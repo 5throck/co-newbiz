@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-28T00:26:49.564Z
+**Generated**: 2026-10-28T01:21:15.376Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -197,7 +197,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.5.0 | scripts/co-newbiz/audit-variant.ts | N/A |
+| audit-variant.ts | 1.6.0 | scripts/co-newbiz/audit-variant.ts | N/A |
 | audit.ts | 2.56.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
@@ -259,7 +259,7 @@
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-pm-catalog.ts | 1.3.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
-| generate-process-flow.ts | 1.4.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
+| generate-process-flow.ts | 1.5.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
 | generate-prompt-registry.ts | 2.1.1 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | js-yaml |
 | generate-skill-graph.ts | 2.0.0 | scripts/generate-skill-graph.ts | js-yaml |
@@ -292,7 +292,7 @@
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
-| process-ssot-check.ts | 2.0.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
+| process-ssot-check.ts | 3.0.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
@@ -315,7 +315,7 @@
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
 | seed-demo-gate-contract.ts | 1.0.0 | scripts/co-newbiz/seed-demo-gate-contract.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
-| seed-s1-s12-demo.ts | 1.12.0 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
+| seed-s1-s12-demo.ts | 1.13.0 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |

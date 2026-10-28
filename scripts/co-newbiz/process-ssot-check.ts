@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 2.0.0
+// @version 3.0.0
 /**
  * Process SSOT validators (ADR-0187 phase P1, design
  * docs/designs/2026-10-27-process-ssot-decision-evidence-design.md section 4.6).
@@ -8,7 +8,7 @@
  * they share every loader, so they live together and keep the design names as
  * check ids):
  *
- *   check-engine-spec-parity      H8    engine missing-artifact labels <-> flow.spec requiredArtifacts
+ *   check-engine-spec-parity      H8    engine blocker keys <-> flow.spec blockers (requiredArtifacts / completionCriteria coverage)
  *   check-checklist-consumers     H9    every checklist with mandatory items has a producer step and a gate consumer
  *   activity-agent-in-procedure   M2    flow.spec activity.agent holds >=1 agent_key step in each listed procedure
  *   check-kill-registry-parity    M4    neb-policy section 4 keys / registry keys / flow.spec killCriteriaRegistry
@@ -17,12 +17,13 @@
  *   check-s12-coverage            M17   each classification cell matches >=1 S12 activity
  *   check-stages-derived          M3    process/stages.yaml equals the gate-order projection of flow.spec
  *
- * Mode (since 2.0.0, ADR-0187 phase P2): the checks in BLOCKING_CHECKS print
- * as ERROR and exit 1 - each reached zero findings, or every remaining pair is
- * an explicit allowlist entry below with its ADR / reason. The two checks the
- * design closes later stay report-only (WARN, exit 0): check-engine-spec-parity
- * (exact-string parity until P3 stable blocker keys) and check-review-coverage
- * (the cross-validation matrix is P4). `--strict` additionally exits 1 on a WARN
+ * Mode (since 2.0.0, ADR-0187 phase P2; engine parity since 3.0.0, phase P3): the
+ * checks in BLOCKING_CHECKS print as ERROR and exit 1 - each reached zero
+ * findings, or every remaining pair is an explicit allowlist entry below with its
+ * ADR / reason. check-engine-spec-parity compares stable blocker KEYS (lib/
+ * process-blocker-keys.ts <-> flow.spec `blockers:`), not Korean strings. The one
+ * check the design closes later stays report-only (WARN, exit 0):
+ * check-review-coverage (the cross-validation matrix is P4). `--strict` additionally exits 1 on a WARN
  * finding. `--check <id>` runs one check; `--json` prints the machine-readable
  * report.
  *
@@ -36,6 +37,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { load as yamlLoad } from "js-yaml";
 import { evaluatePredicate, type Predicate, type VarSnapshot } from "../../packages/core-scoring/src/predicate.ts";
+import { BLOCKER_LABELS } from "../../app/web-next/lib/process-blocker-keys.ts";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -54,11 +56,11 @@ export const CHECK_IDS = [
 export type CheckId = (typeof CHECK_IDS)[number];
 
 /**
- * Checks that fail the audit (P2). The other two stay WARN by design section 5:
- * engine-spec parity closes with P3 stable keys, review coverage with the P4
- * matrix.
+ * Checks that fail the audit (P2, P3). Only check-review-coverage stays WARN by
+ * design section 5: it closes with the P4 cross-validation matrix.
  */
 export const BLOCKING_CHECKS: ReadonlySet<CheckId> = new Set<CheckId>([
+  "check-engine-spec-parity",
   "check-checklist-consumers",
   "activity-agent-in-procedure",
   "check-kill-registry-parity",
@@ -88,6 +90,10 @@ export interface SpecStage {
   activities?: SpecActivity[];
   requiredArtifacts?: string[];
   completionCriteria?: string[];
+  /** ADR-0187 P3: stable engine blocker keys and the artifacts / criteria (0-based indices) each covers. */
+  blockers?: Array<{ key: string; artifacts?: number[]; criteria?: number[] }>;
+  /** requiredArtifacts indices the engine deliberately does not block on. */
+  nonBlockingArtifacts?: number[];
   killCriteriaRegistry?: string[];
 }
 export interface SpecGate {
@@ -117,73 +123,127 @@ const norm = (s: string): string => s.replace(/\s+/g, " ").trim();
 // ── 1. Engine <-> spec parity (H8) ───────────────────────────────────────────
 
 export interface EngineStageBlockers {
-  /** Literal labels pushed into `missing` by the stage predicate. */
-  labels: string[];
-  /** Count of `missing.push(...)` calls with no string literal (spread / computed). */
-  dynamic: number;
+  /** Stable blocker keys (`blocker("s3.x")`) the engine emits for the stage. */
+  keys: string[];
+  /** missing.push calls / `missing: [...]` entries that bypass blocker() (raw labels, computed text). */
+  raw: number;
 }
 
 /**
- * Extract, per stage id, the literal missing-artifact labels of the stage
- * completion predicates in app/web-next/lib/process-flow.ts. A predicate is a
- * registry entry `  S<n>: (` up to the next entry or the registry's `};`.
- * Blocker ids are still Korean strings (stable keys are P3), so the label is
- * the key compared against flow.spec requiredArtifacts.
+ * Extract, per stage id, the stable blocker keys the engine emits. Since ADR-0187
+ * P3 every `missing` entry is produced through `blocker("<key>")`
+ * (app/web-next/lib/process-blocker-keys.ts), and a key's prefix is its stage,
+ * so the scan covers every engine module (process-flow.ts and the modules its
+ * predicates delegate to) without tracking registry boundaries. A
+ * `missing.push(` argument or `missing: [` literal that is neither a blocker()
+ * call nor a spread of another producer's `.missing` counts as a raw entry.
  */
-export function extractEngineBlockers(source: string): Map<string, EngineStageBlockers> {
+export function extractEngineBlockers(sources: string | string[]): Map<string, EngineStageBlockers> {
   const out = new Map<string, EngineStageBlockers>();
-  let current: string | null = null;
-  for (const line of source.split("\n")) {
-    const head = line.match(/^ {2}(S\d+): \(/);
-    if (head) {
-      current = head[1];
-      if (!out.has(current)) out.set(current, { labels: [], dynamic: 0 });
-      continue;
+  const entry = (stage: string): EngineStageBlockers => {
+    if (!out.has(stage)) out.set(stage, { keys: [], raw: 0 });
+    return out.get(stage) as EngineStageBlockers;
+  };
+  for (const source of Array.isArray(sources) ? sources : [sources]) {
+    // `blocker("s3.x")` calls, and `blockerKey: "s4.x"` table entries (modules that
+    // resolve the key at runtime, e.g. lib/checklist-gate-consumers.ts).
+    for (const m of source.matchAll(/\bblocker\(\s*"(s\d+)\.([a-z0-9_]+)"\s*\)|\bblockerKey:\s*"(s\d+)\.([a-z0-9_]+)"/g)) {
+      const stagePart = m[1] ?? m[3];
+      const namePart = m[2] ?? m[4];
+      const e = entry(stagePart.toUpperCase());
+      const key = `${stagePart}.${namePart}`;
+      if (!e.keys.includes(key)) e.keys.push(key);
     }
-    if (/^};/.test(line)) {
-      current = null;
-      continue;
+    const unattributed = entry("?");
+    for (const call of source.matchAll(/missing\.push\(([^;]*)\)/g)) {
+      const arg = call[1];
+      if (/\bblocker\(/.test(arg) || /^\s*\.\.\.[\w.]+\.missing\s*$/.test(arg)) continue;
+      unattributed.raw++;
     }
-    if (!current) continue;
-    const entry = out.get(current) as EngineStageBlockers;
-    for (const call of line.matchAll(/missing\.push\(([^;]*)\)/g)) {
-      const literals = [...call[1].matchAll(/"((?:[^"\\]|\\.)*)"|`([^`$]*)`/g)].map((m) => norm(m[1] ?? m[2] ?? ""));
-      if (literals.length === 0) entry.dynamic++;
-      for (const l of literals) if (l && !entry.labels.includes(l)) entry.labels.push(l);
+    for (const lit of source.matchAll(/\bmissing:\s*\[([^\]]*)\]/g)) {
+      const body = lit[1].trim();
+      if (body === "" || /^\.\.\.[\w.]+$/.test(body)) continue;
+      if (!/\bblocker\(/.test(body)) unattributed.raw++;
     }
   }
   return out;
 }
 
-export function checkEngineSpecParity(spec: FlowSpec, engine: Map<string, EngineStageBlockers>): Finding[] {
+export interface BlockerKeyRegistry {
+  /** Keys defined in process-blocker-keys.ts. */
+  keys: ReadonlySet<string>;
+}
+
+/**
+ * Parity (H8): per stage, the engine's blocker keys equal the keys the stage's
+ * flow.spec `blockers:` declares; every declared key is in the registry; every
+ * registry key is used by the engine; every `blockers` cover reference points at
+ * an existing requiredArtifact / completionCriterion; every requiredArtifact is
+ * covered by a key or listed in `nonBlockingArtifacts`.
+ */
+export function checkEngineSpecParity(
+  spec: FlowSpec,
+  engine: Map<string, EngineStageBlockers>,
+  registry: BlockerKeyRegistry = { keys: new Set([...engine.values()].flatMap((e) => e.keys)) },
+): Finding[] {
   const check: CheckId = "check-engine-spec-parity";
   const findings: Finding[] = [];
+  const allEngineKeys = new Set([...engine.values()].flatMap((e) => e.keys));
   for (const stage of spec.stages ?? []) {
-    const declared = new Set((stage.requiredArtifacts ?? []).map(norm));
-    const eng = engine.get(stage.id) ?? { labels: [], dynamic: 0 };
-    for (const label of eng.labels) {
-      if (!declared.has(label)) {
+    const declared = stage.blockers ?? [];
+    const declaredKeys = declared.map((b) => b.key);
+    const engineKeys = engine.get(stage.id)?.keys ?? [];
+    for (const k of engineKeys) {
+      if (!declaredKeys.includes(k)) {
+        findings.push({ check, message: `${stage.id}: engine blocker key "${k}" is not declared in flow.spec blockers (undeclared blocker)` });
+      }
+    }
+    for (const k of declaredKeys) {
+      if (!engineKeys.includes(k)) {
+        findings.push({ check, message: `${stage.id}: flow.spec blocker key "${k}" is not emitted by the engine (declared, not enforced)` });
+      }
+      if (!registry.keys.has(k)) {
+        findings.push({ check, message: `${stage.id}: flow.spec blocker key "${k}" is not defined in process-blocker-keys.ts` });
+      }
+      if (!k.toLowerCase().startsWith(`${stage.id.toLowerCase()}.`)) {
+        findings.push({ check, message: `${stage.id}: blocker key "${k}" does not carry the stage prefix "${stage.id.toLowerCase()}."` });
+      }
+    }
+    const dupes = declaredKeys.filter((k, i) => declaredKeys.indexOf(k) !== i);
+    for (const k of new Set(dupes)) findings.push({ check, message: `${stage.id}: blocker key "${k}" is declared more than once` });
+    const nArt = (stage.requiredArtifacts ?? []).length;
+    const nCrit = (stage.completionCriteria ?? []).length;
+    const covered = new Set<number>();
+    for (const b of declared) {
+      for (const i of b.artifacts ?? []) {
+        if (!Number.isInteger(i) || i < 0 || i >= nArt)
+          findings.push({ check, message: `${stage.id}: blocker "${b.key}" covers requiredArtifacts[${i}] which does not exist (${nArt} listed)` });
+        else covered.add(i);
+      }
+      for (const i of b.criteria ?? []) {
+        if (!Number.isInteger(i) || i < 0 || i >= nCrit)
+          findings.push({ check, message: `${stage.id}: blocker "${b.key}" covers completionCriteria[${i}] which does not exist (${nCrit} listed)` });
+      }
+    }
+    const nonBlocking = new Set(stage.nonBlockingArtifacts ?? []);
+    for (let i = 0; i < nArt; i++) {
+      if (!covered.has(i) && !nonBlocking.has(i)) {
         findings.push({
           check,
-          message: `${stage.id}: engine blocker "${label}" is not a flow.spec requiredArtifact (undeclared blocker)`,
+          message: `${stage.id}: requiredArtifact[${i}] "${norm((stage.requiredArtifacts as string[])[i]).slice(0, 60)}" is covered by no blocker key and not listed in nonBlockingArtifacts (declared, not enforced)`,
         });
       }
     }
-    const enforced = new Set(eng.labels);
-    for (const art of declared) {
-      if (!enforced.has(art)) {
-        findings.push({
-          check,
-          message: `${stage.id}: flow.spec requiredArtifact "${art}" has no engine blocker with the same key (declared, not enforced)`,
-        });
-      }
+    for (const i of nonBlocking) {
+      if (covered.has(i)) findings.push({ check, message: `${stage.id}: requiredArtifact[${i}] is both covered by a blocker key and listed in nonBlockingArtifacts` });
     }
-    if (eng.dynamic > 0) {
-      findings.push({
-        check,
-        message: `${stage.id}: ${eng.dynamic} engine missing.push call(s) carry no literal key (computed labels cannot be matched until P3 stable keys)`,
-      });
-    }
+  }
+  for (const k of registry.keys) {
+    if (!allEngineKeys.has(k)) findings.push({ check, message: `${k}: key is defined in process-blocker-keys.ts but no engine predicate emits it (dead key)` });
+  }
+  const raw = engine.get("?")?.raw ?? 0;
+  if (raw > 0) {
+    findings.push({ check, message: `${raw} engine missing entr${raw === 1 ? "y" : "ies"} bypass blocker() (raw label or computed text) - every missing entry must carry a stable key` });
   }
   return findings;
 }
@@ -235,18 +295,6 @@ export const CHECKLIST_EXEMPTIONS: ReadonlyArray<{ docId: string; side: "produce
     side: "consumer",
     reason:
       "ADR-0134 removed the standalone fit-verdict UI (the machine consumer) as a duplicate layer; the knock-out rubric is judged into the S3 requiredArtifact '전략적 적합성 판단' (rationale + deterministic recommendation, lib/opportunity-screening.ts) and the human Screening gate record (boundary #2).",
-  },
-  {
-    docId: "chk-site-selection",
-    side: "consumer",
-    reason:
-      "Produced by greenfield-dd step 1-3 and judged by the reviewers inside the technical-dd workspace tab (GF_SITE_CHECKLISTS scopes tdd-01/tdd-02); a machine gate consumer of its own is engine work - ADR-0187 P3 (stable blocker keys), deferred.",
-  },
-  {
-    docId: "chk-greenfield-feasibility",
-    side: "consumer",
-    reason:
-      "Produced by greenfield-screening steps 3/4 and greenfield-pre-fs steps 2/4 (gf-01..gf-07, gf-12); judged by the Screening / Pre-FS gate reviewers. A machine gate consumer is engine work - ADR-0187 P3 (stable blocker keys), deferred.",
   },
 ];
 
@@ -752,7 +800,12 @@ export function runAll(only?: CheckId): Finding[] {
   const findings: Finding[] = [];
 
   if (want("check-engine-spec-parity")) {
-    findings.push(...checkEngineSpecParity(spec, extractEngineBlockers(read("app/web-next/lib/process-flow.ts"))));
+    const engineSources = [...runtimeSources().entries()]
+      .filter(([path, src]) => !path.endsWith("process-blocker-keys.ts") && (path.endsWith("lib/process-flow.ts") || /\bblocker\(\s*"s\d+\.|\bblockerKey:\s*"s\d+\./.test(src)))
+      .map(([, src]) => src);
+    findings.push(
+      ...checkEngineSpecParity(spec, extractEngineBlockers(engineSources), { keys: new Set(Object.keys(BLOCKER_LABELS)) }),
+    );
   }
   if (want("check-checklist-consumers")) {
     const checklists: ChecklistInfo[] = readdirSync(join(ROOT, "checklists"))
@@ -846,7 +899,7 @@ if (import.meta.main) {
   } else {
     for (const f of findings) console.log(`[${isBlocking(f) ? "ERROR" : "WARN"}] ${f.check}: ${f.message}`);
     const counts = summarize(findings);
-    console.log("\nProcess SSOT validators (ADR-0187 P2 - ERROR checks block, WARN checks report):");
+    console.log("\nProcess SSOT validators (ADR-0187 P3 - ERROR checks block, WARN checks report):");
     for (const c of CHECK_IDS)
       if (!only || only === c) console.log(`  ${c.padEnd(30)} ${String(counts[c]).padStart(3)}  ${BLOCKING_CHECKS.has(c) ? "blocking" : "report-only"}`);
   }

@@ -115,6 +115,42 @@ function adoptedModelId(projectId: string, db: Database): string | null {
   }
 }
 
+export interface AdoptedCaseCapex {
+  modelId: string | null;
+  /** Spend total of the adopted case's capex lines in KRW millions; null when not derivable (no case, no lines, unit not KRW_M). */
+  total: number | null;
+  lines: number;
+  unitIssue: boolean;
+}
+
+/**
+ * Total capex of the S8 adopted Business Case (KRW millions) - the "S8 adopted
+ * investment" the tranche reconciliation and the S10 uses reconciliation (ADR-0187
+ * M1) compare against. Never converts or guesses: a null unit, a non-KRW_M unit,
+ * no capex lines or no adoption yield total = null.
+ */
+export function adoptedCaseCapex(projectId: string, db: Database = getDb()): AdoptedCaseCapex {
+  const modelId = adoptedModelId(projectId, db);
+  if (!modelId) return { modelId: null, total: null, lines: 0, unitIssue: false };
+  const model = db.query("SELECT horizon_years FROM business_case_model WHERE id = ?").get(modelId) as { horizon_years: number } | null;
+  const capex = db
+    .query("SELECT annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ? AND category = 'capex'")
+    .all(modelId) as Array<{ annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null }>;
+  const horizon = model?.horizon_years ?? 0;
+  let total = 0;
+  let unitIssue = false;
+  for (const l of capex) {
+    // R5: a null unit is NOT assumed to be KRW_M - it is a finding like any other unit.
+    if (l.unit !== "KRW_M") unitIssue = true;
+    // end_year (ADR-0174 slice 2) clamps the spending window: NULL = run through the horizon.
+    // ADR-0178 slice 1: a 시작 전 (start_year 0) capex line is a single year-0 outlay - counted once, never dropped.
+    if (l.start_year === 0) { total += l.annual_amount_krw_m; continue; }
+    const lastYear = Math.min(l.end_year ?? horizon, horizon);
+    for (let y = Math.max(1, l.start_year); y <= lastYear; y++) total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+  }
+  return { modelId, total: capex.length > 0 && !unitIssue ? exact(total) : null, lines: capex.length, unitIssue };
+}
+
 export function trancheReconciliation(projectId: string, db: Database = getDb()): TrancheReconciliation {
   const findings: Finding[] = [];
   const rows = listCapexTranches(projectId, {}, db);
@@ -133,33 +169,13 @@ export function trancheReconciliation(projectId: string, db: Database = getDb())
     if (!t.release_condition.trim()) findings.push({ code: "tranche_condition_missing", message: `트랜치 ${t.tranche_no}번에 집행 조건이 없습니다.` });
     if (t.source_stage !== "S10") findings.push({ code: "tranche_not_from_s10", message: `트랜치 ${t.tranche_no}번은 S10 조건이 아닌 ${t.source_stage}에서 기록되었습니다 — 확인이 필요합니다.` });
   }
-  const modelId = adoptedModelId(projectId, db);
-  let caseTotal: number | null = null;
-  let lines = 0;
-  let unitIssue = false;
+  const adopted = adoptedCaseCapex(projectId, db);
+  const { modelId, lines, unitIssue } = adopted;
+  const caseTotal = adopted.total;
   if (!modelId) {
     findings.push({ code: "no_adopted_case", message: "S8 채택 Business Case가 없습니다 — capex 대조를 할 수 없습니다." });
-  } else {
-    const model = db.query("SELECT horizon_years FROM business_case_model WHERE id = ?").get(modelId) as { horizon_years: number } | null;
-    const capex = db
-      .query("SELECT annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ? AND category = 'capex'")
-      .all(modelId) as Array<{ annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null }>;
-    lines = capex.length;
-    const horizon = model?.horizon_years ?? 0;
-    let total = 0;
-    for (const l of capex) {
-      // R5: a null unit is NOT assumed to be KRW_M — it is a finding like any other unit.
-      if (l.unit !== "KRW_M") unitIssue = true;
-      // end_year (ADR-0174 slice 2) clamps the spending window: NULL = run through the horizon.
-      // ADR-0178 slice 1: a 시작 전 (start_year 0) capex line is a single year-0 outlay - counted once, never dropped.
-      if (l.start_year === 0) { total += l.annual_amount_krw_m; continue; }
-      const lastYear = Math.min(l.end_year ?? horizon, horizon);
-      for (let y = Math.max(1, l.start_year); y <= lastYear; y++) total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
-    }
-    if (lines === 0) findings.push({ code: "case_capex_missing", message: "S8 채택 케이스에 capex 행이 없습니다 — 트랜치 합계와 대조할 수 없습니다." });
-    else if (unitIssue) findings.push({ code: "case_unit_not_comparable", message: "S8 채택 케이스 capex 행 단위가 KRW_M(백만 원)으로 명시되어 있지 않습니다 (미기재 포함) — 단위 변환·추정 없이 대조하지 않습니다." });
-    else caseTotal = exact(total);
-  }
+  } else if (lines === 0) findings.push({ code: "case_capex_missing", message: "S8 채택 케이스에 capex 행이 없습니다 — 트랜치 합계와 대조할 수 없습니다." });
+  else if (unitIssue) findings.push({ code: "case_unit_not_comparable", message: "S8 채택 케이스 capex 행 단위가 KRW_M(백만 원)으로 명시되어 있지 않습니다 (미기재 포함) — 단위 변환·추정 없이 대조하지 않습니다." });
   if (currencies.length > 1 || (currencies.length === 1 && currencies[0] !== "KRW")) {
     findings.push({ code: "tranche_currency_not_comparable", message: `트랜치 통화(${currencies.join(", ")})가 S8 케이스 통화(KRW)와 다릅니다 — 환산하지 않습니다.` });
   }

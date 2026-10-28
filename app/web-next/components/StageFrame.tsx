@@ -9,7 +9,7 @@
 // 구현 없이 전 하위 탭에 자동 적용). 데이터가 없거나 조회에 실패하면 조용히
 // 숨는다 — 가이던스는 부가 정보이지 본문을 가리는 것이 아니다.
 
-import { localizeRequirement } from "../lib/labels.ts";
+import { localizeBlocker } from "../lib/labels.ts";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -374,7 +374,7 @@ function StageGuidance({ state, projectId, stageId }: { state: GuidanceState; pr
         <p className="mt-1 mb-0">{tr("common.stageNav.missingUnknown")}</p>
       ) : (
         <ul className="mt-1 ml-4 list-disc">
-          {items.map((it) => <li key={it}>{localizeRequirement(it)}</li>)}
+          {items.map((it) => <li key={it}>{localizeBlocker(tr, it)}</li>)}
         </ul>
       )}
       {/* ADR-0186 D8: the S8 discount-rate blocker's next action is the WACC session. */}

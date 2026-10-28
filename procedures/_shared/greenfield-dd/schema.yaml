@@ -3,7 +3,7 @@ procedure_id: shared-greenfield-dd
 title: "Green Field Due Diligence"
 scope: shared
 level: entity
-version: "1.2.0"
+version: "1.3.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -26,8 +26,9 @@ gate: DD
 #                   when the plan is technology-led).
 #   step 8        — intra_venture only.
 #   step 4, 5     — every sub-track.
-#   step 9-17     — every sub-track (v1.2.0, ADR-0187 P2); steps 9, 12-16
-#                   are origin-scoped (D9) — see the comment above step 9.
+#   step 9-17     — steps 10, 11, 17 every sub-track; steps 9, 12-16 unless
+#                   the sub-track is existing_business_rbd / intra_venture
+#                   (D9, v1.3.0) — see the comment above step 9.
 # site_required is a human-confirmed fact recorded as a project.site_required
 # dimension_input assertion confirmed by a single person with a written
 # rationale (no evidence reference is required) through the human-only
@@ -148,17 +149,26 @@ steps:
       intra_venture only.
   # ── v1.2.0 (ADR-0187 phase P2; findings M2, M15; W2-b, W2-d; owner decision
   # D9) — one step per S9 activity that lists greenfield-dd, so every
-  # flow.spec activity agent holds a step here. D9 trims the DD of a greenfield
-  # origin=internal project to capability (steps 6/7/8), financial (step 11),
-  # legal-regulatory (step 10) and EHS (step 1, technical-dd checklist); the
-  # other domain steps below apply to external / hybrid / joint origin only.
-  # An unassessed origin APPLIES them (fail-closed, db/lib/applies-when.ts).
-  # As with steps 1-8, greenfield-subtrack.ts stays authoritative for the
-  # runtime workspace; the origin trim of the counted DD checklists is engine
-  # work (ADR-0187 P3) - until then these predicates document the procedure.
+  # flow.spec activity agent holds a step here.
+  # v1.3.0 (ADR-0187 phase P3; owner decision 2026-10-28, ADR-0187 decision log):
+  # the D9 trim keys on the greenfield SUB-TRACK, not on origin. ADR-0166 defaults
+  # every greenfield project to origin=internal, so an origin predicate would also
+  # trim a new-site plant, which must keep the full DD. The internal-expansion
+  # sub-tracks (existing_business_rbd, intra_venture) are trimmed to capability
+  # (steps 6/7/8), financial (step 11), legal-regulatory (step 10) and EHS
+  # (step 1, technical-dd checklist); steps 9 and 12-16 (commercial, HR, market,
+  # financing, IP, region labor) do not apply to them. A plain greenfield route (no
+  # sub-track), an unknown value and an unassessed route APPLY every step
+  # (fail-closed, db/lib/applies-when.ts).
+  # Grandfathering (ADR-0151/ADR-0020 versioned pins): these sub-track predicates are
+  # greenfield-dd 1.3.0. A project whose earliest pin or creation predates 2026-10-28
+  # stays on the pre-1.3.0 rule (origin=internal trims steps 9, 12-16; D9_RULE_DATE in
+  # greenfield-subtrack.ts), so nothing it completed is un-completed.
+  # greenfield-subtrack.ts stays authoritative for the runtime workspace
+  # (D9_TRIMMED_STEPS); tests/unit/greenfield-subtrack.test.ts keeps both equal.
   - id: 9
     gate: DD
-    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    applies_when: { op: "none_of", of: [{ op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }] }
     agent_key: commercial-dd-agent
     skill_key: commercial-due-diligence
     output_type: dd_finding
@@ -166,7 +176,7 @@ steps:
       Commercial DD of the establishment plan per
       `checklists/commercial-dd-checklist.yaml` — demand evidence, channel and
       pricing-power checks with triangulation; material findings land as
-      dd_finding with value_impact. Trimmed for origin=internal (D9).
+      dd_finding with value_impact. Trimmed for the internal-expansion sub-tracks (D9).
   - id: 10
     gate: DD
     agent_key: legal-counsel
@@ -176,7 +186,7 @@ steps:
       Legal and regulatory DD per `checklists/legal-dd-checklist.yaml` —
       corporate and permit standing of the establishing entity, material
       contracts, regulatory exposure; statute checks against source text.
-      Applies to every origin (D9 keeps legal-regulatory).
+      Applies to every sub-track (D9 keeps legal-regulatory).
   - id: 11
     gate: DD
     agent_key: financial-analyst
@@ -187,30 +197,30 @@ steps:
       to an establishment plan — cost basis, working-capital and capex
       assumptions, tax position and related-party transactions with the
       sponsoring affiliate, projections tested against history and peer
-      benchmarks. Applies to every origin (D9 keeps financial).
+      benchmarks. Applies to every sub-track (D9 keeps financial).
   - id: 12
     gate: DD
-    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    applies_when: { op: "none_of", of: [{ op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }] }
     agent_key: hr-integration-agent
     skill_key: org-readiness-assessment
     output_type: dd_finding
     description: >
       HR DD per `checklists/hr-dd-checklist.yaml` — key-person map, retention
       and transfer terms, labor relations of the establishing workforce.
-      Trimmed for origin=internal (D9; core-team readiness stays in steps 6/8).
+      Trimmed for the internal-expansion sub-tracks (D9; core-team readiness stays in steps 6/8).
   - id: 13
     gate: DD
-    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    applies_when: { op: "none_of", of: [{ op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }] }
     agent_key: market-intelligence-agent
     skill_key: competitive-intelligence
     output_type: dd_finding
     description: >
       Market DD per `checklists/market-dd-checklist.yaml` — re-verify the S2
       entry market and competitive structure the plan rests on. Trimmed for
-      origin=internal (D9).
+      internal-expansion sub-tracks (D9).
   - id: 14
     gate: DD
-    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    applies_when: { op: "none_of", of: [{ op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }] }
     agent_key: financing-agent
     skill_key: financing-plan-review
     output_type: financing_readiness_check
@@ -220,28 +230,28 @@ steps:
       scenario (starting threshold: downside DSCR headroom of at least 1.2x,
       ADR-0187 D2). A covenant breach under the downside scenario is the
       kill criterion covenant_breach_under_downside_financing_plan below.
-      Trimmed for origin=internal (D9).
+      Trimmed for the internal-expansion sub-tracks (D9).
   - id: 15
     gate: DD
-    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    applies_when: { op: "none_of", of: [{ op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }] }
     agent_key: ip-agent
     skill_key: ip-fto-review
     output_type: dd_finding
     description: >
       IP and freedom-to-operate review (ADR-0187 W2-d) — patent landscape and
       FTO position of the technology the plan commercializes, licensing
-      dependencies, pre-formation IP. Every track except greenfield
-      origin=internal; the R&BD technology rows (rbd-03) stay in step 7.
+      dependencies, pre-formation IP. Every track except the greenfield
+      internal-expansion sub-tracks (D9); the R&BD technology rows (rbd-03) stay in step 7.
   - id: 16
     gate: DD
-    applies_when: { op: "in", var: "project.origin", values: ["external", "hybrid", "joint"] }
+    applies_when: { op: "none_of", of: [{ op: "in", var: "project.sub_track", values: ["existing_business_rbd", "intra_venture"] }] }
     agent_key: region-lead
     skill_key: regulatory-screening
     output_type: dd_finding
     description: >
       Region labor-law review per the labor axis of `region-profiles/<ISO>.yaml`
       for the establishment jurisdiction (ADR-0187 W2-b; ADR-0185 §1.2(e):
-      skipped only for greenfield AND origin=internal) — works council,
+      skipped only for the greenfield internal-expansion sub-tracks, D9 2026-10-28) — works council,
       collective agreements, transfer and consultation obligations.
   - id: 17
     gate: DD
@@ -251,7 +261,7 @@ steps:
     description: >
       Waiver adjudication for unmet mandatory DD items (ADR-0036/0037): each
       waiver carries an expiry and a clause anchor; an unmet mandatory item
-      with no active waiver keeps the DD gate blocked. Applies to every origin.
+      with no active waiver keeps the DD gate blocked. Applies to every sub-track.
   - id: 4
     gate: DD
     agent_key: risk-officer
@@ -298,7 +308,8 @@ legal_basis:
   - "checklists/technical-dd-checklist.yaml, checklists/site-selection-checklist.yaml"
   - "checklists/rbd-technology-checklist.yaml, checklists/market-dd-checklist.yaml, checklists/entity-formation-checklist.yaml (ef-01, ef-03, ef-07)"
   - "ADR-0160 (Proposed) — sub-track-aware greenfield S9 steps; addendum 2026-10-12 (migration 0136 routing vars)"
-  - "ADR-0187 (process SSOT and decision evidence) phase P2 — S9 activity steps 9-17 (M2), ip-fto and region-labor on greenfield (W2-b, W2-d), origin=internal trim (D9, M15), covenant-breach kill criterion (M4)"
+  - "ADR-0187 (process SSOT and decision evidence) phase P3 — D9 trim re-keyed from origin to the internal-expansion sub-tracks (owner decision 2026-10-28; greenfield-dd 1.3.0)"
+  - "ADR-0187 (process SSOT and decision evidence) phase P2 — S9 activity steps 9-17 (M2), ip-fto and region-labor on greenfield (W2-b, W2-d), sub-track trim (D9, M15), covenant-breach kill criterion (M4)"
   - "checklists/commercial-dd-checklist.yaml, checklists/legal-dd-checklist.yaml, checklists/financial-dd-checklist.yaml, checklists/hr-dd-checklist.yaml, checklists/financing-plan-checklist.yaml"
 
 owner_agent: process-governance-manager

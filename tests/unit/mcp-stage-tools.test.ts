@@ -48,7 +48,7 @@ describe("coverage gate", () => {
     // Artifacts 34: v2.9.0 added the S2 required artifact 진입시장 산정
     // (stage:S2:2, read via get_entry_market_derivation).
     expect(report.activities).toBe(60); // ADR-0185: +9 (7 S9 DD validators, 2 S4); ADR-0187 P0: +3 (S3 synergy-red-team, capability-register-greenfield/-brownfield); P2: +1 (S4 regulatory-screening, human-only exclusion)
-    expect(report.artifacts).toBe(35); // ADR-0187 P2: +1 (stage:S4:5 legal-regulatory screen, via propose_gate_decision)
+    expect(report.artifacts).toBe(37); // ADR-0187 P2: +1 (stage:S4:5 legal-regulatory screen); P3: +2 (stage:S5:3/4 feasibility and site-selection checklists) - all via propose_gate_decision
   });
 
   test("the coverage script fails when a human-only route gains a tool (self-test)", async () => {

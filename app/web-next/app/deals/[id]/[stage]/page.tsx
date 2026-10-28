@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
-import { localizeRequirement } from "../../../../lib/labels.ts";
+import { localizeBlocker } from "../../../../lib/labels.ts";
 import { STAGE_META } from "../../../../lib/stage-meta.ts";
 import { STAGE_STATUS_KEY, trackKeysText, resolveLabelTokens } from "../../../../lib/label-keys.ts";
 import { resolveDealCarrier } from "../../../../lib/deal-carrier.ts";
@@ -397,7 +397,7 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
         <div className="market-section">
           <p className="text-[length:var(--fs-body)]">{t("statusPrefix")} <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{trRoot(STAGE_STATUS_KEY[stage?.status ?? ""] ?? stage?.status ?? "")}</span></p>
           <ul className="sizing-note-list">
-            {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{localizeRequirement(b)}</li>)}
+            {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{localizeBlocker(trRoot, b)}</li>)}
           </ul>
         </div>
       )}

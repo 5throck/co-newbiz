@@ -18,6 +18,9 @@ import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress, reopenedAfterGate } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
 import { s11ConditionBlockers } from "./gate-conditions.ts";
+import { blocker } from "./process-blocker-keys.ts";
+import { s10M1Checks, s10M1Grandfathered } from "./s10-checks.ts";
+import { checklistStageBlockers } from "./checklist-gate-consumers.ts";
 
 export type StageId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9" | "S10" | "S11" | "S12";
 export type GateId = "screening" | "pre_fs" | "target_screening" | "fs" | "dd" | "entity_ic" | "group_ic";
@@ -43,7 +46,7 @@ export const STAGES: StageDefinition[] = [
   { id: "S2", name: "기회 발굴", sequence: 2, objective: "무엇을 할 것인가? — 가치사슬상 사업 기회를 등록·평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["기회 등록(가치사슬 노드·매력도)", "진입시장 산정 (S1 링크·대상 범위·도출 사슬)"] },
   { id: "S3", name: "시너지·전략적 적합성", sequence: 3, objective: "우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다", applicableTracks: ["all"], gateIds: ["screening"], requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"] },
   { id: "S4", name: "진출방식 결정", sequence: 4, objective: "어떻게 들어갈 것인가? — Greenfield(자체 역량 진출) vs Brownfield(기존 기업·자산 결합)를 결정한다. Brownfield ≠ M&A — M&A·JV·전략적 투자·소수점 지분·파트너십·R&BD·사내벤처(CVC) 중 Route를 고른다", applicableTracks: ["all"], gateIds: ["screening", "pre_fs"], requiredArtifacts: ["트랙 결정(GF/BF)·근거", "Brownfield 선택 시 Route 유형(M&A/JV/전략적 투자/소수점 지분/파트너십/R&BD/CVC)", "5criteria 채점 결과(통제 필요도·역량 결정성·시장 불확실성·통합 역량·역량확보 속도 각 20%)", "검토한 대안", "법무·규제 스크리닝 판정 (chk-legal-regulatory lr-01~lr-07 — regulatory-screening 활동)"] },
-  { id: "S5", name: "자체 진출", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)"] },
+  { id: "S5", name: "자체 진출", sequence: 5, objective: "스스로 진입할 수 있는가? — 자체 역량을 평가하고 격차를 구축 방안(Build/Partner/Hire/Invest)으로 해소해 진출전략을 세운다 (Greenfield 전용 — Target Company 객체가 존재하지 않는다)", applicableTracks: ["greenfield"], gateIds: ["pre_fs"], requiredArtifacts: ["역량 격차 평가", "진출전략(Build/Partner/Hire/Invest 결정·근거)", "그린필드 실현가능성 체크리스트 판정 (chk-greenfield-feasibility gf-01~gf-12)", "부지 선정 체크리스트 판정 (chk-site-selection ss-01~ss-09)"] },
   { id: "S6", name: "대상 후보 발굴", sequence: 6, objective: "누구와 결합할 것인가? — Opportunity에 진입 가능한 기존 기업·자산의 Target Universe를 정의하고 Target Company Long List를 작성한다 (Brownfield 전용)", applicableTracks: ["brownfield"], gateIds: ["pre_fs"], requiredArtifacts: ["Target Universe 정의", "Target Company Long List"] },
   { id: "S7", name: "대상 선정", sequence: 7, objective: "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)", applicableTracks: ["brownfield"], gateIds: ["target_screening"], requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"] },
   { id: "S8", name: "사업성 분석", sequence: 8, objective: "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다", applicableTracks: ["all"], gateIds: ["fs"], requiredArtifacts: ["Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)", "시뮬레이션 NPV 분위수", "BEP 시점과 시뮬레이션 입력 스냅샷", "Target 비교 분석 (brownfield)", "대상 선정 기록 (brownfield)"] },
@@ -248,7 +251,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         blockers.push("산업 시장분석 매트릭스로 대체 충족 — 기회 필드(규모·성장률)는 S2 평가 전 입력 권장");
       } else {
         blockers.push("시장 규모·성장 추정이 필요합니다 (시장분석에서 산업 분석 후 기회 등록)");
-        missing.push("시장 규모·성장 추정");
+        missing.push(blocker("s1.market_size_growth"));
       }
     }
     if (!opp.value_chain_node) {
@@ -256,7 +259,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         blockers.push("산업 가치사슬 구조로 대체 충족 — value_chain_node 입력 권장");
       } else {
         blockers.push("가치사슬 노드가 필요합니다");
-        missing.push("가치사슬 구조");
+        missing.push(blocker("s1.value_chain_structure"));
       }
     }
     // flow.spec S1 completionCriteria — 최신 완료 버전 매트릭스에 경쟁 구조
@@ -278,7 +281,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       })();
       if (!hasCompetitive) {
         blockers.push("S1 경쟁 구조 미기록 — 재분석으로 집중도·주요 플레이어를 보강해야 합니다");
-        missing.push("경쟁 구조");
+        missing.push(blocker("s1.competitive_structure"));
       }
     }
     // flow.spec S1 completionCriteria 3: "데이터 신뢰도 등급이 기록되었다"
@@ -297,7 +300,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
         : undefined;
       if (!graded?.g) {
         blockers.push("S1 데이터 신뢰도 등급(A|B|C)이 기록되지 않았습니다 — 산업 시장분석(재분석)으로 프록시 hop 수와 출처에서 산출해야 합니다");
-        missing.push("데이터 신뢰도 등급");
+        missing.push(blocker("s1.data_confidence_grade"));
       }
     }
     complete = !missing.length; // blockers에 권고 문구가 있어도 산출물이 있으면 완료
@@ -307,7 +310,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     let blockers: string[] = [];
     const missing: string[] = [];
     let complete = false;
-    if (opp.attractiveness_score === null) { blockers.push("매력도 평가가 필요합니다"); missing.push("기회 매력도 평가"); }
+    if (opp.attractiveness_score === null) { blockers.push("매력도 평가가 필요합니다"); missing.push(blocker("s2.attractiveness_assessment")); }
     // flow.spec S2 completionCriteria (v2.9.0, ADR-0180): the entry-market
     // surface must have been used — this opportunity carries the S1 sizing
     // link AND a person-set target scope. ADR-0181 slice 1: the scope reads
@@ -321,10 +324,10 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     if ((opp.created_at ?? "") >= ADR_0180_PREDICATE_DATE) {
       if (!opp.sizing_version_id) {
         blockers.push("진입시장 산정: S1 시장규모 버전 연결이 필요합니다 (진입시장 산정 1단계)");
-        missing.push("진입시장 산정 (S1 링크·대상 범위·도출 사슬)");
+        missing.push(blocker("s2.entry_market"));
       } else if (!readTargetScope(getDb(), opp.id)) {
         blockers.push("진입시장 산정: 대상 범위 기록이 필요합니다 (진입시장 산정 2단계)");
-        missing.push("진입시장 산정 (S1 링크·대상 범위·도출 사슬)");
+        missing.push(blocker("s2.entry_market"));
       }
     }
     complete = blockers.length === 0;
@@ -334,22 +337,22 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     let blockers: string[] = [];
     const missing: string[] = [];
     let complete = false;
-    if (opp.synergy_score === null) { blockers.push("시너지 평가가 필요합니다"); missing.push("시너지 평가"); }
-    if (!opp.rationale) { blockers.push("전략적 적합성 판단 근거가 필요합니다"); missing.push("전략적 적합성 판단"); }
+    if (opp.synergy_score === null) { blockers.push("시너지 평가가 필요합니다"); missing.push(blocker("s3.synergy_assessment")); }
+    if (!opp.rationale) { blockers.push("전략적 적합성 판단 근거가 필요합니다"); missing.push(blocker("s3.strategic_fit_judgement")); }
     // flow.spec S3 / Wave F-6: the required-capability list must exist with a
     // recorded source per row (grandfathered opportunities exempt).
     if (!opportunityGrandfathered(opp) && countSourcedCapabilityRows(opp.capability_gap_json) === 0) {
       blockers.push("필요 역량 목록이 필요합니다 — 출처(source)가 있는 역량 1건 이상 (S3 역량 갭 레지스터)");
-      missing.push("필요 역량 목록(출처 포함)");
+      missing.push(blocker("s3.capability_register"));
     }
     // flow.spec S3 completionCriteria: 최소 1개 기회가 selected. 이 기회 자체가
     // 진출 검토 대상으로 선택되지 않았으면 S4로 진행할 수 없다.
     if (opp.status === "dropped") {
       blockers.push("제외(dropped)된 기회입니다 — S4 진행 대상이 아닙니다");
-      missing.push("기회 선택(selected)");
+      missing.push(blocker("s3.opportunity_selected"));
     } else if (opp.status !== "selected") {
       blockers.push("기회 선택(selected)이 필요합니다 — 시너지·적합성 평가 후 진출 대상으로 선택");
-      missing.push("기회 선택(selected)");
+      missing.push(blocker("s3.opportunity_selected"));
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };
@@ -367,12 +370,20 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const decision = latestRouteDecision(opp.id);
     if (!decision) {
       blockers.push("진출방식 결정(route_decision)이 필요합니다");
-      missing.push("route_decision(트랙)");
+      missing.push(blocker("s4.route_decision"));
     } else {
-      if (decision.track === "brownfield" && !decision.sub_track) { blockers.push("brownfield 라우트 유형(sub_track) 선택이 필요합니다"); missing.push("brownfield sub_track"); }
+      if (decision.track === "brownfield" && !decision.sub_track) { blockers.push("brownfield 라우트 유형(sub_track) 선택이 필요합니다"); missing.push(blocker("s4.brownfield_sub_track")); }
       const scoreCount = (getDb().query("SELECT COUNT(*) c FROM route_decision_score WHERE decision_id = ?").get(decision.id) as { c: number }).c;
-      if (scoreCount < 5) { blockers.push(`5-criteria 채점 부족 (${scoreCount}/5)`); missing.push("5-criteria 채점"); }
-      if (!decision.alternatives_considered?.trim()) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push("검토한 대안"); }
+      if (scoreCount < 5) { blockers.push(`5-criteria 채점 부족 (${scoreCount}/5)`); missing.push(blocker("s4.five_criteria_scores")); }
+      if (!decision.alternatives_considered?.trim()) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push(blocker("s4.alternatives_considered")); }
+    }
+    // ADR-0187 P3 (finding H9): chk-legal-regulatory is a Screening-gate requirement
+    // (compliance-engine semantics, lib/checklist-gate-consumers.ts) - off / shadow /
+    // enforce by CO_NEWBIZ_CHECKLIST_CONSUMERS, opportunities before the P3 date exempt.
+    {
+      const lr = checklistStageBlockers(getDb(), opp, "S4", decision?.track ?? null);
+      blockers.push(...lr.blockers);
+      missing.push(...lr.missing);
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };
@@ -389,11 +400,18 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const a = getDb()
       .query("SELECT entry_strategy, alternatives_considered FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1")
       .get(opp.id) as { entry_strategy: string | null; alternatives_considered: string | null } | undefined;
-    if (gapCount === 0) { blockers.push("역량 격차 항목이 필요합니다(S3에서 필요 역량 정의)"); missing.push("역량 격차·해소 방식"); }
-    if (!a) { blockers.push("역량 평가가 필요합니다"); missing.push("역량 격차 평가"); }
+    if (gapCount === 0) { blockers.push("역량 격차 항목이 필요합니다(S3에서 필요 역량 정의)"); missing.push(blocker("s5.capability_gap_register")); }
+    if (!a) { blockers.push("역량 평가가 필요합니다"); missing.push(blocker("s5.capability_assessment")); }
     else {
-      if (!a.entry_strategy) { blockers.push("진출전략이 필요합니다"); missing.push("진출전략"); }
-      if (!a.alternatives_considered) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push("검토한 대안"); }
+      if (!a.entry_strategy) { blockers.push("진출전략이 필요합니다"); missing.push(blocker("s5.entry_strategy")); }
+      if (!a.alternatives_considered) { blockers.push("검토한 대안 기록이 필요합니다"); missing.push(blocker("s5.alternatives_considered")); }
+    }
+    // ADR-0187 P3 (finding H9): chk-greenfield-feasibility and chk-site-selection are
+    // Pre-FS requirements (S5 is greenfield only) - same flag and cut-over as S4.
+    {
+      const gf = checklistStageBlockers(getDb(), opp, "S5", "greenfield");
+      blockers.push(...gf.blockers);
+      missing.push(...gf.missing);
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };
@@ -407,7 +425,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     try { universe = opp.target_universe_json ? JSON.parse(opp.target_universe_json) as { min_long_list?: number } : null; } catch { /* treat as undefined */ }
     if (!universe) {
       blockers.push("Target Universe 정의가 필요합니다 (선정 기준·커버리지·최소 후보 수)");
-      missing.push("Target Universe 정의");
+      missing.push(blocker("s6.target_universe"));
       return { complete, blockers, missing };
     }
     const minLongList = typeof universe.min_long_list === "number" && universe.min_long_list > 0 ? universe.min_long_list : 3;
@@ -426,12 +444,12 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       covered = candidates.length - incomplete.length;
       if (incomplete.length > 0) {
         blockers.push(`필수 속성·출처가 없는 Long List 후보 ${incomplete.length}건 — ${incomplete.slice(0, 3).map((t) => t.company_name).join(", ")}${incomplete.length > 3 ? " 외" : ""} (식별자·Universe 적합 메모·발굴 출처 기록 필요)`);
-        missing.push("Long List 후보 필수 속성·출처");
+        missing.push(blocker("s6.longlist_attributes"));
       }
     }
     if (covered < minLongList) {
       blockers.push(`Long List 커버리지 부족 (${covered}/${minLongList}${covered !== longList ? " — 필수 속성·출처를 갖춘 후보만 산입" : ""})`);
-      missing.push("Long List 최소 커버리지");
+      missing.push(blocker("s6.longlist_coverage"));
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };
@@ -445,13 +463,13 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const targets = listTargets(opp.id);
     if (targets.length === 0) {
       blockers.push("스크리닝 대상 후보가 필요합니다 (Long List에서 추가)");
-      missing.push("대상 후보 스크리닝");
+      missing.push(blocker("s7.candidate_screening"));
       return { complete, blockers, missing };
     }
     const unresolved = targets.filter((t) => t.status !== "shortlisted" && !(t.status === "excluded" && t.exclusion_reason));
     if (unresolved.length > 0) {
       blockers.push(`판정 대기 후보 ${unresolved.length}건 — Short List 승격 또는 제외 사유 기록 필요`);
-      missing.push("후보별 스크리닝 판정");
+      missing.push(blocker("s7.candidate_verdict"));
     }
     // Wave F-6: a shortlisted candidate needs screening evidence (an excluded
     // one is covered by its explicit exclusion_reason above). Grandfathered
@@ -460,13 +478,13 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       const noEvidence = targets.filter((t) => t.status === "shortlisted" && !hasScreeningEvidence(t));
       if (noEvidence.length > 0) {
         blockers.push(`스크리닝 근거가 기록되지 않은 Short List 후보 ${noEvidence.length}건 — ${noEvidence.slice(0, 3).map((t) => t.company_name).join(", ")} (후보별 근거 저장 필요)`);
-        missing.push("후보별 스크리닝 근거");
+        missing.push(blocker("s7.candidate_evidence"));
       }
     }
     const koPassed = targets.filter((t) => t.status === "shortlisted" && screeningSummary(t).knockOutsPassed);
     if (koPassed.length === 0) {
       blockers.push("knock-out 통과 후보 0건 — Target Screening 진행 KILL 기준 검토가 필요합니다");
-      missing.push("knock-out 통과 Short List");
+      missing.push(blocker("s7.knockout_shortlist"));
     }
     complete = missing.length === 0;
     return { complete, blockers, missing };
@@ -529,7 +547,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     if (resolveTrack(project.id, db).track === "brownfield") {
       if (!project.source_opportunity_id) {
         blockers.push("원 기회(source opportunity) 연결이 필요합니다");
-        missing.push("Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)");
+        missing.push(blocker("s8.business_case_per_target"));
         return { complete: false, blockers, missing };
       }
       const targets = db
@@ -541,7 +559,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         .all(project.source_opportunity_id) as Array<{ id: string; company_name: string }>;
       if (targets.length === 0) {
         blockers.push("Short List 대상이 없습니다 — S7 Short List를 확인하세요");
-        missing.push("Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)");
+        missing.push(blocker("s8.business_case_per_target"));
         return { complete: false, blockers, missing };
       }
       for (const target of targets) {
@@ -558,7 +576,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
           .get(project.id, target.id) as { id: string; inputs_json: string | null } | undefined;
         if (!model) {
           blockers.push(`대상 [${target.company_name}]의 Business Case가 필요합니다 (Short List 대상별 분석)`);
-          missing.push("Business Case(비용·수익 라인 또는 밸류에이션 — brownfield는 대상별)");
+          missing.push(blocker("s8.business_case_per_target"));
           continue;
         }
         const p50 = db
@@ -569,7 +587,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
           .get(model.id) as { bep_year: number | null } | undefined;
         if (!p50 || p50.bep_year == null || model.inputs_json == null) {
           blockers.push(`대상 [${target.company_name}]의 BEP 시점·입력 스냅샷이 필요합니다 (대상별 분석을 재생성하세요)`);
-          missing.push("BEP 시점과 시뮬레이션 입력 스냅샷");
+          missing.push(blocker("s8.bep_input_snapshot"));
         }
       }
       // ADR-0143: the recorded selection must still point at a SHORTLISTED
@@ -583,7 +601,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         .get(project.id) as { meta_json: string | null } | undefined;
       if (!selection?.meta_json) {
         blockers.push("대상 비교 분석과 사람의 대상 선정 기록이 필요합니다 (fs 진행 입력)");
-        missing.push("대상 선정 기록 (brownfield)");
+        missing.push(blocker("s8.target_selection_record"));
       } else {
         let selectedTargetId: string | null = null;
         try { selectedTargetId = (JSON.parse(selection.meta_json) as { target_id?: string }).target_id ?? null; } catch { /* malformed meta — treated as unselected */ }
@@ -593,7 +611,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
             .get(selectedTargetId, project.source_opportunity_id ?? "") as { status: string } | undefined;
           if (!sel || sel.status !== "shortlisted") {
             blockers.push("선정된 대상이 Short List에서 제외되었습니다 — 대상을 재선정하세요");
-            missing.push("대상 선정 기록 (brownfield)");
+            missing.push(blocker("s8.target_selection_record"));
           }
         }
       }
@@ -608,14 +626,14 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       .get(project.id) as { id: string; kind: string; inputs_json: string | null } | undefined;
     if (!model) {
       blockers.push("Business Case / 밸류에이션 모델이 필요합니다");
-      missing.push("Business Case(비용·수익 라인 또는 밸류에이션)");
+      missing.push(blocker("s8.business_case"));
     } else {
       const sims = (db
         .query("SELECT COUNT(*) c FROM valuation_simulation WHERE project_id = ? AND model_id = ?")
         .get(project.id, model.id) as { c: number }).c;
       if (sims === 0) {
         blockers.push("민감도가 포함된 정량 평가(시뮬레이션 NPV 분위수)가 필요합니다");
-        missing.push("시뮬레이션 NPV 분위수");
+        missing.push(blocker("s8.npv_quantiles"));
       }
       // 2026-09-18 spec update: BEP year + input snapshot are completion
       // artifacts too — both land on the latest model's p50 row / inputs_json.
@@ -624,7 +642,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         .get(project.id, model.id) as { bep_year: number | null } | undefined;
       if (!p50 || p50.bep_year == null || model.inputs_json == null) {
         blockers.push("BEP 시점과 시뮬레이션 입력 스냅샷이 필요합니다 (사업성 분석을 재생성하세요)");
-        missing.push("BEP 시점과 시뮬레이션 입력 스냅샷");
+        missing.push(blocker("s8.bep_input_snapshot"));
       }
     }
     return { complete: missing.length === 0, blockers, missing };
@@ -639,19 +657,19 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     const state = ddCompletionSummary(project.id, { targetId: null });
     if (state.total === 0 && state.unassessed === 0) {
       blockers.push("DD 체크리스트 판정이 필요합니다");
-      missing.push("DD 체크리스트 판정(필수 항목 해소)");
+      missing.push(blocker("s9.dd_checklist_judgement"));
     } else {
       if (state.unassessed > 0) {
         blockers.push(`아직 판정하지 않은 표준 체크리스트 항목 ${state.unassessed}건이 있습니다 (ADR-0148)`);
-        missing.push("DD 체크리스트 판정(필수 항목 해소)");
+        missing.push(blocker("s9.dd_checklist_judgement"));
       }
       if (state.pending > 0) {
         blockers.push(`판정 대기 체크리스트 항목 ${state.pending}건이 있습니다`);
-        missing.push("DD 체크리스트 판정(필수 항목 해소)");
+        missing.push(blocker("s9.dd_checklist_judgement"));
       }
       if (state.mandatoryUnmet > 0) {
         blockers.push(`필수 항목 미충족 ${state.mandatoryUnmet}건이 있습니다 (필수 미충족 0건 필요)`);
-        missing.push("필수 항목 해소");
+        missing.push(blocker("s9.dd_mandatory_resolved"));
       }
     }
     return { complete: missing.length === 0, blockers, missing };
@@ -669,10 +687,10 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       .get(project.id) as { id: string; four_axis_review_completed: number } | undefined;
     if (!latest) {
       blockers.push("투자구조 가설이 필요합니다");
-      missing.push("투자구조 가설(4축 검토 완료)");
+      missing.push(blocker("s10.deal_structure_hypothesis"));
     } else if (latest.four_axis_review_completed !== 1) {
       blockers.push("최신 투자구조 가설의 4축 검토(절세·책임격리·레버리지·엑싯)가 완료되지 않았습니다");
-      missing.push("투자구조 가설(4축 검토 완료)");
+      missing.push(blocker("s10.deal_structure_hypothesis"));
     }
     const fin = db
       .query(
@@ -686,7 +704,15 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       blockers.push(
         `자금조달 sources & uses 균형이 필요합니다 (조달 ${fin.sources} / 사용 ${fin.uses} 백만 KRW)`,
       );
-      missing.push("자금조달 계획(sources & uses 균형)");
+      missing.push(blocker("s10.sources_uses_balance"));
+    }
+    // ADR-0187 P3 (finding M1, flow.spec 2.16.0 S10 completionCriteria 2-4): uses
+    // reconcile to the S8 adopted investment, downside DSCR headroom, funding
+    // evidence per source. Grandfathered projects keep the legacy predicate.
+    if (!s10M1Grandfathered(db, project)) {
+      const m1 = s10M1Checks(db, project.id);
+      blockers.push(...m1.blockers, ...m1.advisories);
+      missing.push(...m1.missing);
     }
     return { complete: missing.length === 0, blockers, missing };
   },
@@ -699,11 +725,11 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     const awaiting = (gate: "entity_ic" | "group_ic") => effectiveGateVerdict(db, project.id, gate)?.awaiting === true;
     if (gateStatus.entity_ic !== "go") {
       blockers.push(awaiting("entity_ic") ? "법인 투자심의위원회 GO가 기록되었으나 다른 검토자의 승인(countersign)이 필요합니다" : "법인 투자심의위원회 승인 기록이 필요합니다");
-      missing.push("법인 투자심의위원회 승인");
+      missing.push(blocker("s11.entity_ic_approval"));
     }
     if (gateStatus.group_ic !== "go") {
       blockers.push(awaiting("group_ic") ? "그룹 투자심의위원회 GO가 기록되었으나 다른 검토자의 승인(countersign)이 필요합니다" : "그룹 투자심의위원회 승인 기록이 필요합니다");
-      missing.push("그룹 투자심의위원회 승인");
+      missing.push(blocker("s11.group_ic_approval"));
     }
     // 스펙 requiredArtifacts 정합 (flow.spec S11): 채택된 Business Case(투자심의 자료의
     // 정량 축 — latestAdoption과 동일 키: process_run s8_case_adopt/done)와
@@ -717,14 +743,14 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       .get(project.id) as { id: string } | undefined;
     if (!adoption) {
       blockers.push("채택된 Business Case가 필요합니다 (투자심의 자료 입력)");
-      missing.push("투자심의 자료(채택 Business Case)");
+      missing.push(blocker("s11.adopted_business_case"));
     }
     const charter = db
       .query("SELECT charter_json, charter_confirmed_at FROM md_project WHERE id = ?")
       .get(project.id) as { charter_json: string | null; charter_confirmed_at: string | null } | undefined;
     if (!charter?.charter_json || !charter.charter_confirmed_at) {
       blockers.push("추진계획(차터) 기준선 확정이 필요합니다");
-      missing.push("추진계획(차터) 기준선");
+      missing.push(blocker("s11.charter_baseline"));
     }
     // Wave F-6 (grandfathered projects exempt):
     //  - 사람 최종 승인(reviewer 기록): the latest GO of each IC gate must be
@@ -743,13 +769,13 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       const unreviewed = reviewers.filter((r) => !r.decided_by?.trim() || AGENT_KEYS.has(r.decided_by));
       if (unreviewed.length > 0) {
         blockers.push(`사람 최종 승인(reviewer) 기록이 필요합니다 — ${unreviewed.map((r) => r.gate).join(", ")} 진행 기록의 결정자가 사람이 아닙니다`);
-        missing.push("사람 최종 승인(reviewer 기록)");
+        missing.push(blocker("s11.human_reviewer_record"));
       }
       if (resolveTrack(project.id, db).track === "brownfield") {
         const sub = project.source_opportunity_id ? (latestRouteDecision(project.source_opportunity_id)?.sub_track ?? null) : null;
         if (pmiKickoffApplies("brownfield", sub) && !latestPmiKickoff(db, project.id)) {
           blockers.push("Brownfield PMI 킥오프 기록이 필요합니다 (통합 책임자·통합 계획 기준선 — S11 IC 승인 후 기록)");
-          missing.push("PMI 킥오프 기록 (brownfield)");
+          missing.push(blocker("s11.pmi_kickoff"));
         }
       }
     }
@@ -778,7 +804,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       const gx = executionBaselineS11Check(project.id, { otherCriteriaMet: missing.length === 0 });
       if (gx.blocks && gx.blocker) {
         blockers.push(gx.blocker);
-        missing.push(gx.requirement === "classification_conflict" ? "트랙 분류 정리 (case_type ↔ route)" : "실행 기준선 확인 (greenfield)");
+        missing.push(gx.requirement === "classification_conflict" ? blocker("s11.classification_conflict") : blocker("s11.execution_baseline"));
       }
     }
     return { complete: missing.length === 0, blockers, missing };
@@ -808,10 +834,10 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
     if (resolveTrack(project.id, db).track === "greenfield") {
       if (!latest.c) {
         blockers.push("벤처 스코어카드가 필요합니다");
-        missing.push("벤처 스코어카드");
+        missing.push(blocker("s12.venture_scorecard"));
       } else if (!isFreshReviewCycle(latest.c)) {
         blockers.push(`스코어카드 주기가 낡았습니다 (최신 ${latest.c} — 현재 분기 기준 갱신 필요)`);
-        missing.push("분기별 스코어카드 갱신");
+        missing.push(blocker("s12.scorecard_refresh"));
       }
     }
     // ADR-0150 기준 2: 최신 리뷰 주기에 사람 전환 결정이 근거(rationale)와 함께
@@ -835,11 +861,11 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
           | undefined;
       if (!decision) {
         blockers.push(`사람 전환 결정 기록이 필요합니다 (${latest.c} 주기 — venture_transition_decision)`);
-        missing.push("사람 전환 결정 기록(어휘 5종)");
+        missing.push(blocker("s12.transition_decision"));
       } else {
         if (!decision.decided_by || decision.rationale.trim() === "") {
           blockers.push("전환 결정 기록의 decided_by(venture-portfolio-ic)·근거(rationale)가 필요합니다");
-          missing.push("사람 전환 결정 기록(어휘 5종)");
+          missing.push(blocker("s12.transition_decision"));
         }
         // ADR-0150 기준 3~6 — 전환별 결정 부속 기록. 술어는 5개 전환을 모두
         // 요구하지 않는다: 기록된 결정(최신 1건)이 무엇이든 그 결정에 맞는
@@ -857,20 +883,20 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
             (decision.tranche_condition ?? "").trim() === ""
           ) {
             blockers.push(`${decision.decision} 결정의 차기 트랜치 조건(tranche_condition)이 필요합니다 (ADR-0151)`);
-            missing.push("차기 트랜치 조건(tranche_condition)");
+            missing.push(blocker("s12.tranche_condition"));
           }
           if (decision.decision === "graduate_to_core" && (decision.core_handoff ?? "").trim() === "") {
             blockers.push("핵심사업 진입 결정(graduate_to_core)의 인계 기록(core_handoff)이 필요합니다 (ADR-0151)");
-            missing.push("핵심사업 인계 기록(core_handoff)");
+            missing.push(blocker("s12.core_handoff"));
           }
           if (decision.decision === "reduce_or_divest" && (decision.divest_plan ?? "").trim() === "") {
             blockers.push("매각/청산 결정(reduce_or_divest)의 처분 계획(divest_plan)이 필요합니다 (ADR-0151)");
-            missing.push("매각/청산 계획(divest_plan)");
+            missing.push(blocker("s12.divest_plan"));
           }
         }
         if (decision.decision === "kill_with_learning_captured" && (decision.learning_capture ?? "").trim() === "") {
           blockers.push("중단 결정(kill_with_learning_captured)의 학습 포착 기록(learning_capture)이 필요합니다 — group-review-agent 기록, risk-officer가 S1/S2 기본률에 환류");
-          missing.push("학습 포착 기록(kill_with_learning_captured)");
+          missing.push(blocker("s12.learning_capture"));
         }
       }
     }
@@ -893,7 +919,7 @@ PROJECT_STAGE_COMPLETION.S8 = (args) => {
   const c = resolveWaccConfirmation(getDb(), args.project.id);
   if (c.confirmed) return base;
   const blockers = [...base.blockers, `The discount rate is not human-confirmed: ${c.missing.map((m) => WACC_MISSING_TEXT[m]).join(", ")} must be confirmed in the WACC session (neb-policy 2.2, bf-02)`];
-  const missing = [...base.missing, "WACC and hurdle IRR confirmed by a person"];
+  const missing = [...base.missing, blocker("s8.wacc_hurdle_confirmed")];
   return { complete: false, blockers, missing };
 };
 
@@ -939,13 +965,13 @@ export function establishmentS11Check(projectId: string): { blockers: string[]; 
   if (progress.mode === null) {
     return {
       blockers: ["설립 방식이 아직 정해지지 않았습니다. S10에서 설립 방식을 확정해야 합니다."],
-      missing: ["설립 방식 선택 (신규 법인 설립 / 신규 사업부 추진)"],
+      missing: [blocker("s11.establishment_mode")],
     };
   }
   if (progress.done >= 5) return { blockers: [], missing: [] };
   return progress.mode === "business_unit"
-    ? { blockers: [`사업부 신설 실행 미완료 (${progress.done}/5단계)`], missing: ["사업부 신설 실행 기록(5단계 완료)"] }
-    : { blockers: [`설립 실행 미완료 (${progress.done}/5단계)`], missing: ["설립 실행 기록(5단계 완료)"] };
+    ? { blockers: [`사업부 신설 실행 미완료 (${progress.done}/5단계)`], missing: [blocker("s11.business_unit_execution")] }
+    : { blockers: [`설립 실행 미완료 (${progress.done}/5단계)`], missing: [blocker("s11.entity_establishment_execution")] };
 }
 
 export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {

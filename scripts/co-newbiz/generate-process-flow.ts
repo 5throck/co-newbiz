@@ -1,4 +1,4 @@
-// @version 1.4.0
+// @version 1.5.0
 // Process Flow Spec → docs/process-flow.md generator (ADR-0074).
 // process/flow.spec.yaml is the SSOT; this script regenerates the markdown
 // reference. The drift test (tests/unit/process-flow.test.ts) validates the
@@ -40,6 +40,9 @@ interface Stage {
   activities: Activity[];
   requiredArtifacts: string[];
   completionCriteria: string[];
+  /** ADR-0187 P3: stable engine blocker keys with the artifacts / criteria (0-based) each covers. */
+  blockers?: Array<{ key: string; artifacts?: number[]; criteria?: number[] }>;
+  nonBlockingArtifacts?: number[];
   applicableTracks: string[];
   stateTransitions: { onComplete: string; onHold: string; onKill: string };
   gates: string[];
@@ -100,11 +103,24 @@ function stageSection(s: Stage): string {
     "**완료 기준**",
     list(s.completionCriteria),
     "",
+    blockerSection(s),
     `**적용 트랙**: ${s.applicableTracks.join(", ")}`,
     "",
     "### 게이트",
     gates.join("\n\n"),
   ].join("\n");
+}
+
+/** Engine blocker keys (ADR-0187 P3): the stable ids check-engine-spec-parity compares. */
+function blockerSection(s: Stage): string {
+  if (!s.blockers?.length) return "";
+  const cover = (label: string, idx: number[] | undefined) => (idx?.length ? `${label} ${idx.map((i) => i + 1).join(", ")}` : "");
+  const rows = s.blockers.map((b) => {
+    const covers = [cover("산출물", b.artifacts), cover("완료 기준", b.criteria)].filter(Boolean).join(" · ");
+    return `- \`${b.key}\`${covers ? ` — ${covers}` : ""}`;
+  });
+  const nb = s.nonBlockingArtifacts?.length ? [`- 비차단 산출물: ${s.nonBlockingArtifacts.map((i) => i + 1).join(", ")}`] : [];
+  return ["**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)", ...rows, ...nb, ""].join("\n");
 }
 
 function trackTag(s: Stage): string {

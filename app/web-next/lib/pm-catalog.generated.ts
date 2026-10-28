@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.15.0";
+export const SPEC_VERSION = "2.16.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "7d9e1f5161bb3c28",
-  "flowSpecYaml": "92af78ae73a83347",
+  "promptsJson": "e2b16048e2521eb6",
+  "flowSpecYaml": "fb6f97203d63907b",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -202,8 +202,8 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s3.capability_gap_draft": {
     "promptKey": "s3.capability_gap_draft",
-    "agentKey": "process-governance-manager",
-    "activityId": "strategic-fit-screening",
+    "agentKey": "greenfield-agent",
+    "activityId": "capability-register-greenfield",
     "stageId": "S3",
     "purpose": "S3 필요 역량 수준 필요도·필요 수준·보유 판정 초안",
     "trackScope": [

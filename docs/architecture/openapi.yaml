@@ -3864,6 +3864,47 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/opportunities/{id}/checklist-screening:
+    get:
+      operationId: getChecklistScreening
+      summary: "Gate checklist screening (ADR-0187 P3, finding H9) - chk-legal-regulatory (Screening gate), chk-greenfield-feasibility and chk-site-selection (Pre-FS gate): items, the latest person-recorded result per item, the compliance-engine state (mandatory item unmet = blocked; recommended never blocks) and the rollout mode (CO_NEWBIZ_CHECKLIST_CONSUMERS off|shadow|enforce)."
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordChecklistScreening
+      summary: "Record a gate checklist screening: body { checklist: chk-legal-regulatory|chk-greenfield-feasibility|chk-site-selection, items: [{ id, result: pass|fail|not_applicable, note? }] }. Analyst+, a person only (an agent persona id is rejected with 403 agent_forbidden); not_applicable needs a written reason; append-only (a new record supersedes the previous one); audited checklist_screening.record. The S4 / S5 completion predicates read the latest record."
+      tags:
+        - Deal Review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/opportunities/{id}/capability-gap:
     get:
       operationId: getCapabilityGap

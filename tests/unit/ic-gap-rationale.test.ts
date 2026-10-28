@@ -55,9 +55,9 @@ function seedS10Complete(pid: string) {
      ANALYST, NOW, "SPC 경유 구조 — 4축 검토 완료"],
   );
   db.run(
-    `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at)
-     VALUES (?,?,?,?,?,?,?)`,
-    [ulid(), pid, "source", "출자금 + AC 대출", 1000, ANALYST, NOW],
+    `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at, evidence_kind, evidence_ref)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+    [ulid(), pid, "source", "출자금 + AC 대출", 1000, ANALYST, NOW, "internal_approval", "fixture-evidence"], // ADR-0187 P3 (M1): sources carry funding evidence
   );
   db.run(
     `INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at)

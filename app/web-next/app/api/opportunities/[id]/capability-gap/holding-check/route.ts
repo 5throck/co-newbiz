@@ -12,6 +12,7 @@ import { completeDetailed, isLlmConfigured } from "../../../../../../lib/llm.ts"
 import { route } from "../../../../../../lib/route.ts";
 import { normalizeGapRows, type CapabilityGapRow } from "../../../../../../lib/capability-gap.ts";
 import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
+import { capabilityRegisterLead } from "../../../../../../lib/capability-register-lead.ts";
 import { SEARCH_ROW_CAP, type DraftMark } from "../../../../../../lib/capability-gap-necessity-draft.ts";
 import type { LlmCall } from "../../../../../../lib/llm-json.ts";
 import { runHoldingCheck } from "../../../../../../lib/capability-holding-run.ts";
@@ -103,7 +104,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 
     const call: LlmCall = async (messages, maxTokens) => {
       try {
-        const r = await completeDetailed(messages, { maxTokens, agent: promptAgent("s3.capability_gap_draft") });
+        const r = await completeDetailed(messages, { maxTokens, agent: promptAgent("s3.capability_gap_draft", { key: capabilityRegisterLead(db, id) }) });
         return { ok: true, text: r.text, finishReason: r.finishReason };
       } catch (err) {
         return { ok: false, text: "", reason: err instanceof Error ? err.message.slice(0, 80) : "call_failed" };

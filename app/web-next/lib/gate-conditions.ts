@@ -15,6 +15,7 @@ import { CLEAR_BY, openConditions, type ClearBy, type ConditionRow, type NewCond
 import { badRequest, fail } from "./envelope.ts";
 import type { IntegrityFailure } from "./gate-integrity.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
+import { blocker } from "./process-blocker-keys.ts";
 import { validateRationale } from "./rationale-check.ts";
 
 export const MAX_CONDITIONS = 20;
@@ -83,6 +84,6 @@ export function s11ConditionBlockers(projectId: string, db: Database = getDb()):
   if (open.length === 0) return { blockers: [], missing: [] };
   return {
     blockers: [`${open.length} open condition precedent(s) from the investment committee must be cleared: ${open.slice(0, 3).map((c) => c.text.slice(0, 40)).join("; ")}${open.length > 3 ? " ..." : ""}`],
-    missing: ["IC condition precedents cleared"],
+    missing: [blocker("s11.condition_precedents")],
   };
 }

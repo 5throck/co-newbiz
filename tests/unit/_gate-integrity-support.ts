@@ -25,7 +25,7 @@ export function seedS10Complete(db: Database, pid: string, by: string): void {
     [ulid(), pid, "stock", "majority", "mixed", "spc", "tax", "isolation", "leverage", "exit", by, NOW, "four-axis"],
   );
   for (const [kind, name] of [["source", "equity"], ["use", "purchase"]] as const) {
-    db.run("INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, kind, name, 1000, by, NOW]);
+    db.run("INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at, evidence_kind, evidence_ref) VALUES (?,?,?,?,?,?,?,?,?)", [ulid(), pid, kind, name, 1000, by, NOW, kind === "source" ? "internal_approval" : null, kind === "source" ? "fixture-evidence" : null]); // ADR-0187 P3 (M1): sources carry funding evidence
   }
 }
 

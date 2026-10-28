@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { dealStageHref } from "../../../../lib/deal-links.ts";
 import { DECISION_LABEL_KEY, GATE_LABEL_KEY, STAGE_STATUS_KEY } from "../../../../lib/label-keys.ts";
-import { localizeRequirement } from "../../../../lib/labels.ts";
+import { localizeBlocker } from "../../../../lib/labels.ts";
 import { RECORD_KEY, trackKeyParts, trackKeysText, resolveLabelTokens } from "../../../../lib/label-keys.ts";
 import { RawKey } from "../../../../components/RawKey.tsx";
 
@@ -88,7 +88,7 @@ function StageList({ stages, gateStatus, awaiting = [] }: { stages: StageView[];
             {s.name}
             {s.status === "current" && s.requiredArtifacts.length > 0 && (
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {t("requiredPrefix")}{s.requiredArtifacts.map((k) => (RECORD_KEY[k] ? tr(RECORD_KEY[k]) : isProseRequirement(k) ? localizeRequirement(k) : tr("common.unclassified"))).join(", ")}
+                {t("requiredPrefix")}{s.requiredArtifacts.map((k) => (RECORD_KEY[k] ? tr(RECORD_KEY[k]) : isProseRequirement(k) ? localizeBlocker(tr, k, s.id) : tr("common.unclassified"))).join(", ")}
                 {s.requiredArtifacts.some((k) => !RECORD_KEY[k] && !isProseRequirement(k)) && (
                   <RawKey parts={s.requiredArtifacts.filter((k) => !RECORD_KEY[k] && !isProseRequirement(k)).map((k) => ({ label: "", raw: k, isFallback: true }))} />
                 )}
@@ -172,7 +172,7 @@ export default function ProjectProcessPage() {
         <section aria-label={t("blockersHeading")} className="market-section">
           <h2 className="text-[length:var(--fs-body)] font-semibold mb-1">{t("blockersHeading")}</h2>
           <ul className="sizing-note-list text-[length:var(--fs-body)]">
-            {data.blockers.map((b, i) => <li key={i}>{localizeRequirement(b)}</li>)}
+            {data.blockers.map((b, i) => <li key={i}>{localizeBlocker(tr, b)}</li>)}
           </ul>
         </section>
       )}

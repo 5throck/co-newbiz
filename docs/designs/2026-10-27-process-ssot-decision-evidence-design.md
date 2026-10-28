@@ -100,7 +100,7 @@ The live database is not in the repository (production on port 7749), so DB row 
 
 - `seed-s1-s12-demo.ts`: add one failing-then-remediated checklist row, site assessment, permit candidate and incentive-with-clawback rows (after P2 schema).
 - Fixtures for brownfield JV, minority, partnership, R&BD, CVC through S12 (pairs with M17).
-- `greenfield-dd` schema: origin=internal trims to the items in D9.
+- `greenfield-dd` schema: the greenfield internal-expansion sub-tracks (existing_business_rbd, intra_venture; owner decision 2026-10-28 - NOT origin=internal) trim to the items in D9; a new-site plant keeps the full DD.
 
 ### 4.6 New validators (script-gap items)
 
@@ -170,7 +170,7 @@ Owner confirmation (2026-10-27): all nine decisions are decided exactly as recom
 | D6 | Decided (owner, 2026-10-27): (a) financial-analyst |
 | D7 | Decided (owner, 2026-10-27): (a) group IC GO before establishment |
 | D8 | Decided (owner, 2026-10-27): (a) widen portfolio-venture-monitoring applies_when |
-| D9 | Decided (owner, 2026-10-27): (b) trim to capability, financial, legal-regulatory, EHS |
+| D9 | Decided (owner, 2026-10-27): (b) trim to capability, financial, legal-regulatory, EHS. Scope clarified (owner, 2026-10-28): applies only to the greenfield internal-expansion sub-tracks (existing_business_rbd, intra_venture), not to every origin=internal project (ADR-0166 defaults every greenfield project to internal, so a new-site plant keeps the full DD) |
 
 The D2 thresholds (S10 uses within +/-5% of the S8 investment; downside DSCR headroom of at least 1.2x) are confirmed as starting values, owned by `risk-officer` + `quant-methodologist`.
 
@@ -379,3 +379,62 @@ How each P1 finding closed:
 - M17 (4): portfolio-venture-monitoring 1.3.0 (D8) covers external minority / R&BD / CVC. The (brownfield, external, jv) cell is reachable: classification is human-recorded independently of the route and `deriveOriginFromSubTrack` only defaults JV to joint. jv-lifecycle-governance 1.2.0 covers it with step 2. The S12 step scope is declared in flow.spec `procedureSteps`.
 
 Deferred, with reasons: the runtime D9 trim of the greenfield DD workspace and the origin-aware step exclusion (greenfield-subtrack.ts is authoritative; engine work, P3); a compliance-engine gate requirement for chk-legal-regulatory and machine consumers for site-selection / greenfield-feasibility (P3 stable blocker keys); executable predicates for the nine inert kill criteria (thresholds by risk-officer + quant-methodologist, design Decision 8). Needs judgement: every greenfield project defaults to origin=internal (ADR-0166), so the D9 trim reaches new-site plants as well as expansions; the owner should confirm the scope before P3 makes it effective. Policy change record: `docs/decisions/DEC-20261028-01.md`.
+
+## 13. P3 results
+
+Run on 2026-10-28 after the P3 changes (`process-ssot-check.ts` 3.0.0, flow.spec 2.16.0). Seven checks are blocking; only `check-review-coverage` (M7/M8, 55 findings) stays report-only until P4.
+
+| Validator | Finding | P2 | P3 | Mode |
+|---|---|---|---|---|
+| check-engine-spec-parity | H8 | 52 | 0 | blocking |
+| check-checklist-consumers | H9 | 0 | 0 | blocking (exemptions: chk-strategic-fit consumer only, ADR-0134) |
+| activity-agent-in-procedure | M2 | 0 | 0 | blocking |
+| check-kill-registry-parity | M4 | 0 | 0 | blocking |
+| check-stage-inputs | M9 | 0 | 0 | blocking |
+| check-review-coverage | M7/M8 | 55 | 55 | WARN until P4 |
+| check-s12-coverage | M17 | 0 | 0 | blocking |
+| check-stages-derived | M3 | 0 | 0 | blocking |
+
+### 13.1 Stable blocker keys (H8)
+
+- Every `missing` entry the engine reports goes through `blocker("<key>")` (`app/web-next/lib/process-blocker-keys.ts`): 60 keys of the form `s<stage>.<snake_case>`. The key's label is the exact string the engine has always emitted, so `gate_decision.missing_artifacts_json`, the process API payload and the STAGES mirror of flow.spec `requiredArtifacts` do not change meaning. A new engine blocker needs a key (a raw `missing.push("...")` is a finding).
+- flow.spec 2.16.0 declares `blockers:` per stage: `{ key, artifacts: [i], criteria: [j] }`, where the indices are 0-based positions in that stage's `requiredArtifacts` / `completionCriteria`. Rules checked: engine keys = spec keys per stage; each spec key exists in the registry and every registry key is emitted (no dead key); the key prefix names the stage; indices are in range; every requiredArtifact is covered by a key or listed in `nonBlockingArtifacts` (S12 "baseline variance" only - advisory by design). The spec lines are no longer compared as Korean strings.
+- i18n: each key has `processBlockers.<key>` in ko and en (`s3_synergy_assessment` form); `localizeBlocker(tr, label)` resolves a reported label through the catalog and falls back to the Korean rewriter for free-form prose. Wired into the process page, the deal stage page and the stage-frame "what is left" list.
+- H8 before/after: 52 findings (engine labels not declared, spec artifacts without an engine blocker, 2 computed labels) to 0. The S4 `chk-legal-regulatory` artifact now has its engine blocker `s4.legal_regulatory_screening`. Engine blockers that were enforced but undeclared are now declared: S8 WACC confirmation (ADR-0186 D8) and S11 condition precedents (ADR-0186 D4), as completion criteria.
+
+### 13.2 S10 checks (M1)
+
+`app/web-next/lib/s10-checks.ts`; constants `S10_USES_RECONCILIATION_TOLERANCE = 0.05` and `S10_MIN_DOWNSIDE_DSCR = 1.2` carry the D2 provenance (owner `risk-officer` + `quant-methodologist`).
+
+| Check | Blocks when | Does not block when |
+|---|---|---|
+| (a) uses reconcile to the S8 adopted investment | adopted capex total is derivable (KRW_M lines, > 0) and total uses deviate by more than 5% | not derivable (no adopted case, no capex lines, unit not KRW_M, total <= 0): a non-blocking advisory in `blockers` asks a person to reconcile |
+| (b) downside covenant headroom | the project has debt and: no simulation, no covenant tests, no DSCR test, a DSCR breach, or minimum projected DSCR < 1.2 | no `debt_instrument` row |
+| (c) funding evidence | any source row lacks `evidence_kind` or a non-blank `evidence_ref` (migration 0162 columns) | - |
+
+The investment proxy is the adopted case's capex lines (the same figure `trancheReconciliation` reconciles to). The latest covenant simulation of the project is treated as the downside run (the snapshot filler reads the same one); simulations carry no scenario tag today. Cut-over: projects whose earliest policy pin or creation is on or after 2026-10-28; earlier projects keep the legacy S10 predicate (ADR-0151 precedent). The demo seeds and the scenario deal fixture now carry source evidence; the greenfield demo plan is re-cut to the adopted case.
+
+### 13.3 D9 re-key (owner decision 2026-10-28)
+
+The trim keys on the greenfield sub-track, not on origin. ADR-0166 defaults every greenfield project to `origin=internal`, so the P2 origin predicates would also have trimmed a new-site plant. Rule: for a greenfield route whose sub-track is `existing_business_rbd` or `intra_venture` (selection active), procedure steps 9 (commercial), 12 (HR), 13 (market), 14 (financing), 15 (IP and FTO) and 16 (region labor) do not apply; steps 10 (legal-regulatory), 11 (financial), 17 (waiver) and the EHS/site steps stay. The plain route (no sub-track), an unknown value, an unassessed route and a grandfathered project (selection inactive) keep every step. Where: `greenfield-dd` 1.3.0 predicates (`none_of project.sub_track in [...]`), `greenfield-subtrack.ts` `D9_TRIMMED_STEPS` / `d9TrimApplies` (feeds `excluded_steps`), workspace overlay 1.3.0 (`applies: 'no'` for the two sub-tracks on those steps). `tests/unit/greenfield-subtrack.test.ts` keeps procedure and code equal. Recorded in ADR-0187's decision log and DEC-20261028-02.
+
+Needs judgement: "existing-site capacity expansion" has no sub-track of its own - the route model's greenfield sub-tracks are `existing_business_rbd` and `intra_venture`. Adding a dedicated expansion sub-track means widening the `route_decision.sub_track` CHECK constraint (a schema change, ADR trigger). Item-level scoping of the trimmed domains stays as the approved overlay codes it (per-row human approvals, binding items always A); P3 trims the step scope only.
+
+### 13.4 Gate consumers (H9)
+
+`app/web-next/lib/checklist-gate-consumers.ts`. The compliance engine (`db/lib/compliance.ts`) runs from the project carrier on (waivers and `compliance_check` rows are project-keyed), while the Screening and Pre-FS gates run on the opportunity; the consumers therefore apply the engine's requirement semantics in memory (mandatory item unmet = blocked, recommended = `reason_required`, never blocks) to a person-recorded ledger (`process_run`, entity opportunity; `POST /api/opportunities/:id/checklist-screening`, append-only, audited).
+
+| Checklist | Gate / stage | Engine blocker |
+|---|---|---|
+| chk-legal-regulatory | Screening / S4 | `s4.legal_regulatory_screening` |
+| chk-greenfield-feasibility | Pre-FS / S5 (greenfield) | `s5.greenfield_feasibility_checklist` |
+| chk-site-selection | Pre-FS / S5 (greenfield) | `s5.site_selection_checklist` |
+
+Rollout: `CO_NEWBIZ_CHECKLIST_CONSUMERS` = off / shadow / enforce (default shadow in production, off elsewhere, as ADR-0186). shadow shows an advisory line, enforce blocks the stage; opportunities created before 2026-10-28 are exempt. It ships off by default because no screen records the checklists yet (UI: frontend-engineer). The H9 exemptions for site-selection and greenfield-feasibility are removed; only chk-strategic-fit stays (ADR-0134).
+
+### 13.5 Other P3 items
+
+- D5 prompt rebind: `s3.capability_gap_draft` is bound to `greenfield-agent` / `S3.capability-register-greenfield`; both routes attribute the call to `brownfield-agent` once the recorded route is brownfield (`lib/capability-register-lead.ts`). pm-catalog regenerated.
+- MCP: `propose_gate_decision` covers `stage:S5:3` and `stage:S5:4`; the record write has no tool (human-only record).
+
+Deferred, with reasons: executable predicates for the nine inert kill criteria (thresholds by risk-officer + quant-methodologist, design Decision 8); a recording screen for the three checklists and a runbook for the enforce flip (frontend-engineer, sre); enabling `CO_NEWBIZ_CHECKLIST_CONSUMERS=enforce` (owner decision after the UI exists); item-level D9 scoping and a dedicated expansion sub-track (human approvals, schema ADR); H7/H11/M7 and the schema work (P4).

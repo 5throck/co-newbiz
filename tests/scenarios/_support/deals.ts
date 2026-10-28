@@ -177,8 +177,9 @@ export async function seedGreenfieldDeal(dbPath: string, analystId: string, opts
     );
     for (const [id, kind, name, amount] of [["equity", "source", "Equity", 6000], ["debt", "source", "Loan", 2000], ["plant", "use", "Plant", 6500], ["wc", "use", "Working capital", 1500]] as const) {
       db.run(
-        "INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, note, created_by, created_at) VALUES (?, ?, ?, ?, ?, 'E2E balanced plan', ?, ?)",
-        [`e2e-gf-fin-${id}`, projectId, kind, name, amount, actor, now],
+        "INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, note, created_by, created_at, evidence_kind, evidence_ref) VALUES (?, ?, ?, ?, ?, 'E2E balanced plan', ?, ?, ?, ?)",
+        // ADR-0187 P3 (M1): every source carries funding-certainty evidence.
+        [`e2e-gf-fin-${id}`, projectId, kind, name, amount, actor, now, kind === "source" ? "internal_approval" : null, kind === "source" ? `e2e-evidence/${id}` : null],
       );
     }
     const cycle = currentReviewCycle();

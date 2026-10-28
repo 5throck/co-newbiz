@@ -34,31 +34,73 @@ const proc = (
   steps: steps.map((s, i) => ({ id: String(i + 1), text: "", ...s })),
 });
 
-describe("check-engine-spec-parity (H8)", () => {
+describe("check-engine-spec-parity (H8, stable keys - ADR-0187 P3)", () => {
   const src = [
     "const X = {",
     "  S8: ({ project }) => {",
-    '    missing.push("Business Case");',
-    '    missing.push("채택 Business Case");',
+    '    missing.push(blocker("s8.business_case"));',
+    '    missing.push(blocker("s8.adopted_case"));',
     "    missing.push(...est.missing);",
     "  },",
     "};",
   ].join("\n");
-  test("undeclared engine blocker, unenforced artifact, computed label", () => {
-    const spec: FlowSpec = { stages: [{ id: "S8", requiredArtifacts: ["Business Case", "NPV"] }] };
-    const msgs = checkEngineSpecParity(spec, extractEngineBlockers(src)).map((f) => f.message);
-    expect(msgs.some((m) => m.includes('"채택 Business Case" is not a flow.spec requiredArtifact'))).toBe(true);
-    expect(msgs.some((m) => m.includes('"NPV" has no engine blocker'))).toBe(true);
-    expect(msgs.some((m) => m.includes("1 engine missing.push"))).toBe(true);
+  const registry = { keys: new Set(["s8.business_case", "s8.npv_quantiles", "s8.adopted_case"]) };
+  test("extracts keys per stage, by key prefix, from blocker() calls and blockerKey tables", () => {
+    const e = extractEngineBlockers([src, 'const T = [{ blockerKey: "s4.legal_regulatory_screening" }];']);
+    expect(e.get("S8")?.keys).toEqual(["s8.business_case", "s8.adopted_case"]);
+    expect(e.get("S4")?.keys).toEqual(["s4.legal_regulatory_screening"]);
+    expect(e.get("?")?.raw).toBe(0); // a spread of another producer's .missing is delegated, not raw
+  });
+  test("undeclared engine key, unenforced spec key, uncovered artifact, dead registry key", () => {
+    const spec: FlowSpec = {
+      stages: [
+        {
+          id: "S8",
+          requiredArtifacts: ["Business Case", "NPV"],
+          completionCriteria: ["a"],
+          blockers: [
+            { key: "s8.business_case", artifacts: [0], criteria: [0] },
+            { key: "s8.npv_quantiles", artifacts: [1, 7], criteria: [4] },
+          ],
+        },
+      ],
+    };
+    const msgs = checkEngineSpecParity(spec, extractEngineBlockers(src), registry).map((f) => f.message);
+    expect(msgs.some((m) => m.includes('engine blocker key "s8.adopted_case" is not declared'))).toBe(true);
+    expect(msgs.some((m) => m.includes('blocker key "s8.npv_quantiles" is not emitted by the engine'))).toBe(true);
+    expect(msgs.some((m) => m.includes("covers requiredArtifacts[7] which does not exist"))).toBe(true);
+    expect(msgs.some((m) => m.includes("covers completionCriteria[4] which does not exist"))).toBe(true);
+    expect(msgs.some((m) => m.includes("s8.npv_quantiles: key is defined") || m.includes("dead key"))).toBe(true);
+  });
+  test("a requiredArtifact covered by no key must be listed non-blocking", () => {
+    const e = extractEngineBlockers('const X = {\n  S12: () => {\n    missing.push(blocker("s12.venture_scorecard"));\n  },\n};');
+    const base = { id: "S12", requiredArtifacts: ["Scorecard", "Variance"], blockers: [{ key: "s12.venture_scorecard", artifacts: [0] }] };
+    const reg = { keys: new Set(["s12.venture_scorecard"]) };
+    expect(checkEngineSpecParity({ stages: [base] }, e, reg).map((f) => f.message).join("\n")).toContain("requiredArtifact[1]");
+    expect(checkEngineSpecParity({ stages: [{ ...base, nonBlockingArtifacts: [1] }] }, e, reg)).toEqual([]);
+  });
+  test("a raw label that bypasses blocker() is reported", () => {
+    const raw = 'const X = {\n  S8: () => {\n    missing.push("Business Case");\n    return { missing: ["x"] };\n  },\n};';
+    const f = checkEngineSpecParity({ stages: [] }, extractEngineBlockers(raw), { keys: new Set() });
+    expect(f.map((x) => x.message).join("\n")).toContain("2 engine missing entries bypass blocker()");
+  });
+  test("a key whose prefix names another stage is reported", () => {
+    const e = extractEngineBlockers('const X = {\n  S9: () => {\n    missing.push(blocker("s8.business_case"));\n  },\n};');
+    const spec: FlowSpec = { stages: [{ id: "S9", requiredArtifacts: [], blockers: [{ key: "s8.business_case" }] }] };
+    expect(checkEngineSpecParity(spec, e, registry).map((f) => f.message).join("\n")).toContain("does not carry the stage prefix");
   });
   test("clean", () => {
-    const clean = 'const X = {\n  S8: () => {\n    missing.push("Business Case");\n  },\n};';
+    const clean = 'const X = {\n  S8: () => {\n    missing.push(blocker("s8.business_case"));\n  },\n};';
     expect(
       checkEngineSpecParity(
-        { stages: [{ id: "S8", requiredArtifacts: ["Business Case"] }] },
+        { stages: [{ id: "S8", requiredArtifacts: ["Business Case"], completionCriteria: ["c"], blockers: [{ key: "s8.business_case", artifacts: [0], criteria: [0] }] }] },
         extractEngineBlockers(clean),
+        { keys: new Set(["s8.business_case"]) },
       ),
     ).toEqual([]);
+  });
+  test("the repository tree: every engine key is declared, covered and defined (H8 = 0)", () => {
+    expect(runAll("check-engine-spec-parity")).toEqual([]);
   });
 });
 
@@ -270,10 +312,9 @@ describe("check-s12-coverage step scope from flow.spec procedureSteps (P2)", () 
 });
 
 describe("blocking mode (P2)", () => {
-  test("parity (P3) and review coverage (P4) stay report-only; the rest block", () => {
-    expect([...BLOCKING_CHECKS].sort()).toEqual(
-      CHECK_IDS.filter((c) => c !== "check-engine-spec-parity" && c !== "check-review-coverage").sort(),
-    );
+  test("only review coverage (P4) stays report-only; parity (P3) and the rest block", () => {
+    expect([...BLOCKING_CHECKS].sort()).toEqual(CHECK_IDS.filter((c) => c !== "check-review-coverage").sort());
+    expect(isBlocking({ check: "check-engine-spec-parity", message: "" })).toBe(true);
     expect(isBlocking({ check: "check-review-coverage", message: "" })).toBe(false);
     expect(isBlocking({ check: "check-s12-coverage", message: "" })).toBe(true);
   });

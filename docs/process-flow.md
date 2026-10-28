@@ -144,6 +144,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 최신 완료 버전의 매트릭스에 경쟁 구조(집중도 요약·주요 플레이어)가 기록되었다
 - 데이터 신뢰도 등급이 기록되었다
 
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s1.market_size_growth` — 산출물 1 · 완료 기준 1
+- `s1.competitive_structure` — 산출물 2 · 완료 기준 2
+- `s1.value_chain_structure` — 산출물 3
+- `s1.data_confidence_grade` — 완료 기준 3
+
 **적용 트랙**: greenfield, brownfield
 
 ### 게이트
@@ -181,6 +187,10 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **완료 기준**
 - 최소 1개 기회가 등록되고 매력도가 평가되었다
 - 최소 1개 기회에 S1 시장규모 버전이 연결되고 대상 범위가 기록되었다 (ADR-0180 — 미연결 상태는 미연결로 정직 표시되며 게이트를 막지 않는다)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s2.attractiveness_assessment` — 산출물 1 · 완료 기준 1
+- `s2.entry_market` — 산출물 2 · 완료 기준 2
 
 **적용 트랙**: greenfield, brownfield
 
@@ -225,6 +235,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다
 - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
 - 필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s3.synergy_assessment` — 산출물 1 · 완료 기준 1
+- `s3.strategic_fit_judgement` — 산출물 2 · 완료 기준 2
+- `s3.opportunity_selected` — 완료 기준 3
+- `s3.capability_register` — 완료 기준 4
 
 **적용 트랙**: greenfield, brownfield
 
@@ -274,6 +290,14 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)
 - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
 - Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)
+- 법무·규제 스크리닝 판정(chk-legal-regulatory 필수 항목)이 사람에 의해 기록되었다 — 필수 항목은 pass 또는 사유가 있는 not_applicable이어야 하며 권장 항목은 차단하지 않는다 (ADR-0187 P3, 가족 legal_regulatory가 enforce일 때 차단)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s4.route_decision` — 산출물 1 · 완료 기준 1
+- `s4.brownfield_sub_track` — 산출물 2 · 완료 기준 1
+- `s4.five_criteria_scores` — 산출물 3 · 완료 기준 2, 3
+- `s4.alternatives_considered` — 산출물 4
+- `s4.legal_regulatory_screening` — 산출물 5 · 완료 기준 4
 
 **적용 트랙**: greenfield, brownfield
 
@@ -321,10 +345,22 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **필수 산출물**
 - 역량 격차 평가
 - 진출전략(Build/Partner/Hire/Invest 결정·근거)
+- 그린필드 실현가능성 체크리스트 판정 (chk-greenfield-feasibility gf-01~gf-12)
+- 부지 선정 체크리스트 판정 (chk-site-selection ss-01~ss-09)
 
 **완료 기준**
 - 필요 역량 대비 보유 역량 격차와 해소 방안이 기록되었다
 - 진출전략이 결정되고 검토한 대안이 기록되었다
+- 그린필드 실현가능성 체크리스트(chk-greenfield-feasibility)의 필수 항목이 사람에 의해 판정되었다 (ADR-0187 P3, 가족 checklist_consumers가 enforce일 때 차단)
+- 부지 선정 체크리스트(chk-site-selection)의 필수 항목이 사람에 의해 판정되었다 — 기존 부지 증설은 사유가 있는 not_applicable로 기록한다 (ADR-0187 P3, 가족 checklist_consumers가 enforce일 때 차단)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s5.capability_gap_register` — 완료 기준 1
+- `s5.capability_assessment` — 산출물 1 · 완료 기준 1
+- `s5.entry_strategy` — 산출물 2 · 완료 기준 2
+- `s5.alternatives_considered` — 완료 기준 2
+- `s5.greenfield_feasibility_checklist` — 산출물 3 · 완료 기준 3
+- `s5.site_selection_checklist` — 산출물 4 · 완료 기준 4
 
 **적용 트랙**: greenfield
 
@@ -363,6 +399,11 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 최소 커버리지 기준을 충족하는 Long List가 존재한다
 - Long List 후보에 필수 속성과 출처/근거가 기록되었다
 
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s6.target_universe` — 산출물 1 · 완료 기준 1
+- `s6.longlist_attributes` — 완료 기준 3
+- `s6.longlist_coverage` — 산출물 2 · 완료 기준 2
+
 **적용 트랙**: brownfield
 
 ### 게이트
@@ -400,6 +441,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
 - Short List 후보가 knock-out 스크리닝을 통과했다
 - 스크리닝 근거(evidence)가 후보별로 기록되었다
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s7.candidate_screening` — 완료 기준 1
+- `s7.candidate_verdict` — 산출물 2, 3 · 완료 기준 1
+- `s7.candidate_evidence` — 완료 기준 3
+- `s7.knockout_shortlist` — 산출물 1 · 완료 기준 2
 
 **적용 트랙**: brownfield
 
@@ -445,6 +492,15 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
 - brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)
 - brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다
+- 할인율 적용 주체와 WACC·hurdle IRR을 사람이 확인했다 (ADR-0186 D8 — 가족 wacc가 enforce일 때 차단)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s8.business_case_per_target` — 산출물 1 · 완료 기준 3
+- `s8.business_case` — 산출물 1 · 완료 기준 1
+- `s8.npv_quantiles` — 산출물 2 · 완료 기준 1
+- `s8.bep_input_snapshot` — 산출물 3 · 완료 기준 2
+- `s8.target_selection_record` — 산출물 4, 5 · 완료 기준 4
+- `s8.wacc_hurdle_confirmed` — 완료 기준 5
 
 **적용 트랙**: greenfield, brownfield
 
@@ -496,6 +552,10 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **완료 기준**
 - 적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이다
 
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s9.dd_checklist_judgement` — 산출물 1 · 완료 기준 1
+- `s9.dd_mandatory_resolved` — 산출물 1 · 완료 기준 1
+
 **적용 트랙**: greenfield, brownfield
 
 ### 게이트
@@ -531,6 +591,16 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **완료 기준**
 - 최신 투자구조 가설의 4축 검토(절세 구조·책임 격리·재무 레버리지·엑싯 구조)가 근거 아티팩트 참조와 함께 완료되었다
 - 자금조달 sources와 uses 합계가 균형을 이루고 0보다 크다
+- 자금 사용(uses) 합계가 S8에서 채택한 케이스의 투자금과 ±5% 이내로 대사된다 — 채택 투자금을 도출할 수 없으면 차단하지 않고 사람의 대사를 요구한다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)
+- 부채 조달이 있으면 다운사이드 시나리오의 DSCR 커버넌트 여력이 1.2배 이상이다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)
+- 모든 조달원(sources)에 자금 확정성 증빙(evidence_kind·evidence_ref)이 기록되었다 (ADR-0187 P3)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s10.deal_structure_hypothesis` — 산출물 1 · 완료 기준 1
+- `s10.sources_uses_balance` — 산출물 2 · 완료 기준 2
+- `s10.uses_reconcile_adopted_investment` — 완료 기준 3
+- `s10.downside_covenant_headroom` — 완료 기준 4
+- `s10.funding_evidence` — 완료 기준 5
 
 **적용 트랙**: greenfield, brownfield
 
@@ -572,6 +642,21 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 법인·그룹 투자심의위원회의 최신 GO 결정자가 사람이다 (사람 최종 승인 — grandfathered 프로젝트 제외)
 - brownfield M&A·JV·전략적 투자: 사람이 기록한 PMI 킥오프(통합 책임자·통합 계획 기준선)가 존재한다 (소수점 지분·파트너십·R&BD·CVC·기존사업 R&BD·사내벤처 제외)
 - greenfield: 실행 기준선이 사람에 의해 확인되었다 (트랙 분류 충돌은 사람이 정리 — ADR-0161)
+- 투자심의위원회가 건 선행 조건(condition precedent)이 모두 해소되었다 (ADR-0186 D4 — 가족 validators가 enforce일 때 차단)
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s11.entity_ic_approval` — 완료 기준 1
+- `s11.group_ic_approval` — 완료 기준 1
+- `s11.adopted_business_case` — 산출물 1 · 완료 기준 5
+- `s11.charter_baseline` — 산출물 2 · 완료 기준 2
+- `s11.human_reviewer_record` — 산출물 3 · 완료 기준 6
+- `s11.pmi_kickoff` — 완료 기준 7
+- `s11.establishment_mode` — 산출물 4 · 완료 기준 3
+- `s11.business_unit_execution` — 산출물 4 · 완료 기준 3
+- `s11.entity_establishment_execution` — 산출물 4 · 완료 기준 3
+- `s11.condition_precedents` — 완료 기준 9
+- `s11.classification_conflict` — 완료 기준 8
+- `s11.execution_baseline` — 완료 기준 8
 
 **적용 트랙**: greenfield, brownfield
 
@@ -628,6 +713,16 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 축소/철수 결정(reduce_or_divest)은 매각 또는 청산 계획을 기록한다
 - 중단 결정(kill_with_learning_captured)은 포착된 학습을 기록하고 S1/S2 기본률에 환류한다
 - greenfield는 각 스코어카드 주기에 S11 실행 기준선·S8 채택 케이스·S8 사업 목표(참고) 대비 차이를 보고한다
+
+**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
+- `s12.venture_scorecard` — 산출물 1 · 완료 기준 1
+- `s12.scorecard_refresh` — 산출물 1 · 완료 기준 1
+- `s12.transition_decision` — 산출물 2 · 완료 기준 2
+- `s12.tranche_condition` — 산출물 3 · 완료 기준 3
+- `s12.core_handoff` — 산출물 3 · 완료 기준 4
+- `s12.divest_plan` — 산출물 3 · 완료 기준 5
+- `s12.learning_capture` — 산출물 3 · 완료 기준 6
+- 비차단 산출물: 4
 
 **적용 트랙**: greenfield, brownfield
 
