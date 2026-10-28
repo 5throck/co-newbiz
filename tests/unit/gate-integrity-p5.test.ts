@@ -256,6 +256,24 @@ describe("re-confirmation requirement (O-6, migration 0179)", () => {
   });
 });
 
+describe("reconfirm script project reference", () => {
+  test("project_no resolves to the internal id; internal id still works; unknown and empty fail clearly", () => {
+    const pid = S.seedIcReadyProject(db, MAKER).projectId;
+    const no = (db.query("SELECT project_no FROM md_project WHERE id = ?").get(pid) as { project_no: string }).project_no;
+    const byNo = runReconfirmRequirement({ dbPath: TEST_DB_PATH, project: no, by: ADMIN, apply: true });
+    expect(byNo.applied).toBe(true);
+    expect(byNo.message).toContain(`${no} → ${pid}`);
+    expect(reconfirmStatus(db, pid)).not.toBeNull();
+    expect((db.query("SELECT project_id FROM project_reconfirm_requirement WHERE id = ?").get(byNo.id!) as { project_id: string }).project_id).toBe(pid);
+    const byId = runReconfirmRequirement({ dbPath: TEST_DB_PATH, project: pid, by: ADMIN, apply: false });
+    expect(byId.message).toContain(`${pid} → ${pid}`);
+    const unknown = runReconfirmRequirement({ dbPath: TEST_DB_PATH, project: "PRJ-ZZZZZZ", by: ADMIN, apply: true });
+    expect(unknown.applied).toBe(false);
+    expect(unknown.message).toContain("not found");
+    expect(unknown.message).toContain("project_no");
+  });
+});
+
 // ── 4. shadow review report ───────────────────────────────────────────────────────────────────────────────────
 describe("shadow review report", () => {
   test("summarises would-block and refusal rows per family / code / day / entity and reports readiness; read-only", async () => {

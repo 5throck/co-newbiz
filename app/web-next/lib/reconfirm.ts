@@ -137,6 +137,14 @@ export class ReconfirmError extends Error {
   }
 }
 
+/** Resolve a project reference (internal md_project.id or human project_no) to the internal id. Never throws; callers format the error. */
+export function resolveProjectRef(db: Database, ref: string): { ok: true; id: string; projectNo: string | null } | { ok: false; reason: "not_found" | "ambiguous" } {
+  const rows = db.query("SELECT id, project_no FROM md_project WHERE id = ? OR project_no = ?").all(ref, ref) as { id: string; project_no: string | null }[];
+  if (rows.length === 0) return { ok: false, reason: "not_found" };
+  if (rows.length > 1) return { ok: false, reason: "ambiguous" };
+  return { ok: true, id: rows[0].id, projectNo: rows[0].project_no };
+}
+
 /** Open a requirement (admin route). One open requirement per project (409 reconfirm_exists). */
 export function createRequirement(db: Database, input: { projectId: string; items: readonly string[]; reason: string; by: string; now: string }): ReconfirmRow {
   const fail = (status: IntegrityFailure["status"], code: string, message: string) => new ReconfirmError({ status, code, message });
