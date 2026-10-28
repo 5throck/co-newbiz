@@ -4,7 +4,8 @@ description: "Domestic and overseas statute, contract, and regulatory advisory. 
 model: opus
 ---
 
-<!-- GENERATED from agents/legal-counsel.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/legal-counsel.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 

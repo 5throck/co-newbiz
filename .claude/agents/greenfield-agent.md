@@ -4,7 +4,8 @@ description: "New-establishment review lead: site selection, infrastructure asse
 model: opus
 ---
 
-<!-- GENERATED from agents/greenfield-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/greenfield-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

@@ -4,7 +4,8 @@ description: "Historical financial analysis, peer benchmarking, quality-of-earni
 model: opus
 ---
 
-<!-- GENERATED from agents/financial-analyst.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/financial-analyst.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

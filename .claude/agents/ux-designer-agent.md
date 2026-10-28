@@ -4,7 +4,8 @@ description: "Screen design ownership — JTBD-driven mockups, flows, and intera
 model: sonnet
 ---
 
-<!-- GENERATED from agents/ux-designer-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/ux-designer-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

@@ -4,7 +4,8 @@ description: "Executive compensation review, employee pay-and-benefits parity an
 model: opus
 ---
 
-<!-- GENERATED from agents/hr-integration-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/hr-integration-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 

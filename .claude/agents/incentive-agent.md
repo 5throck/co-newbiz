@@ -4,7 +4,8 @@ description: "Bidirectional policy-benefit management: sourcing regional tax and
 model: sonnet
 ---
 
-<!-- GENERATED from agents/incentive-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/incentive-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 

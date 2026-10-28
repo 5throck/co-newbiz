@@ -4,7 +4,8 @@ description: "Build and deployment pipeline (Docker production on port 7749), mi
 model: sonnet
 ---
 
-<!-- GENERATED from agents/release-engineer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/release-engineer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

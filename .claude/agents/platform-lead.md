@@ -4,7 +4,8 @@ description: "Domain lead for technical. Owns nothing dispatched; reviews and co
 model: opus
 ---
 
-<!-- GENERATED from agents/platform-lead.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/platform-lead.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

@@ -4,7 +4,8 @@ description: "Group-level review distinct from entity-level review: portfolio fi
 model: opus
 ---
 
-<!-- GENERATED from agents/group-review-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/group-review-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

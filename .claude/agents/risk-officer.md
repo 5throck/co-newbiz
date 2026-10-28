@@ -4,7 +4,8 @@ description: "Red-team function. Audits for optimism bias, enforces base-rate ch
 model: opus
 ---
 
-<!-- GENERATED from agents/risk-officer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/risk-officer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

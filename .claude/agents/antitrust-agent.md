@@ -4,7 +4,8 @@ description: "Antitrust and merger-control review: market definition, HHI calcul
 model: opus
 ---
 
-<!-- GENERATED from agents/antitrust-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/antitrust-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 

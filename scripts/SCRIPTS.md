@@ -56,6 +56,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 
 | script | source | version | status | removal-date | security-advisory | layer | pair |
 |--------|--------|---------|--------|--------------|-------------------|-------|------|
+| `sync-agent-mirrors.ts` | L0 | 1.1.0 | active | —| —| L2-only | —|
 | `agent-create.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `skill-session-review.ts` | L0 | 1.2.0 | active | `--date`, `--json`, `--dry-run` | —| L0+L1 | —|
 | `design-lint.ts` | L0 | 2.3.0 | active | —| —| L0+L1 | —|

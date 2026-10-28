@@ -4,7 +4,8 @@ description: "Domain lead for industry, owning the industry profile system used 
 model: opus
 ---
 
-<!-- GENERATED from agents/industry-lead.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/industry-lead.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

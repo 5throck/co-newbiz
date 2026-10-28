@@ -4,7 +4,8 @@ description: "Patent and IP advisory: patent landscape, freedom-to-operate, IP v
 model: sonnet
 ---
 
-<!-- GENERATED from agents/ip-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/ip-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 
