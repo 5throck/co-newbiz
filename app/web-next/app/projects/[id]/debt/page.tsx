@@ -2,13 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { S10Frame } from "../../../../components/stages/S10Frame.tsx";
 import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import { ColGroup, PageState, useToast } from "../../../../components/ui.tsx";
+import { useConfirm } from "../../../../components/crud.tsx";
 
-// 차입 6열 — 대출기관·커버넌트·담보 텍스트에 여유, 수치·날짜는 좁게.
-const DEBT_COL_PCT = [20, 13, 13, 11, 22, 21] as const;
+// 차입 7열(관리 열 포함) — 대출기관·커버넌트·담보 텍스트에 여유, 수치·날짜는 좁게.
+const DEBT_COL_PCT = [17, 11, 12, 11, 20, 17, 12] as const;
 // 커버넌트 여력 표 6열 — ColGroup 고정 % (R10 table-sizing).
 const COV_HEADROOM_COL_PCT = [22, 12, 14, 18, 14, 20] as const;
 import { useAuth } from "../../../../lib/auth-client.tsx";
@@ -35,8 +36,12 @@ function DebtView() {
   const [rows, setRows] = useState<Instrument[] | null>(null);
   const [headroom, setHeadroom] = useState<Headroom | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", amortization: "annuity", covenant_json: "" });
+  const EMPTY_FORM = { lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", amortization: "annuity", covenant_json: "", security: "", seniority: "" };
+  const [form, setForm] = useState(EMPTY_FORM);
+  // 수정 중인 차입 id — null이면 신규 등록 모드 (같은 폼·같은 단일 주 버튼을 재사용).
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
   // 시나리오 계산 입력 — 명시적 가정(사용자 입력)이며 저장되지 않는다.
   // 산식: 연간 상환액 = 연금공식(원금, 금리, 잔존기간) / DSCR = 현금흐름 ÷ 상환액.
   const [scenarioCf, setScenarioCf] = useState("");
@@ -49,21 +54,56 @@ function DebtView() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
-  async function create(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy || !form.principal || !form.rate) return;
     setBusy(true);
+    const payload = {
+      lender: form.lender.trim() || undefined, principal: Number(form.principal),
+      rate: Number(form.rate), rate_type: form.rate_type,
+      maturity: form.maturity.trim() || undefined, amortization: form.amortization || undefined,
+      covenant_json: form.covenant_json.trim() || undefined,
+      security: form.security.trim() || undefined, seniority: form.seniority.trim() || undefined,
+    };
+    const base = `/api/projects/${encodeURIComponent(id)}/debt`;
     try {
-      await api.post(`/api/projects/${encodeURIComponent(id)}/debt`, {
-        lender: form.lender.trim() || undefined, principal: Number(form.principal),
-        rate: Number(form.rate), rate_type: form.rate_type,
-        maturity: form.maturity.trim() || undefined, amortization: form.amortization, covenant_json: form.covenant_json.trim() || undefined,
-      });
-      toast(t("created"));
-      setForm({ ...form, lender: "", principal: "", rate: "", maturity: "", covenant_json: "" });
+      if (editingId) {
+        await api.put(`${base}/${encodeURIComponent(editingId)}`, payload);
+        toast(t("updated"));
+      } else {
+        await api.post(base, payload);
+        toast(t("created"));
+      }
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+      setError(null);
       load();
-    } catch (err) { setError(err instanceof Error ? err.message : tc("errors.createFailed")); }
+    } catch (err) { setError(err instanceof Error ? err.message : editingId ? t("updateFailed") : tc("errors.createFailed")); }
     finally { setBusy(false); }
+  }
+
+  function startEdit(r: Instrument) {
+    setEditingId(r.id);
+    setForm({
+      lender: r.lender ?? "", principal: String(r.principal), rate: String(r.rate), rate_type: r.rate_type,
+      maturity: r.maturity ?? "", amortization: r.amortization ?? "", covenant_json: r.covenant_json ?? "",
+      security: r.security ?? "", seniority: r.seniority ?? "",
+    });
+    document.getElementById("debt-register-form")?.scrollIntoView?.({ block: "center" });
+  }
+  function cancelEdit() { setEditingId(null); setForm(EMPTY_FORM); }
+
+  function remove(r: Instrument) {
+    confirm(t("deleteConfirmTitle"), () => {
+      void (async () => {
+        try {
+          await api.delete(`/api/projects/${encodeURIComponent(id)}/debt/${encodeURIComponent(r.id)}`);
+          toast(t("deleted"));
+          if (editingId === r.id) cancelEdit();
+          load();
+        } catch (e) { toast(e instanceof Error ? t("deleteFailedWith", { message: e.message }) : tc("errors.deleteFailed")); }
+      })();
+    }, { body: t("deleteConfirmBody", { name: r.lender ?? t("fallbackLender"), principal: r.principal }), confirmLabel: tc("delete") });
   }
 
   // covenant_json 파싱 — 표시 형식("DSCR >= 1.3 · NetLev <= 3.5x")과 JSON 형식 모두 수용.
@@ -103,8 +143,8 @@ function DebtView() {
 
   return (
     <main>
-      <StageTabs projectId={id} />
-      <h1>{t("heading")}{" "}<span className="note">{t("headingSuffix")}</span></h1>
+      <S10Frame projectId={id} />
+      <h2>{t("heading")} {t("headingSuffix")}</h2>
       <p className="objective">{t("objective")}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label={t("listSectionAria")}>
@@ -115,7 +155,7 @@ function DebtView() {
             <table className="data-table table-fixed-pct tmin-48" aria-label={t("tableAria")}>
               <caption className="sr-only">{t("tableAria")}</caption>
               <ColGroup widths={DEBT_COL_PCT} />
-              <thead><tr><th>{t("thLender")}</th><th className="col-num">{t("thPrincipal")}</th><th>{t("thRate")}</th><th>{t("thMaturity")}</th><th>{t("thCovenant")}</th><th>{t("thSecurity")}</th></tr></thead>
+              <thead><tr><th>{t("thLender")}</th><th className="col-num">{t("thPrincipal")}</th><th>{t("thRate")}</th><th>{t("thMaturity")}</th><th>{t("thCovenant")}</th><th>{t("thSecurity")}</th><th>{t("thManage")}</th></tr></thead>
               <tbody>{rows.map((r) => (
                 <tr key={r.id}>
                   <td className="font-semibold">{r.lender ?? "—"}</td>
@@ -124,14 +164,51 @@ function DebtView() {
                   <td className="tabular-nums" title={r.amortization ? t("amortTitle", { value: r.amortization }) : undefined}>{r.maturity ?? "—"}{r.amortization ? <span className="note"> · {r.amortization}</span> : null}</td>
                   <td className="text-[length:var(--fs-caption)]">{r.covenant_json ?? "—"}</td>
                   <td className="text-[length:var(--fs-caption)]">{[r.security, r.seniority].filter(Boolean).join(" · ") || "—"}</td>
+                  <td>{canAct && (
+                    <span className="flex flex-wrap gap-1">
+                      <button type="button" className="btn-ghost btn-sm" aria-label={t("editAria", { name: r.lender ?? t("fallbackLender") })} onClick={() => startEdit(r)}>{tc("edit")}</button>
+                      <button type="button" className="btn-danger btn-sm" aria-label={t("deleteAria", { name: r.lender ?? t("fallbackLender") })} onClick={() => remove(r)}>{tc("delete")}</button>
+                    </span>
+                  )}</td>
                 </tr>
               ))}</tbody>
             </table>
           </div>
         )}
       </section>
+      {canAct && (
+        <section className="market-section" aria-label={t("registerSectionAria")}>
+          <h2 className=" mb-2">{editingId ? t("editHeading") : t("registerHeading")}</h2>
+          <form id="debt-register-form" className="sizing-new-form" onSubmit={submit} aria-label={editingId ? t("editHeading") : t("registerHeading")}>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-[length:var(--fs-caption)] w-[11rem]"><span className="block mb-1">{t("lblLender")}</span>
+                <input className="sizing-new-input sizing-new-input-sm w-full" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
+              <label className="text-[length:var(--fs-caption)] w-[9rem]"><span className="block mb-1">{t("lblPrincipal")}</span>
+                <input type="number" className="sizing-new-input sizing-new-input-sm w-full" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblRateType")}</span>
+                <select className="sizing-new-input sizing-new-input-sm w-full" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">{t("rateFixed")}</option><option value="floating">{t("rateFloating")}</option></select></label>
+              <label className="text-[length:var(--fs-caption)] w-[7rem]"><span className="block mb-1">{t("lblRate")}</span>
+                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm w-full" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} required /></label>
+              <label className="text-[length:var(--fs-caption)] w-[9rem]"><span className="block mb-1">{t("lblMaturity")}</span>
+                <input className="sizing-new-input sizing-new-input-sm w-full" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder={t("phMaturity")} /></label>
+              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">{t("lblAmortization")}</span>
+                <select className="sizing-new-input sizing-new-input-sm w-full" value={form.amortization} onChange={(e) => setForm({ ...form, amortization: e.target.value })}>{form.amortization && !["annuity", "equal_principal", "bullet"].includes(form.amortization) && <option value={form.amortization}>{form.amortization}</option>}<option value="annuity">{t("amortAnnuity")}</option><option value="equal_principal">{t("amortEqualPrincipal")}</option><option value="bullet">{t("amortBullet")}</option></select></label>
+              <button type="submit" className="btn-primary" disabled={busy}>{busy ? (editingId ? tc("saving") : tc("registering")) : editingId ? tc("save") : tc("register")}</button>
+              {editingId && <button type="button" className="btn-ghost" onClick={cancelEdit}>{tc("cancel")}</button>}
+            </div>
+            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">{t("lblCovenant")}</span>
+              <input className="sizing-new-input w-full" value={form.covenant_json} onChange={(e) => setForm({ ...form, covenant_json: e.target.value })} placeholder={t("phCovenant")} /></label>
+            <div className="flex flex-wrap items-end gap-2 mt-2">
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblSecurity")}</span>
+                <input className="sizing-new-input w-full" value={form.security} onChange={(e) => setForm({ ...form, security: e.target.value })} /></label>
+              <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblSeniority")}</span>
+                <input className="sizing-new-input w-full" value={form.seniority} onChange={(e) => setForm({ ...form, seniority: e.target.value })} /></label>
+            </div>
+          </form>
+        </section>
+      )}
       <section className="market-section" aria-label={t("headroomSectionAria")} data-testid="covenant-headroom">
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("headroomHeading")} <span className="note">{t("headroomNote")}</span></h2>
+        <h2 className=" mb-2">{t("headroomHeading")} <span className="note">{t("headroomNote")}</span></h2>
         {headroom === null ? <PageState state="loading" /> : headroom.status === "insufficient_evidence" ? (
           <PageState state="empty" emptyText={headroom.reason === "no_debt" ? t("headroomNoDebt") : (headroom.message ?? t("headroomNoSim"))} />
         ) : (
@@ -154,20 +231,20 @@ function DebtView() {
           </div>
         )}
         {headroom?.dscr?.scenario && headroom.dscr.min_dscr !== null && (
-          <p className="note" data-testid="dscr-basis" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
+          <p className="note mt-2" data-testid="dscr-basis">
             {t("headroomBasis", { scenario: headroom.dscr.scenario === "downside" ? t("basisDownside") : t("basisBase"), min: headroom.dscr.min_dscr })}
           </p>
         )}
-        {(headroom?.dscr?.advisories ?? []).map((a) => <p key={a} className="note" style={{ margin: "4px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{a}</p>)}
-        <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{t("headroomFootnote")}</p>
+        {(headroom?.dscr?.advisories ?? []).map((a) => <p key={a} className="note mt-1">{a}</p>)}
+        <p className="note mt-2">{t("headroomFootnote")}</p>
       </section>
-      <section className="market-section" aria-label={t("scenarioSectionAria")} style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("scenarioHeading")} <span className="note">{t("scenarioNote")}</span></h2>
-        <div className="form-grid" style={{ marginBottom: 8 }}>
+      <section className="market-section" aria-label={t("scenarioSectionAria")}>
+        <h2 className=" mb-2">{t("scenarioHeading")} <span className="note">{t("scenarioNote")}</span></h2>
+        <div className="form-grid mb-2">
           <label className="text-[length:var(--fs-caption)] w-[12rem]"><span className="block mb-1">{t("scenarioCfLabel")}</span>
             <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder={t("scenarioCfPlaceholder")} /></label>
           <span className="note">{t("stressNote")}</span>
-          <label className="text-[length:var(--fs-caption)] flex items-center gap-1" style={{ marginBottom: 4 }}><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> {t("stressLabel")}</label>
+          <label className="text-[length:var(--fs-caption)] flex items-center gap-1 mb-1"><input type="checkbox" checked={stress} onChange={(e) => setStress(e.target.checked)} /> {t("stressLabel")}</label>
         </div>
         {rows && rows.length > 0 && scenarioCf && Number(scenarioCf) > 0 ? (
           <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
@@ -194,37 +271,14 @@ function DebtView() {
             </table>
           </div>
         ) : (
-          <p className="note" style={{ margin: 0 }}>{t("scenarioHint")}</p>
+          <p className="note">{t("scenarioHint")}</p>
         )}
-        <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
+        <p className="note mt-2">
           {t("scenarioDisclaimer")}
         </p>
       </section>
 
-      {canAct && (
-        <section className="market-section" aria-label={t("registerSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("registerHeading")}</h2>
-          <form className="sizing-new-form" onSubmit={create}>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblLender")}</span>
-                <input className="sizing-new-input sizing-new-input-sm" value={form.lender} onChange={(e) => setForm({ ...form, lender: e.target.value })} /></label>
-              <label className="text-[length:var(--fs-caption)] w-[8rem]"><span className="block mb-1">{t("lblPrincipal")}</span>
-                <input type="number" className="sizing-new-input sizing-new-input-sm" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblRateType")}</span>
-                <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">{t("rateFixed")}</option><option value="floating">{t("rateFloating")}</option></select></label>
-              <label className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">{t("lblRate")}</span>
-                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} required /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblMaturity")}</span>
-                <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06 / 5년" /></label>
-              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblAmortization")}</span>
-                <select className="sizing-new-input sizing-new-input-sm" value={form.amortization} onChange={(e) => setForm({ ...form, amortization: e.target.value })}><option value="annuity">{t("amortAnnuity")}</option><option value="equal_principal">{t("amortEqualPrincipal")}</option><option value="bullet">{t("amortBullet")}</option></select></label>
-              <button type="submit" className="btn-primary" disabled={busy}>{busy ? tc("registering") : tc("register")}</button>
-            </div>
-            <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">{t("lblCovenant")}</span>
-              <input className="sizing-new-input w-full" value={form.covenant_json} onChange={(e) => setForm({ ...form, covenant_json: e.target.value })} placeholder="DSCR >= 1.3 · NetLev <= 3.5x" /></label>
-          </form>
-        </section>
-      )}
+      {confirmDialog}
     </main>
   );
 }

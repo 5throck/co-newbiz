@@ -17,7 +17,7 @@ export default function ProjectWaccPage() {
   return (
     <main className="market-page">
       <StageTabs projectId={projectId} />
-      <StageFrame stageId="S8" heading={t("heading")}>
+      <StageFrame stageId="S8" subtitle={t("heading")}>
         <WaccPanel projectId={projectId} />
       </StageFrame>
     </main>

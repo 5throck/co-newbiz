@@ -524,7 +524,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
       <StageFrame
         stageId="S8"
-        heading={greenfield ? t("s8BusinessCaseValuation") : t("s8BusinessCaseValuationComparison")}
+        subtitle={greenfield ? t("s8BusinessCaseValuation") : t("s8BusinessCaseValuationComparison")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* The jump chip is the 결정 tab's shortcut — hidden when already there (IA cleanup 2026-10-14). */}

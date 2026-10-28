@@ -282,7 +282,7 @@ describe("S8 greenfield single-perspective wording", () => {
   const method = read("components/business-case/ValuationMethodology.tsx");
   test("greenfield branches replace the dual-perspective wording", () => {
     expect(stage).toContain('t("s8BusinessCaseValuation")');
-    expect(koOf("stages.s8.stage.s8BusinessCaseValuation")).toBe("S8 사업성 분석 — 시장 기반 밸류에이션");
+    expect(koOf("stages.s8.stage.s8BusinessCaseValuation")).toBe("시장 기반 밸류에이션");
     expect(stage).toContain('t("marketBasis3Scenarios")');
     expect(koOf("stages.s8.stage.marketBasis3Scenarios")).toBe("자동 생성 (시장 기반 × 3 시나리오)");
     expect(stage).toContain('t("whatTheEvaluationPerspectiveMeans")');
@@ -294,7 +294,7 @@ describe("S8 greenfield single-perspective wording", () => {
   });
   test("Brown Field keeps the dual-perspective wording", () => {
     expect(stage).toContain('t("s8BusinessCaseValuationComparison")');
-    expect(koOf("stages.s8.stage.s8BusinessCaseValuationComparison")).toBe("S8 사업성 분석 — 이중 관점 밸류에이션 비교");
+    expect(koOf("stages.s8.stage.s8BusinessCaseValuationComparison")).toBe("이중 관점 밸류에이션 비교");
     expect(stage).toContain('t("marketPastBasis3Scenarios")');
     expect(stage).toContain('t("whatTheTwoPerspectivesMean")');
     expect(koOf("stages.s8.stage.whatTheTwoPerspectivesMean")).toBe("두 관점의 의미");

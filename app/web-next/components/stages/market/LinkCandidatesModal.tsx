@@ -16,7 +16,7 @@ export function LinkCandidatesModal({ ctx }: { ctx: MarketAnalysisStageState }) 
             aria-label={t("selectLinkedIndustriesValueChain")}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-[length:var(--fs-body)] mb-1">
+            <h2 className=" mb-1">
               {linkModal.rerunAnalysisId ? t("selectLinkedIndustriesValueChain2") : t("linkedIndustryPreviewValueChain")} — <span className="font-semibold">{linkModal.primaryName}</span>
             </h2>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">

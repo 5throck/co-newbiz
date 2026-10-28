@@ -20,7 +20,7 @@ export function ProfileReport({ ctx, openMember }: { ctx: OurCompanyStageState; 
         return (
           <>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <h2 className="text-[length:var(--fs-body)] !mb-0">{profile.companyName} {t("profile")}</h2>
+              <h2 className=" !mb-0">{profile.companyName} {t("profile")}</h2>
               {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
               {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">{tc("externalResearch")} {profile.dataSources!.webResearchCount}{tc("countUnit")}</span>}
               {hasAnalystEvidence(profile) && <AnalystEvidenceChip />}

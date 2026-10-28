@@ -25,6 +25,7 @@ import { CapexTrancheTable } from "./CapexTrancheTable.tsx";
 import { useConfirm } from "../crud.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { EstablishmentModePanel } from "./EstablishmentModePanel.tsx";
+import { useS10Subtitle } from "./S10Frame.tsx";
 import { useTranslations } from "next-intl";
 import {
   BUSINESS_UNIT_FORMS, BUSINESS_UNIT_FORM_LABEL, BUSINESS_UNIT_NO_ISOLATION_NOTE, withBusinessUnitForm,
@@ -141,6 +142,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
   const [modeState, setModeState] = useState<ModeState | null>(null);
   const [buForm, setBuForm] = useState<BusinessUnitForm | "">("");
   const isBu = isGf && modeState?.active_mode === "business_unit";
+  const s10Heading = useS10Subtitle(isGf, isBu);
   const [recoLoading, setRecoLoading] = useState(false);
   const [recoError, setRecoError] = useState<string | null>(null);
 
@@ -255,7 +257,7 @@ export function DealStructureStage({ projectId, embedded }: { projectId: string;
           아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
       <StageFrame
         stageId="S10"
-        heading={isGf ? t("s10P1P2ReviewFunding", { p1: tr(GF_HEADING_KEY.s10Stage), p2: isBu ? tc("newDivisionForm") : tc("establishedEntityForm") }) : t("s10InvestmentStructureDesignInvesting")}
+        subtitle={s10Heading}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* 3차 사용자 리포트: 종료… 제외 모든 컨트롤이 한 줄 — 검토 버킷과 1차 액션도

@@ -138,6 +138,9 @@ interface FrameParts {
   objIdx: number;
   stripIdx: number;
   railIdx: number;
+  /** End of the head block: the head div, or the subtitle paragraph that may follow it. */
+  afterHead: number;
+  subtitle: string | null;
 }
 
 /** Render one screen and locate the frame segments. Throws with the head of
@@ -149,12 +152,21 @@ function renderScreen(name: string, el: unknown): FrameParts {
   const h1Idx = html.indexOf("<h1", headIdx);
   const h1Close = html.indexOf("</h1>", h1Idx);
   const headClose = html.indexOf("</div>", h1Close);
-  const objIdx = html.indexOf("<p", headClose);
+  // An optional screen-title subtitle paragraph sits directly under the head (never a second h1).
+  let afterHead = headClose + "</div>".length;
+  let subtitle: string | null = null;
+  const subIdx = html.indexOf("<p", headClose);
+  if (subIdx >= 0 && html.slice(subIdx, html.indexOf(">", subIdx)).includes('data-testid="stage-subtitle"')) {
+    const subClose = html.indexOf("</p>", subIdx);
+    subtitle = html.slice(html.indexOf(">", subIdx) + 1, subClose);
+    afterHead = subClose + "</p>".length;
+  }
+  const objIdx = html.indexOf("<p", afterHead);
   const objClose = html.indexOf("</p>", objIdx);
   const stripIdx = html.indexOf(STRIP, objClose);
   const stripClose = html.indexOf("</details>", stripIdx);
   const railIdx = html.indexOf(RAIL, stripClose);
-  return { html, headIdx, h1Idx, objIdx, stripIdx, railIdx };
+  return { html, headIdx, h1Idx, objIdx, stripIdx, railIdx, afterHead, subtitle };
 }
 
 function h1Text(p: FrameParts): string {
@@ -163,9 +175,7 @@ function h1Text(p: FrameParts): string {
 
 /** The full head order contract for one rendered screen. */
 function expectHeadOrder(label: string, p: FrameParts, expectTabs: boolean): void {
-  const { html, headIdx, h1Idx, objIdx, stripIdx, railIdx } = p;
-  const h1Close = html.indexOf("</h1>", h1Idx);
-  const headClose = html.indexOf("</div>", h1Close);
+  const { html, headIdx, h1Idx, objIdx, stripIdx, railIdx, afterHead } = p;
   const objClose = html.indexOf("</p>", objIdx);
   const stripClose = html.indexOf("</details>", stripIdx);
   const breaks: string[] = [];
@@ -174,7 +184,7 @@ function expectHeadOrder(label: string, p: FrameParts, expectTabs: boolean): voi
   if (html.indexOf("<h1") !== h1Idx) breaks.push("the frame h1 is not the document's first h1");
   if (html.slice(headIdx + HEAD.length, h1Idx).trim() !== "") breaks.push("h1 is not the stage-head's first child");
   // Objective paragraph directly after the head…
-  if (html.slice(headClose + "</div>".length, objIdx).trim() !== "")
+  if (html.slice(afterHead, objIdx).trim() !== "")
     breaks.push("objective is not directly after the head");
   // …strip directly after the objective…
   if (html.slice(objClose + "</p>".length, stripIdx).trim() !== "")
@@ -226,7 +236,7 @@ describe("deal stage screens S1-S7 — head order on both seeded carriers", () =
       path: `/deals/${opp}/s3`,
       el: createElement(StageFrame, {
         stageId: "S3",
-        heading: koOf("pages.dealStage.s3CompanyHeading"),
+        subtitle: koOf("pages.dealStage.s3CompanyHeading"),
         children: koOf("pages.dealStage.s3CompanyGuidance"),
       }),
     },
@@ -254,7 +264,7 @@ describe("deal stage screens S1-S7 — head order on both seeded carriers", () =
       el: createElement(StageFrame, {
         stageId: ["S6", "S7"],
         track: carrierTrack,
-        heading: koOf("pages.dealStage.s67Heading"),
+        subtitle: koOf("pages.dealStage.s67Heading"),
         children: koOf("pages.dealStage.s67GuidancePre"),
       }),
     },
@@ -283,11 +293,27 @@ describe("deal stage screens S1-S7 — head order on both seeded carriers", () =
     route = { path: `/deals/${bf.opportunityId}/s6`, params: { id: bf.opportunityId } };
     const p = renderScreen(
       "S6·S7",
-      createElement(StageFrame, { stageId: ["S6", "S7"], heading: koOf("pages.dealStage.s67Heading") }),
+      createElement(StageFrame, { stageId: ["S6", "S7"], subtitle: koOf("pages.dealStage.s67Heading") }),
     );
-    const h1 = h1Text(p);
-    expect(h1).toContain("S6");
-    expect(h1).toContain("S7");
+    // The current path (/s6) singles out S6: the h1 is that stage's canonical label, never the subtitle.
+    expect(h1Text(p)).toContain("S6 대상 후보 발굴");
+    expect(p.subtitle).toBe(koOf("pages.dealStage.s67Heading"));
+  }, 60_000);
+
+  test("h1 is the canonical stage label; the screen title renders as a subtitle, not an h1", () => {
+    route = { path: `/deals/${bf.opportunityId}/s3`, params: { id: bf.opportunityId } };
+    const p = renderScreen(
+      "S3 company",
+      createElement(StageFrame, { stageId: "S3", subtitle: koOf("pages.dealStage.s3CompanyHeading") }),
+    );
+    expect(h1Text(p).endsWith(">S3 시너지·전략적 적합성")).toBe(true);
+    expect(p.subtitle).toBe(koOf("pages.dealStage.s3CompanyHeading"));
+    expect(p.html.match(/<h1/g)?.length).toBe(1);
+    expect(p.subtitle ?? "").not.toMatch(/^S\d/);
+    // Composite frame with no single-stage path shows both canonical labels.
+    route = { path: `/brownfield/targets/x`, params: { id: "x" } };
+    const c = renderScreen("composite", createElement(StageFrame, { stageId: ["S6", "S7"], subtitle: "후보 상세" }));
+    expect(h1Text(c)).toContain("S6 대상 후보 발굴 · S7 대상 선정");
   }, 60_000);
 });
 
@@ -335,7 +361,7 @@ describe("project stage screens S8-S12 — head order + StageTabs in the rail sl
     expect(bfH1).toContain("S8");
     expect(gfH1).toBe(bfH1);
     const src = readFileSync(join(WEB, "components/stages/BusinessCaseStage.tsx"), "utf8");
-    expect(src).toContain("heading={greenfield ? t(");
+    expect(src).toContain("subtitle={greenfield ? t(");
   }, 120_000);
 });
 
@@ -376,6 +402,15 @@ describe("stage-screen wiring lock (static source)", () => {
       expect(crumbIdx).toBeGreaterThanOrEqual(0);
       expect(crumbIdx).toBeLessThan(frameIdx);
     }
+  });
+
+  test("deal route S8-S12 hands off to the canonical /projects screen; no strip renders outside <main>", () => {
+    const src = read("app/deals/[id]/[stage]/page.tsx");
+    const s8 = src.slice(src.indexOf('if (stageId === "S8"'), src.indexOf("return <StageGuidanceTab"));
+    expect(s8).not.toContain("DealEntryMarketStrip");
+    expect(s8).toContain("<ProjectStageTab");
+    expect(src).toContain("router.replace(`/projects/");
+    for (const seg of ["business-case", "dd", "deal-structure", "ic-review", "portfolio"]) expect(src).toContain(`"${seg}"`);
   });
 
   test("S1 mounts its own frame (documented exception); the flat /market route stays a frame-free stub", () => {

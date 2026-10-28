@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-28T21:58:06.370Z
+**Generated**: 2026-10-28T22:59:45.277Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-27 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-27 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-27 |
-| i18n-specialist | agents/i18n-specialist.md | medium | claude-sonnet-5-5 | 2026-10-27 |
+| i18n-specialist | agents/i18n-specialist.md | medium | claude-sonnet-5-5 | 2026-10-28 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-27 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-10-27 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-27 |
@@ -47,7 +47,7 @@
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-28 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-10-27 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-10-27 |
-| pm | agents/pm.md | medium | inherit | 2026-10-27 |
+| pm | agents/pm.md | medium | inherit | 2026-10-28 |
 | pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-10-27 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-27 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-27 |

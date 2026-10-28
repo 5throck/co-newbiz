@@ -170,7 +170,7 @@ export default function ProjectProcessPage() {
 
       {data.blockers.length > 0 && (
         <section aria-label={t("blockersHeading")} className="market-section">
-          <h2 className="text-[length:var(--fs-body)] font-semibold mb-1">{t("blockersHeading")}</h2>
+          <h2 className=" font-semibold mb-1">{t("blockersHeading")}</h2>
           <ul className="sizing-note-list text-[length:var(--fs-body)]">
             {data.blockers.map((b, i) => <li key={i}>{localizeBlocker(tr, b)}</li>)}
           </ul>
@@ -178,13 +178,13 @@ export default function ProjectProcessPage() {
       )}
 
       <section aria-label={t("projectStagesAria")} className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold">{t("projectStagesHeading")}</h2>
+        <h2 className=" font-semibold">{t("projectStagesHeading")}</h2>
         <StageList stages={stagesWithGates} gateStatus={data.gateStatus} awaiting={data.awaitingCountersign} />
       </section>
 
       {data.opportunity && (
         <section aria-label={t("opportunityStagesAria")} className="market-section">
-          <h2 className="text-[length:var(--fs-body)] font-semibold">
+          <h2 className=" font-semibold">
             {t("opportunityStagesHeading")} <a className="text-[color:var(--accent)] underline text-[length:var(--fs-caption)]" href={dealStageHref(data.opportunity.id, opportunityStages?.find((s) => s.status === "current")?.id)}>{t("opportunityLink")}</a>
           </h2>
           <StageList stages={opportunityStages ?? []} gateStatus={data.opportunity.gateStatus} />

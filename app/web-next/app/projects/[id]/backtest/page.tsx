@@ -91,7 +91,7 @@ function BacktestView() {
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
 
       <section className="market-section" aria-label={t("biasHeading")} data-testid="backtest-bias">
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("biasHeading")} <span className="note">{t("biasNote")}</span></h2>
+        <h2 className=" mb-2">{t("biasHeading")} <span className="note">{t("biasNote")}</span></h2>
         {org === null || bias === null ? <PageState state="loading" /> : (
           <ul className="sizing-note-list">
             <li>
@@ -136,7 +136,7 @@ function BacktestView() {
       </section>
 
       <section className="market-section" aria-label={t("proposalsHeading")} data-testid="confidence-proposals">
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("proposalsHeading")} <span className="note">{t("proposalsNote")}</span></h2>
+        <h2 className=" mb-2">{t("proposalsHeading")} <span className="note">{t("proposalsNote")}</span></h2>
         {proposals === null ? <PageState state="loading" /> : proposals.length === 0 ? (
           <p className="note">{t("noProposals")}</p>
         ) : (

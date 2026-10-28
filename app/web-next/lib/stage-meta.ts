@@ -42,3 +42,13 @@ export const STAGE_META: StageMeta[] = [
 export function getStageMeta(id: StageMetaId): StageMeta {
   return STAGE_META.find((s) => s.id === id)!;
 }
+
+/** Canonical stage heading shared by the StageFrame h1 and the stepper vocabulary: `S10 투자구조 설계`.
+    A composite frame (S6·S7 share one screen) shows the stage the current path addresses, or both
+    stages when the path does not single one out. */
+export function stageLabelOf(ids: StageMetaId[], current?: StageMetaId | null): string {
+  const one = (id: StageMetaId) => `${id} ${getStageMeta(id).name}`;
+  if (ids.length === 1) return one(ids[0]!);
+  if (current && ids.includes(current)) return one(current);
+  return ids.map(one).join(" · ");
+}

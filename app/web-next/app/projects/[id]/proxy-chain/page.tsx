@@ -132,7 +132,7 @@ export default function ProxyChainPage() {
     }
   }
 
-  return <main className="market-page"><StageTabs projectId={projectId} /><StageFrame stageId="S9" heading={t("heading")}>
+  return <main className="market-page"><StageTabs projectId={projectId} /><StageFrame stageId="S9" subtitle={t("heading")}>
     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">{t("intro")}</p>
 
     {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}

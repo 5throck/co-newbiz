@@ -6656,6 +6656,59 @@ paths:
           $ref: '#/components/responses/NotFound'
         '201':
           $ref: '#/components/responses/Created'
+  /api/projects/{id}/debt/{debtId}:
+    put:
+      operationId: updateProjectDebtInstrument
+      summary: Correct a registered debt instrument (analyst+, business actor; audit debt.update) - full replace of the editable fields under the same Zod contract as POST; 404 for a non-member or unknown id.
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: debtId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProjectDebtInstrument
+      summary: Remove a registered debt instrument (analyst+, business actor; audit debt.delete; hard delete - the covenant headroom is recomputed live without it).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: debtId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/projects/{id}/interviews:
     get:
       operationId: listProjectInterviews

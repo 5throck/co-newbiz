@@ -11,7 +11,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../../lib/api.ts";
 import { localizeBlocker } from "../../../../lib/labels.ts";
 import { STAGE_META } from "../../../../lib/stage-meta.ts";
@@ -28,12 +28,7 @@ import { SynergyStage } from "../../../../components/stages/SynergyStage.tsx";
 import { BrownfieldStage } from "../../../../components/stages/BrownfieldStage.tsx";
 import { MarketAnalysisStage } from "../../../../components/stages/MarketAnalysisStage.tsx";
 import { OurCompanyStage } from "../../../../components/stages/OurCompanyStage.tsx";
-import { BusinessCaseStage } from "../../../../components/stages/BusinessCaseStage.tsx";
-import { DdStage } from "../../../../components/stages/DdStage.tsx";
-import { DealStructureStage } from "../../../../components/stages/DealStructureStage.tsx";
-import { IcReviewStage } from "../../../../components/stages/IcReviewStage.tsx";
 import { useDealOpportunityId } from "../../../../components/stages/use-deal-opportunity-id.ts";
-import { PortfolioStage } from "../../../../components/stages/PortfolioStage.tsx";
 import { DealEntryMarketStrip } from "../../../../components/EntryMarketContextStrip.tsx";
 import { LearningCorpusPanel } from "../../../../components/LearningCorpusPanel.tsx";
 
@@ -193,7 +188,7 @@ function StageTab() {
         </div>
         {companySurface ? (
           <>
-            <StageFrame stageId="S3" heading={t("s3CompanyHeading")}>
+            <StageFrame stageId="S3" subtitle={t("s3CompanyHeading")}>
               {t("s3CompanyGuidance")}
             </StageFrame>
             <OurCompanyStage embedded />
@@ -242,7 +237,7 @@ function StageTab() {
         <CarrierStageBody routeId={params.id}>
           {({ opportunityId, track }) => (
             <>
-              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} heading={t("s67Heading")}>
+              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} subtitle={t("s67Heading")}>
                 {t("s67GuidancePre")}<code>{t("s67GuidanceCode")}</code>{t("s67GuidancePost")}
               </StageFrame>
               <DealEntryMarketStrip routeId={params.id} />
@@ -256,18 +251,11 @@ function StageTab() {
     );
   }
 
-  // S8~S12 프로젝트 단계 — Wave 3 통합. 캐리어가 기회면 승격된 프로젝트 id로
-  // 해석하고, 프로젝트 id면 그대로 사용한다.
+  // S8~S12 프로젝트 단계 — 정본 화면은 /projects/{id}/...(StageTabs 레일·다음 단계 동작이
+  // 그쪽에서만 동작한다). 이 탭은 캐리어를 프로젝트 id로 풀어 정본 화면으로 보낸다
+  // (2026-10-29 사용자 리포트: 딜 경로 S10에 레일·다음 단계 없음, 진입시장 배너가 main 밖).
   if (stageId === "S8" || stageId === "S9" || stageId === "S10" || stageId === "S11" || stageId === "S12") {
-    // ADR-0181 slice 5 — S9~S12 also operate on the S2-decided entry market:
-    // the subject-market header rides every project stage surface (the strip
-    // resolves the promoted project back to its source opportunity).
-    return (
-      <>
-        <DealEntryMarketStrip routeId={params.id} />
-        <ProjectStageTab carrierId={params.id} stageId={stageId} />
-      </>
-    );
+    return <ProjectStageTab carrierId={params.id} stageId={stageId} />;
   }
 
   return <StageGuidanceTab carrierId={params.id} stageId={stageId} />;
@@ -282,21 +270,18 @@ function S3Synergy({ routeId, analysisId }: { routeId: string; analysisId?: stri
   return <SynergyStage opportunityId={st.opportunityId ?? undefined} noSourceOpportunity={st.opportunityId === null} analysisId={analysisId} embedded />;
 }
 
-// S8~S12 프로젝트 단계 탭 — Wave 3(components/stages/*Stage.tsx 공유 컴포넌트).
-// ADR-0094/0095: FS 경로가 정리되면 캐리어가 기회에서 프로젝트로 교체된다 —
-// carrierId가 프로젝트 id면 그대로, 기회 id면 opportunity.project_id로 해석한다.
-const PROJECT_STAGES: Record<string, (props: { projectId: string }) => React.ReactNode> = {
-  S8: (p) => <BusinessCaseStage projectId={p.projectId} />,
-  S9: (p) => <DdStage projectId={p.projectId} />,
-  S10: (p) => <DealStructureStage projectId={p.projectId} />,
-  S11: (p) => <IcReviewStage projectId={p.projectId} />,
-  S12: (p) => <PortfolioStage projectId={p.projectId} />,
+// S8~S12 프로젝트 단계 — 정본 프로젝트 화면 경로 (StageFrame의 STAGE_HREF와 동일).
+// ADR-0094/0095: carrierId가 프로젝트 id면 그대로, 기회 id면 opportunity.project_id로 해석한다.
+const PROJECT_STAGE_PATH: Record<string, string> = {
+  S8: "business-case", S9: "dd", S10: "deal-structure", S11: "ic-review", S12: "portfolio",
 };
 
 function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
   const trRoot = useTranslations();
   const t = useTranslations("pages.dealStage");
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
   const [error, setError] = useState<string | null>(null);
   // 미승격 빈 상태의 유도 링크 (F3) — 트랙 최종 단계(greenfield S5 / brownfield
   // S7)의 승격 화면으로 보낸다. 트랙을 못 받으면 기회 개요로 폴백한다.
@@ -305,40 +290,39 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
   useEffect(() => {
     let alive = true;
     setError(null);
-    setProjectId(null);
     setPromoHref(null);
-    api
-      .get<{ project_id: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}`)
-      .then((r) => {
-        if (!alive) return;
-        if (r.data.project_id) setProjectId(r.data.project_id);
-        else {
-          setError(t("notPromoted"));
-          // 캐리어 트랙으로 승격 링크의 착지 단계를 정한다 — resolveDealCarrier가
-          // 이 파일의 다른 바디에서 쓰는 것과 동일한 process 뷰의 track 필드.
-          api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
-            .then((p) => {
-              if (!alive) return;
-              setPromoHref(
-                p.data.track === "greenfield" ? `/deals/${encodeURIComponent(carrierId)}/s5`
-                  : p.data.track === "brownfield" ? `/deals/${encodeURIComponent(carrierId)}/s7`
-                    : `/opportunities/${encodeURIComponent(carrierId)}`,
-              );
-            })
-            .catch(() => { if (alive) setPromoHref(`/opportunities/${encodeURIComponent(carrierId)}`); });
-        }
-      })
+    const go = (pid: string) => {
+      if (alive) router.replace(`/projects/${encodeURIComponent(pid)}/${PROJECT_STAGE_PATH[stageId]}${query ? `?${query}` : ""}`);
+    };
+    // 프로젝트 id 링크가 대부분이므로 프로젝트 process를 먼저 조회한다(멤버십 포함 검증) —
+    // 기회 id일 때만 기회 조회로 폴백해 프로젝트 id에 대한 불필요한 404 탐침을 없앤다.
+    api.get(`/api/projects/${encodeURIComponent(carrierId)}/process`)
+      .then(() => go(carrierId))
       .catch(() => {
-        // 캐리어가 이미 프로젝트 id인 경우 — process 엔드포인트(GET 지원)로
-        // 멤버십 포함 검증 후 그대로 사용한다.
-        api.get(`/api/projects/${encodeURIComponent(carrierId)}/process`)
-          .then(() => { if (alive) setProjectId(carrierId); })
+        api
+          .get<{ project_id: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}`)
+          .then((r) => {
+            if (!alive) return;
+            if (r.data.project_id) { go(r.data.project_id); return; }
+            setError(t("notPromoted"));
+            // 캐리어 트랙으로 승격 링크의 착지 단계를 정한다 — resolveDealCarrier가
+            // 이 파일의 다른 바디에서 쓰는 것과 동일한 process 뷰의 track 필드.
+            api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
+              .then((p) => {
+                if (!alive) return;
+                setPromoHref(
+                  p.data.track === "greenfield" ? `/deals/${encodeURIComponent(carrierId)}/s5`
+                    : p.data.track === "brownfield" ? `/deals/${encodeURIComponent(carrierId)}/s7`
+                      : `/opportunities/${encodeURIComponent(carrierId)}`,
+                );
+              })
+              .catch(() => { if (alive) setPromoHref(`/opportunities/${encodeURIComponent(carrierId)}`); });
+          })
           .catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("carrierCheckFailed")); });
       });
     return () => { alive = false; };
-  }, [carrierId]);
+  }, [carrierId, stageId, query, router]);
 
-  const StageComponent = PROJECT_STAGES[stageId];
   return (
     <main>
       <DealBreadcrumb dealId={carrierId} stageId={stageId as "S8"} />
@@ -351,8 +335,7 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
           )}
         />
       )}
-      {!error && !projectId && <PageState state="loading" />}
-      {projectId && StageComponent ? StageComponent({ projectId }) : null}
+      {!error && <PageState state="loading" />}
     </main>
   );
 }

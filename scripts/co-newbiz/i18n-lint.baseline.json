@@ -83,7 +83,7 @@
   "app/web-next/app/companies/[companyId]/page.tsx": 1,
   "app/web-next/app/projects/[id]/comp-parity/page.tsx": 2,
   "app/web-next/app/projects/[id]/customer-coc/page.tsx": 2,
-  "app/web-next/app/projects/[id]/debt/page.tsx": 2,
+  "app/web-next/app/projects/[id]/debt/page.tsx": 1,
   "app/web-next/app/projects/[id]/interviews/page.tsx": 2,
   "app/web-next/app/projects/[id]/risk-heatmap/page.tsx": 1,
   "app/web-next/app/projects/[id]/share/page.tsx": 1,

@@ -115,7 +115,7 @@ function CompView() {
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <div className="grid2e">
         <section className="market-section" aria-label={t("pkgSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("pkgHeading")}</h2>
+          <h2 className=" mb-2">{t("pkgHeading")}</h2>
           {data === null ? <PageState state="loading" /> : data.management_packages.length === 0 ? (
             <PageState state="empty" emptyText={t("pkgEmpty")} />
           ) : (
@@ -147,7 +147,7 @@ function CompView() {
         </section>
         {canAct && (
           <section className="market-section" aria-label={t("pkgFormSectionAria")}>
-            <h2 className="text-[length:var(--fs-body)] mb-2">{t("pkgFormHeading")}</h2>
+            <h2 className=" mb-2">{t("pkgFormHeading")}</h2>
             <form className="grid gap-2 md:grid-cols-4" onSubmit={submitPackage}>
               <label className="grid gap-1 text-sm">{t("lblExecRef")}<input className="form-input" value={pkg.executive_ref} onChange={(e) => setPkg({ ...pkg, executive_ref: e.target.value })} placeholder="CEO-01" required /></label>
               <label className="grid gap-1 text-sm">{t("lblRole")}<input className="form-input" value={pkg.role_title} onChange={(e) => setPkg({ ...pkg, role_title: e.target.value })} placeholder={t("phRole")} required /></label>
@@ -170,7 +170,7 @@ function CompView() {
         )}
         {canAct && (
           <section className="market-section" aria-label={t("parityFormSectionAria")}>
-            <h2 className="text-[length:var(--fs-body)] mb-2">{t("parityFormHeading")}</h2>
+            <h2 className=" mb-2">{t("parityFormHeading")}</h2>
             <form className="grid gap-2 md:grid-cols-5" onSubmit={submitEntry}>
               <label className="grid gap-1 text-sm">{t("lblJobFamily")}<input className="form-input" value={entry.job_family} onChange={(e) => setEntry({ ...entry, job_family: e.target.value })} placeholder={t("phJobFamily")} required /></label>
               <label className="grid gap-1 text-sm">{t("lblGrade")}<input className="form-input" value={entry.grade} onChange={(e) => setEntry({ ...entry, grade: e.target.value })} placeholder={t("phGrade")} required /></label>
@@ -185,7 +185,7 @@ function CompView() {
         )}
 
         <section className="market-section" aria-label={t("paritySectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("parityHeading")}</h2>
+          <h2 className=" mb-2">{t("parityHeading")}</h2>
           {data === null ? <PageState state="loading" /> : data.parity.length === 0 ? (
             <PageState state="empty" emptyText={t("parityEmpty")} />
           ) : (

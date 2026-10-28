@@ -111,7 +111,7 @@ function HeatmapView() {
       {/* 판정 대기 스트립 — 무엇을 판정할 수 있는지와 기록 위치를 먼저 보여준다 (2026-10-21 decider). */}
       {heatmap && (
         <section className="market-section" aria-label={t("sourceStatusAria")} data-testid="risk-source-status">
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("sourceStatusHeading")}</h2>
+          <h2 className=" mb-2">{t("sourceStatusHeading")}</h2>
           <ul className="sizing-note-list">
             {heatmap.sources_status.map((s) => (
               <li key={s.source}>
@@ -126,7 +126,7 @@ function HeatmapView() {
       )}
       <div className="grid2e">
         <section className="market-section" aria-label={t("gridSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("gridHeading")}</h2>
+          <h2 className=" mb-2">{t("gridHeading")}</h2>
           {heatmap === null ? <PageState state="loading" /> : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
@@ -159,7 +159,7 @@ function HeatmapView() {
           )}
         </section>
         <section className="market-section" aria-label={t("listSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("listHeading")}</h2>
+          <h2 className=" mb-2">{t("listHeading")}</h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="risk-heatmap-caveat">
             {t("caveat")}
           </p>

@@ -76,7 +76,7 @@ export default function ProjectOverviewPage() {
       <ReconfirmNotice projectId={projectId} />
 
       <section aria-label={t("charterSectionAria")} className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("charterHeading", { suffix: latest ? `(v${latest.version})` : "" })}</h2>
+        <h2 className=" font-semibold mb-2">{t("charterHeading", { suffix: latest ? `(v${latest.version})` : "" })}</h2>
         {latest ? (
           <dl className="text-[length:var(--fs-body)] space-y-1">
             <div><dt className="inline font-semibold mr-1">{t("dtPurpose")}</dt><dd className="inline">{latest.purpose}</dd></div>
@@ -91,7 +91,7 @@ export default function ProjectOverviewPage() {
 
       {process && (
         <section aria-label={t("processSectionAria")} className="market-section">
-          <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("processHeading")}</h2>
+          <h2 className=" font-semibold mb-2">{t("processHeading")}</h2>
           <ol className="space-y-1 text-[length:var(--fs-body)]">
             {process.stages.map((s2) => (
               <li key={s2.id}>

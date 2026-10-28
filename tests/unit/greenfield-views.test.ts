@@ -30,19 +30,19 @@ describe("S9 sub-track view", () => {
     const none = scope({ sub_track: null, sub_track_class: "none", extra_checklists: [], na_reason_checklists: [], excluded_steps: [6, 7, 8] });
     expect(showSubTrackPanel(none)).toBe(false);
     expect(showStepList(none)).toBe(false);
-    expect(trKo(s9Heading(none))).toBe("S9 실사·검증 — DD 체크리스트 판정");
-    expect(trKo(s9Heading(undefined))).toBe("S9 실사·검증 — DD 체크리스트 판정"); // brownfield: no scope at all
+    expect(trKo(s9Heading(none))).toBe("DD 체크리스트 판정");
+    expect(trKo(s9Heading(undefined))).toBe("DD 체크리스트 판정"); // brownfield: no scope at all
     expect(showSubTrackPanel(null)).toBe(false);
   });
   test("unknown sub-track shows a warning panel but no step list and the legacy heading", () => {
     const unk = scope({ sub_track: "partnership", sub_track_class: "unknown", extra_checklists: [], excluded_steps: [6, 7, 8], warnings: ["w"] });
     expect(showSubTrackPanel(unk)).toBe(true);
     expect(showStepList(unk)).toBe(false);
-    expect(trKo(s9Heading(unk))).toBe("S9 실사·검증 — DD 체크리스트 판정");
+    expect(trKo(s9Heading(unk))).toBe("DD 체크리스트 판정");
   });
   test("named sub-track uses the plan-verification heading only when the selection is active", () => {
     expect(trKo(s9Heading(scope()))).toContain("계획 검증");
-    expect(trKo(s9Heading(scope({ selection_active: false })))).toBe("S9 실사·검증 — DD 체크리스트 판정");
+    expect(trKo(s9Heading(scope({ selection_active: false })))).toBe("DD 체크리스트 판정");
   });
 });
 

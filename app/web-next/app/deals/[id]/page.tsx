@@ -88,7 +88,7 @@ function HoldCard({ holds, suffix }: { holds: Overview["holds"]; suffix: string 
   const headId = `ov-hold-h-${suffix}`;
   return (
     <section id={`ov-hold-${suffix}`} className={`card deal-overview-card deal-overview-hold deal-overview-hold-${suffix}`} aria-labelledby={headId} tabIndex={-1}>
-      <h2 id={headId} className="text-[length:var(--fs-body)] mb-2">{t("sectionHold")}</h2>
+      <h2 id={headId} className=" mb-2">{t("sectionHold")}</h2>
       <ul className="list-none p-0 m-0 grid gap-2">
         {holds.map((h) => {
           const age = holdAgeText(h.ageDays);
@@ -279,7 +279,7 @@ function DealOverview() {
           ) : (
             <>
               <section className="card deal-overview-card" aria-labelledby="ov-stage">
-                <h2 id="ov-stage" className="text-[length:var(--fs-body)] mb-2">{tr("sectionStage")}</h2>
+                <h2 id="ov-stage" className=" mb-2">{tr("sectionStage")}</h2>
                 {ov.currentStage ? (
                   <>
                     <p className="m-0 deal-overview-stage-name font-semibold">{ov.currentStage.id} {ov.currentStage.name}</p>
@@ -295,7 +295,7 @@ function DealOverview() {
               </section>
 
               <section className="card deal-overview-card" aria-labelledby="ov-next">
-                <h2 id="ov-next" className="text-[length:var(--fs-body)] mb-2">{tr("sectionNext")}</h2>
+                <h2 id="ov-next" className=" mb-2">{tr("sectionNext")}</h2>
                 {ov.nextAction ? (
                   <NextActionBody ov={ov} />
                 ) : (
@@ -306,7 +306,7 @@ function DealOverview() {
               {hasHold && <HoldCard holds={ov.holds} suffix="inline" />}
 
               <section className="card deal-overview-card" aria-labelledby="ov-done">
-                <h2 id="ov-done" className="text-[length:var(--fs-body)] mb-2">{tr("sectionDone")}</h2>
+                <h2 id="ov-done" className=" mb-2">{tr("sectionDone")}</h2>
                 {ov.completion.length === 0 ? (
                   <p className="m-0 text-[color:var(--muted-fg)]">{tr("noRequiredArtifacts")}</p>
                 ) : (
@@ -348,7 +348,7 @@ function DealOverview() {
             <>
               {hasHold && <HoldCard holds={ov.holds} suffix="aside" />}
               <section className="card deal-overview-card" aria-labelledby="ov-facts">
-                <h2 id="ov-facts" className="text-[length:var(--fs-body)] mb-2">{tr("sectionFacts")}</h2>
+                <h2 id="ov-facts" className=" mb-2">{tr("sectionFacts")}</h2>
                 {opp.status === "loading" ? (
                   <PageState state="loading" rows={3} />
                 ) : opp.status === "error" ? (

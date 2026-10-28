@@ -457,7 +457,7 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
           탭 행 아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
       <StageFrame
         stageId="S9"
-        heading={resolveLabelTokens(s9Heading(data?.greenfield_scope), tr)}
+        subtitle={resolveLabelTokens(s9Heading(data?.greenfield_scope), tr)}
         railSlot={<StageTabs projectId={projectId} />}
       >
         <GateDecisionJump inline gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />

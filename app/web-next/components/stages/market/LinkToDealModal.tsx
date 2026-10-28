@@ -27,7 +27,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
     return (
       <div className="modal-backdrop" onClick={onClose}>
         <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t("linkIndustryToTheDeal")} onClick={(e) => e.stopPropagation()}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">{tc("linkToThisDeal")}</h2>
+          <h2 className=" mb-1">{tc("linkToThisDeal")}</h2>
           <p role="note" className="text-[length:var(--fs-body)] mb-2">
             {t("thisReviewHasNoBusiness")}
           </p>
@@ -62,7 +62,7 @@ export function LinkToDealModal({ state, projectId, onClose, onLinked }: {
   return (
     <div className="modal-backdrop" onClick={close}>
       <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t("linkIndustryToTheDeal2")} onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-[length:var(--fs-body)] mb-1">{tc("linkToThisDeal")}</h2>
+        <h2 className=" mb-1">{tc("linkToThisDeal")}</h2>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           <strong>{state.industry.name_ko}</strong> {t("linksTheAnalysisAsThis")}
         </p>

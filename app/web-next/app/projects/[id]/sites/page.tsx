@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { StageTabs } from "../../../../components/StageTabs.tsx";
+import { S10Frame } from "../../../../components/stages/S10Frame.tsx";
 import { useTranslations } from "next-intl";
 import { api } from "../../../../lib/api.ts";
 import Link from "next/link";
@@ -92,8 +92,8 @@ function SitesView() {
 
   return (
     <main>
-      <StageTabs projectId={id} />
-      <h1>{t("heading")}</h1>
+      <S10Frame projectId={id} />
+      <h2>{t("heading")}</h2>
       <p className="objective">{t("objective")}{" "}<Link href={`/projects/${encodeURIComponent(id)}/permits`} className="underline">{t("permitsLink")}</Link></p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label={t("compareSectionAria")}>
@@ -129,7 +129,7 @@ function SitesView() {
       </section>
       {draft && (
         <section className="market-section" aria-label={t("draftSectionAria")} data-testid="site-regulatory-draft">
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("draftHeading", { name: draft.siteName })} <span className={`status-chip ${draft.source === "llm" ? "status-amber" : "status-gray"}`}>{draft.source === "llm" ? t("chipLlm") : t("chipFallback")}</span></h2>
+          <h2 className=" mb-2">{t("draftHeading", { name: draft.siteName })} <span className={`status-chip ${draft.source === "llm" ? "status-amber" : "status-gray"}`}>{draft.source === "llm" ? t("chipLlm") : t("chipFallback")}</span></h2>
           <p className="text-[length:var(--fs-caption)]">{draft.synthesis}</p>
           <ul className="sizing-note-list mt-1">
             {draft.items.map((it, i) => (
@@ -142,7 +142,7 @@ function SitesView() {
       )}
       {canAct && (
         <section className="market-section" aria-label={t("registerSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("registerHeading")}</h2>
+          <h2 className=" mb-2">{t("registerHeading")}</h2>
             <div className="grid gap-x-3 gap-y-2 md:grid-cols-3 text-[length:var(--fs-caption)]">
               <label className="grid gap-1"><span className="block">{t("lblName")}</span>
                 <input className="sizing-new-input w-full" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></label>

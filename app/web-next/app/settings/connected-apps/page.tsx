@@ -459,7 +459,7 @@ export default function ConnectedAppsPage() {
       </div>
       {guideOpen && (
         <section aria-label={t("guideAria")} className="market-section mb-3">
-          <h2 className="text-[length:var(--fs-body)] mb-1">{t("guideHeading")}</h2>
+          <h2 className=" mb-1">{t("guideHeading")}</h2>
           <ol className="sizing-note-list">
             <li>{t("guideStep1")}</li>
             <li>{t("guideStep2")}</li>

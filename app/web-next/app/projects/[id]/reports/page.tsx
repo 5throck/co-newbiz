@@ -122,7 +122,7 @@ export default function ReportsPage() {
     }
   }
 
-  return <main className="market-page"><StageTabs projectId={projectId} /><StageFrame stageId="S11" heading={t("stageHeading")}>
+  return <main className="market-page"><StageTabs projectId={projectId} /><StageFrame stageId="S11" subtitle={t("stageHeading")}>
     <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">{t("intro")}</p>
 
     {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
