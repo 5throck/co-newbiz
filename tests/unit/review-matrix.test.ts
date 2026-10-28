@@ -1,4 +1,4 @@
-// Cross-validation matrix routing (ADR-0187 P4, M7/M8, decision D3).
+// Cross-validation matrix routing (ADR-0187 P4, M7/M8, decision D3 as amended by D3').
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { load } from "js-yaml";
@@ -37,19 +37,14 @@ describe("matrix content (D3)", () => {
     }
     expect(selectReviewer([AUTHOR.functional], { artifactType: "technical" })).toMatchObject({ reviewerAgent: "platform-lead" });
   });
-  test("valuation and synergy: risk-officer for non-functional authors; functional authors fall back, labelled", () => {
+  test("valuation and synergy (D3', 2026-10-28): industry-lead for functional/technical/region authors, region-lead for industry authors, no fallback", () => {
     for (const t of ["valuation", "synergy"]) {
-      const viaMatrix = selectReviewer([AUTHOR.technical], { artifactType: t });
-      expect(viaMatrix).toMatchObject({ ok: true, reviewerAgent: "risk-officer", fallbackUsed: false });
-      const fb = selectReviewer([AUTHOR.functional], { artifactType: t });
-      expect(fb.ok).toBe(true);
-      if (fb.ok) {
-        expect(fb.fallbackUsed).toBe(true);
-        expect(fb.fallbackReason).toContain("first stage only");
-        expect(fb.firstStageSpecialist).toBe("risk-officer");
-        expect(fb.reviewerAgent).toBe("platform-lead");
-        expect(fb.reviewerDomain).not.toBe("functional");
+      for (const d of ["functional", "technical", "region"] as ReviewDomain[]) {
+        expect(selectReviewer([AUTHOR[d]], { artifactType: t }), `${t}/${d}`).toMatchObject({ ok: true, reviewerAgent: "industry-lead", fallbackUsed: false });
       }
+      expect(selectReviewer([AUTHOR.industry], { artifactType: t })).toMatchObject({ ok: true, reviewerAgent: "region-lead", fallbackUsed: false });
+      // risk-officer stays a first-stage specialist; it is never the AI-2nd reviewer.
+      expect(Object.values(MATRIX.artifactTypes[t]!.reviewers)).not.toContain("risk-officer");
     }
   });
   test("an unknown artifact type uses the default lead and is labelled fallback", () => {

@@ -106,7 +106,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 - S1 시장분석: `market-intelligence-agent`
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
-- S3 시너지·전략적 적합성: `process-governance-manager`, `financial-analyst`, `risk-officer`, `greenfield-agent`, `brownfield-agent`
+- S3 시너지·전략적 적합성: `process-governance-manager`, `market-intelligence-agent`, `risk-officer`, `greenfield-agent`, `brownfield-agent`, `financial-analyst`
 - S4 진출방식 결정: `pm`, `brownfield-agent`, `valuation-agent`, `certification-agent`, `legal-counsel`
 - S5 자체 진출: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
@@ -220,7 +220,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - strategic-fit-screening · agent: `process-governance-manager` · skills: `strategic-fit-screening`, `portfolio-fit-assessment`, `brownfield-feasibility`, `antitrust-screening`, `site-infrastructure-assessment`, `regional-incentive-sourcing` · procedure: `greenfield-screening`, `brownfield-screening`
-- synergy-analysis · agent: `financial-analyst` · skills: `investment-feasibility-modeling`, `historical-financial-analysis` · procedure: `greenfield-screening`, `brownfield-screening`
+- synergy-analysis · agent: `market-intelligence-agent` · skills: `value-chain-linkage-analysis`, `investment-feasibility-modeling`, `historical-financial-analysis` · procedure: `greenfield-screening`, `brownfield-screening`
 - synergy-red-team · agent: `risk-officer` · skills: `assumption-audit` · procedure: `greenfield-screening`, `brownfield-screening`
 - capability-register-greenfield · agent: `greenfield-agent` · skills: `greenfield-feasibility` · procedure: `greenfield-screening`
 - capability-register-brownfield · agent: `brownfield-agent` · skills: `brownfield-feasibility` · procedure: `brownfield-screening`

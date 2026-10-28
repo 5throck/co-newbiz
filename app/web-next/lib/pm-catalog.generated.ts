@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.16.0";
+export const SPEC_VERSION = "2.17.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "e2b16048e2521eb6",
-  "flowSpecYaml": "fb6f97203d63907b",
+  "promptsJson": "2763b522c3588953",
+  "flowSpecYaml": "fa39799ffdd1434b",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -169,7 +169,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
   },
   "s3.synergy_synergy": {
     "promptKey": "s3.synergy_synergy",
-    "agentKey": "financial-analyst",
+    "agentKey": "market-intelligence-agent",
     "activityId": "synergy-analysis",
     "stageId": "S3",
     "purpose": "시너지 산출 — 정량·정성 시너지 도출",
@@ -480,6 +480,11 @@ export const DYNAMIC_AGENT_PROMPTS: PromptKey[] = ["s8.business_case_prose","com
 
 /** 문서화된 이중 배정 — 유일한 "보조 관점" 예외 (근거 필수, 신규는 게이트 판정 요구). */
 export const DUAL_ASSIGNMENTS: DualAssignment[] = [
+  {
+    "promptKey": "s3.synergy_fa",
+    "activity": "S3.synergy-analysis",
+    "rationale": "Sanctioned dual assignment (owner decision D6' 2026-10-28, amends ADR-0187 D6; DEC-20261028-03): financial-analyst supports the market-intelligence-agent-led synergy-analysis activity by quantifying each synergy line against the assumption register (greenfield-screening step 1.55, brownfield-screening step 2.55); the activity lead is unchanged."
+  },
   {
     "promptKey": "s11.integrated_insight",
     "activity": "S11.ic-preparation",

@@ -21,7 +21,22 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.16.0"
+  version: "2.17.0"
+  # v2.17.0 - owner decisions D6' and D3' (2026-10-28; amend ADR-0187 D6/D3,
+  #   decision log in docs/adr/0187-process-ssot-decision-evidence.md):
+  #   - S3 synergy-analysis is LED by market-intelligence-agent: it locates the
+  #     synergies (which affiliates; where in the value chain - forward/backward
+  #     customers, supply chain, channel, technology) with the six-axis
+  #     value-chain linkage analysis. financial-analyst SUPPORTS by quantifying
+  #     each synergy line (revenue and cost amounts) and tying it to the
+  #     assumption register. risk-officer keeps only synergy-red-team.
+  #     greenfield-screening 1.6.0 (steps 1.5 identification / 1.55
+  #     quantification / 1.6 red team) and brownfield-screening 1.4.0 (2.5 /
+  #     2.55 / 2.6) carry the split.
+  #   - The cross-validation matrix (process/cross-validation-matrix.yaml
+  #     1.1.0) routes valuation and synergy AI-2nd review to industry-lead
+  #     (region-lead for industry authors); risk-officer stays a first-stage
+  #     specialist. No stage, gate, track or artifact string changes.
   # v2.16.0 - ADR-0187 phase P3 (engine parity and decision evidence; design
   #   2026-10-27-process-ssot-decision-evidence-design P3):
   #   - Every stage declares `blockers:` - the stable keys of the engine blockers
@@ -517,15 +532,21 @@ stages:
         # 활동 에이전트의 차이는 AGENTS.md §7에 따라 기록된 divergence이며
         # (S10 site 활동은 두지 않는다), 절차 단계 내부 배정은 절차가 소유한다.
       - id: synergy-analysis
-        agent: financial-analyst
-        skills: [investment-feasibility-modeling, historical-financial-analysis]
+        agent: market-intelligence-agent
+        skills: [value-chain-linkage-analysis, investment-feasibility-modeling, historical-financial-analysis]
         procedure: [greenfield-screening, brownfield-screening]
         # 시너지 정합성 화면 — 대상은 그룹/계열사 레지스트리(계열사 또는 그룹 전체)이며,
         # S2 기회를 연결해 분석하고 완료 시 opportunity.synergy_score 권고를 기록한다 (ADR-0090).
-        # v2.14.0 (ADR-0187 D6, finding M6): the quantitative author is
-        # financial-analyst; risk-officer red-teams it in synergy-red-team and
-        # authors nothing here. v2.15.0 (P2, M2): greenfield-screening step 1.5
-        # and brownfield-screening step 2.5 hold the authoring step.
+        # v2.17.0 (owner decision D6', 2026-10-28, amends ADR-0187 D6): the lead is
+        # market-intelligence-agent, which identifies WHERE synergies exist (which
+        # affiliates; forward/backward customers, supply chain, channel,
+        # technology) via the six-axis value-chain linkage analysis
+        # (greenfield-screening step 1.5, brownfield-screening step 2.5).
+        # financial-analyst supports by quantifying each synergy line (revenue
+        # and cost amounts) tied to the assumption register (greenfield-screening
+        # step 1.55, brownfield-screening step 2.55) - a procedure-step support
+        # role, not a second activity lead. risk-officer red-teams it in
+        # synergy-red-team and authors nothing here.
       - id: synergy-red-team
         agent: risk-officer
         skills: [assumption-audit]
@@ -534,6 +555,7 @@ stages:
         # register (optimism bias, reference-class deviation). Does not draft the
         # assumptions and does not set the score. v2.15.0 (P2, M2):
         # greenfield-screening step 1.6 and brownfield-screening step 2.6.
+        # v2.17.0 (D6'): audits the register built by steps 1.5/1.55 (2.5/2.55).
       - id: capability-register-greenfield
         agent: greenfield-agent
         skills: [greenfield-feasibility]

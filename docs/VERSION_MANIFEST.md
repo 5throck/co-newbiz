@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-28T10:23:28.471Z
+**Generated**: 2026-10-28T11:33:02.394Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -73,7 +73,7 @@
 | agent-lifecycle-manager | 1.3.1 | active | skills/agent-lifecycle-manager/SKILL.md | workspace | create agent, new agent, validate agents, agent lifecycle, manage agents, hire agent, fire agent, deprecate agent | pm |
 | antitrust-screening | 1.1.0 | active | skills/antitrust-screening/SKILL.md | workspace | antitrust screening, HHI calculation, merger control filing, gun-jumping, relevant market definition | antitrust-agent |
 | api-documentation | 1.0.2 | active | skills/api-documentation/SKILL.md | workspace | api documentation, document api, api reference, developer documentation, rest api docs, graphql docs, sdk documentation | pm |
-| assumption-audit | 1.1.2 | experimental | skills/assumption-audit/SKILL.md | workspace | assumption audit, assumption review, assumption register check, optimism bias check | risk-officer |
+| assumption-audit | 1.2.0 | experimental | skills/assumption-audit/SKILL.md | workspace | assumption audit, assumption review, assumption register check, optimism bias check | risk-officer |
 | brownfield-feasibility | 1.2.1 | active | skills/brownfield-feasibility/SKILL.md | workspace | brown field feasibility, M&A feasibility, acquisition screening, brownfield DD | brownfield-agent |
 | certification-roadmap | 1.0.0 | active | skills/certification-roadmap/SKILL.md | workspace | certification requirements, certification gap analysis, certification roadmap | certification-agent |
 | certification-transferability | 1.2.0 | active | skills/certification-transferability/SKILL.md | workspace | certification transferability, change of control certification, certification survives acquisition | legal-counsel |
@@ -95,13 +95,13 @@
 | executive-presentation | 1.0.0 | active | skills/executive-presentation/SKILL.md | workspace | executive presentation, executive deck, IC presentation, decision deck, strategy deck, board presentation | docs-writer |
 | explain-me | 1.0.0 | experimental | skills/explain-me/SKILL.md | workspace | /explain-me, /reportme, make a report, create report, explain this topic | pm |
 | financial-statement-analysis | 1.0.0 | active | skills/financial-statement-analysis/SKILL.md | workspace | financial statement analysis, ROIC analysis, value driver tree, financial KPI, profitability analysis, cash flow analysis, DART analysis, fundamental analysis, corporate financial analysis | financial-analyst |
-| financing-plan-review | 1.2.1 | active | skills/financing-plan-review/SKILL.md | workspace | financing plan, certainty of funds, sources and uses | valuation-agent |
+| financing-plan-review | 1.3.0 | active | skills/financing-plan-review/SKILL.md | workspace | financing plan, certainty of funds, sources and uses | valuation-agent |
 | finishing-a-development-branch | 1.0.1 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
 | forward-industry-research | 1.1.0 | experimental | skills/forward-industry-research/SKILL.md | workspace | industry research, industry outlook, sector research, forward industry view | market-intelligence-agent |
 | gateguard | 1.0.2 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
 | greenfield-feasibility | 1.2.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.1.0 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, proposal ranking, capital allocation priority | group-review-agent |
-| growth-projection-modeling | 1.1.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
+| growth-projection-modeling | 1.2.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
 | handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
 | handbook-sync-audit | 1.0.5 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | pm |
 | historical-financial-analysis | 1.0.1 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
@@ -112,7 +112,7 @@
 | incentive-clawback-assessment | 1.1.0 | active | skills/incentive-clawback-assessment/SKILL.md | workspace | incentive clawback, clawback exposure, relocation clawback risk, incentive obligation | incentive-agent |
 | insight-synthesis | 1.0.0 | active | skills/insight-synthesis/SKILL.md | workspace | synthesize insights, insight synthesis, integrate analysis, strategic synthesis, combine findings, cross-analysis integration | process-governance-manager |
 | intra-group-transaction-compliance | 1.1.0 | active | skills/intra-group-transaction-compliance/SKILL.md | workspace | related party transaction, Fair Trade Act Art. 47, intra-group transaction, affiliate transaction screen | group-review-agent |
-| investment-feasibility-modeling | 1.2.1 | active | skills/investment-feasibility-modeling/SKILL.md | workspace | investment feasibility model, NPV IRR calculation, feasibility financial model | valuation-agent |
+| investment-feasibility-modeling | 1.3.0 | active | skills/investment-feasibility-modeling/SKILL.md | workspace | investment feasibility model, NPV IRR calculation, feasibility financial model | valuation-agent |
 | investment-vehicle-structuring | 1.3.0 | active | skills/investment-vehicle-structuring/SKILL.md | workspace | investment vehicle structure, SPV structuring, direct investment vs SPV, holding company routing, deal structure hypothesis vehicle axis | brownfield-agent |
 | ip-fto-review | 1.0.1 | experimental | skills/ip-fto-review/SKILL.md | workspace | freedom to operate, FTO, IP landscape, patent landscape, target IP valuation | ip-agent |
 | jv-structuring | 1.2.0 | active | skills/jv-structuring/SKILL.md | workspace | JV structuring, joint venture governance, veto matters, drag-along tag-along, deadlock resolution, technology contribution valuation | partnership-agent |
@@ -171,7 +171,7 @@
 | unit-conversion-calibration | 1.0.0 | active | skills/unit-conversion-calibration/SKILL.md | workspace | calibrate a proxy hop, lead-lag regression, unit conversion coefficient, beta calibration for a proxy chain | quant-methodologist |
 | update-bun-packages | 1.3.1 | active | skills/update-bun-packages/SKILL.md | workspace | update bun packages, upgrade bun packages, bun update, update dependencies, upgrade dependencies | pm |
 | value-chain-driver-identification | 1.1.0 | experimental | skills/value-chain-driver-identification/SKILL.md | workspace | value chain drivers, driver analysis, driver identification, stage sensitivity | quant-methodologist |
-| value-chain-linkage-analysis | 1.1.0 | active | skills/value-chain-linkage-analysis/SKILL.md | workspace | value chain linkage, pass-through rate, upstream downstream risk exposure, margin risk from supplier or customer industry | market-intelligence-agent |
+| value-chain-linkage-analysis | 1.2.0 | active | skills/value-chain-linkage-analysis/SKILL.md | workspace | value chain linkage, pass-through rate, upstream downstream risk exposure, margin risk from supplier or customer industry | market-intelligence-agent |
 | value-chain-stage-financials | 1.1.0 | experimental | skills/value-chain-stage-financials/SKILL.md | workspace | stage financials, value chain economics, segment financials, chain stage rollup | financial-analyst |
 | wacc-input-session | 1.3.2 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
 | waiver-management | 1.1.2 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval, waiver expiry | compliance-officer |
@@ -258,7 +258,7 @@
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
-| generate-pm-catalog.ts | 1.3.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
+| generate-pm-catalog.ts | 1.4.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
 | generate-process-flow.ts | 1.5.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
 | generate-prompt-registry.ts | 2.1.1 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | js-yaml |

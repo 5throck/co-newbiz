@@ -10,8 +10,8 @@ description: >
 
   Use when: "value chain linkage", "pass-through rate", "upstream downstream
   risk exposure", "margin risk from supplier or customer industry".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-10-28
 status: active
 owner: market-intelligence-agent
 prerequisites: none
@@ -25,6 +25,7 @@ metadata:
 
   procedure_keys:
     - greenfield-screening
+    - brownfield-screening
 relates_to:
   - skill: site-infrastructure-assessment
     type: follows
@@ -34,6 +35,10 @@ relates_to:
     type: composes_with
 
 ---
+
+## S3 synergy identification
+
+Under owner decision D6' (2026-10-28) this skill is also the instrument of the S3 `synergy-analysis` activity led by `market-intelligence-agent` (greenfield-screening step 1.5, brownfield-screening step 2.5): the six-axis linkage read locates which affiliates and which value-chain positions (forward/backward customers, supply chain, channel, technology) carry a synergy. It records locations and evidence only; amounts are quantified by `financial-analyst` (step 1.55 / 2.55) under `investment-feasibility-modeling`.
 
 ## Context
 
