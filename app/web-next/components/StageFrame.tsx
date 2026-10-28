@@ -229,7 +229,7 @@ export function StageFrame({
         })()}
       </div>
       {subtitle && (
-        <p className="mt-[0.15rem] mb-1 font-semibold text-[length:var(--fs-h2)] leading-snug" data-testid="stage-subtitle">{subtitle}</p>
+        <p className="mt-[0.15rem] mb-1 font-medium text-[color:var(--muted-fg)] text-[length:var(--fs-body)] leading-snug" data-testid="stage-subtitle">{subtitle}</p>
       )}
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
       {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →

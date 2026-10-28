@@ -404,6 +404,15 @@ describe("stage-screen wiring lock (static source)", () => {
     }
   });
 
+  test("deal route S8-S12 hands off to the canonical /projects screen; no strip renders outside <main>", () => {
+    const src = read("app/deals/[id]/[stage]/page.tsx");
+    const s8 = src.slice(src.indexOf('if (stageId === "S8"'), src.indexOf("return <StageGuidanceTab"));
+    expect(s8).not.toContain("DealEntryMarketStrip");
+    expect(s8).toContain("<ProjectStageTab");
+    expect(src).toContain("router.replace(`/projects/");
+    for (const seg of ["business-case", "dd", "deal-structure", "ic-review", "portfolio"]) expect(src).toContain(`"${seg}"`);
+  });
+
   test("S1 mounts its own frame (documented exception); the flat /market route stays a frame-free stub", () => {
     expect(read("components/stages/market/MarketAnalysisStage.tsx")).toContain('<StageFrame stageId="S1">');
     const market = read("app/market/page.tsx");
