@@ -11,7 +11,7 @@ layer: checklist-overlay
 title: Greenfield S9 workspace scope by sub-track (plan verification)
 owner_agent: process-governance-manager
 maintainer: process-governance-manager
-version: 1.2.0
+version: 1.3.0
 status: proposed
 decision_record: DEC-20261012-01
 track: greenfield
@@ -214,9 +214,14 @@ steps:
       intra_venture: 'yes'
   # v1.2.0 (ADR-0187 phase P2, finding M2): greenfield-dd 1.2.0 steps 9-17 —
   # one step per S9 activity agent. They map to a tab only; no item moves, so
-  # expected_counts are unchanged. Every sub-track key reads 'yes': the D9
-  # origin=internal trim of steps 9, 12-16 is an origin rule, not a sub-track
-  # rule, and stays in the procedure predicate (runtime trim is ADR-0187 P3).
+  # expected_counts are unchanged.
+  # v1.3.0 (ADR-0187 phase P3; owner decision 2026-10-28): the D9 trim keys on
+  # the greenfield sub-track, not on origin (ADR-0166 defaults every greenfield
+  # project to origin=internal, which would trim a new-site plant). Steps 9 and
+  # 12-16 (commercial, HR, market, financing, IP, region labor) read 'no' for the
+  # internal-expansion sub-tracks existing_business_rbd and intra_venture, and
+  # 'yes' for the plain new-site route (none). Item codes and the per-row approval
+  # records are untouched: item-level scoping stays as DEC-20261012-01 approved it.
   - step: 9
     purpose: '판매 계획 실사'
     tabs:
@@ -225,8 +230,8 @@ steps:
     pointers: []
     applies:
       none: 'yes'
-      existing_business_rbd: 'yes'
-      intra_venture: 'yes'
+      existing_business_rbd: 'no'
+      intra_venture: 'no'
   - step: 10
     purpose: '법무·인허가 실사'
     tabs:
@@ -255,8 +260,8 @@ steps:
     pointers: []
     applies:
       none: 'yes'
-      existing_business_rbd: 'yes'
-      intra_venture: 'yes'
+      existing_business_rbd: 'no'
+      intra_venture: 'no'
   - step: 13
     purpose: '시장 근거 재확인'
     tabs:
@@ -265,8 +270,8 @@ steps:
     pointers: []
     applies:
       none: 'yes'
-      existing_business_rbd: 'yes'
-      intra_venture: 'yes'
+      existing_business_rbd: 'no'
+      intra_venture: 'no'
   - step: 14
     purpose: '자금 마련 실사(다운사이드 커버넌트 여유)'
     tabs:
@@ -275,8 +280,8 @@ steps:
     pointers: []
     applies:
       none: 'yes'
-      existing_business_rbd: 'yes'
-      intra_venture: 'yes'
+      existing_business_rbd: 'no'
+      intra_venture: 'no'
   - step: 15
     purpose: '지식재산·실시 자유(FTO) 검토'
     tabs:
@@ -285,8 +290,8 @@ steps:
     pointers: []
     applies:
       none: 'yes'
-      existing_business_rbd: 'yes'
-      intra_venture: 'yes'
+      existing_business_rbd: 'no'
+      intra_venture: 'no'
   - step: 16
     purpose: '지역 노동법 검토'
     tabs:
@@ -295,8 +300,8 @@ steps:
     pointers: []
     applies:
       none: 'yes'
-      existing_business_rbd: 'yes'
-      intra_venture: 'yes'
+      existing_business_rbd: 'no'
+      intra_venture: 'no'
   - step: 17
     purpose: '필수 항목 예외(waiver) 판정'
     tabs:

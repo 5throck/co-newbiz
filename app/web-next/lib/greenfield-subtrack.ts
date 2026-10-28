@@ -33,6 +33,48 @@ export type GreenfieldSubTrack = (typeof GREENFIELD_SUB_TRACKS)[number];
 export const GF_DD_POLICY_DOC_ID = "shared-greenfield-dd";
 export const GF_DD_SUBTRACK_VERSION = "1.1.0";
 
+/**
+ * ADR-0187 D9 (owner decision 2026-10-28, recorded in the ADR decision log): the
+ * greenfield DD of an INTERNAL-EXPANSION project is trimmed to capability, financial,
+ * legal-regulatory and EHS. The rule keys on the greenfield sub-track, NOT on
+ * origin=internal: ADR-0166 defaults every greenfield project to origin=internal, so
+ * an origin rule would also trim a new-site plant, which must keep the full DD.
+ * Internal-expansion sub-tracks = GREENFIELD_SUB_TRACKS (existing_business_rbd,
+ * intra_venture); the plain greenfield route (no sub-track = a new site) is never
+ * trimmed. greenfield-dd 1.3.0 steps 9 and 12-16 carry the same predicate; the
+ * trimmed domains keep their items as the approved workspace overlay codes them.
+ */
+export const D9_TRIMMED_STEPS: readonly number[] = [9, 12, 13, 14, 15, 16];
+
+/** Projects whose earliest pin (or creation) predates this date keep the pre-P3 trim rule (ADR-0151: no retroactive change). */
+export const D9_RULE_DATE = "2026-10-28";
+
+/** True when the project predates the D9 re-key (earliest policy pin, else creation, before D9_RULE_DATE). */
+export function d9Legacy(projectId: string, db: Database = getDb()): boolean {
+  const p = db.query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as { created_at: string | null } | undefined;
+  const pin = db.query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ?").get(projectId) as { at: string | null };
+  return (pin.at ?? p?.created_at ?? "") < D9_RULE_DATE;
+}
+
+/** The D9 sub-track rule (projects on or after D9_RULE_DATE): internal-expansion sub-tracks only. */
+export function d9TrimApplies(cls: "none" | GreenfieldSubTrack | "unknown"): boolean {
+  return cls === "existing_business_rbd" || cls === "intra_venture";
+}
+
+/**
+ * Steps trimmed by D9 for one project. Legacy projects (before D9_RULE_DATE) keep the pre-P3 origin rule
+ * (origin=internal trims, any sub-track) so nothing they completed is un-completed; newer projects follow the
+ * sub-track rule, whether or not the by-date sub-track selection is active. greenfield-dd 1.3.0 states the
+ * sub-track rule; projects pinned to an earlier greenfield-dd keep that version's predicates (ADR-0020).
+ */
+export function d9TrimmedStepsFor(projectId: string, cls: "none" | GreenfieldSubTrack | "unknown", db: Database = getDb()): number[] {
+  if (d9Legacy(projectId, db)) {
+    const o = db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string | null } | undefined;
+    return o?.origin === "internal" ? [...D9_TRIMMED_STEPS] : [];
+  }
+  return d9TrimApplies(cls) ? [...D9_TRIMMED_STEPS] : [];
+}
+
 /** Extra S9 checklists per greenfield sub-track (design §4.2). Null: none. */
 export const GF_SUB_TRACK_DD_CHECKLISTS: Record<GreenfieldSubTrack, string[]> = {
   existing_business_rbd: ["chk-rbd-technology-checklist"],
@@ -213,7 +255,7 @@ export function greenfieldSelection(projectId: string, db: Database = getDb()): 
       extra_checklists: [],
       site: active ? site : { site_required: true, basis: "default", site_steps_apply: true, pending_assertion: site.pending_assertion },
       na_reason_checklists: [],
-      excluded_steps: [6, 7, 8],
+      excluded_steps: [6, 7, 8, ...d9TrimmedStepsFor(projectId, cls, db)].sort((x, y) => x - y),
       warnings,
     };
   }
@@ -221,7 +263,7 @@ export function greenfieldSelection(projectId: string, db: Database = getDb()): 
     warnings.push("기존사업 R&BD·사내벤처 세부 트랙은 부지 필요 여부의 기본값이 없습니다 — 사람이 확인하기 전까지 부지 단계가 적용됩니다.");
   }
   const extra = extraChecklistsForMode(cls, projectEstablishmentMode(projectId, db));
-  const excluded = [2, ...(site.site_steps_apply ? [] : [1, 3]), ...(cls === "intra_venture" ? [] : [8])].sort((a, b) => a - b);
+  const excluded = [2, ...(site.site_steps_apply ? [] : [1, 3]), ...(cls === "intra_venture" ? [] : [8]), ...d9TrimmedStepsFor(projectId, cls, db)].sort((a, b) => a - b);
   return {
     track: "greenfield",
     sub_track: route.sub_track,

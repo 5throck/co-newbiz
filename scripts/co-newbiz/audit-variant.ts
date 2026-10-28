@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.5.0
+// @version 1.6.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -34,8 +34,9 @@
  *     an audit run that skips unit tests.
  *   - Process SSOT validators (v1.4.0, ADR-0187 P1): the eight named checks of
  *     scripts/co-newbiz/process-ssot-check.ts. Since v1.5.0 (ADR-0187 P2) the
- *     BLOCKING_CHECKS set the failure flag; check-engine-spec-parity (P3) and
- *     check-review-coverage (P4) stay WARN.
+ *     BLOCKING_CHECKS set the failure flag; since v1.6.0 (ADR-0187 P3)
+ *     check-engine-spec-parity is blocking too and only check-review-coverage
+ *     (P4) stays WARN.
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -235,17 +236,17 @@ runDriftGate(
   "app/web-next/lib/pm-catalog.generated.ts",
 );
 
-// ADR-0187 P2: BLOCKING_CHECKS fail the audit; the P3/P4 checks stay WARN.
+// ADR-0187 P2/P3: BLOCKING_CHECKS fail the audit; the P4 check stays WARN.
 const ssot = runAll();
 const ssotCounts = summarize(ssot);
 const ssotBlocking = ssot.filter(isBlocking);
 const fmt = (ids: readonly string[]) => ids.map((c) => `${c}=${ssotCounts[c as keyof typeof ssotCounts]}`).join(", ");
 if (ssotBlocking.length > 0) {
-  console.log(`  ❌ Process SSOT validators (blocking, ADR-0187 P2): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`);
+  console.log(`  ❌ Process SSOT validators (blocking, ADR-0187 P2/P3): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`);
   failed = true;
-} else console.log(`  ✓ Process SSOT validators (blocking, ADR-0187 P2): 0 findings — ${fmt([...BLOCKING_CHECKS])}`);
+} else console.log(`  ✓ Process SSOT validators (blocking, ADR-0187 P2/P3): 0 findings — ${fmt([...BLOCKING_CHECKS])}`);
 const ssotWarn = CHECK_IDS.filter((c) => !BLOCKING_CHECKS.has(c));
 if (ssot.length > ssotBlocking.length)
-  console.log(`  ⚠ [WARN] Process SSOT validators (report-only until ADR-0187 P3/P4): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`);
+  console.log(`  ⚠ [WARN] Process SSOT validators (report-only until ADR-0187 P4): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`);
 
 process.exit(failed ? 1 : 0);

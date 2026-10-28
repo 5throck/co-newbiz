@@ -20,7 +20,8 @@ describe("ADR-0185 W3 prompt placement", () => {
 
   test("red-team independence rebinds", () => {
     expect(P["s3.synergy_fa"]!.agent).toBe("financial-analyst");
-    expect(P["s3.capability_gap_draft"]!.agent).toBe("process-governance-manager");
+    // ADR-0187 D5: track-lead owned capability-register activities (greenfield-agent default, brownfield-agent once the route is brownfield).
+    expect(P["s3.capability_gap_draft"]!.agent).toBe("greenfield-agent");
     // ADR-0187 D6: the synergy author is financial-analyst; risk-officer red-teams only.
     expect(P["s3.synergy_synergy"]!.agent).toBe("financial-analyst");
     expect(P["s3.synergy_ic"]!.agent).toBe("risk-officer");
@@ -30,7 +31,7 @@ describe("ADR-0185 W3 prompt placement", () => {
 
   test("activity mappings", () => {
     const expected: Record<string, string> = {
-      "s3.capability_gap_draft": "S3.strategic-fit-screening",
+      "s3.capability_gap_draft": "S3.capability-register-greenfield",
       "s3.attractiveness_recommendation": "S3.strategic-fit-screening",
       "s8.business_case_prose": "S8.business-case-modeling",
       "s8.business_case_adoption": "S8.valuation",

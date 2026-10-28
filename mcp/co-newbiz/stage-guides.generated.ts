@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.15.0";
+export const GUIDE_SPEC_VERSION = "2.16.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -243,7 +243,8 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     "completionCriteria": [
       "route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)",
       "Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다",
-      "Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)"
+      "Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)",
+      "법무·규제 스크리닝 판정(chk-legal-regulatory 필수 항목)이 사람에 의해 기록되었다 — 필수 항목은 pass 또는 사유가 있는 not_applicable이어야 하며 권장 항목은 차단하지 않는다 (ADR-0187 P3, 가족 legal_regulatory가 enforce일 때 차단)"
     ]
   },
   {
@@ -281,11 +282,15 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     ],
     "requiredArtifacts": [
       "역량 격차 평가",
-      "진출전략(Build/Partner/Hire/Invest 결정·근거)"
+      "진출전략(Build/Partner/Hire/Invest 결정·근거)",
+      "그린필드 실현가능성 체크리스트 판정 (chk-greenfield-feasibility gf-01~gf-12)",
+      "부지 선정 체크리스트 판정 (chk-site-selection ss-01~ss-09)"
     ],
     "completionCriteria": [
       "필요 역량 대비 보유 역량 격차와 해소 방안이 기록되었다",
-      "진출전략이 결정되고 검토한 대안이 기록되었다"
+      "진출전략이 결정되고 검토한 대안이 기록되었다",
+      "그린필드 실현가능성 체크리스트(chk-greenfield-feasibility)의 필수 항목이 사람에 의해 판정되었다 (ADR-0187 P3, 가족 checklist_consumers가 enforce일 때 차단)",
+      "부지 선정 체크리스트(chk-site-selection)의 필수 항목이 사람에 의해 판정되었다 — 기존 부지 증설은 사유가 있는 not_applicable로 기록한다 (ADR-0187 P3, 가족 checklist_consumers가 enforce일 때 차단)"
     ]
   },
   {
@@ -430,7 +435,8 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       "민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)",
       "BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다",
       "brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)",
-      "brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다"
+      "brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다",
+      "할인율 적용 주체와 WACC·hurdle IRR을 사람이 확인했다 (ADR-0186 D8 — 가족 wacc가 enforce일 때 차단)"
     ]
   },
   {
@@ -606,7 +612,10 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     ],
     "completionCriteria": [
       "최신 투자구조 가설의 4축 검토(절세 구조·책임 격리·재무 레버리지·엑싯 구조)가 근거 아티팩트 참조와 함께 완료되었다",
-      "자금조달 sources와 uses 합계가 균형을 이루고 0보다 크다"
+      "자금조달 sources와 uses 합계가 균형을 이루고 0보다 크다",
+      "자금 사용(uses) 합계가 S8에서 채택한 케이스의 투자금과 ±5% 이내로 대사된다 — 채택 투자금을 도출할 수 없으면 차단하지 않고 사람의 대사를 요구한다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)",
+      "부채 조달이 있으면 다운사이드 시나리오의 DSCR 커버넌트 여력이 1.2배 이상이다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)",
+      "모든 조달원(sources)에 자금 확정성 증빙(evidence_kind·evidence_ref)이 기록되었다 (ADR-0187 P3)"
     ]
   },
   {
@@ -695,7 +704,8 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       "S8에서 사람이 채택한 Business Case 기록(s8_case_adopt)이 존재한다",
       "법인·그룹 투자심의위원회의 최신 GO 결정자가 사람이다 (사람 최종 승인 — grandfathered 프로젝트 제외)",
       "brownfield M&A·JV·전략적 투자: 사람이 기록한 PMI 킥오프(통합 책임자·통합 계획 기준선)가 존재한다 (소수점 지분·파트너십·R&BD·CVC·기존사업 R&BD·사내벤처 제외)",
-      "greenfield: 실행 기준선이 사람에 의해 확인되었다 (트랙 분류 충돌은 사람이 정리 — ADR-0161)"
+      "greenfield: 실행 기준선이 사람에 의해 확인되었다 (트랙 분류 충돌은 사람이 정리 — ADR-0161)",
+      "투자심의위원회가 건 선행 조건(condition precedent)이 모두 해소되었다 (ADR-0186 D4 — 가족 validators가 enforce일 때 차단)"
     ]
   },
   {

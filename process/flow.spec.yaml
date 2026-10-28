@@ -21,7 +21,29 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.15.0"
+  version: "2.16.0"
+  # v2.16.0 - ADR-0187 phase P3 (engine parity and decision evidence; design
+  #   2026-10-27-process-ssot-decision-evidence-design P3):
+  #   - Every stage declares `blockers:` - the stable keys of the engine blockers
+  #     (lib/process-blocker-keys.ts) and the requiredArtifacts / completionCriteria
+  #     each covers, so engine <-> spec parity compares keys, not Korean strings
+  #     (finding H8, check-engine-spec-parity now blocking).
+  #   - S4 gains the chk-legal-regulatory completion criterion and its engine
+  #     blocker (compliance-engine gate requirement at the Screening gate);
+  #     S5 gains machine consumers for chk-greenfield-feasibility and
+  #     chk-site-selection (Pre-FS). Both ship behind the checklist-consumer
+  #     flag (off / shadow / enforce, the ADR-0186 rollout pattern).
+  #   - S8 declares the WACC confirmation blocker (ADR-0186 D8) and S11 the
+  #     condition-precedent blocker (ADR-0186 D4) the engine already enforced.
+  #   - S10 completionCriteria gain the three M1 checks (uses reconcile to the
+  #     S8 adopted investment within +/-5%, downside DSCR headroom >= 1.2x,
+  #     funding evidence on every source); thresholds are D2 starting values
+  #     owned by risk-officer + quant-methodologist.
+  #   - S3 capability-register activities: the draft prompt s3.capability_gap_draft
+  #     is rebound to the track leads (D5).
+  #   - D9 (owner decision 2026-10-28): the greenfield DD trim keys on the
+  #     internal-expansion sub-tracks (existing_business_rbd, intra_venture),
+  #     not on origin; a new-site plant (no sub-track) keeps the full DD.
   # v2.15.0 - ADR-0187 phase P2 (procedure and checklist reconciliation;
   #   design 2026-10-27-process-ssot-decision-evidence-design P2). Every
   #   activity.agent now holds a step in each procedure it lists, or the pair
@@ -391,6 +413,17 @@ stages:
       - 최소 1개의 정량화된 수요 추정(직접 또는 프록시 체인)이 존재한다
       - 최신 완료 버전의 매트릭스에 경쟁 구조(집중도 요약·주요 플레이어)가 기록되었다
       - 데이터 신뢰도 등급이 기록되었다
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s1.market_size_growth, artifacts: [0], criteria: [0] }
+      - { key: s1.competitive_structure, artifacts: [1], criteria: [1] }
+      - { key: s1.value_chain_structure, artifacts: [2], criteria: [] }
+      - { key: s1.data_confidence_grade, artifacts: [], criteria: [2] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S2, onHold: S1, onKill: terminal }
     gates: [screening]
@@ -446,6 +479,15 @@ stages:
     completionCriteria:
       - 최소 1개 기회가 등록되고 매력도가 평가되었다
       - 최소 1개 기회에 S1 시장규모 버전이 연결되고 대상 범위가 기록되었다 (ADR-0180 — 미연결 상태는 미연결로 정직 표시되며 게이트를 막지 않는다)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s2.attractiveness_assessment, artifacts: [0], criteria: [0] }
+      - { key: s2.entry_market, artifacts: [1], criteria: [1] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S3, onHold: S2, onKill: terminal }
     gates: [screening]
@@ -500,9 +542,10 @@ stages:
         # register (opportunity.capability_gap_json) on the greenfield lens. The
         # register is one per opportunity - S3 precedes the S4 route decision, so
         # both track leads contribute; greenfield-agent consumes it at S5
-        # capability-assessment. Recorded divergence until P3: the runtime draft
-        # prompt s3.capability_gap_draft still runs under process-governance-manager
-        # mapped to strategic-fit-screening; rebinding it is engine work.
+        # capability-assessment. v2.16.0 (P3): the runtime draft prompt
+        # s3.capability_gap_draft is bound to greenfield-agent / this activity
+        # (the catalog default) and the call is attributed to brownfield-agent
+        # once the recorded route is brownfield (lib/capability-register-lead.ts).
       - id: capability-register-brownfield
         agent: brownfield-agent
         skills: [brownfield-feasibility]
@@ -533,6 +576,17 @@ stages:
       # 게이트 권고 조합 로직(fit=Go & synergy≥60→Go, fit=Kill or synergy<40→Kill, 그 외→Hold)은
       # 시너지 점수가 40 미만이면 사람의 Hold 판정보다 우선해 Kill을 권고할 수 있다 —
       # 이 경우 권고 근거를 기록하고 사람이 최종 판단한다 (경계 #2: 자동 판정 아님)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s3.synergy_assessment, artifacts: [0], criteria: [0] }
+      - { key: s3.strategic_fit_judgement, artifacts: [1], criteria: [1] }
+      - { key: s3.opportunity_selected, artifacts: [], criteria: [2] }
+      - { key: s3.capability_register, artifacts: [], criteria: [3] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S4, onHold: S3, onKill: terminal }
     gates: [screening]
@@ -619,6 +673,19 @@ stages:
       - route_decision 레코드가 존재한다 (track 필수; brownfield는 Route 유형(sub_track) 필수, greenfield의 sub_track은 선택)
       - Brownfield인 경우 5criteria 채점 결과와 사전배제 점검이 기록되었다
       - Greenfield인 경우에도 5criteria 채점 결과를 기록한다 (ADR-0104 — 트랙 간 비교 가능성)
+      - 법무·규제 스크리닝 판정(chk-legal-regulatory 필수 항목)이 사람에 의해 기록되었다 — 필수 항목은 pass 또는 사유가 있는 not_applicable이어야 하며 권장 항목은 차단하지 않는다 (ADR-0187 P3, 가족 legal_regulatory가 enforce일 때 차단)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s4.route_decision, artifacts: [0], criteria: [0] }
+      - { key: s4.brownfield_sub_track, artifacts: [1], criteria: [0] }
+      - { key: s4.five_criteria_scores, artifacts: [2], criteria: [1, 2] }
+      - { key: s4.alternatives_considered, artifacts: [3], criteria: [] }
+      - { key: s4.legal_regulatory_screening, artifacts: [4], criteria: [3] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S5, onHold: S4, onKill: terminal }
     gates: [screening, pre_fs]
@@ -653,9 +720,26 @@ stages:
     requiredArtifacts:
       - 역량 격차 평가
       - 진출전략(Build/Partner/Hire/Invest 결정·근거)
+      - 그린필드 실현가능성 체크리스트 판정 (chk-greenfield-feasibility gf-01~gf-12)
+      - 부지 선정 체크리스트 판정 (chk-site-selection ss-01~ss-09)
     completionCriteria:
       - 필요 역량 대비 보유 역량 격차와 해소 방안이 기록되었다
       - 진출전략이 결정되고 검토한 대안이 기록되었다
+      - 그린필드 실현가능성 체크리스트(chk-greenfield-feasibility)의 필수 항목이 사람에 의해 판정되었다 (ADR-0187 P3, 가족 checklist_consumers가 enforce일 때 차단)
+      - 부지 선정 체크리스트(chk-site-selection)의 필수 항목이 사람에 의해 판정되었다 — 기존 부지 증설은 사유가 있는 not_applicable로 기록한다 (ADR-0187 P3, 가족 checklist_consumers가 enforce일 때 차단)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s5.capability_gap_register, artifacts: [], criteria: [0] }
+      - { key: s5.capability_assessment, artifacts: [0], criteria: [0] }
+      - { key: s5.entry_strategy, artifacts: [1], criteria: [1] }
+      - { key: s5.alternatives_considered, artifacts: [], criteria: [1] }
+      - { key: s5.greenfield_feasibility_checklist, artifacts: [2], criteria: [2] }
+      - { key: s5.site_selection_checklist, artifacts: [3], criteria: [3] }
 
     # greenfield 실행 시 S6·S7은 applicableTracks 미충족으로 스킵되어 S8로 진행한다
     applicableTracks: [greenfield]
@@ -691,6 +775,16 @@ stages:
       - 후보 Universe의 정의·선정 기준이 기록되었다
       - 최소 커버리지 기준을 충족하는 Long List가 존재한다
       - Long List 후보에 필수 속성과 출처/근거가 기록되었다
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s6.target_universe, artifacts: [0], criteria: [0] }
+      - { key: s6.longlist_attributes, artifacts: [], criteria: [2] }
+      - { key: s6.longlist_coverage, artifacts: [1], criteria: [1] }
     applicableTracks: [brownfield]
     stateTransitions: { onComplete: S7, onHold: S6, onKill: terminal }
     gates: [pre_fs]
@@ -730,6 +824,17 @@ stages:
       - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
       - Short List 후보가 knock-out 스크리닝을 통과했다
       - 스크리닝 근거(evidence)가 후보별로 기록되었다
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s7.candidate_screening, artifacts: [], criteria: [0] }
+      - { key: s7.candidate_verdict, artifacts: [1, 2], criteria: [0] }
+      - { key: s7.candidate_evidence, artifacts: [], criteria: [2] }
+      - { key: s7.knockout_shortlist, artifacts: [0], criteria: [1] }
     applicableTracks: [brownfield]
     stateTransitions: { onComplete: S8, onHold: S7, onKill: terminal }
     gates: [target_screening]
@@ -805,6 +910,20 @@ stages:
       - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
       - "brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)"
       - "brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다"
+      - 할인율 적용 주체와 WACC·hurdle IRR을 사람이 확인했다 (ADR-0186 D8 — 가족 wacc가 enforce일 때 차단)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s8.business_case_per_target, artifacts: [0], criteria: [2] }
+      - { key: s8.business_case, artifacts: [0], criteria: [0] }
+      - { key: s8.npv_quantiles, artifacts: [1], criteria: [0] }
+      - { key: s8.bep_input_snapshot, artifacts: [2], criteria: [1] }
+      - { key: s8.target_selection_record, artifacts: [3, 4], criteria: [3] }
+      - { key: s8.wacc_hurdle_confirmed, artifacts: [], criteria: [4] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S9, onHold: S8, onKill: terminal }
     gates: [fs]
@@ -919,6 +1038,15 @@ stages:
       - DD 체크리스트 판정(필수 항목 해소)
     completionCriteria:
       - 적용 체크리스트의 모든 항목이 판정되고 필수 미충족이 0건이다
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s9.dd_checklist_judgement, artifacts: [0], criteria: [0] }
+      - { key: s9.dd_mandatory_resolved, artifacts: [0], criteria: [0] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S10, onHold: S9, onKill: terminal }
     gates: [dd]
@@ -967,6 +1095,21 @@ stages:
     completionCriteria:
       - 최신 투자구조 가설의 4축 검토(절세 구조·책임 격리·재무 레버리지·엑싯 구조)가 근거 아티팩트 참조와 함께 완료되었다
       - 자금조달 sources와 uses 합계가 균형을 이루고 0보다 크다
+      - 자금 사용(uses) 합계가 S8에서 채택한 케이스의 투자금과 ±5% 이내로 대사된다 — 채택 투자금을 도출할 수 없으면 차단하지 않고 사람의 대사를 요구한다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)
+      - 부채 조달이 있으면 다운사이드 시나리오의 DSCR 커버넌트 여력이 1.2배 이상이다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)
+      - 모든 조달원(sources)에 자금 확정성 증빙(evidence_kind·evidence_ref)이 기록되었다 (ADR-0187 P3)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s10.deal_structure_hypothesis, artifacts: [0], criteria: [0] }
+      - { key: s10.sources_uses_balance, artifacts: [1], criteria: [1] }
+      - { key: s10.uses_reconcile_adopted_investment, artifacts: [], criteria: [2] }
+      - { key: s10.downside_covenant_headroom, artifacts: [], criteria: [3] }
+      - { key: s10.funding_evidence, artifacts: [], criteria: [4] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S11, onHold: S10, onKill: terminal }
     gates: []
@@ -1091,6 +1234,26 @@ stages:
       # lib/process-flow.ts S11 already enforces (s8_case_adopt adoption,
       # reviewer persona check, pmiKickoffApplies / NON_PMI_SUB_TRACKS,
       # executionBaselineS11Check); the order line fixes D7.
+      - 투자심의위원회가 건 선행 조건(condition precedent)이 모두 해소되었다 (ADR-0186 D4 — 가족 validators가 enforce일 때 차단)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s11.entity_ic_approval, artifacts: [], criteria: [0] }
+      - { key: s11.group_ic_approval, artifacts: [], criteria: [0] }
+      - { key: s11.adopted_business_case, artifacts: [0], criteria: [4] }
+      - { key: s11.charter_baseline, artifacts: [1], criteria: [1] }
+      - { key: s11.human_reviewer_record, artifacts: [2], criteria: [5] }
+      - { key: s11.pmi_kickoff, artifacts: [], criteria: [6] }
+      - { key: s11.establishment_mode, artifacts: [3], criteria: [2] }
+      - { key: s11.business_unit_execution, artifacts: [3], criteria: [2] }
+      - { key: s11.entity_establishment_execution, artifacts: [3], criteria: [2] }
+      - { key: s11.condition_precedents, artifacts: [], criteria: [8] }
+      - { key: s11.classification_conflict, artifacts: [], criteria: [7] }
+      - { key: s11.execution_baseline, artifacts: [], criteria: [7] }
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: S12, onHold: S11, onKill: terminal }
     gates: [entity_ic, group_ic]
@@ -1160,6 +1323,21 @@ stages:
       - "greenfield는 각 스코어카드 주기에 S11 실행 기준선·S8 채택 케이스·S8 사업 목표(참고) 대비 차이를 보고한다"
       # 이 단계의 kill/graduate는 S1~S11의 Kill Criteria와 범주가 다른 포트폴리오 거버넌스 결정이다
       # (procedures/_shared/portfolio-venture-monitoring — venture-portfolio-ic 결정 어휘 5종)
+    # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
+    # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
+    # covers the requiredArtifacts / completionCriteria it enforces (0-based
+    # indices into the two lists above). check-engine-spec-parity compares keys,
+    # not label strings; every requiredArtifact must be covered by a key or be
+    # listed in nonBlockingArtifacts.
+    blockers:
+      - { key: s12.venture_scorecard, artifacts: [0], criteria: [0] }
+      - { key: s12.scorecard_refresh, artifacts: [0], criteria: [0] }
+      - { key: s12.transition_decision, artifacts: [1], criteria: [1] }
+      - { key: s12.tranche_condition, artifacts: [2], criteria: [2] }
+      - { key: s12.core_handoff, artifacts: [2], criteria: [3] }
+      - { key: s12.divest_plan, artifacts: [2], criteria: [4] }
+      - { key: s12.learning_capture, artifacts: [2], criteria: [5] }
+    nonBlockingArtifacts: [3]
     applicableTracks: [greenfield, brownfield]
     stateTransitions: { onComplete: terminal, onHold: S12, onKill: terminal }
     # v2.14.0 (ADR-0187 M4): S12 has no gate; the post_close registry entries bind here.

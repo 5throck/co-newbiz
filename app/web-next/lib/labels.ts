@@ -11,6 +11,8 @@
 //   - GLOSSARY_CATEGORY_LABEL: still consumed by app/glossary/page.tsx (extraction pending).
 // Client-safe: NO imports (consumed by client components).
 
+import { blockerMessageKey } from "./process-blocker-keys.ts";
+
 /** Result of `resolveLabel`: `label` is what the UI shows; `raw` goes only into a developer-details disclosure. */
 export interface LabelResult {
   label: string;
@@ -78,6 +80,16 @@ export function localizeRequirement(text: string): string {
     .replace(/어휘 5종:\s*next_tranche_released\s*\/\s*held_evidence_incomplete\s*\/\s*graduate_to_core\s*\/\s*reduce_or_divest\s*\/\s*kill_with_learning_captured/g, "어휘 5종")
     .replace(/decided_by=venture-portfolio-ic/g, "결정자는 사람(벤처 포트폴리오 심의역)")
     .replace(/venture_transition_decision 원장/g, "S12 전환 결정 원장");
+}
+
+/**
+ * Display text for an engine-reported blocker label. A label that is a registered stable blocker
+ * (lib/process-blocker-keys.ts, ADR-0187 P3) resolves through the `processBlockers.*` catalog in the
+ * active locale; anything else (free-form blocker prose) keeps the Korean rewriter.
+ */
+export function localizeBlocker(tr: (key: string) => string, text: string, stage?: string): string {
+  const key = blockerMessageKey(text, stage);
+  return key ? tr(key) : localizeRequirement(text);
 }
 
 // §4 (ko): gate display names embedded in spec-requirement rewriting above (KO_GATE_NAME) —

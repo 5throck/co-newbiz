@@ -154,6 +154,8 @@ describe("S10 deal-structure route + repositories (flow.spec v2.2.0)", () => {
       [`pci-${ulidText()}`, projectId, "custom:commercial", `itm-${ulidText()}`, "pass", ANALYST, NOW],
     );
     judgeAllStandardDdItems(db, projectId, ANALYST, NOW);
+    // ADR-0187 P3 (M1): S10 also needs funding-certainty evidence on every source.
+    db.run("UPDATE financing_sources_uses SET evidence_kind = 'internal_approval', evidence_ref = 'fixture-evidence' WHERE project_id = ? AND kind = 'source'", [projectId]);
     const before = evaluateProcess({ type: "project", id: projectId });
     expect(before.completedStages).toContain("S10");
     expect(before.currentStage).toBe("S11");

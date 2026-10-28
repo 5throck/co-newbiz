@@ -43,7 +43,7 @@ const { SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists } = await import("..
 const NOW = new Date().toISOString();
 const OLD = "2026-06-01T00:00:00.000Z"; // before GF_SUBTRACK_PREDICATE_DATE / GF_WORKSPACE_SCOPE_DATE (2026-07-01)
 /** Fixed post-cut-off creation stamp (GF_SUBTRACK_PREDICATE_DATE) — never wall-clock dependent. */
-const NEW = "2026-10-20T00:00:00.000Z";
+const NEW = "2026-10-29T00:00:00.000Z"; // on/after D9_RULE_DATE (2026-10-28) and the sub-track cut-off
 const A1 = "gf_analyst1";
 const A2 = "gf_analyst2";
 const AGENT = [...AGENT_KEYS][0];
@@ -189,20 +189,20 @@ describe("(b) routing resolver + greenfield-dd step predicates", () => {
   });
   test("existing_business_rbd: unconfirmed site -> site steps apply; confirmed false -> skipped at once", () => {
     const p = seedProject("greenfield", "existing_business_rbd");
-    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 10, 11, 17]); // D9 (2026-10-28): steps 9, 12-16 trimmed for the internal-expansion sub-tracks
     const a = gf.confirmSiteRequired({ projectId: p, value: false, rationale: "부지 없음", actor: A1 }, db);
     expect(a.ok).toBe(true);
     // Single-person confirmation (user decision 2026-10-12): effective immediately.
     expect(resolveRoutingVars(p, db)("project.site_required")).toEqual({ status: "present", value: false });
-    expect(applies(p)).toEqual([4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(applies(p)).toEqual([4, 5, 6, 7, 10, 11, 17]);
   });
   test("intra_venture: no default (site steps apply until a human confirms); reviewed false skips them", () => {
     const p = seedProject("greenfield", "intra_venture");
-    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8, 10, 11, 17]);
     setSite(p, false);
-    expect(applies(p)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(applies(p)).toEqual([4, 5, 6, 7, 8, 10, 11, 17]);
     setSite(p, true);
-    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    expect(applies(p)).toEqual([1, 3, 4, 5, 6, 7, 8, 10, 11, 17]);
   });
   test("unknown (brownfield) value on a greenfield route -> site default, same as null", () => {
     const p = seedProject("greenfield", "m_and_a");
@@ -244,7 +244,7 @@ describe("(b2) YAML documented intent vs greenfield-subtrack.ts (code is authori
     const old = seedProject("greenfield", "existing_business_rbd", { old: true });
     expect(gf.greenfieldSelection(old, db)!.excluded_steps).toEqual([6, 7, 8]); // v1.0.0 steps 1-5
     expect(raw).toContain("GF_SUBTRACK_PREDICATE_DATE");
-    expect(yamlApplies(old)).toEqual([1, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17]); // YAML ignores the cut-off by design
+    expect(yamlApplies(old)).toEqual([1, 3, 4, 5, 6, 7, 10, 11, 17]); // YAML ignores the cut-off by design
     const none = seedProject("greenfield", null);
     db.run("UPDATE route_decision SET is_current = 0 WHERE opportunity_id = (SELECT source_opportunity_id FROM md_project WHERE id = ?)", [none]);
     expect(gf.greenfieldSelection(none, db)).toBeNull(); // code: no route -> no greenfield selection
@@ -270,12 +270,12 @@ describe("(c) S9 selection", () => {
     const sel = gf.greenfieldSelection(v, db)!;
     expect(sel.site).toMatchObject({ site_required: null, basis: "unconfirmed", site_steps_apply: true });
     expect(sel.warnings.length).toBe(1);
-    expect(sel.excluded_steps).toEqual([2]);
+    expect(sel.excluded_steps).toEqual([2, 9, 12, 13, 14, 15, 16]); // site steps apply until confirmed; D9 trim
     expect(sel.na_reason_checklists).not.toContain("chk-technical-dd-checklist");
     setSite(v, false);
     const confirmed = gf.greenfieldSelection(v, db)!;
     expect(confirmed.site).toMatchObject({ site_required: false, basis: "confirmed", site_steps_apply: false });
-    expect(confirmed.excluded_steps).toEqual([1, 2, 3]);
+    expect(confirmed.excluded_steps).toEqual([1, 2, 3, 9, 12, 13, 14, 15, 16]);
     expect(confirmed.na_reason_checklists).toContain("chk-technical-dd-checklist");
     expect(ddCompletionSummary(v).unassessed).toBeGreaterThan(0);
   });
@@ -306,6 +306,104 @@ describe("(c) S9 selection", () => {
     }
     const old = seedProject("brownfield", "m_and_a", { old: true });
     expect(subTrackChecklistIds(old)).toEqual([]); // WAVE_F grandfathering unchanged
+  });
+});
+
+describe("(c2) D9 DD trim keys on the internal-expansion sub-track, not on origin (ADR-0187 P3, owner decision 2026-10-28)", () => {
+  const D9 = [9, 12, 13, 14, 15, 16];
+  const origin = (id: string, o: string) => db.run("UPDATE md_project SET origin = ? WHERE id = ?", [o, id]);
+  const yamlDoc = parseYaml(readFileSync("procedures/_shared/greenfield-dd/schema.yaml", "utf-8")) as { version: string; steps: { id: number; applies_when?: unknown }[] };
+  const procApplies = (projectId: string) => {
+    const lookup = resolveRoutingVars(projectId, db);
+    return yamlDoc.steps
+      .filter((st) => (st.applies_when ? evaluateAppliesWhen({ procedure: "greenfield-dd", step: st.id }, parsePredicate(st.applies_when), lookup).applies : true))
+      .map((st) => st.id);
+  };
+
+  test("the trimmed step set is exactly the steps whose procedure predicate no longer mentions origin", () => {
+    expect(gf.D9_TRIMMED_STEPS).toEqual(D9);
+    expect(yamlDoc.version).toBe("1.3.0");
+    for (const st of yamlDoc.steps) expect(JSON.stringify(st.applies_when ?? {})).not.toContain("project.origin");
+    const trimmed = yamlDoc.steps.filter((st) => JSON.stringify(st.applies_when ?? {}).includes("existing_business_rbd") && D9.includes(st.id)).map((st) => st.id);
+    expect(trimmed.sort((a, b) => a - b)).toEqual(D9);
+  });
+  test("new-site plant (no sub-track): origin=internal (the ADR-0166 default) keeps the FULL DD", () => {
+    const p = seedProject("greenfield", null);
+    origin(p, "internal");
+    const sel = gf.greenfieldSelection(p, db)!;
+    expect(sel.sub_track_class).toBe("none");
+    expect(gf.d9TrimApplies(sel.sub_track_class)).toBe(false);
+    for (const step of D9) expect(sel.excluded_steps).not.toContain(step);
+    for (const step of D9) expect(procApplies(p)).toContain(step);
+    for (const o of ["external", "hybrid", "joint"]) {
+      origin(p, o);
+      for (const step of D9) expect(procApplies(p)).toContain(step);
+    }
+  });
+  for (const sub of ["existing_business_rbd", "intra_venture"] as const) {
+    test(`internal expansion (${sub}) is trimmed to capability / financial / legal-regulatory / EHS, whatever the origin`, () => {
+      for (const o of ["internal", "external", "joint"]) {
+        const p = seedProject("greenfield", sub);
+        origin(p, o);
+        const sel = gf.greenfieldSelection(p, db)!;
+        expect(gf.d9TrimApplies(sel.sub_track_class)).toBe(true);
+        for (const step of D9) expect(sel.excluded_steps).toContain(step);
+        for (const step of D9) expect(procApplies(p)).not.toContain(step);
+        // kept: legal-regulatory (10), financial (11), waiver adjudication (17), EHS site steps (1, 3 until a human says no site)
+        for (const step of [10, 11, 17]) expect(procApplies(p)).toContain(step);
+        for (const step of [10, 11, 17]) expect(sel.excluded_steps).not.toContain(step);
+      }
+    });
+  }
+  test("legacy projects (earliest pin/creation before 2026-10-28) keep the pre-P3 origin rule - no retroactive change (ADR-0151)", () => {
+    expect(gf.D9_RULE_DATE).toBe("2026-10-28");
+    // legacy new-site, origin=internal: old trim stays
+    const a = seedProject("greenfield", null, { old: true });
+    origin(a, "internal");
+    expect(gf.d9Legacy(a, db)).toBe(true);
+    for (const step of D9) expect(gf.greenfieldSelection(a, db)!.excluded_steps).toContain(step);
+    // legacy new-site, other origin: no trim
+    origin(a, "external");
+    for (const step of D9) expect(gf.greenfieldSelection(a, db)!.excluded_steps).not.toContain(step);
+    // legacy rbd (selection inactive): origin decides, not the sub-track
+    const b = seedProject("greenfield", "existing_business_rbd", { old: true });
+    expect(gf.greenfieldSelection(b, db)!.selection_active).toBe(false);
+    for (const step of D9) expect(gf.greenfieldSelection(b, db)!.excluded_steps).not.toContain(step); // origin unassessed
+    origin(b, "internal");
+    for (const step of D9) expect(gf.greenfieldSelection(b, db)!.excluded_steps).toContain(step);
+    // a legacy project created before the date without any pin is legacy too
+    const c = seedProject("greenfield", null);
+    db.run("UPDATE md_project SET created_at = ?, origin = 'internal' WHERE id = ?", ["2026-10-27T00:00:00.000Z", c]);
+    expect(gf.d9Legacy(c, db)).toBe(true);
+    for (const step of D9) expect(gf.greenfieldSelection(c, db)!.excluded_steps).toContain(step);
+  });
+  test("new projects: new new-site gets the full DD, new rbd/intra_venture is trimmed even when its selection is inactive", () => {
+    const n = seedProject("greenfield", null);
+    origin(n, "internal");
+    expect(gf.d9Legacy(n, db)).toBe(false);
+    for (const step of D9) expect(gf.greenfieldSelection(n, db)!.excluded_steps).not.toContain(step);
+    const r = seedProject("greenfield", "existing_business_rbd");
+    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "project", r, "dd", "hold", "x", A1, NOW]);
+    expect(gf.greenfieldSelection(r, db)!.selection_active).toBe(false); // dd already decided: by-date selection off
+    for (const step of D9) expect(gf.greenfieldSelection(r, db)!.excluded_steps).toContain(step); // procedure and code still agree
+    for (const step of D9) expect(procApplies(r)).not.toContain(step);
+  });
+  test("an unknown value and an unassessed route apply every step (fail-closed)", () => {
+    const p = seedProject("greenfield", "m_and_a");
+    for (const step of D9) expect(gf.greenfieldSelection(p, db)!.excluded_steps).not.toContain(step);
+    for (const step of D9) expect(procApplies(p)).toContain(step);
+  });
+  test("the workspace overlay (1.3.0) reads 'no' for steps 9 and 12-16 on the expansion sub-tracks and 'yes' for the new site", async () => {
+    const { workspaceOverlay } = gf;
+    const ov = workspaceOverlay()!;
+    expect(ov.version).toBe("1.3.0");
+    for (const step of D9) {
+      const st = ov.steps.find((x) => x.step === step)!;
+      expect(st.applies.none).toBe("yes");
+      expect(st.applies.existing_business_rbd).toBe("no");
+      expect(st.applies.intra_venture).toBe("no");
+    }
+    for (const step of [10, 11, 17]) expect(ov.steps.find((x) => x.step === step)!.applies.intra_venture).toBe("yes");
   });
 });
 
@@ -376,7 +474,7 @@ describe("(e) human-only routes", () => {
     expect(audit[0].target).toContain("single_person_confirmation");
     expect(audit[0].target).toContain("기존 공장 내 R&BD");
     const g = await nextRequest(path, { headers: { cookie: c1 } });
-    expect((await json(g)).data.greenfield_scope.excluded_steps).toEqual([1, 2, 3, 8]);
+    expect((await json(g)).data.greenfield_scope.excluded_steps).toEqual([1, 2, 3, 8, 9, 12, 13, 14, 15, 16]);
     // Legacy action name still accepted; another person re-confirms -> supersedes, effective at once.
     const c2r = await post(path, { action: "confirm_site_required", site_required: true, rationale: "증설 부지 필요" }, c2);
     expect(c2r.status).toBe(201);

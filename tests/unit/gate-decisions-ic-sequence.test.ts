@@ -49,7 +49,7 @@ function seedS10Complete(pid: string) {
     [ulid(), pid, "stock", "majority", "mixed", "spc", "법인세 특례 검토", "SPC 자산 격리", "AC 대출 60%", "5년 후 매각", ANALYST, NOW, "4축 검토 완료"],
   );
   for (const [kind, name] of [["source", "출자금"], ["use", "주식 인수 대금"]] as const) {
-    db.run("INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, kind, name, 1000, ANALYST, NOW]);
+    db.run("INSERT INTO financing_sources_uses (id, project_id, kind, name, amount_krw_m, created_by, created_at, evidence_kind, evidence_ref) VALUES (?,?,?,?,?,?,?,?,?)", [ulid(), pid, kind, name, 1000, ANALYST, NOW, kind === "source" ? "internal_approval" : null, kind === "source" ? "fixture-evidence" : null]); // ADR-0187 P3 (M1): sources carry funding evidence
   }
 }
 

@@ -1,4 +1,4 @@
-// @version 1.12.0
+// @version 1.13.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -10,7 +10,8 @@
 // the S9/S11/S12 tool cards read (T-20261022-042): DD tool rows, PMI
 // monitoring (brownfield), and the milestone register (both tracks). v1.12.0 (ADR-0186 O-5) records the gate ladder THROUGH the
 // contract (seed-demo-gate-contract.ts): snapshots + acknowledgements, six validators, user-confirmed WACC, countersigned IC
-// GOs, a cleared condition precedent, HOLD, KILL with learning capture and a waiver; option gateDecisions:false skips it.
+// GOs, a cleared condition precedent, HOLD, KILL with learning capture and a waiver; option gateDecisions:false skips it. v1.13.0 (ADR-0187 P3,
+// M1): every demo funding source carries evidence_kind / evidence_ref, as the S10 funding-evidence check requires.
 //
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
@@ -578,11 +579,12 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       ["purchase", "use", "Purchase price", 10000],
       ["integration", "use", "Integration reserve", 2000],
     ] as const) {
+      // ADR-0187 P3 (M1): every source carries funding-certainty evidence.
       db.run(
         `INSERT OR IGNORE INTO financing_sources_uses
-         (id, project_id, kind, name, amount_krw_m, note, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, 'S1-S12 demo balanced plan', ?, ?)`,
-        [`demo-s1-s12-fin-${id}`, DEMO.projectId, kind, name, amount, actor, now],
+         (id, project_id, kind, name, amount_krw_m, note, created_by, created_at, evidence_kind, evidence_ref)
+         VALUES (?, ?, ?, ?, ?, 'S1-S12 demo balanced plan', ?, ?, ?, ?)`,
+        [`demo-s1-s12-fin-${id}`, DEMO.projectId, kind, name, amount, actor, now, kind === "source" ? (id === "debt" ? "term_sheet" : "internal_approval") : null, kind === "source" ? `demo-evidence/${id}` : null],
       );
     }
 
@@ -870,9 +872,9 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     ] as const) {
       db.run(
         `INSERT OR IGNORE INTO financing_sources_uses
-         (id, project_id, kind, name, amount_krw_m, note, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, 'S1-S12 greenfield demo balanced plan', ?, ?)`,
-        [`demo-gf-fin-${id}`, GF.projectId, kind, name, amount, actor, now],
+         (id, project_id, kind, name, amount_krw_m, note, created_by, created_at, evidence_kind, evidence_ref)
+         VALUES (?, ?, ?, ?, ?, 'S1-S12 greenfield demo balanced plan', ?, ?, ?, ?)`,
+        [`demo-gf-fin-${id}`, GF.projectId, kind, name, amount, actor, now, kind === "source" ? (id === "debt" ? "term_sheet" : "internal_approval") : null, kind === "source" ? `demo-evidence/${id}` : null],
       );
     }
 
@@ -944,6 +946,20 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
          VALUES (?, 'project', ?, ?, 'demo-gf', 's8_case_adopt', 'done', 'human', ?, ?, ?, ?)`,
         [GF.adoptionRunId, GF.projectId, GF.projectId, actor, now, now, json({ model_id: adopted.id })],
       );
+
+      // ADR-0187 P3 (M1): the S10 plan's uses reconcile to the adopted case investment
+      // (capex total, +/-5%). The generated case fixes that total, so the demo plan is
+      // re-cut to it once, keeping sources = uses (rows seeded above, same ids).
+      const { adoptedCaseCapex } = await import("../../app/web-next/lib/greenfield-execution.ts");
+      const investment = adoptedCaseCapex(GF.projectId, db).total;
+      if (investment !== null && investment > 0) {
+        const r3 = (n: number) => Math.round(n * 1000) / 1000;
+        const plant = r3(investment * 0.8);
+        const equity = r3(investment * 0.75);
+        for (const [id, amount] of [["plant", plant], ["wc", r3(investment - plant)], ["equity", equity], ["debt", r3(investment - equity)]] as const) {
+          db.run("UPDATE financing_sources_uses SET amount_krw_m = ? WHERE id = ?", [amount, `demo-gf-fin-${id}`]);
+        }
+      }
     }
   }
 
