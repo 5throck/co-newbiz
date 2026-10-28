@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-28T13:04:16.710Z
+**Generated**: 2026-10-28T18:43:07.943Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 179 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 180 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -37,7 +37,7 @@
 | greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-27 |
 | group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-27 |
 | hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-27 |
-| i18n-specialist | agents/i18n-specialist.md | medium | inherit | 2026-10-27 |
+| i18n-specialist | agents/i18n-specialist.md | medium | claude-sonnet-5-5 | 2026-10-27 |
 | incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-27 |
 | industry-lead | agents/industry-lead.md | high | inherit | 2026-10-27 |
 | infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-27 |
@@ -51,7 +51,7 @@
 | pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-10-27 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-27 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-27 |
-| README_ko | agents/README_ko.md | N/A | N/A | 2026-10-26 |
+| README_ko | agents/README_ko.md | N/A | — | 2026-10-26 |
 | region-lead | agents/region-lead.md | high | inherit | 2026-10-27 |
 | release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-27 |
 | risk-officer | agents/risk-officer.md | high | inherit | 2026-10-28 |
@@ -198,7 +198,7 @@
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
 | audit-variant.ts | 1.7.0 | scripts/co-newbiz/audit-variant.ts | N/A |
-| audit.ts | 2.56.0 | scripts/audit.ts | bun |
+| audit.ts | 2.57.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -241,7 +241,7 @@
 | design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.3.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.33.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.34.0 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -265,7 +265,7 @@
 | generate-review-matrix.ts | 1.0.0 | scripts/co-newbiz/generate-review-matrix.ts | js-yaml |
 | generate-skill-graph.ts | 2.0.0 | scripts/generate-skill-graph.ts | js-yaml |
 | generate-spec-activities.ts | 1.2.0 | scripts/co-newbiz/generate-spec-activities.ts | js-yaml |
-| generate-version-manifest.ts | 1.10.2 | scripts/generate-version-manifest.ts | bun, js-yaml |
+| generate-version-manifest.ts | 1.11.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
 | graph-delta-log.ts | 1.1.0 | scripts/graph-delta-log.ts | N/A |
 | graph-map.ts | 1.3.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
@@ -300,7 +300,7 @@
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
 | reconfirm-requirement.ts | 1.1.0 | scripts/co-newbiz/reconfirm-requirement.ts | N/A |
-| regenerate-agents-md.ts | 1.3.0 | scripts/regenerate-agents-md.ts | fs, path |
+| regenerate-agents-md.ts | 1.4.0 | scripts/regenerate-agents-md.ts | fs, path |
 | register-hydraulic-breaker-assumptions.ts | 1.0.0 | scripts/co-newbiz/register-hydraulic-breaker-assumptions.ts | N/A |
 | render-commands.ts | 1.1.0 | scripts/render-commands.ts | N/A |
 | render-pdf-deck.ts | 1.0.1 | scripts/render-pdf-deck.ts | N/A |
@@ -322,10 +322,11 @@
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
-| skill-lifecycle-audit.ts | 1.8.0 | scripts/skill-lifecycle-audit.ts | N/A |
+| skill-lifecycle-audit.ts | 1.9.0 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.2.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.3.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
+| sync-agent-mirrors.ts | 1.1.0 | scripts/sync-agent-mirrors.ts | js-yaml |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
 | sync-library-projection.ts | 1.3.0 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
@@ -346,7 +347,7 @@
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
 | validate-md-language.ts | 1.16.1 | scripts/validate-md-language.ts | fs |
-| validate-model-registry.ts | 2.1.0 | scripts/validate-model-registry.ts | N/A |
+| validate-model-registry.ts | 2.2.0 | scripts/validate-model-registry.ts | N/A |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
 | validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | js-yaml |
@@ -354,7 +355,7 @@
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.2 | scripts/validate-skills.ts | N/A |
 | validate-surface-registry.ts | 1.1.1 | scripts/validate-surface-registry.ts | N/A |
-| validate-templates.ts | 1.63.0 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.64.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
@@ -397,4 +398,4 @@
 
 ⚠️ **Drift detected**:
 
-- [WARNING] Agent README_ko missing tier or model metadata
+- [WARNING] Agent README_ko missing tier metadata

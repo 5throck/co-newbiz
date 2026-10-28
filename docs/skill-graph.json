@@ -1178,8 +1178,8 @@
       "name": "i18n-specialist",
       "scope": "root",
       "capability": "i18n-specialist",
-      "content_hash": "4c93ae3207e624fc",
-      "version": "1.3.0",
+      "content_hash": "67b617e0357c96ee",
+      "version": "1.3.1",
       "mirrors": [
         "agents/i18n-specialist.md"
       ]
@@ -1308,7 +1308,7 @@
       "name": "pm",
       "scope": "root",
       "capability": "pm",
-      "content_hash": "90bee14737ccac61",
+      "content_hash": "4550eac0e3afa974",
       "version": "1.2.0",
       "mirrors": [
         "agents/pm.md"
