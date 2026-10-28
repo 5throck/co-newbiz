@@ -178,7 +178,7 @@ function DebtView() {
       </section>
       {canAct && (
         <section className="market-section" aria-label={t("registerSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{editingId ? t("editHeading") : t("registerHeading")}</h2>
+          <h2 className=" mb-2">{editingId ? t("editHeading") : t("registerHeading")}</h2>
           <form id="debt-register-form" className="sizing-new-form" onSubmit={submit} aria-label={editingId ? t("editHeading") : t("registerHeading")}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] w-[11rem]"><span className="block mb-1">{t("lblLender")}</span>
@@ -208,7 +208,7 @@ function DebtView() {
         </section>
       )}
       <section className="market-section" aria-label={t("headroomSectionAria")} data-testid="covenant-headroom">
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("headroomHeading")} <span className="note">{t("headroomNote")}</span></h2>
+        <h2 className=" mb-2">{t("headroomHeading")} <span className="note">{t("headroomNote")}</span></h2>
         {headroom === null ? <PageState state="loading" /> : headroom.status === "insufficient_evidence" ? (
           <PageState state="empty" emptyText={headroom.reason === "no_debt" ? t("headroomNoDebt") : (headroom.message ?? t("headroomNoSim"))} />
         ) : (
@@ -239,7 +239,7 @@ function DebtView() {
         <p className="note mt-2">{t("headroomFootnote")}</p>
       </section>
       <section className="market-section" aria-label={t("scenarioSectionAria")}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("scenarioHeading")} <span className="note">{t("scenarioNote")}</span></h2>
+        <h2 className=" mb-2">{t("scenarioHeading")} <span className="note">{t("scenarioNote")}</span></h2>
         <div className="form-grid mb-2">
           <label className="text-[length:var(--fs-caption)] w-[12rem]"><span className="block mb-1">{t("scenarioCfLabel")}</span>
             <input type="number" className="sizing-new-input sizing-new-input-sm" value={scenarioCf} onChange={(e) => setScenarioCf(e.target.value)} placeholder={t("scenarioCfPlaceholder")} /></label>

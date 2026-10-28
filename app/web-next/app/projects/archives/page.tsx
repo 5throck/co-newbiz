@@ -119,7 +119,7 @@ export function ProjectArchivesView() {
       )}
 
       <section aria-label={t("archivedHeading")} className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("archivedHeading")}</h2>
+        <h2 className=" font-semibold mb-2">{t("archivedHeading")}</h2>
         {archived === null ? (
           <p>{tc("loading")}</p>
         ) : archived.length === 0 ? (
@@ -174,7 +174,7 @@ export function ProjectArchivesView() {
       </section>
 
       <section aria-label={t("deletedHeading")} className="market-section">
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("deletedHeading")}</h2>
+        <h2 className=" font-semibold mb-2">{t("deletedHeading")}</h2>
         {deleted === null ? (
           <p>{tc("loading")}</p>
         ) : deleted.length === 0 ? (

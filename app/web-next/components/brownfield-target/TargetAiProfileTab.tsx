@@ -26,7 +26,7 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                 {/* 헤더 — 회사명·배지만 표시. 분석 실행/재분석 버튼은 탭 목록과
                     같은 줄 오른쪽으로 이동했다(사용자 요청, 2026-09-15). */}
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <h2 className="text-[length:var(--fs-body)] !mb-0"><span aria-hidden="true">🏢</span> {tr("swotHeading", { p1: companyProfile.profile?.companyName ?? t.company_name })}</h2>
+                  <h2 className=" !mb-0"><span aria-hidden="true">🏢</span> {tr("swotHeading", { p1: companyProfile.profile?.companyName ?? t.company_name })}</h2>
                   {companyProfile.profile?.dataSources?.dart && <span className="status-chip status-green">DART {companyProfile.profile.dataSources.dartYear ?? ""}</span>}
                   {(companyProfile.profile?.dataSources?.webResearchCount ?? 0) > 0 && (
                     <span className="status-chip status-in-progress">{tr("externalResearchCount", { p1: companyProfile.profile!.dataSources.webResearchCount })}</span>

@@ -275,7 +275,7 @@ function DealsBoard() {
 
       {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
         <div className="market-section mb-4" style={{ border: "1px dashed var(--border)" }}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">{t("pages.deals.emptyTitle")}</h2>
+          <h2 className=" mb-1">{t("pages.deals.emptyTitle")}</h2>
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 var(--space-2)" }}>
             {t("pages.deals.emptyBody")}
           </p>

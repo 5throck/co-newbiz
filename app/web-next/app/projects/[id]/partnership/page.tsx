@@ -166,7 +166,7 @@ export default function PartnershipPage() {
 
       <section className="market-section mb-3" aria-label={t("partnerSection")}>
         <div className="section-toolbar">
-          <h2 className="text-[length:var(--fs-body)] font-semibold">{t("partnerHeading", { p1: data?.partners.length ?? 0 })}</h2>
+          <h2 className=" font-semibold">{t("partnerHeading", { p1: data?.partners.length ?? 0 })}</h2>
         </div>
         <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-64">
@@ -232,7 +232,7 @@ export default function PartnershipPage() {
       </section>
 
       <section className="market-section mb-3" aria-label={t("findingsSection")}>
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("findingsHeading")}</h2>
+        <h2 className=" font-semibold mb-2">{t("findingsHeading")}</h2>
         {(data?.partners ?? []).filter((p) => p.findings.length > 0).map((p) => (
           <div key={p.id} className="sizing-grade-card mb-2">
             <p className="text-[length:var(--fs-body)] font-semibold mb-1">{p.name}</p>
@@ -281,7 +281,7 @@ export default function PartnershipPage() {
       </section>
 
       <section className="market-section" aria-label={t("termSection")}>
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("termHeading", { p1: data?.terms.length ?? 0 })}</h2>
+        <h2 className=" font-semibold mb-2">{t("termHeading", { p1: data?.terms.length ?? 0 })}</h2>
         <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-64">
             <caption className="sr-only">{t("termTableCaption")}</caption>

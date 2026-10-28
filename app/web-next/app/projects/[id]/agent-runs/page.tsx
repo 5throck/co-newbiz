@@ -38,7 +38,7 @@ function AgentRunsView() {
       <p className="objective">{t("objective")}</p>
       {error && <PageState state="error" errorText={error} onRetry={() => window.location.reload()} />}
       <section className="market-section" aria-label={t("timelineHeading")}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("timelineHeading")}</h2>
+        <h2 className=" mb-2">{t("timelineHeading")}</h2>
         {data === null ? <PageState state="loading" /> : data.runs.length === 0 ? (
           <PageState state="empty" emptyText={t("emptyRuns")} emptyAction={<Link href="/deals" className="text-[color:var(--accent)] underline not-italic">{t("startPipelineLink")}</Link>} />
         ) : (
@@ -62,7 +62,7 @@ function AgentRunsView() {
         )}
       </section>
       <section className="market-section" aria-label={t("reliabilitySectionAria")}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("reliabilityHeading")} <span className="note">{t("reliabilityNote")}</span></h2>
+        <h2 className=" mb-2">{t("reliabilityHeading")} <span className="note">{t("reliabilityNote")}</span></h2>
         {data === null ? <PageState state="loading" /> : data.reliability.length === 0 ? (
           <PageState state="empty" emptyText={t("emptyReliability")} />
         ) : (
@@ -82,7 +82,7 @@ function AgentRunsView() {
         <p className="note" style={{ marginBottom: 0 }}>{t("reliabilityFootnote")}</p>
       </section>
       <section className="market-section" aria-label={t("proposalsSectionAria")}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("proposalsHeading")}</h2>
+        <h2 className=" mb-2">{t("proposalsHeading")}</h2>
         {data === null ? <PageState state="loading" /> : data.proposals.length === 0 ? (
           <PageState state="empty" emptyText={t("emptyProposals")} />
         ) : (

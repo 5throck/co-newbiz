@@ -94,7 +94,7 @@ function ShareView() {
       </section>
       {canAct && (
         <section className="market-section" aria-label={t("createHeading")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("createHeading")}</h2>
+          <h2 className=" mb-2">{t("createHeading")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[12rem]"><span className="block mb-1">{t("lblTitle")}</span>

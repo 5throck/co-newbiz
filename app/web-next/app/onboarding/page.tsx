@@ -20,7 +20,7 @@ export default async function OnboardingPage() {
       <section className="market-section" aria-label={t("sectionAria")}>
         {STEPS.map((s) => (
           <div key={s.n} className="market-section" style={{ marginBottom: 10 }}>
-            <h2 className="text-[length:var(--fs-body)] mb-1">
+            <h2 className=" mb-1">
               <span className="sizing-step-num">{s.n}</span> {t(s.labelKey)}
             </h2>
             <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{t(s.descKey)}</p>
@@ -35,13 +35,13 @@ export default async function OnboardingPage() {
         {/* 승격 이후 — 단계 목록과 같은 리스트 스타일의 이어짐 (F11). 이동 링크는
             없다: 승격은 트랙 최종 단계(S5/S7) 화면에서 사람이 실행한다. */}
         <div className="market-section" style={{ marginBottom: 10 }}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">{t("promotionHeading")}</h2>
+          <h2 className=" mb-1">{t("promotionHeading")}</h2>
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
             {t("promotionDesc")}
           </p>
         </div>
         <div className="market-section" style={{ marginBottom: 10 }}>
-          <h2 className="text-[length:var(--fs-body)] mb-1">{t("projectStagesHeading")}</h2>
+          <h2 className=" mb-1">{t("projectStagesHeading")}</h2>
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 6px" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
             {t("projectStagesDesc")}
           </p>

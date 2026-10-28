@@ -85,7 +85,7 @@ function InterviewsView() {
       <p className="objective">{t("objective")}</p>
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       <section className="market-section" aria-label={t("triSectionAria")} data-testid="interview-triangulation">
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("triHeading")}</h2>
+        <h2 className=" mb-2">{t("triHeading")}</h2>
         {tri === null ? <PageState state="loading" /> : tri.claims.length === 0 ? (
           <PageState state="empty" emptyText={t("triEmpty", { suffix: tri.unclaimed > 0 ? t("triEmptySuffix", { count: tri.unclaimed }) : "" })} />
         ) : (
@@ -136,7 +136,7 @@ function InterviewsView() {
       </section>
       {canAct && (
         <section className="market-section" aria-label={t("listSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("listSectionAria")}</h2>
+          <h2 className=" mb-2">{t("listSectionAria")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[10rem]"><span className="block mb-1">{t("lblInterviewee")}</span>

@@ -153,7 +153,7 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: "min(90vw, var(--content-modal))" }}
           >
-            <h2 className="text-[length:var(--fs-body)] mb-1">{tc("industryValueChainMap")}</h2>
+            <h2 className=" mb-1">{tc("industryValueChainMap")}</h2>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               {t("showsOnlyDownstreamDownstreamUpstream")}
             </p>

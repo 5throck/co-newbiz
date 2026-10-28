@@ -130,7 +130,7 @@ export default function PmiPage() {
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">{error}</p>}
 
       <section className="market-section mb-3" aria-label={t("talentSectionAria")}>
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("talentHeading", { count: talents?.length ?? 0 })}</h2>
+        <h2 className=" font-semibold mb-2">{t("talentHeading", { count: talents?.length ?? 0 })}</h2>
         <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
           <table className="data-table">
             <caption className="sr-only">{t("captionTalent")}</caption>
@@ -184,7 +184,7 @@ export default function PmiPage() {
       </section>
 
       <section className="market-section" aria-label={t("certSectionAria")}>
-        <h2 className="text-[length:var(--fs-body)] font-semibold mb-2">{t("certHeading", { count: certs?.length ?? 0 })}</h2>
+        <h2 className=" font-semibold mb-2">{t("certHeading", { count: certs?.length ?? 0 })}</h2>
         <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-48">
             <caption className="sr-only">{t("captionCert")}</caption>

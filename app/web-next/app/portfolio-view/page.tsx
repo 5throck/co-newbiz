@@ -108,7 +108,7 @@ function PortfolioView() {
         <div className="summary-card glass text-left"><span className="summary-value mono-num">{dupCount}</span><span className="text-label">{t("statDup")}</span></div>
       </div>
       <section className="market-section" aria-label={t("sectionAria")}>
-        <h2 className="text-[length:var(--fs-body)] mb-2">{t("heading2")} <span className="note">{t("sectionNote")}</span></h2>
+        <h2 className=" mb-2">{t("heading2")} <span className="note">{t("sectionNote")}</span></h2>
         {hiddenCount > 0 && (
           <p className="glass p-3 mb-3 status-amber" role="note">
             <span aria-hidden="true">⚠</span> {t("hiddenNote", { count: hiddenCount })}
@@ -181,7 +181,7 @@ function PortfolioView() {
       </section>
       {result && (naTotal > 0 || result.counts.na_opportunities > 0 || result.counts.na_projects > 0) && (
         <section className="market-section mt-4" aria-label={t("naSectionAria")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("naHeading")} <span className="note">{t("naNote")}</span></h2>
+          <h2 className=" mb-2">{t("naHeading")} <span className="note">{t("naNote")}</span></h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
             {t("naExplainer")}
           </p>

@@ -181,7 +181,7 @@ function MilestonesView() {
       ) : (
         STATUS_ORDER.filter((s) => (grouped.get(s) ?? []).length > 0).map((s) => (
           <section key={s} className="market-section" aria-label={statusText(s)}>
-            <h2 className="text-[length:var(--fs-body)] mb-2">
+            <h2 className=" mb-2">
               <span className={`status-chip ${STATUS_META[s].cls}`}>{statusText(s)}</span>
               {" "}<span className="note">{t("countSuffix", { p1: (grouped.get(s) ?? []).length })}</span>
             </h2>
@@ -213,7 +213,7 @@ function MilestonesView() {
 
       {canAct && (
         <section className="market-section mt-3" aria-label={t("registerSection")}>
-          <h2 className="text-[length:var(--fs-body)] mb-2">{t("registerHeading")}</h2>
+          <h2 className=" mb-2">{t("registerHeading")}</h2>
           <form className="sizing-new-form" onSubmit={create}>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-[length:var(--fs-caption)] flex-1 min-w-[14rem]"><span className="block mb-1">{t("lblTitle")}</span>

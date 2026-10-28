@@ -34,7 +34,7 @@ export function HumanRolesPanel({ ctx }: { ctx: AdminConsoleState }) {
   const roleLabel = (k: string) => (roles.includes(k) || k.endsWith("-ic-reviewer") ? t(`role.${k}` as never) : k);
   return (
     <section className="market-section mt-4" aria-label={t("heading")} data-testid="human-roles-panel">
-      <h2 className="text-[length:var(--fs-body)] font-semibold">{t("heading")}</h2>
+      <h2 className=" font-semibold">{t("heading")}</h2>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("intro")}</p>
       {(data?.grants.length ?? 0) === 0 ? <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("empty")}</p> : (
         <div className="table-scroll" role="region" aria-label={t("heading")} tabIndex={0}>

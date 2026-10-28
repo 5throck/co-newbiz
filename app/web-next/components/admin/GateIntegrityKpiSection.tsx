@@ -92,7 +92,7 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
   return (
     <section className="card" aria-labelledby={`kpi-${kpi.id}`} data-testid={`kpi-${kpi.id}`}>
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <h2 id={`kpi-${kpi.id}`} className="m-0 text-[length:var(--fs-body)]"><span className="tabular-nums">{kpi.id}</span> · {title}</h2>
+        <h2 id={`kpi-${kpi.id}`} className="m-0"><span className="tabular-nums">{kpi.id}</span> · {title}</h2>
         <KpiState kpi={kpi} />
         {kpi.li && (
           <span className="status-chip" title={t("li.title")}>
