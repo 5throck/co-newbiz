@@ -150,11 +150,11 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.56.0 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.57.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.33.0 | active | v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard refuses CLOSED *and* MERGED PRs on the current branch — a follow-up sync onto a merged-PR branch orphans the commits off main (fleet-review wave-1 incident); the guard notes the switch-to-main remediation. | —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.34.0 | active | v1.30.0 (2026-10-26, T-20261026-003): the non-main branch guard refuses CLOSED *and* MERGED PRs on the current branch — a follow-up sync onto a merged-PR branch orphans the commits off main (fleet-review wave-1 incident); the guard notes the switch-to-main remediation. | —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -169,7 +169,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `hooks/gateguard-fact-force.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `hooks/post-write-lifecycle-check.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `hooks/pre-commit.ts` | L0 | 1.11.0 | active | —| —| L0+L1 | —|
-| `hooks/pre-push.ts` | L0 | 1.6.0 | active | v1.5.0 (2026-10-26): deleting a `pr/*` remote branch now requires `ALLOW_REMOTE_BRANCH_DELETE=1`; unset, the push is blocked. | —| L0+L1 | —|
+| `hooks/pre-push.ts` | L0 | 1.7.0 | active | v1.5.0 (2026-10-26): deleting a `pr/*` remote branch now requires `ALLOW_REMOTE_BRANCH_DELETE=1`; unset, the push is blocked. | —| L0+L1 | —|
 | `lib/auth.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/encoding-utils.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/error-handling.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
@@ -186,7 +186,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `render-pdf-deck.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `retry-handler.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `setup-github-branch-protection.ts` | L0 | 1.0.1 | active | `--repo`, `--branch`, `--check` (repeatable), `--dry-run` | —| L0+L1 | —|
-| `skill-lifecycle-audit.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
+| `skill-lifecycle-audit.ts` | L0 | 1.9.0 | active | —| —| L0+L1 | —|
 | `spec-register.ts` | L0 | 1.6.0 | active | `--file`, `--source`, `--update`, `--status`, `--list`, `--ref`, `--id` | —| L0+L1 | —|
 | `lib/local-date.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `typecheck.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -200,7 +200,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-doc-folder.ts` | L0 | 1.2.1 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
 | `validate-md-language.ts` | L0 | 1.16.1 | active | —| —| L0+L1 | —|
-| `validate-model-registry.ts` | L0 | 2.1.0 | active | —| —| L0+L1 (v1.6.0 adds ADR-0183 D3 runtime catalog parity: agent-registry.generated.ts / pm-catalog.generated.ts cross-validated against agents/*.md frontmatter; targets self-skip where the web runtime is not delivered) | —|
+| `validate-model-registry.ts` | L0 | 2.2.0 | active | —| —| L0+L1 (v1.6.0 adds ADR-0183 D3 runtime catalog parity: agent-registry.generated.ts / pm-catalog.generated.ts cross-validated against agents/*.md frontmatter; targets self-skip where the web runtime is not delivered) | —|
 | `validate-skills.ts` | L0 | 1.5.2 | active | —| —| L0+L1 | —|
 | `verify-agent-deliverables.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `verify-memory.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -242,14 +242,14 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
 | `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `validate-templates.ts` | L0 | 1.63.0 | active | v1.50.2: skips cleanly when no templates/common (project context) | —| L0+L1 | —|
+| `validate-templates.ts` | L0 | 1.64.0 | active | v1.50.2: skips cleanly when no templates/common (project context) | —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.1.0 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `lib/constitution-scrub.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `helpers/l0-ref-policy.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/markers.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `helpers/layer-filter.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
-| `generate-version-manifest.ts` | L0 | 1.10.2 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
+| `generate-version-manifest.ts` | L0 | 1.11.0 | active | emits `validate-md-language:allowlist` markers around the generated Skills table (T-20260912-015) | —| L0+L1 | —|
 | `lib/platform-delivery.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/managed-block-parity.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/variant-overlay-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
@@ -275,7 +275,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/resolve-pm-stub.ts` | L0 | 1.2.0 | active | v1.2.0 (registry & platform-policy completeness batch, spec docs/designs/2026-09-25-registry-policy-completeness-design.md R2.1): pure, read-only `composeResolvedAgentContent(agentPath, commonAgentPath, variant, opts)` returns exactly the content `resolveAgentExtendsStub` would write, without touching the filesystem (validators must not mutate the tree they audit); the resolver consumes the compose path so one merge implementation exists (in-place writer stays for the new-project/adopt-project delivery paths). Prior: v1.1.0 (T-20260924-003, spec docs/designs/2026-09-25-inventory-decisions-batch-design.md R2.2): generic `resolveAgentExtendsStub(agentPath, commonAgentPath, variant, opts)` wrapper — the pm canonical-prose check (H12) moves behind an injected `opts.isCanonicalStubBody` (pm passes isCanonicalPmStubBody; the empty-body i18n-specialist stubs skip it); `resolvePmExtendsStub` stays as a thin back-compat wrapper. Prior: Shared agents/pm.md normalization — ADR-0033 extends-stub resolution against the L1 body (H12 non-canonical prose flag) + L1-B metadata strip with project-local lifecycle regeneration; extracted verbatim from new-project §2.3b/§2.5, shared with the adopt-project settling pass | —| L0+L1 | —|
 | `helpers/skills-registry.ts` | L0 | 1.2.0 | active | v1.2.0 (registry-policy-completeness batch W5, spec docs/designs/2026-09-25-registry-policy-completeness-design.md R5.1): registry auto-sync machinery — collectRegistryDrift, listSkillDirs, splitRootRegistry, collectCatalogEntries, collectCatalogDrift, syncVariantExclusiveCatalog, syncGenericRegistry, collectWorkspaceRegistryFindings (pure compute shared by the sync CLI, validate-templates VA-08, and unit tests; the root Variant-Exclusive catalog reconciles via a dedicated path — its 7th column is the owner-variant list, not notes). Prior: v1.1.0 (T-20260924-008, spec docs/designs/2026-09-24-skills-registry-overlay-reconcile-design.md): adds collectDeliveredSkills + pruneSkillRegistryRows (fresh-scaffold reconcile half); extractFrontmatterVersionAndReviewed moved in verbatim from upgrade-project.ts. v1.0.0: parse/reconcile project skills/SKILLS.md (T-20260922-001) | —| L0+L1 | —|
 | `lib/platforms.ts` | L0 | 1.2.0 | active | Platform-list SSOT constants (PLATFORM_SKILL_BASES, PLATFORM_MIRROR_DIRS); Step 1 of the platform-parity program (spec: docs/designs/2026-09-24-platform-ssot-constant-design.md) | —| L0+L1 | —|
-| `regenerate-agents-md.ts` | L0 | 1.3.0 | active | v1.2.0: tier extraction strips inline YAML comments (`medium # model-id` leaked into roster rows). | —| L0+L1 | —|
+| `regenerate-agents-md.ts` | L0 | 1.4.0 | active | v1.2.0: tier extraction strips inline YAML comments (`medium # model-id` leaked into roster rows). | —| L0+L1 | —|
 | `lib/ci-workflow-merge.ts` | L0 | 1.0.0 | active | v1.0.0 (T-20260930-026 PR-A, ADR-0094): fail-closed merge/validate of a project `.github/workflows/ci.yml` against the template — 12 error codes (MARKER_*, REGION_*, YAML_PARSE, DUPLICATE_KEY, RESERVED_JOB, FORBIDDEN_TRIGGER, TEMPLATE_JOB_DRIFT, MIGRATION_UNSAFE); PROJECT-JOBS region is untrusted input; legacy migration copies original text slices (never re-serializes); fs confined to applyCiWorkflowMerge (temp + re-validate + atomic rename) | —| L0+L1 | —|
 | `validate-surface-registry.ts` | L0+L1 | 1.1.1 | active | v1.0.0 (2026-10-01, T-20261001-018, spec docs/designs/2026-10-01-surface-registry-validator-design.md): §11.0 supported-surface registry validator (ADR-0097 follow-up) — parses the 8-row CONSTITUTION table as the single source, checks instruction files/platform dirs per family/L2 skill mirroring (mirror:false honored, SCAFFOLD_COMPOSED excluded) at L0/L1/L2, compares templates/common/docs/context.md rows verbatim (one source), renders documented gaps (docs/surface-gaps.json) as WARN with ticket id and undocumented gaps as FAIL; audit.ts gate with --strict. | —| L0+L1 | —|
 | `hooks/pm-role-bootstrap.ts` | L0 | 1.1.2 | active | SessionStart hook (all sources: startup, resume, clear, compact) injecting PM bootstrap reminder to read AGENTS.md and agents/pm.md before first response — design spec docs/designs/2026-10-02-pm-role-bootstrap-design.md | —| L0+L1 | —|
