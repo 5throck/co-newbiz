@@ -1,0 +1,23 @@
+{
+  "_comment": "Curated industry-term -> KSIC code aliases (10th revision, Statistics Korea). Common business terms rarely appear in official KSIC names (e.g. '조선' vs '선박 및 보트 건조업'). Every code MUST exist in ksic-master.json (enforced by tests/unit/ksic-aliases.test.ts). Each entry carries a 'basis' naming the official KSIC name it maps to. Terms are matched whitespace- and case-insensitively.",
+  "aliases": [
+    { "terms": ["조선", "조선업", "조선소", "shipbuilding", "shipyard"], "codes": ["311", "31111"], "basis": "311 선박 및 보트 건조업; 31111 강선 건조업" },
+    { "terms": ["해양플랜트", "해양 플랜트", "offshore plant", "offshore"], "codes": ["31111", "3111"], "basis": "31111 강선 건조업 (detail: 해양플랜트 포함); 3111 선박 및 수상 부유 구조물 건조업" },
+    { "terms": ["선박엔진", "선박 엔진", "선박용 엔진", "marine engine", "선박용엔진"], "codes": ["29111", "2911"], "basis": "29111 내연기관 제조업; 2911 내연기관 및 터빈 제조업 (선박용 대형 디젤엔진은 내연기관으로 분류)" },
+    { "terms": ["크랭크샤프트", "크랭크축", "크랭크 샤프트", "crankshaft"], "codes": ["29119", "2911", "30310"], "basis": "29119 기타 기관 및 터빈 제조업 / 2911 내연기관 및 터빈 부품(선박·발전용); 30310 자동차 엔진용 신품 부품 제조업(차량용)" },
+    { "terms": ["2차전지", "이차전지", "배터리", "battery", "리튬이온", "리튬이온전지"], "codes": ["28202", "282"], "basis": "28202 축전지 제조업; 282 일차전지 및 이차전지 제조업" },
+    { "terms": ["반도체", "semiconductor", "메모리반도체"], "codes": ["261", "2611", "26111"], "basis": "261 반도체 제조업; 2611 전자집적회로 제조업; 26111 메모리용 전자집적회로 제조업" },
+    { "terms": ["디스플레이", "display", "oled", "lcd"], "codes": ["2621", "26211", "26212"], "basis": "2621 표시장치 제조업; 26211 액정 표시장치; 26212 유기 발광 표시장치" },
+    { "terms": ["바이오", "제약", "의약품", "제약바이오", "bio", "pharma", "pharmaceutical"], "codes": ["21", "212"], "basis": "21 의료용 물질 및 의약품 제조업; 212 의약품 제조업" },
+    { "terms": ["자동차부품", "차량부품", "auto parts", "automotive parts"], "codes": ["303", "3039"], "basis": "303 자동차 신품 부품 제조업; 3039 자동차용 기타 신품 부품 제조업" },
+    { "terms": ["방산", "방위산업", "국방", "defense", "무기"], "codes": ["252", "31312"], "basis": "252 무기 및 총포탄 제조업; 31312 무인 항공기 제조업 (detail: 군용 무인기 포함); 군용 선박은 31111 detail 참조" },
+    { "terms": ["수소", "수소경제", "hydrogen"], "codes": ["20121", "35119"], "basis": "20121 산업용 가스 제조업(수소 가스); 35119 기타 발전업 (detail: 수소 연료전지 발전업)" },
+    { "terms": ["연료전지", "fuel cell", "fuelcell"], "codes": ["35119", "28119"], "basis": "35119 기타 발전업 (detail: 수소 연료전지 발전업); 28119 기타 전기 변환장치 제조업" },
+    { "terms": ["로봇", "robot", "robotics"], "codes": ["2928", "29280"], "basis": "2928 산업용 로봇 제조업; 29280 산업용 로봇 제조업" },
+    { "terms": ["철강", "제철", "steel"], "codes": ["241", "2411", "2412"], "basis": "241 1차 철강 제조업; 2411 제철, 제강 및 합금철 제조업; 2412 철강 압연, 압출 및 연신제품 제조업" },
+    { "terms": ["석유화학", "petrochemical", "석화"], "codes": ["20111", "2011"], "basis": "20111 석유화학계 기초 화학 물질 제조업; 2011 기초 유기화학 물질 제조업" },
+    { "terms": ["태양광", "태양전지", "solar", "pv"], "codes": ["35114"], "basis": "35114 태양력 발전업" },
+    { "terms": ["풍력", "풍력발전", "wind", "wind power"], "codes": ["35119", "29119"], "basis": "35119 기타 발전업 (풍력 전용 코드 없음); 29119 기타 기관 및 터빈 제조업 (풍력 터빈)" },
+    { "terms": ["원전", "원자력", "원자력발전", "nuclear"], "codes": ["35111", "2513"], "basis": "35111 원자력 발전업; 2513 핵반응기 및 증기보일러 제조업" }
+  ]
+}

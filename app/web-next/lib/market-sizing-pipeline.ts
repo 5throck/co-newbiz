@@ -297,7 +297,12 @@ export async function classifyIndustryKsic(db: Database, industryId: string, ind
       const hay = `${e.name_ko} ${e.detail ?? ""}`.toLowerCase();
       return tokens.some((t) => hay.includes(t));
     });
-    if (hits.length !== 1) return null;
+    if (hits.length !== 1) {
+      // Curated alias pre-check (e.g. "조선" -> 311/31111): unique profile candidate only.
+      const aliasHits = candidates.filter((e) => searchKsic(industryName, 50).some((h) => h.matched_by === "alias" && h.code === e.code));
+      if (aliasHits.length !== 1) return null;
+      hits.splice(0, hits.length, aliasHits[0]);
+    }
     code = hits[0].code;
   }
   const held = db.query("SELECT id FROM md_industry WHERE ksic_code = ? AND id != ?").get(code, industryId);

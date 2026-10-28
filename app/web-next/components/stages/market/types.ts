@@ -65,7 +65,7 @@ export interface AnalysisDetail {
   versions: Array<{ version_no: number; payload: { matrix?: SizingMatrix; stepSummaries?: Array<{ step: number; summary: string; source: string; pendingInputs: string[] }> } | null; changelog: string | null; created_by: string; created_at: string; data_confidence_grade?: string | null; confidence_basis?: string | null }>;
 }
 export interface LlmStatus { configured: boolean; provider: string | null; model: string | null }
-export interface KsicEntryView { code: string; name_ko: string; detail: string | null; profile: boolean }
+export interface KsicEntryView { code: string; name_ko: string; detail: string | null; profile: boolean; matched_by?: "alias" | "name"; alias?: string }
 
 // 산업 간 가치사슬 관계도 — 큐레이션된 수요 산업 연계(전방/전전방/후방/후후방,
 // ADR-0129)를 SVG로 시각화한다. 레이어(서버가 Kahn 레이어링으로 계산)를
