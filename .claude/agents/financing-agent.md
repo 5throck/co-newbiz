@@ -4,7 +4,8 @@ description: "Financing structure advisory: debt/equity mix, project finance, go
 model: sonnet
 ---
 
-<!-- GENERATED from agents/financing-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/financing-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

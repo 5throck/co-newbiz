@@ -4,7 +4,8 @@ description: "Owns the proxy industry chain methodology: unit conversion, regres
 model: opus
 ---
 
-<!-- GENERATED from agents/quant-methodologist.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/quant-methodologist.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

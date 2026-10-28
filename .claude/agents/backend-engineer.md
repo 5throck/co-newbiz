@@ -4,7 +4,8 @@ description: "Next.js Route Handler API (App Router, ADR-0069), authentication (
 model: sonnet
 ---
 
-<!-- GENERATED from agents/backend-engineer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/backend-engineer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

@@ -4,7 +4,8 @@ description: "OS configuration, service registration, the scheduled-collection s
 model: sonnet
 ---
 
-<!-- GENERATED from agents/infra-automation-engineer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/infra-automation-engineer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

@@ -4,7 +4,8 @@ description: "Owns governance operation: the standing work of running the rules 
 model: opus
 ---
 
-<!-- GENERATED from agents/compliance-officer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/compliance-officer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 

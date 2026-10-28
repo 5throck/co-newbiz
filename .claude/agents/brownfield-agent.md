@@ -4,7 +4,8 @@ description: "M&A review lead: target screening, deal structuring, and carve-out
 model: opus
 ---
 
-<!-- GENERATED from agents/brownfield-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/brownfield-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

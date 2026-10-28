@@ -4,7 +4,8 @@ description: "Owns the glossary: registration, review, duplicate merging, and th
 model: sonnet
 ---
 
-<!-- GENERATED from agents/glossary-curator.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/glossary-curator.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

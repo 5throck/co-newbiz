@@ -4,7 +4,8 @@ description: "Monitoring and alerting (watch rules over job_run/notification sur
 model: sonnet
 ---
 
-<!-- GENERATED from agents/sre.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/sre.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

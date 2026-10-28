@@ -4,7 +4,8 @@ description: "Threat modeling, the security baseline and its recurring review ca
 model: opus
 ---
 
-<!-- GENERATED from agents/security-engineer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/security-engineer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

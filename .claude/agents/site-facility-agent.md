@@ -4,7 +4,8 @@ description: "Site and facility advisory: site selection, industrial complex eli
 model: sonnet
 ---
 
-<!-- GENERATED from agents/site-facility-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/site-facility-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

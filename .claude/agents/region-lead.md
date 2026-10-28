@@ -4,7 +4,8 @@ description: "Domain lead for region, owning the region profile system covering 
 model: opus
 ---
 
-<!-- GENERATED from agents/region-lead.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/region-lead.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Legal Basis
 

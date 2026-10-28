@@ -4,7 +4,8 @@ description: "Technical due diligence: site visits, remaining equipment life, TR
 model: sonnet
 ---
 
-<!-- GENERATED from agents/technical-dd-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/technical-dd-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

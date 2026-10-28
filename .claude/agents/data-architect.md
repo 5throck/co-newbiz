@@ -4,7 +4,8 @@ description: "Owns the data model: ERD, master data governance (md_* tables with
 model: opus
 ---
 
-<!-- GENERATED from agents/data-architect.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/data-architect.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

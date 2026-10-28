@@ -4,7 +4,8 @@ description: "Commercial due diligence: customer concentration, pricing power, c
 model: sonnet
 ---
 
-<!-- GENERATED from agents/commercial-dd-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/commercial-dd-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

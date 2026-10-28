@@ -4,7 +4,8 @@ description: "DCF/NPV/IRR/Payback/DSCR modeling, WACC assembly from live and use
 model: opus
 ---
 
-<!-- GENERATED from agents/valuation-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/valuation-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

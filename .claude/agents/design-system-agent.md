@@ -4,7 +4,8 @@ description: "Onyx 3.0 design system governance — verifies token, typography, 
 model: sonnet
 ---
 
-<!-- GENERATED from agents/design-system-agent.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/design-system-agent.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

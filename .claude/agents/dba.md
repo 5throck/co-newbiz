@@ -4,7 +4,8 @@ description: "Database operations for the SQLite store: backup/restore, the mont
 model: sonnet
 ---
 
-<!-- GENERATED from agents/dba.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/dba.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 

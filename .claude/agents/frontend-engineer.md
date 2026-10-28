@@ -4,7 +4,8 @@ description: "Next.js App Router UI in app/web-next: screens and flows built wit
 model: sonnet
 ---
 
-<!-- GENERATED from agents/frontend-engineer.md by scripts/co-newbiz/sync-agent-personas.ts — do not edit; rerun the script. -->
+<!-- GENERATED from agents/frontend-engineer.md by scripts/sync-agent-mirrors.ts — do not edit; rerun the script. -->
+
 
 ## Role
 
