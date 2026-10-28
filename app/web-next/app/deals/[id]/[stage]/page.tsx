@@ -193,7 +193,7 @@ function StageTab() {
         </div>
         {companySurface ? (
           <>
-            <StageFrame stageId="S3" heading={t("s3CompanyHeading")}>
+            <StageFrame stageId="S3" subtitle={t("s3CompanyHeading")}>
               {t("s3CompanyGuidance")}
             </StageFrame>
             <OurCompanyStage embedded />
@@ -242,7 +242,7 @@ function StageTab() {
         <CarrierStageBody routeId={params.id}>
           {({ opportunityId, track }) => (
             <>
-              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} heading={t("s67Heading")}>
+              <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} subtitle={t("s67Heading")}>
                 {t("s67GuidancePre")}<code>{t("s67GuidanceCode")}</code>{t("s67GuidancePost")}
               </StageFrame>
               <DealEntryMarketStrip routeId={params.id} />

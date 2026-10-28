@@ -46,7 +46,7 @@ const TITLE_BY_ROUTE: Record<FlatRouteKey, string> = {
   opportunities: "S2 기회 발굴",
   synergy: "S3 시너지·전략적 적합성",
   greenfield: "S5 자체 진출",
-  brownfield: "S6/S7 대상발굴·선정",
+  brownfield: "S6 대상 후보 발굴 · S7 대상 선정",
 };
 
 const SUMMARY_BY_ROUTE: Record<FlatRouteKey, string> = {

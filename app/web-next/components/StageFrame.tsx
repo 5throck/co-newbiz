@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { CheckCircle2, Circle, MinusCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { STAGE_META, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
+import { STAGE_META, stageLabelOf, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
 import { useDealContext } from "../lib/use-deal-context.ts";
@@ -146,7 +146,7 @@ const PROJECT_STAGE_IDS = new Set(["S8", "S9", "S10", "S11", "S12"]);
 export function StageFrame({
   stageId,
   track,
-  heading,
+  subtitle,
   railSlot,
   children,
 }: {
@@ -154,8 +154,10 @@ export function StageFrame({
   stageId: StageMetaId | StageMetaId[];
   /** 화면이 고정 트랙에서 동작할 때 지정 — 트랙 미해당 단계를 레일에서 비활성 */
   track?: TrackId;
-  /** 지원 도구 화면용 제목 재정의 (예: S3의 그룹/계열사 프로파일 화면) — 레일·메타는 stageId를 따른다 */
-  heading?: string;
+  /** 화면 고유 제목 — h1 바로 아래 부제로 렌더한다. h1은 항상 정본 단계명(`S10 투자구조 설계`)이며
+      레일·문서 제목과 같은 출처다(2026-10-29 사용자 리포트: h1이 단계명을 대체해 혼란). 부제에는
+      "S10 " 같은 단계 접두를 쓰지 않는다. */
+  subtitle?: string;
   /** 프로젝트 화면(/projects/**) 전용 — StageTabs(스테퍼·단계 탭 행)를 레일 자리에 렌더한다.
       이렇게 하지 않으면 h1·스트립이 탭 행 아래로 밀려 deal 화면(S1~S7: h1 → 레일 → 스트립)과
       머리 위치가 어긋난다(2026-10-22 사용자 리포트 — S8~S12 전 단계 일관성). */
@@ -188,9 +190,7 @@ export function StageFrame({
   return (
     <>
       <div className="stage-head">
-        <h1>
-          {heading ?? `${stage.id} ${ids.length > 1 ? `· ${STAGE_META.find((s) => s.id === ids[1])!.name}` : stage.name}`}
-        </h1>
+        <h1>{stageLabelOf(ids, pathStageId)}</h1>
         {/* 모든 단계 화면의 머리 우상단 = 다음 단계 내비게이션으로 통일(2026-10-22
             사용자 리포트: 단계별로 생성·제안·기록·종료 등 제각각이어서 혼란). 트랙 인지
             스킵(nextApplicableStage)으로 다음 적용 단계를 계산하며, 단계의 기록·생성
@@ -228,6 +228,9 @@ export function StageFrame({
           return null;
         })()}
       </div>
+      {subtitle && (
+        <p className="mt-[0.15rem] mb-1 font-semibold text-[length:var(--fs-h2)] leading-snug" data-testid="stage-subtitle">{subtitle}</p>
+      )}
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
       {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →
           레일/탭)를 유지한다(2026-10-22 사용자 리포트: S2와 S11의 스트립 위치 불일치). */}

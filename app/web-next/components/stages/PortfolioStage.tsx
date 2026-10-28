@@ -176,7 +176,7 @@ export function PortfolioStage({ projectId }: { projectId: string }) {const tr =
       {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
       <StageFrame
         stageId="S12"
-        heading={t("s12ManagementPortfolioScorecardAnd")}
+        subtitle={t("s12ManagementPortfolioScorecardAnd")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* Wave U-1 (design §3.5): home of the closure flow — preconditions are

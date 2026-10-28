@@ -43,7 +43,7 @@ export function TargetDetailView() {
   if (!detail) {
     return (
       <main>
-        <StageFrame stageId={["S6", "S7"]} track="brownfield" heading={tr("detailHeading")} />
+        <StageFrame stageId={["S6", "S7"]} track="brownfield" subtitle={tr("detailHeading")} />
         {error ? <p role="alert" className="text-[color:var(--red-fg)]">{error}</p> : <p className="text-[color:var(--muted-fg)]">{tc("loading")}</p>}
       </main>
     );
@@ -80,7 +80,7 @@ export function TargetDetailView() {
   );
   return (
     <main>
-      <StageFrame stageId={["S6", "S7"]} track="brownfield" heading={tr("detailHeading")}>
+      <StageFrame stageId={["S6", "S7"]} track="brownfield" subtitle={tr("detailHeading")}>
         {opportunity.name} · {t.company_name}
         {t.dart_corp_code ? <> · DART <code className="dd-item-id">{t.dart_corp_code}</code></> : null}
       </StageFrame>

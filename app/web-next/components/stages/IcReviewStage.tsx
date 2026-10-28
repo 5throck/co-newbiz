@@ -173,7 +173,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
       {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
       <StageFrame
         stageId="S11"
-        heading={t("s11InvestmentReviewAndExecution")}
+        subtitle={t("s11InvestmentReviewAndExecution")}
         railSlot={<StageTabs projectId={projectId} />}
       >
         {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을

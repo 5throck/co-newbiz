@@ -128,7 +128,7 @@ function CharterViewInner() {
     <main>
       <StageTabs projectId={projectId} />
       {/* Charter lives under the S12 tab group and feeds S11, so its tagline/rail follow S12 (not S8's "돈이 되는가?"). */}
-      <StageFrame stageId="S12" heading={t("stageHeading")}>
+      <StageFrame stageId="S12" subtitle={t("stageHeading")}>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           {t("intro")}
           {data && (

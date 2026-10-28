@@ -9,7 +9,7 @@ import { StageFrame } from "../StageFrame.tsx";
 import { StageTabs } from "../StageTabs.tsx";
 
 /** The S10 head title - shared by deal-structure and every S10 sub-tab so all tabs show the identical head. */
-export function useS10Heading(isGf: boolean, isBu: boolean): string {
+export function useS10Subtitle(isGf: boolean, isBu: boolean): string {
   const tr = useTranslations();
   const t = useTranslations("stages.s10.stage");
   const tc = useTranslations("common");
@@ -40,6 +40,6 @@ export function S10Frame({ projectId }: { projectId: string }) {
       .catch(() => { if (alive) setIsGf(false); });
     return () => { alive = false; };
   }, [projectId]);
-  const heading = useS10Heading(isGf, isBu);
-  return <StageFrame stageId="S10" heading={heading} railSlot={<StageTabs projectId={projectId} />} />;
+  const heading = useS10Subtitle(isGf, isBu);
+  return <StageFrame stageId="S10" subtitle={heading} railSlot={<StageTabs projectId={projectId} />} />;
 }
