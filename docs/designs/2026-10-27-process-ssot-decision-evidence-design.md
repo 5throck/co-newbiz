@@ -438,3 +438,90 @@ Rollout: `CO_NEWBIZ_CHECKLIST_CONSUMERS` = off / shadow / enforce (default shado
 - MCP: `propose_gate_decision` covers `stage:S5:3` and `stage:S5:4`; the record write has no tool (human-only record).
 
 Deferred, with reasons: executable predicates for the nine inert kill criteria (thresholds by risk-officer + quant-methodologist, design Decision 8); a recording screen for the three checklists and a runbook for the enforce flip (frontend-engineer, sre); enabling `CO_NEWBIZ_CHECKLIST_CONSUMERS=enforce` (owner decision after the UI exists); item-level D9 scoping and a dedicated expansion sub-track (human approvals, schema ADR); H7/H11/M7 and the schema work (P4).
+
+## 14. P4 results
+
+Merged as PR #759 (`process-ssot-check.ts` 4.0.0, `audit-variant.ts` 1.7.0, migrations 0180-0182). The P4 PR recorded its detail in the changelog and the code; this section is the design-side record.
+
+- H7 (D1): the data-confidence grade is `U` (unknown) when no proxy chain is recorded and the source is not direct data (`packages/core-scoring` 1.1.0; rationale text generated from the real hop list). `U` caps the RAG at Amber and never reaches Green. Migration 0180 rebuilds `market_sizing_version` for the new CHECK value and labels zero-hop legacy defaults; stored grades are not recomputed (write-time only, section 6).
+- H7 (D2): migration 0181 adds `base_rate` (provenance NOT NULL, p10 <= p50 <= p90, no delete, supersede-only updates) and provenance columns on `benchmark_case`. All-or-nothing importers `import-base-rates.ts` and `import-benchmark-cases.ts` reject unsourced rows and project identifiers. `GET /api/base-rates` answers `not_available` rather than a default. No rows are seeded: the data needs owner-supplied sources.
+- H11 (D4): migration 0182 adds `stage_captured` / `captured_by` / `captured_at` to `permit` and `incentive` (certification untouched). `GET|POST /api/projects/:id/pre-ic-captures` captures S5 or S8 candidates (incentive type and clawback terms required); human-only `/adopt` links them into an unconfirmed S11 baseline by id in one transaction. A latent bug fixed on the way: stored baseline milestone links were dropped on re-read.
+- M7 / M8 (D3): `process/cross-validation-matrix.yaml` (artifact type x author domain -> reviewer agent), projected by `generate-review-matrix.ts` into `review/domains.ts` and `ai-second.ts`; the fallback is labelled and the `target_screening` exception is carried. Review coverage 55 -> 0 and blocking: all eight process-ssot checks now block.
+
+## 15. P5 results
+
+Run on 2026-10-28 (`seed-s1-s12-demo.ts` 1.14.0, `tests/unit/adr-0187-p5-seed-subtracks.test.ts`). No schema change; no production or dev database touched (every test seeds a temporary database).
+
+### 15.1 M14 residual - demo seed evidence
+
+| Row | Track | How it is written |
+|---|---|---|
+| 2 ranked site candidates (`site`, scores, permit lead time, infra capex) | greenfield | direct insert in the `POST /api/projects/:id/sites` shape (the route has no service function), `site.create` audited |
+| Permit candidates: S5 environmental consultation, S8 industrial-complex entry | greenfield | `capturePermitCandidate` (`lib/pre-ic-capture.ts`, the function the pre-ic-captures route calls); `stage_captured`, `captured_by`, `captured_at` set, audited |
+| Incentive candidate (subsidy, NPV 1500 KRW M, clawback terms, deadlines, `src:` evidence) | greenfield | `captureIncentiveCandidate`, stage S8 |
+| S11 adoption | greenfield | `adoptPreIcCaptures` links every capture into the baseline by id (no re-entry) before `confirmExecutionBaseline`; the baseline carries the permit milestones and the clawback obligation |
+| One optional commercial item `fail` with a reason; one optional legal item `na` with a note | brownfield | seed rows, optional items only (a mandatory non-pass would block S9 by design) |
+| One optional technical item `fail` with a reason; one optional HR item `na` with a note | greenfield | same |
+
+The ADR-0186 brownfield waiver (a mandatory waiver-eligible item `waived` through the waiver path) stays the single `waived` row. The seeds stay idempotent: every row is looked up by its natural key and a re-run leaves site, permit, incentive, checklist-state, audit and baseline counts unchanged. The brownfield demo carries no site, permit or incentive rows: those registers belong to the greenfield execution path.
+
+### 15.2 M15 - brownfield sub-track fixtures through S12
+
+Spec-level (real `flow.spec.yaml` and `procedures/_shared`, exported helpers of `process-ssot-check.ts`): the S12 activities a classification cell resolves to.
+
+| Cell (brownfield, external) | S12 activities |
+|---|---|
+| m_and_a, strategic_investment | integration-monitoring (pmi-integration-execution step 6) |
+| jv, partnership | partnership-monitoring (jv-lifecycle-governance step 2) |
+| minority_investment, rbd, corporate_venture | portfolio-monitoring (portfolio-venture-monitoring, D8) |
+| jv with origin=joint | portfolio-monitoring and partnership-monitoring |
+
+Asserted: the five sub-tracks never match the PMI integration step, every origin of every one has at least one S12 activity, every greenfield cell resolves to portfolio-monitoring, and `check-s12-coverage` is clean on the real tree.
+
+D9 trim, asserted over all classification cells: greenfield-dd steps 9 and 12-16 are dropped exactly when the sub-track is `existing_business_rbd` or `intra_venture`, whatever the origin; steps 10, 11 and 17 always stay; a plain route (new site, origin internal by the ADR-0166 default) keeps every step; `d9TrimApplies` is false for all seven brownfield sub-tracks and `brownfield-dd` carries no expansion-sub-track predicate.
+
+Engine fixture: the seeded brownfield project is re-pointed to each of m_and_a, jv, minority_investment, partnership, rbd and corporate_venture (each sub-track's own S9 checklists judged, as the seed does for M&A). S11 raises the PMI-kickoff blocker exactly where `pmiKickoffApplies` says (m_and_a and jv) and S11 and S12 complete for all six. A finding worth knowing: a sub-track change alone re-opens S9, because each shape brings its own checklists (partner-shape, R&BD technology, M&A special topics).
+
+## 16. W3 closeout
+
+Wave W3 = findings H7-H9, H11, M1-M9, M14, M15, M17 (M16 closed by ADR-0186; M10-M13 out of scope). PRs: #752 (ADR and design), #753 (P0), #754 (P1), #757 (P2), #758 (P3), #759 (P4), P5 (this change, number assigned at sync).
+
+| ID | Status | Closed by | Remaining |
+|---|---|---|---|
+| H7 | partial | #759 (U grade, `base_rate`, benchmark provenance, importers, API) | no base-rate or benchmark rows exist (needs owner-supplied sources, D2); stored grades keep their legacy value |
+| H8 | closed | #753 (declarations), #758 (stable keys, parity blocking, 52 -> 0) | none |
+| H9 | partial | #757 (producers, S4 artifact), #758 (gate consumers, shadow/enforce flag) | consumers ship off/shadow; no recording screen; enforce flip is an owner decision |
+| H11 | closed | #759 (migration 0182, capture + adopt API), P5 (seed proves the path) | no capture screen yet (frontend-engineer) |
+| M1 | closed | #758 (`lib/s10-checks.ts`: reconciliation, downside DSCR >= 1.2x, funding evidence) | non-derivable investment is an advisory, not a block; thresholds are starting values |
+| M2 | closed | #757 (32 -> 0; 10 `pm` assembler pairs allowlisted with ADRs) | none |
+| M3 | closed | #753 (v2 gate order), #754 (derived-from-spec validator) | none |
+| M4 | closed | #753 (registry canonical), #757 (parity blocking, 1 -> 0) | nine kill criteria are declared but inert (no executable predicate) |
+| M5 | closed | #753 (D7: group IC GO before establishment, in flow.spec S11) | none |
+| M6 | closed | #753 (D6: financial-analyst authors, risk-officer red-teams), #757 (procedure steps) | none |
+| M7 | closed | #759 (cross-validation matrix, fallback labelled) | none |
+| M8 | closed | #753 (policy exception, AI-2nd default), #759 (55 -> 0, blocking) | none |
+| M9 | closed | #753 (S2 entry market declared on S5-S7, S9-S12) | none |
+| M14 | closed | ADR-0186 P5 (HOLD, KILL, waiver, six validators), P5 (site, permit, incentive, non-pass rows) | brownfield demo has no site/permit/incentive rows (greenfield registers) |
+| M15 | partial | #757/#758 (D9 trim, re-keyed to the two sub-tracks), P5 (sub-track fixtures and trim assertions) | an existing-site capacity expansion has no sub-track of its own, so it still gets the full DD; item-level D9 scoping; both need a schema ADR |
+| M17 | closed | #757 (D8 widening, jv branch, 4 -> 0), P5 (per sub-track fixtures) | none |
+
+Exit state: all eight process-ssot checks block and are green on the tree; no new schema in P5.
+
+## 17. Consolidated open decisions and deferrals (P0-P5)
+
+Owner decisions open:
+
+1. Enable `CO_NEWBIZ_CHECKLIST_CONSUMERS=enforce` (H9). Needs the recording screen first; today default is shadow in production and off elsewhere. Opportunities created before 2026-10-28 stay exempt.
+2. Dedicated "existing-site capacity expansion" sub-track (M15). Widening the `route_decision.sub_track` CHECK is a schema change and needs its own ADR; until then only `existing_business_rbd` and `intra_venture` are trimmed. Item-level D9 scoping is the companion decision.
+3. Whether stored `data_confidence` grades are recomputed (H7). P4 keeps them as recorded with a legacy label; a backfill is a data change the owner has not asked for.
+4. Base-rate and benchmark-case sources (D2). The importers and API exist and reject unsourced rows; `risk-officer` + `quant-methodologist` must supply the first sourced rows.
+5. Executable predicates for the nine inert kill criteria (design Decision 8). Thresholds belong to `risk-officer` + `quant-methodologist`.
+6. D2 thresholds stay "starting values": S10 uses +/-5% of the S8 adopted investment and downside DSCR >= 1.2x. Two modelling assumptions to confirm: the investment proxy is the adopted case's capex total, and the latest covenant simulation is treated as the downside run (simulations carry no scenario tag).
+
+Deferrals (owner-visible, no decision needed to proceed):
+
+7. UI: a recording screen for chk-legal-regulatory / chk-greenfield-feasibility / chk-site-selection and a capture/adopt screen for pre-IC permits and incentives (`frontend-engineer`); a runbook for the enforce flip (`sre`).
+8. Cut-over dates: S10 checks apply to projects created or pinned on or after 2026-10-28; legacy projects keep the old predicate (ADR-0151 precedent).
+9. Re-seeding the 7748 dev database to see the P5 evidence rows is owner/dba-run; nothing here touches 7748 or 7749.
+10. Cosmetic: the flow.spec S12 `portfolio-monitoring` comment still says the applies_when widening "lands in P2; until then ... known gap", contradicted by the v2.15.0 comment below it. Fixing it is a spec patch (ADR-0074) for `process-governance-manager`; no behaviour changes.
+11. `docs/reports/2026-10-26-project-review-s1-s12.md` is an analysis-only record and W1/W2 did not annotate it, so its action-wiring section is left unchanged; this section is the W3 status of record.
