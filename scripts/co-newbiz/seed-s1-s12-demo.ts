@@ -1,4 +1,4 @@
-// @version 1.13.0
+// @version 1.14.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -11,7 +11,9 @@
 // monitoring (brownfield), and the milestone register (both tracks). v1.12.0 (ADR-0186 O-5) records the gate ladder THROUGH the
 // contract (seed-demo-gate-contract.ts): snapshots + acknowledgements, six validators, user-confirmed WACC, countersigned IC
 // GOs, a cleared condition precedent, HOLD, KILL with learning capture and a waiver; option gateDecisions:false skips it. v1.13.0 (ADR-0187 P3,
-// M1): every demo funding source carries evidence_kind / evidence_ref, as the S10 funding-evidence check requires.
+// M1): every demo funding source carries evidence_kind / evidence_ref, as the S10 funding-evidence check requires. v1.14.0 (ADR-0187 P5, M14): greenfield site / pre-IC permit / incentive-with-clawback
+// evidence (stage_captured, adopted by the S11 baseline by id) and non-pass DD rows (an optional item that fails with its reason, one
+// not-applicable with its note).
 //
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
@@ -23,6 +25,7 @@ import { ulid } from "../../db/lib/ulid.ts";
 import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, getChecklistItems } from "../../app/web-next/lib/library.ts";
 import { currentReviewCycle } from "../../app/web-next/lib/portfolio.ts";
 import { SCREENING_CHECKLIST_ID, screeningItems } from "../../app/web-next/lib/brownfield-targets.ts";
+import { appendAudit } from "../../db/lib/access-control.ts";
 import * as contract from "./seed-demo-gate-contract.ts";
 
 const DEMO = {
@@ -80,6 +83,23 @@ function json(value: unknown): string {
 /** Demo S3 provenance: a completed synergy analysis linked to the opportunity so
  *  the S3 list agrees with the confirmed score on the opportunity (without it the
  *  list says "no synergy analysis" while S2/S4 show a confirmed score — D-15). */
+interface NonPassRow { status: "fail" | "na"; note: string }
+
+/** First optional (non-mandatory) item of a checklist, or null. */
+function firstOptionalItem(checklistId: string): string | null {
+  return (getChecklistItems(checklistId) ?? []).find((i) => !i.mandatory)?.id ?? null;
+}
+
+/** ADR-0187 P5 (M14): the demo's two honest non-pass rows - a fail carrying its reason and a not-applicable carrying its note. */
+function nonPassDdRows(failChecklist: string, naChecklist: string): Map<string, NonPassRow> {
+  const out = new Map<string, NonPassRow>();
+  const failItem = firstOptionalItem(failChecklist);
+  if (failItem) out.set(`${failChecklist}:${failItem}`, { status: "fail", note: "Demo: optional item not met - the supporting evidence was not provided by the counterparty; residual risk accepted by the reviewer and carried to the IC memo (demo seed)." });
+  const naItem = firstOptionalItem(naChecklist);
+  if (naItem) out.set(`${naChecklist}:${naItem}`, { status: "na", note: "Demo: not applicable to this deal shape - no workforce transfers under this structure (demo seed)." });
+  return out;
+}
+
 function seedSynergyAnalysis(db: ReturnType<typeof getDb>, id: string, oppId: string, oppName: string, score: number, now: string, actor: string): void {
   db.run(
     `INSERT OR IGNORE INTO synergy_analysis
@@ -407,14 +427,18 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
     // waiver-eligible item is waived through the waiver path instead of passed.
     const ownFamily = contractOn ? new Set(["bf-01", "bf-02", "bf-03"]) : new Set<string>();
     const waiverTarget = contractOn ? contract.waiverItemFor(DD_WORKSPACE_CHECKLISTS.commercial) : null;
+    // ADR-0187 P5 (M14): not every judged row is a pass - one optional commercial item fails with its reason and one optional
+    // legal item is not applicable with a note (optional items only: a mandatory non-pass would block S9 by design).
+    const nonPass = humanDecisions ? nonPassDdRows(DD_WORKSPACE_CHECKLISTS.commercial, DD_WORKSPACE_CHECKLISTS.legal) : new Map<string, NonPassRow>();
     for (const checklistId of [...Object.values(DD_WORKSPACE_CHECKLISTS), ...(subTrackDd ? (SUB_TRACK_DD_CHECKLISTS.m_and_a ?? []) : [])]) {
       for (const item of getChecklistItems(checklistId) ?? []) {
         if (ownFamily.has(item.id) || (waiverTarget && checklistId === DD_WORKSPACE_CHECKLISTS.commercial && item.id === waiverTarget)) continue;
+        const np = nonPass.get(`${checklistId}:${item.id}`);
         db.run(
           `INSERT OR IGNORE INTO project_checklist_item_state
            (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at)
-           VALUES (?, ?, ?, ?, 'pass', 'Demo DD completed', ?, ?)`,
-          [`demo-s1-s12-dd-${checklistId}-${item.id}`, DEMO.projectId, checklistId, item.id, actor, now],
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [`demo-s1-s12-dd-${checklistId}-${item.id}`, DEMO.projectId, checklistId, item.id, np?.status ?? "pass", np?.note ?? "Demo DD completed", actor, now],
         );
       }
     }
@@ -835,13 +859,16 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
        VALUES ('demo-gf-dd-state', ?, 'custom:technical', 'demo-gf-dd-custom', 'pass', 'Demo DD completed', 'demo:gf-dd', ?, ?)`,
       [GF.projectId, actor, now],
     );
+    // ADR-0187 P5 (M14): one optional technical item fails with its reason, one optional HR item is not applicable with a note.
+    const gfNonPass = humanDecisions ? nonPassDdRows(DD_WORKSPACE_CHECKLISTS.technical, DD_WORKSPACE_CHECKLISTS.hr) : new Map<string, NonPassRow>();
     for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {
       for (const item of getChecklistItems(checklistId) ?? []) {
+        const np = gfNonPass.get(`${checklistId}:${item.id}`);
         db.run(
           `INSERT OR IGNORE INTO project_checklist_item_state
            (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at)
-           VALUES (?, ?, ?, ?, 'pass', 'Demo DD completed', ?, ?)`,
-          [`demo-gf-dd-${checklistId}-${item.id}`, GF.projectId, checklistId, item.id, actor, now],
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [`demo-gf-dd-${checklistId}-${item.id}`, GF.projectId, checklistId, item.id, np?.status ?? "pass", np?.note ?? "Demo DD completed", actor, now],
         );
       }
     }
@@ -998,6 +1025,10 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     // an already-confirmed baseline is never re-recorded (a fresh entries row
     // would supersede the confirmation).
     if (!geo.latestConfirmedBaseline(GF.projectId, db)) {
+      // ADR-0187 P5 (M14, H11): site assessment plus pre-IC permit / incentive candidates (stage_captured S5 / S8) exist
+      // BEFORE the baseline; the S11 baseline below adopts them by id instead of re-entering them.
+      const pre = await import("../../app/web-next/lib/pre-ic-capture.ts");
+      seedGreenfieldEvidence(db, pre, now);
       const recorded = geo.recordBaselineEntries(
         {
           projectId: GF.projectId,
@@ -1021,6 +1052,14 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
         db,
       );
       if (!recorded.ok) throw new Error(`greenfield demo execution baseline entries failed (${recorded.code}): ${recorded.message}`);
+      const caps = pre.listPreIcCaptures(GF.projectId, db);
+      if (caps.permits.length || caps.incentives.length) {
+        const adopted = pre.adoptPreIcCaptures(
+          { projectId: GF.projectId, permitTargetDates: Object.fromEntries(caps.permits.map((p) => [p.id, "2027-04-30"])), actor: "admin", now },
+          db,
+        );
+        if (!adopted.ok) throw new Error(`greenfield demo pre-IC adoption failed (${adopted.code}): ${adopted.message}`);
+      }
       // A confirmation must acknowledge every open reconciliation finding (R3) —
       // the demo carries no capex tranches, so the findings (if any) are the
       // tranche-comparison notes a human would judge.
@@ -1040,6 +1079,51 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
   }
 
   return { opportunityId: GF.oppId, projectId: GF.projectId };
+}
+
+/**
+ * ADR-0187 P5 (M14 residual, H11): the greenfield site / permit / incentive evidence. The site rows follow the
+ * POST /api/projects/[id]/sites shape (no service function exists; the route inserts directly) and are audited the same way;
+ * the permit and incentive candidates go through the P4 capture service (lib/pre-ic-capture.ts) - the same functions the
+ * pre-ic-captures route calls - so they carry stage_captured / captured_by / captured_at and the incentive carries its
+ * clawback terms. Idempotent: every row is looked up by its natural key first.
+ */
+function seedGreenfieldEvidence(db: ReturnType<typeof getDb>, pre: typeof import("../../app/web-next/lib/pre-ic-capture.ts"), now: string): void {
+  const sites = [
+    { id: "demo-gf-site-1", name: "S1-S12 데모 후보 부지 A (데모)", infra: 4, logistics: 4, labor: 3, lead: 180, capex: 1200, total: 78, rank: 1, note: "데모: 산업단지 내 분양 부지 — 인프라 선정비" },
+    { id: "demo-gf-site-2", name: "S1-S12 데모 후보 부지 B (데모)", infra: 3, logistics: 3, labor: 4, lead: 270, capex: 1800, total: 66, rank: 2, note: "데모: 개별 입지 — 인프라 신규 투자 필요" },
+  ];
+  for (const t of sites) {
+    const r = db.run(
+      `INSERT OR IGNORE INTO site (id, project_id, name, region_code, infra_score, logistics_score, labor_score, permit_lead_time_days, infra_capex, total_score, rank, note, created_by, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [t.id, GF.projectId, t.name, "KR", t.infra, t.logistics, t.labor, t.lead, t.capex, t.total, t.rank, t.note, "demo-seed", now, now],
+    );
+    if (r.changes > 0) appendAudit(db, { actor: "demo-seed", action: "site.create", target: `${GF.projectId}:${t.id}`, now });
+  }
+  const has = (table: "permit" | "incentive", col: "name" | "program_name", value: string) =>
+    !!db.query(`SELECT 1 FROM ${table} WHERE project_id = ? AND ${col} = ? AND stage_captured IS NOT NULL`).get(GF.projectId, value);
+  const permits: Array<{ stage: "S5" | "S8"; name: string; agency: string; days: number }> = [
+    { stage: "S5", name: "환경영향 사전 협의 (데모)", agency: "데모 지방환경청", days: 45 },
+    { stage: "S8", name: "산업단지 입주 계약 및 공장설립 승인 (데모)", agency: "데모 산업단지관리공단", days: 60 },
+  ];
+  for (const p of permits) {
+    if (has("permit", "name", p.name)) continue;
+    const r = pre.capturePermitCandidate({ projectId: GF.projectId, stage: p.stage, name: p.name, agency: p.agency, statutory_days: p.days, actor: "demo-seed", now }, db);
+    if (!r.ok) throw new Error(`greenfield demo permit capture failed (${r.code}): ${r.message}`);
+  }
+  const program = "지방투자 보조금 (데모)";
+  if (!has("incentive", "program_name", program)) {
+    const r = pre.captureIncentiveCandidate(
+      {
+        projectId: GF.projectId, stage: "S8", program_name: program, type: "subsidy", grantor: "데모 지방자치단체", npv_value: 1500,
+        clawback_rule: "수령 후 5년 이내 가동 중단·이전 시 보조금 전액 환수 (데모 조건, 실제 약정 아님)",
+        application_deadline: "2027-03-31", construction_deadline: "2028-06-30", evidence_ref: "src:demo-gf", actor: "demo-seed", now,
+      },
+      db,
+    );
+    if (!r.ok) throw new Error(`greenfield demo incentive capture failed (${r.code}): ${r.message}`);
+  }
 }
 
 /** ADR-0186 O-5: the greenfield demo ladder through the gate contract (confirmed WACC, snapshots, two countersigns, a cleared condition). */
