@@ -13,7 +13,7 @@ import { hasScreeningEvidence, listTargets, longListCandidateGaps, screeningSumm
 import { countSourcedCapabilityRows } from "./capability-gap.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "./pmi-kickoff.ts";
-import { executionBaselineS11Check } from "./greenfield-execution.ts";
+import { adoptedModelId, executionBaselineS11Check } from "./greenfield-execution.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress, reopenedAfterGate } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
@@ -617,31 +617,49 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
       }
       return { complete: missing.length === 0, blockers, missing };
     }
-    const model = db
+    // D5 (2026-10-28): S8 completion keys on the ADOPTED case; before any adoption, on the BASE
+    // scenario model - never on "the latest created model", which is the downside scenario whose
+    // BEP can legitimately be null (not reached within the horizon) and would hold S8 open forever.
+    // Non-regression: a project the old rule (latest-created model) already completed stays complete.
+    type S8Model = { id: string; kind: string; inputs_json: string | null };
+    const gateModels = `FROM business_case_model m WHERE m.project_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant, 'market_forward') = 'market_forward'`;
+    const latest = db.query(`SELECT m.id, m.kind, m.inputs_json ${gateModels} ORDER BY m.created_at DESC LIMIT 1`).get(project.id) as S8Model | undefined;
+    const adoptedId = adoptedModelId(project.id, db);
+    const adoptedModel = adoptedId
+      ? (db.query(`SELECT m.id, m.kind, m.inputs_json ${gateModels} AND m.id = ?`).get(project.id, adoptedId) as S8Model | undefined)
+      : undefined;
+    const baseModel = db
       .query(
-        `SELECT id, kind, inputs_json FROM business_case_model
-         WHERE project_id = ? AND archived_at IS NULL AND COALESCE(variant, 'market_forward') = 'market_forward'
-         ORDER BY created_at DESC LIMIT 1`,
+        `SELECT m.id, m.kind, m.inputs_json ${gateModels}
+           AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario = 'base')
+         ORDER BY m.created_at DESC LIMIT 1`,
       )
-      .get(project.id) as { id: string; kind: string; inputs_json: string | null } | undefined;
+      .get(project.id) as S8Model | undefined;
+    const model = adoptedModel ?? baseModel ?? latest;
+    const bepOk = (m: S8Model | undefined) => {
+      if (!m || m.inputs_json == null) return false;
+      const row = db
+        .query("SELECT bep_year FROM valuation_simulation WHERE project_id = ? AND model_id = ? AND percentile = 'p50' ORDER BY created_at DESC LIMIT 1")
+        .get(project.id, m.id) as { bep_year: number | null } | undefined;
+      return !!row && row.bep_year != null;
+    };
     if (!model) {
       blockers.push("Business Case / 밸류에이션 모델이 필요합니다");
       missing.push(blocker("s8.business_case"));
     } else {
-      const sims = (db
+      const simsOf = (id: string) => (db
         .query("SELECT COUNT(*) c FROM valuation_simulation WHERE project_id = ? AND model_id = ?")
-        .get(project.id, model.id) as { c: number }).c;
-      if (sims === 0) {
+        .get(project.id, id) as { c: number }).c;
+      // Same non-regression OR as the BEP check: the old rule (latest-created model) never un-completes.
+      if (simsOf(model.id) === 0 && !(latest && simsOf(latest.id) > 0)) {
         blockers.push("민감도가 포함된 정량 평가(시뮬레이션 NPV 분위수)가 필요합니다");
         missing.push(blocker("s8.npv_quantiles"));
       }
       // 2026-09-18 spec update: BEP year + input snapshot are completion
-      // artifacts too — both land on the latest model's p50 row / inputs_json.
-      const p50 = db
-        .query("SELECT bep_year FROM valuation_simulation WHERE project_id = ? AND model_id = ? AND percentile = 'p50' ORDER BY created_at DESC LIMIT 1")
-        .get(project.id, model.id) as { bep_year: number | null } | undefined;
-      if (!p50 || p50.bep_year == null || model.inputs_json == null) {
-        blockers.push("BEP 시점과 시뮬레이션 입력 스냅샷이 필요합니다 (사업성 분석을 재생성하세요)");
+      // artifacts too - both land on the judged model's p50 row / inputs_json.
+      if (!bepOk(model) && !bepOk(latest)) {
+        const scenarioLabel = adoptedModel ? "채택한 케이스" : "기준(base) 시나리오";
+        blockers.push(`BEP 시점과 시뮬레이션 입력 스냅샷이 필요합니다 (${scenarioLabel} 기준 — 사업성 분석을 재생성하세요)`);
         missing.push(blocker("s8.bep_input_snapshot"));
       }
     }

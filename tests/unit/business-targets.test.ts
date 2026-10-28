@@ -229,7 +229,7 @@ describe("business-target standards (ADR-0114)", () => {
 
   test("evaluation: final-year compounding, margin excludes capex, statuses are 3-valued", () => {
     const resolved = resolveBusinessTargets(G1, M1);
-    const entries = evaluateTargets(resolved, SCOPE, adoptedCase(), "base");
+    const entries = evaluateTargets(resolved, SCOPE, adoptedCase());
     const byMetric = Object.fromEntries(entries.map((e) => [e.metric_key, e]));
 
     // final-year revenue = 40000 × 1.05^4 ≈ 48620.25 백만 (486.2억) < 500억 → missed
@@ -250,18 +250,21 @@ describe("business-target standards (ADR-0114)", () => {
     expect(byMetric.custom.label).toBe("R&D 투자 비중");
   });
 
-  test("NPV/IRR use only the recommended scenario p50; a missing one is indeterminate (no first-p50 fallback)", () => {
+  test("NPV/IRR use only the judged case's OWN scenario p50 (D4); a missing one is indeterminate (no first-p50 fallback)", () => {
     const resolved = resolveBusinessTargets(G1, M1);
     const sim = (scenario: string) => ({ id: `s-${scenario}`, model_id: "case-1", scenario, percentile: "p50", npv_krw_m: 90000, irr: 0.2, note: null });
-    const c = { ...adoptedCase(), simulations: [sim("bull")] } as ReturnType<typeof adoptedCase>;
-    const miss = Object.fromEntries(evaluateTargets(resolved, SCOPE, c, "base").map((e) => [e.metric_key, e]));
+    // case is the base scenario, but only an upside p50 exists -> no substitution
+    const c = { ...adoptedCase(), simulations: [sim("upside")] } as ReturnType<typeof adoptedCase>;
+    const miss = Object.fromEntries(evaluateTargets(resolved, SCOPE, c).map((e) => [e.metric_key, e]));
     expect(miss.npv.status).toBe("indeterminate");
     expect(miss.npv.actual).toBeNull();
     expect(miss.npv.actual_basis).toContain("대체하지 않음");
-    const none = Object.fromEntries(evaluateTargets(resolved, SCOPE, c, null).map((e) => [e.metric_key, e]));
-    expect(none.npv.status).toBe("indeterminate");
-    const hit = Object.fromEntries(evaluateTargets(resolved, SCOPE, c, "bull").map((e) => [e.metric_key, e]));
+    // the case's own scenario p50 is judged, whatever the engine recommended
+    const hit = Object.fromEntries(evaluateTargets(resolved, SCOPE, { ...c, simulations: [sim("upside"), sim("base")] } as typeof c).map((e) => [e.metric_key, e]));
     expect(hit.npv.actual).toBe(90000);
+    expect(hit.npv.actual_basis).toContain("채택 Case");
+    const fb = Object.fromEntries(evaluateTargets(resolved, SCOPE, { ...c, simulations: [sim("base")] } as typeof c, "base_fallback").map((e) => [e.metric_key, e]));
+    expect(fb.npv.actual_basis).toContain("채택 전");
   });
 
   test("no adopted case → indeterminate for computable metrics, manual for custom", () => {

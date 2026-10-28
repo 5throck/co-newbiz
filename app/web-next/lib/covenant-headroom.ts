@@ -1,16 +1,19 @@
-// @version 1.0.0
+// @version 2.0.0
 /**
  * covenant-headroom — S10 financing-plan output "커버넌트 여력" (flow.spec S10
  * financing-plan activity; procedures/_shared/deal-structuring step 3 fin-03;
- * ADR-0122 #2 lists covenant headroom as a heatmap input). Reads the latest
- * simulation's covenant_test rows for the project and reports, per covenant
- * key, the tightest headroom across periods. Direction (is the covenant a
- * ceiling or a floor?) comes from debt_instrument.covenant_json; when no
- * instrument declares it the headroom is null and only the engine's
- * `breached` flag is reported — never a guessed sign. No simulation, no
- * covenant rows → insufficient_evidence (values are never invented).
+ * ADR-0122 #2 lists covenant headroom as a heatmap input).
+ *
+ * 2026-10-28 (D1, owner decision, ADR-0187 decision log): the headroom is COMPUTED by the same
+ * deterministic function the S10 gate and the RAG covenant variable use
+ * (lib/covenant-dscr.ts computeDownsideDscr: the adopted S8 case's downside CFADS against the
+ * financing plan's debt terms). It no longer reads simulation/covenant_test rows - nothing ever
+ * wrote them. The DSCR row's threshold is the declared DSCR covenant (debt_instrument.covenant_json)
+ * or, when none is declared, the S10 floor (S10_MIN_DOWNSIDE_DSCR). Missing inputs →
+ * insufficient_evidence naming the input (values are never invented).
  */
 import type { getDb } from "../../../db/client.ts";
+import { computeDownsideDscr, S10_MIN_DOWNSIDE_DSCR, type DscrReason, type DscrReport } from "./covenant-dscr.ts";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -31,9 +34,13 @@ export interface CovenantHeadroomRow {
 
 export interface CovenantHeadroomView {
   status: "computed" | "insufficient_evidence";
-  reason?: "no_simulation" | "no_covenant_tests";
-  simulation_id: string | null;
+  /** insufficient_evidence only: why the DSCR could not be computed (see DscrReport.reason). */
+  reason?: DscrReason;
+  /** insufficient_evidence only: Korean message naming the missing input. */
+  message?: string | null;
   covenants: CovenantHeadroomRow[];
+  /** The deterministic computation behind the rows (scenario, per-year CFADS / service / DSCR). */
+  dscr: DscrReport;
 }
 
 /** Headroom below this fraction of the threshold is reported `tight`. */
@@ -107,57 +114,26 @@ export function headroomPct(direction: CovenantDirection, threshold: number, pro
 }
 
 export function covenantHeadroom(db: Db, projectId: string): CovenantHeadroomView {
-  const sim = db
-    .query(
-      `SELECT s.id FROM simulation s JOIN run r ON r.id = s.run_id
-       WHERE r.project_id = ? ORDER BY s.created_at DESC, s.id DESC LIMIT 1`,
-    )
-    .get(projectId) as { id: string } | undefined;
-  if (!sim) return { status: "insufficient_evidence", reason: "no_simulation", simulation_id: null, covenants: [] };
-
-  const tests = db
-    .query(
-      `SELECT period_id, covenant_key, threshold, projected_value, breached
-       FROM covenant_test WHERE simulation_id = ? ORDER BY covenant_key, period_id`,
-    )
-    .all(sim.id) as Array<{ period_id: string; covenant_key: string; threshold: number; projected_value: number; breached: number }>;
-  if (tests.length === 0) return { status: "insufficient_evidence", reason: "no_covenant_tests", simulation_id: sim.id, covenants: [] };
-
-  const directions: Record<string, CovenantDirection> = {};
-  const instruments = db
-    .query("SELECT covenant_json FROM debt_instrument WHERE project_id = ?")
-    .all(projectId) as Array<{ covenant_json: string | null }>;
-  for (const i of instruments) Object.assign(directions, parseCovenantDirections(i.covenant_json));
-
-  const byKey = new Map<string, CovenantHeadroomRow>();
-  for (const t of tests) {
-    const direction = directions[t.covenant_key.toLowerCase()] ?? "unknown";
-    const pct = headroomPct(direction, t.threshold, t.projected_value);
-    const row = byKey.get(t.covenant_key) ?? {
-      covenant_key: t.covenant_key,
-      direction,
-      min_headroom_pct: null,
-      tightest_period: null,
-      periods: 0,
-      breached_periods: 0,
-      status: "ok",
-    };
-    row.periods += 1;
-    if (t.breached === 1) {
-      row.breached_periods += 1;
-      if (row.tightest_period === null || row.status !== "breached") row.tightest_period = t.period_id;
-    }
-    if (pct !== null && (row.min_headroom_pct === null || pct < row.min_headroom_pct)) {
-      row.min_headroom_pct = pct;
-      if (row.breached_periods === 0) row.tightest_period = t.period_id;
-    }
-    byKey.set(t.covenant_key, row);
+  const dscr = computeDownsideDscr(db, projectId);
+  if (dscr.status !== "computed") {
+    return { status: "insufficient_evidence", reason: dscr.reason, message: dscr.message, covenants: [], dscr };
   }
-  for (const row of byKey.values()) {
-    if (row.breached_periods > 0) row.status = "breached";
-    else if (row.direction === "unknown") row.status = "unknown_direction";
-    else if (row.min_headroom_pct !== null && row.min_headroom_pct < TIGHT_HEADROOM_PCT) row.status = "tight";
-    else row.status = "ok";
-  }
-  return { status: "computed", simulation_id: sim.id, covenants: [...byKey.values()] };
+  const tested = dscr.periods.filter((p) => p.dscr !== null);
+  if (tested.length === 0 || dscr.min_dscr === null) return { status: "computed", covenants: [], dscr };
+  const declared = dscr.covenant_tests.length > 0;
+  const threshold = declared ? dscr.covenant_tests[0].threshold : S10_MIN_DOWNSIDE_DSCR;
+  const pct = headroomPct("min", threshold, dscr.min_dscr);
+  const breachedYears = tested.filter((p) => (p.dscr as number) < threshold);
+  const row: CovenantHeadroomRow = {
+    covenant_key: "DSCR",
+    direction: "min",
+    min_headroom_pct: pct,
+    tightest_period: breachedYears.length > 0 ? `Y${breachedYears[0].year}` : `Y${dscr.min_dscr_year}`,
+    periods: tested.length,
+    breached_periods: breachedYears.length,
+    status: "ok",
+  };
+  if (row.breached_periods > 0) row.status = "breached";
+  else if (row.min_headroom_pct !== null && row.min_headroom_pct < TIGHT_HEADROOM_PCT) row.status = "tight";
+  return { status: "computed", covenants: [row], dscr };
 }

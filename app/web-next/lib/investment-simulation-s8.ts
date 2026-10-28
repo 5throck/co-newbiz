@@ -1,3 +1,4 @@
+// @version 1.1.0 (2026-10-28: status follows the adopted case, D7)
 // ADR-0176 slice 3: S8 consumption of the S5 investment simulation, provenance and staleness.
 // Pure read side. The S8 generator takes the latest CONFIRMED S5 run's draw factors (per-draw
 // pairing: draw index d is the same factor draw at S5 and S8, recomputed from the stored seed, draw
@@ -8,6 +9,7 @@ import type { Database } from "bun:sqlite";
 import { getLatestConfirmedInvestmentSimulationRun } from "../../../db/repositories/investment-simulation-run.repository.ts";
 import { drawInvestmentFactors, simulationInputHash } from "./investment-simulation.ts";
 import { loadInvestmentVectorsInput } from "./investment-simulation-input.ts";
+import { adoptedModelId } from "./greenfield-execution.ts";
 import type { effectiveAssumptions } from "./investment-vectors.ts";
 
 /** Per-draw factors of the latest confirmed S5 run. 2026-10-19 decider direction:
@@ -96,9 +98,19 @@ export function s5SimStatusForProject(db: Database, projectId: string): S5SimSta
   const mk = (state: S5SimState, reason: S5SimStaleReason | null, used: string | null, latest: string | null): S5SimStatus =>
     ({ state, stale: state === "stale", reason, used, latest, label: LABEL[state] });
   const proj = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as { source_opportunity_id: string | null } | null;
-  const row = db
-    .query("SELECT note FROM valuation_simulation WHERE project_id = ? AND note LIKE '%basis=s5_plan%' ORDER BY created_at DESC, id DESC LIMIT 1")
-    .get(projectId) as { note: string | null } | null;
+  // D7 (2026-10-28): the status describes the case the person ADOPTED (its own note), so a newer
+  // non-adopted s5_plan case can no longer mask that the adopted one carries no S5 draws. Before
+  // any adoption (or when the adopted case is not an s5_plan case) the latest s5_plan case speaks.
+  const adoptedId = adoptedModelId(projectId, db);
+  const adoptedRow = adoptedId
+    ? (db
+        .query("SELECT note FROM valuation_simulation WHERE project_id = ? AND model_id = ? AND note LIKE '%basis=s5_plan%' ORDER BY created_at DESC, id DESC LIMIT 1")
+        .get(projectId, adoptedId) as { note: string | null } | null)
+    : null;
+  const row = adoptedRow
+    ?? (db
+      .query("SELECT note FROM valuation_simulation WHERE project_id = ? AND note LIKE '%basis=s5_plan%' ORDER BY created_at DESC, id DESC LIMIT 1")
+      .get(projectId) as { note: string | null } | null);
   const used = s5SimFragmentOfNote(row?.note);
   if (!row || used === null) return mk("not_applicable", null, null, null);
   let latest: string | null = null;

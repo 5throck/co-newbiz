@@ -12,7 +12,7 @@ reproduce identical results (ADR-0052 section D.4).
 CLI:  python3 -m sim_engine <job-spec.json>   (or pipe JSON on stdin)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 from .job import run_job  # noqa: E402  (after __version__ — job.py reads it)
 from .job_spec import JobSpecError, parse_job_spec  # noqa: E402

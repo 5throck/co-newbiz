@@ -227,7 +227,7 @@ steps:
     description: >
       Financing DD per `checklists/financing-plan-checklist.yaml` — funding
       sources and their certainty, covenant headroom under the downside
-      scenario (starting threshold: downside DSCR headroom of at least 1.2x,
+      scenario (starting threshold: downside DSCR headroom of at least 1.3x,
       ADR-0187 D2). A covenant breach under the downside scenario is the
       kill criterion covenant_breach_under_downside_financing_plan below.
       Trimmed for the internal-expansion sub-tracks (D9).

@@ -255,7 +255,9 @@ export function finalYearCaseFigures(adopted: BusinessCaseView): { revenueKrwM: 
 }
 
 /** p50 NPV/IRR of the requested scenario only. No fallback to another scenario's p50: when the
- * recommended scenario (or its p50) is missing the result is indeterminate with `missing` set. */
+ * requested scenario's p50 is missing the result is indeterminate with `missing` set. Since
+ * 2026-10-28 (D4) callers pass the JUDGED case's own scenario (the adopted case, or base
+ * before adoption) - never the engine-recommended one, which is usually the upside. */
 function baseCaseSim(adopted: BusinessCaseView, recommendedScenario: string | null): { npv_krw_m: number | null; irr: number | null; missing: boolean } {
   const base = adopted.simulations.find((s) => s.percentile === "p50" && recommendedScenario != null && s.scenario === recommendedScenario);
   if (!base) return { npv_krw_m: null, irr: null, missing: true };
@@ -269,7 +271,7 @@ function directionMet(direction: TargetDirection, actual: number, target: number
 const SHADOW_LABEL: Record<StandardSource, string> = { affiliate: "계열사 기준", group: "그룹 공통 기준" };
 
 interface EvalContext {
-  /** Prefix for the NPV/IRR basis text, e.g. "권장 시나리오". */
+  /** Prefix for the NPV/IRR basis text, e.g. "채택 Case". */
   simBasis: string;
   caseCase: BusinessCaseView | null;
   sim: { npv_krw_m: number | null; irr: number | null; missing?: boolean };
@@ -298,7 +300,7 @@ function evaluateResolved(resolved: ResolvedTarget[], scope: ProjectTargetScope 
       actual_basis = "수동 확인 — 자동 산출 미지원 지표";
     } else if (!adoptedCase) {
       status = "indeterminate";
-      actual_basis = "채택 Business Case 없음";
+      actual_basis = "판정할 Business Case 없음 (채택 전이며 기준(base) Case도 없음)";
     } else if (row.metric_key === "revenue") {
       actual = figures.revenueKrwM;
       actual_basis = "채택 Case 최종 연도 매출 (라인 성장 복리)";
@@ -313,11 +315,11 @@ function evaluateResolved(resolved: ResolvedTarget[], scope: ProjectTargetScope 
       status = directionMet(row.direction, actual, row.target_value) ? "met" : "missed";
     } else if (row.metric_key === "npv") {
       actual = sim.npv_krw_m;
-      actual_basis = sim.missing ? "권장 시나리오의 p50 시뮬레이션 없음 — 다른 시나리오로 대체하지 않음" : `${ctx.simBasis} p50 NPV (${adoptedCase.scenario ?? "시나리오 미지정"})`;
+      actual_basis = sim.missing ? "판정 대상 시나리오의 p50 시뮬레이션 없음 — 다른 시나리오로 대체하지 않음" : `${ctx.simBasis} p50 NPV (${adoptedCase.scenario ?? "시나리오 미지정"})`;
       status = actual == null ? "indeterminate" : directionMet(row.direction, actual, row.target_value) ? "met" : "missed";
     } else if (row.metric_key === "irr") {
       actual = sim.irr;
-      actual_basis = sim.missing ? "권장 시나리오의 p50 시뮬레이션 없음 — 다른 시나리오로 대체하지 않음" : `${ctx.simBasis} p50 IRR (${adoptedCase.scenario ?? "시나리오 미지정"})`;
+      actual_basis = sim.missing ? "판정 대상 시나리오의 p50 시뮬레이션 없음 — 다른 시나리오로 대체하지 않음" : `${ctx.simBasis} p50 IRR (${adoptedCase.scenario ?? "시나리오 미지정"})`;
       status = actual == null ? "indeterminate" : directionMet(row.direction, actual, row.target_value) ? "met" : "missed";
     } else {
       status = "manual";
@@ -346,17 +348,21 @@ function evaluateResolved(resolved: ResolvedTarget[], scope: ProjectTargetScope 
   });
 }
 
-/** Build the fs-gate evidence entries. `adoptedCase === null` (no human adoption
- * yet) yields "indeterminate" for computable metrics — a missing adoption is a
- * fact, not a judgement. Custom metrics are always "manual". */
+/** Which case the goals were judged on (D4, 2026-10-28): the case the person ADOPTED, or - before any
+ * adoption - the base-scenario case. NEVER the engine-recommended scenario (max p05, usually upside). */
+export type GoalJudgedBasis = "adopted" | "base_fallback";
+
+/** Build the fs-gate evidence entries on `caseView`'s OWN scenario p50 (so /target-check and the
+ * S8 lens summary agree). `caseView === null` (nothing adoptable) yields "indeterminate" for
+ * computable metrics - a missing case is a fact, not a judgement. Custom metrics are always "manual". */
 export function evaluateTargets(
   resolved: ResolvedTarget[],
   scope: ProjectTargetScope | null,
-  adoptedCase: BusinessCaseView | null,
-  recommendedScenario: string | null,
+  caseView: BusinessCaseView | null,
+  basis: GoalJudgedBasis = "adopted",
 ): TargetCheckEntry[] {
-  const sim = adoptedCase ? baseCaseSim(adoptedCase, recommendedScenario) : { npv_krw_m: null, irr: null, missing: false };
-  return evaluateResolved(resolved, scope, { simBasis: "권장 시나리오", caseCase: adoptedCase, sim });
+  const sim = caseView ? baseCaseSim(caseView, caseView.scenario) : { npv_krw_m: null, irr: null, missing: false };
+  return evaluateResolved(resolved, scope, { simBasis: basis === "adopted" ? "채택 Case" : "채택 전 — 기준(base) Case", caseCase: caseView, sim });
 }
 
 /** Same status logic as evaluateTargets, for ANY scenario case so the scenario

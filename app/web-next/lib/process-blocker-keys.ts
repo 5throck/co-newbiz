@@ -69,7 +69,7 @@ export const BLOCKER_LABELS = {
   "s10.deal_structure_hypothesis": "투자구조 가설(4축 검토 완료)",
   "s10.sources_uses_balance": "자금조달 계획(sources & uses 균형)",
   "s10.uses_reconcile_adopted_investment": "자금 사용(uses)과 S8 채택 투자금 대사 (허용 오차 ±5%)",
-  "s10.downside_covenant_headroom": "다운사이드 커버넌트 여력 (DSCR 1.2배 이상)",
+  "s10.downside_covenant_headroom": "다운사이드 커버넌트 여력 (DSCR 1.3배 이상)",
   "s10.funding_evidence": "자금 확정성 증빙(조달원별)",
   // S11 investment review and execution
   "s11.entity_ic_approval": "법인 투자심의위원회 승인",

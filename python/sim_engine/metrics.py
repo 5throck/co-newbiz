@@ -3,7 +3,11 @@ BEP volume (design REQ-W3-1).
 
 Conventions shared with the legacy S8 simulator (business-case-generator.ts):
 - flows[0] is the year-0 outflow, undiscounted; year t discounts by (1+r)^-t;
-- IRR is bisection on NPV(rate), null when no sign change in [-0.9, 10];
+- IRR is bisection on NPV(rate) over [-0.9, 10]; when NPV does not change sign
+  there and the upper end is still positive, the upper end widens x10 per step
+  up to 1e6 (100,000,000 %), and the result is null only if no sign change is
+  found by then. This is THE rule: business-case-generator.ts `irr` implements
+  the identical bracket/null policy (parity test: tests/unit/irr-parity.test.ts);
 - the discounted payback / BEP year is the (fractionally interpolated) first
   time cumulative discounted FCF on the DETERMINISTIC path crosses zero —
   null when the horizon ends first. Missing value is null, never a guess.
@@ -16,14 +20,21 @@ from typing import Callable, Sequence
 
 
 def irr(flows: Sequence[float]) -> float | None:
-    """IRR by bisection — identical contract to the legacy implementation."""
+    """IRR by bisection with the widening bracket described in the module docstring (parity with the TS fallback)."""
     def npv(rate: float) -> float:
         return sum(cf / (1.0 + rate) ** i for i, cf in enumerate(flows))
 
     lo, hi = -0.9, 10.0
     f_lo, f_hi = npv(lo), npv(hi)
     if f_lo * f_hi > 0:
-        return None
+        # Real IRR above the standard bracket (e.g. a tiny year-0 outflow
+        # followed by large inflows): widen the upper end x10 until the sign
+        # changes, giving up at 1e6. Mirrors the TS `irr` exactly (D6).
+        while f_hi > 0 and hi < 1e6:
+            hi *= 10.0
+            f_hi = npv(hi)
+        if f_lo * f_hi > 0:
+            return None
     for _ in range(200):
         mid = (lo + hi) / 2.0
         f_mid = npv(mid)

@@ -5363,7 +5363,7 @@ paths:
   /api/projects/{id}/target-check:
     get:
       operationId: getProjectTargetCheck
-      summary: fs-gate evidence (ADR-0114, ADR-0159) — the project's resolved business goals (project > affiliate > group per metric; entries carry source, shadowed, shadowed_note, rationale, set_by; scope is null when the standards scope is unresolved; goal_count_by_source) vs the adopted business case. Display only; never blocks a gate.
+      summary: fs-gate evidence (ADR-0114, ADR-0159) — the project's resolved business goals (project > affiliate > group per metric; entries carry source, shadowed, shadowed_note, rationale, set_by; scope is null when the standards scope is unresolved; goal_count_by_source) vs the ADOPTED case's own scenario p50 (base-scenario case before adoption; never the engine-recommended scenario - D4, 2026-10-28; adds judged_case_id and judged_basis). Display only; never blocks a gate.
       tags:
         - Analysis
       parameters:
@@ -6628,7 +6628,7 @@ paths:
   /api/projects/{id}/debt:
     get:
       operationId: listProjectDebt
-      summary: Debt instruments (covenant tests are simulation-keyed, surfaced elsewhere).
+      summary: Debt instruments plus the computed downside covenant headroom (D1, 2026-10-28) - the adopted S8 case's downside CFADS against the registered debt terms; insufficient_evidence names any missing term.
       tags:
         - Reference
       responses:
@@ -6642,7 +6642,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: createProjectDebtInstrument
-      summary: Register a debt instrument (analyst+).
+      summary: Register a debt instrument (analyst+) - principal KRW millions, rate in percent, maturity as a tenor or a date, amortization annuity|equal_principal|bullet.
       tags:
         - Reference
       responses:

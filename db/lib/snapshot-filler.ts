@@ -1,4 +1,4 @@
-// @version 1.8.0
+// @version 1.9.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -65,6 +65,7 @@ import { evaluateValidatorCompleteness } from "./validator-completeness.ts";
 import type { MaValidatorKey } from "./validator-applicability.ts";
 import { listProjectAnalysisTargets } from "./wacc.ts";
 import { rateScopeState } from "./wacc-confirmation.ts";
+import { computeDownsideDscr } from "../../app/web-next/lib/covenant-dscr.ts";
 
 // ---------------------------------------------------------------------------
 // Public shapes
@@ -573,26 +574,26 @@ function fillContingentVars(db: Database, projectId: string, runId: string, now:
   return [ev, maxAmount, maxProb];
 }
 
-function fillCovenantVar(db: Database, projectId: string): SnapshotWrite {
+function fillCovenantVar(db: Database, projectId: string, now: Date): SnapshotWrite {
   const row = missing("risk.covenants_breached");
-  // The LATEST simulation of this project decides (D-M-RISK-5).
-  const sim = db
-    .query("SELECT s.id AS sim_id, s.created_at FROM simulation s JOIN run r ON r.id = s.run_id WHERE r.project_id = ? ORDER BY s.created_at DESC, s.id DESC LIMIT 1")
-    .get(projectId) as unknown as { sim_id: string; created_at: string } | null;
-  if (sim) {
-    const breached = (db.query("SELECT COUNT(*) AS n FROM covenant_test WHERE simulation_id = ? AND breached = 1").get(sim.sim_id) as unknown as { n: number }).n;
-    row.value_num = breached;
-    row.observed_at = sim.created_at;
+  // D1 (2026-10-28, owner decision): COMPUTED, not looked up - the same deterministic downside DSCR
+  // the S10 gate and the covenant headroom views use (app/web-next/lib/covenant-dscr.ts; the one
+  // sanctioned db -> web-next/lib import, so a single function defines "covenant breached").
+    const report = computeDownsideDscr(db, projectId);
+  if (report.reason === "no_debt") {
+    // No debt instruments -> legitimately nothing to test: present 0.
+    row.value_num = 0;
     row.status = "present";
     return row;
   }
-  const debtCount = (db.query("SELECT COUNT(*) AS n FROM debt_instrument WHERE project_id = ?").get(projectId) as unknown as { n: number }).n;
-  if (debtCount === 0) {
-    // No debt instruments → legitimately nothing to test: present 0.
-    row.value_num = 0;
+  if (report.status === "computed") {
+    // Counts periods below the tighter of the declared DSCR covenant and the S10 1.3x floor (RAG agrees with the gate).
+    row.value_num = report.rag_breached_periods;
+    row.evidence_ref = `covenant-dscr:${report.evidence}`;
+    row.observed_at = now.toISOString();
     row.status = "present";
   }
-  // Debt exists but no simulation ran → missing: the covenant test is owed, not zero.
+  // Debt exists but its terms / the adopted case are incomplete -> missing: the covenant test is owed, not zero.
   return row;
 }
 
@@ -1050,7 +1051,7 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     ...fillCertCountVars(db, opts.projectId),
     ...fillPermitVars(db, opts.projectId),
     ...fillContingentVars(db, opts.projectId, opts.runId, now),
-    fillCovenantVar(db, opts.projectId),
+    fillCovenantVar(db, opts.projectId, now instanceof Date ? now : new Date(now)),
     ...fillPartnerVars(db, opts.projectId),
     fillAntitrustVar(db, opts.projectId),
     fillKeyTalentAttritionVar(db, opts.projectId),

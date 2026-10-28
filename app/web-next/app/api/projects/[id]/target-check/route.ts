@@ -5,7 +5,7 @@
 // project routes (FR-SEC-01).
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
-import { listBusinessCases } from "../../../../../lib/business-case.ts";
+import { goalJudgedCase, listBusinessCases } from "../../../../../lib/business-case.ts";
 import {
   countGoalsBySource,
   evaluateTargets,
@@ -23,16 +23,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     // Project goals (ADR-0159) apply even when the group/affiliate standards
     // scope is unresolved; `resolvable` keeps its meaning (standards scope).
     const { scope, resolved } = resolveProjectTargets(id);
-    const { cases, recommendedScenario } = listBusinessCases(id);
-    const adoptedCase = cases.find((c) => c.adopted) ?? null;
-    const entries = evaluateTargets(resolved, scope, adoptedCase, recommendedScenario);
+    // D4 (2026-10-28): judge on the ADOPTED case's own scenario (base before adoption),
+    // not the engine-recommended scenario - same basis as /s8-lens-summary.
+    const list = listBusinessCases(id);
+    const adoptedCase = list.cases.find((c) => c.adopted) ?? null;
+    const judged = goalJudgedCase(list);
+    const entries = evaluateTargets(resolved, scope, judged.caseView, judged.basis);
     const goal_count_by_source = countGoalsBySource(entries);
     if (!scope && entries.length === 0) {
       // No resolvable scope and no project goal: the UI shows an actionable state.
       return ok({ resolvable: false, reason: "scope_unresolved", scope: null, goal_count_by_source, entries }, 200, { count: 0 });
     }
     return ok(
-      { resolvable: scope != null, ...(scope ? {} : { reason: "scope_unresolved" }), scope, adopted_case_id: adoptedCase?.id ?? null, goal_count_by_source, entries },
+      { resolvable: scope != null, ...(scope ? {} : { reason: "scope_unresolved" }), scope, adopted_case_id: adoptedCase?.id ?? null, judged_case_id: judged.caseView?.id ?? null, judged_basis: judged.caseView ? judged.basis : null, goal_count_by_source, entries },
       200,
       { count: entries.length },
     );

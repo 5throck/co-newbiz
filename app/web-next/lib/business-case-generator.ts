@@ -1,3 +1,4 @@
+// @version 1.1.0 (2026-10-28: uncertainty_scope in the job-spec snapshot, D7; irr parity note, D6)
 // business-case-generator — S8 automatic multi-business-case generation
 // (ADR-0098 §2). For each FS scenario (base / upside / downside) a sequential
 // generation chain — NOT a debate — reuses the ADR-0096 engine
@@ -50,6 +51,7 @@ import { fmtNpvInteger } from "./npv-format.ts";
 import { resolveDownsideOpexUplift } from "./target-costing.ts";
 import { archiveSupersededRound } from "./business-case-cleanup.ts";
 import { resolveS5SimConsumption, type S5SimConsumption } from "./investment-simulation-s8.ts";
+import { deriveUncertaintyScope, type S5RunUse } from "./uncertainty-scope.ts";
 import { aggregatePlanLines, applyStaffingLaborToPlan, pinPlanLinesOf } from "./s5-plan-pin.ts";
 import { fitPlanToHorizon, staffingPlanOf, staffingSummaryVector, type StaffingPlanEntry } from "./staffing-plan.ts";
 import { shiftAdvanceHalf, shiftDelayHalf, staffingAnnualVectorWithFactors } from "./investment-vectors.ts";
@@ -323,7 +325,9 @@ export interface SimulationResult {
   bepVolume: number | null;
 }
 
-/** IRR of a cashflow vector by bisection on NPV(rate); null when no sign change. */
+/** IRR of a cashflow vector by bisection on NPV(rate) over [-0.9, 10], upper end widened x10 up to 1e6
+ *  when there is no sign change; null beyond that. THE single bracket/null rule: python/sim_engine/metrics.py
+ *  `irr` applies the identical policy (D6; parity test tests/unit/irr-parity.test.ts). */
 export function irr(cashflows: number[]): number | null {
   // flows[0]은 year-0(현재 시점) — 미할인, 이후 연도만 할인한다.
   const npv = (rate: number) => cashflows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + rate, i), 0);
@@ -1886,7 +1890,7 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   // ADR-0156 소비 스코프를 스냅샷에 싣는다 — target이면 어떤 회사의 세션으로
   // 할인했는지 subject_company_id까지 식별 가능(REQ-W5-1 재현 계약).
   const waccScope = inputs.waccScope ?? { scope: "project" as const };
-  return {
+  const spec = {
     job_id: `s8:${subjectKey}:${scenario}:${variant}`,
     seed_policy: { base: subjectKey, hash: "fnv1a" },
     device: "auto",
@@ -1947,6 +1951,19 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
         },
       },
     ],
+  };
+  // D7 (2026-10-28): record in the run snapshot WHICH drivers the band reflects and which are held
+  // constant (outside the spec's `cases`, so seeds - a function of case_id + drivers - are untouched).
+  const s5Run: S5RunUse = !s5 ? (inputs.s5Plan ? "basis_not_paired" : "no_s5_plan") : s5.pnl ? "basis_not_paired" : inputs.s5Sim ? "applied" : "none_confirmed";
+  return {
+    ...spec,
+    // Frozen deterministic CFADS basis (S10 covenant check reads this, never live inputs): per-year fcf of this
+    // scenario's deterministic table; the last year includes the exit value, recorded separately.
+    deterministic_flows: (() => {
+      const t = deterministicCaseYearTable(inputs, scenario, variant);
+      return { version: 1, horizon: t.horizon, exit_value: t.exitValue, years: t.rows.filter((r) => r.year >= 1).map((r) => ({ year: r.year, fcf: Math.round(r.fcf * 1e6) / 1e6 })) };
+    })(),
+    uncertainty_scope: deriveUncertaintyScope(spec.cases[0].drivers as Record<string, { dist?: string }>, { run: s5Run, simHash: inputs.s5Sim?.inputHash ?? null }),
   };
 }
 

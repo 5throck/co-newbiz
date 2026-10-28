@@ -27,6 +27,7 @@ import { test, describe, expect, beforeAll, afterAll } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
+import { adoptCase, addDebtForMinDscr } from "./_dscr-fixture.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { evaluateKillCriteria, validateRegistryEntry } from "../../db/lib/kill-criteria.ts";
 import { recordKillCriteriaEvaluation, getRecordedEvaluation } from "../../db/repositories/kill-criteria.repository.ts";
@@ -91,10 +92,10 @@ function insertRun(projectId: string): string {
 }
 
 function insertSimulationWithBreach(projectId: string): void {
-  const runId = insertRun(projectId);
-  const simId = ulid();
-  db.run("INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)", [simId, runId, 42, 100, 0.08, NOW]);
-  db.run("INSERT INTO covenant_test (simulation_id, period_id, covenant_key, threshold, projected_value, breached) VALUES (?,?,?,?,?,?)", [simId, "p1", "dscr", 1.25, 1.0, 1]);
+  // D1 (2026-10-28): covenant breaches are COMPUTED (adopted case downside CFADS vs the debt terms),
+  // not read from simulation/covenant_test rows. Minimum downside DSCR 1.0 vs a DSCR >= 1.25 covenant.
+  adoptCase(db, projectId);
+  addDebtForMinDscr(db, projectId, 1.0, { covenant: "DSCR >= 1.25" });
 }
 
 function insertPartner(projectId: string, opts: { status?: string; dependency?: string | null } = {}): void {

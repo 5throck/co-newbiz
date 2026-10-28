@@ -180,7 +180,7 @@ export function composeProjectReport(db: Database, projectId: string, projectNo:
     if (cov.status === "computed") {
       for (const c of cov.covenants) lines.push(`- 커버넌트 ${c.covenant_key}: ${c.status}${c.min_headroom_pct != null ? ` (최소 여력 ${Math.round(c.min_headroom_pct * 1000) / 10}%)` : ""}`);
     } else {
-      lines.push("- 커버넌트 여력: 시뮬레이션 없음 (근거 부족)");
+      lines.push(cov.reason === "no_debt" ? "- 커버넌트 여력: 차입 없음" : `- 커버넌트 여력: 계산 불가 (근거 부족) — ${cov.message ?? ""}`);
     }
   } catch {
     lines.push("- 자금 데이터 없음");

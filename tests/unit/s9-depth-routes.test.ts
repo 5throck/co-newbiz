@@ -16,6 +16,7 @@ import { ulid } from "../../db/lib/ulid.ts";
 import { approvedConfidenceAdjustment } from "../../db/lib/rag-service.ts";
 import { stageArtifactDefsFor } from "../../app/web-next/lib/review/stage-artifacts.ts";
 import { buildRiskHeatmap, heatmapSnapshot } from "../../app/web-next/lib/risk-heatmap.ts";
+import { addDebtForMinDscr, adoptCase, cfadsOf } from "./_dscr-fixture.ts";
 import { covenantHeadroom } from "../../app/web-next/lib/covenant-headroom.ts";
 
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none"; // draft routes must not call a real provider in tests
@@ -205,34 +206,67 @@ describe("risk heatmap — server builder, assessment ledger, IC snapshot", () =
   });
 });
 
-describe("covenant headroom — latest simulation's covenant_test rows", () => {
-  test("no simulation → insufficient_evidence; a breached DSCR floor plots as a high cov: item", async () => {
-    expect(covenantHeadroom(db, projectId)).toMatchObject({ status: "insufficient_evidence", reason: "no_simulation" });
-    await req(`/api/projects/${projectId}/debt`, json(analystCookie, { lender: "은행", principal: 500, rate: 5, covenant_json: JSON.stringify({ DSCR_min: 1.3, NetLev_max: 3.5 }) }));
-    const runId = ulid();
-    const simId = ulid();
-    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runId, projectId, "sim", "h", ANALYST, NOW]);
-    db.run("INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)", [simId, runId, 42, 1000, 0.08, NOW]);
-    for (const [period, key, threshold, projected, breached] of [
-      ["2027", "DSCR", 1.3, 1.45, 0], ["2028", "DSCR", 1.3, 1.25, 1], ["2027", "NetLev", 3.5, 3.2, 0], ["2028", "NetLev", 3.5, 3.4, 0],
-    ] as const) {
-      db.run("INSERT INTO covenant_test (simulation_id, period_id, covenant_key, threshold, projected_value, breached) VALUES (?,?,?,?,?,?)", [simId, period, key, threshold, projected, breached]);
+describe("covenant headroom — computed from the adopted case's downside (D1, 2026-10-28)", () => {
+  /** Annuity (5y, 5 %) principal that lands the project's minimum downside DSCR on `target`. */
+  // Integer principal (ADR-0061) whose minimum downside DSCR falls inside [lo, hi].
+  const principalIn = (lo: number, hi: number) => {
+    const minCf = Math.min(...cfadsOf(projectId, "downside"));
+    const factor = 0.05 / (1 - Math.pow(1.05, -5));
+    for (let p = 1; p < 1_000_000; p++) {
+      const d = minCf / (p * factor);
+      if (d <= hi && d >= lo) return p;
+      if (d < lo) break;
     }
+    throw new Error(`no integer principal gives DSCR in [${lo}, ${hi}] (min CFADS ${minCf})`);
+  };
+  const postDebt = (principal: number, covenant: string) =>
+    req(`/api/projects/${projectId}/debt`, json(analystCookie, { lender: "은행", principal, rate: 5, maturity: "5년", amortization: "annuity", covenant_json: covenant }));
+
+  test("no debt → insufficient_evidence (no_debt); debt without an adopted case names the missing adoption", async () => {
+    expect(covenantHeadroom(db, projectId)).toMatchObject({ status: "insufficient_evidence", reason: "no_debt" });
+    const res = await postDebt(500, JSON.stringify({ DSCR_min: 1.3, NetLev_max: 3.5 }));
+    expect(res.status).toBe(201);
+    const view = covenantHeadroom(db, projectId);
+    expect(view).toMatchObject({ status: "insufficient_evidence", reason: "no_adopted_case" });
+    expect(view.message).toContain("채택");
+    db.run("DELETE FROM debt_instrument WHERE project_id = ?", [projectId]);
+  });
+
+  test("a DSCR below the declared covenant plots as a high cov: item; the untested NetLev is advisory, not a row", async () => {
+    adoptCase(db, projectId);
+    await postDebt(principalIn(1.0, 1.29), JSON.stringify({ DSCR_min: 1.3, NetLev_max: 3.5 }));
     const view = covenantHeadroom(db, projectId);
     expect(view.status).toBe("computed");
-    const dscr = view.covenants.find((c) => c.covenant_key === "DSCR")!;
-    expect(dscr).toMatchObject({ direction: "min", status: "breached", breached_periods: 1, periods: 2, tightest_period: "2028" });
-    const lev = view.covenants.find((c) => c.covenant_key === "NetLev")!;
-    expect(lev).toMatchObject({ direction: "max", status: "tight", breached_periods: 0 });
-    expect(lev.min_headroom_pct).toBeCloseTo(0.0286, 3);
+    expect(view.dscr).toMatchObject({ scenario: "downside", fallback_to_base: false });
+    expect(view.dscr.min_dscr).toBeLessThan(1.3);
+    expect(view.covenants.map((c) => c.covenant_key)).toEqual(["DSCR"]);
+    expect(view.covenants[0]).toMatchObject({ direction: "min", status: "breached", breached_periods: 1, tightest_period: "Y1" });
+    expect(view.dscr.untested_covenants).toEqual(["NetLev"]);
 
     const debt = await req(`/api/projects/${projectId}/debt`, { headers: { cookie: analystCookie } });
     expect(((await debt.json()).data.headroom as { status: string }).status).toBe("computed");
     const hm = buildRiskHeatmap(db, projectId);
     expect(hm.covenant_status).toBe("computed");
     expect(hm.items.find((i) => i.key === "cov:DSCR")).toMatchObject({ source: "cov", auto: { likelihood: 3, impact: 3 }, severity: "high" });
-    expect(hm.items.find((i) => i.key === "cov:NetLev")).toMatchObject({ auto: { likelihood: 3, impact: 2 } });
-    expect(hm.sources.cov).toBe(2);
+    expect(hm.sources.cov).toBe(1);
+    db.run("DELETE FROM debt_instrument WHERE project_id = ?", [projectId]);
+  });
+
+  test("POST /debt rejects out-of-contract input with 400 invalid_debt_instrument (decimal rate, fractional principal)", async () => {
+    for (const body of [{ principal: 100, rate: 0 }, { principal: 100.5, rate: 5 }, { principal: 100, rate: 150 }, { principal: 100, rate: 5, amortization: "x" }]) {
+      const res = await req(`/api/projects/${projectId}/debt`, json(analystCookie, body));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.code).toBe("invalid_debt_instrument");
+    }
+  });
+
+  test("a DSCR just above the covenant is `tight`; a comfortable one is `ok`", async () => {
+    addDebtForMinDscr(db, projectId, 1.35, { covenant: JSON.stringify({ DSCR_min: 1.3 }) }); // fractional principal: direct insert (the route requires an integer)
+    expect(covenantHeadroom(db, projectId).covenants[0]).toMatchObject({ status: "tight", breached_periods: 0 });
+    db.run("DELETE FROM debt_instrument WHERE project_id = ?", [projectId]);
+    await postDebt(principalIn(1.6, 3), JSON.stringify({ DSCR_min: 1.3 }));
+    expect(covenantHeadroom(db, projectId).covenants[0]).toMatchObject({ status: "ok", breached_periods: 0 });
+    db.run("DELETE FROM debt_instrument WHERE project_id = ?", [projectId]);
   });
 });
 

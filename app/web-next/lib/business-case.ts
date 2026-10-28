@@ -1,3 +1,4 @@
+// @version 1.1.0 (2026-10-28: goalJudgedCase D4, uncertainty_scope D7)
 // business-case — read/model helpers for the S8 surface (ADR-0098 §3/§4).
 // Both write paths (automatic generation via lib/business-case-generator.ts
 // and manual CRUD via the API) land in the same tables, so every read here is
@@ -10,6 +11,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { uncertaintyScopeOfSnapshot, type UncertaintyScope } from "./uncertainty-scope.ts";
 import { hideHistoricalForGreenfield } from "./business-case-legacy.ts";
 import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, resolveConfirmedEvBand, evRevenueBandPayload, type EvRevenueBandPayload, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { evaluateTargets, resolveProjectTargets } from "./business-targets.ts";
@@ -65,6 +67,8 @@ export interface BusinessCaseView {
   adopted: boolean;
   created_by: string;
   inputs_json?: string | null;
+  /** D7: which drivers the NPV band reflects / holds constant, read from the run snapshot (null when none). */
+  uncertainty_scope?: UncertaintyScope | null;
   created_at: string;
   /** ADR-0158 — set when a human archived this pre-ADR-0143 model instead of
    *  deleting it (it is referenced by an adoption / gate record). */
@@ -232,6 +236,7 @@ export function listBusinessCases(projectId: string): {
       archived_at: m.archived_at,
       archived_by: m.archived_by,
       inputs_json: m.inputs_json ?? null,
+      uncertainty_scope: uncertaintyScopeOfSnapshot(m.inputs_json),
       lines: lines.filter((l) => l.model_id === m.id).map(({ model_id: _m, ...rest }) => rest),
       simulations: modelSims,
     };
@@ -239,6 +244,19 @@ export function listBusinessCases(projectId: string): {
   const isGreenfield = (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | undefined)?.track === "greenfield";
   const visible = hideHistoricalForGreenfield(cases, isGreenfield);
   return { cases: visible.filter((c) => c.archived_at === null), archived: visible.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets), evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)) };
+}
+
+/** D4 (2026-10-28): the case the project's GOALS are judged on - the case the person adopted;
+ * before any adoption, the base-scenario market_forward case (of the selected target when a
+ * brownfield selection exists; with several targets and no selection there is nothing to judge).
+ * Never the engine-recommended scenario. The S8 lens summary judges the adopted case the same way. */
+export function goalJudgedCase(list: { cases: BusinessCaseView[]; archived: BusinessCaseView[]; targetSelection?: TargetSelectionRecord | null }): { caseView: BusinessCaseView | null; basis: "adopted" | "base_fallback" } {
+  const adopted = findAdoptedCase(list);
+  if (adopted) return { caseView: adopted, basis: "adopted" };
+  const bases = list.cases.filter((c) => c.scenario === "base" && c.variant === "market_forward");
+  const selected = list.targetSelection?.targetId ?? null;
+  const pick = selected ? bases.find((c) => c.target_id === selected) : bases.every((c) => c.target_id === null) ? bases[0] : undefined;
+  return { caseView: pick ?? null, basis: "base_fallback" };
 }
 
 /** The adopted case for history views (adoption / IC package / report): looks in
@@ -314,10 +332,11 @@ export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy:
   if (resolved.length === 0) {
     recordAck(0, "no_goals");
   } else {
-    const { cases, recommendedScenario } = listBusinessCases(projectId);
+    // D4: judge on the case being adopted (its own scenario), not the engine-recommended one.
+    const { cases } = listBusinessCases(projectId);
     const view = cases.find((c) => c.id === modelId);
     const counts = { met: 0, missed: 0, indeterminate: 0, manual: 0 };
-    for (const e of evaluateTargets(resolved, scope, view ?? null, recommendedScenario)) counts[e.status] += 1;
+    for (const e of evaluateTargets(resolved, scope, view ?? null, "adopted")) counts[e.status] += 1;
     meta.goal_count = resolved.length;
     meta.attainment = counts;
     // Goals exist but none could be judged automatically: same human acknowledgement as "no goals".
