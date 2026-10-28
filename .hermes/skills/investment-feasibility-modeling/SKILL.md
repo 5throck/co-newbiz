@@ -10,7 +10,7 @@ description: >
 
   Use when: "investment feasibility model", "NPV IRR calculation",
   "feasibility financial model".
-version: 1.2.1
+version: 1.3.0
 last_reviewed: 2026-10-28
 status: active
 owner: valuation-agent
@@ -62,6 +62,8 @@ inputs, it assembles already-produced, already-validated figures into one
 model. Using an unconfirmed WACC, an un-normalized EBITDA, or an
 un-anchored growth projection here defeats the point of each upstream
 skill's own discipline.
+
+**Role boundary (finance trio, owner decision 2026-10-28)**: `financial-analyst` owns historical analysis, quality-of-earnings, financial-ratio peer comparison and the growth-projection ASSUMPTIONS with their evidence; `valuation-agent` computes DCF/NPV/IRR/DSCR from those assumptions, value-multiple (EV/Revenue) bands and simulation; `financing-agent` owns the funding structure and an independent covenant-headroom check of valuation's plan under downside. None of the three recommends the investment decision.
 
 ## When to Use
 

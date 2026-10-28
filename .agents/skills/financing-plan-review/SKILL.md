@@ -9,7 +9,7 @@ description: >
   assumed by a financing contingency.
 
   Use when: "financing plan", "certainty of funds", "sources and uses".
-version: 1.2.1
+version: 1.3.0
 last_reviewed: 2026-10-28
 status: active
 owner: valuation-agent
@@ -60,6 +60,8 @@ clearest signal of deal weakness. This skill is the HOW; the procedure
 steps that dispatch it (`procedures/_shared/brownfield-dd/schema.yaml`
 step 12, `procedures/_shared/entity-ic-review/schema.yaml` step 4 as a
 precondition) own the what and when.
+
+**Role boundary (finance trio, owner decision 2026-10-28)**: `financial-analyst` owns historical analysis, quality-of-earnings, financial-ratio peer comparison and the growth-projection ASSUMPTIONS with their evidence; `valuation-agent` computes DCF/NPV/IRR/DSCR from those assumptions, value-multiple (EV/Revenue) bands and simulation; `financing-agent` owns the funding structure and an independent covenant-headroom check of valuation's plan under downside. None of the three recommends the investment decision.
 
 ## When to Use
 

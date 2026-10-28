@@ -5,7 +5,7 @@ owner: risk-officer
 lifecycle:
   phase: draft
 status: experimental
-version: "1.1.2"
+version: "1.2.0"
 description: >
   Implements the synergy-red-team activity (S3): audits the assumption register behind a synergy score for optimism bias and reference-class (base-rate) deviation. Does not draft the assumptions and does not set the score.
   Use when: "assumption audit", "assumption review", "assumption register check", "optimism bias check".
@@ -22,7 +22,7 @@ metadata:
 
 # assumption-audit
 
-Owned by `risk-officer`. Referenced from: synergy-red-team activity in `process/flow.spec.yaml` (S3); the synergy-analysis it audits is authored by `financial-analyst` (ADR-0187 D6).
+Owned by `risk-officer`. Referenced from: synergy-red-team activity in `process/flow.spec.yaml` (S3); the synergy-analysis it audits is led by `market-intelligence-agent` (synergy identification) with `financial-analyst` quantifying each line against the assumption register (owner decision D6' 2026-10-28, amending ADR-0187 D6).
 
 The owning procedure is authoritative for what happens and when; this skill carries only how to do the work and never restates procedure steps.
 

@@ -4,7 +4,7 @@
 import type { ReviewMatrix } from "./domains.ts";
 
 export const REVIEW_MATRIX: ReviewMatrix = {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "fallback": {
     "functional": "platform-lead",
     "technical": "process-governance-manager",
@@ -63,21 +63,21 @@ export const REVIEW_MATRIX: ReviewMatrix = {
     },
     "valuation": {
       "reviewers": {
-        "functional": "risk-officer",
-        "technical": "risk-officer",
-        "industry": "risk-officer",
-        "region": "risk-officer"
+        "functional": "industry-lead",
+        "technical": "industry-lead",
+        "industry": "region-lead",
+        "region": "industry-lead"
       },
-      "rationale": "risk-officer (red team, base-rate authority) reviews valuation work. risk-officer is a functional-domain agent, so for functional-authored valuation the entry is a first-stage specialist review only and the AI-2nd seat falls back (labelled fallback_used) to the cross-domain lead. OPEN for owner: a non-functional valuation reviewer would remove that fallback."
+      "rationale": "D3' (owner decision 2026-10-28, amends D3): industry-lead tests valuation and financing work against the industry's unit-economics benchmarks, cycle and value-chain structure; for industry-authored work region-lead reads it (FX, tax, repatriation, incentives). risk-officer (red team, base-rate authority) stays a first-stage specialist reviewer and is never recorded as the AI-2nd stage, so no fallback is needed."
     },
     "synergy": {
       "reviewers": {
-        "functional": "risk-officer",
-        "technical": "risk-officer",
-        "industry": "risk-officer",
-        "region": "risk-officer"
+        "functional": "industry-lead",
+        "technical": "industry-lead",
+        "industry": "region-lead",
+        "region": "industry-lead"
       },
-      "rationale": "Same as valuation; the S3 synergy red team is risk-officer's activity."
+      "rationale": "D3' (owner decision 2026-10-28): same routing as valuation. Synergy locations (affiliates, value-chain linkage) and their quantification are tested against industry-lead's value-chain structure; risk-officer keeps the S3 synergy-red-team activity as a first-stage review."
     },
     "technical": {
       "reviewers": {

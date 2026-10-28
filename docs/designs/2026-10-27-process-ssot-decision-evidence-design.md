@@ -525,3 +525,10 @@ Deferrals (owner-visible, no decision needed to proceed):
 9. Re-seeding the 7748 dev database to see the P5 evidence rows is owner/dba-run; nothing here touches 7748 or 7749.
 10. Cosmetic: the flow.spec S12 `portfolio-monitoring` comment still says the applies_when widening "lands in P2; until then ... known gap", contradicted by the v2.15.0 comment below it. Fixing it is a spec patch (ADR-0074) for `process-governance-manager`; no behaviour changes.
 11. `docs/reports/2026-10-26-project-review-s1-s12.md` is an analysis-only record and W1/W2 did not annotate it, so its action-wiring section is left unchanged; this section is the W3 status of record.
+
+## 18. Post-W3 amendments D6' and D3' (owner, 2026-10-28)
+
+- **D6' (amends D6)**: S3 `synergy-analysis` is led by `market-intelligence-agent`, which locates the synergies (affiliates; forward/backward customers, supply chain, channel, technology) with the six-axis value-chain linkage analysis. `financial-analyst` quantifies each line (revenue and cost) against the assumption register as a procedure-step support role; `risk-officer` keeps only `synergy-red-team`. flow.spec 2.17.0; greenfield-screening 1.6.0 (1.5 / 1.55 / 1.6); brownfield-screening 1.4.0 (2.5 / 2.55 / 2.6); prompt `s3.synergy_synergy` rebinds, `s3.synergy_fa` becomes a sanctioned dual assignment.
+- **D3' (amends D3)**: cross-validation-matrix 1.1.0 routes valuation and synergy AI-2nd review to `industry-lead` (functional/technical/region authors) and `region-lead` (industry authors). `risk-officer` remains a first-stage specialist; the matrix's OPEN note on the functional-author valuation fallback is removed.
+- **Finance-trio boundaries** (docs only): financial-analyst - historical analysis, QoE, ratio peer comparison, growth-projection assumptions with evidence; valuation-agent - DCF/NPV/IRR/DSCR, EV/Revenue bands, simulation; financing-agent - funding structure and independent downside covenant-headroom check. None recommends the investment decision.
+- Record: DEC-20261028-03 (impact analysis, pin check against the latest local backup).

@@ -1,12 +1,17 @@
 #!/usr/bin/env bun
 /**
- * @version 1.3.0
+ * @version 1.4.0
  */
 // generate-pm-catalog.ts — 3 SSOT 조인(prompts.json × flow.spec.yaml × agents/*.md)을
 // 런타임 PM 활동 카탈로그(app/web-next/lib/pm-catalog.generated.ts)로 투영한다
 // (ADR-0183 D1, design 2026-09-15-runtime-pm-agent-orchestration §6.2).
 // generate-spec-activities.ts와 동일한 규율: 결정론 출력 + --check 드리프트 게이트,
 // 생성 시점 참조 무결성 검증(프롬프트 에이전트·활동 에이전트·활동 매핑 모두 로스터/스펙에 존재).
+//
+// v1.4.0 (owner decision D6' 2026-10-28, flow.spec 2.17.0): S3.synergy-analysis
+// is led by market-intelligence-agent (s3.synergy_synergy rebinds to it);
+// financial-analyst supports by quantifying the synergy lines, so s3.synergy_fa
+// returns to DUAL_ASSIGNMENTS as a sanctioned support lens.
 //
 // v1.3.0 (ADR-0187 D6, flow.spec 2.14.0): S3.synergy-analysis is now led by
 // financial-analyst, so the s3.synergy_fa dual assignment is no longer an
@@ -113,6 +118,11 @@ export interface DualAssignment {
 }
 
 const DUAL_ASSIGNMENTS: DualAssignment[] = [
+  {
+    promptKey: "s3.synergy_fa",
+    activity: "S3.synergy-analysis",
+    rationale: "Sanctioned dual assignment (owner decision D6' 2026-10-28, amends ADR-0187 D6; DEC-20261028-03): financial-analyst supports the market-intelligence-agent-led synergy-analysis activity by quantifying each synergy line against the assumption register (greenfield-screening step 1.55, brownfield-screening step 2.55); the activity lead is unchanged.",
+  },
   {
     promptKey: "s11.integrated_insight",
     activity: "S11.ic-preparation",

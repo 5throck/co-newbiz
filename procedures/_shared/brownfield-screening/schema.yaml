@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-screening
 title: "Brown Field Screening"
 scope: shared
 level: entity
-version: "1.3.0"
+version: "1.4.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -48,14 +48,27 @@ steps:
       confirmed outcomes.
   - id: 2.5
     gate: Screening
+    agent_key: market-intelligence-agent
+    skill_key: value-chain-linkage-analysis
+    output_type: synergy_identification
+    description: >
+      S3 synergy identification (flow.spec activity `synergy-analysis`, lead;
+      owner decision D6' 2026-10-28, amends ADR-0187 D6): locates WHERE the
+      selected opportunity's synergies exist against the group/affiliate
+      registry - which affiliates, and where in the value chain (forward and
+      backward customers, supply chain, channel, technology) - using the
+      six-axis value-chain linkage analysis. Every synergy line names its
+      affiliate, linkage axis and evidence; amounts are left to step 2.55.
+  - id: 2.55
+    gate: Screening
     agent_key: financial-analyst
     skill_key: investment-feasibility-modeling
     output_type: synergy_score_recommendation
     description: >
-      S3 synergy analysis (flow.spec activity `synergy-analysis`, ADR-0187 D6):
-      the quantitative synergy case of the selected opportunity against the
-      group/affiliate registry, with every synergy line tied to an entry of
-      the assumption register. Records the opportunity.synergy_score
+      S3 synergy quantification (flow.spec activity `synergy-analysis`,
+      support; D6'): quantifies each synergy line identified in step 2.5
+      (revenue and cost amounts) and ties every amount to an entry of the
+      assumption register. Records the opportunity.synergy_score
       recommendation and its rationale (ADR-0090); the score is a proposal to
       the Screening gate, never a decision.
   - id: 2.6
@@ -65,7 +78,7 @@ steps:
     output_type: synergy_assumption_audit
     description: >
       S3 synergy red-team (flow.spec activity `synergy-red-team`, ADR-0187 D6):
-      independent audit of the step 2.5 assumption register for optimism bias
+      independent audit of the steps 2.5/2.55 assumption register for optimism bias
       and reference-class (base-rate) deviation. Drafts no assumption and sets
       no score; findings return to the author and travel with the gate
       proposal.
@@ -143,6 +156,7 @@ legal_basis:
   - "Meeting M1 (process-2026-08-20-m1-process-skeleton.md) gate deliverable definitions"
   - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit)"
   - "checklists/legal-regulatory-checklist.yaml (chk-legal-regulatory)"
+  - "Owner decision D6' (2026-10-28, amends ADR-0187 D6; DEC-20261028-03) — synergy identification (market-intelligence-agent) split from quantification (financial-analyst)"
   - "ADR-0187 (process SSOT and decision evidence) phase P2 — synergy author/red-team steps (D6), legal-regulatory producer step (H9), screening kill-criteria declarations (M4)"
   - "ADR-0051 (workflow gap closure — strategic fit at first screen)"
   - "2026-08-22 RAG formalization design Decision 5e / reversal #6 (fact-gated HHI pre-screen; origin exempts the longlist step only — applies_when evaluated by db/lib/applies-when.ts)"

@@ -12,8 +12,8 @@ description: >
 
   Use when: "growth projection", "revenue forecast", "base rate warning",
   "anchor_ref", "hockey stick check".
-version: 1.1.0
-last_reviewed: 2026-08-23
+version: 1.2.0
+last_reviewed: 2026-10-28
 status: active
 owner: financial-analyst
 prerequisites:
@@ -65,6 +65,8 @@ a binding halt — not a RAG-grade penalty. The `anchor_ref` requirement
 (ADR-0018) is what makes this checkable at all: without a recorded pointer
 from the projection assumption back to its historical/peer source, there is
 nothing for the base-rate check to compare against.
+
+**Role boundary (finance trio, owner decision 2026-10-28)**: `financial-analyst` owns historical analysis, quality-of-earnings, financial-ratio peer comparison and the growth-projection ASSUMPTIONS with their evidence; `valuation-agent` computes DCF/NPV/IRR/DSCR from those assumptions, value-multiple (EV/Revenue) bands and simulation; `financing-agent` owns the funding structure and an independent covenant-headroom check of valuation's plan under downside. None of the three recommends the investment decision.
 
 ## When to Use
 
