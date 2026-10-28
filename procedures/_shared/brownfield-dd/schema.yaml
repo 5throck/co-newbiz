@@ -220,7 +220,7 @@ steps:
       Financing DD review (flow.spec activity `financing-dd`; ADR-0187 P2,
       finding M2): independent review of the step 12 evidence pack — funding
       certainty per source, covenant headroom under the downside scenario
-      (starting threshold: downside DSCR headroom of at least 1.2x, ADR-0187
+      (starting threshold: downside DSCR headroom of at least 1.3x, ADR-0187
       D2), change-of-control acceleration exposure. Advises on structure,
       never on the investment decision itself.
   - id: 13

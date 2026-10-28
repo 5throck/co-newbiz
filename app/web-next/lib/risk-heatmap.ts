@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * risk-heatmap — server-side aggregation of the S9 deal risk heatmap
  * (ADR-0122 #2). Until 2026-10-21 the grid was composed in the browser from
@@ -174,7 +174,7 @@ export function buildRiskHeatmap(db: Db, projectId: string): RiskHeatmap {
     },
     {
       source: "cov", label: "커버넌트 여력", recorded: debtCount, plotted: headroom.covenants.length, href: "/debt",
-      hint: debtCount === 0 ? "차입 기록이 없습니다 — 차입이 있으면 부채 탭에서 커버넌트 조건과 함께 등록하세요." : headroom.status === "insufficient_evidence" ? (headroom.reason === "no_simulation" ? "시뮬레이션이 없어 커버넌트 여력을 계산할 수 없습니다 — 시뮬레이션을 실행하세요." : "최신 시뮬레이션에 재무약정 시험 행이 없습니다.") : null,
+      hint: debtCount === 0 ? "차입 기록이 없습니다 — 차입이 있으면 부채 탭에서 커버넌트 조건과 함께 등록하세요." : headroom.status === "insufficient_evidence" ? (headroom.message ?? "커버넌트 여력을 계산할 수 없습니다 — 부채 탭에서 상환 조건(만기·상환방식·금리)을 등록하고 S8에서 케이스를 채택하세요.") : null,
     },
   ];
 

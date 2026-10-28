@@ -19,7 +19,11 @@ import { canWriteProject } from "../../../../lib/project-write-access.ts";
 // 에서 읽어 S10 산출물 "커버넌트 여력"으로 표시한다 — 투자심의 자료·히트맵에도 전달.
 interface Instrument { id: string; lender: string | null; principal: number; rate_type: string; rate: number; maturity: string | null; amortization: string | null; covenant_json: string | null; security: string | null; seniority: string | null }
 interface HeadroomRow { covenant_key: string; direction: "max" | "min" | "unknown"; min_headroom_pct: number | null; tightest_period: string | null; periods: number; breached_periods: number; status: "breached" | "tight" | "ok" | "unknown_direction" }
-interface Headroom { status: "computed" | "insufficient_evidence"; reason?: string; simulation_id: string | null; covenants: HeadroomRow[] }
+interface DscrPeriodRow { year: number; cfads: number; debt_service: number; dscr: number | null }
+interface Headroom {
+  status: "computed" | "insufficient_evidence"; reason?: string; message?: string | null; covenants: HeadroomRow[];
+  dscr?: { scenario: "downside" | "base" | null; fallback_to_base: boolean; periods: DscrPeriodRow[]; min_dscr: number | null; advisories: string[]; missing_inputs: string[] };
+}
 
 function DebtView() {
   const t = useTranslations("pages.projects.debt");
@@ -31,7 +35,7 @@ function DebtView() {
   const [rows, setRows] = useState<Instrument[] | null>(null);
   const [headroom, setHeadroom] = useState<Headroom | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", covenant_json: "" });
+  const [form, setForm] = useState({ lender: "", principal: "", rate: "", rate_type: "fixed", maturity: "", amortization: "annuity", covenant_json: "" });
   const [busy, setBusy] = useState(false);
   // 시나리오 계산 입력 — 명시적 가정(사용자 입력)이며 저장되지 않는다.
   // 산식: 연간 상환액 = 연금공식(원금, 금리, 잔존기간) / DSCR = 현금흐름 ÷ 상환액.
@@ -47,13 +51,13 @@ function DebtView() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !form.principal) return;
+    if (busy || !form.principal || !form.rate) return;
     setBusy(true);
     try {
       await api.post(`/api/projects/${encodeURIComponent(id)}/debt`, {
         lender: form.lender.trim() || undefined, principal: Number(form.principal),
-        rate: form.rate ? Number(form.rate) : 0, rate_type: form.rate_type,
-        maturity: form.maturity.trim() || undefined, covenant_json: form.covenant_json.trim() || undefined,
+        rate: Number(form.rate), rate_type: form.rate_type,
+        maturity: form.maturity.trim() || undefined, amortization: form.amortization, covenant_json: form.covenant_json.trim() || undefined,
       });
       toast(t("created"));
       setForm({ ...form, lender: "", principal: "", rate: "", maturity: "", covenant_json: "" });
@@ -129,7 +133,7 @@ function DebtView() {
       <section className="market-section" aria-label={t("headroomSectionAria")} data-testid="covenant-headroom">
         <h2 className="text-[length:var(--fs-body)] mb-2">{t("headroomHeading")} <span className="note">{t("headroomNote")}</span></h2>
         {headroom === null ? <PageState state="loading" /> : headroom.status === "insufficient_evidence" ? (
-          <PageState state="empty" emptyText={headroom.reason === "no_simulation" ? t("headroomNoSim") : t("headroomNoRows")} />
+          <PageState state="empty" emptyText={headroom.reason === "no_debt" ? t("headroomNoDebt") : (headroom.message ?? t("headroomNoSim"))} />
         ) : (
           <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
             <table className="data-table table-fixed-pct tmin-48" aria-label={t("headroomSectionAria")}>
@@ -149,6 +153,12 @@ function DebtView() {
             </table>
           </div>
         )}
+        {headroom?.dscr?.scenario && headroom.dscr.min_dscr !== null && (
+          <p className="note" data-testid="dscr-basis" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>
+            {t("headroomBasis", { scenario: headroom.dscr.scenario === "downside" ? t("basisDownside") : t("basisBase"), min: headroom.dscr.min_dscr })}
+          </p>
+        )}
+        {(headroom?.dscr?.advisories ?? []).map((a) => <p key={a} className="note" style={{ margin: "4px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{a}</p>)}
         <p className="note" style={{ margin: "6px 0 0" /* design-token-exempt: off-scale legacy spacing (visual-preserving) */ }}>{t("headroomFootnote")}</p>
       </section>
       <section className="market-section" aria-label={t("scenarioSectionAria")} style={{ border: "1px solid var(--border)", borderRadius: 12 }}>
@@ -203,9 +213,11 @@ function DebtView() {
               <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblRateType")}</span>
                 <select className="sizing-new-input sizing-new-input-sm" value={form.rate_type} onChange={(e) => setForm({ ...form, rate_type: e.target.value })}><option value="fixed">{t("rateFixed")}</option><option value="floating">{t("rateFloating")}</option></select></label>
               <label className="text-[length:var(--fs-caption)] w-[6rem]"><span className="block mb-1">{t("lblRate")}</span>
-                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} /></label>
+                <input type="number" step="0.01" className="sizing-new-input sizing-new-input-sm" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} required /></label>
               <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblMaturity")}</span>
-                <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06" /></label>
+                <input className="sizing-new-input sizing-new-input-sm" value={form.maturity} onChange={(e) => setForm({ ...form, maturity: e.target.value })} placeholder="2031-06 / 5년" /></label>
+              <label className="text-[length:var(--fs-caption)]"><span className="block mb-1">{t("lblAmortization")}</span>
+                <select className="sizing-new-input sizing-new-input-sm" value={form.amortization} onChange={(e) => setForm({ ...form, amortization: e.target.value })}><option value="annuity">{t("amortAnnuity")}</option><option value="equal_principal">{t("amortEqualPrincipal")}</option><option value="bullet">{t("amortBullet")}</option></select></label>
               <button type="submit" className="btn-primary" disabled={busy}>{busy ? tc("registering") : tc("register")}</button>
             </div>
             <label className="text-[length:var(--fs-caption)] block mt-2"><span className="block mb-1">{t("lblCovenant")}</span>

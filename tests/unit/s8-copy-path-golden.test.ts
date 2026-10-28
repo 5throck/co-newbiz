@@ -66,6 +66,11 @@ await gen.recordBusinessCaseParams(db, { projectId: GF, params: { s5_source: 0 }
 const r4 = (n: number | null) => (n === null ? null : Math.round(n * 1e6) / 1e6);
 function simOf(projectId: string, scenario: "base" | "downside" = "base") {
   const inputs = gen.caseInputsForProject(projectId);
+  // D7 (2026-10-28): the job-spec snapshot gained a top-level `uncertainty_scope` record. The frozen
+  // EXECUTION contract (everything else, incl. every case driver and therefore every seed) stays
+  // byte-identical; the added record is asserted present here and covered by investment-simulation-s8.test.ts.
+  const { uncertainty_scope: scope, deterministic_flows: _flows, ...contract } = gen.buildS8JobSpec(inputs, scenario) as Record<string, unknown>;
+  if (!scope) throw new Error("job-spec snapshot lost its uncertainty_scope record");
   const s = gen.runSeededSimulation(inputs, scenario);
   const plan = inputs.s5Plan ?? null;
   return {
@@ -73,7 +78,7 @@ function simOf(projectId: string, scenario: "base" | "downside" = "base") {
     flows: gen.deterministicCashflows(inputs, scenario).map(r4),
     plan: plan && { capex: plan.capexByYear, labor: plan.laborOpexByYear, gov: plan.govRndByYear, covered: plan.opexCovered, capexCap: plan.capexCapabilityByYear, laborCap: plan.laborOpexCapabilityByYear, skipped: plan.skippedLines, lineHash: plan.lineHash, horizon: plan.horizonYears },
     s5Sim: inputs.s5Sim ? { runId: "present", hash: inputs.s5Sim.inputHash, draws: inputs.s5Sim.drawCount } : null,
-    jobSpec: JSON.stringify(gen.buildS8JobSpec(inputs, scenario)).replace(/01GOLDENMODEL00000000000000/g, "<model>"),
+    jobSpec: JSON.stringify(contract).replace(/01GOLDENMODEL00000000000000/g, "<model>"),
   };
 }
 

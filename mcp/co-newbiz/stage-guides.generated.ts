@@ -614,7 +614,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       "최신 투자구조 가설의 4축 검토(절세 구조·책임 격리·재무 레버리지·엑싯 구조)가 근거 아티팩트 참조와 함께 완료되었다",
       "자금조달 sources와 uses 합계가 균형을 이루고 0보다 크다",
       "자금 사용(uses) 합계가 S8에서 채택한 케이스의 투자금과 ±5% 이내로 대사된다 — 채택 투자금을 도출할 수 없으면 차단하지 않고 사람의 대사를 요구한다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)",
-      "부채 조달이 있으면 다운사이드 시나리오의 DSCR 커버넌트 여력이 1.2배 이상이다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)",
+      "부채 조달이 있으면 다운사이드 시나리오의 DSCR 커버넌트 여력이 1.3배 이상이다 (ADR-0187 D2·P3; 임계값 소유자는 risk-officer와 quant-methodologist)",
       "모든 조달원(sources)에 자금 확정성 증빙(evidence_kind·evidence_ref)이 기록되었다 (ADR-0187 P3)"
     ]
   },

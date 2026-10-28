@@ -102,7 +102,7 @@ export interface TrancheReconciliation {
 /** Round to 1e-6 of a million (one won): representation only, never a tolerance. */
 const exact = (n: number) => Math.round(n * 1e6) / 1e6;
 
-function adoptedModelId(projectId: string, db: Database): string | null {
+export function adoptedModelId(projectId: string, db: Database): string | null {
   const row = db
     .query(
       `SELECT meta_json FROM process_run WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_case_adopt' AND status = 'done'

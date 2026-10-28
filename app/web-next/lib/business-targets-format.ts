@@ -25,8 +25,8 @@ export const METRIC_PRESETS: MetricPreset[] = [
   { key: "revenue", label: "연매출 (최종 연도)", direction: "gte", unit: "krw_m", computable: true },
   { key: "operating_margin", label: "영업이익률 (최종 연도)", direction: "gte", unit: "pct", computable: true },
   { key: "period", label: "사업계획 기간", direction: "lte", unit: "years", computable: true },
-  { key: "npv", label: "NPV (권장 시나리오 p50)", direction: "gte", unit: "krw_m", computable: true },
-  { key: "irr", label: "IRR (권장 시나리오 p50)", direction: "gte", unit: "pct", computable: true },
+  { key: "npv", label: "NPV (채택 시나리오 p50)", direction: "gte", unit: "krw_m", computable: true },
+  { key: "irr", label: "IRR (채택 시나리오 p50)", direction: "gte", unit: "pct", computable: true },
 ];
 
 export const CUSTOM_METRIC_KEY = "custom";

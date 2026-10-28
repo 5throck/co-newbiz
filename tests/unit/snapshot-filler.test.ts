@@ -22,6 +22,7 @@ import { existsSync, rmSync } from "node:fs";
 import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
+import { adoptCase, addDebtForMinDscr } from "./_dscr-fixture.ts";
 import { fillSnapshot, SNAPSHOT_VAR_KEYS } from "../../db/lib/snapshot-filler.ts";
 import { evaluateValidatorCompleteness } from "../../db/lib/validator-completeness.ts";
 
@@ -182,17 +183,6 @@ function insertContingent(projectId: string, probability: number, amountExpected
   db.run("INSERT INTO contingent_liability (id, project_id, category, probability, amount_low, amount_expected, amount_high, expected_timing_year) VALUES (?,?,?,?,?,?,?,?)", [
     ulid(), projectId, "litigation", probability, amountExpected, amountExpected, amountExpected, 0,
   ]);
-}
-
-function insertSimulation(projectId: string, createdAt: string): string {
-  const runId = insertRun(projectId);
-  const id = ulid();
-  db.run("INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)", [id, runId, 42, 100, 0.08, createdAt]);
-  return id;
-}
-
-function insertCovenantTest(simulationId: string, key: string, breached: 0 | 1): void {
-  db.run("INSERT INTO covenant_test (simulation_id, period_id, covenant_key, threshold, projected_value, breached) VALUES (?,?,?,?,?,?)", [simulationId, "p1", key, 1.25, breached === 1 ? 1.0 : 1.5, breached]);
 }
 
 function insertPartner(projectId: string, opts: { status?: string; dependency?: string | null } = {}): void {
@@ -803,41 +793,60 @@ describe("contingent family — EV / max amount / max probability", () => {
   });
 });
 
-describe("covenant family — latest run decides", () => {
-  test("breaches in the LATEST simulation count; older simulations are invisible", () => {
+describe("covenant family — computed deterministically from the adopted case's downside (D1, 2026-10-28)", () => {
+  test("debt whose DSCR covenant is breached in the downside → present, the count of breached periods", () => {
     const pid = insertProject();
-    const oldSim = insertSimulation(pid, "2026-08-20T00:00:00Z");
-    insertCovenantTest(oldSim, "dscr", 1);
-    insertCovenantTest(oldSim, "leverage", 1);
-    const newSim = insertSimulation(pid, "2026-08-22T00:00:00Z");
-    insertCovenantTest(newSim, "dscr", 0);
+    adoptCase(db, pid);
+    addDebtForMinDscr(db, pid, 1.0, { covenant: "DSCR >= 1.25" }); // year-1 DSCR 1.0 breaches; later years clear
     const runId = insertRun(pid);
     fill(pid, runId);
-    expect(snap(runId, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 0, observed_at: "2026-08-22T00:00:00Z" });
+    expect(snap(runId, "risk.covenants_breached").evidence_ref).toMatch(/^covenant-dscr:case=\w+;scenario=downside;source_model=\w+;inputs=[0-9a-f]{12}$/);
+    expect(snap(runId, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 1, observed_at: FILL_NOW.toISOString() });
   });
 
-  test("latest simulation carries the breaches → the count is that simulation's", () => {
+  test("debt whose DSCR covenant holds in every downside period → present 0", () => {
     const pid = insertProject();
-    const oldSim = insertSimulation(pid, "2026-08-20T00:00:00Z");
-    insertCovenantTest(oldSim, "dscr", 0);
-    const newSim = insertSimulation(pid, "2026-08-22T00:00:00Z");
-    insertCovenantTest(newSim, "dscr", 1);
-    insertCovenantTest(newSim, "leverage", 1);
+    adoptCase(db, pid);
+    addDebtForMinDscr(db, pid, 1.6, { covenant: "DSCR >= 1.25" });
     const runId = insertRun(pid);
     fill(pid, runId);
-    expect(snap(runId, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 2 });
+    expect(snap(runId, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 0 });
   });
 
-  test("no simulation + no debt → present 0 (nothing to test)", () => {
+  test("a floor breach WITHOUT a declared covenant counts (RAG agrees with the 1.3x gate); a covenant looser than the floor does not hide it", () => {
+    const pid = insertProject();
+    adoptCase(db, pid);
+    addDebtForMinDscr(db, pid, 1.1); // below the 1.3 floor, no covenant declared
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 1 });
+    const loose = insertProject();
+    adoptCase(db, loose);
+    addDebtForMinDscr(db, loose, 1.1, { covenant: "DSCR >= 1.0" });
+    const run2 = insertRun(loose);
+    fill(loose, run2);
+    expect(snap(run2, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 1 });
+  });
+
+  test("no debt → present 0 (nothing to test)", () => {
     const pid = insertProject();
     const runId = insertRun(pid);
     fill(pid, runId);
     expect(snap(runId, "risk.covenants_breached")).toMatchObject({ status: "present", value_num: 0 });
   });
 
-  test("no simulation but debt exists → missing (the covenant test is owed)", () => {
+  test("debt exists but no case is adopted → missing (the covenant test is owed)", () => {
     const pid = insertProject();
-    db.run("INSERT INTO debt_instrument (id, project_id, principal, rate_type, rate) VALUES (?,?,?,?,?)", [ulid(), pid, 10e9, "fixed", 0.05]);
+    db.run("INSERT INTO debt_instrument (id, project_id, principal, rate_type, rate, maturity, amortization) VALUES (?,?,?,?,?,?,?)", [ulid(), pid, 100, "fixed", 5, "5년", "annuity"]);
+    const runId = insertRun(pid);
+    fill(pid, runId);
+    expect(snap(runId, "risk.covenants_breached").status).toBe("missing");
+  });
+
+  test("debt with a missing required term (no amortization) → missing, never a guessed schedule", () => {
+    const pid = insertProject();
+    adoptCase(db, pid);
+    addDebtForMinDscr(db, pid, 1.6, { amortization: null });
     const runId = insertRun(pid);
     fill(pid, runId);
     expect(snap(runId, "risk.covenants_breached").status).toBe("missing");

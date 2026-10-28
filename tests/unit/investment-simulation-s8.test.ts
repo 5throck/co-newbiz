@@ -234,6 +234,57 @@ function insertCaseNote(note: string): void {
   );
 }
 
+// -- D7 (2026-10-28): uncertainty scope in the run snapshot; status follows the ADOPTED case ------
+describe("D7: what the NPV band reflects is recorded in the snapshot", () => {
+  const factors = Array.from({ length: 50 }, (_, i) => 0.7 + (i / 49) * 0.6);
+  const simRun = {
+    runId: "r", inputHash: "paired-hash", seed: 1, drawCount: 50, capFactors: factors, manFactors: factors,
+    salaryFactors: [1], increaseFactorsPp: [0], onCostFactorsPp: [0], rampFactors: [0],
+  };
+  const scopeOf = (inputs: genT.CaseInputs) => (gen.buildS8JobSpec(inputs, "base") as { uncertainty_scope: import("../../app/web-next/lib/uncertainty-scope.ts").UncertaintyScope }).uncertainty_scope;
+
+  test("ratio basis: the band reflects revenue growth only; every other driver is recorded as held constant", () => {
+    const scope = scopeOf(caseInputs("ratio", null, null));
+    expect(scope.varied).toEqual(["revenue_growth"]);
+    expect(scope.held_constant).toEqual(expect.arrayContaining(["opex_ratio", "capex_ratio", "initial_investment", "ramp_up", "revenue_y1", "discount_rate"]));
+    expect(scope.s5_run).toBe("no_s5_plan");
+  });
+
+  test("s5_plan basis without a confirmed run: S5 investment uncertainty is absent and the snapshot says why", () => {
+    const scope = scopeOf(caseInputs("s5_plan", null));
+    expect(scope.varied).toEqual(["revenue_growth"]);
+    expect(scope.s5_run).toBe("none_confirmed");
+    expect(scope.held_constant).toContain("initial_investment");
+  });
+
+  test("s5_plan basis WITH a confirmed S5 run: the S5 draws are included and the capex ratio is no longer held constant", () => {
+    const scope = scopeOf(caseInputs("s5_plan", simRun as never));
+    expect(scope.varied).toEqual(["revenue_growth", "s5_investment"]);
+    expect(scope.held_constant).not.toContain("capex_ratio");
+    expect(scope.s5_run).toBe("applied");
+    expect(scope.s5_sim_hash).toBe("paired-hash");
+    // and the simulation itself moves: the paired draws widen the NPV band versus the single-point plan
+    const without = gen.runSeededSimulation(caseInputs("s5_plan", null), "base");
+    const withRun = gen.runSeededSimulation(caseInputs("s5_plan", simRun as never), "base");
+    expect(withRun.std).toBeGreaterThan(without.std);
+  });
+
+  test("the scope is part of the stored snapshot (inputs_json) and re-readable; legacy snapshots are derived from their drivers", async () => {
+    const lib = await import("../../app/web-next/lib/uncertainty-scope.ts");
+    const spec = gen.buildS8JobSpec(caseInputs("s5_plan", simRun as never), "downside");
+    expect(lib.uncertaintyScopeOfSnapshot(JSON.stringify(spec))?.varied).toEqual(["revenue_growth", "s5_investment"]);
+    const legacy = { ...spec } as Record<string, unknown>;
+    delete legacy.uncertainty_scope;
+    const derived = lib.uncertaintyScopeOfSnapshot(JSON.stringify(legacy));
+    expect(derived?.varied).toEqual(["revenue_growth"]);
+    expect(lib.isGrowthOnly(derived!)).toBe(true);
+    expect(lib.uncertaintyScopeOfSnapshot(null)).toBeNull();
+    expect(lib.uncertaintyScopeOfSnapshot("not json")).toBeNull();
+    // the engine contract is unaffected: seeds hash the CASE drivers, which carry no scope
+    expect(JSON.stringify((spec as { cases: unknown[] }).cases)).not.toContain("uncertainty_scope");
+  });
+});
+
 describe("S8 consumption, provenance and staleness", () => {
   test("caseInputs carry the confirmed run's factors only under an s5_plan basis", async () => {
     // ratio basis: no consumption even though a confirmed run exists
@@ -292,6 +343,31 @@ describe("S8 consumption, provenance and staleness", () => {
     expect(s8.s5SimStatusForProject(db, projectId)).toMatchObject({ state: "stale", reason: "s5_lines_changed" });
     // and the stale run can no longer be confirmed (the person re-runs first)
     expect(inputLib.loadInvestmentVectorsInput(db, oppId)).not.toBeNull();
+  });
+
+  test("D7: the status describes the ADOPTED case, not the newest s5_plan case", () => {
+    const run = repo.getLatestConfirmedInvestmentSimulationRun(oppId, db)!;
+    setLines(LINES); // back to the lines the run was made on
+    const adoptedModel = ulid();
+    const t0 = new Date(Date.now() + 5000).toISOString();
+    db.run("INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)", [adoptedModel, projectId, "valuation", "adopted", 5, "t", t0]);
+    db.run(
+      "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, unit, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), projectId, adoptedModel, "base", "p50", 1, "KRW_M", null, "seed=1; basis=s5_plan; s5_model=m; s5_line_hash=ab; s5_skipped=0; s5_sim=none; engine=inline-ts", t0],
+    );
+    db.run(
+      "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json) VALUES (?,?,?,?,'t','s8_case_adopt','done','human','t',?,?,?)",
+      [ulid(), "project", projectId, projectId, t0, t0, json({ model_id: adoptedModel })],
+    );
+    // a NEWER, non-adopted case that carries the current run hash would have reported `in_effect` before
+    const t1 = new Date(Date.now() + 9000).toISOString();
+    const newer = ulid();
+    db.run("INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at) VALUES (?,?,?,?,?,?,?)", [newer, projectId, "valuation", "newer", 5, "t", t1]);
+    db.run(
+      "INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, unit, irr, note, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), projectId, newer, "base", "p50", 1, "KRW_M", null, `seed=1; basis=s5_plan; s5_model=m; s5_line_hash=ab; s5_skipped=0; s5_sim=${run.input_hash}; engine=inline-ts`, t1],
+    );
+    expect(s8.s5SimStatusForProject(db, projectId)).toMatchObject({ state: "stale", reason: "run_confirmed_after_generation", used: "none" });
   });
 
   test("no run at all: s5_sim=none stays informational, never stale", () => {

@@ -385,7 +385,7 @@ describe("(d) resolution order and per-case evaluation", () => {
     const p = resolveProjectTargets(projectId).resolved.find((t) => t.row.metric_key === "operating_margin")!;
     expect(p.source).toBe("project");
     expect(p.shadowed.map((s) => [s.source, s.row.target_value])).toEqual([["affiliate", 0.08], ["group", 0.07]]);
-    const entry = evaluateTargets([p], resolveProjectTargets(projectId).scope, null, null)[0];
+    const entry = evaluateTargets([p], resolveProjectTargets(projectId).scope, null)[0];
     expect(entry.shadowed).toEqual([{ source: "affiliate", target_value: 0.08 }, { source: "group", target_value: 0.07 }]);
     expect(entry.shadowed_note).toContain("계열사 기준");
     // restore state for later tests

@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 2.0.0
 /**
  * S10 investment-structure checks beyond "sources = uses" (ADR-0187 phase P3,
  * finding M1; design 2026-10-27-process-ssot-decision-evidence-design 4.1):
@@ -19,11 +19,12 @@
  *    pass or fail: it never blocks, never passes silently, and names the gap in
  *    `advisories` for a person to reconcile (same stance as
  *    lib/greenfield-execution.ts trancheReconciliation).
- *  - (b) applies only when the project has debt (a debt_instrument row). Debt with
- *    no covenant evidence, no DSCR covenant test, or a minimum projected DSCR below
- *    the floor blocks. The latest covenant simulation of the project is the
- *    downside run (db/lib/snapshot-filler.ts D-M-RISK-5 reads the same one);
- *    simulations carry no scenario tag today, so that is an assumption, reported.
+ *  - (b) applies only when the project has debt (a debt_instrument row). The DSCR is
+ *    COMPUTED (lib/covenant-dscr.ts, D1 owner decision 2026-10-28): debt terms vs the
+ *    adopted S8 case's DOWNSIDE cash flows (base only if no downside case exists, as an
+ *    advisory). Debt with a missing required input (named), a breached DSCR covenant in
+ *    any period, or a minimum projected DSCR below the floor blocks. The old "latest
+ *    simulation is the downside" assumption (review item M4) is gone.
  *  - (c) blocks when any source row lacks evidence_kind or a non-blank
  *    evidence_ref (migration 0162).
  * Grandfathering (ADR-0151 precedent): a project whose earliest policy pin (or
@@ -34,7 +35,8 @@
  */
 import type { Database } from "bun:sqlite";
 import { adoptedCaseCapex } from "./greenfield-execution.ts";
-import { covenantHeadroom } from "./covenant-headroom.ts";
+import { computeDownsideDscr, S10_MIN_DOWNSIDE_DSCR } from "./covenant-dscr.ts";
+export { S10_MIN_DOWNSIDE_DSCR };
 import { blocker } from "./process-blocker-keys.ts";
 
 /**
@@ -42,13 +44,6 @@ import { blocker } from "./process-blocker-keys.ts";
  * adopted investment. Owner of the value: risk-officer + quant-methodologist.
  */
 export const S10_USES_RECONCILIATION_TOLERANCE = 0.05;
-
-/**
- * D2 (owner-confirmed 2026-10-27, ADR-0187): downside DSCR headroom of at least
- * 1.2x - the minimum projected DSCR across periods must be >= this multiple.
- * Owner of the value: risk-officer + quant-methodologist.
- */
-export const S10_MIN_DOWNSIDE_DSCR = 1.2;
 
 /** Predicate date of the M1 tightening (same grandfathering rule as WAVE_F_PREDICATE_DATE). */
 export const ADR_0187_P3_PREDICATE_DATE = "2026-10-28";
@@ -92,31 +87,31 @@ export function s10UsesReconciliation(db: Database, projectId: string): S10Check
   return out;
 }
 
-/** (b) downside DSCR headroom. */
+/**
+ * (b) downside DSCR headroom - COMPUTED deterministically (D1, owner decision 2026-10-28): the
+ * financing plan's debt terms against the adopted S8 case's downside CFADS (lib/covenant-dscr.ts).
+ * Blocks when a required input is missing (named), any declared covenant threshold is breached in
+ * any period, or the minimum projected DSCR is below S10_MIN_DOWNSIDE_DSCR. The base scenario is
+ * used only when the project has no downside case, and an advisory says so.
+ */
 export function s10CovenantHeadroom(db: Database, projectId: string): S10CheckResult {
   const out = empty();
-  const debt = (db.query("SELECT COUNT(*) AS c FROM debt_instrument WHERE project_id = ?").get(projectId) as { c: number }).c;
-  if (debt === 0) return out; // no debt, no covenant to test
+  const report = computeDownsideDscr(db, projectId);
+  if (report.reason === "no_debt") return out; // no debt, no covenant to test
   const fail = (reason: string) => {
     out.blockers.push(`부채 조달이 있는데 다운사이드 커버넌트 여력을 확인할 수 없거나 기준 미달입니다 — ${reason}`);
     out.missing.push(blocker("s10.downside_covenant_headroom"));
   };
-  const view = covenantHeadroom(db as never, projectId);
-  if (view.status !== "computed" || !view.simulation_id) {
-    fail(view.reason === "no_simulation" ? "구조 시뮬레이션이 없습니다" : "커버넌트 테스트 결과가 없습니다");
+  if (report.status !== "computed") {
+    fail(report.message ?? "다운사이드 DSCR을 계산할 수 없습니다");
     return out;
   }
-  const dscr = db
-    .query(
-      "SELECT MIN(projected_value) AS minimum, SUM(breached) AS breached, COUNT(*) AS n FROM covenant_test WHERE simulation_id = ? AND LOWER(covenant_key) LIKE 'dscr%'",
-    )
-    .get(view.simulation_id) as { minimum: number | null; breached: number | null; n: number };
-  if (dscr.n === 0 || dscr.minimum === null) {
-    fail("DSCR 커버넌트 테스트가 없습니다");
-  } else if ((dscr.breached ?? 0) > 0) {
-    fail(`DSCR 커버넌트가 위반되었습니다 (${dscr.breached}개 기간)`);
-  } else if (dscr.minimum < S10_MIN_DOWNSIDE_DSCR) {
-    fail(`최소 DSCR ${fmt(dscr.minimum)}배가 기준 ${S10_MIN_DOWNSIDE_DSCR}배 미만입니다`);
+  out.advisories.push(...report.advisories);
+  const basis = report.scenario === "downside" ? "다운사이드" : "기준(base, 다운사이드 케이스 없음)";
+  if (report.breached_periods > 0) {
+    fail(`DSCR 커버넌트가 위반되었습니다 (${report.breached_periods}개 기간, ${basis} 시나리오)`);
+  } else if (report.min_dscr !== null && report.min_dscr < S10_MIN_DOWNSIDE_DSCR) {
+    fail(`최소 DSCR ${fmt(report.min_dscr)}배(${report.min_dscr_year}년차, ${basis} 시나리오)가 기준 ${S10_MIN_DOWNSIDE_DSCR}배 미만입니다`);
   }
   return out;
 }
