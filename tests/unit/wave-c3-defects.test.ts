@@ -127,11 +127,11 @@ describe("D-4 gate GO requires stage prerequisites", () => {
 });
 
 describe("D-2 data-confidence grade", () => {
-  test("synthesized sizing is capped at C; an LLM estimate is B; frozen research is A", () => {
+  test("synthesized sizing is capped at C; an LLM estimate with no chain is U (ADR-0187 D1); frozen research is A", () => {
     const ind = ulid();
     db.run("INSERT INTO md_industry (id, name_ko, name_en, created_at) VALUES (?,?,?,?)", [ind, "c3-ind", "c3-ind", NOW]);
     expect(deriveDataConfidence(db, ind, "frozen-research").grade).toBe("A");
-    expect(deriveDataConfidence(db, ind, "llm-estimate").grade).toBe("B");
+    expect(deriveDataConfidence(db, ind, "llm-estimate").grade).toBe("U");
     expect(deriveDataConfidence(db, ind, "llm-estimate", { synthesized: true }).grade).toBe("C");
     expect(deriveDataConfidence(db, ind, "frozen-research", { synthesized: true }).grade).toBe("C");
   });

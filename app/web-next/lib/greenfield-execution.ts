@@ -18,7 +18,8 @@
 //     ledgers (no new tables);
 //   - the one-time, human-initiated policy_migration audit entry per project
 //     and the read-only in-flight counts (design §8.1 / §8.3).
-// No DB schema change: every read/write uses tables that already exist.
+// No DB schema change of its own: every read/write uses tables that already exist (pre-IC capture
+// columns come from migration 0182, ADR-0187 D4, written by lib/pre-ic-capture.ts).
 import type { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { getDb } from "../../../db/client.ts";
@@ -257,7 +258,9 @@ function milestones(raw: unknown, field: string, idKey: string): Parse<Milestone
     const date = s(r.target_date);
     if (!isDate(date)) return { ok: false, message: `${at}.target_date는 YYYY-MM-DD 날짜여야 합니다.` };
     const gates = opt(r.gates_ref, ENTRY_LIMITS.short, `${at}.gates_ref`); if (!gates.ok) return gates;
-    const src = opt(r[idKey], 64, `${at}.${idKey}`); if (!src.ok) return src;
+    // Request entries name the link `${idKey}`; stored (parsed) entries carry it as `source_id` - accept both so a
+    // re-parse of a stored record (toRecord, or a re-recorded copy) keeps the link (ADR-0187 D4 adoption by id).
+    const src = opt(r[idKey] ?? r.source_id, 64, `${at}.${idKey}`); if (!src.ok) return src;
     out.push({ name: name.value, issuer: issuer.value, target_date: date, gates_ref: gates.value, source_id: src.value });
   }
   return { ok: true, value: out };
@@ -642,10 +645,12 @@ export function executionBaselineStatus(projectId: string, db: Database = getDb(
   if (!scope.permit_step_applies && (entries.permit_milestones.length || entries.certification_milestones.length)) {
     findings.push({ code: "permit_step_not_applicable", message: "사내벤처(intra_venture)에는 인허가·인증 단계(2)가 기본 적용되지 않습니다 — 기록된 항목은 참고로만 표시합니다." });
   }
-  const permits = db.query("SELECT id, name, agency, status FROM permit WHERE project_id = ? ORDER BY name, id").all(projectId);
+  // ADR-0187 D4 (migration 0182): stage_captured marks pre-IC captures (S5/S8) the baseline adopts by id
+  // (lib/pre-ic-capture.ts adoptPreIcCaptures); NULL = recorded without a capture stage.
+  const permits = db.query("SELECT id, name, agency, status, stage_captured FROM permit WHERE project_id = ? ORDER BY name, id").all(projectId);
   const certifications = db.query("SELECT id, name, agency, status FROM certification WHERE project_id = ? ORDER BY name, id").all(projectId);
   const incentives = db
-    .query("SELECT id, type, program_name, direction, status, application_deadline, construction_deadline, clawback_rule, obligation_json FROM incentive WHERE project_id = ? ORDER BY id")
+    .query("SELECT id, type, program_name, direction, status, application_deadline, construction_deadline, clawback_rule, obligation_json, stage_captured FROM incentive WHERE project_id = ? ORDER BY id")
     .all(projectId);
   const goals = db
     .query("SELECT id, metric_key, label, direction, target_value FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL ORDER BY metric_key, id")

@@ -48,7 +48,7 @@ const TABLE_COLUMNS: Record<string, string[]> = {
   value_chain_link: ["id", "project_id", "from_industry_id", "to_industry_id", "direction", "elasticity", "lag_months", "correlation", "r2", "pass_through_rate", "pass_through_lag_months", "concentration_hhi", "switching_cost_grade", "substitution_threat", "evidence_ref", "assessed_at"],
   dd_finding: ["id", "project_id", "category", "description", "value_impact", "assumption_key", "evidence_ref", "trl_grade", "ip_ownership_status", "commercialization_path", "parent_relationship_json", "rbd_source", "created_at", "target_id" /* ADR-0157 / migration 0132: appended nullable DD scope axis */],
   certification: ["id", "project_id", "name", "agency", "statutory_days", "status", "transferability_basis", "transferable_on_coc", "transferability_evidence_ref", "load_bearing", "confirmed_at"],
-  permit: ["id", "project_id", "name", "agency", "statutory_days", "status"],
+  permit: ["id", "project_id", "name", "agency", "statutory_days", "status", "stage_captured", "captured_by", "captured_at" /* ADR-0187 D4 / migration 0182: appended nullable pre-IC capture columns */],
   partner_candidate: ["id", "project_id", "name", "partner_type", "region_code", "capability_score", "capacity_score", "financial_score", "compliance_risk", "customer_base_fit", "dependency_risk", "status", "contacted_at", "nda_signed", "evidence_ref"],
 };
 

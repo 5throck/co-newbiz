@@ -162,6 +162,14 @@ describe("inbox text hygiene (QA sweep B1/B2)", () => {
     const en = "AI 1st found structural gaps (incomplete or locked stages); nothing worth cross-domain review yet";
     expect(localizeNotPerformedReason(en)).not.toMatch(/[A-Za-z]{4}/);
   });
+  test("fallback reason: a same-domain matrix reviewer is described as the SAME domain (not different)", () => {
+    const ko = localizeNotPerformedReason(
+      "matrix reviewer 'risk-officer' is not cross-domain for authors in functional (counts as first stage only); default cross-domain lead platform-lead reviewed. Specialist risk-officer is same-domain (first stage only).",
+    );
+    expect(ko).toContain("과 같아 교차 검토가 되지 않아");
+    expect(ko).not.toContain("과 달라");
+    expect(ko).toContain("platform-lead");
+  });
   test("guard: every not-performed reason in ai-second.ts / domains.ts has a Korean catalog entry", () => {
     const root = "app/web-next/lib/review/";
     const src = readFileSync(root + "ai-second.ts", "utf8") + readFileSync(root + "domains.ts", "utf8");

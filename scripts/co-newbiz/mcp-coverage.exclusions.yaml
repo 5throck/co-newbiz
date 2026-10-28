@@ -134,6 +134,10 @@ exclusions:
     kind: route
     route: "POST /api/projects/{}/execution-baseline"
     reason: Human-only greenfield S11 execution baseline entries and single-person confirmation with rationale (ADR-0161, boundary #2).
+  - id: pre-ic-captures-adopt
+    kind: route
+    route: "POST /api/projects/{}/pre-ic-captures/adopt"
+    reason: Human-only S11 adoption of pre-IC permit/incentive captures into the execution baseline (writes a baseline entries record; ADR-0187 D4, boundary #2).
   - id: post-management-scorecard
     kind: route
     route: "POST /api/projects/{}/post-management/scorecard"

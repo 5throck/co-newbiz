@@ -141,7 +141,7 @@ describe("confidence cap — property-style", () => {
 
   test("gradeDataConfidence never beats its provenance cap (seeded)", () => {
     const r = prng(7);
-    const order: Record<ConfidenceGrade, number> = { A: 2, B: 1, C: 0 };
+    const order: Record<ConfidenceGrade, number> = { A: 3, B: 2, U: 1, C: 0 };
     for (let i = 0; i < 1000; i++) {
       const provenance = pick(r, ["frozen-research", "llm-estimate", null, undefined]);
       const synthesized = r() < 0.2;

@@ -155,7 +155,13 @@ describe("migration 0125 backfill SQL parity with deriveDataConfidence", () => {
         )
         .get(ind.id) as { grade: string; hops: number; basis: string };
       const derived = deriveDataConfidence(db, ind.id, shape.provenance ?? null);
-      expect(row.grade).toBe(derived.grade);
+      // ADR-0187 D1 / migration 0180: 0125 is a historical backfill. For the zero-hop, non-direct-data shape it
+      // wrote the old default B (labelled legacy_default by 0180); the live twin now derives U. Every other shape
+      // must still agree exactly.
+      if (shape.hops.length === 0 && shape.provenance !== "frozen-research") {
+        expect(row.grade).toBe("B");
+        expect(derived.grade).toBe("U");
+      } else expect(row.grade).toBe(derived.grade);
       expect(row.hops).toBe(derived.chainHops);
       expect(row.basis).toBeTruthy();
     }

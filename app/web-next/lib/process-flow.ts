@@ -299,7 +299,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
             .get(industry.id) as { g: string | null } | undefined
         : undefined;
       if (!graded?.g) {
-        blockers.push("S1 데이터 신뢰도 등급(A|B|C)이 기록되지 않았습니다 — 산업 시장분석(재분석)으로 프록시 hop 수와 출처에서 산출해야 합니다");
+        blockers.push("S1 데이터 신뢰도 등급(A|B|C|U)이 기록되지 않았습니다 — 산업 시장분석(재분석)으로 프록시 hop 수와 출처에서 산출해야 합니다");
         missing.push(blocker("s1.data_confidence_grade"));
       }
     }
