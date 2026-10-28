@@ -8,7 +8,7 @@ import { covenantHeadroom } from "../../../../../lib/covenant-headroom.ts";
 import { debtCreateSchema } from "../../../../../lib/debt-input.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 
-// GET/POST /api/projects/[id]/debt — debt instruments + covenant tests
+// GET/POST /api/projects/[id]/debt (edit/delete: ./[debtId]/route.ts) — debt instruments + covenant tests
 // (financing/valuation). B6. 2026-10-21: GET adds the covenant headroom (S10
 // financing-plan "커버넌트 여력", fin-03; also a heatmap input per ADR-0122 #2).
 // 2026-10-28 (D1): the headroom is COMPUTED deterministically - these debt terms vs the
