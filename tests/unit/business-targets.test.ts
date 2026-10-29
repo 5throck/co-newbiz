@@ -4,7 +4,7 @@
  *
  * Proves against the REAL route handlers (nextRequest harness) and the real
  * scratch SQLite:
- *  (a) admin CRUD on md_business_target: create/list/update, tombstone delete
+ *  (a) group-scoped CRUD on md_business_target (ADR-0191; analyst writes, admin rejected): create/list/update, tombstone delete
  *      (0081 convention — row survives with deleted_at, lists filter it),
  *      admin-only writes, duplicate scope+metric rejection, custom-label rule;
  *  (b) resolution precedence: an affiliate-specific row shadows the
@@ -55,6 +55,7 @@ const C1 = ulid(); // md_company row linked to the project (0047), matched by na
 let adminCookie = "";
 let analystCookie = "";
 let outsiderCookie = "";
+let viewerCookie = "";
 let projectId = ""; // company_id = C1 → registry member M1
 let projectIdNoCompany = "";
 
@@ -66,8 +67,9 @@ async function loginCookie(userId: string, password: string): Promise<string> {
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 }
 
-function post(json: unknown, cookie: string) {
-  return req("/api/admin/business-targets", { method: "POST", headers: { cookie }, body: JSON.stringify(json) });
+const bt = (groupId: string) => `/api/our-company/groups/${groupId}/business-targets`;
+function post(json: unknown, cookie: string, groupId: string = G1) {
+  return req(bt(groupId), { method: "POST", headers: { cookie }, body: JSON.stringify(json) });
 }
 
 const SCOPE = { groupId: G1, groupName: "테스트그룹", memberId: M1, memberName: "테스트중공업" };
@@ -103,10 +105,13 @@ describe("business-target standards (ADR-0114)", () => {
     approveUser(db, { userId: ANALYST, approvedBy: "test", now: NOW });
     await createUser(db, { userId: OUTSIDER, role: "analyst", password: "pw-outsider-12345", createdBy: "test", now: NOW });
     approveUser(db, { userId: OUTSIDER, approvedBy: "test", now: NOW });
+    await createUser(db, { userId: "viewer1", role: "viewer", password: "pw-viewer-12345", createdBy: "test", now: NOW });
+    approveUser(db, { userId: "viewer1", approvedBy: "test", now: NOW });
     db.run("UPDATE app_user SET must_change_password = 0");
     adminCookie = await loginCookie(ADMIN, "pw-admin-12345");
     analystCookie = await loginCookie(ANALYST, "pw-analyst-12345");
     outsiderCookie = await loginCookie(OUTSIDER, "pw-outsider-12345");
+    viewerCookie = await loginCookie("viewer1", "pw-viewer-12345");
 
     db.run("INSERT INTO company_group (id, name, created_by, created_at) VALUES (?,?,?,?)", [G1, "테스트그룹", "test", NOW]);
     db.run("INSERT INTO company_group_member (id, group_id, company_name, role, created_at) VALUES (?,?,?,?,?)", [M1, G1, "테스트중공업", "affiliate", NOW]);
@@ -164,36 +169,60 @@ describe("business-target standards (ADR-0114)", () => {
     expect(formatTargetValue(5, "years")).toBe("5년");
   });
 
-  test("admin-only writes: analyst gets forbidden, anonymous gets 401", async () => {
-    const analystRes = await post({ group_id: G1, metric_key: "revenue", direction: "gte", target_value: 50000 }, analystCookie);
-    expect(analystRes.status).toBe(403);
-    const anonRes = await req("/api/admin/business-targets", { method: "POST", body: JSON.stringify({}) });
-    expect(anonRes.status).toBe(401);
+  test("permission (ADR-0191): admin 403 role_forbidden, viewer reads but cannot write, anonymous 401, unknown group 404", async () => {
+    const body = { metric_key: "revenue", direction: "gte", target_value: 50000 };
+    const code = async (res: Response) => ((await res.json()) as { error?: { code?: string } }).error?.code;
+    // admin role never touches business content (ADR-0146)
+    const adminPost = await post(body, adminCookie);
+    expect(adminPost.status).toBe(403);
+    expect(await code(adminPost)).toBe("role_forbidden");
+    const adminGet = await req(bt(G1), { headers: { cookie: adminCookie } });
+    expect(adminGet.status).toBe(403);
+    expect(await code(adminGet)).toBe("role_forbidden");
+    for (const method of ["PUT", "DELETE"]) {
+      const res = await req(bt(G1), { method, headers: { cookie: adminCookie }, body: JSON.stringify({ id: "x" }) });
+      expect(res.status).toBe(403);
+    }
+    // viewer: read yes, write no
+    expect((await req(bt(G1), { headers: { cookie: viewerCookie } })).status).toBe(200);
+    for (const method of ["POST", "PUT", "DELETE"]) {
+      const res = await req(bt(G1), { method, headers: { cookie: viewerCookie }, body: JSON.stringify({ id: "x", ...body }) });
+      expect(res.status).toBe(403);
+      expect(await code(res)).toBe("role_required");
+    }
+    // anonymous
+    expect((await req(bt(G1), { method: "POST", body: JSON.stringify({}) })).status).toBe(401);
+    expect((await req(bt(G1))).status).toBe(401);
+    // unknown group
+    expect((await post(body, analystCookie, "no-such-group")).status).toBe(404);
+    expect((await req(bt("no-such-group"), { headers: { cookie: analystCookie } })).status).toBe(404);
+    // nothing was written by any rejected call
+    expect(listBusinessTargets().length).toBe(0);
   });
 
   test("POST creates group-common and affiliate standards; validation errors are specific", async () => {
-    const rev = await post({ group_id: G1, metric_key: "revenue", direction: "gte", target_value: 50000 }, adminCookie);
+    const rev = await post({ metric_key: "revenue", direction: "gte", target_value: 50000 }, analystCookie);
     expect(rev.status).toBe(201);
-    const marginGroup = await post({ group_id: G1, metric_key: "operating_margin", direction: "gte", target_value: 0.07 }, adminCookie);
+    const marginGroup = await post({ metric_key: "operating_margin", direction: "gte", target_value: 0.07 }, analystCookie);
     expect(marginGroup.status).toBe(201);
-    const marginAffiliate = await post({ group_id: G1, member_id: M1, metric_key: "operating_margin", direction: "gte", target_value: 0.08 }, adminCookie);
+    const marginAffiliate = await post({ member_id: M1, metric_key: "operating_margin", direction: "gte", target_value: 0.08 }, analystCookie);
     expect(marginAffiliate.status).toBe(201);
-    const period = await post({ group_id: G1, metric_key: "period", direction: "lte", target_value: 5 }, adminCookie);
+    const period = await post({ metric_key: "period", direction: "lte", target_value: 5 }, analystCookie);
     expect(period.status).toBe(201);
-    const npv = await post({ group_id: G1, metric_key: "npv", direction: "gte", target_value: 30000 }, adminCookie);
+    const npv = await post({ metric_key: "npv", direction: "gte", target_value: 30000 }, analystCookie);
     expect(npv.status).toBe(201);
-    const custom = await post({ group_id: G1, metric_key: "custom", label: "R&D 투자 비중", direction: "lte", target_value: 0.15 }, adminCookie);
+    const custom = await post({ metric_key: "custom", label: "R&D 투자 비중", direction: "lte", target_value: 0.15 }, analystCookie);
     expect(custom.status).toBe(201);
 
-    const dup = await post({ group_id: G1, member_id: M1, metric_key: "operating_margin", direction: "gte", target_value: 0.1 }, adminCookie);
+    const dup = await post({ member_id: M1, metric_key: "operating_margin", direction: "gte", target_value: 0.1 }, analystCookie);
     expect(dup.status).toBe(400);
     expect((await dup.json()).error?.code).toBe("duplicate_target");
-    const noLabel = await post({ group_id: G1, metric_key: "custom", direction: "gte", target_value: 1 }, adminCookie);
+    const noLabel = await post({ metric_key: "custom", direction: "gte", target_value: 1 }, analystCookie);
     expect(noLabel.status).toBe(400);
     expect((await noLabel.json()).error?.code).toBe("custom_label_required");
-    const badGroup = await post({ group_id: "no-such-group", metric_key: "revenue", direction: "gte", target_value: 1 }, adminCookie);
-    expect(badGroup.status).toBe(400);
-    expect((await badGroup.json()).error?.code).toBe("unknown_group");
+    const badMember = await post({ member_id: "no-such-member", metric_key: "revenue", direction: "gte", target_value: 1 }, analystCookie);
+    expect(badMember.status).toBe(400);
+    expect((await badMember.json()).error?.code).toBe("unknown_member");
     expect(listBusinessTargets().length).toBe(6);
   });
 
@@ -304,15 +333,24 @@ describe("business-target standards (ADR-0114)", () => {
   test("PUT edits value/direction in place; DELETE tombstones instead of erasing", async () => {
     const targets = listBusinessTargets();
     const revenue = targets.find((t) => t.metric_key === "revenue")!;
-    const put = await req("/api/admin/business-targets", {
+    const put = await req(bt(G1), {
       method: "PUT",
-      headers: { cookie: adminCookie },
+      headers: { cookie: analystCookie },
       body: JSON.stringify({ id: revenue.id, target_value: 55000 }),
     });
     expect(put.status).toBe(200);
+    // a row of another group cannot be edited or deleted through this group's path
+    db.run("INSERT OR IGNORE INTO company_group (id, name, created_by, created_at) VALUES (?,?,?,?)", ["g-other", "다른그룹", "test", NOW]);
+    const crossPut = await req(bt("g-other"), { method: "PUT", headers: { cookie: analystCookie }, body: JSON.stringify({ id: revenue.id, target_value: 1 }) });
+    expect(crossPut.status).toBe(400);
+    const crossDel = await req(bt("g-other"), { method: "DELETE", headers: { cookie: analystCookie }, body: JSON.stringify({ id: revenue.id }) });
+    expect(crossDel.status).toBe(400);
+    expect(listBusinessTargets(G1).find((t) => t.id === revenue.id)!.target_value).toBe(55000);
+    // audit entries are kept
+    expect((db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'business_target_add'").get() as { n: number }).n).toBeGreaterThan(0);
     expect(listBusinessTargets().find((t) => t.id === revenue.id)!.target_value).toBe(55000);
 
-    const del = await req("/api/admin/business-targets", { method: "DELETE", headers: { cookie: adminCookie }, body: JSON.stringify({ id: revenue.id }) });
+    const del = await req(bt(G1), { method: "DELETE", headers: { cookie: analystCookie }, body: JSON.stringify({ id: revenue.id }) });
     expect(del.status).toBe(200);
     // tombstone: the row survives with deleted_at; the active list filters it
     const row = db.query("SELECT deleted_at FROM md_business_target WHERE id = ?").get(revenue.id) as { deleted_at: string | null };

@@ -1,7 +1,7 @@
 // business-targets — group/affiliate business-target standards (md_business_target,
 // migration 0082 / ADR-0114) plus the fs-gate evidence read model that compares
-// them against the adopted business case. Standards are master data managed in
-// the admin console; per the boundary in ADR-0114 they surface at the fs gate as
+// them against the adopted business case. Standards are business content managed
+// per group on /our-company (ADR-0191 amends ADR-0114 ownership); per the boundary in ADR-0114 they surface at the fs gate as
 // reference evidence only — a miss never blocks a gate by itself.
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
@@ -36,7 +36,7 @@ export interface BusinessTargetRow {
   member_name: string | null;
 }
 
-export function listBusinessTargets(): BusinessTargetRow[] {
+export function listBusinessTargets(groupId?: string): BusinessTargetRow[] {
   return getDb()
     .query(
       `SELECT t.id, t.group_id, t.member_id, t.metric_key, t.label, t.direction, t.target_value,
@@ -45,10 +45,10 @@ export function listBusinessTargets(): BusinessTargetRow[] {
        FROM md_business_target t
        JOIN company_group g ON g.id = t.group_id
        LEFT JOIN company_group_member m ON m.id = t.member_id
-       WHERE t.deleted_at IS NULL
+       WHERE t.deleted_at IS NULL${groupId ? " AND t.group_id = ?" : ""}
        ORDER BY g.name, m.company_name, t.metric_key, t.label`,
     )
-    .all() as unknown as BusinessTargetRow[];
+    .all(...(groupId ? [groupId] : [])) as unknown as BusinessTargetRow[];
 }
 
 /** The fields evaluation needs. Standards rows and project goals both satisfy it. */
@@ -378,7 +378,7 @@ export function evaluateTargetsForCase(
   return evaluateResolved(resolved, null, { simBasis: "해당 Case", caseCase: caseView, sim });
 }
 
-// ── admin CRUD (soft delete per the 0081 tombstone convention) ──────────────
+// ── group-scoped CRUD (soft delete per the 0081 tombstone convention) ──────────────
 
 export interface CreateTargetInput {
   groupId: string;
@@ -429,13 +429,17 @@ export interface UpdateTargetInput {
   direction?: TargetDirection;
   targetValue?: number;
   actor: string;
+  /** When set, the row must belong to this group (route-scope guard). */
+  groupId?: string;
 }
 
 /** Standards are edited in place (value/direction); scope and metric are
  * immutable after create — change them by delete + re-create. */
 export function updateBusinessTarget(input: UpdateTargetInput): { ok: true } | { ok: false; code: string } {
   const db = getDb();
-  const row = db.query("SELECT id FROM md_business_target WHERE id = ? AND deleted_at IS NULL").get(input.id);
+  const row = db
+    .query(`SELECT id FROM md_business_target WHERE id = ? AND deleted_at IS NULL${input.groupId ? " AND group_id = ?" : ""}`)
+    .get(...(input.groupId ? [input.id, input.groupId] : [input.id]));
   if (!row) return { ok: false, code: "not_found" };
   if (input.targetValue !== undefined && !Number.isFinite(input.targetValue)) return { ok: false, code: "invalid_value" };
   const sets: string[] = [];
@@ -457,12 +461,12 @@ export function updateBusinessTarget(input: UpdateTargetInput): { ok: true } | {
   return { ok: true };
 }
 
-export function deleteBusinessTarget(id: string, actor: string, reason: string): { ok: true } | { ok: false; code: string } {
+export function deleteBusinessTarget(id: string, actor: string, reason: string, groupId?: string): { ok: true } | { ok: false; code: string } {
   const db = getDb();
   const res = db.run(
     `UPDATE md_business_target SET deleted_at = ?, deleted_by = ?, delete_reason = ?
-     WHERE id = ? AND deleted_at IS NULL`,
-    [new Date().toISOString(), actor, reason || "관리자 삭제", id],
+     WHERE id = ? AND deleted_at IS NULL${groupId ? " AND group_id = ?" : ""}`,
+    [new Date().toISOString(), actor, reason || "사용자 삭제", id, ...(groupId ? [groupId] : [])],
   );
   if (res.changes === 0) return { ok: false, code: "not_found" };
   appendAudit(db, { actor, action: "business_target_delete", target: `md_business_target:${id}`, now: new Date().toISOString() });

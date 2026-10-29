@@ -1,6 +1,6 @@
 // @version 1.0.0
 /**
- * ADR-0146 PR3 — admin-side group reads for the Business Targets screen; admin is rejected on the our-company reads.
+ * ADR-0146 / ADR-0191 — the admin-side group mirror routes were removed with the business-target move to /our-company; admin stays rejected on the our-company reads.
  * routes; analyst passes the role guard; viewer gets role_required where the
  * route is viewer-gated. One representative route per group, payloads chosen to
  * stop right after the role check (404/400), so no heavy fixtures are needed.
@@ -69,7 +69,7 @@ async function errCode(res: Response): Promise<string | undefined> {
 }
 const get = (path: string, cookie: string) => req(path, { headers: { cookie } });
 
-describe("ADR-0146 admin business-targets group reads", () => {
+describe("ADR-0146 / ADR-0191 group reads are closed to admin", () => {
   test("setup: analyst creates a group with a member", async () => {
     const res = await req("/api/our-company/groups", {
       method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify({ name: "G1" }),
@@ -80,36 +80,6 @@ describe("ADR-0146 admin business-targets group reads", () => {
       "INSERT INTO company_group_member (id, group_id, company_name, role, created_at) VALUES ('m1', ?, 'HQ Co', 'hq', ?)",
       [groupId, NOW],
     );
-  });
-
-  test("admin: 200 on new admin routes, same shape as original for analyst", async () => {
-    const adminList = await get("/api/admin/business-targets/groups", adminCookie);
-    const origList = await get("/api/our-company/groups", analystCookie);
-    expect(adminList.status).toBe(200);
-    expect(origList.status).toBe(200);
-    expect(((await adminList.json()) as { data: unknown }).data).toEqual(((await origList.json()) as { data: unknown }).data);
-
-    const adminDetail = await get(`/api/admin/business-targets/groups/${groupId}`, adminCookie);
-    const origDetail = await get(`/api/our-company/groups/${groupId}`, analystCookie);
-    expect(adminDetail.status).toBe(200);
-    const a = ((await adminDetail.json()) as { data: { members: unknown[]; group: unknown; profiles: unknown[] } }).data;
-    const o = ((await origDetail.json()) as { data: unknown }).data;
-    expect(a).toEqual(o as typeof a);
-    expect(a.members.length).toBe(1);
-  });
-
-  test("admin: 404 on unknown group", async () => {
-    expect((await get("/api/admin/business-targets/groups/NOPE", adminCookie)).status).toBe(404);
-  });
-
-  test("analyst and viewer: 403 admin_required on new routes", async () => {
-    for (const cookie of [analystCookie, viewerCookie]) {
-      for (const path of ["/api/admin/business-targets/groups", `/api/admin/business-targets/groups/${groupId}`]) {
-        const res = await get(path, cookie);
-        expect(res.status).toBe(403);
-        expect(await errCode(res)).toBe("admin_required");
-      }
-    }
   });
 
   test("admin: 403 role_forbidden on our-company group reads", async () => {

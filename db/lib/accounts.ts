@@ -344,3 +344,91 @@ export async function resetPassword(db: Database, opts: ResetPasswordOptions): P
     appendAudit(db, { actor: opts.resetBy, action: "password_reset", target: opts.userId, now: opts.now });
   })();
 }
+
+// ---------------------------------------------------------------------------
+// Account deletion and orphaned-access report
+// ---------------------------------------------------------------------------
+
+export interface DeleteUserResult {
+  deleted: boolean;
+  membershipsRevoked: number;
+  insiderEntriesRemoved: number;
+}
+
+/**
+ * Delete an account and, in the SAME transaction, revoke everything that
+ * grants access (security-model need-to-know): project_member rows
+ * (revoked_at, history kept), insider_list entries (removed_at + reason),
+ * sessions, API/OAuth tokens (revoked_at), OAuth codes, human-role grants and
+ * share links the user issued. Disable deliberately does NOT do this - it is
+ * reversible and access is already blocked by status.
+ *
+ * Throws (and rolls everything back) when enforced FKs from history tables
+ * (agent_position, decision_proposal, approved_by chains) still reference the
+ * user; the caller should tell the admin to disable instead.
+ */
+export function deleteUser(db: Database, opts: { userId: string; deletedBy: string; now: string }): DeleteUserResult {
+  const { userId, deletedBy, now } = opts;
+  return db.transaction((): DeleteUserResult => {
+    const exists = db.query("SELECT 1 AS x FROM app_user WHERE user_id = ?").get(userId);
+    if (!exists) return { deleted: false, membershipsRevoked: 0, insiderEntriesRemoved: 0 };
+
+    const members = db
+      .query("SELECT project_id FROM project_member WHERE user_id = ? AND revoked_at IS NULL")
+      .all(userId) as { project_id: string }[];
+    db.run("UPDATE project_member SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL", [now, userId]);
+    const insiders = db.run(
+      "UPDATE insider_list SET removed_at = ?, reason = COALESCE(reason || ' | ', '') || 'removed: account deleted' WHERE user_id = ? AND removed_at IS NULL",
+      [now, userId],
+    ).changes;
+    for (const m of members) {
+      appendAudit(db, { actor: deletedBy, action: "membership_revoke", target: `${m.project_id}:${userId}`, now });
+    }
+
+    db.run("UPDATE session SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL", [now, userId]);
+    db.run("UPDATE api_token SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL", [now, userId]);
+    db.run("DELETE FROM oauth_code WHERE user_id = ?", [userId]);
+    db.run("UPDATE oauth_client SET registered_by_user_id = NULL WHERE registered_by_user_id = ?", [userId]);
+    db.run("UPDATE app_user_human_role SET revoked_at = ?, revoked_by = ? WHERE user_id = ? AND revoked_at IS NULL", [now, deletedBy, userId]);
+    db.run("UPDATE share_link SET revoked_at = ? WHERE created_by = ? AND revoked_at IS NULL", [now, userId]);
+
+    // Credentials and sessions of a deleted account have no audit value; the
+    // FK on password_history/session/api_token forces removal before the user.
+    db.run("DELETE FROM password_history WHERE user_id = ?", [userId]);
+    db.run("DELETE FROM session WHERE user_id = ?", [userId]);
+    db.run("DELETE FROM api_token WHERE user_id = ?", [userId]);
+    db.run("DELETE FROM app_user WHERE user_id = ?", [userId]);
+
+    appendAudit(db, {
+      actor: deletedBy,
+      action: "account_delete",
+      target: `${userId} (memberships_revoked=${members.length}, insider_removed=${insiders})`,
+      now,
+    });
+    return { deleted: true, membershipsRevoked: members.length, insiderEntriesRemoved: insiders };
+  })();
+}
+
+export interface OrphanedMembership {
+  project_id: string;
+  user_id: string;
+  project_role: string;
+  reason: "user_missing" | "user_disabled";
+  has_active_insider_entry: boolean;
+}
+
+/** Read-only: active memberships whose user no longer exists or is disabled. */
+export function listOrphanedMemberships(db: Database): OrphanedMembership[] {
+  const rows = db
+    .query(
+      `SELECT pm.project_id, pm.user_id, pm.project_role,
+              CASE WHEN u.user_id IS NULL THEN 'user_missing' ELSE 'user_disabled' END AS reason,
+              EXISTS (SELECT 1 FROM insider_list il WHERE il.project_id = pm.project_id AND il.user_id = pm.user_id AND il.removed_at IS NULL) AS ins
+         FROM project_member pm
+         LEFT JOIN app_user u ON u.user_id = pm.user_id
+        WHERE pm.revoked_at IS NULL AND (u.user_id IS NULL OR u.status = 'disabled')
+        ORDER BY pm.user_id, pm.project_id`,
+    )
+    .all() as (Omit<OrphanedMembership, "has_active_insider_entry"> & { ins: number })[];
+  return rows.map(({ ins, ...r }) => ({ ...r, has_active_insider_entry: ins === 1 }));
+}

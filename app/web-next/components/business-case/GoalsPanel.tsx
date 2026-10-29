@@ -12,6 +12,7 @@ import { api } from "../../lib/api.ts";
 import { useModalFocus } from "../../lib/use-modal-focus.ts";
 import { SectionToolbar } from "../layout.tsx";
 import { TranslatorFn } from "../../i18n/config.ts";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   formatDirectionLabel,
@@ -420,6 +421,9 @@ export function GoalsPanel({ projectId, data, canAct, onChanged, loadError }: { 
                     <td>
                       <SourceBadge source={r.source} />
                       {r.source_name && <span className="section-meta" style={{ display: "block" }}>{r.source_name}</span>}
+                      {r.source !== "project" && (
+                        <Link href="/our-company" className="section-meta" style={{ display: "block" }}>{t("manageStandardLink")}</Link>
+                      )}
                       {note && <span className="section-meta" style={{ display: "block" }}>{note}</span>}
                     </td>
                     <td>

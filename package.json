@@ -45,6 +45,8 @@
     "glossary:lint": "bun glossary/_validate.ts",
     "glossary:generate": "bun scripts/co-newbiz/generate-glossary-data.ts",
     "glossary:check": "bun scripts/co-newbiz/generate-glossary-data.ts --check",
+    "governance:generate": "bun scripts/co-newbiz/governance-sync.ts",
+    "governance:check": "bun scripts/co-newbiz/governance-sync.ts --check",
     "procedures:lint": "bun procedures/_validate.ts",
     "checklists:lint": "bun checklists/_validate.ts",
     "process:ssot-check": "bun scripts/co-newbiz/process-ssot-check.ts",

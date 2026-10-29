@@ -348,6 +348,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0188` | adr | — | — | — |
 | `adr:0189` | adr | — | — | — |
 | `adr:0190` | adr | — | — | — |
+| `adr:0191` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -574,7 +575,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 178 | (expected until docs `references` edges are mined) |
+| adr | 179 | (expected until docs `references` edges are mined) |
 | agent | 13 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ir-agent, root/platform-lead, root/release-engineer, root/security-engineer, root/sre |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 9 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync |

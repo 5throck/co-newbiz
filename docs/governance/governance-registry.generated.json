@@ -1,0 +1,1054 @@
+{
+  "schema": 1,
+  "generated_by": "scripts/co-newbiz/governance-sync.ts",
+  "counts": {
+    "docs": 54,
+    "findings_error": 4,
+    "findings_warn": 24,
+    "by_layer": {
+      "policy": 3,
+      "procedure": 24,
+      "guideline": 0,
+      "checklist": 19,
+      "template": 8
+    }
+  },
+  "docs": [
+    {
+      "id": "pol-ent-a-addendum",
+      "layer": "policy",
+      "key": "pol-ent-a-addendum",
+      "title": "Entity Addendum — ent-a",
+      "scope": "entity",
+      "entity_code": "ent-a",
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "policies/entities/ent-a/addendum.md",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": 12
+    },
+    {
+      "id": "pol-ent-b-addendum",
+      "layer": "policy",
+      "key": "pol-ent-b-addendum",
+      "title": "Entity Addendum — ent-b",
+      "scope": "entity",
+      "entity_code": "ent-b",
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "policies/entities/ent-b/addendum.md",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": 12
+    },
+    {
+      "id": "pol-group-neb",
+      "layer": "policy",
+      "key": "pol-group-neb",
+      "title": "Group New Business Review Policy",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.1",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "policies/group/neb-policy.md",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": 12
+    },
+    {
+      "id": "proc-shared-brownfield-dd",
+      "layer": "procedure",
+      "key": "shared-brownfield-dd",
+      "title": "Brown Field Due Diligence",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.8.0",
+      "enforceability": "mixed",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/brownfield-dd/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-brownfield-fs",
+      "layer": "procedure",
+      "key": "shared-brownfield-fs",
+      "title": "Brown Field Full Feasibility",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.4.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/brownfield-fs/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-brownfield-fs-comparative",
+      "layer": "procedure",
+      "key": "shared-brownfield-fs-comparative",
+      "title": "Brown Field FS Comparative Selection",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.1",
+      "enforceability": "mixed",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/brownfield-fs-comparative/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-brownfield-pre-fs",
+      "layer": "procedure",
+      "key": "shared-brownfield-pre-fs",
+      "title": "Brown Field Pre-Feasibility",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.5.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/brownfield-pre-fs/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-brownfield-screening",
+      "layer": "procedure",
+      "key": "shared-brownfield-screening",
+      "title": "Brown Field Screening",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.4.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/brownfield-screening/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-brownfield-target-identification",
+      "layer": "procedure",
+      "key": "shared-brownfield-target-identification",
+      "title": "Brown Field Target Identification (Universe → Long List)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mandatory",
+      "owner_agent": "brownfield-agent",
+      "doc_path": "procedures/_shared/brownfield-target-identification/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-brownfield-target-screening",
+      "layer": "procedure",
+      "key": "shared-brownfield-target-screening",
+      "title": "Brown Field Target Screening (Long List → Short List)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mandatory",
+      "owner_agent": "brownfield-agent",
+      "doc_path": "procedures/_shared/brownfield-target-screening/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-business-unit-establishment-execution",
+      "layer": "procedure",
+      "key": "shared-business-unit-establishment-execution",
+      "title": "Business Unit Establishment Execution",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.1",
+      "enforceability": "mixed",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/business-unit-establishment-execution/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-company-profile-analysis",
+      "layer": "procedure",
+      "key": "shared-company-profile-analysis",
+      "title": "Company Profile Analysis (그룹/계열사 자사 프로파일)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.0",
+      "enforceability": "mandatory",
+      "owner_agent": "financial-analyst",
+      "doc_path": "procedures/_shared/company-profile-analysis/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-deal-shape-chain",
+      "layer": "procedure",
+      "key": "shared-deal-shape-chain",
+      "title": "Deal-Shape Selection Chain (Partner Track)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.1",
+      "enforceability": "mixed",
+      "owner_agent": "partnership-agent",
+      "doc_path": "procedures/_shared/deal-shape-chain/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-deal-structuring",
+      "layer": "procedure",
+      "key": "shared-deal-structuring",
+      "title": "Deal Structuring (S10)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/deal-structuring/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-entity-establishment-execution",
+      "layer": "procedure",
+      "key": "shared-entity-establishment-execution",
+      "title": "Entity Establishment Execution",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/entity-establishment-execution/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-entity-ic-review",
+      "layer": "procedure",
+      "key": "shared-entity-ic-review",
+      "title": "Entity Investment Committee Review",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.4.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/entity-ic-review/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-greenfield-capability-assessment",
+      "layer": "procedure",
+      "key": "shared-greenfield-capability-assessment",
+      "title": "Green Field Capability Assessment & Entry Strategy",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mandatory",
+      "owner_agent": "greenfield-agent",
+      "doc_path": "procedures/_shared/greenfield-capability-assessment/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-greenfield-dd",
+      "layer": "procedure",
+      "key": "shared-greenfield-dd",
+      "title": "Green Field Due Diligence",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/greenfield-dd/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-greenfield-execution-baseline",
+      "layer": "procedure",
+      "key": "shared-greenfield-execution-baseline",
+      "title": "Greenfield Execution Baseline (post-approval, S11)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mixed",
+      "owner_agent": "greenfield-agent",
+      "doc_path": "procedures/_shared/greenfield-execution-baseline/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-greenfield-fs",
+      "layer": "procedure",
+      "key": "shared-greenfield-fs",
+      "title": "Green Field Full Feasibility",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/greenfield-fs/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-greenfield-pre-fs",
+      "layer": "procedure",
+      "key": "shared-greenfield-pre-fs",
+      "title": "Green Field Pre-Feasibility",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/greenfield-pre-fs/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-greenfield-screening",
+      "layer": "procedure",
+      "key": "shared-greenfield-screening",
+      "title": "Green Field Screening",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.6.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/greenfield-screening/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-group-investment-review",
+      "layer": "procedure",
+      "key": "shared-group-investment-review",
+      "title": "Group Investment Committee Review",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.0",
+      "enforceability": "mandatory",
+      "owner_agent": "group-review-agent",
+      "doc_path": "procedures/_shared/group-investment-review/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-jv-lifecycle-governance",
+      "layer": "procedure",
+      "key": "shared-jv-lifecycle-governance",
+      "title": "JV Lifecycle Governance (post-formation, origin=joint)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "partnership-agent",
+      "doc_path": "procedures/_shared/jv-lifecycle-governance/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-opportunity-discovery",
+      "layer": "procedure",
+      "key": "shared-opportunity-discovery",
+      "title": "Opportunity Discovery (S2)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mandatory",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/opportunity-discovery/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-pmi-integration-execution",
+      "layer": "procedure",
+      "key": "shared-pmi-integration-execution",
+      "title": "PMI Integration Execution (post-approval, Brown Field)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.0",
+      "enforceability": "mixed",
+      "owner_agent": "pmi-agent",
+      "doc_path": "procedures/_shared/pmi-integration-execution/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "proc-shared-portfolio-venture-monitoring",
+      "layer": "procedure",
+      "key": "shared-portfolio-venture-monitoring",
+      "title": "Venture Portfolio Monitoring (post-approval, group level)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.0",
+      "enforceability": "mixed",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "procedures/_shared/portfolio-venture-monitoring/schema.yaml",
+      "effective_from": null,
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-brownfield-feasibility",
+      "layer": "checklist",
+      "key": "chk-brownfield-feasibility",
+      "title": "Brown Field Feasibility Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.0",
+      "enforceability": "mixed",
+      "owner_agent": "brownfield-agent",
+      "doc_path": "checklists/brownfield-feasibility-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-business-unit-formation",
+      "layer": "checklist",
+      "key": "chk-business-unit-formation",
+      "title": "Business Unit Formation Checklist (New Business Unit Inside the Existing Entity)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mixed",
+      "owner_agent": "legal-counsel",
+      "doc_path": "checklists/business-unit-formation-checklist.yaml",
+      "effective_from": "2026-10-14",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-commercial-dd",
+      "layer": "checklist",
+      "key": "chk-commercial-dd",
+      "title": "Commercial Due Diligence Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.0",
+      "enforceability": "mixed",
+      "owner_agent": "commercial-dd-agent",
+      "doc_path": "checklists/commercial-dd-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-deal-shape-presigning",
+      "layer": "checklist",
+      "key": "chk-deal-shape-presigning",
+      "title": "Deal-Shape Pre-Signing Checklists (License-in / Co-development / Minority / JV)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.1",
+      "enforceability": "mixed",
+      "owner_agent": "legal-counsel",
+      "doc_path": "checklists/deal-shape-presigning-checklist.yaml",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-entity-formation",
+      "layer": "checklist",
+      "key": "chk-entity-formation",
+      "title": "Entity Formation Checklist (Internal / Joint Origin Execution)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.0",
+      "enforceability": "mixed",
+      "owner_agent": "legal-counsel",
+      "doc_path": "checklists/entity-formation-checklist.yaml",
+      "effective_from": "2026-08-22",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-financial-dd-checklist",
+      "layer": "checklist",
+      "key": "chk-financial-dd-checklist",
+      "title": "Financial Due Diligence Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "financial-analyst",
+      "doc_path": "checklists/financial-dd-checklist.yaml",
+      "effective_from": "2026-09-05",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-financing",
+      "layer": "checklist",
+      "key": "chk-financing",
+      "title": "Financing Plan Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.3.1",
+      "enforceability": "mixed",
+      "owner_agent": "valuation-agent",
+      "doc_path": "checklists/financing-plan-checklist.yaml",
+      "effective_from": "2026-08-22",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-greenfield-feasibility",
+      "layer": "checklist",
+      "key": "chk-greenfield-feasibility",
+      "title": "Green Field Feasibility Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.1",
+      "enforceability": "mixed",
+      "owner_agent": "greenfield-agent",
+      "doc_path": "checklists/greenfield-feasibility-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-hr-dd",
+      "layer": "checklist",
+      "key": "chk-hr-dd",
+      "title": "HR Due Diligence Checklist (Brown Field DD)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "hr-integration-agent",
+      "doc_path": "checklists/hr-dd-checklist.yaml",
+      "effective_from": "2026-08-22",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-legal-dd",
+      "layer": "checklist",
+      "key": "chk-legal-dd",
+      "title": "Legal Due Diligence Checklist (Brown Field DD)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.1",
+      "enforceability": "mixed",
+      "owner_agent": "legal-counsel",
+      "doc_path": "checklists/legal-dd-checklist.yaml",
+      "effective_from": "2026-08-22",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-legal-regulatory",
+      "layer": "checklist",
+      "key": "chk-legal-regulatory",
+      "title": "Legal and Regulatory Screening Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.1",
+      "enforceability": "mixed",
+      "owner_agent": "legal-counsel",
+      "doc_path": "checklists/legal-regulatory-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-ma-special-topics",
+      "layer": "checklist",
+      "key": "chk-ma-special-topics",
+      "title": "M&A Special Topics Checklist (Brown Field)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.5.1",
+      "enforceability": "mixed",
+      "owner_agent": "brownfield-agent",
+      "doc_path": "checklists/ma-special-topics-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-market-dd",
+      "layer": "checklist",
+      "key": "chk-market-dd",
+      "title": "Market Due Diligence Checklist (Brown Field DD)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "market-intelligence-agent",
+      "doc_path": "checklists/market-dd-checklist.yaml",
+      "effective_from": "2026-08-22",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-partnership",
+      "layer": "checklist",
+      "key": "chk-partnership",
+      "title": "Partnership Sourcing and JV Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "partnership-agent",
+      "doc_path": "checklists/partnership-checklist.yaml",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-rbd-technology",
+      "layer": "checklist",
+      "key": "chk-rbd-technology",
+      "title": "R&BD (Research & Business Development) Technology Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.5.0",
+      "enforceability": "mixed",
+      "owner_agent": "brownfield-agent",
+      "doc_path": "checklists/rbd-technology-checklist.yaml",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-site-selection",
+      "layer": "checklist",
+      "key": "chk-site-selection",
+      "title": "Site Selection Checklist (Green Field)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.2.0",
+      "enforceability": "mixed",
+      "owner_agent": "greenfield-agent",
+      "doc_path": "checklists/site-selection-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-strategic-fit",
+      "layer": "checklist",
+      "key": "chk-strategic-fit",
+      "title": "Strategic Fit Screening Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.1",
+      "enforceability": "mixed",
+      "owner_agent": "process-governance-manager",
+      "doc_path": "checklists/strategic-fit-screening-checklist.yaml",
+      "effective_from": "2026-08-22",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-target-screening",
+      "layer": "checklist",
+      "key": "chk-target-screening",
+      "title": "Target Screening Checklist (Long List → Short List)",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "mixed",
+      "owner_agent": "brownfield-agent",
+      "doc_path": "checklists/target-screening-checklist.yaml",
+      "effective_from": "2026-08-31",
+      "review_cycle_months": null
+    },
+    {
+      "id": "chk-technical-dd",
+      "layer": "checklist",
+      "key": "chk-technical-dd",
+      "title": "Technical Due Diligence Checklist",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.1",
+      "enforceability": "mixed",
+      "owner_agent": "technical-dd-agent",
+      "doc_path": "checklists/technical-dd-checklist.yaml",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-bau-exit-evidence-pack",
+      "layer": "template",
+      "key": "tpl-bau-exit-evidence-pack",
+      "title": "PMI BAU-Exit Evidence Pack Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/bau-exit-evidence-pack-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-gate-pass-record",
+      "layer": "template",
+      "key": "tpl-gate-pass-record",
+      "title": "Gate Pass Record Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/gate-pass-record-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-ic-memo",
+      "layer": "template",
+      "key": "tpl-ic-memo",
+      "title": "Investment Committee Memo Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.1.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/ic-memo-template.md",
+      "effective_from": "2026-08-20",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-jv-health-scorecard",
+      "layer": "template",
+      "key": "tpl-jv-health-scorecard",
+      "title": "JV Health Scorecard Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/jv-health-scorecard-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-partner-dd-report",
+      "layer": "template",
+      "key": "tpl-partner-dd-report",
+      "title": "Partner Due Diligence Report Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/partner-dd-report-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-portfolio-scorecard-rollup",
+      "layer": "template",
+      "key": "tpl-portfolio-scorecard-rollup",
+      "title": "Portfolio Scorecard Rollup Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/portfolio-scorecard-rollup-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-venture-transition-decision",
+      "layer": "template",
+      "key": "tpl-venture-transition-decision",
+      "title": "Venture Transition Decision Record Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/venture-transition-decision-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    },
+    {
+      "id": "tpl-venture-transition-evidence",
+      "layer": "template",
+      "key": "tpl-venture-transition-evidence",
+      "title": "Venture Transition Evidence Pack Template",
+      "scope": "shared",
+      "entity_code": null,
+      "region_code": null,
+      "version": "1.0.0",
+      "enforceability": "recommended",
+      "owner_agent": "docs-writer",
+      "doc_path": "templates/deliverables/venture-transition-evidence-template.md",
+      "effective_from": "2026-08-23",
+      "review_cycle_months": null
+    }
+  ],
+  "findings": [
+    {
+      "path": "checklists/_overlays/brownfield-workspace-scope.yaml",
+      "layer": "checklist",
+      "severity": "error",
+      "missing": [
+        "enforceability"
+      ]
+    },
+    {
+      "path": "checklists/_overlays/greenfield-workspace-scope.yaml",
+      "layer": "checklist",
+      "severity": "error",
+      "missing": [
+        "enforceability"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-dd/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-fs-comparative/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-fs/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-pre-fs/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-screening/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-target-identification/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/brownfield-target-screening/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/business-unit-establishment-execution/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/company-profile-analysis/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/deal-shape-chain/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/deal-structuring/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/entity-establishment-execution/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/entity-ic-review/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/greenfield-capability-assessment/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/greenfield-dd/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/greenfield-execution-baseline/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/greenfield-fs/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/greenfield-pre-fs/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/greenfield-screening/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/group-investment-review/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/jv-lifecycle-governance/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/opportunity-discovery/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/pmi-integration-execution/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/_shared/portfolio-venture-monitoring/schema.yaml",
+      "layer": "procedure",
+      "severity": "warn",
+      "missing": [
+        "effective_from"
+      ]
+    },
+    {
+      "path": "procedures/entities/ent-a/brownfield-screening/schema.yaml",
+      "layer": "procedure",
+      "severity": "error",
+      "missing": [
+        "version"
+      ]
+    },
+    {
+      "path": "procedures/regions/EU/brownfield-screening/schema.yaml",
+      "layer": "procedure",
+      "severity": "error",
+      "missing": [
+        "version"
+      ]
+    }
+  ]
+}

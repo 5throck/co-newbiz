@@ -137,45 +137,6 @@
       "handlingHint_archive_then_delete": "Data past the period is archived first, then deleted.",
       "handlingHint_archive_only": "Data past the period is only archived, never deleted. The handling of this data cannot be changed."
     },
-    "businessTargets": {
-      "errValueNumeric": "Enter the target value as a number.",
-      "createdNotice": "Business target registered.",
-      "updatedNotice": "Target updated.",
-      "updateFailed": "Failed to update",
-      "deleteConfirmTitle": "Delete the ‘{p1}’ target?",
-      "deleteBody": "Deletion is tombstoned (record preserved) and disappears immediately from the FS progress criteria table.",
-      "sectionTitle": "Business targets",
-      "sectionSummary": "Group-common and per-affiliate business targets — used as FS progress criteria",
-      "addButton": "＋ Add",
-      "emptyGroupsPre": "No groups registered. First register groups and affiliates in",
-      "ourCompanyLink": "Our company analysis",
-      "emptyGroupsPost": ".",
-      "formAria": "Add business target",
-      "groupAria": "Group",
-      "scopeAria": "Scope",
-      "groupCommon": "Group common",
-      "metricAria": "Metric",
-      "customMetricOption": "Custom KPI…",
-      "customMetricNameAria": "Custom metric name",
-      "customMetricNamePlaceholder": "Metric name (e.g. overseas revenue share)",
-      "directionAria": "Direction",
-      "directionGte": "At least (≥)",
-      "directionLte": "At most (≤)",
-      "valueAria": "Target value",
-      "valueFallback": "Value",
-      "emptyTargets": "No business targets registered.",
-      "tableAria": "Business target list",
-      "colGroup": "Group",
-      "colScope": "Scope",
-      "colMetric": "Metric",
-      "colTarget": "Target",
-      "colCreatedDate": "Registered",
-      "customMetricSuffix": " · custom",
-      "directionEditAria": "Edit direction",
-      "valueEditAria": "Edit target value",
-      "deleteTitle": "Delete this target",
-      "footnote": "Only one target per scope·metric pair is registered. Affiliate targets override group-common targets; custom KPIs show as “manual check” on the FS screen."
-    },
     "masterData": {
       "tableIndustry": "Industry",
       "tableCurrency": "Currency",
@@ -224,7 +185,105 @@
       "updateFailed": "Could not update.",
       "searchAria": "Search codes",
       "searchPlaceholder": "Search by code or name",
-      "deleteAria": "Delete {p1}"
+      "deleteAria": "Delete {p1}",
+      "siMan": "0,000",
+      "siEok": "00M",
+      "siJo": "T",
+      "tableKsic": "KSIC industry classification",
+      "ksicNote": "Shows every code of the Korean Standard Industrial Classification (Statistics Korea, 10th revision) plus the industries with a project profile. The list is file-managed (ksic-master.json, ksic-aliases.json), so it cannot be edited here. Analysis subjects are managed in the S1 market screen.",
+      "ksicMarketLink": "Manage analysis industries in the S1 market screen",
+      "ksicSearchAria": "Search KSIC",
+      "ksicSearchPlaceholder": "Search by code, industry name or alias (e.g. shipbuilding, 31111)",
+      "ksicNoMatch": "No matching classification.",
+      "colIndustryName": "Industry",
+      "colLevel": "Level",
+      "colProfile": "Industry profile",
+      "colMatch": "Found by",
+      "ksicLevel": {
+        "mid": "Division (2-digit)",
+        "sub": "Group (3-digit)",
+        "detail": "Class (4-digit)",
+        "leaf": "Sub-class (5-digit)",
+        "other": "Other"
+      },
+      "profileYes": "Yes",
+      "matchAlias": "Alias ‘{p1}’",
+      "matchName": "Industry name",
+      "colInternalId": "Internal ID",
+      "colDisplayName": "Name",
+      "colSiFactor": "Conversion factor",
+      "siFactorTitle": "How many base units (won, pieces, kilograms, ...) one of this unit equals.",
+      "nameUnregistered": "(name not registered)",
+      "noMatch": "No results.",
+      "emptyTable": "No {p1} codes yet. Add one below.",
+      "sourceNote": "Data sources are registered by the collection pipeline and their reliability grade is set in code, so this tab is read-only. Key settings and the grade legend are on the data sources screen.",
+      "sourceOpenLink": "Open data sources",
+      "referencedRow": "Other data uses this code, so it cannot be deleted: {p1}. Clean up the data that uses it first.",
+      "currencyNames": {
+        "KRW": "South Korean won",
+        "USD": "US dollar",
+        "EUR": "Euro",
+        "JPY": "Japanese yen",
+        "CNY": "Chinese yuan",
+        "GBP": "Pound sterling",
+        "HKD": "Hong Kong dollar",
+        "SGD": "Singapore dollar",
+        "VND": "Vietnamese dong",
+        "THB": "Thai baht",
+        "IDR": "Indonesian rupiah",
+        "MYR": "Malaysian ringgit",
+        "PHP": "Philippine peso",
+        "INR": "Indian rupee"
+      },
+      "countryNames": {
+        "KR": "South Korea",
+        "US": "United States",
+        "CN": "China",
+        "JP": "Japan",
+        "GB": "United Kingdom",
+        "HK": "Hong Kong",
+        "TW": "Taiwan",
+        "IN": "India",
+        "DE": "Germany",
+        "FR": "France",
+        "IT": "Italy",
+        "ES": "Spain",
+        "NL": "Netherlands",
+        "BE": "Belgium",
+        "AT": "Austria",
+        "IE": "Ireland",
+        "SE": "Sweden",
+        "PL": "Poland",
+        "SG": "Singapore",
+        "VN": "Vietnam",
+        "TH": "Thailand",
+        "ID": "Indonesia",
+        "MY": "Malaysia",
+        "PH": "Philippines"
+      },
+      "unitNames": {
+        "krw": "Won",
+        "krw_1m": "Million won",
+        "krw_100m": "100 million won",
+        "krw_1t": "Trillion won",
+        "percent": "Percent (%)",
+        "index": "Index",
+        "persons": "Persons",
+        "count": "Count",
+        "ton": "Tonne",
+        "kw": "Kilowatt (kW)",
+        "mw": "Megawatt (MW)",
+        "gwh": "Gigawatt-hour (GWh)"
+      },
+      "dimensionNames": {
+        "krw": "Amount (KRW)",
+        "ratio": "Ratio",
+        "count": "Quantity",
+        "index": "Index",
+        "mass": "Mass",
+        "power": "Power",
+        "energy": "Energy"
+      }
     },
     "users": {
       "addUserButton": "＋ Add user",
@@ -316,7 +375,34 @@
       "adrReadOnlyNote": "Read-only. Change a design decision record in its document under docs/adr.",
       "colScope": "Scope",
       "adrDuplicateNote": "The same number is used by more than one document.",
-      "adrDuplicateChip": "Duplicate no."
+      "adrDuplicateChip": "Duplicate no.",
+      "colEffective": "Effective date",
+      "colNextReview": "Next review",
+      "colWaivers": "Active waivers",
+      "colDocument": "Document",
+      "filterLayerAria": "Filter by layer",
+      "filterLayerAll": "All layers",
+      "showPast": "Show past versions",
+      "reviewOverdue": "Review overdue",
+      "reviewSoon": "Review due within 30 days",
+      "reviewOk": "On schedule",
+      "reviewNone": "No review cycle",
+      "waiverCount": "{p1}",
+      "waiverConcentrated": "Concentrated",
+      "waiverConcentratedNote": "3 or more waivers on one clause - consider amending the clause.",
+      "openDoc": "Open",
+      "noDoc": "Not in docs hub",
+      "syncButton": "Sync now",
+      "syncing": "Syncing...",
+      "syncHint": "Refreshes this list from the committed document list. Nothing is deleted.",
+      "syncDone": "Sync finished: {p1} added, {p2} replaced by a new version, {p3} corrected, {p4} unchanged.",
+      "syncFailed": "Sync failed.",
+      "findingsHeading": "Documents with missing information ({p1})",
+      "findingNotRegistered": "Not registered",
+      "findingIncomplete": "Registered, incomplete",
+      "findingMissing": "Missing: {p1}",
+      "orphansNote": "{p1} registered documents are no longer in the repository (kept).",
+      "editedInRepo": "Documents are edited in the repository; this list only reflects them."
     },
     "glossarySection": {
       "emptyTerms": "No terms registered.",
@@ -430,10 +516,6 @@
       "toProductionButton": "Switch to production — block deletion",
       "toDevelopmentButton": "Switch to development — allow deletion"
     },
-    "businessTargetsPage": {
-      "h1": "Business-target standards",
-      "intro": "Group-common and per-affiliate business-target master — the basis for criteria-met rulings during FS progression. Affiliate rows override group-common rows."
-    },
     "systemModePage": {
       "h1": "System mode",
       "intro": "The production/development global switch — production mode blocks deletion of deal data."
@@ -468,17 +550,18 @@
     },
     "gateIntegrity": {
       "h1": "Stage Gate integrity",
-      "intro": "Weekly indicators G1-G12 for the Stage Gate rules: how often decisions are blocked or differ, and whether each rule family is ready to be switched on. Counts only; no reasons text or project names.",
+      "intro": "This screen answers two questions. First, whether each rule family can be switched from record-only to actually blocking. Second, what is backed up or needs fixing now. Counts only; no reason text or project names.",
       "loadFailed": "Could not load the indicators.",
       "filter": {
         "legend": "Period and filter",
         "from": "From",
         "to": "To (included)",
         "gate": "Stage Gate",
-        "minWrites": "Minimum decisions (G12)",
+        "minWrites": "Minimum decisions for readiness",
         "apply": "Show indicators",
         "rangeProblem": "The start date must not be after the end date.",
-        "minWritesProblem": "Enter a whole number, 0 or more."
+        "minWritesProblem": "Enter a whole number, 0 or more.",
+        "minWritesHint": "How many decisions a family needs before it counts as ready. Leave empty for 10."
       },
       "summary": "Period {from} to {to} · {count} indicator(s) over the limit",
       "banner": {
@@ -503,7 +586,7 @@
       "rate": "rate",
       "rateNone": "no rate (nothing to divide by)",
       "reasons": "Why it is over the limit",
-      "noteSummary": "How this is counted",
+      "noteSummary": "How it is calculated",
       "kpiName": {
         "G1": "GO / HOLD / KILL mix",
         "G2": "AI and human decisions differ",
@@ -540,6 +623,130 @@
         "generalCaption": "Figures of indicator {id}",
         "item": "Figure",
         "figure": "Value"
+      },
+      "readiness": {
+        "title": "Readiness to enforce, by rule family",
+        "intro": "A rule family may be only recording what it would block. Once there have been no would-be blocks for 14 days in a row and at least 10 decisions, it can be switched to blocking. The system owner makes the switch; neither this screen nor any agent changes the setting.",
+        "caption": "Current mode and readiness to enforce for each rule family",
+        "empty": "Rule family information could not be loaded.",
+        "col": {
+          "family": "Rule family",
+          "mode": "Current mode",
+          "cleanDays": "Clean days",
+          "decisions": "Decisions in that span",
+          "wouldBlocks": "Would-be blocks, last 14 days",
+          "verdict": "Readiness"
+        },
+        "mode": {
+          "off": "Off",
+          "shadow": "Record only (shadow)",
+          "enforce": "Blocking (enforce)"
+        },
+        "verdict": {
+          "ready": "Ready",
+          "notYet": "Not yet",
+          "enforcing": "Already blocking"
+        },
+        "reason": {
+          "modeOff": "It is off, so no history builds up. Turn it on as record-only first.",
+          "wouldBlocks": "{count} would-be blocks in the last 14 days.",
+          "cleanDays": "{days} clean days ({need} needed).",
+          "decisions": "{count} decisions ({need} needed)."
+        },
+        "runbook": "Open the switch-over guide",
+        "ownerNote": "The guide explains how and in what order. The owner changes the setting and restarts."
+      },
+      "family": {
+        "rationale": {
+          "name": "Reason quality",
+          "desc": "Placeholder or too-short reasons are not accepted."
+        },
+        "waiver": {
+          "name": "Waivers and N/A confirmation",
+          "desc": "Waivers are approved separately; N/A answers are confirmed by two people."
+        },
+        "ladder": {
+          "name": "Stage Gate order",
+          "desc": "A gate can only be passed after the one before it."
+        },
+        "validators": {
+          "name": "Required checks complete",
+          "desc": "GO is blocked when a core M&A check is missing."
+        },
+        "wacc": {
+          "name": "Discount rate (WACC) Confirmed Status",
+          "desc": "Feasibility GO is blocked until the discount rate is confirmed."
+        },
+        "snapshot_ack": {
+          "name": "Screen acknowledgement",
+          "desc": "Before GO, the latest content must be seen and acknowledged item by item."
+        },
+        "kill_binding": {
+          "name": "Binding stop conditions",
+          "desc": "A triggered stop condition blocks GO unless an exception is approved."
+        },
+        "divergence": {
+          "name": "Reason for differing from AI",
+          "desc": "A GO that differs from the AI recommendation needs a written reason."
+        },
+        "maker_checker": {
+          "name": "Maker/Checker Separation (second review)",
+          "desc": "An investment committee GO only takes effect after another person countersigns."
+        }
+      },
+      "actions": {
+        "title": "To do now",
+        "intro": "Tasks taken from the indicators that are over their limit. Each link goes to where it can be fixed.",
+        "empty": "Nothing to do right now.",
+        "go": "Go",
+        "fallbackLead": "Original",
+        "role": {
+          "entity-ic-reviewer": "entity investment committee reviewer",
+          "group-ic-reviewer": "group investment committee reviewer"
+        },
+        "text": {
+          "reviewer_holders_low": "Assign the {role} role to at least 2 people.",
+          "wacc_provisional": "{count} projects at S8 or later still have a provisional discount rate (WACC). Confirm them.",
+          "na_unconfirmed_old": "Confirm {count} mandatory N/A answers (unconfirmed for over 14 days).",
+          "countersign_pending_old": "{count} decisions have waited over 5 business days for a second review (countersign).",
+          "countersign_slow": "The slowest 10% of countersigns take {days} business days.",
+          "conditions_old": "{count} conditions have been open for over 30 days.",
+          "group_ic_conditions_open": "{count} conditions are still open on projects whose group committee has already met.",
+          "waivers_old": "{count} waivers have been active for over 90 days. Renew or end them.",
+          "go_share_high": "The GO share at {gate} is very high at {pct}% ({total} decisions). Check that review is not a formality.",
+          "go_share_shift": "The GO share at {gate} moved {points} points from the prior 4 weeks. Find out why.",
+          "divergence_zero": "No decision differed from the AI recommendation in {total} decisions. Check that the recommendation is not simply followed.",
+          "divergence_high": "{pct}% of decisions differ from the AI recommendation. Review the recommendation quality.",
+          "divergence_reason_missing": "{count} GO decisions differ from the AI recommendation without a sufficient reason.",
+          "would_block_events": "{count} would-be blocks occurred where a reason for differing was needed but missing.",
+          "rationale_rejections_high": "{rejections} of {total} acknowledgements were sent back for an insufficient reason.",
+          "ack_reason_reused": "The same acknowledgement wording was reused across more than 5 decisions ({count} wordings).",
+          "unassessed_high": "{pct}% of stop conditions at {gate} were not assessed at GO.",
+          "would_block_unexplained": "{count} would-be blocks are still unexplained. Decide their cause in the weekly review."
+        }
+      },
+      "group": {
+        "quality": {
+          "title": "Decision quality",
+          "desc": "Whether GO, HOLD and KILL are balanced and whether decisions that differ from AI carry reasons."
+        },
+        "backlog": {
+          "title": "Review queue and exceptions",
+          "desc": "Whether second reviews, open conditions, waivers and N/A confirmations are backing up."
+        },
+        "readiness": {
+          "title": "Readiness to enforce",
+          "desc": "Would-be blocks, provisional discount rates and clean days that show readiness."
+        }
+      },
+      "emptyGroup": "{count} with no data",
+      "emptyGroupHint": "Indicators with nothing to show in this period.",
+      "noData": "No data in this period",
+      "kpiCount": "{count} indicators",
+      "reasonsFallback": "Original (English)",
+      "reconfirm": {
+        "title": "Open a re-confirmation requirement",
+        "intro": "A form for administrators to require that one project's earlier records be re-confirmed by a person. It does not change any indicator; lifting the requirement is done by the project owner on the project screen."
       }
     },
     "pageIntro": {
@@ -584,7 +791,8 @@
       "govEnforce": {
         "mandatory": "Mandatory",
         "advisory": "Advisory",
-        "recommended": "Recommended"
+        "recommended": "Recommended",
+        "mixed": "Partly mandatory"
       },
       "govOwner": {
         "process_governance_manager": "Process governance lead",
@@ -595,7 +803,19 @@
         "glossary_curator": "Glossary curator",
         "docs_writer": "Documentation owner",
         "security_engineer": "Security engineer",
-        "risk_officer": "Risk officer"
+        "risk_officer": "Risk officer",
+        "brownfield_agent": "Brown Field lead",
+        "greenfield_agent": "Green Field lead",
+        "hr_integration_agent": "HR integration",
+        "legal_counsel": "Legal counsel",
+        "financial_analyst": "Financial analyst",
+        "partnership_agent": "Partnership lead",
+        "commercial_dd_agent": "Commercial DD",
+        "technical_dd_agent": "Technical DD",
+        "market_intelligence_agent": "Market intelligence",
+        "valuation_agent": "Valuation",
+        "pmi_agent": "Post-merger integration",
+        "group_review_agent": "Group review"
       },
       "glossaryCategory": {
         "business": "Business",
@@ -757,7 +977,17 @@
         "fs": "Feasibility",
         "dd": "Due diligence",
         "entity_ic": "Entity investment committee",
-        "group_ic": "Group investment committee"
+        "group_ic": "Group investment committee",
+        "target_screening": "Target screening"
+      },
+      "govMissing": {
+        "key": "ID",
+        "title": "title",
+        "version": "version",
+        "enforceability": "enforceability",
+        "owner_agent": "owner",
+        "effective_from": "effective date",
+        "derived": "derived"
       }
     },
     "list": {
@@ -1875,6 +2105,40 @@
         "thisGroupAndAllIts": "This group and all its affiliates switch to delete-marked. The data is preserved and viewable for audit.",
         "unknownError": "Unknown error",
         "uploadFailed": "Upload failed"
+      },
+      "businessTargets": {
+        "errValueNumeric": "Enter the target value as a number.",
+        "createdNotice": "Business target registered.",
+        "updatedNotice": "Target updated.",
+        "updateFailed": "Failed to update",
+        "deleteConfirmTitle": "Delete the ‘{p1}’ target?",
+        "deleteBody": "Deletion is tombstoned (record preserved) and disappears immediately from the FS progress criteria table.",
+        "sectionTitle": "Business targets",
+        "sectionSummary": "Group-common and per-affiliate business-target standards for this group — used as FS progress criteria. Project goals (S8) take precedence.",
+        "addButton": "＋ Add",
+        "formAria": "Add business target",
+        "scopeAria": "Scope",
+        "groupCommon": "Group common",
+        "metricAria": "Metric",
+        "customMetricOption": "Custom KPI…",
+        "customMetricNameAria": "Custom metric name",
+        "customMetricNamePlaceholder": "Metric name (e.g. overseas revenue share)",
+        "directionAria": "Direction",
+        "directionGte": "At least (≥)",
+        "directionLte": "At most (≤)",
+        "valueAria": "Target value",
+        "valueFallback": "Value",
+        "emptyTargets": "No business targets registered.",
+        "tableAria": "Business target list",
+        "colScope": "Scope",
+        "colMetric": "Metric",
+        "colTarget": "Target",
+        "colCreatedDate": "Registered",
+        "customMetricSuffix": " · custom",
+        "directionEditAria": "Edit direction",
+        "valueEditAria": "Edit target value",
+        "deleteTitle": "Delete this target",
+        "footnote": "Only one target per scope·metric pair is registered. Affiliate targets override group-common targets; custom KPIs show as “manual check” on the FS screen."
       }
     },
     "pageState": {
@@ -2739,7 +3003,6 @@
       "adr": "Design decision records",
       "audit": "Audit log",
       "brand": "co-newbiz admin",
-      "businessTargets": "Business-target standards",
       "dashboard": "System dashboard",
       "database": "Database",
       "dataSources": "Data sources",
@@ -5387,7 +5650,7 @@
         "optional": " (optional)",
         "orAbove": "≥ or above",
         "orBelow": "≤ or below",
-        "p1BasisP2": "{p1} basis {p2}",
+        "p1BasisP2": "{p1} {p2}",
         "permissionTheTargetCannotBe": "View-only permission; the target cannot be edited.",
         "pickAStartingMetric": "Pick a starting metric",
         "replaced": "Replaced",
@@ -5412,7 +5675,8 @@
         "userDefined": "User defined",
         "userDefined2": "· user defined",
         "viewHistory": "View history",
-        "youMustTickTheCheckbox": "You must tick the checkbox to proceed."
+        "youMustTickTheCheckbox": "You must tick the checkbox to proceed.",
+        "manageStandardLink": "Manage in Our company"
       },
       "investUncertainty": {
         "budgetCap": "· budget cap",
@@ -8029,7 +8293,6 @@
     "titles": {
       "adminAdr": "Design decision records",
       "adminAudit": "Audit log",
-      "adminBusinessTargets": "Business-target standards",
       "adminDataSources": "Data sources",
       "adminDatabase": "Database",
       "adminGlossary": "Glossary",
@@ -8193,7 +8456,11 @@
       "expiry30": "30 days — default",
       "expiry90": "90 days — maximum allowed",
       "issueButton": "Issue token",
-      "viewerNote": "Viewer accounts can use read-only tokens only and cannot issue tokens here. Viewing the list and revoking remain available.",
+      "writeNoteViewer": "Viewer accounts can issue read-only tokens only; the read·write option is unavailable.",
+      "writeNoteAdmin": "Admin accounts can issue read-only tokens only (system administration does not include business-data write); the read·write option is unavailable.",
+      "noSessionRoleNote": "Your account role cannot issue tokens here. Viewing the list and revoking remain available.",
+      "slotsRemaining": "{p1} of {p2} active token slots remaining.",
+      "slotsFull": "All {p1} active token slots are in use. Revoke one to issue another.",
       "emptyTokens": "No personal API tokens issued.",
       "patTableAria": "Personal API token list",
       "patTableCaption": "Personal API tokens I issued",

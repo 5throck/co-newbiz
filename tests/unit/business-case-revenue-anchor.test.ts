@@ -84,8 +84,10 @@ beforeAll(async () => {
 
   // Target A: linked to a company with 3 years of DART revenue facts.
   db.run("INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)", [companyAId, "㈜앵커대상", DART_CORP_CODE, NOW]);
-  const sourceId = ulid();
-  db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "dart", "A", NOW]);
+  let sourceId = ulid();
+  // Migration 0184 seeds the reference source codes; reuse the seeded row.
+  db.run("INSERT OR IGNORE INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "dart", "A", NOW]);
+  sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get("dart") as { id: string }).id;
   const accountId = (db.query("SELECT id FROM md_account WHERE name_ko = '매출액'").get() as { id: string }).id;
   for (const [year, value] of REVENUE_WON) {
     let periodId = (db.query("SELECT id FROM md_period WHERE period_type='year' AND fiscal_year=?").get(year) as { id: string } | undefined)?.id;

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { api } from "../../lib/api.ts";
-import { InlineCreateForm, useConfirm } from "../crud.tsx";
-import { SectionToolbar } from "../layout.tsx";
-import { ColGroup } from "../ui.tsx";
+import { api } from "../../../lib/api.ts";
+import { InlineCreateForm, useConfirm } from "../../crud.tsx";
+import { SectionToolbar } from "../../layout.tsx";
+import { ColGroup } from "../../ui.tsx";
+import type { OurCompanyStageState } from "./useOurGroups.ts";
 
-// 사업목표 기준 목록 6열 — 그룹·적용 범위·지표·기준·등록일·작업 고정 비율.
-const TARGETS_COL_PCT = [20, 16, 26, 16, 12, 10] as const;
+// 사업목표 기준 목록 5열 — 적용 범위·지표·기준·등록일·작업 고정 비율.
+const TARGETS_COL_PCT = [22, 30, 20, 14, 14] as const;
 import {
   CUSTOM_METRIC_KEY,
   METRIC_PRESETS,
@@ -16,25 +17,14 @@ import {
   formatTargetValue,
   presetFor,
   unitSpec,
-} from "../../lib/business-targets-format.ts";
-import type { TargetDirection, TargetUnit } from "../../lib/business-targets-format.ts";
+} from "../../../lib/business-targets-format.ts";
+import type { TargetDirection, TargetUnit } from "../../../lib/business-targets-format.ts";
 
-// 관리자 콘솔 — 사업목표 기준 섹션 (md_business_target, ADR-0114).
-// 그룹 공통/계열사별 기준을 등록·수정(값·방향)·삭제(툼스톤)한다.
+// 우리 회사(그룹) 화면 — 선택한 그룹의 사업목표 기준 패널 (md_business_target,
+// ADR-0114 / 소유권 이관 ADR-0191). 그룹 공통/계열사별 기준을 등록·수정(값·방향)·
+// 삭제(툼스톤)한다. 프로젝트 목표(S8, ADR-0159)는 이 기준보다 우선한다.
 // 입력 단위는 지표 프리셋에 따라 억원/%, 년이며 API에는 저장 단위
 // (KRW 백만, 비율, 년)로 환산해 보낸다.
-
-interface GroupRow {
-  id: string;
-  name: string;
-  member_count: number;
-}
-
-interface MemberRow {
-  id: string;
-  company_name: string;
-  role: "hq" | "affiliate";
-}
 
 interface TargetRow {
   id: string;
@@ -46,7 +36,6 @@ interface TargetRow {
   target_value: number;
   created_at: string;
   updated_at: string | null;
-  group_name: string;
   member_name: string | null;
 }
 
@@ -65,19 +54,20 @@ function toInputText(stored: number, unit: TargetUnit): string {
   return String(Number(input.toFixed(2)));
 }
 
-export function BusinessTargetsSection() {
-  const t = useTranslations("admin.businessTargets");
+export function BusinessTargetsPanel({ ctx }: { ctx: OurCompanyStageState }) {
+  const t = useTranslations("components.ourCompany.businessTargets");
   const tc = useTranslations("common");
+  const { selectedGroup, canAct } = ctx;
+  const groupId = selectedGroup?.group.id ?? "";
+  const members = selectedGroup?.members ?? [];
+  const base = `/api/our-company/groups/${encodeURIComponent(groupId)}/business-targets`;
   const { confirm, confirmDialog } = useConfirm();
-  const [groups, setGroups] = useState<GroupRow[] | null>(null);
-  const [members, setMembers] = useState<MemberRow[]>([]);
   const [targets, setTargets] = useState<TargetRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   // 생성 폼 상태
   const [createOpen, setCreateOpen] = useState(false);
-  const [formGroupId, setFormGroupId] = useState("");
   const [formMemberId, setFormMemberId] = useState(""); // "" = 그룹 공통
   const [formMetric, setFormMetric] = useState(METRIC_PRESETS[0].key);
   const [formCustomLabel, setFormCustomLabel] = useState("");
@@ -89,38 +79,22 @@ export function BusinessTargetsSection() {
   const [editing, setEditing] = useState<{ id: string; value: string; direction: TargetDirection } | null>(null);
 
   const loadTargets = useCallback(() => {
+    if (!groupId) return;
     api
-      .get<{ targets: TargetRow[] }>("/api/admin/business-targets")
+      .get<{ targets: TargetRow[] }>(`/api/our-company/groups/${encodeURIComponent(groupId)}/business-targets`)
       .then((r) => setTargets(r.data.targets))
       .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
-  }, []);
+  }, [groupId]);
 
   useEffect(() => {
-    api
-      .get<{ groups: GroupRow[] }>("/api/admin/business-targets/groups")
-      .then((r) => {
-        setGroups(r.data.groups);
-        if (r.data.groups[0]) setFormGroupId(r.data.groups[0].id);
-      })
-      .catch(() => setGroups([]));
+    setTargets(null);
+    setError(null);
+    setNotice(null);
+    setCreateOpen(false);
+    setEditing(null);
+    setFormMemberId("");
     loadTargets();
   }, [loadTargets]);
-
-  const loadMembers = useCallback((groupId: string) => {
-    if (!groupId) {
-      setMembers([]);
-      return;
-    }
-    api
-      .get<{ members: MemberRow[] }>(`/api/admin/business-targets/groups/${encodeURIComponent(groupId)}`)
-      .then((r) => setMembers(r.data.members))
-      .catch(() => setMembers([]));
-  }, []);
-
-  useEffect(() => {
-    loadMembers(formGroupId);
-    setFormMemberId("");
-  }, [formGroupId, loadMembers]);
 
   const formUnit = displayUnit(formMetric);
   const isCustom = formMetric === CUSTOM_METRIC_KEY;
@@ -137,8 +111,7 @@ export function BusinessTargetsSection() {
     const spec = unitSpec(formUnit);
     setSaving(true);
     try {
-      await api.post("/api/admin/business-targets", {
-        group_id: formGroupId,
+      await api.post(base, {
         member_id: formMemberId || null,
         metric_key: formMetric,
         label: isCustom ? formCustomLabel : null,
@@ -170,7 +143,7 @@ export function BusinessTargetsSection() {
     const factor = unitSpec(displayUnit(row.metric_key)).factor;
     setSaving(true);
     try {
-      await api.put("/api/admin/business-targets", {
+      await api.put(base, {
         id: editing.id,
         direction: editing.direction,
         target_value: parsed * factor,
@@ -191,7 +164,7 @@ export function BusinessTargetsSection() {
       async () => {
         setError(null);
         try {
-          await api.delete("/api/admin/business-targets", { id: row.id });
+          await api.delete(base, { id: row.id });
           loadTargets();
         } catch (err) {
           setError(err instanceof Error ? err.message : tc("errors.deleteFailed"));
@@ -201,6 +174,7 @@ export function BusinessTargetsSection() {
     );
   }
 
+  if (!selectedGroup) return null;
   return (
     <>
       {confirmDialog}
@@ -210,9 +184,11 @@ export function BusinessTargetsSection() {
           count={targets?.length ?? 0}
           summary={<span className="section-meta">{t("sectionSummary")}</span>}
           actions={
-            <button type="button" className="btn-ghost btn-sm" onClick={() => setCreateOpen((v) => !v)}>
-              {createOpen ? tc("close") : t("addButton")}
-            </button>
+            canAct ? (
+              <button type="button" className="btn-ghost btn-sm" aria-expanded={createOpen} onClick={() => setCreateOpen((v) => !v)}>
+                {createOpen ? tc("close") : t("addButton")}
+              </button>
+            ) : undefined
           }
         />
         {error && (
@@ -226,26 +202,15 @@ export function BusinessTargetsSection() {
           </p>
         )}
 
-        {groups !== null && groups.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)]">
-            {t("emptyGroupsPre")} <a href="/our-company" className="underline">{t("ourCompanyLink")}</a>{t("emptyGroupsPost")}
-          </p>
-        ) : (
+        {(
           <>
             <InlineCreateForm
-              open={createOpen}
+              open={canAct && createOpen}
               onSubmit={addTarget}
               onCancel={() => setCreateOpen(false)}
-              disabled={saving || !formGroupId || !formValue}
+              disabled={saving || !formValue}
               ariaLabel={t("formAria")}
             >
-              <select aria-label={t("groupAria")} className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 11rem" }} value={formGroupId} onChange={(e) => setFormGroupId(e.target.value)}>
-                {(groups ?? []).map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
               <select aria-label={t("scopeAria")} className="sizing-new-input sizing-new-input-sm" style={{ flex: "0 1 12rem" }} value={formMemberId} onChange={(e) => setFormMemberId(e.target.value)}>
                 <option value="">{t("groupCommon")}</option>
                 {members.map((m) => (
@@ -313,7 +278,6 @@ export function BusinessTargetsSection() {
                   <ColGroup widths={TARGETS_COL_PCT} />
                   <thead>
                     <tr>
-                      <th scope="col">{t("colGroup")}</th>
                       <th scope="col">{t("colScope")}</th>
                       <th scope="col">{t("colMetric")}</th>
                       <th scope="col" className="col-num">{t("colTarget")}</th>
@@ -327,7 +291,6 @@ export function BusinessTargetsSection() {
                       const isEditing = editing?.id === row.id;
                       return (
                         <tr key={row.id}>
-                          <td>{row.group_name}</td>
                           <td>
                             {row.member_id ? (
                               <span className="status-chip status-green">{row.member_name}</span>
@@ -378,6 +341,7 @@ export function BusinessTargetsSection() {
                           </td>
                           <td className="cell-sub col-date">{(row.updated_at ?? row.created_at).slice(0, 10)}</td>
                           <td className="sizing-actions-cell">
+                            {canAct && (
                             <div className="actions-row">
                               <button
                                 type="button"
@@ -395,6 +359,7 @@ export function BusinessTargetsSection() {
                                 {tc("delete")}
                               </button>
                             </div>
+                            )}
                           </td>
                         </tr>
                       );

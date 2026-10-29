@@ -73,4 +73,11 @@ export interface GovernanceDocRow {
   effective_from: string;
   superseded_by: string | null;
   review_cycle_months: number | null;
+  next_review?: string | null;
+  review_status?: "none" | "ok" | "due_soon" | "overdue";
+  days_to_review?: number | null;
+  active_waivers?: number;
+  waiver_clauses?: Array<{ clause_ref: string; count: number }>;
+  waiver_concentrated?: boolean;
+  library_id?: string | null;
 }

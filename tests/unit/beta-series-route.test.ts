@@ -71,7 +71,9 @@ beforeAll(async () => {
   );
   sourceId = ulid();
   unitId = ulid();
-  db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "krx", "A", NOW]);
+  // Migration 0184 seeds the reference source codes; reuse the seeded row.
+  db.run("INSERT OR IGNORE INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "krx", "A", NOW]);
+  sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get("krx") as { id: string }).id;
   db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [unitId, "pt-test", "index", 1, NOW]);
 });
 

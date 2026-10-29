@@ -1,9 +1,11 @@
 // View helpers for the admin "Gate integrity" KPI screen. The API (GET /api/admin/gate-integrity/kpis) owns every number;
 // these helpers only shape the request and flatten `value` objects for compact tables.
 
+import type { BreachCode, BreachItem, FamilyStatus, NotReadyReason } from "./gate-integrity-readiness.ts";
+
 export const KPI_GATE_OPTIONS = ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"] as const;
 
-export interface KpiBreach { breached: boolean; reasons: string[] }
+export interface KpiBreach { breached: boolean; reasons: string[]; items?: BreachItem[] }
 export interface KpiMigrationPending { section: string; missing: string[]; migrations: string[] }
 export interface Kpi {
   id: string;
@@ -25,6 +27,7 @@ export interface KpiReport {
   period: { from: string; to: string; prior_from: string; prior_to: string };
   gate: string | null;
   unapplied_migrations: string[];
+  families?: FamilyStatus[];
   kpis: Kpi[];
 }
 
@@ -110,3 +113,74 @@ export function streakRows(value: Record<string, unknown> | null): StreakRow[] {
 }
 
 export const KPI_IDS = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"] as const;
+
+// ---- redesign: grouping, empty detection, action list, label keys -------------------------------------------------
+
+export type KpiGroupId = "quality" | "backlog" | "readiness";
+export const KPI_GROUPS: ReadonlyArray<{ id: KpiGroupId; ids: readonly string[] }> = [
+  { id: "quality", ids: ["G1", "G2", "G3", "G4", "G5"] },
+  { id: "backlog", ids: ["G7", "G8", "G9", "G10"] },
+  { id: "readiness", ids: ["G6", "G11", "G12"] },
+];
+
+/** Rule families in the order the enforce-flip runbook recommends flipping them. */
+export const FAMILY_ORDER = ["rationale", "waiver", "ladder", "validators", "wacc", "snapshot_ack", "kill_binding", "divergence", "maker_checker"] as const;
+
+export function sortFamilies(rows: readonly FamilyStatus[]): FamilyStatus[] {
+  const rank = (f: string) => { const i = (FAMILY_ORDER as readonly string[]).indexOf(f); return i < 0 ? 99 : i; };
+  return [...rows].sort((a, b) => rank(a.family) - rank(b.family));
+}
+
+/** Catalog key (under admin.gateIntegrity.family) of a family; unknown families fall back to the raw key at the call site. */
+export function isKnownFamily(f: string): boolean { return (FAMILY_ORDER as readonly string[]).includes(f); }
+
+/** A KPI that computed fine but has nothing to show for the period: no breach, no denominator, every figure zero. */
+export function isEmptyKpi(k: Kpi): boolean {
+  if (k.status !== "ok" || k.breach.breached || k.id === "G12") return false;
+  if ((k.denominator ?? 0) !== 0 || (k.numerator ?? 0) !== 0) return false;
+  return flattenValue(k.value).every((r) => r.value === null || r.value === 0 || r.value === false);
+}
+
+export interface ActionItem { key: string; kpiId: string; code: BreachCode | "unknown"; params: Record<string, string | number>; href: string; fallback: string }
+
+const ACTION_HREF: Partial<Record<BreachCode, string>> = {
+  reviewer_holders_low: "/admin/users",
+  wacc_provisional: "/projects",
+  na_unconfirmed_old: "/projects",
+  countersign_pending_old: "/projects",
+  conditions_old: "/projects",
+  group_ic_conditions_open: "/projects",
+  waivers_old: "/projects",
+};
+const ACTION_ORDER: BreachCode[] = ["reviewer_holders_low", "wacc_provisional", "na_unconfirmed_old", "countersign_pending_old", "conditions_old", "group_ic_conditions_open", "waivers_old"];
+
+/** The "what to do now" list: one entry per breach finding, with a link to where it is fixed (or to its indicator card). */
+export function breachActions(kpis: readonly Kpi[]): ActionItem[] {
+  const out: ActionItem[] = [];
+  for (const k of kpis) {
+    if (k.status !== "ok" || !k.breach.breached) continue;
+    const items = k.breach.items ?? [];
+    k.breach.reasons.forEach((fallback, i) => {
+      const it = items[i];
+      const code = it?.code ?? "unknown";
+      out.push({ key: `${k.id}:${i}`, kpiId: k.id, code, params: it?.params ?? {}, href: (it && ACTION_HREF[it.code]) || `#kpi-${k.id}`, fallback });
+    });
+  }
+  const rank = (c: string) => { const i = ACTION_ORDER.indexOf(c as BreachCode); return i < 0 ? 99 : i; };
+  return out.sort((a, b) => rank(a.code) - rank(b.code));
+}
+
+/** Catalog keys for a not-ready reason, with its interpolation params. */
+export function notReadyText(r: NotReadyReason): { key: string; params: Record<string, number> } {
+  switch (r.code) {
+    case "mode_off": return { key: "readiness.reason.modeOff", params: {} };
+    case "would_blocks_open": return { key: "readiness.reason.wouldBlocks", params: { count: r.count } };
+    case "clean_days_short": return { key: "readiness.reason.cleanDays", params: { days: r.days, need: r.need } };
+    case "decisions_few": return { key: "readiness.reason.decisions", params: { count: r.count, need: r.need } };
+  }
+}
+
+/** Runbook document id in the /library hub for the active UI language. */
+export function runbookHref(locale: string): string {
+  return `/library?doc=${locale === "ko" ? "rb-gate-integrity-enforce-flip-ko" : "rb-gate-integrity-enforce-flip"}`;
+}

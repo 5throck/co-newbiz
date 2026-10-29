@@ -8,7 +8,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../lib/api.ts";
 import { useAuth } from "../../../lib/auth-client.tsx";
-import { canWriteBusiness } from "../../../lib/project-write-access.ts";
+import {
+  canIssueToken,
+  canIssueWriteToken,
+  remainingTokenSlots,
+  TOKEN_ACTIVE_CAP,
+  TOKEN_EXPIRY_DAYS,
+  writeScopeNoteKey,
+} from "../../../lib/token-issue-access.ts";
 import { Button, PageState, PrimaryAction, useToast } from "../../../components/ui.tsx";
 import { ColGroup } from "../../../components/ui.tsx";
 import { useConfirm } from "../../../components/crud.tsx";
@@ -49,11 +56,8 @@ const TOKEN_STATUS: Record<PersonalToken["status"], { cls: string; icon: string;
   revoked: { cls: "status-unknown", icon: "○", key: "statusRevoked" },
 };
 
-const EXPIRY_OPTIONS = [
-  { days: 7, key: "expiry7" },
-  { days: 30, key: "expiry30" },
-  { days: 90, key: "expiry90" },
-];
+const EXPIRY_KEY: Record<number, string> = { 7: "expiry7", 30: "expiry30", 90: "expiry90" };
+const EXPIRY_OPTIONS = TOKEN_EXPIRY_DAYS.map((days) => ({ days, key: EXPIRY_KEY[days] ?? "expiry30" }));
 
 // Compact date-time for the token table cells (e.g. "26. 10. 11. 15:04").
 function fmtShort(iso: string, locale: string): string {
@@ -166,7 +170,9 @@ function PersonalTokensSection() {
   const tc = useTranslations("common");
   const locale = useLocale();
   const { me } = useAuth();
-  const canIssue = canWriteBusiness(me?.role);
+  const canIssue = canIssueToken(me?.role);
+  const canWrite = canIssueWriteToken(me?.role);
+  const writeNoteKey = writeScopeNoteKey(me?.role);
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
 
@@ -178,6 +184,7 @@ function PersonalTokensSection() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
+  const slotsLeft = remainingTokenSlots((tokens ?? []).filter((x) => x.status === "active").length);
 
   /** 발급 오류 코드 → 실행 가능한 안내 (카탈로그 텍스트) */
   function issueErrorText(e: unknown): string {
@@ -303,9 +310,21 @@ function PersonalTokensSection() {
                     {t("scopeRead")}
                   </label>
                   <label>
-                    <input type="radio" name="pat-scope" checked={withWrite} onChange={() => setWithWrite(true)} />{" "}
+                    <input
+                      type="radio"
+                      name="pat-scope"
+                      checked={withWrite}
+                      disabled={!canWrite}
+                      aria-describedby={writeNoteKey ? "pat-write-note" : undefined}
+                      onChange={() => setWithWrite(true)}
+                    />{" "}
                     {t("scopeReadWrite")}
                   </label>
+                  {writeNoteKey && (
+                    <p id="pat-write-note" className="objective">
+                      {t(writeNoteKey)}
+                    </p>
+                  )}
                 </fieldset>
                 <div className="pat-field">
                   <label htmlFor="pat-expiry" className="pat-field-label">
@@ -324,13 +343,18 @@ function PersonalTokensSection() {
                     ))}
                   </select>
                 </div>
-                <Button variant="primary" type="submit" disabled={submitting}>
+                <Button variant="primary" type="submit" disabled={submitting || slotsLeft === 0}>
                   {t("issueButton")}
                 </Button>
               </div>
             </form>
           ) : (
-            <p>{t("viewerNote")}</p>
+            <p>{t("noSessionRoleNote")}</p>
+          )}
+          {canIssue && tokens !== null && (
+            <p className="objective" role="status">
+              {slotsLeft === 0 ? t("slotsFull", { p1: TOKEN_ACTIVE_CAP }) : t("slotsRemaining", { p1: slotsLeft, p2: TOKEN_ACTIVE_CAP })}
+            </p>
           )}
 
           <div role="alert">

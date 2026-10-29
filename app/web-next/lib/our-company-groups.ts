@@ -1,6 +1,5 @@
 // Shared read queries for company groups — used by the business route
-// (/api/our-company/groups*) and the admin Business Targets screen
-// (/api/admin/business-targets/groups*, ADR-0146) so both return one shape.
+// (/api/our-company/groups*) and the business-target standards panel on /our-company.
 import type { Database } from "bun:sqlite";
 import { loadLatestProfile } from "./company-profile-pipeline.ts";
 

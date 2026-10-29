@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-29T08:33:24.488Z
+**Generated**: 2026-10-29T13:35:13.381Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 181 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 191 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -197,7 +197,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.8.0 | scripts/co-newbiz/audit-variant.ts | N/A |
+| audit-variant.ts | 1.9.0 | scripts/co-newbiz/audit-variant.ts | N/A |
 | audit.ts | 2.57.0 | scripts/audit.ts | bun |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
@@ -254,6 +254,7 @@
 | fin-project.ts | 1.0.1 | scripts/co-newbiz/fin-project.ts | N/A |
 | fix-construction-machinery-link.ts | 1.0.0 | scripts/co-newbiz/fix-construction-machinery-link.ts | N/A |
 | gate-integrity-shadow-report.ts | 1.1.0 | scripts/co-newbiz/gate-integrity-shadow-report.ts | bun:sqlite |
+| gate-integrity-shadow-report.ts | 1.0.0 | scripts/co-newbiz/jobs/gate-integrity-shadow-report.ts | N/A |
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
@@ -268,6 +269,7 @@
 | generate-spec-activities.ts | 1.2.0 | scripts/co-newbiz/generate-spec-activities.ts | js-yaml |
 | generate-version-manifest.ts | 1.11.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
+| governance-sync.ts | 1.0.0 | scripts/co-newbiz/governance-sync.ts | js-yaml |
 | graph-delta-log.ts | 1.1.0 | scripts/graph-delta-log.ts | N/A |
 | graph-map.ts | 1.3.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
 | graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | js-yaml |
@@ -277,6 +279,7 @@
 | i18n-lint.ts | 1.1.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | N/A |
 | import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | N/A |
+| index.ts | 1.0.0 | scripts/co-newbiz/jobs/index.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
@@ -292,8 +295,9 @@
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.21.0 | scripts/co-newbiz/newbiz.ts | N/A |
+| newbiz.ts | 1.22.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
+| orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
 | process-ssot-check.ts | 4.0.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
@@ -311,9 +315,13 @@
 | restore.ts | 1.0.0 | scripts/co-newbiz/restore.ts | N/A |
 | retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | N/A |
 | route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | N/A |
+| run-job.ts | 1.0.0 | scripts/co-newbiz/run-job.ts | N/A |
 | run.ts | 1.1.0 | scripts/eval/run.ts | N/A |
 | runbook-validate.ts | 1.0.0 | scripts/co-newbiz/runbook-validate.ts | js-yaml |
 | scaffold-handbook.ts | 1.2.0 | scripts/handbook/scaffold-handbook.ts | N/A |
+| schedule-seed.ts | 1.0.0 | scripts/co-newbiz/schedule-seed.ts | N/A |
+| schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | N/A |
+| scheduler-core.ts | 1.0.0 | scripts/co-newbiz/scheduler-core.ts | N/A |
 | scope-impact.ts | 1.0.0 | scripts/co-newbiz/scope-impact.ts | bun:sqlite |
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
@@ -339,6 +347,7 @@
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | N/A |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |
+| types.ts | 1.0.0 | scripts/co-newbiz/jobs/types.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
 | update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | N/A |
@@ -365,6 +374,7 @@
 | verify-scripts.ts | 1.13.0 | scripts/verify-scripts.ts | fs, path |
 | verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | N/A |
 | verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | N/A |
+| watch-evaluate.ts | 1.0.0 | scripts/co-newbiz/jobs/watch-evaluate.ts | N/A |
 | watch-run.ts | 1.1.1 | scripts/co-newbiz/watch-run.ts | bun:sqlite |
 
 ---

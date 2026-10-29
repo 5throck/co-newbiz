@@ -122,4 +122,4 @@ describe("ADR-0146 exempt read routes stay open to admin", () => {
     });
   }
 });
-// GET /api/admin/business-targets/groups (admin 200 / analyst 403 admin_required) is covered in admin-business-targets-groups.test.ts.
+// Admin rejection on /api/our-company/groups* (and /business-targets) is covered in admin-business-targets-groups.test.ts and business-targets.test.ts.

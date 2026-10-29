@@ -1,9 +1,9 @@
 // Port of app/server/admin.ts PUT /api/admin/users/:userId
 import { getDb } from "../../../../../../../db/client.ts";
-import { approveUser, resetPassword } from "../../../../../../../db/lib/accounts.ts";
+import { approveUser, deleteUser, resetPassword } from "../../../../../../../db/lib/accounts.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin } from "../../../../../lib/auth.ts";
-import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
+import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const ACCOUNT_ROLES = new Set(["admin", "analyst", "viewer"]);
 const DISPLAY_NAME_MAX = 60;
@@ -92,16 +92,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     if (userId === ctx.userId) {
       return badRequest("self_delete_blocked", "An admin cannot delete their own account.");
     }
-    // Drop dependent rows BEFORE the user row — the FK constraints are
-    // enforced, so deleting app_user first 500s on any account that has
-    // ever logged in, changed, or reset a password.
-    db.run("DELETE FROM password_history WHERE user_id = ?", [userId]);
-    db.run("DELETE FROM session WHERE user_id = ?", [userId]);
-    db.run("DELETE FROM api_token WHERE user_id = ?", [userId]);
-    const res = db.run("DELETE FROM app_user WHERE user_id = ?", [userId]);
-    if (res.changes === 0) return notFound();
-    appendAudit(db, { actor: ctx.userId, action: "account_delete", target: userId, now });
-    return ok({ ok: true, deleted: userId });
+    // Memberships, insider entries, tokens and grants are revoked in the same
+    // transaction as the delete (accounts.deleteUser).
+    let result;
+    try {
+      result = deleteUser(db, { userId, deletedBy: ctx.userId, now });
+    } catch (err) {
+      return fail(409, "user_has_history", `Account is referenced by recorded history and cannot be deleted; disable it instead. (${err instanceof Error ? err.message : "constraint"})`);
+    }
+    if (!result.deleted) return notFound();
+    return ok({ ok: true, deleted: userId, memberships_revoked: result.membershipsRevoked, insider_entries_removed: result.insiderEntriesRemoved });
   }
 
   return badRequest("invalid_request", "action must be approve|set_role|set_display_name|disable|enable|reset_password|delete.");

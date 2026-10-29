@@ -10,6 +10,7 @@ import type * as wrT from "../../app/web-next/lib/web-research.ts";
 
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
 const wr = await import("../../app/web-next/lib/web-research.ts");
+const ps = await import("../../app/web-next/lib/playwright-search.ts");
 const hc = await import("../../app/web-next/lib/capability-holding-check.ts");
 const run = await import("../../app/web-next/lib/capability-holding-run.ts");
 const dr = await import("../../app/web-next/lib/capability-gap-necessity-draft.ts");
@@ -22,6 +23,8 @@ const saved: Record<string, string | undefined> = {};
 beforeEach(() => {
   for (const k of ENV_KEYS) saved[k] = process.env[k];
   wr.setWebResearchOverrideForTests(null);
+  // Other files (brownfield-llm-support) set a process-wide Playwright override that would make the chain look reachable.
+  ps.setPlaywrightSearchOverrideForTests(null);
   globalThis.fetch = (async () => { throw new Error("no real network in tests"); }) as unknown as typeof fetch;
 });
 afterEach(() => {

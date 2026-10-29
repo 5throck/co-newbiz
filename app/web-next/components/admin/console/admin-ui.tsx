@@ -19,7 +19,7 @@ export function adrStatusCode(status: string | null | undefined): string {
 }
 
 export type AdminLabelGroup =
-  | "role" | "userStatus" | "adrStatus" | "govLayer" | "govEnforce" | "govOwner" | "glossaryCategory"
+  | "role" | "userStatus" | "adrStatus" | "govLayer" | "govEnforce" | "govOwner" | "govMissing" | "glossaryCategory"
   | "source" | "jobStatus" | "severity" | "channel" | "action" | "kpiKey";
 
 /** Resolves `admin.labels.<group>.<code>`; falls back to the raw code when unmapped. */
