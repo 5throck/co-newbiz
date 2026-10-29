@@ -469,7 +469,7 @@ describe("admin console", () => {
     const res = await req("/api/admin/retention", {
       method: "POST",
       headers: { cookie: rootCookie },
-      body: JSON.stringify({ table_key: "simulation_draw", basis: "G5 capacity", retention_months: 6, action: "archive" }),
+      body: JSON.stringify({ table_key: "notification", basis: "sent_at", retention_months: 6, action: "archive" }),
     });
     expect(res.status).toBe(201);
   });

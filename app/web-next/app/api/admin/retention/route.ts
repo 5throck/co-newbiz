@@ -2,6 +2,7 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin } from "../../../../lib/auth.ts";
+import { validateRetentionPolicy } from "../../../../../../db/lib/retention-registry.ts";
 import { badRequest, ok } from "../../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
   if (body.action !== "archive" && body.action !== "delete") {
     return badRequest("invalid_request", "action must be archive|delete.");
   }
+  const v = validateRetentionPolicy(body.table_key.trim(), body.basis.trim(), body.action);
+  if (!v.ok) return badRequest(v.code, v.message);
   const db = getDb();
   const now = new Date().toISOString();
   db.run(

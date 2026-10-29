@@ -2411,7 +2411,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       operationId: upsertRetentionPolicy
-      summary: Upsert one policy row. Admin role; audited.
+      summary: Upsert one policy row. 400 table_not_eligible / column_not_eligible / action_not_allowed unless table, date column (basis) and action are on the server-side retention allowlist (db/lib/retention-registry.ts). Admin role; audited.
       tags:
         - Admin
       requestBody:
@@ -2443,6 +2443,72 @@ paths:
           $ref: '#/components/responses/Created'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/retention/{tableKey}:
+    delete:
+      operationId: deleteRetentionPolicy
+      summary: Remove one retention policy row (the policy only, never data). Admin role; audited (retention_policy_delete).
+      tags:
+        - Admin
+      parameters:
+        - name: tableKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/retention/preview:
+    get:
+      operationId: previewRetentionImpact
+      summary: Impact preview for a proposed retention policy - the count of rows older than N months (count only, never row data). 400 table_not_eligible/column_not_eligible when the table or date column is not on the retention allowlist. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: table
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: column
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: months
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/database/overview:
+    get:
+      operationId: getDatabaseOverview
+      summary: Retention-eligible tables (label, description, row count, oldest/newest per eligible date column, policy presence) plus applied migration count and latest migration. Aggregates only, no row data. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "../../../lib/auth-client.tsx";
 import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import { useState, type FormEvent, useEffect } from "react";
-import { type AdminUser, type DataSourceRow, type ScheduleJobRow, type RetentionPolicyRow, api, type AuditLogRow } from "../../../lib/api.ts";
+import { type AdminUser, type DataSourceRow, type ScheduleJobRow, type RetentionPolicyRow, type DatabaseOverview, type RetentionPreview, api, type AuditLogRow } from "../../../lib/api.ts";
 import { useConfirm } from "../../crud.tsx";
 import type { AuditStats, AdminNotificationRow, GlossaryTermRow, GlossaryLintQueue, AdrRow, GovernanceDocRow, ReviewAuditSummary, Section } from "./types.ts";
 
@@ -28,6 +28,8 @@ export function useAdminData({ section }: { section: Section }) {
   const [sources, setSources] = useState<DataSourceRow[] | null>(null);
   const [jobs, setJobs] = useState<ScheduleJobRow[] | null>(null);
   const [retention, setRetention] = useState<RetentionPolicyRow[] | null>(null);
+  const [dbOverview, setDbOverview] = useState<DatabaseOverview | null>(null);
+  const [preview, setPreview] = useState<{ state: "idle" | "loading" | "ready" | "error"; count: number | null }>({ state: "idle", count: null });
   const [notifications, setNotifications] = useState<AdminNotificationRow[] | null>(null);
   const [glossary, setGlossary] = useState<GlossaryTermRow[] | null>(null);
   const [lintQueue, setLintQueue] = useState<GlossaryLintQueue | null>(null);
@@ -124,6 +126,12 @@ export function useAdminData({ section }: { section: Section }) {
         .then((res) => setRetention(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
+    if (section === "database" && dbOverview === null) {
+      api
+        .get<DatabaseOverview>("/api/admin/database/overview")
+        .then((res) => setDbOverview(res.data))
+        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
+    }
     if (section === "notifications" && notifications === null) {
       api
         .get<AdminNotificationRow[]>("/api/admin/notifications")
@@ -160,7 +168,25 @@ export function useAdminData({ section }: { section: Section }) {
         .then((res) => setGovernance(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
-  }, [section, users, auditLog, sources, jobs, retention, notifications, glossary, lintQueue, adrs, governance]);
+  }, [section, users, auditLog, sources, jobs, retention, dbOverview, notifications, glossary, lintQueue, adrs, governance]);
+
+  // Impact preview — refreshed as table / date column / months change (count only).
+  useEffect(() => {
+    const monthsValue = Number(months);
+    if (section !== "database" || !tableKey || !basis || months.trim() === "" || !Number.isInteger(monthsValue) || monthsValue < 0) {
+      setPreview({ state: "idle", count: null });
+      return;
+    }
+    let cancelled = false;
+    setPreview({ state: "loading", count: null });
+    const timer = setTimeout(() => {
+      api
+        .get<RetentionPreview>(`/api/admin/retention/preview?table=${encodeURIComponent(tableKey)}&column=${encodeURIComponent(basis)}&months=${monthsValue}`)
+        .then((res) => { if (!cancelled) setPreview({ state: "ready", count: res.data.affected_count }); })
+        .catch(() => { if (!cancelled) setPreview({ state: "error", count: null }); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [section, tableKey, basis, months]);
 
   async function approve(userId: string) {
     await api.put(`/api/admin/users/${userId}`, { action: "approve" });
@@ -184,5 +210,5 @@ export function useAdminData({ section }: { section: Section }) {
       setNotice(err instanceof Error ? err.message : t("createFailed"));
     }
   }
-  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, action, setTableKey, setBasis, setMonths, setRetention, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, setAction, retentionFormError, retentionNotice, notifications, glossary, lintQueue, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy, reviewAudit, governance, adrs };
+  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, action, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, setAction, retentionFormError, retentionNotice, notifications, glossary, lintQueue, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy, reviewAudit, governance, adrs };
 }

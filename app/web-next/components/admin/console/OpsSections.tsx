@@ -123,15 +123,74 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.ops");
   const tc = useTranslations("common");
   const locale = useLocale();
-  const { section, retention, tableKey, setTableKey, basis, setBasis, months, setMonths, action, setAction, retentionFormError, retentionNotice, saveRetention } = ctx;
-  const editingKey = retention?.some((r) => r.table_key === tableKey.trim()) ? tableKey.trim() : null;
+  const lang: "ko" | "en" = locale === "en" ? "en" : "ko";
+  const { section, retention, dbOverview, preview, tableKey, setTableKey, basis, setBasis, months, setMonths, action, setAction, retentionFormError, retentionNotice, saveRetention, removeRetentionPolicy } = ctx;
+  const eligible = dbOverview?.tables ?? [];
+  const selected = eligible.find((e) => e.table === tableKey) ?? null;
+  const eligibleByKey = new Map(eligible.map((e) => [e.table, e]));
+  const editingKey = retention?.some((r) => r.table_key === tableKey) ? tableKey : null;
+  const columnLabel = (table: string, column: string) =>
+    eligibleByKey.get(table)?.date_columns.find((c) => c.column === column)?.label[lang] ?? column;
+
+  function pickTable(key: string) {
+    setTableKey(key);
+    const entry = eligibleByKey.get(key);
+    setBasis(entry?.date_columns[0]?.column ?? "");
+    setAction(entry?.actions.includes("archive") ? "archive" : "delete");
+  }
+
   return (
     <>{section === "database" && (
         <div>
-          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-            {t("migrationNote")}
-          </p>
-          <h2 className="mt-4 mb-2">{t("retentionHeading")}</h2>
+          <h2 className="mt-2 mb-2">{t("migrationHeading")}</h2>
+          {dbOverview === null ? (
+            <p>{tc("loading")}</p>
+          ) : (
+            <p className="mb-1 text-[length:var(--fs-body)]">
+              {t("migrationSummary", { p1: dbOverview.migrations.applied_count })}
+              {dbOverview.migrations.latest && ` · ${t("migrationLatest", { p1: dbOverview.migrations.latest.filename, p2: formatDateTime(dbOverview.migrations.latest.applied_at, locale) })}`}
+            </p>
+          )}
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{t("backupNote")}</p>
+
+          <h2 className="mt-6 mb-2">{t("overviewHeading")}</h2>
+          <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{t("overviewNote")}</p>
+          {dbOverview === null ? (
+            <p>{tc("loading")}</p>
+          ) : (
+            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table list-table">
+              <caption className="sr-only">{t("overviewCaption")}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t("colDataTable")}</th>
+                  <th scope="col">{t("colDescription")}</th>
+                  <th scope="col">{t("colRows")}</th>
+                  <th scope="col">{t("colOldest")}</th>
+                  <th scope="col">{t("colCurrentPolicy")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eligible.map((e) => {
+                  const oldest = e.date_columns.map((c) => c.oldest).filter((d): d is string => !!d).sort()[0] ?? null;
+                  return (
+                    <tr key={e.table}>
+                      <td>{e.label[lang]}<br /><span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{e.table}</span></td>
+                      <td>{e.description[lang]}</td>
+                      <td>{e.row_count.toLocaleString(locale)}</td>
+                      <td>{oldest ? formatDateTime(oldest, locale) : "—"}</td>
+                      <td>
+                        {e.policy
+                          ? t("policySummary", { p1: columnLabel(e.table, e.policy.basis), p2: e.policy.retention_months, p3: e.policy.action === "delete" ? tc("delete") : t("actionArchive") })
+                          : t("noPolicy")}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table></div>
+          )}
+
+          <h2 className="mt-6 mb-2">{t("retentionHeading")}</h2>
           {retention === null ? (
             <p>{tc("loading")}</p>
           ) : retention.length === 0 ? (
@@ -150,25 +209,39 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
                 </tr>
               </thead>
               <tbody>
-                {retention.map((r) => (
-                  <tr key={r.table_key}>
-                    <td>{r.table_key}</td>
-                    <td>{r.basis}</td>
-                    <td>{r.retention_months}</td>
-                    <td>{r.action === "archive" ? t("actionArchive") : tc("delete")}</td>
-                    <td>{r.last_run_at ? formatDateTime(r.last_run_at, locale) : t("neverRun")}</td>
-                    <td className="sizing-actions-cell"><span className="actions-row">
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        aria-label={t("editRowAria", { p1: r.table_key })}
-                        onClick={() => { setTableKey(r.table_key); setBasis(r.basis); setMonths(String(r.retention_months)); setAction(r.action === "delete" ? "delete" : "archive"); }}
-                      >
-                        {t("editRow")}
-                      </button>
-                    </span></td>
-                  </tr>
-                ))}
+                {retention.map((r) => {
+                  const entry = eligibleByKey.get(r.table_key);
+                  const name = entry ? entry.label[lang] : r.table_key;
+                  return (
+                    <tr key={r.table_key}>
+                      <td>{name}{!entry && dbOverview && <><br /><span className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)]">{t("notEligibleBadge")}</span></>}</td>
+                      <td>{entry ? columnLabel(r.table_key, r.basis) : r.basis}</td>
+                      <td>{r.retention_months}</td>
+                      <td>{r.action === "archive" ? t("actionArchive") : tc("delete")}</td>
+                      <td>{r.last_run_at ? formatDateTime(r.last_run_at, locale) : t("neverRun")}</td>
+                      <td className="sizing-actions-cell"><span className="actions-row">
+                        {entry && (
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            aria-label={t("editRowAria", { p1: name })}
+                            onClick={() => { setTableKey(r.table_key); setBasis(r.basis); setMonths(String(r.retention_months)); setAction(r.action === "delete" ? "delete" : "archive"); }}
+                          >
+                            {t("editRow")}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-danger btn-sm"
+                          aria-label={t("removeRowAria", { p1: name })}
+                          onClick={() => removeRetentionPolicy(r.table_key)}
+                        >
+                          {tc("delete")}
+                        </button>
+                      </span></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table></div>
           )}
@@ -177,18 +250,24 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
           <p className="mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
             {t("upsertNote")}
           </p>
-          <form onSubmit={saveRetention} className="run-form" aria-label={t("formHeading")}>
-            <div className="run-form-row">
+          <form onSubmit={saveRetention} className="run-form stack-form" aria-label={t("formHeading")}>
+            <div className="stack-form-row">
               <label htmlFor="retTableKey">{t("colTableKey")}</label>
-              <input id="retTableKey" value={tableKey} onChange={(e) => setTableKey(e.target.value)} aria-describedby="retTableKeyHint" required />
-              <p id="retTableKeyHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hintTableKey")}</p>
+              <select id="retTableKey" value={tableKey} onChange={(e) => pickTable(e.target.value)} aria-describedby="retTableKeyHint" required>
+                <option value="" disabled>{t("selectTablePlaceholder")}</option>
+                {eligible.map((e) => <option key={e.table} value={e.table}>{e.label[lang]}</option>)}
+              </select>
+              <p id="retTableKeyHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{selected ? selected.description[lang] : t("hintTableKey")}</p>
             </div>
-            <div className="run-form-row">
+            <div className="stack-form-row">
               <label htmlFor="retBasis">{t("colBasis")}</label>
-              <input id="retBasis" value={basis} onChange={(e) => setBasis(e.target.value)} aria-describedby="retBasisHint" required />
+              <select id="retBasis" value={basis} onChange={(e) => setBasis(e.target.value)} aria-describedby="retBasisHint" disabled={!selected} required>
+                {!selected && <option value="">{t("selectTableFirst")}</option>}
+                {selected?.date_columns.map((c) => <option key={c.column} value={c.column}>{c.label[lang]}</option>)}
+              </select>
               <p id="retBasisHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hintBasis")}</p>
             </div>
-            <div className="run-form-row">
+            <div className="stack-form-row">
               <label htmlFor="retMonths">{t("colRetentionMonths")}</label>
               <input
                 id="retMonths"
@@ -200,15 +279,23 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
               />
               <p id="retMonthsHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hintMonths")}</p>
             </div>
-            <div className="run-form-row">
+            <div className="stack-form-row">
               <label htmlFor="retAction">{t("colAction")}</label>
-              <select id="retAction" value={action} onChange={(e) => setAction(e.target.value === "delete" ? "delete" : "archive")} aria-describedby="retActionHint">
-                <option value="archive">{t("optionArchive")}</option>
-                <option value="delete">{t("optionDelete")}</option>
+              <select id="retAction" value={action} onChange={(e) => setAction(e.target.value === "delete" ? "delete" : "archive")} aria-describedby="retActionHint" disabled={!selected}>
+                {(selected?.actions ?? ["archive", "delete"]).map((a) => (
+                  <option key={a} value={a}>{a === "delete" ? t("optionDelete") : t("optionArchive")}</option>
+                ))}
               </select>
               <p id="retActionHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hintAction")}</p>
             </div>
-            {editingKey && <p role="status" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("editingNotice", { p1: editingKey })}</p>}
+            <p role="status" aria-live="polite" className="m-0 text-[length:var(--fs-body)]">
+              {preview.state === "ready" && preview.count !== null && t("impactPreview", { p1: preview.count.toLocaleString(locale) })}
+              {preview.state === "loading" && t("impactLoading")}
+              {preview.state === "error" && t("impactError")}
+              {preview.state === "idle" && <span className="text-[color:var(--muted-fg)]">{t("impactIdle")}</span>}
+            </p>
+            {editingKey && <p role="status" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("editingNotice", { p1: eligibleByKey.get(editingKey)?.label[lang] ?? editingKey })}</p>}
+            <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("executionNote")}</p>
             <button type="submit" className="btn-primary">{t("saveButton")}</button>
           </form>
           {retentionFormError && (
