@@ -1,6 +1,6 @@
 # ADR-0190: Notification delivery — email and webhook transport, delivery ledger, recipient policy
 
-**Status**: Proposed
+**Status**: Accepted (owner merge of #773, 2026-10-29)
 **Date**: 2026-10-29
 **Deciders**: PM (approval); proposed by platform-lead; reviewers security-engineer, data-architect, sre, backend-engineer
 **Related**: ADR-0017 (bidirectional notifications), ADR-0189 (scheduler model, sibling), ADR-0012 (append-only audit), ADR-0014 (reversible migrations)

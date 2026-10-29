@@ -124,3 +124,6 @@ db/dev.db-wal
 # ephemeral run artifacts; only the opt-in __screenshots__/ aHash baselines are
 # meant to be committed.
 tests/e2e-visual/screenshots/
+
+# Scheduler-generated reports (gate-integrity weekly shadow report, ...)
+db/data/reports/

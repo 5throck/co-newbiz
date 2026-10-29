@@ -1,9 +1,9 @@
 # Scheduled Jobs — OS Registration, Runner, and Admin CRUD (Proposed)
 
 - **Date**: 2026-10-29
-- **Status**: Proposed (Row 0 — design only, no code; D1–D8 decided by owner 2026-10-29)
+- **Status**: Accepted (owner merge of #773, 2026-10-29; D1–D8 decided by owner 2026-10-29; phase order revised 2026-10-29)
 - **Author**: platform-lead (technical domain lead), under PM dispatch
-- **Related**: ADR-0019 (OS-level scheduler), ADR-0189 draft (amendment: launchd + Docker production model), ADR-0190 draft (notification delivery), ADR-0011 (MCP never touches the DB), ADR-0012 (append-only audit), ADR-0017 (deterioration notifications), ADR-0186 (gate integrity), FR-MON-01, `docs/runbooks/deployment.md`
+- **Related**: ADR-0019 (OS-level scheduler), ADR-0189 (amendment: launchd + Docker production model), ADR-0190 (notification delivery), ADR-0011 (MCP never touches the DB), ADR-0012 (append-only audit), ADR-0017 (deterioration notifications), ADR-0186 (gate integrity), FR-MON-01, `docs/runbooks/deployment.md`
 - **Owner selection (2026-10-29)**: watch-rule evaluation; external data collection (DART, ECOS, KRX, KOSIS, law); retention cleanup; gate-integrity weekly shadow report
 
 ## 1. Problem
@@ -84,12 +84,13 @@ Running inside the container via `docker exec` keeps one DB writer topology (the
 | `collect.law` | fetch `law` + `md:sync law` | `0 6 * * *` | 30 min | same | same | Upsert by statute id + promulgation date |
 | `retention.cleanup` | new `retention` handler reading `retention_policy` | `0 3 * * *` | 30 min | none | run once if missed | Deterministic cutoff `now - retention_months`; batch deletes/archives of 1,000 rows; rerun is a no-op; updates `retention_policy.last_run_at` |
 | `gate_integrity.shadow_report` | `gate-integrity-shadow-report.ts` main | `0 8 * * 1` (Mon) | 15 min | 1 retry | run once if missed within 7 d | Report keyed by ISO week; rerun overwrites the same week |
+| `governance.sync` (TODO, register after P1 lands) | `applyGovernanceManifest` from `db/lib/governance-registry.ts` over `docs/governance/governance-registry.generated.json` (same code as `newbiz.ts governance:sync` and the admin sync button; writes one `governance_sync` audit row per run) | `0 6 * * *` | 2 min | none | run once if missed | Upsert by (layer, key); a version change inserts a new row and supersedes the old one; rows are never deleted |
 
 All collect jobs run only if the adapter's `credentialEnv` is present; a missing key ends the run `skipped` with reason `credential_missing`, not `failed` (avoids nightly false alarms for intentionally disabled sources).
 
 ### 3.2 Collection: closing the "later wave" fetch stage
 
-As far as the code allows today: the adapters and `fetch` command exist (`newbiz.ts:603`); what is missing is (a) a library-level entry point that returns counts instead of printing, and (b) writing `data_change_log` on value changes so `watch.evaluate` has input. Phase P3 extracts `fetchSource(db, source, opts) → {series, rows_upserted, rows_changed, failures}` from the CLI case, has both the CLI and the handler call it, and inserts a `data_change_log` row per changed observation inside the same transaction as the upsert. `watch.evaluate` then consumes those rows as it already does. Ordering: collect jobs are scheduled before the next `watch.evaluate` slot; no explicit dependency engine is introduced.
+As far as the code allows today: the adapters and `fetch` command exist (`newbiz.ts:603`); what is missing is (a) a library-level entry point that returns counts instead of printing, and (b) writing `data_change_log` on value changes so `watch.evaluate` has input. Phase P5 extracts `fetchSource(db, source, opts) → {series, rows_upserted, rows_changed, failures}` from the CLI case, has both the CLI and the handler call it, and inserts a `data_change_log` row per changed observation inside the same transaction as the upsert. `watch.evaluate` then consumes those rows as it already does. Ordering: collect jobs are scheduled before the next `watch.evaluate` slot; no explicit dependency engine is introduced.
 
 ### 3.3 Retention executor guardrails
 
@@ -135,6 +136,7 @@ Every mutating call is admin-only (existing admin guard) and calls `appendAudit`
 - Admin-only API and page; agents inherit user permissions (no service account). The OS-launched runner is not a user: `job_run.actor` is `NULL` for schedule triggers and the requesting user id for manual triggers; audit entries are written for every admin change and every manual request (ADR-0012, append-only).
 - MCP gets no scheduler tool in this round; if added later it goes through the REST API (ADR-0011).
 - Secrets: handlers read keys through the existing env/root-env loader (`app/web-next/lib/root-env.ts` semantics; scripts use the same resolution). Plists contain **no secrets** — only the label, program arguments, `CO_NEWBIZ_SCHEDULER_ENV`, and log paths. In prod, secrets come from the container env.
+- Layering: the scheduler core and handlers live in `scripts/co-newbiz/` and import downward (`db/lib/secret-scrubber.ts`, `app/web-next/lib/schedule/cron.ts`); `db/lib` never imports `scripts/` or `app/web-next/lib` (s10-checks). The adapter credential env names are injected into the scrubber by the scripts layer. run-job's stdout/stderr pass through the scrubber.
 - Never log secrets: `run-job.ts` wraps handler errors with a scrubber that redacts values of every known `credentialEnv` and URL query params named `key|crtfc_key|serviceKey|OC|apiKey` before writing `job_run.error` or stdout. Unit-tested.
 - launchd logs go to `~/Library/Logs/co-newbiz/<env>-tick.{out,err}.log`, mode 0600, rotated by the retention job.
 - "Create" accepts only registered handler keys — no free-text command field, which would be remote code execution from the admin console.
@@ -153,7 +155,7 @@ New `scripts/co-newbiz/scheduler-install.ts` (infra-automation-engineer):
 bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|systemd|schtasks] [--uninstall] [--dry-run] [--print]
 ```
 
-- **launchd (macOS, implemented)**: renders `ops/scheduler/launchd/co-newbiz-tick.plist.tmpl` to `~/Library/LaunchAgents/org.bizknights.co-newbiz.<env>.tick.plist` with `StartInterval 60`, `RunAtLoad false`, `ProcessType Background`, explicit `PATH` including bun and docker, log paths; then `launchctl bootstrap gui/$UID` (uninstall: `bootout`). `--print` emits the plist only. LaunchAgent (user session) rather than LaunchDaemon, because Docker Desktop runs in the user session — documented trade-off: no runs while logged out (owner decision D5).
+- **launchd (macOS, implemented)**: renders `ops/scheduler/launchd/co-newbiz-tick.plist.tmpl` to `~/Library/LaunchAgents/org.bizknights.co-newbiz.<env>.tick.plist` with `StartInterval 60`, `RunAtLoad false`, `ProcessType Background`, **`AbandonProcessGroup = true`** (mandatory: the tick spawns detached run-job children and exits; without it launchd kills the tick's process group, children included), explicit `PATH` including bun and docker, log paths; then `launchctl bootstrap gui/$UID` (uninstall: `bootout`). `--print` emits the plist only. LaunchAgent (user session) rather than LaunchDaemon, because Docker Desktop runs in the user session — documented trade-off: no runs while logged out (owner decision D5).
 - **systemd (documented + template)**: `ops/scheduler/systemd/co-newbiz-tick@.service` + `.timer` with `OnCalendar=*-*-* *:*:00`, `Persistent=false`; installer prints commands, `--platform systemd` writes units under `~/.config/systemd/user/`.
 - **Task Scheduler (documented + template)**: `ops/scheduler/schtasks/co-newbiz-tick.xml` with a 1-minute repetition trigger; installer prints the `schtasks /Create /XML` command.
 - Enable/disable sync needs **no** re-registration: the OS entry is static; `schedule_job.enabled` and `cron_expr` are read at every tick. Uninstalling the OS entry is the global kill switch.
@@ -163,17 +165,18 @@ bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|sy
 
 | Phase | Scope | Owner agents | Gate to next |
 |---|---|---|---|
-| P0 | This design + ADR-0189 (which also governs the scheduler schema change, owner decision 2026-10-29) and ADR-0190 (notification delivery schema) accepted | platform-lead, PM | ADR accepted |
-| P1 | Migration (job_run columns, schedule_job columns, lock, request, heartbeat tables); shared cron module; `run-job.ts`, `schedule-tick.ts`, scrubber; handlers for `watch.evaluate` and `gate_integrity.shadow_report` (code already exists) | data-architect (design) → dba (execute), backend-engineer | Unit tests green; manual `run-job.ts` writes complete `job_run` rows on dev |
-| P2 | `scheduler-install.ts` + templates + runbook; register **dev** tick; seed endpoint | infra-automation-engineer, release-engineer | 48 h dev soak, heartbeat continuous |
-| P3 | `fetchSource` extraction, `data_change_log` writes, five `collect.*` handlers | backend-engineer, data-architect review | Each source run once manually with real keys; counts correct; no secrets in logs |
-| P4 | Retention executor (allow-list, dry-run, archive) | backend-engineer, dba | Dry-run report reviewed by owner before first destructive prod run |
-| P5 | Admin API CRUD + UI (list, drawer, history, run now, health banner) | backend-engineer, ux-designer-agent → frontend-engineer, design-system-agent | design:lint clean; security-engineer review |
-| P5a | Notification delivery: `notification_delivery`/recipient-policy migration, email + webhook senders, `notify.deliver` and `notify.digest` handlers, scrubber/URL masking (§13.1-13.4) | data-architect → dba, backend-engineer, security-engineer review | Test send succeeds on both channels on dev; retries and dedupe proven by integration tests |
-| P5b | Admin notification history UI + test send; watch / watch_rule CRUD with fire preview (§13.5-13.7) | backend-engineer, ux-designer-agent → frontend-engineer, design-system-agent | design:lint clean; a seeded watch rule produces a previewed and then a delivered notification end-to-end |
-| P6 | Prod: register prod tick, seed, enable jobs one by one; SRE watch rules | release-engineer, sre | 1 week prod with no missed heartbeat |
+| P0 | This design + ADR-0189 (which also governs the scheduler schema change, owner decision 2026-10-29) and ADR-0190 (notification delivery schema) accepted | platform-lead, PM | ADR accepted (done: owner merge of #773, 2026-10-29) |
+| P1 | Runner: migration (job_run columns, schedule_job columns, lock, request, heartbeat tables); shared cron module; `run-job.ts`, `schedule-tick.ts`, scrubber; handlers for `watch.evaluate` and `gate_integrity.shadow_report` (code already exists). Failures are recorded in `job_run` only; the `notification` insert for `batch_failure` (needs the nullable `project_id` of ADR-0190) lands in P3 behind a TODO hook | data-architect (design) -> dba (execute), backend-engineer | Unit tests green; manual `run-job.ts` writes complete `job_run` rows on dev |
+| P2 | OS registration and dev soak: `scheduler-install.ts` + templates + runbook; register **dev** tick; seed endpoint | infra-automation-engineer, release-engineer | 48 h dev soak, heartbeat continuous |
+| P3 | Notification delivery (former P5a): `notification_delivery`/recipient-policy migration, nullable `notification.project_id`, email + webhook senders, `notify.deliver` and `notify.digest` handlers, scrubber/URL masking, and the `batch_failure` notification hook from P1 (13.1-13.4) | data-architect -> dba, backend-engineer, security-engineer review | Test send succeeds on both channels on dev; retries and dedupe proven by integration tests |
+| P4 | Notification history, watch management and test send (former P5b): admin notification history UI + test send; watch / watch_rule CRUD with fire preview (13.5-13.7) | backend-engineer, ux-designer-agent -> frontend-engineer, design-system-agent | design:lint clean; a seeded watch rule produces a previewed and then a delivered notification end-to-end |
+| P5 | Collection (former P3): `fetchSource` extraction, `data_change_log` writes, five `collect.*` handlers | backend-engineer, data-architect review | Each source run once manually with real keys; counts correct; no secrets in logs |
+| P6 | Retention (former P4): executor (allow-list, dry-run, archive) | backend-engineer, dba | Dry-run report reviewed by owner before first destructive prod run |
+| P7 | Admin job CRUD UI and prod rollout (former P5 jobs UI and P6): admin API CRUD + UI (list, drawer, history, run now, health banner); then register prod tick, seed, enable jobs one by one; SRE watch rules | backend-engineer, ux-designer-agent -> frontend-engineer, design-system-agent, security-engineer review; release-engineer, sre | design:lint clean; 1 week prod with no missed heartbeat |
 
-Landing order respects schema → API → UI → deploy. P3 and P4 are independent of P5 and may run in parallel branches only if the sequential-branch rule is explicitly waived by PM.
+Phase order changed by the owner on 2026-10-29: notifications (P3, P4) come right after the runner and its OS registration, so failures raised by later jobs are deliverable from the start.
+
+Landing order respects schema -> API -> UI -> deploy. P5 and P6 are independent of P7 and may run in parallel branches only if the sequential-branch rule is explicitly waived by PM.
 
 ## 9. Test plan
 
@@ -184,7 +187,7 @@ Landing order respects schema → API → UI → deploy. P3 and P4 are independe
 - **API**: admin-only (403 for analyst/viewer), audit row per mutation, create rejects unknown handler keys, run-now never executes in-process (assert no handler import in route module).
 - **UI**: design:lint, keyboard/a11y on drawer, ko/en strings.
 - **Notifications (§13)**: SMTP sender against a local capture server (e.g. smtp4dev/MailHog container) in tests, never a real relay; webhook sender against a local HTTP stub asserting the Slack and Teams payload shapes; retry/backoff schedule and terminal `failed` after max attempts; 4xx (non-429) is not retried; dedupe — the same `dedupe_key` within the window yields one delivery per channel; rate limit holds excess rows as `deferred`, not dropped; digest groups one user's daily rows into one message and marks every row; opt-out suppresses email/webhook but never in-app or `urgent` kill-criteria; recipient policy resolution per role; URL masking in API responses (no full webhook URL ever leaves the server); scrubber removes SMTP password and webhook tokens from `last_error`; test send writes an audit row and a delivery tagged `is_test`; watch_rule validation (threshold required for `threshold_breach`, forbidden where meaningless) and preview returns would-fire results without writing `notification` rows.
-- **Manual (P2/P6)**: `launchctl print gui/$UID/org.bizknights.co-newbiz.dev.tick`; sleep/wake catch-up; `docker stop` → heartbeat alert fires.
+- **Manual (P2/P7)**: `launchctl print gui/$UID/org.bizknights.co-newbiz.dev.tick`; sleep/wake catch-up; `docker stop` → heartbeat alert fires.
 
 ## 10. Owner decisions
 
@@ -269,7 +272,7 @@ Producer writes one `notification` per addressed user (existing behaviour) or, f
 
 - API (admin, plus project members for their own watches if PM agrees — default admin-only in this round): `GET/POST /api/admin/watches`, `PATCH/DELETE /api/admin/watches/[id]` (soft delete = disable all rules), `GET/POST /api/admin/watches/[id]/rules`, `PATCH/DELETE /api/admin/watch-rules/[id]`. All audited.
 - Validation: `trigger_type` from the CHECK set; `threshold` required for `threshold_breach` (percentage points, > 0) and `staleness` (days), rejected for triggers without a threshold; `cooldown_hours` 1–720; `channel` limited to channels configured on the server; one watch per (project, user).
-- **Preview**: `POST /api/admin/watch-rules/preview` runs the watch-engine evaluation for the rule against current data in dry-run mode (no `notification` writes, no watermark advance) and returns would-fire items with reason, severity and resolved recipients/channels. Requires a dry-run flag on `runWatchCycle` / `watch-engine.ts` — backend-engineer change in P5b.
+- **Preview**: `POST /api/admin/watch-rules/preview` runs the watch-engine evaluation for the rule against current data in dry-run mode (no `notification` writes, no watermark advance) and returns would-fire items with reason, severity and resolved recipients/channels. Requires a dry-run flag on `runWatchCycle` / `watch-engine.ts` — backend-engineer change in P4.
 - `watch.evaluate` (§3.1) consumes enabled rules unchanged; a disabled rule or watch is skipped at evaluation time, so toggles need no scheduler action.
 
 ### 13.7 Test send
@@ -281,7 +284,7 @@ Producer writes one `notification` per addressed user (existing behaviour) or, f
 - SMTP password and webhook URLs are added to the central scrubber (§5); `last_error` and logs pass through it.
 - API responses mask webhook URLs and recipient addresses for everyone, admins included.
 - Outbound HTTPS only in prod; webhook hosts restricted to an allow-list (`hooks.slack.com`, `*.webhook.office.com`, plus owner-approved hosts) to prevent SSRF via admin config.
-- security-engineer reviews 13.1–13.7 before P5a merges (outbound transport is a new exfiltration path).
+- security-engineer reviews 13.1–13.7 before P3 merges (outbound transport is a new exfiltration path).
 
 ## 12. Review notes (Review Model)
 

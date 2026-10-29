@@ -1,6 +1,6 @@
 # ADR-0189: Amend ADR-0019 — macOS launchd, a single minute-tick dispatcher, and the Docker production model
 
-**Status**: Proposed
+**Status**: Accepted (owner merge of #773, 2026-10-29)
 **Date**: 2026-10-29
 **Deciders**: PM (approval); proposed by platform-lead; reviewers infra-automation-engineer, sre, security-engineer, data-architect
 **Amends**: ADR-0019 (OS-level scheduler for periodic collection)
@@ -44,3 +44,9 @@ All of the following are Decided (owner, 2026-10-29), approved as recommended. D
 - **Per-job launchd plists**: rejected — edits require `launchctl` re-registration from the admin path, and launchd calendar intervals cannot express common cron patterns without enumeration.
 - **In-container cron daemon**: rejected — dies with the container and duplicates the OS role ADR-0019 assigns to the host.
 - **Reuse `execution_job` / `job-worker.ts` as the scheduler queue**: deferred — that queue serves the simulation runtime with resource classes; its stale-reclaim pattern is reused instead.
+
+## Decision log
+
+- 2026-10-29: Accepted by the owner's merge of #773.
+- 2026-10-29: Owner reordered the rollout phases so notifications follow the runner immediately: P1 runner, P2 OS registration and dev soak, P3 notification delivery (ADR-0190), P4 notification history, watch management and test send, P5 collection, P6 retention, P7 admin job CRUD UI and prod rollout. See design section 8.
+- 2026-10-29: P1 records scheduler failures in `job_run` only; the `batch_failure` notification awaits the nullable `notification.project_id` (ADR-0190, P3).

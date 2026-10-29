@@ -599,6 +599,14 @@ model job_run {
   finished_at String?
   status      String
   error       String?
+  trigger      String?
+  actor        String?
+  env          String?
+  rows_read    Int?
+  rows_written Int?
+  rows_changed Int?
+  attempt      Int     @default(1)
+  detail_json  String?
 
   @@index([job_key, started_at(sort: Desc)], map: "idx_job_run_key")
 }
@@ -1260,6 +1268,36 @@ model schedule_job {
   cron_expr  String
   enabled    Int    @default(1)
   created_at String
+  display_name     String?
+  description      String?
+  timeout_sec      Int     @default(600)
+  max_retries      Int     @default(0)
+  updated_at       String?
+  updated_by       String?
+  last_fire_minute String?
+}
+
+model schedule_job_lock {
+  job_key     String @id
+  holder      String
+  acquired_at String
+  lease_until String
+}
+
+model schedule_job_request {
+  id           String  @id
+  job_key      String
+  requested_by String
+  requested_at String
+  status       String  @default("queued")
+  job_run_id   String?
+
+  @@index([status, requested_at], map: "idx_schedule_job_request_status")
+}
+
+model schedule_heartbeat {
+  env          String @id
+  last_tick_at String
 }
 
 model schema_migrations {
