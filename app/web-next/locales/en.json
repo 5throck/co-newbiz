@@ -413,7 +413,7 @@
         "G4": "Acknowledgements by kind",
         "G5": "Unassessed kill criteria at GO",
         "G6": "Would-block events (shadow)",
-        "G7": "Second-review wait and pending count",
+        "G7": "Second review wait and pending count",
         "G8": "Open conditions and their age",
         "G9": "Waivers: count and age",
         "G10": "na confirmation wait and backlog",
@@ -1926,7 +1926,7 @@
       "state": {
         "not_applicable": "No second review needed",
         "legacy": "Before second review",
-        "countersigned": "Countersigned",
+        "countersigned": "Second review done",
         "pending_countersign": "Waiting for a second reviewer",
         "countersign_rejected": "Second reviewer did not approve"
       },

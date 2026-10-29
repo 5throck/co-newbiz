@@ -1,5 +1,5 @@
-version: 1.0.2
-last_updated: 2026-08-19
+version: 1.1.0
+last_updated: 2026-10-29
 terms:
   Run:
     ko: 실행 (run)
@@ -59,7 +59,7 @@ terms:
     why_it_matters_ko: 가중평균이 아니라 규칙 기반이며, 데이터 신뢰도가 종합 등급의 상한을 캡한다 — 이게 이 체계에서 가장 중요한 규칙이다.
     category: technical
     aliases: [RAG, Red-Amber-Green, RAG 종합 등급, RAG 등급]
-    related: [Reliability Grade, Hysteresis]
+    related: [Reliability Grade, Data Confidence U Grade, Hysteresis]
     used_in: [rag-scoring-framework]
     owner: process-governance-manager
 
@@ -74,8 +74,9 @@ terms:
     owner: quant-methodologist
 
   Hysteresis:
-    ko: 히스테리시스
+    ko: 등급 완충 규칙(히스테리시스)
     en: Hysteresis
+    aliases: [히스테리시스, 승격·강등 임계 분리]
     definition_ko: 등급 승격과 강등의 임계값을 다르게 설정해(승격이 더 엄격) 경계에서 등급이 매일 바뀌는 것을 막는 규칙.
     why_it_matters_ko: 경계에서 등급이 자주 바뀌면 아무도 신호를 신뢰하지 않는다. 최소 유지 기간과 함께 적용된다.
     category: technical
@@ -94,8 +95,9 @@ terms:
     owner: process-governance-manager
 
   References Override:
-    ko: 참조·오버라이드 모델
+    ko: 참조·덮어쓰기 방식
     en: References + Override Model
+    aliases: [참조·오버라이드 모델, 참조 오버라이드]
     definition_ko: 공통 절차를 복사하지 않고 참조(references) + 차분(overrides)만 선언하는 절차 관리 방식. safety_os의 워크플로우 참조 스펙에서 차용.
     why_it_matters_ko: 그룹 규정이 바뀌면 모든 각사·지역 절차가 자동으로 따라간다 — 복사본이 생기면 이 성질이 깨지므로 감사가 복사본을 차단한다.
     category: technical
@@ -114,11 +116,36 @@ terms:
     owner: risk-officer
 
   Staleness Gate:
-    ko: 신선도 게이트
+    ko: 데이터 기한 점검
     en: Staleness Gate
+    aliases: [신선도 게이트, 기한 점검]
     definition_ko: as_of + ttl_days를 초과한 live 데이터가 하나라도 있으면 보고서 최종화를 차단하는 규칙.
     why_it_matters_ko: “데이터가 바뀌면 보고서가 다시 쓰여야 한다”는 문제의 실제 해결 장치다.
     category: technical
     related: [Run]
     used_in: [data-freshness-and-revision-control]
     owner: data-architect
+
+  Data Confidence U Grade:
+    ko: 데이터 신뢰도 U 등급(미확인)
+    en: Data Confidence U Grade
+    aliases: [U 등급, 신뢰도 U, 데이터 신뢰도 U, 미확인 등급, grade U, unknown grade]
+    definition_ko: 시장 규모 산정에서 그 산업에 기록된 프록시 체인이 없고 출처도 직접 데이터(frozen-research)가 아닐 때 붙는 '알 수 없음(unknown)' 등급. A·B·C처럼 측정한 약한 근거가 아니라 근거를 아직 모른다는 뜻이다.
+    why_it_matters_ko: 예전에는 이런 경우 기본값 B가 붙어 근거 없는 숫자가 중간 등급으로 보였다. 이제 U는 종합 등급(RAG)을 최대 Amber로 묶고 Green이 될 수 없게 한다(경계 #4). 이미 저장된 등급은 다시 계산하지 않고 다음 시장 규모 산정부터 적용되며, 기본값 B였던 기존 행은 'legacy_default' 표시가 붙는다.
+    category: technical
+    source: ADR-0187 D1; db/migrations/0180_data_confidence_unknown_grade.sql
+    related: [Reliability Grade, Proxy Chain, RAG Dimension, Overall Grade]
+    used_in: [rag-scoring-framework, proxy-industry-chain]
+    owner: process-governance-manager
+
+  Cross-Validation Matrix:
+    ko: 교차 검토 배정표(교차검증 매트릭스)
+    en: Cross-Validation Matrix
+    aliases: [교차검증 매트릭스, 교차 검토 매트릭스, 리뷰 매트릭스, review matrix]
+    definition_ko: 산출물 종류와 작성 영역(기능·기술·산업·지역)마다 AI 2차 검토를 누가 맡는지 정해 둔 표. 작성자와 다른 영역의 검토자만 2차 검토로 인정한다. 같은 영역이거나 표에 없으면 기본 검토자로 넘기고 '대체 검토자 사용(fallback_used)'으로 표시한다.
+    why_it_matters_ko: AI가 AI 결과를 검토하면 같은 맹점을 공유해 오류가 함께 통과한다. 검토자 선정을 코드가 아닌 한 파일(process/cross-validation-matrix.yaml)에 두어 누락과 어긋남을 검사로 잡는다. 이 표는 검토 담당만 정하며, 사람 검토 화면(확인함·확인 못 함·판단 필요)과 게이트 승인은 그대로다. 브라운필드 필수 교차검증 6종이나 기업 공시 교차검증과는 다른 개념이다.
+    category: technical
+    source: process/cross-validation-matrix.yaml v1.1.0; ADR-0187 D3, D3'
+    related: [Stage Gate, Entity IC]
+    used_in: [stage-gate-governance]
+    owner: process-governance-manager

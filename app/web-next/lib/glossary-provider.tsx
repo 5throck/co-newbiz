@@ -10,10 +10,10 @@ import { GlossaryTerm } from "../components/GlossaryTerm.tsx";
 // GlossaryTerm tooltip (dashed underline + popover) automatically.
 //
 // Matching contract (deliberate, documented):
-//   - The lookup map is built from the fields GET /api/glossary actually
-//     returns: key / en / ko. Aliases exist only on the per-term detail
-//     endpoint — alias auto-detection stays gated until the list endpoint
-//     carries them (no N+1 fetching to work around it).
+//   - The lookup map is built from key / en / ko and the term's aliases (the
+//     list endpoint carries them). Primary forms are indexed first, so an alias
+//     never shadows another term's key/en/ko; aliases shorter than
+//     MIN_ALIAS_LENGTH are skipped (false-positive guard, e.g. "GF", "BF").
 //   - Latin forms (anything containing [A-Za-z0-9]) match case-insensitively
 //     with word boundaries, so "CGT" does not fire inside a longer token.
 //   - Korean forms match the exact term string — Hangul is not a \w class in
@@ -59,19 +59,25 @@ function escapeRegExp(s: string): string {
 
 const HAS_LATIN = /[A-Za-z0-9]/;
 
-function buildIndex(terms: GlossaryTermSummary[] | null): GlossaryIndex {
+const MIN_ALIAS_LENGTH = 3;
+
+export function buildIndex(terms: GlossaryTermSummary[] | null): GlossaryIndex {
   if (!terms || terms.length === 0) return { ready: terms !== null, matcher: null, lookup: new Map() };
   const lookup = new Map<string, GlossaryTermSummary>();
   const forms: string[] = [];
+  const add = (form: string, term: GlossaryTermSummary) => {
+    const trimmed = form.trim();
+    if (trimmed === "") return;
+    const key = trimmed.toLowerCase();
+    if (!lookup.has(key)) {
+      lookup.set(key, term);
+      forms.push(trimmed);
+    }
+  };
+  for (const term of terms) for (const form of [term.key, term.en, term.ko]) add(form, term);
   for (const term of terms) {
-    for (const form of [term.key, term.en, term.ko]) {
-      const trimmed = form.trim();
-      if (trimmed === "") continue;
-      const key = trimmed.toLowerCase();
-      if (!lookup.has(key)) {
-        lookup.set(key, term);
-        forms.push(trimmed);
-      }
+    for (const alias of term.aliases ?? []) {
+      if (alias.trim().length >= MIN_ALIAS_LENGTH) add(alias, term);
     }
   }
   if (forms.length === 0) return { ready: true, matcher: null, lookup };
@@ -99,7 +105,7 @@ let cachedGeneration = -1;
 const segmentCache = new Map<string, Segment[]>();
 const SEGMENT_CACHE_MAX = 500;
 
-function segmentByGlossary(text: string, index: GlossaryIndex): Segment[] {
+export function segmentByGlossary(text: string, index: GlossaryIndex): Segment[] {
   if (!index.matcher || text.trim() === "") return [text];
   if (cachedGeneration !== generation) {
     segmentCache.clear();

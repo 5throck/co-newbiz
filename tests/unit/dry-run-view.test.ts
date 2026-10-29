@@ -157,7 +157,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain("useConfirm");
     // i18n: execute CTA/confirm title resolves through pages.flows.dryRunSession.executeConfirmTitle.
     expect(sessionPage).toContain('t("executeConfirmTitle")');
-    expect(koOf("pages.flows.dryRunSession.executeConfirmTitle")).toBe("드라이런 실행 — 비용 확인");
+    expect(koOf("pages.flows.dryRunSession.executeConfirmTitle")).toBe("시험 실행 — 비용 확인");
     expect(sessionPage).toContain("estimateFromLedger");
     expect(sessionPage).toContain("DRY_RUN_DISCLOSURE");
     // 상호작용 순서 보초 — askRun이 confirm을 부르고, doRun은 dirty면 세션 생성(POST)→이동, 아니면 execute만. PATCH 없음.
@@ -175,7 +175,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain('t("blockedClosed")');
     // LLM 미구성·오버라이드 없음은 실행 버튼이 사유 텍스트와 함께 막힌다(§6.2/§10).
     expect(sessionPage).toContain('t("blockedNoLlm")');
-    expect(koOf("pages.flows.dryRunSession.blockedNoLlm")).toContain("LLM이 구성되지 않아 드라이런을 실행할 수 없습니다");
+    expect(koOf("pages.flows.dryRunSession.blockedNoLlm")).toContain("LLM이 구성되지 않아 시험 실행을 할 수 없습니다");
     expect(sessionPage).toContain('t("blockedNoOverride")');
     expect(koOf("pages.flows.dryRunSession.blockedNoOverride")).toContain("기본(base)과 같은 내용은 실행할 수 없습니다"); // F9 도메인 용어 괄호 표기
   });
@@ -255,7 +255,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(sessionPage).toContain("navigator.clipboard.writeText(session.id)");
     // 2026-10-26 개편 — 주 동작은 고정 요약 줄의 단일 PrimaryAction(상태별), 비용 추정은 실행·비교 탭.
     expect(sessionPage).toContain('t("runCardTitle")');
-    expect(koOf("pages.flows.dryRunSession.runCardTitle")).toBe("드라이런 실행");
+    expect(koOf("pages.flows.dryRunSession.runCardTitle")).toBe("시험 실행");
     expect(sessionPage).toContain('t("costEstimateLabel")');
     expect(sessionPage).toContain("dry-run-summary-bar");
     expect(sessionPage.split("<PrimaryAction").length - 1).toBe(1); // 화면당 주 동작 1개
@@ -290,7 +290,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(koOf("pages.flows.dryRunSession.legBaseEmpty")).toContain("base");
     expect(sessionPage).toContain('t("legOverrideEmpty")');
     expect(sessionPage).toContain('t("notExecuted")');
-    expect(koOf("pages.flows.dryRunSession.notExecuted")).toContain("드라이런 실행");
+    expect(koOf("pages.flows.dryRunSession.notExecuted")).toContain("시험 실행");
   });
 
   test("가독성 개편 — 실행 기록 표에 토큰 열이 있고(A10), 재배정 select와 제안 후보의 역할이 문맥화된다", () => {
@@ -313,7 +313,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
     expect(listPage).toContain('t("mySessions")');
     expect(koOf("pages.flows.dryRunSession.mySessions")).toBe("내 세션");
     expect(listPage).toContain('t("emptySessions")');
-    expect(koOf("pages.flows.dryRunSession.emptySessions")).toBe("드라이런 세션이 없습니다. 블루프린트에서 활동을 골라 시작하세요.");
+    expect(koOf("pages.flows.dryRunSession.emptySessions")).toBe("시험 실행 세션이 없습니다. 설계도에서 활동을 골라 시작하세요.");
     expect(koOf("pages.flows.dryRunSession.colExpiry")).toBe("만료");
     expect(listPage).toContain("purgedExpired");
     // 2026-10-26 개편 — 상태 칩(실제 상태값), 짧은 ID+복사, 작성자 열, 검색.
@@ -327,17 +327,17 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
   test("§2.2 — 블루프린트 진입점은 세션 생성 후 세션 화면으로 이동한다(준비 중 placeholder 제거)", () => {
     expect(blueprint).not.toContain("준비 중");
     expect(blueprint).toContain('t("dryRunStart")');
-    expect(koOf("pages.flows.blueprint.dryRunStart")).toBe("드라이런 시작");
+    expect(koOf("pages.flows.blueprint.dryRunStart")).toBe("시험 실행 시작");
     expect(blueprint).toContain("/api/flows/dry-run/sessions");
     expect(blueprint).toContain("router.push(`/flows/dry-run/");
     // 동적 프롬프트는 v1 대상이 아님을 버튼이 아니라 이유 텍스트로 알린다(§6.10).
     expect(blueprint).toContain('t("dynamicTitle")');
-    expect(koOf("pages.flows.blueprint.dynamicTitle")).toContain("v1 드라이런 대상이 아닙니다");
+    expect(koOf("pages.flows.blueprint.dynamicTitle")).toContain("v1 시험 실행 대상이 아닙니다");
   });
 
   test("§5.3 — 런 레저 드라이런 행은 amber 칩 + 세션 딥링크를 가진다(벤치 B1-2 변형)", () => {
     expect(ledgerView).toContain('status-chip status-amber">{t("dryRunChip")}');
-    expect(koOf("pages.flows.ledger.dryRunChip")).toBe("드라이런");
+    expect(koOf("pages.flows.ledger.dryRunChip")).toBe("시험 실행");
     expect(ledgerView).toContain("/flows/dry-run/");
     expect(ledgerView).toContain("dryRunGroupOf");
   });
@@ -345,7 +345,7 @@ describe("드라이런 화면 소스 — a11y·상호작용·경계 규약 (화�
   test("§2.2 — /flows 탭 행에 드라이런 세션 목록 링크가 있다", () => {
     expect(flowsPage).toContain('href="/flows/dry-run"');
     expect(flowsPage).toContain('t("dryRunSessionsLink")');
-    expect(koOf("pages.flows.flowsAdmin.dryRunSessionsLink")).toBe("드라이런 세션 →");
+    expect(koOf("pages.flows.flowsAdmin.dryRunSessionsLink")).toBe("시험 실행 세션 →");
   });
 
   test("A10 — 코드 키는 code 스타일, 문구는 한국어로 일관된다(발췌 검사)", () => {

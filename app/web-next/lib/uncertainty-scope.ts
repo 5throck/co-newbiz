@@ -77,14 +77,23 @@ export function deriveUncertaintyScope(
 export function uncertaintyScopeOfSnapshot(inputsJson: string | null | undefined): UncertaintyScope | null {
   if (!inputsJson) return null;
   try {
-    const spec = JSON.parse(inputsJson) as { uncertainty_scope?: UncertaintyScope; cases?: Array<{ drivers?: Record<string, { dist?: string }> }> };
+    const spec = JSON.parse(inputsJson) as { uncertainty_scope?: UncertaintyScope; cases?: Array<{ drivers?: Record<string, { dist?: string }> }>; drivers?: Record<string, { dist?: string }> };
     if (spec.uncertainty_scope && Array.isArray(spec.uncertainty_scope.varied) && Array.isArray(spec.uncertainty_scope.held_constant)) return spec.uncertainty_scope;
-    const drivers = spec.cases?.[0]?.drivers;
+    const drivers = spec.cases?.[0]?.drivers ?? spec.drivers;
     // Legacy snapshot: the S5 pairing is not recorded, so it is not claimed either way.
     return drivers ? deriveUncertaintyScope(drivers, { run: "no_s5_plan" }) : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Read-time scope of one case: the band label exists only where a simulation band is shown, so a
+ * case without simulation rows (e.g. a manual / greenfield_cost model) is null. Otherwise the
+ * stored scope, or - for snapshots that predate it - the one derived from the stored drivers.
+ */
+export function uncertaintyScopeForCase(inputsJson: string | null | undefined, simulationCount: number): UncertaintyScope | null {
+  return simulationCount > 0 ? uncertaintyScopeOfSnapshot(inputsJson) : null;
 }
 
 /** True when the only drawn driver is revenue growth - the common case the owner-mandated label addresses. */

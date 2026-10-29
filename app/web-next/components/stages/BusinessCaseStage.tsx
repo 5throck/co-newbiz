@@ -1179,18 +1179,6 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 </tbody>
               </table></div>
             )}
-            {/* D7 (2026-10-28): the band only reflects the drivers actually drawn - say so, next to the band. */}
-            {(() => {
-              const scope = (cases.find((c) => c.variant === "market_forward") ?? cases[0])?.uncertainty_scope ?? null;
-              if (!scope) return null;
-              const list = (keys: string[]) => keys.map((k) => t(`uncertaintyDriver.${k}`)).join(", ");
-              return (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" data-testid="uncertainty-scope-note">
-                  {isGrowthOnly(scope) ? t("uncertaintyScopeGrowthOnly") : t("uncertaintyScopeVaried", { varied: list(scope.varied), held: list(scope.held_constant) })}
-                  {scope.s5_run === "none_confirmed" ? ` ${t("uncertaintyScopeS5None")}` : scope.s5_run === "basis_not_paired" ? ` ${t("uncertaintyScopeS5NotPaired")}` : ""}
-                </p>
-              );
-            })()}
             {/* ADR-0179 slice 3 — Y1 revenue vs plan-investment ratio guard. Case-level
                 display warning recomputed live on read; says "check the anchor",
                 never "the case is wrong"; never blocks. Diagnostic pointer style
@@ -1219,6 +1207,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </section>
         );
       })}
+        {/* D7 (2026-10-28): the band only reflects the drivers actually drawn - say so, once for all scenario tables. */}
+        {(() => {
+          const allCases = [...byScenario.values()].flat();
+          const scope = (allCases.find((c) => c.variant === "market_forward" && c.uncertainty_scope) ?? allCases.find((c) => c.uncertainty_scope))?.uncertainty_scope ?? null;
+          if (!scope) return null;
+          const list = (keys: string[]) => keys.map((k) => t(`uncertaintyDriver.${k}`)).join(", ");
+          return (
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" data-testid="uncertainty-scope-note">
+              {isGrowthOnly(scope) ? t("uncertaintyScopeGrowthOnly") : t("uncertaintyScopeVaried", { varied: list(scope.varied), held: list(scope.held_constant) })}
+              {scope.s5_run === "none_confirmed" ? ` ${t("uncertaintyScopeS5None")}` : scope.s5_run === "basis_not_paired" ? ` ${t("uncertaintyScopeS5NotPaired")}` : ""}
+            </p>
+          );
+        })()}
       </>
       )}
 

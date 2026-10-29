@@ -1,5 +1,5 @@
-version: 1.2.0
-last_updated: 2026-10-01
+version: 1.3.0
+last_updated: 2026-10-29
 terms:
   WACC:
     ko: 가중평균자본비용
@@ -7,7 +7,7 @@ terms:
     definition_ko: 부채와 자본의 조달비용을 가중평균한 할인율.
     why_it_matters_ko: 직접 입력(user)과 CAPM 구성요소 입력(ADR-0115) 두 모드를 지원한다. CAPM 모드는 시장 통용 수치(AlphaSpread, 한국은행 ECOS 등)를 출처·기준일과 함께 인용(live)하거나, 인용값이 없으면 산식(Rf + β×ERP, 신용등급 가산금리)으로 유도하며 베타는 시장 대비 변동성 추정(회귀 R²·연율화 변동성)을 동반한다. 구성요소는 wacc.* 가정 키로 저장되고 산식 분해(항목·산식·대입·결과)가 산출물에 함께 실린다.
     category: financial
-    related: [WACC Input Session, Assumption Kind]
+    related: [WACC Input Session, WACC Confirmation, Hurdle IRR, Assumption Kind]
     used_in: [wacc-input-session]
     owner: valuation-agent
 
@@ -17,17 +17,18 @@ terms:
     definition_ko: 투자안의 NPV를 0으로 만드는 할인율.
     why_it_matters_ko: hurdle rate와 비교해 RAG 재무성 차원 판정의 핵심 지표이며, 히스테리시스 규칙(승격/강등 임계 분리)이 이 지표에 적용된다.
     category: financial
-    related: [DSCR, RAG]
+    related: [DSCR, RAG, Hurdle IRR]
     used_in: [investment-feasibility-modeling]
     owner: valuation-agent
 
   DSCR:
-    ko: 부채상환비율
+    ko: 원리금 상환 능력(DSCR)
     en: Debt Service Coverage Ratio
-    definition_ko: 영업현금흐름을 원리금 상환액으로 나눈 비율. 재무약정(covenant)의 기준 지표로 흔히 쓰인다.
-    why_it_matters_ko: 하방 시나리오에서 DSCR이 covenant를 위반하면 기한이익상실로 이어져 유동성 위기가 된다 — Kill Criteria 후보다.
+    aliases: [부채상환비율, DSCR, 원리금 상환 능력, 원리금 상환 여력]
+    definition_ko: 영업현금흐름을 원리금 상환액(원금과 이자)으로 나눈 비율로, 1보다 클수록 갚을 여력이 있다는 뜻이다. 대출 약정 조건(커버넌트)의 기준 지표로 흔히 쓰인다. 화면에는 '원리금 상환 능력(DSCR)'으로 표기한다.
+    why_it_matters_ko: 불황 시나리오에서 이 비율이 약정 기준을 밑돌면 기한이익상실로 이어져 유동성 위기가 된다 — 중단 기준(Kill Criteria) 후보다. 불황 시 값은 '불황 시 원리금 상환 능력' 항목에서 따로 본다.
     category: financial
-    related: [Covenant, Kill Criteria]
+    related: [Covenant, Downside DSCR, Kill Criteria]
     used_in: [debt-and-contingent-liability-simulation]
     owner: valuation-agent
 
@@ -64,16 +65,19 @@ terms:
   Base Rate:
     ko: 기저율
     en: Base Rate
-    definition_ko: 과거·피어 사례의 실제 분포에 근거한 참조값.
-    why_it_matters_ko: 예측 성장률이 과거·피어 분포 상위 10% 밖이면 자동 경고가 발동한다. 근거 없는 하키스틱 예측을 구조적으로 막는 장치다.
+    aliases: [기준율, 기준 비율, base_rate]
+    definition_ko: 과거·피어 사례의 실제 분포(하위 10%·중앙값·상위 10%)에 근거한 참조값. 값마다 출처, 확인한 날짜, 관리자, 근거 종류(내부 사후 평가·공개 연구·규제 통계·산업 데이터)를 반드시 함께 적어 두는 base_rate 표에서 가져온다(ADR-0187 D2). 출처 없는 행은 시스템이 받지 않는다.
+    why_it_matters_ko: 예측 성장률이 과거·피어 분포 상위 10% 밖이면 자동 경고가 발동한다. 근거 없는 하키스틱 예측을 구조적으로 막는 장치다. 저장된 행이 없으면 기본값을 채우지 않고 '없음(not_available)'으로 답한다. 2026-10-28에 공개 연구 기반 첫 제안 파일(23행)이 만들어졌지만 담당자가 가져오기를 실행해야 데이터베이스에 들어간다. 값 이름이 _mean이면 평균, share_로 시작하면 비율이며 중앙값이 아니다.
     category: financial
+    source: ADR-0187 D2; docs/architecture/base-rate-import-format.md
     related: [Anchor Ref, Reference Class Forecasting]
     used_in: [assumption-audit, growth-projection-modeling]
     owner: risk-officer
 
   Peer Group:
-    ko: 피어 그룹
+    ko: 비교 기업군
     en: Peer Group
+    aliases: [피어 그룹, 피어, 비교 기업 집단]
     definition_ko: 재무 벤치마크 비교 대상이 되는 유사 기업 집단.
     why_it_matters_ko: 선정 근거를 필수 기록해야 한다 — 자의적 피어 선정은 벤치마크 자체를 무력화한다. 신규 사업은 과거 실적이 없으므로 피어의 과거가 유일한 앵커다.
     category: financial
@@ -82,8 +86,9 @@ terms:
     owner: financial-analyst
 
   ROIC Driver Tree:
-    ko: ROIC 밸류 드라이버 트리
+    ko: ROIC 요인 분해도
     en: ROIC Value Driver Tree
+    aliases: [ROIC 밸류 드라이버 트리, 밸류 드라이버 트리, 가치 동인 분해도]
     definition_ko: 투하자본이익률(ROIC)을 5단계로 분해한 재무 분석 구조. co-consult에서 이식된 기존 파이프라인.
     why_it_matters_ko: 과거 재무 분석의 기반이며, 이 위에 피어 벤치마크·성장성 예측 공백을 채워 넣는 구조다.
     category: financial
@@ -92,19 +97,21 @@ terms:
     owner: financial-analyst
 
   Covenant:
-    ko: 재무약정
+    ko: 대출 약정 조건(커버넌트)
     en: Covenant
-    definition_ko: 대출 계약에 포함된 재무 조건(예 — DSCR 최소 유지).
-    why_it_matters_ko: CoC(지배구조 변경) 조항에 의한 기한이익상실이 M&A에서 가장 위험한 조항 중 하나다 — 클로징 시 상환 소요로 계상해야 한다.
+    aliases: [재무약정, 커버넌트, 약정 조건, 재무 약정]
+    definition_ko: 대출 계약에 담긴 재무 조건으로, 지키지 못하면 대출 기관이 조기 상환을 요구할 수 있다(예 — 원리금 상환 능력(DSCR)을 일정 수준 이상 유지). 화면에는 '대출 약정 조건(커버넌트)'으로 표기한다.
+    why_it_matters_ko: 경영권 변경(CoC) 조항에 의한 기한이익상실이 M&A에서 가장 위험한 조항 중 하나다 — 클로징 시 상환 소요로 계상해야 한다.
     category: financial
-    related: [DSCR, Change of Control]
+    related: [DSCR, Downside DSCR, Change of Control]
     used_in: [debt-and-contingent-liability-simulation]
     owner: valuation-agent
 
   Golden Parachute:
-    ko: 경영진 CoC 트리거 보상
+    ko: 경영권 변경 시 경영진 보상(골든 파라슈트)
     en: Golden Parachute
-    definition_ko: 지배구조 변경(CoC) 시 경영진에게 즉시 지급되는 보상.
+    aliases: [경영진 CoC 트리거 보상, 골든 파라슈트]
+    definition_ko: 경영권 변경(CoC) 시 경영진에게 즉시 지급되는 보상.
     why_it_matters_ko: 딜 클로징과 동시에 나가는 현금인데 밸류에이션에서 자주 누락되는 항목이다.
     category: financial
     related: [Change of Control]
@@ -130,3 +137,39 @@ terms:
     related: [Revenue Quality, QoE]
     used_in: [commercial-due-diligence, quality-of-earnings]
     owner: financial-analyst
+
+  Hurdle IRR:
+    ko: 최소 요구 수익률(허들 IRR)
+    en: Hurdle IRR
+    aliases: [허들 IRR, 허들 수익률, 허들레이트, hurdle_irr, hurdle rate]
+    definition_ko: 투자안이 통과하려면 내부수익률(IRR)이 넘어야 하는 최소 기준 수익률. 사람이 WACC 입력 세션에서 WACC와 함께 확정한다. 비율로 입력하며 12%는 0.12이다(0과 1 사이만 받는다).
+    why_it_matters_ko: 확정 전 기본값(0.10)으로 계산한 값은 '잠정 할인율' 표시를 달고 나온다. 확정되지 않으면 사업성(FS) GO를 기록할 수 없고, 브라운필드 '기준 시나리오에서 허들을 넘는 대상이 없음' 중단 기준도 평가하지 못한 상태로 남는다. WACC가 허들 IRR 이상이면 두 비율을 다시 확인하라는 경고가 뜬다.
+    category: financial
+    source: ADR-0186 D8; db/lib/wacc-confirmation.ts
+    related: [IRR, WACC, WACC Confirmation]
+    used_in: [wacc-input-session, investment-feasibility-modeling]
+    owner: valuation-agent
+
+  WACC Confirmation:
+    ko: 할인율 확정(WACC 확인)
+    en: WACC Confirmation
+    aliases: [WACC 확인, 할인율 확정, 할인율 확정됨, 잠정 할인율, provisional discount rate, wacc_confirmed]
+    definition_ko: 사람이 WACC 입력 세션에서 WACC 적용 주체, WACC, 허들 IRR 세 가지를 모두 직접 입력해 확정한 상태. 선정 대상의 자체 세션이 있으면 그 세션, 없으면 프로젝트 세션을 보며, 가장 최근 기록이 판정한다. 확정 전에는 할인율에 따라 달라지는 모든 값에 '잠정 할인율' 표시가 붙는다.
+    why_it_matters_ko: 확정 전에는 사업성(FS) GO를 기록할 수 없고(면제 경로 없음, 409 wacc_unconfirmed) S8도 끝낼 수 없다. 이후 게이트는 확정이 해제된 경우에만 막는다. HOLD와 KILL은 언제든 기록할 수 있다.
+    category: financial
+    source: ADR-0186 D8; neb-policy 2.2; checklist bf-02
+    related: [WACC, Hurdle IRR, Gate Snapshot Acknowledgement]
+    used_in: [wacc-input-session, stage-gate-governance]
+    owner: quant-methodologist
+
+  Downside DSCR:
+    ko: 불황 시 원리금 상환 능력(하방 DSCR)
+    en: Downside DSCR
+    aliases: [하방 DSCR, 다운사이드 DSCR, downside DSCR, 하방 상환 능력]
+    definition_ko: 채택한 S8 케이스의 불황(다운사이드) 현금흐름에 등록된 차입 조건(만기·상환 방식·금리)을 적용해 계산한 기간별 원리금 상환 능력(DSCR) 중 가장 낮은 값. 불황 케이스가 없으면 기준 케이스로 계산하고 그 사실을 안내한다. 한 함수가 S10 확인, 약정 조건 여유 화면, 투자심의 자료, 위험 히트맵, RAG 변수를 모두 같은 값으로 채운다.
+    why_it_matters_ko: S10은 이 값이 1.3배 미만이거나, 선언한 DSCR 약정 조건을 위반했거나, 필요한 차입 조건이 빠져 있으면(빠진 항목을 이름으로 알려 준다) 막힌다. 1.3배는 RAG 초록 조건과 맞춘 값으로 2026-10-29에 소유자가 1.2배에서 올렸다. 입력이 없으면 추정하지 않고 '근거 부족'으로 답한다. 순레버리지 같은 다른 약정은 재무상태표 입력이 없어 검증하지 않은 항목으로 나열한다.
+    category: financial
+    source: app/web-next/lib/covenant-dscr.ts (S10_MIN_DOWNSIDE_DSCR = 1.3); ADR-0187 D2
+    related: [DSCR, Covenant, Kill Criteria]
+    used_in: [debt-and-contingent-liability-simulation, financing-plan-review]
+    owner: valuation-agent

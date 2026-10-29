@@ -1,5 +1,5 @@
-version: 1.0.0
-last_updated: 2026-08-19
+version: 1.1.0
+last_updated: 2026-10-29
 terms:
   CGT:
     ko: 표준화물선환산톤수
@@ -98,8 +98,9 @@ terms:
     ko: 한국표준산업분류
     en: Korean Standard Industrial Classification
     definition_ko: 통계청이 정한 한국의 표준 산업 분류 체계.
-    why_it_matters_ko: 전방·전전방 산업을 연결하는 축이자 기준정보(md_industry)의 기준 코드 체계다. 이게 없으면 프록시 체인 자체를 구성할 수 없다.
+    why_it_matters_ko: 전방·전전방 산업을 연결하는 축이자 기준정보(md_industry)의 기준 코드 체계다. 이게 없으면 프록시 체인 자체를 구성할 수 없다. 산업 검색에서는 코드나 공식 명칭 대신 조선, 2차전지, 반도체 같은 통용어로도 찾을 수 있다(별칭마다 근거를 붙인 목록 lib/ksic-aliases.json, 별칭으로 찾은 결과를 먼저 보여 준다).
     category: industry
+    aliases: [KSIC 코드, 산업분류, KSIC 별칭]
     related: [Proxy Chain]
     used_in: [master-data-governance]
     owner: data-architect
