@@ -578,7 +578,7 @@ export interface DatabaseOverviewTable {
   table: string;
   label: { ko: string; en: string };
   description: { ko: string; en: string };
-  actions: Array<"archive" | "delete">;
+  handling: "archive_then_delete" | "archive_only";
   row_count: number;
   date_columns: Array<{ column: string; label: { ko: string; en: string }; oldest: string | null; newest: string | null }>;
   policy: { basis: string; retention_months: number; action: string } | null;

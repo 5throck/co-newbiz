@@ -19,12 +19,23 @@ export interface RetentionDateColumn {
   label: { ko: string; en: string };
 }
 
+/** Fixed per-table handling. Rows are always archived first; only `archive_then_delete` removes them afterwards. */
+export type RetentionHandling = "archive_then_delete" | "archive_only";
+
+/**
+ * Stored `retention_policy.action` (CHECK archive|delete, no schema change):
+ * archive_then_delete -> 'delete', archive_only -> 'archive'.
+ */
+export function handlingToStoredAction(h: RetentionHandling): RetentionAction {
+  return h === "archive_then_delete" ? "delete" : "archive";
+}
+
 export interface RetentionEligibleTable {
   table: string;
   label: { ko: string; en: string };
   description: { ko: string; en: string };
   dateColumns: RetentionDateColumn[];
-  actions: RetentionAction[];
+  handling: RetentionHandling;
 }
 
 export const RETENTION_ELIGIBLE_TABLES: readonly RetentionEligibleTable[] = [
@@ -36,7 +47,7 @@ export const RETENTION_ELIGIBLE_TABLES: readonly RetentionEligibleTable[] = [
       en: "Notifications sent to users. Old notifications are not used as decision evidence.",
     },
     dateColumns: [{ column: "sent_at", label: { ko: "발송일", en: "Sent at" } }],
-    actions: ["archive", "delete"],
+    handling: "archive_then_delete",
   },
   {
     table: "llm_call_log",
@@ -46,7 +57,7 @@ export const RETENTION_ELIGIBLE_TABLES: readonly RetentionEligibleTable[] = [
       en: "Log of AI draft calls (who, purpose, success). Does not contain the generated text.",
     },
     dateColumns: [{ column: "created_at", label: { ko: "기록일", en: "Logged at" } }],
-    actions: ["archive", "delete"],
+    handling: "archive_then_delete",
   },
   {
     table: "dry_run_session",
@@ -59,7 +70,7 @@ export const RETENTION_ELIGIBLE_TABLES: readonly RetentionEligibleTable[] = [
       { column: "created_at", label: { ko: "생성일", en: "Created at" } },
       { column: "expires_at", label: { ko: "만료일", en: "Expires at" } },
     ],
-    actions: ["archive", "delete"],
+    handling: "archive_then_delete",
   },
   {
     table: "raw_payload",
@@ -69,7 +80,7 @@ export const RETENTION_ELIGIBLE_TABLES: readonly RetentionEligibleTable[] = [
       en: "Raw responses fetched from external sources. They underpin lineage, so only archiving is allowed, never deletion.",
     },
     dateColumns: [{ column: "fetched_at", label: { ko: "수집일", en: "Fetched at" } }],
-    actions: ["archive"],
+    handling: "archive_only",
   },
 ];
 
@@ -119,8 +130,8 @@ export function validateRetentionPolicy(table: string, column: string, action?: 
   if (!entry.dateColumns.some((c) => c.column === column)) {
     return { ok: false, code: "column_not_eligible", message: `Column '${column}' is not an eligible date column of '${table}'.` };
   }
-  if (action !== undefined && !entry.actions.includes(action as RetentionAction)) {
-    return { ok: false, code: "action_not_allowed", message: `Action '${action}' is not allowed for '${table}'.` };
+  if (action !== undefined && action !== handlingToStoredAction(entry.handling)) {
+    return { ok: false, code: "action_not_allowed", message: `Action '${action}' conflicts with the fixed handling '${entry.handling}' of '${table}'.` };
   }
   return { ok: true, entry };
 }

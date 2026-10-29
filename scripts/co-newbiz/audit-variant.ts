@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.7.0
+// @version 1.8.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -38,6 +38,8 @@
  *     check-engine-spec-parity is blocking too; since v1.7.0 (ADR-0187 P4)
  *     check-review-coverage blocks as well (every check is blocking) and the
  *     review-matrix projection drift gate runs next to the registry gates.
+ *   - Glossary-data drift gate (v1.8.0, ADR-0022 / FR-SYS-04): glossary/*.yaml vs
+ *     app/web-next/lib/glossary-data.generated.ts via generate-glossary-data.ts --check.
  */
 
 import { existsSync, readdirSync } from "node:fs";

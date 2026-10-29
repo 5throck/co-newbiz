@@ -42,7 +42,6 @@ export function useAdminData({ section }: { section: Section }) {
   const [tableKey, setTableKey] = useState("");
   const [basis, setBasis] = useState("");
   const [months, setMonths] = useState("");
-  const [action, setAction] = useState<"archive" | "delete">("archive");
 
   // 용어집 등록 폼 — why_it_matters_ko 필수 (glossary/_schema.yaml).
   const [termForm, setTermForm] = useState({ key: "", ko: "", en: "", definition_ko: "", why_it_matters_ko: "", category: "business", owner: "glossary-curator", aliases: "" });
@@ -210,5 +209,5 @@ export function useAdminData({ section }: { section: Section }) {
       setNotice(err instanceof Error ? err.message : t("createFailed"));
     }
   }
-  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, action, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, setAction, retentionFormError, retentionNotice, notifications, glossary, lintQueue, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy, reviewAudit, governance, adrs };
+  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, retentionFormError, retentionNotice, notifications, glossary, lintQueue, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy, reviewAudit, governance, adrs };
 }

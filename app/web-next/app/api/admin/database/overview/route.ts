@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       table: t.table,
       label: t.label,
       description: t.description,
-      actions: t.actions,
+      handling: t.handling,
       row_count: rowCount,
       date_columns: dateColumns,
       policy: p ? { basis: p.basis, retention_months: p.retention_months, action: p.action } : null,

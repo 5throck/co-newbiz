@@ -9,7 +9,7 @@ import type { useAdminData } from "./useAdminData.ts";
 
 export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   const t = useTranslations("admin.actions");
-  const { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, action, setTableKey, setBasis, setMonths, setRetention, setDbOverview, preview } = prev;
+  const { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, setDbOverview, preview, dbOverview } = prev;
 
   const { panelRef: secretModalPanelRef, onKeyDown: secretModalKeyDown } = useModalFocus(
     () => setIssuedSecret(null),
@@ -78,7 +78,7 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   }
 
   function userAction(userId: string, action: "delete" | "reset_password" | "disable" | "enable") {
-    if (action === "delete") {
+    if (dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling === "archive_then_delete") {
       confirm(
         t("deleteAccountTitle", { p1: userId }),
         async () => {
@@ -130,7 +130,6 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
         table_key: tableKey.trim(),
         basis: basis.trim(),
         retention_months: monthsValue,
-        action,
       });
       setRetentionNotice(t("savedNotice", { p1: tableKey.trim() }));
       setTableKey("");
@@ -156,7 +155,7 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
       setRetentionFormError(t("errMonthsInteger"));
       return;
     }
-    if (action === "delete") {
+    if (dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling === "archive_then_delete") {
       // Irreversible once the scheduled job runs — state the count and require confirmation.
       const count = preview.state === "ready" && preview.count !== null ? preview.count.toLocaleString() : "?";
       confirm(t("retentionDeleteConfirmTitle", { p1: tableKey.trim() }), () => { void persistRetention(monthsValue); }, {

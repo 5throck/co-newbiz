@@ -2411,7 +2411,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       operationId: upsertRetentionPolicy
-      summary: Upsert one policy row. 400 table_not_eligible / column_not_eligible / action_not_allowed unless table, date column (basis) and action are on the server-side retention allowlist (db/lib/retention-registry.ts). Admin role; audited.
+      summary: "Upsert one policy row. action is optional: the server derives it from the registry's fixed per-table handling (archive_then_delete is stored as delete, archive_only as archive; rows are always archived first). A conflicting action is rejected 400 action_not_allowed. 400 table_not_eligible / column_not_eligible unless table and date column (basis) are on the server-side retention allowlist (db/lib/retention-registry.ts). Admin role; audited."
       tags:
         - Admin
       requestBody:
@@ -2424,7 +2424,6 @@ paths:
                 - table_key
                 - basis
                 - retention_months
-                - action
               properties:
                 table_key:
                   type: string

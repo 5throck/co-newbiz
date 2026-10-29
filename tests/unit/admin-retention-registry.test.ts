@@ -58,6 +58,12 @@ describe("registry", () => {
       for (const c of t.dateColumns) expect(cols).toContain(c.column);
     }
   });
+  test("each table has one fixed handling mapped to the stored action", () => {
+    const h = Object.fromEntries(reg.RETENTION_ELIGIBLE_TABLES.map((t) => [t.table, t.handling]));
+    expect(h).toEqual({ notification: "archive_then_delete", llm_call_log: "archive_then_delete", dry_run_session: "archive_then_delete", raw_payload: "archive_only" });
+    expect(reg.handlingToStoredAction("archive_then_delete")).toBe("delete");
+    expect(reg.handlingToStoredAction("archive_only")).toBe("archive");
+  });
   test("excluded tables are rejected", () => {
     for (const t of Object.keys(reg.RETENTION_EXCLUDED_TABLES)) {
       const v = reg.validateRetentionPolicy(t, "created_at", "delete");
@@ -79,7 +85,15 @@ describe("policy API allowlist", () => {
     expect(res.status).toBe(400);
     expect(((await res.json()) as any).error.code).toBe("column_not_eligible");
   });
-  test("rejects delete on archive-only table", async () => {
+  test("POST without action derives it from the registry", async () => {
+    expect((await post({ table_key: "raw_payload", basis: "fetched_at", retention_months: 24 })).status).toBe(201);
+    expect((await post({ table_key: "notification", basis: "sent_at", retention_months: 24 })).status).toBe(201);
+    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
+    expect(list.data.find((r: any) => r.table_key === "raw_payload").action).toBe("archive");
+    expect(list.data.find((r: any) => r.table_key === "notification").action).toBe("delete");
+    db.run("DELETE FROM retention_policy");
+  });
+  test("conflicting action is rejected (archive-only table)", async () => {
     const res = await post({ table_key: "raw_payload", basis: "fetched_at", retention_months: 6, action: "delete" });
     expect(res.status).toBe(400);
     expect(((await res.json()) as any).error.code).toBe("action_not_allowed");
@@ -142,9 +156,10 @@ describe("policy CRUD with audit", () => {
   test("create, update, delete write audit rows", async () => {
     const audit = (action: string) =>
       (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = ?").get(action) as { n: number }).n;
-    expect((await post({ table_key: "llm_call_log", basis: "created_at", retention_months: 12, action: "delete" })).status).toBe(201);
-    expect((await post({ table_key: "llm_call_log", basis: "created_at", retention_months: 6, action: "archive" })).status).toBe(201);
-    expect(audit("retention_policy_set")).toBe(2);
+    const before = audit("retention_policy_set");
+    expect((await post({ table_key: "llm_call_log", basis: "created_at", retention_months: 12 })).status).toBe(201);
+    expect((await post({ table_key: "llm_call_log", basis: "created_at", retention_months: 6 })).status).toBe(201);
+    expect(audit("retention_policy_set") - before).toBe(2);
     const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
     expect(list.data.find((r: any) => r.table_key === "llm_call_log").retention_months).toBe(6);
 

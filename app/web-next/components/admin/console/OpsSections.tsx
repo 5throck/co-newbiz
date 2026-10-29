@@ -124,7 +124,7 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
   const tc = useTranslations("common");
   const locale = useLocale();
   const lang: "ko" | "en" = locale === "en" ? "en" : "ko";
-  const { section, retention, dbOverview, preview, tableKey, setTableKey, basis, setBasis, months, setMonths, action, setAction, retentionFormError, retentionNotice, saveRetention, removeRetentionPolicy } = ctx;
+  const { section, retention, dbOverview, preview, tableKey, setTableKey, basis, setBasis, months, setMonths, retentionFormError, retentionNotice, saveRetention, removeRetentionPolicy } = ctx;
   const eligible = dbOverview?.tables ?? [];
   const selected = eligible.find((e) => e.table === tableKey) ?? null;
   const eligibleByKey = new Map(eligible.map((e) => [e.table, e]));
@@ -136,7 +136,6 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
     setTableKey(key);
     const entry = eligibleByKey.get(key);
     setBasis(entry?.date_columns[0]?.column ?? "");
-    setAction(entry?.actions.includes("archive") ? "archive" : "delete");
   }
 
   return (
@@ -166,6 +165,7 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
                   <th scope="col">{t("colDescription")}</th>
                   <th scope="col">{t("colRows")}</th>
                   <th scope="col">{t("colOldest")}</th>
+                  <th scope="col">{t("colHandling")}</th>
                   <th scope="col">{t("colCurrentPolicy")}</th>
                 </tr>
               </thead>
@@ -178,9 +178,10 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
                       <td>{e.description[lang]}</td>
                       <td>{e.row_count.toLocaleString(locale)}</td>
                       <td>{oldest ? formatDateTime(oldest, locale) : "—"}</td>
+                      <td>{t(`handling_${e.handling}`)}</td>
                       <td>
                         {e.policy
-                          ? t("policySummary", { p1: columnLabel(e.table, e.policy.basis), p2: e.policy.retention_months, p3: e.policy.action === "delete" ? tc("delete") : t("actionArchive") })
+                          ? t("policySummary", { p1: columnLabel(e.table, e.policy.basis), p2: e.policy.retention_months, p3: t(`handling_${e.handling}`) })
                           : t("noPolicy")}
                       </td>
                     </tr>
@@ -217,7 +218,7 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
                       <td>{name}{!entry && dbOverview && <><br /><span className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)]">{t("notEligibleBadge")}</span></>}</td>
                       <td>{entry ? columnLabel(r.table_key, r.basis) : r.basis}</td>
                       <td>{r.retention_months}</td>
-                      <td>{r.action === "archive" ? t("actionArchive") : tc("delete")}</td>
+                      <td>{r.action === "archive" ? t("handling_archive_only") : t("handling_archive_then_delete")}</td>
                       <td>{r.last_run_at ? formatDateTime(r.last_run_at, locale) : t("neverRun")}</td>
                       <td className="sizing-actions-cell"><span className="actions-row">
                         {entry && (
@@ -225,7 +226,7 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
                             type="button"
                             className="btn-ghost btn-sm"
                             aria-label={t("editRowAria", { p1: name })}
-                            onClick={() => { setTableKey(r.table_key); setBasis(r.basis); setMonths(String(r.retention_months)); setAction(r.action === "delete" ? "delete" : "archive"); }}
+                            onClick={() => { setTableKey(r.table_key); setBasis(r.basis); setMonths(String(r.retention_months)); }}
                           >
                             {t("editRow")}
                           </button>
@@ -280,13 +281,9 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
               <p id="retMonthsHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hintMonths")}</p>
             </div>
             <div className="stack-form-row">
-              <label htmlFor="retAction">{t("colAction")}</label>
-              <select id="retAction" value={action} onChange={(e) => setAction(e.target.value === "delete" ? "delete" : "archive")} aria-describedby="retActionHint" disabled={!selected}>
-                {(selected?.actions ?? ["archive", "delete"]).map((a) => (
-                  <option key={a} value={a}>{a === "delete" ? t("optionDelete") : t("optionArchive")}</option>
-                ))}
-              </select>
-              <p id="retActionHint" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hintAction")}</p>
+              <span className="text-[length:var(--fs-body)] font-semibold">{t("colAction")}</span>
+              <p className="m-0 text-[length:var(--fs-body)]">{selected ? t(`handling_${selected.handling}`) : t("selectTableFirst")}</p>
+              <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{selected ? t(`handlingHint_${selected.handling}`) : t("hintAction")}</p>
             </div>
             <p role="status" aria-live="polite" className="m-0 text-[length:var(--fs-body)]">
               {preview.state === "ready" && preview.count !== null && t("impactPreview", { p1: preview.count.toLocaleString(locale) })}
