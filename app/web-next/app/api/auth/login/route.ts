@@ -39,11 +39,13 @@ export async function POST(request: Request) {
   if (!body?.userId || !body?.password) {
     return badRequest("invalid_request", "userId and password are required.");
   }
+  const userId = body.userId.trim();
+  if (!userId) return badRequest("invalid_request", "userId and password are required.");
   const address = clientAddress(request);
   if (loginThrottled(address)) {
     return fail(429, "too_many_attempts", "Too many failed logins from this address — try again later.");
   }
-  const result = await authenticateAccount(getDb(), { userId: body.userId, password: body.password, now: new Date().toISOString() });
+  const result = await authenticateAccount(getDb(), { userId, password: body.password, now: new Date().toISOString() });
   if (!result.ok) {
     recordLoginFailure(address);
     const status = result.reason === "locked" ? 423 : result.reason === "invalid_credentials" ? 401 : 403;
@@ -51,8 +53,8 @@ export async function POST(request: Request) {
   }
 
   const secure = requestIsSecure(request);
-  const row = getDb().query("SELECT role FROM app_user WHERE user_id = ?").get(body.userId) as { role: string };
-  const response = ok({ userId: body.userId, role: row.role, mustChangePassword: result.mustChangePassword, expiresAt: result.session.expiresAt });
+  const row = getDb().query("SELECT role FROM app_user WHERE user_id = ?").get(userId) as { role: string };
+  const response = ok({ userId, role: row.role, mustChangePassword: result.mustChangePassword, expiresAt: result.session.expiresAt });
   response.cookies.set(SESSION_COOKIE, result.session.token, sessionCookieOpts(secure));
   response.cookies.set(CSRF_COOKIE, randomHex(32), { httpOnly: false, sameSite: "lax", path: "/", secure, maxAge: 12 * 3600 });
   return response;

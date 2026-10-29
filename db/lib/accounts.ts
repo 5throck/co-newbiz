@@ -83,7 +83,10 @@ export interface CreateUserOptions {
  * The initial password is a known/communicated value, so the account is
  * flagged must_change_password=1 — the first login forces the change flow.
  */
-export async function createUser(db: Database, opts: CreateUserOptions): Promise<void> {
+export async function createUser(db: Database, rawOpts: CreateUserOptions): Promise<void> {
+  // Never store an id with surrounding whitespace (login trims the same way).
+  const opts = { ...rawOpts, userId: rawOpts.userId.trim() };
+  if (!opts.userId) throw new Error("User id must not be empty.");
   if (opts.password.length < MIN_PASSWORD_LENGTH) {
     throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
@@ -158,7 +161,11 @@ export interface AuthenticateOptions {
  *   - 5th consecutive failure locks for 30 minutes;
  *   - a successful login clears the counter.
  */
-export async function authenticate(db: Database, opts: AuthenticateOptions): Promise<AuthenticateResult> {
+export async function authenticate(db: Database, rawOpts: AuthenticateOptions): Promise<AuthenticateResult> {
+  // Surrounding whitespace on the user id is a typing/paste artifact; the
+  // password is never trimmed (spaces may be intentional). Ids stay
+  // case-sensitive.
+  const opts = { ...rawOpts, userId: rawOpts.userId.trim() };
   const row = db
     .query("SELECT * FROM app_user WHERE user_id = ?")
     .get(opts.userId) as (StoredHash & {

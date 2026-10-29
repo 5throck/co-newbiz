@@ -389,7 +389,7 @@
       "deleteAccountBody": "Sessions and tokens are deleted with it and the action is written to the audit log.",
       "actionFailed": "Action failed",
       "tempPasswordKind": "Temporary password — {p1}",
-      "tempPasswordDetail": "A password change will be required at next sign-in.",
+      "tempPasswordDetail": "A password change will be required at next sign-in. Only the most recently issued temporary password is valid; resetting again voids the previous one.",
       "jobToggleFailed": "Failed to toggle the job.",
       "errTableKeyBasis": "Select both the data and the date field.",
       "errMonthsInteger": "Retention (months) must be a non-negative integer.",
