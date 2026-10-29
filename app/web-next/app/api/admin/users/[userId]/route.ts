@@ -8,6 +8,13 @@ import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 const ACCOUNT_ROLES = new Set(["admin", "analyst", "viewer"]);
 const DISPLAY_NAME_MAX = 60;
 
+// CSPRNG-backed (the temporary password is a credential, not a display value).
+function randomBase36(length: number): string {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
+
 export async function PUT(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -72,7 +79,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     // Admin-initiated reset: temporary password, forces the change flow,
     // revokes sessions (accounts.resetPassword). The temp password is shown
     // once in this response — never stored in plaintext or audit.
-    const tempPassword = body.temporary_password && body.temporary_password.length >= 8 ? body.temporary_password : `tmp-${Math.random().toString(36).slice(2, 10)}!A`;
+    const tempPassword = body.temporary_password && body.temporary_password.length >= 8 ? body.temporary_password : `tmp-${randomBase36(8)}!A`;
     try {
       await resetPassword(db, { userId, tempPassword, resetBy: ctx.userId, now });
     } catch (err) {

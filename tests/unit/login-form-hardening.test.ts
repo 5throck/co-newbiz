@@ -67,7 +67,7 @@ describe("login form markup (SSR source contract)", () => {
     expect(src).toContain("setHydrated(true)");
   });
   test("the hydrated flow still authenticates through the JSON login call", () => {
-    expect(src).toContain("await login(userId, password)");
+    expect(src).toContain("await login(userId.trim(), password)");
     expect(src).toContain("e.preventDefault()");
   });
 });

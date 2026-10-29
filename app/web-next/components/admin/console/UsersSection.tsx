@@ -71,7 +71,7 @@ export function UsersTablePanel({ ctx }: { ctx: AdminConsoleState }) {
   const locale = useLocale();
   const label = useAdminLabel();
   const tl = useTranslations("admin.list");
-  const { section, users, me, approve, userAction, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, setUsers } = ctx;
+  const { section, users, me, approve, userAction, resettingUser, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, setUsers } = ctx;
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<UserEdit | null>(null);
   const [editBusy, setEditBusy] = useState(false);
@@ -159,7 +159,7 @@ export function UsersTablePanel({ ctx }: { ctx: AdminConsoleState }) {
                       {t("editButton")}
                     </button>
                     {u.status !== "pending" && (
-                      <button type="button" className="btn-ghost btn-sm" aria-label={t("resetAria", { p1: u.user_id })} onClick={() => userAction(u.user_id, "reset_password")}>
+                      <button type="button" className="btn-ghost btn-sm" aria-label={t("resetAria", { p1: u.user_id })} disabled={resettingUser !== null} onClick={() => userAction(u.user_id, "reset_password")}>
                         {t("resetPassword")}
                       </button>
                     )}
