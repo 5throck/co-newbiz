@@ -6,6 +6,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, Clock, HelpCircle } from "lucide-react";
 import { api } from "../../lib/api.ts";
+import { useAdminLabel, useKpiKeyLabel } from "./console/admin-ui.tsx";
 import {
   KPI_GATE_OPTIONS, currentWeekStart, flattenValue, formatRate, kpiQueryProblem, kpiQueryString, mixRows, streakRows, todayDate, weekCountRows,
   type Kpi, type KpiQuery, type KpiReport,
@@ -24,6 +25,8 @@ function KpiState({ kpi }: { kpi: Kpi }) {
 
 function KpiValue({ kpi }: { kpi: Kpi }) {
   const t = useTranslations("admin.gateIntegrity");
+  const label = useAdminLabel();
+  const keyLabel = useKpiKeyLabel();
   if (!kpi.value) return null;
   if (kpi.id === "G1") {
     const rows = mixRows(kpi.value);
@@ -36,7 +39,7 @@ function KpiValue({ kpi }: { kpi: Kpi }) {
           <th scope="col">{t("value.goShare")}</th><th scope="col">{t("value.priorGoShare")}</th>
         </tr></thead>
         <tbody>{rows.map((r) => (
-          <tr key={r.gate}><th scope="row"><code lang="en">{r.gate}</code></th><td className="tabular-nums">{r.total}</td><td className="tabular-nums">{r.go}</td><td className="tabular-nums">{r.hold}</td><td className="tabular-nums">{r.kill}</td>
+          <tr key={r.gate}><th scope="row">{label("kpiKey", r.gate)}</th><td className="tabular-nums">{r.total}</td><td className="tabular-nums">{r.go}</td><td className="tabular-nums">{r.hold}</td><td className="tabular-nums">{r.kill}</td>
             <td className="tabular-nums">{formatRate(r.goShare)}</td><td className="tabular-nums">{r.priorTotal === null ? "-" : `${formatRate(r.priorGoShare)} (${r.priorTotal})`}</td></tr>
         ))}</tbody>
       </table></div>
@@ -79,7 +82,7 @@ function KpiValue({ kpi }: { kpi: Kpi }) {
       <caption className="sr-only">{t("value.generalCaption", { id: kpi.id })}</caption>
       <thead><tr><th scope="col">{t("value.item")}</th><th scope="col">{t("value.figure")}</th></tr></thead>
       <tbody>{flat.map((r) => (
-        <tr key={r.key}><th scope="row"><code lang="en">{r.key}</code></th><td className="tabular-nums">{r.value === null ? "-" : String(r.value)}</td></tr>
+        <tr key={r.key}><th scope="row">{keyLabel(r.key)}</th><td className="tabular-nums">{r.value === null ? "-" : String(r.value)}</td></tr>
       ))}</tbody>
     </table></div>
   );
@@ -133,6 +136,7 @@ function KpiCard({ kpi }: { kpi: Kpi }) {
 export function GateIntegrityKpiSection() {
   const t = useTranslations("admin.gateIntegrity");
   const tc = useTranslations("common");
+  const label = useAdminLabel();
   const uid = useId().replace(/:/g, "");
   const [q, setQ] = useState<KpiQuery>(() => ({ from: currentWeekStart(), to: todayDate(), gate: "", minWrites: "" }));
   const [report, setReport] = useState<KpiReport | null>(null);
@@ -166,7 +170,7 @@ export function GateIntegrityKpiSection() {
         <label className={small} htmlFor={`${uid}-gate`}><span className="block mb-1">{t("filter.gate")}</span>
           <select id={`${uid}-gate`} className="sizing-new-input sizing-new-input-sm" value={q.gate} onChange={(e) => setQ({ ...q, gate: e.target.value })}>
             <option value="">{tc("all")}</option>
-            {KPI_GATE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
+            {KPI_GATE_OPTIONS.map((g) => <option key={g} value={g}>{label("kpiKey", g)}</option>)}
           </select></label>
         <label className={small} htmlFor={`${uid}-mw`}><span className="block mb-1">{t("filter.minWrites")}</span>
           <input id={`${uid}-mw`} inputMode="numeric" className="sizing-new-input sizing-new-input-sm w-24" value={q.minWrites} placeholder="10" onChange={(e) => setQ({ ...q, minWrites: e.target.value })} /></label>
@@ -186,7 +190,7 @@ export function GateIntegrityKpiSection() {
             </div>
           )}
           <p className={`${small} ${muted} mb-3`} data-testid="kpi-summary">
-            {t("summary", { from: report.period.from.slice(0, 10), to: report.period.to.slice(0, 10), count: breachedCount })}{report.gate ? ` · ${t("filter.gate")}: ${report.gate}` : ""}
+            {t("summary", { from: report.period.from.slice(0, 10), to: report.period.to.slice(0, 10), count: breachedCount })}{report.gate ? ` · ${t("filter.gate")}: ${label("kpiKey", report.gate)}` : ""}
           </p>
           <div className="grid gap-3">{report.kpis.map((k) => <KpiCard key={k.id} kpi={k} />)}</div>
         </>

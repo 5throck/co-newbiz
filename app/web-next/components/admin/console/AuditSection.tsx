@@ -7,11 +7,16 @@ import { api } from "../../../lib/api.ts";
 import { EChartsCore } from "./constants.ts";
 import type { AdminConsoleState } from "./useAdminActions.ts";
 import { formatDateTime } from "../../../lib/format.ts";
+import { Pager, useAdminLabel, usePaged } from "./admin-ui.tsx";
+
+const AUDIT_PAGE_SIZE = 20;
 
 export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.audit");
   const tc = useTranslations("common");
   const locale = useLocale();
+  const label = useAdminLabel();
+  const paged = usePaged(ctx.auditLog ?? [], AUDIT_PAGE_SIZE);
   const { section, error, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, setError, showAuditTable } = ctx;
   return (
     <>{section === "audit" && (
@@ -22,13 +27,13 @@ export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
             <>
               <div className="summary-cards mb-4">
                 <div className="summary-card glass"><span className="summary-value mono-num">{auditStats.total.toLocaleString()}</span><span className="text-label">{t("totalRecords")}</span></div>
-                <div className="summary-card glass"><span className="summary-value mono-num">{auditStats.byAction[0]?.count ?? 0}</span><span className="text-label">{t("topAction", { p1: auditStats.byAction[0]?.action ?? "—" })}</span></div>
-                <div className="summary-card glass"><span className="summary-value mono-num">{auditStats.byActor[0]?.count ?? 0}</span><span className="text-label">{t("topActor", { p1: auditStats.byActor[0]?.actor ?? "—" })}</span></div>
+                <div className="summary-card glass"><span className="summary-value mono-num">{auditStats.byAction[0]?.count ?? 0}</span><span className="text-label">{t("topAction")}</span><span className="normal-case text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{label("action", auditStats.byAction[0]?.action)}</span></div>
+                <div className="summary-card glass"><span className="summary-value mono-num">{auditStats.byActor[0]?.count ?? 0}</span><span className="text-label">{t("topActor")}</span><span className="normal-case text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{auditStats.byActor[0]?.actor ?? "—"}</span></div>
                 <div className="summary-card glass"><span className="summary-value mono-num">{auditStats.daily.reduce((a, b) => a + b.count, 0)}</span><span className="text-label">{t("last30Days")}</span></div>
               </div>
               <div className="charts-row">
                 <section className="chart-card glass">
-                  <h3 className="text-label mb-2">{t("dailyChartHeading")}</h3>
+                  <h2 className="text-label mb-2">{t("dailyChartHeading")}</h2>
                   <EChartsCore option={{
                     tooltip: { trigger: "axis" as const },
                     grid: { left: 40, right: 16, top: 16, bottom: 32 },
@@ -38,12 +43,12 @@ export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
                   }} style={{ height: 240 }} />
                 </section>
                 <section className="chart-card glass">
-                  <h3 className="text-label mb-2">{t("topActionsHeading")}</h3>
+                  <h2 className="text-label mb-2">{t("topActionsHeading")}</h2>
                   <EChartsCore option={{
                     tooltip: { trigger: "axis" as const },
-                    grid: { left: 120, right: 16, top: 16, bottom: 24 },
+                    grid: { left: 160, right: 16, top: 16, bottom: 24 },
                     xAxis: { type: "value" as const, minInterval: 1, axisLabel: { color: ct.muted }, splitLine: { lineStyle: { color: ct.split } } },
-                    yAxis: { type: "category" as const, data: [...auditStats.byAction].reverse().map((a) => a.action), axisLabel: { color: ct.muted, fontSize: 10 } },
+                    yAxis: { type: "category" as const, data: [...auditStats.byAction].reverse().map((a) => label("action", a.action)), axisLabel: { color: ct.muted, fontSize: 11, width: 150, overflow: "truncate" as const } },
                     series: [{ type: "bar" as const, data: [...auditStats.byAction].reverse().map((a) => a.count), itemStyle: { color: ct.color[1] }, barMaxWidth: 14 }],
                   }} style={{ height: 240 }} />
                 </section>
@@ -61,7 +66,7 @@ export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
                 actions={
                   <button
                     type="button"
-                    className="btn-ghost"
+                    className="btn-primary"
                     onClick={() => {
                       const qs = new URLSearchParams({ limit: "200" });
                       if (auditFilters.actor) qs.set("actor", auditFilters.actor);
@@ -92,11 +97,11 @@ export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {auditLog.map((row) => (
+                    {paged.slice.map((row) => (
                       <tr key={row.id}>
                         <td>{formatDateTime(row.created_at, locale)}</td>
                         <td>{row.actor_user_id}</td>
-                        <td>{row.action}</td>
+                        <td>{label("action", row.action)}</td>
                         <td>{row.target}</td>
                       </tr>
                     ))}
@@ -104,6 +109,9 @@ export function AuditPanel({ ctx }: { ctx: AdminConsoleState }) {
                 </table>
                 </div>
               ))}
+              {showAuditTable && auditLog && auditLog.length > 0 && (
+                <Pager page={paged.page} pages={paged.pages} total={paged.total} onPage={paged.setPage} ariaLabel={t("pageAria")} />
+              )}
             </>
           )}
         </div>

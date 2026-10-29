@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { authenticate, requireAdmin } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
+import { parseAdrStatus } from "../../../../lib/adr-status.ts";
 
 // import.meta.dirname does not survive Turbopack bundling (undefined in the
 // production container — "paths[0] must be of type string", found
@@ -41,11 +42,10 @@ export async function GET(request: Request) {
       const idMatch = f.match(/^(\d{4})-/);
       const id = idMatch ? `ADR-${idMatch[1]}` : f;
       const titleMatch = raw.match(/^#\s+ADR-\d+:\s*(.+)$/m);
-      const statusMatch = raw.match(/^\*\*Status\*\*:\s*(.+)$/m);
-      return {
+            return {
         id,
         title: titleMatch ? titleMatch[1].trim() : f,
-        status: statusMatch ? statusMatch[1].trim() : "Unknown",
+        status: parseAdrStatus(raw) ?? "Unknown",
         file: f,
       };
     })

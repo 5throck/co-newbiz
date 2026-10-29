@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
+import { useAuth } from "../../lib/auth-client.tsx";
 import { ColGroup, FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
@@ -90,6 +91,8 @@ const FILTERS: Array<[FilterKey, string]> = [
 
 function DealsBoard() {
   const t = useTranslations();
+  const { me } = useAuth();
+  const isAdmin = me?.role === "admin";
   const [data, setData] = useState<PipelineView | null>(null);
   const [opps, setOpps] = useState<OpportunityRow[] | null>(null);
   const [paused, setPaused] = useState<Record<string, PausedInfo>>({});
@@ -100,8 +103,11 @@ function DealsBoard() {
 
   const load = useCallback(() => {
     api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : t("pages.deals.loadFailed")));
+    // /api/opportunities is a business route (requireBusinessActor) that answers 403 for the
+    // admin role (ADR-0091/0146); admin lands here via "/" but has no opportunity list to show.
+    if (isAdmin) { setOpps([]); return; }
     api.get<OpportunityRow[]>("/api/opportunities").then((r) => setOpps(r.data)).catch(() => setOpps([]));
-  }, []);
+  }, [isAdmin]);
   useEffect(() => { load(); }, [load]);
 
   // Paused-pipeline banners (ADR-0102 deep links): fetched only for board-size

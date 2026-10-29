@@ -6,6 +6,7 @@ import { authenticate, requireAdmin } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 
 const ACCOUNT_ROLES = new Set(["admin", "analyst", "viewer"]);
+const DISPLAY_NAME_MAX = 60;
 
 export async function PUT(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const auth = authenticate(request);
@@ -14,7 +15,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
   if (adminCheck) return adminCheck;
   const ctx = auth.auth;
   const { userId } = await params;
-  const body = (await request.json().catch(() => null)) as { action?: string; role?: string; temporary_password?: string } | null;
+  const body = (await request.json().catch(() => null)) as { action?: string; role?: string; temporary_password?: string; display_name?: string } | null;
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -38,6 +39,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     if (res.changes === 0) return notFound();
     appendAudit(db, { actor: ctx.userId, action: "account_set_role", target: `${userId}:${body.role}`, now });
     return ok({ ok: true, role: body.role });
+  }
+
+  if (body?.action === "set_display_name") {
+    const name = typeof body.display_name === "string" ? body.display_name.trim() : "";
+    if (!name || name.length > DISPLAY_NAME_MAX) {
+      return badRequest("invalid_request", `display_name must be 1-${DISPLAY_NAME_MAX} characters.`);
+    }
+    const res = db.run("UPDATE app_user SET display_name = ? WHERE user_id = ?", [name, userId]);
+    if (res.changes === 0) return notFound();
+    appendAudit(db, { actor: ctx.userId, action: "account_set_display_name", target: userId, now });
+    return ok({ ok: true, display_name: name });
   }
 
   if (body?.action === "disable") {
@@ -85,5 +97,5 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     return ok({ ok: true, deleted: userId });
   }
 
-  return badRequest("invalid_request", "action must be approve|set_role|disable|enable|reset_password|delete.");
+  return badRequest("invalid_request", "action must be approve|set_role|set_display_name|disable|enable|reset_password|delete.");
 }

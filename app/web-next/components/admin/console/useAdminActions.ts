@@ -9,7 +9,7 @@ import type { useAdminData } from "./useAdminData.ts";
 
 export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   const t = useTranslations("admin.actions");
-  const { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, action, setTableKey, setBasis, setMonths, setRetention } = prev;
+  const { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, setDbOverview, preview, dbOverview } = prev;
 
   const { panelRef: secretModalPanelRef, onKeyDown: secretModalKeyDown } = useModalFocus(
     () => setIssuedSecret(null),
@@ -78,7 +78,7 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   }
 
   function userAction(userId: string, action: "delete" | "reset_password" | "disable" | "enable") {
-    if (action === "delete") {
+    if (dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling === "archive_then_delete") {
       confirm(
         t("deleteAccountTitle", { p1: userId }),
         async () => {
@@ -124,7 +124,25 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
     }
   }
 
-  async function saveRetention(e: FormEvent) {
+  async function persistRetention(monthsValue: number) {
+    try {
+      await api.post("/api/admin/retention", {
+        table_key: tableKey.trim(),
+        basis: basis.trim(),
+        retention_months: monthsValue,
+      });
+      setRetentionNotice(t("savedNotice", { p1: tableKey.trim() }));
+      setTableKey("");
+      setBasis("");
+      setMonths("");
+      setRetention(null); // re-fetch through the section effect
+      setDbOverview(null);
+    } catch (err) {
+      setRetentionFormError(err instanceof ApiError ? err.message : t("saveFailed"));
+    }
+  }
+
+  function saveRetention(e: FormEvent) {
     e.preventDefault();
     setRetentionFormError(null);
     setRetentionNotice(null);
@@ -133,27 +151,39 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
       setRetentionFormError(t("errTableKeyBasis"));
       return;
     }
-    if (!Number.isInteger(monthsValue) || monthsValue < 0) {
+    if (months.trim() === "" || !Number.isInteger(monthsValue) || monthsValue < 0) {
       setRetentionFormError(t("errMonthsInteger"));
       return;
     }
-    try {
-      await api.post("/api/admin/retention", {
-        table_key: tableKey.trim(),
-        basis: basis.trim(),
-        retention_months: monthsValue,
-        action,
+    if (dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling === "archive_then_delete") {
+      // Irreversible once the scheduled job runs — state the count and require confirmation.
+      const count = preview.state === "ready" && preview.count !== null ? preview.count.toLocaleString() : "?";
+      confirm(t("retentionDeleteConfirmTitle", { p1: tableKey.trim() }), () => { void persistRetention(monthsValue); }, {
+        body: t("retentionDeleteConfirmBody", { p1: count, p2: monthsValue }),
+        confirmLabel: t("retentionDeleteConfirmLabel"),
       });
-      setRetentionNotice(t("savedNotice", { p1: tableKey.trim() }));
-      setTableKey("");
-      setBasis("");
-      setMonths("");
-      setRetention(null); // re-fetch through the section effect
-    } catch (err) {
-      setRetentionFormError(err instanceof ApiError ? err.message : t("saveFailed"));
+      return;
     }
+    void persistRetention(monthsValue);
   }
-  return { issuedSecret, secretModalKeyDown, secretModalPanelRef, setIssuedSecret, showCreateUser, setShowCreateUser, setRole, userAction, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, toggleJob, saveRetention };
+
+  function removeRetentionPolicy(key: string) {
+    confirm(t("retentionRemoveTitle", { p1: key }), () => {
+      void (async () => {
+        setRetentionFormError(null);
+        setRetentionNotice(null);
+        try {
+          await api.delete(`/api/admin/retention/${encodeURIComponent(key)}`);
+          setRetentionNotice(t("retentionRemovedNotice", { p1: key }));
+          setRetention(null);
+          setDbOverview(null);
+        } catch (err) {
+          setRetentionFormError(err instanceof ApiError ? err.message : t("retentionRemoveFailed"));
+        }
+      })();
+    }, { body: t("retentionRemoveBody") });
+  }
+  return { issuedSecret, secretModalKeyDown, secretModalPanelRef, setIssuedSecret, showCreateUser, setShowCreateUser, setRole, userAction, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, toggleJob, saveRetention, removeRetentionPolicy };
 }
 
 export type AdminConsoleState = ReturnType<typeof useAdminData> & ReturnType<typeof useAdminActions>;

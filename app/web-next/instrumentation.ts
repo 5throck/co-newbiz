@@ -11,6 +11,15 @@ function randomPassword(bytes = 16): string {
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Import allowlisted pipeline keys from the repo-root .env once, so every
+  // route (not only LLM/DART code paths) sees them. Never logs values.
+  try {
+    const { loadRootEnvPipelineKeys } = await import("./lib/root-env.ts");
+    loadRootEnvPipelineKeys();
+  } catch {
+    // best-effort — lazy loaders remain as fallback
+  }
+
   // Production hardening hint (never throws, never blocks boot): warn once per
   // process when the public origin is unset or malformed.
   try {

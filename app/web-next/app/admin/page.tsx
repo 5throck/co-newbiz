@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
-import { SectionToolbar } from "../../components/layout.tsx";
+import { useAdminLabel } from "../../components/admin/console/admin-ui.tsx";
+import { PageHeader } from "../../components/layout.tsx";
 
 const EChartsCore = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -32,6 +33,7 @@ export default function AdminDashboardPage() {
   const t = useTranslations("admin.dashboard");
   const tc = useTranslations("common");
   const ct = useChartTheme();
+  const label = useAdminLabel();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +45,7 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="admin-console-page">
-      <h1>{t("title")}</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{t("subtitle")}</p>
+      <PageHeader title={t("title")} description={t("subtitle")} />
       {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
       {!stats && !error && <p>{tc("loading")}</p>}
       {stats && (
@@ -57,7 +58,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="charts-row">
             <section className="chart-card glass">
-              <h3 className="text-label mb-2">{t("charts.auditTrend")}</h3>
+              <h2 className="text-label mb-2">{t("charts.auditTrend")}</h2>
               <EChartsCore option={{
                 tooltip: { trigger: "axis" as const },
                 grid: { left: 40, right: 16, top: 16, bottom: 32 },
@@ -67,16 +68,35 @@ export default function AdminDashboardPage() {
               }} style={{ height: 260 }} />
             </section>
             <section className="chart-card glass">
-              <h3 className="text-label mb-2">{t("charts.roleDistribution")}</h3>
+              <h2 className="text-label mb-2">{t("charts.roleDistribution")}</h2>
+              {/* Labels stay off the ring (they skewed and overlapped at this size); names and counts live in the legend + tooltip. */}
               <EChartsCore option={{
-                tooltip: { trigger: "item" as const },
-                series: [{ type: "pie" as const, radius: ["45%", "70%"], data: stats.usersByRole.map((r, i) => ({ name: r.role, value: r.count, itemStyle: { color: ct.color[i % ct.color.length] } })) }],
+                tooltip: { trigger: "item" as const, formatter: (p: { name: string; value: number; percent: number }) => `${p.name}: ${p.value} (${p.percent}%)` },
+                legend: {
+                  bottom: 0,
+                  icon: "circle",
+                  textStyle: { color: ct.muted, fontSize: 12 },
+                  formatter: (name: string) => {
+                    const row = stats.usersByRole.find((r) => label("role", r.role) === name);
+                    return row ? t("charts.roleCount", { name, value: row.count }) : name;
+                  },
+                },
+                series: [{
+                  type: "pie" as const,
+                  radius: ["42%", "66%"],
+                  center: ["50%", "42%"],
+                  avoidLabelOverlap: true,
+                  label: { show: false },
+                  labelLine: { show: false },
+                  itemStyle: { borderColor: ct.tooltipBg, borderWidth: 2 },
+                  data: stats.usersByRole.map((r, i) => ({ name: label("role", r.role), value: r.count, itemStyle: { color: ct.color[i % ct.color.length] } })),
+                }],
               }} style={{ height: 260 }} />
             </section>
           </div>
           <div className="charts-row">
             <section className="chart-card glass">
-              <h3 className="text-label mb-2">{t("charts.opportunityFunnel")}</h3>
+              <h2 className="text-label mb-2">{t("charts.opportunityFunnel")}</h2>
               <EChartsCore option={{
                 tooltip: { trigger: "axis" as const },
                 grid: { left: 40, right: 16, top: 16, bottom: 32 },
@@ -86,7 +106,10 @@ export default function AdminDashboardPage() {
               }} style={{ height: 260 }} />
             </section>
             <section className="chart-card glass">
-              <h3 className="text-label mb-2">{t("charts.scheduleResults")}</h3>
+              <h2 className="text-label mb-2">{t("charts.scheduleResults")}</h2>
+              {stats.jobRuns.length === 0 || stats.jobRuns.every((j) => j.success + j.failed === 0) ? (
+                <p role="status" className="text-[color:var(--muted-fg)] italic" style={{ minHeight: 260 }}>{t("charts.emptyScheduleResults")}</p>
+              ) : (
               <EChartsCore option={{
                 tooltip: { trigger: "axis" as const },
                 legend: { top: 0, textStyle: { color: ct.muted, fontSize: 11 } },
@@ -98,6 +121,7 @@ export default function AdminDashboardPage() {
                   { name: t("series.failure"), type: "bar" as const, data: stats.jobRuns.map((j) => j.failed), itemStyle: { color: ct.color[3] } },
                 ],
               }} style={{ height: 260 }} />
+              )}
             </section>
           </div>
         </>

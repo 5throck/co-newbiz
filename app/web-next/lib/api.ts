@@ -224,9 +224,10 @@ export interface AuditLogRow {
 
 export interface DataSourceRow {
   code: string;
-  reliability_grade: string;
-  key_var: string;
+  reliability_grade: string | null;
+  key_var: string | null;
   key_present: boolean;
+  key_source: "process_env" | "root_env" | null;
 }
 
 // --- PR #65: Data / Assumptions / DD / Regulatory & Permits tabs ---
@@ -571,6 +572,24 @@ export interface RetentionPolicyRow {
   action: string;
   last_run_at: string | null;
 }
+
+// GET /api/admin/database/overview — aggregates only, never row data.
+export interface DatabaseOverviewTable {
+  table: string;
+  label: { ko: string; en: string };
+  description: { ko: string; en: string };
+  handling: "archive_then_delete" | "archive_only";
+  row_count: number;
+  date_columns: Array<{ column: string; label: { ko: string; en: string }; oldest: string | null; newest: string | null }>;
+  policy: { basis: string; retention_months: number; action: string } | null;
+}
+export interface DatabaseOverview {
+  tables: DatabaseOverviewTable[];
+  migrations: { applied_count: number; latest: { filename: string; applied_at: string } | null };
+  backup_history: null;
+}
+// GET /api/admin/retention/preview
+export interface RetentionPreview { table: string; column: string; months: number; cutoff: string; affected_count: number }
 
 // --- PR-3b: portfolio scorecard (E.4) — appended only, same boundary as
 // the PR #65 batches: no existing export above this line is touched (a

@@ -345,6 +345,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0185` | adr | — | root/certification-transferability, root/design-foundation, root/financing-plan-review, root/ip-fto-review, root/k-dart, root/k-ecos, root/k-kosis, root/k-krx, root/k-opendata, root/legal-due-diligence, root/management-incentive-review, root/partnership-health-scorecard, root/permit-pathway-mapping, root/portfolio-fit-assessment, root/project-review, root/regulatory-screening, root/technical-due-diligence, root/value-chain-stage-financials, root/zod-contract-gate | — |
 | `adr:0186` | adr | — | root/compliance-monitoring, root/stage-gate-governance, root/two-tier-approval-chain, root/wacc-input-session, root/waiver-management | — |
 | `adr:0187` | adr | — | root/ip-fto-review, root/regulatory-screening | — |
+| `adr:0188` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -571,7 +572,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 175 | (expected until docs `references` edges are mined) |
+| adr | 176 | (expected until docs `references` edges are mined) |
 | agent | 13 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ir-agent, root/platform-lead, root/release-engineer, root/security-engineer, root/sre |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 9 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync |

@@ -86,7 +86,7 @@ export const judgementPatch = (id: string, d: JudgementDraft, s3Hash: string | u
 });
 
 
-const levelText = (v: string, tc: TranslatorFn) => (v.trim() === "" ? tc("common.undetermined") : v);
+const levelText = (v: string, tc: TranslatorFn) => (v.trim() === "" ? tc("undetermined") : v);
 
 export function SummaryStrip({ s }: { s: AttainabilitySummary }) {const t = useTranslations("components.capabilityJudgement.table"); const tc = useTranslations("common");
   const judged = Math.max(0, s.total - s.grades.unjudged);

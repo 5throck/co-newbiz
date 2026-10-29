@@ -2,6 +2,7 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin } from "../../../../lib/auth.ts";
+import { handlingToStoredAction, validateRetentionPolicy } from "../../../../../../db/lib/retention-registry.ts";
 import { badRequest, ok } from "../../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
@@ -26,9 +27,10 @@ export async function POST(request: Request) {
   if (!body?.table_key?.trim() || !body?.basis?.trim() || !Number.isInteger(body?.retention_months) || body.retention_months! < 0) {
     return badRequest("invalid_request", "table_key, basis and a non-negative integer retention_months are required.");
   }
-  if (body.action !== "archive" && body.action !== "delete") {
-    return badRequest("invalid_request", "action must be archive|delete.");
-  }
+  // action is optional and derived from the registry; a conflicting client value is rejected (400 action_not_allowed).
+  const v = validateRetentionPolicy(body.table_key.trim(), body.basis.trim(), body.action);
+  if (!v.ok) return badRequest(v.code, v.message);
+  const action = handlingToStoredAction(v.entry.handling);
   const db = getDb();
   const now = new Date().toISOString();
   db.run(
@@ -38,8 +40,8 @@ export async function POST(request: Request) {
        basis = excluded.basis,
        retention_months = excluded.retention_months,
        action = excluded.action`,
-    [body.table_key.trim(), body.basis.trim(), body.retention_months!, body.action],
+    [body.table_key.trim(), body.basis.trim(), body.retention_months!, action],
   );
-  appendAudit(db, { actor: auth.auth.userId, action: "retention_policy_set", target: `${body.table_key}:${body.action}:${body.retention_months}m`, now });
+  appendAudit(db, { actor: auth.auth.userId, action: "retention_policy_set", target: `${body.table_key}:${action}:${body.retention_months}m`, now });
   return ok({ ok: true, table_key: body.table_key.trim() }, 201);
 }

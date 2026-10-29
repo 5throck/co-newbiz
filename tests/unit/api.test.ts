@@ -435,11 +435,41 @@ describe("admin console", () => {
     expect(body.data[0]).not.toHaveProperty("key_value");
   });
 
+  test("data-sources lists every adapter and reads keys from a temp root .env", async () => {
+    const { mkdtempSync, writeFileSync, rmSync: rm } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { resetRootEnvForTests } = await import("../../app/web-next/lib/root-env.ts");
+    const { SOURCE_ADAPTERS } = await import("../../scripts/co-newbiz/source-adapters.ts");
+    const dir = mkdtempSync(join(tmpdir(), "ds-env-"));
+    const saved = { k: process.env.KOSIS_API_KEY, l: process.env.LAW_API_OC };
+    delete process.env.KOSIS_API_KEY;
+    delete process.env.LAW_API_OC;
+    process.env.LAW_API_OC = "from-process";
+    writeFileSync(join(dir, ".env"), "KOSIS_API_KEY=temp-secret-value\nLAW_API_OC=ignored\n");
+    resetRootEnvForTests(dir);
+    try {
+      const res = await req("/api/admin/data-sources", { headers: { cookie: rootCookie } });
+      const text = await res.text();
+      expect(text).not.toContain("temp-secret-value");
+      expect(text).not.toContain("from-process");
+      const data = JSON.parse(text).data as { code: string; key_present: boolean; key_source: string | null }[];
+      expect(data.map((d) => d.code).sort()).toEqual(Object.keys(SOURCE_ADAPTERS).sort());
+      expect(data.find((d) => d.code === "kosis")).toMatchObject({ key_present: true, key_source: "root_env" });
+      expect(data.find((d) => d.code === "law")).toMatchObject({ key_present: true, key_source: "process_env" });
+    } finally {
+      resetRootEnvForTests(null);
+      rm(dir, { recursive: true, force: true });
+      if (saved.k === undefined) delete process.env.KOSIS_API_KEY; else process.env.KOSIS_API_KEY = saved.k;
+      if (saved.l === undefined) delete process.env.LAW_API_OC; else process.env.LAW_API_OC = saved.l;
+    }
+  });
+
   test("retention policy can be upserted", async () => {
     const res = await req("/api/admin/retention", {
       method: "POST",
       headers: { cookie: rootCookie },
-      body: JSON.stringify({ table_key: "simulation_draw", basis: "G5 capacity", retention_months: 6, action: "archive" }),
+      body: JSON.stringify({ table_key: "notification", basis: "sent_at", retention_months: 6 }),
     });
     expect(res.status).toBe(201);
   });

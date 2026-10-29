@@ -43,6 +43,8 @@
     "contrast:check": "bun scripts/co-newbiz/contrast-check.ts",
     "agents:personas": "bun scripts/co-newbiz/sync-agent-personas.ts",
     "glossary:lint": "bun glossary/_validate.ts",
+    "glossary:generate": "bun scripts/co-newbiz/generate-glossary-data.ts",
+    "glossary:check": "bun scripts/co-newbiz/generate-glossary-data.ts --check",
     "procedures:lint": "bun procedures/_validate.ts",
     "checklists:lint": "bun checklists/_validate.ts",
     "process:ssot-check": "bun scripts/co-newbiz/process-ssot-check.ts",

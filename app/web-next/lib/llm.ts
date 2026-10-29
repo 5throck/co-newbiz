@@ -15,6 +15,7 @@ import { z } from "zod";
 import { costUsd, estimatedUsage, parseUsage, type LlmUsage } from "./llm-usage.ts";
 import { emitGenAiSpan } from "./llm-otel.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
+import { loadRootEnvPipelineKeys } from "./root-env.ts";
 
 export type { LlmUsage } from "./llm-usage.ts";
 
@@ -50,43 +51,8 @@ interface ProviderConfig {
   model?: string;
 }
 
-// The Next.js server runs with cwd app/web-next, so Next only auto-loads
-// .env files from there — but operators configure CO_NEWBIZ_LLM_*, DART_API_KEY,
-// TAVILY_API_KEY etc. in the repo-root .env. Walk up from cwd and import
-// pipeline keys that are not already in the environment (never overriding
-// explicitly-set values).
-const PIPELINE_ENV_KEYS = /^(CO_NEWBIZ_LLM_[A-Z_]+|DART_API_KEY|ECOS_API_KEY|KRX_API_KEY|TAVILY_API_KEY)$/;
-let rootEnvLoaded = false;
-export function loadRootEnvPipelineKeys(): void {
-  if (rootEnvLoaded) return;
-  rootEnvLoaded = true;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-    const { existsSync, readFileSync } = require("node:fs") as typeof import("node:fs");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-    const { dirname, join } = require("node:path") as typeof import("node:path");
-    // cwd is the anchor (next start runs from app/web-next); import.meta.dir
-    // is unreliable inside the bundled server chunks.
-    let dir = /*turbopackIgnore: true*/ process.cwd();
-    for (let i = 0; i < 5; i++) {
-      const envPath = join(dir, ".env");
-      if (existsSync(envPath)) {
-        for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
-          const m = line.match(/^([A-Z_]+)=(.*)$/);
-          if (m && PIPELINE_ENV_KEYS.test(m[1]) && process.env[m[1]] === undefined) {
-            process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
-          }
-        }
-        if (process.env.CO_NEWBIZ_LLM_PROVIDER && process.env.DART_API_KEY && process.env.TAVILY_API_KEY) return;
-      }
-      const parent = dirname(dir);
-      if (parent === dir) return;
-      dir = parent;
-    }
-  } catch {
-    // env discovery is best-effort — the deterministic fallback still works
-  }
-}
+// Repo-root .env loading lives in ./root-env.ts (shared by every route).
+export { loadRootEnvPipelineKeys };
 
 export function getProviderConfig(): ProviderConfig | null {
   loadRootEnvPipelineKeys();
