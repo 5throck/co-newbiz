@@ -1,13 +1,22 @@
 "use client";
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { AdminConsoleState } from "./useAdminActions.ts";
+import { ListSearch, Pager, matchesQuery, useAdminLabel, usePaged } from "./admin-ui.tsx";
+
+const GLOSSARY_PAGE_SIZE = 25;
 
 export function GlossaryListPanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.glossarySection");
   const tc = useTranslations("common");
+  const tl = useTranslations("admin.list");
+  const label = useAdminLabel();
   const { section, glossary } = ctx;
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => (glossary ?? []).filter((g) => matchesQuery(query, g.key, g.ko, g.en, label("glossaryCategory", g.category))), [glossary, query, label]);
+  const paged = usePaged(filtered, GLOSSARY_PAGE_SIZE);
   return (
     <>{section === "glossary" &&
         (glossary === null ? (
@@ -15,7 +24,14 @@ export function GlossaryListPanel({ ctx }: { ctx: AdminConsoleState }) {
         ) : glossary.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">{t("emptyTerms")}</p>
         ) : (
-          <table className="data-table">
+          <>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <ListSearch value={query} onChange={setQuery} ariaLabel={t("searchAria")} placeholder={t("searchPlaceholder")} />
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("readOnlyNote")}</span>
+          </div>
+          {filtered.length === 0 ? <p className="text-[color:var(--muted-fg)] italic">{tl("noMatch")}</p> : (
+          <>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table">
             <caption className="sr-only">{t("listCaption")}</caption>
             <thead>
               <tr>
@@ -26,16 +42,20 @@ export function GlossaryListPanel({ ctx }: { ctx: AdminConsoleState }) {
               </tr>
             </thead>
             <tbody>
-              {glossary.map((term) => (
+              {paged.slice.map((term) => (
                 <tr key={term.key}>
                   <td className="font-mono text-xs">{term.key}</td>
                   <td>{term.ko}</td>
                   <td>{term.en}</td>
-                  <td>{term.category}</td>
+                  <td>{label("glossaryCategory", term.category)}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
+          <Pager page={paged.page} pages={paged.pages} total={paged.total} onPage={paged.setPage} />
+          </>
+          )}
+          </>
         ))}</>
   );
 }
@@ -88,6 +108,7 @@ export function GlossaryLintPanel({ ctx }: { ctx: AdminConsoleState }) {
 
 export function GlossaryFormPanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.glossarySection");
+  const label = useAdminLabel();
   const { section, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy } = ctx;
   return (
     <>{section === "glossary" && (
@@ -112,12 +133,12 @@ export function GlossaryFormPanel({ ctx }: { ctx: AdminConsoleState }) {
             <label>
               {t("labelCategory")}
               <select value={termForm.category} onChange={(e) => setTermForm({ ...termForm, category: e.target.value })}>
-                <option value="business">business</option>
-                <option value="financial">financial</option>
-                <option value="legal">legal</option>
-                <option value="technical">technical</option>
-                <option value="industry">industry</option>
-                <option value="unit">unit</option>
+                <option value="business">{label("glossaryCategory", "business")}</option>
+                <option value="financial">{label("glossaryCategory", "financial")}</option>
+                <option value="legal">{label("glossaryCategory", "legal")}</option>
+                <option value="technical">{label("glossaryCategory", "technical")}</option>
+                <option value="industry">{label("glossaryCategory", "industry")}</option>
+                <option value="unit">{label("glossaryCategory", "unit")}</option>
               </select>
             </label>
             <label>
@@ -139,7 +160,7 @@ export function GlossaryFormPanel({ ctx }: { ctx: AdminConsoleState }) {
           </label>
           {termFormError && <p className="form-error mt-2" role="alert">{termFormError}</p>}
           {termFormNotice && <p className="form-success mt-2">{termFormNotice}</p>}
-          <button type="submit" className="btn-ghost mt-2" disabled={termFormBusy}>
+          <button type="submit" className="btn-primary mt-2" disabled={termFormBusy}>
             {termFormBusy ? t("submitting") : t("submitButton")}
           </button>
         </form>

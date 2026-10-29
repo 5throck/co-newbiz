@@ -12,7 +12,8 @@ import { AuditPanel } from "./AuditSection.tsx";
 import { DataSourcesPanel, SchedulePanel, DatabasePanel, NotificationsPanel } from "./OpsSections.tsx";
 import { GlossaryListPanel, GlossaryLintPanel, GlossaryFormPanel } from "./GlossarySections.tsx";
 import { ReviewAuditPanel, GovernancePanel, AdrPanel } from "./GovernanceSections.tsx";
-import { SECTION_TITLE_KEY } from "./constants.ts";
+import { SECTION_INTRO_KEY, SECTION_TITLE_KEY } from "./constants.ts";
+import { PageHeader } from "../../layout.tsx";
 import type { Section } from "./types.ts";
 
 export function AdminConsole(props0: { section: Section }) {
@@ -25,7 +26,7 @@ export function AdminConsole(props0: { section: Section }) {
   return (
     <main className="admin-console-page">
       {confirmDialog}
-      <h1>{t(SECTION_TITLE_KEY[section])}</h1>
+      <PageHeader title={t(SECTION_TITLE_KEY[section])} description={t(SECTION_INTRO_KEY[section])} />
       {issuedSecret && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={st("aria")} onKeyDown={secretModalKeyDown}>
           <div ref={secretModalPanelRef} className="modal-panel">

@@ -1,9 +1,14 @@
 "use client";
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { AdminConsoleState } from "./useAdminActions.ts";
 import { ColGroup, DevRef } from "../../ui.tsx";
+import { ListSearch, Pager, adrStatusCode, matchesQuery, useAdminLabel, usePaged } from "./admin-ui.tsx";
+
+const GOV_PAGE_SIZE = 20;
+const ADR_PAGE_SIZE = 25;
 
 // 거버넌스 문서 레지스트리 8열 — ID·키·제목이 긴 텍스트라 고정 비율 유지.
 const GOVERNANCE_COL_PCT = [18, 8, 14, 26, 7, 9, 10, 8] as const;
@@ -34,7 +39,7 @@ export function ReviewAuditPanel({ ctx }: { ctx: AdminConsoleState }) {
             <tbody>
               <tr>
                 <td>{t("rowOverall")}</td>
-                <td>overall</td>
+                <td>—</td>
                 <td className="mono-num">{reviewAudit.overall.sampled}</td>
                 <td className="mono-num">{reviewAudit.overall.agreed}</td>
                 <td className="mono-num">{reviewAudit.overall.rate === null ? "—" : `${Math.round(reviewAudit.overall.rate * 100)}%`}</td>
@@ -67,7 +72,15 @@ export function ReviewAuditPanel({ ctx }: { ctx: AdminConsoleState }) {
 export function GovernancePanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.governance");
   const tc = useTranslations("common");
+  const label = useAdminLabel();
+  const tl = useTranslations("admin.list");
   const { section, governance } = ctx;
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(
+    () => (governance ?? []).filter((g) => matchesQuery(query, g.id, g.key, g.title, label("govLayer", g.layer), label("govOwner", g.owner_agent))),
+    [governance, query, label],
+  );
+  const paged = usePaged(filtered, GOV_PAGE_SIZE);
   return (
     <>{section === "governance" &&
         (governance === null ? (
@@ -75,6 +88,13 @@ export function GovernancePanel({ ctx }: { ctx: AdminConsoleState }) {
         ) : governance.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">{t("emptyDocs")}</p>
         ) : (
+          <>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <ListSearch value={query} onChange={setQuery} ariaLabel={t("searchAria")} placeholder={t("searchPlaceholder")} />
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("readOnlyNote")}</span>
+          </div>
+          {filtered.length === 0 ? <p className="text-[color:var(--muted-fg)] italic">{tl("noMatch")}</p> : (
+          <>
           <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
 <table className="data-table table-fixed-pct tmin-56">
             <caption className="sr-only">{t("registryCaption")}</caption>
@@ -92,21 +112,25 @@ export function GovernancePanel({ ctx }: { ctx: AdminConsoleState }) {
               </tr>
             </thead>
             <tbody>
-              {governance.map((g) => (
+              {paged.slice.map((g) => (
                 <tr key={g.id}>
                   <td className="font-mono text-xs">{g.id}</td>
-                  <td>{g.layer}</td>
+                  <td>{label("govLayer", g.layer)}</td>
                   <td className="font-mono text-xs">{g.key}</td>
                   <td>{g.title}</td>
                   <td>{g.version}</td>
-                  <td>{g.enforceability}</td>
-                  <td>{g.owner_agent}</td>
+                  <td>{label("govEnforce", g.enforceability)}</td>
+                  <td>{label("govOwner", g.owner_agent)}</td>
                   <td>{g.superseded_by ? t("superseded", { p1: g.superseded_by }) : t("valid")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 </div>
+          <Pager page={paged.page} pages={paged.pages} total={paged.total} onPage={paged.setPage} />
+          </>
+          )}
+          </>
         ))}</>
   );
 }
@@ -114,7 +138,17 @@ export function GovernancePanel({ ctx }: { ctx: AdminConsoleState }) {
 export function AdrPanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.governance");
   const tc = useTranslations("common");
+  const label = useAdminLabel();
+  const tl = useTranslations("admin.list");
   const { section, adrs } = ctx;
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => (adrs ?? []).filter((a) => matchesQuery(query, a.id, a.title, a.file, label("adrStatus", adrStatusCode(a.status)))), [adrs, query, label]);
+  const paged = usePaged(filtered, ADR_PAGE_SIZE);
+  const idCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of adrs ?? []) m.set(a.id, (m.get(a.id) ?? 0) + 1);
+    return m;
+  }, [adrs]);
   return (
     <>{section === "adr" &&
         (adrs === null ? (
@@ -122,7 +156,14 @@ export function AdrPanel({ ctx }: { ctx: AdminConsoleState }) {
         ) : adrs.length === 0 ? (
           <p className="text-[color:var(--muted-fg)] italic">{t("emptyAdrs")}</p>
         ) : (
-          <table className="data-table">
+          <>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <ListSearch value={query} onChange={setQuery} ariaLabel={t("adrSearchAria")} placeholder={t("adrSearchPlaceholder")} />
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("adrReadOnlyNote")}</span>
+          </div>
+          {filtered.length === 0 ? <p className="text-[color:var(--muted-fg)] italic">{tl("noMatch")}</p> : (
+          <>
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table">
             <caption className="sr-only">{t("adrCaption")}</caption>
             <thead>
               <tr>
@@ -133,16 +174,24 @@ export function AdrPanel({ ctx }: { ctx: AdminConsoleState }) {
               </tr>
             </thead>
             <tbody>
-              {adrs.map((a) => (
-                <tr key={a.id}>
-                  <td className="font-mono text-xs">{a.id}</td>
+              {paged.slice.map((a) => (
+                // Two ADR files can share a number (e.g. 0142), so the file name is the unique key.
+                <tr key={a.file}>
+                  <td className="font-mono text-xs">
+                    {a.id}
+                    {(idCounts.get(a.id) ?? 0) > 1 && <span className="status-chip status-amber ml-1" title={t("adrDuplicateNote")}>{t("adrDuplicateChip")}</span>}
+                  </td>
                   <td>{a.title}</td>
-                  <td>{a.status}</td>
+                  <td title={a.status}>{label("adrStatus", adrStatusCode(a.status))}</td>
                   <td className="font-mono text-xs">{a.file}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
+          <Pager page={paged.page} pages={paged.pages} total={paged.total} onPage={paged.setPage} />
+          </>
+          )}
+          </>
         ))}</>
   );
 }

@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useConfirm } from "../crud.tsx";
 import { BusinessTargetsSection } from "./BusinessTargetsSection.tsx";
 import { api } from "../../lib/api.ts";
+import { formatDateTime } from "../../lib/format.ts";
+import { IdCell, ListSearch, Pager, matchesQuery, usePaged } from "./console/admin-ui.tsx";
+
+const MD_PAGE_SIZE = 15;
 
 // 관리자 콘솔 — 마스터데이터 관리 섹션. 코드 테이블(허용목록) 조회·추가와
 // staging_unmapped 큐(매핑 완료/기각) 처리를 담당한다. 테이블·컬럼명은
@@ -54,11 +58,14 @@ const COL_KEY: Record<string, string> = {
   si_coefficient: "colSiCoefficient",
   dart_corp_code: "colDartCorpCode",
   biz_reg_no: "colBizRegNo",
+  created_at: "colCreatedAt",
 };
 
 export function MasterDataSection() {
   const t = useTranslations("admin.masterData");
   const tc = useTranslations("common");
+  const tl = useTranslations("admin.list");
+  const locale = useLocale();
 
   const { confirm, confirmDialog } = useConfirm();
   const [tables, setTables] = useState<string[] | null>(null);
@@ -69,6 +76,8 @@ export function MasterDataSection() {
   const [newFields, setNewFields] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const tableName = TABLE_KEY[table] ? t(TABLE_KEY[table]) : table;
   const colName = (c: string): string => (COL_KEY[c] ? t(COL_KEY[c]) : c);
@@ -92,18 +101,51 @@ export function MasterDataSection() {
 
   useEffect(loadTable, [loadTable]);
 
+  // Names lead; the long id and the timestamp trail the row.
+  const shownCols = useMemo(() => {
+    if (!data) return [];
+    const body = data.columns.filter((c) => c !== "id" && c !== "created_at");
+    const names = body.filter((c) => c.startsWith("name_"));
+    return [...names, ...body.filter((c) => !c.startsWith("name_")), "id", "created_at"].filter((c) => data.columns.includes(c));
+  }, [data]);
+  const filteredRows = useMemo(
+    () => (data?.rows ?? []).filter((row) => matchesQuery(query, ...Object.values(row).map((v) => (v === null || v === undefined ? "" : String(v))))),
+    [data, query],
+  );
+  const paged = usePaged(filteredRows, MD_PAGE_SIZE);
+
+  function resetForm() {
+    setEditingId(null);
+    setNewId("");
+    setNewFields({});
+  }
+
+  function startEdit(row: Record<string, unknown>) {
+    setNotice(null);
+    setError(null);
+    setEditingId(String(row.id ?? ""));
+    setNewId(String(row.id ?? ""));
+    const next: Record<string, string> = {};
+    for (const c of EDITABLE[table] ?? []) if (c !== "id") next[c] = row[c] === null || row[c] === undefined ? "" : String(row[c]);
+    setNewFields(next);
+  }
+
   async function addCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setNotice(null);
     try {
-      await api.post("/api/admin/master-data", { table, id: newId.trim(), fields: newFields });
-      setNotice(t("codeAdded", { p1: tableName, p2: newId }));
-      setNewId("");
-      setNewFields({});
+      if (editingId) {
+        await api.put("/api/admin/master-data", { table, id: editingId, fields: newFields });
+        setNotice(t("codeUpdated", { p1: tableName, p2: editingId }));
+      } else {
+        await api.post("/api/admin/master-data", { table, id: newId.trim(), fields: newFields });
+        setNotice(t("codeAdded", { p1: tableName, p2: newId }));
+      }
+      resetForm();
       loadTable();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("addFailed"));
+      setError(err instanceof Error ? err.message : editingId ? t("updateFailed") : t("addFailed"));
     }
   }
 
@@ -144,7 +186,7 @@ export function MasterDataSection() {
             aria-selected={table === tbl}
             aria-current={table === tbl ? "true" : undefined}
             className={table === tbl ? "chip-selected" : undefined}
-            onClick={() => setTable(tbl)}
+            onClick={() => { setTable(tbl); resetForm(); setQuery(""); }}
           >
             {TABLE_KEY[tbl] ? t(TABLE_KEY[tbl]) : tbl}
           </button>
@@ -152,29 +194,55 @@ export function MasterDataSection() {
       </div>
 
       {data && (
-        <table className="data-table">
-          <caption className="sr-only">{t("tableCaption", { p1: data.table })}</caption>
+        <>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <ListSearch value={query} onChange={setQuery} ariaLabel={t("searchAria")} placeholder={t("searchPlaceholder")} />
+        </div>
+        {filteredRows.length === 0 ? (
+          <p className="text-[color:var(--muted-fg)] italic">{tl("noMatch")}</p>
+        ) : (
+        <>
+        <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+        <table className="data-table list-table list-wide">
+          <caption className="sr-only">{t("tableCaption", { p1: tableName })}</caption>
           <thead>
             <tr>
-              {data.columns.map((c) => (
+              {shownCols.map((c) => (
                 <th key={c} scope="col">
                   {colName(c)}
                 </th>
               ))}
+              <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
             </tr>
           </thead>
           <tbody>
-            {data.rows.map((row, i) => (
-              <tr key={String(row.id) ?? i}>
-                {data.columns.map((c) => (
-                  <td key={c} className="cell-sub">
-                    {row[c] === null || row[c] === undefined ? "—" : String(row[c])}
+            {paged.slice.map((row, i) => (
+              <tr key={String(row.id ?? i)}>
+                {shownCols.map((c) => (
+                  <td key={c} className={c === "id" || c === "created_at" ? "cell-sub" : undefined}>
+                    {row[c] === null || row[c] === undefined || row[c] === ""
+                      ? "—"
+                      : c === "id"
+                        ? <IdCell id={String(row[c])} />
+                        : c === "created_at"
+                          ? formatDateTime(String(row[c]), locale)
+                          : String(row[c])}
                   </td>
                 ))}
-                <td>
+                <td className="sizing-actions-cell">
+                  <span className="actions-row">
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    aria-label={t("editRowAria", { p1: String(row.id ?? "") })}
+                    onClick={() => startEdit(row)}
+                  >
+                    {t("editRowButton")}
+                  </button>
                   <button
                     type="button"
                     className="btn-danger btn-sm"
+                    aria-label={t("deleteAria", { p1: String(row.id ?? "") })}
                     title={t("deleteRowTitle")}
                     onClick={() => confirm(t("deleteRowConfirmTitle", { p1: tableName }), async () => {
                       setError(null);
@@ -188,20 +256,28 @@ export function MasterDataSection() {
                   >
                     {tc("delete")}
                   </button>
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
+        <Pager page={paged.page} pages={paged.pages} total={paged.total} onPage={paged.setPage} />
+        </>
+        )}
+        </>
       )}
 
-      <form onSubmit={addCode} aria-label={t("addFormAria")} className="my-4 flex flex-wrap items-center gap-2">
+      <form onSubmit={addCode} aria-label={editingId ? t("editFormHeading") : t("addFormAria")} className="my-4 flex flex-wrap items-center gap-2">
+        {editingId && <span role="status" className="w-full text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("editingNotice", { p1: editingId })}</span>}
         <input
           type="text"
           aria-label={t("newIdAria")}
           placeholder={t("newIdPlaceholder")}
           value={newId}
           onChange={(e) => setNewId(e.target.value)}
+          disabled={!!editingId}
           required
         />
         {editableCols.map((c) => (
@@ -214,9 +290,12 @@ export function MasterDataSection() {
             onChange={(e) => setNewFields((prev) => ({ ...prev, [c]: e.target.value }))}
           />
         ))}
-        <button type="submit" className="btn-ghost">
-          {t("addCodeButton")}
+        <button type="submit" className="btn-primary">
+          {editingId ? t("saveEditButton") : t("addCodeButton")}
         </button>
+        {editingId && (
+          <button type="button" className="btn-ghost" onClick={resetForm}>{t("cancelEdit")}</button>
+        )}
       </form>
 
       <BusinessTargetsSection />
