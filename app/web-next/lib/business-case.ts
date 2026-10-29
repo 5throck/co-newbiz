@@ -11,7 +11,7 @@
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
-import { uncertaintyScopeOfSnapshot, type UncertaintyScope } from "./uncertainty-scope.ts";
+import { uncertaintyScopeForCase, type UncertaintyScope } from "./uncertainty-scope.ts";
 import { hideHistoricalForGreenfield } from "./business-case-legacy.ts";
 import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, resolveConfirmedEvBand, evRevenueBandPayload, type EvRevenueBandPayload, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
 import { evaluateTargets, resolveProjectTargets } from "./business-targets.ts";
@@ -236,7 +236,7 @@ export function listBusinessCases(projectId: string): {
       archived_at: m.archived_at,
       archived_by: m.archived_by,
       inputs_json: m.inputs_json ?? null,
-      uncertainty_scope: uncertaintyScopeOfSnapshot(m.inputs_json),
+      uncertainty_scope: uncertaintyScopeForCase(m.inputs_json, modelSims.length),
       lines: lines.filter((l) => l.model_id === m.id).map(({ model_id: _m, ...rest }) => rest),
       simulations: modelSims,
     };

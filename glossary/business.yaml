@@ -1,5 +1,5 @@
-version: 1.4.0
-last_updated: 2026-10-15
+version: 1.5.0
+last_updated: 2026-10-29
 terms:
   Green Field:
     ko: 그린필드
@@ -176,7 +176,7 @@ terms:
   Kill Criteria:
     ko: 중단 기준
     en: Kill Criteria
-    definition_ko: 사전에 정의된 조건 충족 시 검토를 자동으로 중단시키는 규칙(예 — 필수 인증 미취득, covenant 위반).
+    definition_ko: 사전에 정의된 조건 충족 시 검토를 자동으로 중단시키는 규칙(예 — 필수 인증 미취득, 대출 약정 조건(커버넌트) 위반).
     why_it_matters_ko: 중단 기준 없는 검토는 표류하고 "검토"가 "정당화"로 변질된다. 낙관편향을 구조적으로 차단하는 장치다.
     category: business
     aliases: [중단 조건, Kill Criteria 제안]
@@ -346,3 +346,75 @@ terms:
     related: [Green Field]
     used_in: [greenfield-feasibility]
     owner: valuation-agent
+
+  Countersign:
+    ko: 두 번째 검토
+    en: Second review
+    aliases: [Countersign, IC 연서, 연서, 두 번째 검토자 확인, 두 번째 검토자, countersign, 카운터사인]
+    definition_ko: 법인·그룹 투자심의위원회 GO를 기록한 사람이 아닌 다른 검토자가 그 GO의 효력을 정하는 절차. 해당 투자심의 검토자 권한을 가진 다른 사용자가 승인·조건부 승인·반려·재상정을 위해 돌려보냄 중 하나를 사유와 함께 기록한다. 이 전까지 GO는 '두 번째 검토자 확인 대기' 상태다.
+    why_it_matters_ko: 확인 대기 중인 GO는 GO로 세지 않는다 — 다음 게이트 진입과 S11 진행이 모두 막힌다. 같은 사람이 기록과 검토를 모두 하려 하면 거절된다(403 checker_must_differ). 조건부 승인에는 조건을 한 가지 이상 붙여야 한다. AI 에이전트는 이 권한을 가질 수 없다(경계 #1).
+    category: business
+    source: ADR-0186 D6; neb-policy 2.9
+    related: [Maker Checker Separation, Condition Precedent, Entity IC, Group IC, Reconfirmation Requirement]
+    used_in: [two-tier-approval-chain, stage-gate-governance]
+    owner: process-governance-manager
+
+  Maker Checker Separation:
+    ko: 기록자·확인자 분리
+    en: Maker/Checker Separation
+    aliases: [maker/checker, maker-checker, 기록자와 확인자 분리, 작성자·승인자 분리]
+    definition_ko: 같은 사람이 결정을 기록하고 그 결정을 확인하지 못하게 나누는 원칙. 투자심의 GO는 기록한 사람(기록자)과 다른 사람(확인자)이 두 번째 검토로 확인해야 효력이 생긴다. 재확인 요건을 해제하는 사람도 해당 프로젝트의 투자심의 결정을 기록한 사람일 수 없다.
+    why_it_matters_ko: 이 분리 이전에는 한 사용자가 모든 투자심의 결정을 혼자 기록해도 막을 방법이 없었다(2026-10-26 점검 지적 C1). 강제를 켜려면 해당 역할의 검토자 권한 보유자가 2명 이상이어야 한다.
+    category: business
+    source: ADR-0186 D6 and owner decision O-1
+    related: [Countersign, Reconfirmation Requirement, Entity IC, Group IC]
+    used_in: [two-tier-approval-chain]
+    owner: process-governance-manager
+
+  Divergence Reason:
+    ko: AI 권고와 다른 결정 사유
+    en: Divergence Reason
+    aliases: [다른 결정 사유, 권고와 다른 이유, divergence_reason, divergence]
+    definition_ko: 게이트 브리프에서 AI가 권고한 결정(GO·HOLD·KILL)과 사람이 내린 결정이 다를 때 결정한 사람이 직접 적는 이유. 화면 질문은 'AI 권고와 결정이 다른 이유는 무엇입니까?'이다. AI 권고와 함께 결정 기록에 저장되며, 시스템이 사람의 결정을 바꾸는 일은 없다.
+    why_it_matters_ko: AI 권고와 다른 GO는 사유 없이 기록할 수 없다(422 divergence_reason_required). HOLD와 KILL은 막지 않고 기록한다. 브리프를 만들지 않았다면 권고는 '없음'으로 저장되고 사유는 요구하지 않는다. 사유의 실질은 기계적으로 검사한다(글자 수·토큰 수 등). 불일치 횟수는 거버넌스 지표와 S1·S2 기준 비율 환류에 쓰인다.
+    category: business
+    source: ADR-0186 D9 (M16), D2
+    related: [Gate Snapshot Acknowledgement, Stage Gate, Base Rate]
+    used_in: [stage-gate-governance, decision-record]
+    owner: process-governance-manager
+
+  Gate Snapshot Acknowledgement:
+    ko: 결정 전 상태 확인
+    en: Gate Snapshot Acknowledgement
+    aliases: [게이트 스냅샷 확인, 스냅샷 확인, 스냅샷 확인 사유, 확인 사유, snapshot acknowledgement, acknowledgement, 확인할 항목]
+    definition_ko: 게이트 GO를 기록하기 전에 서버가 그 시점의 상태(중단 기준 결과, RAG 등급과 데이터 신뢰도 상한, 검증 완료 여부, WACC 확정 여부, 면제, AI 권고)를 계산해 해시와 함께 저장한 '스냅샷'을 보고, 결정하는 사람이 항목별로 사유를 적어 확인하는 절차. 결정 요청에는 스냅샷 해시와 확인 사유가 함께 실린다.
+    why_it_matters_ko: 시스템이 GO를 대신 막거나 승인하지 않고, 충돌하는 사실을 넘어갈 수 없게 기록에 남긴다(경계 #2). 사유가 필요한 항목은 평가하지 못한 중단 기준, 적색 등급, 등급 없음, 끝나지 않은 필수 항목 등이다. 검토하는 사이 상태가 바뀌면 거절되고(409 snapshot_stale) 새로 고친 스냅샷을 다시 확인한다. 정책상 구속력이 있는 항목(발동한 중단 기준, 필수 검증 누락, WACC 미확정, 인증 승계 미확인)은 사유로 넘길 수 없는 '막힘'이다. HOLD와 KILL은 항상 기록할 수 있다.
+    category: business
+    source: ADR-0186 D1, D2, D3
+    related: [Divergence Reason, Kill Criteria, WACC Confirmation, Condition Precedent, Overall Grade]
+    used_in: [stage-gate-governance, decision-record]
+    owner: process-governance-manager
+
+  Condition Precedent:
+    ko: 투자심의 선행 조건
+    en: Conditions Precedent
+    aliases: [선행 조건, 선행조건, 열린 조건, 투자심의 선행 조건, condition precedent, CP, condition_precedent]
+    definition_ko: 투자심의 GO나 두 번째 검토에 붙은, 추적하고 해소해야 하는 조건(조건 내용, 해소 시점, 담당 역할, 상태). 해소 시점은 '그룹 투자심의위원회 개최 전', '설립 완료 전', '거래 종결 전' 중 하나이며 상태는 열림·해소·철회다. 기록한 사람이나 조건을 만든 사람이 아닌 다른 검토자가 해소하고, 닫을 때는 근거를 남긴다.
+    why_it_matters_ko: 열린 조건이 있으면 S11을 끝낼 수 없고 그룹 투자심의위원회 GO도 기록할 수 없다. 실제로 브라운필드 한 건이 DD HOLD 뒤에 추적 가능한 조건 없이 법인·그룹 GO를 받은 일이 이 장치의 계기였다. 한번 기록한 조건 행은 고치지 않는다.
+    category: business
+    source: ADR-0186 D4; neb-policy 2.10
+    related: [Countersign, Gate Snapshot Acknowledgement, Entity IC, Group IC, Reconfirmation Requirement]
+    used_in: [stage-gate-governance, two-tier-approval-chain]
+    owner: process-governance-manager
+
+  Reconfirmation Requirement:
+    ko: 재확인 요건
+    en: Reconfirmation Requirement
+    aliases: [재확인 요구, 재확인 필요, 재확인 요건 해제, reconfirmation requirement, reconfirmation_required]
+    definition_ko: 이전 게이트 규칙으로 기록된 프로젝트가 새로 쓰이기 전에 사람이 다시 확인해야 하는 항목 묶음(예 — WACC·허들 확정, 투자심의 GO의 두 번째 검토, 필수 DD 항목 '해당 없음'의 두 번째 확인). 열려 있는 동안은 새 GO 기록과 사업성 케이스 채택이 거절된다(409 reconfirmation_required). 해제는 모든 항목이 충족됐을 때 투자심의 검토자 권한 보유자가 사유와 함께 한다.
+    why_it_matters_ko: 규칙이 강화되기 전의 기록을 그대로 쓰면 새 규칙의 취지가 무너진다. HOLD와 KILL은 막지 않고, 두 번째 검토만 남았다면 투자심의 GO는 허용한다. 해제하는 사람은 그 프로젝트의 투자심의 결정을 기록한 사람이 아니어야 한다. S11 기준선 변경 때 뜨는 '재확정 필요'와는 다른 장치다.
+    category: business
+    source: ADR-0186 P5 (migration 0179); docs/runbooks/prj-dse4pw-reconfirmation.md
+    related: [Countersign, Maker Checker Separation, WACC Confirmation, Condition Precedent]
+    used_in: [stage-gate-governance, compliance-monitoring]
+    owner: process-governance-manager

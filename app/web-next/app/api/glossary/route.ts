@@ -85,7 +85,7 @@ export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const terms = loadGlossary();
-  return ok(terms.map((t) => ({ key: t.key, ko: t.ko, en: t.en, category: t.category })), 200, { count: terms.length });
+  return ok(terms.map((t) => ({ key: t.key, ko: t.ko, en: t.en, category: t.category, aliases: t.aliases ?? [] })), 200, { count: terms.length });
 }
 
 export async function POST(request: Request) {

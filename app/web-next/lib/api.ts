@@ -179,12 +179,13 @@ export interface GlossaryTermSummary {
   ko: string;
   en: string;
   category: string;
+  /** Old/alternate wordings; auto-linked too (min length applies). */
+  aliases?: string[];
 }
 
 export interface GlossaryTerm extends GlossaryTermSummary {
   definition_ko: string;
   why_it_matters_ko: string;
-  aliases?: string[];
   related?: string[];
 }
 

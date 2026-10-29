@@ -331,7 +331,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "key": "Kill Criteria",
     "ko": "중단 기준",
     "en": "Kill Criteria",
-    "definition_ko": "사전에 정의된 조건 충족 시 검토를 자동으로 중단시키는 규칙(예 — 필수 인증 미취득, covenant 위반).",
+    "definition_ko": "사전에 정의된 조건 충족 시 검토를 자동으로 중단시키는 규칙(예 — 필수 인증 미취득, 대출 약정 조건(커버넌트) 위반).",
     "why_it_matters_ko": "중단 기준 없는 검토는 표류하고 \"검토\"가 \"정당화\"로 변질된다. 낙관편향을 구조적으로 차단하는 장치다.",
     "category": "business",
     "aliases": [
@@ -583,6 +583,233 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "owner": "process-governance-manager"
   },
   {
+    "key": "Capability Judgement Stale",
+    "ko": "재판정 필요",
+    "en": "Capability Judgement Stale",
+    "definition_ko": "필요 역량의 달성 가능성 판정을 내린 뒤 그 근거(S3 필요 역량 정의, 브라운필드는 대상의 평가 기준 판정)가 바뀌어 기존 판정을 더는 믿을 수 없는 상태. 확정이 풀리고 이전 값은 기록으로 남으며 미판정으로 센다.",
+    "why_it_matters_ko": "바뀐 근거 위에 예전 판정이 그대로 남으면 S8 기술적 타당성과 게이트 요약이 낡은 판정을 확정된 것처럼 보여 준다. 사람이 다시 판정해야 풀리며, 참고용 표시라 게이트나 등급을 막지 않는다.",
+    "category": "business",
+    "aliases": [
+      "재평가 필요",
+      "재판정 필요"
+    ],
+    "related": [
+      "Target Capability Judgement",
+      "Stage Gate"
+    ],
+    "used_in": [
+      "brownfield-feasibility",
+      "greenfield-feasibility"
+    ],
+    "owner": "platform-lead"
+  },
+  {
+    "key": "Target Capability Judgement",
+    "ko": "대상별 필요 역량 점검",
+    "en": "Target Capability Judgement",
+    "definition_ko": "브라운필드 S7에서 최종 후보(숏리스트) 대상마다 S3 필요 역량 행에 대해 해소 방식·기대 수준·비용·기간·달성 가능성을 판정한 기록. 그린필드는 S5가 같은 판정을 맡는다. 사람이 확정하기 전까지는 확정 전 판정이다.",
+    "why_it_matters_ko": "어떤 대상이 유망한가는 대상마다 다르다. 판정이 대상별로 저장되어 한 대상의 변경이 다른 대상의 판정을 흔들지 않는다. S8은 선정된 대상의 판정을 읽기 전용으로 보여 줄 뿐 고치지 않는다.",
+    "category": "business",
+    "aliases": [
+      "S7 필요 역량 점검",
+      "대상별 역량 판정"
+    ],
+    "related": [
+      "Capability Judgement Stale",
+      "Brown Field",
+      "Green Field"
+    ],
+    "used_in": [
+      "brownfield-feasibility"
+    ],
+    "owner": "platform-lead"
+  },
+  {
+    "key": "Market Share",
+    "ko": "시장점유율",
+    "en": "Market Share",
+    "definition_ko": "시장 규모 가운데 우리 사업이 차지하는 몫. S8 사업성 분석에서는 `1년차 시장점유율`(비율)에 시장 규모를 곱해 첫해 매출을 추정한다.",
+    "why_it_matters_ko": "직접 시장 데이터가 없는 신규 사업에서는 첫해 매출이 이 가정 하나에 크게 좌우된다. 사람이 확정한 값인지 기본값인지 출처를 함께 확인해야 한다.",
+    "category": "business",
+    "aliases": [
+      "1년차 시장점유율"
+    ],
+    "related": [
+      "Green Field"
+    ],
+    "used_in": [
+      "greenfield-feasibility"
+    ],
+    "owner": "valuation-agent"
+  },
+  {
+    "key": "Countersign",
+    "ko": "두 번째 검토",
+    "en": "Second review",
+    "aliases": [
+      "Countersign",
+      "IC 연서",
+      "연서",
+      "두 번째 검토자 확인",
+      "두 번째 검토자",
+      "countersign",
+      "카운터사인"
+    ],
+    "definition_ko": "법인·그룹 투자심의위원회 GO를 기록한 사람이 아닌 다른 검토자가 그 GO의 효력을 정하는 절차. 해당 투자심의 검토자 권한을 가진 다른 사용자가 승인·조건부 승인·반려·재상정을 위해 돌려보냄 중 하나를 사유와 함께 기록한다. 이 전까지 GO는 '두 번째 검토자 확인 대기' 상태다.",
+    "why_it_matters_ko": "확인 대기 중인 GO는 GO로 세지 않는다 — 다음 게이트 진입과 S11 진행이 모두 막힌다. 같은 사람이 기록과 검토를 모두 하려 하면 거절된다(403 checker_must_differ). 조건부 승인에는 조건을 한 가지 이상 붙여야 한다. AI 에이전트는 이 권한을 가질 수 없다(경계",
+    "category": "business",
+    "source": "ADR-0186 D6; neb-policy 2.9",
+    "related": [
+      "Maker Checker Separation",
+      "Condition Precedent",
+      "Entity IC",
+      "Group IC",
+      "Reconfirmation Requirement"
+    ],
+    "used_in": [
+      "two-tier-approval-chain",
+      "stage-gate-governance"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Maker Checker Separation",
+    "ko": "기록자·확인자 분리",
+    "en": "Maker/Checker Separation",
+    "aliases": [
+      "maker/checker",
+      "maker-checker",
+      "기록자와 확인자 분리",
+      "작성자·승인자 분리"
+    ],
+    "definition_ko": "같은 사람이 결정을 기록하고 그 결정을 확인하지 못하게 나누는 원칙. 투자심의 GO는 기록한 사람(기록자)과 다른 사람(확인자)이 두 번째 검토로 확인해야 효력이 생긴다. 재확인 요건을 해제하는 사람도 해당 프로젝트의 투자심의 결정을 기록한 사람일 수 없다.",
+    "why_it_matters_ko": "이 분리 이전에는 한 사용자가 모든 투자심의 결정을 혼자 기록해도 막을 방법이 없었다(2026-10-26 점검 지적 C1). 강제를 켜려면 해당 역할의 검토자 권한 보유자가 2명 이상이어야 한다.",
+    "category": "business",
+    "source": "ADR-0186 D6 and owner decision O-1",
+    "related": [
+      "Countersign",
+      "Reconfirmation Requirement",
+      "Entity IC",
+      "Group IC"
+    ],
+    "used_in": [
+      "two-tier-approval-chain"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Divergence Reason",
+    "ko": "AI 권고와 다른 결정 사유",
+    "en": "Divergence Reason",
+    "aliases": [
+      "다른 결정 사유",
+      "권고와 다른 이유",
+      "divergence_reason",
+      "divergence"
+    ],
+    "definition_ko": "게이트 브리프에서 AI가 권고한 결정(GO·HOLD·KILL)과 사람이 내린 결정이 다를 때 결정한 사람이 직접 적는 이유. 화면 질문은 'AI 권고와 결정이 다른 이유는 무엇입니까?'이다. AI 권고와 함께 결정 기록에 저장되며, 시스템이 사람의 결정을 바꾸는 일은 없다.",
+    "why_it_matters_ko": "AI 권고와 다른 GO는 사유 없이 기록할 수 없다(422 divergence_reason_required). HOLD와 KILL은 막지 않고 기록한다. 브리프를 만들지 않았다면 권고는 '없음'으로 저장되고 사유는 요구하지 않는다. 사유의 실질은 기계적으로 검사한다(글자 수·토큰 수 등). 불일치 횟수는 거버넌스 지표와 S1·S2 기준 비율 환류에 쓰인다.",
+    "category": "business",
+    "source": "ADR-0186 D9 (M16), D2",
+    "related": [
+      "Gate Snapshot Acknowledgement",
+      "Stage Gate",
+      "Base Rate"
+    ],
+    "used_in": [
+      "stage-gate-governance",
+      "decision-record"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Gate Snapshot Acknowledgement",
+    "ko": "결정 전 상태 확인",
+    "en": "Gate Snapshot Acknowledgement",
+    "aliases": [
+      "게이트 스냅샷 확인",
+      "스냅샷 확인",
+      "스냅샷 확인 사유",
+      "확인 사유",
+      "snapshot acknowledgement",
+      "acknowledgement",
+      "확인할 항목"
+    ],
+    "definition_ko": "게이트 GO를 기록하기 전에 서버가 그 시점의 상태(중단 기준 결과, RAG 등급과 데이터 신뢰도 상한, 검증 완료 여부, WACC 확정 여부, 면제, AI 권고)를 계산해 해시와 함께 저장한 '스냅샷'을 보고, 결정하는 사람이 항목별로 사유를 적어 확인하는 절차. 결정 요청에는 스냅샷 해시와 확인 사유가 함께 실린다.",
+    "why_it_matters_ko": "시스템이 GO를 대신 막거나 승인하지 않고, 충돌하는 사실을 넘어갈 수 없게 기록에 남긴다(경계",
+    "category": "business",
+    "source": "ADR-0186 D1, D2, D3",
+    "related": [
+      "Divergence Reason",
+      "Kill Criteria",
+      "WACC Confirmation",
+      "Condition Precedent",
+      "Overall Grade"
+    ],
+    "used_in": [
+      "stage-gate-governance",
+      "decision-record"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Condition Precedent",
+    "ko": "투자심의 선행 조건",
+    "en": "Conditions Precedent",
+    "aliases": [
+      "선행 조건",
+      "선행조건",
+      "열린 조건",
+      "투자심의 선행 조건",
+      "condition precedent",
+      "CP",
+      "condition_precedent"
+    ],
+    "definition_ko": "투자심의 GO나 두 번째 검토에 붙은, 추적하고 해소해야 하는 조건(조건 내용, 해소 시점, 담당 역할, 상태). 해소 시점은 '그룹 투자심의위원회 개최 전', '설립 완료 전', '거래 종결 전' 중 하나이며 상태는 열림·해소·철회다. 기록한 사람이나 조건을 만든 사람이 아닌 다른 검토자가 해소하고, 닫을 때는 근거를 남긴다.",
+    "why_it_matters_ko": "열린 조건이 있으면 S11을 끝낼 수 없고 그룹 투자심의위원회 GO도 기록할 수 없다. 실제로 브라운필드 한 건이 DD HOLD 뒤에 추적 가능한 조건 없이 법인·그룹 GO를 받은 일이 이 장치의 계기였다. 한번 기록한 조건 행은 고치지 않는다.",
+    "category": "business",
+    "source": "ADR-0186 D4; neb-policy 2.10",
+    "related": [
+      "Countersign",
+      "Gate Snapshot Acknowledgement",
+      "Entity IC",
+      "Group IC",
+      "Reconfirmation Requirement"
+    ],
+    "used_in": [
+      "stage-gate-governance",
+      "two-tier-approval-chain"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Reconfirmation Requirement",
+    "ko": "재확인 요건",
+    "en": "Reconfirmation Requirement",
+    "aliases": [
+      "재확인 요구",
+      "재확인 필요",
+      "재확인 요건 해제",
+      "reconfirmation requirement",
+      "reconfirmation_required"
+    ],
+    "definition_ko": "이전 게이트 규칙으로 기록된 프로젝트가 새로 쓰이기 전에 사람이 다시 확인해야 하는 항목 묶음(예 — WACC·허들 확정, 투자심의 GO의 두 번째 검토, 필수 DD 항목 '해당 없음'의 두 번째 확인). 열려 있는 동안은 새 GO 기록과 사업성 케이스 채택이 거절된다(409 reconfirmation_required). 해제는 모든 항목이 충족됐을 때 투자심의 검토자 권한 보유자가 사유와 함께 한다.",
+    "why_it_matters_ko": "규칙이 강화되기 전의 기록을 그대로 쓰면 새 규칙의 취지가 무너진다. HOLD와 KILL은 막지 않고, 두 번째 검토만 남았다면 투자심의 GO는 허용한다. 해제하는 사람은 그 프로젝트의 투자심의 결정을 기록한 사람이 아니어야 한다. S11 기준선 변경 때 뜨는 '재확정 필요'와는 다른 장치다.",
+    "category": "business",
+    "source": "ADR-0186 P5 (migration 0179); docs/runbooks/prj-dse4pw-reconfirmation.md",
+    "related": [
+      "Countersign",
+      "Maker Checker Separation",
+      "WACC Confirmation",
+      "Condition Precedent"
+    ],
+    "used_in": [
+      "stage-gate-governance",
+      "compliance-monitoring"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
     "key": "WACC",
     "ko": "가중평균자본비용",
     "en": "Weighted Average Cost of Capital",
@@ -591,6 +818,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "category": "financial",
     "related": [
       "WACC Input Session",
+      "WACC Confirmation",
+      "Hurdle IRR",
       "Assumption Kind"
     ],
     "used_in": [
@@ -607,7 +836,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "category": "financial",
     "related": [
       "DSCR",
-      "RAG"
+      "RAG",
+      "Hurdle IRR"
     ],
     "used_in": [
       "investment-feasibility-modeling"
@@ -616,13 +846,20 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "DSCR",
-    "ko": "부채상환비율",
+    "ko": "원리금 상환 능력(DSCR)",
     "en": "Debt Service Coverage Ratio",
-    "definition_ko": "영업현금흐름을 원리금 상환액으로 나눈 비율. 재무약정(covenant)의 기준 지표로 흔히 쓰인다.",
-    "why_it_matters_ko": "하방 시나리오에서 DSCR이 covenant를 위반하면 기한이익상실로 이어져 유동성 위기가 된다 — Kill Criteria 후보다.",
+    "aliases": [
+      "부채상환비율",
+      "DSCR",
+      "원리금 상환 능력",
+      "원리금 상환 여력"
+    ],
+    "definition_ko": "영업현금흐름을 원리금 상환액(원금과 이자)으로 나눈 비율로, 1보다 클수록 갚을 여력이 있다는 뜻이다. 대출 약정 조건(커버넌트)의 기준 지표로 흔히 쓰인다. 화면에는 '원리금 상환 능력(DSCR)'으로 표기한다.",
+    "why_it_matters_ko": "불황 시나리오에서 이 비율이 약정 기준을 밑돌면 기한이익상실로 이어져 유동성 위기가 된다 — 중단 기준(Kill Criteria) 후보다. 불황 시 값은 '불황 시 원리금 상환 능력' 항목에서 따로 본다.",
     "category": "financial",
     "related": [
       "Covenant",
+      "Downside DSCR",
       "Kill Criteria"
     ],
     "used_in": [
@@ -682,9 +919,15 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "key": "Base Rate",
     "ko": "기저율",
     "en": "Base Rate",
-    "definition_ko": "과거·피어 사례의 실제 분포에 근거한 참조값.",
-    "why_it_matters_ko": "예측 성장률이 과거·피어 분포 상위 10% 밖이면 자동 경고가 발동한다. 근거 없는 하키스틱 예측을 구조적으로 막는 장치다.",
+    "aliases": [
+      "기준율",
+      "기준 비율",
+      "base_rate"
+    ],
+    "definition_ko": "과거·피어 사례의 실제 분포(하위 10%·중앙값·상위 10%)에 근거한 참조값. 값마다 출처, 확인한 날짜, 관리자, 근거 종류(내부 사후 평가·공개 연구·규제 통계·산업 데이터)를 반드시 함께 적어 두는 base_rate 표에서 가져온다(ADR-0187 D2). 출처 없는 행은 시스템이 받지 않는다.",
+    "why_it_matters_ko": "예측 성장률이 과거·피어 분포 상위 10% 밖이면 자동 경고가 발동한다. 근거 없는 하키스틱 예측을 구조적으로 막는 장치다. 저장된 행이 없으면 기본값을 채우지 않고 '없음(not_available)'으로 답한다. 2026-10-28에 공개 연구 기반 첫 제안 파일(23행)이 만들어졌지만 담당자가 가져오기를 실행해야 데이터베이스에 들어간다. 값 이름이 _mean이면 평균, share_로 시작하면 비율이며 중앙값이 아니다.",
     "category": "financial",
+    "source": "ADR-0187 D2; docs/architecture/base-rate-import-format.md",
     "related": [
       "Anchor Ref",
       "Reference Class Forecasting"
@@ -697,8 +940,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Peer Group",
-    "ko": "피어 그룹",
+    "ko": "비교 기업군",
     "en": "Peer Group",
+    "aliases": [
+      "피어 그룹",
+      "피어",
+      "비교 기업 집단"
+    ],
     "definition_ko": "재무 벤치마크 비교 대상이 되는 유사 기업 집단.",
     "why_it_matters_ko": "선정 근거를 필수 기록해야 한다 — 자의적 피어 선정은 벤치마크 자체를 무력화한다. 신규 사업은 과거 실적이 없으므로 피어의 과거가 유일한 앵커다.",
     "category": "financial",
@@ -712,8 +960,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "ROIC Driver Tree",
-    "ko": "ROIC 밸류 드라이버 트리",
+    "ko": "ROIC 요인 분해도",
     "en": "ROIC Value Driver Tree",
+    "aliases": [
+      "ROIC 밸류 드라이버 트리",
+      "밸류 드라이버 트리",
+      "가치 동인 분해도"
+    ],
     "definition_ko": "투하자본이익률(ROIC)을 5단계로 분해한 재무 분석 구조. co-consult에서 이식된 기존 파이프라인.",
     "why_it_matters_ko": "과거 재무 분석의 기반이며, 이 위에 피어 벤치마크·성장성 예측 공백을 채워 넣는 구조다.",
     "category": "financial",
@@ -727,13 +980,20 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Covenant",
-    "ko": "재무약정",
+    "ko": "대출 약정 조건(커버넌트)",
     "en": "Covenant",
-    "definition_ko": "대출 계약에 포함된 재무 조건(예 — DSCR 최소 유지).",
-    "why_it_matters_ko": "CoC(지배구조 변경) 조항에 의한 기한이익상실이 M&A에서 가장 위험한 조항 중 하나다 — 클로징 시 상환 소요로 계상해야 한다.",
+    "aliases": [
+      "재무약정",
+      "커버넌트",
+      "약정 조건",
+      "재무 약정"
+    ],
+    "definition_ko": "대출 계약에 담긴 재무 조건으로, 지키지 못하면 대출 기관이 조기 상환을 요구할 수 있다(예 — 원리금 상환 능력(DSCR)을 일정 수준 이상 유지). 화면에는 '대출 약정 조건(커버넌트)'으로 표기한다.",
+    "why_it_matters_ko": "경영권 변경(CoC) 조항에 의한 기한이익상실이 M&A에서 가장 위험한 조항 중 하나다 — 클로징 시 상환 소요로 계상해야 한다.",
     "category": "financial",
     "related": [
       "DSCR",
+      "Downside DSCR",
       "Change of Control"
     ],
     "used_in": [
@@ -743,9 +1003,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Golden Parachute",
-    "ko": "경영진 CoC 트리거 보상",
+    "ko": "경영권 변경 시 경영진 보상(골든 파라슈트)",
     "en": "Golden Parachute",
-    "definition_ko": "지배구조 변경(CoC) 시 경영진에게 즉시 지급되는 보상.",
+    "aliases": [
+      "경영진 CoC 트리거 보상",
+      "골든 파라슈트"
+    ],
+    "definition_ko": "경영권 변경(CoC) 시 경영진에게 즉시 지급되는 보상.",
     "why_it_matters_ko": "딜 클로징과 동시에 나가는 현금인데 밸류에이션에서 자주 누락되는 항목이다.",
     "category": "financial",
     "related": [
@@ -788,6 +1052,84 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       "quality-of-earnings"
     ],
     "owner": "financial-analyst"
+  },
+  {
+    "key": "Hurdle IRR",
+    "ko": "최소 요구 수익률(허들 IRR)",
+    "en": "Hurdle IRR",
+    "aliases": [
+      "허들 IRR",
+      "허들 수익률",
+      "허들레이트",
+      "hurdle_irr",
+      "hurdle rate"
+    ],
+    "definition_ko": "투자안이 통과하려면 내부수익률(IRR)이 넘어야 하는 최소 기준 수익률. 사람이 WACC 입력 세션에서 WACC와 함께 확정한다. 비율로 입력하며 12%는 0.12이다(0과 1 사이만 받는다).",
+    "why_it_matters_ko": "확정 전 기본값(0.10)으로 계산한 값은 '잠정 할인율' 표시를 달고 나온다. 확정되지 않으면 사업성(FS) GO를 기록할 수 없고, 브라운필드 '기준 시나리오에서 허들을 넘는 대상이 없음' 중단 기준도 평가하지 못한 상태로 남는다. WACC가 허들 IRR 이상이면 두 비율을 다시 확인하라는 경고가 뜬다.",
+    "category": "financial",
+    "source": "ADR-0186 D8; db/lib/wacc-confirmation.ts",
+    "related": [
+      "IRR",
+      "WACC",
+      "WACC Confirmation"
+    ],
+    "used_in": [
+      "wacc-input-session",
+      "investment-feasibility-modeling"
+    ],
+    "owner": "valuation-agent"
+  },
+  {
+    "key": "WACC Confirmation",
+    "ko": "할인율 확정(WACC 확인)",
+    "en": "WACC Confirmation",
+    "aliases": [
+      "WACC 확인",
+      "할인율 확정",
+      "할인율 확정됨",
+      "잠정 할인율",
+      "provisional discount rate",
+      "wacc_confirmed"
+    ],
+    "definition_ko": "사람이 WACC 입력 세션에서 WACC 적용 주체, WACC, 허들 IRR 세 가지를 모두 직접 입력해 확정한 상태. 선정 대상의 자체 세션이 있으면 그 세션, 없으면 프로젝트 세션을 보며, 가장 최근 기록이 판정한다. 확정 전에는 할인율에 따라 달라지는 모든 값에 '잠정 할인율' 표시가 붙는다.",
+    "why_it_matters_ko": "확정 전에는 사업성(FS) GO를 기록할 수 없고(면제 경로 없음, 409 wacc_unconfirmed) S8도 끝낼 수 없다. 이후 게이트는 확정이 해제된 경우에만 막는다. HOLD와 KILL은 언제든 기록할 수 있다.",
+    "category": "financial",
+    "source": "ADR-0186 D8; neb-policy 2.2; checklist bf-02",
+    "related": [
+      "WACC",
+      "Hurdle IRR",
+      "Gate Snapshot Acknowledgement"
+    ],
+    "used_in": [
+      "wacc-input-session",
+      "stage-gate-governance"
+    ],
+    "owner": "quant-methodologist"
+  },
+  {
+    "key": "Downside DSCR",
+    "ko": "불황 시 원리금 상환 능력(하방 DSCR)",
+    "en": "Downside DSCR",
+    "aliases": [
+      "하방 DSCR",
+      "다운사이드 DSCR",
+      "downside DSCR",
+      "하방 상환 능력"
+    ],
+    "definition_ko": "채택한 S8 케이스의 불황(다운사이드) 현금흐름에 등록된 차입 조건(만기·상환 방식·금리)을 적용해 계산한 기간별 원리금 상환 능력(DSCR) 중 가장 낮은 값. 불황 케이스가 없으면 기준 케이스로 계산하고 그 사실을 안내한다. 한 함수가 S10 확인, 약정 조건 여유 화면, 투자심의 자료, 위험 히트맵, RAG 변수를 모두 같은 값으로 채운다.",
+    "why_it_matters_ko": "S10은 이 값이 1.3배 미만이거나, 선언한 DSCR 약정 조건을 위반했거나, 필요한 차입 조건이 빠져 있으면(빠진 항목을 이름으로 알려 준다) 막힌다. 1.3배는 RAG 초록 조건과 맞춘 값으로 2026-10-29에 소유자가 1.2배에서 올렸다. 입력이 없으면 추정하지 않고 '근거 부족'으로 답한다. 순레버리지 같은 다른 약정은 재무상태표 입력이 없어 검증하지 않은 항목으로 나열한다.",
+    "category": "financial",
+    "source": "app/web-next/lib/covenant-dscr.ts (S10_MIN_DOWNSIDE_DSCR = 1.3); ADR-0187 D2",
+    "related": [
+      "DSCR",
+      "Covenant",
+      "Kill Criteria"
+    ],
+    "used_in": [
+      "debt-and-contingent-liability-simulation",
+      "financing-plan-review"
+    ],
+    "owner": "valuation-agent"
   },
   {
     "key": "CGT",
@@ -944,8 +1286,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "ko": "한국표준산업분류",
     "en": "Korean Standard Industrial Classification",
     "definition_ko": "통계청이 정한 한국의 표준 산업 분류 체계.",
-    "why_it_matters_ko": "전방·전전방 산업을 연결하는 축이자 기준정보(md_industry)의 기준 코드 체계다. 이게 없으면 프록시 체인 자체를 구성할 수 없다.",
+    "why_it_matters_ko": "전방·전전방 산업을 연결하는 축이자 기준정보(md_industry)의 기준 코드 체계다. 이게 없으면 프록시 체인 자체를 구성할 수 없다. 산업 검색에서는 코드나 공식 명칭 대신 조선, 2차전지, 반도체 같은 통용어로도 찾을 수 있다(별칭마다 근거를 붙인 목록 lib/ksic-aliases.json, 별칭으로 찾은 결과를 먼저 보여 준다).",
     "category": "industry",
+    "aliases": [
+      "KSIC 코드",
+      "산업분류",
+      "KSIC 별칭"
+    ],
     "related": [
       "Proxy Chain"
     ],
@@ -1397,6 +1744,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     "related": [
       "Reliability Grade",
+      "Data Confidence U Grade",
       "Hysteresis"
     ],
     "used_in": [
@@ -1422,8 +1770,12 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Hysteresis",
-    "ko": "히스테리시스",
+    "ko": "등급 완충 규칙(히스테리시스)",
     "en": "Hysteresis",
+    "aliases": [
+      "히스테리시스",
+      "승격·강등 임계 분리"
+    ],
     "definition_ko": "등급 승격과 강등의 임계값을 다르게 설정해(승격이 더 엄격) 경계에서 등급이 매일 바뀌는 것을 막는 규칙.",
     "why_it_matters_ko": "경계에서 등급이 자주 바뀌면 아무도 신호를 신뢰하지 않는다. 최소 유지 기간과 함께 적용된다.",
     "category": "technical",
@@ -1452,8 +1804,12 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "References Override",
-    "ko": "참조·오버라이드 모델",
+    "ko": "참조·덮어쓰기 방식",
     "en": "References + Override Model",
+    "aliases": [
+      "참조·오버라이드 모델",
+      "참조 오버라이드"
+    ],
     "definition_ko": "공통 절차를 복사하지 않고 참조(references) + 차분(overrides)만 선언하는 절차 관리 방식. safety_os의 워크플로우 참조 스펙에서 차용.",
     "why_it_matters_ko": "그룹 규정이 바뀌면 모든 각사·지역 절차가 자동으로 따라간다 — 복사본이 생기면 이 성질이 깨지므로 감사가 복사본을 차단한다.",
     "category": "technical",
@@ -1482,8 +1838,12 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Staleness Gate",
-    "ko": "신선도 게이트",
+    "ko": "데이터 기한 점검",
     "en": "Staleness Gate",
+    "aliases": [
+      "신선도 게이트",
+      "기한 점검"
+    ],
     "definition_ko": "as_of + ttl_days를 초과한 live 데이터가 하나라도 있으면 보고서 최종화를 차단하는 규칙.",
     "why_it_matters_ko": "“데이터가 바뀌면 보고서가 다시 쓰여야 한다”는 문제의 실제 해결 장치다.",
     "category": "technical",
@@ -1494,5 +1854,56 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       "data-freshness-and-revision-control"
     ],
     "owner": "data-architect"
+  },
+  {
+    "key": "Data Confidence U Grade",
+    "ko": "데이터 신뢰도 U 등급(미확인)",
+    "en": "Data Confidence U Grade",
+    "aliases": [
+      "U 등급",
+      "신뢰도 U",
+      "데이터 신뢰도 U",
+      "미확인 등급",
+      "grade U",
+      "unknown grade"
+    ],
+    "definition_ko": "시장 규모 산정에서 그 산업에 기록된 프록시 체인이 없고 출처도 직접 데이터(frozen-research)가 아닐 때 붙는 '알 수 없음(unknown)' 등급. A·B·C처럼 측정한 약한 근거가 아니라 근거를 아직 모른다는 뜻이다.",
+    "why_it_matters_ko": "예전에는 이런 경우 기본값 B가 붙어 근거 없는 숫자가 중간 등급으로 보였다. 이제 U는 종합 등급(RAG)을 최대 Amber로 묶고 Green이 될 수 없게 한다(경계",
+    "category": "technical",
+    "source": "ADR-0187 D1; db/migrations/0180_data_confidence_unknown_grade.sql",
+    "related": [
+      "Reliability Grade",
+      "Proxy Chain",
+      "RAG Dimension",
+      "Overall Grade"
+    ],
+    "used_in": [
+      "rag-scoring-framework",
+      "proxy-industry-chain"
+    ],
+    "owner": "process-governance-manager"
+  },
+  {
+    "key": "Cross-Validation Matrix",
+    "ko": "교차 검토 배정표(교차검증 매트릭스)",
+    "en": "Cross-Validation Matrix",
+    "aliases": [
+      "교차검증 매트릭스",
+      "교차 검토 매트릭스",
+      "리뷰 매트릭스",
+      "review matrix"
+    ],
+    "definition_ko": "산출물 종류와 작성 영역(기능·기술·산업·지역)마다 AI 2차 검토를 누가 맡는지 정해 둔 표. 작성자와 다른 영역의 검토자만 2차 검토로 인정한다. 같은 영역이거나 표에 없으면 기본 검토자로 넘기고 '대체 검토자 사용(fallback_used)'으로 표시한다.",
+    "why_it_matters_ko": "AI가 AI 결과를 검토하면 같은 맹점을 공유해 오류가 함께 통과한다. 검토자 선정을 코드가 아닌 한 파일(process/cross-validation-matrix.yaml)에 두어 누락과 어긋남을 검사로 잡는다. 이 표는 검토 담당만 정하며, 사람 검토 화면(확인함·확인 못 함·판단 필요)과 게이트 승인은 그대로다. 브라운필드 필수 교차검증 6종이나 기업 공시 교차검증과는 다른 개념이다.",
+    "category": "technical",
+    "source": "process/cross-validation-matrix.yaml v1.1.0; ADR-0187 D3, D3'",
+    "related": [
+      "Stage Gate",
+      "Entity IC"
+    ],
+    "used_in": [
+      "stage-gate-governance"
+    ],
+    "owner": "process-governance-manager"
   }
 ];

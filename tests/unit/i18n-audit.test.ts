@@ -93,7 +93,7 @@ const EN_HANGUL_ALLOWLIST = new Set(["common.locale.ko", "pages.library.langKo"]
 
 /** Glossary drift at audit time (2026-10-24). Ratchet: lower this constant
  * after fixing entries; the test fails if drift grows back toward it. */
-const GLOSSARY_DRIFT_BASELINE = 274;
+const GLOSSARY_DRIFT_BASELINE = 271;
 
 interface GlossaryTerm {
   name: string;
