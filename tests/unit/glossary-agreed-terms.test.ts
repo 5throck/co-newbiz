@@ -42,7 +42,9 @@ const AGREED_KO = [
   "그룹 투자심의위원회",
   "종합 등급",
   "전략 제휴",
-  "게이트",
+  // Owner decision 2026-10-29 (design §1.2): Stage Gate's canonical ko is the
+  // full form; the old canonical "게이트" stays resolvable as an alias.
+  "단계별 심사 체계(스테이지 게이트)",
   "면제 요청",
   "AI 작성·검토 전",
   "법무 검토됨",
@@ -57,6 +59,7 @@ test("every agreed Korean term is registered as a canonical ko name", () => {
 test("previous display names remain as aliases", () => {
   const terms = loadYamlTerms();
   expect(terms["Stage Gate"].aliases).toContain("스테이지 게이트");
+  expect(terms["Stage Gate"].aliases).toContain("게이트");
   expect(terms["Waiver"].aliases).toContain("예외 승인");
   expect(terms["Partnership"].aliases).toContain("파트너십");
 });

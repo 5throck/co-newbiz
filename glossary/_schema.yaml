@@ -43,6 +43,19 @@ optional_fields:
     type: array
     items: string
     description: Skill or procedure keys where this term is load-bearing
+  exclude_phrases:
+    type: array
+    items: string
+    description: >
+      Disambiguation for a term whose ko form collides with another word (e.g. 인도
+      = Delivery vs. the country India). Phrases listed here are removed from a
+      string before the term is matched against it.
+  exclude_paths:
+    type: array
+    items: string
+    description: >
+      Disambiguation by catalog location: dotted locale-key prefixes (ending in
+      ".") where the term must not be matched (e.g. country/currency name lists).
   source:
     type: string
     description: External reference (standards body, statute, industry association)

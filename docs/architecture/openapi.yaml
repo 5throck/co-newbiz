@@ -359,7 +359,7 @@ paths:
         Session-only issuance (403 session_required for any Bearer credential).
         Scopes are ["read"] or ["read","write"]; viewer and admin accounts are
         read-only (ADR-0146). Expiry defaults to 30 days; allowed values are
-        7, 30, or 90. At most 5 active personal tokens per user
+        7, 30, 90, or 180. At most 5 active personal tokens per user
         (409 token_limit_reached) and 10 issues per user per hour
         (429 rate_limited). New tokens carry the cnb_pat_ prefix. The 201
         response is Cache-Control: no-store; the token is never logged.
@@ -386,7 +386,7 @@ paths:
                       - write
                 expiresInDays:
                   type: integer
-                  enum: [7, 30, 90]
+                  enum: [7, 30, 90, 180]
                   default: 30
       responses:
         '201':

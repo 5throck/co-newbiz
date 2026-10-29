@@ -127,7 +127,9 @@ describe("connected-apps personal API tokens UI", () => {
   test("token list date cells keep nowrap so timestamps do not break mid-line", () => {
     expect(PAGE).toMatch(/<td className="cell-nowrap">\{fmtShort\(tok\.created_at, locale\)\}<\/td>/);
     expect(PAGE).toMatch(/<td className="cell-nowrap">\{tok\.expires_at/);
-    expect(PAGE).toMatch(/<td className="cell-nowrap">\{tok\.last_used_at \? fmtShort\(tok\.last_used_at, locale\) : t\("neverUsed"\)\}<\/td>/);
+    // last used is relative ("5분 전") with the exact time in title
+    expect(PAGE).toMatch(/relativeAgo\(tok\.last_used_at, locale, t\("justNow"\)\)/);
+    expect(PAGE).toMatch(/title=\{tok\.last_used_at \? fmtShort\(tok\.last_used_at, locale\)/);
   });
 
   test("token table uses explicit column sizing: shared system (table-fixed-pct + ColGroup), ellipsis label, scroll wrapper", () => {
@@ -139,8 +141,33 @@ describe("connected-apps personal API tokens UI", () => {
     expect(PAGE).toMatch(/title=\{tok\.label\}/);
     expect(PAGE).toContain("table-fixed-pct tmin-64");
     expect(PAGE).toContain("ColGroup widths={TOKEN_COL_PCT}");
-    expect(PAGE).toMatch(/const TOKEN_COL_PCT = \[22, 16, 12, 14, 10, 10, 10, 6\] as const/);
+    expect(PAGE).toMatch(/const TOKEN_COL_PCT = \[18, 15, 10, 10, 12, 17, 12, 6\] as const/);
     expect(PAGE).toMatch(/<td className="cell-truncate" title=\{tok\.label\}>/);
     expect(PAGE).toContain('dateStyle: "short"');
+  });
+
+  test("page is split into hosted-app and personal-token sections with a copyable connector URL", async () => {
+    expect(PAGE).toContain('aria-labelledby="hosted-heading"');
+    expect(PAGE).toContain('aria-labelledby="pat-heading"');
+    expect(PAGE).toContain("navigator.clipboard.writeText(connectorUrl)");
+    expect(PAGE).toContain('htmlFor="connector-url"');
+    expect(ko("pages.connectedApps.expiry180")).toBe("6개월 (180일)");
+    const en = (await import("../../app/web-next/locales/en.json")).default;
+    expect(en.pages.connectedApps.expiry180).toBe("180 days (6 months)");
+  });
+
+  test("expiry column shows D-n, expired badge and an icon+text expiring-soon chip", () => {
+    expect(PAGE).toContain("expiryLabel(tok.status");
+    expect(PAGE).toContain("isExpiringSoon(tok.status");
+    expect(PAGE).toMatch(/aria-hidden="true">⚠<\/span> \{t\("expiringSoon"\)\}/);
+    expect(ko("pages.connectedApps.expiryDaysLeft")).toBe("D-{p1}");
+    expect(ko("pages.connectedApps.expiryExpiredBadge")).toBe("만료됨");
+  });
+
+  test("token list has a status filter and a collapsible revoked/expired tail", () => {
+    expect(PAGE).toContain("filterTokensByStatus");
+    expect(PAGE).toContain("aria-expanded");
+    expect(PAGE).toContain('useState<TokenStatusFilter>("active")');
+    expect(ko("pages.connectedApps.filterExpiring")).toContain("곧 만료");
   });
 });

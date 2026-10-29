@@ -2,8 +2,8 @@
 
 // 연결된 앱 — ADR-0154 §2 (Revocation UI) + 개인 API 토큰 자가발급
 // (docs/designs/2026-10-11-self-service-api-tokens-design.md §4.2).
-// 상단: OAuth로 허용한 MCP 커넥터 목록. 하단: 로컬 stdio MCP 서버·스크립트용
-// 개인 API 토큰 발급/목록/해지. 발급·해지는 사람 웹 세션 전용(403 session_required).
+// 1) 호스팅 AI 앱(OAuth): 커넥터 주소 + 연결 방법 + 허용한 앱 목록.
+// 2) 개인 API 토큰: 로컬 stdio MCP 서버·스크립트용 발급/목록/해지. 발급·해지는 사람 웹 세션 전용(403 session_required).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../lib/api.ts";
@@ -14,9 +14,15 @@ import {
   remainingTokenSlots,
   TOKEN_ACTIVE_CAP,
   TOKEN_EXPIRY_DAYS,
+  countByStatus,
+  expiryLabel,
+  filterTokensByStatus,
+  isExpiringSoon,
+  relativeParts,
   writeScopeNoteKey,
+  type TokenStatusFilter,
 } from "../../../lib/token-issue-access.ts";
-import { Button, PageState, PrimaryAction, useToast } from "../../../components/ui.tsx";
+import { Button, FilterChip, PageState, useToast } from "../../../components/ui.tsx";
 import { ColGroup } from "../../../components/ui.tsx";
 import { useConfirm } from "../../../components/crud.tsx";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
@@ -25,7 +31,9 @@ import { intlTag, isLocale } from "../../../i18n/config.ts";
 
 // 개인 API 토큰 목록 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
 // 라벨이 본문(cell-truncate), 식별자·권한·상태·날짜·작업은 좁게.
-const TOKEN_COL_PCT = [22, 16, 12, 14, 10, 10, 10, 6] as const;
+const TOKEN_COL_PCT = [18, 15, 10, 10, 12, 17, 12, 6] as const;
+
+const APP_COL_PCT = [26, 16, 28, 16, 14] as const;
 
 interface ConnectedApp {
   client_id: string;
@@ -56,7 +64,7 @@ const TOKEN_STATUS: Record<PersonalToken["status"], { cls: string; icon: string;
   revoked: { cls: "status-unknown", icon: "○", key: "statusRevoked" },
 };
 
-const EXPIRY_KEY: Record<number, string> = { 7: "expiry7", 30: "expiry30", 90: "expiry90" };
+const EXPIRY_KEY: Record<number, string> = { 7: "expiry7", 30: "expiry30", 90: "expiry90", 180: "expiry180" };
 const EXPIRY_OPTIONS = TOKEN_EXPIRY_DAYS.map((days) => ({ days, key: EXPIRY_KEY[days] ?? "expiry30" }));
 
 // Compact date-time for the token table cells (e.g. "26. 10. 11. 15:04").
@@ -66,6 +74,16 @@ function fmtShort(iso: string, locale: string): string {
     timeStyle: "short",
     hour12: false,
   }).format(new Date(iso));
+}
+
+// 마지막 사용: "5분 전" 같은 상대 표기 (1분 미만은 "방금 전"), 정확한 시각은 title로.
+function relativeAgo(iso: string, locale: string, justNow: string): string {
+  const parts = relativeParts(iso, Date.now());
+  if (!parts) return justNow;
+  return new Intl.RelativeTimeFormat(intlTag(isLocale(locale) ? locale : "ko"), { numeric: "auto" }).format(
+    parts.value,
+    parts.unit,
+  );
 }
 
 // 목록에는 접두어 + 마지막 6자만 노출 (전체 시크릿은 1회 모달에서만)
@@ -184,6 +202,12 @@ function PersonalTokensSection() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<TokenStatusFilter>("active");
+  const nowMs = Date.now();
+  const counts = countByStatus(tokens ?? []);
+  const inactiveCount = counts.expired + counts.revoked;
+  // 단일 술어: 목록과 "곧 만료" 칩 개수가 같은 판정을 공유한다.
+  const visibleTokens = filterTokensByStatus(tokens ?? [], statusFilter, nowMs);
   const slotsLeft = remainingTokenSlots((tokens ?? []).filter((x) => x.status === "active").length);
 
   /** 발급 오류 코드 → 실행 가능한 안내 (카탈로그 텍스트) */
@@ -301,7 +325,9 @@ function PersonalTokensSection() {
                     maxLength={80}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder={t("labelPlaceholder")}
+                    aria-describedby="pat-label-help"
                   />
+                  <p id="pat-label-help" className="pat-help">{t("labelHelp")}</p>
                 </div>
                 <fieldset className="pat-field pat-scope-field">
                   <legend className="pat-field-label">{t("scopeLegend")}</legend>
@@ -320,8 +346,9 @@ function PersonalTokensSection() {
                     />{" "}
                     {t("scopeReadWrite")}
                   </label>
+                  <p className="pat-help">{t("scopeHelp")}</p>
                   {writeNoteKey && (
-                    <p id="pat-write-note" className="objective">
+                    <p id="pat-write-note" className="pat-help">
                       {t(writeNoteKey)}
                     </p>
                   )}
@@ -334,6 +361,7 @@ function PersonalTokensSection() {
                     id="pat-expiry"
                     className="form-input"
                     value={expiresInDays}
+                    aria-describedby="pat-expiry-help"
                     onChange={(e) => setExpiresInDays(Number(e.target.value))}
                   >
                     {EXPIRY_OPTIONS.map((o) => (
@@ -342,21 +370,23 @@ function PersonalTokensSection() {
                       </option>
                     ))}
                   </select>
+                  <p id="pat-expiry-help" className="pat-help">{t("expiryHelp")}</p>
                 </div>
-                <Button variant="primary" type="submit" disabled={submitting || slotsLeft === 0}>
-                  {t("issueButton")}
-                </Button>
+                <div className="pat-submit">
+                  <Button variant="primary" type="submit" disabled={submitting || slotsLeft === 0}>
+                    {t("issueButton")}
+                  </Button>
+                  {canIssue && tokens !== null && (
+                    <p className="pat-help" role="status">
+                      {slotsLeft === 0 ? t("slotsFull", { p1: TOKEN_ACTIVE_CAP }) : t("slotsRemaining", { p1: slotsLeft, p2: TOKEN_ACTIVE_CAP })}
+                    </p>
+                  )}
+                </div>
               </div>
             </form>
           ) : (
-            <p>{t("noSessionRoleNote")}</p>
+            <p className="objective">{t("noSessionRoleNote")}</p>
           )}
-          {canIssue && tokens !== null && (
-            <p className="objective" role="status">
-              {slotsLeft === 0 ? t("slotsFull", { p1: TOKEN_ACTIVE_CAP }) : t("slotsRemaining", { p1: slotsLeft, p2: TOKEN_ACTIVE_CAP })}
-            </p>
-          )}
-
           <div role="alert">
             {formError && (
               <p style={{ color: "var(--red-fg)" }}>
@@ -370,58 +400,111 @@ function PersonalTokensSection() {
           ) : tokens.length === 0 ? (
             <PageState state="empty" emptyText={t("emptyTokens")} />
           ) : (
-            <div className="table-scroll" style={{ marginTop: "var(--space-3, 1rem)" }}>
-              <table className="data-table list-table pat-token-table table-fixed-pct tmin-64" aria-label={t("patTableAria")}>
-                <caption className="sr-only">{t("patTableCaption")}</caption>
-                <ColGroup widths={TOKEN_COL_PCT} />
-                <thead>
-                  <tr>
-                    <th scope="col">{t("colLabel")}</th>
-                    <th scope="col">{t("colIdentifier")}</th>
-                    <th scope="col">{t("colScopes")}</th>
-                    <th scope="col">{tc("status")}</th>
-                    <th scope="col">{t("colCreated")}</th>
-                    <th scope="col">{t("colExpires")}</th>
-                    <th scope="col">{t("colLastUsed")}</th>
-                    <th scope="col">{tc("actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokens.map((tok) => {
-                    const s = TOKEN_STATUS[tok.status];
-                    return (
-                      <tr key={tok.id}>
-                        <td className="cell-truncate" title={tok.label}>{tok.label}</td>
-                        <td>
-                          <code>{maskedId(tok.display_id)}</code>
-                        </td>
-                        <td>{tok.scopes.split(",").includes("write") ? t("scopeReadWrite") : t("scopeRead")}</td>
-                        <td>
-                          <span className={`status-chip ${s.cls}`}>
-                            <span aria-hidden="true">{s.icon}</span> {t(s.key)}
-                          </span>
-                        </td>
-                        <td className="cell-nowrap">{fmtShort(tok.created_at, locale)}</td>
-                        <td className="cell-nowrap">{tok.expires_at ? fmtShort(tok.expires_at, locale) : "—"}</td>
-                        <td className="cell-nowrap">{tok.last_used_at ? fmtShort(tok.last_used_at, locale) : t("neverUsed")}</td>
-                        <td className="sizing-actions-cell">
-                          {tok.status === "active" && (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => void revoke(tok)}
-                              aria-label={t("revokeAria", { p1: tok.label })}
-                            >
-                              {t("revokeButton")}
-                            </Button>
-                          )}
-                        </td>
+            <>
+              <div className="pat-filter-row">
+                <div role="group" aria-label={t("filterAria")} className="pat-filter-chips">
+                  {(
+                    [
+                      ["active", "filterActive", counts.active],
+                      ["expiring", "filterExpiring", (tokens ?? []).filter((x) => isExpiringSoon(x.status, x.expires_at, nowMs)).length],
+                      ["expired", "filterExpired", counts.expired],
+                      ["revoked", "filterRevoked", counts.revoked],
+                      ["all", "filterAll", tokens.length],
+                    ] as const
+                  ).map(([value, key, n]) => (
+                    <FilterChip key={value} selected={statusFilter === value} onClick={() => setStatusFilter(value)}>
+                      {t(key, { p1: n })}
+                    </FilterChip>
+                  ))}
+                </div>
+                {inactiveCount > 0 && (statusFilter === "active" || statusFilter === "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-expanded={statusFilter === "all"}
+                    aria-controls={visibleTokens.length > 0 ? "pat-token-table" : undefined}
+                    onClick={() => setStatusFilter(statusFilter === "all" ? "active" : "all")}
+                  >
+                    {statusFilter === "all" ? t("hideInactive") : t("showInactive", { p1: inactiveCount })}
+                  </Button>
+                )}
+              </div>
+              {visibleTokens.length === 0 ? (
+                <PageState state="empty" emptyText={t("emptyTokensFiltered")} />
+              ) : (
+                <div className="table-scroll" style={{ marginTop: "var(--space-3, 1rem)" }}>
+                  <table id="pat-token-table" className="data-table list-table pat-token-table table-fixed-pct tmin-64" aria-label={t("patTableAria")}>
+                    <caption className="sr-only">{t("patTableCaption")}</caption>
+                    <ColGroup widths={TOKEN_COL_PCT} />
+                    <thead>
+                      <tr>
+                        <th scope="col">{t("colLabel")}</th>
+                        <th scope="col">{t("colIdentifier")}</th>
+                        <th scope="col">{t("colScopes")}</th>
+                        <th scope="col">{tc("status")}</th>
+                        <th scope="col">{t("colCreated")}</th>
+                        <th scope="col">{t("colExpires")}</th>
+                        <th scope="col">{t("colLastUsed")}</th>
+                        <th scope="col">{tc("actions")}</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {visibleTokens.map((tok) => {
+                        const s = TOKEN_STATUS[tok.status];
+                        const exp = expiryLabel(tok.status, tok.expires_at, nowMs);
+                        const soon = isExpiringSoon(tok.status, tok.expires_at, nowMs);
+                        return (
+                          <tr key={tok.id}>
+                            <td className="cell-truncate" title={tok.label}>{tok.label}</td>
+                            <td>
+                              <code>{maskedId(tok.display_id)}</code>
+                            </td>
+                            <td>{tok.scopes.split(",").includes("write") ? t("scopeReadWrite") : t("scopeRead")}</td>
+                            <td>
+                              <span className={`status-chip ${s.cls}`}>
+                                <span aria-hidden="true">{s.icon}</span> {t(s.key)}
+                              </span>
+                            </td>
+                            <td className="cell-nowrap">{fmtShort(tok.created_at, locale)}</td>
+                            <td className="cell-nowrap">{tok.expires_at ? (
+                              <span className="pat-expiry">
+                                <span>{fmtShort(tok.expires_at, locale)}</span>
+                                {exp.kind === "days" && (
+                                  <span className="pat-dn" aria-label={t("expiryDaysLeftAria", { p1: exp.days })}>
+                                    {t("expiryDaysLeft", { p1: exp.days })}
+                                  </span>
+                                )}
+                                {exp.kind === "expired" && <span className="pat-dn">{t("expiryExpiredBadge")}</span>}
+                                {soon && (
+                                  <span className="status-chip status-amber" aria-label={t("expiringSoonAria")}>
+                                    <span aria-hidden="true">⚠</span> {t("expiringSoon")}
+                                  </span>
+                                )}
+                              </span>
+                            ) : "—"}</td>
+                            <td className="cell-nowrap" title={tok.last_used_at ? fmtShort(tok.last_used_at, locale) : undefined}>
+                              {tok.last_used_at ? relativeAgo(tok.last_used_at, locale, t("justNow")) : t("neverUsed")}
+                            </td>
+                            <td className="sizing-actions-cell">
+                              {tok.status === "active" && (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => void revoke(tok)}
+                                  aria-label={t("revokeAria", { p1: tok.label })}
+                                >
+                                  {t("revokeButton")}
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -438,7 +521,9 @@ export default function ConnectedAppsPage() {
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
+  const connectorUrl = typeof window === "undefined" ? "/api/mcp" : `${window.location.origin}/api/mcp`;
+  const urlRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
 
@@ -472,71 +557,101 @@ export default function ConnectedAppsPage() {
     }
   }
 
+  async function copyConnector() {
+    try {
+      await navigator.clipboard.writeText(connectorUrl);
+      setCopied("ok");
+    } catch {
+      urlRef.current?.select();
+      setCopied("fail");
+    }
+  }
+
   return (
     <main aria-labelledby="apps-heading">
       {confirmDialog}
       <div className="page-header-row">
         <h1 id="apps-heading">{t("h1")}</h1>
-        <span className="ml-auto">
-          <PrimaryAction readOnly inline label={t("connectButton")} onClick={() => setGuideOpen((v) => !v)} />
-        </span>
       </div>
-      {guideOpen && (
-        <section aria-label={t("guideAria")} className="market-section mb-3">
-          <h2 className=" mb-1">{t("guideHeading")}</h2>
-          <ol className="sizing-note-list">
-            <li>{t("guideStep1")}</li>
-            <li>{t("guideStep2")}</li>
-            <li>{t("guideStep3")}</li>
-          </ol>
-          <p className="mb-0">
-            <code>{typeof window === "undefined" ? "/api/mcp" : `${window.location.origin}/api/mcp`}</code>
-          </p>
-        </section>
-      )}
       <p className="objective">{t("intro")}</p>
-      {error && <PageState state="error" errorText={error} onRetry={load} />}
-      {!error && apps === null && <PageState state="loading" />}
-      {!error && apps?.length === 0 && <PageState state="empty" emptyText={t("emptyApps")} />}
-      {!error && apps && apps.length > 0 && (
-        <table className="data-table list-table" aria-label={t("appsTableAria")}>
-          <caption className="sr-only">{t("appsTableCaption")}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t("colApp")}</th>
-              <th scope="col">{tc("status")}</th>
-              <th scope="col">{t("colScopes")}</th>
-              <th scope="col">{t("colLastUsed")}</th>
-              <th scope="col">{tc("actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {apps.map((a) => (
-              <tr key={a.client_id}>
-                <td>{a.name}</td>
-                <td>
-                  <span className={`status-chip ${a.verified ? "status-green" : "status-amber"}`}>
-                    <span aria-hidden="true">{a.verified ? "●" : "◐"}</span> {a.verified ? t("verified") : t("unverified")}
-                  </span>
-                </td>
-                <td>{a.scopes}</td>
-                <td>{a.last_used_at ? formatDateTime(a.last_used_at, locale) : t("neverUsed")}</td>
-                <td className="sizing-actions-cell">
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => void revoke(a)}
-                    disabled={busyId === a.client_id}
-                    aria-label={t("appRevokeAria", { p1: a.name })}
-                  >
-                    {t("revokeButton")}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+
+      <section aria-labelledby="hosted-heading" className="market-section">
+        <h2 id="hosted-heading">{t("appsHeading")}</h2>
+        <p className="objective">{t("appsIntro")}</p>
+        <div className="connector-box">
+          <label htmlFor="connector-url" className="pat-field-label">{t("connectorLabel")}</label>
+          <div className="connector-row">
+            <input
+              id="connector-url"
+              ref={urlRef}
+              readOnly
+              className="form-input connector-url"
+              value={connectorUrl}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <Button variant="primary" onClick={() => void copyConnector()} aria-label={t("connectorCopyAria")}>
+              {t("connectorCopy")}
+            </Button>
+          </div>
+          <p role="status" aria-live="polite" className="pat-help">
+            {copied === "ok" ? t("connectorCopied") : copied === "fail" ? t("connectorCopyFail") : ""}
+          </p>
+        </div>
+        <h3 className="mb-1">{t("guideHeading")}</h3>
+        <ol className="sizing-note-list" aria-label={t("guideAria")}>
+          <li>{t("guideStep1")}</li>
+          <li>{t("guideStep2")}</li>
+          <li>{t("guideStep3")}</li>
+        </ol>
+
+        {error && <PageState state="error" errorText={error} onRetry={load} />}
+        {!error && apps === null && <PageState state="loading" />}
+        {!error && apps?.length === 0 && <PageState state="empty" emptyText={t("emptyApps")} />}
+        {!error && apps && apps.length > 0 && (
+          <div className="table-scroll">
+            <table className="data-table list-table table-fixed-pct tmin-64" aria-label={t("appsTableAria")}>
+              <caption className="sr-only">{t("appsTableCaption")}</caption>
+              <ColGroup widths={APP_COL_PCT} />
+              <thead>
+                <tr>
+                  <th scope="col">{t("colApp")}</th>
+                  <th scope="col">{tc("status")}</th>
+                  <th scope="col">{t("colScopes")}</th>
+                  <th scope="col">{t("colLastUsed")}</th>
+                  <th scope="col">{tc("actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apps.map((a) => (
+                  <tr key={a.client_id}>
+                    <td className="cell-truncate" title={a.name}>{a.name}</td>
+                    <td>
+                      <span className={`status-chip ${a.verified ? "status-green" : "status-amber"}`}>
+                        <span aria-hidden="true">{a.verified ? "●" : "◐"}</span> {a.verified ? t("verified") : t("unverified")}
+                      </span>
+                    </td>
+                    <td className="cell-truncate" title={a.scopes}><code>{a.scopes}</code></td>
+                    <td className="cell-nowrap" title={a.last_used_at ? formatDateTime(a.last_used_at, locale) : undefined}>
+                      {a.last_used_at ? relativeAgo(a.last_used_at, locale, t("justNow")) : t("neverUsed")}
+                    </td>
+                    <td className="sizing-actions-cell">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void revoke(a)}
+                        disabled={busyId === a.client_id}
+                        aria-label={t("appRevokeAria", { p1: a.name })}
+                      >
+                        {t("revokeButton")}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <PersonalTokensSection />
     </main>

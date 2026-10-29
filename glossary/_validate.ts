@@ -66,7 +66,7 @@ function validateTerm(file: string, key: string, entry: unknown): TermIssue[] {
     });
   }
 
-  for (const arrField of ["aliases", "related", "used_in"]) {
+  for (const arrField of ["aliases", "related", "used_in", "exclude_phrases", "exclude_paths"]) {
     const value = term[arrField];
     if (value !== undefined && !Array.isArray(value)) {
       issues.push({

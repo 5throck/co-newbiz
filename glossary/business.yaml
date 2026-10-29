@@ -131,12 +131,12 @@ terms:
     owner: greenfield-agent
 
   Stage Gate:
-    ko: 게이트
+    ko: 단계별 심사 체계(스테이지 게이트)
     en: Stage Gate
     definition_ko: Screening → Pre-FS → FS → DD → 법인 투자심의위원회 → 그룹 투자심의위원회 순으로 진행되는 신사업 검토 단계.
     why_it_matters_ko: 각 게이트마다 필수 산출물과 통과 조건이 다르다. 게이트를 건너뛰면 시스템이 다음 단계 진입을 차단한다.
     category: business
-    aliases: [스테이지 게이트, 게이트 심사]
+    aliases: [게이트, 스테이지 게이트, 게이트 심사]
     related: [Entity IC, Group IC, Kill Criteria]
     used_in: [stage-gate-governance]
     owner: process-governance-manager

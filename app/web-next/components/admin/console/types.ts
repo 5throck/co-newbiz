@@ -36,6 +36,7 @@ export interface GlossaryTermRow {
   ko: string;
   en: string;
   category: string;
+  aliases?: string[];
 }
 
 // glossary-lint 미정의어 큐 (ADR-0022) — scripts/co-newbiz/glossary-lint.ts의

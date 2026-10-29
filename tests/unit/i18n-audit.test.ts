@@ -91,14 +91,18 @@ const EN_HANGUL_ALLOWLIST = new Set(["common.locale.ko", "pages.library.langKo"]
 //     and 게이트 ("gate") cannot literally carry "Confirmed Status" /
 //     "Stage Gate" — that split is a glossary-curator referral (report §5).
 
-/** Glossary drift at audit time (2026-10-24). Ratchet: lower this constant
+/** Glossary drift at audit time (2026-10-24: 271; 2026-10-29: 217 after the owner Korean term decisions and the 인도 disambiguation). Ratchet: lower this constant
  * after fixing entries; the test fails if drift grows back toward it. */
-const GLOSSARY_DRIFT_BASELINE = 271;
+const GLOSSARY_DRIFT_BASELINE = 217;
 
 interface GlossaryTerm {
   name: string;
   ko: string;
   en: string;
+  /** Disambiguation (glossary/_schema.yaml): phrases removed before matching. */
+  excludePhrases: string[];
+  /** Disambiguation: locale-key prefixes where the term never applies. */
+  excludePaths: string[];
 }
 
 function loadGlossaryTerms(): GlossaryTerm[] {
@@ -106,10 +110,18 @@ function loadGlossaryTerms(): GlossaryTerm[] {
   const terms: GlossaryTerm[] = [];
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".yaml") && f !== "_schema.yaml")) {
     const doc = yaml.load(readFileSync(join(dir, file), "utf8")) as {
-      terms?: Record<string, { ko?: string; en?: string }>;
+      terms?: Record<string, { ko?: string; en?: string; exclude_phrases?: string[]; exclude_paths?: string[] }>;
     };
     for (const [name, term] of Object.entries(doc.terms ?? {})) {
-      if (term?.ko && term?.en) terms.push({ name, ko: term.ko, en: term.en });
+      if (term?.ko && term?.en) {
+        terms.push({
+          name,
+          ko: term.ko,
+          en: term.en,
+          excludePhrases: term.exclude_phrases ?? [],
+          excludePaths: term.exclude_paths ?? [],
+        });
+      }
     }
   }
   return terms;
@@ -154,7 +166,9 @@ function computeGlossaryDrift(): GlossaryDrift[] {
   for (const term of loadGlossaryTerms()) {
     const matcher = koTermMatcher(term.ko);
     for (const [key, koValue] of koLeaves) {
-      if (!matcher.test(koValue)) continue;
+      if (term.excludePaths.some((prefix) => key.startsWith(prefix))) continue;
+      const scanned = term.excludePhrases.reduce((acc, phrase) => acc.split(phrase).join(" "), koValue);
+      if (!matcher.test(scanned)) continue;
       const enValue = enByKey.get(key) ?? "";
       if (!enAdheresToTerm(enValue, term)) {
         drift.push({ key, term: term.name, enTerm: term.en, enValue });

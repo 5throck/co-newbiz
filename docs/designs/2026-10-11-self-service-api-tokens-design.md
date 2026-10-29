@@ -245,3 +245,17 @@ The open questions in section 13 (items 2-4) were decided by PM for implementati
 4. **List shape (review defect):** the UI now types `scopes` as the comma-joined string the list
    API returns and parses it for display (`split(",")`), replacing the accidental substring
    `includes()` check. The backend list shape is unchanged.
+
+## Amendment 2026-10-29 — 180-day option and Connected apps UI review
+
+- **TTL set:** the allowed expiry set becomes {7, 30, 90, **180**} and the hard maximum 180 days (owner
+  request: "add 6 months as a maximum allowed period"). Default stays 30 days. Sections 4.1, 7 and the
+  threat table above that cite "90-day max" read 180 from this date. Constants: `TOKEN_TTL_DAYS` /
+  `MAX_TTL_DAYS` in `db/lib/api-tokens.ts`, mirrored in `app/web-next/lib/token-issue-access.ts`
+  (parity test); `expiresInDays` enum in `docs/architecture/openapi.yaml`. The admin per-user route
+  takes no `expiresInDays`, and the MCP server carries no TTL list, so neither changes.
+- **ADR:** a longer credential lifetime relaxes the stolen-token mitigation, so it is recorded as a
+  dated amendment note on ADR-0146 item 6 (no new ADR: no schema, scope or flow change).
+- **UI:** the page was reorganised into two explained sections (hosted AI apps via the connector URL,
+  personal tokens for local MCP/scripts), with D-n expiry, an expiring-soon (7 days or fewer) chip,
+  relative last-used, and a status filter. API contracts are unchanged.

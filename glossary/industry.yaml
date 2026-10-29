@@ -66,6 +66,10 @@ terms:
   인도:
     ko: 인도
     en: Delivery
+    # Disambiguation: 인도 is also the country (India, ISO IN) and part of 인도 루피 (INR).
+    # Those uses are not this term; the i18n glossary-adherence audit skips them.
+    exclude_phrases: [인도 루피]
+    exclude_paths: [admin.masterData.countryNames., admin.masterData.currencyNames.]
     definition_ko: 건조가 완료되어 발주처에 실제로 넘겨지는 시점.
     why_it_matters_ko: 매출 인식 시점과 가장 가까운 지표이나, 수주 대비 수년의 시차가 있어 수요 예측에 그대로 쓰면 시차 오류가 생긴다.
     category: industry

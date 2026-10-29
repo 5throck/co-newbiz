@@ -43,49 +43,29 @@ export function useAdminData({ section }: { section: Section }) {
   const [basis, setBasis] = useState("");
   const [months, setMonths] = useState("");
 
-  // 용어집 등록 폼 — why_it_matters_ko 필수 (glossary/_schema.yaml).
-  const [termForm, setTermForm] = useState({ key: "", ko: "", en: "", definition_ko: "", why_it_matters_ko: "", category: "business", owner: "glossary-curator", aliases: "" });
-  const [termFormError, setTermFormError] = useState<string | null>(null);
-  const [termFormNotice, setTermFormNotice] = useState<string | null>(null);
-  const [termFormBusy, setTermFormBusy] = useState(false);
+  // 용어집 등록 — 폼 상태는 GlossaryFormPanel이 갖고, 여기서는 쓰기 가능 여부와 등록 호출만 맡는다.
+  const [glossaryWritable, setGlossaryWritable] = useState(true);
 
-  async function submitGlossaryTerm(e: FormEvent) {
-    e.preventDefault();
-    setTermFormError(null);
-    setTermFormNotice(null);
-    if (!termForm.key.trim() || !termForm.ko.trim() || !termForm.en.trim() || !termForm.definition_ko.trim()) {
-      setTermFormError(t("errRequiredFields"));
-      return;
-    }
-    if (!termForm.why_it_matters_ko.trim()) {
-      setTermFormError(t("errWhyRequired"));
-      return;
-    }
-    setTermFormBusy(true);
-    try {
-      const res = await api.post<{ key: string; file: string }>("/api/glossary", {
-        key: termForm.key.trim(),
-        ko: termForm.ko.trim(),
-        en: termForm.en.trim(),
-        definition_ko: termForm.definition_ko.trim(),
-        why_it_matters_ko: termForm.why_it_matters_ko.trim(),
-        category: termForm.category,
-        owner: termForm.owner.trim() || undefined,
-        aliases: termForm.aliases.trim() ? termForm.aliases.split(",").map((a) => a.trim()).filter(Boolean) : undefined,
-      });
-      setTermFormNotice(t("termCreatedNotice", { p1: res.data.key, p2: res.data.file }));
-      setTermForm({ key: "", ko: "", en: "", definition_ko: "", why_it_matters_ko: "", category: "business", owner: "glossary-curator", aliases: "" });
-      api
-        .get<GlossaryTermRow[]>("/api/glossary")
-        .then((r) => setGlossary(r.data))
-        .catch(() => undefined);
-    } catch (err) {
-      setTermFormError(err instanceof Error ? err.message : t("termCreateFailed"));
-    } finally {
-      setTermFormBusy(false);
-    }
+  async function registerGlossaryTerm(payload: {
+    key: string;
+    ko: string;
+    en: string;
+    definition_ko: string;
+    why_it_matters_ko: string;
+    category: string;
+    owner: string;
+    aliases: string[];
+  }): Promise<{ key: string; file: string }> {
+    const res = await api.post<{ key: string; file: string; regenerated: boolean }>("/api/glossary", {
+      ...payload,
+      aliases: payload.aliases.length ? payload.aliases : undefined,
+    });
+    api
+      .get<GlossaryTermRow[]>("/api/glossary")
+      .then((r) => setGlossary(r.data))
+      .catch(() => undefined);
+    return res.data;
   }
-
 
   useEffect(() => {
     setError(null);
@@ -140,7 +120,10 @@ export function useAdminData({ section }: { section: Section }) {
     if (section === "glossary" && glossary === null) {
       api
         .get<GlossaryTermRow[]>("/api/glossary")
-        .then((res) => setGlossary(res.data))
+        .then((res) => {
+          setGlossary(res.data);
+          setGlossaryWritable(res.meta?.writable !== false);
+        })
         .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
     if (section === "glossary" && lintQueue === null) {
@@ -209,5 +192,5 @@ export function useAdminData({ section }: { section: Section }) {
       setNotice(err instanceof Error ? err.message : t("createFailed"));
     }
   }
-  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, retentionFormError, retentionNotice, notifications, glossary, lintQueue, submitGlossaryTerm, termForm, setTermForm, termFormError, termFormNotice, termFormBusy, reviewAudit, governance, adrs };
+  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, retentionFormError, retentionNotice, notifications, glossary, lintQueue, registerGlossaryTerm, glossaryWritable, reviewAudit, governance, adrs };
 }
