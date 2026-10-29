@@ -57,6 +57,11 @@
       "colEnvVar": "환경변수",
       "colKeyPresent": "키 설정 여부",
       "keySet": "설정됨",
+      "colKeySource": "출처",
+      "keySourceProcess": "서버 환경변수",
+      "keySourceRoot": "루트 .env",
+      "keyNone": "—",
+      "dsNote": "키는 서버 환경변수 또는 저장소 루트의 .env 파일에서 읽습니다(운영 환경은 compose의 .env.prod). .env를 수정한 뒤에는 서버를 다시 시작해야 반영됩니다. 값은 표시되지 않습니다.",
       "keyUnset": "미설정",
       "emptyJobs": "데이터 없음 — 등록된 스케줄 작업이 없습니다.",
       "jobsCaption": "스케줄 작업 목록",
@@ -571,7 +576,9 @@
         "dart": "DART",
         "ecos": "ECOS",
         "kosis": "KOSIS",
-        "krx": "KRX"
+        "krx": "KRX",
+        "law": "법제처 국가법령정보",
+        "opendata": "공공데이터포털"
       },
       "jobStatus": {
         "success": "성공",

@@ -57,6 +57,11 @@
       "colEnvVar": "Environment variable",
       "colKeyPresent": "Key set",
       "keySet": "Set",
+      "colKeySource": "Source",
+      "keySourceProcess": "Server environment",
+      "keySourceRoot": "Root .env",
+      "keyNone": "—",
+      "dsNote": "Keys are read from the server environment or the repo-root .env file (production uses .env.prod via the compose env_file). After editing .env, restart the server for changes to take effect. Values are never shown.",
       "keyUnset": "Not set",
       "emptyJobs": "No data — no scheduled jobs registered.",
       "jobsCaption": "Scheduled job list",
@@ -571,7 +576,9 @@
         "dart": "DART",
         "ecos": "ECOS",
         "kosis": "KOSIS",
-        "krx": "KRX"
+        "krx": "KRX",
+        "law": "National Law Information (law.go.kr)",
+        "opendata": "Public Data Portal (data.go.kr)"
       },
       "jobStatus": {
         "success": "Succeeded",

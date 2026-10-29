@@ -224,9 +224,10 @@ export interface AuditLogRow {
 
 export interface DataSourceRow {
   code: string;
-  reliability_grade: string;
-  key_var: string;
+  reliability_grade: string | null;
+  key_var: string | null;
   key_present: boolean;
+  key_source: "process_env" | "root_env" | null;
 }
 
 // --- PR #65: Data / Assumptions / DD / Regulatory & Permits tabs ---

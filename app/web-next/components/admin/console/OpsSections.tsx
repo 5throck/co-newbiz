@@ -20,6 +20,8 @@ export function DataSourcesPanel({ ctx }: { ctx: AdminConsoleState }) {
         (sources === null ? (
           <p>{tc("loading")}</p>
         ) : (
+          <>
+          <p className="text-[color:var(--muted-fg)]">{t("dsNote")}</p>
           <table className="data-table">
             <caption className="sr-only">{t("dsCaption")}</caption>
             <thead>
@@ -28,21 +30,24 @@ export function DataSourcesPanel({ ctx }: { ctx: AdminConsoleState }) {
                 <th scope="col">{t("colReliability")}</th>
                 <th scope="col">{t("colEnvVar")}</th>
                 <th scope="col">{t("colKeyPresent")}</th>
+                <th scope="col">{t("colKeySource")}</th>
               </tr>
             </thead>
             <tbody>
               {sources.map((s) => (
                 <tr key={s.code}>
                   <td>{label("source", s.code)}</td>
-                  <td>{s.reliability_grade}</td>
+                  <td>{s.reliability_grade ?? t("keyNone")}</td>
                   <td>
                     <code>{s.key_var}</code>
                   </td>
                   <td>{s.key_present ? t("keySet") : t("keyUnset")}</td>
+                  <td>{s.key_source === "root_env" ? t("keySourceRoot") : s.key_source === "process_env" ? t("keySourceProcess") : t("keyNone")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </>
         ))}</>
   );
 }
