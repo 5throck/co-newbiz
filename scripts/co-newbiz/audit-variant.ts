@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.8.0
+// @version 1.9.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -40,6 +40,9 @@
  *     review-matrix projection drift gate runs next to the registry gates.
  *   - Glossary-data drift gate (v1.8.0, ADR-0022 / FR-SYS-04): glossary/*.yaml vs
  *     app/web-next/lib/glossary-data.generated.ts via generate-glossary-data.ts --check.
+ *   - Governance-registry manifest drift gate (v1.9.0): policies/, procedures/,
+ *     checklists/, templates/ vs docs/governance/governance-registry.generated.json
+ *     via governance-sync.ts --check.
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -243,6 +246,16 @@ runDriftGate(
   "Review-matrix",
   "scripts/co-newbiz/generate-review-matrix.ts",
   "app/web-next/lib/review/review-matrix.generated.ts",
+);
+
+// Governance registry manifest drift (v1.9.0): policies/procedures/checklists/
+// templates vs docs/governance/governance-registry.generated.json. The DB
+// registry is fed from that manifest (newbiz.ts governance:sync), so a stale
+// manifest means a stale registry and waiver anchors.
+runDriftGate(
+  "Governance-registry",
+  "scripts/co-newbiz/governance-sync.ts",
+  "docs/governance/governance-registry.generated.json",
 );
 
 // ADR-0187 P2-P4: BLOCKING_CHECKS (all eight checks) fail the audit.

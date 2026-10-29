@@ -531,12 +531,13 @@ describe("(f) human-only wiring and (g) no leak", () => {
     expect(yaml).toContain('route: "POST /api/projects/{}/business-goals"');
   });
 
-  test("admin sees no project goals anywhere: the admin master-data list excludes them", async () => {
-    const res = await req("/api/admin/business-targets", { headers: { cookie: adminCookie } });
-    expect(res.status).toBe(200);
+  test("admin sees no project goals anywhere: the standards list is closed to admin and excludes them (ADR-0191)", async () => {
+    const res = await req("/api/our-company/groups/any/business-targets", { headers: { cookie: adminCookie } });
+    expect(res.status).toBe(403);
     const text = JSON.stringify(await res.json());
     expect(text).not.toContain("스코프 없는 목표");
     expect(text).not.toContain("project_id");
+    expect(JSON.stringify(listBusinessTargets())).not.toContain("스코프 없는 목표");
     expect((await post({ action: "create", metric_key: "irr", target_value: 0.1, rationale: "r" }, adminCookie)).status).toBe(404);
   });
 });

@@ -143,7 +143,7 @@ describe("navigation SSOT (ADR-0105)", () => {
     expect(ADMIN_NAV.map((i: { href: string }) => i.href)).toEqual([
       "/admin", "/admin/users", "/admin/audit", "/admin/data-sources", "/admin/schedule",
       "/admin/database", "/admin/notifications", "/admin/glossary", "/admin/governance", "/admin/gate-integrity",
-      "/admin/master-data", "/admin/business-targets", "/admin/adr", "/admin/system-mode",
+      "/admin/master-data", "/admin/adr", "/admin/system-mode",
       "/settings/connected-apps",
     ]);
     for (const href of ADMIN_NAV.map((i: { href: string }) => i.href)) {

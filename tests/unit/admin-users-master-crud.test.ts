@@ -105,7 +105,7 @@ describe("PUT /api/admin/users/:userId set_display_name", () => {
 describe("master-data PUT / DELETE", () => {
   const MD = "/api/admin/master-data";
   test("setup: admin adds a currency code", async () => {
-    expect((await json(adminCookie, "POST", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "KRW" } })).status).toBe(201);
+    expect((await json(adminCookie, "POST", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "XTS" } })).status).toBe(201);
   });
   test("401 without a session, 403 for non-admin", async () => {
     expect((await json(null, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "USD" } })).status).toBe(401);
@@ -125,8 +125,8 @@ describe("master-data PUT / DELETE", () => {
     expect((await json(adminCookie, "DELETE", MD, { table: "md_currency", id: "NOPE" })).status).toBe(400);
   });
   test("200 PUT updates the row and audits; DELETE removes it and audits", async () => {
-    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "USD" } })).status).toBe(200);
-    expect((db.query("SELECT iso_code FROM md_currency WHERE id = 'CUR1'").get() as { iso_code: string }).iso_code).toBe("USD");
+    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "XTU" } })).status).toBe(200);
+    expect((db.query("SELECT iso_code FROM md_currency WHERE id = 'CUR1'").get() as { iso_code: string }).iso_code).toBe("XTU");
     expect(auditCount("master_data_update", "md_currency:CUR1")).toBe(1);
     expect((await json(adminCookie, "DELETE", MD, { table: "md_currency", id: "CUR1" })).status).toBe(200);
     expect(db.query("SELECT id FROM md_currency WHERE id = 'CUR1'").get()).toBeNull();

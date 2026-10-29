@@ -135,9 +135,9 @@ export function bannerText(state: BannerState): { message: string; standardsNote
 // ── Source + attainment presentation (icon + text, never colour alone) ───
 
 export const SOURCE_VIEW: Record<GoalSource, { icon: string; label: string; cls: string }> = {
-  project: { icon: "◆", label: "프로젝트", cls: "status-green" }, // INTERIM-WORDING
-  affiliate: { icon: "▲", label: "계열사", cls: "status-in-progress" }, // INTERIM-WORDING
-  group: { icon: "●", label: "그룹", cls: "status-not-started" }, // INTERIM-WORDING
+  project: { icon: "◆", label: "프로젝트 목표", cls: "status-green" }, // INTERIM-WORDING
+  affiliate: { icon: "▲", label: "계열사 기준", cls: "status-in-progress" }, // INTERIM-WORDING
+  group: { icon: "●", label: "그룹 기준", cls: "status-not-started" }, // INTERIM-WORDING
 };
 
 export const ATTAINMENT_VIEW: Record<AttainmentStatus | "not_set", { icon: string; label: string; cls: string }> = {

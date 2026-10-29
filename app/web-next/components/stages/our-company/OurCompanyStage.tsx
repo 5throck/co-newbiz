@@ -14,6 +14,7 @@ import { useOurGroups } from "./useOurGroups.ts";
 import { PrimaryAction } from "../../ui.tsx";
 import { GroupSelectPanel, ProfileSummaryPanel } from "./GroupPanels.tsx";
 import { MembersPanel } from "./MembersPanel.tsx";
+import { BusinessTargetsPanel } from "./BusinessTargetsPanel.tsx";
 import { ProfileSection } from "./ProfileSection.tsx";
 import { useTranslations } from "next-intl";
 
@@ -50,6 +51,9 @@ export function OurCompanyStage(props0: { memberId?: string; embedded?: boolean 
 
       {/* ── 그룹 상세: 계열사 테이블 ── */}
       <MembersPanel ctx={ctx} />
+
+      {/* ── 그룹·계열사 사업목표 기준 (ADR-0114 / ADR-0191) ── */}
+      <BusinessTargetsPanel ctx={ctx} />
 
       {/* ── 계열사 간 시너지 매트릭스 (산업 노출 겹침 기반) ── */}
       <ProfileSummaryPanel ctx={ctx} />

@@ -83,8 +83,10 @@ beforeAll(async () => {
   // Bind a company and seed 5 years of perfectly-geometric revenue growth
   // (CAGR exactly 30%) through the same tables the real writer fills.
   db.run("INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)", [companyId, "㈜듀얼뷰", "09999999", NOW]);
-  const sourceId = ulid();
-  db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "dart", "A", NOW]);
+  let sourceId = ulid();
+  // Migration 0184 seeds the reference source codes; reuse the seeded row.
+  db.run("INSERT OR IGNORE INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "dart", "A", NOW]);
+  sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get("dart") as { id: string }).id;
   const accountId = (db.query("SELECT id FROM md_account WHERE name_ko = '매출액'").get() as { id: string }).id;
   let value = 100;
   for (const year of [2021, 2022, 2023, 2024, 2025]) {

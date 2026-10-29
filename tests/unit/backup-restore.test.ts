@@ -41,18 +41,21 @@ afterAll(async () => {
 });
 
 describe("backup", () => {
+  // Migration 0184 seeds reference rows into md_source; the assertions count only the rows added here.
+  const seededSources = () => (db.query("SELECT COUNT(*) AS n FROM md_source WHERE id LIKE 'seed_src_%'").get() as { n: number }).n;
+
   test("writes a self-contained copy plus a row-count manifest", () => {
     db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES ('t1','TEST','A',datetime('now'))");
     const result = runBackup(TEST_DB_PATH, BACKUP_DIR);
     expect(existsSync(result.backupFile)).toBe(true);
     expect(existsSync(result.manifestFile)).toBe(true);
-    expect(result.tableRowCounts.md_source).toBe(1);
+    expect(result.tableRowCounts.md_source).toBe(seededSources() + 1);
   });
 
   test("checkpoints the WAL so the backup captures pre-checkpoint writes", () => {
     db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES ('t2','TEST2','B',datetime('now'))");
     const result = runBackup(TEST_DB_PATH, BACKUP_DIR);
-    expect(result.tableRowCounts.md_source).toBe(2);
+    expect(result.tableRowCounts.md_source).toBe(seededSources() + 2);
   });
 });
 

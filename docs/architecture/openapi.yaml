@@ -1257,7 +1257,20 @@ paths:
   /api/admin/governance:
     get:
       operationId: listGovernanceDocs
-      summary: Governance document registry read view (from governance_doc). Admin role.
+      summary: Governance document registry read view (from governance_doc) with review-due status, active-waiver concentration and docs-hub link. Admin role.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/governance/sync:
+    post:
+      operationId: syncGovernanceDocs
+      summary: Apply the committed governance registry manifest to governance_doc (insert / supersede / update; never deletes). Optional dry_run. Admin role; audited (governance_sync).
       tags:
         - Admin
       responses:
@@ -1324,95 +1337,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/business-targets:
-    get:
-      operationId: listBusinessTargets
-      summary: List the business-target standards (md_business_target, ADR-0114) with group/member names and the metric presets. Admin role.
-      tags:
-        - Admin
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    post:
-      operationId: createBusinessTarget
-      summary: Create a group-common (member_id null) or affiliate-specific standard; stored units (KRW millions, ratios, years). Admin role; audited.
-      tags:
-        - Admin
-      responses:
-        '201':
-          $ref: '#/components/responses/Created'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    put:
-      operationId: updateBusinessTarget
-      summary: Edit a standard's value/direction in place (scope and metric are immutable). Admin role; audited.
-      tags:
-        - Admin
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    delete:
-      operationId: deleteBusinessTarget
-      summary: Tombstone a standard (0081 convention — the row survives with deleted_at). Admin role; audited.
-      tags:
-        - Admin
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /api/admin/business-targets/groups:
-    get:
-      operationId: listBusinessTargetGroups
-      summary: List company groups for the Business Targets screen (admin-side mirror of the group list, ADR-0146). Admin role.
-      tags:
-        - Admin
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /api/admin/business-targets/groups/{id}:
-    get:
-      operationId: getBusinessTargetGroup
-      summary: Group detail (members and profile rollup) for the Business Targets screen (ADR-0146). Admin role.
-      tags:
-        - Admin
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
   /api/admin/adr:
     get:
       operationId: listAdrIndex
@@ -4360,6 +4284,75 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /api/our-company/groups/{id}/business-targets:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: listGroupBusinessTargets
+      summary: List one group's business-target standards (md_business_target, ADR-0114 as amended by ADR-0191) with member names and the metric presets. Business actor (admin role rejected, ADR-0146).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: createGroupBusinessTarget
+      summary: Create a group-common (member_id null) or affiliate-specific standard; stored units (KRW millions, ratios, years). Analyst or higher; audited.
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateGroupBusinessTarget
+      summary: Edit a standard's value/direction in place (scope and metric are immutable; the row must belong to the path group). Analyst or higher; audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteGroupBusinessTarget
+      summary: Tombstone a standard (0081 convention — the row survives with deleted_at). Analyst or higher; audited.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/our-company/groups/{id}/members:
     post:
       operationId: addGroupMember

@@ -68,6 +68,19 @@ function decide(o: { entity?: string; entityType?: "opportunity" | "project"; ga
 const kpi = (id: string, extra: Record<string, unknown> = {}) => buildGateIntegrityKpis(db, { ...W, ...extra }).kpis.find((k) => k.id === id)!;
 
 describe("KPI response contract", () => {
+  test("families: every rule family carries its server-resolved mode and a readiness verdict, aggregate only", () => {
+    const r = buildGateIntegrityKpis(db, { ...W, env: { CO_NEWBIZ_GATE_INTEGRITY_WAIVER: "enforce", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "shadow" } });
+    expect(r.families.map((f) => f.family).sort()).toEqual(["divergence", "kill_binding", "ladder", "maker_checker", "rationale", "snapshot_ack", "validators", "waiver", "wacc"].sort());
+    expect(r.families.find((f) => f.family === "waiver")?.mode).toBe("enforce");
+    expect(r.families.find((f) => f.family === "waiver")?.verdict.state).toBe("enforcing");
+    expect(r.families.find((f) => f.family === "ladder")?.mode).toBe("shadow");
+    expect(r.families.find((f) => f.family === "rationale")?.mode).toBe("off");
+    // only counts, modes and verdict codes: no free text, no ids
+    for (const f of r.families) expect(Object.keys(f).sort()).toEqual(["clean_days", "decisions", "family", "mode", "verdict", "would_blocks_14d"]);
+    // structured breach params are numbers, or short gate / role codes - never reason text or project ids
+    for (const k of r.kpis) for (const i of k.breach.items) for (const v of Object.values(i.params)) expect(typeof v === "number" || /^[a-z_-]+$/.test(String(v))).toBe(true);
+  });
+
   test("twelve KPIs in order, each with period / value / numerator / denominator / rate / breach / status", () => {
     const r = buildGateIntegrityKpis(db, W);
     expect(r.kpis.map((k) => k.id)).toEqual(["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"]);
@@ -180,6 +193,10 @@ describe("G6-G12 (state based)", () => {
     expect(k.breach.breached).toBe(true);
     expect(k.breach.reasons.join(" ")).toContain("5 business days");
     expect(k.breach.reasons.join(" ")).toContain("fewer than 2 active holders");
+    // structured codes run parallel to the English fallback text
+    expect(k.breach.items).toHaveLength(k.breach.reasons.length);
+    expect(k.breach.items.map((i) => i.code)).toEqual(expect.arrayContaining(["countersign_pending_old", "reviewer_holders_low"]));
+    expect(k.breach.items.find((i) => i.code === "reviewer_holders_low")?.params.role).toMatch(/-ic-reviewer$/);
   });
 
   test("G8: open conditions, older than 30 days, open at a reached group_ic gate", () => {

@@ -83,10 +83,14 @@ describe("connected-apps personal API tokens UI", () => {
     expect(PAGE).toContain('role="alert"');
   });
 
-  test("viewer accounts get a read-only explanation instead of the issue form", () => {
-    expect(PAGE).toContain("canWriteBusiness");
-    expect(ko("pages.connectedApps.viewerNote")).toContain("읽기 전용 토큰");
-    expect(PAGE).toContain('t("viewerNote")');
+  test("every role gets the issue form; viewer/admin are read-only with role notes", () => {
+    // Replaces the old viewer-only explanation: access rules live in lib/token-issue-access.ts.
+    expect(PAGE).toContain("canIssueToken(me?.role)");
+    expect(PAGE).toContain("canIssueWriteToken(me?.role)");
+    expect(PAGE).toContain("writeScopeNoteKey(me?.role)");
+    expect(PAGE).toContain("{t(writeNoteKey)}");
+    expect(ko("pages.connectedApps.writeNoteViewer")).toContain("읽기 전용 토큰");
+    expect(ko("pages.connectedApps.writeNoteAdmin")).toContain("읽기 전용 토큰");
   });
 
   test("revoke confirms irreversibility before api.delete", () => {

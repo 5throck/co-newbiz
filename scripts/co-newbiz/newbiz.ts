@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.21.0
+// @version 1.22.0
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -60,6 +60,11 @@
  *   policy:sync     Scan the policies/ tree into the policy registry
  *                   (migration 0011) — idempotent by doc_path; an edited
  *                   policy supersedes the old version row (append-mostly)
+ *   governance:sync Scan the five governance layers (policies, procedures,
+ *                   checklists, guidelines, templates) into the governance_doc
+ *                   registry via the committed manifest
+ *                   docs/governance/governance-registry.generated.json;
+ *                   [--dry-run] plans only, [--check] fails on manifest drift
  *   policy:impact   Reference index for one policy: skills/procedures/
  *                   checklists/docs references + in-flight pinned projects
  *                   (the mechanical core of policy-change-impact-analysis)
@@ -167,7 +172,7 @@ function resolveMonthlyPeriods(fromArg: string | undefined, toArg: string | unde
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, governance:sync [--dry-run|--check], policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
 }
 
 switch (command) {
@@ -792,6 +797,11 @@ switch (command) {
     const r = await syncPolicies();
     console.log(`policy:sync — ${r.inserted} inserted, ${r.superseded} superseded, ${r.unchanged} unchanged.`);
     for (const d of r.docs) console.log(`  [${d.action}] ${d.path} (${d.policyId})`);
+    break;
+  }
+  case "governance:sync": {
+    const { runGovernanceSync } = await import("./governance-sync.ts");
+    process.exitCode = await runGovernanceSync(args);
     break;
   }
   case "policy:impact": {

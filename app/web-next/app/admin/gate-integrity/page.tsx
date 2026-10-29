@@ -12,7 +12,11 @@ export default function AdminGateIntegrityPage() {
     <main className="admin-console-page">
       <PageHeader title={t("h1")} description={t("intro")} />
       <GateIntegrityKpiSection />
-      <ReconfirmCreateForm />
+      <section aria-labelledby="gi-reconfirm" className="mt-4">
+        <h2 id="gi-reconfirm" className="m-0">{t("reconfirm.title")}</h2>
+        <p className="m-0 mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("reconfirm.intro")}</p>
+        <ReconfirmCreateForm />
+      </section>
     </main>
   );
 }

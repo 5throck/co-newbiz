@@ -70,6 +70,8 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  // Close the singleton handle first so later files in the same process do not inherit a handle to the deleted file.
+  resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });
 

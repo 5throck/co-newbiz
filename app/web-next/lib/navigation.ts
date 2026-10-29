@@ -144,7 +144,7 @@ export const NON_MENU_ROUTES: string[] = [
   "/projects/[id]/risk-heatmap",
   "/portfolio-view",
   "/onboarding",
-  "/admin/business-targets",
+  "/admin/business-targets", // redirect-only → /our-company (ADR-0191)
   // 플로우 콘솔 드라이런 세션(2026-10-24-flow-console-screen-design §2.1/§2.3) —
   // 별도 여정이라 사이드바 밖. /flows/dry-run(세션 목록)은 /flows 탭 행의 텍스트
   // 링크와 블루프린트 "드라이런 시작"으로, [sessionId]는 세션 목록·런 레저 칩의
@@ -192,7 +192,6 @@ export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin/governance", label: "nav.admin.governance" },
   { href: "/admin/gate-integrity", label: "nav.admin.gateIntegrity" },
   { href: "/admin/master-data", label: "nav.admin.masterData" },
-  { href: "/admin/business-targets", label: "nav.admin.businessTargets" },
   { href: "/admin/adr", label: "nav.admin.adr" },
   { href: "/admin/system-mode", label: "nav.admin.systemMode" },
   { href: "/settings/connected-apps", label: "nav.connectedApps" },

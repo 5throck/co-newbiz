@@ -6,19 +6,15 @@
 // moved to app/api/admin/master-data/staging/route.ts.)
 import { getDb } from "../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../db/lib/access-control.ts";
+import { findMasterReferences } from "../../../../../../db/lib/master-refs.ts";
+import { ulid } from "../../../../../../db/lib/ulid.ts";
 import { authenticate, requireAdmin } from "../../../../lib/auth.ts";
-import { badRequest, ok } from "../../../../lib/envelope.ts";
+import { badRequest, fail, ok } from "../../../../lib/envelope.ts";
 
-// table → editable columns (id is always required and immutable after create)
+// table → editable columns (id is immutable after create; POST generates a ULID when none is sent).
+// md_industry is deliberately absent: those rows are S1 analysis subjects managed in the S1 market
+// screen, and the reference classification is the file-managed KSIC list.
 const MASTER_TABLES: Record<string, { columns: { name: string; type: "text" | "number" }[] }> = {
-  md_industry: {
-    columns: [
-      { name: "ksic_code", type: "text" },
-      { name: "naics_code", type: "text" },
-      { name: "name_ko", type: "text" },
-      { name: "name_en", type: "text" },
-    ],
-  },
   md_currency: { columns: [{ name: "iso_code", type: "text" }] },
   md_country: { columns: [{ name: "iso_code", type: "text" }] },
   md_source: {
@@ -97,20 +93,21 @@ export async function POST(request: Request) {
   } | null;
   const table = tableOf(body?.table);
   if (!table) return badRequest("invalid_request", `table must be one of ${Object.keys(MASTER_TABLES).join(", ")}.`);
-  if (!body?.id?.trim()) return badRequest("invalid_request", "id is required.");
-  const { cols, vals } = validateFields(table.spec, body.fields);
+  const id = body?.id?.trim() || ulid();
+  const { cols, vals } = validateFields(table.spec, body?.fields);
+  if (cols.length === 0) return badRequest("invalid_request", "At least one field is required.");
   const db = getDb();
   const now = new Date().toISOString();
   try {
     db.run(
       `INSERT INTO ${table.name} (id, ${cols.join(", ")}, created_at) VALUES (?, ${cols.map(() => "?").join(", ")}, ?)`,
-      [body.id.trim(), ...vals, now],
+      [id, ...vals, now],
     );
   } catch (err) {
     return badRequest("insert_failed", err instanceof Error ? err.message : "Insert failed.");
   }
-  appendAudit(db, { actor: ctx.userId, action: "master_data_add", target: `${table.name}:${body.id}`, now });
-  return ok({ table: table.name, id: body.id.trim() }, 201);
+  appendAudit(db, { actor: ctx.userId, action: "master_data_add", target: `${table.name}:${id}`, now });
+  return ok({ table: table.name, id }, 201);
 }
 
 export async function PUT(request: Request) {
@@ -151,6 +148,11 @@ export async function DELETE(request: Request) {
   if (!table) return badRequest("invalid_request", `table must be one of ${Object.keys(MASTER_TABLES).join(", ")}.`);
   if (!body?.id?.trim()) return badRequest("invalid_request", "id is required.");
   const db = getDb();
+  const refs = findMasterReferences(db, table.name, body.id.trim());
+  if (refs.length > 0) {
+    const usage = refs.map((r) => `${r.table}.${r.column} (${r.count})`).join(", ");
+    return fail(400, "referenced_row", `Other data references this row — clean up the references first: ${usage}.`, { references: refs });
+  }
   try {
     const res = db.run(`DELETE FROM ${table.name} WHERE id = ?`, [body.id.trim()]);
     if (res.changes === 0) return badRequest("not_found", "No such master-data row.");

@@ -10,7 +10,8 @@
  * acknowledgements live in gate_decision_snapshot.acknowledgements_json).
  */
 import type { Database } from "bun:sqlite";
-import { GATE_INTEGRITY_FAMILIES } from "../../../db/lib/gate-integrity-flags.ts";
+import { GATE_INTEGRITY_FAMILIES, gateIntegrityMode } from "../../../db/lib/gate-integrity-flags.ts";
+import { buildBreach, familyStatus, type BreachItem, type FamilyStatus } from "./gate-integrity-readiness.ts";
 import { resolveWaccConfirmation } from "../../../db/lib/wacc-confirmation.ts";
 import { isMandatoryChecklistItem } from "./dd-checklist-tailor.ts";
 import { validateRationale } from "./rationale-check.ts";
@@ -19,7 +20,8 @@ import { CODE_FAMILY, buildShadowReport, missingNeeds, pendingEntry, NEED, type 
 export const KPI_GATES = ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"] as const;
 const DAY = 86_400_000;
 
-export interface Breach { breached: boolean; reasons: string[] }
+/** `reasons` = English fallback text; `items` = the same findings as structured codes + params (parallel arrays) for the UI to localize. */
+export interface Breach { breached: boolean; reasons: string[]; items: BreachItem[] }
 export interface Kpi {
   id: string;
   name: string;
@@ -41,6 +43,8 @@ export interface KpiResponse {
   period: { from: string; to: string; prior_from: string; prior_to: string };
   gate: string | null;
   unapplied_migrations: string[];
+  /** Per rule family: current mode (server-side flag resolution) and the shadow-to-enforce readiness verdict. */
+  families: FamilyStatus[];
   kpis: Kpi[];
 }
 
@@ -65,7 +69,8 @@ export function businessDays(fromIso: string, toIso: string): number {
   }
   return n;
 }
-const ok = (): Breach => ({ breached: false, reasons: [] });
+const ok = (): Breach => ({ breached: false, reasons: [], items: [] });
+type Found = Array<readonly [import("./gate-integrity-readiness.ts").BreachCode, Record<string, string | number>, string]>;
 
 interface DecisionRow {
   id: string; entity_type: string; entity_id: string; gate: string; decision: string; decided_by: string; decided_at: string;
@@ -106,7 +111,7 @@ function mixByGate(rows: DecisionRow[]) {
   return out;
 }
 
-export function buildGateIntegrityKpis(db: Database, o: { from: string; to: string; gate?: string | null; now?: string; minWrites?: number }): KpiResponse {
+export function buildGateIntegrityKpis(db: Database, o: { from: string; to: string; gate?: string | null; now?: string; minWrites?: number; env?: Record<string, string | undefined> }): KpiResponse {
   const now = o.now ?? new Date().toISOString();
   const gate = o.gate ?? null;
   const period = { from: o.from, to: o.to };
@@ -131,34 +136,35 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
     }
   };
   let rep: ReturnType<typeof buildShadowReport> | null = null;
+  const g12ByFamily: Record<string, { cleanDays: number; decisions: number; wouldBlocks14d: number }> = {};
 
   section("G1", "GO/HOLD/KILL mix", false, [], [NEED.snapshot, NEED.aiColumn], () => {
     const mix = mixByGate(curRows());
     const priorMix = mixByGate(priorRows());
-    const reasons: string[] = [];
+    const found: Found = [];
     for (const [g, m] of Object.entries(mix)) {
-      if (m.total >= 10 && (m.go_share ?? 0) > 0.95) reasons.push(`${g}: GO share ${(100 * (m.go_share ?? 0)).toFixed(0)}% over ${m.total} decisions`);
+      if (m.total >= 10 && (m.go_share ?? 0) > 0.95) found.push(["go_share_high", { gate: g, pct: Math.round(100 * (m.go_share ?? 0)), total: m.total }, `${g}: GO share ${(100 * (m.go_share ?? 0)).toFixed(0)}% over ${m.total} decisions`]);
       const p = priorMix[g];
-      if (p && p.total > 0 && m.go_share !== null && p.go_share !== null && Math.abs(m.go_share - p.go_share) > 0.3) reasons.push(`${g}: GO share moved ${(100 * Math.abs(m.go_share - p.go_share)).toFixed(0)} points versus the prior 4 weeks`);
+      if (p && p.total > 0 && m.go_share !== null && p.go_share !== null && Math.abs(m.go_share - p.go_share) > 0.3) found.push(["go_share_shift", { gate: g, points: Math.round(100 * Math.abs(m.go_share - p.go_share)) }, `${g}: GO share moved ${(100 * Math.abs(m.go_share - p.go_share)).toFixed(0)} points versus the prior 4 weeks`]);
     }
     const all = Object.values(mix);
     const total = all.reduce((n, m) => n + m.total, 0);
-    add({ id: "G1", name: "GO/HOLD/KILL mix", li: false, li_families: [], value: { by_gate: mix, prior_4_weeks_by_gate: priorMix }, numerator: all.reduce((n, m) => n + m.go, 0), denominator: total, rate: rate(all.reduce((n, m) => n + m.go, 0), total), breach: { breached: reasons.length > 0, reasons }, note: "numerator/denominator = GO decisions / latest decisions per entity and gate; legacy = no snapshot row" });
+    add({ id: "G1", name: "GO/HOLD/KILL mix", li: false, li_families: [], value: { by_gate: mix, prior_4_weeks_by_gate: priorMix }, numerator: all.reduce((n, m) => n + m.go, 0), denominator: total, rate: rate(all.reduce((n, m) => n + m.go, 0), total), breach: buildBreach(found), note: "numerator/denominator = GO decisions / latest decisions per entity and gate; legacy = no snapshot row" });
   });
   section("G2", "AI-vs-human divergence rate", false, [], [NEED.snapshot, NEED.aiColumn], () => {
     const withAi = curRows().filter((r) => r.ai !== null);
     const div = withAi.filter((r) => r.ai !== r.decision);
     const r = rate(div.length, withAi.length);
-    const reasons: string[] = [];
-    if (withAi.length >= 10 && r !== null && (r > 0.4 || r === 0)) reasons.push(r === 0 ? "0% divergence over 10 or more decisions" : `divergence ${(100 * r).toFixed(0)}% above 40%`);
-    add({ id: "G2", name: "AI-vs-human divergence rate", li: false, li_families: [], value: { divergent: div.length, with_recommendation: withAi.length }, numerator: div.length, denominator: withAi.length, rate: r, breach: { breached: reasons.length > 0, reasons } });
+    const found: Found = [];
+    if (withAi.length >= 10 && r !== null && (r > 0.4 || r === 0)) found.push(r === 0 ? ["divergence_zero", { total: withAi.length }, "0% divergence over 10 or more decisions"] : ["divergence_high", { pct: Math.round(100 * r) }, `divergence ${(100 * r).toFixed(0)}% above 40%`]);
+    add({ id: "G2", name: "AI-vs-human divergence rate", li: false, li_families: [], value: { divergent: div.length, with_recommendation: withAi.length }, numerator: div.length, denominator: withAi.length, rate: r, breach: buildBreach(found) });
   });
   section("G3", "Divergence-reason presence", true, ["divergence"], [NEED.snapshot, NEED.aiColumn], () => {
     const div = curRows().filter((r) => r.ai !== null && r.ai !== r.decision && r.decision === "go");
     const good = div.filter((r) => r.divergence_reason && validateRationale(r.divergence_reason, "decision").ok);
     const wb = (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'gate_integrity.would_block:divergence_reason_required' AND created_at >= ? AND created_at < ?").get(o.from, o.to) as { c: number }).c;
     const shortfall = div.length - good.length;
-    add({ id: "G3", name: "Divergence-reason presence", li: true, li_families: ["divergence"], value: { shortfall, would_block_divergence_reason_required: wb }, numerator: good.length, denominator: div.length, rate: rate(good.length, div.length), breach: { breached: shortfall > 0 || wb > 0, reasons: [...(shortfall > 0 ? [`${shortfall} divergent GO without a passing reason`] : []), ...(wb > 0 ? [`${wb} would-block events`] : [])] }, note: "GO decisions only (the enforced set); HOLD/KILL reasons are optional" });
+    add({ id: "G3", name: "Divergence-reason presence", li: true, li_families: ["divergence"], value: { shortfall, would_block_divergence_reason_required: wb }, numerator: good.length, denominator: div.length, rate: rate(good.length, div.length), breach: buildBreach([...(shortfall > 0 ? [["divergence_reason_missing", { count: shortfall }, `${shortfall} divergent GO without a passing reason`] as const] : []), ...(wb > 0 ? [["would_block_events", { count: wb }, `${wb} would-block events`] as const] : [])]), note: "GO decisions only (the enforced set); HOLD/KILL reasons are optional" });
   });
   section("G4", "Acknowledgements per kind", false, [], [NEED.snapshot, NEED.aiColumn], () => {
     const byKind: Record<string, Record<string, number>> = {};
@@ -177,10 +183,10 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
     }
     const reused = [...reasonUse.values()].filter((s) => s.size > 5).length;
     const rej = (db.query("SELECT COUNT(*) c FROM audit_log WHERE (action = 'gate_integrity.would_block:rationale_insufficient' OR action LIKE '%.refused:rationale_insufficient') AND created_at >= ? AND created_at < ?").get(o.from, o.to) as { c: number }).c;
-    const reasons: string[] = [];
-    if (total > 0 && rej / total > 0.1) reasons.push(`rationale-substance rejections ${rej} exceed 10% of ${total} acknowledgements`);
-    if (reused > 0) reasons.push(`${reused} acknowledgement reason text(s) reused across more than 5 decisions`);
-    add({ id: "G4", name: "Acknowledgements per kind", li: false, li_families: [], value: { by_gate_and_kind: byKind, rationale_rejections: rej, reused_reason_texts: reused }, numerator: rej, denominator: total, rate: rate(rej, total), breach: { breached: reasons.length > 0, reasons }, note: "rate = substance rejections (any rationale_insufficient event in the window, an upper bound for acknowledgements) / acknowledgements" });
+    const found: Found = [];
+    if (total > 0 && rej / total > 0.1) found.push(["rationale_rejections_high", { rejections: rej, total }, `rationale-substance rejections ${rej} exceed 10% of ${total} acknowledgements`]);
+    if (reused > 0) found.push(["ack_reason_reused", { count: reused }, `${reused} acknowledgement reason text(s) reused across more than 5 decisions`]);
+    add({ id: "G4", name: "Acknowledgements per kind", li: false, li_families: [], value: { by_gate_and_kind: byKind, rationale_rejections: rej, reused_reason_texts: reused }, numerator: rej, denominator: total, rate: rate(rej, total), breach: buildBreach(found), note: "rate = substance rejections (any rationale_insufficient event in the window, an upper bound for acknowledgements) / acknowledgements" });
   });
   section("G5", "Unassessed kill-criteria share at GO", true, ["kill_binding", "snapshot_ack"], [NEED.snapshot, NEED.aiColumn], () => {
     const per: Record<string, { unassessed: number; applicable: number; share: number | null }> = {};
@@ -194,11 +200,11 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
         p.applicable += (k.evaluated ?? 0);
       } catch { /* unreadable snapshot ignored */ }
     }
-    const reasons: string[] = [];
-    for (const [g, p] of Object.entries(per)) { p.share = rate(p.unassessed, p.applicable); if (p.share !== null && p.share > 0.25) reasons.push(`${g}: ${(100 * p.share).toFixed(0)}% unassessed`); }
+    const found: Found = [];
+    for (const [g, p] of Object.entries(per)) { p.share = rate(p.unassessed, p.applicable); if (p.share !== null && p.share > 0.25) found.push(["unassessed_high", { gate: g, pct: Math.round(100 * p.share) }, `${g}: ${(100 * p.share).toFixed(0)}% unassessed`]); }
     const n = Object.values(per).reduce((a, p) => a + p.unassessed, 0);
     const d = Object.values(per).reduce((a, p) => a + p.applicable, 0);
-    add({ id: "G5", name: "Unassessed kill-criteria share at GO", li: true, li_families: ["kill_binding", "snapshot_ack"], value: { by_gate: per }, numerator: n, denominator: d, rate: rate(n, d), breach: { breached: reasons.length > 0, reasons } });
+    add({ id: "G5", name: "Unassessed kill-criteria share at GO", li: true, li_families: ["kill_binding", "snapshot_ack"], value: { by_gate: per }, numerator: n, denominator: d, rate: rate(n, d), breach: buildBreach(found) });
   });
   section("G6", "would_block counts (shadow)", true, [...GATE_INTEGRITY_FAMILIES], [], () => {
     rep = buildShadowReport(db as never, { from: o.from, to: o.to, now });
@@ -212,7 +218,7 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
       f[w] = (f[w] ?? 0) + r.count;
       total += r.count;
     }
-    add({ id: "G6", name: "would_block counts (shadow)", li: true, li_families: [...GATE_INTEGRITY_FAMILIES], value: { by_family_code_week: byFam, explained: null, unexplained: total }, numerator: total, denominator: null, rate: null, breach: { breached: total > 0, reasons: total > 0 ? [`${total} would-block event(s); all count as unexplained until a reviewer ties them to a fixture, legacy record or fixed defect`] : [] }, note: "the explained/unexplained flag is a reviewer act and is not stored; every event is reported as unexplained" });
+    add({ id: "G6", name: "would_block counts (shadow)", li: true, li_families: [...GATE_INTEGRITY_FAMILIES], value: { by_family_code_week: byFam, explained: null, unexplained: total }, numerator: total, denominator: null, rate: null, breach: buildBreach(total > 0 ? [["would_block_unexplained", { count: total }, `${total} would-block event(s); all count as unexplained until a reviewer ties them to a fixture, legacy record or fixed defect`] as const] : []), note: "the explained/unexplained flag is a reviewer act and is not stored; every event is reported as unexplained" });
   });
   section("G7", "Countersign latency and pending count", false, ["maker_checker"], [NEED.chainDecision, NEED.cutoff, NEED.grants], () => {
     const rows = db
@@ -235,22 +241,22 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
       .all(gate, gate) as Array<{ made: string }>;
     const pendingOld = pending.filter((p) => businessDays(p.made, now) > 5).length;
     const p90 = pct(bd, 0.9);
-    const reasons: string[] = [];
-    if (pendingOld > 0) reasons.push(`${pendingOld} decision(s) pending a countersign for more than 5 business days`);
-    if (p90 !== null && p90 > 10) reasons.push(`p90 countersign latency ${p90} business days exceeds 10`);
+    const found: Found = [];
+    if (pendingOld > 0) found.push(["countersign_pending_old", { count: pendingOld }, `${pendingOld} decision(s) pending a countersign for more than 5 business days`]);
+    if (p90 !== null && p90 > 10) found.push(["countersign_slow", { days: p90 }, `p90 countersign latency ${p90} business days exceeds 10`]);
     const holders = db.query("SELECT role_key, COUNT(DISTINCT user_id) c FROM app_user_human_role h WHERE revoked_at IS NULL GROUP BY role_key").all() as Array<{ role_key: string; c: number }>;
-    for (const r of ["entity-ic-reviewer", "group-ic-reviewer"]) if ((holders.find((h) => h.role_key === r)?.c ?? 0) < 2) reasons.push(`${r} has fewer than 2 active holders (O-1 not met)`);
-    add({ id: "G7", name: "Countersign latency and pending count", li: false, li_families: ["maker_checker"], value: { median_hours: median(hours), p90_hours: pct(hours, 0.9), median_business_days: median(bd), p90_business_days: p90, countersigned: rows.length, pending: pending.length, pending_over_5_business_days: pendingOld, holders: Object.fromEntries(holders.map((h) => [h.role_key, h.c])) }, numerator: pending.length, denominator: pending.length + rows.length, rate: rate(pending.length, pending.length + rows.length), breach: { breached: reasons.length > 0, reasons }, note: "numerator = pending now (not period-bound), denominator = pending + countersigned in the period" });
+    for (const r of ["entity-ic-reviewer", "group-ic-reviewer"]) if ((holders.find((h) => h.role_key === r)?.c ?? 0) < 2) found.push(["reviewer_holders_low", { role: r }, `${r} has fewer than 2 active holders (O-1 not met)`]);
+    add({ id: "G7", name: "Countersign latency and pending count", li: false, li_families: ["maker_checker"], value: { median_hours: median(hours), p90_hours: pct(hours, 0.9), median_business_days: median(bd), p90_business_days: p90, countersigned: rows.length, pending: pending.length, pending_over_5_business_days: pendingOld, holders: Object.fromEntries(holders.map((h) => [h.role_key, h.c])) }, numerator: pending.length, denominator: pending.length + rows.length, rate: rate(pending.length, pending.length + rows.length), breach: buildBreach(found), note: "numerator = pending now (not period-bound), denominator = pending + countersigned in the period" });
   });
   section("G8", "Open condition precedents and age", false, [], [NEED.conditions], () => {
     const open = db.query("SELECT id, project_id, gate, clear_by, created_at FROM condition_precedent WHERE status = 'open'").all() as Array<{ id: string; project_id: string; gate: string; clear_by: string; created_at: string }>;
     const older = open.filter((c) => Date.parse(now) - Date.parse(c.created_at) > 30 * DAY).length;
     const reached = open.filter((c) => c.clear_by === "group_ic" && db.query("SELECT 1 FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate = 'group_ic' LIMIT 1").get(c.project_id)).length;
-    const reasons: string[] = [];
-    if (older > 0) reasons.push(`${older} open condition(s) older than 30 days`);
-    if (reached > 0) reasons.push(`${reached} open group_ic condition(s) at a reached group_ic gate`);
+    const found: Found = [];
+    if (older > 0) found.push(["conditions_old", { count: older }, `${older} open condition(s) older than 30 days`]);
+    if (reached > 0) found.push(["group_ic_conditions_open", { count: reached }, `${reached} open group_ic condition(s) at a reached group_ic gate`]);
     const ages = open.map((c) => (Date.parse(now) - Date.parse(c.created_at)) / DAY);
-    add({ id: "G8", name: "Open condition precedents and age", li: false, li_families: [], value: { open: open.length, older_than_30_days: older, past_clear_by_gate: reached, oldest_age_days: ages.length ? Math.round(Math.max(...ages)) : null }, numerator: older, denominator: open.length, rate: rate(older, open.length), breach: { breached: reasons.length > 0, reasons }, note: "open conditions are a current snapshot; past-clear-by is evaluated for group_ic (the gate whose reach is recorded)" });
+    add({ id: "G8", name: "Open condition precedents and age", li: false, li_families: [], value: { open: open.length, older_than_30_days: older, past_clear_by_gate: reached, oldest_age_days: ages.length ? Math.round(Math.max(...ages)) : null }, numerator: older, denominator: open.length, rate: rate(older, open.length), breach: buildBreach(found), note: "open conditions are a current snapshot; past-clear-by is evaluated for group_ic (the gate whose reach is recorded)" });
   });
   section("G9", "Waiver count and age", false, ["waiver"], [], () => {
     const ws = db.query("SELECT clause_ref, status, approved_at, expires_at FROM waiver").all() as Array<{ clause_ref: string; status: string; approved_at: string | null; expires_at: string }>;
@@ -262,7 +268,7 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
     const over90 = ages.filter((a) => a > 90).length;
     const conc: Record<string, number> = {};
     for (const w of ws) conc[w.clause_ref] = (conc[w.clause_ref] ?? 0) + 1;
-    add({ id: "G9", name: "Waiver count and age", li: false, li_families: ["waiver"], value: { active: active.length, expired: expired.length, expiring_14d: expiring, mean_active_age_days: ages.length ? Math.round((ages.reduce((a, b) => a + b, 0) / ages.length) * 10) / 10 : null, active_over_90_days: over90, concentration_by_clause: conc }, numerator: over90, denominator: active.length, rate: rate(over90, active.length), breach: { breached: over90 > 0, reasons: over90 > 0 ? [`${over90} active waiver(s) older than 90 days`] : [] }, note: "'expired but relied on' is not derivable from stored data; expired waivers are counted" });
+    add({ id: "G9", name: "Waiver count and age", li: false, li_families: ["waiver"], value: { active: active.length, expired: expired.length, expiring_14d: expiring, mean_active_age_days: ages.length ? Math.round((ages.reduce((a, b) => a + b, 0) / ages.length) * 10) / 10 : null, active_over_90_days: over90, concentration_by_clause: conc }, numerator: over90, denominator: active.length, rate: rate(over90, active.length), breach: buildBreach(over90 > 0 ? [["waivers_old", { count: over90 }, `${over90} active waiver(s) older than 90 days`] as const] : []), note: "'expired but relied on' is not derivable from stored data; expired waivers are counted" });
   });
   section("G10", "na confirmation latency and backlog", true, ["waiver"], [NEED.naConfirm], () => {
     const rows = db
@@ -274,12 +280,12 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
     const legacy = unconf.filter((r) => r.assessed_at < mig).length;
     const over14 = unconf.filter((r) => Date.parse(now) - Date.parse(r.assessed_at) > 14 * DAY).length;
     const lat = mand.filter((r) => r.na_confirmed_at).map((r) => (Date.parse(r.na_confirmed_at!) - Date.parse(r.assessed_at)) / DAY);
-    add({ id: "G10", name: "na confirmation latency and backlog", li: true, li_families: ["waiver"], value: { unconfirmed: unconf.length, unconfirmed_over_14_days: over14, legacy_unconfirmed: legacy, median_days_to_confirmation: median(lat) }, numerator: unconf.length, denominator: mand.length, rate: rate(unconf.length, mand.length), breach: { breached: over14 > 0, reasons: over14 > 0 ? [`${over14} unconfirmed mandatory na row(s) older than 14 days (legacy backlog ${legacy} must be reviewed before the waiver flip)`] : [] } });
+    add({ id: "G10", name: "na confirmation latency and backlog", li: true, li_families: ["waiver"], value: { unconfirmed: unconf.length, unconfirmed_over_14_days: over14, legacy_unconfirmed: legacy, median_days_to_confirmation: median(lat) }, numerator: unconf.length, denominator: mand.length, rate: rate(unconf.length, mand.length), breach: buildBreach(over14 > 0 ? [["na_unconfirmed_old", { count: over14, legacy }, `${over14} unconfirmed mandatory na row(s) older than 14 days (legacy backlog ${legacy} must be reviewed before the waiver flip)`] as const] : []) });
   });
   section("G11", "WACC provisional share at S8+", true, ["wacc"], [], () => {
     const ps = db.query("SELECT p.id FROM md_project p WHERE p.status = 'open' AND p.deleted_at IS NULL AND EXISTS (SELECT 1 FROM business_case_model m WHERE m.project_id = p.id)").all() as Array<{ id: string }>;
     const prov = ps.filter((p) => !resolveWaccConfirmation(db, p.id).confirmed).length;
-    add({ id: "G11", name: "WACC provisional share at S8+", li: true, li_families: ["wacc"], value: { provisional: prov, projects_at_s8_or_later: ps.length }, numerator: prov, denominator: ps.length, rate: rate(prov, ps.length), breach: { breached: prov > 0, reasons: prov > 0 ? [`${prov} project(s) at S8 or later with a provisional discount rate`] : [] }, note: "S8 or later = an S8 business-case model exists" });
+    add({ id: "G11", name: "WACC provisional share at S8+", li: true, li_families: ["wacc"], value: { provisional: prov, projects_at_s8_or_later: ps.length }, numerator: prov, denominator: ps.length, rate: rate(prov, ps.length), breach: buildBreach(prov > 0 ? [["wacc_provisional", { count: prov }, `${prov} project(s) at S8 or later with a provisional discount rate`] as const] : []), note: "S8 or later = an S8 business-case model exists" });
   });
   section("G12", "Would-block-free days", true, [...GATE_INTEGRITY_FAMILIES], [], () => {
     const minWrites = o.minWrites ?? 10;
@@ -287,7 +293,8 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
     const horizonFrom = new Date(Date.parse(o.to) - 90 * DAY).toISOString();
     const wbRows = db.query("SELECT action, substr(created_at,1,10) AS day FROM audit_log WHERE action LIKE 'gate_integrity.would_block:%' AND created_at >= ? AND created_at < ?").all(horizonFrom, o.to) as Array<{ action: string; day: string }>;
     const writeRows = db.query("SELECT substr(decided_at,1,10) AS day, COUNT(*) c FROM gate_decision WHERE decided_at >= ? AND decided_at < ? GROUP BY 1").all(horizonFrom, o.to) as Array<{ day: string; c: number }>;
-    const out: Record<string, { streak_days: number; writes_in_streak: number; qualifies_14_days: boolean }> = {};
+    const out: Record<string, { streak_days: number; writes_in_streak: number; qualifies_14_days: boolean; would_blocks_14d: number }> = {};
+    const from14 = new Date(Date.parse(`${toDay}T00:00:00Z`) - 14 * DAY).toISOString().slice(0, 10);
     for (const f of GATE_INTEGRITY_FAMILIES) {
       const days = new Set(wbRows.filter((w) => CODE_FAMILY[w.action.slice(w.action.indexOf(":") + 1)] === f).map((w) => w.day));
       let streak = 0, writes = 0;
@@ -297,9 +304,12 @@ export function buildGateIntegrityKpis(db: Database, o: { from: string; to: stri
         streak += 1;
         writes += writeRows.find((w) => w.day === day)?.c ?? 0;
       }
-      out[f] = { streak_days: streak, writes_in_streak: writes, qualifies_14_days: streak >= 14 && writes >= minWrites };
+      const wb14 = wbRows.filter((w) => w.day >= from14 && CODE_FAMILY[w.action.slice(w.action.indexOf(":") + 1)] === f).length;
+      out[f] = { streak_days: streak, writes_in_streak: writes, qualifies_14_days: streak >= 14 && writes >= minWrites, would_blocks_14d: wb14 };
+      g12ByFamily[f] = { cleanDays: streak, decisions: writes, wouldBlocks14d: wb14 };
     }
     add({ id: "G12", name: "Would-block-free days", li: true, li_families: [...GATE_INTEGRITY_FAMILIES], value: { min_writes: minWrites, by_family: out }, numerator: Object.values(out).filter((v) => v.qualifies_14_days).length, denominator: GATE_INTEGRITY_FAMILIES.length, rate: null, breach: ok(), note: "no breach trigger: the counter resets on any would_block event; writes are all gate decisions in the streak (N = min_writes, default 10 per the runbook)" });
   });
-  return { generated_at: now, unapplied_migrations: unappliedGateIntegrityMigrations(db), period: { from: o.from, to: o.to, prior_from: priorFrom, prior_to: priorTo }, gate, kpis };
+  const families = GATE_INTEGRITY_FAMILIES.map((f) => familyStatus(f, gateIntegrityMode(f, o.env ?? process.env), g12ByFamily[f] ?? { cleanDays: 0, decisions: 0, wouldBlocks14d: 0 }, o.minWrites));
+  return { generated_at: now, families, unapplied_migrations: unappliedGateIntegrityMigrations(db), period: { from: o.from, to: o.to, prior_from: priorFrom, prior_to: priorTo }, gate, kpis };
 }

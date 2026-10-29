@@ -206,8 +206,7 @@ All project-scoped via membership (404-not-403); writes analyst-gated and audit-
 | `/api/admin/governance` | GET | Governance document registry (`governance_doc`: layer/key/title/version/enforceability/owner/superseded_by) | `admin` role |
 | `/api/admin/master-data` | GET | Master-data unmapped queue (`staging_unmapped`: raw_value/attempted_master_table/first_seen_at) | `admin` role |
 | `/api/admin/adr` | GET | ADR index scanned from `docs/adr/*.md` (id/title/status); excludes README | `admin` role |
-| `/api/admin/business-targets/groups` | GET | Business Targets group list for the admin console (shared logic `lib/our-company-groups.ts` `listGroups`); replaces the console's former call to `/api/our-company/groups`, which now rejects admin (ADR-0146 Decision 5) | `admin` role only |
-| `/api/admin/business-targets/groups/{id}` | GET | Business Targets group detail (`getGroupDetail`) | `admin` role only |
+| `/api/our-company/groups/{id}/business-targets` | GET/POST/PUT/DELETE | Group-common and affiliate business-target standards (`md_business_target`, ADR-0114 as amended by ADR-0191); stored units (KRW millions, ratios, years); deletes are tombstones; PUT/DELETE reject rows outside the path group | GET: business actor; writes: analyst or higher; `admin` rejected (ADR-0146), audited |
 
 ## 9. Response Envelope and Error Contract
 
