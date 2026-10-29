@@ -109,7 +109,8 @@
       "editingNotice": "Editing the {p1} policy.",
       "cancelEdit": "Cancel edit",
       "statusLabelOn": "On",
-      "statusLabelOff": "Off"
+      "statusLabelOff": "Off",
+      "gradeNote": "Reliability grade: A = official primary source (government or exchange statistics, statutory filings), B = verified secondary source, C = unverified or estimated. \"—\" means no grade is registered in the source code table (md_source)."
     },
     "businessTargets": {
       "errValueNumeric": "Enter the target value as a number.",
@@ -573,11 +574,11 @@
         "unit": "Unit"
       },
       "source": {
-        "dart": "DART",
-        "ecos": "ECOS",
-        "kosis": "KOSIS",
-        "krx": "KRX",
-        "law": "National Law Information (law.go.kr)",
+        "dart": "Electronic Disclosure System (DART)",
+        "ecos": "Bank of Korea Economic Statistics (ECOS)",
+        "kosis": "Korean Statistical Information Service (KOSIS)",
+        "krx": "Korea Exchange (KRX)",
+        "law": "Korean Law Information (Law)",
         "opendata": "Public Data Portal (data.go.kr)"
       },
       "jobStatus": {

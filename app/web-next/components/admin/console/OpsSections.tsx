@@ -27,7 +27,7 @@ export function DataSourcesPanel({ ctx }: { ctx: AdminConsoleState }) {
             <thead>
               <tr>
                 <th scope="col">{t("colSource")}</th>
-                <th scope="col">{t("colReliability")}</th>
+                <th scope="col" title={t("gradeNote")}>{t("colReliability")}</th>
                 <th scope="col">{t("colEnvVar")}</th>
                 <th scope="col">{t("colKeyPresent")}</th>
                 <th scope="col">{t("colKeySource")}</th>
@@ -47,6 +47,7 @@ export function DataSourcesPanel({ ctx }: { ctx: AdminConsoleState }) {
               ))}
             </tbody>
           </table>
+          <p className="mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("gradeNote")}</p>
           </>
         ))}</>
   );

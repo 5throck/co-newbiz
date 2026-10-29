@@ -109,7 +109,8 @@
       "editingNotice": "{p1} 정책을 수정하는 중입니다.",
       "cancelEdit": "수정 취소",
       "statusLabelOn": "켜짐",
-      "statusLabelOff": "꺼짐"
+      "statusLabelOff": "꺼짐",
+      "gradeNote": "신뢰도 등급: A = 공식 1차 자료(정부·거래소 통계, 법정 공시), B = 확인된 2차 자료, C = 확인되지 않았거나 추정한 자료. \"—\"는 출처 코드표(md_source)에 등급이 등록되지 않았다는 뜻입니다."
     },
     "businessTargets": {
       "errValueNumeric": "기준값을 숫자로 입력하세요.",
@@ -573,12 +574,12 @@
         "unit": "단위"
       },
       "source": {
-        "dart": "DART",
-        "ecos": "ECOS",
-        "kosis": "KOSIS",
-        "krx": "KRX",
-        "law": "법제처 국가법령정보",
-        "opendata": "공공데이터포털"
+        "dart": "전자공시시스템 (DART)",
+        "ecos": "한국은행 경제통계 (ECOS)",
+        "kosis": "국가통계포털 (KOSIS)",
+        "krx": "한국거래소 (KRX)",
+        "law": "국가법령정보 (Law)",
+        "opendata": "공공데이터포털 (data.go.kr)"
       },
       "jobStatus": {
         "success": "성공",

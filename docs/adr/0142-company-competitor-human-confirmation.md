@@ -4,6 +4,8 @@
 **Date**: 2026-09-18
 **Deciders**: workspace owner (user direction, 2026-09-18)
 
+> Note: ADR number 0142 was shared with a second decision on 2026-09-18; the other decision (standalone simulation engine) moved to ADR-0188 on 2026-10-29.
+
 ## Context
 
 ADR-0089 introduced the group/affiliate company-profile surface as a non-stage
