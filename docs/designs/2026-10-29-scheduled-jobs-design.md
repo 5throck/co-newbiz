@@ -58,6 +58,7 @@ job handler (watch, collect:<source>, retention, gate-integrity-report)
 - `scripts/co-newbiz/schedule-tick.ts` — new. Idempotent per minute: computes due jobs from `cron_expr` (5-field cron, Asia/Seoul) and `last fire minute`, plus pending manual requests; spawns `run-job.ts` per job; exits within a few seconds. Never runs handler code itself.
 - `scripts/co-newbiz/run-job.ts` — new thin runner. Re-checks `enabled` (except manual requests, which carry an explicit actor), acquires the lock, opens a `job_run`, runs the handler with a hard timeout, records the outcome, releases the lock. Can also be called directly by an operator.
 - Handlers live in `scripts/co-newbiz/jobs/<job>.ts` and call existing library functions (`runWatchCycle`, fetch adapters, etc.), not the CLI via a sub-shell, so counts are returned structurally.
+- Operational note: a manual `run-job.ts --actor <...>` invocation runs a job even when it is disabled (`enabled = 0`), so "disabled" is not a hard off-switch — it only stops the tick from firing it on schedule.
 
 ### 2.3 Environments: where the tick runs
 

@@ -5,7 +5,7 @@ lang_reason: source-material
 
 # ADR-0114: Business-target standards as group/affiliate master data, with a non-blocking fs-gate evidence panel
 
-- Status: Accepted
+- Status: Accepted (amended by ADR-0191 — ownership and permissions moved to the group screen, 2026-10-29)
 - Date: 2026-09-10
 - Deciders: New Business Review Lead (PM)
 - Related: ADR-0008 (kill criteria are policy, not code), ADR-0037 (gate blocking rule), ADR-0053/0094 (gate verdicts are human decisions), ADR-0061 (money = INTEGER KRW millions), ADR-0074 (flow.spec.yaml is the SSOT), migration 0081 (tombstone deletion convention), ADR-0098 (S8 business case)

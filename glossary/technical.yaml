@@ -22,8 +22,9 @@ terms:
     owner: quant-methodologist
 
   Attribution:
-    ko: 귀인분석
+    ko: 변화 요인 분해
     en: Attribution Analysis
+    aliases: [귀인분석]
     definition_ko: NPV 변화를 각 입력 변수의 기여도로 분해하는 분석.
     why_it_matters_ko: 규정 개정 파이프라인·회귀 테스트·IC 재심의 대응까지 이 개념 하나로 연결된다.
     category: technical
@@ -32,12 +33,12 @@ terms:
     owner: quant-methodologist
 
   Proxy Chain:
-    ko: 프록시 체인
+    ko: 연관 산업 추정(프록시 체인)
     en: Proxy Industry Chain
     definition_ko: 대상 산업 데이터가 없을 때 전방(Tier 1)·전전방(Tier 2) 산업 데이터를 단위 환산해 규모를 추정하는 체계.
     why_it_matters_ko: 크랭크축 → 선박엔진(BHP) → 선박(CGT)처럼 두 단계를 건너뛰는 게 예외가 아니라 표준인 산업이 있다. 체인 신뢰도 등급이 RAG 데이터 신뢰도 캡으로 직결된다.
     category: technical
-    aliases: [가치사슬 연계 산업]
+    aliases: [프록시 체인, 가치사슬 연계 산업]
     related: [Value Chain Linkage, Reliability Grade]
     used_in: [proxy-industry-chain, unit-conversion-calibration]
     owner: quant-methodologist

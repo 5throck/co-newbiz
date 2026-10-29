@@ -53,8 +53,9 @@ terms:
     owner: valuation-agent
 
   Anchor Ref:
-    ko: 앵커 참조
+    ko: 기준값 참조(앵커)
     en: Anchor Reference
+    aliases: [앵커 참조]
     definition_ko: 예측값(projection)이 근거하는 과거 데이터나 피어 데이터를 가리키는 참조 필드.
     why_it_matters_ko: “매출총이익률 22%”가 어디서 왔는지(“피어 5개사 5년 중앙값”) 추적 가능하게 만드는 핵심 필드다.
     category: financial
@@ -63,9 +64,9 @@ terms:
     owner: financial-analyst
 
   Base Rate:
-    ko: 기저율
+    ko: 기준 비율
     en: Base Rate
-    aliases: [기준율, 기준 비율, base_rate]
+    aliases: [기저율, 기준율, base_rate]
     definition_ko: 과거·피어 사례의 실제 분포(하위 10%·중앙값·상위 10%)에 근거한 참조값. 값마다 출처, 확인한 날짜, 관리자, 근거 종류(내부 사후 평가·공개 연구·규제 통계·산업 데이터)를 반드시 함께 적어 두는 base_rate 표에서 가져온다(ADR-0187 D2). 출처 없는 행은 시스템이 받지 않는다.
     why_it_matters_ko: 예측 성장률이 과거·피어 분포 상위 10% 밖이면 자동 경고가 발동한다. 근거 없는 하키스틱 예측을 구조적으로 막는 장치다. 저장된 행이 없으면 기본값을 채우지 않고 '없음(not_available)'으로 답한다. 2026-10-28에 공개 연구 기반 첫 제안 파일(23행)이 만들어졌지만 담당자가 가져오기를 실행해야 데이터베이스에 들어간다. 값 이름이 _mean이면 평균, share_로 시작하면 비율이며 중앙값이 아니다.
     category: financial

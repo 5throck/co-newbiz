@@ -15,6 +15,8 @@ export interface GlossaryTerm {
   used_in?: string[];
   owner?: string;
   source?: string;
+  exclude_phrases?: string[];
+  exclude_paths?: string[];
 }
 
 let cache: GlossaryTerm[] | null = null;

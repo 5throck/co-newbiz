@@ -130,7 +130,7 @@ const AUDITED_TABLES: Array<{ file: string; match: string }> = [
 
 /** i18n: migrated aria-label keys → the original Korean labels, pinned in locales/ko.json. */
 const MIGRATED_TABLE_LABELS: Array<[string, string]> = [
-  ["stages.s2.stage.opportunityFunnelList", "기회 퍼널 목록"],
+  ["stages.s2.stage.opportunityFunnelList", "기회 단계별 현황 목록"],
   ["stages.s9.stage.p1Checklist", "{p1} 체크리스트"],
   ["stages.s67.shortlistSection.andCommitteeRecommendation2", "사전 검토 · 위원회 추천"],
   ["components.capabilityJudgement.table.capabilityAttainabilityTable", "필요 역량 달성 가능성 표"],

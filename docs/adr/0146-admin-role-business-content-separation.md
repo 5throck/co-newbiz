@@ -90,3 +90,9 @@ lang_reason: source-material
 4. **PR4** — 남음. UI 헬퍼 + 기회 캐리어 화면들을 analyst 전용으로 전환. AppShell은 admin에게 관리 그룹만 보여 주므로 admin은 탐색으로 이 화면에 닿지 않는다. PR4 전까지의 차이는 표시상 문제에 그친다.
 
 OP-1~OP-3은 2026-09-30 승인 시, OP-4는 PR3에서 해결되었다.
+
+## Amendment 2026-10-29 — 개인 토큰 최대 유효기간 90일 → 180일 (항목 6)
+
+- 개인 API 토큰의 허용 유효기간 집합을 {7, 30, 90}일에서 {7, 30, 90, 180}일로 넓히고 최대값을 180일로 한다(소유자 요청, 2026-10-29). 기본값은 30일 그대로다.
+- 근거: 로컬 stdio MCP·스크립트용 토큰의 재발급 빈도를 줄인다. 위험 완화는 유지된다. 세션 전용 발급, 사용자당 활성 5개, 시간당 10회 발급 제한, 해지, `cnb_pat_` 접두어, 역할 재검증(viewer/admin은 `write` 불가)이 그대로이며, 180일 토큰은 목록에서 D-n과 7일 이내 만료 경고로 드러난다.
+- 변경 범위: `db/lib/api-tokens.ts`, `app/web-next/lib/token-issue-access.ts`, `docs/architecture/openapi.yaml`, 자가발급 설계 문서 개정 노트. 스키마·스코프·OAuth 흐름 변경 없음.

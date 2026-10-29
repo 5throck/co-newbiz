@@ -4100,9 +4100,8 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
   display: grid;
   grid-template-columns: minmax(16rem, 1fr) auto auto auto;
   gap: var(--space-3, 1rem);
-  align-items: end;
+  align-items: start;
 }
-.pat-form-grid > :last-child { white-space: nowrap; }
 .pat-field { display: flex; flex-direction: column; gap: var(--space-1, 0.25rem); }
 .pat-field-label { display: block; font-size: var(--fs-caption, 0.8rem); color: var(--muted-fg); }
 .pat-field .form-input { width: 100%; min-width: 14rem; }
@@ -4113,8 +4112,17 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
    레이아웃(.table-fixed-pct + ColGroup TOKEN_COL_PCT)으로 이전. 좁은 화면에서는
    .table-scroll 안에서 가로 스크롤된다(tmin-64). */
 .pat-token-table th, .pat-token-table td { padding-inline: var(--space-1, 0.25rem) var(--space-2, 0.5rem); white-space: nowrap; }
-.pat-token-table code { font-family: var(--font-mono); font-size: var(--fs-body); }
+.pat-token-table code, .list-table code { font-family: var(--font-mono); font-size: var(--fs-caption); }
 .pat-token-table .status-chip { white-space: nowrap; }
+.pat-help { margin: 0; font-size: var(--fs-caption); color: var(--muted-fg); }
+.pat-submit { padding-top: calc(var(--fs-caption) * 1.5 + var(--space-1, 0.25rem)); display: flex; flex-direction: column; gap: var(--space-1, 0.25rem); align-items: flex-start; }
+.pat-expiry { display: inline-flex; flex-direction: column; gap: var(--space-1, 0.25rem); align-items: flex-start; }
+.pat-dn { font-size: var(--fs-caption); color: var(--muted-fg); font-weight: 600; }
+.pat-filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2, 0.5rem); margin-top: var(--space-3, 1rem); }
+.pat-filter-chips { display: flex; flex-wrap: wrap; gap: var(--space-2, 0.5rem); }
+.connector-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3, 1rem); margin-bottom: var(--space-3, 1rem); }
+.connector-row { display: flex; flex-wrap: wrap; gap: var(--space-2, 0.5rem); align-items: center; }
+.connector-url { flex: 1 1 18rem; min-width: 0; font-family: var(--font-mono); font-size: var(--fs-caption); }
 @media (max-width: 640px) { /* design-token-exempt: breakpoint (custom properties invalid in query conditions) */
   .pat-form-grid { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
   .pat-form-grid > :last-child { justify-self: start; }

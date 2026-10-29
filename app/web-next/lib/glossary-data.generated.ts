@@ -247,12 +247,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Stage Gate",
-    "ko": "게이트",
+    "ko": "단계별 심사 체계(스테이지 게이트)",
     "en": "Stage Gate",
     "definition_ko": "Screening → Pre-FS → FS → DD → 법인 투자심의위원회 → 그룹 투자심의위원회 순으로 진행되는 신사업 검토 단계.",
     "why_it_matters_ko": "각 게이트마다 필수 산출물과 통과 조건이 다르다. 게이트를 건너뛰면 시스템이 다음 단계 진입을 차단한다.",
     "category": "business",
     "aliases": [
+      "게이트",
       "스테이지 게이트",
       "게이트 심사"
     ],
@@ -901,8 +902,11 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Anchor Ref",
-    "ko": "앵커 참조",
+    "ko": "기준값 참조(앵커)",
     "en": "Anchor Reference",
+    "aliases": [
+      "앵커 참조"
+    ],
     "definition_ko": "예측값(projection)이 근거하는 과거 데이터나 피어 데이터를 가리키는 참조 필드.",
     "why_it_matters_ko": "“매출총이익률 22%”가 어디서 왔는지(“피어 5개사 5년 중앙값”) 추적 가능하게 만드는 핵심 필드다.",
     "category": "financial",
@@ -917,11 +921,11 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Base Rate",
-    "ko": "기저율",
+    "ko": "기준 비율",
     "en": "Base Rate",
     "aliases": [
+      "기저율",
       "기준율",
-      "기준 비율",
       "base_rate"
     ],
     "definition_ko": "과거·피어 사례의 실제 분포(하위 10%·중앙값·상위 10%)에 근거한 참조값. 값마다 출처, 확인한 날짜, 관리자, 근거 종류(내부 사후 평가·공개 연구·규제 통계·산업 데이터)를 반드시 함께 적어 두는 base_rate 표에서 가져온다(ADR-0187 D2). 출처 없는 행은 시스템이 받지 않는다.",
@@ -1236,6 +1240,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     "key": "인도",
     "ko": "인도",
     "en": "Delivery",
+    "exclude_phrases": [
+      "인도 루피"
+    ],
+    "exclude_paths": [
+      "admin.masterData.countryNames.",
+      "admin.masterData.currencyNames."
+    ],
     "definition_ko": "건조가 완료되어 발주처에 실제로 넘겨지는 시점.",
     "why_it_matters_ko": "매출 인식 시점과 가장 가까운 지표이나, 수주 대비 수년의 시차가 있어 수요 예측에 그대로 쓰면 시차 오류가 생긴다.",
     "category": "industry",
@@ -1681,8 +1692,11 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Attribution",
-    "ko": "귀인분석",
+    "ko": "변화 요인 분해",
     "en": "Attribution Analysis",
+    "aliases": [
+      "귀인분석"
+    ],
     "definition_ko": "NPV 변화를 각 입력 변수의 기여도로 분해하는 분석.",
     "why_it_matters_ko": "규정 개정 파이프라인·회귀 테스트·IC 재심의 대응까지 이 개념 하나로 연결된다.",
     "category": "technical",
@@ -1696,12 +1710,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     "key": "Proxy Chain",
-    "ko": "프록시 체인",
+    "ko": "연관 산업 추정(프록시 체인)",
     "en": "Proxy Industry Chain",
     "definition_ko": "대상 산업 데이터가 없을 때 전방(Tier 1)·전전방(Tier 2) 산업 데이터를 단위 환산해 규모를 추정하는 체계.",
     "why_it_matters_ko": "크랭크축 → 선박엔진(BHP) → 선박(CGT)처럼 두 단계를 건너뛰는 게 예외가 아니라 표준인 산업이 있다. 체인 신뢰도 등급이 RAG 데이터 신뢰도 캡으로 직결된다.",
     "category": "technical",
     "aliases": [
+      "프록시 체인",
       "가치사슬 연계 산업"
     ],
     "related": [

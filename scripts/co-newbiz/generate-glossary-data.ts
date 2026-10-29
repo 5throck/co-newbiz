@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 // glossary/*.yaml -> app/web-next/lib/glossary-data.generated.ts (ADR-0022, FR-SYS-04).
 // The YAML registry is the SSOT; the Next/Turbopack server bundle cannot read it at
 // runtime, so the UI tooltip, /api/glossary, MCP lookup_term and the admin glossary
@@ -10,6 +10,7 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import * as yaml from "js-yaml";
+import { renderGlossaryDataModule } from "../../app/web-next/lib/glossary-generate.ts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const GLOSSARY_DIR = join(ROOT, "glossary");
@@ -36,12 +37,7 @@ for (const file of files) {
   for (const [key, entry] of Object.entries(doc.terms)) terms.push({ key, ...entry });
 }
 
-const generated = `// Generated from glossary/*.yaml for Next/Turbopack static server bundling.
-// Do not edit by hand; update glossary YAML and regenerate this projection.
-import type { GlossaryTerm } from "./glossary.ts";
-
-export const GLOSSARY_TERMS: GlossaryTerm[] = ${JSON.stringify(terms, null, 2)};
-`;
+const generated = renderGlossaryDataModule(terms);
 
 const norm = (t: string) => t.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 

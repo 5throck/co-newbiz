@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
   const ttl = body.expiresInDays ?? DEFAULT_TTL_DAYS;
   if (!isAllowedTtl(ttl)) {
-    return badRequest("invalid_request", "expiresInDays must be one of 7, 30, or 90.");
+    return badRequest("invalid_request", "expiresInDays must be one of 7, 30, 90, or 180.");
   }
 
   // Rate limit first (cheapest refusal); denials count against the window.

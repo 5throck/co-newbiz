@@ -3,7 +3,7 @@
  * Scoped API-token engine — Wave 5.6, api-spec.md §2, design §4-11.
  * 2026-10-11: self-service personal tokens (design
  * docs/designs/2026-10-11-self-service-api-tokens-design.md §4.1) —
- * expiry (default 30d / max 90d), lazy grace expiry for legacy NULL rows,
+ * expiry (default 30d / max 180d since 2026-10-29, ADR-0146 amendment), lazy grace expiry for legacy NULL rows,
  * role re-check at validation (viewer/admin lose 'write'), cnb_pat_ prefix,
  * active-token cap, and per-hour use auditing. All refusals are audited via
  * the existing append-only audit_log — no new tables.
@@ -36,9 +36,9 @@ const VALID_SCOPES: readonly TokenScope[] = ["read", "write"];
 export const TOKEN_PREFIX = "cnb_pat_";
 
 /** Allowed expiry choices (days); anything else is refused at issue. */
-export const TOKEN_TTL_DAYS = [7, 30, 90] as const;
+export const TOKEN_TTL_DAYS = [7, 30, 90, 180] as const;
 export const DEFAULT_TTL_DAYS = 30;
-export const MAX_TTL_DAYS = 90;
+export const MAX_TTL_DAYS = 180;
 /** Legacy NULL-expiry rows get this grace window, written once lazily. */
 export const GRACE_TTL_DAYS = 30;
 /** At most this many active (not revoked, not expired) personal tokens per user. */

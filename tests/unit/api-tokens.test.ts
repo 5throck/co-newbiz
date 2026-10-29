@@ -143,12 +143,12 @@ describe("expiry", () => {
     expect(days).toBeLessThanOrEqual(30);
   });
 
-  test("expiresInDays 7 and 90 are accepted, 91 and 15 are rejected", async () => {
-    for (const days of [7, 90]) {
+  test("expiresInDays 7, 90 and 180 are accepted, 91, 181 and 15 are rejected", async () => {
+    for (const days of [7, 90, 180]) {
       const res = await issueViaRoute(patCookie, { label: `ttl-${days}`, expiresInDays: days });
       expect(res.status).toBe(201);
     }
-    for (const days of [91, 15, 0]) {
+    for (const days of [91, 181, 15, 0]) {
       const res = await issueViaRoute(patCookie, { label: "bad-ttl", expiresInDays: days });
       expect(res.status).toBe(400);
       expect((await res.json()).error.code).toBe("invalid_request");
