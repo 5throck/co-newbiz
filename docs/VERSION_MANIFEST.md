@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-29T13:35:13.381Z
+**Generated**: 2026-10-29T16:39:34.320Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 191 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 192 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -258,7 +258,7 @@
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
-| generate-glossary-data.ts | 1.0.0 | scripts/co-newbiz/generate-glossary-data.ts | js-yaml |
+| generate-glossary-data.ts | 1.1.0 | scripts/co-newbiz/generate-glossary-data.ts | js-yaml |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-pm-catalog.ts | 1.4.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
 | generate-process-flow.ts | 1.5.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
@@ -322,6 +322,7 @@
 | schedule-seed.ts | 1.0.0 | scripts/co-newbiz/schedule-seed.ts | N/A |
 | schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | N/A |
 | scheduler-core.ts | 1.0.0 | scripts/co-newbiz/scheduler-core.ts | N/A |
+| scheduler-install.ts | 1.0.0 | scripts/co-newbiz/scheduler-install.ts | N/A |
 | scope-impact.ts | 1.0.0 | scripts/co-newbiz/scope-impact.ts | bun:sqlite |
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |

@@ -1254,6 +1254,31 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/schedule-jobs/seed:
+    post:
+      operationId: seedScheduleJobs
+      summary: Idempotent seed of the default schedule_job rows (created disabled; existing rows never touched, owner decision D3). Optional dryRun. Admin role; audited (schedule_job_seed).
+      tags:
+        - Admin
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dryRun:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/governance:
     get:
       operationId: listGovernanceDocs

@@ -105,7 +105,11 @@ curl -sI https://newbiz.bizknights.org/ | head -1
 
 쿠키 세션 CSRF 검사는 요청 Origin의 호스트와 Host 헤더만 비교하므로 새 공개 호스트명은 브라우저에서 `/api/mcp`를 호출하지 않는 한 앱 설정이 필요 없습니다.
 
-## 9. 관련 문서
+## 9. 스케줄러 (분 틱)
+
+주기 잡은 호스트 OS 스케줄러에서 실행됩니다. 환경마다 하나의 launchd 항목(`org.bizknights.co-newbiz.<env>.tick`, ADR-0189)입니다. dev 틱은 호스트 프로세스로 `schedule-tick.ts`를 dev DB에 대해 실행하고, prod 틱은 `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod ...`로 **`co-newbiz-web` 컨테이너 안에서** 실행합니다 — 따라서 prod 틱에는 컨테이너가 떠 있어야 하고, 환경 플래그는 설치기가 자체 주입합니다(컨테이너 환경 설정 불필요). 설치·검증(심박)·시드·제거·문제 해결은 `docs/runbooks/scheduler_ko.md`를 참고하세요. §7은 그대로 적용됩니다: 컨테이너 교체가 호스트 스케줄러 등록을 건드리지 않아야 합니다.
+
+## 10. 관련 문서
 
 - `docs/runbooks/backup-restore.md` — 이 runbook이 의존하는 롤백 메커니즘
 - `docs/security/security-baseline.md` — 이 runbook이 실행하는 배포 전 게이트

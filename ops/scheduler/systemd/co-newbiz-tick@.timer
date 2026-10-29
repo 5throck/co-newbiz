@@ -1,0 +1,14 @@
+# co-newbiz scheduler tick timer template (ADR-0189, scheduled-jobs design section 7).
+# One timer instance per environment: systemctl --user enable --now co-newbiz-tick@<env>.timer
+# Persistent=false: missed minutes are handled by the tick's own catch-up policy (design section 3.4, D7).
+[Unit]
+Description=co-newbiz scheduler tick timer (%i) - fires every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=false
+AccuracySec=1s
+Unit=co-newbiz-tick@%i.service
+
+[Install]
+WantedBy=timers.target
