@@ -3113,11 +3113,7 @@
         ".agents/skills/project-review/SKILL.md",
         ".codex/skills/project-review/SKILL.md",
         ".hermes/skills/project-review/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-10-22"
-      }
+      ]
     },
     {
       "id": "skill:root/proxy-industry-chain",
@@ -3461,7 +3457,7 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 3,
+        "sessions": 1,
         "last_used": "2026-10-25"
       }
     },

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-29T13:35:13.381Z
+**Generated**: 2026-10-30T17:09:21.351Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -258,7 +258,7 @@
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
-| generate-glossary-data.ts | 1.0.0 | scripts/co-newbiz/generate-glossary-data.ts | js-yaml |
+| generate-glossary-data.ts | 1.1.0 | scripts/co-newbiz/generate-glossary-data.ts | js-yaml |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
 | generate-pm-catalog.ts | 1.4.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
 | generate-process-flow.ts | 1.5.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
