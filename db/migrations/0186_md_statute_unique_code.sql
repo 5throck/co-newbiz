@@ -1,0 +1,15 @@
+-- 0186_md_statute_unique_code.sql
+-- @reversible: true (additive-only: one partial unique index; rollback is the DROP INDEX in ROLLBACK-SQL below — ADR-0014.
+-- Creation fails fast instead if existing rows already violate uniqueness: deduplicate md_statute by hand first, then
+-- re-run. No seed migration inserts md_statute rows, so fresh databases never hit that case.)
+-- ROLLBACK-SQL-BEGIN
+--   DROP INDEX IF EXISTS idx_md_statute_code;
+-- ROLLBACK-SQL-END
+--
+-- md_statute natural-key idempotency at the DB layer (ADR-0189 phase P5, data-architect review 2026-11-01).
+-- The collect.law handler (and the CLI fetch/md:sync law cases) upsert md_statute by korea_statute_id in
+-- application code (source-adapters.ts upsertCatalog); this partial unique index mirrors
+-- idx_md_company_dart (0033) and makes that natural key DB-enforced, so a duplicate statute id inside one
+-- lawSearch payload, or a concurrent sync, can never double-insert. The catalog insert uses
+-- ON CONFLICT DO NOTHING, which this index (any partial unique violation) satisfies.
+CREATE UNIQUE INDEX idx_md_statute_code ON md_statute(korea_statute_id) WHERE korea_statute_id IS NOT NULL;

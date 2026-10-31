@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-31T13:36:14.182Z
+**Generated**: 2026-10-31T23:53:00.909Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 196 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 203 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -226,12 +226,14 @@
 | cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | N/A |
 | clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | N/A |
 | committee-deliberation.ts | 1.1.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
+| common.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/common.ts | N/A |
 | compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | N/A |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |
 | convert.ts | 1.1.0 | scripts/co-newbiz/convert.ts | N/A |
 | copy-legacy-bf-capability-judgements.ts | 1.0.0 | scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts | bun:sqlite |
 | coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | N/A |
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
+| dart.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/dart.ts | N/A |
 | db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
 | db-integrity.ts | 1.0.2 | scripts/co-newbiz/db-integrity.ts | N/A |
 | demo.ts | 1.0.0 | scripts/co-newbiz/demo.ts | N/A |
@@ -247,9 +249,11 @@
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
 | driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | N/A |
+| ecos.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/ecos.ts | N/A |
 | env-check.ts | 1.1.1 | scripts/co-newbiz/env-check.ts | N/A |
 | evidence-backport-scan.ts | 1.2.0 | scripts/evidence-backport-scan.ts | N/A |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |
+| fetch-source.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/fetch-source.ts | N/A |
 | fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
 | fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
 | fin-project.ts | 1.0.1 | scripts/co-newbiz/fin-project.ts | N/A |
@@ -280,10 +284,13 @@
 | i18n-lint.ts | 1.1.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | N/A |
 | import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | N/A |
-| index.ts | 1.0.0 | scripts/co-newbiz/jobs/index.ts | N/A |
+| index.ts | 1.1.0 | scripts/co-newbiz/jobs/index.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
+| kosis.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/kosis.ts | N/A |
+| krx.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/krx.ts | N/A |
+| law.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/law.ts | N/A |
 | lifecycle-sync-audit.ts | 1.19.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
 | lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | N/A |
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
@@ -296,9 +303,9 @@
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.22.0 | scripts/co-newbiz/newbiz.ts | N/A |
+| newbiz.ts | 1.23.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
-| notify-deliver.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
+| notify-deliver.ts | 1.1.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
 | notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
 | orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
@@ -338,7 +345,7 @@
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
 | skill-lifecycle-audit.ts | 1.10.0 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.2.0 | scripts/skill-session-review.ts | bun |
-| source-adapters.ts | 1.3.0 | scripts/co-newbiz/source-adapters.ts | N/A |
+| source-adapters.ts | 1.4.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
 | sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | js-yaml |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
