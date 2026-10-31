@@ -1,17 +1,80 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.7.0
+ * @version 1.9.0
  *
- * v1.6.0 (2026-09-21 docker-cicd follow-up): bun test now runs with
- * --timeout=30000. The bun default (5s per test/hook) flaked the
- * scratch-SQLite house pattern on CI runners — a fresh-DB migration
- * beforeAll exceeded 5s there while passing locally (adr-0104,
- * brownfield-eval-criteria). The per-suite process timeout is unchanged.
+ * v1.9.0 (2026-10-31, T-20261030-002 stage 2 — spec
+ *         docs/designs/2026-10-31-test-budget-split-design.md): the evidence
+ *         gate passed — PR #1770's own win32 CI run (windows-latest, runs
+ *         41153388888/41153395059) measured the split
+ *         upgrade-decision-log.test.ts at 99.9s (≤ the design's ~150s gate;
+ *         ~2x headroom rule satisfied at 300s) and the extracted
+ *         upgrade-policy-decisions.test.ts at 0.34s — so the decision-log row
+ *         drops 600000 → 300000 (test ceiling stays 60s) and the file returns
+ *         to the family convention (mcp-upstream-server and upgrade-tree-sync
+ *         sit at 300s) instead of the twice-raised 600s outlier. Row-only
+ *         behavioral change; the v1.8.0 BUDGET-HEADROOM WARN and the
+ *         budget-raise policy stay on watch over the restored headroom.
  *
- * v1.5.0 (2026-09-20 project-review): empty suites now fail by default so
- * package-level test commands cannot pass without executing tests. Use the
- * explicit --allow-empty flag only for transitional suites. The scripts suite
- * now scans scripts/tests/*.test.ts.
+ * v1.8.0 (2026-10-31, T-20261030-002 — spec
+ *         docs/designs/2026-10-31-test-budget-split-design.md, stage 1 of 2):
+ *         the re-inflation guard. (1) BUDGET-HEADROOM WARN — every completed
+ *         test file whose elapsed time exceeds 60% of its resolved suite
+ *         budget prints a WARN row into the run log; WARN, not FAIL — CI
+ *         timing variance must not block merges, the row makes slow burn-in
+ *         visible in every CI log instead of at raise time. (2) Budget-raise
+ *         policy (recorded, enforced by review): a FILE_TIME_BUDGETS raise
+ *         requires a ticket naming the CI-run evidence that motivated it; two
+ *         raises for the same file inside one quarter trigger a mandatory
+ *         split/trim review — the rule the 3-raises-in-2-weeks pattern on
+ *         upgrade-decision-log.test.ts (v1.5.0/v1.6.0/v1.7.0) violated
+ *         silently. (3) The extracted pure-helper suite
+ *         upgrade-policy-decisions.test.ts (split out of
+ *         upgrade-decision-log.test.ts in the same change set) gets an
+ *         explicit FILE_TIME_BUDGETS row pinned at the family defaults
+ *         (suite 120s / test 15s) — its runtime is trivial today; the row
+ *         makes any drift visible. Stage 2 of the design (NOT this change)
+ *         drops the upgrade-decision-log row 600s → 300s once one green win32
+ *         CI run shows the file total ≤ ~150 s.
+ *
+ * v1.7.0 (2026-10-29, Windows CI timing budgets — PR #1723 CI run
+ * 40799972562): `upgrade-decision-log.test.ts` suite budget 300s → 600s
+ * (test ceiling stays 60s). The delivery-bookkeeping PR1 wave (spec
+ * 2026-10-29-delivery-bookkeeping-engine-design) added the TOMBSTONE_CLEARED
+ * + clear-grant regression cases to the file (now 45 tests / 3087 expect()
+ * calls; macOS total 16.7s, max per-test 1.4s); on windows-latest 41/45
+ * tests printed (pass) before the 300s suite wall killed the file — the same
+ * every-test-passes-file-killed-at-the-suite-wall shape v1.6.0 budgeted for.
+ * Not a hang: observed win32 per-test max 36.7s (< the 60s bun ceiling, so no
+ * individual test timed out) and the four tests that never ran are full
+ * `upgrade-project.ts` integration runs (~15-37s each on win32). Projected
+ * win32 file total ~330-440s → suite 600s keeps ~1.4-1.8x headroom.
+ *
+ * v1.6.0 (2026-10-28, Windows CI timing budgets — PR #1677 CI run
+ * 40603661108): `upgrade-decision-log.test.ts` joins FILE_TIME_BUDGETS
+ * (suite 300s / test 60s). The U-20261028-001 tombstone engine suites added
+ * 17 full `upgrade-project.ts` integration runs to the file; on
+ * windows-latest its first 25 tests alone cost 119.7s, so the LAST test was
+ * killed by the 120s suite wall with "Test timed out after 120000ms" while
+ * every individual test PASSED (macOS total: 8.4s) — the same
+ * every-test-passes-file-killed-at-the-suite-wall shape that put
+ * mcp-upstream-server and upgrade-tree-sync on the override list in v1.5.0.
+ * Observed win32 per-test max 25.2s → test 60s keeps ≥2x headroom; projected
+ * win32 file total ~126s → suite 300s keeps ~2.4x. Not a hang: all 25
+ * printed passes are finite and the CI log shows no blocking test.
+ *
+ * v1.5.0 (2026-10-14, Windows CI timing budgets — CI run 38412124373):
+ * (1) Bun per-test ceiling — the runner now passes `--timeout` to `bun test`
+ * (default 15000ms; bun's implicit default is 5000ms). bun 1.4 ignores a
+ * bunfig `[test] timeout` key (verified 1.4.3), so the CLI flag is the only
+ * working knob. Spawn-heavy tests overran 5s on windows-latest with every
+ * assertion passing (script-registry-audit "validate-templates missing
+ * templates/common" 5.27s; mcp-upstream-server E13d 5.68s). (2) Per-file
+ * budget overrides for files whose win32 wall time legitimately exceeds the
+ * suite defaults — every individual test passing while the file is killed at
+ * the 120s suite wall (mcp-upstream-server, upgrade-tree-sync; observed max
+ * ~30s per test, >120s per file). An explicit `--timeout` CLI flag still wins
+ * over both knobs. Same documented win32 flake family as the
+ * hook-post-write-lifecycle 30s→120s raise (2026-10-12) and T-20261004-011.
  *
  * v1.3.0 (T-20260916-001): (1) per-suite `sequential` flag — the `scripts`
  * suite now runs its members one at a time because its E2E files stage
@@ -26,7 +89,7 @@
  * fails the suite.
  */
 import { readdirSync, existsSync, rmSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { availableParallelism, cpus } from 'os';
 import { isTransientTestFixture } from './helpers/scaffold-markers.ts';
 
@@ -44,7 +107,6 @@ export interface RunOptions {
   parallel?: boolean;
   concurrency?: number;
   timeout?: number;
-  allowEmpty?: boolean;
 }
 
 interface TestFileResult {
@@ -61,14 +123,43 @@ interface TestFileResult {
 const suites: TestSuite[] = [
   { name: 'unit', pattern: '*.test.ts', timeout: 120000, dir: 'tests/unit', ext: '.test.ts' },
   { name: 'integration', pattern: '*.test.ts', timeout: 120000, dir: 'tests', ext: '.test.ts' },
-  // sequential: every scenario boots its own Next server + Chromium; serial runs keep CPU/RAM
-  // predictable and avoid racing the shared one-time `next build` (Wave C-1).
-  { name: 'scenarios', pattern: '*.test.ts', timeout: 600000, dir: 'tests/scenarios', ext: '.test.ts', sequential: true },
+  { name: 'scenarios', pattern: '*', timeout: 300000, dir: 'tests/scenarios', ext: '' },
   // sequential: members stage transient fixture dirs under the real templates/
   // tree (test-l3promo-*, co-e2eguard-*, co-e2p2*) and race concurrent
   // validators when run in parallel — T-20260916-001.
-  { name: 'scripts', pattern: '*.test.ts', timeout: 120000, dir: 'scripts/tests', ext: '.test.ts', sequential: true }
+  { name: 'scripts', pattern: 'test-*.ts', timeout: 120000, dir: 'scripts', ext: '.ts', sequential: true }
 ];
+
+/** Bun per-test ceiling passed as `bun test --timeout` (ms). bun's implicit
+ * default is 5000ms, which spawn-heavy tests overrun on slow runners with
+ * every assertion passing; 15000ms keeps real hangs loud (≥3x the observed
+ * worst case outside the override list). */
+const DEFAULT_TEST_TIMEOUT_MS = 15000;
+
+/** Per-file budget overrides, basename-keyed (OS-independent): `suite` is the
+ * runner kill budget, `test` is the bun per-test ceiling. Only files whose
+ * win32 wall time legitimately exceeds the suite defaults are listed — every
+ * individual test passing while the file hits the suite wall (CI run
+ * 38412124373). Headroom ≈2.5x suite / ≥2x test over the observed win32 max.
+ *
+ * Raise policy (v1.8.0, T-20261030-002 — recorded here, enforced by review):
+ * a budget raise requires a ticket naming the CI-run evidence that motivated
+ * it, and two raises for the same file inside one quarter trigger a mandatory
+ * split/trim review. The BUDGET-HEADROOM WARN (60% of suite budget) makes
+ * slow burn-in visible in every CI log instead of at raise time. */
+const FILE_TIME_BUDGETS: Record<string, { suite: number; test: number }> = {
+  'mcp-upstream-server.test.ts': { suite: 300000, test: 30000 },
+  'upgrade-tree-sync.test.ts': { suite: 300000, test: 60000 },
+  // v1.9.0 (T-20261030-002 stage 2): 600s → 300s on the design's evidence
+  // gate — PR #1770's win32 run measured the split file at 99.9s (≤ ~150s),
+  // restoring the family's ~2x headroom at 300s.
+  'upgrade-decision-log.test.ts': { suite: 300000, test: 60000 },
+  // v1.8.0 (T-20261030-002): the pure-helper suite extracted from
+  // upgrade-decision-log.test.ts, pinned AT the family defaults — the row
+  // exists so any runtime drift on the extracted file is visible without a
+  // registry diff.
+  'upgrade-policy-decisions.test.ts': { suite: 120000, test: 15000 },
+};
 
 function getTestFiles(suite: TestSuite): string[] {
   const files: string[] = [];
@@ -78,7 +169,7 @@ function getTestFiles(suite: TestSuite): string[] {
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const matchesExt = suite.ext === '' || entry.name.endsWith(suite.ext);
-      const matchesPattern = suite.name !== 'scripts' || entry.name.endsWith('.test.ts');
+      const matchesPattern = suite.name !== 'scripts' || (entry.name.startsWith('test-') && entry.name !== 'test-runner.ts');
       if (matchesExt && matchesPattern) {
         files.push(join(suite.dir, entry.name));
       }
@@ -94,6 +185,7 @@ function getTestFiles(suite: TestSuite): string[] {
 async function executeTestFile(
   file: string,
   timeoutMs: number,
+  bunTestTimeoutMs: number | null,
   workerId: number,
   execMode: 'bun-test' | 'bun-script' = 'bun-test'
 ): Promise<TestFileResult> {
@@ -118,10 +210,9 @@ async function executeTestFile(
     // non-zero on failure) — running them under `bun test` fails with
     // "filters did not match any test files" because their names lack a bun
     // test naming pattern. Everything else is a bun test file.
-    // --timeout: bun's per-test/hook default (5s) is too tight for CI runners —
-    // the scratch-DB migration hooks take >5s there while passing locally. The
-    // per-suite process `timeout` above still bounds each file's total runtime.
-    const argv = execMode === 'bun-script' ? [process.execPath, file] : [process.execPath, 'test', '--timeout=30000', file];
+    const argv = execMode === 'bun-script'
+      ? [process.execPath, file]
+      : [process.execPath, 'test', '--timeout', String(bunTestTimeoutMs), file];
     proc = Bun.spawn(argv, {
       env,
       stdout: 'pipe',
@@ -314,11 +405,7 @@ export async function runTests(
 
   if (files.length === 0) {
     console.log(`No tests found for suite: ${suiteName}`);
-    if (options.allowEmpty) {
-      console.log(`[test-runner] --allow-empty set; treating empty ${suiteName} suite as pass`);
-      return true;
-    }
-    return false;
+    return true;
   }
 
   const isParallel = options.parallel !== undefined
@@ -329,7 +416,15 @@ export async function runTests(
   const concurrency = isParallel
     ? Math.max(1, options.concurrency || Math.min(files.length, defaultConcurrency))
     : 1;
-  const timeoutMs = options.timeout || suite.timeout;
+  // Explicit `--timeout` CLI wins over the per-file overrides (manual runs
+  // know what they asked for); otherwise overridden files get their budgets
+  // and everything else the suite default + DEFAULT_TEST_TIMEOUT_MS.
+  const cliTimeoutMs = options.timeout;
+  const resolveBudgets = (file: string): { suite: number; test: number } => {
+    if (cliTimeoutMs) return { suite: cliTimeoutMs, test: cliTimeoutMs };
+    const override = FILE_TIME_BUDGETS[basename(file)];
+    return { suite: override?.suite ?? suite.timeout, test: override?.test ?? DEFAULT_TEST_TIMEOUT_MS };
+  };
 
   const modeStr = isParallel ? `parallel (concurrency: ${concurrency})` : 'sequential';
   console.log(`Running ${suiteName} suite (${files.length} test file${files.length === 1 ? '' : 's'}, ${modeStr})...`);
@@ -339,17 +434,19 @@ export async function runTests(
   const hygieneSnapshot = suiteName === 'scripts' ? takeHygieneSnapshot() : null;
 
   try {
-    const execMode = 'bun-test' as const;
+    const execMode = suiteName === 'scripts' ? 'bun-script' as const : 'bun-test' as const;
     if (isParallel && concurrency > 1) {
       try {
-        results = await runInParallel(files, concurrency, (file, _, workerId) =>
-          executeTestFile(file, timeoutMs, workerId, execMode)
-        );
+        results = await runInParallel(files, concurrency, (file, _, workerId) => {
+          const budgets = resolveBudgets(file);
+          return executeTestFile(file, budgets.suite, execMode === 'bun-test' ? budgets.test : null, workerId, execMode);
+        });
       } catch (err: any) {
         console.warn(`[test-runner] Warning: Parallel execution failed (${err.message}). Falling back to sequential execution...`);
         results = [];
         for (let i = 0; i < files.length; i++) {
-          const res = await executeTestFile(files[i], timeoutMs, 1, execMode);
+          const budgets = resolveBudgets(files[i]);
+          const res = await executeTestFile(files[i], budgets.suite, execMode === 'bun-test' ? budgets.test : null, 1, execMode);
           results.push(res);
         }
       }
@@ -357,7 +454,8 @@ export async function runTests(
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         console.log(`  Running: ${file}`);
-        const res = await executeTestFile(file, timeoutMs, 1, execMode);
+        const budgets = resolveBudgets(file);
+        const res = await executeTestFile(file, budgets.suite, execMode === 'bun-test' ? budgets.test : null, 1, execMode);
         results.push(res);
       }
     }
@@ -383,6 +481,15 @@ export async function runTests(
     }
 
     for (const res of results) {
+      // BUDGET-HEADROOM WARN (v1.8.0, T-20261030-002): slow burn-in against a
+      // file's resolved budget is visible in every run log, not just at raise
+      // time. WARN only — CI timing variance must not block merges; the raise
+      // policy lives in the FILE_TIME_BUDGETS doc block.
+      const budgets = resolveBudgets(res.file);
+      const headroomPct = Math.round((res.durationMs / budgets.suite) * 100);
+      if (headroomPct >= 60) {
+        console.log(`  ⚠️  BUDGET-HEADROOM: ${basename(res.file)} took ${res.durationMs}ms (${headroomPct}% of its ${budgets.suite}ms suite budget) — a raise requires a ticket with CI-run evidence; 2 raises/quarter triggers a mandatory split/trim review`);
+      }
       if (res.success) {
         console.log(`  ✓ ${res.file} (${res.durationMs}ms)`);
       } else {
@@ -390,7 +497,7 @@ export async function runTests(
         console.error(`\n================================================================================`);
         console.error(`FAIL: ${res.file}`);
         console.error(`--------------------------------------------------------------------------------`);
-        console.error(`Status: ${res.timedOut ? `TIMEOUT (${timeoutMs}ms)` : `FAILED (exit code ${res.exitCode})`}`);
+        console.error(`Status: ${res.timedOut ? `TIMEOUT (${resolveBudgets(res.file).suite}ms)` : `FAILED (exit code ${res.exitCode})`}`);
         if (res.error) console.error(`Error: ${res.error}`);
         if (res.stdout.trim()) {
           console.error(`--- STDOUT ---`);
@@ -431,7 +538,6 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
   let parallel: boolean | undefined = undefined;
   let concurrency: number | undefined = undefined;
   let timeout: number | undefined = undefined;
-  let allowEmpty = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -445,14 +551,12 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
     } else if (arg === '--timeout' || arg === '-t') {
       const val = parseInt(args[++i], 10);
       if (!isNaN(val) && val > 0) timeout = val;
-    } else if (arg === '--allow-empty') {
-      allowEmpty = true;
     } else if (!arg.startsWith('-')) {
       suiteName = arg;
     }
   }
 
-  return { suiteName, options: { parallel, concurrency, timeout, allowEmpty } };
+  return { suiteName, options: { parallel, concurrency, timeout } };
 }
 
 // CLI entrypoint

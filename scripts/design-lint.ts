@@ -2,8 +2,27 @@
 /**
  * design-lint.ts — deterministic design-compliance lint (sub-check runner).
  * Runnable companion to the token-usage-lint and design-foundation specs.
- * @version 2.3.0
+ * @version 2.5.0
  *
+ * v2.5.0 (2026-10-29, U-20261028-014 — spec
+ *       docs/designs/2026-10-29-owner-decision-batch-design.md §2): new
+ *       repeatable `--allow <literal>` flag — extra allowlist entries merged
+ *       into the loaded config's allowlist (all sub-checks honor it, same
+ *       match-equality filter as schema allowlist rows). Consumed by audit.ts
+ *       checkDesignLint to forward a project's variant.json designLint
+ *       override, so project-level literal exemptions are real in L3 checkouts
+ *       that have no docs/workspace-schema.json for the engine to read.
+ *       Standalone runs without the flag are unchanged.
+ * v2.4.0 (2026-10-29, T-20261029-004): new `token-role-misuse` sub-check —
+ *       flags status fill/border tokens referenced as TEXT color: the
+ *       bg/fg/border triplet convention (design-tokens.template.css) reserves
+ *       `*-bg` / `*-border` / bare `--success|--warning|--danger|--info` for
+ *       surfaces and strokes; text color must pair `*-fg`. Extracted from the
+ *       co-newbiz PR #740 hand-fix (commit 8cf2f396 fixed the anti-pattern in
+ *       3 files and deferred the mechanized check). Exemptions + allowlist
+ *       shared with token-usage; non-text color declarations
+ *       (background-color, border-color, custom-property definitions) are
+ *       out of scope.
  * v2.3.0 (2026-10-27, U-20261027-005, DESIGN-R2 theme invariance): new `themes`
  * sub-check — the documented rule that theme presets in tokens.json may override
  * ONLY color and shadow tokens (typography/spacing/borderRadius/target-size are
@@ -97,10 +116,10 @@ import { join, relative } from "node:path";
 import { load as loadYaml } from "js-yaml";
 import { isThemeOverridableGroup } from "./helpers/theme-token-policy.ts";
 
-const VERSION = "2.3.0";
+const VERSION = "2.5.0";
 
 /** Sub-check execution order (canonical; --check selections are re-sorted to this). */
-const CHECK_ORDER = ["token-usage", "components", "patterns", "icons", "fonts", "themes", "list-table"] as const;
+const CHECK_ORDER = ["token-usage", "token-role-misuse", "components", "patterns", "icons", "fonts", "themes", "list-table"] as const;
 type CheckName = (typeof CHECK_ORDER)[number];
 
 /** Registry paths, relative to the project root (design §4.4). POSIX-style literals: the
@@ -737,6 +756,88 @@ function runTokenUsage(opts: CliOptions): CheckResult {
 }
 
 // ---------------------------------------------------------------------------
+// Sub-check: token-role-misuse (v2.4.0, T-20261029-004)
+// ---------------------------------------------------------------------------
+
+/** Text-color declaration value: `color:` NOT part of a compound property
+ *  (background-color, border-color, …) and not a custom-property definition.
+ *  The capture is the declaration's value up to `;` or `}`. */
+const TEXT_COLOR_DECL = /(^|[^\w-])color\s*:\s*([^;}]*)(?=[;}]|$)/g;
+
+/** Tokens whose ROLE forbids text-color use: bare status fills and every
+ *  `*-bg` / `*-border` surface/stroke role (bg/fg/border triplet convention). */
+function tokenRoleAllowsTextColor(token: string): boolean {
+  const name = token.trim().toLowerCase();
+  if (/^--(success|warning|danger|info)$/.test(name)) return false;
+  if (/-bg$/.test(name) || /-border$/.test(name)) return false;
+  return true;
+}
+
+/** Per-line role-misuse detector over the same walked tree as token-usage. */
+function lintTokenRoleMisuse(file: string, root: string): RawFinding[] {
+  const findings: RawFinding[] = [];
+  let content: string;
+  try {
+    content = readFileSync(file, "utf8");
+  } catch {
+    return findings;
+  }
+  const lines = content.split(/\r?\n/);
+  lines.forEach((line, i) => {
+    const exemption = extractExemption(line);
+    for (const m of line.matchAll(TEXT_COLOR_DECL)) {
+      const value = m[2];
+      for (const t of value.matchAll(/var\(\s*(--[A-Za-z0-9-]+)\s*\)/g)) {
+        const token = t[1];
+        if (tokenRoleAllowsTextColor(token)) continue;
+        findings.push({
+          file: relative(root, file) || file,
+          line: i + 1,
+          pattern: "token-role-misuse",
+          match: token,
+          classification: exemption ? "one-off (documented)" : "should-be-token",
+          ...(exemption ? { suppression: exemption } : {}),
+        });
+      }
+    }
+  });
+  return findings;
+}
+
+function runTokenRoleMisuse(opts: CliOptions): CheckResult {
+  const root = opts.projectRoot;
+  let roots: string[];
+  if (opts.hasLegacyScanScope) {
+    roots = opts.legacyScanRoots.slice();
+  } else {
+    const defaults = uiSourceRoots(root, opts.config);
+    if (defaults.length === 0) {
+      return skipped(
+        "token-role-misuse",
+        `no scan roots found (looked for ${toPosix(join(root, "playground/src"))}, ${toPosix(join(root, "src"))})`,
+      );
+    }
+    roots = defaults;
+  }
+  const all: RawFinding[] = [];
+  let existingRoots = 0;
+  for (const scanRoot of roots) {
+    if (!existsSync(scanRoot)) {
+      console.log(`design-lint: scan root "${toPosix(scanRoot)}" does not exist — skipped.`);
+      continue;
+    }
+    existingRoots++;
+    for (const file of walkFiles(scanRoot)) {
+      all.push(...lintTokenRoleMisuse(file, scanRoot));
+    }
+  }
+  if (existingRoots === 0) {
+    return skipped("token-role-misuse", "no scan roots exist");
+  }
+  return result("token-role-misuse", rawFindingsToFindings(all, false, new Set(opts.config.allowlist)));
+}
+
+// ---------------------------------------------------------------------------
 // Sub-check: components (T-20260926-028)
 // ---------------------------------------------------------------------------
 
@@ -1262,6 +1363,7 @@ Sub-checks (default: all):
   patterns      docs/design/patterns.registry.yaml shape + composes_from cross-refs + docs/*.md usage
   icons         docs/design/icon-vocabulary.yaml shape + UI-source icon reference set membership
   fonts         --font-* token stack contract (>= 1 fallback + terminating generic family)
+  token-role-misuse  status/bg/border tokens used as text color (T-20261029-004)
   themes        DESIGN-R2 theme invariance — presets override only color/shadow (U-20261027-005)
   list-table    .data-table with per-row actions carries the list-table modifier + sr-only header
 
@@ -1272,6 +1374,9 @@ Usage:
   bun scripts/design-lint.ts --schema             print the three registry YAML schemas
   bun scripts/design-lint.ts [paths...]           legacy: token-usage scan roots (v1.0.0)
   bun scripts/design-lint.ts --dir <path> ...     legacy: explicit token-usage scan roots (v1.0.0)
+  bun scripts/design-lint.ts --allow <literal> ...  extra allowlist entries (repeatable; merged into
+                                                  the config allowlist — audit.ts forwards a
+                                                  variant.json designLint override this way)
   bun scripts/design-lint.ts --help
 
 Detection (token-usage): raw hex colors, rgb()/rgba()/hsl()/hsla() literals, raw px
@@ -1321,6 +1426,7 @@ interface ParsedArgs {
   schema: boolean;
   checks: CheckName[];
   dirs: string[];
+  allows: string[]; // --allow literals (v2.5.0): merged into config.allowlist
   positionals: string[];
   invalidChecks: string[];
 }
@@ -1333,6 +1439,7 @@ function parseArgs(): ParsedArgs {
     schema: false,
     checks: [],
     dirs: [],
+    allows: [],
     positionals: [],
     invalidChecks: [],
   };
@@ -1349,6 +1456,13 @@ function parseArgs(): ParsedArgs {
     } else if (arg === "--dir") {
       const value = args[++i];
       if (value !== undefined) parsed.dirs.push(value);
+    } else if (arg === "--allow") {
+      // v2.5.0 (U-20261028-014): extra allowlist literal, repeatable. Consumed
+      // by audit.ts checkDesignLint to forward a project's variant.json
+      // designLint.allowlist override — the engine itself still reads
+      // docs/workspace-schema.json when run standalone.
+      const value = args[++i];
+      if (value !== undefined) parsed.allows.push(value);
     } else {
       parsed.positionals.push(arg);
     }
@@ -1449,16 +1563,24 @@ export async function main(): Promise<void> {
     parsed.checks.length > 0
       ? CHECK_ORDER.filter((c) => parsed.checks.includes(c))
       : [...CHECK_ORDER];
+  // v2.5.0 (U-20261028-014): --allow literals merge into the loaded config's
+  // allowlist so callers (audit.ts checkDesignLint forwarding a variant.json
+  // designLint override) can exempt literals without a workspace-schema.json.
+  const loadedConfig = loadDesignLintConfig(projectRoot);
   const opts: CliOptions = {
     projectRoot,
     json: parsed.json,
     legacyScanRoots: [...parsed.dirs, ...parsed.positionals],
     hasLegacyScanScope: parsed.dirs.length > 0 || parsed.positionals.length > 0,
-    config: loadDesignLintConfig(projectRoot),
+    config:
+      parsed.allows.length > 0
+        ? { ...loadedConfig, allowlist: [...loadedConfig.allowlist, ...parsed.allows] }
+        : loadedConfig,
   };
 
   const runners: Record<CheckName, (o: CliOptions) => CheckResult> = {
     "token-usage": runTokenUsage,
+    "token-role-misuse": runTokenRoleMisuse,
     components: runComponents,
     patterns: runPatterns,
     icons: runIcons,

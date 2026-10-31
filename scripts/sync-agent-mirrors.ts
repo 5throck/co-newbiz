@@ -1,5 +1,29 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.3.0
+// v1.3.0 (2026-10-29, U-20261029-001 — T-20261029-008 follow-up): per-agent
+//          CHECK-mode degrade replaces the v1.2.0 blanket skip. The blanket
+//          guard (discovery-null + mirrors-exist -> skip everything green) both
+//          concealed REAL drift among verifiable non-stub mirrors in a detached
+//          checkout and still hard-threw when no mirrors existed yet. Now: stub
+//          bodies that cannot resolve throw UnresolvableStubError; in CHECK mode
+//          that agent degrades — an EXISTING mirror is unverifiable (content not
+//          compared, listed in the WARN with the repair line "run inside a
+//          workspace checkout or pass --templates-root"), a MISSING mirror is
+//          real drift (exit 1 — presence is always enforceable). Non-stub
+//          agents compare normally in every checkout, so detached runs still
+//          catch real drift. WRITE mode unchanged: hard error, a deliberate
+//          write never runs without the body.
+// v1.2.0 (2026-10-28, T-20261029-008): CHECK-mode out-of-root degrade — a
+//          standalone CI checkout has no workspace ancestor, so extends-stub
+//          discovery hard-threw inside the SSOT parse and the audit gate
+//          blocked every real-CI project PR (co-abap #227, co-safety #220).
+//          When no templates root is discoverable AND generated mirrors exist,
+//          --check now returns green with an explicit WARN ("parity cannot be
+//          verified out-of-root — run inside a workspace checkout or pass
+//          --templates-root"); write mode keeps the hard error (deliberate
+//          write, never auto-repair). Discovery extracted to the exported pure
+//          discoverTemplatesRoot({root, searched}) reused by
+//          resolveTemplatesRoot (same bounded walk, same error text).
 // v1.1.0 (2026-10-28, canary finding on Projects/co-newbiz — the design §4.2
 //          flagged ASSUMPTION verified with a real gap): stub bodies resolve
 //          POINTER-FIRST — the stub's own `extends:` value (file-dir-relative,
@@ -313,6 +337,21 @@ const TEMPLATES_COMMON_AGENTS_REL = join('templates', 'common', 'agents');
  * not-found is a hard error naming every searched ancestor — never a silent
  * fallback, because a stub must never project as a dead mirror.
  */
+export function discoverTemplatesRoot(targetRoot: string): { root: string | null; searched: string[] } {
+  const searched: string[] = [];
+  let dir = resolve(targetRoot);
+  for (let depth = 0; depth <= TEMPLATES_ROOT_MAX_ANCESTORS; depth++) {
+    searched.push(dir);
+    if (existsSync(join(dir, TEMPLATES_COMMON_AGENTS_REL))) {
+      return { root: join(dir, 'templates'), searched };
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return { root: null, searched };
+}
+
 export function resolveTemplatesRoot(targetRoot: string, override?: string | null): string {
   if (override !== undefined && override !== null && override !== '') {
     const tplDir = resolve(override);
@@ -324,28 +363,38 @@ export function resolveTemplatesRoot(targetRoot: string, override?: string | nul
     }
     return tplDir;
   }
-  const searched: string[] = [];
-  let dir = resolve(targetRoot);
-  for (let depth = 0; depth <= TEMPLATES_ROOT_MAX_ANCESTORS; depth++) {
-    searched.push(dir);
-    if (existsSync(join(dir, TEMPLATES_COMMON_AGENTS_REL))) {
-      return join(dir, 'templates');
-    }
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
+  const { root: found, searched } = discoverTemplatesRoot(targetRoot);
+  if (found === null) {
+    throw new SsotError(
+      `templates/common/agents not found walking up from ${resolve(targetRoot)} ` +
+      `(searched: ${searched.join(' -> ')}) — extends-stubs cannot resolve to self-contained personas ` +
+      `(repair: pass --templates-root <workspace>/templates, or run inside a workspace checkout)`,
+    );
   }
-  throw new SsotError(
-    `templates/common/agents not found walking up from ${resolve(targetRoot)} ` +
-    `(searched: ${searched.join(' -> ')}) — extends-stubs cannot resolve to self-contained personas ` +
-    `(repair: pass --templates-root <workspace>/templates, or run inside a workspace checkout)`,
-  );
+  return found;
 }
 
 // ── SSOT parsing ──────────────────────────────────────────────────────────────
 
 /** Hard input-contract error; the message names the offending file. */
 export class SsotError extends Error {}
+
+/**
+ * A stub body could not be resolved (extends pointer dangling, no discoverable
+ * templates root). WRITE mode treats this as fatal — a stub must never project
+ * as a dead mirror. CHECK mode degrades per-agent (v1.3.0, U-20261029-001 /
+ * T-20261029-008 follow-up): the mirror's EXISTENCE stays enforced (missing =
+ * real drift, exit 1); only the CONTENT comparison is unverifiable out-of-root.
+ */
+export class UnresolvableStubError extends SsotError {
+  readonly agentName: string;
+  readonly agentRel: string;
+  constructor(message: string, agentName: string, agentRel: string) {
+    super(message);
+    this.agentName = agentName;
+    this.agentRel = agentRel;
+  }
+}
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
@@ -451,27 +500,39 @@ export function parseSsotAgent(
     } else {
       // templatesRoot === undefined -> discovery (bounded ancestor walk); an
       // explicit value (CLI flag / scaffold-adopt wiring) was already validated.
-      const tplRoot = templatesRoot ?? resolveTemplatesRoot(root);
+      // Discovery-not-found is a stub-resolution failure, so it degrades with
+      // the same class in CHECK mode (the message — searched ancestors
+      // included — travels into the unverifiable WARN).
+      let tplRoot: string;
+      try {
+        tplRoot = templatesRoot ?? resolveTemplatesRoot(root);
+      } catch (err) {
+        throw new UnresolvableStubError((err as Error).message, name, rel);
+      }
       commonPath = join(tplRoot, 'common', 'agents', basename(filePath));
       if (!existsSync(commonPath)) {
-        throw new SsotError(
+        throw new UnresolvableStubError(
           `${rel}: extends-stub but the L1 body is unavailable ` +
           (extendsTarget ? `(extends '${extendsRaw}' -> ${extendsTarget}; convention path ${commonPath})` : `(${commonPath})`) +
           ` — a stub must never project as a dead mirror ` +
           `(repair: restore the body at the extends target or the convention path, or inline the body)`,
+          name,
+          rel,
         );
       }
     }
     const variant = readVariantName(root);
     const composed = composeResolvedAgentContent(filePath, commonPath, variant);
     if (composed.missingL1) {
-      throw new SsotError(
+      throw new UnresolvableStubError(
         `${rel}: extends-stub but the L1 body is unavailable (${commonPath}) — a stub must never project as a dead mirror ` +
         `(repair: restore the body at ${commonPath} or inline the body)`,
+        name,
+        rel,
       );
     }
     if (!composed.composed) {
-      throw new SsotError(`${rel}: carries extends: but the composer declined to resolve it — refusing to project a stub body (repair: inline the persona body or fix the extends target)`);
+      throw new UnresolvableStubError(`${rel}: carries extends: but the composer declined to resolve it — refusing to project a stub body (repair: inline the persona body or fix the extends target)`, name, rel);
     }
     body = bodyOf(composed.content);
   }
@@ -550,6 +611,8 @@ export interface SyncAgentMirrorsResult {
   drifts: MirrorDrift[];
   warnings: string[];
   notes: string[];
+  /** CHECK-mode only: stub agents whose bodies cannot resolve in this checkout (content not compared; presence still enforced). */
+  unverifiable: Array<{ name: string; file: string }>;
 }
 
 /** Load docs/workspace-schema.json from the target root (registry + models). */
@@ -594,6 +657,7 @@ export function syncAgentMirrors(
     drifts: [],
     warnings: [],
     notes: [],
+    unverifiable: [],
   };
 
   // The registry is the contract: load + coverage-guard BEFORE any per-file work.
@@ -614,11 +678,6 @@ export function syncAgentMirrors(
   // shape) before any per-file work; undefined defers to per-stub discovery.
   const templatesRoot = opts.templatesRoot ? resolveTemplatesRoot(root, opts.templatesRoot) : opts.templatesRoot;
 
-  // Parse the SSOT roster (hard errors throw, naming the file).
-  const ssotPaths = listSsotAgents(root);
-  const agents: SsotAgent[] = ssotPaths.map((p) => parseSsotAgent(p, root, result.warnings, templatesRoot));
-  result.agents = agents.length;
-
   // v1 emits exactly the registry's supported rows (today: Claude Code only).
   const adapterEntries = Object.entries(PLATFORM_AGENT_ADAPTERS).filter(([platform]) =>
     schema.platform_surfaces?.platforms?.[platform]?.agents?.supported === true,
@@ -634,6 +693,36 @@ export function syncAgentMirrors(
   const mirrorDir = join(root, agentsRow.mirror_dir ?? '.claude/agents');
   result.mirrorDir = mirrorDir;
   const modelFormat = agentsRow.model_format ?? 'alias';
+
+  // Parse the SSOT roster (hard errors throw, naming the file). CHECK mode
+  // degrades PER-AGENT (v1.3.0 — U-20261029-001, T-20261029-008 follow-up):
+  // an unresolvable stub body never blocks the whole run; non-stub agents and
+  // every other hard-error class (missing name/description/tier) still throw.
+  // The v1.2.0 blanket skip is superseded — it concealed real drift among
+  // verifiable non-stub mirrors and still hard-failed mirror-less detached
+  // checkouts.
+  const ssotPaths = listSsotAgents(root);
+  const agents: SsotAgent[] = [];
+  for (const p of ssotPaths) {
+    try {
+      agents.push(parseSsotAgent(p, root, result.warnings, templatesRoot));
+    } catch (err) {
+      if (opts.check && err instanceof UnresolvableStubError) {
+        result.unverifiable.push({ name: err.agentName, file: err.agentRel });
+        continue;
+      }
+      throw err;
+    }
+  }
+  result.agents = agents.length;
+  if (result.unverifiable.length > 0) {
+    const listing = result.unverifiable.map((uv) => `${uv.name} (${uv.file})`).join(', ');
+    result.warnings.push(
+      `stub-body parity unverifiable for ${result.unverifiable.length} mirror(s) out-of-root ` +
+      `(content not compared; presence still enforced) (U-20261029-001, T-20261029-008 follow-up): ${listing} — ` +
+      `run inside a workspace checkout or pass --templates-root <workspace>/templates`,
+    );
+  }
 
   // Projection set: name -> content.
   const projections = new Map<string, string>();
@@ -664,9 +753,25 @@ export function syncAgentMirrors(
     }
     if (prior !== null) {
       for (const name of prior.generated) {
+        // An unverifiable stub's SSOT counterpart still EXISTS (it is present
+        // but its body cannot resolve out-of-root) — it is never extra-managed.
+        if (result.unverifiable.some((uv) => uv.name === name)) continue;
         if (!projections.has(name) && existsSync(join(mirrorDir, `${name}.md`))) {
           result.drifts.push({ kind: 'extra-managed', file: relative(root, join(mirrorDir, `${name}.md`)), detail: 'recorded in the provenance manifest but its SSOT counterpart is gone' });
         }
+      }
+    }
+    // Unverifiable stubs: presence is still enforceable (v1.3.0) — a missing
+    // mirror is REAL drift even when the body cannot be resolved out-of-root;
+    // only the content comparison degrades.
+    for (const uv of result.unverifiable) {
+      const mirrorPath = join(mirrorDir, `${uv.name}.md`);
+      if (!existsSync(mirrorPath)) {
+        result.drifts.push({
+          kind: 'missing',
+          file: relative(root, mirrorPath),
+          detail: 'stub SSOT has no mirror and its body cannot be resolved in this checkout — presence is enforceable regardless (real drift, not unverifiable)',
+        });
       }
     }
     result.ok = result.drifts.length === 0;
@@ -805,12 +910,31 @@ function printReport(res: SyncAgentMirrorsResult, check: boolean): number {
   for (const w of res.warnings) console.warn(`  WARN: ${w}`);
   if (check) {
     if (res.drifts.length === 0) {
-      console.log(`sync-agent-mirrors --check: ${res.agents} agent(s) in parity at ${res.mirrorDir} (0 missing / 0 extra-managed / 0 differing)`);
+      const uvNote = res.unverifiable.length > 0
+        ? `, ${res.unverifiable.length} stub-derived mirror(s) unverifiable`
+        : '';
+      console.log(`sync-agent-mirrors --check: ${res.agents} agent(s) in parity at ${res.mirrorDir} (0 missing / 0 extra-managed / 0 differing${uvNote})`);
+      if (res.unverifiable.length > 0) {
+        // The degraded-green WARN is echoed on STDOUT too: the audit arm greps
+        // stdout for 'WARN:' before its Pass line (audit v2.58.0) — a CI
+        // checkout that cannot verify stub parity must stay visible in the
+        // audit log, not only on stderr.
+        console.log(
+          `  WARN: stub-body parity unverifiable for ${res.unverifiable.length} mirror(s) out-of-root ` +
+          `(U-20261029-001, T-20261029-008 follow-up) — run inside a workspace checkout or pass --templates-root <workspace>/templates`,
+        );
+        // The repair line stays (parity with the hard-error message): the
+        // unverifiable class is always root-anchorable.
+        console.log(`  Repair: run inside a workspace checkout or pass --templates-root <workspace>/templates`);
+      }
       return 0;
     }
     console.error(`Agent-mirror parity check FAILED — ${res.drifts.length} drift(s) at ${res.targetRoot}:`);
     for (const d of res.drifts) {
       console.error(`  [${d.kind}] ${d.file} — ${d.detail}`);
+    }
+    if (res.unverifiable.length > 0) {
+      console.error(`  additionally unverifiable out-of-root (content not compared; presence enforced): ${res.unverifiable.map((uv) => uv.name).join(', ')}`);
     }
     const dirArg = process.cwd() === res.targetRoot ? '' : ` --dir ${res.targetRoot}`;
     console.error(`Repair (one deliberate, reviewable write — /sync never auto-repairs): bun scripts/${SCRIPT_NAME}${dirArg}`);
