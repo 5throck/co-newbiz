@@ -1,0 +1,23 @@
+# co-newbiz scheduler tick service template (ADR-0189, scheduled-jobs design section 7).
+# Rendered by scripts/co-newbiz/scheduler-install.ts into ~/.config/systemd/user/; the instance
+# name is the scheduler environment (prod|dev): enable with
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now co-newbiz-tick@<env>.timer
+# No secrets in unit files (design section 5): label, program arguments and env names only.
+[Unit]
+Description=co-newbiz scheduler tick (%i) - minute dispatcher (ADR-0019/ADR-0189)
+After=network-online.target
+
+[Service]
+Type=oneshot
+# The OS is the clock; this short-lived dispatcher reads schedule_job, spawns run-job children and exits.
+Environment="CO_NEWBIZ_SCHEDULER_ENV=%i"
+Environment="PATH={{PATH}}"
+ExecStart={{EXEC_START}}
+{{WORKING_DIRECTORY}}
+# run-job children are spawned detached and must outlive the dispatcher (AbandonProcessGroup on launchd)
+KillMode=process
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

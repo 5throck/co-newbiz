@@ -42,6 +42,17 @@ entries:
       ko: docs/runbooks/deployment_ko.md
     status: active
 
+  - id: rb-scheduler
+    layer: runbook
+    title: "Runbook — Scheduler Tick (OS Registration, Heartbeat, and Jobs)"
+    audience: operators, release-engineer, infra-automation-engineer, sre
+    owner: infra-automation-engineer
+    files:
+      en: docs/runbooks/scheduler.md
+      ko: docs/runbooks/scheduler_ko.md
+    status: active
+    followups: docs/designs/2026-10-29-scheduled-jobs-design.md (§8 P7 prod rollout)
+
   - id: rb-backup-restore
     layer: runbook
     title: "Runbook — Backup & Restore"

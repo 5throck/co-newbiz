@@ -110,7 +110,11 @@ The container reads `.env.prod` (compose `env_file`), **not** the root `.env`. C
 
 The cookie-session CSRF check only compares the request Origin host with the Host header, so a new public hostname needs no app setting unless it calls `/api/mcp` from a browser.
 
-## 9. Related
+## 9. Scheduler (Minute-Tick)
+
+Periodic jobs fire from the host OS scheduler, one launchd entry per environment (`org.bizknights.co-newbiz.<env>.tick`, ADR-0189). The dev tick runs `schedule-tick.ts` as a host process against the dev DB; the prod tick runs it **inside the `co-newbiz-web` container** via `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod ...` — the prod tick therefore requires the container to be up, and the installer injects the environment flag itself (no container env setup needed). Install, verify (heartbeat), seed, uninstall, and troubleshooting: `docs/runbooks/scheduler.md`. §7 applies unchanged: container replacement must not disturb the host scheduler registrations.
+
+## 10. Related
 
 - `docs/runbooks/backup-restore.md` — the rollback mechanism this runbook depends on
 - `docs/security/security-baseline.md` — the pre-deployment gate this runbook executes
