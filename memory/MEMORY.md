@@ -4,7 +4,10 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-10-31](2026-10-31.md) | chore: workspace sync — session residue (Step 1 local-work) |
+| [2026-10-30](2026-10-30.md) | feat(web): glossary register UX, agreed terms, connected-apps token screen |
 | [2026-10-29](2026-10-29.md) | chore: workspace sync (0 files) |
+| [2026-10-29](2026-10-29.md) | feat(agents): canary install — registry + generator over the 41-mirror tree (platform-agent-mirror §6.4) |
 | [2026-10-28](2026-10-28.md) | feat(governance): ADR-0187 W3 P1 report-only process SSOT validators |
 | [2026-10-28](2026-10-28.md) | chore: workspace sync (0 files) |
 | [2026-10-27](2026-10-27.md) | feat(governance): gate integrity — ADR-0186 design and hook hardening |
@@ -12,8 +15,8 @@
 | [2026-10-25](2026-10-25.md) | docs(docs): workspace sync (11 files) |
 | [2026-10-25](2026-10-25.md) | chore(visual): commit aHash baselines, pin macos runner; record getDb migration analysis |
 | [2026-10-24](2026-10-24.md) | docs(wiki): close the five visual-enrichment follow-ups from the rebuild design V1 waiver |
-| [2026-10-23](2026-10-23.md) | test: refresh migration/library test contracts for bun 1.4 driver behavior and the 0013 schema extension |
-| [2026-10-22](2026-10-22.md) | docs: S1-S12 track project-review report with ticket wiring, ADR-0182 second addendum, memory open issues |
+| 2026-10-23 | test: refresh migration/library test contracts for bun 1.4 driver behavior and the 0013 schema extension |
+| 2026-10-22 | docs: S1-S12 track project-review report with ticket wiring, ADR-0182 second addendum, memory open issues |
 | 2026-10-21 | memory-log-and-decision-ref-fixes |
 | 2026-10-20 | docs(docs): workspace sync (5 files) |
 | 2026-10-19 | test(tests): workspace sync (spec 2026-10-18-synergy-4element, 10 files) |
