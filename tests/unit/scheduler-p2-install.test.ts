@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.0.1
 /**
  * Scheduler P2 installer tests (ADR-0189, scheduled-jobs design section 7 and the section 9 "Installer" test plan):
  * rendered launchd plist snapshots for both envs, plutil -lint validation (skipped gracefully when plutil is
@@ -8,8 +8,8 @@
  */
 import { test, expect, describe, afterAll } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 const TMP = mkdtempSync(join(tmpdir(), "scheduler-p2-"));
 const REPO_ROOT = join(import.meta.dirname, "..", "..");
@@ -31,6 +31,21 @@ const xmlLintOk = (xml: string) => {
   return Bun.spawnSync(["xmllint", "--noout", file]).exitCode === 0;
 };
 
+// The renderer bakes machine-local absolute paths into the output (repo root,
+// bun binary directory, bun binary, home directory). Snapshots must be
+// machine-independent, so every environment-dependent absolute path is
+// normalized to a token first. Order matters: longer paths (execPath,
+// REPO_ROOT) before their homedir prefix; the bun directory before the binary.
+const normalizePaths = (s: string) => {
+  const tokens: Array<[string, string]> = [
+    [dirname(process.execPath), "<BUN_BIN>"],
+    [process.execPath, "<BUN>"],
+    [REPO_ROOT, "<REPO_ROOT>"],
+    [homedir(), "<HOME>"],
+  ];
+  return tokens.reduce((acc, [token, replacement]) => (token ? acc.replaceAll(token, replacement) : acc), s);
+};
+
 describe("launchd rendering (both envs)", () => {
   const plistDev = inst.renderLaunchdPlist("dev");
   const plistProd = inst.renderLaunchdPlist("prod");
@@ -39,7 +54,7 @@ describe("launchd rendering (both envs)", () => {
     ["dev", plistDev],
     ["prod", plistProd],
   ] as const)("%s: mandatory keys per design section 7 (snapshot)", (_, plist) => {
-    expect(plist).toMatchSnapshot();
+    expect(normalizePaths(plist)).toMatchSnapshot();
     expect(plist).toContain(`<key>Label</key>\n\t<string>org.bizknights.co-newbiz.`);
     expect(plist).toContain("<key>StartInterval</key>\n\t<integer>60</integer>");
     expect(plist).toContain("<key>RunAtLoad</key>\n\t<false/>");
@@ -47,7 +62,7 @@ describe("launchd rendering (both envs)", () => {
     // mandatory: the tick spawns detached run-job children that must outlive it
     expect(plist).toContain("<key>AbandonProcessGroup</key>\n\t<true/>");
     expect(plist).toContain("<key>CO_NEWBIZ_SCHEDULER_ENV</key>");
-    expect(plist).toContain("<key>StandardOutPath</key>\n\t<string>/Users/");
+    expect(plist).toContain(`<key>StandardOutPath</key>\n\t<string>${homedir()}/`);
     expect(plist).toContain("Library/Logs/co-newbiz/");
     expect(plist).toContain("scripts/co-newbiz/schedule-tick.ts");
   });

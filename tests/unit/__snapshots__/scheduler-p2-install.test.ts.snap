@@ -9,15 +9,15 @@ exports[`launchd rendering (both envs) dev: mandatory keys per design section 7 
 	<string>org.bizknights.co-newbiz.dev.tick</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/techcross/.bun/bin/bun</string>
+		<string><BUN_BIN>/bun</string>
 		<string>scripts/co-newbiz/schedule-tick.ts</string>
 	</array>
 	<key>WorkingDirectory</key>
-	<string>/Users/techcross/git/ai_workspace/Projects/co-newbiz</string>
+	<string><REPO_ROOT></string>
 	<key>EnvironmentVariables</key>
 	<dict>
 		<key>PATH</key>
-		<string>/Users/techcross/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<string><BUN_BIN>:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 		<key>CO_NEWBIZ_SCHEDULER_ENV</key>
 		<string>dev</string>
 	</dict>
@@ -30,9 +30,9 @@ exports[`launchd rendering (both envs) dev: mandatory keys per design section 7 
 	<key>AbandonProcessGroup</key>
 	<true/>
 	<key>StandardOutPath</key>
-	<string>/Users/techcross/Library/Logs/co-newbiz/dev-tick.out.log</string>
+	<string><HOME>/Library/Logs/co-newbiz/dev-tick.out.log</string>
 	<key>StandardErrorPath</key>
-	<string>/Users/techcross/Library/Logs/co-newbiz/dev-tick.err.log</string>
+	<string><HOME>/Library/Logs/co-newbiz/dev-tick.err.log</string>
 </dict>
 </plist>
 "
@@ -59,7 +59,7 @@ exports[`launchd rendering (both envs) prod: mandatory keys per design section 7
 	<key>EnvironmentVariables</key>
 	<dict>
 		<key>PATH</key>
-		<string>/Users/techcross/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<string><BUN_BIN>:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
 		<key>CO_NEWBIZ_SCHEDULER_ENV</key>
 		<string>prod</string>
 	</dict>
@@ -72,9 +72,9 @@ exports[`launchd rendering (both envs) prod: mandatory keys per design section 7
 	<key>AbandonProcessGroup</key>
 	<true/>
 	<key>StandardOutPath</key>
-	<string>/Users/techcross/Library/Logs/co-newbiz/prod-tick.out.log</string>
+	<string><HOME>/Library/Logs/co-newbiz/prod-tick.out.log</string>
 	<key>StandardErrorPath</key>
-	<string>/Users/techcross/Library/Logs/co-newbiz/prod-tick.err.log</string>
+	<string><HOME>/Library/Logs/co-newbiz/prod-tick.err.log</string>
 </dict>
 </plist>
 "
