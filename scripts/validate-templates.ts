@@ -1,7 +1,30 @@
 #!/usr/bin/env bun
 /**
  * Template Lifecycle Validation Script
- * @version 1.64.0
+ * @version 1.66.0
+ *
+ * v1.66.0 (2026-10-31, U-20261029-004 — spec
+ *          docs/designs/2026-10-31-variant-generators-design.md §6.3):
+ *          additive generator-manifest arm — when a variant template declares
+ *          `scripts/<variant>/generators.json`, validate it through the shared
+ *          loader library (lib/generator-manifest.ts: strict parse, name
+ *          uniqueness, array-form command with `bun` as argv[0],
+ *          outputs/sources project-relative and traversal-free, size caps,
+ *          script-path existence + symlink containment against the variant
+ *          root). Absent file → no check (the manifest is project-authored
+ *          and optional; absence must never become a template-validation
+ *          failure for existing variants). Runs beside Check B-10 in the
+ *          stable-variant loop as check id 'generator-manifest'.
+ *
+ * v1.65.0 (2026-10-29, U-20261028-014 — spec
+ *          docs/designs/2026-10-29-owner-decision-batch-design.md §2):
+ *          variant-designlint shape check (Check 2) — when a template's
+ *          variant.json declares a `designLint` block it must be
+ *          { enabled: boolean (required), scanRoots?: string[],
+ *          allowlist?: string[] } (same rule as audit.ts's gate via
+ *          helpers/design-lint-roots.ts v1.1.0 validateDesignLintOverride;
+ *          restated inline — this validator does not import audit helpers).
+ *          Absent block stays valid (the override is opt-in per variant).
  *
  * v1.64.0 (2026-10-28, spec docs/designs/2026-10-28-platform-agent-mirror-design.md,
  *          DEC-20261028-06 §4.1): WS-01 Check 8 — platform_surfaces registry
@@ -430,6 +453,7 @@ import { PLATFORMS } from './validate-model-registry.ts';
 import { PLATFORM_AGENT_ADAPTERS } from './sync-agent-mirrors.ts';
 import { loadSkillGraph, findCapabilityDivergence } from './lib/skill-graph-compat.ts';
 import { evaluateScaffoldPackageContract } from './lib/package-merge.ts';
+import { parseGeneratorManifest, validateManifestAgainstRoot } from './lib/generator-manifest.ts';
 import { extractKeyedBlocks, compareKeyedBlocks, isExtendsStub, extractCommonAgentsBlock, compareCommonAgentsBlock } from './lib/managed-block-parity.ts';
 import { MANAGED_SKELETON_SECTIONS, validateSkeletonRegistry } from './lib/platform-skeleton-merge.ts';
 import { MERGE_MANAGED_FILES, SCAFFOLD_COMMON_OWNED_FILES } from './lib/upgrade-policy.ts';
@@ -880,6 +904,32 @@ function checkVariantManifests(): Map<string, VariantManifest> {
           ccOk = false;
         }
         if (ccOk) pass(`templates/${dir}/variant.json country_config declaration OK (ADR-0091 R3)`);
+      }
+
+      // B-05 (U-20261028-014): variant.json `designLint` block shape check —
+      // the per-variant override audit.ts's design-lint gate consumes. Same
+      // rule as helpers/design-lint-roots.ts validateDesignLintOverride,
+      // restated inline. Absent block = valid (opt-in per variant).
+      const designLint = raw.designLint;
+      if (designLint !== undefined) {
+        let dlOk = true;
+        if (designLint === null || typeof designLint !== 'object' || Array.isArray(designLint)) {
+          fail(dir, 'variant-designlint', `templates/${dir}/variant.json designLint must be an object with a required boolean "enabled" (got ${designLint === null ? 'null' : Array.isArray(designLint) ? 'array' : typeof designLint})`);
+          dlOk = false;
+        } else {
+          const dl = designLint as Record<string, unknown>;
+          if (typeof dl.enabled !== 'boolean') {
+            fail(dir, 'variant-designlint', `templates/${dir}/variant.json designLint.enabled must be a boolean (got ${JSON.stringify(dl.enabled ?? null)})`);
+            dlOk = false;
+          }
+          for (const key of ['scanRoots', 'allowlist'] as const) {
+            if (dl[key] !== undefined && (!Array.isArray(dl[key]) || !(dl[key] as unknown[]).every(x => typeof x === 'string'))) {
+              fail(dir, 'variant-designlint', `templates/${dir}/variant.json designLint.${key} must be an array of strings (got ${JSON.stringify(dl[key])})`);
+              dlOk = false;
+            }
+          }
+        }
+        if (dlOk) pass(`templates/${dir}/variant.json designLint override shape OK (U-20261028-014)`);
       }
 
       // B-03: script_manifest path existence check
@@ -2222,6 +2272,41 @@ function checkVariantSkills(variant: string): void {
 //   - every .ts inside carries an @version header and is registered in the variant's
 //     scripts/SCRIPTS.md registry when that registry exists.
 // Adopted 2026-08-28 (docs/designs/2026-08-28-skill-hygiene-and-conventions-design.md).
+// v1.66.0 (U-20261029-004 — spec docs/designs/2026-10-31-variant-generators-design.md
+// §6.3): additive generator-manifest arm — when a variant template declares
+// scripts/<variant>/generators.json, validate shape + containment through the
+// shared loader library (strict parse, name uniqueness, array-form command
+// with `bun` as argv[0], outputs/sources project-relative and traversal-free,
+// size caps, script-path existence + symlink containment against the variant
+// root). Absent file → no check (the manifest is project-authored and
+// optional; absence must never become a template-validation failure).
+function checkVariantGeneratorManifest(variant: string): void {
+  const manifestPath = join(TEMPLATES_DIR, variant, 'scripts', variant, 'generators.json');
+  if (!existsSync(manifestPath)) return; // absent = skip cleanly
+  const variantRoot = join(TEMPLATES_DIR, variant);
+  let content: string;
+  try {
+    content = readFileSync(manifestPath, 'utf-8');
+  } catch (err) {
+    fail(variant, 'generator-manifest', `templates/${variant}/scripts/${variant}/generators.json unreadable: ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+  const parsed = parseGeneratorManifest(content);
+  if (!parsed.ok) {
+    fail(variant, 'generator-manifest', `templates/${variant}/scripts/${variant}/generators.json: ${parsed.error}`,
+      'See the "Declared generators" section in docs/guides/creating-a-variant.md');
+    return;
+  }
+  const rootErrors = validateManifestAgainstRoot(variantRoot, parsed.manifest);
+  for (const e of rootErrors) {
+    fail(variant, 'generator-manifest', `templates/${variant}/scripts/${variant}/generators.json: ${e}`,
+      'Command scripts and outputs must be project-relative, traversal-free, and resolve inside the variant root');
+  }
+  if (rootErrors.length === 0) {
+    pass(`templates/${variant}/scripts/${variant}/generators.json: valid (${parsed.manifest.generators.length} generator(s))`);
+  }
+}
+
 function checkVariantScriptsLayout(variant: string): void {
   const variantScriptsDir = join(TEMPLATES_DIR, variant, 'scripts', variant);
   if (!existsSync(variantScriptsDir)) {
@@ -6072,6 +6157,7 @@ function main(): number {
     checkSecurityGateSkills(variant);          // B-03
     checkVariantSkills(variant);               // B-09: presence-driven skill lifecycle
     checkVariantScriptsLayout(variant);        // B-10: scripts/<variant>/ layout convention
+    checkVariantGeneratorManifest(variant);    // v1.66.0: declared generators.json arm (absent = skip)
     checkDeprecatedVersionBump(variant, manifest); // B-08: deprecated → version bump warning
     checkPlatformSettingsParity(variant);      // VA-04: run for stable and beta/draft so bad platform keys cannot hide
 

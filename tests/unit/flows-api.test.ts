@@ -50,9 +50,13 @@ let outsiderCookie: string; // 프로젝트 비멤버 analyst — 가시성 검�
 
 // 픽스처: alice이 멤버인 프로젝트 1개 + 기회 1개, 각각 런 3단(activity→agent)과
 // llm_call_log 행. 시간 순서: OLDER < MID < NEWER — 커서 검증용.
-const OLDER = "2026-10-01T00:00:00.000Z";
-const MID = "2026-10-15T00:00:00.000Z";
-const NEWER = "2026-10-20T00:00:00.000Z";
+// 기준 시각은 now 기준 상대 오프셋으로 계산한다(고정 날짜는 window=30d 요약이
+// 롤링 윈도우라 시간 경과 시 픽스처가 윈도우 밖으로 밀려나는 시한폭탄이 된다 —
+// 2026-10-31 실측: OLDER가 30일 경계를 넘어 summary.calls 3→2로 열외).
+const DAY_MS = 24 * 60 * 60 * 1000;
+const OLDER = new Date(Date.now() - 20 * DAY_MS).toISOString();
+const MID = new Date(Date.now() - 10 * DAY_MS).toISOString();
+const NEWER = new Date(Date.now() - 5 * DAY_MS).toISOString();
 let projectId: string;
 let opportunityId: string;
 
@@ -303,7 +307,7 @@ describe("GET /api/flows/runs — run ledger", () => {
   test("cursor: before returns strictly older rows; nextBefore meta feeds the next page", async () => {
     const first = await req(`/api/flows/runs?limit=2`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
     expect(first.data.processRuns.map((r: Record<string, unknown>) => r.stage)).toEqual(["S8", "S3"]);
-    expect(first.meta.nextBefore.processRuns).toBe("2026-10-15T00:00:00.000Z");
+    expect(first.meta.nextBefore.processRuns).toBe(MID);
     const second = await req(`/api/flows/runs?limit=2&before=${first.meta.nextBefore.processRuns}`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
     expect(second.data.processRuns.map((r: Record<string, unknown>) => r.stage)).toEqual(["S1"]);
   });

@@ -1,7 +1,7 @@
 # Add §6 Skills pointer section + transitional §7 numbering (pre-promotion alignment)
 
 - **Date**: 2026-09-25
-- **Status**: Approved (one-design-doc convention, ADR-0074; workspace-mandated remediation)
+- **Status**: implemented (one-design-doc convention, ADR-0074; workspace-mandated remediation; header aligned to registry per T-20261029-002)
 - **Spec**: 2026-09-25-agents-md-section6-alignment
 
 Background: co-newbiz is a standalone-track project slated for variant promotion (project-to-variant). Its AGENTS.md had no §6, so audit #29 skipped. Evidence: docs/analysis/2026-09-25-agents-md-duplication-audit.md F7; user ruling: promote-ready, not a permanent exception.
