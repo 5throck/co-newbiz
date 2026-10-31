@@ -56,7 +56,12 @@ jobs:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
       - name: Biome on files changed vs base
-        run: bunx biome ci --changed --since=origin/${{ github.base_ref || 'main' }} --no-errors-on-unmatched
+        env:
+          # Env indirection, not inline ${{ }} in run: — github.base_ref is a
+          # PR-author-influencable branch name and refnames may legally contain
+          # shell metacharacters ($(), backticks, ;). CWE-78 (RT-01).
+          BASE_REF: ${{ github.base_ref || 'main' }}
+        run: bunx biome ci --changed --since=origin/"$BASE_REF" --no-errors-on-unmatched
       - name: Full-repo lint report (non-blocking burn-down count)
         run: bunx biome check --reporter=summary > biome-report.txt 2>&1 || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
