@@ -1,7 +1,7 @@
 # Companies List: Exclude Group and Affiliate Companies - Design
 
 - **Date**: 2026-10-11
-- **Status**: approved (Design Gate Row 0, user decision)
+- **Status**: implemented (Design Gate Row 0, user decision; shipped in PR #509, registry flipped per T-20261029-002)
 - **Owner**: backend-engineer
 - **ADR**: none required (read-only query filter; no schema, auth, or MCP scope change)
 
