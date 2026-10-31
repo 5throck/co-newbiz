@@ -402,6 +402,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261028-01` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261028-02` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261028-03` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
+| `dec:DEC-20261031-01` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |

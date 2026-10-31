@@ -68,7 +68,9 @@ describe("referenced-row delete guard", () => {
 
     const blocked = await send("DELETE", { table: "md_currency", id });
     expect(blocked.status).toBe(400);
-    const body = (await blocked.json()) as { error: { code: string; details: { references: { table: string; count: number }[] } } };
+    const body = (await blocked.json()) as {
+      error: { code: string; details: { references: { table: string; column: string; count: number }[] } };
+    };
     expect(body.error.code).toBe("referenced_row");
     expect(body.error.details.references).toEqual([{ table: "zz_ref", column: "cur", count: 2 }]);
     expect(db.query("SELECT id FROM md_currency WHERE id = ?").get(id)).not.toBeNull();

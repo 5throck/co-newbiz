@@ -8,13 +8,19 @@
 // values and never logging or returning values.
 //
 // The allowlist is derived from SOURCE_ADAPTERS[*].credentialEnv so it cannot
-// drift from the adapters, plus the LLM and web-search provider keys.
+// drift from the adapters, plus the LLM and web-search provider keys and the
+// scheduler notification-transport keys (NOTIFY_*, ADR-0189/0190).
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { SOURCE_ADAPTERS } from "../../../scripts/co-newbiz/source-adapters.ts";
 
 const EXTRA_KEYS = ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "SERPER_API_KEY"] as const;
 const LLM_KEY = /^CO_NEWBIZ_LLM_[A-Z_]+$/;
+// Scheduler notification transport (ADR-0189/0190, design 2026-10-29-scheduled-jobs-design section 13.1):
+// SMTP credentials and webhook target URLs for notify.deliver/notify.digest. Prefix rule on purpose —
+// NOTIFY_WEBHOOK_URL_<CHANNEL> grows with new channel keys. Secret values are still scrubbed centrally
+// by db/lib/secret-scrubber.ts; this allowlist only decides what the root-env loader may lift into process.env.
+const NOTIFY_KEY = /^NOTIFY_[A-Z_]+$/;
 
 /** Exact-name allowlist for non-LLM keys (adapter credentials + search providers). */
 export function pipelineEnvKeys(): Set<string> {
@@ -24,7 +30,7 @@ export function pipelineEnvKeys(): Set<string> {
 }
 
 export function isPipelineEnvKey(name: string): boolean {
-  return LLM_KEY.test(name) || pipelineEnvKeys().has(name);
+  return LLM_KEY.test(name) || NOTIFY_KEY.test(name) || pipelineEnvKeys().has(name);
 }
 
 let loaded = false;

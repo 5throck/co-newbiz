@@ -16,7 +16,8 @@ const PYTHON_BIN = existsSync(resolve(REPO_ROOT, ".venv", "bin", "python3")) ? r
 function pythonIrr(vectors: number[][]): Array<number | null> | null {
   const code = "import json,sys\nfrom sim_engine.metrics import irr\nprint(json.dumps([irr(v) for v in json.load(sys.stdin)]))";
   const r = spawnSync(PYTHON_BIN, ["-c", code], { cwd: PYTHON_DIR, input: JSON.stringify(vectors), encoding: "utf-8", timeout: 30_000, env: { ...process.env, PYTHONPATH: PYTHON_DIR } });
-  if ((r.status ?? r.exitCode) !== 0) return null;
+  // node:child_process spawnSync exposes the exit code as `status` (null when killed by a signal = failure).
+  if ((r.status ?? 1) !== 0) return null;
   return JSON.parse(r.stdout);
 }
 

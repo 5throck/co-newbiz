@@ -5,6 +5,8 @@
  */
 import { gateIntegrityShadowReport } from "./gate-integrity-shadow-report.ts";
 import { watchEvaluate } from "./watch-evaluate.ts";
+import { notifyDeliver } from "./notify-deliver.ts";
+import { notifyDigest } from "./notify-digest.ts";
 import type { JobHandler } from "./types.ts";
 
 const HANDLERS = new Map<string, JobHandler>();
@@ -25,3 +27,5 @@ export function unregisterJobHandler(key: string): void {
 
 registerJobHandler(watchEvaluate);
 registerJobHandler(gateIntegrityShadowReport);
+registerJobHandler(notifyDeliver);
+registerJobHandler(notifyDigest);

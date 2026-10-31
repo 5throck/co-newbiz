@@ -3,6 +3,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+// @ts-expect-error --jsx is not set in the root tsconfig program; the module itself is type-checked under app/web-next
 import { adrStatusCode, labelKeyOf, matchesQuery } from "../../app/web-next/components/admin/console/admin-ui.tsx";
 
 const ROOT = join(import.meta.dirname, "../../app/web-next");

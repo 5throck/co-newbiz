@@ -120,7 +120,7 @@ Follows Onyx 3.0 (`docs/design-system/`, `design:lint`) and the admin CRUD conve
 | `DELETE /api/admin/schedule-jobs/[jobKey]` | New: soft — sets `enabled=0`; `job_run` history is retained |
 | `POST /api/admin/schedule-jobs/[jobKey]/run` | New "run now": inserts `schedule_job_request`; returns 202 with request id. **No in-process execution** (ADR-0019) |
 | `GET /api/admin/schedule-jobs/[jobKey]/runs?page=` | Extend with new columns, error text, trigger, actor |
-| `POST /api/admin/schedule-jobs/seed` | New: idempotent upsert of the eight default rows (§3.1); never overwrites admin-edited cron |
+| `POST /api/admin/schedule-jobs/seed` | New: idempotent upsert of the eight default rows (§3.1 — the registry's handlers; grows as phases land); never overwrites admin-edited cron |
 | `GET /api/admin/schedule-jobs/health` | New: last tick heartbeat, overdue jobs |
 
 Every mutating call is admin-only (existing admin guard) and calls `appendAudit` with action `schedule_job_create|update|disable|run_requested|seed`, before/after cron in `target`. Cron parsing/preview uses one shared module (`app/web-next/lib/schedule/cron.ts`, also imported by `schedule-tick.ts`) — the parser choice is `cron-parser` or an in-repo 5-field parser; the human-readable preview uses `cronstrue` with ko locale. One parser for both preview and execution is mandatory, otherwise the preview can lie.
@@ -144,7 +144,7 @@ Every mutating call is admin-only (existing admin guard) and calls `appendAudit`
 
 ## 6. Failure alerting
 
-- On `failed`/`timeout` (after retries) `run-job.ts` inserts a `notification` with `trigger_type = 'batch_failure'` and `severity = 'ops'` (escalated to `urgent` for `watch.evaluate` and `retention.cleanup`), addressed per the recipient policy in §13.4 and delivered by `notify.deliver` (§13). Because `notification.project_id` is `NOT NULL` today, system notifications need the schema change in §13.3.
+- On `failed`/`timeout` (after retries) `run-job.ts` inserts a `notification` with `trigger_type = 'batch_failure'` and `severity = 'ops'` (escalated to `urgent` for `watch.evaluate` and `retention.cleanup`), addressed per the recipient policy in §13.4 and delivered by `notify.deliver` (§13). `notification.project_id` became nullable in migration 0072 (ADR-0102) — corrected 2026-10-31 per P3 Row 0 conformance review; the §13.3 rebuild adds `title`/`source_ref` only.
 - SRE watch rules (owned by `sre`): (a) tick heartbeat — `schedule-tick.ts` upserts `schedule_heartbeat(env, last_tick_at)` every run; stale > 3 min → high alert; (b) job overdue — `next_run_at + timeout` passed with no `job_run` → warning; (c) 3 consecutive failures of the same job → high.
 - A failure of the alerting insert itself is written to stderr (launchd log) and never masks the original error.
 
@@ -228,7 +228,7 @@ D1–D8 were decided by the owner on 2026-10-29 by approving the recommendations
 
 Owner decision: deliver in-app **plus email and webhook**. Governing ADR: ADR-0190 (sibling of ADR-0189 — new schema and an outbound transport warrant their own record).
 
-Verified state: `notification(id, user_id, project_id NOT NULL, trigger_type, severity opportunity|warning|urgent|info|ops, payload, channel in_app|email|webhook|all, bundle immediate|daily, sent_at, read_at, dedupe_key)` (`db/migrations/0007_watch_and_notification.sql:62`); producers `db/lib/watch-engine.ts` (comment: no transport yet), `app/web-next/lib/pipeline.ts` (pause), establishment steps; `watch` and `watch_rule` empty; `/api/admin/notifications` lists 200 rows with no filters, payload view or delivery status.
+Verified state (corrected 2026-10-31 per P3 Row 0 conformance review — 0007:62 is superseded): `notification(id, user_id, project_id nullable — since migration 0072 per ADR-0102, trigger_type (10 values), severity opportunity|warning|urgent|info|ops, payload, channel in_app|email|webhook|all, bundle immediate|daily, sent_at, read_at, dedupe_key + partial unique index per recipient)` (`db/migrations/0141_establishment_notifications_and_call_path.sql`; this changeset's migration 0185 extends the shape further); producers `db/lib/watch-engine.ts` (comment: no transport yet), `app/web-next/lib/pipeline.ts` (pause), establishment steps; `watch` and `watch_rule` empty; `/api/admin/notifications` lists 200 rows with no filters, payload view or delivery status.
 
 ### 13.1 Transport
 

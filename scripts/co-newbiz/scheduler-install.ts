@@ -217,8 +217,20 @@ export function removeLaunchdPlist(
   return { bootedOut, removed: existed && !existsSync(plistPath), plistPath };
 }
 
+/**
+ * POSIX uid for the launchd `gui/<uid>` domain. `process.getuid` is platform-optional in the Node types (it does
+ * not exist on Windows); the launchd paths only ever run on macOS, so absence is a hard, explicit error rather
+ * than a silent `gui/undefined` target (P2 typecheck-gate repair).
+ */
+function currentUid(): number {
+  if (typeof process.getuid !== "function") {
+    throw new Error("scheduler-install: process.getuid is unavailable (launchd install requires macOS)");
+  }
+  return process.getuid();
+}
+
 function defaultBootout(plistPath: string): CommandResult {
-  const uid = process.getuid();
+  const uid = currentUid();
   const p = Bun.spawnSync([LAUNCHCTL, "bootout", `gui/${uid}`, plistPath]);
   return { code: p.exitCode ?? 1, stderr: p.stderr.toString() };
 }
@@ -262,7 +274,7 @@ function installLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
     chmodSync(f, LOG_FILE_MODE);
   }
   writeFileSync(plistPath, plist, { mode: 0o644 });
-  const uid = process.getuid();
+  const uid = currentUid();
   const r = Bun.spawnSync([LAUNCHCTL, "bootstrap", `gui/${uid}`, plistPath]);
   if ((r.exitCode ?? 1) !== 0) {
     console.error(`scheduler-install: launchctl bootstrap failed: ${(r.stderr.toString() || r.stdout.toString()).trim()}`);
@@ -276,7 +288,7 @@ function installLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
 
 function uninstallLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
   const plistPath = launchdPlistPath(env);
-  const uid = process.getuid();
+  const uid = currentUid();
   if (print || dryRun) {
     console.log(`[dry-run] would run: launchctl bootout gui/${uid} ${plistPath}`);
     console.log(`[dry-run] would remove (this env's plist only): ${plistPath}`);
