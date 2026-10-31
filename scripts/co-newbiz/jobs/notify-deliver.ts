@@ -1,4 +1,5 @@
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0: channel-level is_test webhook expansion for admin test sends (design section 13.7) — testWebhookTargetKey() honors the admin-requested notify_webhook_target key carried on a trigger_type='test' notification's payload; the severity→target mapping (webhookTargetKeyFor) still applies to real traffic.
 /**
  * notify.deliver - the delivery worker for immediate notifications (ADR-0189/0190, scheduled-jobs design section 13.2,
  * phase P3 row 3). Runs every tick (timeout 50 s so it never overlaps the next tick; the job lease guards overlap too).
@@ -131,6 +132,25 @@ export function webhookTargetKeyFor(severity: string, triggerType?: string): "op
   return severity === "ops" ? "ops" : "deals";
 }
 
+/**
+ * P4 test-send threading (design section 13.7): the admin names the webhook channel key EXPLICITLY on a
+ * trigger_type='test' notification, so the requested key rides on the payload and is honored here — the
+ * regular severity→target mapping (webhookTargetKeyFor) applies to real traffic only, and the D9 seed
+ * grants webhook to urgent/ops traffic only, so a policy-driven expansion would silently drop an info/test
+ * webhook row. Returns the key for test rows (defensively parsed), null for everything else.
+ */
+export function testWebhookTargetKey(n: { trigger_type: string; payload: string }): string | null {
+  if (n.trigger_type !== "test") return null;
+  try {
+    const parsed = JSON.parse(n.payload) as { webhook_target_key?: unknown };
+    return typeof parsed.webhook_target_key === "string" && parsed.webhook_target_key.trim() !== ""
+      ? parsed.webhook_target_key.trim()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Cap for the provider-controlled message id stored on a delivery row (F-3, P3 QA review). */
 export const PROVIDER_MESSAGE_ID_MAX = 256;
 
@@ -155,12 +175,14 @@ function insertDeliveryRow(
     channel: ExternalChannel;
     targetKey: string | null;
     nowIso: string;
+    /** 1 when the parent notification is an admin test send (trigger_type 'test', design section 13.7). */
+    isTest?: number;
   },
 ): void {
   db.run(
     `INSERT OR IGNORE INTO notification_delivery
-       (id, notification_id, recipient_user_id, recipient_address_masked, channel, target_key, status, attempt, next_attempt_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?)`,
+       (id, notification_id, recipient_user_id, recipient_address_masked, channel, target_key, status, attempt, next_attempt_at, created_at, is_test)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?)`,
     [
       ulid(),
       opts.notificationId,
@@ -170,6 +192,7 @@ function insertDeliveryRow(
       opts.targetKey,
       opts.nowIso,
       opts.nowIso,
+      opts.isTest ?? 0,
     ],
   );
 }
@@ -190,12 +213,33 @@ export function expandPending(db: any, now: Date): { deliveryRows: number; fanou
        ORDER BY n.sent_at
        LIMIT 500`,
     )
-    .all(windowStart) as NotificationRowLike[];
+    .all(windowStart) as (NotificationRowLike & { payload: string })[];
   let deliveryRows = 0;
   let fanoutRows = 0;
 
   for (const n of pending) {
+    // §13.7 test send to a webhook target: the admin addressed one channel key explicitly — a
+    // channel-level row with is_test=1, bypassing policy audiences (the D9 seed grants webhook to
+    // urgent/ops traffic only, so an info/test row would otherwise expand to nothing). Every other
+    // channel of a test send flows through the normal path below.
+    const forcedTestKey = testWebhookTargetKey(n);
+    if (forcedTestKey) {
+      insertDeliveryRow(db, {
+        notificationId: n.id,
+        recipientUserId: null,
+        recipientAddressMasked: null,
+        channel: "webhook",
+        targetKey: forcedTestKey,
+        nowIso,
+        isTest: 1,
+      });
+      deliveryRows++;
+      continue;
+    }
     const resolution = resolveRecipients(db, n);
+    // Design section 13.7: delivery rows of admin test sends (parent trigger_type 'test') are tagged
+    // is_test = 1 so test traffic stays distinguishable in the delivery ledger forever.
+    const isTest = n.trigger_type === "test" ? 1 : 0;
     for (const r of resolution.recipients) {
       for (const channel of r.channels) {
         if (channel === "email") {
@@ -206,6 +250,7 @@ export function expandPending(db: any, now: Date): { deliveryRows: number; fanou
             channel: "email",
             targetKey: null,
             nowIso,
+            isTest,
           });
           deliveryRows++;
         } else {
@@ -217,6 +262,7 @@ export function expandPending(db: any, now: Date): { deliveryRows: number; fanou
             channel: "webhook",
             targetKey: webhookTargetKeyFor(n.severity, n.trigger_type),
             nowIso,
+            isTest,
           });
           deliveryRows++;
         }

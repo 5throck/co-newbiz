@@ -9,8 +9,10 @@ import { useAdminActions } from "./useAdminActions.ts";
 import { UsersNoticePanel, UsersTablePanel } from "./UsersSection.tsx";
 import { HumanRolesPanel } from "./HumanRolesSection.tsx";
 import { AuditPanel } from "./AuditSection.tsx";
-import { DataSourcesPanel, DatabasePanel, NotificationsPanel } from "./OpsSections.tsx";
+import { DataSourcesPanel, DatabasePanel } from "./OpsSections.tsx";
 import { SchedulePanel } from "./ScheduleSection.tsx";
+import { NotificationSection } from "./NotificationSection.tsx";
+import { WatchesSection } from "./WatchesSection.tsx";
 import { GlossaryListPanel, GlossaryLintPanel, GlossaryFormPanel } from "./GlossarySections.tsx";
 import { ReviewAuditPanel, GovernancePanel, AdrPanel } from "./GovernanceSections.tsx";
 import { SECTION_INTRO_KEY, SECTION_TITLE_KEY } from "./constants.ts";
@@ -70,7 +72,9 @@ export function AdminConsole(props0: { section: Section }) {
 
       <DatabasePanel ctx={ctx} />
 
-      <NotificationsPanel ctx={ctx} />
+      {section === "notifications" && <NotificationSection />}
+
+      {section === "notifications" && <WatchesSection />}
 
       <GlossaryListPanel ctx={ctx} />
 

@@ -1199,7 +1199,151 @@ paths:
   /api/admin/notifications:
     get:
       operationId: adminListNotifications
-      summary: All users' notification rows for the admin console. Admin role.
+      summary: >-
+        All users' notification history for the admin console (design 2026-10-29 §13.5) with
+        server-side filters and paging (default 50, max 100). Each row carries a per-channel
+        delivery-status-count summary built from notification_delivery of just the page's ids;
+        in-app-only rows carry an empty object (in-app has no delivery ledger rows). The channel
+        filter matches the producer bound inclusively (email matches 'email' and 'all'). Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+          description: ISO date or date-time; lower bound on the row's sent_at (date-only values are start-of-day UTC).
+        - name: to
+          in: query
+          schema:
+            type: string
+          description: ISO date or date-time; upper bound on sent_at (date-only values are end-of-day UTC).
+        - name: trigger_type
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [opportunity, warning, urgent, info, ops]
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [in_app, email, webhook]
+          description: Matches the notification's producer bound inclusively (email also matches 'all').
+        - name: read
+          in: query
+          schema:
+            type: string
+            enum: [read, unread]
+        - name: delivery_status
+          in: query
+          schema:
+            type: string
+            enum: [pending, retry, sent, failed, skipped, deferred]
+          description: Row has at least one notification_delivery in this status (in-app-only rows never match).
+        - name: project_id
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Bounded LIKE over title and the payload's first 500 chars (wildcards escaped).
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/notifications/{id}:
+    get:
+      operationId: adminGetNotification
+      summary: >-
+        One notification for the detail drawer — parsed payload (JSON viewer), title, source_ref,
+        timestamps, project, and the full notification_delivery attempts table (channel, masked
+        recipient, target_key, status, attempt, next_attempt_at, scrubbed last_error, digest_id,
+        is_test, sent_at). Webhook URLs and raw recipient addresses are never returned (§13.8).
+        404 for an unknown id. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/notifications/test:
+    post:
+      operationId: adminTestNotification
+      summary: >-
+        Test send (design §13.7) — body {channel: email|webhook|in_app, target} where target is a
+        user id (email requires app_user.email, else 400) or a configured webhook channel key.
+        Creates a trigger_type='test', severity info, bundle immediate notification ("Test
+        notification"); notify.deliver expands and sends it on the next tick (≤ 60 s) with
+        is_test=1 delivery rows. Audited (notification_test_sent, masked target); rate-limited
+        to 5 per admin per hour (429 over). Admin role.
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, target]
+              properties:
+                channel:
+                  type: string
+                  enum: [email, webhook, in_app]
+                target:
+                  type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/admin/watches:
+    get:
+      operationId: adminListWatches
+      summary: >-
+        All watches with project join, owner user, rule counts and enabled state. The watch table
+        has no enabled column, so enabled is derived (enabled_rule_count > 0) — watch-level
+        enable/disable operates on all of the watch's rules (§13.6). Admin role.
       tags:
         - Admin
       responses:
@@ -1209,6 +1353,292 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: adminCreateWatch
+      summary: >-
+        Create a watch for (project_id, user_id); one watch per pair — a duplicate is 409
+        watch_exists. Both references are validated (unknown project/user → 400). Audited
+        (watch_create). Admin role.
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [project_id, user_id]
+              properties:
+                project_id:
+                  type: string
+                user_id:
+                  type: string
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/watches/{id}:
+    patch:
+      operationId: adminUpdateWatch
+      summary: >-
+        Enable or disable the watch — body {enabled: boolean}, mapped onto ALL of the watch's
+        rules (the watch table has no enabled or name column; rename is rejected with that
+        explanation). Audited (watch_rule rows toggled, watch_update). 404 unknown. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: adminDeleteWatch
+      summary: >-
+        Soft delete (§13.6): disables the watch AND all its rules (watch-level disable IS
+        disable-all-rules on this schema); the watch row itself stays. Audited (watch_delete).
+        404 unknown. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/watches/{id}/rules:
+    get:
+      operationId: adminListWatchRules
+      summary: Rules of one watch (trigger_type, threshold, cooldown_hours, channel, enabled, adr_ref). 404 unknown watch. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: adminCreateWatchRule
+      summary: >-
+        Create a rule under the watch (§13.6 validation): trigger_type from the watch_rule CHECK's
+        7-value set (notification-only values like pipeline_paused/test are rejected); threshold
+        required and > 0 for threshold_breach (percentage points) and staleness (days), rejected
+        for the event-driven five; cooldown_hours 1–720; channel gated on server configuration
+        (in_app and 'all' always; email when SMTP env exists; webhook when an enabled
+        notify_webhook_target exists); enabled defaults true; optional adr_ref. Field-level 400
+        (error.details.fields). Audited (watch_rule_create). Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trigger_type]
+              properties:
+                trigger_type:
+                  type: string
+                  enum: [rag_upgrade, rag_downgrade, kill_criteria, regulation_change, threshold_breach, staleness, batch_failure]
+                threshold:
+                  type: number
+                  description: Required and > 0 for threshold_breach (percentage points) and staleness (days); rejected otherwise.
+                cooldown_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 720
+                  default: 24
+                channel:
+                  type: string
+                  enum: [in_app, email, webhook, all]
+                enabled:
+                  type: boolean
+                  default: true
+                adr_ref:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/watch-rules/{id}:
+    patch:
+      operationId: adminUpdateWatchRule
+      summary: >-
+        Partial rule update; the composite (trigger_type × threshold) is re-validated after the
+        merge — switching onto a threshold-bearing trigger without a threshold is 400. Audited
+        (watch_rule_update, before→after). 404 unknown. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trigger_type:
+                  type: string
+                threshold:
+                  type: number
+                  nullable: true
+                cooldown_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 720
+                channel:
+                  type: string
+                enabled:
+                  type: boolean
+                adr_ref:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: adminDeleteWatchRule
+      summary: >-
+        Hard-delete the rule row (configuration, not an append-only record; audit_log's no-delete
+        mandate does not extend here). Audited (watch_rule_delete). 404 unknown. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/watch-rules/preview:
+    post:
+      operationId: adminPreviewWatchRule
+      summary: >-
+        Dry-run evaluation of a NOT-persisted rule draft (§13.6) — body {watch_id, trigger_type,
+        threshold?, cooldown_hours?, channel?} under an existing watch. Zero writes (no
+        notification row, no watermark advance, no notified flip); returns evaluated / would_fire
+        / suppressed_by_cooldown / reason / severity and the recipients+channels resolved through
+        the recipient policy exactly as notify.deliver would (email addresses MASKED; in-app is
+        the owner for in_app|all channels). Event-driven triggers without a current-data basis
+        return evaluated=false. Admin role.
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [watch_id, trigger_type]
+              properties:
+                watch_id:
+                  type: string
+                trigger_type:
+                  type: string
+                threshold:
+                  type: number
+                  nullable: true
+                cooldown_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 720
+                channel:
+                  type: string
+                  enum: [in_app, email, webhook, all]
+                  description: Defaults to 'all' so the resolution shows every reachable channel.
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/system-stats:
     get:
       operationId: getSystemStats
