@@ -287,7 +287,7 @@ describe("table column sizing guard", () => {
       { file: "app/agents/page.tsx", label: "rosterTitle", tmin: "tmin-40", expect: ["table-fixed-pct"] },
       { file: "app/agents/page.tsx", label: "stepsTableAria", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
       { file: "app/deals/page.tsx", label: "pages.deals.agingTableAria", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
-      { file: "app/settings/connected-apps/page.tsx", label: "patTableAria", tmin: "tmin-64", expect: ["table-fixed-pct", "cell-truncate"] },
+      { file: "app/settings/connected-apps/page.tsx", label: "patTableAria", tmin: "tmin-48", expect: ["table-fixed-pct", "cell-truncate"] },
       { file: "components/stages/synergy/SynergyListSection.tsx", label: "companyListInAnalysisScope", tmin: "tmin-56", expect: ["table-fixed-pct"] },
     ];
     const problems: string[] = [];

@@ -52,6 +52,7 @@ Kept unchanged: 지배구조 변경, 수요 파이프라인, 스냅샷. In tight
 - Token table lacks remaining-days (D-n) and an expiring-soon signal.
 - No status filter; revoked/expired rows clutter the list.
 - TTL options are 7/30/90; owner requested a 180-day (6 months) option.
+- **Amendment (2026-10-31, owner Row 0 directive)**: the personal-token items' structure itself needs a usability pass — see the diagnosis and decision in §2.4 (C7–C10).
 
 ## 2. Design decisions and acceptance criteria
 
@@ -90,10 +91,51 @@ Kept unchanged: 지배구조 변경, 수요 파이프라인, 스냅샷. In tight
 | C5 | Revoked/expired rows collapsed under a disclosure | Disclosure uses `aria-expanded`; collapsed by default |
 | C6 | TTL options 7/30/90/180 days, default 30, max 180 | API accepts 180 and rejects 365 with 400; UI lists 180 labelled "180 days (6 months)" |
 
+### 2.4 Connected-apps token UX amendment (2026-10-31, ux-designer-agent)
+
+Owner Row 0 directive (2026-10-31): the personal API token items' UI structure needs a usability
+improvement. Browser diagnosis (dev 7748; issue → reveal → filter → revoke exercised live in an
+admin session, list also inspected in an analyst session):
+
+| Observed | Detail |
+|---|---|
+| Row structure | 8 flat columns at widths 18/15/10/10/12/17/12/6% — label, masked identifier, scopes, status chip, created, expiry (date + D-n + expiring-soon chips), last used, actions. The identifier and scope columns are sparse; the table carries `tmin-64` horizontal scroll at common widths |
+| Actions | the only action is the danger-styled 해지 button, always visible and the most prominent control in every active row |
+| Reveal modal | fires correctly with the one-time warning, focused read-only input, copy button, MCP JSON snippet and the "저장했습니다" primary — but at a 720 px viewport the panel overflows and the primary button is clipped out of view; there is no copy action for the JSON snippet itself |
+| Expiry | a freshly issued 7-day token is born "곧 만료" (D-7) — the ≤7-day threshold applies immediately; true signal, and the option label ("7일 — 짧은 테스트용") already flags it |
+| States | filter chips with counts, filtered-empty text, inactive-tokens disclosure, slot-remaining status, revoke confirm (alertdialog, irreversible warning) and success toast all work |
+
+Security invariant verified in code and left untouched: the full token exists only in the POST 201
+response (`cache-control: no-store`, "Store this token now — it is never shown again"); `GET /api/tokens`
+returns `display_id` only, and the list renders the masked `cnb_pat_••••` + last 6. Nothing in this
+amendment proposes storing or re-displaying the full secret.
+
+**Decision — direction (a): keep the table, restructure the row hierarchy.** JTBD: the operator's
+recurring job here is small-batch housekeeping ("which tokens are active, which are stale, kill the
+one I retired"), and the rare setup job is "issue once, copy, paste into the client". The list is
+capped (5 active + disclosed inactive) and is never bulk-scanned, so cards (direction b) would spend
+vertical space pushing the how-to and issue form further down without adding information, and a
+master-detail split (direction c) adds a selection state whose detail panel would repeat what one
+row already shows. Restructuring the row inside the existing `list-table` keeps C1–C6 intact and
+gives the name room to carry recognition.
+
+| # | Decision | Acceptance criterion |
+|---|---|---|
+| C7 | Row hierarchy: columns 8 → 5. `토큰` cell = label (primary, `cell-truncate` with `title`) + status chip inline + a secondary caption line with the scope label and the masked identifier in mono; `만료`, `마지막 사용` keep their current content in wider columns; no `tmin-64` overflow at 1280 px | All row content visible at 1280×720 without horizontal scroll; secondary line is text, not colour-only; the sr-only table caption and headers updated (`colToken` 토큰) |
+| C8 | Row actions move into the established `RowMenu` (`components/crud.tsx`, "더 보기", `aria-label="{name} 작업 메뉴"`): active rows carry the 해지 item (`danger: true`); revoked/expired rows show "—" | Revocation still requires the C-series confirm dialog (`ConfirmDialog`, danger tone) before any change; the danger styling lives at the commitment point, not on every row; keyboard: menu items reachable and labelled (existing RowMenu focus management) |
+| C9 | Reveal modal fits short viewports: panel `max-height: min(85dvh, 48rem)` with internal scroll and a pinned footer so "저장했습니다" is always visible; add a "설정 예시 복사" ghost button beside 토큰 복사 that copies the JSON snippet | At 720 px height the primary button is visible without scrolling the page; both copy actions announce success via the existing `aria-live` status |
+| C10 | Expiry presentation unchanged (date + D-n chip + ≤7-day "곧 만료" chip, all aria-labelled); empty/filtered states, slot status and the inactive disclosure unchanged — verified working in the Row 0 diagnosis | C3–C5 acceptance criteria continue to pass; no regression in `connected-apps-page.test.ts` |
+
+i18n keys (`pages.connectedApps`, ko drafted): `colToken` "토큰", `rowMenuAria` "{p1} 작업 메뉴",
+`revealSnippetCopy` "설정 예시 복사", `revealSnippetCopiedOk` "설정 예시를 복사했습니다.",
+`revealSnippetCopyFail` "복사에 실패했습니다. 직접 선택해 복사해 주세요."; en mirrors in
+`locales/en.json`. The hosted-connector section (C1/C2: connector box, numbered how-to, MCP URL
+copy) is untouched.
+
 ## 3. Accessibility (ADR-0065)
 
 - **Target**: WCAG 2.1 AA.
-- **Affected interactions**: register form fields and validation errors (associated via `aria-describedby`, error summary focus on submit failure); alias chips (keyboard add/remove, labelled remove buttons); key suggestion (no focus steal); preview (`aria-live="polite"`); token status chip (icon + text, 1.4.1); status filter and revoked/expired disclosure (`aria-expanded`); copy-URL button (status announced); 4.5:1 contrast for all text including the enlarged table.
+- **Affected interactions**: register form fields and validation errors (associated via `aria-describedby`, error summary focus on submit failure); alias chips (keyboard add/remove, labelled remove buttons); key suggestion (no focus steal); preview (`aria-live="polite"`); token status chip (icon + text, 1.4.1); status filter and revoked/expired disclosure (`aria-expanded`); copy-URL button (status announced); 4.5:1 contrast for all text including the enlarged table. **Amendment (§2.4)**: token row secondary caption line is text (never colour-only); `RowMenu` per row is keyboard-operable with a labelled trigger; the reveal modal keeps `useModalFocus` trapping and both copy buttons announce through `aria-live`; the pinned footer stays inside the focus order.
 - **Verification**: `design:lint`, axe-core via the accessibility-audit skill on both pages, keyboard-only pass through each form and the filter/disclosure, unit tests asserting labels and `aria-*` attributes.
 
 ## 4. Preview Verification (ADR-0070)
@@ -127,5 +169,5 @@ Registration mutates repo YAML and generated data; in production that would dive
 - Unit: key suggestion, duplicate detection (key/term/alias normalization), alias parsing (`glossary-form.ts`); regeneration call after register (`glossary-generate.ts`); prod block returns 403; `isAllowedTtl(180)` true, 365 false; token status/D-n derivation and expiring-soon threshold.
 - Existing suites updated: `tests/unit/api-tokens.test.ts`, `token-issue-access.test.ts`, `connected-apps-page.test.ts`, `i18n-audit.test.ts`.
 - Data: `bun glossary/_validate.ts`, glossary lint, `generate-glossary-data.ts` output diff reviewed.
-- UI: `design:lint`, axe-core, Preview Verification per §4.
+- UI: `design:lint`, axe-core, Preview Verification per §4. **Amendment (§2.4)**: `connected-apps-page.test.ts` updated for the 5-column row (label + status chip + scope/identifier caption line), the RowMenu action path, and the snippet-copy button; keyboard pass through a token row menu and the reveal modal at a 720 px-tall viewport.
 - Gate: `bun scripts/audit.ts` and `/sync` spec-check.

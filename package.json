@@ -79,6 +79,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "cronstrue": "^3.38.0",
     "js-yaml": "^5.5.0",
     "marked": "^18.1.2",
     "nodemailer": "^10.3.1",
