@@ -59,3 +59,31 @@ Commit `bdaf2657` (feat(admin): admin console and screen improvements, 2026-10-2
 - `.github/workflows/quality.yml` is frozen for this task (PR #786 owns it).
 - Pinning CJK fonts on CI runners (a quality.yml change) would align CI font metrics with dev machines; if the glossary overflow still reproduces after change 3, that is the follow-up to route through PM.
 - Root-lane typechecks stay on TS 7.0.2 intentionally; the root-vs-web-next `tsc` shadowing inside `bun run` remains a footgun for FUTURE scripts — any new script that must run a non-root compiler needs the same explicit `./node_modules/.bin/` pin (surfaced for platform-lead awareness).
+
+## 6. Round 2 — run 41267430065 residuals (same PR, second dispatch)
+
+PM dispatch scoped this round to the three remaining red jobs of run 41267430065 (lint / coverage / e2e; the three typecheck jobs pass and are frozen). The Round 1 §5 quality.yml freeze is lifted for this branch by the same dispatch — the branch already carries #786's workflow commit, so its diff collapses on merge as designed.
+
+### 6.1 lint — the "1 error" was the biome formatter, not the noExplicitAny
+
+The run's single lint error is `File content differs from formatting output` on `app/web-next/app/styles.css`: `biome ci --changed` format-checks every changed file whole, and styles.css predates biome's CSS formatter, so ANY PR touching the file fails the gate (Round 1 §2.4 had already flagged the symptom; the visible `noExplicitAny` diagnostic at `test-runner.ts:572` is warning-severity and was mis-attributed as the error by both the run summary reading and the dispatch). Empirics:
+
+- Mass-format styles.css (`bunx biome format --write`): a 5,273-line reflow (3,954+/1,319−) that broke **6 unit tests** asserting raw CSS substrings (`connected-apps` form-grid, stage-frame focus bubble, group-card focus reveal, funnel modifier, table-sizing guard, label sweep) — the file's exact text is load-bearing for tests, so a whole-file reformat is a governed change of its own (reformat + rewrite 6 assertions + visual regression), not lint hygiene to smuggle into a CI-fix PR.
+- **Chosen**: formatter override for `app/web-next/app/styles.css` in `biome.json` — the same pattern the repo already uses for `db/lib/snapshot-filler.ts`. The linter remains active on the file: its 2 `noImportantStyles` + 19 `noDescendingSpecificity` warnings still report (non-blocking) and stay flagged as debt for PM triage.
+
+While in `scripts/test-runner.ts`: the five `catch (: any)` annotations became `catch (unknown)` + `instanceof Error` narrowing, and the two global `isNaN` uses became `Number.isNaN` — 7 lint warnings removed, `typecheck:core` clean.
+
+### 6.2 coverage — every failure is a missing Python package
+
+All ten coverage failures in the run are `ModuleNotFoundError` raised inside the suite's spawned Python children: `render_docx.py`→`docx`, `render_pdf.py`→`reportlab`, `render_hwpx.py`→`hwpx`, `monte_carlo.py`→`numpy`. The dispatch hypotheses are disproven by the log: no test reached an assertion (nothing about fonts or determinism ever executed), and the Korean-font hypothesis is moot anyway — the renderers resolve fonts repo-first (`python/report/fonts/NanumGothic{,Bold}.ttf`, OFL, shipped in-repo), so no runner font package is needed. No bun-version drift is involved. Fix: the coverage job gets `actions/setup-python@a26af69…` (v5.6.0, Python 3.12) + `pip install -r python/requirements.txt` before `test:coverage` — the repo's own pinned dependency set, install path documented in the file header.
+
+### 6.3 e2e — the overflow culprit is the class-less glossary search input
+
+The Round 1 `OVERFLOW-CULPRITS` diagnostic paid off: `input right=396 w=340` — the offender is the bare `<input type="search">` on `/glossary` (`app/web-next/app/glossary/page.tsx`), which has **no CSS width**. Its intrinsic width is the `size` attribute (default 20) × the average glyph width of the inherited font — on darwin ≈310px (fits 390px), under CI linux's wider CJK fallback metrics 340px (+6px past the viewport, main's 2.5rem side padding included). The prior dispatch's `overflow-wrap: anywhere` hardening targeted `<code>` tokens and could not touch this. Fix: `max-width: 100%` on the global `input, select, textarea` rule — the box is capped at its containing block regardless of font metrics, which closes the whole failure class (any width-less form control on any route), not just this instance. Pinning CJK fonts on runners (Round 1 §5 follow-up) is therefore unnecessary for this failure.
+
+### 6.4 Verification (round 2, local)
+
+- `bunx biome ci --changed --since=origin/main` → exit 0 (0 errors; 47 warnings / 6 infos, all non-blocking).
+- `bun run typecheck:core` → 0. `bun run design:lint` → clean. `bun run test:unit` → full green (418 files).
+- `bun test tests/scenarios/axe-sweep.test.ts -t "no horizontal overflow"` → pass, `OVERFLOW-390 offenders=0`.
+- CI verdict for this round: recorded in PR #787's body (updated after the branch's CI run).

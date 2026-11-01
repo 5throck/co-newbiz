@@ -1,6 +1,13 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.10.1
+ * @version 1.10.2
+ *
+ * v1.10.2 (2026-11-01, lint hygiene — quality-gate round 2, spec
+ *         docs/designs/2026-11-01-quality-gate-web-types-and-e2e-design.md §6.1):
+ *         the five `catch (: any)` annotations become `catch` (unknown) with
+ *         `instanceof Error` narrowing and the two global `isNaN` uses become
+ *         `Number.isNaN` — 7 lint warnings removed, zero behavior change
+ *         (`typecheck:core` clean; full unit + scenario suites green).
  *
  * v1.10.0 (2026-11-01, axe-sweep suite budget — CI run 41258720879):
  *         `axe-sweep.test.ts` joins FILE_TIME_BUDGETS (suite 300s → 900s; per-test
@@ -194,9 +201,10 @@ function getTestFiles(suite: TestSuite): string[] {
         files.push(join(suite.dir, entry.name));
       }
     }
-  } catch (error: any) {
-    if (error.code !== "ENOENT") {
-      console.error(`Error reading directory ${suite.dir}: ${error.message}`);
+  } catch (error) {
+    const code = error instanceof Error && "code" in error ? error.code : undefined;
+    if (code !== "ENOENT") {
+      console.error(`Error reading directory ${suite.dir}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   return files.sort();
@@ -301,7 +309,7 @@ async function executeTestFile(
       timedOut: false,
       error: exitCode !== 0 ? `Process exited with code ${exitCode}` : undefined,
     };
-  } catch (err: any) {
+  } catch (err) {
     if (timer) clearTimeout(timer);
     return {
       file,
@@ -311,7 +319,7 @@ async function executeTestFile(
       stderr: "",
       exitCode: null,
       timedOut: false,
-      error: err.message,
+      error: err instanceof Error ? err.message : String(err),
     };
   }
 }
@@ -471,9 +479,9 @@ export async function runTests(suiteName: string = "integration", options: RunOp
             execMode,
           );
         });
-      } catch (err: any) {
+      } catch (err) {
         console.warn(
-          `[test-runner] Warning: Parallel execution failed (${err.message}). Falling back to sequential execution...`,
+          `[test-runner] Warning: Parallel execution failed (${err instanceof Error ? err.message : String(err)}). Falling back to sequential execution...`,
         );
         results = [];
         for (let i = 0; i < files.length; i++) {
@@ -569,16 +577,16 @@ export async function runTests(suiteName: string = "integration", options: RunOp
 
     console.log(`✓ ${suiteName} suite passed (${totalDuration}ms)`);
     return true;
-  } catch (error: any) {
-    console.error(`✗ Suite execution error: ${error.message}`);
+  } catch (error) {
+    console.error(`✗ Suite execution error: ${error instanceof Error ? error.message : String(error)}`);
     return false;
   } finally {
     try {
       if (existsSync("tests/.temp")) {
         rmSync("tests/.temp", { recursive: true, force: true });
       }
-    } catch (e: any) {
-      console.error(`[test-runner] Error during temp dir cleanup: ${e.message || e}`);
+    } catch (e) {
+      console.error(`[test-runner] Error during temp dir cleanup: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 }
@@ -597,10 +605,10 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
       parallel = false;
     } else if (arg === "--concurrency" || arg === "-c") {
       const val = parseInt(args[++i], 10);
-      if (!isNaN(val) && val > 0) concurrency = val;
+      if (!Number.isNaN(val) && val > 0) concurrency = val;
     } else if (arg === "--timeout" || arg === "-t") {
       const val = parseInt(args[++i], 10);
-      if (!isNaN(val) && val > 0) timeout = val;
+      if (!Number.isNaN(val) && val > 0) timeout = val;
     } else if (!arg.startsWith("-")) {
       suiteName = arg;
     }

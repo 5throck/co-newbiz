@@ -284,6 +284,11 @@
     /* 폼 컨트롤이 grid/flex 트랙 안에서 수축할 수 있게 — min-width:auto이면
        고정 폭 트랙(예: WACC 입력 행의 7rem 값 칸)을 벗어나 옆 입력칸과 겹친다. */
     min-width: 0;
+    /* 폼 컨트롤이 컨테이너를 벗어나지 않게 — CSS width가 없는 <input>의 내재 폭은
+       size 속성 × 글꼴 평균 자폭인데, 폭이 넓은 CJK 폴백 폰트(CI linux)에서는 그 값이
+       뷰포트(390px)를 넘긴다(OVERFLOW-390 /glossary +6px). max-width는 폰트 계량과
+       무관하게 상자 모델을 부모 폭 안에 묶는다. */
+    max-width: 100%;
     background: var(--input-bg);
     color: var(--fg);
     transition: all 0.3s var(--ease-spring);

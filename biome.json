@@ -39,6 +39,10 @@
     {
       "includes": ["db/lib/snapshot-filler.ts"],
       "formatter": { "enabled": false }
+    },
+    {
+      "includes": ["app/web-next/app/styles.css"],
+      "formatter": { "enabled": false }
     }
   ],
   "assist": { "enabled": false }
