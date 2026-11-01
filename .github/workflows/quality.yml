@@ -21,6 +21,8 @@ jobs:
         with:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: app/web-next
       - run: bun run typecheck:core
 
   typecheck-baseline:
@@ -31,6 +33,8 @@ jobs:
         with:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: app/web-next
       - run: bun run typecheck:baseline
 
   typecheck-web:
@@ -77,6 +81,8 @@ jobs:
         with:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: app/web-next
       - run: bun run test:coverage
       - run: bun run coverage:check
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
