@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-01T01:18:38.105Z
+**Generated**: 2026-11-01T04:00:57.874Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -355,7 +355,7 @@
 | sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | N/A |
 | sync-wiki-projection.ts | 1.0.0 | scripts/co-newbiz/sync-wiki-projection.ts | js-yaml |
 | team-builder.ts | 1.5.0 | scripts/team-builder.ts | N/A |
-| test-runner.ts | 1.9.0 | scripts/test-runner.ts | fs, os, path |
+| test-runner.ts | 1.10.2 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | N/A |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |

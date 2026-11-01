@@ -80,6 +80,14 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.4.x
+      # The coverage suite spawns the python/ analysis scripts (report renderers,
+      # monte_carlo.py) via python3. The hosted runner has no PyPI packages, so
+      # every render/simulate test failed with ModuleNotFoundError (docx, reportlab,
+      # hwpx, numpy). Install the pinned dependency set before the suite.
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - run: pip install -r python/requirements.txt
       - run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
         working-directory: app/web-next
