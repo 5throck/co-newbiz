@@ -5,7 +5,15 @@
 // decision form is refused inline (409 reconfirmation_required) with the unmet items named; nothing is recorded.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
-import { axeScan, formatAxe, launchBrowser, loginThroughUi, visit, type AxeResult, type Session } from "./_support/browser.ts";
+import {
+  axeScan,
+  formatAxe,
+  launchBrowser,
+  loginThroughUi,
+  visit,
+  type AxeResult,
+  type Session,
+} from "./_support/browser.ts";
 import { GREENFIELD, seedGreenfieldDeal } from "./_support/deals.ts";
 import type { Browser } from "./_support/playwright.ts";
 
@@ -18,14 +26,25 @@ const REASON = "이전 규칙으로 기록된 프로젝트라 새로 쓰기 전�
 const axe: AxeResult[] = [];
 
 beforeAll(async () => {
-  app = await startApp("reconfirm-ui", { seed: async ({ dbPath, analystId }) => { await seedGreenfieldDeal(dbPath, analystId); } });
+  app = await startApp("reconfirm-ui", {
+    seed: async ({ dbPath, analystId }) => {
+      await seedGreenfieldDeal(dbPath, analystId);
+    },
+  });
   browser = await launchBrowser();
   analyst = await loginThroughUi(browser, app);
   admin = await loginThroughUi(browser, app, "admin");
 }, 180_000);
-afterAll(async () => { await browser?.close(); await app?.stop(); });
+afterAll(async () => {
+  await browser?.close();
+  await app?.stop();
+});
 
-const fsRows = () => app.readDb((d) => (d.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ? AND gate = 'fs'").get(P) as { c: number }).c);
+const fsRows = () =>
+  app.readDb(
+    (d) =>
+      (d.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ? AND gate = 'fs'").get(P) as { c: number }).c,
+  );
 
 describe("admin gate integrity KPI screen", () => {
   test("renders G1-G12 (cards or collapsed empty summaries), each rendered card with a state in text, and no axe violations in both themes", async () => {
@@ -38,16 +57,20 @@ describe("admin gate integrity KPI screen", () => {
     // under the greenfield seed only G7 (breached), G11 and G12 (never empty by
     // contract) render as cards. The twelve-indicator contract is now: every G id
     // appears either as a card or inside its group's empty summary.
-    const cardTestids = await admin.page.locator('[data-testid^="kpi-G"]').evaluateAll((els) =>
-      els.map((e) => e.getAttribute("data-testid") ?? ""),
-    );
+    const cardTestids = await admin.page
+      .locator('[data-testid^="kpi-G"]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-testid") ?? ""));
     const emptyText = (await admin.page.locator('[data-testid^="kpi-empty-"] li').allTextContents()).join("\n");
     const emptyIds = [...emptyText.matchAll(/G\d+/g)].map((m) => m[0]);
-    const missing = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"].filter((id) => !cardTestids.includes(`kpi-${id}`) && !emptyIds.includes(id));
+    const missing = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"].filter(
+      (id) => !cardTestids.includes(`kpi-${id}`) && !emptyIds.includes(id),
+    );
     expect(missing).toEqual([]);
     for (const testid of cardTestids) {
       const text = await admin.page.locator(`[data-testid="${testid}"]`).innerText();
-      expect(/한도 이내|한도 초과|데이터베이스 변경 대기|계산 불가/.test(text), `${testid}: ${text.slice(0, 80)}`).toBe(true);
+      expect(/한도 이내|한도 초과|데이터베이스 변경 대기|계산 불가/.test(text), `${testid}: ${text.slice(0, 80)}`).toBe(
+        true,
+      );
     }
     // G6's unreviewed note ("검토 전") renders only when G6 has data for the period;
     // a collapsed G6 shows the readiness group's empty summary instead.
@@ -66,7 +89,10 @@ describe("admin gate integrity KPI screen", () => {
     const gate = admin.page.getByLabel("관문");
     await gate.selectOption("fs");
     await admin.page.getByRole("button", { name: "지표 보기" }).click();
-    await admin.page.locator('[data-testid="kpi-summary"]').filter({ hasText: "타당성" }).waitFor({ state: "visible", timeout: 20_000 });
+    await admin.page
+      .locator('[data-testid="kpi-summary"]')
+      .filter({ hasText: "타당성" })
+      .waitFor({ state: "visible", timeout: 20_000 });
   }, 120_000);
 });
 
@@ -80,8 +106,20 @@ describe("re-confirmation notice and the inline 409", () => {
     await create.getByLabel("프로젝트 id").fill(P);
     await create.locator("textarea").fill(REASON);
     await create.getByRole("button", { name: "요건 열기" }).click();
-    await admin.page.locator(".toast").filter({ hasText: "요건을 열었습니다" }).waitFor({ state: "visible", timeout: 20_000 });
-    expect(app.readDb((d) => (d.query("SELECT COUNT(*) c FROM project_reconfirm_requirement WHERE project_id = ? AND cleared_at IS NULL").get(P) as { c: number }).c)).toBe(1);
+    await admin.page
+      .locator(".toast")
+      .filter({ hasText: "요건을 열었습니다" })
+      .waitFor({ state: "visible", timeout: 20_000 });
+    expect(
+      app.readDb(
+        (d) =>
+          (
+            d
+              .query("SELECT COUNT(*) c FROM project_reconfirm_requirement WHERE project_id = ? AND cleared_at IS NULL")
+              .get(P) as { c: number }
+          ).c,
+      ),
+    ).toBe(1);
 
     await visit(analyst.page, app, `/projects/${P}/business-case?tab=decision`);
     const notice = analyst.page.locator('[data-testid="reconfirm-notice"]');
@@ -99,7 +137,9 @@ describe("re-confirmation notice and the inline 409", () => {
     await form.locator("select").last().selectOption("go");
     await form.locator("input[required]").first().fill("채택 사례의 NPV/BEP가 투자 기준을 충족함");
     await form.locator('button[type="submit"]').last().click();
-    const posted = analyst.page.waitForResponse((r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+    const posted = analyst.page.waitForResponse(
+      (r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+    );
     await analyst.page.getByRole("alertdialog").getByRole("button", { name: "기록", exact: true }).click();
     const res = await posted;
     expect(res.status()).toBe(409);
