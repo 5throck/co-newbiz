@@ -2201,11 +2201,7 @@
         ".agents/skills/decision-record/SKILL.md",
         ".codex/skills/decision-record/SKILL.md",
         ".hermes/skills/decision-record/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-10-25"
-      }
+      ]
     },
     {
       "id": "skill:root/design-foundation",
@@ -3468,7 +3464,7 @@
       ],
       "usage": {
         "sessions": 3,
-        "last_used": "2026-11-01"
+        "last_used": "2026-11-02"
       }
     },
     {
