@@ -133,3 +133,6 @@ tests/e2e-visual/screenshots/
 
 # Scheduler-generated reports (gate-integrity weekly shadow report, ...)
 db/data/reports/
+
+# Retention archives (D6: local db/archive/ inside the backed-up volume; never committed)
+db/archive/

@@ -1,4 +1,6 @@
-// @version 1.1.0
+// @version 1.2.0
+// 1.2.0: ADR-0189 phase P6 — retention.cleanup registers here, which makes schedule-seed create its
+// schedule_job row disabled (D3) with cron 0 3 * * *, timeout 30 min, max_retries 0.
 // 1.1.0: ADR-0189 phase P5 — the five collect.* handlers register here, which makes schedule-seed create their
 // schedule_job rows disabled (D3) with each handler's cron/timeout/retry values.
 /**
@@ -14,6 +16,7 @@ import { collectEcos } from "./collect/ecos.ts";
 import { collectKrx } from "./collect/krx.ts";
 import { collectKosis } from "./collect/kosis.ts";
 import { collectLaw } from "./collect/law.ts";
+import { retentionCleanup } from "./retention-cleanup.ts";
 import type { JobHandler } from "./types.ts";
 
 const HANDLERS = new Map<string, JobHandler>();
@@ -41,3 +44,4 @@ registerJobHandler(collectEcos);
 registerJobHandler(collectKrx);
 registerJobHandler(collectKosis);
 registerJobHandler(collectLaw);
+registerJobHandler(retentionCleanup);
