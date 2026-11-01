@@ -134,7 +134,7 @@ describe("platform parity: variant audit hook wiring (ADR-0183 D3)", () => {
 });
 
 describe("platform parity: validate-model-registry.ts PLATFORMS vs workspace-schema.json models (ADR-0183 D3)", () => {
-  test("the 7-platform list matches the models registry block exactly (both directions)", () => {
+  test("the 8-platform list matches the models registry block exactly (both directions)", () => {
     // The script source is the single source for the platform list — extract
     // it instead of hardcoding a second copy here.
     const src = readFileSync(join(ROOT, "scripts", "validate-model-registry.ts"), "utf-8");
@@ -153,8 +153,9 @@ describe("platform parity: validate-model-registry.ts PLATFORMS vs workspace-sch
     expect([...scriptPlatforms].sort()).toEqual([...schemaPlatforms].sort());
     // The known harness count is a floor guard: if a platform joins the list
     // without a registry entry (or vice versa) the equality above already
-    // fails — this pins the design's "7 platforms" vocabulary so a silent
-    // single-platform addition is a conscious test change.
-    expect(scriptPlatforms.length).toBe(7);
+    // fails — this pins the design's "8 platforms" vocabulary so a silent
+    // single-platform addition is a conscious test change. 8th entry `zcode`
+    // joined via template 0.26.0 (2026-11-01 upgrade delivery).
+    expect(scriptPlatforms.length).toBe(8);
   });
 });
