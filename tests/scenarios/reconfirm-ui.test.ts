@@ -1,5 +1,6 @@
-// ADR-0186 P5 UI on the production bundle: (1) the admin "Gate integrity" KPI screen renders all twelve indicators with
-// state in icon + text and the shadow-report copy; (2) an administrator opens a re-confirmation requirement on a project,
+// ADR-0186 P5 UI on the production bundle: (1) the admin "Gate integrity" KPI screen renders all twelve indicators —
+// as cards with state in icon + text or, since the bdaf2657 screen redesign, collapsed into their group's empty
+// summary when they have nothing to show for the period — plus the shadow-report copy; (2) an administrator opens a re-confirmation requirement on a project,
 // a person sees the notice on the stage screen with its items and a disabled clear action, and a GO recorded through the
 // decision form is refused inline (409 reconfirmation_required) with the unmet items named; nothing is recorded.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -27,24 +28,45 @@ afterAll(async () => { await browser?.close(); await app?.stop(); });
 const fsRows = () => app.readDb((d) => (d.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ? AND gate = 'fs'").get(P) as { c: number }).c);
 
 describe("admin gate integrity KPI screen", () => {
-  test("renders G1-G12, each with a state in text, the unreviewed note for G6, and no axe violations in both themes", async () => {
+  test("renders G1-G12 (cards or collapsed empty summaries), each rendered card with a state in text, and no axe violations in both themes", async () => {
     await visit(admin.page, app, "/admin/gate-integrity");
     await admin.page.locator('[data-testid="kpi-summary"]').waitFor({ state: "visible", timeout: 30_000 });
-    expect(await admin.page.locator('[data-testid^="kpi-G"]').count()).toBe(12);
-    for (let i = 1; i <= 12; i += 1) {
-      const card = admin.page.locator(`[data-testid="kpi-G${i}"]`);
-      const text = await card.innerText();
-      expect(/한도 이내|한도 초과|데이터베이스 변경 대기|계산 불가/.test(text), `G${i}: ${text.slice(0, 80)}`).toBe(true);
+    // bdaf2657 (feat(admin): admin console and screen improvements) redesigned this
+    // screen: a KPI that computes fine but has nothing to show for the period
+    // (isEmptyKpi) collapses into its group's "empty" summary (`kpi-empty-<group>`)
+    // instead of rendering a `kpi-G*` card, so the card count is data-dependent —
+    // under the greenfield seed only G7 (breached), G11 and G12 (never empty by
+    // contract) render as cards. The twelve-indicator contract is now: every G id
+    // appears either as a card or inside its group's empty summary.
+    const cardTestids = await admin.page.locator('[data-testid^="kpi-G"]').evaluateAll((els) =>
+      els.map((e) => e.getAttribute("data-testid") ?? ""),
+    );
+    const emptyText = (await admin.page.locator('[data-testid^="kpi-empty-"] li').allTextContents()).join("\n");
+    const emptyIds = [...emptyText.matchAll(/G\d+/g)].map((m) => m[0]);
+    const missing = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"].filter((id) => !cardTestids.includes(`kpi-${id}`) && !emptyIds.includes(id));
+    expect(missing).toEqual([]);
+    for (const testid of cardTestids) {
+      const text = await admin.page.locator(`[data-testid="${testid}"]`).innerText();
+      expect(/한도 이내|한도 초과|데이터베이스 변경 대기|계산 불가/.test(text), `${testid}: ${text.slice(0, 80)}`).toBe(true);
     }
-    expect(await admin.page.locator('[data-testid="kpi-G6"]').innerText()).toContain("검토 전");
+    // G6's unreviewed note ("검토 전") renders only when G6 has data for the period;
+    // a collapsed G6 shows the readiness group's empty summary instead.
+    const g6Card = admin.page.locator('[data-testid="kpi-G6"]');
+    if ((await g6Card.count()) > 0) {
+      expect(await g6Card.innerText()).toContain("검토 전");
+    } else {
+      expect(emptyText).toContain("G6");
+    }
     expect(await admin.page.locator("h1").count()).toBe(1);
     axe.push(await axeScan(admin.page, "light /admin/gate-integrity"));
     await admin.page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
     axe.push(await axeScan(admin.page, "dark /admin/gate-integrity"));
-    const gate = admin.page.getByLabel("게이트");
+    // bdaf2657 renamed the filter label (게이트 → 관문) and the summary now renders the
+    // gate through useAdminLabel("kpiKey") ("fs" → "타당성") instead of the raw key.
+    const gate = admin.page.getByLabel("관문");
     await gate.selectOption("fs");
     await admin.page.getByRole("button", { name: "지표 보기" }).click();
-    await admin.page.locator('[data-testid="kpi-summary"]').filter({ hasText: "fs" }).waitFor({ state: "visible", timeout: 20_000 });
+    await admin.page.locator('[data-testid="kpi-summary"]').filter({ hasText: "타당성" }).waitFor({ state: "visible", timeout: 20_000 });
   }, 120_000);
 });
 

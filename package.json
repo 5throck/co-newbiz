@@ -65,7 +65,7 @@
     "typecheck": "tsc -p tsconfig.core.json --noEmit && bun scripts/typecheck-baseline.ts",
     "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
     "typecheck:baseline": "bun scripts/typecheck-baseline.ts",
-    "typecheck:web": "cd app/web-next && tsc --noEmit",
+    "typecheck:web": "cd app/web-next && ./node_modules/.bin/tsc --noEmit",
     "lint": "biome check",
     "lint:changed": "biome ci --changed --since=origin/main --no-errors-on-unmatched"
   },

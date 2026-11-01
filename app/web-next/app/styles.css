@@ -3125,6 +3125,12 @@ a.funnel-card:hover { border-color: var(--primary); }
 .glossary-card-open { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left; background: transparent; border: none; padding: 0; color: inherit; cursor: pointer; font: inherit; }
 .glossary-card-open:hover .glossary-card-head strong { color: var(--accent); }
 .glossary-card-active { border-color: var(--primary) !important; }
+/* A card's widest unbreakable run (term key in <code>) otherwise sets the card's
+   min-content; under font stacks with wider fallback metrics (CI linux) that pushed
+   scrollWidth past the 390px viewport (e2e axe-sweep OVERFLOW-390). `anywhere` —
+   not `break-word` — also shrinks min-content, so a long token can wrap instead of
+   widening its container. */
+.glossary-card code, .glossary-detail code, .glossary-preview { overflow-wrap: anywhere; }
 .glossary-preview { margin: 0.25rem 0 0; font-size: var(--fs-caption); color: var(--muted-fg); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .glossary-detail {
   position: sticky; top: 5.2rem;

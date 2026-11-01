@@ -1,6 +1,21 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.9.0
+ * @version 1.10.0
+ *
+ * v1.10.0 (2026-11-01, axe-sweep suite budget — CI run 41258720879):
+ *         `axe-sweep.test.ts` joins FILE_TIME_BUDGETS (suite 300s → 900s; per-test
+ *         ceiling stays at the file's own declarations — page-contract/overflow
+ *         declare 600s, the theme sweeps 900s). Hosted e2e became runnable on CI
+ *         (billing unblocked) and the file hit the 300s scenarios default at
+ *         300092ms with the two R2-C page-contract tests alone costing 183.8s
+ *         (91.5s + 92.3s) before either axe sweep started. Not a hang: the file
+ *         passes all 4 tests in 302.6s on darwin run solo via plain `bun test`
+ *         (which has no suite wall) — i.e. the file was already over the 300s
+ *         runner budget on a fast machine, and CI runs it ~1.6-2x slower
+ *         (page-contract 91.5s CI vs 45.4s darwin; overflow 92.3s vs 58.1s),
+ *         projecting a CI total of ~480-610s → 900s keeps ~1.5-1.9x headroom.
+ *         First raise for this file (the 2-raises-per-quarter split/trim review
+ *         rule is not triggered).
  *
  * v1.9.0 (2026-10-31, T-20261030-002 stage 2 — spec
  *         docs/designs/2026-10-31-test-budget-split-design.md): the evidence
@@ -159,6 +174,10 @@ const FILE_TIME_BUDGETS: Record<string, { suite: number; test: number }> = {
   // exists so any runtime drift on the extracted file is visible without a
   // registry diff.
   'upgrade-policy-decisions.test.ts': { suite: 120000, test: 15000 },
+  // v1.10.0 (CI run 41258720879): see the header note — hosted e2e's heaviest file,
+  // 4 tests / 70 routes x 2 themes of axe scanning; killed at the 300s default with
+  // the sweeps still running. Suite 900s keeps ~1.5-1.9x over the projected CI total.
+  'axe-sweep.test.ts': { suite: 900000, test: 60000 },
 };
 
 function getTestFiles(suite: TestSuite): string[] {
