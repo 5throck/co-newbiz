@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-01T22:14:16.814Z
+**Generated**: 2026-11-01T23:29:03.312Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 203 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 204 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -284,7 +284,7 @@
 | i18n-lint.ts | 1.1.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | N/A |
 | import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | N/A |
-| index.ts | 1.1.0 | scripts/co-newbiz/jobs/index.ts | N/A |
+| index.ts | 1.2.0 | scripts/co-newbiz/jobs/index.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
@@ -323,6 +323,7 @@
 | resolve-variants.ts | 1.0.3 | scripts/resolve-variants.ts | fs, js-yaml, path |
 | restore-capability-levels.ts | 1.0.0 | scripts/co-newbiz/restore-capability-levels.ts | bun:sqlite |
 | restore.ts | 1.0.0 | scripts/co-newbiz/restore.ts | N/A |
+| retention-cleanup.ts | 1.1.0 | scripts/co-newbiz/jobs/retention-cleanup.ts | N/A |
 | retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | N/A |
 | route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | N/A |
 | route-audit-scan.ts | 1.0.1 | scripts/route-audit-scan.ts | N/A |
