@@ -6,5 +6,6 @@
   "synergy/ai-score-adjustment/route.ts": "LLM draft generator: returns a proposed score adjustment, no database write.",
   "notifications/[id]/read/route.ts": "Per-user read-state watermark on the caller's own notification (migration 0077); no business data.",
   "notifications/read-all/route.ts": "Per-user read-state watermark on the caller's own notifications (migration 0077); no business data.",
-  "reviews/[id]/audit-sample/route.ts": "The route itself records the audit-sample artifact; it is the audit trail, not a business mutation."
+  "reviews/[id]/audit-sample/route.ts": "The route itself records the audit-sample artifact; it is the audit trail, not a business mutation.",
+  "admin/watch-rules/preview/route.ts": "Watch-rule dry-run preview (design 2026-10-29 §13.6): evaluates a NOT-persisted draft with zero writes (no notification row, no watermark advance); the audited writes are the watch/rule CRUD routes."
 }
