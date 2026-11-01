@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-02](2026-11-02.md) | fix(dart): parse streaming corp-code ZIPs via central directory |
 | [2026-11-01](2026-11-01.md) | feat(web): admin schedule management UI and token list restructure |
 | [2026-10-31](2026-10-31.md) | chore: workspace sync — session residue (Step 1 local-work) |
 | [2026-10-30](2026-10-30.md) | feat(web): glossary register UX, agreed terms, connected-apps token screen |
@@ -13,8 +14,8 @@
 | [2026-10-28](2026-10-28.md) | chore: workspace sync (0 files) |
 | [2026-10-27](2026-10-27.md) | feat(governance): gate integrity — ADR-0186 design and hook hardening |
 | [2026-10-26](2026-10-26.md) | docs(docs): workspace sync (136 files) |
-| [2026-10-25](2026-10-25.md) | docs(docs): workspace sync (11 files) |
-| [2026-10-25](2026-10-25.md) | chore(visual): commit aHash baselines, pin macos runner; record getDb migration analysis |
+| 2026-10-25 | docs(docs): workspace sync (11 files) |
+| 2026-10-25 | chore(visual): commit aHash baselines, pin macos runner; record getDb migration analysis |
 | 2026-10-24 | docs(wiki): close the five visual-enrichment follow-ups from the rebuild design V1 waiver |
 | 2026-10-23 | test: refresh migration/library test contracts for bun 1.4 driver behavior and the 0013 schema extension |
 | 2026-10-22 | docs: S1-S12 track project-review report with ticket wiring, ADR-0182 second addendum, memory open issues |

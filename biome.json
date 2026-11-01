@@ -43,6 +43,10 @@
     {
       "includes": ["app/web-next/app/styles.css"],
       "formatter": { "enabled": false }
+    },
+    {
+      "includes": ["app/web-next/lib/dart-client.ts"],
+      "formatter": { "enabled": false }
     }
   ],
   "assist": { "enabled": false }

@@ -1,4 +1,5 @@
-// @version 1.0.0
+// @version 1.1.0 (2026-11-02: isRetryableCollectError classifies zlib/archive truncation
+// errors as retryable — dart corp-code streaming-ZIP gate fix; design section 3.1 dart row)
 /**
  * fetch-source.ts — the library-level collection entry point (ADR-0189 phase P5,
  * design docs/designs/2026-10-29-scheduled-jobs-design.md section 3.2).
@@ -144,19 +145,15 @@ export function upsertPeriod(db: any, periodKey: string): string {
   const endDate = isDay ? periodKey : new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   // md_period CHECK allows date|month|quarter|year — the day grain is stored as "date".
   const periodType = isDay ? "date" : "month";
-  const found = db.query("SELECT id FROM md_period WHERE period_type=? AND start_date=? AND end_date=?").get(periodType, startDate, endDate) as
-    | { id: string }
-    | undefined;
+  const found = db
+    .query("SELECT id FROM md_period WHERE period_type=? AND start_date=? AND end_date=?")
+    .get(periodType, startDate, endDate) as { id: string } | undefined;
   if (found) return found.id;
   const id = ulid();
-  db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [
-    id,
-    periodType,
-    startDate,
-    endDate,
-    y,
-    new Date().toISOString(),
-  ]);
+  db.run(
+    "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+    [id, periodType, startDate, endDate, y, new Date().toISOString()],
+  );
   return id;
 }
 
@@ -206,6 +203,15 @@ export function resolveMonthlyPeriods(fromArg?: string, toArg?: string): string[
  * errors and unit quarantines are terminal. KRX throttling surfaces as
  * KrxHttpError 403/429 (verified live 2026-10-12) — retried; a generic HTTP 403
  * from another host is an auth problem — terminal.
+ *
+ * Archive truncation (dart corp-code ZIP): zlib raises "unexpected end of file"
+ * for a cut deflate stream and parseCorpXml raises its own "corp-code ZIP
+ * truncated" error when the buffer carries no End-of-Central-Directory record.
+ * The deterministic streaming-ZIP misparse itself was fixed on 2026-11-02
+ * (central-directory extraction in app/web-next/lib/dart-client.ts), so a
+ * parser-side truncation no longer occurs on an intact download — but a TRANSFER
+ * cut short still yields a headerless buffer, and retrying it is exactly this
+ * row's network-class policy.
  */
 export function isRetryableCollectError(err: unknown): boolean {
   if (err instanceof KrxHttpError) return err.status >= 500 || err.status === 403 || err.status === 429;
@@ -213,6 +219,7 @@ export function isRetryableCollectError(err: unknown): boolean {
   if (name === "TimeoutError" || name === "AbortError") return true; // AbortSignal.timeout / fetch abort
   if (err instanceof TypeError) return true; // fetch network-layer failure
   const msg = err instanceof Error ? err.message : String(err);
+  if (/unexpected end of file|corp-code ZIP truncated/i.test(msg)) return true; // zlib / parser truncation class
   const m = /HTTP (\d{3})\b/.exec(msg);
   if (m) {
     const status = Number(m[1]);
@@ -263,7 +270,9 @@ function upsertObservation(
   o: { seriesId: string; periodId: string; unitId: string; sourceId: string; value: number; contentHash: string },
 ): { status: "new" | "revised" | "unchanged"; revisionNo: number } {
   const latest = db
-    .query("SELECT revision_no, value FROM fact_market_observation WHERE series_id = ? AND period_id = ? ORDER BY revision_no DESC LIMIT 1")
+    .query(
+      "SELECT revision_no, value FROM fact_market_observation WHERE series_id = ? AND period_id = ? ORDER BY revision_no DESC LIMIT 1",
+    )
     .get(o.seriesId, o.periodId) as { revision_no: number; value: number } | undefined;
 
   if (!latest) {
@@ -326,7 +335,13 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
 
   // Credential gate BEFORE any adapter call (design section 3.1).
   if (!adapter.isEnabled()) {
-    return { ok: false, reason: "credential_missing", source, credentialEnv: adapter.credentialEnv, kSkill: adapter.kSkill };
+    return {
+      ok: false,
+      reason: "credential_missing",
+      source,
+      credentialEnv: adapter.credentialEnv,
+      kSkill: adapter.kSkill,
+    };
   }
 
   const { emit, signal, seriesArg, fromArg, toArg } = opts;
@@ -356,7 +371,9 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
         continue;
       }
       const unitId = (() => {
-        const row = db.query("SELECT id FROM md_unit WHERE code = ?").get(mapping.unitCode) as { id: string } | undefined;
+        const row = db.query("SELECT id FROM md_unit WHERE code = ?").get(mapping.unitCode) as
+          | { id: string }
+          | undefined;
         if (row) return row.id;
         const id = ulid();
         db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [
@@ -395,7 +412,13 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
               });
               rowsUpserted++;
               rowsChanged += r.status === "revised" ? 1 : 0;
-              emit?.({ type: "row", seriesId: s.seriesId, period: row.date, status: r.status, revisionNo: r.revisionNo });
+              emit?.({
+                type: "row",
+                seriesId: s.seriesId,
+                period: row.date,
+                status: r.status,
+                revisionNo: r.revisionNo,
+              });
             } catch (err) {
               fail(s.seriesId, err, row.date);
             }
@@ -445,7 +468,8 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
   }
 
   // ── catalog adapters (dart / law) — md:sync semantics ──
-  if (!adapter.listCatalog) throw new Error(`fetchSource: adapter '${source}' exposes no listCatalog (catalog-kind contract).`);
+  if (!adapter.listCatalog)
+    throw new Error(`fetchSource: adapter '${source}' exposes no listCatalog (catalog-kind contract).`);
   const sourceRegistered = registerSourceIfNeeded(db, source, emit);
   const upserts = await adapter.listCatalog({ all: opts.all ?? false });
   const result = upsertCatalog(db, upserts);

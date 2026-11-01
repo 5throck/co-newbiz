@@ -1,3 +1,7 @@
+// @version 1.1.0 (2026-11-02: parseCorpXml rewritten around the End-of-Central-Directory
+// record — DART ships corpCode as a streaming ZIP whose local headers declare csize/usize 0,
+// and the old next-signature scan cut the deflate stream at a false PK byte-pair; sizes now
+// come from the central directory, and a buffer with no EOCD raises a clear truncation error)
 // DART (전자공시시스템) client — k-dart 스킬 v2.1.0 구현 (ADR: k-dart P1~P5 고도화).
 // 회사 조회(폴백 체인 + 교차검증) · 재무제표(계정 확장·합산 검증·연결/개별 폴백) ·
 // 공시 검색 프리셋 · 지분 안정성 시그널 · 공시 원문 입수.
@@ -169,39 +173,71 @@ function writeCache(rows: CorpRow[]): void {
   } catch { /* 캐시 기록 실패는 치명적이지 않다 */ }
 }
 
-/** P5-11: ZIP slip/bomb 방어 — 크기 상한(50MB)·압축비 상한(100x), 첫 파일의 XML만 추출. */
+/** P5-11: ZIP slip/bomb 방어 — 크기 상한(50MB)·압축비 상한(100x), 첫 파일의 XML만 추출.
+ * 2026-11-02: DART ships corpCode as a STREAMING ZIP — local file headers declare
+ * csize/usize 0; the true sizes live in the trailing data descriptor and the central
+ * directory. Locate the EOCD (PK\x05\x06) by scanning BACKWARD from the end of the
+ * buffer, then inflate each entry with the central directory's real csize. The old
+ * next-signature scan cut the deflate stream at a coincidental PK byte-pair inside
+ * the compressed bytes (offset 2,893,889 of the real 3.63 MB file) and failed
+ * deterministically. A buffer with no EOCD is a truncated download — rejected with a
+ * clear error, never a parser guess (callers classify it for retry). */
 export function parseCorpXml(buf: Buffer): CorpRow[] {
   const MAX_ZIP = 50 * 1024 * 1024;
   const MAX_RATIO = 100;
   if (buf.length > MAX_ZIP) return [];
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
   const { inflateRawSync } = require("node:zlib") as typeof import("node:zlib");
-  if (!(buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b)) return [];
+  if (!(buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b)) return []; // not a ZIP (HTML block page)
+  // 1) locate the EOCD from the end (comment up to 65,535 bytes); validate via commentLen
+  const EOCD_LEN = 22;
+  let eocd = -1;
+  for (let i = buf.length - EOCD_LEN; i >= Math.max(0, buf.length - EOCD_LEN - 65_535); i--) {
+    if (buf.readUInt32LE(i) !== 0x06054b50) continue;
+    if (i + EOCD_LEN + buf.readUInt16LE(i + 20) === buf.length) { eocd = i; break; }
+  }
+  if (eocd === -1) {
+    throw new Error("DART corp-code ZIP truncated: no End-of-Central-Directory record — download incomplete, retry");
+  }
+  const entryCount = buf.readUInt16LE(eocd + 10);
+  const cdOffset = buf.readUInt32LE(eocd + 16);
+  if (entryCount === 0xffff || cdOffset === 0xffffffff || buf.readUInt32LE(eocd + 12) === 0xffffffff) {
+    throw new Error("DART corp-code ZIP64 archives are not supported (unexpected for the corp-code dump)");
+  }
+  if (cdOffset + 4 > buf.length) {
+    throw new Error("DART corp-code ZIP truncated: central directory offset out of bounds — download incomplete, retry");
+  }
+  // 2) central directory entries — the sizes of record live HERE, not in the local header.
   let xml = "";
-  const sig = (i: number) => buf[i] === 0x50 && buf[i + 1] === 0x4b;
-  for (let i = 0; i < buf.length - 4 && !xml; i++) {
-    if (!(sig(i) && buf[i + 2] === 0x03 && buf[i + 3] === 0x04)) continue;
-    const compressionMethod = buf.readUInt16LE(i + 8);
-    let compressedSize = buf.readUInt32LE(i + 18);
-    const uncompressedSize = buf.readUInt32LE(i + 22);
-    const nameLen = buf.readUInt16LE(i + 26);
-    const extraLen = buf.readUInt16LE(i + 28);
-    const fileName = buf.subarray(i + 30, i + 30 + nameLen).toString("utf-8");
-    if (fileName.includes("/") || fileName.includes("..")) return []; // slip 방지 — 단일 파일 덤프만 허용
-    const dataStart = i + 30 + nameLen + extraLen;
-    if (compressedSize === 0) {
-      // 스트리밍 ZIP(data descriptor) — 로컬 헤더에 크기 미기록. 다음 시그니처까지를 데이터로 간주.
-      let next = -1;
-      for (let j = dataStart; j < buf.length - 4; j++) {
-        if (sig(j) && (buf[j + 2] === 0x03 || buf[j + 2] === 0x01)) { next = j; break; }
-      }
-      if (next === -1) next = buf.length;
-      compressedSize = Math.min(next - dataStart, MAX_ZIP);
+  let cursor = cdOffset;
+  for (let n = 0; n < entryCount && !xml; n++) {
+    if (cursor + 46 > buf.length || buf.readUInt32LE(cursor) !== 0x02014b50) {
+      throw new Error(`DART corp-code ZIP corrupt: bad central directory entry at offset ${cursor}`);
     }
+    const compressionMethod = buf.readUInt16LE(cursor + 10);
+    const compressedSize = buf.readUInt32LE(cursor + 20);
+    const uncompressedSize = buf.readUInt32LE(cursor + 24);
+    const nameLen = buf.readUInt16LE(cursor + 28);
+    const extraLen = buf.readUInt16LE(cursor + 30);
+    const commentLen = buf.readUInt16LE(cursor + 32);
+    const localOffset = buf.readUInt32LE(cursor + 42);
+    const fileName = buf.subarray(cursor + 46, cursor + 46 + nameLen).toString("utf-8");
+    cursor += 46 + nameLen + extraLen + commentLen;
+    if (fileName.includes("/") || fileName.includes("..")) return []; // slip 방지 — 단일 파일 덤프만 허용
     if (compressedSize <= 0 || compressedSize > MAX_ZIP) return [];
     if (uncompressedSize > 0 && uncompressedSize / compressedSize > MAX_RATIO) return []; // 압축비 이상 = bomb 의심
+    // only the DATA START comes from the local header (streaming ZIPs declare csize=0 there)
+    if (localOffset + 30 > buf.length || buf.readUInt32LE(localOffset) !== 0x04034b50) {
+      throw new Error(`DART corp-code ZIP corrupt: bad local file header at offset ${localOffset}`);
+    }
+    const dataStart = localOffset + 30 + buf.readUInt16LE(localOffset + 26) + buf.readUInt16LE(localOffset + 28);
+    if (dataStart + compressedSize > buf.length) {
+      throw new Error(`DART corp-code ZIP truncated: entry data cut off at offset ${dataStart} (central directory declares ${compressedSize} bytes) — download incomplete, retry`);
+    }
     const data = buf.subarray(dataStart, dataStart + compressedSize);
-    xml = compressionMethod === 8 ? inflateRawSync(data, { maxOutputLength: MAX_ZIP }).toString("utf-8") : data.toString("utf-8");
+    try {
+      xml = compressionMethod === 8 ? inflateRawSync(data, { maxOutputLength: MAX_ZIP }).toString("utf-8") : data.toString("utf-8");
+    } catch { /* corrupt entry — try the next central directory entry */ }
   }
   const rows: CorpRow[] = [];
   for (const row of xml.split("<list>").slice(1)) {
