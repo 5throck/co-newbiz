@@ -10,6 +10,19 @@ export interface Envelope<T> {
   error: { code: string; message: string; details?: Record<string, unknown> } | null;
 }
 
+/**
+ * List payload: routes that wrap the row array in `{rows}` INSIDE `data` (unlike the
+ * endpoints that return the bare array) — GET /api/admin/notifications, /api/admin/watches,
+ * /api/admin/watches/[id]/rules. Consumers must type the fetch as `api.get<RowList<Row>>`
+ * and read `res.data.rows`; typing against the bare row array compiles fine and then maps
+ * over a non-array at runtime — the P4 QA browser-pass crash this type exists to make
+ * impossible. Paging meta (where present, e.g. notifications) lives on the ENVELOPE meta,
+ * not here — see components/admin/console/types.ts PageMeta for its shape.
+ */
+export interface RowList<T> {
+  rows: T[];
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,

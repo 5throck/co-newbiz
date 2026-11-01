@@ -1,14 +1,13 @@
 "use client";
 
-// Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
+// Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition).
+// The notifications panel moved out per design 2026-10-29-scheduled-jobs-design §13.5–13.7
+// (P4): the history list lives in NotificationSection.tsx, watch management in
+// WatchesSection.tsx (both rendered by AdminConsole under the notifications section).
 import { useLocale, useTranslations } from "next-intl";
 import type { AdminConsoleState } from "./useAdminActions.ts";
-import { ColGroup } from "../../ui.tsx";
 import { formatDateTime } from "../../../lib/format.ts";
 import { useAdminLabel } from "./admin-ui.tsx";
-
-// 알림 목록 7열 — 프로젝트·트리거·발송일이 긴 텍스트라 고정 비율 유지.
-const NOTIFICATIONS_COL_PCT = [22, 16, 10, 10, 10, 20, 12] as const;
 
 export function DataSourcesPanel({ ctx }: { ctx: AdminConsoleState }) {
   const t = useTranslations("admin.ops");
@@ -237,51 +236,5 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
           {retentionNotice && <p className="text-[color:var(--green-fg)]">{retentionNotice}</p>}
         </div>
       )}</>
-  );
-}
-
-export function NotificationsPanel({ ctx }: { ctx: AdminConsoleState }) {
-  const t = useTranslations("admin.ops");
-  const tc = useTranslations("common");
-  const locale = useLocale();
-  const label = useAdminLabel();
-  const { section, notifications } = ctx;
-  return (
-    <>{section === "notifications" &&
-        (notifications === null ? (
-          <p>{tc("loading")}</p>
-        ) : notifications.length === 0 ? (
-          <p className="text-[color:var(--muted-fg)] italic">{t("emptyNotifications")}</p>
-        ) : (
-          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
-<table className="data-table report-table table-fixed-pct tmin-48">
-            <caption className="sr-only">{t("notificationsCaption")}</caption>
-            <ColGroup widths={NOTIFICATIONS_COL_PCT} />            <thead>
-              <tr>
-                <th scope="col">{t("colProject")}</th>
-                <th scope="col">{t("colTrigger")}</th>
-                <th scope="col">{t("colSeverity")}</th>
-                <th scope="col">{t("colChannel")}</th>
-                <th scope="col">{t("colBundle")}</th>
-                <th scope="col">{t("colSentAt")}</th>
-                <th scope="col">{t("colRead")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {notifications.map((n) => (
-                <tr key={n.id}>
-                  <td>{n.project_id ?? "—"}</td>
-                  <td>{n.trigger_type}</td>
-                  <td>{label("severity", n.severity)}</td>
-                  <td>{label("channel", n.channel)}</td>
-                  <td>{n.bundle}</td>
-                  <td>{formatDateTime(n.sent_at, locale)}</td>
-                  <td>{n.read_at ? <span className="status-chip status-green">{t("read")}</span> : <span className="status-chip status-amber">{t("unread")}</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-</div>
-        ))}</>
   );
 }

@@ -18,17 +18,116 @@ export interface ReviewAuditSummary {
 
 export type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
 
-export interface AdminNotificationRow {
+// ── P4 notifications & watches (design 2026-10-29-scheduled-jobs-design §13.5–13.7) ──
+// Shapes mirror the B1 Route Handler contracts verbatim (app/api/admin/notifications*,
+// app/api/admin/watches*, app/api/admin/watch-rules*).
+
+/** Per-channel delivery STATUS COUNTS of one list row ({} = in-app only — the row IS the in-app delivery). */
+export type DeliverySummary = Record<string, Record<string, number>>;
+
+/** Paging meta of GET /api/admin/notifications (page/page_size ≤ 100/total/total_pages — the old count meta is gone). */
+export interface PageMeta {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
+
+/** One row of GET /api/admin/notifications (paged list; the old uncapped shape is gone). */
+export interface AdminNotificationListRow {
   id: string;
-  user_id: string;
-  project_id: string | null;
+  sent_at: string;
+  read_at: string | null;
   trigger_type: string;
   severity: string;
-  payload: string;
+  title: string | null;
+  project: { id: string; project_no: string | null } | null;
+  delivery: DeliverySummary;
+}
+
+/** GET /api/admin/notifications/[id] — the detail-drawer payload. */
+export interface AdminNotificationDetail {
+  id: string;
+  user_id: string;
+  project: { id: string; project_no: string | null } | null;
+  trigger_type: string;
+  severity: string;
+  title: string | null;
+  payload: unknown;
   channel: string;
   bundle: string;
   sent_at: string;
   read_at: string | null;
+  dedupe_key: string | null;
+  source_ref: string | null;
+  deliveries: NotificationDeliveryRow[];
+}
+
+/** One notification_delivery ledger row — masked values are rendered as-is (never unmuted client-side). */
+export interface NotificationDeliveryRow {
+  id: string;
+  channel: string;
+  recipient_user_id: string | null;
+  recipient_address_masked: string | null;
+  target_key: string | null;
+  status: string;
+  attempt: number;
+  next_attempt_at: string | null;
+  last_error: string | null;
+  provider_message_id: string | null;
+  digest_id: string | null;
+  is_test: number;
+  created_at: string;
+  sent_at: string | null;
+}
+
+/** One row of GET /api/admin/watches — `enabled` is DERIVED (enabled_rule_count > 0; no watch.enabled column). */
+export interface WatchListRow {
+  id: string;
+  project: { id: string; project_no: string | null };
+  user_id: string;
+  created_at: string;
+  last_checked_at: string | null;
+  rule_count: number;
+  enabled_rule_count: number;
+  enabled: boolean;
+}
+
+/** One watch_rule row (GET/POST .../watches/[id]/rules, PATCH/DELETE /api/admin/watch-rules/[id]). */
+export interface WatchRuleRow {
+  id: string;
+  watch_id: string;
+  trigger_type: string;
+  threshold: number | null;
+  cooldown_hours: number;
+  channel: string;
+  enabled: number;
+  adr_ref: string | null;
+}
+
+/** Rule draft sent to POST /api/admin/watch-rules/preview (threshold only when the trigger bears one). */
+export interface WatchRuleDraft {
+  trigger_type: string;
+  threshold: number | null;
+  cooldown_hours: number;
+  channel: string;
+}
+
+/** POST /api/admin/watch-rules/preview response — zero-write evaluation; recipients arrive MASKED (§13.8). */
+export interface WatchRulePreview {
+  watch_id: string;
+  project: { id: string; project_no: string | null };
+  trigger_type: string;
+  threshold: number | null;
+  cooldown_hours: number;
+  channel: string;
+  evaluated: boolean;
+  would_fire: boolean;
+  suppressed_by_cooldown: boolean;
+  reason: string;
+  severity: string | null;
+  recipients: Array<{ user_id: string; email_masked: string | null; channels: string[] }>;
+  in_app_user_ids: string[];
 }
 
 export interface GlossaryTermRow {

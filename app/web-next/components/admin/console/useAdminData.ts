@@ -7,7 +7,7 @@ import { useChartTheme } from "../../../lib/echarts-theme.ts";
 import { useState, type FormEvent, useEffect } from "react";
 import { type AdminUser, type DataSourceRow, type ScheduleJobRow, type RetentionPolicyRow, type DatabaseOverview, type RetentionPreview, api, type AuditLogRow } from "../../../lib/api.ts";
 import { useConfirm } from "../../crud.tsx";
-import type { AuditStats, AdminNotificationRow, GlossaryTermRow, GlossaryLintQueue, AdrRow, GovernanceDocRow, ReviewAuditSummary, Section } from "./types.ts";
+import type { AuditStats, GlossaryTermRow, GlossaryLintQueue, AdrRow, GovernanceDocRow, ReviewAuditSummary, Section } from "./types.ts";
 
 export function useAdminData({ section }: { section: Section }) {
   const t = useTranslations("admin.data");
@@ -30,7 +30,8 @@ export function useAdminData({ section }: { section: Section }) {
   const [retention, setRetention] = useState<RetentionPolicyRow[] | null>(null);
   const [dbOverview, setDbOverview] = useState<DatabaseOverview | null>(null);
   const [preview, setPreview] = useState<{ state: "idle" | "loading" | "ready" | "error"; count: number | null }>({ state: "idle", count: null });
-  const [notifications, setNotifications] = useState<AdminNotificationRow[] | null>(null);
+  // notifications state moved to NotificationSection.tsx (P4: server-side filters + paging
+  // made the section self-contained — design 2026-10-29-scheduled-jobs-design §13.5).
   const [glossary, setGlossary] = useState<GlossaryTermRow[] | null>(null);
   const [lintQueue, setLintQueue] = useState<GlossaryLintQueue | null>(null);
   const [adrs, setAdrs] = useState<AdrRow[] | null>(null);
@@ -111,12 +112,6 @@ export function useAdminData({ section }: { section: Section }) {
         .then((res) => setDbOverview(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
-    if (section === "notifications" && notifications === null) {
-      api
-        .get<AdminNotificationRow[]>("/api/admin/notifications")
-        .then((res) => setNotifications(res.data))
-        .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
-    }
     if (section === "glossary" && glossary === null) {
       api
         .get<GlossaryTermRow[]>("/api/glossary")
@@ -150,7 +145,7 @@ export function useAdminData({ section }: { section: Section }) {
         .then((res) => setGovernance(res.data))
         .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
     }
-  }, [section, users, auditLog, sources, jobs, retention, dbOverview, notifications, glossary, lintQueue, adrs, governance]);
+  }, [section, users, auditLog, sources, jobs, retention, dbOverview, glossary, lintQueue, adrs, governance]);
 
   // Impact preview — refreshed as table / date column / months change (count only).
   useEffect(() => {
@@ -192,5 +187,5 @@ export function useAdminData({ section }: { section: Section }) {
       setNotice(err instanceof Error ? err.message : t("createFailed"));
     }
   }
-  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, retentionFormError, retentionNotice, notifications, glossary, lintQueue, registerGlossaryTerm, glossaryWritable, reviewAudit, governance, adrs };
+  return { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, dbOverview, setDbOverview, preview, confirmDialog, section, error, notice, noticePinned, createUserAccount, newUserId, setNewUserId, newUserRole, setNewUserRole, users, me, approve, auditStats, ct, auditLog, auditFilters, setAuditFilters, setAuditLog, setShowAuditTable, showAuditTable, sources, retention, retentionFormError, retentionNotice, glossary, lintQueue, registerGlossaryTerm, glossaryWritable, reviewAudit, governance, adrs };
 }
