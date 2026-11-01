@@ -1244,7 +1244,12 @@ paths:
   /api/admin/schedule-jobs:
     get:
       operationId: listScheduleJobs
-      summary: Job registry plus latest run per job. Admin role.
+      summary: >-
+        Job registry rows with the migration-0183 fields (display_name, description, timeout_sec,
+        max_retries, updated_at, updated_by), next_run_at computed server-side by the shared cron
+        module (null for disabled jobs), and last_run {started_at, status, duration_ms} from the
+        latest job_run (null when never run). No server-side human cron string — the client
+        humanizes with cronstrue per locale. Admin role.
       tags:
         - Admin
       responses:
@@ -2303,9 +2308,56 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
   /api/admin/schedule-jobs/{jobKey}:
+    patch:
+      operationId: updateScheduleJob
+      summary: >-
+        Partial update of one scheduled job (design 2026-10-29-scheduled-jobs-design §4.1/§4.3):
+        cron_expr, timeout_sec (60–7200 s, i.e. 1–120 min), max_retries (0–5) and/or enabled.
+        Server-side cron validation via the shared parser (invalid → 400 invalid_cron) and the
+        5-minute interval floor, except watch.evaluate and notify.deliver (400 cron_too_frequent;
+        notify.deliver's every-minute cron is spec, §13.2). Sets updated_at/updated_by, responds
+        with the full updated row (listScheduleJobs row shape), audits schedule_job_update with
+        before→after values. Admin role.
+      tags:
+        - Admin
+      parameters:
+        - $ref: '#/components/parameters/JobKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                cron_expr:
+                  type: string
+                timeout_sec:
+                  type: integer
+                  minimum: 60
+                  maximum: 7200
+                max_retries:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     put:
       operationId: toggleScheduleJob
-      summary: Enable/disable toggle for one job. Admin role; audited.
+      summary: >-
+        Legacy enable/disable toggle for one job (kept for the existing UI caller; new callers use
+        PATCH updateScheduleJob). Admin role; audited (schedule_job_toggle).
       tags:
         - Admin
       parameters:

@@ -134,16 +134,75 @@ describe("connected-apps personal API tokens UI", () => {
 
   test("token table uses explicit column sizing: shared system (table-fixed-pct + ColGroup), ellipsis label, scroll wrapper", () => {
     // 2026-10-12 table-sizing batch 2: the bespoke .pat-col-* CSS was replaced
-    // by the shared system (ColGroup + table-fixed-pct + tmin + cell-truncate),
-    // so the old auto-layout/min-width CSS assertions no longer apply.
+    // by the shared system (ColGroup + table-fixed-pct + tmin + cell-truncate).
+    // §2.4 amendment (C7, 2026-10-31): the row collapsed 8 → 5 columns, so the
+    // pin moves to the retuned tmin-48 (no horizontal scroll at 1280px).
     expect(PAGE).toContain("pat-token-table");
     expect(PAGE).toMatch(/<div className="table-scroll"[\s\S]*pat-token-table/);
-    expect(PAGE).toMatch(/title=\{tok\.label\}/);
-    expect(PAGE).toContain("table-fixed-pct tmin-64");
+    expect(PAGE).toContain("table-fixed-pct tmin-48");
     expect(PAGE).toContain("ColGroup widths={TOKEN_COL_PCT}");
-    expect(PAGE).toMatch(/const TOKEN_COL_PCT = \[18, 15, 10, 10, 12, 17, 12, 6\] as const/);
-    expect(PAGE).toMatch(/<td className="cell-truncate" title=\{tok\.label\}>/);
+    expect(PAGE).toMatch(/const TOKEN_COL_PCT = \[34, 24, 16, 16, 10\] as const/);
     expect(PAGE).toContain('dateStyle: "short"');
+  });
+
+  test("§2.4 C7: token cell is a hierarchy — label + status chip inline, scope/identifier caption line", () => {
+    expect(ko("pages.connectedApps.colToken")).toBe("토큰");
+    expect(PAGE).toContain('t("colToken")');
+    // primary line: ellipsised label with title + the icon+text chip inline
+    expect(PAGE).toMatch(/<span className="cell-truncate" title=\{tok\.label\}>\{tok\.label\}<\/span>/);
+    expect(PAGE).toMatch(/aria-hidden="true">\{s\.icon\}/);
+    // secondary caption line is text (never colour-only): scope label · masked identifier in mono
+    expect(PAGE).toMatch(/text-\[length:var\(--fs-caption\)\] text-\[color:var\(--muted-fg\)\]"/);
+    expect(PAGE).toMatch(/\{tok\.scopes\.split\(","\)\.includes\("write"\) \? t\("scopeReadWrite"\) : t\("scopeRead"\)\}/);
+    expect(PAGE).toMatch(/<code>\{maskedId\(tok\.display_id\)\}<\/code>/);
+    // the identifier/scope/status columns are gone from the header row
+    const head = PAGE.slice(PAGE.indexOf('id="pat-token-table"'), PAGE.indexOf("<tbody>"));
+    for (const gone of ['t("colIdentifier")', 't("colScopes")', "colLabel"]) {
+      expect(head).not.toContain(gone);
+    }
+    expect(PAGE).toMatch(/<th scope="col">\{t\("colExpires"\)\}<\/th>/);
+    expect(PAGE).toMatch(/<th scope="col">\{t\("colLastUsed"\)\}<\/th>/);
+    expect(PAGE).toMatch(/<th scope="col">\{t\("colCreated"\)\}<\/th>/);
+  });
+
+  test("§2.4 C8: row actions live in the RowMenu; the row itself stays neutral", () => {
+    // the established overflow menu (components/crud.tsx) with the §2.4 trigger label
+    expect(PAGE).toMatch(/import \{ RowMenu, useConfirm, type RowMenuItem \} from "\.\.\/\.\.\/\.\.\/components\/crud\.tsx"/);
+    expect(ko("pages.connectedApps.rowMenuAria")).toBe("{p1} 작업 메뉴");
+    expect(PAGE).toMatch(/<RowMenu label=\{t\("rowMenuAria", \{ p1: tok\.label \}\)\} items=\{menuItems\(tok\)\} \/>/);
+    // revoked/expired rows render an em dash instead of a menu
+    expect(PAGE).toMatch(/\) : \(\n                                "—"\n                              \)\}/);
+    // the 해지 item is danger-flagged; identifier copy rides in the same menu
+    expect(PAGE).toMatch(/danger: true, separatorBefore: true, onSelect: \(\) => revoke\(tok\)/);
+    expect(ko("pages.connectedApps.menuCopyId")).toBe("식별자 복사");
+    expect(PAGE).toMatch(/writeText\(maskedId\(tok\.display_id\)\)/);
+    // no danger-styled button on the row anymore; danger lives at the commitment point
+    expect(PAGE.slice(PAGE.indexOf("<tbody>"))).not.toMatch(/variant="danger"[\s\S]*revoke\(tok\)/);
+    // revocation still requires the confirm dialog (default danger tone) before api.delete
+    expect(ko("pages.connectedApps.tokenRevokeBody")).toMatch(/되돌릴 수 없으며/);
+    expect(PAGE).toMatch(/confirm\([\s\S]*?doRevoke\(tok\)[\s\S]*?api\.delete\(`\/api\/tokens/);
+  });
+
+  test("§2.4 C9: reveal modal fits short viewports and copies the config snippet", () => {
+    // height cap + internal scroll + pinned footer (footer is a flex sibling of the scroll area)
+    expect(PAGE).toMatch(/maxHeight: "min\(85dvh, 48rem\)", display: "flex", flexDirection: "column"/);
+    expect(PAGE).toMatch(/overflowY: "auto", minHeight: 0/);
+    const footer = PAGE.slice(PAGE.indexOf('overflowY: "auto", minHeight: 0'));
+    expect(footer).toMatch(/flexShrink: 0,[\s\S]*revealSavedButton/);
+    // the pinned footer stays inside the focus order: it is inside the modal-panel focus trap
+    expect(footer.indexOf("revealSavedButton")).toBeLessThan(footer.indexOf("</div>\n    </div>"));
+    // snippet copy beside the token copy, both announced via the single aria-live status
+    expect(ko("pages.connectedApps.revealSnippetCopy")).toBe("설정 예시 복사");
+    expect(ko("pages.connectedApps.revealSnippetCopiedOk")).toBe("설정 예시를 복사했습니다.");
+    expect(PAGE).toMatch(/<Button variant="ghost" onClick=\{\(\) => void copySnippet\(\)\}>/);
+    expect(PAGE).toMatch(/writeText\(snippet\)/);
+    expect(PAGE).toMatch(/role="status" aria-live="polite"/);
+    expect(PAGE).toMatch(/t\("revealSnippetCopiedOk"\)/);
+    expect(PAGE).toMatch(/t\("revealSnippetCopyFail"\)/);
+    // one-time warning and focused read-only input untouched
+    expect(PAGE).toMatch(/onFocus=\{\(e\) => e\.currentTarget\.select\(\)\}/);
+    expect(ko("pages.connectedApps.revealBodyTail")).toContain("다시는 보여주지 않습니다");
+    expect(PAGE).not.toMatch(/localStorage|sessionStorage/);
   });
 
   test("page is split into hosted-app and personal-token sections with a copyable connector URL", async () => {

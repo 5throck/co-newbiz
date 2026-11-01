@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-10-31T04:42:38.532Z
+**Generated**: 2026-10-31T13:36:14.182Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 42
 - **Skills**: 107
-- **Scripts**: 194 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 196 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 8
 
 ---
@@ -298,6 +298,8 @@
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
 | newbiz.ts | 1.22.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
+| notify-deliver.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
+| notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
 | orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |

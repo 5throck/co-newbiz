@@ -4,11 +4,20 @@
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
-import { api, ApiError } from "../../../lib/api.ts";
+import { api, ApiError, type ScheduleJobRow } from "../../../lib/api.ts";
+import { useToast } from "../../ui.tsx";
 import type { useAdminData } from "./useAdminData.ts";
+
+/** PATCH /api/admin/schedule-jobs/[jobKey] body — partial update, the design (§4.3) canonical surface. */
+export interface ScheduleJobUpdate {
+  cron_expr?: string;
+  timeout_sec?: number;
+  max_retries?: number;
+}
 
 export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   const t = useTranslations("admin.actions");
+  const { toast } = useToast();
   const { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, setDbOverview, preview, dbOverview } = prev;
 
   const { panelRef: secretModalPanelRef, onKeyDown: secretModalKeyDown } = useModalFocus(
@@ -120,15 +129,51 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   // Optimistic enable/disable: flip locally, revert to the pre-toggle
   // snapshot when the server rejects (admin-only is already enforced
   // server-side, so a failure here is a real failure, not a permissions UI).
+  // Migrated from the legacy PUT toggle to PATCH {enabled} (design
+  // 2026-10-29-scheduled-jobs-design §4.3); the backend keeps PUT byte-compatible
+  // but the UI no longer relies on it.
   async function toggleJob(jobKey: string, next: boolean) {
     const snapshot = jobs;
     setJobs((rows) => rows?.map((j) => (j.job_key === jobKey ? { ...j, enabled: next ? 1 : 0 } : j)) ?? rows);
     try {
-      await api.put(`/api/admin/schedule-jobs/${encodeURIComponent(jobKey)}`, { enabled: next });
+      await api.patch(`/api/admin/schedule-jobs/${encodeURIComponent(jobKey)}`, { enabled: next });
     } catch (err) {
       setJobs(snapshot);
       setError(err instanceof Error ? err.message : t("jobToggleFailed"));
     }
+  }
+
+  // PATCH the editable fields (cron_expr / timeout_sec / max_retries — the
+  // dialog never sends `enabled`; enabling is the separate toggle action).
+  // Success toasts (ADR-0121 mutation-outcome queue) and re-fetches the rows;
+  // a 400 resolves { ok: false, error } with the server message so the dialog
+  // can keep it inline next to the field (and the toast repeats it).
+  async function saveJob(jobKey: string, payload: ScheduleJobUpdate): Promise<{ ok: boolean; error?: string }> {
+    try {
+      await api.patch<ScheduleJobRow>(`/api/admin/schedule-jobs/${encodeURIComponent(jobKey)}`, payload);
+      toast(t("jobSavedNotice", { p1: jobKey }));
+      setJobs(null); // re-fetch through the section effect
+      return { ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("jobSaveFailed");
+      toast(message, "alert");
+      return { ok: false, error: message };
+    }
+  }
+
+  // Empty-state seed ("기본 작업 등록", design §4.3): POST the idempotent seed
+  // endpoint after confirmation — it only inserts missing keys and never
+  // touches existing rows, so a confirm is courtesy, not protection.
+  function seedJobs() {
+    confirm(t("jobSeedTitle"), async () => {
+      try {
+        await api.post("/api/admin/schedule-jobs/seed");
+        toast(t("jobSeedDone"));
+        setJobs(null);
+      } catch (err) {
+        toast(err instanceof Error ? err.message : t("jobSeedFailed"), "alert");
+      }
+    }, { body: t("jobSeedBody"), confirmLabel: t("jobSeedLabel") });
   }
 
   async function persistRetention(monthsValue: number) {
@@ -190,7 +235,7 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
       })();
     }, { body: t("retentionRemoveBody") });
   }
-  return { resettingUser, issuedSecret, secretModalKeyDown, secretModalPanelRef, setIssuedSecret, showCreateUser, setShowCreateUser, setRole, userAction, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, toggleJob, saveRetention, removeRetentionPolicy };
+  return { resettingUser, issuedSecret, secretModalKeyDown, secretModalPanelRef, setIssuedSecret, showCreateUser, setShowCreateUser, setRole, userAction, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, toggleJob, saveJob, seedJobs, saveRetention, removeRetentionPolicy };
 }
 
 export type AdminConsoleState = ReturnType<typeof useAdminData> & ReturnType<typeof useAdminActions>;

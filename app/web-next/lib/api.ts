@@ -553,15 +553,24 @@ export interface ValueChainLinkRow {
 // --- PR #65 batch 4: admin schedule/retention sections (the glossary list
 // reuses GlossaryTermSummary above) — appended only. ---
 
-// GET /api/admin/schedule-jobs rows: job registry plus the latest job_run
-// per job (null when the job has never run).
+// GET /api/admin/schedule-jobs rows: job registry (migration-0183 fields) plus
+// next_run_at (shared cron module) and the latest job_run per job (null when
+// the job has never run). Mirrors lib/schedule/job-rows.ts ScheduleJobRow.
 export interface ScheduleJobRow {
   id: string;
   job_key: string;
   cron_expr: string;
   enabled: number; // SQLite INTEGER 0/1
   created_at: string;
-  last_run: { job_key: string; status: string; finished_at: string | null; error: string | null } | null;
+  display_name: string | null;
+  description: string | null;
+  timeout_sec: number;
+  max_retries: number;
+  updated_at: string | null;
+  updated_by: string | null;
+  /** Next fire instant (ISO) for enabled jobs; null when disabled or the stored cron is invalid. */
+  next_run_at: string | null;
+  last_run: { started_at: string; status: string; duration_ms: number | null } | null;
 }
 
 // GET /api/admin/retention rows (retention_policy table).

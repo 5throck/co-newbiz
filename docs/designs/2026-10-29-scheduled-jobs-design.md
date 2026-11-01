@@ -120,7 +120,7 @@ Follows Onyx 3.0 (`docs/design-system/`, `design:lint`) and the admin CRUD conve
 | `DELETE /api/admin/schedule-jobs/[jobKey]` | New: soft — sets `enabled=0`; `job_run` history is retained |
 | `POST /api/admin/schedule-jobs/[jobKey]/run` | New "run now": inserts `schedule_job_request`; returns 202 with request id. **No in-process execution** (ADR-0019) |
 | `GET /api/admin/schedule-jobs/[jobKey]/runs?page=` | Extend with new columns, error text, trigger, actor |
-| `POST /api/admin/schedule-jobs/seed` | New: idempotent upsert of the eight default rows (§3.1); never overwrites admin-edited cron |
+| `POST /api/admin/schedule-jobs/seed` | New: idempotent upsert of the eight default rows (§3.1 — the registry's handlers; grows as phases land); never overwrites admin-edited cron |
 | `GET /api/admin/schedule-jobs/health` | New: last tick heartbeat, overdue jobs |
 
 Every mutating call is admin-only (existing admin guard) and calls `appendAudit` with action `schedule_job_create|update|disable|run_requested|seed`, before/after cron in `target`. Cron parsing/preview uses one shared module (`app/web-next/lib/schedule/cron.ts`, also imported by `schedule-tick.ts`) — the parser choice is `cron-parser` or an in-repo 5-field parser; the human-readable preview uses `cronstrue` with ko locale. One parser for both preview and execution is mandatory, otherwise the preview can lie.
@@ -131,6 +131,80 @@ Every mutating call is admin-only (existing admin guard) and calls `appendAudit`
 - **Create/edit drawer**: job (select from registered handlers), cron input with inline validation, live preview ("Every weekday at 07:00 KST"), next 5 fire times, timeout, retries.
 - **Detail**: run history table (paged) — started, finished, trigger, actor, status, counts, error expander; "Run now" secondary action with confirm, then polls the request until a `job_run` id appears.
 - **Health banner**: shown when the tick heartbeat is older than 3 min ("Scheduler not firing — check launchd registration").
+
+### 4.3 Row 0 browser diagnosis and the confirmed screen subset (2026-10-31, ux-designer-agent)
+
+Owner directive (2026-10-31): pull the P7 **list-and-edit** subset forward. The owner cannot tell what
+each job on `/admin/schedule` does (rows render raw `job_key` only) and cannot adjust a schedule from
+the web (only an enable toggle exists). **Scope cut, explicit: run-now, run-history detail and the
+health banner stay in P7** — they are NOT part of this round. Job creation (§4.1 POST) is also out:
+all rows come from the registry seed.
+
+Browser findings (dev server 7748, admin session via the UI; analyst-role gate screen also captured):
+
+| Observed | Detail |
+|---|---|
+| List columns today | `작업 키` (raw key), `스케줄 (cron)` (raw expr in `<code>`), `상태` (`활성/비활성` chip with ●/○), `최근 실행` (status · finished date, or `실행 이력 없음`), actions = a single `활성화/비활성화` button |
+| Not shown | `display_name`, `description`, `timeout_sec`, `max_retries` — the columns exist in `schedule_job` since migration 0183 and the seed fills them, but `GET /api/admin/schedule-jobs` selects `id, job_key, cron_expr, enabled, created_at` only (`app/web-next/app/api/admin/schedule-jobs/route.ts`) |
+| Not possible | editing cron / timeout / retries from the web — `PUT /api/admin/schedule-jobs/[jobKey]` accepts `{ enabled }` only; no PATCH, no run endpoint |
+| Interactions | toggle fires instantly with no confirmation, no toast and no inline error state; no search, no paging; empty state exists; no human cron preview; no next-run column |
+| Live data shape (dev) | 4 seeded rows, all `비활성` (D3 invariant); `gate_integrity.shadow_report` showed `성공 · 2026. 10. 30.`, the rest `실행 이력 없음` |
+
+Confirmed screen design (amends §4.2; the list and edit drawer are the whole round):
+
+**List** — admin shell section, list-table standard (`.data-table.list-table.table-fixed-pct` +
+`ColGroup`; `ListSearch` above the table, `Pager` via `usePaged` rendered only when pages > 1):
+
+| Column | Content |
+|---|---|
+| `작업` | readable name from a new `useAdminLabel` group `jobName.<job_key>` (ko catalog; DB `display_name` is the en fallback), `job_key` in mono caption on the second line, `description` (catalog `jobDesc.<job_key>`) as a muted third line |
+| `스케줄` | human cron preview in the active locale (ko example: `매주 월요일 오전 8시`) + the raw expr in mono caption |
+| `상태` | existing `활성/비활성` chip; the enable action stays the existing two-state `btn-ghost` button — no switch component exists in the codebase, and registering one is a design-system-agent escalation, not an inline invention |
+| `다음 실행` | `next_run_at` computed by the shared `app/web-next/lib/schedule/cron.ts` (`nextFireTimes`), absolute date-time + relative (`3분 후`) |
+| `최근 실행` | unchanged (status label + icon · finished_at; error line truncated with `title`) |
+| `작업` | `편집` button (`aria-label="{name} 작업 편집"`) → opens the edit dialog |
+
+Empty state: keep `emptyJobs`, and add a `기본 작업 등록` ghost button calling the existing
+`POST /api/admin/schedule-jobs/seed` (the §4.2 "Seed defaults only when the table is empty" rule;
+the endpoint already exists).
+
+**Edit dialog** — §4.2's "drawer" is realized as the established `modal-panel` + `useModalFocus`
+dialog (no drawer component exists in the codebase; naming reconciled here, no new component):
+header shows `display_name` + `job_key`; the description is shown read-only; fields — cron input
+(mono; inline validation via `validateCron` with the error bound by `aria-describedby`, never
+colour-only), live human preview line in the active locale, `다음 5회 실행 시각` list
+(`nextFireTimes(expr, now, 5)`, formatted `formatDateTime`), timeout input in **minutes**
+(stored as `timeout_sec`, allowed 1–120), max_retries (0–5). Buttons: `취소` (ghost) + `저장`
+(primary). A disabled job stays editable; saving never enables. One primary action per dialog.
+
+ko catalog strings (drafted for `locales/ko.json`, `admin.ops`; key = "ko string", fenced because
+the i18n values themselves are the Korean source material and the language gate exempts code
+blocks — en strings mirror in `locales/en.json`):
+
+```
+jobName.watch.evaluate = "감시 규칙 평가"
+jobName.notify.deliver = "알림 발송"
+jobName.notify.digest = "알림 일일 요약"
+jobName.gate_integrity.shadow_report = "게이트 무결성 주간 점검"
+jobDesc.watch.evaluate = "새 데이터에 감시 규칙을 평가하고 악화·기회 알림을 기록하며 일시중지된 파이프라인을 재개합니다."
+jobDesc.notify.deliver = "새 알림을 수신자·채널별 발송 행으로 확장하고 예정된 이메일·웹훅 발송을 처리합니다."
+jobDesc.notify.digest = "지난 24시간의 일일 요약 대상 알림을 한 이메일로 묶어 발송합니다."
+jobDesc.gate_integrity.shadow_report = "게이트 무결성 셰도우 감사 로그의 주간 요약 리포트를 만듭니다."
+colName = "작업"
+colNextRun = "다음 실행"
+editJob = "편집"
+editJobAria = "{p1} 작업 편집"
+nextFireTimesHeading = "다음 5회 실행 시각"
+cronInvalid = "cron 식이 올바르지 않습니다: {p1}"
+cronTooFrequent = "실행 간격은 5분 이상이어야 합니다."
+timeoutLabel = "실행 제한(분)"
+retriesLabel = "실패 시 재시도 횟수"
+```
+
+Success criterion: an operator who has never seen the registry can, from the list alone, say what
+each job does and when it next fires, and can change `watch.evaluate` to hourly and see the preview
+and the next-fire list agree with the saved value — measured in the P7 gate's `design:lint` +
+preview-verification evidence.
 
 ## 5. Security
 
@@ -144,7 +218,7 @@ Every mutating call is admin-only (existing admin guard) and calls `appendAudit`
 
 ## 6. Failure alerting
 
-- On `failed`/`timeout` (after retries) `run-job.ts` inserts a `notification` with `trigger_type = 'batch_failure'` and `severity = 'ops'` (escalated to `urgent` for `watch.evaluate` and `retention.cleanup`), addressed per the recipient policy in §13.4 and delivered by `notify.deliver` (§13). Because `notification.project_id` is `NOT NULL` today, system notifications need the schema change in §13.3.
+- On `failed`/`timeout` (after retries) `run-job.ts` inserts a `notification` with `trigger_type = 'batch_failure'` and `severity = 'ops'` (escalated to `urgent` for `watch.evaluate` and `retention.cleanup`), addressed per the recipient policy in §13.4 and delivered by `notify.deliver` (§13). `notification.project_id` became nullable in migration 0072 (ADR-0102) — corrected 2026-10-31 per P3 Row 0 conformance review; the §13.3 rebuild adds `title`/`source_ref` only.
 - SRE watch rules (owned by `sre`): (a) tick heartbeat — `schedule-tick.ts` upserts `schedule_heartbeat(env, last_tick_at)` every run; stale > 3 min → high alert; (b) job overdue — `next_run_at + timeout` passed with no `job_run` → warning; (c) 3 consecutive failures of the same job → high.
 - A failure of the alerting insert itself is written to stderr (launchd log) and never masks the original error.
 
@@ -176,6 +250,8 @@ bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|sy
 | P7 | Admin job CRUD UI and prod rollout (former P5 jobs UI and P6): admin API CRUD + UI (list, drawer, history, run now, health banner); then register prod tick, seed, enable jobs one by one; SRE watch rules | backend-engineer, ux-designer-agent -> frontend-engineer, design-system-agent, security-engineer review; release-engineer, sre | design:lint clean; 1 week prod with no missed heartbeat |
 
 Phase order changed by the owner on 2026-10-29: notifications (P3, P4) come right after the runner and its OS registration, so failures raised by later jobs are deliverable from the start.
+
+**P7 subset pulled forward (owner directive, 2026-10-31)**: the admin list-and-edit screen (§4.3 — readable list + edit dialog + the GET/PATCH API extensions behind it) lands ahead of full P7; run-now, run-history detail, the health banner and job creation remain in P7. The dev tick and seed (P2) are already registered, so the UI ships against live dev data.
 
 Landing order respects schema -> API -> UI -> deploy. P5 and P6 are independent of P7 and may run in parallel branches only if the sequential-branch rule is explicitly waived by PM.
 
@@ -228,7 +304,7 @@ D1–D8 were decided by the owner on 2026-10-29 by approving the recommendations
 
 Owner decision: deliver in-app **plus email and webhook**. Governing ADR: ADR-0190 (sibling of ADR-0189 — new schema and an outbound transport warrant their own record).
 
-Verified state: `notification(id, user_id, project_id NOT NULL, trigger_type, severity opportunity|warning|urgent|info|ops, payload, channel in_app|email|webhook|all, bundle immediate|daily, sent_at, read_at, dedupe_key)` (`db/migrations/0007_watch_and_notification.sql:62`); producers `db/lib/watch-engine.ts` (comment: no transport yet), `app/web-next/lib/pipeline.ts` (pause), establishment steps; `watch` and `watch_rule` empty; `/api/admin/notifications` lists 200 rows with no filters, payload view or delivery status.
+Verified state (corrected 2026-10-31 per P3 Row 0 conformance review — 0007:62 is superseded): `notification(id, user_id, project_id nullable — since migration 0072 per ADR-0102, trigger_type (10 values), severity opportunity|warning|urgent|info|ops, payload, channel in_app|email|webhook|all, bundle immediate|daily, sent_at, read_at, dedupe_key + partial unique index per recipient)` (`db/migrations/0141_establishment_notifications_and_call_path.sql`; this changeset's migration 0185 extends the shape further); producers `db/lib/watch-engine.ts` (comment: no transport yet), `app/web-next/lib/pipeline.ts` (pause), establishment steps; `watch` and `watch_rule` empty; `/api/admin/notifications` lists 200 rows with no filters, payload view or delivery status.
 
 ### 13.1 Transport
 

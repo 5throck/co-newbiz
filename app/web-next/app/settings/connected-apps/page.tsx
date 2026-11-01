@@ -24,14 +24,14 @@ import {
 } from "../../../lib/token-issue-access.ts";
 import { Button, FilterChip, PageState, useToast } from "../../../components/ui.tsx";
 import { ColGroup } from "../../../components/ui.tsx";
-import { useConfirm } from "../../../components/crud.tsx";
+import { RowMenu, useConfirm, type RowMenuItem } from "../../../components/crud.tsx";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { formatDateTime } from "../../../lib/format.ts";
 import { intlTag, isLocale } from "../../../i18n/config.ts";
 
-// 개인 API 토큰 목록 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
-// 라벨이 본문(cell-truncate), 식별자·권한·상태·날짜·작업은 좁게.
-const TOKEN_COL_PCT = [18, 15, 10, 10, 12, 17, 12, 6] as const;
+// 개인 API 토큰 목록 표 열 비율 — §2.4 amendment (C7): 8열 → 5열. 토큰 칸에 라벨·상태 칩·
+// (권한·식별자 캡션 줄)을 계층으로 모으고 만료/마지막 사용/생성은 넓게, 작업은 RowMenu.
+const TOKEN_COL_PCT = [34, 24, 16, 16, 10] as const;
 
 const APP_COL_PCT = [26, 16, 28, 16, 14] as const;
 
@@ -92,6 +92,10 @@ function maskedId(displayId: string): string {
 }
 
 // ── 1회 노출 모달: 시크릿은 이 컴포넌트 상태에만 존재하고 닫으면 사라진다 ──
+// §2.4 (C9): panel is capped at min(85dvh, 48rem) with the body scrolling
+// internally and the footer pinned outside the scroll area, so the primary
+// "저장했습니다" button stays visible (and in the focus order) at ~720px
+// viewports. Both copy actions announce through the single aria-live status.
 function TokenRevealModal({
   token,
   origin,
@@ -104,7 +108,7 @@ function TokenRevealModal({
   const t = useTranslations("pages.connectedApps");
   const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
-  const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle");
+  const [copied, setCopied] = useState<{ kind: "token" | "snippet"; ok: boolean } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const snippet = JSON.stringify(
@@ -121,15 +125,35 @@ function TokenRevealModal({
     2,
   );
 
-  async function copy() {
+  async function copyToken() {
     try {
       await navigator.clipboard.writeText(token);
-      setCopied("ok");
+      setCopied({ kind: "token", ok: true });
     } catch {
       inputRef.current?.select();
-      setCopied("fail");
+      setCopied({ kind: "token", ok: false });
     }
   }
+
+  async function copySnippet() {
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setCopied({ kind: "snippet", ok: true });
+    } catch {
+      setCopied({ kind: "snippet", ok: false });
+    }
+  }
+
+  const copyStatus =
+    copied === null
+      ? ""
+      : copied.ok
+        ? copied.kind === "token"
+          ? t("copiedOk")
+          : t("revealSnippetCopiedOk")
+        : copied.kind === "token"
+          ? t("copiedFail")
+          : t("revealSnippetCopyFail");
 
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -140,40 +164,55 @@ function TokenRevealModal({
         aria-modal="true"
         aria-labelledby="token-reveal-heading"
         onKeyDown={onKeyDown}
+        style={{ maxWidth: "46rem", width: "100%", maxHeight: "min(85dvh, 48rem)", display: "flex", flexDirection: "column" }}
       >
-        <h2 id="token-reveal-heading">{t("revealTitle")}</h2>
-        <p>
-          {t("revealBodyHead")} <strong>{t("revealBodyEmphasis")}</strong> {t("revealBodyTail")}
-        </p>
-        <input
-          ref={inputRef}
-          readOnly
-          value={token}
-          onFocus={(e) => e.currentTarget.select()}
-          aria-label={t("revealInputAria")}
-          style={{ width: "100%", fontFamily: "var(--font-mono, monospace)" }}
-        />
-        <div style={{ display: "flex", gap: "var(--space-2, 0.5rem)", marginTop: "var(--space-2, 0.5rem)" }}>
-          <Button variant="ghost" onClick={() => void copy()}>
-            {tc("copy")}
-          </Button>
+        <div style={{ overflowY: "auto", minHeight: 0, paddingRight: "0.25rem" }}>
+          <h2 id="token-reveal-heading">{t("revealTitle")}</h2>
+          <p>
+            {t("revealBodyHead")} <strong>{t("revealBodyEmphasis")}</strong> {t("revealBodyTail")}
+          </p>
+          <input
+            ref={inputRef}
+            readOnly
+            value={token}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label={t("revealInputAria")}
+            style={{ width: "100%", fontFamily: "var(--font-mono, monospace)" }}
+          />
+          <div style={{ display: "flex", gap: "var(--space-2, 0.5rem)", marginTop: "var(--space-2, 0.5rem)" }}>
+            <Button variant="ghost" onClick={() => void copyToken()}>
+              {tc("copy")}
+            </Button>
+            <Button variant="ghost" onClick={() => void copySnippet()}>
+              {t("revealSnippetCopy")}
+            </Button>
+          </div>
+          <p role="status" aria-live="polite" className="sr-only">
+            {copyStatus}
+          </p>
+          <h3>{t("revealSnippetHeading")}</h3>
+          <pre style={{ overflowX: "auto", fontSize: "var(--fs-caption)" }}>
+            <code>{snippet}</code>
+          </pre>
+          <p>
+            <code>CO_NEWBIZ_API_TOKEN</code>
+            {t("snippetAfterToken")}{" "}
+            <code>CO_NEWBIZ_API_BASE_URL</code>
+            {t("snippetAfterBase")}{" "}
+            <code>mcp/co-newbiz/index.ts</code>
+            {t("snippetTail")}
+          </p>
         </div>
-        <p role="status" aria-live="polite" className="sr-only">
-          {copied === "ok" ? t("copiedOk") : copied === "fail" ? t("copiedFail") : ""}
-        </p>
-        <h3>{t("revealSnippetHeading")}</h3>
-        <pre style={{ overflowX: "auto", fontSize: "var(--fs-caption)" }}>
-          <code>{snippet}</code>
-        </pre>
-        <p>
-          <code>CO_NEWBIZ_API_TOKEN</code>
-          {t("snippetAfterToken")}{" "}
-          <code>CO_NEWBIZ_API_BASE_URL</code>
-          {t("snippetAfterBase")}{" "}
-          <code>mcp/co-newbiz/index.ts</code>
-          {t("snippetTail")}
-        </p>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-3, 1rem)" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            flexShrink: 0,
+            marginTop: "var(--space-3, 1rem)",
+            paddingTop: "var(--space-3, 1rem)",
+            borderTop: "1px solid var(--border)",
+          }}
+        >
           <Button variant="primary" onClick={onClose}>
             {t("revealSavedButton")}
           </Button>
@@ -270,6 +309,27 @@ function PersonalTokensSection() {
         confirmLabel: t("revokeButton"),
       },
     );
+  }
+
+  // §2.4 (C8): the masked identifier is not secret (prefix + last 6, already
+  // shown in the row) — copying it is a support-request convenience.
+  async function copyTokenId(tok: PersonalToken) {
+    try {
+      await navigator.clipboard.writeText(maskedId(tok.display_id));
+      toast(t("copiedOk"));
+    } catch {
+      toast(t("copiedFail"), "alert");
+    }
+  }
+
+  // §2.4 (C8): the row stays neutral — the only actions live in the overflow
+  // menu, and the danger styling appears at the commitment point (the
+  // ConfirmDialog's btn-danger), not on every row.
+  function menuItems(tok: PersonalToken): RowMenuItem[] {
+    return [
+      { key: "copy-id", label: t("menuCopyId"), onSelect: () => void copyTokenId(tok) },
+      { key: "revoke", label: t("revokeButton"), danger: true, separatorBefore: true, onSelect: () => revoke(tok) },
+    ];
   }
 
   async function doRevoke(tok: PersonalToken) {
@@ -433,18 +493,15 @@ function PersonalTokensSection() {
                 <PageState state="empty" emptyText={t("emptyTokensFiltered")} />
               ) : (
                 <div className="table-scroll" style={{ marginTop: "var(--space-3, 1rem)" }}>
-                  <table id="pat-token-table" className="data-table list-table pat-token-table table-fixed-pct tmin-64" aria-label={t("patTableAria")}>
+                  <table id="pat-token-table" className="data-table list-table pat-token-table table-fixed-pct tmin-48" aria-label={t("patTableAria")}>
                     <caption className="sr-only">{t("patTableCaption")}</caption>
                     <ColGroup widths={TOKEN_COL_PCT} />
                     <thead>
                       <tr>
-                        <th scope="col">{t("colLabel")}</th>
-                        <th scope="col">{t("colIdentifier")}</th>
-                        <th scope="col">{t("colScopes")}</th>
-                        <th scope="col">{tc("status")}</th>
-                        <th scope="col">{t("colCreated")}</th>
+                        <th scope="col">{t("colToken")}</th>
                         <th scope="col">{t("colExpires")}</th>
                         <th scope="col">{t("colLastUsed")}</th>
+                        <th scope="col">{t("colCreated")}</th>
                         <th scope="col">{tc("actions")}</th>
                       </tr>
                     </thead>
@@ -455,17 +512,20 @@ function PersonalTokensSection() {
                         const soon = isExpiringSoon(tok.status, tok.expires_at, nowMs);
                         return (
                           <tr key={tok.id}>
-                            <td className="cell-truncate" title={tok.label}>{tok.label}</td>
                             <td>
-                              <code>{maskedId(tok.display_id)}</code>
-                            </td>
-                            <td>{tok.scopes.split(",").includes("write") ? t("scopeReadWrite") : t("scopeRead")}</td>
-                            <td>
-                              <span className={`status-chip ${s.cls}`}>
-                                <span aria-hidden="true">{s.icon}</span> {t(s.key)}
+                              <div className="flex min-w-0 items-center gap-2">
+                                <span className="cell-truncate" title={tok.label}>{tok.label}</span>
+                                <span className={`status-chip ${s.cls} cell-nowrap`}>
+                                  <span aria-hidden="true">{s.icon}</span> {t(s.key)}
+                                </span>
+                              </div>
+                              {/* §2.4 (C7): scope + masked identifier as a text caption line (never colour-only). */}
+                              <span className="mt-[0.15rem] block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                {tok.scopes.split(",").includes("write") ? t("scopeReadWrite") : t("scopeRead")}
+                                {" · "}
+                                <code>{maskedId(tok.display_id)}</code>
                               </span>
                             </td>
-                            <td className="cell-nowrap">{fmtShort(tok.created_at, locale)}</td>
                             <td className="cell-nowrap">{tok.expires_at ? (
                               <span className="pat-expiry">
                                 <span>{fmtShort(tok.expires_at, locale)}</span>
@@ -485,16 +545,12 @@ function PersonalTokensSection() {
                             <td className="cell-nowrap" title={tok.last_used_at ? fmtShort(tok.last_used_at, locale) : undefined}>
                               {tok.last_used_at ? relativeAgo(tok.last_used_at, locale, t("justNow")) : t("neverUsed")}
                             </td>
+                            <td className="cell-nowrap">{fmtShort(tok.created_at, locale)}</td>
                             <td className="sizing-actions-cell">
-                              {tok.status === "active" && (
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => void revoke(tok)}
-                                  aria-label={t("revokeAria", { p1: tok.label })}
-                                >
-                                  {t("revokeButton")}
-                                </Button>
+                              {tok.status === "active" ? (
+                                <RowMenu label={t("rowMenuAria", { p1: tok.label })} items={menuItems(tok)} />
+                              ) : (
+                                "—"
                               )}
                             </td>
                           </tr>

@@ -298,7 +298,7 @@ describe("business-target standards (ADR-0114)", () => {
 
   test("no adopted case → indeterminate for computable metrics, manual for custom", () => {
     const resolved = resolveBusinessTargets(G1, M1);
-    const entries = evaluateTargets(resolved, SCOPE, null, null);
+    const entries = evaluateTargets(resolved, SCOPE, null, undefined); // basis omitted → default 'adopted'
     for (const e of entries) {
       expect(["indeterminate", "manual"]).toContain(e.status);
       expect(e.actual).toBeNull();

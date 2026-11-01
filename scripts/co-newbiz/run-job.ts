@@ -27,6 +27,7 @@ import {
   type SchedulerEnv,
 } from "./scheduler-core.ts";
 import { scrubSecrets } from "../../db/lib/secret-scrubber.ts";
+import { ulid } from "../../db/lib/ulid.ts";
 import { getJobHandler } from "./jobs/index.ts";
 import { RetryableJobError } from "./jobs/types.ts";
 
@@ -58,7 +59,9 @@ export const REQUEST_ID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 /** L5: --request must be a ULID that names a request for THIS job_key. Returns an error message or null. */
 export function validateRequest(db: any, requestId: string, jobKey: string): string | null {
   if (!REQUEST_ID_RE.test(requestId)) return `invalid --request '${requestId}' (expected a 26-char ULID)`;
-  const r = db.query("SELECT job_key FROM schedule_job_request WHERE id = ?").get(requestId) as { job_key: string } | null;
+  const r = db.query("SELECT job_key FROM schedule_job_request WHERE id = ?").get(requestId) as {
+    job_key: string;
+  } | null;
   if (!r) return `request ${requestId} not found`;
   if (r.job_key !== jobKey) return `request ${requestId} is for job '${r.job_key}', not '${jobKey}'`;
   return null;
@@ -74,14 +77,50 @@ export const DEFAULT_REPORT_DIR = join(DB_DIR, "data", "reports", "gate-integrit
 const DEFAULT_RETRY_DELAY_MS = 5 * 60_000;
 
 /**
- * TODO(P3, ADR-0190): insert the `notification` (trigger_type 'batch_failure', severity 'ops', escalated to 'urgent' for
- * watch.evaluate / retention.cleanup) once notification.project_id is nullable. Until then P1 records failures in
- * job_run only (that row is the durable trace) and writes one scrubbed line to stderr (the launchd log).
+ * Jobs whose terminal failure is itself urgent: the batch_failure notification escalates from 'ops' to 'urgent'
+ * (immediate delivery) for these keys. Named/exported so P6 (retention.cleanup) inherits the list.
  */
-function onJobFailure(db: any, jobKey: string, jobRunId: string, status: string, error: string): void {
+export const BATCH_FAILURE_URGENT_JOB_KEYS: ReadonlySet<string> = new Set(["watch.evaluate", "retention.cleanup"]);
+
+/**
+ * batch_failure hook (ADR-0189/0190 P3, design sections 13.2/13.4). Every terminal job failure writes ONE
+ * `notification` row (user_id 'system', project_id NULL - nullable since migration 0072) so notify.deliver fans it
+ * out through the recipient policy (D9: system/ops rows reach admins). severity 'ops' (daily bundle) except for
+ * BATCH_FAILURE_URGENT_JOB_KEYS, which escalate to 'urgent' (immediate). dedupe_key buckets per job × UTC hour so a
+ * flapping job cannot spam a notification every minute. The scrubbed stderr line stays: it is what the launchd log
+ * shows. Everything is wrapped so alerting never masks the original error.
+ */
+export function onJobFailure(
+  db: any,
+  jobKey: string,
+  jobRunId: string,
+  status: string,
+  error: string,
+  now: Date = new Date(),
+): void {
   try {
     const n = consecutiveFailures(db, jobKey);
-    console.error(`[run-job] ${jobKey} ${status} run=${jobRunId} consecutive_failures=${n}: ${scrubSecrets(error, { maxLen: 300 })}`);
+    console.error(
+      `[run-job] ${jobKey} ${status} run=${jobRunId} consecutive_failures=${n}: ${scrubSecrets(error, { maxLen: 300 })}`,
+    );
+    const urgent = BATCH_FAILURE_URGENT_JOB_KEYS.has(jobKey);
+    const nowIso = now.toISOString();
+    const hourBucket = nowIso.slice(0, 13); // YYYY-MM-DDTHH (UTC) - one batch_failure notification per job per hour
+    db.run(
+      `INSERT OR IGNORE INTO notification
+         (id, user_id, project_id, trigger_type, severity, payload, channel, bundle, sent_at, dedupe_key, title, source_ref)
+       VALUES (?, 'system', NULL, 'batch_failure', ?, ?, 'all', ?, ?, ?, ?, ?)`,
+      [
+        ulid(),
+        urgent ? "urgent" : "ops",
+        JSON.stringify({ job_key: jobKey, job_run_id: jobRunId, status, error: scrubSecrets(error, { maxLen: 500 }) }),
+        urgent ? "immediate" : "daily",
+        nowIso,
+        `batch_failure:${jobKey}:${hourBucket}`,
+        `${jobKey} failed`,
+        `job_run:${jobRunId}`,
+      ],
+    );
   } catch {
     /* alerting must never mask the original error */
   }
@@ -102,21 +141,33 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
   };
 
   if (!handler) {
-    const id = startJobRun(db, { jobKey: opts.jobKey, env: opts.env, trigger: opts.trigger, actor: opts.actor, now: clock() });
+    const id = startJobRun(db, {
+      jobKey: opts.jobKey,
+      env: opts.env,
+      trigger: opts.trigger,
+      actor: opts.actor,
+      now: clock(),
+    });
     const msg = `no registered handler for job_key '${opts.jobKey}'`;
     finishJobRun(db, id, { status: "failed", now: clock(), error: msg });
-    onJobFailure(db, opts.jobKey, id, "failed", msg);
+    onJobFailure(db, opts.jobKey, id, "failed", msg, clock());
     finishRequest("done", id);
     return { outcome: "no_handler", jobRunId: id, attempts: 1 };
   }
 
-  const row = db.query("SELECT enabled, timeout_sec, max_retries FROM schedule_job WHERE job_key = ?").get(opts.jobKey) as
-    | { enabled: number; timeout_sec: number; max_retries: number }
-    | null;
+  const row = db
+    .query("SELECT enabled, timeout_sec, max_retries FROM schedule_job WHERE job_key = ?")
+    .get(opts.jobKey) as { enabled: number; timeout_sec: number; max_retries: number } | null;
 
   // Manual runs carry an explicit actor and are allowed on a disabled job; every other trigger re-checks the flag.
   if (opts.trigger !== "manual" && (!row || row.enabled !== 1)) {
-    const id = startJobRun(db, { jobKey: opts.jobKey, env: opts.env, trigger: opts.trigger, actor: opts.actor, now: clock() });
+    const id = startJobRun(db, {
+      jobKey: opts.jobKey,
+      env: opts.env,
+      trigger: opts.trigger,
+      actor: opts.actor,
+      now: clock(),
+    });
     finishJobRun(db, id, { status: "skipped", now: clock(), detail: { reason: "disabled" } });
     return { outcome: "disabled", jobRunId: id, attempts: 1 };
   }
@@ -142,7 +193,8 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
   const backstopMs = opts.backstopMsOverride ?? leaseSeconds(timeoutSec, maxRetries, retryDelayMs / 1000) * 1000;
   const backstop = setTimeout(() => {
     try {
-      if (lastRunId) finishJobRun(db, lastRunId, { status: "timeout", now: clock(), error: "backstop: run exceeded its lease" });
+      if (lastRunId)
+        finishJobRun(db, lastRunId, { status: "timeout", now: clock(), error: "backstop: run exceeded its lease" });
     } finally {
       exit(125);
     }
@@ -150,7 +202,14 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
   try {
     for (;;) {
       attempt++;
-      const runId = startJobRun(db, { jobKey: opts.jobKey, env: opts.env, trigger: opts.trigger, actor: opts.actor, attempt, now: clock() });
+      const runId = startJobRun(db, {
+        jobKey: opts.jobKey,
+        env: opts.env,
+        trigger: opts.trigger,
+        actor: opts.actor,
+        attempt,
+        now: clock(),
+      });
       lastRunId = runId;
       const ac = new AbortController();
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -158,7 +217,13 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
       try {
         const result = await Promise.race([
           Promise.resolve().then(() =>
-            handler.run({ db, now: clock(), env: opts.env, signal: ac.signal, reportDir: opts.reportDir ?? DEFAULT_REPORT_DIR }),
+            handler.run({
+              db,
+              now: clock(),
+              env: opts.env,
+              signal: ac.signal,
+              reportDir: opts.reportDir ?? DEFAULT_REPORT_DIR,
+            }),
           ),
           new Promise<never>((_, reject) => {
             timer = setTimeout(() => {
@@ -185,19 +250,24 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
           // do NOT release the lock and carry on: record the timeout and exit the process. The lease expires on its own.
           // Handlers must therefore be async and check ctx.signal between units of work.
           finishJobRun(db, runId, { status: "timeout", now: clock(), error: msg });
-          onJobFailure(db, opts.jobKey, runId, "timeout", msg);
+          onJobFailure(db, opts.jobKey, runId, "timeout", msg, clock());
           outcome = "timeout";
           exitedOnTimeout = true;
           break;
         }
         const willRetry = err instanceof RetryableJobError && attempt <= maxRetries;
         // M3: an attempt that will be retried is marked so failure streaks count distinct runs (final attempts only).
-        finishJobRun(db, runId, { status: "failed", now: clock(), error: msg, ...(willRetry ? { detail: { retried: true } } : {}) });
+        finishJobRun(db, runId, {
+          status: "failed",
+          now: clock(),
+          error: msg,
+          ...(willRetry ? { detail: { retried: true } } : {}),
+        });
         if (willRetry) {
           if (retryDelayMs > 0) await sleep(retryDelayMs);
           continue;
         }
-        onJobFailure(db, opts.jobKey, runId, "failed", msg);
+        onJobFailure(db, opts.jobKey, runId, "failed", msg, clock());
         outcome = "failed";
         break;
       } finally {
@@ -220,7 +290,11 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
 export function installScrubbedOutput(): void {
   for (const stream of [process.stdout, process.stderr] as const) {
     const orig = stream.write.bind(stream) as (chunk: any, ...rest: any[]) => boolean;
-    stream.write = ((chunk: any, ...rest: any[]) => orig(typeof chunk === "string" ? scrubSecrets(chunk, { maxLen: Number.MAX_SAFE_INTEGER }) : chunk, ...rest)) as typeof stream.write;
+    stream.write = ((chunk: any, ...rest: any[]) =>
+      orig(
+        typeof chunk === "string" ? scrubSecrets(chunk, { maxLen: Number.MAX_SAFE_INTEGER }) : chunk,
+        ...rest,
+      )) as typeof stream.write;
   }
 }
 
@@ -233,7 +307,9 @@ if (import.meta.main) {
   const argv = process.argv.slice(2);
   const jobKey = arg(argv, "--job");
   if (!jobKey) {
-    console.error("usage: run-job.ts --job <job_key> [--trigger schedule|manual|catchup] [--actor <user>] [--request <id>] [--db-path <path>]");
+    console.error(
+      "usage: run-job.ts --job <job_key> [--trigger schedule|manual|catchup] [--actor <user>] [--request <id>] [--db-path <path>]",
+    );
     process.exit(2);
   }
   let env: SchedulerEnv;
@@ -259,7 +335,14 @@ if (import.meta.main) {
   const db = getDb(arg(argv, "--db-path"));
   const actor = arg(argv, "--actor") ?? (trigger === "manual" ? "operator:cli" : null);
   try {
-    const res = await runJob(db, { jobKey, env, trigger, actor, requestId: requestArg ?? null, reportDir: process.env.CO_NEWBIZ_REPORT_DIR });
+    const res = await runJob(db, {
+      jobKey,
+      env,
+      trigger,
+      actor,
+      requestId: requestArg ?? null,
+      reportDir: process.env.CO_NEWBIZ_REPORT_DIR,
+    });
     console.log(JSON.stringify(res));
     process.exit(res.outcome === "failed" || res.outcome === "no_handler" ? 1 : res.outcome === "timeout" ? 124 : 0);
   } catch (e) {
