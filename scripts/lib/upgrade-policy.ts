@@ -1,4 +1,59 @@
-// @version 1.31.0
+// @version 1.34.0
+// v1.34.0 (2026-11-01, design addendum
+//          docs/designs/2026-10-31-workspace-schema-merge-delivery-design.md
+//          §Addendum, U-20261101-001): template-authoritative vocabulary blocks.
+//          The 0.26.0 wave proved the shared-block project-wins rule wrong for
+//          `models` and `platform_surfaces`: the MERGE pass stamps the
+//          template-authoritative GPT-6.x prose into AGENTS.md §3.6 / CODEX.md
+//          WORKSPACE-MANAGED blocks while SCHEMA_MERGE withheld the matching
+//          `models.codex` rows from every project — the exact-equality gate
+//          (validate-model-registry.ts) failed fleet-wide and each project
+//          needed a manual 3-value convergence. Fix: SCHEMA_TEMPLATE_
+//          AUTHORITATIVE_KEYS — those two blocks land the template value
+//          VERBATIM even when present (and diverged) in the project copy; the
+//          divergence is recorded as TEMPLATE_DELTA INFO rows (visibility, not
+//          withholding; project-only keys inside the block are dropped and
+//          logged the same way). designLint STAYS project-wins (the protected
+//          token-debt class); project-only blocks stay preserved; template
+//          additions still land.
+// v1.33.0 (2026-10-31, design
+//          docs/designs/2026-10-31-graft-trail-migration-design.md R2.4 arm (b),
+//          U-20261031-009): TRAIL_RETIRED_SEEDS + isTrailRetiredSeed(rel) — the
+//          graft-era seeds (.mcp.json, .claude/helpers/graft-hooks.cjs,
+//          .claude/helpers/graft-statusline.cjs) that a `.trail/`-marked project
+//          treats as retired. The upgrade TEMPLATE TREE SYNC pass consults the
+//          predicate before every absent-copy delivery: a retired seed is
+//          withheld and decision-logged SEED_SKIP (retired-surface) instead of
+//          re-seeded over a trail-init-rewritten tree.
+// v1.32.0 (2026-10-31, spec
+//          docs/designs/2026-10-31-workspace-schema-merge-delivery-design.md):
+//          merge-aware delivery for docs/workspace-schema.json (the co-price
+//          0.22.1→0.25.0 / co-architect 0.23.0→0.25.0 upgrade halts). (a) The
+//          `SCHEMA_MERGE` policy joins UpgradePolicy + isDeliveryPolicy,
+//          claimed by exactly docs/workspace-schema.json via
+//          SCHEMA_MERGE_FILE (resolveClaim, above the docs/ SYNC fall-through).
+//          (b) mergeWorkspaceSchemaData(template, project) — the block-aware
+//          three-way top-level merge (design §4): template-owned class
+//          (absent-from-project blocks + the metadata scalars $schema/version/
+//          description) lands verbatim; project-owned blocks are preserved
+//          untouched; shared blocks recurse leaf-wise with project-wins on
+//          existing leaves, template-only keys landing, and ARRAYS ATOMIC
+//          (never unioned — the deliberate divergence from
+//          mergeSettingsData's settings semantics). Pure in (template,
+//          project) → idempotent (double merge is a fixed point). Returns the
+//          merged object plus landed / preserved top-level key lists and
+//          templateDeltas — every shared-block leaf whose final value differs
+//          from the template's (a withheld template change), each with a
+//          dotted path, both summarized values, and severity (WARN for
+//          scalar/array divergences, INFO for structural mismatches) the
+//          engine turns into TEMPLATE_DELTA decision rows. (c)
+//          mergeWorkspaceSchemaJson — the file-level wrapper with the
+//          mergeSettingsJson output convention (2-space indent + trailing
+//          newline; key order follows the project copy, template-added keys
+//          append in template order). (d) TEMPLATE_DELTA (INFO default; WARN
+//          via the per-row severity override) joins DecisionVerdict +
+//          DECISION_SEVERITY_CONTRACT — the decision log owns visibility of
+//          template changes the merge withheld; the upgrade stays green.
 // v1.31.0 (2026-10-29, spec
 //          docs/designs/2026-10-29-delivery-bookkeeping-engine-design.md,
 //          DEC-20261029-01): TOMBSTONE_CLEARED (INFO) and
@@ -282,6 +337,7 @@ export type UpgradePolicy =
   | 'PROJECT_STATE'
   | 'TEMPLATE_ONLY'
   | 'JSON_MERGE'
+  | 'SCHEMA_MERGE'
   | 'WORKSPACE'
   | 'SYNC';
 
@@ -336,6 +392,39 @@ export const JSON_MERGE_FILES = [
   '.claude/settings.json', '.gemini/settings.json', '.mcp.json', 'opencode.json',
   '.agents/mcp.json',
 ] as const;
+
+/** Graft-era seeds retired by the trail migration (design
+ *  docs/designs/2026-10-31-graft-trail-migration-design.md R2.4 arm (b),
+ *  U-20261031-009). When the project carries `.trail/` — the trail-migration
+ *  marker that `trail init` creates — these template seeds are treated as
+ *  RETIRED: `trail init` rewrote the same surfaces (MCP entries swapped,
+ *  helpers replaced by `.trail/hook.cjs`) and deliberately deleted the project
+ *  copies, so an absent-copy re-seed would resurrect pre-migration state. The
+ *  upgrade TEMPLATE TREE SYNC pass withholds them and decision-logs
+ *  `SEED_SKIP` (retired-surface) instead. Kept as a data export so the guard is
+ *  unit-pinnable; the list never shrinks silently (design R2.6: graft-era
+ *  tolerance stays while any project is pre-migration). */
+export const TRAIL_RETIRED_SEEDS = [
+  '.mcp.json',
+  '.claude/helpers/graft-hooks.cjs',
+  '.claude/helpers/graft-statusline.cjs',
+] as const;
+
+/** True when `rel` is a graft-era seed retired by the trail migration. */
+export function isTrailRetiredSeed(rel: string): boolean {
+  return (TRAIL_RETIRED_SEEDS as readonly string[]).includes(rel.replace(/\\/g, '/'));
+}
+
+/** The one file the SCHEMA_MERGE delivery policy claims (spec
+ *  2026-10-31-workspace-schema-merge-delivery-design §3): docs/workspace-schema.json —
+ *  the fleet SSOT for platform/model registries, route-audit tripwires, and design-lint
+ *  gate config, read directly by six consumer scripts (an override-only route cannot
+ *  serve them). Generic SYNC whole-content delivery clobbered project-evolved gate
+ *  config (co-price's 131-entry designLint allowlist + tokenSources) and the
+ *  conflict-skip path blocked the 0.25.0 upgrades entirely; SCHEMA_MERGE delivers
+ *  template-added blocks (platform_surfaces, routeAudit) while the merge preserves
+ *  project-owned content (design §4). */
+export const SCHEMA_MERGE_FILE = 'docs/workspace-schema.json';
 
 /** Files whose scaffold-delivered copy was intentionally left unsubstituted — `{{tokens}}` are
  *  expected content, so the coverage validator's placeholder check must not flag them. */
@@ -512,6 +601,16 @@ export function resolveClaim(relPath: string, variant = ''): UpgradeClaim {
   if ((JSON_MERGE_FILES as readonly string[]).includes(rel)) {
     return { policy: 'JSON_MERGE', pass: TEMPLATE_TREE_SYNC_PASS };
   }
+  // docs/workspace-schema.json (spec 2026-10-31-workspace-schema-merge-delivery-design):
+  // the fleet SSOT for platform/model registries, route-audit tripwires, and design-lint
+  // gate config. Whole-content SYNC clobbered project-evolved blocks (co-price's 131-entry
+  // designLint allowlist + tokenSources, co-architect's 122-entry allowlist) and the
+  // conflict-skip blocked the 0.25.0 upgrades entirely; SCHEMA_MERGE delivers template
+  // additions (platform_surfaces, routeAudit) while the merge preserves project-owned
+  // content. Claim must sit ABOVE the docs/ SYNC fall-through below.
+  if (rel === SCHEMA_MERGE_FILE) {
+    return { policy: 'SCHEMA_MERGE', pass: TEMPLATE_TREE_SYNC_PASS };
+  }
 
   if (underDir(rel, 'procedures')) return { policy: 'ADD_IF_MISSING', pass: 'PROCEDURES' };
 
@@ -576,7 +675,7 @@ export function resolveClaim(relPath: string, variant = ''): UpgradeClaim {
 /** True when a claim's policy delivers file content into the project (validator placeholder check scope). */
 export function isDeliveryPolicy(policy: UpgradePolicy): boolean {
   return ['LOCKED', 'MERGE_MANAGED', 'OVERWRITE', 'VERSIONED_SYNC', 'HASH_SYNC',
-    'ADD_IF_MISSING', 'JSON_MERGE', 'WORKSPACE', 'SYNC'].includes(policy);
+    'ADD_IF_MISSING', 'JSON_MERGE', 'SCHEMA_MERGE', 'WORKSPACE', 'SYNC'].includes(policy);
 }
 
 // ── Effective template tree (scaffold parity: variant overlay over common) ────────────────────
@@ -683,6 +782,230 @@ export function mergeSettingsJson(projectFile: string, templateFile: string): Js
   const { merged, preserved } = mergeSettingsData(template, project);
   const out = `${JSON.stringify(merged, null, 2)}\n`;
   return { changed: out !== projectRaw, merged: out, preserved };
+}
+
+// ── SCHEMA_MERGE: merge-aware delivery for docs/workspace-schema.json ─────────────────────────
+// Spec 2026-10-31-workspace-schema-merge-delivery-design (§3/§4, v1.34.0 addendum
+// U-20261101-001). mergeSettingsData above has the WRONG semantics for this file:
+// array-union would append the template's playground scanRoot to co-price's ["src"]
+// (the token lint would scan both trees) and template-wins scalars would clobber
+// project-evolved leaf values. The schema merge is block-aware, three-way over
+// top-level keys, project-wins on existing leaves EXCEPT the template-authoritative
+// vocabulary blocks (models, platform_surfaces — they pair with template-managed
+// prose and land verbatim), arrays ATOMIC — a pure function of (template, project)
+// and therefore idempotent (design §4).
+
+/** Metadata scalars the template owns verbatim on the SCHEMA_MERGE path (design §4 rule 1):
+ *  even when present in the project copy, the template value lands (schema-version
+ *  evolution must reach every project). Everything else absent from the project copy is
+ *  also template-owned (template-ADDED blocks land through that rule). */
+export const SCHEMA_TEMPLATE_OWNED_KEYS = ['$schema', 'version', 'description'] as const;
+
+/** Template-authoritative vocabulary blocks (v1.34.0, U-20261101-001 addendum):
+ *  top-level blocks the template owns VERBATIM even when present in the project
+ *  copy. They are the schema-side half of template-managed prose pairs —
+ *  `models.*` rows feed validate-model-registry.ts's exact-equality gate
+ *  against the AGENTS.md §3.6 / CODEX.md WORKSPACE-MANAGED model vocabulary the
+ *  MERGE pass stamps verbatim — so a project-wins divergence here desyncs the
+ *  pair and fails the gate. The template value lands; divergence is logged
+ *  (TEMPLATE_DELTA INFO), never withheld. Everything else (notably
+ *  `designLint`, the protected token-debt class) stays project-wins. */
+export const SCHEMA_TEMPLATE_AUTHORITATIVE_KEYS = ['models', 'platform_surfaces'] as const;
+
+/** One withheld template change: a shared-block leaf whose final (project-won) value
+ *  differs from the template's value. The engine turns these into TEMPLATE_DELTA
+ *  decision-log rows (design §4 — the decision log owns visibility of what did not land;
+ *  the upgrade stays green). */
+export interface SchemaMergeLeafDelta {
+  /** Dotted path from the schema root (e.g. `designLint.scanRoots`). */
+  path: string;
+  /** JSON-serialized template value (truncated for log readability). */
+  template: string;
+  /** JSON-serialized project value that won (truncated for log readability). */
+  project: string;
+  /** WARN for scalar/array divergences (a reshaped value the template wanted to deliver);
+   *  INFO for structural mismatches (an object replaced by a non-object or vice versa). */
+  severity: 'WARN' | 'INFO';
+}
+
+export interface SchemaMergeResult {
+  merged: Record<string, unknown>;
+  /** Template-owned top-level keys that landed verbatim (absent from the project copy). */
+  landed: string[];
+  /** Project-only top-level keys preserved untouched (never pruned by delivery). */
+  preserved: string[];
+  /** Shared-block leaves where the project value won — the withheld template changes. */
+  templateDeltas: SchemaMergeLeafDelta[];
+}
+
+function isSchemaPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Structural deep-equality (order-insensitive for object keys; arrays compare element-wise
+ *  as ordered values). JSON.stringify comparison would report key-order-only differences
+ *  between template and project copies of the same content as real deltas. */
+function schemaDeepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => schemaDeepEqual(item, b[i]));
+  }
+  if (isSchemaPlainObject(a) && isSchemaPlainObject(b)) {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    return aKeys.length === bKeys.length && aKeys.every((k) => k in b && schemaDeepEqual(a[k], b[k]));
+  }
+  return false;
+}
+
+/** Truncate a serialized value for decision-log readability (a 131-entry allowlist must not
+ *  flood the manifest). Deterministic: same value → same summary. */
+function summarizeSchemaValue(v: unknown, max = 120): string {
+  const raw = JSON.stringify(v) ?? String(v);
+  if (raw.length <= max) return raw;
+  return `${raw.slice(0, max - 1)}… (${raw.length} chars)`;
+}
+
+/** Shared-block leaf merge (design §4 rule 3). Both sides are present: objects recurse
+ *  (project order first, template-only keys append in template order); every non-object
+ *  leaf — scalars AND arrays — is project-wins when present (arrays are ATOMIC: template
+ *  and project arrays are alternative choices, never unioned). Deltas record every leaf
+ *  present on both sides whose final value differs from the template's. */
+function mergeSchemaNode(t: unknown, p: unknown, path: string, deltas: SchemaMergeLeafDelta[]): unknown {
+  if (isSchemaPlainObject(t) && isSchemaPlainObject(p)) {
+    const out: Record<string, unknown> = { ...p };
+    for (const [key, tVal] of Object.entries(t)) {
+      const childPath = path ? `${path}.${key}` : key;
+      if (!(key in p)) {
+        out[key] = tVal; // template-only key inside a shared block still reaches evolved projects
+        continue;
+      }
+      out[key] = mergeSchemaNode(tVal, p[key], childPath, deltas);
+    }
+    return out;
+  }
+  if (!schemaDeepEqual(t, p)) {
+    const structural = isSchemaPlainObject(t) || isSchemaPlainObject(p);
+    deltas.push({
+      path,
+      template: summarizeSchemaValue(t),
+      project: summarizeSchemaValue(p),
+      severity: structural ? 'INFO' : 'WARN',
+    });
+  }
+  return p;
+}
+
+/** Divergence recorder for template-authoritative blocks (v1.34.0, U-20261101-001
+ *  addendum): walks the (template, project) subtree pair and records every leaf
+ *  where the project copy differs from the template's — all at INFO severity,
+ *  because these rows document a landing (the template value won), not a
+ *  withholding. Template-only keys inside the block land silently (they are the
+ *  template's vocabulary); project-only keys inside the block are DROPPED by the
+ *  verbatim landing and logged (template '(absent)') so the removal is loud. */
+function recordTemplateAuthoritativeDeltas(t: unknown, p: unknown, path: string, deltas: SchemaMergeLeafDelta[]): void {
+  if (isSchemaPlainObject(t) && isSchemaPlainObject(p)) {
+    for (const [key, tVal] of Object.entries(t)) {
+      if (key in p) recordTemplateAuthoritativeDeltas(tVal, p[key], `${path}.${key}`, deltas);
+    }
+    for (const key of Object.keys(p)) {
+      if (!(key in t)) {
+        deltas.push({
+          path: `${path}.${key}`,
+          template: '(absent — project-only key dropped by the template-authoritative landing)',
+          project: summarizeSchemaValue(p[key]),
+          severity: 'INFO',
+        });
+      }
+    }
+    return;
+  }
+  if (!schemaDeepEqual(t, p)) {
+    deltas.push({ path, template: summarizeSchemaValue(t), project: summarizeSchemaValue(p), severity: 'INFO' });
+  }
+}
+
+/**
+ * Merge-aware delivery merge for docs/workspace-schema.json (design §4, v1.34.0
+ * addendum): block-aware, three-way over top-level keys, project-wins on existing
+ * leaves EXCEPT the template-authoritative vocabulary blocks, arrays atomic.
+ *
+ * For each top-level key K in union(template, project):
+ *  1. Template-owned — K absent from the project copy, plus the metadata scalars
+ *     `$schema`/`version`/`description`: the template value lands verbatim.
+ *  2. Template-authoritative (U-20261101-001) — K in SCHEMA_TEMPLATE_AUTHORITATIVE_KEYS
+ *     (`models`, `platform_surfaces`) and present on both sides: the template value
+ *     lands verbatim (it pairs with template-managed prose downstream); every
+ *     divergence is recorded as a TEMPLATE_DELTA INFO row.
+ *  3. Project-owned — K present only in the project copy: preserved untouched.
+ *  4. Shared (everything else, notably designLint) — recursive leaf merge,
+ *     project-wins on existing leaves, template-only keys land, arrays atomic
+ *     (never unioned).
+ *
+ * Pure in (template, project): `merge(merge(T, P), T)` deep-equals `merge(T, P)` (rules
+ * 3–4 are pure functions of the two trees; rules 1–2 are set-stable). Throws on
+ * non-object input — the engine hard-SKIPs on malformed JSON with an explicit error
+ * (no silent fallback).
+ */
+export function mergeWorkspaceSchemaData(template: unknown, project: unknown): SchemaMergeResult {
+  if (!isSchemaPlainObject(template)) {
+    throw new Error('SCHEMA_MERGE: template docs/workspace-schema.json is not a JSON object');
+  }
+  if (!isSchemaPlainObject(project)) {
+    throw new Error('SCHEMA_MERGE: project docs/workspace-schema.json is not a JSON object');
+  }
+  const deltas: SchemaMergeLeafDelta[] = [];
+  const merged: Record<string, unknown> = { ...project };
+  const landed: string[] = [];
+  const preserved: string[] = [];
+  for (const [key, tVal] of Object.entries(template)) {
+    if (!(key in project)) {
+      merged[key] = tVal;
+      landed.push(key);
+      continue;
+    }
+    if ((SCHEMA_TEMPLATE_OWNED_KEYS as readonly string[]).includes(key)) {
+      merged[key] = tVal; // metadata scalars land verbatim (schema-version evolution)
+      continue;
+    }
+    if ((SCHEMA_TEMPLATE_AUTHORITATIVE_KEYS as readonly string[]).includes(key)) {
+      // Template-authoritative vocabulary block (U-20261101-001): the template value
+      // lands verbatim — project-wins here desynced the schema rows from the
+      // template-managed prose the MERGE pass stamps (fleet-wide exact-equality gate
+      // failures). Divergence is logged, not withheld.
+      recordTemplateAuthoritativeDeltas(tVal, project[key], key, deltas);
+      merged[key] = tVal;
+      continue;
+    }
+    merged[key] = mergeSchemaNode(tVal, project[key], key, deltas);
+  }
+  for (const key of Object.keys(project)) {
+    if (!(key in template)) preserved.push(key);
+  }
+  return { merged, landed, preserved, templateDeltas: deltas };
+}
+
+/** File-level SCHEMA_MERGE result (the mergeSettingsJson convention): the serialized
+ *  output replaces the merged object in `merged` (2-space indent + trailing newline). */
+export interface SchemaMergeJsonResult {
+  changed: boolean;
+  /** Serialized merged output (2-space indent + trailing newline). */
+  merged: string;
+  /** Template-owned top-level keys that landed verbatim (absent from the project copy). */
+  landed: string[];
+  /** Project-only top-level keys preserved untouched (never pruned by delivery). */
+  preserved: string[];
+  /** Shared-block leaves where the project value won — the withheld template changes. */
+  templateDeltas: SchemaMergeLeafDelta[];
+}
+
+export function mergeWorkspaceSchemaJson(projectFile: string, templateFile: string): SchemaMergeJsonResult {
+  const template = JSON.parse(readFileSync(templateFile, 'utf8'));
+  const projectRaw = readFileSync(projectFile, 'utf8');
+  const project = JSON.parse(projectRaw);
+  const result = mergeWorkspaceSchemaData(template, project);
+  const out = `${JSON.stringify(result.merged, null, 2)}\n`;
+  return { ...result, changed: out !== projectRaw, merged: out };
 }
 
 /** Remove an agent/markdown file's top-level `lifecycle:` frontmatter block
@@ -967,13 +1290,20 @@ export type DecisionSeverity = 'INFO' | 'WARN' | 'ERROR';
  *  engine under the existing CONFLICT verdict); TOMBSTONE_CLEARED /
  *  STUB_VERSION_DIVERGENCE joined in v1.31.0 (delivery-bookkeeping-engine
  *  design B1/D1 — the auditable --clear-tombstone retraction row and the
- *  sanctioned-pin stub version divergence row). */
+ *  sanctioned-pin stub version divergence row); TEMPLATE_DELTA joined in
+ *  v1.32.0 (workspace-schema merge-delivery design — one row per template
+ *  change the SCHEMA_MERGE merge withheld under project-wins; INFO default,
+ *  WARN via the per-row override for scalar/array divergences). DELETE joined
+ *  in v1.34.0 (T-20261101-001 adjudication — a registry-curated prune deletion
+ *  must never be silent; DELETE is contractually WARN, the floor the
+ *  adjudication set for destructive rows). */
 export type DecisionVerdict =
   | 'NEW'
   | 'UPDATE'
   | 'ADOPT'
   | 'SKIP'
   | 'MERGE'
+  | 'TEMPLATE_DELTA'
   | 'CONTEXT_PRESERVE'
   | 'DRIFT_PRESERVE'
   | 'DRIFT_RESTORED'
@@ -990,7 +1320,8 @@ export type DecisionVerdict =
   | 'TOMBSTONED'
   | 'TOMBSTONED_SKIP'
   | 'TOMBSTONE_CLEARED'
-  | 'CONFLICT';
+  | 'CONFLICT'
+  | 'DELETE';
 
 export const DECISION_SEVERITY_CONTRACT: Record<DecisionVerdict, DecisionSeverity> = {
   NEW: 'INFO',
@@ -998,6 +1329,7 @@ export const DECISION_SEVERITY_CONTRACT: Record<DecisionVerdict, DecisionSeverit
   ADOPT: 'INFO',
   SKIP: 'INFO',
   MERGE: 'INFO',
+  TEMPLATE_DELTA: 'INFO',
   SEED_SKIP: 'INFO',
   STUB_SKIP: 'INFO',
   STUB_FM_BACKFILL: 'INFO',
@@ -1015,6 +1347,7 @@ export const DECISION_SEVERITY_CONTRACT: Record<DecisionVerdict, DecisionSeverit
   TOMBSTONED_SKIP: 'INFO',
   TOMBSTONE_CLEARED: 'INFO',
   CONFLICT: 'ERROR',
+  DELETE: 'WARN',
 };
 
 /** One decision entry of the unified decision log (design §7 schema). */

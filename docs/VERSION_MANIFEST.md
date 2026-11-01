@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-01T04:00:57.874Z
+**Generated**: 2026-11-01T05:12:11.072Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -291,7 +291,7 @@
 | kosis.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/kosis.ts | N/A |
 | krx.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/krx.ts | N/A |
 | law.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/law.ts | N/A |
-| lifecycle-sync-audit.ts | 1.19.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
+| lifecycle-sync-audit.ts | 1.20.1 | scripts/lifecycle-sync-audit.ts | js-yaml |
 | lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | N/A |
 | lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
 | llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | zod |
@@ -344,7 +344,7 @@
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
 | skill-lifecycle-audit.ts | 1.10.0 | scripts/skill-lifecycle-audit.ts | N/A |
-| skill-session-review.ts | 1.2.0 | scripts/skill-session-review.ts | bun |
+| skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun |
 | source-adapters.ts | 1.4.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
 | sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | js-yaml |
@@ -369,7 +369,7 @@
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
 | validate-md-language.ts | 1.16.1 | scripts/validate-md-language.ts | fs |
-| validate-model-registry.ts | 2.2.0 | scripts/validate-model-registry.ts | N/A |
+| validate-model-registry.ts | 2.3.0 | scripts/validate-model-registry.ts | N/A |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
 | validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | js-yaml |
@@ -377,7 +377,7 @@
 | validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
 | validate-skills.ts | 1.5.2 | scripts/validate-skills.ts | N/A |
 | validate-surface-registry.ts | 1.1.1 | scripts/validate-surface-registry.ts | N/A |
-| validate-templates.ts | 1.66.0 | scripts/validate-templates.ts | js-yaml |
+| validate-templates.ts | 1.67.0 | scripts/validate-templates.ts | js-yaml |
 | validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
