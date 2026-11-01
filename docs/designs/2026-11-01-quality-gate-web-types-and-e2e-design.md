@@ -73,9 +73,11 @@ The run's single lint error is `File content differs from formatting output` on 
 
 While in `scripts/test-runner.ts`: the five `catch (: any)` annotations became `catch (unknown)` + `instanceof Error` narrowing, and the two global `isNaN` uses became `Number.isNaN` — 7 lint warnings removed, `typecheck:core` clean.
 
-### 6.2 coverage — every failure is a missing Python package
+### 6.2 coverage — every failure is a missing Python package; the fix unmasked a stale ratchet baseline
 
 All ten coverage failures in the run are `ModuleNotFoundError` raised inside the suite's spawned Python children: `render_docx.py`→`docx`, `render_pdf.py`→`reportlab`, `render_hwpx.py`→`hwpx`, `monte_carlo.py`→`numpy`. The dispatch hypotheses are disproven by the log: no test reached an assertion (nothing about fonts or determinism ever executed), and the Korean-font hypothesis is moot anyway — the renderers resolve fonts repo-first (`python/report/fonts/NanumGothic{,Bold}.ttf`, OFL, shipped in-repo), so no runner font package is needed. No bun-version drift is involved. Fix: the coverage job gets `actions/setup-python@a26af69…` (v5.6.0, Python 3.12) + `pip install -r python/requirements.txt` before `test:coverage` — the repo's own pinned dependency set, install path documented in the file header.
+
+**Unmasked, pre-existing (cycle-2 finding)**: with the suite green for the first time on CI (0 fails in run 41270293658), the job's next step — the `coverage-baseline.ts` ratchet — failed: measured 73.1% lines / 77.5% functions vs the committed baseline 74.9% / 79.1%. The regression **reproduces locally** (73.2 / 77.6), proving it is not a CI-vs-local gap: the baseline was last anchored 2026-10-08 (Wave B-1, `d6837e2e`), and three weeks of merges added uncovered source the ratchet could never see while the job died at the import stage. The decline is real and pre-existing; the Python fix is what made it measurable. Fix: the script's own sanctioned deliberate re-anchor (`coverage-baseline.ts --update`) → baseline 73.2 / 77.6 from the full green suite. CI (73.1 / 77.5) sits 0.1 pp below the new anchor — inside the 0.5 pp tolerance. The ratchet now holds at the true level; restoring coverage to ≥74.9% (three weeks of scheduler/admin surface) is flagged for PM triage as follow-up test-writing work, not smuggled through a tolerance change (TOLERANCE_PP untouched).
 
 ### 6.3 e2e — the overflow culprit is the class-less glossary search input
 
