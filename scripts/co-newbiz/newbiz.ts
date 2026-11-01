@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
-// @version 1.22.0
+// @version 1.23.0
+// 1.23.0: ADR-0189 phase P5 — the `fetch` and `md:sync` cases delegate to the shared fetchSource library
+// (scripts/co-newbiz/jobs/collect/fetch-source.ts, design 2026-10-29-scheduled-jobs-design §3.2); the collect.*
+// scheduler handlers call the same function. Output lines are unchanged (formatFetchEventLine).
 /**
  * co-newbiz analysis-engine CLI — design v1.0 §4-8.
  *
@@ -45,10 +48,14 @@
  *
  *   fetch           Source-adapter data collection — k-dart/k-kosis/k-opendata/
  *                   k-law adapters (source-adapters.ts, design 2026-09-09);
- *                   observation series go through ensure_fresh (ADR-0004),
- *                   catalog sources produce natural-key upserts
+ *                   delegates to the shared fetchSource library
+ *                   (jobs/collect/fetch-source.ts, ADR-0189 P5) — observation
+ *                   series upsert on (series_id, period) with a data_change_log
+ *                   row per changed value; catalog sources produce natural-key
+ *                   upserts
  *   md:sync         Master-data catalog sync from the adapters
- *                   (md_company/md_statute/md_source; idempotent)
+ *                   (md_company/md_statute/md_source; idempotent) — the same
+ *                   fetchSource library entry the collect.* handlers call
  *
  *   calibrate       Statistical proxy-hop calibration — python/correlation.py
  *                   (OLS + lead-lag + 95% CI) → proxy_link + single-hop
@@ -102,8 +109,7 @@ import { lintGlossaryUsage, printGlossaryLintReport } from "./glossary-lint.ts";
 import { scaffoldAdr } from "./adr-new.ts";
 import { runExportCommand } from "./db-export.ts";
 import { runGraphCommand, runContextCommand } from "./graph.ts";
-import { ulid } from "../../db/lib/ulid.ts";
-import { KOSIS_UNITS } from "./kosis-units.ts";
+import { formatFetchEventLine, type FetchSourceEvent } from "./jobs/collect/fetch-source.ts";
 import {
   createUser,
   approveUser,
@@ -114,60 +120,15 @@ import {
 const [command, ...args] = process.argv.slice(2);
 
 /**
- * Upsert md_period for a YYYY-MM (month) or YYYY-MM-DD (day) key — the day
- * grain is new with the KRX beta series (ADR-0115), where start=end=the date.
+ * Stream fetchSource events to the console exactly as the pre-P5 fetch/md:sync
+ * cases printed them (ADR-0189 P5: the CLI and the collect.* handlers share the
+ * library; the printed lines stay byte-identical via formatFetchEventLine).
  */
-function upsertPeriod(db: ReturnType<typeof getDb>, periodKey: string): string {
-  const isDay = /^\d{4}-\d{2}-\d{2}$/.test(periodKey);
-  const [y, m] = periodKey.split("-").map(Number);
-  const startDate = isDay ? periodKey : `${periodKey}-01`;
-  const endDate = isDay ? periodKey : new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
-  // md_period CHECK allows date|month|quarter|year — the day grain is stored as "date".
-  const periodType = isDay ? "date" : "month";
-  const found = db
-    .query("SELECT id FROM md_period WHERE period_type=? AND start_date=? AND end_date=?")
-    .get(periodType, startDate, endDate) as { id: string } | undefined;
-  if (found) return found.id;
-  const id = ulid();
-  db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
-    [id, periodType, startDate, endDate, y, new Date().toISOString()]);
-  return id;
-}
-
-/** SHA-256 content hash for a raw KRX row — ensure_fresh's change probe. */
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-function resolveMonthlyPeriods(fromArg: string | undefined, toArg: string | undefined): string[] {
-  const ym = /^\d{4}-\d{2}$/;
-  const year = new Date().getUTCFullYear();
-  const from = fromArg ?? `${year}-01`;
-  const to = toArg ?? `${year}-12`;
-  if (!ym.test(from) || !ym.test(to)) {
-    console.error("fetch: --from/--to must use YYYY-MM.");
-    process.exit(2);
-  }
-  const [fromYear, fromMonth] = from.split("-").map(Number);
-  const [toYear, toMonth] = to.split("-").map(Number);
-  if (fromMonth < 1 || fromMonth > 12 || toMonth < 1 || toMonth > 12) {
-    console.error("fetch: --from/--to months must be 01-12.");
-    process.exit(2);
-  }
-  const start = fromYear * 12 + fromMonth;
-  const end = toYear * 12 + toMonth;
-  if (start > end) {
-    console.error("fetch: --from must be earlier than or equal to --to.");
-    process.exit(2);
-  }
-  const periods: string[] = [];
-  for (let cursor = start; cursor <= end; cursor++) {
-    const y = Math.floor((cursor - 1) / 12);
-    const m = ((cursor - 1) % 12) + 1;
-    periods.push(`${y}-${String(m).padStart(2, "0")}`);
-  }
-  return periods;
+function emitFetchEvent(e: FetchSourceEvent): void {
+  const line = formatFetchEventLine(e);
+  if (e.type === "failure") console.error(line);
+  else if (e.type === "warn_unverified") console.warn(line);
+  else console.log(line);
 }
 
 function printUsage(): void {
@@ -612,19 +573,10 @@ switch (command) {
       console.error("fetch: --source is required (dart | ecos | kosis | law | opendata).");
       process.exit(2);
     }
-    const { SOURCE_ADAPTERS, upsertCatalog } = await import("./source-adapters.ts");
-    const { ensureFresh } = await import("../../db/repositories/observation.repository.ts");
+    const { SOURCE_ADAPTERS } = await import("./source-adapters.ts");
+    const { fetchSource, resolveMonthlyPeriods } = await import("./jobs/collect/fetch-source.ts");
     const adapter = SOURCE_ADAPTERS[source];
     const db = getDb();
-    // md_source registration: every used adapter is a known source with a grade.
-    const GRADE: Record<string, string> = { dart: "A", ecos: "A", krx: "A", kosis: "A", law: "A", opendata: "B" };
-    const registerSource = () => {
-      if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
-        db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
-          [ulid(), source, GRADE[source] ?? "C", new Date().toISOString()]);
-        console.log(`md_source: registered '${source}' (grade ${GRADE[source] ?? "C"})`);
-      }
-    };
     const seriesIdIdx = args.indexOf("--series");
     const seriesArg = seriesIdIdx >= 0 ? args[seriesIdIdx + 1] : undefined;
     const fromIdx = args.indexOf("--from");
@@ -632,11 +584,13 @@ switch (command) {
     const fromArg = fromIdx >= 0 ? args[fromIdx + 1] : undefined;
     const toArg = toIdx >= 0 ? args[toIdx + 1] : undefined;
     const all = args.includes("--all");
-    let failures = 0;
 
+    // CLI-side guards keep their exact pre-P5 messages and exit codes; the
+    // heavy lifting (md_source/unit registration, upserts, change detection)
+    // lives in the shared fetchSource library (ADR-0189 P5, design §3.2).
     if (adapter.kind === "observations") {
-      const catalog = await adapter.listSeries();
       if (args.includes("--list")) {
+        const catalog = await adapter.listSeries();
         for (const s of catalog) {
           console.log(`${s.seriesId}\t${s.tblId ?? "-"}\t${s.periodType}\t${s.unitCode}\tverified=${s._verified === true}\t${s.title}`);
         }
@@ -646,100 +600,37 @@ switch (command) {
         console.error(`fetch: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
         process.exit(2);
       }
-      registerSource();
-      const targets = seriesArg
-        ? catalog.filter((s) => s.seriesId === seriesArg || s.tblId === seriesArg)
-        : catalog;
-      if (targets.length === 0) {
-        console.error(`fetch: no series matched '${seriesArg ?? "(all)"}' — fetch --list shows the seeded catalog.`);
-        process.exit(1);
+      // Same validation (messages + exit 2) the pre-P5 resolver performed inline.
+      try {
+        resolveMonthlyPeriods(fromArg, toArg);
+      } catch (err) {
+        console.error(`fetch: ${(err as Error).message}`);
+        process.exit(2);
       }
-      for (const s of targets) {
-        if (!s._verified) console.warn(`⚠ ${s.seriesId}: seed entry UNVERIFIED — confirm orgId/tblId against KOSIS before trusting outputs.`);
-        const mapping = Object.values(KOSIS_UNITS).find((u) => u.unitCode === s.unitCode);
-        if (!mapping) {
-          failures++;
-          console.error(`  isolated failure ${s.seriesId}: unit '${s.unitCode}' has no md_unit mapping (kosis-units.ts).`);
-          continue;
-        }
-        const unitId = (() => {
-          const row = db.query("SELECT id FROM md_unit WHERE code = ?").get(mapping.unitCode) as { id: string } | undefined;
-          if (row) return row.id;
-          const id = ulid();
-          db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)",
-            [id, mapping.unitCode, mapping.dimension, mapping.siCoefficient, new Date().toISOString()]);
-          return id;
-        })();
-        const sourceId = (db.query("SELECT id FROM md_source WHERE code = ?").get(source) as { id: string }).id;
-        // Day-grain series (KRX): one API call per (series × month) through
-        // the adapter's listDailyRows hook; ensure_fresh runs per trading day.
-        if (adapter.listDailyRows && s.periodType === "day") {
-          for (const month of resolveMonthlyPeriods(fromArg, toArg)) {
-            let rows: Awaited<ReturnType<NonNullable<typeof adapter.listDailyRows>>> = [];
-            try {
-              rows = await adapter.listDailyRows({ seriesId: s.seriesId, sourceId }, month);
-            } catch (err) {
-              failures++;
-              console.error(`  isolated failure ${s.seriesId}@${month}: ${err instanceof Error ? err.message : err}`);
-              continue;
-            }
-            for (const row of rows) {
-              try {
-                const periodId = upsertPeriod(db, row.date);
-                const r = await ensureFresh({
-                  seriesId: s.seriesId, periodId, unitId, sourceId,
-                  fetcher: async () => ({ value: row.value, contentHash: await sha256Hex(row.raw), raw: row.raw }),
-                });
-                console.log(`${s.seriesId}@${row.date}: ${r.changeType ?? "cached"} (rev ${r.revisionNo})`);
-              } catch (err) {
-                failures++;
-                console.error(`  isolated failure ${s.seriesId}@${row.date}: ${err instanceof Error ? err.message : err}`);
-              }
-            }
-          }
-          continue;
-        }
-        let rawFetcher: (periodKey: string) => Promise<{ value: number; contentHash: string; raw: string }>;
-        try {
-          rawFetcher = adapter.fetcher({ seriesId: s.seriesId, sourceId });
-        } catch (err) {
-          failures++;
-          console.error(`  isolated failure ${s.seriesId}: ${err instanceof Error ? err.message : err}`);
-          continue;
-        }
-        for (const periodKey of resolveMonthlyPeriods(fromArg, toArg)) {
-          try {
-            const periodId = upsertPeriod(db, periodKey);
-            const periodFetcher = async () => rawFetcher(periodKey);
-            const r = await ensureFresh({
-              seriesId: s.seriesId, periodId, unitId, sourceId,
-              fetcher: periodFetcher,
-            });
-            console.log(`${s.seriesId}@${periodKey}: ${r.changeType ?? "cached"} (rev ${r.revisionNo})`);
-          } catch (err) {
-            failures++;
-            console.error(`  isolated failure ${s.seriesId}@${periodKey}: ${err instanceof Error ? err.message : err}`);
-          }
-        }
-      }
-      if (failures > 0) {
-        console.error(`fetch: ${failures} isolated failure(s).`);
-        process.exit(1);
-      }
-      break;
-    }
-
-    // catalog adapters: md:sync semantics. dart's corpCode dump is a full-market
-    // dump (~100k rows) — require explicit opt-in so a typo'd fetch never
-    // pulls it uninvited (law's whitelist default keeps it small).
-    if (source === "dart" && !args.includes("--all")) {
+    } else if (source === "dart" && !all) {
+      // catalog adapters: md:sync semantics. dart's corpCode dump is a full-market
+      // dump (~100k rows) — require explicit opt-in so a typo'd fetch never
+      // pulls it uninvited (law's whitelist default keeps it small).
       console.error("fetch: dart catalog is the full-market corpCode dump — pass --all explicitly.");
       process.exit(2);
     }
-    registerSource();
-    const upserts = await adapter.listCatalog({ all });
-    const result = upsertCatalog(db, upserts);
-    console.log(`${source}: ${result.inserted} inserted, ${result.existing} already present.`);
+
+    const result = await fetchSource(db, source, { seriesArg, fromArg, toArg, all, emit: emitFetchEvent });
+    if (!result.ok) {
+      if (result.reason === "credential_missing") {
+        console.error(`fetch: ${result.credentialEnv} is not set — the ${source} adapter (${result.kSkill}) is disabled.`);
+        process.exit(2);
+      }
+      console.error(`fetch: no series matched '${result.seriesArg}' — fetch --list shows the seeded catalog.`);
+      process.exit(1);
+    }
+    if (result.kind === "catalog") {
+      console.log(`${source}: ${result.catalog!.inserted} inserted, ${result.catalog!.existing} already present.`);
+    }
+    if (result.failures.length > 0) {
+      console.error(`fetch: ${result.failures.length} isolated failure(s).`);
+      process.exit(1);
+    }
     break;
   }
   case "calibrate": {
@@ -834,22 +725,22 @@ switch (command) {
       console.error("md:sync: --source is required (dart | law).");
       process.exit(2);
     }
-    const { SOURCE_ADAPTERS, upsertCatalog } = await import("./source-adapters.ts");
-    const adapter = SOURCE_ADAPTERS[source];
-    if (!adapter.isEnabled()) {
-      console.error(`md:sync: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
+    // ADR-0189 P5: md:sync and the collect.dart/collect.law handlers share the
+    // same fetchSource catalog branch (registration + listCatalog + natural-key
+    // upsert); only the message prefixes stay CLI-specific here.
+    const { fetchSource } = await import("./jobs/collect/fetch-source.ts");
+    const db = getDb();
+    const result = await fetchSource(db, source, { all: args.includes("--all"), emit: emitFetchEvent });
+    if (!result.ok) {
+      if (result.reason === "no_series_matched") {
+        // Unreachable: dart/law are catalog adapters (no series catalog).
+        console.error(`md:sync: no series matched '${result.seriesArg}'.`);
+        process.exit(1);
+      }
+      console.error(`md:sync: ${result.credentialEnv} is not set — the ${source} adapter (${result.kSkill}) is disabled.`);
       process.exit(2);
     }
-    const db = getDb();
-    const GRADE: Record<string, string> = { dart: "A", law: "A" };
-    if (!db.query("SELECT id FROM md_source WHERE code = ?").get(source)) {
-      db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)",
-        [ulid(), source, GRADE[source] ?? "C", new Date().toISOString()]);
-      console.log(`md_source: registered '${source}' (grade ${GRADE[source] ?? "C"})`);
-    }
-    const upserts = await adapter.listCatalog({ all: args.includes("--all") });
-    const result = upsertCatalog(db, upserts);
-    console.log(`md:sync ${source}: ${result.inserted} inserted, ${result.existing} already present.`);
+    console.log(`md:sync ${source}: ${result.catalog!.inserted} inserted, ${result.catalog!.existing} already present.`);
     break;
   }
 

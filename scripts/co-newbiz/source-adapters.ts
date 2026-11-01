@@ -1,4 +1,7 @@
-// @version 1.3.0
+// @version 1.4.0
+// 1.4.0: md_statute natural-key idempotency is DB-enforced (0186 idx_md_statute_code, data-architect review
+// 2026-11-01) — the md_statute catalog insert uses ON CONFLICT DO NOTHING and upsertCatalog counts a conflicted
+// row as existing, never as a phantom insert (intra-batch duplicates / losing races).
 /**
  * source-adapters.ts — the pluggable data-source adapter framework
  * (design: docs/designs/2026-09-09-source-adapter-framework-design.md).
@@ -882,7 +885,7 @@ export const SOURCE_ADAPTERS: Record<string, SourceAdapter> = {
 
 /** Natural-key upsert for catalog rows — idempotent by construction. */
 export function upsertCatalog(
-  db: { query: (sql: string, ...args: unknown[]) => { get: (...args: unknown[]) => unknown }; run: (sql: string, ...args: unknown[]) => void },
+  db: { query: (sql: string, ...args: unknown[]) => { get: (...args: unknown[]) => unknown }; run: (sql: string, ...args: unknown[]) => { changes: number } },
   upserts: CatalogUpsert[],
 ): { inserted: number; existing: number } {
   let inserted = 0;
@@ -894,8 +897,12 @@ export function upsertCatalog(
       existing++;
       continue;
     }
-    insertCatalogByNaturalKey(db, up, ulid(), now);
-    inserted++;
+    const changes = insertCatalogByNaturalKey(db, up, ulid(), now);
+    // ON CONFLICT DO NOTHING (md_statute natural-key index, 0186): an intra-batch
+    // duplicate or a losing concurrent sync counts as existing, never as a
+    // phantom insert.
+    if (changes > 0) inserted++;
+    else existing++;
   }
   return { inserted, existing };
 }
@@ -916,36 +923,42 @@ function findCatalogByNaturalKey(
   }
 }
 
+/** Insert one catalog row; returns the number of rows actually inserted
+ * (0 when the md_statute natural-key index (0186) absorbs the write via
+ * ON CONFLICT DO NOTHING). */
 function insertCatalogByNaturalKey(
-  db: { run: (sql: string, ...args: unknown[]) => void },
+  db: { run: (sql: string, ...args: unknown[]) => { changes: number } },
   up: CatalogUpsert,
   id: string,
   now: string,
-): void {
+): number {
   switch (up.table) {
     case "md_company":
       db.run(
         "INSERT INTO md_company (id, dart_corp_code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)",
         [id, up.naturalKey.dart_corp_code, up.values.name_ko ?? null, up.values.name_en ?? null, now],
       );
-      return;
+      return 1;
     case "md_statute":
-      db.run(
-        "INSERT INTO md_statute (id, korea_statute_id, foreign_framework_key, created_at) VALUES (?, ?, ?, ?)",
-        [id, up.naturalKey.korea_statute_id, up.values.foreign_framework_key ?? null, now],
-      );
-      return;
+      // ON CONFLICT DO NOTHING (no target): absorbs any partial-unique violation
+      // — idx_md_statute_code (0186) makes the natural key DB-enforced.
+      return db
+        .run(
+          "INSERT INTO md_statute (id, korea_statute_id, foreign_framework_key, created_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+          [id, up.naturalKey.korea_statute_id, up.values.foreign_framework_key ?? null, now],
+        )
+        .changes;
     case "md_industry":
       db.run(
         "INSERT INTO md_industry (id, code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)",
         [id, up.naturalKey.code, up.values.name_ko ?? null, up.values.name_en ?? null, now],
       );
-      return;
+      return 1;
     case "md_source":
       db.run(
         "INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?, ?, ?, ?)",
         [id, up.naturalKey.code, up.values.reliability_grade ?? "C", now],
       );
-      return;
+      return 1;
   }
 }

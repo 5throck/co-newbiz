@@ -1,4 +1,6 @@
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0: ADR-0189 phase P5 — the five collect.* handlers register here, which makes schedule-seed create their
+// schedule_job rows disabled (D3) with each handler's cron/timeout/retry values.
 /**
  * The scheduler's handler registry. Adding a job = adding a handler here; `schedule_job.job_key` values without a
  * registered handler are refused by run-job (and by the future admin create endpoint).
@@ -7,6 +9,11 @@ import { gateIntegrityShadowReport } from "./gate-integrity-shadow-report.ts";
 import { watchEvaluate } from "./watch-evaluate.ts";
 import { notifyDeliver } from "./notify-deliver.ts";
 import { notifyDigest } from "./notify-digest.ts";
+import { collectDart } from "./collect/dart.ts";
+import { collectEcos } from "./collect/ecos.ts";
+import { collectKrx } from "./collect/krx.ts";
+import { collectKosis } from "./collect/kosis.ts";
+import { collectLaw } from "./collect/law.ts";
 import type { JobHandler } from "./types.ts";
 
 const HANDLERS = new Map<string, JobHandler>();
@@ -29,3 +36,8 @@ registerJobHandler(watchEvaluate);
 registerJobHandler(gateIntegrityShadowReport);
 registerJobHandler(notifyDeliver);
 registerJobHandler(notifyDigest);
+registerJobHandler(collectDart);
+registerJobHandler(collectEcos);
+registerJobHandler(collectKrx);
+registerJobHandler(collectKosis);
+registerJobHandler(collectLaw);
