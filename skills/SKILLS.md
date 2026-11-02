@@ -33,6 +33,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `dd-to-valuation-bridge` | 1.2.0 | active | valuation-agent | 2026-10-01 | — | Wave 5.8H — assumption_key/value_impact connection audit across all DD workstreams; margin-axis vs. QoE double-count check |
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
 | `decision-record` | 1.1.2 | active | pm | 2026-08-25 | — | — |
+| `delegate-to-hub` | 1.0.1 | active | pm | 2026-11-02 | — | — |
 | `design-foundation` | 1.1.0 | active | design-system-agent | 2026-09-26 | — | — |
 | `documentation-writing` | 1.0.3 | active | pm | 2026-07-19 | — | — |
 | `evidence-ledger` | 1.1.1 | active | pm | 2026-08-25 | — | — |

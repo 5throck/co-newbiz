@@ -2204,6 +2204,24 @@
       ]
     },
     {
+      "id": "skill:root/delegate-to-hub",
+      "type": "skill",
+      "layer": "L3",
+      "name": "delegate-to-hub",
+      "scope": "root",
+      "capability": "delegate-to-hub",
+      "content_hash": "6a8d68b6e8a283da",
+      "version": "1.0.1",
+      "mirrors": [
+        "skills/delegate-to-hub/SKILL.md",
+        ".claude/skills/delegate-to-hub/SKILL.md",
+        ".gemini/skills/delegate-to-hub/SKILL.md",
+        ".agents/skills/delegate-to-hub/SKILL.md",
+        ".codex/skills/delegate-to-hub/SKILL.md",
+        ".hermes/skills/delegate-to-hub/SKILL.md"
+      ]
+    },
+    {
       "id": "skill:root/design-foundation",
       "type": "skill",
       "layer": "L3",
@@ -7893,6 +7911,12 @@
         "field": "relates_to",
         "index": 1
       }
+    },
+    {
+      "type": "references",
+      "from": "skill:root/delegate-to-hub",
+      "to": "skill:root/sync",
+      "source": "prose"
     },
     {
       "type": "composes_with",

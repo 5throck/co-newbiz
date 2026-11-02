@@ -30,6 +30,7 @@
 | `root/deal-execution-playbook` | L3 | 1.1.0 | root/brownfield-agent, root/process-governance-manager | — | — | — | — |
 | `root/debt-and-contingent-liability-simulation` | L3 | 1.1.0 | root/risk-officer, root/valuation-agent | root/phase 4 | root/certification-transferability (follows), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/decision-record` | L3 | 1.1.2 | — | — | root/evidence-ledger (composes_with), root/stage-gate-governance | — | — |
+| `root/delegate-to-hub` | L3 | 1.0.1 | — | — | — | — | — |
 | `root/design-foundation` | L3 | 1.1.0 | — | — | root/accessibility-audit (composes_with), root/token-usage-lint (composes_with), root/ui-ux-design-intelligence (enables) | — | — |
 | `root/documentation-writing` | L3 | 1.0.3 | — | — | root/team-builder (composes_with) | — | — |
 | `root/evidence-ledger` | L3 | 1.1.1 | — | — | root/decision-record (composes_with), root/stage-gate-governance | — | — |
@@ -580,11 +581,11 @@ None — every capability has a single content hash.
 | adr | 179 | (expected until docs `references` edges are mined) |
 | agent | 13 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ir-agent, root/platform-lead, root/release-engineer, root/security-engineer, root/sre |
 | decision | 4 | (expected until docs `references` edges are mined) |
-| skill | 9 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer, root/sync |
+| skill | 8 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer |
 
 ## Skills Without `used_by` (G6)
 
-30 skill nodes have no `used_by` edge (no agent `required_skills` / manifest `used_by_agents` entry).
+31 skill nodes have no `used_by` edge (no agent `required_skills` / manifest `used_by_agents` entry).
 
 ### Suggested `required_by` agents (E4, report-only)
 
@@ -595,4 +596,4 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-03), window 90 days. Skill nodes with usage: 1.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (1): root/sync
-- **unused** (0 sessions in 90 days) (106): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout, root/i18n-locale-config … and 66 more
+- **unused** (0 sessions in 90 days) (107): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout … and 67 more
