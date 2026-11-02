@@ -19,17 +19,22 @@
 // RETENTION_EXCLUDED_TABLES).
 //
 // Usage: CO_NEWBIZ_SCHEDULER_ENV=dev bun scripts/co-newbiz/schedule-seed.ts [--db-path <path>] [--dry-run]
+import type { Database } from "bun:sqlite";
 import { getDb } from "../../db/client.ts";
 import { resolveSchedulerEnv } from "./scheduler-core.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { validateCron } from "../../app/web-next/lib/schedule/cron.ts";
 import { listJobHandlers } from "./jobs/index.ts";
-import {
-  RETENTION_ELIGIBLE_TABLES,
-  handlingToStoredAction,
-} from "../../db/lib/retention-registry.ts";
+import { RETENTION_ELIGIBLE_TABLES, handlingToStoredAction } from "../../db/lib/retention-registry.ts";
 
-export function seedScheduleJobs(db: any, now: Date, opts: { dryRun?: boolean } = {}): { inserted: string[]; existing: string[] } {
+/** The scheduler's DB handle (bun:sqlite Database); db/client.ts getDb() is typed `any` so callers pass through. */
+type Db = Database;
+
+export function seedScheduleJobs(
+  db: Db,
+  now: Date,
+  opts: { dryRun?: boolean } = {},
+): { inserted: string[]; existing: string[] } {
   const inserted: string[] = [];
   const existing: string[] = [];
   for (const h of listJobHandlers()) {
@@ -44,7 +49,17 @@ export function seedScheduleJobs(db: any, now: Date, opts: { dryRun?: boolean } 
       db.run(
         `INSERT INTO schedule_job (id, job_key, cron_expr, enabled, created_at, display_name, description, timeout_sec, max_retries, updated_at, updated_by)
          VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 'seed')`,
-        [ulid(), h.key, h.defaultCron, now.toISOString(), h.displayName, h.description, h.timeoutSec, h.maxRetries, now.toISOString()],
+        [
+          ulid(),
+          h.key,
+          h.defaultCron,
+          now.toISOString(),
+          h.displayName,
+          h.description,
+          h.timeoutSec,
+          h.maxRetries,
+          now.toISOString(),
+        ],
       );
     }
     inserted.push(h.key);
@@ -64,7 +79,10 @@ export function seedScheduleJobs(db: any, now: Date, opts: { dryRun?: boolean } 
  * dry_run_session is intentionally absent: it is not registry-eligible (executor-refused, read-path
  * purge per migration 0172).
  */
-export function seedRetentionPolicies(db: any, opts: { dryRun?: boolean } = {}): { inserted: string[]; existing: string[] } {
+export function seedRetentionPolicies(
+  db: Db,
+  opts: { dryRun?: boolean } = {},
+): { inserted: string[]; existing: string[] } {
   const inserted: string[] = [];
   const existing: string[] = [];
   for (const entry of RETENTION_ELIGIBLE_TABLES) {

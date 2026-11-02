@@ -50,9 +50,14 @@ async function loginCookie(userId: string, password: string): Promise<string> {
   expect(res.status).toBe(200);
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 }
-const jobRows = () => db.query("SELECT * FROM schedule_job ORDER BY job_key").all() as any[];
-const policyRows = () => db.query("SELECT * FROM retention_policy ORDER BY table_key").all() as any[];
-const seedAuditRows = () => db.query("SELECT * FROM audit_log WHERE action = 'schedule_job_seed' ORDER BY created_at, id").all() as any[];
+const jobRows = () => db.query("SELECT * FROM schedule_job ORDER BY job_key").all() as Record<string, unknown>[];
+const policyRows = () =>
+  db.query("SELECT * FROM retention_policy ORDER BY table_key").all() as Record<string, unknown>[];
+const seedAuditRows = () =>
+  db.query("SELECT * FROM audit_log WHERE action = 'schedule_job_seed' ORDER BY created_at, id").all() as Record<
+    string,
+    unknown
+  >[];
 
 let adminCookie: string;
 let analystCookie: string;
@@ -140,7 +145,7 @@ describe("POST /api/admin/schedule-jobs/seed — mutating path (D3 invariant, au
     expect(rows.filter((r) => r.enabled !== 0).length).toBe(0); // D3: seeded rows are DISABLED
     const byKey = new Map(rows.map((r) => [r.job_key, r]));
     for (const h of listJobHandlers()) {
-      expect(byKey.get(h.key).cron_expr).toBe(h.defaultCron); // default cron from the registry
+      expect(byKey.get(h.key)?.cron_expr).toBe(h.defaultCron); // default cron from the registry
     }
 
     // policy seeding: one row per registry-eligible table, registry defaults, derived stored action
@@ -149,14 +154,22 @@ describe("POST /api/admin/schedule-jobs/seed — mutating path (D3 invariant, au
     expect(pols.length).toBe(reg.RETENTION_ELIGIBLE_TABLES.length);
     for (const t of reg.RETENTION_ELIGIBLE_TABLES) {
       const row = pols.find((p) => p.table_key === t.table);
-      expect(row.basis).toBe(t.defaultBasis);
-      expect(row.retention_months).toBe(t.defaultMonths);
-      expect(row.action).toBe(reg.handlingToStoredAction(t.handling));
-      expect(row.last_run_at).toBeNull();
+      expect(row?.basis).toBe(t.defaultBasis);
+      expect(row?.retention_months).toBe(t.defaultMonths);
+      expect(row?.action).toBe(reg.handlingToStoredAction(t.handling));
+      expect(row?.last_run_at).toBeNull();
     }
     // dba ruling 2026-11-02 spot-checks + the explicit non-seed
-    expect(pols.find((p) => p.table_key === "session")).toMatchObject({ basis: "expires_at", retention_months: 1, action: "delete" });
-    expect(pols.find((p) => p.table_key === "notification")).toMatchObject({ basis: "sent_at", retention_months: 12, action: "delete" });
+    expect(pols.find((p) => p.table_key === "session")).toMatchObject({
+      basis: "expires_at",
+      retention_months: 1,
+      action: "delete",
+    });
+    expect(pols.find((p) => p.table_key === "notification")).toMatchObject({
+      basis: "sent_at",
+      retention_months: 12,
+      action: "delete",
+    });
     expect(pols.find((p) => p.table_key === "dry_run_session")).toBeUndefined();
 
     const audits = seedAuditRows();
@@ -164,7 +177,9 @@ describe("POST /api/admin/schedule-jobs/seed — mutating path (D3 invariant, au
     expect(audits[0].actor_user_id).toBe("seedadmin");
     expect(audits[0].target).toContain(`inserted=[${[...registeredKeys].sort().join(",")}]`);
     expect(audits[0].target).toContain("existing_count=0");
-    expect(audits[0].target).toContain(`policies_inserted=[${reg.RETENTION_ELIGIBLE_TABLES.map((t) => t.table).join(",")}]`);
+    expect(audits[0].target).toContain(
+      `policies_inserted=[${reg.RETENTION_ELIGIBLE_TABLES.map((t) => t.table).join(",")}]`,
+    );
     expect(audits[0].target).toContain("policies_existing_count=0");
   });
 
@@ -188,7 +203,9 @@ describe("POST /api/admin/schedule-jobs/seed — mutating path (D3 invariant, au
     expect(new Map(rows.map((r) => [r.job_key, r.cron_expr])).get(editedKey)).toBe("9 9 * * *");
     expect(rows.filter((r) => r.enabled !== 0).length).toBe(0); // still disabled after re-seed
     // the admin-tuned 6-month notification policy survives the re-seed untouched
-    expect(db.query("SELECT retention_months FROM retention_policy WHERE table_key='notification'").get()).toEqual({ retention_months: 6 });
+    expect(db.query("SELECT retention_months FROM retention_policy WHERE table_key='notification'").get()).toEqual({
+      retention_months: 6,
+    });
 
     // Every mutating call audits, including a no-op re-seed.
     const audits = seedAuditRows();

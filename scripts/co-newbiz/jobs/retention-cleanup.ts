@@ -72,6 +72,7 @@
  *     handler's batch size and archive destination (tests).
  */
 
+import type { Database } from "bun:sqlite";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -215,7 +216,11 @@ interface LoadedArchive {
   lines: string[];
 }
 
-function tableColumns(db: any, table: string): Set<string> {
+/** The scheduler's DB handle. Typed as bun:sqlite's Database (new code must not use `any`;
+ * callers that hold a looser handle from db/client.ts getDb() still pass - it is typed `any`). */
+type Db = Database;
+
+function tableColumns(db: Db, table: string): Set<string> {
   // table is a code-constant identifier (allow-list only) - never policy input.
   const rows = db.query(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   return new Set(rows.map((r) => r.name));
@@ -276,7 +281,15 @@ function verifyArchiveFile(path: string, pk: string, newPks: string[]): void {
  * PK dedupe, verifies the archive, then deletes; delete_only plain-deletes; archive_only archives
  * and never deletes. All under the caller's db.
  */
-function processTable(db: any, entry: RetentionAllowEntry, months: number, opts: Required<Pick<RunRetentionOptions, "now" | "batchSize" | "archiveDir">> & { dryRun: boolean; signal?: AbortSignal }): RetentionTableReport {
+function processTable(
+  db: Db,
+  entry: RetentionAllowEntry,
+  months: number,
+  opts: Required<Pick<RunRetentionOptions, "now" | "batchSize" | "archiveDir">> & {
+    dryRun: boolean;
+    signal?: AbortSignal;
+  },
+): RetentionTableReport {
   const cutoff = retentionCutoff(months, opts.now);
   const pk = entry.pk;
   const basis = entry.basis;
@@ -373,10 +386,7 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, opts:
       if (deletes) {
         for (let i = 0; i < archivedIds.length; i += opts.batchSize) {
           const chunk = archivedIds.slice(i, i + opts.batchSize);
-          db.run(
-            `DELETE FROM ${entry.table} WHERE ${pk} IN (${chunk.map(() => "?").join(",")})`,
-            chunk,
-          );
+          db.run(`DELETE FROM ${entry.table} WHERE ${pk} IN (${chunk.map(() => "?").join(",")})`, chunk);
           report.rows_deleted += chunk.length;
         }
       }
@@ -395,7 +405,7 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, opts:
  * then processes each allow-listed policy row. Zero qualifying rows (raw_payload today) is a no-op.
  * `last_run_at` is updated per table after a successful non-dry run - not on dry-run, not on error.
  */
-export function runRetention(db: any, opts: RunRetentionOptions): RetentionRunResult {
+export function runRetention(db: Db, opts: RunRetentionOptions): RetentionRunResult {
   const nowIso = opts.now.toISOString();
   const dryRun = opts.dryRun === true;
   const batchSize = opts.batchSize ?? RETENTION_BATCH;
@@ -404,7 +414,13 @@ export function runRetention(db: any, opts: RunRetentionOptions): RetentionRunRe
 
   const policies = db
     .query("SELECT table_key, basis, retention_months, action, last_run_at FROM retention_policy ORDER BY table_key")
-    .all() as Array<{ table_key: string; basis: string; retention_months: number; action: string; last_run_at: string | null }>;
+    .all() as Array<{
+    table_key: string;
+    basis: string;
+    retention_months: number;
+    action: string;
+    last_run_at: string | null;
+  }>;
 
   // 1. validate every policy row against the allow-list BEFORE touching any data
   const issues: RetentionPolicyIssue[] = [];
