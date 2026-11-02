@@ -301,6 +301,49 @@ describe("fetchSource library", () => {
     expect(obsCount()).toBe(2);
   });
 
+  test("fetchSource passes the caller's db handle into the adapter ctx (stock_series resolution seam)", async () => {
+    // owner decision 2026-11-02 option 1 (stock_series, migration 0187): the krx adapter merges its
+    // table-backed stock series from the CALLER's handle — fetchSource must forward it in both
+    // enumeration points (listSeries for the catalog, listDailyRows for per-series resolution), or a
+    // stock_series row would never be collected. Pinned with a fixture that records what it received.
+    const seen: { listSeries?: unknown; listDailyRows?: unknown } = {};
+    const krxFixture: SourceAdapter = {
+      code: "krx",
+      kSkill: "k-krx",
+      credentialEnv: "KRX_API_KEY",
+      kind: "observations",
+      isEnabled: () => Boolean(process.env[envKey(["KRX", "API_KEY"].join("_"))]),
+      listSeries: async (ctx) => {
+        seen.listSeries = ctx?.db;
+        return [
+          {
+            seriesId: "krx:index:KOSPI:close",
+            adapter: "krx",
+            title: "코스피 지수 일별종가",
+            unitCode: "index",
+            periodType: "day",
+            _verified: true,
+          },
+        ];
+      },
+      listDailyRows: async (ctx, _month) => {
+        seen.listDailyRows = ctx.db;
+        return [{ date: "2026-01-02", value: 4100.5, raw: JSON.stringify({ BAS_DD: "20260102", CLSPRC_IDX: "4,100.5" }) }];
+      },
+      fetcher() {
+        throw new Error("day-grain fixture should never run the monthly fetcher");
+      },
+    };
+    await withKey(["KRX", "API_KEY"].join("_"), async () => {
+      await withAdapter("krx", krxFixture, async () => {
+        const r = await fetchSource(db, "krx", { fromArg: "2026-01", toArg: "2026-01" });
+        expect(r.ok).toBe(true);
+      });
+    });
+    expect(seen.listSeries).toBe(db);
+    expect(seen.listDailyRows).toBe(db);
+  });
+
   test("failures are structured and classified (retryable vs terminal), never raw exceptions", async () => {
     await withAdapter(
       "ecos",

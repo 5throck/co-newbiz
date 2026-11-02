@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.3.0
 /**
  * beta-series.ts — register and collect KRX beta inputs (index + subject/target
  * daily closes) for one brownfield project (WACC beta regression, issue #2 of
@@ -9,6 +9,14 @@
  * documented deviation — md_company has no ISIN/short-code column), then
  * collects KOSPI + KOSDAQ index closes plus each company's daily closes into
  * fact_market_observation via the same ensure_fresh path as `newbiz fetch`.
+ *
+ * v1.3.0 (owner decision 2026-11-02, option 1): each registration is ALSO
+ * persisted to the stock_series table (migration 0187, upsert by company_id
+ * via db/repositories/stock-series.repository.ts, registered_by 'beta-series')
+ * in addition to the in-process registration — from then on the nightly
+ * collect.krx job collects the company's closes in every process, not just
+ * where a beta run registered them. Re-registration updates the row and
+ * clears a soft disable; an identical enabled row is a no-op.
  *
  * KRX request shape: every daily service is called with ONE reference date
  * (basDd=YYYYMMDD) per weekday; one call per (service, day) is shared across
@@ -57,6 +65,7 @@ import {
   resolveKrxStockMaster,
 } from "./source-adapters.ts";
 import { normalizeKrxMarket, upsertKrxListing } from "../../db/repositories/krx-listing.repository.ts";
+import { upsertStockSeries } from "../../db/repositories/stock-series.repository.ts";
 
 const CACHE_PATH = resolve(import.meta.dir, "../../db/data/krx-stock-code-cache.json");
 const CACHE_VERSION = 1;
@@ -108,8 +117,12 @@ function monthRange(fromArg?: string, toArg?: string): string[] {
   return months;
 }
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
+/**
+ * The flow entry point. `pacing` exists for tests only — production runs take
+ * the adapter's burst-safe defaults (250ms spacing) via resetKrxRunState.
+ */
+async function main(argv: string[] = process.argv.slice(2), pacing: { minIntervalMs?: number; retryDelayMs?: number } = {}): Promise<void> {
+  const args = argv;
   const idx = args.indexOf("--project");
   const projectId = idx >= 0 ? args[idx + 1] : undefined;
   if (!projectId) {
@@ -130,7 +143,7 @@ async function main(): Promise<void> {
   const backfillOnly = args.includes("--backfill-market");
   const budgetIdx = args.indexOf("--budget");
   const budget = budgetIdx >= 0 ? Number(args[budgetIdx + 1]) : undefined;
-  resetKrxRunState({ budget: budget && budget > 0 ? budget : undefined });
+  resetKrxRunState({ budget: budget && budget > 0 ? budget : undefined, minIntervalMs: pacing.minIntervalMs, retryDelayMs: pacing.retryDelayMs });
   loadPipelineKeys();
   if (!backfillOnly && !process.env.KRX_API_KEY) {
     console.error("beta-series: KRX_API_KEY is not set (.env) — nothing can be collected.");
@@ -292,6 +305,18 @@ async function main(): Promise<void> {
     }
     const series = krxStockSeries(company.id, shortCode, company.nameKo, market ?? "kospi");
     registerKrxSeries(series);
+    // Persist the registration (owner decision 2026-11-02, option 1): the
+    // company becomes a first-class nightly series — collect.krx picks it up
+    // from stock_series in every process from now on. Upsert by company_id;
+    // re-registration updates and re-enables, identical rows are a no-op.
+    const persisted = upsertStockSeries(db, {
+      company_id: company.id,
+      ticker: shortCode,
+      market: market ?? "kospi",
+      display_name: company.nameKo,
+      registered_by: "beta-series",
+    });
+    if (persisted) console.log(`${company.nameKo}: registered in stock_series (nightly collection enabled)`);
     console.log(`collecting ${series.seriesId} (${series.title})…`);
     await collect(series.seriesId, krwUnitId);
   }
@@ -350,4 +375,8 @@ function diagnoseZero(stats: Readonly<{ calls: number; emptyDays: number; errors
   return `payloads returned rows but none matched the series (index name / 단축코드) — check --ticker and KRX field names. ${errs.slice(0, 200)}`;
 }
 
-await main();
+// Exported for tests (import.meta.main guard: running as a script still
+// executes the flow; importing it does not).
+export { main as betaSeriesMain };
+
+if (import.meta.main) await main();

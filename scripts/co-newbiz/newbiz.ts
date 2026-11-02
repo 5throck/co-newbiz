@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
-// @version 1.23.0
+// @version 1.24.0
+// 1.24.0: `fetch --list` passes the db handle in the adapter ctx, so the krx listing includes the
+// table-backed stock_series rows (migration 0187, owner decision 2026-11-02 option 1) alongside the seeds.
 // 1.23.0: ADR-0189 phase P5 — the `fetch` and `md:sync` cases delegate to the shared fetchSource library
 // (scripts/co-newbiz/jobs/collect/fetch-source.ts, design 2026-10-29-scheduled-jobs-design §3.2); the collect.*
 // scheduler handlers call the same function. Output lines are unchanged (formatFetchEventLine).
@@ -590,7 +592,10 @@ switch (command) {
     // lives in the shared fetchSource library (ADR-0189 P5, design §3.2).
     if (adapter.kind === "observations") {
       if (args.includes("--list")) {
-        const catalog = await adapter.listSeries();
+        // The db handle rides in ctx so krx --list shows the table-backed
+        // stock_series rows (migration 0187) the nightly job will actually
+        // collect — not just the static seeds.
+        const catalog = await adapter.listSeries({ db });
         for (const s of catalog) {
           console.log(`${s.seriesId}\t${s.tblId ?? "-"}\t${s.periodType}\t${s.unitCode}\tverified=${s._verified === true}\t${s.title}`);
         }

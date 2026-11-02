@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-02T12:25:40.736Z
+**Generated**: 2026-11-02T15:16:41.943Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -203,7 +203,7 @@
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
-| beta-series.ts | 1.2.0 | scripts/co-newbiz/beta-series.ts | N/A |
+| beta-series.ts | 1.3.0 | scripts/co-newbiz/beta-series.ts | N/A |
 | bootstrap-stages.ts | 1.1.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
 | calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | N/A |
@@ -253,7 +253,7 @@
 | env-check.ts | 1.1.1 | scripts/co-newbiz/env-check.ts | N/A |
 | evidence-backport-scan.ts | 1.2.0 | scripts/evidence-backport-scan.ts | N/A |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |
-| fetch-source.ts | 1.2.0 | scripts/co-newbiz/jobs/collect/fetch-source.ts | N/A |
+| fetch-source.ts | 1.3.0 | scripts/co-newbiz/jobs/collect/fetch-source.ts | N/A |
 | fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
 | fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
 | fin-project.ts | 1.0.1 | scripts/co-newbiz/fin-project.ts | N/A |
@@ -303,7 +303,7 @@
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.23.0 | scripts/co-newbiz/newbiz.ts | N/A |
+| newbiz.ts | 1.24.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | notify-deliver.ts | 1.1.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
 | notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
@@ -346,7 +346,7 @@
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
 | skill-lifecycle-audit.ts | 1.10.0 | scripts/skill-lifecycle-audit.ts | N/A |
 | skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun |
-| source-adapters.ts | 1.4.0 | scripts/co-newbiz/source-adapters.ts | N/A |
+| source-adapters.ts | 1.5.0 | scripts/co-newbiz/source-adapters.ts | N/A |
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
 | sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | js-yaml |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |

@@ -1,4 +1,10 @@
-// @version 1.4.0
+// @version 1.5.0
+// 1.5.0: per-deal KRX stock series are table-backed (stock_series, migration 0187, owner decision 2026-11-02
+// option 1) — loadStockSeriesDescriptors(db) builds descriptors from enabled rows and BOTH enumeration points
+// merge them: krx listSeries (seeds < table rows < in-process registry) and listKrxDailyRows resolution (the
+// SourceAdapter listSeries/listDailyRows ctx now carries the caller's db handle, passed by fetchSource). The
+// nightly collect.krx job therefore collects stock_series rows without any beta-series process having run in
+// the collector's own process; the in-process registry (registerKrxSeries) still wins on conflict.
 // 1.4.0: md_statute natural-key idempotency is DB-enforced (0186 idx_md_statute_code, data-architect review
 // 2026-11-01) — the md_statute catalog insert uses ON CONFLICT DO NOTHING and upsertCatalog counts a conflicted
 // row as existing, never as a phantom insert (intra-batch duplicates / losing races).
@@ -22,6 +28,7 @@
  */
 
 import { ulid } from "../../db/lib/ulid.ts";
+import { listEnabledStockSeries } from "../../db/repositories/stock-series.repository.ts";
 import { parseCorpXml } from "../../app/web-next/lib/dart-client.ts";
 import type { Fetcher } from "../../db/repositories/observation.repository.ts";
 import { loadPipelineKeys } from "../lib/env-keys.ts";
@@ -84,14 +91,21 @@ export interface SourceAdapter {
   kind: "observations" | "catalog";
   /** Disabled when the credential is absent — the CLI reports and exits 2. */
   isEnabled(): boolean;
-  /** Series catalog for observation adapters with MONTH grain (KOSIS/ECOS). */
-  listSeries(): Promise<SeriesDescriptor[]>;
+  /**
+   * Series catalog for observation adapters. The caller's db handle rides in
+   * ctx (optional — fixtures and the pre-0187 callers omit it): the krx
+   * adapter merges its table-backed stock series (stock_series, migration
+   * 0187) into the enumerated set when a handle is present.
+   */
+  listSeries(ctx?: { db?: unknown }): Promise<SeriesDescriptor[]>;
   /**
    * Day-grain collection hook (KRX). Iterates one month's trading days from a
    * single API call per (series × month); the caller upserts a day period per
-   * row and runs ensure_fresh per day. Absent = month-grain adapter.
+   * row and runs ensure_fresh per day. Absent = month-grain adapter. ctx.db is
+   * the caller's handle, used to resolve table-backed stock series
+   * (stock_series) the in-process registry does not know.
    */
-  listDailyRows?(ctx: { seriesId: string; sourceId: string }, month: string): Promise<KrxDailyRow[]>;
+  listDailyRows?(ctx: { seriesId: string; sourceId: string; db?: unknown }, month: string): Promise<KrxDailyRow[]>;
   /**
    * Build the raw observation fetcher for one series (argument is a period key
    * such as YYYY-MM). Month-grain adapters (KOSIS/ECOS) honor it; day-grain
@@ -402,8 +416,13 @@ export const KRX_SEED_SERIES: SeriesDescriptor[] = [
  * Runtime registry for per-deal company series (krx:stock:<companyId>:close).
  * The static seeds cannot carry them (company ids are project data), so
  * beta-series.ts registers each company's descriptor — including the resolved
- * KRX 단축코드 as ticker — before collecting. The adapter's fetcher and the
- * daily-row listing resolve through this registry first, then the seeds.
+ * KRX 단축코드 as ticker — before collecting. Since source-adapters 1.5.0 this
+ * registry is the in-process LAYER on top of the persisted stock_series table
+ * (migration 0187): enumeration and resolution merge seeds < table rows <
+ * registry, the registry winning on conflict (a beta run's freshly resolved
+ * descriptor is the most current view of the company). Keep using it for
+ * in-process needs (tests, the beta flow's own run); persistence goes through
+ * db/repositories/stock-series.repository.ts.
  */
 const KRX_DYNAMIC_SERIES = new Map<string, SeriesDescriptor>();
 
@@ -424,6 +443,27 @@ export function krxStockSeries(companyId: string, ticker: string, companyName: s
     periodType: "day",
     _verified: true,
   };
+}
+
+/**
+ * Table-backed per-deal stock series (stock_series, migration 0187; owner
+ * decision 2026-11-02, option 1) as series descriptors. Disabled rows
+ * (disabled_at set) are skipped — collection stops for them but their
+ * observation history stays. This is the merge source for BOTH enumeration
+ * points: the krx adapter's listSeries (what the nightly collect.krx job and
+ * the CLI fetch loop collect) and the single-series resolution in
+ * listKrxDailyRows/krxResolveSeries — so a company registered by a beta-series
+ * run in ANY process (persisted by beta-series.ts since 1.3.0, backfilled by
+ * migration 0187 for the two already-flowing series) is collected without that
+ * process having registered anything in-memory.
+ */
+export function loadStockSeriesDescriptors(
+  // biome-ignore lint/suspicious/noExplicitAny: bun:sqlite Database handle (upsertCatalog's db typing)
+  db: any,
+): SeriesDescriptor[] {
+  return listEnabledStockSeries(db).map((row) =>
+    krxStockSeries(row.company_id, row.ticker, row.display_name, row.market),
+  );
 }
 
 /** One trading day's close from a KRX daily service payload row. */
@@ -670,9 +710,15 @@ export function krxPickRow(
  * skipped (counted in krxRunStats().emptyDays). This is the collection unit
  * both newbiz.ts fetch (day-grain series) and beta-series.ts consume.
  */
-export async function listKrxDailyRows(seriesId: string, month: string, today: Date = new Date()): Promise<KrxDailyRow[]> {
+export async function listKrxDailyRows(
+  seriesId: string,
+  month: string,
+  today: Date = new Date(),
+  // biome-ignore lint/suspicious/noExplicitAny: bun:sqlite Database handle (optional — in-process-only callers omit it)
+  db?: any,
+): Promise<KrxDailyRow[]> {
   const apiKey = krxApiKey();
-  const series = KRX_DYNAMIC_SERIES.get(seriesId) ?? KRX_SEED_SERIES.find((s) => s.seriesId === seriesId);
+  const series = krxResolveSeries(seriesId, db);
   if (!series) throw new Error(`krx: unknown series '${seriesId}'`);
   const { path, indexCode } = krxServiceFor(series);
   if (indexCode === null && !series.ticker) throw new Error(`krx: stock series '${seriesId}' has no ticker (단축코드)`);
@@ -749,8 +795,25 @@ export async function resolveKrxStockMaster(
   return { ok: true, basDd, row: { shortCode, isin: hit.ISU_CD ?? null, nameKo: hit.ISU_ABBRV ?? target, market: resolvedMarket } };
 }
 
-function krxResolveSeries(seriesId: string): SeriesDescriptor | undefined {
-  return KRX_DYNAMIC_SERIES.get(seriesId) ?? KRX_SEED_SERIES.find((s) => s.seriesId === seriesId);
+/**
+ * Single-series resolution precedence: the in-process registry wins, then the
+ * static seeds, then the persisted stock_series table (db omitted →
+ * registry/seeds only, the pre-0187 behavior). Seeds-vs-table precedence is
+ * unobservable — the id namespaces are disjoint (krx:index:* seeds never
+ * collide with krx:stock:* table rows) — so this is a lookup order, not a
+ * merge order to keep in step with listSeries.
+ */
+function krxResolveSeries(
+  seriesId: string,
+  // biome-ignore lint/suspicious/noExplicitAny: bun:sqlite Database handle (optional — in-process-only callers omit it)
+  db?: any,
+): SeriesDescriptor | undefined {
+  const dynamic = KRX_DYNAMIC_SERIES.get(seriesId);
+  if (dynamic) return dynamic;
+  const seed = KRX_SEED_SERIES.find((s) => s.seriesId === seriesId);
+  if (seed) return seed;
+  if (db) return loadStockSeriesDescriptors(db).find((s) => s.seriesId === seriesId);
+  return undefined;
 }
 
 const krxAdapter: SourceAdapter = {
@@ -762,11 +825,21 @@ const krxAdapter: SourceAdapter = {
     loadPipelineKeys();
     return Boolean(process.env.KRX_API_KEY);
   },
-  async listSeries() {
-    return KRX_SEED_SERIES;
+  async listSeries(ctx?: { db?: unknown }) {
+    // Merge order: seeds < table-backed stock_series rows < in-process
+    // registry (registry wins — a beta run in THIS process holds the freshest
+    // descriptor). A db handle is passed by fetchSource since 1.5.0; without
+    // one (old callers, bare fixtures) this is the pre-0187 seed-only catalog.
+    const merged = new Map<string, SeriesDescriptor>();
+    for (const s of KRX_SEED_SERIES) merged.set(s.seriesId, s);
+    if (ctx?.db) {
+      for (const s of loadStockSeriesDescriptors(ctx.db)) merged.set(s.seriesId, s);
+    }
+    for (const s of KRX_DYNAMIC_SERIES.values()) merged.set(s.seriesId, s);
+    return [...merged.values()];
   },
   async listDailyRows(ctx, month) {
-    return listKrxDailyRows(ctx.seriesId, month);
+    return listKrxDailyRows(ctx.seriesId, month, new Date(), ctx.db);
   },
   fetcher(ctx) {
     const series = krxResolveSeries(ctx.seriesId);

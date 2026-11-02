@@ -1,4 +1,8 @@
-// @version 1.2.0 (2026-11-02: the isRetryableCollectError truncation class also covers the
+// @version 1.3.0 (2026-11-02: the caller's db handle rides in the observation-adapter ctx —
+// listSeries({ db }) and listDailyRows({ seriesId, sourceId, db }) — so the krx adapter can merge
+// its table-backed stock series (stock_series, migration 0187, owner decision option 1) into the
+// enumerated catalog and resolve each series' descriptor from the same handle; fixture adapters
+// ignore the extra ctx field. v1.2.0: the isRetryableCollectError truncation class also covers the
 // disclosure-side parser errors — dart-client v1.2.0 rewired fetchDisclosureText onto the
 // same readZipEntries central-directory walk, so its truncation errors read "DART disclosure
 // ZIP truncated" instead of matching the corp-code literal)
@@ -357,7 +361,7 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
   // ── observations adapters (kosis / ecos / krx) ──
   if (adapter.kind === "observations") {
     const sourceRegistered = registerSourceIfNeeded(db, source, emit);
-    const catalog = await adapter.listSeries();
+    const catalog = await adapter.listSeries({ db });
     const targets = seriesArg ? catalog.filter((s) => s.seriesId === seriesArg || s.tblId === seriesArg) : catalog;
     if (targets.length === 0) {
       return { ok: false, reason: "no_series_matched", source, seriesArg: seriesArg ?? "(all)" };
@@ -395,7 +399,7 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
           checkAbort(signal);
           let rows: Awaited<ReturnType<NonNullable<typeof adapter.listDailyRows>>> = [];
           try {
-            rows = await adapter.listDailyRows({ seriesId: s.seriesId, sourceId }, month);
+            rows = await adapter.listDailyRows({ seriesId: s.seriesId, sourceId, db }, month);
           } catch (err) {
             fail(s.seriesId, err, month);
             continue;
