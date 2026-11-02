@@ -1,4 +1,4 @@
-// @version 1.6.0
+// @version 1.7.0
 /**
  * API tests — exercising the real app/web-next Route Handlers via
  * nextRequest() against a scratch SQLite file (deleted after), not mocked
@@ -86,10 +86,33 @@ afterAll(async () => {
 });
 
 describe("auth", () => {
-  test("register lands as pending viewer", async () => {
-    const res = await req("/api/auth/register", { method: "POST", body: JSON.stringify({ userId: "carol", password: "pw-carol-12345" }) });
-    expect(res.status).toBe(201);
-    expect((await res.json()).data.status).toBe("pending");
+  // Owner decision 2026-11-02 (access tightening, Option A): self-registration
+  // is CLOSED by default — a default viewer gets full business READ, so an open
+  // register endpoint exposed the whole deal pipeline to anyone reaching the
+  // login page. CO_NEWBIZ_ALLOW_REGISTER=1 deliberately re-opens it.
+  test("self-registration is closed by default — 403 registration_disabled, no account created", async () => {
+    const res = await req("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ userId: "carol", password: "pw-carol-12345" }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("registration_disabled");
+    const created = db.query("SELECT COUNT(*) n FROM app_user WHERE user_id = 'carol'").get() as { n: number };
+    expect(created.n).toBe(0);
+  });
+
+  test("CO_NEWBIZ_ALLOW_REGISTER=1 deliberately re-opens registration — still lands as a pending viewer", async () => {
+    process.env.CO_NEWBIZ_ALLOW_REGISTER = "1";
+    try {
+      const res = await req("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ userId: "carol", password: "pw-carol-12345" }),
+      });
+      expect(res.status).toBe(201);
+      expect((await res.json()).data.status).toBe("pending");
+    } finally {
+      delete process.env.CO_NEWBIZ_ALLOW_REGISTER;
+    }
   });
 
   test("pending account cannot log in", async () => {
@@ -120,7 +143,11 @@ describe("bearer API tokens", () => {
   let readToken: string;
 
   test("a token is returned once, on issue, with the cnb_pat_ prefix", async () => {
-    const res = await req("/api/tokens", { method: "POST", headers: { cookie: bobCookie }, body: JSON.stringify({ label: "mcp", scopes: ["read"] }) });
+    const res = await req("/api/tokens", {
+      method: "POST",
+      headers: { cookie: bobCookie },
+      body: JSON.stringify({ label: "mcp", scopes: ["read"] }),
+    });
     const body = (await res.json()).data;
     expect(res.status).toBe(201);
     expect(res.headers.get("cache-control")).toBe("no-store");
@@ -134,7 +161,11 @@ describe("bearer API tokens", () => {
   });
 
   test("a bearer token cannot mint tokens (session-only issuance)", async () => {
-    const res = await req("/api/tokens", { method: "POST", headers: { authorization: `Bearer ${readToken}` }, body: JSON.stringify({ label: "x" }) });
+    const res = await req("/api/tokens", {
+      method: "POST",
+      headers: { authorization: `Bearer ${readToken}` },
+      body: JSON.stringify({ label: "x" }),
+    });
     expect(res.status).toBe(403);
     expect((await res.json()).error.code).toBe("session_required");
   });
@@ -193,13 +224,17 @@ describe("glossary and procedures", () => {
   });
 
   test("glossary lookup by Korean alias", async () => {
-    const res = await req(`/api/glossary/${encodeURIComponent("표준화물선환산톤수")}`, { headers: { cookie: aliceCookie } });
+    const res = await req(`/api/glossary/${encodeURIComponent("표준화물선환산톤수")}`, {
+      headers: { cookie: aliceCookie },
+    });
     expect(res.status).toBe(200);
     expect((await res.json()).data.key).toBe("CGT");
   });
 
   test("procedure resolve returns merged steps with source layers", async () => {
-    const res = await req("/api/procedures/resolve?procedure=brownfield-screening", { headers: { cookie: aliceCookie } });
+    const res = await req("/api/procedures/resolve?procedure=brownfield-screening", {
+      headers: { cookie: aliceCookie },
+    });
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.data.steps.length).toBeGreaterThan(0);
@@ -215,7 +250,11 @@ describe("glossary and procedures", () => {
 describe("notifications", () => {
   test("notifications endpoint returns unread counts and read mutations are caller-scoped", async () => {
     const projectId = ulid();
-    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, `NOTIF-${projectId.slice(-4)}`, NOW]);
+    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [
+      projectId,
+      `NOTIF-${projectId.slice(-4)}`,
+      NOW,
+    ]);
     const aliceNotif = ulid();
     const bobNotif = ulid();
     db.run(
@@ -233,14 +272,26 @@ describe("notifications", () => {
     expect(body.meta.unread_count).toBeGreaterThanOrEqual(1);
     expect(body.data.find((n: { id: string }) => n.id === aliceNotif)).toMatchObject({ read_at: null });
 
-    const read = await req(`/api/notifications/${aliceNotif}/read`, { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({}) });
+    const read = await req(`/api/notifications/${aliceNotif}/read`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({}),
+    });
     expect(read.status).toBe(200);
     expect((await read.json()).data.read_at).toBeTruthy();
 
-    const cross = await req(`/api/notifications/${bobNotif}/read`, { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({}) });
+    const cross = await req(`/api/notifications/${bobNotif}/read`, {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({}),
+    });
     expect(cross.status).toBe(404);
 
-    const all = await req("/api/notifications/read-all", { method: "POST", headers: { cookie: aliceCookie }, body: JSON.stringify({}) });
+    const all = await req("/api/notifications/read-all", {
+      method: "POST",
+      headers: { cookie: aliceCookie },
+      body: JSON.stringify({}),
+    });
     expect(all.status).toBe(200);
     expect((await all.json()).meta.unread_count).toBe(0);
   });
@@ -252,14 +303,47 @@ describe("projects", () => {
     const industryId = ulid();
     const sourceId = ulid();
     const unitId = ulid();
-    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, `STALE-${projectId.slice(-4)}`, NOW]);
-    db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "alice", "lead", "root", NOW, "api stale test"]);
-    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [industryId, `K${projectId.slice(-4)}`, "테스트 산업", "Test Industry", NOW]);
-    db.run("INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale) VALUES (?,?,?,?,?,?)", [ulid(), projectId, industryId, "alice", NOW, "test binding"]);
-    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, `SRC${projectId.slice(-4)}`, "A", NOW]);
-    db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [unitId, `U${projectId.slice(-4)}`, "currency", 1, NOW]);
-    db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [`Y2020-${projectId.slice(-4)}`, "year", "2020-01-01", "2020-12-31", 2020, NOW]);
-    db.run("INSERT INTO fact_industry (id, industry_id, period_id, metric_key, value, revision_no, source_id, created_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), industryId, `Y2020-${projectId.slice(-4)}`, "market_tam_krw", 100, 1, sourceId, NOW]);
+    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [
+      projectId,
+      `STALE-${projectId.slice(-4)}`,
+      NOW,
+    ]);
+    db.run(
+      "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
+      [projectId, "alice", "lead", "root", NOW, "api stale test"],
+    );
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
+      industryId,
+      `K${projectId.slice(-4)}`,
+      "테스트 산업",
+      "Test Industry",
+      NOW,
+    ]);
+    db.run(
+      "INSERT INTO project_industry (id, project_id, industry_id, bound_by, bound_at, rationale) VALUES (?,?,?,?,?,?)",
+      [ulid(), projectId, industryId, "alice", NOW, "test binding"],
+    );
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [
+      sourceId,
+      `SRC${projectId.slice(-4)}`,
+      "A",
+      NOW,
+    ]);
+    db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [
+      unitId,
+      `U${projectId.slice(-4)}`,
+      "currency",
+      1,
+      NOW,
+    ]);
+    db.run(
+      "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+      [`Y2020-${projectId.slice(-4)}`, "year", "2020-01-01", "2020-12-31", 2020, NOW],
+    );
+    db.run(
+      "INSERT INTO fact_industry (id, industry_id, period_id, metric_key, value, revision_no, source_id, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), industryId, `Y2020-${projectId.slice(-4)}`, "market_tam_krw", 100, 1, sourceId, NOW],
+    );
 
     const res = await req("/api/projects", { headers: { cookie: aliceCookie } });
     const body = await res.json();
@@ -267,7 +351,9 @@ describe("projects", () => {
     const row = body.data.find((p: { id: string }) => p.id === projectId);
     expect(row).toMatchObject({ is_stale: true });
     expect(row.stale_reasons.some((r: string) => r.includes("TAM"))).toBe(true);
-    expect(db.query("SELECT COUNT(*) AS c FROM pragma_table_info('md_project') WHERE name = 'is_stale'").get()).toMatchObject({ c: 0 });
+    expect(
+      db.query("SELECT COUNT(*) AS c FROM pragma_table_info('md_project') WHERE name = 'is_stale'").get(),
+    ).toMatchObject({ c: 0 });
   });
 });
 
@@ -277,18 +363,42 @@ describe("analysis — series catalog, observations, changes (live 5.7B surface)
   beforeAll(() => {
     const unitId = ulid();
     const sourceId = ulid();
-    db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [unitId, "TEST.UNIT", "dimensionless", 1, NOW]);
-    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "TESTSRC", "A", NOW]);
-    for (const [periodId, fiscalYear] of [["2025", 2025], ["2026", 2026]] as const) {
-      db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [periodId, "year", `${fiscalYear}-01-01`, `${fiscalYear}-12-31`, fiscalYear, NOW]);
+    db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [
+      unitId,
+      "TEST.UNIT",
+      "dimensionless",
+      1,
+      NOW,
+    ]);
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [
+      sourceId,
+      "TESTSRC",
+      "A",
+      NOW,
+    ]);
+    for (const [periodId, fiscalYear] of [
+      ["2025", 2025],
+      ["2026", 2026],
+    ] as const) {
+      db.run(
+        "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+        [periodId, "year", `${fiscalYear}-01-01`, `${fiscalYear}-12-31`, fiscalYear, NOW],
+      );
     }
-    for (const [periodId, revisionNo, value] of [["2025", 1, 100.0], ["2025", 2, 110.0], ["2026", 1, 120.0]] as const) {
+    for (const [periodId, revisionNo, value] of [
+      ["2025", 1, 100.0],
+      ["2025", 2, 110.0],
+      ["2026", 1, 120.0],
+    ] as const) {
       db.run(
         "INSERT INTO fact_market_observation (series_id, period_id, revision_no, value, unit_id, source_id, content_hash, fetched_at) VALUES (?,?,?,?,?,?,?,?)",
         [SERIES_ID, periodId, revisionNo, value, unitId, sourceId, `hash-${periodId}-${revisionNo}`, NOW],
       );
     }
-    db.run("INSERT INTO data_change_log (id, series_id, detected_at, change_type, old_value, new_value) VALUES (?,?,?,?,?,?)", [ulid(), SERIES_ID, NOW, "revised", 100, 110]);
+    db.run(
+      "INSERT INTO data_change_log (id, series_id, detected_at, change_type, old_value, new_value) VALUES (?,?,?,?,?,?)",
+      [ulid(), SERIES_ID, NOW, "revised", 100, 110],
+    );
   });
 
   test("series catalog aggregates observations per series", async () => {
@@ -296,7 +406,12 @@ describe("analysis — series catalog, observations, changes (live 5.7B surface)
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.meta.count).toBe(1);
-    expect(body.data[0]).toMatchObject({ series_id: SERIES_ID, observation_count: 3, min_period_id: "2025", max_period_id: "2026" });
+    expect(body.data[0]).toMatchObject({
+      series_id: SERIES_ID,
+      observation_count: 3,
+      min_period_id: "2025",
+      max_period_id: "2026",
+    });
   });
 
   test("?q= filters the catalog by substring", async () => {
@@ -308,18 +423,27 @@ describe("analysis — series catalog, observations, changes (live 5.7B surface)
     const res = await req(`/api/series/${SERIES_ID}/observations`, { headers: { cookie: aliceCookie } });
     const body = await res.json();
     expect(body.data).toHaveLength(2);
-    expect(body.data.find((r: { period_id: string }) => r.period_id === "2025")).toMatchObject({ revision_no: 2, value: 110 });
+    expect(body.data.find((r: { period_id: string }) => r.period_id === "2025")).toMatchObject({
+      revision_no: 2,
+      value: 110,
+    });
   });
 
   test("?all_revisions=1 returns every revision row", async () => {
-    const res = await req(`/api/series/${SERIES_ID}/observations?all_revisions=1`, { headers: { cookie: aliceCookie } });
+    const res = await req(`/api/series/${SERIES_ID}/observations?all_revisions=1`, {
+      headers: { cookie: aliceCookie },
+    });
     expect((await res.json()).data).toHaveLength(3);
   });
 
   test("observations meta.source carries the shared source of the returned rows", async () => {
     const res = await req(`/api/series/${SERIES_ID}/observations`, { headers: { cookie: aliceCookie } });
     const body = await res.json();
-    const expected = (db.query("SELECT source_id FROM fact_market_observation WHERE series_id = ? LIMIT 1").get(SERIES_ID) as { source_id: string }).source_id;
+    const expected = (
+      db.query("SELECT source_id FROM fact_market_observation WHERE series_id = ? LIMIT 1").get(SERIES_ID) as {
+        source_id: string;
+      }
+    ).source_id;
     expect(body.meta.source).toBe(expected);
   });
 
@@ -386,7 +510,9 @@ describe("opportunities — role-gated writes over an open read surface (ADR-009
   });
 
   test("gate decisions carry the same viewer role gate", async () => {
-    const oppId = ((await (await req("/api/opportunities", { headers: { cookie: aliceCookie } })).json()).data as { id: string }[])[0].id;
+    const oppId = (
+      (await (await req("/api/opportunities", { headers: { cookie: aliceCookie } })).json()).data as { id: string }[]
+    )[0].id;
     const res = await req(`/api/opportunities/${oppId}/gate-decisions`, {
       method: "POST",
       headers: { cookie: viewerCookie },
@@ -427,7 +553,12 @@ describe("admin console", () => {
   });
 
   test("data-sources report presence only, never the key value", async () => {
-    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [ulid(), "DART", "A", NOW]);
+    db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [
+      ulid(),
+      "DART",
+      "A",
+      NOW,
+    ]);
     const res = await req("/api/admin/data-sources", { headers: { cookie: rootCookie } });
     const body = await res.json();
     expect(res.status).toBe(200);
@@ -460,8 +591,10 @@ describe("admin console", () => {
     } finally {
       resetRootEnvForTests(null);
       rm(dir, { recursive: true, force: true });
-      if (saved.k === undefined) delete process.env.KOSIS_API_KEY; else process.env.KOSIS_API_KEY = saved.k;
-      if (saved.l === undefined) delete process.env.LAW_API_OC; else process.env.LAW_API_OC = saved.l;
+      if (saved.k === undefined) delete process.env.KOSIS_API_KEY;
+      else process.env.KOSIS_API_KEY = saved.k;
+      if (saved.l === undefined) delete process.env.LAW_API_OC;
+      else process.env.LAW_API_OC = saved.l;
     }
   });
 

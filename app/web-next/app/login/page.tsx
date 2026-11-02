@@ -1,10 +1,10 @@
 "use client";
 
 // Port of app/web/src/pages/Login.tsx — useNavigate -> useRouter().push.
-// 신규사업 검토 프로세스(S1~S3 기회 발굴) 플랫폼의 진입 화면: 배경 이미지(가치사슬/항만 모티프)와
-// 계정 신청 안내 링크를 제공한다. 계정 신청은 /register → 관리자 승인.
+// 신규사업 검토 프로세스(S1~S3 기회 발굴) 플랫폼의 진입 화면: 배경 이미지(가치사슬/항만 모티프).
+// OWNER DECISION 2026-11-02 (access tightening, Option A): self-registration is
+// closed — the 계정 신청(/register) 링크는 제거되었고 계정은 관리자가 발급한다.
 import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuth, describeAuthError } from "../../lib/auth-client.tsx";
@@ -49,7 +49,9 @@ export default function LoginPage() {
       await login(userId.trim(), password);
       // ADR-0154: return to a pending OAuth consent; only same-origin /oauth/ paths.
       const next = new URLSearchParams(window.location.search).get("next");
-      router.push(next && (next.startsWith("/oauth/") || next.startsWith("/proposals/")) && !next.startsWith("//") ? next : "/");
+      router.push(
+        next && (next.startsWith("/oauth/") || next.startsWith("/proposals/")) && !next.startsWith("//") ? next : "/",
+      );
     } catch (err) {
       setError(describeAuthError(err));
     } finally {
@@ -61,7 +63,11 @@ export default function LoginPage() {
     <main className="login-page login-page-rich">
       <div className="login-hero-stack" aria-hidden="true">
         {LOGIN_BACKGROUNDS.map((bg, i) => (
-          <div key={bg} className={`login-hero-bg ${i === bgIndex ? "is-active" : ""}`} style={{ backgroundImage: `url("${bg}")` }} />
+          <div
+            key={bg}
+            className={`login-hero-bg ${i === bgIndex ? "is-active" : ""}`}
+            style={{ backgroundImage: `url("${bg}")` }}
+          />
         ))}
         <div className="login-hero-veil" />
       </div>
@@ -70,12 +76,33 @@ export default function LoginPage() {
         <p className="login-hero-sub">{t("processFlow")}</p>
       </div>
       <div className="login-panel">
-        <form onSubmit={onSubmit} method="post" action="/api/auth/login" className="login-form" aria-labelledby="login-heading">
+        <form
+          onSubmit={onSubmit}
+          method="post"
+          action="/api/auth/login"
+          className="login-form"
+          aria-labelledby="login-heading"
+        >
           <h1 id="login-heading">{t("loginHeading")}</h1>
           <label htmlFor="userId">{t("userId")}</label>
-          <input id="userId" name="userId" autoComplete="username" value={userId} onChange={(e) => setUserId(e.target.value)} required />
+          <input
+            id="userId"
+            name="userId"
+            autoComplete="username"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            required
+          />
           <label htmlFor="password">{t("password")}</label>
-          <input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
           {error && (
             <p role="alert" className="text-[color:var(--red-fg)]">
               {error}
@@ -85,12 +112,6 @@ export default function LoginPage() {
             {busy ? t("signingIn") : t("signIn")}
           </button>
         </form>
-        <div className="login-assist">
-          <Link href="/register" className="login-link">
-            {t("registerPrompt")}
-          </Link>
-          <p className="login-hint">{t("registerHint")}</p>
-        </div>
       </div>
     </main>
   );
