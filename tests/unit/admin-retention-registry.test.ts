@@ -60,9 +60,35 @@ describe("registry", () => {
   });
   test("each table has one fixed handling mapped to the stored action", () => {
     const h = Object.fromEntries(reg.RETENTION_ELIGIBLE_TABLES.map((t) => [t.table, t.handling]));
-    expect(h).toEqual({ notification: "archive_then_delete", llm_call_log: "archive_then_delete", dry_run_session: "archive_then_delete", raw_payload: "archive_only" });
+    // dba adjudication 2026-11-02: the eligible set mirrors the executor allow-list
+    // table-for-table; dry_run_session moved to the excluded set (read-path purge, migration 0172).
+    expect(h).toEqual({
+      notification: "archive_then_delete",
+      llm_call_log: "archive_then_delete",
+      raw_payload: "archive_only",
+      job_run: "delete_only",
+      execution_job: "delete_only",
+      session: "delete_only",
+    });
     expect(reg.handlingToStoredAction("archive_then_delete")).toBe("delete");
     expect(reg.handlingToStoredAction("archive_only")).toBe("archive");
+    expect(reg.handlingToStoredAction("delete_only")).toBe("delete");
+    // dry_run_session: executor-refused, purged on the read path (migration 0172 TTL)
+    expect(reg.RETENTION_EXCLUDED_TABLES["dry_run_session"]).toContain("read path");
+    expect(reg.RETENTION_EXCLUDED_TABLES["job_run"]).toBeUndefined();
+    expect(reg.RETENTION_EXCLUDED_TABLES["session"]).toBeUndefined();
+  });
+
+  test("D2/dba default months and basis are recorded per entry (the seeder's defaults)", () => {
+    const d = Object.fromEntries(reg.RETENTION_ELIGIBLE_TABLES.map((t) => [t.table, { m: t.defaultMonths, b: t.defaultBasis }]));
+    expect(d).toEqual({
+      notification: { m: 12, b: "sent_at" },
+      llm_call_log: { m: 12, b: "created_at" },
+      raw_payload: { m: 24, b: "fetched_at" },
+      job_run: { m: 12, b: "started_at" },
+      execution_job: { m: 6, b: "created_at" },
+      session: { m: 1, b: "expires_at" }, // dba ruling 2026-11-02
+    });
   });
   test("excluded tables are rejected", () => {
     for (const t of Object.keys(reg.RETENTION_EXCLUDED_TABLES)) {
@@ -73,7 +99,7 @@ describe("registry", () => {
 });
 
 describe("policy API allowlist", () => {
-  for (const table of ["audit_log", "gate_decision", "job_run", "project_policy_pin", "no_such_table"]) {
+  for (const table of ["audit_log", "gate_decision", "dry_run_session", "project_policy_pin", "no_such_table"]) {
     test(`rejects ${table} with 400 table_not_eligible`, async () => {
       const res = await post({ table_key: table, basis: "created_at", retention_months: 6, action: "delete" });
       expect(res.status).toBe(400);
@@ -91,6 +117,25 @@ describe("policy API allowlist", () => {
     const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
     expect(list.data.find((r: any) => r.table_key === "raw_payload").action).toBe("archive");
     expect(list.data.find((r: any) => r.table_key === "notification").action).toBe("delete");
+    db.run("DELETE FROM retention_policy");
+  });
+  test("POST for the reconciliation-added tables derives the executor-accepted stored action", async () => {
+    // job_run / execution_job / session are delete_only -> stored 'delete'; llm_call_log is
+    // archive_then_delete -> stored 'delete'. The executor's action_mismatch guard compares against
+    // the SAME handlingToStoredAction mapping, so these admin-created rows always pass (the full
+    // cross-module proof runs in retention-cleanup.test.ts).
+    for (const [table, basis, months] of [
+      ["job_run", "started_at", 12],
+      ["execution_job", "created_at", 6],
+      ["session", "expires_at", 1],
+      ["llm_call_log", "created_at", 12],
+    ] as const) {
+      expect((await post({ table_key: table, basis, retention_months: months })).status).toBe(201);
+    }
+    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
+    for (const table of ["job_run", "execution_job", "session", "llm_call_log"]) {
+      expect(list.data.find((r: any) => r.table_key === table).action).toBe("delete");
+    }
     db.run("DELETE FROM retention_policy");
   });
   test("conflicting action is rejected (archive-only table)", async () => {

@@ -37,7 +37,8 @@ type RetentionPolicyErrorT = import("../../scripts/co-newbiz/jobs/retention-clea
 type JobResultT = import("../../scripts/co-newbiz/jobs/types.ts").JobResult;
 type RetentionRunResultT = import("../../scripts/co-newbiz/jobs/retention-cleanup.ts").RetentionRunResult;
 const { listJobHandlers } = await import("../../scripts/co-newbiz/jobs/index.ts");
-const { seedScheduleJobs } = await import("../../scripts/co-newbiz/schedule-seed.ts");
+const { seedScheduleJobs, seedRetentionPolicies } = await import("../../scripts/co-newbiz/schedule-seed.ts");
+const reg = await import("../../db/lib/retention-registry.ts");
 
 // Fixed clock: cutoffs are deterministic UTC calendar-month subtractions.
 const NOW = new Date("2026-11-02T03:00:00.000Z");
@@ -55,7 +56,7 @@ beforeEach(() => {
   savedEnv = Object.fromEntries(RETENTION_ENVS.map((k) => [k, process.env[k]]));
   for (const k of RETENTION_ENVS) delete process.env[k];
   db.run("DELETE FROM retention_policy");
-  for (const t of ["job_run", "notification", "raw_payload", "execution_job", "session"]) db.run(`DELETE FROM ${t}`);
+  for (const t of ["job_run", "notification", "raw_payload", "execution_job", "session", "llm_call_log"]) db.run(`DELETE FROM ${t}`);
   rmSync(ARCHIVE_DIR, { recursive: true, force: true });
 });
 afterEach(() => {
@@ -106,6 +107,14 @@ function seedExecutionJob(status: string, createdAt: string) {
   db.run(
     "INSERT INTO execution_job (id, kind, payload_json, resource_class, status, created_by, created_at) VALUES (?,?,?,?,?,?,?)",
     [id, "reprofile", "{}", "numeric", status, "system", createdAt],
+  );
+  return id;
+}
+
+function seedLlmCallLog(createdAt: string, id = uid()) {
+  db.run(
+    "INSERT INTO llm_call_log (id, agent_key, purpose, source, created_by, created_at) VALUES (?,?,?,?,?,?)",
+    [id, "backend-engineer", "draft", "llm", "system", createdAt],
   );
   return id;
 }
@@ -175,7 +184,7 @@ describe("allow-list enforcement", () => {
   });
 
   test("a policy row whose basis mismatches the declared basis is an error", () => {
-    setPolicy("notification", "created_at", 12, "archive"); // declared basis is sent_at
+    setPolicy("notification", "created_at", 12, "delete"); // declared basis is sent_at
     let err: unknown;
     try {
       run();
@@ -185,12 +194,13 @@ describe("allow-list enforcement", () => {
     expect((err as RetentionPolicyErrorT).issues[0].code).toBe("basis_mismatch");
   });
 
-  test("a policy row whose action differs from the dba-declared handling is an error (dba guard, 2026-11-02)", () => {
-    // The admin registry derives notification's stored action from handling archive_then_delete
-    // as 'delete' - under the executor's vocabulary that would plain-delete WITHOUT the archive
-    // D2 requires. The action_mismatch guard fails the run instead (nothing deleted).
+  test("a policy row whose stored action differs from the registry-derived stored action is an error (dba guard, 2026-11-02, reconciled vocabulary)", () => {
+    // The stored action must equal handlingToStoredAction(entry.handling) - the SAME mapping the
+    // seeder and the admin route derive from. notification is archive_then_delete -> stored
+    // 'delete'; a hand-written row with action 'archive' contradicts the handling and fails loud
+    // (nothing deleted, nothing archived) instead of running under ambiguous semantics.
     const kept = seedNotification("2025-06-01T00:00:00.000Z");
-    setPolicy("notification", "sent_at", 12, "delete");
+    setPolicy("notification", "sent_at", 12, "archive"); // expected stored action is 'delete'
     let err: unknown;
     try {
       run();
@@ -202,6 +212,16 @@ describe("allow-list enforcement", () => {
     expect(countRows("notification")).toBe(1);
     expect((db.query("SELECT id FROM notification").get() as any).id).toBe(kept);
     expect(existsSync(ARCHIVE_DIR)).toBe(false);
+
+    // a delete_only table with 'archive' fails the same way (plain-delete tables never archive)
+    setPolicy("job_run", "started_at", 12, "archive");
+    try {
+      run();
+    } catch (e) {
+      err = e;
+    }
+    expect((err as RetentionPolicyErrorT).issues[0].code).toBe("action_mismatch");
+    expect((err as RetentionPolicyErrorT).issues[0].message).toContain("delete_only");
   });
 });
 
@@ -223,7 +243,7 @@ describe("cutoff math (basis column, month boundary)", () => {
   });
 
   test("each table uses its own declared basis column (notification.sent_at, session.expires_at)", () => {
-    setPolicy("notification", "sent_at", 12, "archive");
+    setPolicy("notification", "sent_at", 12, "delete");
     setPolicy("session", "expires_at", 12, "delete");
     // session created long ago but expires in the future -> kept despite old created_at
     const sid = seedSession("2027-01-01T00:00:00.000Z");
@@ -244,7 +264,7 @@ describe("cutoff math (basis column, month boundary)", () => {
 // ── archive before delete ───────────────────────────────────────────────────
 describe("archive before delete", () => {
   test("archived rows are in the month file with _archived_at AND gone from the table", () => {
-    setPolicy("notification", "sent_at", 12, "archive");
+    setPolicy("notification", "sent_at", 12, "delete");
     const a = seedNotification("2025-09-15T10:00:00.000Z");
     const b = seedNotification("2025-10-20T10:00:00.000Z");
     const res = run();
@@ -264,7 +284,7 @@ describe("archive before delete", () => {
   });
 
   test("archive idempotency: a row already present in the month file is not written twice", () => {
-    setPolicy("notification", "sent_at", 12, "archive");
+    setPolicy("notification", "sent_at", 12, "delete");
     const id = seedNotification("2025-09-15T10:00:00.000Z");
     // simulate a crash between archive and delete: the month file already holds this row
     const pre = JSON.stringify({ id, user_id: "system", sent_at: "2025-09-15T10:00:00.000Z", _archived_at: "2026-10-02T03:00:00.000Z" });
@@ -335,7 +355,7 @@ describe("execution_job terminal-status filter", () => {
 // ── dry-run ─────────────────────────────────────────────────────────────────
 describe("dry-run", () => {
   test("writes nothing but reports planned counts and the would-be archive path", () => {
-    setPolicy("notification", "sent_at", 12, "archive");
+    setPolicy("notification", "sent_at", 12, "delete");
     setPolicy("job_run", "started_at", 12, "delete");
     seedNotification("2025-03-05T00:00:00.000Z");
     seedNotification("2026-10-05T00:00:00.000Z");
@@ -386,7 +406,7 @@ describe("last_run_at", () => {
 // ── idempotency ─────────────────────────────────────────────────────────────
 describe("rerun no-op", () => {
   test("a second run changes nothing and writes no new archive lines", () => {
-    setPolicy("notification", "sent_at", 12, "archive");
+    setPolicy("notification", "sent_at", 12, "delete");
     seedNotification("2025-04-05T00:00:00.000Z");
     const first = run();
     expect(first.tables[0].rows_deleted).toBe(1);
@@ -401,17 +421,19 @@ describe("rerun no-op", () => {
 
 // ── allow-list constant + handler registration/seed contract ────────────────
 describe("allow-list constant and handler contract", () => {
-  test("D2 defaults are recorded on the entries and audit_log is absent", () => {
+  test("D2/dba defaults are recorded on the entries and audit_log is absent", () => {
     const byTable = new Map(RETENTION_ALLOW_LIST.map((e) => [e.table, e]));
-    expect(byTable.get("job_run")).toMatchObject({ defaultMonths: 12, defaultAction: "delete", basis: "started_at" });
-    expect(byTable.get("notification")).toMatchObject({ defaultMonths: 12, defaultAction: "archive", basis: "sent_at" });
-    expect(byTable.get("raw_payload")).toMatchObject({ defaultMonths: 24, defaultAction: "archive", basis: "fetched_at" });
-    expect(byTable.get("execution_job")).toMatchObject({ defaultMonths: 6, defaultAction: "delete", terminalOnly: true });
+    expect(byTable.get("job_run")).toMatchObject({ defaultMonths: 12, handling: "delete_only", basis: "started_at" });
+    expect(byTable.get("notification")).toMatchObject({ defaultMonths: 12, handling: "archive_then_delete", basis: "sent_at" });
+    expect(byTable.get("llm_call_log")).toMatchObject({ defaultMonths: 12, handling: "archive_then_delete", basis: "created_at" });
+    expect(byTable.get("raw_payload")).toMatchObject({ defaultMonths: 24, handling: "archive_only", basis: "fetched_at" });
+    expect(byTable.get("execution_job")).toMatchObject({ defaultMonths: 6, handling: "delete_only", terminalOnly: true });
     // dba ruling 2026-11-02: session is IN at 1 month on expires_at (12h TTL table - a session
     // expired >= 1 month is dead beyond any forensic need; expires_at basis can never match a
     // live session regardless of created_at).
-    expect(byTable.get("session")).toMatchObject({ defaultMonths: 1, defaultAction: "delete", basis: "expires_at" });
+    expect(byTable.get("session")).toMatchObject({ defaultMonths: 1, handling: "delete_only", basis: "expires_at" });
     expect(byTable.has("audit_log")).toBe(false);
+    expect(byTable.has("dry_run_session")).toBe(false);
   });
 
   test("retention.cleanup is registered; schedule-seed creates it disabled with cron/timeout/retries", () => {
@@ -450,12 +472,139 @@ describe("allow-list constant and handler contract", () => {
   });
 
   test("archive files land as <archiveDir>/<table>/<yyyy-mm>.jsonl.gz only (D6 layout)", () => {
-    setPolicy("notification", "sent_at", 12, "archive");
+    setPolicy("notification", "sent_at", 12, "delete");
     seedNotification("2025-05-05T00:00:00.000Z");
     run();
     const tables = readdirSync(ARCHIVE_DIR);
     expect(tables).toEqual(["notification"]);
     const files = readdirSync(join(ARCHIVE_DIR, "notification"));
     expect(files).toEqual(["2025-05.jsonl.gz"]);
+  });
+});
+
+// ── registry reconciliation (dba adjudication 2026-11-02 + owner adoption) ───
+describe("stored-action vocabulary round-trip (registry -> seeder -> executor)", () => {
+  test("a seeded notification row (stored 'delete') archives-then-deletes: the action_mismatch guard never fires", () => {
+    // End-to-end proof of the reconciled vocabulary: the seeder stores 'delete' for an
+    // archive_then_delete table, and the executor understands that as archive-then-delete
+    // (behavior is pinned by entry.handling, never read from the stored action).
+    setPolicy("notification", "sent_at", 12, "delete"); // exactly what seedRetentionPolicies writes
+    const id = seedNotification("2025-07-15T00:00:00.000Z");
+    const res = run();
+    expect(res.tables[0].handling).toBe("archive_then_delete");
+    expect(res.tables[0].action).toBe("delete");
+    expect(res.tables[0].rows_to_archive).toBe(1);
+    expect(res.tables[0].rows_deleted).toBe(1);
+    expect(readArchiveLines("notification", "2025-07").map((r) => r.id)).toEqual([id]);
+    expect(countRows("notification")).toBe(0);
+  });
+
+  test("llm_call_log (dba-adopted volume table) archives-then-deletes on created_at at 12 months", () => {
+    setPolicy("llm_call_log", "created_at", 12, "delete");
+    const old = seedLlmCallLog("2025-05-01T00:00:00.000Z");
+    seedLlmCallLog("2026-10-01T00:00:00.000Z");
+    const res = run();
+    expect(res.tables[0].handling).toBe("archive_then_delete");
+    expect(res.tables[0].rows_deleted).toBe(1);
+    expect(readArchiveLines("llm_call_log", "2025-05").map((r) => r.id)).toEqual([old]);
+    expect(countRows("llm_call_log")).toBe(1);
+  });
+
+  test("archive_only handling archives but NEVER deletes (raw_payload lineage)", () => {
+    setPolicy("raw_payload", "fetched_at", 24, "archive");
+    // fixture only (no ingest path writes raw_payload): bypass the data_source FK the same way
+    // admin-retention-registry.test.ts does for its fixture rows
+    db.run("PRAGMA foreign_keys = OFF");
+    const id = seedRawPayload("2020-01-01T00:00:00.000Z");
+    db.run("PRAGMA foreign_keys = ON");
+    const res = run();
+    expect(res.tables[0].handling).toBe("archive_only");
+    expect(res.tables[0].rows_to_archive).toBe(1);
+    expect(res.tables[0].rows_deleted).toBe(0);
+    expect(readArchiveLines("raw_payload", "2020-01").map((r) => r.id)).toEqual([id]);
+    // the row SURVIVES the run - archiving never implies deletion for archive_only
+    expect(countRows("raw_payload")).toBe(1);
+    // rerun: the surviving row is re-processed (it is still under the cutoff) but the archive
+    // dedupe writes no new line, and it is STILL not deleted
+    const second = run();
+    expect(second.tables[0].rows_to_archive).toBe(1);
+    expect(readArchiveLines("raw_payload", "2020-01").map((r) => r.id)).toEqual([id]);
+    expect(readArchiveLines("raw_payload", "2020-01")[0]._archived_at).toBe(NOW.toISOString());
+    expect(countRows("raw_payload")).toBe(1);
+  });
+});
+
+// ── seedRetentionPolicies (registry reconciliation, part A) ──────────────────
+describe("seedRetentionPolicies", () => {
+  test("seeds one row per registry-eligible table with the registry defaults and derived stored action", () => {
+    const res = seedRetentionPolicies(db);
+    expect(res.inserted.sort()).toEqual([...reg.RETENTION_ELIGIBLE_TABLES.map((t) => t.table)].sort());
+    expect(res.existing).toEqual([]);
+    for (const t of reg.RETENTION_ELIGIBLE_TABLES) {
+      const row = db.query("SELECT basis, retention_months, action, last_run_at FROM retention_policy WHERE table_key = ?").get(t.table) as any;
+      expect(row).toEqual({
+        basis: t.defaultBasis,
+        retention_months: t.defaultMonths,
+        action: reg.handlingToStoredAction(t.handling),
+        last_run_at: null,
+      });
+    }
+    // the concrete D2/dba contract
+    expect(db.query("SELECT action FROM retention_policy WHERE table_key='notification'").get()).toEqual({ action: "delete" });
+    expect(db.query("SELECT action FROM retention_policy WHERE table_key='session'").get()).toEqual({ action: "delete" });
+    expect(db.query("SELECT retention_months FROM retention_policy WHERE table_key='session'").get()).toEqual({ retention_months: 1 });
+    expect(db.query("SELECT COUNT(*) AS n FROM retention_policy WHERE table_key='dry_run_session'").get().n).toBe(0);
+  });
+
+  test("is idempotent and never touches an existing row (the dev 6-month notification row wins)", () => {
+    db.run("DELETE FROM retention_policy");
+    db.run("INSERT INTO retention_policy (table_key, basis, retention_months, action, last_run_at) VALUES ('notification','sent_at',6,'delete',NULL)");
+    const first = seedRetentionPolicies(db);
+    expect(first.inserted).not.toContain("notification");
+    expect(first.existing).toEqual(["notification"]);
+    expect(db.query("SELECT retention_months FROM retention_policy WHERE table_key='notification'").get()).toEqual({ retention_months: 6 });
+    const second = seedRetentionPolicies(db);
+    expect(second.inserted).toEqual([]);
+    expect(second.existing.sort()).toEqual([...reg.RETENTION_ELIGIBLE_TABLES.map((t) => t.table)].sort());
+    expect(db.query("SELECT retention_months FROM retention_policy WHERE table_key='notification'").get()).toEqual({ retention_months: 6 });
+  });
+
+  test("dry-run inserts nothing but reports the full plan", () => {
+    db.run("DELETE FROM retention_policy");
+    const res = seedRetentionPolicies(db, { dryRun: true });
+    expect(res.inserted.sort()).toEqual([...reg.RETENTION_ELIGIBLE_TABLES.map((t) => t.table)].sort());
+    expect(db.query("SELECT COUNT(*) AS n FROM retention_policy").get().n).toBe(0);
+  });
+});
+
+// ── cross-module invariant: registry == executor, seeded rows always pass ────
+describe("cross-module invariant: a seeded/registry-created policy row always passes the executor guard", () => {
+  test("RETENTION_ALLOW_LIST and RETENTION_ELIGIBLE_TABLES agree table-for-table (set, basis, months, handling)", () => {
+    const byExecutor = new Map(RETENTION_ALLOW_LIST.map((e) => [e.table, e]));
+    const byRegistry = new Map(reg.RETENTION_ELIGIBLE_TABLES.map((t) => [t.table, t]));
+    expect([...byExecutor.keys()].sort()).toEqual([...byRegistry.keys()].sort());
+    for (const [table, e] of byExecutor) {
+      const r = byRegistry.get(table)!;
+      expect(e.basis).toBe(r.defaultBasis);
+      expect(e.basis).toBe(r.dateColumns[0].column);
+      expect(e.defaultMonths).toBe(r.defaultMonths);
+      expect(e.handling).toBe(r.handling);
+      // registry lists ONLY the executor-declared basis as an eligible column
+      expect(r.dateColumns).toHaveLength(1);
+      // dry_run_session is excluded on both sides (executor-refused, read-path purge per 0172)
+      expect(reg.RETENTION_EXCLUDED_TABLES["dry_run_session"]).toBeDefined();
+    }
+  });
+
+  test("runRetention accepts EVERY seeded row (zero policies error) - dry-run over a live schema", () => {
+    db.run("DELETE FROM retention_policy");
+    seedRetentionPolicies(db);
+    // empty tables: validation still exercises every row (PRAGMA basis check included)
+    const res = run({ dryRun: true });
+    expect(res.dry_run).toBe(true);
+    expect(res.tables.map((t) => t.table).sort()).toEqual([...reg.RETENTION_ELIGIBLE_TABLES.map((t) => t.table)].sort());
+    for (const t of res.tables) expect(t.noop).toBe(true);
+    // and the real run validates the same rows without RetentionPolicyError
+    expect(() => run()).not.toThrow(RetentionPolicyError);
   });
 });

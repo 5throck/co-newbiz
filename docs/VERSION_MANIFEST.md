@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-01T23:29:03.312Z
+**Generated**: 2026-11-02T00:00:19.057Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -323,7 +323,7 @@
 | resolve-variants.ts | 1.0.3 | scripts/resolve-variants.ts | fs, js-yaml, path |
 | restore-capability-levels.ts | 1.0.0 | scripts/co-newbiz/restore-capability-levels.ts | bun:sqlite |
 | restore.ts | 1.0.0 | scripts/co-newbiz/restore.ts | N/A |
-| retention-cleanup.ts | 1.1.0 | scripts/co-newbiz/jobs/retention-cleanup.ts | N/A |
+| retention-cleanup.ts | 1.2.0 | scripts/co-newbiz/jobs/retention-cleanup.ts | N/A |
 | retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | N/A |
 | route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | N/A |
 | route-audit-scan.ts | 1.0.1 | scripts/route-audit-scan.ts | N/A |
@@ -331,7 +331,7 @@
 | run.ts | 1.1.0 | scripts/eval/run.ts | N/A |
 | runbook-validate.ts | 1.0.0 | scripts/co-newbiz/runbook-validate.ts | js-yaml |
 | scaffold-handbook.ts | 1.2.0 | scripts/handbook/scaffold-handbook.ts | N/A |
-| schedule-seed.ts | 1.0.0 | scripts/co-newbiz/schedule-seed.ts | N/A |
+| schedule-seed.ts | 1.1.0 | scripts/co-newbiz/schedule-seed.ts | N/A |
 | schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | N/A |
 | scheduler-core.ts | 1.0.0 | scripts/co-newbiz/scheduler-core.ts | N/A |
 | scheduler-install.ts | 1.0.0 | scripts/co-newbiz/scheduler-install.ts | N/A |
