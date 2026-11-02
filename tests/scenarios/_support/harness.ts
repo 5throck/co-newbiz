@@ -11,7 +11,16 @@
 //  - Credentials are generated at runtime and never logged.
 import { Database } from "bun:sqlite";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { readdirSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -116,7 +125,11 @@ async function ensureBuild(): Promise<void> {
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [out, err, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+      const [out, err, code] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
       if (code !== 0) throw new Error(`next build failed (exit ${code}):\n${out.slice(-2000)}\n${err.slice(-2000)}`);
     } finally {
       rmSync(BUILD_LOCK, { force: true });
@@ -147,11 +160,25 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
   const adminId = "admin";
   const adminPassword = runtimeSecret("Aa1-");
   const now = new Date().toISOString();
-  await createUser(db, { userId: adminId, role: "admin", password: adminPassword, displayName: "E2E Admin", createdBy: "e2e-bootstrap", now });
+  await createUser(db, {
+    userId: adminId,
+    role: "admin",
+    password: adminPassword,
+    displayName: "E2E Admin",
+    createdBy: "e2e-bootstrap",
+    now,
+  });
   approveUser(db, { userId: adminId, approvedBy: "e2e-bootstrap", now });
   const analystId = "analyst";
   const analystPassword = runtimeSecret("Bb2-");
-  await createUser(db, { userId: analystId, role: "analyst", password: analystPassword, displayName: "E2E Analyst", createdBy: "e2e-bootstrap", now });
+  await createUser(db, {
+    userId: analystId,
+    role: "analyst",
+    password: analystPassword,
+    displayName: "E2E Analyst",
+    createdBy: "e2e-bootstrap",
+    now,
+  });
   approveUser(db, { userId: analystId, approvedBy: "e2e-bootstrap", now });
   if (opts.seed) await opts.seed({ dbPath, adminId, analystId });
   // Flush WAL before the server opens the file.
@@ -249,6 +276,14 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
     analystPassword,
     readDb: <T>(fn: (d: Database) => T): T => {
       const ro = new Database(dbPath, { readonly: true });
+      // The scenario process and the spawned server are two WRITERS on the same scratch
+      // DB (fixtures/cleanup here vs audit/checklist writes there). db/client.ts already
+      // sets busy_timeout = 5000 on the server side for exactly this (job-worker
+      // precedent); these ad-hoc connections default to 0, so a write colliding with a
+      // server-held lock failed instantly with SQLITE_BUSY (brownfield-ma CI flake,
+      // 2026-11-02 — passed on rerun). Same lock courtesy, no masking: a genuine >5 s
+      // hold still surfaces.
+      ro.run("PRAGMA busy_timeout = 5000;");
       try {
         return fn(ro);
       } finally {
@@ -257,6 +292,7 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
     },
     writeDb: (fn: (d: Database) => void): void => {
       const rw = new Database(dbPath);
+      rw.run("PRAGMA busy_timeout = 5000;"); // see readDb — two writers share the scratch DB
       try {
         fn(rw);
       } finally {

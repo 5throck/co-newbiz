@@ -1,5 +1,7 @@
-// @version 1.1.0 (2026-11-02: isRetryableCollectError classifies zlib/archive truncation
-// errors as retryable — dart corp-code streaming-ZIP gate fix; design section 3.1 dart row)
+// @version 1.2.0 (2026-11-02: the isRetryableCollectError truncation class also covers the
+// disclosure-side parser errors — dart-client v1.2.0 rewired fetchDisclosureText onto the
+// same readZipEntries central-directory walk, so its truncation errors read "DART disclosure
+// ZIP truncated" instead of matching the corp-code literal)
 /**
  * fetch-source.ts — the library-level collection entry point (ADR-0189 phase P5,
  * design docs/designs/2026-10-29-scheduled-jobs-design.md section 3.2).
@@ -219,7 +221,7 @@ export function isRetryableCollectError(err: unknown): boolean {
   if (name === "TimeoutError" || name === "AbortError") return true; // AbortSignal.timeout / fetch abort
   if (err instanceof TypeError) return true; // fetch network-layer failure
   const msg = err instanceof Error ? err.message : String(err);
-  if (/unexpected end of file|corp-code ZIP truncated/i.test(msg)) return true; // zlib / parser truncation class
+  if (/unexpected end of file|DART .*ZIP truncated/i.test(msg)) return true; // zlib / parser truncation class (corp-code + disclosure, dart-client readZipEntries)
   const m = /HTTP (\d{3})\b/.exec(msg);
   if (m) {
     const status = Number(m[1]);

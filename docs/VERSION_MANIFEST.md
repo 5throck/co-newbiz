@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-02T04:18:11.456Z
+**Generated**: 2026-11-02T11:41:36.214Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -253,7 +253,7 @@
 | env-check.ts | 1.1.1 | scripts/co-newbiz/env-check.ts | N/A |
 | evidence-backport-scan.ts | 1.2.0 | scripts/evidence-backport-scan.ts | N/A |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |
-| fetch-source.ts | 1.1.0 | scripts/co-newbiz/jobs/collect/fetch-source.ts | N/A |
+| fetch-source.ts | 1.2.0 | scripts/co-newbiz/jobs/collect/fetch-source.ts | N/A |
 | fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
 | fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
 | fin-project.ts | 1.0.1 | scripts/co-newbiz/fin-project.ts | N/A |
