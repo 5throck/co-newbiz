@@ -214,7 +214,40 @@
       "period_90d": "Last 90 days",
       "detailAction": "View",
       "period_all": "All time",
-      "period_custom": "Custom"
+      "period_custom": "Custom",
+      "newJob": "New job",
+      "healthBannerTitle": "The scheduler is not firing",
+      "healthBannerBody": "Check the launchd registration. Verification steps:",
+      "chipOverdue": "Overdue",
+      "chipConsecutiveFailures": "{n} consecutive failures",
+      "runsButton": "History",
+      "runsButtonAria": "{p1} run history",
+      "runsDialogAria": "{p1} run history",
+      "runNow": "Run now",
+      "runNowHint": "Runs on the next tick (within 60 s). A disabled job can also be run manually.",
+      "runNowTitle": "Run {p1} now?",
+      "runNowBody": "The job runs on the next scheduler tick (within 60 s). A disabled job also runs when requested manually.",
+      "runNowConfirmLabel": "Request run",
+      "runNowWaiting": "Waiting for the run to start…",
+      "runNowLanded": "The run has been recorded ({p1}).",
+      "runNowTimeout": "No run was recorded within 90 s — it has not run yet. Re-check the run history below.",
+      "runNowRequestFailed": "The run request was not accepted.",
+      "runsRefresh": "Refresh run history",
+      "runsLoadFailed": "The run history could not be loaded.",
+      "runsEmpty": "No run history.",
+      "colRunActor": "Actor",
+      "colRunEnv": "Env",
+      "colRunCounts": "Rows (read/written/changed)",
+      "colRunDuration": "Duration",
+      "runDurationSeconds": "{n}s",
+      "runDurationMinutes": "{n}m",
+      "createDialogAria": "Register a new schedule job",
+      "createJobFormAria": "New job form",
+      "createKeyRegistered": "already registered",
+      "createKeyHint": "Default schedule",
+      "createNoKeysAvailable": "Every registered handler already has a schedule job.",
+      "createDisabledNote": "A created job starts disabled — enable it separately from the list.",
+      "createSubmit": "Create"
     },
     "masterData": {
       "tableIndustry": "Industry",
@@ -588,6 +621,8 @@
       "jobSeedLabel": "Register",
       "jobSeedDone": "Default jobs registered.",
       "jobSeedFailed": "Failed to register the default jobs.",
+      "jobCreatedNotice": "{p1} job created — it starts disabled.",
+      "jobCreateFailed": "Job creation failed.",
       "errTableKeyBasis": "Select both the data and the date field.",
       "errMonthsInteger": "Retention (months) must be a non-negative integer.",
       "savedNotice": "Saved ({p1}).",
@@ -958,7 +993,8 @@
         "failed": "Failed",
         "error": "Error",
         "running": "Running",
-        "skipped": "Skipped"
+        "skipped": "Skipped",
+        "timeout": "Timeout"
       },
       "jobName": {
         "watch_evaluate": "Watch rule evaluation",
@@ -1136,7 +1172,10 @@
         "pipeline_paused": "Pipeline paused",
         "establishment_step_reopened": "Establishment step reopened",
         "establishment_step_assigned": "Establishment step assigned",
-        "test": "Test"
+        "test": "Test",
+        "schedule": "Schedule",
+        "manual": "Manual",
+        "catchup": "Catch-up"
       },
       "deliveryStatus": {
         "pending": "Pending",
@@ -1145,6 +1184,10 @@
         "failed": "Failed",
         "skipped": "Skipped",
         "deferred": "Deferred"
+      },
+      "env": {
+        "prod": "Prod",
+        "dev": "Dev"
       }
     },
     "list": {
@@ -3000,6 +3043,7 @@
       "csrf_missing": "CSRF cookie missing — reload the page and retry.",
       "csrf_rejected": "Cross-origin request rejected.",
       "csrf_token_mismatch": "CSRF token mismatch — refresh and retry.",
+      "cron_too_frequent": "The schedule interval must be at least 5 minutes.",
       "dd_target_not_open": "DD has not been opened for this target.",
       "deal_structure_write_failed": "Failed to record the deal structure review.",
       "decision_superseded": "A later decision exists on this gate. Countersign the latest one.",
@@ -3048,6 +3092,7 @@
       "invalid_body": "Invalid request body.",
       "invalid_category": "Invalid glossary category.",
       "invalid_company_note": "companyNote must be a string.",
+      "invalid_cron": "The cron expression is not valid.",
       "invalid_direction": "direction must be one of: gte | lte.",
       "invalid_draws": "The draw count must be a number (clamped to 100-5,000).",
       "invalid_envelope": "Invalid response envelope shape.",
@@ -3073,6 +3118,7 @@
       "invalid_transition": "The transition is not allowed.",
       "invalid_value": "Invalid value.",
       "invalid_weight": "weight must be greater than 0.",
+      "job_key_exists": "A schedule job with this key already exists.",
       "kill_binding_unoverridden": "A binding kill criterion is triggered and has no Group Investment Committee override, so GO cannot be recorded. HOLD or KILL can be recorded at any time.",
       "kind_required": "kind must be permit or certification.",
       "ladder_prerequisite_missing": "An earlier gate has no effective GO yet. Record the earlier gate first.",
@@ -3184,6 +3230,7 @@
       "topology_failed": "Topology computation failed.",
       "typed_closure_required": "dropped cannot be set at creation — exclude via POST /api/opportunities/[id]/close.",
       "unauthorized": "Authentication required (session cookie or Bearer token).",
+      "unregistered_handler": "Not a registered scheduler handler key — create accepts registered handler keys only.",
       "unknown_committee": "Unknown committee.",
       "unknown_company": "Unknown company.",
       "unknown_error": "The request could not be processed — retry shortly.",

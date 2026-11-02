@@ -14,31 +14,60 @@ export function labelKeyOf(code: string): string {
 
 /** ADR status text is free prose ("Accepted — implemented ..."); only its leading word is the status. */
 export function adrStatusCode(status: string | null | undefined): string {
-  const word = (status ?? "").trim().split(/[\s(—–:,-]+/)[0]?.toLowerCase() ?? "";
+  const word =
+    (status ?? "")
+      .trim()
+      .split(/[\s(—–:,-]+/)[0]
+      ?.toLowerCase() ?? "";
   return ["accepted", "proposed", "superseded", "deprecated", "rejected", "unknown"].includes(word) ? word : "other";
 }
 
 export type AdminLabelGroup =
-  | "role" | "userStatus" | "adrStatus" | "govLayer" | "govEnforce" | "govOwner" | "govMissing" | "glossaryCategory"
-  | "source" | "jobStatus" | "severity" | "channel" | "action" | "kpiKey"
-  | "jobName" | "jobDesc"
-  | "trigger" | "deliveryStatus";
+  | "role"
+  | "userStatus"
+  | "adrStatus"
+  | "govLayer"
+  | "govEnforce"
+  | "govOwner"
+  | "govMissing"
+  | "glossaryCategory"
+  | "source"
+  | "jobStatus"
+  | "severity"
+  | "channel"
+  | "action"
+  | "kpiKey"
+  | "jobName"
+  | "jobDesc"
+  | "trigger"
+  | "deliveryStatus"
+  | "env";
 
 /** Resolves `admin.labels.<group>.<code>`; falls back to the raw code when unmapped. */
 export function useAdminLabel(): (group: AdminLabelGroup, code: string | null | undefined) => string {
   const t = useTranslations("admin.labels");
-  return useCallback((group, code) => {
-    const raw = (code ?? "").trim();
-    if (!raw) return "—";
-    const key = `${group}.${labelKeyOf(raw)}`;
-    return t.has(key as never) ? t(key as never) : raw;
-  }, [t]);
+  return useCallback(
+    (group, code) => {
+      const raw = (code ?? "").trim();
+      if (!raw) return "—";
+      const key = `${group}.${labelKeyOf(raw)}`;
+      return t.has(key as never) ? t(key as never) : raw;
+    },
+    [t],
+  );
 }
 
 /** Label for a dotted KPI value path ("by_gate.screening.total"): every known segment is translated. */
 export function useKpiKeyLabel(): (path: string) => string {
   const label = useAdminLabel();
-  return useCallback((path: string) => path.split(".").map((seg) => label("kpiKey", seg)).join(" · "), [label]);
+  return useCallback(
+    (path: string) =>
+      path
+        .split(".")
+        .map((seg) => label("kpiKey", seg))
+        .join(" · "),
+    [label],
+  );
 }
 
 /** Case-insensitive "all terms contained" match over the given fields. */
@@ -52,13 +81,25 @@ export function matchesQuery(query: string, ...fields: Array<string | null | und
 export function usePaged<T>(items: readonly T[], pageSize: number) {
   const [page, setPage] = useState(1);
   const pages = Math.max(1, Math.ceil(items.length / pageSize));
-  useEffect(() => { if (page > pages) setPage(pages); }, [page, pages]);
+  useEffect(() => {
+    if (page > pages) setPage(pages);
+  }, [page, pages]);
   const current = Math.min(page, pages);
   const slice = useMemo(() => items.slice((current - 1) * pageSize, current * pageSize), [items, current, pageSize]);
   return { page: current, pages, setPage, slice, total: items.length };
 }
 
-export function ListSearch({ value, onChange, ariaLabel, placeholder }: { value: string; onChange: (v: string) => void; ariaLabel: string; placeholder?: string }) {
+export function ListSearch({
+  value,
+  onChange,
+  ariaLabel,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  ariaLabel: string;
+  placeholder?: string;
+}) {
   const t = useTranslations("admin.list");
   return (
     <input
@@ -73,16 +114,35 @@ export function ListSearch({ value, onChange, ariaLabel, placeholder }: { value:
   );
 }
 
-export function Pager({ page, pages, total, onPage, ariaLabel }: { page: number; pages: number; total: number; onPage: (p: number) => void; ariaLabel?: string }) {
+export function Pager({
+  page,
+  pages,
+  total,
+  onPage,
+  ariaLabel,
+}: {
+  page: number;
+  pages: number;
+  total: number;
+  onPage: (p: number) => void;
+  ariaLabel?: string;
+}) {
   const t = useTranslations("admin.list");
   return (
-    <nav aria-label={ariaLabel ?? t("pagerAria")} className="mt-2 mb-3 flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+    <nav
+      aria-label={ariaLabel ?? t("pagerAria")}
+      className="mt-2 mb-3 flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+    >
       <span>{t("totalCount", { total })}</span>
       {pages > 1 && (
         <>
-          <button type="button" className="btn-ghost btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>{t("prev")}</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+            {t("prev")}
+          </button>
           <span aria-live="polite">{t("pageStatus", { page, pages })}</span>
-          <button type="button" className="btn-ghost btn-sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>{t("next")}</button>
+          <button type="button" className="btn-ghost btn-sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+            {t("next")}
+          </button>
         </>
       )}
     </nav>
@@ -96,13 +156,17 @@ export function IdCell({ id }: { id: string }) {
   const short = id.length > 10 ? `${id.slice(0, 8)}…` : id;
   return (
     <span className="inline-flex items-center gap-1">
-      <code className="font-mono text-xs text-[color:var(--muted-fg)]" title={t("idCopyTitle", { p1: id })}>{short}</code>
+      <code className="font-mono text-xs text-[color:var(--muted-fg)]" title={t("idCopyTitle", { p1: id })}>
+        {short}
+      </code>
       {id.length > 10 && (
         <button
           type="button"
           className="btn-ghost btn-sm"
           aria-label={t("idCopyAria", { p1: id })}
-          onClick={() => { void navigator.clipboard.writeText(id); }}
+          onClick={() => {
+            void navigator.clipboard.writeText(id);
+          }}
         >
           {tc("copy")}
         </button>

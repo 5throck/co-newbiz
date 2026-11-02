@@ -4,7 +4,7 @@
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
-import { api, ApiError, type ScheduleJobRow } from "../../../lib/api.ts";
+import { api, ApiError, type ScheduleJobCreate, type ScheduleJobRow } from "../../../lib/api.ts";
 import { useToast } from "../../ui.tsx";
 import type { useAdminData } from "./useAdminData.ts";
 
@@ -18,15 +18,45 @@ export interface ScheduleJobUpdate {
 export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   const t = useTranslations("admin.actions");
   const { toast } = useToast();
-  const { setNotice, setError, confirm, setUsers, setNoticePinned, jobs, setJobs, setRetentionFormError, setRetentionNotice, months, tableKey, basis, setTableKey, setBasis, setMonths, setRetention, setDbOverview, preview, dbOverview } = prev;
+  const {
+    setNotice,
+    setError,
+    confirm,
+    setUsers,
+    setNoticePinned,
+    jobs,
+    setJobs,
+    setRetentionFormError,
+    setRetentionNotice,
+    months,
+    tableKey,
+    basis,
+    setTableKey,
+    setBasis,
+    setMonths,
+    setRetention,
+    setDbOverview,
+    preview,
+    dbOverview,
+  } = prev;
 
-  const { panelRef: secretModalPanelRef, onKeyDown: secretModalKeyDown } = useModalFocus(
-    () => setIssuedSecret(null),
-  );
+  const { panelRef: secretModalPanelRef, onKeyDown: secretModalKeyDown } = useModalFocus(() => setIssuedSecret(null));
 
   // ── API 토큰 관리 (사용자별) ──
   const [tokenPanelUser, setTokenPanelUser] = useState<string | null>(null);
-  const [userTokens, setUserTokens] = useState<Record<string, Array<{ id: string; label: string; scopes: string; created_at: string; last_used_at: string | null; revoked_at: string | null }>>>({});
+  const [userTokens, setUserTokens] = useState<
+    Record<
+      string,
+      Array<{
+        id: string;
+        label: string;
+        scopes: string;
+        created_at: string;
+        last_used_at: string | null;
+        revoked_at: string | null;
+      }>
+    >
+  >({});
   const [tokenLabel, setTokenLabel] = useState("");
   const [tokenWrite, setTokenWrite] = useState(false);
   const [tokenBusy, setTokenBusy] = useState(false);
@@ -36,7 +66,17 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   const [issuedSecret, setIssuedSecret] = useState<{ kind: string; value: string; detail: string } | null>(null);
 
   function loadUserTokens(userId: string) {
-    api.get<Array<{ id: string; label: string; scopes: string; created_at: string; last_used_at: string | null; revoked_at: string | null }>>(`/api/admin/users/${encodeURIComponent(userId)}/tokens`)
+    api
+      .get<
+        Array<{
+          id: string;
+          label: string;
+          scopes: string;
+          created_at: string;
+          last_used_at: string | null;
+          revoked_at: string | null;
+        }>
+      >(`/api/admin/users/${encodeURIComponent(userId)}/tokens`)
       .then((r) => setUserTokens((prev) => ({ ...prev, [userId]: r.data })))
       .catch((e) => setNotice(e instanceof Error ? e.message : t("tokenListFailed")));
   }
@@ -53,8 +93,15 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
     setError(null);
     try {
       const scopes = tokenWrite ? ["read", "write"] : ["read"];
-      const res = await api.post<{ token: string; label: string }>(`/api/admin/users/${encodeURIComponent(userId)}/tokens`, { label: tokenLabel.trim(), scopes });
-      setIssuedSecret({ kind: t("issuedKindToken", { p1: userId, p2: res.data.label }), value: res.data.token, detail: t("issuedTokenDetail") });
+      const res = await api.post<{ token: string; label: string }>(
+        `/api/admin/users/${encodeURIComponent(userId)}/tokens`,
+        { label: tokenLabel.trim(), scopes },
+      );
+      setIssuedSecret({
+        kind: t("issuedKindToken", { p1: userId, p2: res.data.label }),
+        value: res.data.token,
+        detail: t("issuedTokenDetail"),
+      });
       setTokenLabel("");
       setTokenWrite(false);
       loadUserTokens(userId);
@@ -66,14 +113,20 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   }
 
   function revokeUserToken(userId: string, tokenId: string) {
-    confirm(t("revokeTokenTitle"), async () => {
-      try {
-        await api.delete(`/api/admin/users/${encodeURIComponent(userId)}/tokens?tokenId=${encodeURIComponent(tokenId)}`);
-        loadUserTokens(userId);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t("tokenRevokeFailed"));
-      }
-    }, { body: t("revokeTokenBody"), confirmLabel: t("revokeLabel") });
+    confirm(
+      t("revokeTokenTitle"),
+      async () => {
+        try {
+          await api.delete(
+            `/api/admin/users/${encodeURIComponent(userId)}/tokens?tokenId=${encodeURIComponent(tokenId)}`,
+          );
+          loadUserTokens(userId);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : t("tokenRevokeFailed"));
+        }
+      },
+      { body: t("revokeTokenBody"), confirmLabel: t("revokeLabel") },
+    );
   }
 
   async function setRole(userId: string, role: string) {
@@ -115,9 +168,15 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
     setResettingUser(userId);
     setNotice(null);
     try {
-      const res = await api.put<{ temporary_password: string }>(`/api/admin/users/${userId}`, { action: "reset_password" });
+      const res = await api.put<{ temporary_password: string }>(`/api/admin/users/${userId}`, {
+        action: "reset_password",
+      });
       setNoticePinned(true);
-      setIssuedSecret({ kind: t("tempPasswordKind", { p1: userId }), value: res.data.temporary_password, detail: t("tempPasswordDetail") });
+      setIssuedSecret({
+        kind: t("tempPasswordKind", { p1: userId }),
+        value: res.data.temporary_password,
+        detail: t("tempPasswordDetail"),
+      });
       setUsers(null);
     } catch (err) {
       setNotice(err instanceof Error ? err.message : t("actionFailed"));
@@ -165,15 +224,38 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
   // endpoint after confirmation — it only inserts missing keys and never
   // touches existing rows, so a confirm is courtesy, not protection.
   function seedJobs() {
-    confirm(t("jobSeedTitle"), async () => {
-      try {
-        await api.post("/api/admin/schedule-jobs/seed");
-        toast(t("jobSeedDone"));
-        setJobs(null);
-      } catch (err) {
-        toast(err instanceof Error ? err.message : t("jobSeedFailed"), "alert");
-      }
-    }, { body: t("jobSeedBody"), confirmLabel: t("jobSeedLabel") });
+    confirm(
+      t("jobSeedTitle"),
+      async () => {
+        try {
+          await api.post("/api/admin/schedule-jobs/seed");
+          toast(t("jobSeedDone"));
+          setJobs(null);
+        } catch (err) {
+          toast(err instanceof Error ? err.message : t("jobSeedFailed"), "alert");
+        }
+      },
+      { body: t("jobSeedBody"), confirmLabel: t("jobSeedLabel") },
+    );
+  }
+
+  // POST create (ADR-0189 P7, §4.2 "New job"): the payload never carries `enabled` — created
+  // rows start disabled (server default, the D3 posture); enabling is the separate toggle.
+  // A 400/409 resolves { ok: false, error, code } so the create dialog can render the field
+  // error inline (unregistered_handler / job_key_exists → the key field; invalid_cron /
+  // cron_too_frequent → the cron field); errors.codes localization already happened at the
+  // ApiError choke point.
+  async function createJob(payload: ScheduleJobCreate): Promise<{ ok: boolean; error?: string; code?: string }> {
+    try {
+      await api.post<ScheduleJobRow>("/api/admin/schedule-jobs", payload);
+      toast(t("jobCreatedNotice", { p1: payload.job_key }));
+      setJobs(null); // re-fetch through the section effect
+      return { ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("jobCreateFailed");
+      toast(message, "alert");
+      return { ok: false, error: message, code: err instanceof ApiError ? err.code : "unknown_error" };
+    }
   }
 
   async function persistRetention(monthsValue: number) {
@@ -210,32 +292,68 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
     if (dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling === "archive_then_delete") {
       // Irreversible once the scheduled job runs — state the count and require confirmation.
       const count = preview.state === "ready" && preview.count !== null ? preview.count.toLocaleString() : "?";
-      confirm(t("retentionDeleteConfirmTitle", { p1: tableKey.trim() }), () => { void persistRetention(monthsValue); }, {
-        body: t("retentionDeleteConfirmBody", { p1: count, p2: monthsValue }),
-        confirmLabel: t("retentionDeleteConfirmLabel"),
-      });
+      confirm(
+        t("retentionDeleteConfirmTitle", { p1: tableKey.trim() }),
+        () => {
+          void persistRetention(monthsValue);
+        },
+        {
+          body: t("retentionDeleteConfirmBody", { p1: count, p2: monthsValue }),
+          confirmLabel: t("retentionDeleteConfirmLabel"),
+        },
+      );
       return;
     }
     void persistRetention(monthsValue);
   }
 
   function removeRetentionPolicy(key: string) {
-    confirm(t("retentionRemoveTitle", { p1: key }), () => {
-      void (async () => {
-        setRetentionFormError(null);
-        setRetentionNotice(null);
-        try {
-          await api.delete(`/api/admin/retention/${encodeURIComponent(key)}`);
-          setRetentionNotice(t("retentionRemovedNotice", { p1: key }));
-          setRetention(null);
-          setDbOverview(null);
-        } catch (err) {
-          setRetentionFormError(err instanceof ApiError ? err.message : t("retentionRemoveFailed"));
-        }
-      })();
-    }, { body: t("retentionRemoveBody") });
+    confirm(
+      t("retentionRemoveTitle", { p1: key }),
+      () => {
+        void (async () => {
+          setRetentionFormError(null);
+          setRetentionNotice(null);
+          try {
+            await api.delete(`/api/admin/retention/${encodeURIComponent(key)}`);
+            setRetentionNotice(t("retentionRemovedNotice", { p1: key }));
+            setRetention(null);
+            setDbOverview(null);
+          } catch (err) {
+            setRetentionFormError(err instanceof ApiError ? err.message : t("retentionRemoveFailed"));
+          }
+        })();
+      },
+      { body: t("retentionRemoveBody") },
+    );
   }
-  return { resettingUser, issuedSecret, secretModalKeyDown, secretModalPanelRef, setIssuedSecret, showCreateUser, setShowCreateUser, setRole, userAction, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, toggleJob, saveJob, seedJobs, saveRetention, removeRetentionPolicy };
+  return {
+    resettingUser,
+    issuedSecret,
+    secretModalKeyDown,
+    secretModalPanelRef,
+    setIssuedSecret,
+    showCreateUser,
+    setShowCreateUser,
+    setRole,
+    userAction,
+    toggleTokenPanel,
+    tokenPanelUser,
+    tokenLabel,
+    setTokenLabel,
+    tokenWrite,
+    setTokenWrite,
+    tokenBusy,
+    issueUserToken,
+    userTokens,
+    revokeUserToken,
+    toggleJob,
+    saveJob,
+    seedJobs,
+    createJob,
+    saveRetention,
+    removeRetentionPolicy,
+  };
 }
 
 export type AdminConsoleState = ReturnType<typeof useAdminData> & ReturnType<typeof useAdminActions>;

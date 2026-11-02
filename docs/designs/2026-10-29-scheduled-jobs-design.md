@@ -117,7 +117,7 @@ Follows Onyx 3.0 (`docs/design-system/`, `design:lint`) and the admin CRUD conve
 | `GET /api/admin/schedule-jobs?q=&page=` | Extend: `display_name`, `cron_expr`, human preview, `enabled`, `next_run_at` (computed), last run `{started_at, status, duration}` |
 | `POST /api/admin/schedule-jobs` | New: create — only for `job_key` values that have a registered handler (no arbitrary commands, ever) |
 | `PATCH /api/admin/schedule-jobs/[jobKey]` | Extend existing toggle to edit `cron_expr`, `timeout_sec`, `max_retries`, `enabled`; server-side cron validation; rejects intervals < 5 min except `watch.evaluate` (floor 5 min) |
-| `DELETE /api/admin/schedule-jobs/[jobKey]` | New: soft — sets `enabled=0`; `job_run` history is retained |
+| `DELETE /api/admin/schedule-jobs/[jobKey]` | New: soft — sets `enabled=0`; `job_run` history is retained. (2026-11-02, QA iteration 2: DROP is implemented as PATCH `{enabled:false}`; no separate DELETE endpoint — QA-verified) |
 | `POST /api/admin/schedule-jobs/[jobKey]/run` | New "run now": inserts `schedule_job_request`; returns 202 with request id. **No in-process execution** (ADR-0019) |
 | `GET /api/admin/schedule-jobs/[jobKey]/runs?page=` | Extend with new columns, error text, trigger, actor |
 | `POST /api/admin/schedule-jobs/seed` | New: idempotent upsert of the eight default rows (§3.1 — the registry's handlers; grows as phases land); never overwrites admin-edited cron |

@@ -7,23 +7,10 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin } from "../../../../../lib/auth.ts";
 import { fetchScheduleJobRow } from "../../../../../lib/schedule/job-rows.ts";
-import { nextFireTimes, validateCron } from "../../../../../lib/schedule/cron.ts";
+import { checkCronForJob, isValidMaxRetries, isValidTimeoutSec } from "../../../../../lib/schedule/job-validate.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 
-/** Crons must not fire more often than every 5 minutes (§4.1 interval floor) except these keys. */
-const INTERVAL_FLOOR_MS = 300_000;
-// §13.2: notify.deliver is INTENTIONALLY `* * * * *` (one fire per tick — delivery worker);
-// watch.evaluate is likewise exempt (flagged in the P3 Row 0 drift notes, never had a route to
-// live in until this PATCH).
-const INTERVAL_FLOOR_EXEMPT_KEYS = new Set(["watch.evaluate", "notify.deliver"]);
-
 const UPDATE_FIELDS = new Set(["cron_expr", "timeout_sec", "max_retries", "enabled"]);
-
-/** Fires the next two times and requires >= 300 s between them — the honest minimal check with the shared parser. */
-function cronTooFrequent(expr: string, now: Date): boolean {
-  const fires = nextFireTimes(expr, now, 2);
-  return fires.length === 2 && fires[1].getTime() - fires[0].getTime() < INTERVAL_FLOOR_MS;
-}
 
 interface UpdateBody {
   cron_expr?: unknown;
@@ -51,17 +38,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ jo
     return badRequest("invalid_request", "at least one of cron_expr, timeout_sec, max_retries, enabled is required.");
   }
   // Type/range validation (all server-side, §4.3 floor: timeout 1–120 min stored as seconds, retries 0–5).
-  if ("timeout_sec" in body) {
-    const v = body.timeout_sec;
-    if (typeof v !== "number" || !Number.isInteger(v) || v < 60 || v > 7200) {
-      return badRequest("invalid_request", "timeout_sec must be an integer between 60 and 7200 (1–120 minutes).");
-    }
+  // The rules live in lib/schedule/job-validate.ts — POST create imports the SAME module, so the
+  // two routes cannot drift.
+  if ("timeout_sec" in body && !isValidTimeoutSec(body.timeout_sec)) {
+    return badRequest("invalid_request", "timeout_sec must be an integer between 60 and 7200 (1–120 minutes).");
   }
-  if ("max_retries" in body) {
-    const v = body.max_retries;
-    if (typeof v !== "number" || !Number.isInteger(v) || v < 0 || v > 5) {
-      return badRequest("invalid_request", "max_retries must be an integer between 0 and 5.");
-    }
+  if ("max_retries" in body && !isValidMaxRetries(body.max_retries)) {
+    return badRequest("invalid_request", "max_retries must be an integer between 0 and 5.");
   }
   if ("enabled" in body && typeof body.enabled !== "boolean") {
     return badRequest("invalid_request", "enabled must be a boolean.");
@@ -86,20 +69,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ jo
   const values: (string | number)[] = [];
   let cronExpr: string | null = null;
   if ("cron_expr" in body) {
-    const expr = body.cron_expr;
-    if (typeof expr !== "string") {
-      return badRequest("invalid_cron", "cron_expr must be a string.");
-    }
-    const check = validateCron(expr); // same parser the tick uses — §4.1 one-parser mandate
+    const check = checkCronForJob(body.cron_expr, jobKey, now);
     if (!check.ok) {
-      return badRequest("invalid_cron", `invalid cron expression: ${check.error}`);
+      return badRequest(check.code, check.message);
     }
-    if (!INTERVAL_FLOOR_EXEMPT_KEYS.has(jobKey) && cronTooFrequent(expr, now)) {
-      return badRequest("cron_too_frequent", "schedule interval must be at least 5 minutes.");
-    }
-    cronExpr = expr;
+    cronExpr = check.cron_expr;
     sets.push("cron_expr = ?");
-    values.push(expr);
+    values.push(cronExpr);
   }
   if ("timeout_sec" in body) {
     sets.push("timeout_sec = ?");
