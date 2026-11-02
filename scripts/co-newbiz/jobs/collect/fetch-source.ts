@@ -1,4 +1,11 @@
-// @version 1.2.0 (2026-11-02: the isRetryableCollectError truncation class also covers the
+// @version 1.3.1 (2026-11-03: lint-gate cleanup only — the four `db: any` params are typed
+// Database from bun:sqlite (the #792 pattern: upsertPeriod, registerSourceIfNeeded,
+// upsertObservation, fetchSource); biome format drift; no behavior change.
+// 1.3.0, 2026-11-02: the caller's db handle rides in the observation-adapter ctx —
+// listSeries({ db }) and listDailyRows({ seriesId, sourceId, db }) — so the krx adapter can merge
+// its table-backed stock series (stock_series, migration 0187, owner decision option 1) into the
+// enumerated catalog and resolve each series' descriptor from the same handle; fixture adapters
+// ignore the extra ctx field. v1.2.0: the isRetryableCollectError truncation class also covers the
 // disclosure-side parser errors — dart-client v1.2.0 rewired fetchDisclosureText onto the
 // same readZipEntries central-directory walk, so its truncation errors read "DART disclosure
 // ZIP truncated" instead of matching the corp-code literal)
@@ -58,6 +65,7 @@
  * exception objects never leave this module (secrets are scrubbed downstream by
  * run-job's scrubber, but URLs with keys are not constructed here at all).
  */
+import type { Database } from "bun:sqlite";
 import { ulid } from "../../../../db/lib/ulid.ts";
 import { KOSIS_UNITS } from "../../kosis-units.ts";
 import { KrxHttpError, SOURCE_ADAPTERS, upsertCatalog, type SourceAdapter } from "../../source-adapters.ts";
@@ -140,7 +148,7 @@ const GRADE: Record<string, string> = { dart: "A", ecos: "A", krx: "A", kosis: "
  * Upsert md_period for a YYYY-MM (month) or YYYY-MM-DD (day) key — the day
  * grain is new with the KRX beta series (ADR-0115), where start=end=the date.
  */
-export function upsertPeriod(db: any, periodKey: string): string {
+export function upsertPeriod(db: Database, periodKey: string): string {
   const isDay = /^\d{4}-\d{2}-\d{2}$/.test(periodKey);
   const [y, m] = periodKey.split("-").map(Number);
   const startDate = isDay ? periodKey : `${periodKey}-01`;
@@ -250,7 +258,7 @@ function checkAbort(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw new Error("aborted: collect run exceeded its timeout");
 }
 
-function registerSourceIfNeeded(db: any, source: string, emit?: (e: FetchSourceEvent) => void): boolean {
+function registerSourceIfNeeded(db: Database, source: string, emit?: (e: FetchSourceEvent) => void): boolean {
   if (db.query("SELECT id FROM md_source WHERE code = ?").get(source)) return false;
   db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [
     ulid(),
@@ -268,7 +276,7 @@ function registerSourceIfNeeded(db: any, source: string, emit?: (e: FetchSourceE
  * initial inserts log a 'new' row (old_value NULL), same contract as ensure_fresh.
  */
 function upsertObservation(
-  db: any,
+  db: Database,
   o: { seriesId: string; periodId: string; unitId: string; sourceId: string; value: number; contentHash: string },
 ): { status: "new" | "revised" | "unchanged"; revisionNo: number } {
   const latest = db
@@ -330,7 +338,11 @@ function upsertObservation(
  * fetches are all-or-nothing); per-series/per-period problems are collected in
  * `failures` and the run continues.
  */
-export async function fetchSource(db: any, source: string, opts: FetchSourceOptions = {}): Promise<FetchSourceResult> {
+export async function fetchSource(
+  db: Database,
+  source: string,
+  opts: FetchSourceOptions = {},
+): Promise<FetchSourceResult> {
   const registry = opts.adapters ?? SOURCE_ADAPTERS;
   const adapter = registry[source];
   if (!adapter) throw new Error(`fetchSource: no adapter registered for source '${source}'`);
@@ -357,7 +369,7 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
   // ── observations adapters (kosis / ecos / krx) ──
   if (adapter.kind === "observations") {
     const sourceRegistered = registerSourceIfNeeded(db, source, emit);
-    const catalog = await adapter.listSeries();
+    const catalog = await adapter.listSeries({ db });
     const targets = seriesArg ? catalog.filter((s) => s.seriesId === seriesArg || s.tblId === seriesArg) : catalog;
     if (targets.length === 0) {
       return { ok: false, reason: "no_series_matched", source, seriesArg: seriesArg ?? "(all)" };
@@ -395,7 +407,7 @@ export async function fetchSource(db: any, source: string, opts: FetchSourceOpti
           checkAbort(signal);
           let rows: Awaited<ReturnType<NonNullable<typeof adapter.listDailyRows>>> = [];
           try {
-            rows = await adapter.listDailyRows({ seriesId: s.seriesId, sourceId }, month);
+            rows = await adapter.listDailyRows({ seriesId: s.seriesId, sourceId, db }, month);
           } catch (err) {
             fail(s.seriesId, err, month);
             continue;

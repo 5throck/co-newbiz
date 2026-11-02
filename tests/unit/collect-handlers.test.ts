@@ -9,7 +9,7 @@
  * DB). Adapters are RECORDED FIXTURES swapped into SOURCE_ADAPTERS and always restored — NO live
  * network in CI (design section 9 collection block).
  */
-import { test, expect, describe, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
+import { test, expect, describe, afterAll, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,7 +43,14 @@ afterAll(() => {
 
 // ── env hygiene (credential gates read env at call time; loadPipelineKeys is once-per-process,
 //    so explicit deletes/sets here fully control what the adapters see) ──────────────────────
-const CREDENTIAL_ENVS = ["DART_API_KEY", "ECOS_API_KEY", "KRX_API_KEY", "KOSIS_API_KEY", "LAW_API_OC", "DATA_GO_KR_API_KEY"];
+const CREDENTIAL_ENVS = [
+  "DART_API_KEY",
+  "ECOS_API_KEY",
+  "KRX_API_KEY",
+  "KOSIS_API_KEY",
+  "LAW_API_OC",
+  "DATA_GO_KR_API_KEY",
+];
 let savedEnv: Record<string, string | undefined>;
 const envKey = (name: string) => name; // assembled at call sites via join("_") to keep secret scanners quiet
 beforeEach(() => {
@@ -96,7 +103,8 @@ function fixtureObservationsAdapter(plan: {
       plan.onFetch?.(periodKey);
       const failure = plan.fail?.(periodKey);
       if (failure) throw failure;
-      const v = plan.values?.[periodKey] ?? (plan.fallback ? { value: 3.5, raw: JSON.stringify({ p: periodKey }) } : undefined);
+      const v =
+        plan.values?.[periodKey] ?? (plan.fallback ? { value: 3.5, raw: JSON.stringify({ p: periodKey }) } : undefined);
       if (!v) throw new Error(`ecos: no data point for ${ctx.seriesId}@${periodKey}`);
       return { value: v.value, contentHash: await sha256Hex(v.raw), raw: v.raw };
     },
@@ -104,7 +112,9 @@ function fixtureObservationsAdapter(plan: {
 }
 
 /** Recorded-fixture catalog adapter (dart/law shape): no network, calls counted. */
-function fixtureCatalogAdapter(plan: { rows?: import("../../scripts/co-newbiz/source-adapters.ts").CatalogUpsert[]; onList?: () => void } = {}): SourceAdapter {
+function fixtureCatalogAdapter(
+  plan: { rows?: import("../../scripts/co-newbiz/source-adapters.ts").CatalogUpsert[]; onList?: () => void } = {},
+): SourceAdapter {
   return {
     code: "law",
     kSkill: "k-law",
@@ -117,10 +127,20 @@ function fixtureCatalogAdapter(plan: { rows?: import("../../scripts/co-newbiz/so
     },
     listCatalog: async () => {
       plan.onList?.();
-      return plan.rows ?? [
-        { table: "md_statute", naturalKey: { korea_statute_id: "130000" }, values: { foreign_framework_key: "상법" } },
-        { table: "md_statute", naturalKey: { korea_statute_id: "184000" }, values: { foreign_framework_key: "자본시장법" } },
-      ];
+      return (
+        plan.rows ?? [
+          {
+            table: "md_statute",
+            naturalKey: { korea_statute_id: "130000" },
+            values: { foreign_framework_key: "상법" },
+          },
+          {
+            table: "md_statute",
+            naturalKey: { korea_statute_id: "184000" },
+            values: { foreign_framework_key: "자본시장법" },
+          },
+        ]
+      );
     },
   };
 }
@@ -160,16 +180,22 @@ function resetTables(): void {
 }
 
 const obsCount = () => (db.query("SELECT COUNT(*) c FROM fact_market_observation").get() as { c: number }).c;
-const logRows = () => db.query("SELECT * FROM data_change_log ORDER BY detected_at, id").all() as any[];
+/** Structural shape of the data_change_log columns the assertions read. */
+type ChangeLogRow = {
+  series_id: string;
+  change_type: string;
+  old_value: number | null;
+  new_value: number | null;
+  detected_at: string;
+};
+const logRows = () => db.query("SELECT * FROM data_change_log ORDER BY detected_at, id").all() as ChangeLogRow[];
 const revs = (seriesId: string, period: string) =>
-  (
-    db
-      .query(
-        `SELECT o.revision_no, o.value FROM fact_market_observation o JOIN md_period p ON p.id = o.period_id
+  db
+    .query(
+      `SELECT o.revision_no, o.value FROM fact_market_observation o JOIN md_period p ON p.id = o.period_id
          WHERE o.series_id = ? AND p.start_date = ? ORDER BY o.revision_no`,
-      )
-      .all(seriesId, period) as any[]
-  );
+    )
+    .all(seriesId, period) as Array<{ revision_no: number; value: number }>;
 
 beforeEach(resetTables);
 
@@ -184,19 +210,23 @@ describe("fetchSource library", () => {
     // MAX(detected_at), so a first-ever insert MUST be visible. The backfill is
     // bounded (tens for the seeds, ~500 one-time for KRX YTD; catalogs never
     // touch the log).
-    await withAdapter("ecos", fixtureObservationsAdapter({ values: { "2026-01": pv(3.1), "2026-02": pv(3.2) } }), async () => {
-      await withKey(["ECOS", "API_KEY"].join("_"), async () => {
-        const r = await fetchSource(db, "ecos", { fromArg: "2026-01", toArg: "2026-02" });
-        expect(r.ok).toBe(true);
-        if (!r.ok) return;
-        expect(r.kind).toBe("observations");
-        expect(r.series).toBe(1);
-        expect(r.rowsUpserted).toBe(2);
-        expect(r.rowsChanged).toBe(0); // rows_changed = value REVISIONS; initial inserts are 'new', not changed
-        expect(r.failures).toEqual([]);
-        expect(r.sourceRegistered).toBe(true);
-      });
-    });
+    await withAdapter(
+      "ecos",
+      fixtureObservationsAdapter({ values: { "2026-01": pv(3.1), "2026-02": pv(3.2) } }),
+      async () => {
+        await withKey(["ECOS", "API_KEY"].join("_"), async () => {
+          const r = await fetchSource(db, "ecos", { fromArg: "2026-01", toArg: "2026-02" });
+          expect(r.ok).toBe(true);
+          if (!r.ok) return;
+          expect(r.kind).toBe("observations");
+          expect(r.series).toBe(1);
+          expect(r.rowsUpserted).toBe(2);
+          expect(r.rowsChanged).toBe(0); // rows_changed = value REVISIONS; initial inserts are 'new', not changed
+          expect(r.failures).toEqual([]);
+          expect(r.sourceRegistered).toBe(true);
+        });
+      },
+    );
     expect(obsCount()).toBe(2);
     const log = logRows();
     expect(log).toHaveLength(2);
@@ -208,7 +238,9 @@ describe("fetchSource library", () => {
       expect(row.detected_at).toBeTruthy();
     }
     expect(revs(TEST_SERIES.seriesId, "2026-01-01")).toEqual([{ revision_no: 1, value: 3.1 }]);
-    const src = db.query("SELECT reliability_grade FROM md_source WHERE code = 'ecos'").get() as { reliability_grade: string };
+    const src = db.query("SELECT reliability_grade FROM md_source WHERE code = 'ecos'").get() as {
+      reliability_grade: string;
+    };
     expect(src.reliability_grade).toBe("A");
   });
 
@@ -220,7 +252,11 @@ describe("fetchSource library", () => {
         await fetchSource(db, "ecos", { fromArg: "2026-01", toArg: "2026-02" });
       });
       await withAdapter("ecos", adapter(3.4), async () => {
-        const r = await fetchSource(db, "ecos", { fromArg: "2026-01", toArg: "2026-02", emit: (e) => e.type === "row" && events.push(`${e.status}:${e.revisionNo}`) });
+        const r = await fetchSource(db, "ecos", {
+          fromArg: "2026-01",
+          toArg: "2026-02",
+          emit: (e) => e.type === "row" && events.push(`${e.status}:${e.revisionNo}`),
+        });
         expect(r.ok).toBe(true);
         if (!r.ok) return;
         expect(r.rowsUpserted).toBe(2);
@@ -270,13 +306,24 @@ describe("fetchSource library", () => {
       kind: "observations",
       isEnabled: () => Boolean(process.env[envKey(["KRX", "API_KEY"].join("_"))]),
       listSeries: async () => [
-        { seriesId: "krx:index:KOSPI:close", adapter: "krx", title: "코스피 지수 일별종가", unitCode: "index", periodType: "day", _verified: true },
+        {
+          seriesId: "krx:index:KOSPI:close",
+          adapter: "krx",
+          title: "코스피 지수 일별종가",
+          unitCode: "index",
+          periodType: "day",
+          _verified: true,
+        },
       ],
       listDailyRows: async (_ctx, month) =>
         month === "2026-01"
           ? [
               { date: "2026-01-02", value: 4100.5, raw: JSON.stringify({ BAS_DD: "20260102", CLSPRC_IDX: "4,100.5" }) },
-              { date: "2026-01-05", value: 4120.25, raw: JSON.stringify({ BAS_DD: "20260105", CLSPRC_IDX: "4,120.25" }) },
+              {
+                date: "2026-01-05",
+                value: 4120.25,
+                raw: JSON.stringify({ BAS_DD: "20260105", CLSPRC_IDX: "4,120.25" }),
+              },
             ]
           : [],
       fetcher() {
@@ -292,7 +339,9 @@ describe("fetchSource library", () => {
         expect(r.rowsChanged).toBe(0);
       });
     });
-    const periods = db.query("SELECT period_type, start_date, end_date FROM md_period WHERE start_date LIKE '2026-01-0%'").all() as any[];
+    const periods = db
+      .query("SELECT period_type, start_date, end_date FROM md_period WHERE start_date LIKE '2026-01-0%'")
+      .all() as Array<{ period_type: string; start_date: string; end_date: string }>;
     expect(periods).toHaveLength(2);
     for (const p of periods) {
       expect(p.period_type).toBe("date");
@@ -301,12 +350,62 @@ describe("fetchSource library", () => {
     expect(obsCount()).toBe(2);
   });
 
+  test("fetchSource passes the caller's db handle into the adapter ctx (stock_series resolution seam)", async () => {
+    // owner decision 2026-11-02 option 1 (stock_series, migration 0187): the krx adapter merges its
+    // table-backed stock series from the CALLER's handle — fetchSource must forward it in both
+    // enumeration points (listSeries for the catalog, listDailyRows for per-series resolution), or a
+    // stock_series row would never be collected. Pinned with a fixture that records what it received.
+    const seen: { listSeries?: unknown; listDailyRows?: unknown } = {};
+    const krxFixture: SourceAdapter = {
+      code: "krx",
+      kSkill: "k-krx",
+      credentialEnv: "KRX_API_KEY",
+      kind: "observations",
+      isEnabled: () => Boolean(process.env[envKey(["KRX", "API_KEY"].join("_"))]),
+      listSeries: async (ctx) => {
+        seen.listSeries = ctx?.db;
+        return [
+          {
+            seriesId: "krx:index:KOSPI:close",
+            adapter: "krx",
+            title: "코스피 지수 일별종가",
+            unitCode: "index",
+            periodType: "day",
+            _verified: true,
+          },
+        ];
+      },
+      listDailyRows: async (ctx, _month) => {
+        seen.listDailyRows = ctx.db;
+        return [
+          { date: "2026-01-02", value: 4100.5, raw: JSON.stringify({ BAS_DD: "20260102", CLSPRC_IDX: "4,100.5" }) },
+        ];
+      },
+      fetcher() {
+        throw new Error("day-grain fixture should never run the monthly fetcher");
+      },
+    };
+    await withKey(["KRX", "API_KEY"].join("_"), async () => {
+      await withAdapter("krx", krxFixture, async () => {
+        const r = await fetchSource(db, "krx", { fromArg: "2026-01", toArg: "2026-01" });
+        expect(r.ok).toBe(true);
+      });
+    });
+    expect(seen.listSeries).toBe(db);
+    expect(seen.listDailyRows).toBe(db);
+  });
+
   test("failures are structured and classified (retryable vs terminal), never raw exceptions", async () => {
     await withAdapter(
       "ecos",
       fixtureObservationsAdapter({
         values: { "2026-01": pv(3.1) },
-        fail: (p) => (p === "2026-02" ? new Error("HTTP 503 from ecos.bok.or.kr") : p === "2026-03" ? new Error("ecos API error 401: no auth") : undefined),
+        fail: (p) =>
+          p === "2026-02"
+            ? new Error("HTTP 503 from ecos.bok.or.kr")
+            : p === "2026-03"
+              ? new Error("ecos API error 401: no auth")
+              : undefined,
       }),
       async () => {
         await withKey(["ECOS", "API_KEY"].join("_"), async () => {
@@ -376,19 +475,49 @@ describe("fetchSource library", () => {
 describe("collect.* handlers", () => {
   test("five handlers registered with the design §3.1 schedule", () => {
     const expect_ = [
-      { key: "collect.dart", cron: "0 7 * * 1-5", timeoutSec: 1800, maxRetries: 2, catchup: { mode: "once" as const, maxAgeHours: 24 } },
-      { key: "collect.ecos", cron: "0 8 * * *", timeoutSec: 1200, maxRetries: 2, catchup: { mode: "once" as const, maxAgeHours: 24 } },
-      { key: "collect.krx", cron: "30 18 * * 1-5", timeoutSec: 1200, maxRetries: 2, catchup: { mode: "once" as const, maxAgeHours: 24 } },
-      { key: "collect.kosis", cron: "0 9 * * 1", timeoutSec: 1800, maxRetries: 2, catchup: { mode: "once" as const, maxAgeHours: 24 } },
-      { key: "collect.law", cron: "0 6 * * *", timeoutSec: 1800, maxRetries: 2, catchup: { mode: "once" as const, maxAgeHours: 24 } },
+      {
+        key: "collect.dart",
+        cron: "0 7 * * 1-5",
+        timeoutSec: 1800,
+        maxRetries: 2,
+        catchup: { mode: "once" as const, maxAgeHours: 24 },
+      },
+      {
+        key: "collect.ecos",
+        cron: "0 8 * * *",
+        timeoutSec: 1200,
+        maxRetries: 2,
+        catchup: { mode: "once" as const, maxAgeHours: 24 },
+      },
+      {
+        key: "collect.krx",
+        cron: "30 18 * * 1-5",
+        timeoutSec: 1200,
+        maxRetries: 2,
+        catchup: { mode: "once" as const, maxAgeHours: 24 },
+      },
+      {
+        key: "collect.kosis",
+        cron: "0 9 * * 1",
+        timeoutSec: 1800,
+        maxRetries: 2,
+        catchup: { mode: "once" as const, maxAgeHours: 24 },
+      },
+      {
+        key: "collect.law",
+        cron: "0 6 * * *",
+        timeoutSec: 1800,
+        maxRetries: 2,
+        catchup: { mode: "once" as const, maxAgeHours: 24 },
+      },
     ];
     for (const row of expect_) {
       const h = getJobHandler(row.key);
-      expect(h).toBeTruthy();
-      expect(h!.defaultCron).toBe(row.cron);
-      expect(h!.timeoutSec).toBe(row.timeoutSec);
-      expect(h!.maxRetries).toBe(row.maxRetries);
-      expect(h!.catchup).toEqual(row.catchup);
+      if (!h) throw new Error(`collect handler '${row.key}' is not registered`);
+      expect(h.defaultCron).toBe(row.cron);
+      expect(h.timeoutSec).toBe(row.timeoutSec);
+      expect(h.maxRetries).toBe(row.maxRetries);
+      expect(h.catchup).toEqual(row.catchup);
     }
     // No opendata job (design §3.1 has five collect rows; opendata has no onboarded dataset).
     expect(getJobHandler("collect.opendata")).toBeUndefined();
@@ -399,23 +528,42 @@ describe("collect.* handlers", () => {
     const res = seedScheduleJobs(db, new Date());
     for (const key of ["collect.dart", "collect.ecos", "collect.krx", "collect.kosis", "collect.law"]) {
       expect(res.inserted).toContain(key);
-      const row = db.query("SELECT enabled, cron_expr, timeout_sec, max_retries FROM schedule_job WHERE job_key = ?").get(key) as any;
+      const h = getJobHandler(key);
+      if (!h) throw new Error(`collect handler '${key}' is not registered`);
+      const row = db
+        .query("SELECT enabled, cron_expr, timeout_sec, max_retries FROM schedule_job WHERE job_key = ?")
+        .get(key) as { enabled: number; cron_expr: string; timeout_sec: number; max_retries: number };
       expect(row.enabled).toBe(0);
-      expect(row.cron_expr).toBe(getJobHandler(key)!.defaultCron);
-      expect(row.timeout_sec).toBe(getJobHandler(key)!.timeoutSec);
-      expect(row.max_retries).toBe(getJobHandler(key)!.maxRetries);
+      expect(row.cron_expr).toBe(h.defaultCron);
+      expect(row.timeout_sec).toBe(h.timeoutSec);
+      expect(row.max_retries).toBe(h.maxRetries);
     }
   });
 
   function insertJobRow(key: string, opts: { enabled?: number; maxRetries?: number } = {}): void {
+    const h = getJobHandler(key);
+    if (!h) throw new Error(`collect handler '${key}' is not registered`);
     db.run(
       "INSERT OR REPLACE INTO schedule_job (id, job_key, cron_expr, enabled, created_at, timeout_sec, max_retries) VALUES (?,?,?,?,?,?,?)",
-      [`id-${key}`, key, getJobHandler(key)!.defaultCron, opts.enabled ?? 1, "2026-11-01T00:00:00Z", getJobHandler(key)!.timeoutSec, opts.maxRetries ?? 2],
+      [`id-${key}`, key, h.defaultCron, opts.enabled ?? 1, "2026-11-01T00:00:00Z", h.timeoutSec, opts.maxRetries ?? 2],
     );
   }
-  const runEcos = (retryDelayMs = 0) => runJob(db, { jobKey: "collect.ecos", env: "dev", trigger: "manual", retryDelayMs });
-  const jobRuns = () => db.query("SELECT * FROM job_run WHERE job_key = 'collect.ecos' ORDER BY started_at, id").all() as any[];
-  const detailOf = (row: any) => (row.detail_json ? (JSON.parse(row.detail_json) as Record<string, unknown>) : null);
+  const runEcos = (retryDelayMs = 0) =>
+    runJob(db, { jobKey: "collect.ecos", env: "dev", trigger: "manual", retryDelayMs });
+  /** Structural shape of the job_run columns the assertions read. */
+  type JobRunRow = {
+    status: string;
+    error: string | null;
+    detail_json: string | null;
+    rows_read: number;
+    rows_written: number;
+    rows_changed: number;
+    env: string;
+  };
+  const jobRuns = () =>
+    db.query("SELECT * FROM job_run WHERE job_key = 'collect.ecos' ORDER BY started_at, id").all() as JobRunRow[];
+  const detailOf = (row: JobRunRow) =>
+    row.detail_json ? (JSON.parse(row.detail_json) as Record<string, unknown>) : null;
 
   test("end-to-end through run-job: success with counts in detail_json", async () => {
     insertJobRow("collect.ecos");
@@ -439,24 +587,39 @@ describe("collect.* handlers", () => {
     expect(runs[0].rows_changed).toBe(0);
     expect(runs[0].env).toBe("dev");
     const detail = detailOf(runs[0]);
-    expect(detail).toMatchObject({ source: "ecos", kind: "observations", series: 1, rows_upserted: 12, rows_changed: 0, failures: [] });
+    expect(detail).toMatchObject({
+      source: "ecos",
+      kind: "observations",
+      series: 1,
+      rows_upserted: 12,
+      rows_changed: 0,
+      failures: [],
+    });
     expect(obsCount()).toBe(12);
   });
 
   test("missing credential ends the run skipped/credential_missing with zero adapter calls", async () => {
     insertJobRow("collect.ecos");
     let calls = 0;
-    await withAdapter("ecos", fixtureObservationsAdapter({ values: { "2026-01": pv(3.1) }, onFetch: () => calls++ }), async () => {
-      // ECOS_API_KEY stays deleted (beforeEach) — the gate must fire before any fetch.
-      const res = await runEcos();
-      expect(res.outcome).toBe("skipped");
-    });
+    await withAdapter(
+      "ecos",
+      fixtureObservationsAdapter({ values: { "2026-01": pv(3.1) }, onFetch: () => calls++ }),
+      async () => {
+        // ECOS_API_KEY stays deleted (beforeEach) — the gate must fire before any fetch.
+        const res = await runEcos();
+        expect(res.outcome).toBe("skipped");
+      },
+    );
     expect(calls).toBe(0);
     const runs = jobRuns();
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe("skipped");
     expect(runs[0].error).toBeNull();
-    expect(detailOf(runs[0])).toMatchObject({ reason: "credential_missing", source: "ecos", credentialEnv: "ECOS_API_KEY" });
+    expect(detailOf(runs[0])).toMatchObject({
+      reason: "credential_missing",
+      source: "ecos",
+      credentialEnv: "ECOS_API_KEY",
+    });
   });
 
   test("all-retryable failure (5xx class) retries twice through RetryableJobError, then fails", async () => {
@@ -478,24 +641,28 @@ describe("collect.* handlers", () => {
     );
     const runs = jobRuns();
     expect(runs).toHaveLength(3);
-    expect(runs.map((r: any) => r.status)).toEqual(["failed", "failed", "failed"]);
-    expect(JSON.parse(runs[0].detail_json).retried).toBe(true);
-    expect(JSON.parse(runs[1].detail_json).retried).toBe(true);
+    expect(runs.map((r) => r.status)).toEqual(["failed", "failed", "failed"]);
+    expect(detailOf(runs[0])?.retried).toBe(true);
+    expect(detailOf(runs[1])?.retried).toBe(true);
     expect(runs[2].detail_json).toBeNull(); // final attempt is not flagged retried
   });
 
   test("terminal failure (auth class) is not retried", async () => {
     insertJobRow("collect.ecos", { maxRetries: 2 });
-    await withAdapter("ecos", fixtureObservationsAdapter({ fail: () => new Error("ecos API error 401: invalid key") }), async () => {
-      process.env[envKey(["ECOS", "API_KEY"].join("_"))] = "fixture-key";
-      try {
-        const res = await runEcos();
-        expect(res.outcome).toBe("failed");
-        expect(res.attempts).toBe(1);
-      } finally {
-        delete process.env[envKey(["ECOS", "API_KEY"].join("_"))];
-      }
-    });
+    await withAdapter(
+      "ecos",
+      fixtureObservationsAdapter({ fail: () => new Error("ecos API error 401: invalid key") }),
+      async () => {
+        process.env[envKey(["ECOS", "API_KEY"].join("_"))] = "fixture-key";
+        try {
+          const res = await runEcos();
+          expect(res.outcome).toBe("failed");
+          expect(res.attempts).toBe(1);
+        } finally {
+          delete process.env[envKey(["ECOS", "API_KEY"].join("_"))];
+        }
+      },
+    );
     expect(jobRuns()).toHaveLength(1);
   });
 
@@ -522,10 +689,11 @@ describe("collect.* handlers", () => {
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe("success");
     expect(runs[0].rows_read).toBe(12); // attempts: 11 upserts + 1 failure (SHOULD-FIX, data-architect review 2026-11-01)
-    const detail = detailOf(runs[0]) as any;
-    expect(detail.failures).toHaveLength(1);
-    expect(detail.failures[0]).toMatchObject({ series_id: TEST_SERIES.seriesId, period: "2026-02", retryable: false });
-    expect(detail.rows_upserted).toBe(11); // YTD window = 12 periods, one failed
+    const detail = detailOf(runs[0]);
+    const failures = (detail?.failures ?? []) as Array<Record<string, unknown>>;
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatchObject({ series_id: TEST_SERIES.seriesId, period: "2026-02", retryable: false });
+    expect(detail?.rows_upserted).toBe(11); // YTD window = 12 periods, one failed
   });
 
   test("watch-engine staleness sees a project whose only ingest is a fetchSource initial insert", async () => {
@@ -533,9 +701,16 @@ describe("collect.* handlers", () => {
     // data_change_log row, MAX(detected_at) over the project's live-anchor
     // series is NULL and the engine reports "no data change ever recorded" —
     // a project whose data was collected moments ago reads as maximally stale.
-    db.run("INSERT INTO md_project (id, project_no, created_at, current_stage_gate, origin, track, status) VALUES ('p-col','P-COL','2026-11-01T00:00:00Z','fs','internal','greenfield','open')");
-    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES ('r-col','p-col','collect-staleness','h','test','2026-11-01T00:00:00Z')");
-    db.run("INSERT INTO assumption (id, run_id, assumption_key, kind, value, anchor_ref, as_of) VALUES ('a-col','r-col','mkt.rate_index','live',3.1,?,'2026-11-01')", [TEST_SERIES.seriesId]);
+    db.run(
+      "INSERT INTO md_project (id, project_no, created_at, current_stage_gate, origin, track, status) VALUES ('p-col','P-COL','2026-11-01T00:00:00Z','fs','internal','greenfield','open')",
+    );
+    db.run(
+      "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES ('r-col','p-col','collect-staleness','h','test','2026-11-01T00:00:00Z')",
+    );
+    db.run(
+      "INSERT INTO assumption (id, run_id, assumption_key, kind, value, anchor_ref, as_of) VALUES ('a-col','r-col','mkt.rate_index','live',3.1,?,'2026-11-01')",
+      [TEST_SERIES.seriesId],
+    );
     const draft = { projectId: "p-col", triggerType: "staleness" as const, threshold: 7, channel: "in_app" as const };
     const now = "2026-11-01T01:00:00.000Z";
 
@@ -561,17 +736,33 @@ describe("collect.* handlers", () => {
 
 describe("CLI output shape (formatFetchEventLine)", () => {
   test("reproduces the pre-P5 fetch/md:sync print lines byte-for-byte", () => {
-    expect(formatFetchEventLine({ type: "source_registered", code: "ecos", grade: "A" })).toBe("md_source: registered 'ecos' (grade A)");
+    expect(formatFetchEventLine({ type: "source_registered", code: "ecos", grade: "A" })).toBe(
+      "md_source: registered 'ecos' (grade A)",
+    );
     expect(formatFetchEventLine({ type: "warn_unverified", seriesId: "kosis:x" })).toBe(
       "⚠ kosis:x: seed entry UNVERIFIED — confirm orgId/tblId against KOSIS before trusting outputs.",
     );
-    expect(formatFetchEventLine({ type: "row", seriesId: "ecos:TEST:5020000", period: "2026-01", status: "new", revisionNo: 1 })).toBe(
-      "ecos:TEST:5020000@2026-01: new (rev 1)",
+    expect(
+      formatFetchEventLine({
+        type: "row",
+        seriesId: "ecos:TEST:5020000",
+        period: "2026-01",
+        status: "new",
+        revisionNo: 1,
+      }),
+    ).toBe("ecos:TEST:5020000@2026-01: new (rev 1)");
+    expect(
+      formatFetchEventLine({
+        type: "row",
+        seriesId: "ecos:TEST:5020000",
+        period: "2026-01",
+        status: "unchanged",
+        revisionNo: 3,
+      }),
+    ).toBe("ecos:TEST:5020000@2026-01: unchanged (rev 3)");
+    expect(formatFetchEventLine({ type: "failure", seriesId: "ecos:x", message: "no data" })).toBe(
+      "  isolated failure ecos:x: no data",
     );
-    expect(formatFetchEventLine({ type: "row", seriesId: "ecos:TEST:5020000", period: "2026-01", status: "unchanged", revisionNo: 3 })).toBe(
-      "ecos:TEST:5020000@2026-01: unchanged (rev 3)",
-    );
-    expect(formatFetchEventLine({ type: "failure", seriesId: "ecos:x", message: "no data" })).toBe("  isolated failure ecos:x: no data");
     expect(formatFetchEventLine({ type: "failure", seriesId: "ecos:x", period: "2026-02", message: "HTTP 503" })).toBe(
       "  isolated failure ecos:x@2026-02: HTTP 503",
     );

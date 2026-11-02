@@ -1,5 +1,12 @@
 #!/usr/bin/env bun
-// @version 1.23.0
+// @version 1.24.1
+// 1.24.1: lint-gate cleanup only (biome whole-file scan on the changed file blocked the quality
+// gate) — `result.catalog` guards replace the `catalog!` non-null assertions in the fetch and
+// md:sync cases (md:sync gains an explicit unreachable-branch guard: dart/law are catalog
+// adapters, fetchSource always populates the catalog on the ok path), biome format drift; no
+// behavior change.
+// 1.24.0: `fetch --list` passes the db handle in the adapter ctx, so the krx listing includes the
+// table-backed stock_series rows (migration 0187, owner decision 2026-11-02 option 1) alongside the seeds.
 // 1.23.0: ADR-0189 phase P5 — the `fetch` and `md:sync` cases delegate to the shared fetchSource library
 // (scripts/co-newbiz/jobs/collect/fetch-source.ts, design 2026-10-29-scheduled-jobs-design §3.2); the collect.*
 // scheduler handlers call the same function. Output lines are unchanged (formatFetchEventLine).
@@ -110,12 +117,7 @@ import { scaffoldAdr } from "./adr-new.ts";
 import { runExportCommand } from "./db-export.ts";
 import { runGraphCommand, runContextCommand } from "./graph.ts";
 import { formatFetchEventLine, type FetchSourceEvent } from "./jobs/collect/fetch-source.ts";
-import {
-  createUser,
-  approveUser,
-  listUsers,
-  resetPassword,
-} from "../../db/lib/accounts.ts";
+import { createUser, approveUser, listUsers, resetPassword } from "../../db/lib/accounts.ts";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -133,7 +135,9 @@ function emitFetchEvent(e: FetchSourceEvent): void {
 
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
-  console.log("Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, governance:sync [--dry-run|--check], policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale \"...\"] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title \"...\" [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]");
+  console.log(
+    'Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, governance:sync [--dry-run|--check], policy:impact --policy <id-or-doc-path>, fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale "..."] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title "..." [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]',
+  );
 }
 
 switch (command) {
@@ -516,7 +520,9 @@ switch (command) {
     const lines: string[] = [];
     lines.push("## WACC 산식 분해");
     lines.push("");
-    lines.push(`확정 WACC: **${formatPct(wacc.value)}** (${wacc.source}${wacc.run_id ? `, run ${wacc.run_id}` : ""}) · Hurdle IRR: ${hurdle ? formatPct(hurdle.value) : "—"}`);
+    lines.push(
+      `확정 WACC: **${formatPct(wacc.value)}** (${wacc.source}${wacc.run_id ? `, run ${wacc.run_id}` : ""}) · Hurdle IRR: ${hurdle ? formatPct(hurdle.value) : "—"}`,
+    );
     lines.push("");
     lines.push(`베타 경로: ${derivation.betaPath ?? "—"}`);
     lines.push("");
@@ -528,11 +534,19 @@ switch (command) {
     lines.push("");
     lines.push("| 가정 키 | 값 | kind | 출처 / 근거 | 기준일 |");
     lines.push("|---|---|---|---|---|");
-    const RAW_KEYS = new Set(["wacc.beta_levered", "wacc.beta_unlevered", "wacc.observed_de", "wacc.target_de", "wacc.beta_r2"]);
+    const RAW_KEYS = new Set([
+      "wacc.beta_levered",
+      "wacc.beta_unlevered",
+      "wacc.observed_de",
+      "wacc.target_de",
+      "wacc.beta_r2",
+    ]);
     for (const c of components) {
       const raw = derivation.components[c.key];
       const shown = RAW_KEYS.has(c.key) ? String(raw) : formatPct(raw);
-      lines.push(`| \`${c.key}\` | ${shown} | ${c.kind} | ${c.rationale ?? "—"}${c.anchor_ref ? ` (${c.anchor_ref})` : ""} | ${c.as_of} |`);
+      lines.push(
+        `| \`${c.key}\` | ${shown} | ${c.kind} | ${c.rationale ?? "—"}${c.anchor_ref ? ` (${c.anchor_ref})` : ""} | ${c.as_of} |`,
+      );
     }
     console.log(lines.join("\n"));
     break;
@@ -590,14 +604,21 @@ switch (command) {
     // lives in the shared fetchSource library (ADR-0189 P5, design §3.2).
     if (adapter.kind === "observations") {
       if (args.includes("--list")) {
-        const catalog = await adapter.listSeries();
+        // The db handle rides in ctx so krx --list shows the table-backed
+        // stock_series rows (migration 0187) the nightly job will actually
+        // collect — not just the static seeds.
+        const catalog = await adapter.listSeries({ db });
         for (const s of catalog) {
-          console.log(`${s.seriesId}\t${s.tblId ?? "-"}\t${s.periodType}\t${s.unitCode}\tverified=${s._verified === true}\t${s.title}`);
+          console.log(
+            `${s.seriesId}\t${s.tblId ?? "-"}\t${s.periodType}\t${s.unitCode}\tverified=${s._verified === true}\t${s.title}`,
+          );
         }
         break;
       }
       if (!adapter.isEnabled()) {
-        console.error(`fetch: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`);
+        console.error(
+          `fetch: ${adapter.credentialEnv} is not set — the ${source} adapter (${adapter.kSkill}) is disabled.`,
+        );
         process.exit(2);
       }
       // Same validation (messages + exit 2) the pre-P5 resolver performed inline.
@@ -618,14 +639,16 @@ switch (command) {
     const result = await fetchSource(db, source, { seriesArg, fromArg, toArg, all, emit: emitFetchEvent });
     if (!result.ok) {
       if (result.reason === "credential_missing") {
-        console.error(`fetch: ${result.credentialEnv} is not set — the ${source} adapter (${result.kSkill}) is disabled.`);
+        console.error(
+          `fetch: ${result.credentialEnv} is not set — the ${source} adapter (${result.kSkill}) is disabled.`,
+        );
         process.exit(2);
       }
       console.error(`fetch: no series matched '${result.seriesArg}' — fetch --list shows the seeded catalog.`);
       process.exit(1);
     }
-    if (result.kind === "catalog") {
-      console.log(`${source}: ${result.catalog!.inserted} inserted, ${result.catalog!.existing} already present.`);
+    if (result.kind === "catalog" && result.catalog) {
+      console.log(`${source}: ${result.catalog.inserted} inserted, ${result.catalog.existing} already present.`);
     }
     if (result.failures.length > 0) {
       console.error(`fetch: ${result.failures.length} isolated failure(s).`);
@@ -650,7 +673,12 @@ switch (command) {
     }
     const { runCalibrate } = await import("./calibrate.ts");
     const r = await runCalibrate({
-      fromIndustryId, toIndustryId, fromSeriesId, toSeriesId, periodFrom, periodTo,
+      fromIndustryId,
+      toIndustryId,
+      fromSeriesId,
+      toSeriesId,
+      periodFrom,
+      periodTo,
       maxLagMonths: opt("--max-lag") ? Number(opt("--max-lag")) : undefined,
       evidenceRef: opt("--evidence-ref"),
     });
@@ -737,10 +765,18 @@ switch (command) {
         console.error(`md:sync: no series matched '${result.seriesArg}'.`);
         process.exit(1);
       }
-      console.error(`md:sync: ${result.credentialEnv} is not set — the ${source} adapter (${result.kSkill}) is disabled.`);
+      console.error(
+        `md:sync: ${result.credentialEnv} is not set — the ${source} adapter (${result.kSkill}) is disabled.`,
+      );
       process.exit(2);
     }
-    console.log(`md:sync ${source}: ${result.catalog!.inserted} inserted, ${result.catalog!.existing} already present.`);
+    if (!result.catalog) {
+      // Unreachable: dart/law are catalog adapters — fetchSource always populates
+      // the catalog result on the ok path (same contract as the fetch case above).
+      console.error(`md:sync: '${source}' returned no catalog result.`);
+      process.exit(2);
+    }
+    console.log(`md:sync ${source}: ${result.catalog.inserted} inserted, ${result.catalog.existing} already present.`);
     break;
   }
 
