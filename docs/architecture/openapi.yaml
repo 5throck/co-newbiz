@@ -56,7 +56,13 @@ paths:
   /api/auth/register:
     post:
       operationId: register
-      summary: Self-signup — always role=viewer, status=pending (no auth).
+      summary: Self-signup — CLOSED by default (403 registration_disabled unless CO_NEWBIZ_ALLOW_REGISTER=1); behind the flag, pending role=viewer.
+      description: >-
+        Owner decision 2026-11-02 (access tightening, "Option A"): the endpoint
+        refuses with 403 registration_disabled unless CO_NEWBIZ_ALLOW_REGISTER=1.
+        Behind the flag it creates a pending role=viewer account (no auth,
+        rate-limited). Accounts are normally admin-provisioned via
+        POST /api/admin/users or the CLI user:create flow.
       tags:
         - Auth
       security: []
@@ -81,6 +87,8 @@ paths:
           $ref: '#/components/responses/Created'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/auth/login:
     post:
       operationId: login
