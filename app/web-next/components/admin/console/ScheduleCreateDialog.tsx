@@ -19,10 +19,9 @@
 import cronstrue from "cronstrue/i18n";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
-import { api, ApiError, type ScheduleJobCreate, type ScheduleJobRow } from "../../../lib/api.ts";
+import type { ScheduleJobCreate } from "../../../lib/api.ts";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { parseRetries, parseTimeoutMin } from "../../../lib/schedule/job-form.ts";
-import { useToast } from "../../ui.tsx";
 import { useAdminLabel } from "./admin-ui.tsx";
 import { ScheduleCronField, useCronFieldCheck } from "./ScheduleCronField.tsx";
 
@@ -55,7 +54,6 @@ export function ScheduleCreateDialog({
   const tc = useTranslations("common");
   const locale = useLocale();
   const label = useAdminLabel();
-  const { toast } = useToast();
   const { panelRef, onKeyDown } = useModalFocus(onClose);
 
   // Prefill from the selected handler's registry defaults; untouched fields stay out of the
