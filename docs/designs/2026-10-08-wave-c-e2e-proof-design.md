@@ -41,6 +41,8 @@ Waves A, F, M, U and B shipped closure, the 3-stage review, MCP parity, the UX o
 
 Scenarios run sequentially (`sequential: true` in the runner) and each is its own `bun test` file, so each owns its server and its DB singleton.
 
+> **(2026-11-02, backend-engineer, brownfield-ma CI flake — SQLITE_BUSY):** the scenario process and the spawned server are two writers on the same scratch DB once the server is up (fixture seeding/cleanup here vs audit/checklist writes there). The server side already sets `PRAGMA busy_timeout = 5000` (db/client.ts, job-worker precedent); the harness's ad-hoc `readDb`/`writeDb` connections defaulted to 0, so a write colliding with a server-held lock failed instantly (CI run 41387711443, passed on rerun). Both harness connections now carry the same 5000 ms lock courtesy — a genuine >5 s hold still surfaces, so this is contention courtesy, not race masking.
+
 ## 4. Scenarios
 
 | # | File | Path | Ends in |

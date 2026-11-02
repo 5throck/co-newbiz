@@ -1,3 +1,7 @@
+// @version 1.2.0 (2026-11-02: fetchDisclosureText moves onto the shared readZipEntries
+// EOCD/central-directory extraction — its old next-signature fallback inherited the same
+// false-PK-in-deflate truncation hazard the P5 gate fixed for parseCorpXml; the fail-soft
+// error surface (available:false + error string, never a throw to callers) is unchanged)
 // @version 1.1.0 (2026-11-02: parseCorpXml rewritten around the End-of-Central-Directory
 // record — DART ships corpCode as a streaming ZIP whose local headers declare csize/usize 0,
 // and the old next-signature scan cut the deflate stream at a false PK byte-pair; sizes now
@@ -173,22 +177,29 @@ function writeCache(rows: CorpRow[]): void {
   } catch { /* 캐시 기록 실패는 치명적이지 않다 */ }
 }
 
-/** P5-11: ZIP slip/bomb 방어 — 크기 상한(50MB)·압축비 상한(100x), 첫 파일의 XML만 추출.
- * 2026-11-02: DART ships corpCode as a STREAMING ZIP — local file headers declare
- * csize/usize 0; the true sizes live in the trailing data descriptor and the central
- * directory. Locate the EOCD (PK\x05\x06) by scanning BACKWARD from the end of the
- * buffer, then inflate each entry with the central directory's real csize. The old
- * next-signature scan cut the deflate stream at a coincidental PK byte-pair inside
- * the compressed bytes (offset 2,893,889 of the real 3.63 MB file) and failed
- * deterministically. A buffer with no EOCD is a truncated download — rejected with a
- * clear error, never a parser guess (callers classify it for retry). */
-export function parseCorpXml(buf: Buffer): CorpRow[] {
-  const MAX_ZIP = 50 * 1024 * 1024;
-  const MAX_RATIO = 100;
-  if (buf.length > MAX_ZIP) return [];
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-  const { inflateRawSync } = require("node:zlib") as typeof import("node:zlib");
-  if (!(buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b)) return []; // not a ZIP (HTML block page)
+interface ZipEntry {
+  fileName: string;
+  compressionMethod: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  /** Exact compressed byte slice — its length is the central directory's csize, not the local header's. */
+  data: Buffer;
+}
+
+/** EOCD + central-directory ZIP walk shared by parseCorpXml (corp-code dump) and
+ * fetchDisclosureText (disclosure ZIPs) — v1.2.0. DART ships both as streaming ZIPs:
+ * local file headers declare csize/usize 0 (the true sizes live in the trailing data
+ * descriptor and the central directory), so locate the EOCD (PK\x05\x06) by scanning
+ * BACKWARD from the end of the buffer and take every size from the central directory.
+ * The next-signature scans this helper replaces cut the deflate stream at a coincidental
+ * PK byte-pair inside the compressed bytes (offset 2,893,889 of the real 3.63 MB
+ * corp-code file) and failed deterministically. A buffer with no EOCD is a truncated
+ * download — rejected with a clear `subject`-named error, never a parser guess (callers
+ * classify it for retry). Archive-level faults throw here; entry-level guards
+ * (slip/bomb/size) and decoding stay with the callers because their contracts differ:
+ * the corp-code dump rejects the whole archive on suspicion, the disclosure flow skips
+ * a suspect entry and tries the next one. */
+function readZipEntries(buf: Buffer, subject: string): ZipEntry[] {
   // 1) locate the EOCD from the end (comment up to 65,535 bytes); validate via commentLen
   const EOCD_LEN = 22;
   let eocd = -1;
@@ -197,22 +208,22 @@ export function parseCorpXml(buf: Buffer): CorpRow[] {
     if (i + EOCD_LEN + buf.readUInt16LE(i + 20) === buf.length) { eocd = i; break; }
   }
   if (eocd === -1) {
-    throw new Error("DART corp-code ZIP truncated: no End-of-Central-Directory record — download incomplete, retry");
+    throw new Error(`DART ${subject} ZIP truncated: no End-of-Central-Directory record — download incomplete, retry`);
   }
   const entryCount = buf.readUInt16LE(eocd + 10);
   const cdOffset = buf.readUInt32LE(eocd + 16);
   if (entryCount === 0xffff || cdOffset === 0xffffffff || buf.readUInt32LE(eocd + 12) === 0xffffffff) {
-    throw new Error("DART corp-code ZIP64 archives are not supported (unexpected for the corp-code dump)");
+    throw new Error(`DART ${subject} ZIP64 archives are not supported (unexpected for the ${subject} dump)`);
   }
   if (cdOffset + 4 > buf.length) {
-    throw new Error("DART corp-code ZIP truncated: central directory offset out of bounds — download incomplete, retry");
+    throw new Error(`DART ${subject} ZIP truncated: central directory offset out of bounds — download incomplete, retry`);
   }
   // 2) central directory entries — the sizes of record live HERE, not in the local header.
-  let xml = "";
+  const entries: ZipEntry[] = [];
   let cursor = cdOffset;
-  for (let n = 0; n < entryCount && !xml; n++) {
+  for (let n = 0; n < entryCount; n++) {
     if (cursor + 46 > buf.length || buf.readUInt32LE(cursor) !== 0x02014b50) {
-      throw new Error(`DART corp-code ZIP corrupt: bad central directory entry at offset ${cursor}`);
+      throw new Error(`DART ${subject} ZIP corrupt: bad central directory entry at offset ${cursor}`);
     }
     const compressionMethod = buf.readUInt16LE(cursor + 10);
     const compressedSize = buf.readUInt32LE(cursor + 20);
@@ -223,21 +234,42 @@ export function parseCorpXml(buf: Buffer): CorpRow[] {
     const localOffset = buf.readUInt32LE(cursor + 42);
     const fileName = buf.subarray(cursor + 46, cursor + 46 + nameLen).toString("utf-8");
     cursor += 46 + nameLen + extraLen + commentLen;
-    if (fileName.includes("/") || fileName.includes("..")) return []; // slip 방지 — 단일 파일 덤프만 허용
-    if (compressedSize <= 0 || compressedSize > MAX_ZIP) return [];
-    if (uncompressedSize > 0 && uncompressedSize / compressedSize > MAX_RATIO) return []; // 압축비 이상 = bomb 의심
     // only the DATA START comes from the local header (streaming ZIPs declare csize=0 there)
     if (localOffset + 30 > buf.length || buf.readUInt32LE(localOffset) !== 0x04034b50) {
-      throw new Error(`DART corp-code ZIP corrupt: bad local file header at offset ${localOffset}`);
+      throw new Error(`DART ${subject} ZIP corrupt: bad local file header at offset ${localOffset}`);
     }
     const dataStart = localOffset + 30 + buf.readUInt16LE(localOffset + 26) + buf.readUInt16LE(localOffset + 28);
     if (dataStart + compressedSize > buf.length) {
-      throw new Error(`DART corp-code ZIP truncated: entry data cut off at offset ${dataStart} (central directory declares ${compressedSize} bytes) — download incomplete, retry`);
+      throw new Error(`DART ${subject} ZIP truncated: entry data cut off at offset ${dataStart} (central directory declares ${compressedSize} bytes) — download incomplete, retry`);
     }
-    const data = buf.subarray(dataStart, dataStart + compressedSize);
+    entries.push({ fileName, compressionMethod, compressedSize, uncompressedSize, data: buf.subarray(dataStart, dataStart + compressedSize) });
+  }
+  return entries;
+}
+
+/** P5-11: ZIP slip/bomb 방어 — 크기 상한(50MB)·압축비 상한(100x), 첫 파일의 XML만 추출.
+ * 2026-11-02 (v1.2.0): extraction walks the shared readZipEntries central directory
+ * (see its doc for the streaming-ZIP rationale); this caller keeps only its own contract —
+ * the whole dump is rejected ([] return, no throw) the moment any entry looks like a slip
+ * or a bomb, and the first decodable entry wins. */
+export function parseCorpXml(buf: Buffer): CorpRow[] {
+  const MAX_ZIP = 50 * 1024 * 1024;
+  const MAX_RATIO = 100;
+  if (buf.length > MAX_ZIP) return [];
+  if (!(buf.length > 4 && buf[0] === 0x50 && buf[1] === 0x4b)) return []; // not a ZIP (HTML block page)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
+  const { inflateRawSync } = require("node:zlib") as typeof import("node:zlib");
+  let xml = "";
+  for (const entry of readZipEntries(buf, "corp-code")) {
+    if (entry.fileName.includes("/") || entry.fileName.includes("..")) return []; // slip 방지 — 단일 파일 덤프만 허용
+    if (entry.compressedSize <= 0 || entry.compressedSize > MAX_ZIP) return [];
+    if (entry.uncompressedSize > 0 && entry.uncompressedSize / entry.compressedSize > MAX_RATIO) return []; // 압축비 이상 = bomb 의심
     try {
-      xml = compressionMethod === 8 ? inflateRawSync(data, { maxOutputLength: MAX_ZIP }).toString("utf-8") : data.toString("utf-8");
+      xml = entry.compressionMethod === 8
+        ? inflateRawSync(entry.data, { maxOutputLength: MAX_ZIP }).toString("utf-8")
+        : entry.data.toString("utf-8");
     } catch { /* corrupt entry — try the next central directory entry */ }
+    if (xml) break;
   }
   const rows: CorpRow[] = [];
   for (const row of xml.split("<list>").slice(1)) {
@@ -645,31 +677,21 @@ export async function fetchDisclosureText(rceptNo: string): Promise<DisclosureTe
     }
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
     const { inflateRawSync } = require("node:zlib") as typeof import("node:zlib");
+    // v1.2.0: 공시 ZIP도 corp-code 덤프와 같은 readZipEntries 중앙 디렉터리 경로를 쓴다 —
+    // 기존 다음-시그니처 스캔은 압축 데이터 안의 우연한 PK 바이트쌍에서 deflate 스트림을
+    // 잘라내는 위험(P5 게이트가 corp-code 쪽에서 이미 수정)을 그대로 안고 있었다.
+    // 공시 ZIP은 첨부를 여러 항목으로 담을 수 있으나, 기존 선점 규칙(순서대로 첫 번째
+    // 디코딩 성공 항목)을 그대로 유지한다. 이 함수는 fail-soft 계약이라 헬퍼가 던지는
+    // 잘림/손상 오류도 아래 catch가 error 문자열로 바꾼다 — 던지기 없음.
     let xml = "";
-    const sig = (i: number) => buf[i] === 0x50 && buf[i + 1] === 0x4b;
-    for (let i = 0; i < buf.length - 4 && !xml; i++) {
-      if (!(sig(i) && buf[i + 2] === 0x03 && buf[i + 3] === 0x04)) continue;
-      const compressionMethod = buf.readUInt16LE(i + 8);
-      let compressedSize = buf.readUInt32LE(i + 18);
-      const nameLen = buf.readUInt16LE(i + 26);
-      const extraLen = buf.readUInt16LE(i + 28);
-      const dataStart = i + 30 + nameLen + extraLen;
-      if (compressedSize === 0) {
-        // 스트리밍 ZIP(data descriptor) — 로컬 헤더에 크기 미기록. 다음 시그니처까지를 데이터로 간주.
-        let next = -1;
-        for (let j = dataStart; j < buf.length - 4; j++) {
-          if (sig(j) && (buf[j + 2] === 0x03 || buf[j + 2] === 0x01)) { next = j; break; }
-        }
-        if (next === -1 || next - dataStart > MAX_DOCUMENT) continue;
-        compressedSize = next - dataStart;
-      }
-      if (compressedSize > MAX_DOCUMENT) continue;
-      const data = buf.subarray(dataStart, dataStart + compressedSize);
+    for (const entry of readZipEntries(buf, "disclosure")) {
+      if (entry.compressedSize <= 0 || entry.compressedSize > MAX_DOCUMENT) continue; // 비정상 항목 — 다음 중앙 디렉터리 항목
       try {
-        xml = compressionMethod === 8
-          ? inflateRawSync(data, { maxOutputLength: MAX_DOCUMENT }).toString("utf-8")
-          : data.toString("utf-8");
-      } catch { /* 다음 로컬 파일 헤더 시도 */ }
+        const decoded = entry.compressionMethod === 8
+          ? inflateRawSync(entry.data, { maxOutputLength: MAX_DOCUMENT }).toString("utf-8")
+          : entry.data.toString("utf-8");
+        if (decoded) { xml = decoded; break; }
+      } catch { /* 다음 중앙 디렉터리 항목 시도 */ }
     }
     if (!xml) return { available: false, rcept_no: rceptNo, error: "XML 원문 추출 실패" };
     // XML 태그 제거 — 원문 텍스트만 남긴다 (상한 500k 문자).

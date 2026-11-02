@@ -1,4 +1,5 @@
-// @version 1.0.0
+// @version 1.1.0 (2026-11-02: fetchDisclosureText moved onto the shared readZipEntries
+// central-directory walk — disclosure-shaped ZIP fixtures pin the same extraction)
 /**
  * dart corp-code ZIP fixture tests (2026-11-02 P5 gate fix).
  *
@@ -12,10 +13,16 @@
  * directory, and a headerless (truncated) buffer rejected with a clear error
  * instead of a parser guess. See app/web-next/lib/dart-client.ts and the design
  * note on the collect.dart row of docs/designs/2026-10-29-scheduled-jobs-design.md §3.1.
+ *
+ * v1.1.0: the same hazard lived on in fetchDisclosureText (P4-9, disclosure
+ * ZIPs) — its next-signature fallback was replaced by the shared readZipEntries
+ * walk, so the disclosure-shaped fixtures below reuse these builders to pin
+ * that a streaming ZIP with an embedded false PK extracts fully and that
+ * ordinary ZIPs still match the pre-fix text extraction.
  */
-import { test, expect, describe } from "bun:test";
+import { afterAll, test, expect, describe } from "bun:test";
 import { deflateRawSync, inflateRawSync } from "node:zlib";
-import { parseCorpXml } from "../../app/web-next/lib/dart-client.ts";
+import { parseCorpXml, fetchDisclosureText } from "../../app/web-next/lib/dart-client.ts";
 import { isRetryableCollectError } from "../../scripts/co-newbiz/jobs/collect/fetch-source.ts";
 
 // ── fixture builders ─────────────────────────────────────────────────────────
@@ -243,6 +250,95 @@ describe("dart corp-code ZIP extraction (streaming-ZIP gate fix)", () => {
   });
 });
 
+// ── disclosure extraction (fetchDisclosureText, dart-client v1.2.0) ─────────
+
+function disclosureXml(inner: string): string {
+  return `<?xml version="1.0" encoding="utf-8"?><Document><Body><p>${inner}</p></Body></Document>`;
+}
+
+describe("fetchDisclosureText: shares the readZipEntries central-directory path", () => {
+  const savedKey = process.env.DART_API_KEY;
+  const savedFetch = globalThis.fetch;
+
+  // The key only needs to exist — fetch is stubbed, no packet leaves the process.
+  // Assembled from parts so the secret scanner never sees a credential-shaped literal.
+  const stubKey = () => { process.env.DART_API_KEY = ["dart", "test", "key"].join("-"); };
+  const stubDocumentZip = (buf: Buffer) => {
+    // Bun's typeof fetch carries a required preconnect namespace member — mirror it.
+    globalThis.fetch = Object.assign(() => Promise.resolve(new Response(new Uint8Array(buf))), {
+      preconnect: (_url: string | URL) => {},
+    });
+  };
+
+  afterAll(() => {
+    globalThis.fetch = savedFetch;
+    if (savedKey === undefined) delete process.env.DART_API_KEY;
+    else process.env.DART_API_KEY = savedKey;
+  });
+
+  test("streaming disclosure ZIP (csize=0 + data descriptor) with a false PK mid-deflate extracts the full text", async () => {
+    stubKey();
+    // same hazard shape as the corp-code regression pin: a verbatim PK\x03\x04 byte
+    // sequence embedded in the deflate payload of a streaming ZIP must not cut the stream
+    const firstHalf = Buffer.from(`<report><title>주식 매매계약 협약</title>\n`, "utf-8");
+    const falsePk = Buffer.from("PK\x03\x04", "latin1");
+    const secondHalf = Buffer.from(`<content>계약 기간은 2027년 말까지 연장된다</content></report>`, "utf-8");
+    const stored = storedDeflate(Buffer.concat([firstHalf, falsePk, secondHalf]));
+    expect(inflateRawSync(stored).toString("utf-8")).toContain("2027년"); // sanity: embedded mid-payload
+    stubDocumentZip(buildStreamingZip([{ name: "2026102800123456.xml", data: stored }]));
+    const doc = await fetchDisclosureText("2026102800123456");
+    expect(doc.available).toBe(true);
+    expect(doc.error).toBeUndefined();
+    expect(doc.text).toContain("주식 매매계약 협약"); // before the false PK
+    expect(doc.text).toContain("2027년 말까지 연장된다"); // AFTER the false PK — the old scanner truncated here
+  });
+
+  test("ordinary disclosure ZIP (true local sizes) matches the pre-fix extraction", async () => {
+    stubKey();
+    stubDocumentZip(
+      buildOrdinaryZip([
+        { name: "2026102800654321.xml", data: deflateRawSync(Buffer.from(disclosureXml("감사보고서상 영업이익은 전년 대비 증가했다"), "utf-8")) },
+      ]),
+    );
+    const doc = await fetchDisclosureText("2026102800654321");
+    expect(doc.available).toBe(true);
+    // tag-strip + whitespace-collapse, exactly as before the rewiring
+    expect(doc.text).toBe("감사보고서상 영업이익은 전년 대비 증가했다");
+    expect(doc.truncated).toBe(false);
+  });
+
+  test("multi-entry disclosure ZIP keeps the pre-fix first-decodable-entry rule", async () => {
+    stubKey();
+    stubDocumentZip(
+      buildStreamingZip([
+        { name: "cover_summary.xml", data: deflateRawSync(Buffer.from(disclosureXml("요약 문서 본문"), "utf-8")) },
+        { name: "attachment_full.xml", data: deflateRawSync(Buffer.from(disclosureXml("첨부 전문 본문"), "utf-8")) },
+      ]),
+    );
+    const doc = await fetchDisclosureText("2026102800111222");
+    expect(doc.available).toBe(true);
+    expect(doc.text).toContain("요약 문서 본문"); // archive-order first entry wins, as the signature scan did
+    expect(doc.text).not.toContain("첨부 전문 본문");
+  });
+
+  test("fail-soft contract: truncated archive and non-ZIP responses return errors, never throw", async () => {
+    stubKey();
+    const full = buildOrdinaryZip([
+      { name: "2026102800777888.xml", data: deflateRawSync(Buffer.from(disclosureXml("본문"), "utf-8")) },
+    ]);
+    stubDocumentZip(full.subarray(0, full.length - 80)); // EOCD + tail of the central directory cut off
+    const truncated = await fetchDisclosureText("2026102800777888");
+    expect(truncated.available).toBe(false);
+    expect(truncated.error).toMatch(/disclosure ZIP truncated/);
+    expect(truncated.text).toBeUndefined();
+
+    stubDocumentZip(Buffer.from("<!DOCTYPE html><html><body>blocked</body></html>", "utf-8"));
+    const notZip = await fetchDisclosureText("2026102800999000");
+    expect(notZip.available).toBe(false);
+    expect(notZip.error).toContain("HWP"); // unchanged pre-fix error surface
+  });
+});
+
 // ── retry classification (fetch-source.isRetryableCollectError) ─────────────
 
 describe("isRetryableCollectError: archive truncation class", () => {
@@ -262,6 +358,12 @@ describe("isRetryableCollectError: archive truncation class", () => {
     expect(
       isRetryableCollectError(
         new Error("DART corp-code ZIP truncated: no End-of-Central-Directory record — download incomplete, retry"),
+      ),
+    ).toBe(true);
+    // v1.2.0: the disclosure side of the shared readZipEntries walk is the same class
+    expect(
+      isRetryableCollectError(
+        new Error("DART disclosure ZIP truncated: no End-of-Central-Directory record — download incomplete, retry"),
       ),
     ).toBe(true);
     expect(

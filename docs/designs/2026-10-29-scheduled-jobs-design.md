@@ -78,7 +78,7 @@ Running inside the container via `docker exec` keeps one DB writer topology (the
 | job_key | Command (handler) | Default cron (KST) | Timeout | Retry | Catch-up | Idempotency |
 |---|---|---|---|---|---|---|
 | `watch.evaluate` | `runWatchCycle` + resume passes from `watch-run.ts` | `*/30 * * * *` | 10 min | none (next tick retries) | skip missed, run once | Watch cooldown/hysteresis (FR-MON-03) and `watch.last_checked_at` watermark already prevent duplicate alerts |
-| `collect.dart` | fetch adapter `dart` + `md:sync dart` | `0 7 * * 1-5` | 30 min | 2 retries, backoff 5/15 min, only on network/5xx/429 | run once if missed within 24 h | Upsert on (series_id, period); `data_change_log` row only when value differs. **(2026-11-01, platform-lead AI-2nd review): the handler performs the `fetch` + `md:sync` pair once — for the catalog-kind dart adapter both commands are the same catalog sync, so calling it twice would download the corp-code ZIP twice for zero additional rows (justified in the `scripts/co-newbiz/jobs/collect/dart.ts` header).** **(2026-11-02, backend-engineer, P5 gate fix): DART ships the corp-code download as a streaming ZIP — each local file header declares csize/usize 0 and the true sizes live in the trailing data descriptor and the central directory. `parseCorpXml` (app/web-next/lib/dart-client.ts) was rewritten to locate the End-of-Central-Directory record by scanning from the END of the buffer and to inflate each entry using the central directory's true compressed size; the previous next-signature scan cut the deflate stream at a false PK byte-pair (offset 2,893,889 of the 3.63 MB file) and failed deterministically with "unexpected end of file". A buffer with no EOCD (a transfer cut short) now raises a clear truncation error, which `isRetryableCollectError` classifies as retryable — the same network-class policy as this row's retry column; ordinary non-streaming ZIPs take the identical code path, and the zip-slip/ratio guards are unchanged. Pinned by tests/unit/dart-corp-zip.test.ts.** |
+| `collect.dart` | fetch adapter `dart` + `md:sync dart` | `0 7 * * 1-5` | 30 min | 2 retries, backoff 5/15 min, only on network/5xx/429 | run once if missed within 24 h | Upsert on (series_id, period); `data_change_log` row only when value differs. **(2026-11-01, platform-lead AI-2nd review): the handler performs the `fetch` + `md:sync` pair once — for the catalog-kind dart adapter both commands are the same catalog sync, so calling it twice would download the corp-code ZIP twice for zero additional rows (justified in the `scripts/co-newbiz/jobs/collect/dart.ts` header).** **(2026-11-02, backend-engineer, P5 gate fix): DART ships the corp-code download as a streaming ZIP — each local file header declares csize/usize 0 and the true sizes live in the trailing data descriptor and the central directory. `parseCorpXml` (app/web-next/lib/dart-client.ts) was rewritten to locate the End-of-Central-Directory record by scanning from the END of the buffer and to inflate each entry using the central directory's true compressed size; the previous next-signature scan cut the deflate stream at a false PK byte-pair (offset 2,893,889 of the 3.63 MB file) and failed deterministically with "unexpected end of file". A buffer with no EOCD (a transfer cut short) now raises a clear truncation error, which `isRetryableCollectError` classifies as retryable — the same network-class policy as this row's retry column; ordinary non-streaming ZIPs take the identical code path, and the zip-slip/ratio guards are unchanged. Pinned by tests/unit/dart-corp-zip.test.ts.** **(2026-11-02, backend-engineer, follow-up to the P5 gate fix): `fetchDisclosureText` (dart-client v1.2.0) — which had kept the old next-signature fallback and inherited the same false-PK truncation hazard — now extracts through the same shared `readZipEntries` EOCD/central-directory walk (subject-parameterized so its truncation errors read "DART disclosure ZIP truncated"); the fail-soft error surface and the first-decodable-entry selection are unchanged, and `isRetryableCollectError`'s truncation class covers the disclosure errors too. Pinned by the disclosure-shaped fixtures in tests/unit/dart-corp-zip.test.ts.** |
 | `collect.ecos` | fetch adapter `ecos` | `0 8 * * *` | 20 min | same | same | same |
 | `collect.krx` | fetch adapter `krx` | `30 18 * * 1-5` (after market close) | 20 min | same | same | same |
 | `collect.kosis` | fetch adapter `kosis` | `0 9 * * 1` (weekly) | 30 min | same | same | same |
@@ -369,3 +369,127 @@ Producer writes one `notification` per addressed user (existing behaviour) or, f
 - **Could not verify**: whether `watch-engine.ts` can run in dry-run without side effects today (preview depends on it); whether user records hold verified email addresses; whether SQLite runs in WAL mode in the prod container; Docker Desktop behaviour under `docker exec` from a LaunchAgent at login before Docker is up; adapter rate limits per source; contents of `gate-integrity-shadow-report.ts` output destination.
 - **Needs judgement**: D9–D14 (D1–D8 decided by the owner 2026-10-29; scheduler schema rides ADR-0189).
 - **Surfaces not examined in depth**: UI component internals of the new admin CRUD pattern (only the convention names were taken from commit 69703135).
+
+### 4.4 Structured cron picker for the schedule dialogs (2026-11-02, ux-designer-agent — amends §4.2 and §4.3)
+
+Owner directive (2026-11-02): scheduling must be configurable WITHOUT typing a raw crontab
+expression. JTBD: "an operator wants to schedule collection daily at 07:00 — in three seconds,
+without knowing crontab syntax." The server contract is unchanged: the API keeps receiving a
+5-field cron string, and `app/web-next/lib/schedule/cron.ts` remains the ONLY parser. The picker is
+a composer — it produces strings the shared parser already accepts, adds no grammar, and every
+composed result still passes through the unchanged `useCronFieldCheck` before save; the server 400
+(`invalid_cron` / `cron_too_frequent`) stays authoritative.
+
+**Dual-mode field — `ScheduleCronField` internals only.** A mode radio group (`빠른 설정` with
+structured controls | `직접 입력` with today's mono input) sits above the field. Both modes feed ONE
+validation + preview path (the existing `useCronFieldCheck` + cronstrue line + `다음 5회 실행 시각`
+list), so the preview can never disagree between modes. The single source of truth stays the
+dialog's `cron: string` state; structured controls only call the existing
+`onCronChange(composedExpr)`. Dialog props do not change except one addition: `jobKey: string|null`
+on `ScheduleCronField`, because the §13.2 floor-exemption set is keyed by job.
+
+**Quick-setup grammar** — five frequency presets whose parameters compose exactly the shapes the 10
+registry default crons use:
+
+| Preset | Parameters (all native selects) | Composed cron |
+|---|---|---|
+| `매분` | `분 간격`: `매분`(=`* * * * *`, exempt keys only), 5, 10, 15, 20, 30 | `* * * * *` / `*/N * * * *` |
+| `매시간` | `시간 간격`: `매시간`, 2, 3, 4, 6, 12 | `0 * * * *` / `0 */N * * *` |
+| `매일` | `시각`: hour 0–23, minute 0–55 step 5 | `M H * * *` |
+| `매주` | `요일` multi-select (`일`–`토`, 0–6; ≥1 required) + `시각` | `M H * * <days>` |
+| `매월` | `날짜` 1–31 + `시각` | `M H D * *` |
+
+Floor by construction: the only composed form that can violate the 5-minute interval floor is
+`매분 · 매분` — that option is disabled (with a text annotation `정책: 최소 5분 간격`) for every key
+except `watch.evaluate` and `notify.deliver`. `N분 간격` offers only divisors of 60 that are ≥ 5
+(45 is excluded: `*/45` fires :00/:45, a 15-minute gap). `매시간`/`매일`/`매주`/`매월` fire ≥ 1 hour
+apart by construction. The controls make the violation unreachable; they do not replace the check.
+
+**Round-trip rule.** An expression opens in quick mode iff `parseToStructured(expr)` (new pure
+helper) classifies it — including arithmetic-step detection for `*/N` minute/hour sets — AND the
+canonical recomposition is semantically identical (same five field sets under `parseCron`; NOT byte
+equality). Toggling modes alone never rewrites the expression. Touching any quick control writes
+the canonical composed form into the same `cron` state (visible in a `생성되는 cron 식` mono line
+and the preview before saving). Expressions that fail parse-back (e.g. dual day-of-month +
+day-of-week restriction, `0 0 31 2 *`, `0 8,12 * * *`) open quick mode in a neutral state
+(`매일` 07:00 defaults) with a hint that the current expression cannot be edited there; the stored
+string is untouched until a control is actually changed. Canonical rendering: day-of-week emits
+`a-b` for ≥3 consecutive days (matches the registry's `1-5`), otherwise a sorted comma list; a
+single day is a bare number; day-of-month is a sorted comma list.
+
+Round-trip cases (all 10 registry keys, `scripts/co-newbiz/jobs/*`):
+
+| job_key | Registry cron | Quick rendering | Regenerates |
+|---|---|---|---|
+| collect.dart | `0 7 * * 1-5` | `매주` Mon–Fri 07:00 | `0 7 * * 1-5` (canonical range) |
+| collect.ecos | `0 8 * * *` | `매일` 08:00 | byte-identical |
+| collect.krx | `30 18 * * 1-5` | `매주` Mon–Fri 18:30 | `30 18 * * 1-5` |
+| collect.kosis | `0 9 * * 1` | `매주` Mon 09:00 | byte-identical |
+| collect.law | `0 6 * * *` | `매일` 06:00 | byte-identical |
+| gate_integrity.shadow_report | `0 8 * * 1` | `매주` Mon 08:00 | byte-identical |
+| notify.deliver | `* * * * *` | `매분 · 매분` | byte-identical |
+| notify.digest | `30 8 * * *` | `매일` 08:30 | byte-identical |
+| retention.cleanup | `0 3 * * *` | `매일` 03:00 | byte-identical |
+| watch.evaluate | `*/30 * * * *` | `매분 · 30분 간격` | byte-identical |
+
+Known limitation (accepted): multi-time or offset-step schedules (`0 8,12 * * *`, `5,35 * * * *`)
+and month restriction stay quick-mode-unrepresentable and are edited in `직접 입력`. No registry cron
+uses them.
+
+**Accessibility.** The mode toggle and the frequency preset use the codebase's established
+fieldset + legend + `role="radiogroup"` + native radio pattern (`ClosureModal.tsx`,
+`GreenfieldScopePanel.tsx`) — no new segmented-control component is registered (a styled one
+remains a design-system-agent escalation). Every parameter is a labelled native `<select>`; the
+keyboard-only path is Tab to the mode group → arrow keys → Tab through selects → save. The shared
+preview/error slot gains `aria-live="polite"`; the next-fire list stays in reading order below it.
+Disabled options carry the policy suffix as text, never colour-only. Time fields carry a KST
+annotation (`한국시간(KST) 기준`). `매주` with zero days selected disables save with a text hint.
+
+**i18n keys** (`admin.ops`; ko source below — fenced per the §4.3 convention, en mirrors in
+`locales/en.json`):
+
+```
+cronModeLegend = "입력 방식"
+cronModeQuick = "빠른 설정"
+cronModeText = "직접 입력"
+cronQuickUnavailable = "현재 cron 식은 빠른 설정으로 편집할 수 없습니다. 직접 입력을 사용하거나 값을 다시 구성하세요."
+cronFreqLegend = "빈도"
+cronFreqEveryMinute = "매분"
+cronFreqHourly = "매시간"
+cronFreqDaily = "매일"
+cronFreqWeekly = "매주"
+cronFreqMonthly = "매월"
+cronStepBaseMinute = "매분"
+cronStepBaseHour = "매시간"
+cronIntervalMinutes = "{p1}분 간격"
+cronIntervalHours = "{p1}시간 간격"
+cronTimeLabel = "시각"
+cronHourLabel = "시"
+cronMinuteLabel = "분"
+cronTzNote = "한국시간(KST) 기준"
+cronDowLegend = "요일"
+cronDow0 = "일요일"
+cronDow1 = "월요일"
+cronDow2 = "화요일"
+cronDow3 = "수요일"
+cronDow4 = "목요일"
+cronDow5 = "금요일"
+cronDow6 = "토요일"
+cronDowRequired = "요일을 한 개 이상 선택하세요."
+cronDomLabel = "날짜"
+cronDomHint = "29일~31일은 해당 날짜가 없는 달에는 실행되지 않습니다."
+cronComposedLabel = "생성되는 cron 식"
+cronFloorOptionNote = "정책: 최소 5분 간격"
+```
+
+**Scope.** `ScheduleCronField.tsx` + one new pure helper
+`app/web-next/lib/schedule/cron-structured.ts` (`parseToStructured` + canonical compose, importing
+`parseCron` from `cron.ts`). The create/edit dialogs keep their props (one added `jobKey`); no
+backend change; unit test pins the 10 round-trip cases above against the registry sources (same
+pattern as the existing `KNOWN_HANDLERS` pin).
+
+**Success criterion.** All 10 registry default crons open in quick mode with controls
+pre-populated and pass the regeneration check; an operator sets `매일` 07:00 in three interactions
+(preset → hour → minute) or edits an existing row's hour in two (edit dialog opens directly in
+quick mode → change hour); a keyboard-only user completes a full edit including the mode switch;
+and no mode switch or dialog visit mutates the stored expression.

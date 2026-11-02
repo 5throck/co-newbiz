@@ -247,22 +247,31 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
     adminPassword,
     analystId,
     analystPassword,
-    readDb: <T>(fn: (d: Database) => T): T => {
-      const ro = new Database(dbPath, { readonly: true });
-      try {
-        return fn(ro);
-      } finally {
-        ro.close();
-      }
-    },
-    writeDb: (fn: (d: Database) => void): void => {
-      const rw = new Database(dbPath);
-      try {
-        fn(rw);
-      } finally {
-        rw.close();
-      }
-    },
+      readDb: <T>(fn: (d: Database) => T): T => {
+        const ro = new Database(dbPath, { readonly: true });
+        // The scenario process and the spawned server are two WRITERS on the same scratch
+        // DB (fixtures/cleanup here vs audit/checklist writes there). db/client.ts already
+        // sets busy_timeout = 5000 on the server side for exactly this (job-worker
+        // precedent); these ad-hoc connections default to 0, so a write colliding with a
+        // server-held lock failed instantly with SQLITE_BUSY (brownfield-ma CI flake,
+        // 2026-11-02 — passed on rerun). Same lock courtesy, no masking: a genuine >5 s
+        // hold still surfaces.
+        ro.run("PRAGMA busy_timeout = 5000;");
+        try {
+          return fn(ro);
+        } finally {
+          ro.close();
+        }
+      },
+      writeDb: (fn: (d: Database) => void): void => {
+        const rw = new Database(dbPath);
+        rw.run("PRAGMA busy_timeout = 5000;"); // see readDb — two writers share the scratch DB
+        try {
+          fn(rw);
+        } finally {
+          rw.close();
+        }
+      },
     log: () => logChunks.join(""),
     stop: async () => {
       proc.kill();
