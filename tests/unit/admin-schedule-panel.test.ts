@@ -1,4 +1,4 @@
-// @version 2.1.0
+// @version 2.2.0
 /**
  * /admin/schedule screen (docs/designs/2026-10-29-scheduled-jobs-design §4.3 list-and-edit +
  * the P7 remainder §4.2/§4.1) — frontend source-reading tests in the connected-apps-page.test.ts
@@ -21,6 +21,9 @@
  * edit payload diff gained the form-unit-dirty contract (computeJobEditPayload, unit-tested
  * below) so a sub-minute registry timeout (notify.deliver's §13.2 50 s) survives an
  * untouched save instead of being silently rewritten to 60 s.
+ * v2.2.0 (§4.4 structured cron picker): the shared-field pin gains the jobKey prop both
+ * dialogs now pass (the 매분·매분 option is floor-exempt per job). The §4.4 picker invariants
+ * themselves live in schedule-cron-picker.test.ts.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -196,8 +199,9 @@ describe("shared cron field (§4.2/§4.3: one validation+preview path for the ed
       /import \{ ScheduleJobEditDialog, type JobEditState \} from "\.\/ScheduleJobEditDialog\.tsx"/,
     );
     expect(EDIT).toMatch(/import \{ ScheduleCronField, useCronFieldCheck \} from "\.\/ScheduleCronField\.tsx"/);
-    expect(EDIT).toMatch(
-      /<ScheduleCronField idPrefix="job" cron=\{cron\} onCronChange=\{setCron\} check=\{check\} \/>/,
+    // §4.4: both dialogs pass jobKey — the dual-mode field gates the 매분·매분 option by job
+    expect(squash(EDIT)).toContain(
+      '<ScheduleCronField idPrefix="job" jobKey={state.job.job_key} cron={cron} onCronChange={setCron} check={check} />',
     );
     expect(squash(CREATE)).toContain('<ScheduleCronField idPrefix="createJob"');
     expect(CREATE).toMatch(/useCronFieldCheck\(cron\.trim\(\), jobKey \|\| null, openedAt\)/);
@@ -277,7 +281,7 @@ describe("shared cron field (§4.2/§4.3: one validation+preview path for the ed
   test("a disabled job stays editable — the dialog never touches enabled", () => {
     // openEdit carries no enabled flag; saveJob's payload type omits `enabled`
     expect(ACTIONS).toMatch(
-      /export interface ScheduleJobUpdate \{\n  cron_expr\?: string;\n  timeout_sec\?: number;\n  max_retries\?: number;\n\}/,
+      /export interface ScheduleJobUpdate \{\n {2}cron_expr\?: string;\n {2}timeout_sec\?: number;\n {2}max_retries\?: number;\n\}/,
     );
     expect(PANEL).toMatch(/onSave=\{saveJob\}/);
   });
@@ -500,7 +504,7 @@ describe("runs detail dialog (§4.2 detail: the migration-0183 columns)", () => 
 
   test("the scrubbed error stays expandable per row (the details/summary pattern)", () => {
     expect(RUNS).toMatch(
-      /<details>\n            <summary className="cursor-pointer text-\[length:var\(--fs-caption\)\]">\{t\("errorToggle"\)\}<\/summary>/,
+      /<details>\n {12}<summary className="cursor-pointer text-\[length:var\(--fs-caption\)\]">\{t\("errorToggle"\)\}<\/summary>/,
     );
     expect(RUNS).toMatch(/\{r\.error \?/);
   });
@@ -599,7 +603,7 @@ describe("job creation (§4.1 POST + §5 RCE guard + §4.2 New job dialog)", () 
 
 describe("catalog entries for the registered jobs (§4.3 ko drafts)", () => {
   test("jobName/jobDesc groups carry all four keys in ko and en, under labelKeyOf normalization", () => {
-    const m = LABELS.match(/export function labelKeyOf\(code: string\): string \{\n  return ([^;]+);/);
+    const m = LABELS.match(/export function labelKeyOf\(code: string\): string \{\n {2}return ([^;]+);/);
     expect(m).toBeTruthy(); // snake_case normalization is what maps dotted keys to catalog keys
     for (const job of REGISTERED_JOBS) {
       const key = job.trim().replace(/[^A-Za-z0-9_]+/g, "_");
