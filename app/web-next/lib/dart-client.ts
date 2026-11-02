@@ -168,7 +168,7 @@ function readCache(): { fetched_at: string; rows: CorpRow[] } | null {
 function writeCache(rows: CorpRow[]): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-    const { dirname, join } = require("node:path") as typeof import("node:path");
+    const { dirname } = require("node:path") as typeof import("node:path");
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
     const { mkdirSync, writeFileSync } = require("node:fs") as typeof import("node:fs");
     const path = cacheFile();
@@ -292,7 +292,7 @@ async function loadCorpRows(opts: { forceRefresh?: boolean } = {}): Promise<Corp
   const key = apiKey();
   if (!key) return { rows: cache?.rows ?? [], stale: !!cache, error: "DART_API_KEY 미구성", results: [] };
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-  const { existsSync, mkdtempSync, rmSync } = require("node:fs") as typeof import("node:fs");
+  const { mkdtempSync, rmSync } = require("node:fs") as typeof import("node:fs");
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
   const { tmpdir } = require("node:os") as typeof import("node:os");
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only

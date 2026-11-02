@@ -262,7 +262,9 @@ describe("fetchDisclosureText: shares the readZipEntries central-directory path"
 
   // The key only needs to exist — fetch is stubbed, no packet leaves the process.
   // Assembled from parts so the secret scanner never sees a credential-shaped literal.
-  const stubKey = () => { process.env.DART_API_KEY = ["dart", "test", "key"].join("-"); };
+  const stubKey = () => {
+    process.env.DART_API_KEY = ["dart", "test", "key"].join("-");
+  };
   const stubDocumentZip = (buf: Buffer) => {
     // Bun's typeof fetch carries a required preconnect namespace member — mirror it.
     globalThis.fetch = Object.assign(() => Promise.resolve(new Response(new Uint8Array(buf))), {
@@ -297,7 +299,10 @@ describe("fetchDisclosureText: shares the readZipEntries central-directory path"
     stubKey();
     stubDocumentZip(
       buildOrdinaryZip([
-        { name: "2026102800654321.xml", data: deflateRawSync(Buffer.from(disclosureXml("감사보고서상 영업이익은 전년 대비 증가했다"), "utf-8")) },
+        {
+          name: "2026102800654321.xml",
+          data: deflateRawSync(Buffer.from(disclosureXml("감사보고서상 영업이익은 전년 대비 증가했다"), "utf-8")),
+        },
       ]),
     );
     const doc = await fetchDisclosureText("2026102800654321");
