@@ -105,7 +105,13 @@ export function ScheduleJobEditDialog({
           aria-label={t("editJobFormAria")}
           className="stack-form"
         >
-          <ScheduleCronField idPrefix="job" cron={cron} onCronChange={setCron} check={check} />
+          <ScheduleCronField
+            idPrefix="job"
+            jobKey={state.job.job_key}
+            cron={cron}
+            onCronChange={setCron}
+            check={check}
+          />
           <div className="stack-form-row">
             <label htmlFor="jobTimeoutInput">{t("timeoutLabel")}</label>
             <input
