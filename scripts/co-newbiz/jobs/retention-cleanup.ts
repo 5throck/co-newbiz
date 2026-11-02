@@ -1,4 +1,14 @@
-// @version 1.1.0
+// @version 1.2.0
+// 1.2.0: registry reconciliation (dba 2026-11-02 adjudication + owner adoption; PM follow-up
+// before P7). The allow-list gains llm_call_log (12 mo archive-then-delete/created_at - the volume
+// table) and every entry now carries the registry's RetentionHandling (db/lib/retention-registry.ts)
+// instead of the old defaultAction: the action_mismatch guard compares the policy row's STORED
+// action against handlingToStoredAction(entry.handling) - the SAME mapping the seeder and the admin
+// route use - so a registry-created or seeded row always passes (the stored 'delete' of an
+// archive_then_delete table is understood as archive-then-delete at runtime). Runtime behavior is
+// pinned by handling: archive_then_delete archives then deletes, delete_only plain-deletes,
+// archive_only archives and never deletes. The allow-list set is table-for-table identical to the
+// registry's RETENTION_ELIGIBLE_TABLES (both sides fail a test if they drift).
 // 1.1.0: dba adjudication of the P6 allow-list (2026-11-02): session confirmed IN with 1-month
 // delete-on-expires_at (12h TTL table; the proposed 12 months was wrong-sized), policy action now
 // pinned to the entry's dba-declared defaultAction (action_mismatch fail-loud guard against the
@@ -19,16 +29,17 @@
  *  - `audit_log` is NEVER eligible (ADR-0012, FR-SEC-07) regardless of any retention_policy row.
  *    A policy row naming audit_log (or ANY table not in the allow-list) fails the run with a
  *    structural, scrubbed error listing the offending rows - it is never silently skipped.
- *  - Action semantics are ALSO pinned to the dba-declared entry (dba review 2026-11-02): a policy
- *    row whose action differs from the entry's defaultAction fails the run (action_mismatch).
- *    Reason: db/lib/retention-registry.ts maps handling archive_then_delete -> stored action
- *    'delete', while this executor reads 'delete' as plain delete and 'archive' as archive-then-
- *    delete - the two vocabularies collide, and without this guard an admin-registry-derived
- *    notification row (action='delete') would be plain-deleted nightly, silently skipping the
- *    archive that D2 requires. Fail loud instead; the registry reconciliation is filed as a
- *    follow-up (PM, 2026-11-02).
- *  - action='archive' policies archive qualifying rows FIRST (gzip'd JSONL, one file per row's
- *    basis month), verify the file reads back with every row present, THEN batch-delete.
+ *  - Action semantics are pinned to the dba-declared entry's handling (dba review 2026-11-02,
+ *    reconciled with the registry 2026-11-02): a policy row whose STORED action differs from
+ *    handlingToStoredAction(entry.handling) fails the run (action_mismatch). The stored action and
+ *    the runtime behavior are two vocabularies over the same handling - the seeder and the admin
+ *    route derive the stored action from the SAME registry function, so a registry-created or
+ *    seeded row always passes this guard; runtime behavior (archive-then-delete vs plain delete)
+ *    is pinned by entry.handling, never read from the stored action.
+ *  - archive_then_delete handling archives qualifying rows FIRST (gzip'd JSONL, one file per row's
+ *    basis month), verifies the file reads back with every row present, THEN batch-deletes.
+ *    delete_only handling plain-deletes without archiving; archive_only handling archives and
+ *    never deletes (raw_payload lineage).
  *  - Deterministic cutoff: now - retention_months (UTC calendar months, db/lib/retention-registry.ts
  *    retentionCutoff) against the entry's declared basis column.
  *  - Batches of RETENTION_BATCH rows per statement (design section 11: <= 1,000); progress per
@@ -65,7 +76,12 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DB_DIR } from "../../../db/client.ts";
-import { retentionCutoff, type RetentionAction } from "../../../db/lib/retention-registry.ts";
+import {
+  handlingToStoredAction,
+  retentionCutoff,
+  type RetentionAction,
+  type RetentionHandling,
+} from "../../../db/lib/retention-registry.ts";
 import type { JobHandler } from "./types.ts";
 
 /** Design section 11: batches of at most 1,000 rows per DELETE statement. */
@@ -85,37 +101,46 @@ export interface RetentionAllowEntry {
   pk: string;
   /** the declared basis column; a policy row's basis must match it (design 3.3 deterministic cutoff) */
   basis: string;
-  /** D2 default (owner decision 2026-10-29) - recorded so policy rows and defaults agree */
+  /** D2 default (owner decision 2026-10-29) or dba ruling 2026-11-02 - recorded so policy rows and defaults agree */
   defaultMonths: number;
-  defaultAction: RetentionAction;
+  /**
+   * The registry handling (db/lib/retention-registry.ts) - the operative per-table contract,
+   * mirrored table-for-table from RETENTION_ELIGIBLE_TABLES. Runtime behavior: archive_then_delete
+   * archives then deletes; delete_only plain-deletes; archive_only archives and never deletes.
+   * The stored action a policy row must carry is handlingToStoredAction(handling) - the SAME
+   * function the seeder and the admin route use, which is why a registry-created row can never
+   * trip the action_mismatch guard.
+   */
+  handling: RetentionHandling;
   /** delete only rows whose status is terminal (execution_job) */
   terminalOnly?: boolean;
 }
 
 /**
  * The executor's allow-list (design 3.3: "touches only tables present in an allow-list in code -
- * final list from dba"). CONFIRMED by dba review 2026-11-02 (D2 owner decision 2026-10-29 + the
- * session ruling): job_run/notification/raw_payload/execution_job carry D2's values unchanged;
- * `session` is IN (design 3.3 names "session tables" and D2 is silent - dba decides) with
- * basis=expires_at and a 1-MONTH default, not the implementation's proposed 12 months: session
- * TTL is 12 HOURS (db/lib/accounts.ts SESSION_HOURS), so a session expired >= 1 month is dead
- * beyond any operational or forensic need (token_hash is a non-replayable SHA-256) and holding
- * dead auth rows for 12 months serves nothing but PII retention. expires_at (not created_at) is
- * the right age semantic: a live session can never match, whatever its created_at.
+ * final list from dba"). CONFIRMED by dba review 2026-11-02 and reconciled with the registry
+ * (db/lib/retention-registry.ts) table-for-table: job_run/notification/raw_payload/execution_job
+ * carry D2's values (owner decision 2026-10-29); `session` is IN per the dba ruling with
+ * basis=expires_at and a 1-MONTH default (session TTL is 12 HOURS, db/lib/accounts.ts
+ * SESSION_HOURS, so a session expired >= 1 month is dead beyond any operational or forensic need -
+ * token_hash is a non-replayable SHA-256; expires_at is the right age semantic: a live session can
+ * never match, whatever its created_at); `llm_call_log` is IN per the dba recommendation adopted by
+ * the owner (the volume table - 12 months archive-then-delete on created_at).
  */
 export const RETENTION_ALLOW_LIST: readonly RetentionAllowEntry[] = [
-  { table: "job_run", pk: "id", basis: "started_at", defaultMonths: 12, defaultAction: "delete" },
-  { table: "notification", pk: "id", basis: "sent_at", defaultMonths: 12, defaultAction: "archive" },
-  { table: "raw_payload", pk: "id", basis: "fetched_at", defaultMonths: 24, defaultAction: "archive" },
+  { table: "job_run", pk: "id", basis: "started_at", defaultMonths: 12, handling: "delete_only" },
+  { table: "notification", pk: "id", basis: "sent_at", defaultMonths: 12, handling: "archive_then_delete" },
+  { table: "llm_call_log", pk: "id", basis: "created_at", defaultMonths: 12, handling: "archive_then_delete" },
+  { table: "raw_payload", pk: "id", basis: "fetched_at", defaultMonths: 24, handling: "archive_only" },
   {
     table: "execution_job",
     pk: "id",
     basis: "created_at",
     defaultMonths: 6,
-    defaultAction: "delete",
+    handling: "delete_only",
     terminalOnly: true,
   },
-  { table: "session", pk: "id", basis: "expires_at", defaultMonths: 1, defaultAction: "delete" },
+  { table: "session", pk: "id", basis: "expires_at", defaultMonths: 1, handling: "delete_only" },
 ];
 
 const BY_TABLE = new Map(RETENTION_ALLOW_LIST.map((e) => [e.table, e]));
@@ -151,7 +176,10 @@ export class RetentionPolicyError extends Error {
 export interface RetentionTableReport {
   table: string;
   basis: string;
+  /** the stored action of the policy row that drove this table (vocabulary: handlingToStoredAction) */
   action: RetentionAction;
+  /** the operative per-table contract (archive_then_delete | archive_only | delete_only) */
+  handling: RetentionHandling;
   retention_months: number;
   cutoff: string;
   /** rows under the cutoff (dry-run: planned; real run: actually processed) */
@@ -243,13 +271,19 @@ function verifyArchiveFile(path: string, pk: string, newPks: string[]): void {
 }
 
 /**
- * Run the retention executor against one policy row. Reads qualifying rows in batches, archives
- * (action='archive') with PK dedupe, verifies the archive, then deletes - all under the caller's db.
+ * Run the retention executor against one policy row. Behavior is pinned by the entry's handling
+ * (NOT by the stored action - see the registry vocabulary note): archive_then_delete archives with
+ * PK dedupe, verifies the archive, then deletes; delete_only plain-deletes; archive_only archives
+ * and never deletes. All under the caller's db.
  */
-function processTable(db: any, entry: RetentionAllowEntry, months: number, action: RetentionAction, opts: Required<Pick<RunRetentionOptions, "now" | "batchSize" | "archiveDir">> & { dryRun: boolean; signal?: AbortSignal }): RetentionTableReport {
+function processTable(db: any, entry: RetentionAllowEntry, months: number, opts: Required<Pick<RunRetentionOptions, "now" | "batchSize" | "archiveDir">> & { dryRun: boolean; signal?: AbortSignal }): RetentionTableReport {
   const cutoff = retentionCutoff(months, opts.now);
   const pk = entry.pk;
   const basis = entry.basis;
+  const handling = entry.handling;
+  const action = handlingToStoredAction(handling); // report/descriptive only
+  const deletes = handling !== "archive_only";
+  const archivesFirst = handling !== "delete_only";
   const statusFilter = entry.terminalOnly
     ? ` AND status IN (${EXECUTION_JOB_TERMINAL_STATUSES.map((s) => `'${s}'`).join(",")})`
     : "";
@@ -260,6 +294,7 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, actio
     table: entry.table,
     basis,
     action,
+    handling,
     retention_months: months,
     cutoff,
     rows_to_archive: 0,
@@ -272,9 +307,9 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, actio
 
   if (opts.dryRun) {
     // planned counts: in dry-run rows_to_archive/rows_deleted are what WOULD happen (nothing is written)
-    report.rows_to_archive = action === "archive" ? count : 0;
-    report.rows_deleted = count;
-    if (action === "archive") {
+    report.rows_to_archive = archivesFirst ? count : 0;
+    report.rows_deleted = deletes ? count : 0;
+    if (archivesFirst) {
       const monthsSeen = db
         .query(`SELECT DISTINCT substr(${basis}, 1, 7) AS m FROM ${entry.table} WHERE ${where} ORDER BY m`)
         .all(cutoff) as Array<{ m: string }>;
@@ -284,18 +319,23 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, actio
   }
 
   // dedupe state per month file, loaded once per run (archive idempotency: PK dedupe within the file)
-  const archives = new Map<string, LoadedArchive>();
+  const archiveCache = new Map<string, LoadedArchive>();
 
-  // loop until under the cutoff - one batch of RETENTION_BATCH rows per statement
+  // Loop until under the cutoff - one batch of RETENTION_BATCH rows per statement. For deleting
+  // handlings the DELETE itself advances the scan; archive_only never deletes, so it paginates by
+  // OFFSET instead (rows stay, the offset advances).
+  let offset = 0;
   for (;;) {
     if (opts.signal?.aborted) throw new Error("retention: aborted before batch");
-    const batch = db
-      .query(`SELECT * FROM ${entry.table} WHERE ${where} ORDER BY ${basis} LIMIT ${opts.batchSize}`)
-      .all(cutoff) as Array<Record<string, unknown>>;
+    const sql = deletes
+      ? `SELECT * FROM ${entry.table} WHERE ${where} ORDER BY ${basis} LIMIT ${opts.batchSize}`
+      : `SELECT * FROM ${entry.table} WHERE ${where} ORDER BY ${basis} LIMIT ${opts.batchSize} OFFSET ${offset}`;
+    const batch = db.query(sql).all(cutoff) as Array<Record<string, unknown>>;
     if (batch.length === 0) break;
+    if (!deletes) offset += batch.length;
     report.batches += 1;
 
-    if (action === "archive") {
+    if (archivesFirst) {
       const byMonth = new Map<string, Array<Record<string, unknown>>>();
       for (const row of batch) {
         const month = monthOf(row[basis] as string);
@@ -306,10 +346,10 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, actio
       const archivedIds: string[] = [];
       for (const [month, rows] of byMonth) {
         const path = archivePathFor(opts.archiveDir, entry.table, month);
-        let loaded = archives.get(month);
+        let loaded = archiveCache.get(month);
         if (!loaded) {
           loaded = readArchiveFile(path, pk);
-          archives.set(month, loaded);
+          archiveCache.set(month, loaded);
         }
         const newIds: string[] = [];
         for (const row of rows) {
@@ -328,14 +368,17 @@ function processTable(db: any, entry: RetentionAllowEntry, months: number, actio
         }
         report.rows_to_archive += rows.length;
       }
-      // delete only after the archive verified: chunked by the batch's ids
-      for (let i = 0; i < archivedIds.length; i += opts.batchSize) {
-        const chunk = archivedIds.slice(i, i + opts.batchSize);
-        db.run(
-          `DELETE FROM ${entry.table} WHERE ${pk} IN (${chunk.map(() => "?").join(",")})`,
-          chunk,
-        );
-        report.rows_deleted += chunk.length;
+      // delete only after the archive verified - and only for archive_then_delete (archive_only
+      // rows are never deleted, raw_payload lineage): chunked by the batch's ids
+      if (deletes) {
+        for (let i = 0; i < archivedIds.length; i += opts.batchSize) {
+          const chunk = archivedIds.slice(i, i + opts.batchSize);
+          db.run(
+            `DELETE FROM ${entry.table} WHERE ${pk} IN (${chunk.map(() => "?").join(",")})`,
+            chunk,
+          );
+          report.rows_deleted += chunk.length;
+        }
       }
     } else {
       const ids = batch.map((row) => String(row[pk]));
@@ -365,7 +408,7 @@ export function runRetention(db: any, opts: RunRetentionOptions): RetentionRunRe
 
   // 1. validate every policy row against the allow-list BEFORE touching any data
   const issues: RetentionPolicyIssue[] = [];
-  const plan: Array<{ entry: RetentionAllowEntry; months: number; action: RetentionAction }> = [];
+  const plan: Array<{ entry: RetentionAllowEntry; months: number }> = [];
   for (const p of policies) {
     const entry = BY_TABLE.get(p.table_key);
     if (!entry) {
@@ -402,14 +445,20 @@ export function runRetention(db: any, opts: RunRetentionOptions): RetentionRunRe
       });
       continue;
     }
-    if (p.action !== entry.defaultAction) {
+    // Vocabulary-aware guard (registry reconciliation, 2026-11-02): the stored action must equal
+    // handlingToStoredAction(entry.handling) - the SAME mapping the seeder and the admin route
+    // derive the stored action from, so a registry-created or seeded row always passes. The old
+    // collision (stored 'delete' on an archive_then_delete table read as plain delete) is gone:
+    // behavior is pinned by entry.handling, the stored action is descriptive.
+    const expectedStoredAction = handlingToStoredAction(entry.handling);
+    if (p.action !== expectedStoredAction) {
       issues.push({
         table_key: p.table_key,
         basis: p.basis,
         action: p.action,
         retention_months: p.retention_months,
         code: "action_mismatch",
-        message: `policy action '${p.action}' does not match the dba-declared handling '${entry.defaultAction}' of '${entry.table}' (registry stored-action vocabulary differs for archive_then_delete tables - see the retention registry reconciliation follow-up)`,
+        message: `policy action '${p.action}' does not match the stored action '${expectedStoredAction}' for the dba-declared handling '${entry.handling}' of '${entry.table}' (vocabulary: db/lib/retention-registry.ts handlingToStoredAction)`,
       });
       continue;
     }
@@ -449,7 +498,7 @@ export function runRetention(db: any, opts: RunRetentionOptions): RetentionRunRe
       });
       continue;
     }
-    plan.push({ entry, months: p.retention_months, action: p.action });
+    plan.push({ entry, months: p.retention_months });
   }
   if (issues.length > 0) throw new RetentionPolicyError(issues);
 
@@ -457,8 +506,8 @@ export function runRetention(db: any, opts: RunRetentionOptions): RetentionRunRe
   const reports: RetentionTableReport[] = [];
   let rowsArchived = 0;
   let rowsDeleted = 0;
-  for (const { entry, months, action } of plan) {
-    const report = processTable(db, entry, months, action, {
+  for (const { entry, months } of plan) {
+    const report = processTable(db, entry, months, {
       now: opts.now,
       batchSize,
       archiveDir,
@@ -488,7 +537,7 @@ export const retentionCleanup: JobHandler = {
   key: "retention.cleanup",
   displayName: "Retention policy executor",
   description:
-    "Executes retention_policy rows for tables in the code-level allow-list (D2: job_run, notification, raw_payload, execution_job terminal rows, session): deterministic cutoff, archive before delete into db/archive/, batches of 1,000; audit_log is never eligible (ADR-0012). Set RETENTION_DRY_RUN=1 for the mandatory first-run dry-run.",
+    "Executes retention_policy rows for tables in the code-level allow-list (D2 + dba ruling: job_run, notification, llm_call_log, raw_payload, execution_job terminal rows, session): deterministic cutoff, archive before delete into db/archive/ for archive_then_delete tables, batches of 1,000; audit_log is never eligible (ADR-0012). Set RETENTION_DRY_RUN=1 for the mandatory first-run dry-run.",
   defaultCron: "0 3 * * *",
   timeoutSec: 30 * 60,
   maxRetries: 0,
