@@ -1655,7 +1655,13 @@ paths:
   /api/admin/schedule-jobs/{jobKey}/runs:
     get:
       operationId: listScheduleJobRuns
-      summary: Run history for one scheduled job. Admin role.
+      summary: >-
+        Run history for one scheduled job (design 2026-10-29-scheduled-jobs-design §4.1, ADR-0189
+        P7): started_at, finished_at, status, scrubbed error, trigger, actor, env, rows_read /
+        rows_written / rows_changed, attempt and computed duration (ms, null while running),
+        paged with ?page=&limit= (limit 1–200, default 50). Backward compatible: job_key,
+        success_rate (over the returned page) and meta.count keep their semantics; total added
+        for the pager. Admin role.
       tags:
         - Admin
       parameters:
@@ -1664,6 +1670,68 @@ paths:
           required: true
           schema:
             type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/schedule-jobs/{jobKey}/run:
+    post:
+      operationId: requestScheduleJobRun
+      summary: >-
+        "Run now" (design 2026-10-29-scheduled-jobs-design §4.1, ADR-0189 P7): enqueues a
+        schedule_job_request row picked up by the next tick (within 60 s); the client polls
+        listScheduleJobRuns until a job_run appears for the returned request_id. NO in-process
+        execution (ADR-0019). Works on any existing job regardless of enabled state (the tick
+        dispatches manual requests without an enabled check); a second request while one is
+        still queued reuses that row (reused: true) instead of stacking duplicates. Audited
+        (schedule_job_run_requested). Admin role.
+      tags:
+        - Admin
+      parameters:
+        - $ref: '#/components/parameters/JobKey'
+      responses:
+        '202':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/schedule-jobs/health:
+    get:
+      operationId: getScheduleJobsHealth
+      summary: >-
+        Health-banner data (design 2026-10-29-scheduled-jobs-design §4.1/§4.2/§6, ADR-0189 P7):
+        tick heartbeat {env, last_tick_at, age_seconds, healthy (age <= 180 s)} for the
+        server-resolved CO_NEWBIZ_SCHEDULER_ENV, plus per-job rows with next_run_at, overdue
+        (enabled job whose dispatched fire — schedule_job.last_fire_minute — is older than
+        timeout_sec with no job_run of the env started at/after that fire), last run and
+        consecutive_failures (trailing failed/timeout runs, window 3). Admin role.
+      tags:
+        - Admin
       responses:
         '200':
           $ref: '#/components/responses/Ok'
@@ -1671,6 +1739,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '500':
+          description: Scheduler environment unresolved (CO_NEWBIZ_SCHEDULER_ENV not prod/dev).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
   /api/admin/schedule-jobs:
     get:
       operationId: listScheduleJobs
@@ -1689,6 +1763,61 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createScheduleJob
+      summary: >-
+        Create one schedule_job row (design 2026-10-29-scheduled-jobs-design §4.1 create row and
+        §5 RCE guard, ADR-0189 P7): job_key MUST be a registered scheduler handler key
+        (listJobHandlers) — 400 unregistered_handler naming the key otherwise; no free-text
+        command field. Omitted fields default from the registry entry (cron_expr, timeout_sec,
+        max_retries, display_name, description); explicitly supplied fields reuse the PATCH
+        validation (shared validator; 5-minute floor with the §13.2 exemptions). enabled
+        defaults to false (create-then-enable is the safe flow). 409 job_key_exists when the key
+        already has a row. Responds 201 with the listScheduleJobs row shape; audited
+        (schedule_job_create, full row in the target). Admin role.
+      tags:
+        - Admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - job_key
+              properties:
+                job_key:
+                  type: string
+                cron_expr:
+                  type: string
+                timeout_sec:
+                  type: integer
+                  minimum: 60
+                  maximum: 7200
+                max_retries:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                enabled:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          description: Registered handler's default cron is invalid (configuration error).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
   /api/admin/schedule-jobs/seed:
     post:
       operationId: seedScheduleJobs

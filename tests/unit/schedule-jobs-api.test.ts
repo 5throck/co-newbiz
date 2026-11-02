@@ -1,18 +1,33 @@
-// @version 1.0.0
+// @version 1.2.0
 /**
- * GET /api/admin/schedule-jobs and PATCH /api/admin/schedule-jobs/[jobKey] — the pulled-forward
- * admin list-and-edit screen's API (design 2026-10-29-scheduled-jobs-design §4.1/§4.3, §9):
- * GET rows carry the migration-0183 fields, next_run_at (shared parser; null when disabled) and
- * last_run; PATCH is the canonical partial update with server-side cron validation, the 5-minute
- * interval floor (except watch.evaluate / notify.deliver per §13.2), range checks, and an
- * append-only schedule_job_update audit row with before→after values (ADR-0012). The legacy PUT
- * toggle stays byte-compatible for the current UI caller.
+ * GET/POST /api/admin/schedule-jobs, PATCH /api/admin/schedule-jobs/[jobKey], POST
+ * /[jobKey]/run, GET /health and GET /[jobKey]/runs — the admin schedule-jobs API (design
+ * 2026-10-29-scheduled-jobs-design §4.1/§4.3, §9; ADR-0189 P7):
+ * - GET/PATCH (pulled-forward screen): rows carry the migration-0183 fields, next_run_at (shared
+ *   parser; null when disabled) and last_run; PATCH is the canonical partial update with
+ *   server-side cron validation, the 5-minute interval floor (except watch.evaluate /
+ *   notify.deliver per §13.2), range checks, and an append-only schedule_job_update audit row
+ *   with before→after values (ADR-0012). The legacy PUT toggle stays byte-compatible.
+ *   v1.2.0 (QA iteration 2, F-3): pins that absent PATCH fields keep their stored value —
+ *   notify.deliver's sub-minute §13.2 timeout of 50 s survives a PATCH body without timeout_sec.
+ * - POST (P7 create): registered-handler-key guard only (§5 RCE guard, 400 names the key),
+ *   registry defaults, PATCH validation reused via lib/schedule/job-validate.ts, enabled
+ *   defaults to 0, 409 on duplicates, schedule_job_create audit, GET-shaped 201 row.
+ * - POST [jobKey]/run (P7 run-now): enqueues a schedule_job_request (requested_by = admin),
+ *   202 with {request_id, reused, note}; a still-queued request is reused, never stacked; works
+ *   on disabled jobs; schedule_job_run_requested audit; NO handler import in the route module
+ *   (§9 "run-now never executes in-process" — asserted statically below).
+ * - GET health (P7): tick heartbeat healthy iff age <= 180 s; overdue = enabled job whose
+ *   dispatched fire (last_fire_minute) is older than timeout_sec with no env job_run at/after
+ *   it; consecutive_failures = trailing failed/timeout runs (window 3).
+ * - GET [jobKey]/runs (P7 extension): 0183 columns (trigger, actor, env, rows_*, attempt),
+ *   duration, paging (?page=&limit=), backward-compatible job_key/success_rate/meta.count.
  *
  * Covered against the real Route Handlers via nextRequest() on a scratch SQLite (never the dev
  * 7748 or prod 7749 DB), admin-only with 403 for analyst/viewer.
  */
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
@@ -66,6 +81,9 @@ let analystCookie: string;
 let viewerCookie: string;
 
 beforeAll(async () => {
+  // GET /health resolves the environment server-side (seed-route pattern); deleted in afterAll
+  // so the variable never leaks into another test file running in the same process.
+  process.env.CO_NEWBIZ_SCHEDULER_ENV = "dev";
   addJob("notify.deliver", "* * * * *", 1, {
     display_name: "Notification dispatch",
     description: "Delivery worker",
@@ -100,6 +118,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  delete process.env.CO_NEWBIZ_SCHEDULER_ENV;
   resetDb();
   for (const suffix of ["", "-wal", "-shm"]) rmSync(TEST_DB_PATH + suffix, { force: true });
 });
@@ -364,6 +383,23 @@ describe("PATCH — happy path, response row, audit (ADR-0012)", () => {
     expect(targets).toContain("notify.digest: enabled 1→0");
     expect(targets).toContain("notify.digest: enabled 0→0"); // before→after is truthful even when equal
   });
+
+  test("partial PATCH: fields absent from the body keep their stored value (notify.deliver §13.2 50 s)", async () => {
+    // notify.deliver is seeded with timeout_sec = 50 — BELOW the PATCH floor of 60. The edit
+    // dialog (form-unit-dirty, QA iteration 2 F-3) sends no timeout_sec for an untouched
+    // timeout input; the row must keep the intentional 50 s instead of snapping to 60.
+    const res = await nextRequest(jobPath("notify.deliver"), {
+      method: "PATCH",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ max_retries: 3 }), // explicit idempotent set — nothing else in the body
+    });
+    expect(res.status).toBe(200);
+    const row = (await res.json()).data;
+    expect(row.timeout_sec).toBe(50); // untouched by the partial PATCH
+    expect(row.max_retries).toBe(3);
+    const stored = db.query("SELECT timeout_sec FROM schedule_job WHERE job_key = 'notify.deliver'").get() as any;
+    expect(stored.timeout_sec).toBe(50); // the stored value stays 50
+  });
 });
 
 describe("PUT toggle — legacy contract kept byte-compatible for the current UI caller", () => {
@@ -403,5 +439,431 @@ describe("PUT toggle — legacy contract kept byte-compatible for the current UI
       body: JSON.stringify({ enabled: true }),
     });
     expect(missing.status).toBe(404);
+  });
+});
+
+// ── ADR-0189 P7: run-now ─────────────────────────────────────────────────────────────────
+
+const RUN_NOW_AUDITS = () =>
+  db
+    .query("SELECT * FROM audit_log WHERE action = 'schedule_job_run_requested' ORDER BY created_at, id")
+    .all() as any[];
+
+describe("POST /api/admin/schedule-jobs/[jobKey]/run — run-now (P7)", () => {
+  test("unauthenticated request is 401; analyst and viewer are 403 admin_required", async () => {
+    const res = await nextRequest(`${jobPath("notify.digest")}/run`, { method: "POST" });
+    expect(res.status).toBe(401);
+    for (const cookie of [analystCookie, viewerCookie]) {
+      const forbidden = await nextRequest(`${jobPath("notify.digest")}/run`, { method: "POST", headers: { cookie } });
+      expect(forbidden.status).toBe(403);
+      expect((await forbidden.json()).error.code).toBe("admin_required");
+    }
+  });
+
+  test("unknown job_key is 404", async () => {
+    const res = await nextRequest(`${jobPath("no.such.job")}/run`, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test("202 run-now enqueues with requested_by = the admin; the audit row carries the job key", async () => {
+    const res = await nextRequest(`${jobPath("notify.digest")}/run`, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+    });
+    expect(res.status).toBe(202);
+    const json = await res.json();
+    expect(json.error).toBeNull();
+    const { request_id, job_key, reused, note } = json.data;
+    expect(job_key).toBe("notify.digest");
+    expect(reused).toBe(false);
+    expect(note).toContain("next scheduler tick");
+    const row = db.query("SELECT * FROM schedule_job_request WHERE id = ?").get(request_id) as any;
+    expect(row).not.toBeNull();
+    expect(row.job_key).toBe("notify.digest");
+    expect(row.requested_by).toBe("sjadmin");
+    expect(row.status).toBe("queued");
+    expect(row.job_run_id).toBeNull();
+    const audit = RUN_NOW_AUDITS().at(-1);
+    expect(audit.actor_user_id).toBe("sjadmin");
+    expect(audit.target).toBe("notify.digest");
+  });
+
+  test("a second request while one is still queued REUSES the row instead of stacking", async () => {
+    const second = await nextRequest(`${jobPath("notify.digest")}/run`, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+    });
+    expect(second.status).toBe(202);
+    const data = (await second.json()).data;
+    expect(data.reused).toBe(true);
+    const first = db
+      .query("SELECT id FROM schedule_job_request WHERE job_key = 'notify.digest' AND status = 'queued'")
+      .all() as any[];
+    expect(first.length).toBe(1);
+    expect(data.request_id).toBe(first[0].id);
+  });
+
+  test("run-now works on a DISABLED job (manual runs are explicit admin actions; the tick dispatches them)", async () => {
+    const res = await nextRequest(`${jobPath("gate_integrity.shadow_report")}/run`, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+    });
+    expect(res.status).toBe(202);
+    expect((await res.json()).data.reused).toBe(false);
+    const row = db
+      .query("SELECT status FROM schedule_job_request WHERE job_key = 'gate_integrity.shadow_report'")
+      .get() as any;
+    expect(row.status).toBe("queued");
+  });
+
+  test("§9 no-handler-import assertion: the run-now route module imports no jobs/ handler code", () => {
+    const source = readFileSync(
+      join(PROJECT_ROOT, "app/web-next/app/api/admin/schedule-jobs/[jobKey]/run/route.ts"),
+      "utf8",
+    );
+    const imports = [...source.matchAll(/import\s+[^'"]+from\s+["']([^"']+)["']/g)].map((m) => m[1]);
+    expect(imports.length).toBeGreaterThan(0);
+    // No jobs/ handler module (registry index included) may appear among the imports: the route
+    // must only touch schedule_job_request via scheduler-core's pure enqueueRequest.
+    for (const spec of imports) {
+      expect(spec).not.toMatch(/jobs\//);
+      expect(spec).not.toMatch(/\/jobs(\.ts)?["']$/);
+    }
+    expect(imports).toContain("../../../../../../../../scripts/co-newbiz/scheduler-core.ts");
+  });
+});
+
+// ── ADR-0189 P7: health ──────────────────────────────────────────────────────────────────
+
+describe("GET /api/admin/schedule-jobs/health — P7", () => {
+  const tenMinAgo = () => new Date(Date.now() - 10 * 60_000).toISOString();
+
+  beforeAll(() => {
+    // Fresh heartbeat → healthy tick (overwritten by the stale test below, then restored).
+    db.run(
+      "INSERT INTO schedule_heartbeat (env, last_tick_at) VALUES ('dev', ?) ON CONFLICT(env) DO UPDATE SET last_tick_at = excluded.last_tick_at",
+      [new Date().toISOString()],
+    );
+    // Overdue: enabled, a dispatched fire 10 min ago (older than its 60 s timeout), no run since.
+    addJob("t.overdue", "*/30 * * * *", 1, { timeout_sec: 60 });
+    db.run("UPDATE schedule_job SET last_fire_minute = ? WHERE job_key = 't.overdue'", [tenMinAgo()]);
+    // Not overdue: a run started now (>= the dispatched fire) covers it.
+    addJob("t.fresh", "*/30 * * * *", 1, { timeout_sec: 60 });
+    db.run("UPDATE schedule_job SET last_fire_minute = ? WHERE job_key = 't.fresh'", [tenMinAgo()]);
+    db.run(
+      "INSERT INTO job_run (id, job_key, started_at, status, env, trigger, attempt) VALUES ('jr-h1','t.fresh',?, 'success','dev','schedule',1)",
+      [new Date().toISOString()],
+    );
+    // Not overdue: disabled (the rule only flags enabled jobs) and never dispatched.
+    addJob("t.disabled-od", "*/30 * * * *", 0, { timeout_sec: 60 });
+    db.run("UPDATE schedule_job SET last_fire_minute = ? WHERE job_key = 't.disabled-od'", [tenMinAgo()]);
+    addJob("t.neverfired", "*/30 * * * *", 1, { timeout_sec: 60 }); // last_fire_minute stays NULL
+    // 3 consecutive failures → the flag is 3; watch.evaluate's single success stays at 0.
+    addJob("t.fail3", "*/30 * * * *", 1, { timeout_sec: 60 });
+    for (let i = 1; i <= 3; i++) {
+      db.run(
+        "INSERT INTO job_run (id, job_key, started_at, finished_at, status, env, trigger, attempt) VALUES (?, 't.fail3', ?, ?, 'failed', 'dev', 'schedule', 1)",
+        [`jr-f${i}`, `2026-11-01T00:0${i}:00.000Z`, `2026-11-01T00:0${i}:30.000Z`],
+      );
+    }
+  });
+
+  test("unauthenticated request is 401; analyst is 403 admin_required", async () => {
+    const res = await nextRequest("/api/admin/schedule-jobs/health");
+    expect(res.status).toBe(401);
+    const forbidden = await nextRequest("/api/admin/schedule-jobs/health", { headers: { cookie: analystCookie } });
+    expect(forbidden.status).toBe(403);
+  });
+
+  test("tick heartbeat is healthy when fresh (age <= 180 s) and unhealthy when stale", async () => {
+    const res = await nextRequest("/api/admin/schedule-jobs/health", { headers: { cookie: adminCookie } });
+    expect(res.status).toBe(200);
+    const { tick } = (await res.json()).data;
+    expect(tick.env).toBe("dev");
+    expect(tick.healthy).toBe(true);
+    expect(tick.age_seconds).toBeLessThanOrEqual(180);
+
+    db.run("UPDATE schedule_heartbeat SET last_tick_at = ? WHERE env = 'dev'", [
+      new Date(Date.now() - 4 * 60_000).toISOString(),
+    ]);
+    const stale = await nextRequest("/api/admin/schedule-jobs/health", { headers: { cookie: adminCookie } });
+    const staleTick = (await stale.json()).data.tick;
+    expect(staleTick.healthy).toBe(false);
+    expect(staleTick.age_seconds).toBeGreaterThan(180);
+    // restore for any later reader
+    db.run("UPDATE schedule_heartbeat SET last_tick_at = ? WHERE env = 'dev'", [new Date().toISOString()]);
+  });
+
+  test("overdue follows the documented rule: dispatched fire older than timeout with no covering run", async () => {
+    const res = await nextRequest("/api/admin/schedule-jobs/health", { headers: { cookie: adminCookie } });
+    expect(res.status).toBe(200);
+    const { jobs } = (await res.json()).data;
+    const byKey = new Map<string, any>(jobs.map((j: any) => [j.job_key, j]));
+    expect(byKey.get("t.overdue").overdue).toBe(true);
+    expect(byKey.get("t.fresh").overdue).toBe(false);
+    expect(byKey.get("t.disabled-od").overdue).toBe(false);
+    expect(byKey.get("t.neverfired").overdue).toBe(false);
+    expect(byKey.get("t.overdue").last_fire_at).toBeTruthy();
+    expect(byKey.get("t.fresh").last_run_started_at).toBeTruthy();
+  });
+
+  test("consecutive_failures counts the trailing failed/timeout streak (window 3)", async () => {
+    const res = await nextRequest("/api/admin/schedule-jobs/health", { headers: { cookie: adminCookie } });
+    const { jobs } = (await res.json()).data;
+    const byKey = new Map<string, any>(jobs.map((j: any) => [j.job_key, j]));
+    expect(byKey.get("t.fail3").consecutive_failures).toBe(3);
+    expect(byKey.get("watch.evaluate").consecutive_failures).toBe(0); // latest run is a success
+  });
+});
+
+// ── ADR-0189 P7: create ──────────────────────────────────────────────────────────────────
+
+describe("POST /api/admin/schedule-jobs — create (P7)", () => {
+  test("unauthenticated request is 401; analyst is 403 admin_required", async () => {
+    const res = await nextRequest(LIST_PATH, { method: "POST", body: JSON.stringify({ job_key: "collect.dart" }) });
+    expect(res.status).toBe(401);
+    const forbidden = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ job_key: "collect.dart" }),
+    });
+    expect(forbidden.status).toBe(403);
+  });
+
+  test("body validation: object with job_key required, unknown fields rejected", async () => {
+    const noKey = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({}),
+    });
+    expect(noKey.status).toBe(400);
+    const nonString = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ job_key: 7 }),
+    });
+    expect(nonString.status).toBe(400);
+    const unknown = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ job_key: "collect.dart", command: "rm -rf /" }),
+    });
+    expect(unknown.status).toBe(400);
+    expect((await unknown.json()).error.message).toContain("command");
+  });
+
+  test("§5 RCE guard: an unregistered job_key is 400 unregistered_handler naming the key", async () => {
+    for (const key of ["rm -rf /", "no.such.handler", "notify.deliver.extra"]) {
+      const res = await nextRequest(LIST_PATH, {
+        method: "POST",
+        headers: { cookie: adminCookie },
+        body: JSON.stringify({ job_key: key }),
+      });
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error.code).toBe("unregistered_handler");
+      expect(json.error.message).toContain(key);
+    }
+  });
+
+  test("409 job_key_exists when the key already has a schedule_job row", async () => {
+    const res = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ job_key: "notify.deliver" }),
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("job_key_exists");
+  });
+
+  test("registry defaults apply (enabled = 0, cron/timeout/retries/display fields from the handler)", async () => {
+    const handlers = await import("../../scripts/co-newbiz/jobs/index.ts");
+    const handler = handlers.listJobHandlers().find((h) => h.key === "collect.dart")!;
+    const res = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ job_key: "collect.dart" }),
+    });
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.error).toBeNull();
+    const row = json.data;
+    expect(Object.keys(row).sort()).toEqual(EXPECTED_ROW_KEYS); // GET-shaped row
+    expect(row.enabled).toBe(0); // create-then-enable is the safe flow
+    expect(row.next_run_at).toBeNull(); // disabled → null, like the list rows
+    expect(row.cron_expr).toBe(handler.defaultCron);
+    expect(row.timeout_sec).toBe(handler.timeoutSec);
+    expect(row.max_retries).toBe(handler.maxRetries);
+    expect(row.display_name).toBe(handler.displayName);
+    expect(row.description).toBe(handler.description);
+  });
+
+  test("explicit fields reuse the PATCH validation rules (shared validator)", async () => {
+    for (const [body, code] of [
+      [{ job_key: "collect.ecos", cron_expr: "60 * * * *" }, "invalid_cron"],
+      [{ job_key: "collect.ecos", cron_expr: "*/2 * * * *" }, "cron_too_frequent"], // not exempt
+      [{ job_key: "collect.ecos", timeout_sec: 59 }, "invalid_request"],
+      [{ job_key: "collect.ecos", max_retries: 6 }, "invalid_request"],
+      [{ job_key: "collect.ecos", enabled: "yes" }, "invalid_request"],
+    ] as const) {
+      const res = await nextRequest(LIST_PATH, {
+        method: "POST",
+        headers: { cookie: adminCookie },
+        body: JSON.stringify(body),
+      });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.code).toBe(code);
+    }
+    // nothing was written by the rejected requests (bun:sqlite get() -> null for no row)
+    expect(db.query("SELECT 1 FROM schedule_job WHERE job_key = 'collect.ecos'").get()).toBeNull();
+  });
+
+  test("201 happy path: explicit fields persisted, schedule_job_create audit carries the full row", async () => {
+    const res = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ job_key: "collect.ecos", cron_expr: "15 6 * * *", timeout_sec: 600, max_retries: 2 }),
+    });
+    expect(res.status).toBe(201);
+    const row = (await res.json()).data;
+    expect(row.job_key).toBe("collect.ecos");
+    expect(row.cron_expr).toBe("15 6 * * *");
+    expect(row.timeout_sec).toBe(600);
+    expect(row.max_retries).toBe(2);
+    expect(row.enabled).toBe(0);
+    expect(row.created_at).toBeTruthy();
+    const audit = db
+      .query("SELECT * FROM audit_log WHERE action = 'schedule_job_create' ORDER BY created_at, id")
+      .all()
+      .at(-1) as any;
+    expect(audit.actor_user_id).toBe("sjadmin");
+    expect(audit.target).toBe("collect.ecos: cron 15 6 * * *; timeout 600; retries 2; enabled 0");
+  });
+
+  test("an explicit enabled=true is honored (admin-gated and audited)", async () => {
+    const res = await nextRequest(LIST_PATH, {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ job_key: "collect.krx", enabled: true }),
+    });
+    expect(res.status).toBe(201);
+    const row = (await res.json()).data;
+    expect(row.enabled).toBe(1);
+    expect(row.next_run_at).toBeTruthy(); // enabled → the shared parser computes the next fire
+    const audit = db
+      .query("SELECT * FROM audit_log WHERE action = 'schedule_job_create' ORDER BY created_at, id")
+      .all()
+      .at(-1) as any;
+    expect(audit.target).toContain("enabled 1");
+  });
+});
+
+// ── ADR-0189 P7: run-history extension ───────────────────────────────────────────────────
+
+describe("GET /api/admin/schedule-jobs/[jobKey]/runs — P7 extension", () => {
+  beforeAll(() => {
+    // 7 runs for notify.digest: 4 success / 3 failed; the newest (jr-r7) is still running.
+    for (let i = 1; i <= 7; i++) {
+      const status = i % 2 === 0 ? "failed" : "success";
+      db.run(
+        `INSERT INTO job_run (id, job_key, started_at, finished_at, status, error, "trigger", actor, env, rows_read, rows_written, rows_changed, attempt)
+         VALUES (?, 'notify.digest', ?, ?, ?, ?, 'manual', 'sjadmin', 'dev', ?, ?, ?, ?)`,
+        [
+          `jr-r${i}`,
+          `2026-11-01T00:0${i}:00.000Z`,
+          status === "success" ? `2026-11-01T00:0${i}:30.000Z` : `2026-11-01T00:0${i}:45.000Z`,
+          status,
+          status === "failed" ? "boom" : null,
+          i,
+          i + 1,
+          i + 2,
+          1,
+        ],
+      );
+    }
+  });
+
+  test("unauthenticated request is 401; analyst is 403; unknown job_key is 404", async () => {
+    const res = await nextRequest(jobPath("notify.digest") + "/runs");
+    expect(res.status).toBe(401);
+    const forbidden = await nextRequest(jobPath("notify.digest") + "/runs", { headers: { cookie: analystCookie } });
+    expect(forbidden.status).toBe(403);
+    const missing = await nextRequest(jobPath("no.such.job") + "/runs", { headers: { cookie: adminCookie } });
+    expect(missing.status).toBe(404);
+  });
+
+  test("rows carry the 0183 columns, scrubbed error and computed duration; newest first", async () => {
+    const res = await nextRequest(jobPath("notify.digest") + "/runs", { headers: { cookie: adminCookie } });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.job_key).toBe("notify.digest");
+    const runs = json.data.runs as any[];
+    expect(runs.length).toBe(7);
+    for (const r of runs) {
+      for (const key of [
+        "started_at",
+        "finished_at",
+        "status",
+        "error",
+        "trigger",
+        "actor",
+        "env",
+        "rows_read",
+        "rows_written",
+        "rows_changed",
+        "attempt",
+        "duration",
+      ]) {
+        expect(key in r).toBe(true);
+      }
+      expect(r.trigger).toBe("manual");
+      expect(r.actor).toBe("sjadmin");
+      expect(r.env).toBe("dev");
+    }
+    expect(runs[0].started_at).toBe("2026-11-01T00:07:00.000Z");
+    expect(runs[0].finished_at).toBe("2026-11-01T00:07:30.000Z");
+    expect(runs[0].duration).toBe(30_000);
+    expect(runs[0].rows_read).toBe(7);
+    const failed = runs.find((r) => r.status === "failed")!;
+    expect(failed.error).toBe("boom");
+    expect(failed.duration).toBe(45_000);
+    // backward-compatible fields keep their semantics
+    expect(json.data.success_rate).toBe(57); // 4 / 7 over the returned page
+    expect(json.meta.count).toBe(7);
+  });
+
+  test("paging: ?page=&limit= slices the newest-first window; total serves the pager", async () => {
+    const page1 = await nextRequest(jobPath("notify.digest") + "/runs?page=1&limit=3", {
+      headers: { cookie: adminCookie },
+    });
+    const p1 = (await page1.json()).data;
+    expect(p1.runs.map((r: any) => r.started_at)).toEqual([
+      "2026-11-01T00:07:00.000Z",
+      "2026-11-01T00:06:00.000Z",
+      "2026-11-01T00:05:00.000Z",
+    ]);
+    expect(p1.total).toBe(7);
+    expect(p1.page).toBe(1);
+    expect(p1.limit).toBe(3);
+    const page3 = await nextRequest(jobPath("notify.digest") + "/runs?page=3&limit=3", {
+      headers: { cookie: adminCookie },
+    });
+    const p3env = await page3.json(); // meta lives at the envelope root, not inside data
+    const p3 = p3env.data;
+    expect(p3.runs.length).toBe(1);
+    expect(p3.runs[0].started_at).toBe("2026-11-01T00:01:00.000Z");
+    expect(p3env.meta.count).toBe(1);
+    expect(p3env.meta.total).toBe(7);
+  });
+
+  test("invalid paging is 400", async () => {
+    for (const qs of ["?page=0", "?page=x", "?limit=0", "?limit=201", "?limit=2.5"]) {
+      const res = await nextRequest(jobPath("notify.digest") + "/runs" + qs, { headers: { cookie: adminCookie } });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.code).toBe("invalid_request");
+    }
   });
 });

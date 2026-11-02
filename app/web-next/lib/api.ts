@@ -47,7 +47,11 @@ function readCookie(name: string): string | null {
 // res.json()이 브라우저 원문 에러("Unexpected end of JSON input")를 던진다.
 // 그 원문이 UI에 그대로 노출되지 않도록 판독 가능한 ApiError로 바꾼다.
 function invalidResponse(res: Response): ApiError {
-  return new ApiError(res.status || 0, "invalid_response", resolveApiErrorText("invalid_response", "The server response was empty or malformed — retry shortly."));
+  return new ApiError(
+    res.status || 0,
+    "invalid_response",
+    resolveApiErrorText("invalid_response", "The server response was empty or malformed — retry shortly."),
+  );
 }
 
 /** JSON 본문 파싱 — 빈·손상 본문이면 undefined (호출부가 재시도를 결정한다). */
@@ -60,7 +64,10 @@ async function parseJson<T>(res: Response): Promise<Envelope<T> | undefined> {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...(init?.headers as Record<string, string>) };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string>),
+  };
   // multipart 업로드는 브라우저가 boundary를 설정해야 하므로 Content-Type을 제거한다.
   if (init?.body instanceof FormData) delete headers["Content-Type"];
   const method = init?.method ?? "GET";
@@ -88,17 +95,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<Envelope<T>
     const code = body.error?.code ?? "unknown_error";
     // §3.5: localized text resolves from errors.codes.<code> at this single
     // choke point; unknown codes pass the (English) server message through.
-    throw new ApiError(res.status, code, resolveApiErrorText(code, body.error?.message ?? "Request failed."), body.meta ?? {}, body.error?.details ?? {});
+    throw new ApiError(
+      res.status,
+      code,
+      resolveApiErrorText(code, body.error?.message ?? "Request failed."),
+      body.meta ?? {},
+      body.error?.details ?? {},
+    );
   }
   return body;
 }
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
-  put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string, body?: unknown) => request<T>(path, { method: "DELETE", body: body ? JSON.stringify(body) : undefined }),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
+  delete: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "DELETE", body: body ? JSON.stringify(body) : undefined }),
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", body: form }),
 };
 
@@ -602,7 +619,12 @@ export interface DatabaseOverviewTable {
   description: { ko: string; en: string };
   handling: "archive_then_delete" | "archive_only";
   row_count: number;
-  date_columns: Array<{ column: string; label: { ko: string; en: string }; oldest: string | null; newest: string | null }>;
+  date_columns: Array<{
+    column: string;
+    label: { ko: string; en: string };
+    oldest: string | null;
+    newest: string | null;
+  }>;
   policy: { basis: string; retention_months: number; action: string } | null;
 }
 export interface DatabaseOverview {
@@ -611,7 +633,13 @@ export interface DatabaseOverview {
   backup_history: null;
 }
 // GET /api/admin/retention/preview
-export interface RetentionPreview { table: string; column: string; months: number; cutoff: string; affected_count: number }
+export interface RetentionPreview {
+  table: string;
+  column: string;
+  months: number;
+  cutoff: string;
+  affected_count: number;
+}
 
 // --- PR-3b: portfolio scorecard (E.4) — appended only, same boundary as
 // the PR #65 batches: no existing export above this line is touched (a
@@ -715,7 +743,6 @@ export async function getPortfolioScorecard(
 // Money fields are INTEGER KRW millions (ADR-0061); run_rate_bp is basis
 // points of committed cost-synergy run-rate.
 
-
 // ── ADR-0066 value-chain scenario simulation (Phase A/C surfaces) ──
 
 export interface ChainLayer {
@@ -732,4 +759,72 @@ export interface ChainLinkLite {
   pass_through_rate: number | null;
 }
 
+// ── ADR-0189 P7: scheduler admin surfaces (design 2026-10-29-scheduled-jobs-design §4.1) ──
+// Mirrors the Route Handler responses; frontend-only types, appended only.
 
+// GET /api/admin/schedule-jobs/health — tick heartbeat + per-job health rows (§4.2 banner,
+// §6 SRE rules b+c). `overdue`: an enabled job whose dispatched fire (last_fire_minute) is
+// older than timeout_sec with no job_run of the env started at/after that fire;
+// `consecutive_failures`: trailing failed/timeout job_run rows, window 3.
+export interface ScheduleHealthJob {
+  job_key: string;
+  enabled: number; // SQLite INTEGER 0/1
+  timeout_sec: number;
+  next_run_at: string | null;
+  overdue: boolean;
+  last_fire_at: string | null;
+  last_run_started_at: string | null;
+  last_run_status: string | null;
+  consecutive_failures: number;
+}
+export interface ScheduleHealth {
+  env: "prod" | "dev";
+  tick: { env: string; last_tick_at: string | null; age_seconds: number | null; healthy: boolean };
+  jobs: ScheduleHealthJob[];
+}
+
+// GET /api/admin/schedule-jobs/[jobKey]/runs — one job_run row (migration-0183 columns +
+// computed duration ms, null while running; `error` is scrubbed server-side, design §5).
+export interface ScheduleJobRun {
+  started_at: string;
+  finished_at: string | null;
+  status: string;
+  error: string | null;
+  trigger: "schedule" | "manual" | "catchup" | null;
+  actor: string | null;
+  env: string | null;
+  rows_read: number | null;
+  rows_written: number | null;
+  rows_changed: number | null;
+  attempt: number | null;
+  duration: number | null;
+}
+export interface ScheduleJobRunsPage {
+  job_key: string;
+  runs: ScheduleJobRun[];
+  /** Computed over the returned page (previous semantics, kept for compatibility). */
+  success_rate: number | null;
+  page: number;
+  limit: number;
+  total: number;
+}
+
+// POST /api/admin/schedule-jobs/[jobKey]/run — 202 body: the request id the client polls
+// listScheduleJobRuns against; `reused` marks a still-queued request being reused instead of
+// stacking a duplicate. NO in-process execution (ADR-0019) — pickup happens on the next tick.
+export interface ScheduleJobRunRequest {
+  request_id: string;
+  job_key: string;
+  reused: boolean;
+  note: string;
+}
+
+// POST /api/admin/schedule-jobs — create body. `job_key` must be a registered scheduler handler
+// key (server-enforced §5 RCE guard: 400 unregistered_handler; 409 job_key_exists); omitted
+// fields default from the registry entry; enabled defaults to false (create-then-enable).
+export interface ScheduleJobCreate {
+  job_key: string;
+  cron_expr?: string;
+  timeout_sec?: number;
+  max_retries?: number;
+}
