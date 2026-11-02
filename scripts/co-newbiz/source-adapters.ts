@@ -1,4 +1,10 @@
-// @version 1.5.0
+// @version 1.5.1
+// 1.5.1: lint-gate cleanup only (biome whole-file scan on the changed file blocked the quality
+// gate) — useLiteralKeys dot access on the law-adapter rows, noNonNullAssertion removed (kosis
+// closure snapshots the validated orgId/tblId/itmId keys; listKrxDailyRows restructures the
+// indexCode/ticker pick so no `series.ticker!` is needed), upsertCatalog/findCatalogByNaturalKey/
+// insertCatalogByNaturalKey params typed Database (bun:sqlite) instead of hand-rolled structural
+// shapes, biome format drift; no behavior change.
 // 1.5.0: per-deal KRX stock series are table-backed (stock_series, migration 0187, owner decision 2026-11-02
 // option 1) — loadStockSeriesDescriptors(db) builds descriptors from enabled rows and BOTH enumeration points
 // merge them: krx listSeries (seeds < table rows < in-process registry) and listKrxDailyRows resolution (the
@@ -27,6 +33,7 @@
  *    live KOSIS API — future seeds ship unverified-by-design, not as authority.
  */
 
+import type { Database } from "bun:sqlite";
 import { ulid } from "../../db/lib/ulid.ts";
 import { listEnabledStockSeries } from "../../db/repositories/stock-series.repository.ts";
 import { parseCorpXml } from "../../app/web-next/lib/dart-client.ts";
@@ -127,7 +134,9 @@ async function getJson(url: string): Promise<unknown> {
   // auth failure — detect and surface the marker instead of a parse error.
   const trimmed = text.trimStart();
   if (trimmed.startsWith("<")) {
-    throw new Error(`non-JSON response (auth/service-key problem?) from ${new URL(url).host}: ${trimmed.slice(0, 120)}`);
+    throw new Error(
+      `non-JSON response (auth/service-key problem?) from ${new URL(url).host}: ${trimmed.slice(0, 120)}`,
+    );
   }
   return JSON.parse(text);
 }
@@ -135,7 +144,8 @@ async function getJson(url: string): Promise<unknown> {
 function requireKey(env: string): string {
   loadPipelineKeys();
   const v = process.env[env];
-  if (!v) throw new Error(`${env} is not set — the ${env.replace("_API_KEY", "")} adapter is disabled until configured.`);
+  if (!v)
+    throw new Error(`${env} is not set — the ${env.replace("_API_KEY", "")} adapter is disabled until configured.`);
   return v;
 }
 
@@ -154,7 +164,9 @@ const dartAdapter: SourceAdapter = {
     return []; // observation-series extension lands with the valuation wave
   },
   fetcher() {
-    throw new Error("dart adapter is catalog-kind — observation fetching is not provided (use fin:pipeline / dart-collect for financials).");
+    throw new Error(
+      "dart adapter is catalog-kind — observation fetching is not provided (use fin:pipeline / dart-collect for financials).",
+    );
   },
   async listCatalog() {
     const apiKey = requireKey("DART_API_KEY");
@@ -244,6 +256,9 @@ const kosisAdapter: SourceAdapter = {
       );
     }
     const apiKey = requireKey("KOSIS_API_KEY");
+    // Snapshot the validated keys: closure bodies don't retain property narrowing
+    // from the guards above, and a non-null assertion is not allowed here.
+    const { orgId, tblId, itmId } = series;
     return async (periodKey: string) => {
       // KOSIS stats API: one call per series returns the full period range;
       // periodKey (YYYY-MM or YYYY) narrows the parsed row.
@@ -251,9 +266,9 @@ const kosisAdapter: SourceAdapter = {
       const params = new URLSearchParams({
         method: "getList",
         apiKey,
-        orgId: series.orgId!,
-        tblId: series.tblId!,
-        itmId: series.itmId!,
+        orgId,
+        tblId,
+        itmId,
         prdSe: "M",
         startPrdDe: compactPeriod,
         endPrdDe: compactPeriod,
@@ -276,15 +291,28 @@ const kosisAdapter: SourceAdapter = {
       const payload = await getJson(url);
       if (!Array.isArray(payload)) {
         const err = payload as { err?: string; errMsg?: string; errMessage?: string };
-        throw new Error(`kosis API error${err.err ? ` ${err.err}` : ""}: ${err.errMsg ?? err.errMessage ?? "non-array response"}`);
+        throw new Error(
+          `kosis API error${err.err ? ` ${err.err}` : ""}: ${err.errMsg ?? err.errMessage ?? "non-array response"}`,
+        );
       }
-      const rows = payload as Array<{ TBL_NM?: string; UNIT_NM?: string; UNIT?: string; DT?: string; PRD_DE?: string; PERIOD?: string }>;
+      const rows = payload as Array<{
+        TBL_NM?: string;
+        UNIT_NM?: string;
+        UNIT?: string;
+        DT?: string;
+        PRD_DE?: string;
+        PERIOD?: string;
+      }>;
       const row = rows.find((d) => d.PRD_DE === compactPeriod || d.PERIOD === periodKey) ?? rows[0];
       if (!row?.DT) throw new Error(`kosis: no data point for ${ctx.seriesId}@${periodKey}`);
       const value = Number(row.DT);
-      if (!Number.isFinite(value)) throw new Error(`kosis: non-numeric value '${row.DT}' for ${ctx.seriesId}@${periodKey}`);
+      if (!Number.isFinite(value))
+        throw new Error(`kosis: non-numeric value '${row.DT}' for ${ctx.seriesId}@${periodKey}`);
       const unit = resolveKosisUnit(row.UNIT_NM ?? row.UNIT);
-      if (!unit) throw new Error(`kosis: unknown unit '${row.UNIT_NM ?? row.UNIT}' — quarantined per kosis-units.ts (add the mapping to onboard).`);
+      if (!unit)
+        throw new Error(
+          `kosis: unknown unit '${row.UNIT_NM ?? row.UNIT}' — quarantined per kosis-units.ts (add the mapping to onboard).`,
+        );
       const raw = JSON.stringify(row);
       return { value, contentHash: await hash(raw), raw };
     };
@@ -346,7 +374,7 @@ const ecosAdapter: SourceAdapter = {
       // Success envelope: {"StatisticSearch":{"list_total_count":N,"row":[…]}}
       // Error envelope: a bare {"RESULT":{"CODE","MESSAGE"}} — per the k-ecos
       // skill's response policy.
-      const payload = await getJson(url) as {
+      const payload = (await getJson(url)) as {
         StatisticSearch?: { row?: Array<{ ITEM_CODE1?: string; DATA_VALUE?: string; TIME?: string }> };
         RESULT?: { CODE?: string; MESSAGE?: string };
       };
@@ -357,7 +385,8 @@ const ecosAdapter: SourceAdapter = {
       const row = rows.find((r) => r.TIME === compact) ?? rows[rows.length - 1];
       if (!row?.DATA_VALUE) throw new Error(`ecos: no data point for ${ctx.seriesId}@${periodKey}`);
       const value = Number(row.DATA_VALUE);
-      if (!Number.isFinite(value)) throw new Error(`ecos: non-numeric value '${row.DATA_VALUE}' for ${ctx.seriesId}@${periodKey}`);
+      if (!Number.isFinite(value))
+        throw new Error(`ecos: non-numeric value '${row.DATA_VALUE}' for ${ctx.seriesId}@${periodKey}`);
       const raw = JSON.stringify(row);
       return { value, contentHash: await hash(raw), raw };
     };
@@ -432,7 +461,12 @@ export function registerKrxSeries(series: SeriesDescriptor): void {
 }
 
 /** Build the daily-close series descriptor for a listed company. */
-export function krxStockSeries(companyId: string, ticker: string, companyName: string, market: "kospi" | "kosdaq"): SeriesDescriptor {
+export function krxStockSeries(
+  companyId: string,
+  ticker: string,
+  companyName: string,
+  market: "kospi" | "kosdaq",
+): SeriesDescriptor {
   return {
     seriesId: `krx:stock:${companyId}:close`,
     adapter: "krx",
@@ -502,7 +536,10 @@ export interface KrxStockMasterRow {
 
 /** HTTP-level KRX failure — status kept so callers can decide retry/diagnosis. */
 export class KrxHttpError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message);
   }
 }
@@ -525,7 +562,9 @@ function krxRequireRows(payload: unknown, service: string): Array<Record<string,
   if (env.respCode && !env.OutBlock_1) {
     throw new Error(
       `KRX ${service} error ${env.respCode}: ${env.respMsg}` +
-        (env.respCode === "401" ? " — key valid but service not approved/expired (k-krx skill: re-apply via 마이페이지 → API 사용 신청)" : ""),
+        (env.respCode === "401"
+          ? " — key valid but service not approved/expired (k-krx skill: re-apply via 마이페이지 → API 사용 신청)"
+          : ""),
     );
   }
   return env.OutBlock_1 ?? [];
@@ -613,7 +652,10 @@ async function krxCall(path: string, basDd: string, apiKey: string): Promise<Arr
       return krxRequireRows(await krxGetJson(url, apiKey), path);
     } catch (err) {
       const throttled = err instanceof KrxHttpError && (err.status === 403 || err.status === 429);
-      const retryable = err instanceof KrxHttpError ? err.status >= 500 || throttled : err instanceof TypeError || (err as Error)?.name === "TimeoutError";
+      const retryable =
+        err instanceof KrxHttpError
+          ? err.status >= 500 || throttled
+          : err instanceof TypeError || (err as Error)?.name === "TimeoutError";
       if (!retryable || attempt >= 1) throw err;
       await new Promise((r) => setTimeout(r, krxRetryDelayMs * (attempt + 1) * (throttled ? 5 : 1)));
     }
@@ -721,10 +763,17 @@ export async function listKrxDailyRows(
   const series = krxResolveSeries(seriesId, db);
   if (!series) throw new Error(`krx: unknown series '${seriesId}'`);
   const { path, indexCode } = krxServiceFor(series);
-  if (indexCode === null && !series.ticker) throw new Error(`krx: stock series '${seriesId}' has no ticker (단축코드)`);
-  const pick = indexCode !== null ? { indexCode } : { ticker: series.ticker! };
+  let pick: { indexCode: string } | { ticker: string };
+  if (indexCode !== null) {
+    pick = { indexCode };
+  } else {
+    if (!series.ticker) throw new Error(`krx: stock series '${seriesId}' has no ticker (단축코드)`);
+    pick = { ticker: series.ticker };
+  }
   const days = krxWeekdays(month, today);
-  const picked = await krxPool(days, KRX_CONCURRENCY, async (day) => krxPickRow(await krxDayRows(path, day, apiKey), pick));
+  const picked = await krxPool(days, KRX_CONCURRENCY, async (day) =>
+    krxPickRow(await krxDayRows(path, day, apiKey), pick),
+  );
   return picked.filter((r): r is KrxDailyRow => r !== null).sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -756,7 +805,9 @@ export async function resolveKrxStockMaster(
   for (let back = 0; candidatesDays.length < 10 && back < 20; back++) {
     const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back);
     if (d.getDay() === 0 || d.getDay() === 6) continue;
-    candidatesDays.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`);
+    candidatesDays.push(
+      `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`,
+    );
   }
   let rows: Array<Record<string, string>> = [];
   let basDd = "";
@@ -776,23 +827,37 @@ export async function resolveKrxStockMaster(
   }
   const target = companyName.trim();
   const names = (r: Record<string, string>) => [r.ISU_ABBRV ?? "", r.ISU_NM ?? ""];
-  const tiers: Array<(n: string) => boolean> = [(n) => n === target, (n) => n.startsWith(target), (n) => n.includes(target)];
+  const tiers: Array<(n: string) => boolean> = [
+    (n) => n === target,
+    (n) => n.startsWith(target),
+    (n) => n.includes(target),
+  ];
   let hits: Array<Record<string, string>> = [];
   for (const tier of tiers) {
     hits = rows.filter((r) => names(r).some((n) => n !== "" && tier(n)));
     if (hits.length > 0) break;
   }
-  if (hits.length === 0) return { ok: false, reason: `'${target}' not found in ${label} master (${service} basDd=${basDd})` };
+  if (hits.length === 0)
+    return { ok: false, reason: `'${target}' not found in ${label} master (${service} basDd=${basDd})` };
   if (hits.length > 1) {
     const candidates = hits.map((r) => `${r.ISU_ABBRV ?? r.ISU_NM}=${r.ISU_SRT_CD}`);
-    return { ok: false, reason: `'${target}' is ambiguous in ${label} master: ${candidates.join(", ")} — pin with --ticker`, candidates };
+    return {
+      ok: false,
+      reason: `'${target}' is ambiguous in ${label} master: ${candidates.join(", ")} — pin with --ticker`,
+      candidates,
+    };
   }
   const hit = hits[0];
   const shortCode = hit.ISU_SRT_CD ?? "";
-  if (!/^[0-9A-Z]{6}$/.test(shortCode)) return { ok: false, reason: `${label} master row for '${target}' has no 6-char ISU_SRT_CD` };
+  if (!/^[0-9A-Z]{6}$/.test(shortCode))
+    return { ok: false, reason: `${label} master row for '${target}' has no 6-char ISU_SRT_CD` };
   const rawMarket = (hit.MKT_TP_NM ?? label).toUpperCase();
   const resolvedMarket = rawMarket === "KOSDAQ" ? "KOSDAQ" : rawMarket === "KONEX" ? "KONEX" : "KOSPI";
-  return { ok: true, basDd, row: { shortCode, isin: hit.ISU_CD ?? null, nameKo: hit.ISU_ABBRV ?? target, market: resolvedMarket } };
+  return {
+    ok: true,
+    basDd,
+    row: { shortCode, isin: hit.ISU_CD ?? null, nameKo: hit.ISU_ABBRV ?? target, market: resolvedMarket },
+  };
 }
 
 /**
@@ -852,14 +917,18 @@ const krxAdapter: SourceAdapter = {
       // and beta-series.ts collect through the adapter's listDailyRows hook
       // (listKrxDailyRows). A monthly call here means a day-grain series was
       // misconfigured; fail loudly rather than return a wrong grain.
-      throw new Error(`krx: series '${ctx.seriesId}' is day-grain — collect via listKrxDailyRows, not the monthly fetch loop.`);
+      throw new Error(
+        `krx: series '${ctx.seriesId}' is day-grain — collect via listKrxDailyRows, not the monthly fetch loop.`,
+      );
     };
   },
 };
 
 async function hash(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // ── law adapter (k-law, via 법제처 OC credential) ─────────────────────────
@@ -901,13 +970,17 @@ const lawAdapter: SourceAdapter = {
       try {
         payload = await getJson(url);
       } catch (err) {
-        throw new Error(`law search failed for '${query || "(all)"}': ${err instanceof Error ? err.message : String(err)}`);
+        throw new Error(
+          `law search failed for '${query || "(all)"}': ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
-      const lawSearch = (payload as { LawSearch?: Array<Record<string, string>> | { law?: Array<Record<string, string>> } })?.LawSearch;
-      const rows = Array.isArray(lawSearch) ? lawSearch : lawSearch?.law ?? [];
+      const lawSearch = (
+        payload as { LawSearch?: Array<Record<string, string>> | { law?: Array<Record<string, string>> } }
+      )?.LawSearch;
+      const rows = Array.isArray(lawSearch) ? lawSearch : (lawSearch?.law ?? []);
       for (const row of rows) {
-        const statuteId = row["법령일련번호"] ?? row["법령ID"];
-        const nameKo = row["법령명한글"] ?? row["법령명"];
+        const statuteId = row.법령일련번호 ?? row.법령ID;
+        const nameKo = row.법령명한글 ?? row.법령명;
         if (!statuteId || !nameKo) continue;
         upserts.push({
           table: "md_statute",
@@ -941,7 +1014,9 @@ const opendataAdapter: SourceAdapter = {
     // Extension point: a data.go.kr dataset becomes an adapter entry here
     // when one is onboarded. The serviceKey transport (getJson + safeFetch)
     // is shared with the law adapter, so onboarding is listCatalog-only.
-    throw new Error("opendata adapter has no catalogs onboarded yet — the transport is ready (see design doc §2.2); add a dataset to extend.");
+    throw new Error(
+      "opendata adapter has no catalogs onboarded yet — the transport is ready (see design doc §2.2); add a dataset to extend.",
+    );
   },
 };
 
@@ -957,10 +1032,7 @@ export const SOURCE_ADAPTERS: Record<string, SourceAdapter> = {
 };
 
 /** Natural-key upsert for catalog rows — idempotent by construction. */
-export function upsertCatalog(
-  db: { query: (sql: string, ...args: unknown[]) => { get: (...args: unknown[]) => unknown }; run: (sql: string, ...args: unknown[]) => { changes: number } },
-  upserts: CatalogUpsert[],
-): { inserted: number; existing: number } {
+export function upsertCatalog(db: Database, upserts: CatalogUpsert[]): { inserted: number; existing: number } {
   let inserted = 0;
   let existing = 0;
   const now = new Date().toISOString();
@@ -980,10 +1052,7 @@ export function upsertCatalog(
   return { inserted, existing };
 }
 
-function findCatalogByNaturalKey(
-  db: { query: (sql: string, ...args: unknown[]) => { get: (...args: unknown[]) => unknown } },
-  up: CatalogUpsert,
-): unknown {
+function findCatalogByNaturalKey(db: Database, up: CatalogUpsert): unknown {
   switch (up.table) {
     case "md_company":
       return db.query("SELECT id FROM md_company WHERE dart_corp_code = ?").get(up.naturalKey.dart_corp_code);
@@ -999,39 +1068,40 @@ function findCatalogByNaturalKey(
 /** Insert one catalog row; returns the number of rows actually inserted
  * (0 when the md_statute natural-key index (0186) absorbs the write via
  * ON CONFLICT DO NOTHING). */
-function insertCatalogByNaturalKey(
-  db: { run: (sql: string, ...args: unknown[]) => { changes: number } },
-  up: CatalogUpsert,
-  id: string,
-  now: string,
-): number {
+function insertCatalogByNaturalKey(db: Database, up: CatalogUpsert, id: string, now: string): number {
   switch (up.table) {
     case "md_company":
-      db.run(
-        "INSERT INTO md_company (id, dart_corp_code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)",
-        [id, up.naturalKey.dart_corp_code, up.values.name_ko ?? null, up.values.name_en ?? null, now],
-      );
+      db.run("INSERT INTO md_company (id, dart_corp_code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)", [
+        id,
+        up.naturalKey.dart_corp_code,
+        up.values.name_ko ?? null,
+        up.values.name_en ?? null,
+        now,
+      ]);
       return 1;
     case "md_statute":
       // ON CONFLICT DO NOTHING (no target): absorbs any partial-unique violation
       // — idx_md_statute_code (0186) makes the natural key DB-enforced.
-      return db
-        .run(
-          "INSERT INTO md_statute (id, korea_statute_id, foreign_framework_key, created_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-          [id, up.naturalKey.korea_statute_id, up.values.foreign_framework_key ?? null, now],
-        )
-        .changes;
+      return db.run(
+        "INSERT INTO md_statute (id, korea_statute_id, foreign_framework_key, created_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+        [id, up.naturalKey.korea_statute_id, up.values.foreign_framework_key ?? null, now],
+      ).changes;
     case "md_industry":
-      db.run(
-        "INSERT INTO md_industry (id, code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)",
-        [id, up.naturalKey.code, up.values.name_ko ?? null, up.values.name_en ?? null, now],
-      );
+      db.run("INSERT INTO md_industry (id, code, name_ko, name_en, created_at) VALUES (?, ?, ?, ?, ?)", [
+        id,
+        up.naturalKey.code,
+        up.values.name_ko ?? null,
+        up.values.name_en ?? null,
+        now,
+      ]);
       return 1;
     case "md_source":
-      db.run(
-        "INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?, ?, ?, ?)",
-        [id, up.naturalKey.code, up.values.reliability_grade ?? "C", now],
-      );
+      db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?, ?, ?, ?)", [
+        id,
+        up.naturalKey.code,
+        up.values.reliability_grade ?? "C",
+        now,
+      ]);
       return 1;
   }
 }
