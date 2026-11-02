@@ -24,6 +24,28 @@ const reg = await import("../../db/lib/retention-registry.ts");
 
 const NOW = new Date().toISOString();
 const req = (path: string, init?: RequestInit) => nextRequest(path, init);
+
+/** Minimal structural types for the API envelope responses these tests inspect. */
+interface ApiErrorBody {
+  error: { code: string };
+}
+interface RetentionPolicyRow {
+  table_key: string;
+  action: string;
+  retention_months: number;
+}
+interface ApiListBody {
+  data: RetentionPolicyRow[];
+}
+interface OverviewBody {
+  tables: Array<{
+    table: string;
+    row_count: number;
+    date_columns: Array<{ oldest: string; newest: string }>;
+    policy: unknown;
+  }>;
+  migrations: { applied_count: number; latest: { filename: string } };
+}
 async function loginCookie(userId: string, password: string) {
   const res = await req("/api/auth/login", { method: "POST", body: JSON.stringify({ userId, password }) });
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
@@ -32,7 +54,10 @@ let admin = "";
 let analyst = "";
 
 beforeAll(async () => {
-  for (const [u, role, pw] of [["root", "admin", "pw-root-12345"], ["alice", "analyst", "pw-alice-12345"]] as const) {
+  for (const [u, role, pw] of [
+    ["root", "admin", "pw-root-12345"],
+    ["alice", "analyst", "pw-alice-12345"],
+  ] as const) {
     await createUser(db, { userId: u, role, password: pw, createdBy: "test", now: NOW });
     approveUser(db, { userId: u, approvedBy: "test", now: NOW });
   }
@@ -74,13 +99,15 @@ describe("registry", () => {
     expect(reg.handlingToStoredAction("archive_only")).toBe("archive");
     expect(reg.handlingToStoredAction("delete_only")).toBe("delete");
     // dry_run_session: executor-refused, purged on the read path (migration 0172 TTL)
-    expect(reg.RETENTION_EXCLUDED_TABLES["dry_run_session"]).toContain("read path");
-    expect(reg.RETENTION_EXCLUDED_TABLES["job_run"]).toBeUndefined();
-    expect(reg.RETENTION_EXCLUDED_TABLES["session"]).toBeUndefined();
+    expect(reg.RETENTION_EXCLUDED_TABLES.dry_run_session).toContain("read path");
+    expect(reg.RETENTION_EXCLUDED_TABLES.job_run).toBeUndefined();
+    expect(reg.RETENTION_EXCLUDED_TABLES.session).toBeUndefined();
   });
 
   test("D2/dba default months and basis are recorded per entry (the seeder's defaults)", () => {
-    const d = Object.fromEntries(reg.RETENTION_ELIGIBLE_TABLES.map((t) => [t.table, { m: t.defaultMonths, b: t.defaultBasis }]));
+    const d = Object.fromEntries(
+      reg.RETENTION_ELIGIBLE_TABLES.map((t) => [t.table, { m: t.defaultMonths, b: t.defaultBasis }]),
+    );
     expect(d).toEqual({
       notification: { m: 12, b: "sent_at" },
       llm_call_log: { m: 12, b: "created_at" },
@@ -103,20 +130,20 @@ describe("policy API allowlist", () => {
     test(`rejects ${table} with 400 table_not_eligible`, async () => {
       const res = await post({ table_key: table, basis: "created_at", retention_months: 6, action: "delete" });
       expect(res.status).toBe(400);
-      expect(((await res.json()) as any).error.code).toBe("table_not_eligible");
+      expect(((await res.json()) as ApiErrorBody).error.code).toBe("table_not_eligible");
     });
   }
   test("rejects a non-eligible column", async () => {
     const res = await post({ table_key: "notification", basis: "read_at", retention_months: 6, action: "delete" });
     expect(res.status).toBe(400);
-    expect(((await res.json()) as any).error.code).toBe("column_not_eligible");
+    expect(((await res.json()) as ApiErrorBody).error.code).toBe("column_not_eligible");
   });
   test("POST without action derives it from the registry", async () => {
     expect((await post({ table_key: "raw_payload", basis: "fetched_at", retention_months: 24 })).status).toBe(201);
     expect((await post({ table_key: "notification", basis: "sent_at", retention_months: 24 })).status).toBe(201);
-    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
-    expect(list.data.find((r: any) => r.table_key === "raw_payload").action).toBe("archive");
-    expect(list.data.find((r: any) => r.table_key === "notification").action).toBe("delete");
+    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as ApiListBody;
+    expect(list.data.find((r) => r.table_key === "raw_payload")?.action).toBe("archive");
+    expect(list.data.find((r) => r.table_key === "notification")?.action).toBe("delete");
     db.run("DELETE FROM retention_policy");
   });
   test("POST for the reconciliation-added tables derives the executor-accepted stored action", async () => {
@@ -132,19 +159,22 @@ describe("policy API allowlist", () => {
     ] as const) {
       expect((await post({ table_key: table, basis, retention_months: months })).status).toBe(201);
     }
-    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
+    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as ApiListBody;
     for (const table of ["job_run", "execution_job", "session", "llm_call_log"]) {
-      expect(list.data.find((r: any) => r.table_key === table).action).toBe("delete");
+      expect(list.data.find((r) => r.table_key === table)?.action).toBe("delete");
     }
     db.run("DELETE FROM retention_policy");
   });
   test("conflicting action is rejected (archive-only table)", async () => {
     const res = await post({ table_key: "raw_payload", basis: "fetched_at", retention_months: 6, action: "delete" });
     expect(res.status).toBe(400);
-    expect(((await res.json()) as any).error.code).toBe("action_not_allowed");
+    expect(((await res.json()) as ApiErrorBody).error.code).toBe("action_not_allowed");
   });
   test("non-admin cannot write", async () => {
-    const res = await post({ table_key: "notification", basis: "sent_at", retention_months: 6, action: "delete" }, analyst);
+    const res = await post(
+      { table_key: "notification", basis: "sent_at", retention_months: 6, action: "delete" },
+      analyst,
+    );
     expect(res.status).toBe(403);
   });
 });
@@ -152,7 +182,13 @@ describe("policy API allowlist", () => {
 describe("overview and preview", () => {
   test("admin-only", async () => {
     expect((await req("/api/admin/database/overview", { headers: { cookie: analyst } })).status).toBe(403);
-    expect((await req("/api/admin/retention/preview?table=notification&column=sent_at&months=1", { headers: { cookie: analyst } })).status).toBe(403);
+    expect(
+      (
+        await req("/api/admin/retention/preview?table=notification&column=sent_at&months=1", {
+          headers: { cookie: analyst },
+        })
+      ).status,
+    ).toBe(403);
     expect((await req("/api/admin/database/overview")).status).toBe(401);
   });
 
@@ -165,28 +201,34 @@ describe("overview and preview", () => {
       );
     const old = new Date(Date.now() - 400 * 86400000).toISOString();
     const older = new Date(Date.now() - 800 * 86400000).toISOString();
-    ins("n1", older); ins("n2", old); ins("n3", NOW);
+    ins("n1", older);
+    ins("n2", old);
+    ins("n3", NOW);
 
     const res = await req("/api/admin/database/overview", { headers: { cookie: admin } });
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).not.toContain("SECRET-PAYLOAD");
-    const body = JSON.parse(text).data;
-    const n = body.tables.find((t: any) => t.table === "notification");
-    expect(n.row_count).toBe(3);
-    expect(n.date_columns[0].oldest).toBe(older);
-    expect(n.date_columns[0].newest).toBe(NOW);
-    expect(n.policy).toBeNull();
+    const body = (JSON.parse(text) as { data: OverviewBody }).data;
+    const n = body.tables.find((t) => t.table === "notification");
+    expect(n?.row_count).toBe(3);
+    expect(n?.date_columns[0].oldest).toBe(older);
+    expect(n?.date_columns[0].newest).toBe(NOW);
+    expect(n?.policy).toBeNull();
     expect(body.migrations.applied_count).toBeGreaterThan(100);
     expect(body.migrations.latest.filename).toMatch(/\.sql$/);
 
-    const p = await req("/api/admin/retention/preview?table=notification&column=sent_at&months=12", { headers: { cookie: admin } });
+    const p = await req("/api/admin/retention/preview?table=notification&column=sent_at&months=12", {
+      headers: { cookie: admin },
+    });
     expect(p.status).toBe(200);
     const pt = await p.text();
     expect(pt).not.toContain("SECRET-PAYLOAD");
     expect(JSON.parse(pt).data.affected_count).toBe(2);
-    const p2 = await req("/api/admin/retention/preview?table=notification&column=sent_at&months=24", { headers: { cookie: admin } });
-    expect(((await p2.json()) as any).data.affected_count).toBe(1);
+    const p2 = await req("/api/admin/retention/preview?table=notification&column=sent_at&months=24", {
+      headers: { cookie: admin },
+    });
+    expect(((await p2.json()) as { data: { affected_count: number } }).data.affected_count).toBe(1);
   });
 
   test("preview rejects non-eligible table/column and bad months", async () => {
@@ -205,12 +247,18 @@ describe("policy CRUD with audit", () => {
     expect((await post({ table_key: "llm_call_log", basis: "created_at", retention_months: 12 })).status).toBe(201);
     expect((await post({ table_key: "llm_call_log", basis: "created_at", retention_months: 6 })).status).toBe(201);
     expect(audit("retention_policy_set") - before).toBe(2);
-    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as any;
-    expect(list.data.find((r: any) => r.table_key === "llm_call_log").retention_months).toBe(6);
+    const list = (await (await req("/api/admin/retention", { headers: { cookie: admin } })).json()) as ApiListBody;
+    expect(list.data.find((r) => r.table_key === "llm_call_log")?.retention_months).toBe(6);
 
-    expect((await req("/api/admin/retention/llm_call_log", { method: "DELETE", headers: { cookie: analyst } })).status).toBe(403);
-    expect((await req("/api/admin/retention/llm_call_log", { method: "DELETE", headers: { cookie: admin } })).status).toBe(200);
+    expect(
+      (await req("/api/admin/retention/llm_call_log", { method: "DELETE", headers: { cookie: analyst } })).status,
+    ).toBe(403);
+    expect(
+      (await req("/api/admin/retention/llm_call_log", { method: "DELETE", headers: { cookie: admin } })).status,
+    ).toBe(200);
     expect(audit("retention_policy_delete")).toBe(1);
-    expect((await req("/api/admin/retention/llm_call_log", { method: "DELETE", headers: { cookie: admin } })).status).toBe(404);
+    expect(
+      (await req("/api/admin/retention/llm_call_log", { method: "DELETE", headers: { cookie: admin } })).status,
+    ).toBe(404);
   });
 });

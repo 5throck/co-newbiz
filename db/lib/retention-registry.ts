@@ -197,7 +197,8 @@ export const RETENTION_EXCLUDED_TABLES: Readonly<Record<string, string>> = {
   // dba adjudication 2026-11-02: executor-refused — expired dry-run sessions are
   // purged on the READ path (lib/dry-run.ts purgeExpiredDryRunSessions), per the
   // migration 0172 header (TTL §6.8); the retention executor never touches it.
-  dry_run_session: "expired sessions are purged on the read path (lib/dry-run.ts purgeExpiredDryRunSessions, migration 0172 TTL); the retention executor refuses it",
+  dry_run_session:
+    "expired sessions are purged on the read path (lib/dry-run.ts purgeExpiredDryRunSessions, migration 0172 TTL); the retention executor refuses it",
   api_token: "active authentication state, managed by the auth lifecycle (revocation, not age-based pruning)",
   oauth_code: "short-lived authentication state, managed by the auth lifecycle",
   password_history: "credential reuse protection",
@@ -219,13 +220,25 @@ export type RetentionValidation =
 export function validateRetentionPolicy(table: string, column: string, action?: string): RetentionValidation {
   const entry = BY_TABLE.get(table);
   if (!entry) {
-    return { ok: false, code: "table_not_eligible", message: `Table '${table}' is not eligible for a retention policy.` };
+    return {
+      ok: false,
+      code: "table_not_eligible",
+      message: `Table '${table}' is not eligible for a retention policy.`,
+    };
   }
   if (!entry.dateColumns.some((c) => c.column === column)) {
-    return { ok: false, code: "column_not_eligible", message: `Column '${column}' is not an eligible date column of '${table}'.` };
+    return {
+      ok: false,
+      code: "column_not_eligible",
+      message: `Column '${column}' is not an eligible date column of '${table}'.`,
+    };
   }
   if (action !== undefined && action !== handlingToStoredAction(entry.handling)) {
-    return { ok: false, code: "action_not_allowed", message: `Action '${action}' conflicts with the fixed handling '${entry.handling}' of '${table}'.` };
+    return {
+      ok: false,
+      code: "action_not_allowed",
+      message: `Action '${action}' conflicts with the fixed handling '${entry.handling}' of '${table}'.`,
+    };
   }
   return { ok: true, entry };
 }
