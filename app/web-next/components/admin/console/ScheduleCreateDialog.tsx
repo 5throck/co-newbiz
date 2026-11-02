@@ -178,6 +178,7 @@ export function ScheduleCreateDialog({
           </div>
           <ScheduleCronField
             idPrefix="createJob"
+            jobKey={jobKey || null}
             cron={cron}
             onCronChange={(v) => {
               setCron(v);
