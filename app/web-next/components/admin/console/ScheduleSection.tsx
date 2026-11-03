@@ -24,7 +24,7 @@ import { ScheduleRunsDialog } from "./ScheduleRunsDialog.tsx";
 import { ListSearch, Pager, matchesQuery, useAdminLabel, usePaged } from "./admin-ui.tsx";
 
 // 스케줄 작업 6열 — 작업(이름·키·설명 3줄)과 스케줄(미리보기+raw cron)이 긴 텍스트라 고정 비율 유지.
-const SCHEDULE_COL_PCT = [24, 20, 10, 15, 21, 10] as const;
+const SCHEDULE_COL_PCT = [34, 22, 10, 11, 13, 10] as const;
 const SCHEDULE_PAGE_SIZE = 15;
 
 export function SchedulePanel({ ctx }: { ctx: AdminConsoleState }) {
@@ -157,7 +157,7 @@ function ScheduleScreen({ ctx }: { ctx: AdminConsoleState }) {
                       const rel = j.next_run_at ? relIn(j.next_run_at) : null;
                       return (
                         <tr key={j.id}>
-                          <td className="cell-truncate">
+                          <td className="cell-clamp-3">
                             {name}
                             <br />
                             <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
@@ -172,7 +172,7 @@ function ScheduleScreen({ ctx }: { ctx: AdminConsoleState }) {
                               </>
                             )}
                           </td>
-                          <td className="cell-truncate">
+                          <td>
                             {preview ?? "—"}
                             <br />
                             <code className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">

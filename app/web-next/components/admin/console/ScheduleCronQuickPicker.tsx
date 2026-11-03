@@ -170,7 +170,7 @@ export function ScheduleCronQuickPicker({
       <legend className="mb-1 text-[length:var(--fs-caption)] font-semibold">{t("cronFreqLegend")}</legend>
       <div role="radiogroup" className="flex flex-wrap gap-x-4 gap-y-1">
         {PRESETS.map((p) => (
-          <label key={p} className="flex items-center gap-1 text-[length:var(--fs-body)]">
+          <label key={p} className="flex items-center gap-1 whitespace-nowrap text-[length:var(--fs-body)]">
             <input
               type="radio"
               name={`${idPrefix}CronPreset`}
