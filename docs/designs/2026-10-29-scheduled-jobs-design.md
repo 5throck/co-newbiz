@@ -493,3 +493,9 @@ pre-populated and pass the regeneration check; an operator sets `매일` 07:00 i
 (preset → hour → minute) or edits an existing row's hour in two (edit dialog opens directly in
 quick mode → change hour); a keyboard-only user completes a full edit including the mode switch;
 and no mode switch or dialog visit mutates the stored expression.
+
+### 4.5 Follow-up: day-of-week chips and dialog rhythm (2026-11-03, owner feedback)
+
+- The weekly day-of-week control is a **chip toggle group** (7 chips), not the multiple-select listbox: click to toggle, selected = primary tint, `sr-only` checkboxes inside the chips keep the keyboard/screen-reader path, `aria-labelledby` + the `cronDowRequired` hint wiring unchanged.
+- Dialog sections get real vertical rhythm: the form container is `flex flex-col gap-4` (the gap-less `.stack-form` left sections flush), and the picker fieldset carries a 0.75rem internal rhythm.
+- Radio labels (mode + frequency) are `whitespace-nowrap` (the §4.4 squish fix, recorded here because this block is the picker's home).

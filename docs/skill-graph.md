@@ -405,6 +405,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261028-03` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261031-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261031-02` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261104-01` | decision | `root/design-foundation`, `root/project-review` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
@@ -593,7 +594,7 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 
 ## Skill Usage (E3)
 
-Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-03), window 90 days. Skill nodes with usage: 1.
+Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-04), window 90 days. Skill nodes with usage: 2.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (1): root/sync
-- **unused** (0 sessions in 90 days) (107): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout … and 67 more
+- **unused** (0 sessions in 90 days) (106): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout … and 66 more
