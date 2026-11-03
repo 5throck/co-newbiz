@@ -108,7 +108,7 @@ export function ScheduleCronField({
             rendering — neither branch writes the expression. Both branches stay mounted
             (hidden), so quick-setup selections survive a peek at 직접 입력. */}
         <div role="radiogroup" className="flex gap-x-4">
-          <label className="flex items-center gap-1 text-[length:var(--fs-body)]">
+          <label className="flex items-center gap-1 whitespace-nowrap text-[length:var(--fs-body)]">
             <input
               type="radio"
               name={`${idPrefix}CronMode`}
@@ -118,7 +118,7 @@ export function ScheduleCronField({
             />
             {t("cronModeQuick")}
           </label>
-          <label className="flex items-center gap-1 text-[length:var(--fs-body)]">
+          <label className="flex items-center gap-1 whitespace-nowrap text-[length:var(--fs-body)]">
             <input
               type="radio"
               name={`${idPrefix}CronMode`}
