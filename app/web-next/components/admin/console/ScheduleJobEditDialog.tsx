@@ -103,7 +103,7 @@ export function ScheduleJobEditDialog({
             void submit(e);
           }}
           aria-label={t("editJobFormAria")}
-          className="stack-form"
+          className="flex flex-col gap-4"
         >
           <ScheduleCronField
             idPrefix="job"

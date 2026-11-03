@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-04](2026-11-04.md) | feat(web): cron day-of-week chips and dialog rhythm |
 | [2026-11-03](2026-11-03.md) | feat(scheduler): persist per-deal KRX stock series (owner decision option 1) |
 | [2026-11-02](2026-11-02.md) | fix(dart): parse streaming corp-code ZIPs via central directory |
 | [2026-11-01](2026-11-01.md) | feat(web): admin schedule management UI and token list restructure |
@@ -13,7 +14,7 @@
 | [2026-10-29](2026-10-29.md) | feat(agents): canary install — registry + generator over the 41-mirror tree (platform-agent-mirror §6.4) |
 | [2026-10-28](2026-10-28.md) | feat(governance): ADR-0187 W3 P1 report-only process SSOT validators |
 | [2026-10-28](2026-10-28.md) | chore: workspace sync (0 files) |
-| [2026-10-27](2026-10-27.md) | feat(governance): gate integrity — ADR-0186 design and hook hardening |
+| 2026-10-27 | feat(governance): gate integrity — ADR-0186 design and hook hardening |
 | 2026-10-26 | docs(docs): workspace sync (136 files) |
 | 2026-10-25 | docs(docs): workspace sync (11 files) |
 | 2026-10-25 | chore(visual): commit aHash baselines, pin macos runner; record getDb migration analysis |

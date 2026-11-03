@@ -337,12 +337,17 @@ describe("dual-mode field source pins (§4.4 invariants over the client sources)
     );
     expect(FIELD).toContain('role="radiogroup"');
     expect(PICKER).toContain('role="radiogroup"');
-    // every parameter is a native <select>; the multi-select dow is a native multiple select
+    // every parameter is a native <select>; the dow is a checkbox chip group (§4.4 a11y update)
     expect(PICKER.match(/<select/g)?.length).toBeGreaterThanOrEqual(5);
-    expect(PICKER).toContain("multiple");
     expect(PICKER).toContain('t("cronTzNote")');
     expect(PICKER).toContain('t("cronDomHint")');
-    expect(PICKER).toMatch(/htmlFor=\{`\$\{idPrefix\}CronDow`\}/); // the dow multi-select is labelled
+    // the dow chip group is labelled via aria-labelledby + sr-only checkboxes (replaces the multiple select)
+    expect(PICKER).toContain('aria-labelledby={`${idPrefix}CronDow`}');
+    expect(PICKER).toContain('className="sr-only"');
+    expect(PICKER).toContain('type="checkbox"'); // one literal inside the DOW map — 7 chips at runtime
+    // frequency + mode radio labels render on one line (owner-reported squish fix)
+    expect(PICKER).toContain("whitespace-nowrap");
+    expect(FIELD).toContain("whitespace-nowrap");
   });
 });
 
