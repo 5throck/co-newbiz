@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { SOURCE_ADAPTERS } from "../../../scripts/co-newbiz/source-adapters.ts";
+import { parseEnvValue } from "../../../scripts/lib/env-value.ts";
 
 const EXTRA_KEYS = ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "SERPER_API_KEY"] as const;
 const LLM_KEY = /^CO_NEWBIZ_LLM_[A-Z_]+$/;
@@ -49,7 +50,7 @@ export function loadRootEnvPipelineKeys(): void {
         for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
           const m = line.match(/^([A-Z_0-9]+)=(.*)$/);
           if (m && isPipelineEnvKey(m[1]) && process.env[m[1]] === undefined) {
-            process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+            process.env[m[1]] = parseEnvValue(m[2], m[1]);
             fromRootEnv.add(m[1]);
           }
         }
