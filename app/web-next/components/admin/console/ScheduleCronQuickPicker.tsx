@@ -166,7 +166,7 @@ export function ScheduleCronQuickPicker({
   );
 
   return (
-    <fieldset className="stack-form-row" style={{ border: 0, padding: 0, margin: 0 }}>
+    <fieldset className="flex flex-col gap-3" style={{ border: 0, padding: 0, margin: 0 }}>
       <legend className="mb-1 text-[length:var(--fs-caption)] font-semibold">{t("cronFreqLegend")}</legend>
       <div role="radiogroup" className="flex flex-wrap gap-x-4 gap-y-1">
         {PRESETS.map((p) => (
@@ -234,25 +234,42 @@ export function ScheduleCronQuickPicker({
       {ctrl.preset === "daily" && <div className="flex flex-wrap items-center gap-2">{timeSelects}</div>}
       {ctrl.preset === "weekly" && (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor={`${idPrefix}CronDow`} className="text-[length:var(--fs-caption)] font-semibold">
+          <div className="flex flex-col gap-1">
+            <span id={`${idPrefix}CronDow`} className="text-[length:var(--fs-caption)] font-semibold">
               {t("cronDowLegend")}
-            </label>
-            <select
-              id={`${idPrefix}CronDow`}
-              multiple
-              size={7}
-              className="sizing-new-input"
-              value={ctrl.days.map(String)}
-              onChange={(e) => changeDays([...e.target.selectedOptions].map((o) => Number(o.value)))}
+            </span>
+            <div
+              role="group"
+              aria-labelledby={`${idPrefix}CronDow`}
               aria-describedby={dowEmpty ? `${idPrefix}CronError` : undefined}
+              className="flex flex-wrap gap-1"
             >
-              {DOW_VALUES.map((d) => (
-                <option key={d} value={String(d)}>
-                  {t(DOW_LABEL_KEY[d])}
-                </option>
-              ))}
-            </select>
+              {DOW_VALUES.map((d) => {
+                const selected = ctrl.days.includes(d);
+                return (
+                  <label
+                    key={d}
+                    className={`flex cursor-pointer items-center whitespace-nowrap rounded-full border px-[0.7rem] py-[0.25rem] text-[length:var(--fs-body)] ${
+                      selected
+                        ? "border-[color:var(--primary)] bg-[color:var(--primary-bg)] font-semibold"
+                        : "border-[color:var(--border)] text-[color:var(--muted-fg)]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={selected}
+                      onChange={(e) =>
+                        changeDays(
+                          e.target.checked ? [...ctrl.days, d].sort((a, b) => a - b) : ctrl.days.filter((x) => x !== d),
+                        )
+                      }
+                    />
+                    {t(DOW_LABEL_KEY[d])}
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">{timeSelects}</div>
         </>

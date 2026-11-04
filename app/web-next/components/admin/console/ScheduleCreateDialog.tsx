@@ -58,7 +58,7 @@ export function ScheduleCreateDialog({
 
   // Prefill from the selected handler's registry defaults; untouched fields stay out of the
   // payload so the server default (e.g. notify.deliver's 50 s timeout, below the 60 s input
-  // floor) is preserved — a property that holds under the seeded-flow invariant, since
+  // floor) stays out of the payload when untouched — exact preservation holds under the seeded-flow invariant, since
   // notify.deliver is always seeded and has no DELETE endpoint.
   const available = KNOWN_HANDLERS.filter((h) => !existingKeys.has(h.key));
   const [jobKey, setJobKey] = useState(available[0]?.key ?? "");
@@ -138,7 +138,7 @@ export function ScheduleCreateDialog({
             void submit(e);
           }}
           aria-label={t("createJobFormAria")}
-          className="stack-form"
+          className="flex flex-col gap-4"
         >
           <div className="stack-form-row">
             <label htmlFor="createJobKeySelect">{t("colJobKey")}</label>

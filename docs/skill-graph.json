@@ -1766,6 +1766,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261104-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -3137,7 +3142,11 @@
         ".agents/skills/project-review/SKILL.md",
         ".codex/skills/project-review/SKILL.md",
         ".hermes/skills/project-review/SKILL.md"
-      ]
+      ],
+      "usage": {
+        "sessions": 1,
+        "last_used": "2026-11-04"
+      }
     },
     {
       "id": "skill:root/proxy-industry-chain",
@@ -5784,6 +5793,18 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261031-02",
       "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261104-01",
+      "to": "skill:root/design-foundation",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261104-01",
+      "to": "skill:root/project-review",
       "source": "skills_used"
     },
     {
