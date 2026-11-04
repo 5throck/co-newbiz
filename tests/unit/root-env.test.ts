@@ -17,6 +17,9 @@ const TOUCHED = [
   "DART_API_KEY",
   "SERPER_API_KEY",
   "CO_NEWBIZ_LLM_PROVIDER",
+  "CO_NEWBIZ_LLM_MODEL_V2",
+  "NOTIFY_WEBHOOK_URL_OPS_2",
+  "FOO_2_API_KEY",
   "UNRELATED_SECRET",
 ];
 let tmp: string;
@@ -111,5 +114,37 @@ describe("root-env loader", () => {
     expect(envKeySource("KOSIS_API_KEY")).toBe("root_env");
     expect(envKeySource("DART_API_KEY")).toBe("process_env");
     expect(envKeySource("SERPER_API_KEY")).toBeNull();
+  });
+});
+
+describe("digit-bearing key charset (DEC-20261104-04)", () => {
+  function loadWith(envLine: string): void {
+    writeFileSync(join(tmp, ".env"), `${envLine}\n`);
+    resetRootEnvForTests(tmp);
+    loadRootEnvPipelineKeys();
+  }
+
+  // Fails-before/passes-after per design 2026-08-31 §4 Row 1: this loader's
+  // line regex already admits digits, so the only blocking layer pre-change is
+  // the family sub-patterns LLM_KEY/NOTIFY_KEY — both widen in this change.
+  test("admits a digit-suffixed LLM family key via the loader walk (CO_NEWBIZ_LLM_MODEL_V2)", () => {
+    expect(isPipelineEnvKey("CO_NEWBIZ_LLM_MODEL_V2")).toBe(true);
+    loadWith("CO_NEWBIZ_LLM_MODEL_V2=abc");
+    expect(process.env.CO_NEWBIZ_LLM_MODEL_V2).toBe("abc");
+  });
+
+  test("admits a digit-suffixed NOTIFY channel key (NOTIFY_WEBHOOK_URL_OPS_2)", () => {
+    expect(isPipelineEnvKey("NOTIFY_WEBHOOK_URL_OPS_2")).toBe(true);
+    loadWith("NOTIFY_WEBHOOK_URL_OPS_2=https://example.invalid/hook");
+    expect(process.env.NOTIFY_WEBHOOK_URL_OPS_2).toBe("https://example.invalid/hook");
+  });
+
+  // Passes before and after — regression guard, not a fails-before case.
+  // DEC-20261104-04 consequence: digits are admitted only inside the families
+  // that were already prefix-wildcarded; a non-family digit key stays rejected.
+  test("still rejects a non-family digit key (FOO_2_API_KEY)", () => {
+    expect(isPipelineEnvKey("FOO_2_API_KEY")).toBe(false);
+    loadWith("FOO_2_API_KEY=abc");
+    expect(process.env.FOO_2_API_KEY).toBeUndefined();
   });
 });

@@ -1796,6 +1796,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261104-07",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -2233,8 +2238,8 @@
         ".hermes/skills/decision-record/SKILL.md"
       ],
       "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-04"
+        "sessions": 2,
+        "last_used": "2026-11-05"
       }
     },
     {
@@ -2759,8 +2764,8 @@
         ".hermes/skills/k-dart/SKILL.md"
       ],
       "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-04"
+        "sessions": 2,
+        "last_used": "2026-11-05"
       }
     },
     {
@@ -3523,8 +3528,8 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 5,
-        "last_used": "2026-11-04"
+        "sessions": 6,
+        "last_used": "2026-11-05"
       }
     },
     {
@@ -5880,6 +5885,12 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261104-06",
       "to": "skill:root/design-foundation",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261104-07",
+      "to": "skill:root/decision-record",
       "source": "skills_used"
     },
     {

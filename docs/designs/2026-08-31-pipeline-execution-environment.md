@@ -116,15 +116,35 @@ coupling — `app/web-next/lib/safe-fetch-text.ts:17` already imports
   — and `NOTIFY_SMTP_PASS` is the key family where a literal `#` in a password
   is plausible.
 
-**Deliberately out of scope** (so a later reader does not assume support): the
-key charset stays as each reader has it — `app/web-next/lib/root-env.ts` and
-`app/web-next/prisma.config.ts` match `[A-Z_0-9]+`, while
-`scripts/lib/env-keys.ts:18` still matches `[A-Z_]+` with **no digits**, which is
-the deferred Row 1 defect (a key such as `DART_API_KEY_V2` is unreachable
-through that loader), not a supported shape. dotenv also takes
-lowercase and dotted keys, none of which exist on disk; `export ` prefixes,
-`key: value` colon form, YAML containers/anchors, and multiline values are not
-supported (0 occurrences of each in `.env`, `.env.prod`, `app/web-next/.env`).
+**Row 1 closure — key charset `[A-Z_0-9]+` (DEC-20261104-04).** The deferred
+key-charset defect is closed under this spec by PM gate ruling 2026-11-04;
+implementation (Row 1) is a separate dispatch:
+
+- Line match: `scripts/lib/env-keys.ts:33` (pre-change) `/^([A-Z_]+)=(.*)$/`
+  → `/^([A-Z_0-9]+)=(.*)$/`, matching the other two readers —
+  `app/web-next/lib/root-env.ts` and `app/web-next/prisma.config.ts:16`
+  (already `[A-Z_0-9]+`, untouched).
+- Family sub-patterns widen to `[A-Z_0-9]+` in the same change, because a
+  line-regex-only fix has zero observable behaviour — the allowlist would
+  still reject every digit key, so no fails-before/passes-after test could
+  exist: `PIPELINE_ENV_KEYS` `CO_NEWBIZ_LLM_[A-Z_]+` →
+  `CO_NEWBIZ_LLM_[A-Z_0-9]+` (env-keys.ts, pre-change `:17-18`); `LLM_KEY`
+  likewise (root-env.ts, pre-change `:19`); `NOTIFY_KEY`
+  `/^NOTIFY_[A-Z_]+$/` → `/^NOTIFY_[A-Z_0-9]+$/` (root-env.ts, pre-change
+  `:24`) — the prefix rule's stated purpose is that channel names grow, so a
+  digit-suffixed channel name must not be a silent trap.
+- Named adapter credentials in `PIPELINE_ENV_KEYS` (DART/ECOS/KRX/KOSIS/
+  DATA_GO_KR/LAW_OC/TAVILY) stay exact-name.
+- Security framing: the widening stays inside families that are already
+  prefix-wildcarded (`CO_NEWBIZ_LLM_*`, `NOTIFY_*`); no new family is
+  admitted; no live key on disk has digits (0 digit-bearing key lines in
+  `.env`, `.env.prod`, `app/web-next/.env`, grep-verified 2026-11-04).
+
+**Deliberately out of scope** (so a later reader does not assume support):
+dotenv also takes lowercase and dotted keys, none of which exist on disk;
+`export ` prefixes, `key: value` colon form, YAML containers/anchors, and
+multiline values are not supported (0 occurrences of each in `.env`,
+`.env.prod`, `app/web-next/.env`).
 
 ## 3. Non-goals
 
@@ -148,3 +168,9 @@ supported (0 occurrences of each in `.env`, `.env.prod`, `app/web-next/.env`).
   `tests/unit/prisma-env-loader.test.ts` (the Prisma config's loop, replicated
   with a source-drift guard). The 2026-11-04 divergence must fail before the
   change and pass after.
+- Row 1 (DEC-20261104-04): a digit-bearing family key loads through each
+  loader — `CO_NEWBIZ_LLM_MODEL_V2` via root-env and env-keys;
+  `NOTIFY_WEBHOOK_URL_OPS_2` admitted by root-env's NOTIFY rule — while a
+  non-family digit key (`FOO_2_API_KEY`) stays rejected, and the existing
+  suite stays green. The digit-key cases must fail before the charset change
+  and pass after.

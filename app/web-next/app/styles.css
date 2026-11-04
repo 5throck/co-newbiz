@@ -294,6 +294,11 @@
     transition: all 0.3s var(--ease-spring);
   }
 
+  select option, select optgroup {
+    background-color: var(--surface);
+    color: var(--fg);
+  }
+
   input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
