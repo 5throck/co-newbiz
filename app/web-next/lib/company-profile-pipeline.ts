@@ -30,9 +30,12 @@ export interface CompanyProfilePayload {
   dartFinancials: {
     available?: boolean;
     year?: string;
-    items?: Array<{ name: string; value: number }>;
+    /** 저장 페이로드는 DartFinancials를 통째로 퍼옮긴 것(:557 스프레드) — dart-client v1.3.0부터
+     *  항목에 연도별 작성 기준 fsDiv가 실린다 (연도별 단일 기준 폴백) */
+    items?: Array<{ name: string; value: number; fsDiv?: "CFS" | "BFS" }>;
     reportUrl?: string;
     error?: string;
+    fsDiv?: "CFS" | "BFS" | "mixed";
   };
   strengths: string[];
   weaknesses: string[];

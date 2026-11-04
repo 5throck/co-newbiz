@@ -2331,6 +2331,7 @@
       "profileFinancialsTab": {
         "account": "계정",
         "accountsNotCollected": "미수집 계정:",
+        "consolidated": "연결",
         "dartFinancialSummaryAccountYear": "DART 재무 요약 (계정 × 연도)",
         "dartFinancialSummaryAccountYear2": "DART 재무 요약 (계정 × 연도)",
         "dartP1": "(DART {p1}년)",
@@ -2342,6 +2343,7 @@
         "financialRatiosByYear": "재무 비율 (연도별)",
         "financialRatiosByYear2": "재무 비율 (연도별)",
         "insufficientData": "데이터 부족",
+        "mixedSourceNote": "연결·개별 재무제표가 혼합되어 있습니다 — 연도별 작성 기준이 다릅니다.",
         "netMargin": "순이익률",
         "noFinancialData": "재무 데이터 없음",
         "operatingMargin": "영업이익률",
@@ -2350,6 +2352,7 @@
         "p1HundredMillions2": "{p1}억",
         "regulatoryFilingAnnualReport": "전자공시 사업보고서",
         "revenueChangeRate": "매출 증감률",
+        "separate": "개별",
         "source": "출처:",
         "unitKrw100MillionsSource": "단위: 억원 · 출처: DART 사업보고서",
         "viewOriginal": "원문 보기",
@@ -2656,7 +2659,10 @@
         "webResearchCount": "외부 웹 리서치 {p1}건",
         "dartReportLabel": "전자공시 사업보고서 ({p1}년)",
         "viewOriginal": "원문 보기",
-        "noWebSources": "웹 리서치 출처가 없습니다."
+        "noWebSources": "웹 리서치 출처가 없습니다.",
+        "consolidated": "연결",
+        "separate": "개별",
+        "mixedSourceNote": "연결·개별 재무제표가 혼합되어 있습니다 — 연도별 작성 기준이 다릅니다."
       },
       "competitorRegistry": {
         "requestFailed": "요청 실패",

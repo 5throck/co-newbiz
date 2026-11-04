@@ -32,9 +32,11 @@ export interface SynergyPayload {
   dartFinancials: {
     available: boolean;
     year?: string;
-    items?: Array<{ name: string; value: number }>;
+    items?: Array<{ name: string; value: number; fsDiv?: string }>;
     reportUrl?: string;
     error?: string;
+    /** 조회 윈도우 집계 작성 기준 — 연도별 기준이 갈리면 "mixed" (P2-6 연도별 폴백) */
+    fsDiv?: "CFS" | "BFS" | "mixed";
   };
   researchSources: SynergySourceRef[];
   /** 재무 데이터 출처 추적 — DART / 신용평가자료 / 외부 검색 */
@@ -194,7 +196,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       reusedProfile = prof;
       corpCode = prof.dartCorpCode ?? null;
       dart = prof.dartFinancials?.available
-        ? { corpCode: corpCode ?? "", found: true, year: prof.dartFinancials.year, items: (prof.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW" })), reportUrl: prof.dartFinancials.reportUrl }
+        ? { corpCode: corpCode ?? "", found: true, year: prof.dartFinancials.year, items: (prof.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW", fsDiv: i.fsDiv })), reportUrl: prof.dartFinancials.reportUrl }
         : { corpCode: corpCode ?? "", found: false, items: [], error: prof.dartFinancials?.error ?? "프로파일에 재무 데이터 없음" };
     } else {
       const grp = db.query("SELECT name FROM company_group WHERE id = ?").get(row.group_id) as { name: string } | undefined;
@@ -222,7 +224,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
       };
       corpCode = best.dartCorpCode ?? null;
       dart = best.dartFinancials?.available
-        ? { corpCode: corpCode ?? "", found: true, year: best.dartFinancials.year, items: (best.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW" })), reportUrl: best.dartFinancials.reportUrl }
+        ? { corpCode: corpCode ?? "", found: true, year: best.dartFinancials.year, items: (best.dartFinancials.items ?? []).map((i) => ({ name: i.name, value: i.value, unit: "KRW", fsDiv: i.fsDiv })), reportUrl: best.dartFinancials.reportUrl }
         : { corpCode: corpCode ?? "", found: false, items: [], error: "그룹 대표 재무 없음" };
     }
     stepSummaries.push({

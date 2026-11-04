@@ -8,7 +8,7 @@ export interface MemberRow {
 }
 export interface Profile {
   companyName: string;
-  dartFinancials?: { available?: boolean; year?: string; items?: Array<{ name: string; value: number; year?: string }>; reportUrl?: string; error?: string };
+  dartFinancials?: { available?: boolean; year?: string; items?: Array<{ name: string; value: number; year?: string; fsDiv?: string }>; reportUrl?: string; error?: string; fsDiv?: "CFS" | "BFS" | "mixed" };
   strengths?: string[];
   weaknesses?: string[];
   businessAssessment?: string;

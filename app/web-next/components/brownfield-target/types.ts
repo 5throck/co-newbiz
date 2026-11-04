@@ -85,9 +85,10 @@ export interface CompanyProfile {
   dartFinancials?: {
     available?: boolean;
     year?: string;
-    items?: Array<{ name: string; value: number; year?: string }>;
+    items?: Array<{ name: string; value: number; year?: string; fsDiv?: string }>;
     reportUrl?: string;
     error?: string;
+    fsDiv?: "CFS" | "BFS" | "mixed";
   };
 }
 export interface CompanyProfileResp {

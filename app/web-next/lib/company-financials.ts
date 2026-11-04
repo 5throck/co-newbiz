@@ -88,7 +88,10 @@ export function deriveFinancialAnalysis(dart: DartFinancials): FinancialAnalysis
       out.missingAccounts.push(alias.label);
       continue;
     }
-    // Dedup: same account+year may appear from CFS/BFS overlap — keep the first.
+    // Dedup: keep the first item per account+year. Since dart-client v1.3.0 one
+    // year adopts exactly one statement basis (per-year CFS→BFS fallback), so the
+    // fetch path can no longer produce CFS/BFS overlap for the same account+year —
+    // this guard is now dead-letter defense for payloads fetched by older versions.
     const byYear = new Map<string, number>();
     for (const it of matched) {
       const y = it.year ?? years[years.length - 1];
@@ -123,6 +126,7 @@ export function deriveFinancialAnalysis(dart: DartFinancials): FinancialAnalysis
     out.ratios.push(row);
   }
   if (dart.fsDiv === "BFS") out.notes.push("연결재무제표 미제출 — 개별(BFS) 기준");
+  if (dart.fsDiv === "mixed") out.notes.push("연결·개별 재무제표가 혼합되어 있습니다 — 연도별 작성 기준이 다릅니다 (연도별 표기 참조)");
   if (dart.integrity === "warning") out.notes.push(`합산 검증 경고: ${(dart.integrityNotes ?? []).join("; ")}`);
   return out;
 }

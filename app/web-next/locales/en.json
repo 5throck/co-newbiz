@@ -2331,6 +2331,7 @@
       "profileFinancialsTab": {
         "account": "Account",
         "accountsNotCollected": "Accounts not collected:",
+        "consolidated": "Consolidated",
         "dartFinancialSummaryAccountYear": "DART financial summary (account × year)",
         "dartFinancialSummaryAccountYear2": "DART financial summary (account × year)",
         "dartP1": "(DART {p1})",
@@ -2342,6 +2343,7 @@
         "financialRatiosByYear": "Financial ratios (by year)",
         "financialRatiosByYear2": "Financial ratios (by year)",
         "insufficientData": "Insufficient data",
+        "mixedSourceNote": "Consolidated and separate statements are mixed — the reporting basis differs by year.",
         "netMargin": "Net margin",
         "noFinancialData": "No financial data",
         "operatingMargin": "Operating margin",
@@ -2350,6 +2352,7 @@
         "p1HundredMillions2": "{p1} ×100M",
         "regulatoryFilingAnnualReport": "Regulatory filing annual report",
         "revenueChangeRate": "Revenue change rate",
+        "separate": "Separate",
         "source": "Source:",
         "unitKrw100MillionsSource": "Unit: ×100M KRW · Source: DART annual reports",
         "viewOriginal": "View original",
@@ -2656,7 +2659,10 @@
         "webResearchCount": "{p1} external web research items",
         "dartReportLabel": "DART annual report ({p1})",
         "viewOriginal": "View original",
-        "noWebSources": "No web research sources."
+        "noWebSources": "No web research sources.",
+        "consolidated": "Consolidated",
+        "separate": "Separate",
+        "mixedSourceNote": "Consolidated and separate statements are mixed — the reporting basis differs by year."
       },
       "competitorRegistry": {
         "requestFailed": "Request failed",
