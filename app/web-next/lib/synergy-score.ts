@@ -47,6 +47,19 @@ interface MarketSnapshot {
   relatedIndustries: string[]; // 후방/전방 산업 이름 목록 (chainDirection)
 }
 
+/** bottomUpCagr 저장 단위는 ×100 %p이고 작성자는 market-sizing-pipeline 하나다
+ *  (단일 작성자, 단일 단위 — DEC-20261104-06 item B). 따라서 /100 환산은
+ *  무조건 적용한다(구 `> 1` 휴리스틱 제거 — 0.8%p·음수를 분수로 오인했던 결함).
+ *  작성자 봉투는 [-1, 0.25] 분수, 즉 저장값 [-100, 25] %p다(cagrBase 상한 0.25
+ *  하드캡). 그러므로 환산 결과가 비유한수이거나 |분수| > 1(저장값 |pct| > 100)이면
+ *  외부 주입 단위 계약 위반 입력으로 보고 null — 팩터는 미반영 제외 경로로 간다.
+ *  (검토 2차: 세척 밴드 (0.25, 10]을 닫기 위해 |분수| > 10에서 > 1로 강화.) */
+export function toCagrFraction(cagrPct: number | null): number | null {
+  if (cagrPct === null) return null;
+  const c = cagrPct / 100;
+  return Number.isFinite(c) && Math.abs(c) <= 1 ? c : null;
+}
+
 export interface ScoreInputs {
   opportunity: { market_scope: string | null; value_chain_node: string | null; name: string } | null;
   profile: {
@@ -92,7 +105,10 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
 
   // 1) Market attractiveness — linked market's CAGR. Piecewise curve so
   // mature markets are not flattened to 0: 0%→0, 8%→50, 35%+→100.
-  if (market && market.cagr !== null) {
+  // Fail-closed(4element amendment 2026-11-04, DEC-20261104-06 item C): 성장률이
+  // null·비유한수·≤0이면 매력도 곡선의 정의역 밖 — 0/100으로 클램프해 날조하지
+  // 않고 팩터를 제외한다(누락 입력과 동일한 취급, 위 원칙 준수).
+  if (market && market.cagr !== null && Number.isFinite(market.cagr) && market.cagr > 0) {
     const c = market.cagr;
     const { cagrMidpoint, cagrUpperSpan, midpointScore } = MARKET_ATTRACTIVENESS_CURVE;
     const value =
@@ -104,6 +120,12 @@ export function computeSynergyScore(inputs: ScoreInputs): SynergyScoreResult {
       baseWeight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, weight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, value,
       note: `${market.industry} 성장률 ${(c * 100).toFixed(1)}% → 정규화 ${value.toFixed(0)}/100`,
     });
+  } else if (market) {
+    // 시장은 연결됐지만 성장률이 비정상/비양수 — 입력 부재가 아닌 입력 결함으로 제외.
+    missing.push("성장률 비정상/비양수 — 시장 매력도 팩터 미반영");
+    factors.push({
+      key: "market_attractiveness", label: "시장 매력도",
+      baseWeight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, weight: 0, value: null, note: "성장률 비정상/비양수 — 시장 매력도 팩터 미반영" });
   } else {
     missing.push("완료된 S1 시장분석(CAGR) 없음 — 시장 매력도 팩터 미반영");
     factors.push({

@@ -408,7 +408,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   // 시너지 점수 — 규칙 기반 팩터 엔진이 앵커를 계산하고(결정론·인자 분해),
   // LLM이 가용하면 서사 근거와 ±10p 이내 보정만 추가한다. LLM 불가 시에도
   // 규칙 점수 + 템플릿 근거로 저하 동작한다 (fail-degraded, 점수 소실 없음).
-  const { computeSynergyScore } = await import("./synergy-score.ts");
+  const { computeSynergyScore, toCagrFraction } = await import("./synergy-score.ts");
   // ADR-0182 — 필요 역량 충족도 (5번째 팩터): the opportunity's capability
   // register holding coverage (0-100, essential rows weighted ×2 via
   // summarizeGap.essentialCoveragePct blend). Null when the register is
@@ -435,7 +435,7 @@ export async function runSynergyPipeline(db: Database, analysisId: string): Prom
   const rule = computeSynergyScore({
     opportunity: oppRow ? { market_scope: oppRow.market_scope, value_chain_node: null, name: oppRow.name } : null,
     profile: reusedProfile ? { industryExposure: reusedProfile.industryExposure ?? [], strengths: financialStrengths, ratios: reusedProfile.financialAnalysis?.ratios ?? [] } : null,
-    markets: marketSummaries.map((m) => ({ industry: m.industry, cagr: m.cagrPct === null ? null : m.cagrPct > 1 ? m.cagrPct / 100 : m.cagrPct, relatedIndustries: m.relatedIndustries })),
+    markets: marketSummaries.map((m) => ({ industry: m.industry, cagr: toCagrFraction(m.cagrPct), relatedIndustries: m.relatedIndustries })),
     capabilityCoverage,
     capabilityCoverageNote,
   });

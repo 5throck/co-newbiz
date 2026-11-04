@@ -28,6 +28,14 @@ const NOW = "2026-10-18T00:00:00Z";
 let cookie = "";
 let oppId = "";
 let synId = "";
+// DEC-20261104-06 — additional S1 markets seeded per bottomUpCagr case (item B
+// conversion seam, observed end-to-end through the rescored factors): -100
+// (the degenerate defect), 6.9 (healthy), 1500 (range-sanity garbage), 0.8
+// (sub-1 pct point the old heuristic misread as a fraction).
+let sidNeg = "";
+let sidHealthy = "";
+let sidGarbage = "";
+let sidSubOne = "";
 
 async function loginCookie(userId: string, password: string): Promise<string> {
   const res = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId, password }) });
@@ -76,6 +84,30 @@ beforeAll(async () => {
   });
   db.run("INSERT INTO synergy_version (id, analysis_id, version_no, payload, created_by, created_at) VALUES (?,?,?,?,?,?)",
     [ulid(), synId, 1, legacyPayload, "test", NOW]);
+
+  // DEC-20261104-06 — one market+opportunity+legacy analysis per bottomUpCagr
+  // case; the opportunity's market_scope exact-matches its industry so the
+  // rescore's pickMarket selects it from the shared completed-markets list.
+  const seedCagrCase = (industryName: string, bottomUpCagr: number): string => {
+    const indId = ulid();
+    db.run("INSERT INTO md_industry (id, name_ko, name_en, created_at) VALUES (?,?,?,?)", [indId, industryName, industryName, NOW]);
+    const msId = ulid();
+    db.run("INSERT INTO market_sizing_analysis (id, industry_id, status, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?)", [msId, indId, "completed", "test", NOW, NOW]);
+    db.run("INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), msId, 1, JSON.stringify({ matrix: { consistency: { bottomUpCagr }, chainDirection: { relatedIndustries: [] } } }), "test", NOW]);
+    const oid = ulid();
+    db.run("INSERT INTO opportunity (id, name, status, market_scope, created_by, created_at) VALUES (?,?,?,?,?,?)", [oid, `${industryName} 기회`, "assessed", industryName, "test", NOW]);
+    const sid = ulid();
+    db.run("INSERT INTO synergy_analysis (id, company_id, status, current_step, created_by, created_at, opportunity_id) VALUES (?,?,?,?,?,?,?)",
+      [sid, "md-synergy-registry-sentinel", "completed", 5, "test", NOW, oid]);
+    db.run("INSERT INTO synergy_version (id, analysis_id, version_no, payload, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), sid, 1, JSON.stringify({ synergyScore: 40, synergyScoreFactors: [], financialStrengths: [], marketLinkage: { synergyAreas: [] } }), "test", NOW]);
+    return sid;
+  };
+  sidNeg = seedCagrCase("성장 정체 부품 산업", -100);
+  sidHealthy = seedCagrCase("저성장 성숙 산업", 6.9);
+  sidGarbage = seedCagrCase("이상치 성장률 산업", 1500);
+  sidSubOne = seedCagrCase("초저성장 산업", 0.8);
 });
 
 afterAll(() => {
@@ -127,5 +159,61 @@ describe("POST /api/synergy/analyses/[id]/rescore (legacy → current scheme)", 
     expect(tabs).toContain("!storedFactors.some((f) => f?.key === \"capability_coverage\")");
     const route = readFileSync("app/web-next/app/api/synergy/analyses/[id]/rescore/route.ts", "utf8");
     expect(route).toContain("requireBusinessActor");
+  });
+});
+
+// DEC-20261104-06 — the bottomUpCagr unit contract observed END-TO-END: the
+// stored pct-point value passes the toCagrFraction seam (unconditional /100 +
+// range sanity) and the market_attractiveness guard excludes non-positive or
+// out-of-range growth instead of clamping to a fabricated 0/100.
+describe("bottomUpCagr unit conversion → market factor (item B + C)", () => {
+  const INVALID_NOTE = "성장률 비정상/비양수 — 시장 매력도 팩터 미반영";
+
+  const rescoredFactors = async (sid: string) => {
+    const res = await nextRequest(`/api/synergy/analyses/${sid}/rescore`, { method: "POST", headers: { cookie }, body: "{}" });
+    expect(res.status).toBe(201);
+    const stored = JSON.parse(db.query("SELECT payload FROM synergy_version WHERE analysis_id = ? AND version_no = 2").get(sid).payload) as {
+      synergyScore: number | null;
+      synergyScoreFactors: Array<{ key: string; value: number | null; weight: number; note: string }>;
+    };
+    return { stored, mkt: stored.synergyScoreFactors.find((f) => f.key === "market_attractiveness")! };
+  };
+
+  test("stored bottomUpCagr -100 (pct) → fraction -1.0 → factor EXCLUDED with the fail-closed note", async () => {
+    const { stored, mkt } = await rescoredFactors(sidNeg);
+    expect(mkt.value).toBeNull();
+    expect(mkt.weight).toBe(0);
+    expect(mkt.note).toBe(INVALID_NOTE);
+    // with only scope_match usable (< MIN_FACTORS) the score fails closed too
+    expect(stored.synergyScore).toBeNull();
+  });
+
+  test("stored bottomUpCagr 6.9 (pct) → fraction 0.069 → scores on the existing curve (≈43.1)", async () => {
+    const { stored, mkt } = await rescoredFactors(sidHealthy);
+    expect(mkt.value).toBeCloseTo((6.9 / 100 / 0.08) * 50, 1); // 43.125 — below-midpoint segment
+    expect(mkt.note).toContain("성장률 6.9%");
+    // usable: market 43.125 (w .3) + scope 100 (w .1, direct match) → renormalized 57.34 → 57
+    expect(stored.synergyScore).toBe(57);
+  });
+
+  test("stored bottomUpCagr 1500 (pct) → fraction 15 > 1 → range sanity nulls it → factor excluded (old heuristic scored 100/100)", async () => {
+    const { stored, mkt } = await rescoredFactors(sidGarbage);
+    expect(mkt.value).toBeNull();
+    expect(mkt.note).toBe(INVALID_NOTE);
+    expect(stored.synergyScore).toBeNull();
+  });
+
+  test("stored bottomUpCagr 0.8 (pct) → 0.008, no longer passed through as a 'fraction' (old: 100/100)", async () => {
+    const { mkt } = await rescoredFactors(sidSubOne);
+    expect(mkt.value).toBeCloseTo((0.8 / 100 / 0.08) * 50, 5); // 5 — not the old clamp(500)→100
+    expect(mkt.note).toContain("성장률 0.8%");
+  });
+
+  test("item B wiring — the >1 heuristic is gone and toCagrFraction is called at both seams", () => {
+    for (const f of ["app/web-next/lib/synergy-pipeline.ts", "app/web-next/lib/synergy-rescore.ts"]) {
+      const src = readFileSync(f, "utf8");
+      expect(src).not.toContain("cagrPct > 1");
+      expect(src).toContain("toCagrFraction(");
+    }
   });
 });

@@ -318,6 +318,20 @@ export async function classifyIndustryKsic(db: Database, industryId: string, ind
   return code;
 }
 
+// Zero-baseline 방어(DEC-20261104-06 item A) — LLM 기준선이 전부 0으로 해석되면
+// (셀이 명시적 0이거나 num(v, 0)으로 접혀 0이 되면) scale과 앵커 정합이 모두
+// 무력화되어 all-zero 매트릭스가 버전으로 저장된다. 균일 폴백으로 채우는 것은
+// 근거 없는 시장 구조를 날조하는 것이므로(Step 5 탑다운 경로의 "절대 날조하지
+// 않는다" 원칙) 실행을 여기서 실패로 종료한다 — 매트릭스 버전은 저장되지 않고,
+// 재분석이 유일한 복구 경로다(같은 입력 재시도 시 회복될 수 있음).
+// 호출 조건: LLM completion이 실제로 파싱된 경우(cagrJson !== null)에만 —
+// 오프라인·LLM 장애 실행(cagrJson === null)은 수동 완료용 스켈레톤으로 저장되는
+// 것이 계약이므로(Wave C-3 synthesized 경로) 이 방어의 대상이 아니다.
+export function assertUsableBaseline(rawTotal: number, totalNow: number): void {
+  if (rawTotal > 0 && totalNow > 0) return;
+  throw new Error("기준선 매트릭스가 전부 0으로 해석되어 분석을 완료하지 못했습니다 — 재분석으로 재시도하세요");
+}
+
 export async function runSizingPipeline(db: Database, analysisId: string): Promise<void> {
   // ADR-0126/0128 — 재분석 일관성: 직전 완료 버전의 산업 사슬 방향을 앵커로
   // 주입한다(옵션 2). LLM 샘플링 변동은 그대로 두되(temperature 0 미고정),
@@ -678,6 +692,10 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       }
     }
   }
+  // Zero-baseline 방어 — LLM completion이 전부 0 기준선이면 날조된 균일 폴백으로
+  // 메우지 않고 실행을 실패로 종료한다(DEC-20261104-06 item A; 헬퍼 주석 참조).
+  // cagrJson === null(오프라인·LLM 장애)은 스켈레톤 경로라 방어 대상이 아니다.
+  if (cagrJson !== null) assertUsableBaseline(rawTotal, totalNow);
   const bandOverrides: SizingMatrix["bandOverrides"] = {};
   if (Array.isArray(cagrJson?.overrides)) {
     for (const o of cagrJson!.overrides as Array<Record<string, unknown>>) {
