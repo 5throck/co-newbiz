@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.2.0
 /**
  * i18n-lint — the re-liquefaction guard (design 2026-10-23-i18n-ui-adoption
  * §3.6). Scans app/web-next sources for Hangul occurring in CODE (line and
@@ -7,6 +7,20 @@
  * counts against a committed baseline allowlist. The baseline records every
  * file still carrying Korean at extraction start; extraction batches shrink
  * their entries via `--update`, and the allowlist only ever shrinks.
+ *
+ * Checks (all three gate the exit code):
+ *   1. Korean-line baseline — Hangul in code vs the committed allowlist
+ *      (this file's original check, v1.0.0).
+ *   2. Dotted-key — translator-taking label maps whose `stages.*`/`common.*`/
+ *      `pages.*` values are rendered without a translator call (v1.1.0,
+ *      review W1 H2).
+ *   3. Dynamic-key catalog coverage — template-literal keys like
+ *      `t(`handling_${e.handling}`)` are invisible to both checks above;
+ *      v1.2.0 cross-checks every member of a source type-union (e.g.
+ *      `RetentionHandling` in db/lib/retention-registry.ts — the SSOT) ×
+ *      locale against the nested locale catalogs and fails on a missing or
+ *      empty key. An unparseable values source is itself a violation
+ *      (fail-loud). Design 2026-11-04-i18n-dynamic-key-lint.
  *
  * Rules:
  *   violation — a file NOT in the baseline contains Korean, or a file's
@@ -28,8 +42,10 @@
  *      counting, so Korean in comments neither counts nor fails.
  *
  * Wired as `bun run lint:i18n` (package.json) and asserted green by
- * tests/unit/i18n-lint.test.ts, so the /sync unit suite fails the PR that
- * reintroduces a hard-coded string.
+ * tests/unit/i18n-lint.test.ts (checks 1–2) and
+ * tests/unit/i18n-dynamic-key-lint.test.ts (check 3), so the /sync unit
+ * suite fails the PR that reintroduces a hard-coded string or ships an
+ * enum value without catalog keys.
  *
  * Usage:
  *   bun scripts/co-newbiz/i18n-lint.ts            # check (exit 1 on violations)
@@ -358,6 +374,114 @@ export function scanUnresolvedDottedKeys(projectRoot: string = findProjectRoot()
   return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }
 
+/** Locales with committed catalogs under app/web-next/locales/. */
+export const LOCALES = ["ko", "en"] as const;
+
+/**
+ * A dynamic key family: UI code interpolates an enum value into a template
+ * literal (`t(`handling_${e.handling}`)`), so the effective key vocabulary is
+ * the source type's union members under `namespace`. `valuesSource` is the
+ * repo-relative file owning the vocabulary (the SSOT); `typeName` is the
+ * `export type` union declaration parsed for the member list.
+ */
+export interface DynamicKeyFamily {
+  prefix: string;
+  namespace: string;
+  valuesSource: string;
+  typeName: string;
+}
+
+/** Families shipped today, all sourced from the retention registry SSOT. */
+export const DYNAMIC_KEY_FAMILIES: readonly DynamicKeyFamily[] = [
+  { prefix: "handling_", namespace: "admin.ops", valuesSource: "db/lib/retention-registry.ts", typeName: "RetentionHandling" },
+  { prefix: "handlingHint_", namespace: "admin.ops", valuesSource: "db/lib/retention-registry.ts", typeName: "RetentionHandling" },
+];
+
+/**
+ * Quoted string literals of the `export type <typeName> = ...;` declaration
+ * span, comments stripped first (a quoted example in a comment cannot
+ * pollute the result) and multi-line unions tolerated. Returns [] when the
+ * declaration cannot be located or yields no literals — callers treat that
+ * as a violation (fail-loud), never a silent pass.
+ */
+export function parseUnionTypeValues(src: string, typeName: string): string[] {
+  const code = stripCommentsAndStringsKeepStructure(src);
+  const decl = new RegExp(`\\bexport\\s+type\\s+${typeName}\\b[^=;{]*=`).exec(code);
+  if (!decl) return [];
+  const semi = code.indexOf(";", decl.index + decl[0].length);
+  const span = semi < 0 ? code.slice(decl.index + decl[0].length) : code.slice(decl.index + decl[0].length, semi);
+  const values: string[] = [];
+  const literal = /"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'/g;
+  for (let m = literal.exec(span); m; m = literal.exec(span)) values.push(m[1] ?? m[2] ?? "");
+  return values;
+}
+
+/** True when `keyPath` ("a.b.c") resolves through the nested catalog to a non-empty string leaf. */
+export function resolvesKeyPath(catalog: unknown, keyPath: string): boolean {
+  let node: unknown = catalog;
+  for (const segment of keyPath.split(".")) {
+    if (node === null || typeof node !== "object") return false;
+    node = (node as Record<string, unknown>)[segment];
+  }
+  return typeof node === "string" && node.length > 0;
+}
+
+/** One missing (or empty) dynamic-key catalog entry, or one unparseable values source. */
+export interface DynamicKeyCoverageViolation {
+  locale: string;
+  key: string;
+  valuesSource: string;
+  typeName: string;
+}
+
+function loadLocaleCatalog(projectRoot: string, locale: string): Record<string, unknown> {
+  return JSON.parse(readFileSync(join(projectRoot, "app/web-next/locales", `${locale}.json`), "utf8")) as Record<string, unknown>;
+}
+
+/**
+ * Check 3 — for each family, parse the source type's union members and
+ * require `namespace.<prefix><value>` to resolve to a non-empty string in
+ * every locale catalog. Pure and injectable: pass in-memory `catalogs`
+ * (locale → nested JSON) to scan without touching disk; omit to read the
+ * committed locale files. A values source that cannot be parsed is itself a
+ * violation (locale "*") — a linter that stops reading its SSOT must fail,
+ * not green-light.
+ */
+export function scanDynamicKeyCoverage(
+  families: readonly DynamicKeyFamily[] = DYNAMIC_KEY_FAMILIES,
+  projectRoot: string = findProjectRoot(),
+  catalogs?: Record<string, unknown>,
+): DynamicKeyCoverageViolation[] {
+  const violations: DynamicKeyCoverageViolation[] = [];
+  for (const family of families) {
+    let values: string[] = [];
+    try {
+      values = parseUnionTypeValues(readFileSync(join(projectRoot, family.valuesSource), "utf8"), family.typeName);
+    } catch {
+      values = [];
+    }
+    if (values.length === 0) {
+      violations.push({
+        locale: "*",
+        key: `unparseable values source: ${family.valuesSource} — 0 literals parsed for ${family.typeName}`,
+        valuesSource: family.valuesSource,
+        typeName: family.typeName,
+      });
+      continue;
+    }
+    for (const locale of LOCALES) {
+      const catalog = catalogs?.[locale] ?? loadLocaleCatalog(projectRoot, locale);
+      for (const value of values) {
+        const key = `${family.namespace}.${family.prefix}${value}`;
+        if (!resolvesKeyPath(catalog, key)) {
+          violations.push({ locale, key, valuesSource: family.valuesSource, typeName: family.typeName });
+        }
+      }
+    }
+  }
+  return violations;
+}
+
 export type ViolationReason = "not-in-baseline" | "exceeds-baseline";
 
 export interface I18nLintViolation {
@@ -453,15 +577,20 @@ if (import.meta.main) {
   } else {
     const result = lintI18nStrings(projectRoot);
     const dotted = scanUnresolvedDottedKeys(projectRoot);
+    const dynamic = scanDynamicKeyCoverage(DYNAMIC_KEY_FAMILIES, projectRoot);
     if (args.includes("--json")) {
-      console.log(JSON.stringify({ ...result, dottedKeys: dotted }, null, 2));
+      console.log(JSON.stringify({ ...result, dottedKeys: dotted, dynamicKeyCoverage: dynamic }, null, 2));
     } else {
       printResult(result);
       for (const d of dotted) {
         console.log(`i18n-lint  ${d.file}:${d.line}  ${d.map}() (keys defined in ${d.definedIn}) rendered without a translator call`);
       }
       console.log(`i18n-lint dotted-keys: ${dotted.length === 0 ? "PASS" : "FAIL"} — ${dotted.length} unresolved key(s).`);
+      for (const v of dynamic) {
+        console.log(`i18n-lint  ${v.locale}  ${v.key}  (values: ${v.valuesSource} ${v.typeName}) missing from the locale catalog`);
+      }
+      console.log(`i18n-lint dynamic-keys: ${dynamic.length === 0 ? "PASS" : "FAIL"} — ${dynamic.length} missing catalog key(s).`);
     }
-    process.exit(result.violations.length === 0 && dotted.length === 0 ? 0 : 1);
+    process.exit(result.violations.length === 0 && dotted.length === 0 && dynamic.length === 0 ? 0 : 1);
   }
 }

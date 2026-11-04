@@ -186,6 +186,8 @@
       "handling_archive_only": "Archive only",
       "handlingHint_archive_then_delete": "Data past the period is archived first, then deleted.",
       "handlingHint_archive_only": "Data past the period is only archived, never deleted. The handling of this data cannot be changed.",
+      "handling_delete_only": "Delete only",
+      "handlingHint_delete_only": "Data past the period is deleted outright, without archiving.",
       "colTime": "Time",
       "colTitle": "Title",
       "colDelivery": "Delivery",

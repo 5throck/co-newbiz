@@ -3490,8 +3490,8 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 4,
-        "last_used": "2026-11-03"
+        "sessions": 5,
+        "last_used": "2026-11-04"
       }
     },
     {
@@ -5798,7 +5798,7 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261104-01",
-      "to": "skill:root/design-foundation",
+      "to": "skill:root/decision-record",
       "source": "skills_used"
     },
     {

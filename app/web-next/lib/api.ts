@@ -617,7 +617,7 @@ export interface DatabaseOverviewTable {
   table: string;
   label: { ko: string; en: string };
   description: { ko: string; en: string };
-  handling: "archive_then_delete" | "archive_only";
+  handling: "archive_then_delete" | "archive_only" | "delete_only";
   row_count: number;
   date_columns: Array<{
     column: string;

@@ -289,7 +289,8 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
       setRetentionFormError(t("errMonthsInteger"));
       return;
     }
-    if (dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling === "archive_then_delete") {
+    const handling = dbOverview?.tables.find((x) => x.table === tableKey.trim())?.handling;
+    if (handling === "archive_then_delete" || handling === "delete_only") {
       // Irreversible once the scheduled job runs — state the count and require confirmation.
       const count = preview.state === "ready" && preview.count !== null ? preview.count.toLocaleString() : "?";
       confirm(

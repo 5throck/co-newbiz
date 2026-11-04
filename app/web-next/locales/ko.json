@@ -186,6 +186,8 @@
       "handling_archive_only": "보관만",
       "handlingHint_archive_then_delete": "기간이 지난 데이터는 먼저 보관하고, 그다음 삭제합니다.",
       "handlingHint_archive_only": "기간이 지난 데이터는 보관만 하고 삭제하지 않습니다. 이 데이터는 처리 방식을 바꿀 수 없습니다.",
+      "handling_delete_only": "삭제만",
+      "handlingHint_delete_only": "기간이 지난 데이터는 보관 없이 바로 삭제합니다.",
       "colTime": "시각",
       "colTitle": "제목",
       "colDelivery": "전송",
