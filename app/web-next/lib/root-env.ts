@@ -16,12 +16,12 @@ import { SOURCE_ADAPTERS } from "../../../scripts/co-newbiz/source-adapters.ts";
 import { parseEnvValue } from "../../../scripts/lib/env-value.ts";
 
 const EXTRA_KEYS = ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "SERPER_API_KEY"] as const;
-const LLM_KEY = /^CO_NEWBIZ_LLM_[A-Z_]+$/;
+const LLM_KEY = /^CO_NEWBIZ_LLM_[A-Z_0-9]+$/;
 // Scheduler notification transport (ADR-0189/0190, design 2026-10-29-scheduled-jobs-design section 13.1):
 // SMTP credentials and webhook target URLs for notify.deliver/notify.digest. Prefix rule on purpose —
 // NOTIFY_WEBHOOK_URL_<CHANNEL> grows with new channel keys. Secret values are still scrubbed centrally
 // by db/lib/secret-scrubber.ts; this allowlist only decides what the root-env loader may lift into process.env.
-const NOTIFY_KEY = /^NOTIFY_[A-Z_]+$/;
+const NOTIFY_KEY = /^NOTIFY_[A-Z_0-9]+$/;
 
 /** Exact-name allowlist for non-LLM keys (adapter credentials + search providers). */
 export function pipelineEnvKeys(): Set<string> {
