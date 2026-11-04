@@ -1,6 +1,23 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.10.2
+ * @version 1.11.0
+ *
+ * v1.11.0 (2026-11-04, review 2026-11-04 H1 — spec
+ *         docs/designs/2026-11-04-review-hardening-design.md):
+ *         the `scripts` suite actually scans the script tests again. v1.5.0
+ *         documented a scan of `scripts/tests/*.test.ts`, but the suite still
+ *         pointed at the top-level `scripts/` dir with a `test-*.ts` name filter
+ *         whose only match was the excluded runner itself — so `bun run
+ *         test:scripts` resolved zero files and returned PASS, and the three
+ *         real tests under `scripts/tests/` never ran in CI. The suite now
+ *         scans `scripts/tests` for `*.test.ts`, the scripts-only name
+ *         special-case is gone (extension matching is uniform), and the dead
+ *         `bun-script` exec mode was removed — suite members are bun:test files
+ *         and run under `bun test --timeout` like every other suite, so the
+ *         per-test budget applies again. An empty suite is now a HARD FAILURE
+ *         (`--allow-empty` opts out): a suite matching nothing is a gate that
+ *         always passes. `test:integration` carries the flag because a tree
+ *         without integration tests is legitimate.
  *
  * v1.10.2 (2026-11-01, lint hygiene — quality-gate round 2, spec
  *         docs/designs/2026-11-01-quality-gate-web-types-and-e2e-design.md §6.1):
@@ -129,6 +146,10 @@ export interface RunOptions {
   parallel?: boolean;
   concurrency?: number;
   timeout?: number;
+  /** Allow a suite that resolves to zero test files to pass. Without it an
+   * empty suite is a hard failure: a suite silently matching nothing turns CI
+   * green on tests that never ran (review 2026-11-04 H1). */
+  allowEmpty?: boolean;
 }
 
 interface TestFileResult {
@@ -149,7 +170,7 @@ const suites: TestSuite[] = [
   // sequential: members stage transient fixture dirs under the real templates/
   // tree (test-l3promo-*, co-e2eguard-*, co-e2p2*) and race concurrent
   // validators when run in parallel — T-20260916-001.
-  { name: "scripts", pattern: "test-*.ts", timeout: 120000, dir: "scripts", ext: ".ts", sequential: true },
+  { name: "scripts", pattern: "*.test.ts", timeout: 120000, dir: "scripts/tests", ext: ".test.ts", sequential: true },
 ];
 
 /** Bun per-test ceiling passed as `bun test --timeout` (ms). bun's implicit
@@ -195,9 +216,7 @@ function getTestFiles(suite: TestSuite): string[] {
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const matchesExt = suite.ext === "" || entry.name.endsWith(suite.ext);
-      const matchesPattern =
-        suite.name !== "scripts" || (entry.name.startsWith("test-") && entry.name !== "test-runner.ts");
-      if (matchesExt && matchesPattern) {
+      if (matchesExt) {
         files.push(join(suite.dir, entry.name));
       }
     }
@@ -215,7 +234,6 @@ async function executeTestFile(
   timeoutMs: number,
   bunTestTimeoutMs: number | null,
   workerId: number,
-  execMode: "bun-test" | "bun-script" = "bun-test",
 ): Promise<TestFileResult> {
   const startTime = Date.now();
   const workerTempDir = join("tests", ".temp", `worker-${workerId}`);
@@ -234,14 +252,7 @@ async function executeTestFile(
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   try {
-    // The `scripts` suite members are standalone assertion scripts (they exit
-    // non-zero on failure) — running them under `bun test` fails with
-    // "filters did not match any test files" because their names lack a bun
-    // test naming pattern. Everything else is a bun test file.
-    const argv =
-      execMode === "bun-script"
-        ? [process.execPath, file]
-        : [process.execPath, "test", "--timeout", String(bunTestTimeoutMs), file];
+    const argv = [process.execPath, "test", "--timeout", String(bunTestTimeoutMs), file];
     proc = Bun.spawn(argv, {
       env,
       stdout: "pipe",
@@ -440,8 +451,15 @@ export async function runTests(suiteName: string = "integration", options: RunOp
   const files = getTestFiles(suite);
 
   if (files.length === 0) {
-    console.log(`No tests found for suite: ${suiteName}`);
-    return true;
+    if (options.allowEmpty) {
+      console.log(`No tests found for suite: ${suiteName} (--allow-empty)`);
+      return true;
+    }
+    console.error(
+      `✗ ${suiteName} suite failed: 0 test files resolved in ${suite.dir} — ` +
+        `an empty suite is a gate that always passes. Fix the scan roots, or pass --allow-empty if emptiness is intended.`,
+    );
+    return false;
   }
 
   const isParallel = options.parallel !== undefined ? options.parallel : !suite.sequential && files.length > 1;
@@ -466,7 +484,6 @@ export async function runTests(suiteName: string = "integration", options: RunOp
   const hygieneSnapshot = suiteName === "scripts" ? takeHygieneSnapshot() : null;
 
   try {
-    const execMode = suiteName === "scripts" ? ("bun-script" as const) : ("bun-test" as const);
     if (isParallel && concurrency > 1) {
       try {
         results = await runInParallel(files, concurrency, (file, _, workerId) => {
@@ -474,9 +491,8 @@ export async function runTests(suiteName: string = "integration", options: RunOp
           return executeTestFile(
             file,
             budgets.suite,
-            execMode === "bun-test" ? budgets.test : null,
+            budgets.test,
             workerId,
-            execMode,
           );
         });
       } catch (err) {
@@ -489,9 +505,8 @@ export async function runTests(suiteName: string = "integration", options: RunOp
           const res = await executeTestFile(
             files[i],
             budgets.suite,
-            execMode === "bun-test" ? budgets.test : null,
+            budgets.test,
             1,
-            execMode,
           );
           results.push(res);
         }
@@ -504,9 +519,8 @@ export async function runTests(suiteName: string = "integration", options: RunOp
         const res = await executeTestFile(
           file,
           budgets.suite,
-          execMode === "bun-test" ? budgets.test : null,
+          budgets.test,
           1,
-          execMode,
         );
         results.push(res);
       }
@@ -596,6 +610,7 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
   let parallel: boolean | undefined = undefined;
   let concurrency: number | undefined = undefined;
   let timeout: number | undefined = undefined;
+  let allowEmpty = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -603,6 +618,8 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
       parallel = true;
     } else if (arg === "--sequential") {
       parallel = false;
+    } else if (arg === "--allow-empty") {
+      allowEmpty = true;
     } else if (arg === "--concurrency" || arg === "-c") {
       const val = parseInt(args[++i], 10);
       if (!Number.isNaN(val) && val > 0) concurrency = val;
@@ -614,7 +631,7 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
     }
   }
 
-  return { suiteName, options: { parallel, concurrency, timeout } };
+  return { suiteName, options: { parallel, concurrency, timeout, allowEmpty } };
 }
 
 // CLI entrypoint

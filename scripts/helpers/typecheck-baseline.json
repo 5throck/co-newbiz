@@ -1,0 +1,5 @@
+{
+  "count": 84,
+  "updated": "2026-11-04",
+  "note": "Regression-only gate: 84 pre-existing type errors recorded at HEAD 46bc9a00 when the gate was made real (review 2026-11-04 M2 — the file had been missing since introduction, so the gate printed [SKIP] on every battery run). Triage-to-zero is deferred item D4 in docs/reports/2026-11-04-project-review-full.md; the bulk sit in tests/unit/*. Never raise this number to absorb new debt."
+}

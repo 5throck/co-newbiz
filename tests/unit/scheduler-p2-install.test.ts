@@ -32,12 +32,17 @@ const xmlLintOk = (xml: string) => {
 };
 
 // The renderer bakes machine-local absolute paths into the output (repo root,
-// bun binary directory, bun binary, home directory). Snapshots must be
-// machine-independent, so every environment-dependent absolute path is
+// bun binary directory, bun binary, docker binary, home directory). Snapshots
+// must be machine-independent, so every environment-dependent absolute path is
 // normalized to a token first. Order matters: longer paths (execPath,
 // REPO_ROOT) before their homedir prefix; the bun directory before the binary.
+// The docker binary is resolved via Bun.which (launchd cannot PATH-lookup
+// ProgramArguments[0]) and its location differs per machine (/opt/homebrew vs
+// /usr/local vs /usr/bin), so it is tokenized too.
+const DOCKER_BIN = Bun.which("docker") ?? "docker";
 const normalizePaths = (s: string) => {
   const tokens: Array<[string, string]> = [
+    [DOCKER_BIN && DOCKER_BIN !== "docker" ? DOCKER_BIN : "", "<DOCKER_BIN>"],
     [dirname(process.execPath), "<BUN_BIN>"],
     [process.execPath, "<BUN>"],
     [REPO_ROOT, "<REPO_ROOT>"],
@@ -71,7 +76,10 @@ describe("launchd rendering (both envs)", () => {
     expect(plistDev).toContain(`<string>${process.execPath}</string>`);
     expect(plistDev).toContain("<key>WorkingDirectory</key>");
     expect(plistDev).not.toContain("docker");
-    expect(plistProd).toContain("<string>docker</string>");
+    // launchd does not PATH-lookup ProgramArguments[0]: the docker binary must be
+    // an absolute path (bare "docker" fails with exit 78 EX_CONFIG / spawn failed).
+    expect(plistProd).toContain(`<string>${DOCKER_BIN}</string>`);
+    expect(DOCKER_BIN.startsWith("/")).toBe(true);
     expect(plistProd).toContain("<string>exec</string>");
     expect(plistProd).toContain("<string>co-newbiz-web</string>");
     expect(plistProd).not.toContain("WorkingDirectory");
@@ -81,14 +89,16 @@ describe("launchd rendering (both envs)", () => {
 
   test("release-engineer drift fix: docker exec does not forward client env, so CO_NEWBIZ_SCHEDULER_ENV is injected with -e", () => {
     // The client-side env var alone would leave the container-side tick exiting 2 every minute.
+    // The tick path is container-absolute: the image's WORKDIR is /repo/app/web-next, so a
+    // relative scripts/... path fails with Module not found inside the container.
     expect(inst.tickArguments("prod")).toEqual([
-      "docker",
+      DOCKER_BIN,
       "exec",
       "-e",
       "CO_NEWBIZ_SCHEDULER_ENV=prod",
       "co-newbiz-web",
       "bun",
-      "scripts/co-newbiz/schedule-tick.ts",
+      "/repo/scripts/co-newbiz/schedule-tick.ts",
     ]);
     expect(plistProd).toContain("<string>-e</string>\n\t\t<string>CO_NEWBIZ_SCHEDULER_ENV=prod</string>");
     expect(plistDev).not.toContain("<string>-e</string>");
@@ -161,7 +171,9 @@ describe("templates", () => {
     expect(dev).toContain(`ExecStart=${process.execPath} scripts/co-newbiz/schedule-tick.ts`);
     expect(dev).toContain(`WorkingDirectory=${REPO_ROOT}`);
     const prod = inst.renderSystemdService("prod");
-    expect(prod).toContain("ExecStart=docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod co-newbiz-web bun scripts/co-newbiz/schedule-tick.ts");
+    expect(prod).toContain(
+      "ExecStart=docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod co-newbiz-web bun /repo/scripts/co-newbiz/schedule-tick.ts",
+    );
     expect(prod).not.toContain("WorkingDirectory=");
     expect(dev).not.toMatch(/API_KEY|PASSWORD|SECRET|TOKEN/);
   });
@@ -181,8 +193,10 @@ describe("templates", () => {
     }
     expect(inst.renderSchtasksXml("dev")).toContain(`<WorkingDirectory>${REPO_ROOT}</WorkingDirectory>`);
     expect(inst.renderSchtasksXml("prod")).toContain("<Command>docker</Command>");
+    // schtasks resolves the command through PATH, so a bare "docker" is correct here
+    // (unlike launchd); the tick path is container-absolute, like the other docker-exec legs.
     expect(inst.renderSchtasksXml("prod")).toContain(
-      "<Arguments>exec -e CO_NEWBIZ_SCHEDULER_ENV=prod co-newbiz-web bun scripts/co-newbiz/schedule-tick.ts</Arguments>",
+      "<Arguments>exec -e CO_NEWBIZ_SCHEDULER_ENV=prod co-newbiz-web bun /repo/scripts/co-newbiz/schedule-tick.ts</Arguments>",
     );
   });
 });
@@ -203,7 +217,7 @@ describe("CLI behaviour (no side effects in print/dry-run mode)", () => {
     expect(p.exitCode).toBe(0);
     const out = p.stdout.toString();
     expect(out).toContain("org.bizknights.co-newbiz.prod.tick");
-    expect(out).toContain("<string>docker</string>");
+    expect(out).toContain(`<string>${DOCKER_BIN}</string>`);
     expect(out).toContain("<string>co-newbiz-web</string>");
     expect(out).not.toContain("WorkingDirectory");
   });

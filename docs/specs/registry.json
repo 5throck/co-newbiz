@@ -1435,6 +1435,24 @@
       "last_updated": "2026-11-02"
     },
     {
+      "id": "2026-11-04-i18n-dynamic-key-lint-design",
+      "title": "i18n dynamic key lint design",
+      "file": "docs/designs/2026-11-04-i18n-dynamic-key-lint-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-04",
+      "last_updated": "2026-11-04"
+    },
+    {
+      "id": "2026-11-04-retention-handling-i18n-design",
+      "title": "retention handling i18n design",
+      "file": "docs/designs/2026-11-04-retention-handling-i18n-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-04",
+      "last_updated": "2026-11-04"
+    },
+    {
       "id": "2026-11-04-review-hardening-design",
       "title": "review hardening design",
       "file": "docs/designs/2026-11-04-review-hardening-design.md",

@@ -47,13 +47,13 @@ exports[`launchd rendering (both envs) prod: mandatory keys per design section 7
 	<string>org.bizknights.co-newbiz.prod.tick</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>docker</string>
+		<string><DOCKER_BIN></string>
 		<string>exec</string>
 		<string>-e</string>
 		<string>CO_NEWBIZ_SCHEDULER_ENV=prod</string>
 		<string>co-newbiz-web</string>
 		<string>bun</string>
-		<string>scripts/co-newbiz/schedule-tick.ts</string>
+		<string>/repo/scripts/co-newbiz/schedule-tick.ts</string>
 	</array>
 
 	<key>EnvironmentVariables</key>

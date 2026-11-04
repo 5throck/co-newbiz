@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-03T21:43:40.567Z
+**Generated**: 2026-11-04T03:22:51.671Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -282,7 +282,7 @@
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
-| i18n-lint.ts | 1.1.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
+| i18n-lint.ts | 1.2.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | N/A |
 | import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | N/A |
 | index.ts | 1.2.0 | scripts/co-newbiz/jobs/index.ts | N/A |
@@ -357,7 +357,7 @@
 | sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | N/A |
 | sync-wiki-projection.ts | 1.0.0 | scripts/co-newbiz/sync-wiki-projection.ts | js-yaml |
 | team-builder.ts | 1.5.0 | scripts/team-builder.ts | N/A |
-| test-runner.ts | 1.10.2 | scripts/test-runner.ts | fs, os, path |
+| test-runner.ts | 1.11.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
 | typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | N/A |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |

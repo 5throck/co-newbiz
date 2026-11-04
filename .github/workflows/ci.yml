@@ -164,12 +164,15 @@ jobs:
   test:
     name: Unit + Script Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
+      # Pinned to match every other job: "latest" silently changes the runtime
+      # under the battery and makes a red run unreproducible.
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: latest
+          bun-version: "1.4.x"
 
       - name: Install dependencies
         if: ${{ hashFiles('package.json') != '' }}
@@ -183,9 +186,8 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -r python/requirements.txt
 
-      - name: Run unit tests
-        run: bun run test:unit
-
+      # A dedicated unit-tests job already runs the unit suite; re-running it
+      # here doubled every push's unit time for no added coverage.
       - name: Run script tests
         run: bun run test:scripts
 

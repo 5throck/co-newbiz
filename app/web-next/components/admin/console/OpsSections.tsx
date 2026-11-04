@@ -151,7 +151,7 @@ export function DatabasePanel({ ctx }: { ctx: AdminConsoleState }) {
                       <td>{name}{!entry && dbOverview && <><br /><span className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)]">{t("notEligibleBadge")}</span></>}</td>
                       <td>{entry ? columnLabel(r.table_key, r.basis) : r.basis}</td>
                       <td>{r.retention_months}</td>
-                      <td>{r.action === "archive" ? t("handling_archive_only") : t("handling_archive_then_delete")}</td>
+                      <td>{entry ? t(`handling_${entry.handling}`) : r.action === "archive" ? t("handling_archive_only") : t("handling_archive_then_delete")}</td>
                       <td>{r.last_run_at ? formatDateTime(r.last_run_at, locale) : t("neverRun")}</td>
                       <td className="sizing-actions-cell"><span className="actions-row">
                         {entry && (

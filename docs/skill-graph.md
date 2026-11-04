@@ -405,7 +405,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261028-03` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261031-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261031-02` | decision | `root/decision-record` | — | — |
-| `dec:DEC-20261104-01` | decision | `root/design-foundation`, `root/project-review` | — | — |
+| `dec:DEC-20261104-01` | decision | `root/decision-record`, `root/project-review` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |

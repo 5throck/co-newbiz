@@ -35,6 +35,11 @@ export type Platform = "launchd" | "systemd" | "schtasks";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..", "..");
 const TICK_REL = "scripts/co-newbiz/schedule-tick.ts";
+// Inside the co-newbiz-web image the repo lives at /repo but the image's final WORKDIR is
+// /repo/app/web-next (docker/Dockerfile), so `docker exec` starts there and a RELATIVE
+// scripts/... path fails with `Module not found` (observed 2026-11-04, P7 prod-tick
+// registration). The docker-exec variants therefore pass the container-absolute path.
+const CONTAINER_TICK_ABS = "/repo/scripts/co-newbiz/schedule-tick.ts";
 const DOCKER_CONTAINER = "co-newbiz-web";
 const LABEL_BASE = "org.bizknights.co-newbiz";
 
@@ -93,6 +98,23 @@ export function hostPath(bunPath: string = process.execPath): string {
 }
 
 /**
+ * launchd does NOT PATH-lookup ProgramArguments[0] (posix_spawn without PATH search) — a bare
+ * "docker" fails with exit 78 EX_CONFIG / "spawn failed" no matter what the job's EnvironmentVariables.PATH
+ * says (observed 2026-11-04 during the P7 prod-tick registration: 9 failed spawns, empty tick logs).
+ * systemd's ExecStart and schtasks resolve via PATH, so this absolute-path requirement is launchd-only;
+ * resolve the binary here and fail loudly rather than registering a tick that can never spawn.
+ */
+function resolveDockerPath(): string {
+  const p = Bun.which("docker");
+  if (!p) {
+    throw new Error(
+      "scheduler-install: docker binary not found on PATH — launchd requires an absolute ProgramArguments[0] and cannot fall back to PATH lookup",
+    );
+  }
+  return p;
+}
+
+/**
  * Design section 2.3: prod runs inside the container (one DB writer topology, container env carries the secrets).
  * `docker exec` does NOT forward client env vars into the container, so the tick's env guard
  * (CO_NEWBIZ_SCHEDULER_ENV, checked by scheduler-core.resolveSchedulerEnv) is injected explicitly with -e; the
@@ -100,7 +122,7 @@ export function hostPath(bunPath: string = process.execPath): string {
  */
 export function tickArguments(env: SchedulerEnv, bunPath: string = process.execPath): string[] {
   return env === "prod"
-    ? ["docker", "exec", "-e", `CO_NEWBIZ_SCHEDULER_ENV=${env}`, DOCKER_CONTAINER, "bun", TICK_REL]
+    ? [resolveDockerPath(), "exec", "-e", `CO_NEWBIZ_SCHEDULER_ENV=${env}`, DOCKER_CONTAINER, "bun", CONTAINER_TICK_ABS]
     : [bunPath, TICK_REL];
 }
 
@@ -145,7 +167,9 @@ export function renderSystemdService(env: SchedulerEnv, opts: RenderOptions = {}
   const repoRoot = opts.repoRoot ?? REPO_ROOT;
   const bunPath = opts.bunPath ?? process.execPath;
   const execStart =
-    env === "prod" ? `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=${env} ${DOCKER_CONTAINER} bun ${TICK_REL}` : `${bunPath} ${TICK_REL}`;
+    env === "prod"
+      ? `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=${env} ${DOCKER_CONTAINER} bun ${CONTAINER_TICK_ABS}`
+      : `${bunPath} ${TICK_REL}`;
   const workingDirectory = env === "dev" ? `WorkingDirectory=${repoRoot}` : "";
   return fill(readFileSync(SYSTEMD_SERVICE_TMPL, "utf-8"), {
     PATH: hostPath(bunPath),
@@ -163,7 +187,7 @@ export function renderSchtasksXml(env: SchedulerEnv, opts: RenderOptions = {}): 
   const bunPath = opts.bunPath ?? process.execPath;
   const [command, args] =
     env === "prod"
-      ? ["docker", `exec -e CO_NEWBIZ_SCHEDULER_ENV=${env} ${DOCKER_CONTAINER} bun ${TICK_REL}`]
+      ? ["docker", `exec -e CO_NEWBIZ_SCHEDULER_ENV=${env} ${DOCKER_CONTAINER} bun ${CONTAINER_TICK_ABS}`]
       : [bunPath, TICK_REL];
   const workingDirectory = env === "dev" ? `      <WorkingDirectory>${xmlEscape(repoRoot)}</WorkingDirectory>\n` : "";
   return fill(readFileSync(SCHTASKS_TMPL, "utf-8"), {
