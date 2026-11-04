@@ -41,7 +41,7 @@ function insertCompany(name: string, corpCode: string | null): string {
   return id;
 }
 
-type FakeItem = { name: string; value: number; unit: string; year: string };
+type FakeItem = { name: string; value: number; unit: string; year: string; fsDiv?: "CFS" | "BFS" };
 function fakeFetcher(byCall: FakeItem[][]): FinancialsFetcherSpy {
   let call = 0;
   const spy = ((corpCode: string, _opts?: { years?: number }) => {
@@ -76,6 +76,20 @@ const YEAR_2025: FakeItem[] = [
   { name: "영업이익", value: 32_300_000_000, unit: "KRW", year: "2025" },
   { name: "부채총계", value: 253_000_000_000, unit: "KRW", year: "2025" },
   { name: "자본총계", value: 215_000_000_000, unit: "KRW", year: "2025" },
+];
+
+const YEAR_2024: FakeItem[] = [
+  { name: "매출액", value: 26_671_468_809, unit: "KRW", year: "2024" },
+  { name: "영업이익", value: 1_200_000_000, unit: "KRW", year: "2024" },
+  { name: "부채총계", value: 90_000_000_000, unit: "KRW", year: "2024" },
+  { name: "자본총계", value: 80_000_000_000, unit: "KRW", year: "2024" },
+];
+
+const YEAR_2023: FakeItem[] = [
+  { name: "매출액", value: 22_100_000_000, unit: "KRW", year: "2023" },
+  { name: "영업이익", value: 900_000_000, unit: "KRW", year: "2023" },
+  { name: "부채총계", value: 85_000_000_000, unit: "KRW", year: "2023" },
+  { name: "자본총계", value: 78_000_000_000, unit: "KRW", year: "2023" },
 ];
 
 beforeAll(() => {
@@ -167,6 +181,34 @@ describe("syncCompanyFinancialFacts", () => {
     const companyId = insertCompany("㈜미지계정", "05444444");
     const bad = fakeFetcher([[{ name: "기타특수이익", value: 1, unit: "KRW", year: "2025" }]]);
     await expect(syncCompanyFinancialFacts(db, companyId, { fetcher: bad, corpCode: "05444444" })).rejects.toThrow(/md_account/);
+  });
+
+  test("T6 — mixed per-year fsDiv payload syncs every year (CFS one year, BFS the rest)", async () => {
+    // dart-client v1.3.0 연도별 폴백의 페이로드 형태 — yearly 항목에 연도별 fsDiv가
+    // 도장 찍혀 온다(정본은 items[].fsDiv). writer는 yearly/items를 범용으로 소비하므로
+    // 출처 필드가 있어도 모든 연도가 저장되어야 한다(수산아이앤티 재현: FY2024/2025 복원).
+    const companyId = insertCompany("㈜혼합기준", "08777777");
+    const mixed: FakeItem[] = [
+      ...YEAR_2023.map((i) => ({ ...i, fsDiv: "CFS" as const })),
+      ...YEAR_2024.map((i) => ({ ...i, fsDiv: "BFS" as const })),
+      ...YEAR_2025.map((i) => ({ ...i, fsDiv: "BFS" as const })),
+    ];
+    const fetcher = fakeFetcher([mixed]);
+    const result = await syncCompanyFinancialFacts(db, companyId, { fetcher, corpCode: "08777777" });
+
+    expect(result.years).toEqual([2023, 2024, 2025]);
+    expect(result.inserted).toBe(12); // 3연도 × 4계정 — 구결함에서 비던 FY2024/2025 포함
+    expect(result.unchanged).toBe(0);
+
+    const periods = db
+      .query("SELECT fiscal_year FROM md_period WHERE period_type = 'year' AND fiscal_year BETWEEN 2023 AND 2025")
+      .all() as Array<{ fiscal_year: number }>;
+    expect(periods.map((p) => p.fiscal_year).sort()).toEqual([2023, 2024, 2025]);
+
+    const factCount = db.query("SELECT COUNT(*) AS n FROM fact_financial WHERE company_id = ?").get(companyId) as {
+      n: number;
+    };
+    expect(factCount.n).toBe(12);
   });
 });
 

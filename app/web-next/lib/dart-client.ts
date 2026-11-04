@@ -1,3 +1,10 @@
+// @version 1.3.0 (2026-11-04: fetchFinancials falls back per YEAR, not per window —
+// CFS is tried first for each year and BFS is retried only for that same year on a miss
+// (status != 000 or a 000 with zero WANTED_ACCOUNTS matches). One statement basis per
+// year; CFS wins when both yield, so same-account/same-year CFS+BFS mixing is
+// structurally impossible. items[].fsDiv / yearly[].fsDiv carry per-year provenance,
+// the aggregate fsDiv widens to "mixed", and lastError is recorded only for years that
+// yield nothing from either basis. Design 2026-11-04-dart-fsdiv-per-year-fallback.)
 // @version 1.2.0 (2026-11-02: fetchDisclosureText moves onto the shared readZipEntries
 // EOCD/central-directory extraction — its old next-signature fallback inherited the same
 // false-PK-in-deflate truncation hazard the P5 gate fixed for parseCorpXml; the fail-soft
@@ -17,16 +24,18 @@ export interface DartFinancials {
   corpName?: string;
   found: boolean;
   year?: string;
-  /** 연결(CFS) 실패 시 개별(BFS)로 폴백한 경우 폴백 여부 (P2-6) */
-  fsDiv?: "CFS" | "BFS";
+  /** 조회 윈도우 전체의 작성 기준 집계 (P2-6) — 모든 연도가 같은 기준이면 "CFS"|"BFS",
+   *  연도별 기준이 갈리면 "mixed". 연도별 기준은 items[].fsDiv가 정본(canonical)이다. */
+  fsDiv?: "CFS" | "BFS" | "mixed";
   fsDivLabel?: string;
   /** 합산 검증 결과 — 정상 null, 비일치 "warning" (P2-5) */
   integrity?: "ok" | "warning" | null;
   integrityNotes?: string[];
-  /** 개별 재무 항목 (연도별 조회 시 항목마다 year 태그) */
-  items: Array<{ name: string; value: number; unit: string; year?: string }>;
-  /** 연도별 재무 요약 — 연도가 있는 조회에서 채워진다 */
-  yearly?: Array<{ year: string; items: Array<{ name: string; value: number; unit: string }> }>;
+  /** 개별 재무 항목 (연도별 조회 시 항목마다 year·fsDiv 태그 — fsDiv는 그 항목이
+   *  나온 작성 기준이며 연도별 출처 표기의 정본) */
+  items: Array<{ name: string; value: number; unit: string; year?: string; fsDiv?: "CFS" | "BFS" }>;
+  /** 연도별 재무 요약 — 연도가 있는 조회에서 채워진다 (fsDiv는 그 연도에 채택된 기준) */
+  yearly?: Array<{ year: string; fsDiv?: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string }> }>;
   reportUrl?: string;
   raw?: unknown;
   error?: string;
@@ -473,7 +482,16 @@ export function checkSummation(items: Array<{ name: string; value: number }>): b
   return Math.abs(a - (l + e)) / Math.abs(a) <= 0.01;
 }
 
-/** Latest-year single-company full financial statements (reprt_code 11011). */
+/** Latest-year single-company full financial statements (reprt_code 11011).
+ *  v1.3.0 (P2-6 재설계): 윈도우 단위 폴백을 연도 단위 폴백으로 바꾼다 — 일부 연도만
+ *  연결(CFS)이 비어 있는 회사(예: (주)수산아이앤티, FY2024부터 개별만 제출)가 CFS
+ *  성공 하나로 BFS 조회를 영영 건너뛰어 최신 연도가 통째로 누락되던 결함의 수정.
+ *  각 연도마다 CFS를 먼저 조회하고, 그 연도가 미스(status != 000 또는 000인데
+ *  WANTED_ACCOUNTS 필터 결과 0건)일 때 같은 연도에 한해 BFS를 다시 시도한다.
+ *  한 연도는 정확히 하나의 기준을 채택한다 — 두 기준 모두 값이 나오면 CFS가 이기고
+ *  BFS는 폐기되므로 같은 계정+연도의 CFS/BFS 혼입은 구조적으로 불가능하다.
+ *  lastError는 두 기준 모두 무실과인 연도에서만 기록한다(부분 성공 회차가 에러
+ *  문자열을 갖지 않도록). out.error는 전 연도 무실과일 때만 설정된다(기존 규율 유지). */
 export async function fetchFinancials(corpCode: string, opts: { years?: number } = {}): Promise<DartFinancials> {
   const key = apiKey();
   const out: DartFinancials = { corpCode, found: false, items: [], yearly: [] };
@@ -483,55 +501,83 @@ export async function fetchFinancials(corpCode: string, opts: { years?: number }
   let anyFound = false;
   let lastError: string | undefined;
   const integrityNotes: string[] = [];
+  const perYearBases: Array<"CFS" | "BFS"> = [];
 
-  // 연결(CFS) 우선 — 연도별로 개별(BFS) 폴백이 발생하면 fsDiv로 표기 (P2-6).
-  for (const fsDiv of ["CFS", "BFS"] as const) {
-    if (anyFound && fsDiv === "BFS") break; // 연결로 성공했으면 개별 폴백 불필요
-    out.items = [];
-    out.yearly = [];
-    anyFound = false;
-    for (let y = 0; y < yearsToFetch; y++) {
-      const year = latest - y;
-      try {
-        // fnlttSinglAcntAll은 api_key를 인식하지 못한다(HTML 오류 페이지 반환) — crttc_key 필수.
-        const json = await dartJson<{ status?: string; list?: Array<{ account_nm?: string; thstrm_amount?: string; thstrm_nm?: string }> }>(
-          `${BASE}/fnlttSinglAcntAll.json?crtfc_key=${encodeURIComponent(key)}&corp_code=${encodeURIComponent(corpCode)}&bsns_year=${year}&reprt_code=11011&fs_div=${fsDiv}`,
-        );
-        if (json.status !== "000" || !Array.isArray(json.list)) {
-          lastError = `DART ${json.status ?? "ERR"} — ${year}년 사업보고서 미제출 또는 코드 오류`;
-          continue;
-        }
-        // All 엔드포인트는 공시 섹션마다 같은 계정명을 반복한다(값이 다를 수 있음) —
-        // 첫 건(최상위 재무제표 순서)만 채택해 항목별 1개 값을 보장한다.
-        const seenAccounts = new Set<string>();
-        const byName = new Map<string, number>();
-        const yearlyItems: Array<{ name: string; value: number; unit: string; year: string }> = [];
-        for (const l of json.list) {
-          const std = normalizeAccountName(l.account_nm ?? "");
-          if (!WANTED_ACCOUNTS.includes(std) || !l.thstrm_amount) continue;
-          if (seenAccounts.has(std)) continue;
-          seenAccounts.add(std);
-          const item = { name: std, value: Number(l.thstrm_amount), unit: "KRW", year: String(year) };
-          byName.set(std, item.value);
-          yearlyItems.push(item);
-        }
-        // P2-5: 합산 검증
-        const sum = checkSummation([...byName.entries()].map(([name, value]) => ({ name, value })));
-        if (sum === false) integrityNotes.push(`${year}: 자산총계 ≠ 부채총계+자본총계 (±1% 초과) — 해당 연도 수치 신뢰도 하향`);
-        if (yearlyItems.length > 0) {
-          anyFound = true;
-          out.yearly!.push({ year: String(year), items: yearlyItems });
-          out.items.push(...yearlyItems);
-          if (!out.year) out.year = String(year);
-          out.reportUrl = `https://dart.fss.or.kr/dsab007/main.do?option=corp&corp_code=${corpCode}`;
-        }
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : "DART 조회 실패";
+  // 한 블록(연도 × 작성 기준) 조회 → WANTED_ACCOUNTS 필터 + first-wins 중복 제거.
+  // "yields"(ok) = status 000 AND 필터 후 1건 이상 — 000이어도 원하는 계정이 0건이면
+  // 폴백 관점에서는 미스로 본다. 네트워크·파싱 오류도 미스로 정규화해 같은 연도의
+  // BFS 재시도 기회를 보존한다(던지지 않는다 — 설계 §2.1 의사코드 계약).
+  const fetchBlock = async (
+    year: number,
+    fsDiv: "CFS" | "BFS",
+  ): Promise<{ ok: boolean; status: string; items: Array<{ name: string; value: number; unit: string; year: string }> }> => {
+    try {
+      // fnlttSinglAcntAll은 api_key를 인식하지 못한다(HTML 오류 페이지 반환) — crttc_key 필수.
+      const json = await dartJson<{ status?: string; list?: Array<{ account_nm?: string; thstrm_amount?: string; thstrm_nm?: string }> }>(
+        `${BASE}/fnlttSinglAcntAll.json?crtfc_key=${encodeURIComponent(key)}&corp_code=${encodeURIComponent(corpCode)}&bsns_year=${year}&reprt_code=11011&fs_div=${fsDiv}`,
+      );
+      if (json.status !== "000" || !Array.isArray(json.list)) {
+        return { ok: false, status: json.status ?? "ERR", items: [] };
       }
+      // All 엔드포인트는 공시 섹션마다 같은 계정명을 반복한다(값이 다를 수 있음) —
+      // 첫 건(최상위 재무제표 순서)만 채택해 항목별 1개 값을 보장한다.
+      const seenAccounts = new Set<string>();
+      const byName = new Map<string, number>();
+      const yearlyItems: Array<{ name: string; value: number; unit: string; year: string }> = [];
+      for (const l of json.list) {
+        const std = normalizeAccountName(l.account_nm ?? "");
+        if (!WANTED_ACCOUNTS.includes(std) || !l.thstrm_amount) continue;
+        if (seenAccounts.has(std)) continue;
+        seenAccounts.add(std);
+        const item = { name: std, value: Number(l.thstrm_amount), unit: "KRW", year: String(year) };
+        byName.set(std, item.value);
+        yearlyItems.push(item);
+      }
+      // P2-5: 합산 검증
+      const sum = checkSummation([...byName.entries()].map(([name, value]) => ({ name, value })));
+      if (sum === false) integrityNotes.push(`${year}: 자산총계 ≠ 부채총계+자본총계 (±1% 초과) — 해당 연도 수치 신뢰도 하향`);
+      return { ok: yearlyItems.length > 0, status: json.status ?? "000", items: yearlyItems };
+    } catch (err) {
+      return { ok: false, status: err instanceof Error ? err.message : "ERR", items: [] };
     }
-    if (anyFound) { out.fsDiv = fsDiv; out.fsDivLabel = fsDiv === "CFS" ? "연결재무제표" : "개별재무제표"; break; }
+  };
+
+  for (let y = 0; y < yearsToFetch; y++) {
+    const year = latest - y;
+    // 연결(CFS) 우선 — 미스인 같은 연도에만 개별(BFS)로 폴백한다(연도별 단일 기준).
+    const cfs = await fetchBlock(year, "CFS");
+    let chosen: { fsDiv: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string; year: string }> } | null =
+      cfs.ok ? { fsDiv: "CFS", items: cfs.items } : null;
+    let bfsStatus: string | null = null;
+    if (!chosen) {
+      const bfs = await fetchBlock(year, "BFS");
+      bfsStatus = bfs.status;
+      chosen = bfs.ok ? { fsDiv: "BFS", items: bfs.items } : null;
+    }
+    if (!chosen) {
+      // lastError 규율(v1.3.0): 두 기준 모두 무실과인 연도에서만 기록 — 부분 성공
+      // 회차가 에러처럼 보이는 문자열을 갖지 않도록 한다.
+      lastError = `DART CFS ${cfs.status}/BFS ${bfsStatus} — ${year}년 사업보고서 미제출 또는 코드 오류`;
+      continue;
+    }
+    const basis = chosen.fsDiv;
+    const stamped = chosen.items.map((i) => ({ ...i, fsDiv: basis }));
+    anyFound = true;
+    perYearBases.push(basis);
+    out.yearly!.push({ year: String(year), fsDiv: basis, items: stamped });
+    out.items.push(...stamped);
+    if (!out.year) out.year = String(year);
+    out.reportUrl = `https://dart.fss.or.kr/dsab007/main.do?option=corp&corp_code=${corpCode}`;
   }
   out.found = anyFound;
+  if (anyFound) {
+    // 집계 규칙(설계 §2.2): 연도별 기준 집합이 하나로 수렴하면 그 값, 갈리면 "mixed".
+    // 0연도 무실과면 fsDiv는 미설정(found: false) — 기존 동작 유지.
+    const first = perYearBases[0];
+    const uniform = perYearBases.every((b) => b === first);
+    out.fsDiv = uniform && first ? first : "mixed";
+    out.fsDivLabel = out.fsDiv === "CFS" ? "연결재무제표" : out.fsDiv === "BFS" ? "개별재무제표" : "연결·개별 혼합 (연도별 기준 상이)";
+  }
   if (integrityNotes.length > 0) { out.integrity = "warning"; out.integrityNotes = integrityNotes; } else { out.integrity = anyFound ? "ok" : null; }
   if (!anyFound) out.error = lastError ?? "DART 조회 실패 — corp_code를 확인하세요";
   return out;

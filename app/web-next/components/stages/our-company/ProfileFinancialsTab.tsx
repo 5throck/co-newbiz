@@ -21,6 +21,15 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                   const years = [...new Set(items.map((i) => i.year ?? ""))].filter(Boolean).sort().reverse();
                   const accounts = [...new Set(items.map((i) => i.name))];
                   const byKey = new Map(items.map((i) => [`${i.year}|${i.name}`, i.value]));
+                  // 연도별 작성 기준(연결/개별) 표기 — items[].fsDiv가 정본 (design 2026-11-04 §2.5).
+                  // 구형 페이로드(fsDiv 없음)는 표기 없는 연도 헤더로 자연 강등된다.
+                  const fsDivByYear = new Map(
+                    items.filter((i) => i.year && i.fsDiv).map((i) => [i.year as string, i.fsDiv as "CFS" | "BFS"]),
+                  );
+                  const yearLabel = (y: string) => {
+                    const d = fsDivByYear.get(y);
+                    return d === "BFS" ? `${y} (${t("separate")})` : d === "CFS" ? `${y} (${t("consolidated")})` : y;
+                  };
                   const fmtEok = (v: number) => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
                                     const chartOption = {
                     tooltip: { trigger: "axis" as const },
@@ -29,7 +38,7 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                     xAxis: { type: "category" as const, data: accounts, axisLabel: { color: ct.muted, fontSize: 11, interval: 0, rotate: accounts.length > 6 ? 20 : 0 } },
                     yAxis: { type: "value" as const, axisLabel: { color: ct.muted, formatter: (v: number) => t("p1HundredMillions", { p1: fmtEok(v) }) }, splitLine: { lineStyle: { color: ct.split } } },
                     series: years.map((y, i) => ({
-                      name: y,
+                      name: yearLabel(y),
                       type: "bar" as const,
                       data: accounts.map((a) => byKey.get(`${y}|${a}`) ?? null),
                       itemStyle: { color: ct.color[i % ct.color.length], borderRadius: [4, 4, 0, 0] },
@@ -45,7 +54,7 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                         <table className="data-table report-table" aria-label={t("dartFinancialSummaryAccountYear")}>
                           <caption className="sr-only">{t("dartFinancialSummaryAccountYear2")}</caption>
                           <thead>
-                            <tr><th scope="col" className="col-label">{t("account")}</th>{years.map((y) => <th key={y} scope="col" className="col-num">{y}</th>)}</tr>
+                            <tr><th scope="col" className="col-label">{t("account")}</th>{years.map((y) => <th key={y} scope="col" className="col-num">{yearLabel(y)}</th>)}</tr>
                           </thead>
                           <tbody>
                             {accounts.map((a) => (
@@ -60,6 +69,9 @@ export function ProfileFinancialsTab({ ctx, profile }: { ctx: OurCompanyStageSta
                           </tbody>
                         </table>
                       </div>
+                      {profile.dartFinancials?.fsDiv === "mixed" && (
+                        <p className="mt-2 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("mixedSourceNote")}</p>
+                      )}
                       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("source")} <span className="status-chip status-green">DART</span> {t("regulatoryFilingAnnualReport")}{profile.dartFinancials?.reportUrl ? <> — <a href={profile.dartFinancials.reportUrl} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{t("viewOriginal")}</a></> : null}</p>
                     </>
                   );

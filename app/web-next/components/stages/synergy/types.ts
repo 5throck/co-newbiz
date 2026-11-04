@@ -5,7 +5,7 @@ export interface SynergyStepSummary { step: number; title: string; summary: stri
 export interface SynergySourceRef { title: string; url: string; snippet?: string }
 export interface SynergyPayload {
   company: { name: string; dartCorpCode: string | null };
-  dartFinancials: { available: boolean; year?: string; items?: Array<{ name: string; value: number; year?: string }>; reportUrl?: string; error?: string; fsDivLabel?: string; integrity?: string | null; integrityNotes?: string[] };
+  dartFinancials: { available: boolean; year?: string; items?: Array<{ name: string; value: number; year?: string; fsDiv?: string }>; reportUrl?: string; error?: string; fsDiv?: "CFS" | "BFS" | "mixed"; fsDivLabel?: string; integrity?: string | null; integrityNotes?: string[] };
   /** 재무 데이터 출처 — DART / 신용평가자료 / 외부 검색 (구형 버전에는 없음) */
   dataSources?: { dart: boolean; dartYear: string | null; creditReport: string | null; webResearchCount: number };
   researchSources: SynergySourceRef[];

@@ -2757,7 +2757,11 @@
         ".agents/skills/k-dart/SKILL.md",
         ".codex/skills/k-dart/SKILL.md",
         ".hermes/skills/k-dart/SKILL.md"
-      ]
+      ],
+      "usage": {
+        "sessions": 1,
+        "last_used": "2026-11-04"
+      }
     },
     {
       "id": "skill:root/k-ecos",
