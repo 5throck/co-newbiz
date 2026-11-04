@@ -15,7 +15,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { systemMessage, promptAgent, type PromptKey } from "./prompts.ts";
 import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
-import { computeSynergyScore } from "./synergy-score.ts";
+import { computeSynergyScore, toCagrFraction } from "./synergy-score.ts";
 import { recordSynergyRecommendation, type SynergyPayload } from "./synergy-pipeline.ts";
 
 async function askJson(promptKey: PromptKey, user: string, maxTokens = 800): Promise<Record<string, unknown> | null> {
@@ -94,7 +94,7 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
       cagrPct = matrix?.consistency?.bottomUpCagr ?? null;
       relatedIndustries = (matrix?.chainDirection?.relatedIndustries ?? []).map((r) => String(r?.name ?? "")).filter(Boolean);
     } catch { /* skip malformed */ }
-    return { industry: m.name_ko, cagr: cagrPct === null ? null : cagrPct > 1 ? cagrPct / 100 : cagrPct, relatedIndustries };
+    return { industry: m.name_ko, cagr: toCagrFraction(cagrPct), relatedIndustries };
   });
 
   // ── Profile scoring inputs — fresh from the registry (affiliate: the member

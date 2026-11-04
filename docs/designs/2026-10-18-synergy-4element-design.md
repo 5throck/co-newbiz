@@ -217,3 +217,80 @@ FX 환산이 없어 외화 항목이 통째로 제외되고 있었다(환율 미
   제공하지 않음을 명시.
 - 연도별 명세는 deterministicCashflows와 완전히 일치(같은 분기 로직 재사용) — 유닛
   테스트가 세 시나리오 모두에서 레거시 FCF 벡터와 정확히 일치함을 검증.
+
+## Amendment (2026-11-04) — market_attractiveness fail-closed guard in synergy-score.ts
+
+Recorded in English per the docs/context.md language policy. Gate ruling: DEC-20261104-06; sibling design doc: `docs/designs/2026-11-04-s1-sizing-cagr-unit-guard-design.md` (items A/B — the sizing-side links of the same defect chain). This amendment extends this spec's scope to cover a guard change in the scoring engine this spec governs; the existing body above is unchanged.
+
+### Defect (verified 2026-11-04)
+
+`synergy-score.ts:95-105` maps any `c <= cagrMidpoint` through
+`clamp((c / cagrMidpoint) * midpointScore)`, so a **non-positive CAGR is
+clamped to a fabricated factor score of 0/100 at full weight**, and the
+factor note renders the raw number — the user-visible symptom
+"원자력 발전소 핵심 부품·장비 공급 산업 성장률 -10000.0% → 정규화 0/100"
+(note format `synergy-score.ts:105`; the -10000.0% itself comes from the
+upstream unit defect fixed by item B of the sibling design, and the -100
+stored value from item A). This contradicts the file's own stated
+principle (header comment `synergy-score.ts:10-11`): missing/invalid
+inputs are excluded with a note, **never a fabricated number** — exactly
+the treatment the missing-market branch at :107-112 already implements.
+
+### Change
+
+In `computeSynergyScore`, the market_attractiveness factor gains a
+validity guard before the curve mapping: when the linked market's `cagr`
+is `null`, non-finite (`Number.isFinite` false), or `<= 0`, the factor is
+**excluded** — the same mechanism as the existing missing-input branch:
+
+- `factors.push({ key: "market_attractiveness", label: "시장 매력도",
+  baseWeight: SYNERGY_FACTOR_WEIGHTS.market_attractiveness, weight: 0,
+  value: null, note: "성장률 비정상/비양수 — 시장 매력도 팩터 미반영" })`,
+- `missing.push("성장률 비정상/비양수 — 시장 매력도 팩터 미반영")`.
+
+The verbatim note string (the only Korean in this amendment) is
+user-facing UI text. Only a positive, finite fraction reaches the piecewise
+curve (the existing `c <= cagrMidpoint` / else branches at :98-101,
+unchanged). `MIN_FACTORS` accounting, the renormalization rule (as-built
+slice 4: weights renormalize across usable factors so the applied weights
+sum to exactly 100%), and the null-score rule are all unchanged — an
+excluded factor behaves identically to an absent market today.
+
+### Rationale
+
+A non-growing market cannot be attractive, but "cannot be attractive" is
+not the same fact as "scored 0 by an attractiveness curve" — the latter
+fabricates a methodology output from an input the curve was never defined
+over, and (as this chain shows) masks an upstream data defect behind a
+plausible 0/100. Fail-closed exclusion makes the defect visible in the
+factor list and keeps the score a weighted average of only honestly-scored
+factors.
+
+### Interface with the sibling design
+
+Item B of `2026-11-04-s1-sizing-cagr-unit-guard-design.md` makes the
+`markets[]` seam deliver an unconditional fraction; this guard consumes
+it. Sequencing: both ship in one implementation dispatch (B alone would
+render -100.0% instead of -10000.0% with the same wrong 0/100 scoring; C
+alone leaves the unit heuristic armed for sub-1 pct-point values).
+
+### Consequences
+
+- Behavior change (intended): stored analyses with a non-positive CAGR
+  previously carried a 0-valued, fully-weighted market_attractiveness
+  factor that diluted the weighted average; after the change the factor
+  drops out and the remaining factors renormalize, so such analyses
+  **score higher** on rescore/re-analysis and display an honest exclusion
+  note instead of "-10000.0% → 정규화 0/100". Existing stored versions are
+  not rewritten (append-only discipline, as-built slice 6).
+- No type, schema, weight-constant, or legend-text change: the
+  `팩터 점수 기준 보기` legend (as-built slice 4) already describes the
+  curve only for positive growth; the excluded-with-note path matches the
+  legend's implicit domain.
+
+### Out of scope
+
+Remediation of the existing degenerate stored analysis (user-run S1
+re-run, documented in the sibling design §5); broader numeric-quality
+validation of sizing matrices; the upstream unit-heuristic fix itself
+(sibling design item B).

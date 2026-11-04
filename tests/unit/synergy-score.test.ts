@@ -1,8 +1,13 @@
 // Unit tests for the deterministic synergy scoring engine (ADR-0102).
 // Pure function — no DB. Covers: factor renormalization, the piecewise
-// mature-market curve, fail-closed MIN_FACTORS, and missing-input notes.
+// mature-market curve, fail-closed MIN_FACTORS, missing-input notes, the
+// market_attractiveness fail-closed guard (DEC-20261104-06 item C), and the
+// bottomUpCagr unit-conversion contract (item B's toCagrFraction seam).
 import { test, expect, describe } from "bun:test";
-import { computeSynergyScore, type ScoreInputs } from "../../app/web-next/lib/synergy-score.ts";
+import { computeSynergyScore, toCagrFraction, type ScoreInputs } from "../../app/web-next/lib/synergy-score.ts";
+import { SYNERGY_FACTOR_WEIGHTS } from "../../app/web-next/lib/scoring-weights.ts";
+
+const MARKET_BASE_WEIGHT = SYNERGY_FACTOR_WEIGHTS.market_attractiveness;
 
 const baseInputs = (over: Partial<ScoreInputs> = {}): ScoreInputs => ({
   opportunity: { market_scope: "휴머노이드 로봇", value_chain_node: null, name: "op" },
@@ -60,9 +65,8 @@ describe("computeSynergyScore", () => {
     expect(capped.factors.find((f) => f.key === "capability_coverage")!.value).toBe(100);
   });
 
-  test("curve anchors: 0% → 0, 8% → 50, 35%+ → 100", () => {
+  test("curve anchors: 8% → 50, 35%+ → 100 (0% left the curve's domain — excluded per item C)", () => {
     const mk = (cagr: number) => baseInputs({ markets: [{ industry: "X", cagr, relatedIndustries: [] }] });
-    expect(computeSynergyScore(mk(0)).factors[0].value).toBe(0);
     expect(computeSynergyScore(mk(0.08)).factors[0].value).toBe(50);
     expect(computeSynergyScore(mk(0.4)).factors[0].value).toBe(100);
   });
@@ -131,5 +135,89 @@ describe("computeSynergyScore", () => {
       },
     })).factors.find((f) => f.key === "financial_capacity")!.value!;
     expect(weak).toBeLessThan(strong);
+  });
+});
+
+// DEC-20261104-06 item C — a non-positive/non-finite CAGR is outside the
+// attractiveness curve's domain: the factor is EXCLUDED with the fail-closed
+// note, never clamped to a fabricated 0/100.
+describe("market_attractiveness fail-closed guard (item C)", () => {
+  const INVALID_NOTE = "성장률 비정상/비양수 — 시장 매력도 팩터 미반영";
+  const mk = (cagr: number | null) => baseInputs({ markets: [{ industry: "원자력 발전소 핵심 부품", cagr, relatedIndustries: [] }] });
+  const marketFactor = (cagr: number | null) => computeSynergyScore(mk(cagr)).factors.find((f) => f.key === "market_attractiveness")!;
+
+  test.each([
+    ["null cagr", null],
+    ["non-finite cagr (NaN)", Number.NaN],
+    ["negative cagr (-1.0, the -100 pct defect after item B)", -1.0],
+    ["zero cagr", 0],
+  ])("%s → factor excluded with the invalid-input note, not 0/100", (_name, cagr) => {
+    const f = marketFactor(cagr);
+    expect(f.value).toBeNull();
+    expect(f.weight).toBe(0);
+    expect(f.baseWeight).toBe(MARKET_BASE_WEIGHT);
+    expect(f.note).toBe(INVALID_NOTE);
+  });
+
+  test("excluded market factor renormalizes the usable factors and keeps the score a weighted average", () => {
+    const r = computeSynergyScore(mk(-1.0));
+    expect(r.missing).toContain(INVALID_NOTE);
+    expect(r.score).not.toBeNull(); // industry·재무·일치도 remain usable (≥ MIN_FACTORS)
+    const usable = r.factors.filter((f) => f.value !== null);
+    expect(usable.map((f) => f.key)).not.toContain("market_attractiveness");
+    expect(usable.reduce((s, f) => s + f.weight, 0)).toBeCloseTo(1, 5);
+  });
+
+  test("fewer than MIN_FACTORS usable factors remain → null score with the invalid note listed", () => {
+    const r = computeSynergyScore(baseInputs({
+      opportunity: { market_scope: null, value_chain_node: null, name: "op" },
+      profile: null,
+      markets: [{ industry: "원자력 발전소 핵심 부품", cagr: -1.0, relatedIndustries: [] }],
+    }));
+    expect(r.score).toBeNull();
+    expect(r.missing).toContain(INVALID_NOTE);
+    expect(r.missing.join()).toContain("최소");
+  });
+
+  test("positive cagr path is unchanged — value, weight and note format identical", () => {
+    const f = marketFactor(0.36);
+    expect(f.value).toBe(100); // 0.36 > 0.35 → curve cap
+    // 0.3 renormalized over the usable 0.55 (market + 재무 + 일치도; relatedIndustries 없음)
+    expect(f.weight).toBeCloseTo(MARKET_BASE_WEIGHT / 0.55, 5);
+    expect(f.note).toBe("원자력 발전소 핵심 부품 성장률 36.0% → 정규화 100/100");
+    // existing expected value on the below-midpoint segment (pins the curve)
+    expect(computeSynergyScore(baseInputs({
+      markets: [{ industry: "유압식 브레이커", cagr: 0.057, relatedIndustries: ["특수강 단조"] }],
+    })).factors.find((f2) => f2.key === "market_attractiveness")!.value).toBeCloseTo((0.057 / 0.08) * 50, 1);
+  });
+});
+
+// DEC-20261104-06 item B — bottomUpCagr is stored ×100 pct points by a single
+// writer; the conversion is unconditional, and |fraction| > 1 (stored |pct| >
+// 100 — outside the writer envelope [-100, 25] pct) is a unit-contract
+// violation, not an estimate (→ null so the factor lands in the excluded path).
+describe("toCagrFraction — bottomUpCagr unit contract (item B seam)", () => {
+  test("pct points convert unconditionally — no value passes through unconverted", () => {
+    expect(toCagrFraction(6.9)).toBe(0.069);
+    expect(toCagrFraction(0.8)).toBe(0.008); // old heuristic passed this through as a "fraction"
+    expect(toCagrFraction(-100)).toBe(-1.0); // old heuristic passed this through unconverted
+    expect(toCagrFraction(0)).toBe(0);
+    expect(toCagrFraction(12)).toBe(0.12);
+  });
+
+  test("range sanity: |fraction| > 1 (stored |pct| > 100) → null; the boundary ±100 pct itself stays valid", () => {
+    expect(toCagrFraction(1500)).toBeNull(); // fraction 15 — old path laundered this into 100/100
+    expect(toCagrFraction(-1500)).toBeNull();
+    expect(toCagrFraction(500)).toBeNull(); // fraction 5.0 — inside the old ±10 band, now rejected (laundering band closed)
+    expect(toCagrFraction(-500)).toBeNull();
+    expect(toCagrFraction(100)).toBe(1); // boundary kept valid
+    expect(toCagrFraction(-100)).toBe(-1.0); // boundary — valid at the seam, then excluded by the cagr ≤ 0 factor gate
+    expect(toCagrFraction(100.01)).toBeNull();
+  });
+
+  test("non-finite and null inputs → null", () => {
+    expect(toCagrFraction(null)).toBeNull();
+    expect(toCagrFraction(Number.NaN)).toBeNull();
+    expect(toCagrFraction(Number.POSITIVE_INFINITY)).toBeNull();
   });
 });
