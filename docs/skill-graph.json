@@ -1771,6 +1771,16 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261104-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261104-03",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -2206,7 +2216,11 @@
         ".agents/skills/decision-record/SKILL.md",
         ".codex/skills/decision-record/SKILL.md",
         ".hermes/skills/decision-record/SKILL.md"
-      ]
+      ],
+      "usage": {
+        "sessions": 1,
+        "last_used": "2026-11-04"
+      }
     },
     {
       "id": "skill:root/delegate-to-hub",
@@ -5805,6 +5819,18 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261104-01",
       "to": "skill:root/project-review",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261104-02",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261104-03",
+      "to": "skill:root/decision-record",
       "source": "skills_used"
     },
     {

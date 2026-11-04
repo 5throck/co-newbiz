@@ -1,4 +1,4 @@
-// @version 1.0.2
+// @version 1.0.3
 /**
  * env-keys.ts — credential loading for the CLI side of the pipeline.
  *
@@ -11,6 +11,8 @@
  * loadPipelineKeys() first, then read process.env directly — this module
  * never returns secret values, it only populates process.env.
  */
+
+import { parseEnvValue } from "./env-value.ts";
 
 const PIPELINE_ENV_KEYS =
   /^(DART_API_KEY|ECOS_API_KEY|KRX_API_KEY|KOSIS_API_KEY|DATA_GO_KR_API_KEY|LAW_API_OC|TAVILY_API_KEY|CO_NEWBIZ_LLM_[A-Z_]+)$/;
@@ -30,7 +32,7 @@ export function loadPipelineKeys(): void {
         for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
           const m = line.match(/^([A-Z_]+)=(.*)$/);
           if (m && PIPELINE_ENV_KEYS.test(m[1]) && process.env[m[1]] === undefined) {
-            process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+            process.env[m[1]] = parseEnvValue(m[2], m[1]);
           }
         }
       }
@@ -41,6 +43,11 @@ export function loadPipelineKeys(): void {
   } catch {
     // env discovery is best-effort — adapters report their own disabled state
   }
+}
+
+/** Test seam: forget load state so the next loadPipelineKeys() re-reads the walk. */
+export function resetPipelineKeysForTests(): void {
+  loaded = false;
 }
 
 /** True when every named key is present in the environment (after loading). */

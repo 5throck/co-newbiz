@@ -4,6 +4,7 @@
 // links to in schema.prisma).
 import { defineConfig } from "prisma/config";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { parseEnvValue } from "../../scripts/lib/env-value.ts";
 
 // Prisma 7's CLI does not auto-load .env for the config file itself (only
 // for migrate/generate steps downstream) — load it explicitly here so
@@ -12,8 +13,8 @@ if (!process.env.DATABASE_URL) {
   const { readFileSync } = await import("node:fs");
   const envText = readFileSync(new URL("./.env", import.meta.url), "utf-8");
   for (const line of envText.split("\n")) {
-    const m = line.match(/^([A-Z_]+)="?([^"\n]*)"?$/);
-    if (m) process.env[m[1]] = m[2];
+    const m = line.match(/^([A-Z_0-9]+)=(.*)$/);
+    if (m) process.env[m[1]] = parseEnvValue(m[2], m[1]);
   }
 }
 
