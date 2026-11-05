@@ -8,6 +8,10 @@
 //
 // 선택 모드: 독립 페이지(기본)는 URL ?industry= 로 선택을 운반하고, embedded
 // 모드(deals 탭)는 내부 상태로 선택한다 — router를 건드리지 않는다.
+// 신규 산업 분석의 단일 진입점은 목록 헤더의 "＋ 신규 산업 분석" 버튼
+// (IndustryListSection)이다 — 화면 상단에 독립 primary 버튼을 두지 않는다
+// (design 2026-11-06-s1-primary-action-placement; Wave U: one filled primary
+// button per screen).
 // industryId prop으로 특정 산업을 고정 딥링크할 수 있다.
 // Split from components/stages/MarketAnalysisStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useEffect, useRef, useState } from "react";
@@ -119,7 +123,6 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
       {confirmDialog}
       {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{linkNotice}</p>}
       {dealId && <DealBreadcrumb dealId={dealId} stageId="S1" />}
-      <MarketPrimaryAction ctx={ctx} />
       <StageFrame stageId="S1">
         <span className="flex flex-wrap items-center justify-between gap-2">
           <span>{t("selectingAnIndustryShowsThe")}</span>
@@ -166,25 +169,4 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
       )}
     </>
   );
-}
-
-/** S1 primary action (design §5): run sizing once inputs are complete, else lead the user to the gap. */
-function MarketPrimaryAction({ ctx }: { ctx: ReturnType<typeof useMarketData> & ReturnType<typeof useMarketLinking> }) {const t = useTranslations("stages.s1.marketAnalysisStage");
-  const { canCurate, showNewForm, setShowNewForm, newName, openLinkModal } = ctx;
-  if (!canCurate) {
-    return <PrimaryAction inline label={t("runMarketSizing")} disabled disabledReason={t("industryAnalysisRequiresTheAnalyst")} />;
-  }
-  if (!showNewForm || !newName.trim()) {
-    return (
-      <PrimaryAction
-        inline
-        label={t("newIndustryAnalysisInput")}
-        onClick={() => {
-          setShowNewForm(true);
-          setTimeout(() => document.getElementById("market-new-name")?.focus(), 0);
-        }}
-      />
-    );
-  }
-  return <PrimaryAction inline label={t("runMarketSizing2")} onClick={() => void openLinkModal(newName.trim())} />;
 }
