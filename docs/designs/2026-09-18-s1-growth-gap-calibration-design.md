@@ -114,3 +114,48 @@ bumps to v1.2.0).
   deliberately a person's action (boundary #2).
 - Deterministic scaling of cell CAGRs (methodology stays LLM-constraint
   based); escalation is a future decision.
+
+---
+
+## Addendum (2026-11-06): 기록된 외부 참조의 step-5 탑다운 컨센서스 연동
+
+- Status: approved fix design (구현 대기 — 본 문서에 설계만 기록)
+- Scope: `lib/market-sizing-pipeline.ts` step 5 의 `topDownCagr` 산출 경로 확장.
+  저장소·API·UI 변경 없음 — 기존 `market_external_reference` 기록을 재사용한다.
+
+### 문제
+
+- step 5 (`lib/market-sizing-pipeline.ts` ~L711-733) 의 탑다운 컨센서스
+  CAGR(`topDownCagr`)은 one-shot LLM 선험 질의(`askJsonTracked`)에서만 온다.
+  LLM이 `{"cagr":null}`을 반환하면 `topDownCagr=0`이 되고, 리포트는
+  "탑다운 컨센서스 미입력 — 입력 후 재확인 필요…"(~L1055-1061)를 영구 표시한다.
+- 보정 루프(v1.2.0)는 사람이 외부 참조(출처 라벨, 대상 연도, 외부 CAGR%)를
+  CalibrationPanel → `PUT /api/market-overview/industry/[industryId]/external-reference`
+  로 기록하고, `resolveExternalReference`(`lib/market-calibration.ts`)로
+  해석한다. R1 원칙: "기록된 참조는 재분석에서 그대로 재사용 — LLM 선험은
+  폴백일 뿐이다."
+- 결함: 이 기록 참조는 현재 step 5-B `externalForecast`(~L744)에만 먹히고,
+  step 5 `topDownCagr`에는 먹히지 않는다. step 5 `pendingInputs`는
+  "탑다운 컨센서스 CAGR 수동 입력"이라 쓰지만 수동 경로는 step 5에 닿지 않는다.
+
+### 결정 (요구사항, ASD-STE100)
+
+- D1: `resolveExternalReference`가 참조를 반환하면 파이프라인은 그
+  `external_cagr_pct`를 step 5 탑다운 컨센서스(`consistency.topDownCagr`)로
+  사용한다. step 5에서 LLM 선험 질의를 하지 않는다.
+- D2: 우선순위는 기록 참조 > LLM 선험 > 0(미입력)이다. R1과 같은 순서다.
+- D3: 기록 참조를 쓸 때 `consistency.tolerance` 노트는 이 값이 사람이 기록한
+  출처 확인된 참조임을 명시한다(`captured_from` 표기 포함). 기존
+  "LLM 지식 기반 추정" 노트 문구는 LLM 선험 경로에만 유지한다.
+- D4: 기록 참조가 없으면 현재 동작을 유지한다 — LLM 선험 질의 후, 실패 시
+  기존 "탑다운 컨센서스 미입력" 메시지에 보정 루프 기록 경로 안내를 덧붙인다
+  (보정 루프에서 외부 참조를 기록하면 재분석 시 이 값이 탑다운 컨센서스로
+  반영됨).
+- D5: 게이트·RAG·스키마(`schemaVersion`) 변경 없음. `topDownCagr`의 산출
+  근거만 달라진다.
+
+### 영향 파일
+
+- `app/web-next/lib/market-sizing-pipeline.ts` — step 5 산출 경로와
+  `consistency.tolerance` 노트 문구만. 이 문서는 설계 기록이며 코드 변경은
+  별도 실행 태스크로 진행한다.

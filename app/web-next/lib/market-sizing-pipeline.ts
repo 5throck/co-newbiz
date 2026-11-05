@@ -332,6 +332,54 @@ export function assertUsableBaseline(rawTotal: number, totalNow: number): void {
   throw new Error("기준선 매트릭스가 전부 0으로 해석되어 분석을 완료하지 못했습니다 — 재분석으로 재시도하세요");
 }
 
+// Step 5 탑다운 컨센서스 해석 — 우선순위: 기록 참조 > LLM 선험 > 0(미입력)
+// (design 2026-09-18-s1-growth-gap-calibration 추가분, 2026-11-06). 보정 루프에서
+// 사람이 기록한 외부 참조가 있으면 그 external_cagr_pct(%)를 그대로 컨센서스로
+// 쓰고 LLM 선험 질의를 건너뛴다(R1: 기록된 참조는 재분석에서 그대로 재사용 —
+// LLM 선험은 폴백일 뿐). 두 경로 모두 유효한 값이 없으면 0을 돌려준다 — 절대
+// 날조하지 않는다. 요약 표기·tolerance 노트·pendingInputs 문구도 한 곳에 모은다.
+export interface TopDownConsensusSource {
+  source_label: string;
+  captured_from: string;
+  external_cagr_pct: number;
+}
+
+export interface TopDownConsensus {
+  topDownCagr: number; // % 단위(예: 8.0) — 미입력이면 0(UI가 '미입력'으로 표시)
+  summaryLabel: string; // step-5 summary의 컨센서스 표기
+  toleranceNote: string; // consistency.tolerance 노트
+  pendingInputs: string[];
+}
+
+export function resolveTopDownConsensus(input: {
+  externalReference: TopDownConsensusSource | null;
+  llmCagrFrac: number | null; // LLM 선험의 cagr(분수, 예: 0.08) — 기록 참조가 있으면 질의하지 않았으므로 null
+}): TopDownConsensus {
+  const ref = input.externalReference && input.externalReference.external_cagr_pct > 0 ? input.externalReference : null;
+  if (ref) {
+    // 기록 참조 경로 — external_cagr_pct는 이미 % 단위(LLM 경로의 분수 × 100과 동일 값).
+    const topDownCagr = Math.round(ref.external_cagr_pct * 10) / 10;
+    return {
+      topDownCagr,
+      summaryLabel: `${topDownCagr.toFixed(1)}% (기록된 외부 참조)`,
+      toleranceNote: `탑다운 컨센서스는 사람이 기록한 외부 참조(${ref.source_label}, ${ref.captured_from}) — 원문 출처 확인됨. 내부 정합성 확인으로만 사용(독립 검증 아님).`,
+      pendingInputs: ["컨센서스 원문 출처 주기적 재확인"],
+    };
+  }
+  // LLM 선험 경로(기존 동작 유지) — 분수(0.08)를 %(8.0)로 환산한다.
+  const topDownCagr = typeof input.llmCagrFrac === "number" && input.llmCagrFrac > 0 && input.llmCagrFrac < 1
+    ? Math.round(input.llmCagrFrac * 1000) / 10
+    : 0;
+  return {
+    topDownCagr,
+    summaryLabel: topDownCagr > 0 ? `${topDownCagr.toFixed(1)}%` : "미입수",
+    toleranceNote: topDownCagr > 0
+      ? "탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님)."
+      : "탑다운 컨센서스 미입력 — 보정 루프에서 외부 참조를 기록하면 재분석 때 컨센서스로 사용됩니다. 내부 정합성 확인으로만 사용(독립 검증 아님).",
+    pendingInputs: topDownCagr > 0 ? ["컨센서스 CAGR의 원문 출처 확인"] : ["보정 루프에서 외부 참조로 탑다운 컨센서스 CAGR 기록"],
+  };
+}
+
 export async function runSizingPipeline(db: Database, analysisId: string): Promise<void> {
   // ADR-0126/0128 — 재분석 일관성: 직전 완료 버전의 산업 사슬 방향을 앵커로
   // 주입한다(옵션 2). LLM 샘플링 변동은 그대로 두되(temperature 0 미고정),
@@ -714,23 +762,29 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     REGIONS.reduce((a, r) => a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], 4), 0), 0) / anchorTotal,
     1 / 4,
   ) - 1;
-  // 탑다운 컨센서스 CAGR — LLM 지식의 공개 컨센서스(벤더 리포트 평균 관점)를 입수해
-  // 정합성 비교가 실제 두 값 사이의 비교가 되도록 한다. 입수 실패 시 0 유지(UI에
-  // '미입력'으로 표시됨)하며 절대 날조하지 않는다.
-  const tdJson = await askJsonTracked(
-    industry,
-    `이 산업의 공개된 시장 성장률 컨센서스(주요 시장조사기관 전망의 대표값, 연평균, 소수)를 제시하세요. JSON: {"cagr":0.08,"sourceLabel":"출처 관점(예: 글로벌 리서치 기관 전망 평균)","note":"전제 한 문장"}. 신뢰할 공개 컨센서스를 모르면 {"cagr":null}.`,
-  );
-  const topDownCagr = typeof tdJson?.cagr === "number" && tdJson.cagr > 0 && tdJson.cagr < 1
-    ? Math.round(tdJson.cagr * 1000) / 10
-    : 0;
+  // 탑다운 컨센서스 CAGR — 우선순위는 기록 참조 > LLM 선험 > 0(미입력)이며
+  // 절대 날조하지 않는다. 보정 루프(v1.2.0)에서 사람이 기록한 외부 참조가 있으면
+  // 그 external_cagr_pct(%)를 그대로 컨센서스로 쓰고 LLM 선험 질의를 아예
+  // 건너뛴다(R1: 기록된 참조는 재분석에서 그대로 재사용 — LLM 선험은 폴백일
+  // 뿐이고, 추적된 호출도 낭비하지 않는다). 참조가 없을 때만 LLM에 공개
+  // 컨센서스 관점값을 묻는다(정합성 비교가 실제 두 값 사이의 비교가 되도록).
+  let llmCagrFrac: number | null = null;
+  if (!externalReference) {
+    const tdJson = await askJsonTracked(
+      industry,
+      `이 산업의 공개된 시장 성장률 컨센서스(주요 시장조사기관 전망의 대표값, 연평균, 소수)를 제시하세요. JSON: {"cagr":0.08,"sourceLabel":"출처 관점(예: 글로벌 리서치 기관 전망 평균)","note":"전제 한 문장"}. 신뢰할 공개 컨센서스를 모르면 {"cagr":null}.`,
+    );
+    llmCagrFrac = typeof tdJson?.cagr === "number" ? tdJson.cagr : null;
+  }
+  const td = resolveTopDownConsensus({ externalReference, llmCagrFrac });
+  const topDownCagr = td.topDownCagr;
   const s5 = await summarize(
     industry,
     5,
     "성장률 정합성 확인",
-    `바텀업 롤업 CAGR ${(bottomUpCagr * 100).toFixed(1)}% vs 탑다운 컨센서스 ${topDownCagr > 0 ? `${topDownCagr.toFixed(1)}%` : "미입수"} — 내부 정합성 확인으로만 사용.`,
+    `바텀업 롤업 CAGR ${(bottomUpCagr * 100).toFixed(1)}% vs 탑다운 컨센서스 ${td.summaryLabel} — 내부 정합성 확인으로만 사용.`,
   );
-  stepSummaries.push({ step: 5, ...s5, pendingInputs: topDownCagr > 0 ? ["컨센서스 CAGR의 원문 출처 확인"] : ["탑다운 컨센서스 CAGR 수동 입력"] });
+  stepSummaries.push({ step: 5, ...s5, pendingInputs: td.pendingInputs });
 
   // ── Step 5-B: external future forecast vs our CAGR extrapolation ──
   // 외부 전망이 입수되면 우리 추정(과거 성장률 연장)과의 격차와 그 요인(신규·강화 드라이버)을
@@ -1055,9 +1109,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     consistency: {
       bottomUpCagr: Math.round(bottomUpCagr * 1000) / 10,
       topDownCagr,
-      tolerance: topDownCagr > 0
-        ? "탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님)."
-        : "탑다운 컨센서스 미입력 — 입력 후 재확인 필요. 내부 정합성 확인으로만 사용(독립 검증 아님).",
+      tolerance: td.toleranceNote,
     },
     externalForecast,
     crossValidation,

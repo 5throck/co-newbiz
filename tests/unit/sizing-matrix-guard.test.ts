@@ -22,23 +22,30 @@ const realLlmSnapshot = { ...realLlm };
 const realIsLlmConfigured = realLlmSnapshot.isLlmConfigured;
 const realCompleteOrFallback = realLlmSnapshot.completeOrFallback;
 // Mutable stub — each test swaps the completion object the seam returns.
-const llmStub: { armed: boolean; json: Record<string, unknown> } = { armed: false, json: {} };
+// `prompts` records the armed branch's serialized messages so tests can assert
+// which pipeline LLM queries fired (addendum 2026-11-06: the step-5 consensus
+// query must be SKIPPED when a recorded external reference exists).
+const llmStub: { armed: boolean; json: Record<string, unknown>; prompts: string[] } = { armed: false, json: {}, prompts: [] };
 mock.module("../../app/web-next/lib/llm.ts", () => ({
   ...realLlmSnapshot,
   isLlmConfigured: () => (llmStub.armed ? true : realIsLlmConfigured()),
-  completeOrFallback: (messages: unknown, fallback: unknown, opts?: { maxTokens?: number }) =>
-    llmStub.armed
-      ? Promise.resolve({
-          source: "llm" as const,
-          text: opts?.maxTokens === 400 ? "스텁 단계 요약 — 테스트 고정문" : JSON.stringify(llmStub.json),
-        })
-      : realCompleteOrFallback(messages as Parameters<typeof realCompleteOrFallback>[0], fallback as Parameters<typeof realCompleteOrFallback>[1], opts as Parameters<typeof realCompleteOrFallback>[2]),
+  completeOrFallback: (messages: unknown, fallback: unknown, opts?: { maxTokens?: number }) => {
+    if (!llmStub.armed) {
+      return realCompleteOrFallback(messages as Parameters<typeof realCompleteOrFallback>[0], fallback as Parameters<typeof realCompleteOrFallback>[1], opts as Parameters<typeof realCompleteOrFallback>[2]);
+    }
+    llmStub.prompts.push(JSON.stringify(messages));
+    return Promise.resolve({
+      source: "llm" as const,
+      text: opts?.maxTokens === 400 ? "스텁 단계 요약 — 테스트 고정문" : JSON.stringify(llmStub.json),
+    });
+  },
 }));
 
 const { resetDb, getDb } = await import("../../db/client.ts");
 const { seedS1ToS12Demo } = await import("../../scripts/co-newbiz/seed-s1-s12-demo.ts");
 const { isCompleteSizingMatrix, global2026, projection2030 } = await import("../../app/web-next/lib/market-sizing.ts");
-const { assertUsableBaseline, runSizingPipeline } = await import("../../app/web-next/lib/market-sizing-pipeline.ts");
+const { assertUsableBaseline, runSizingPipeline, resolveTopDownConsensus } = await import("../../app/web-next/lib/market-sizing-pipeline.ts");
+const { appendExternalReference } = await import("../../app/web-next/lib/market-calibration.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
@@ -98,6 +105,7 @@ describe("runSizingPipeline — zero-baseline fail-closed (§6 T1/T2)", () => {
   // on exit so sibling suites keep their env-driven behavior — no env mutation.
   beforeEach(() => {
     llmStub.armed = true;
+    llmStub.prompts.length = 0;
     setWebResearchOverrideForTests({ configured: false, sources: [] });
   });
   afterAll(() => {
@@ -171,6 +179,90 @@ describe("runSizingPipeline — zero-baseline fail-closed (§6 T1/T2)", () => {
     expect(total).toBeCloseTo(12, 0);
     // every stub cell CAGR 0.05 → bottom-up rollup ≈ 5.0 pct points (not the degenerate −100)
     expect(matrix.consistency.bottomUpCagr).toBeCloseTo(5, 1);
+  });
+
+  // Addendum 2026-11-06 (design 2026-09-18-s1-growth-gap-calibration) — the
+  // recorded external reference now feeds step 5's top-down consensus: the
+  // LLM prior query is SKIPPED entirely and the tolerance note names the
+  // person-recorded, source-verified reference.
+  test("addendum — 기록된 외부 참조가 있으면 step 5 컨센서스는 참조값을 쓰고 LLM 선험 질의를 스킵한다", async () => {
+    llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
+    const aid = insertAnalysis("참조 컨센서스 스텁 산업");
+    const industryId = (db().query("SELECT industry_id FROM market_sizing_analysis WHERE id = ?").get(aid) as { industry_id: string }).industry_id;
+    appendExternalReference(db(), {
+      industry_id: industryId,
+      source_label: "스텁 리서치 기관 전망",
+      target_year: 2030,
+      external_cagr_pct: 8.7,
+      captured_from: "user",
+      created_by: "test",
+    });
+    await expect(runSizingPipeline(db(), aid)).resolves.toBeUndefined();
+    const stored = db().query("SELECT payload FROM market_sizing_version WHERE analysis_id = ?").get(aid) as { payload: string };
+    const matrix = (JSON.parse(stored.payload) as { matrix: { consistency: { topDownCagr: number; tolerance: string } } }).matrix;
+    // The stub's `cagr` is the step-4 matrix object (not a number), so an LLM
+    // prior path would yield 0 — 8.7 can only come from the recorded reference.
+    expect(matrix.consistency.topDownCagr).toBe(8.7);
+    expect(matrix.consistency.tolerance).toContain("사람이 기록한 외부 참조(스텁 리서치 기관 전망, user)");
+    expect(matrix.consistency.tolerance).toContain("원문 출처 확인됨");
+    // The tracked LLM prior queries are not burned: step-5 consensus AND the
+    // step 5-B forecast ask (both reuse the same recorded reference) are skipped.
+    const prompts = llmStub.prompts.join("\n");
+    expect(prompts).not.toContain("공개된 시장 성장률 컨센서스");
+    expect(prompts).not.toContain("미래 시장 전망치");
+  });
+
+  test("addendum — 참조가 없으면 기존 LLM 선험 질의를 유지하고 미입력 노트가 보정 루프 기록 경로를 안내한다", async () => {
+    llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
+    const aid = insertAnalysis("레거시 컨센서스 스텁 산업");
+    await expect(runSizingPipeline(db(), aid)).resolves.toBeUndefined();
+    const stored = db().query("SELECT payload FROM market_sizing_version WHERE analysis_id = ?").get(aid) as { payload: string };
+    const matrix = (JSON.parse(stored.payload) as { matrix: { consistency: { topDownCagr: number; tolerance: string } } }).matrix;
+    // Legacy path intact: the consensus query fired, and with the stub's
+    // non-scalar `cagr` the prior yields no consensus (0) — never fabricated.
+    expect(llmStub.prompts.join("\n")).toContain("공개된 시장 성장률 컨센서스");
+    expect(matrix.consistency.topDownCagr).toBe(0);
+    expect(matrix.consistency.tolerance).toContain("탑다운 컨센서스 미입력 — 보정 루프에서 외부 참조를 기록하면 재분석 때 컨센서스로 사용됩니다");
+    expect(matrix.consistency.tolerance).toContain("내부 정합성 확인으로만 사용(독립 검증 아님)");
+  });
+});
+
+// resolveTopDownConsensus — the pure step-5 consensus resolution (addendum
+// 2026-11-06). Pipeline-level tests above cover the reference-present and
+// reference-absent runs; these unit cases pin the wording of every note
+// including the LLM-prior-success path the pipeline stub cannot reach (its
+// shared `cagr` key is the step-4 matrix object).
+describe("resolveTopDownConsensus — step 5 우선순위(기록 참조 > LLM 선험 > 0)", () => {
+  const ref = { source_label: "Gartner 전망", captured_from: "user", external_cagr_pct: 8.74 };
+
+  test("기록 참조가 있으면 external_cagr_pct(%)를 소수 1자리로 쓰고 출처 확인 노트를 돌려준다", () => {
+    const td = resolveTopDownConsensus({ externalReference: ref, llmCagrFrac: null });
+    expect(td.topDownCagr).toBe(8.7);
+    expect(td.summaryLabel).toBe("8.7% (기록된 외부 참조)");
+    expect(td.toleranceNote).toBe("탑다운 컨센서스는 사람이 기록한 외부 참조(Gartner 전망, user) — 원문 출처 확인됨. 내부 정합성 확인으로만 사용(독립 검증 아님).");
+    expect(td.pendingInputs).toEqual(["컨센서스 원문 출처 주기적 재확인"]);
+  });
+
+  test("LLM 선험 성공(분수 0.08) → 8.0, 기존 LLM 추정 노트 문구 유지", () => {
+    const td = resolveTopDownConsensus({ externalReference: null, llmCagrFrac: 0.08 });
+    expect(td.topDownCagr).toBe(8);
+    expect(td.summaryLabel).toBe("8.0%");
+    expect(td.toleranceNote).toBe("탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님).");
+    expect(td.pendingInputs).toEqual(["컨센서스 CAGR의 원문 출처 확인"]);
+  });
+
+  test("둘 다 없으면 0(미입력) — 절대 날조하지 않고 보정 루프 기록 경로를 안내한다", () => {
+    const td = resolveTopDownConsensus({ externalReference: null, llmCagrFrac: null });
+    expect(td.topDownCagr).toBe(0);
+    expect(td.summaryLabel).toBe("미입수");
+    expect(td.toleranceNote).toBe("탑다운 컨센서스 미입력 — 보정 루프에서 외부 참조를 기록하면 재분석 때 컨센서스로 사용됩니다. 내부 정합성 확인으로만 사용(독립 검증 아님).");
+    expect(td.pendingInputs).toEqual(["보정 루프에서 외부 참조로 탑다운 컨센서스 CAGR 기록"]);
+  });
+
+  test("기록 참조의 external_cagr_pct가 0이면(퇴화 레코드) 컨센서스로 쓰지 않는다 — 미입력 폴백", () => {
+    const td = resolveTopDownConsensus({ externalReference: { ...ref, external_cagr_pct: 0 }, llmCagrFrac: null });
+    expect(td.topDownCagr).toBe(0);
+    expect(td.toleranceNote).toContain("탑다운 컨센서스 미입력");
   });
 });
 
