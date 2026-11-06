@@ -2,9 +2,30 @@
 // gate decisions, the S12 transition decision, and the closure modal.
 import type { Locator, Page } from "./playwright.ts";
 import type { TestApp } from "./harness.ts";
-import { visit } from "./browser.ts";
+import { visit, type Session } from "./browser.ts";
 
 export type GateDecision = "go" | "hold" | "kill";
+
+/**
+ * Confirm the S3 synergy score the way a person does — POST the synergy-confirm
+ * endpoint with the session's cookie + CSRF (ADR-0090 boundary #2; ADR-0192
+ * makes that confirmation + a recorded rationale the S3 fit judgement, so any
+ * scenario whose fixture is created post-ADR_0192_PREDICATE_DATE and later
+ * records a pre_fs/fs GO must confirm first). Never writes the DB directly.
+ */
+export async function confirmSynergy(
+  app: TestApp,
+  s: Session,
+  opportunityId: string,
+  rationale = "E2E: 권고 시너지 점수를 검토하고 사람이 확정함 (ADR-0192)",
+): Promise<void> {
+  const csrf = (await s.context.cookies(app.baseUrl)).find((c) => c.name === "co_newbiz_csrf")?.value ?? "";
+  const res = await s.context.request.post(`${app.baseUrl}/api/opportunities/${opportunityId}/synergy-confirm`, {
+    headers: { "x-csrf-token": csrf, origin: app.baseUrl },
+    data: { rationale },
+  });
+  if (res.status() !== 200) throw new Error(`synergy-confirm failed (${res.status()}): ${await res.text()}`);
+}
 
 /** The gate panel (`section[aria-label="의사결정"]`) that offers `gate` in its 진행 select (or the only panel on the page). */
 export async function recordGate(
@@ -29,10 +50,15 @@ export async function recordGate(
   await form.locator("select").last().selectOption(decision);
   await form.locator("input[required]").first().fill(rationale);
   if (decision === "kill") {
-    await form.locator("textarea[required]").first().fill(opts.learning ?? "");
+    await form
+      .locator("textarea[required]")
+      .first()
+      .fill(opts.learning ?? "");
   }
   await fillGateAcknowledgements(form, decision);
-  const responsePromise = page.waitForResponse((r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+  const responsePromise = page.waitForResponse(
+    (r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+  );
   await form.locator('button[type="submit"]').last().click();
   // Shared gate-recording flow (R2-B): a confirm dialog first - or, for an IC GO with missing artifacts,
   // the warning dialog that requires a typed rationale. Nothing is sent before one of them is accepted.
@@ -54,9 +80,19 @@ export async function recordGate(
  */
 export async function openGatePanels(page: Page, index = 0): Promise<Locator> {
   const panels = page.locator('section[aria-label="의사결정"]');
-  const mounted = await panels.first().waitFor({ state: "attached", timeout: 8_000 }).then(() => true, () => false);
+  const mounted = await panels
+    .first()
+    .waitFor({ state: "attached", timeout: 8_000 })
+    .then(
+      () => true,
+      () => false,
+    );
   if (!mounted) {
-    await page.getByRole("tab", { name: /^(의사결정|결정)$/ }).filter({ visible: true }).first().click();
+    await page
+      .getByRole("tab", { name: /^(의사결정|결정)$/ })
+      .filter({ visible: true })
+      .first()
+      .click();
     await panels.first().waitFor({ state: "attached", timeout: 30_000 });
   }
   await revealTab(page, panels.nth(index));
@@ -81,7 +117,12 @@ export async function recordTransition(
   page: Page,
   app: TestApp,
   projectId: string,
-  decision: "next_tranche_released" | "held_evidence_incomplete" | "graduate_to_core" | "reduce_or_divest" | "kill_with_learning_captured",
+  decision:
+    | "next_tranche_released"
+    | "held_evidence_incomplete"
+    | "graduate_to_core"
+    | "reduce_or_divest"
+    | "kill_with_learning_captured",
   rationale: string,
   extra: { record?: string; learning?: string },
 ): Promise<void> {
@@ -95,13 +136,21 @@ export async function recordTransition(
   if (extra.record) await form.locator("input.sizing-new-input").last().fill(extra.record);
   await form.locator('button[type="submit"]').click();
   // P4 confirm dialog (useConfirm) — the explicit human confirmation.
-  const responsePromise = page.waitForResponse((r) => /transition-decision$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+  const responsePromise = page.waitForResponse(
+    (r) => /transition-decision$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "기록", exact: true }).click();
   const res = await responsePromise;
   if (res.status() >= 300) throw new Error(`transition POST returned ${res.status()}: ${await res.text()}`);
 }
 
-export type ClosureTypeLabel = "게이트 KILL로 종료" | "철회" | "핵심사업 편입" | "매각/청산" | "중단(학습 포착)" | "제외";
+export type ClosureTypeLabel =
+  | "게이트 KILL로 종료"
+  | "철회"
+  | "핵심사업 편입"
+  | "매각/청산"
+  | "중단(학습 포착)"
+  | "제외";
 
 /** Open the closure modal from the S12 header action and submit. Returns the dialog for axe scans before submit when `beforeSubmit` is provided. */
 export async function closeProjectViaModal(
@@ -113,16 +162,24 @@ export async function closeProjectViaModal(
   opts: { learning?: string; beforeSubmit?: (page: Page) => Promise<void> } = {},
 ): Promise<void> {
   await visit(page, app, `/projects/${projectId}/portfolio`);
-  await page.getByRole("button", { name: /프로젝트 종료…/ }).first().click();
+  await page
+    .getByRole("button", { name: /프로젝트 종료…/ })
+    .first()
+    .click();
   const dialog = page.getByRole("dialog");
   await dialog.waitFor({ state: "visible", timeout: 20_000 });
-  await dialog.getByText("전제조건을 확인하는 중").waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
+  await dialog
+    .getByText("전제조건을 확인하는 중")
+    .waitFor({ state: "detached", timeout: 20_000 })
+    .catch(() => undefined);
   await dialog.getByRole("radio", { name: new RegExp(type.replace(/[()]/g, "\\$&")) }).check();
   const [reasonBox, learningBox] = [dialog.locator("textarea").nth(0), dialog.locator("textarea").nth(1)];
   await reasonBox.fill(reason);
   if (opts.learning) await learningBox.fill(opts.learning);
   if (opts.beforeSubmit) await opts.beforeSubmit(page);
-  const responsePromise = page.waitForResponse((r) => /\/close$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+  const responsePromise = page.waitForResponse(
+    (r) => /\/close$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+  );
   await dialog.getByRole("button", { name: "프로젝트 종료", exact: true }).click();
   const res = await responsePromise;
   if (res.status() >= 300) throw new Error(`close POST returned ${res.status()}: ${await res.text()}`);
@@ -139,19 +196,31 @@ export async function see(page: Page, text: string | RegExp, timeout = 20_000): 
 }
 
 export async function seeNot(page: Page, text: string | RegExp, timeout = 5_000): Promise<void> {
-  await page.getByText(text).first().waitFor({ state: "detached", timeout }).catch(async () => {
-    if (await page.getByText(text).first().isVisible()) throw new Error(`unexpected text still visible: ${String(text)}`);
-  });
+  await page
+    .getByText(text)
+    .first()
+    .waitFor({ state: "detached", timeout })
+    .catch(async () => {
+      if (await page.getByText(text).first().isVisible())
+        throw new Error(`unexpected text still visible: ${String(text)}`);
+    });
 }
 
 /**
  * Acknowledged-GO block (ADR-0186 P2): once the snapshot has loaded, give a reason for every listed acknowledgement
  * and, when the AI recommendation differs, the divergence reason. With the flags off the block is empty and this is a no-op.
  */
-export async function fillGateAcknowledgements(form: Locator, decision: GateDecision, reason = "E2E: 항목을 검토했고 영향을 인지한 채 진행함"): Promise<void> {
+export async function fillGateAcknowledgements(
+  form: Locator,
+  decision: GateDecision,
+  reason = "E2E: 항목을 검토했고 영향을 인지한 채 진행함",
+): Promise<void> {
   if (decision !== "go") return;
   // The snapshot loads after the panel mounts; the summary heading marks it as present.
-  await form.getByText("이 진행의 현재 상태").waitFor({ state: "visible", timeout: 10_000 }).catch(() => undefined);
+  await form
+    .getByText("이 진행의 현재 상태")
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .catch(() => undefined);
   const block = form.locator('[data-testid="gate-ack-block"]');
   if ((await block.count()) === 0) return;
   const boxes = block.locator("textarea");
