@@ -20,6 +20,7 @@ import { ClosureModal } from "../../../components/ClosureModal.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
 import { KnownTargetGuide } from "../../../components/KnownTargetGuide.tsx";
 import { EntryMarketFlow } from "../../../components/EntryMarketFlow.tsx";
+import { AttractivenessReEvaluate } from "../../../components/AttractivenessReEvaluate.tsx";
 
 interface OpportunityRow {
   id: string; project_id: string | null; name: string; market_scope: string | null; value_chain_node: string | null;
@@ -37,10 +38,6 @@ interface Sketch {
 }
 interface SketchVersion { version_no: number; source: string | null; created_at: string }
 interface SketchView { sketch: Sketch | null; source: string | null; created_at: string | null; versions: SketchVersion[] }
-interface AttractivenessReco {
-  source: "llm" | "synthesis"; note: string | null; manifest: string[];
-  recommendation: { suggested_score: number | null; rationale_draft: string; key_evidence: string[]; cautions: string[] };
-}
 
 // 퍼널 상태 라벨 — 카탈로그 키로 해석 (ko 마스터: 발굴/평가/선별/제외)
 const STATUS_KEY: Record<OpportunityRow["status"], string> = {
@@ -61,12 +58,6 @@ export function OpportunityDetail() {
   const [factors, setFactors] = useState<OppFactors | null>(null);
   const [factorBusy, setFactorBusy] = useState(false);
   const [factorDraft, setFactorDraft] = useState<{ type: "opportunity" | "risk"; text: string }>({ type: "opportunity", text: "" });
-  const [attractDraft, setAttractDraft] = useState("");
-  const [attractReco, setAttractReco] = useState<AttractivenessReco | null>(null);
-  const [attractBusy, setAttractBusy] = useState(false);
-  // 재평가: 발굴(identified) 이후에도 매력도를 다시 매길 수 있게 입력 컨트롤을 여는 토글.
-  // PUT /api/opportunities/{id}는 status 게이트가 없다(점수만 갱신) — 종결(selected/dropped)만 UI에서 막는다.
-  const [reEvaluating, setReEvaluating] = useState(false);
   const [sketchView, setSketchView] = useState<SketchView | null>(null);
   const [sketchBusy, setSketchBusy] = useState(false);
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
@@ -92,10 +83,6 @@ export function OpportunityDetail() {
     el?.scrollIntoView({ block: "center" });
     el?.focus();
   }, [wantsScoreFocus, scoreReady]);
-  // 재평가 토글을 열면 점수 입력으로 포커스를 옮긴다 (키보드·스크린리더 흐름).
-  useEffect(() => {
-    if (reEvaluating) document.getElementById("opp-score-input")?.focus();
-  }, [reEvaluating]);
   useEffect(() => {
     api.get<{ factors: OppFactors }>(`/api/opportunities/${encodeURIComponent(id)}/factors`)
       .then((r) => setFactors(r.data.factors))
@@ -134,32 +121,6 @@ export function OpportunityDetail() {
         setFactors(res.data.factors);
       } catch (err) { setError(err instanceof Error ? err.message : t("factorDeleteFailed")); }
     }, { body: text.length > 60 ? `${text.slice(0, 60)}…` : text });
-  }
-
-  async function evaluateAttractiveness() {
-    const v = attractDraft === "" ? null : Math.min(100, Math.max(0, Number(attractDraft)));
-    if (v === null || Number.isNaN(v)) { setError(t("errAttractRange")); return; }
-    setError(null);
-    try {
-      await api.put(`/api/opportunities/${encodeURIComponent(id)}`, { attractiveness_score: v });
-      // 매력도 평가 = 평가 단계 진행 — 발굴(identified) 상태면 자동으로
-      // 평가(assessed)로 넘긴다 (퍼널이 평가 버튼 없이 막히지 않게, ADR-0127).
-      if (opp?.status === "identified") {
-        await api.put(`/api/opportunities/${encodeURIComponent(id)}`, { status: "assessed" });
-      }
-      setAttractDraft("");
-      setReEvaluating(false);
-      load();
-    } catch (err) { setError(err instanceof Error ? err.message : t("attractEvalFailed")); }
-  }
-  async function generateAttractDraft() {
-    setAttractBusy(true); setError(null);
-    try {
-      const r = await api.post<AttractivenessReco>(`/api/opportunities/${encodeURIComponent(id)}/attractiveness-recommendation`, {});
-      setAttractReco(r.data);
-      if (r.data.recommendation.suggested_score !== null) setAttractDraft(String(r.data.recommendation.suggested_score));
-    } catch (err) { setError(err instanceof Error ? err.message : t("attractDraftFailed")); }
-    finally { setAttractBusy(false); }
   }
 
   async function createSketch(force: boolean) {
@@ -204,9 +165,6 @@ export function OpportunityDetail() {
   if (!opp) return <main><p>{tc("loading")}</p></main>;
 
   const s3Ready = opp.synergy_score !== null && opp.attractiveness_score !== null;
-  const firstEvaluation = opp.status === "identified";
-  const canReEvaluate = canAct && !firstEvaluation && opp.status !== "selected" && opp.status !== "dropped";
-  const showScoreControls = canAct && (firstEvaluation || (canReEvaluate && reEvaluating));
 
   return (
     <main>
@@ -257,24 +215,8 @@ export function OpportunityDetail() {
           )}
         </div>
         {opp.rationale && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
-        {showScoreControls && (
-          <div className="flex flex-wrap items-center gap-1">
-            <input id="opp-score-input" type="number" min={0} max={100} aria-label={t("attractiveness")} placeholder={t("attractPlaceholder")}
-              value={attractDraft} onChange={(e) => setAttractDraft(e.target.value)}
-              className="sizing-new-input sizing-new-input-sm" style={{ width: "7.5rem" }} />
-            <button type="button" className="btn-ghost btn-sm" onClick={() => void evaluateAttractiveness()}>{t("evaluateButton")}</button>
-            <button type="button" className="btn-ghost btn-sm" disabled={attractBusy} onClick={() => void generateAttractDraft()}>
-              {attractBusy ? t("draftGenerating") : t("aiDraftButton")}
-            </button>
-            {canReEvaluate && (
-              <button type="button" className="btn-ghost btn-sm" onClick={() => { setReEvaluating(false); setAttractDraft(""); }}>{t("reEvaluateClose")}</button>
-            )}
-            {attractReco && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || t("noDraft")}</span>}
-          </div>
-        )}
-        {canReEvaluate && !reEvaluating && (
-          <button type="button" className="btn-ghost btn-sm" aria-expanded={false} onClick={() => setReEvaluating(true)}>{t("reEvaluateButton")}</button>
-        )}
+        {/* 매력도 평가·재평가 컨트롤 — S2 퍼널 행과 공용 (AttractivenessReEvaluate) */}
+        <AttractivenessReEvaluate opportunityId={id} status={opp.status} canAct={canAct} onSaved={load} />
         {/* S3 — 판정 결과와 S3 화면 이동 링크 (인라인 실행 없음, ADR-0127) */}
         {opp.status !== "identified" && (
           <div className="mt-2 p-2 border border-[color:var(--border)] rounded text-[length:var(--fs-caption)]">

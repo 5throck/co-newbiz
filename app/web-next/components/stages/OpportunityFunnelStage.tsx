@@ -19,6 +19,7 @@ import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 import { ColGroup } from "../ui.tsx";
+import { AttractivenessReEvaluate } from "../AttractivenessReEvaluate.tsx";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
 import type { TranslatorFn } from "../../i18n/config.ts";
 import { useTranslations } from "next-intl";
@@ -769,6 +770,18 @@ export function OpportunityFunnelStage({
                               ))}
                             </select>
                           </label>
+                        )}
+                        {/* 평가(assessed) 기회의 매력도 재평가 — 상세 화면과 같은 공용 컨트롤.
+                            발굴(identified)은 첫 평가를 상세 화면에서 하므로 여기선 그리지 않는다. */}
+                        {o.status === "assessed" && (
+                          <AttractivenessReEvaluate
+                            opportunityId={o.id}
+                            opportunityName={o.name}
+                            status={o.status}
+                            canAct={canAct}
+                            onSaved={load}
+                            inputId={`opp-score-input-${o.id}`}
+                          />
                         )}
                         {nextStepActions(o, t)}
                         {canAct && !o.project_id && (
