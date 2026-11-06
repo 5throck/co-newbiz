@@ -169,7 +169,11 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
   test("checkbox UI is gated behind the decision panel and rides with the POST", () => {
     const buckets = readFileSync("app/web-next/components/ReviewBuckets.tsx", "utf8");
     expect(buckets).toContain("onToggleJudgement");
-    expect(buckets).toContain("사람 확인");
+    // PR3 (design 2026-11-06): the ack label renders via the catalog key.
+    expect(buckets).toContain('tr("review.items.ackLabel")');
+    expect(koOf("review.items.ackLabel")).toBe(
+      "사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)",
+    );
     const panel = readFileSync("app/web-next/components/GateDecisionPanel.tsx", "utf8");
     expect(panel).toContain("judgement_confirmations:");
     expect(panel).toContain("onDecisionJump={canRecord ? () => focusGateDecision(gates[0]) : undefined}");
@@ -230,7 +234,9 @@ describe("gate decision judgement_confirmations sidecar (ADR-0182 §5)", () => {
   test("a confirmed claim renders as a saved-state chip, not a pending checkbox", () => {
     const buckets = readFileSync("app/web-next/components/ReviewBuckets.tsx", "utf8");
     expect(buckets).toContain("confirmedJudgements");
-    expect(buckets).toContain("사람 확인됨 — 결정 기록과 함께 저장");
+    // PR3 (design 2026-11-06): the chip text renders via the catalog key.
+    expect(buckets).toContain('tr("review.items.confirmed")');
+    expect(koOf("review.items.confirmed")).toBe("사람 확인됨 — 결정 기록과 함께 저장");
     expect(buckets).toContain("!confirmed && judgementable");
   });
 });

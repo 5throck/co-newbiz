@@ -1,6 +1,8 @@
 // Client-safe display helpers for the 3-stage review surface (critique
-// 2026-10-09, items 1/5/6/7). NO imports: consumed by client components, so it
-// must not pull server modules (bun:sqlite) into the bundle.
+// 2026-10-09, items 1/5/6/7). Client-safe only: no server modules (bun:sqlite)
+// may be pulled into the bundle. The review-item-keys catalog is pure
+// constants, so importing it stays client-safe.
+import { REVIEW_ITEM_KEYS, isReviewItemKey, type ReviewItemKey } from "./review-item-keys.ts";
 //
 // Boundary: this file only re-words AI 1st's deterministic English templates
 // into Korean for display. It never changes what a reason MEANS, never turns a
@@ -57,7 +59,26 @@ interface ItemLike {
   claim: string;
   reason: string;
   evidence_ref?: string;
+  /** Locale key from the catalog (review-item-keys.ts); absent on legacy rows. */
+  key?: string;
+  params?: Record<string, unknown>;
 }
+
+/**
+ * Resolve a keyed review item to its next-intl message id + params (Fix 3,
+ * design 2026-11-06 PR3). Returns null when the item has no catalog key —
+ * legacy rows fall back to `localizeItem` (ko) / raw stored text (en).
+ * `localizeItem` remains the LEGACY fallback and is unchanged.
+ */
+export function resolveKeyedItem(
+  it: Pick<ItemLike, "key" | "params">,
+): { messageId: ReviewItemKey; params: Record<string, unknown> } | null {
+  if (!it.key || !isReviewItemKey(it.key)) return null;
+  return { messageId: it.key, params: it.params ?? {} };
+}
+
+/** Non-null marker for the UI: this item renders via next-intl, not localizeItem. */
+export const REVIEW_KEY_HINT = REVIEW_ITEM_KEYS.ai2FreeText;
 export interface LocalizedItem {
   claim: string;
   reason: string;

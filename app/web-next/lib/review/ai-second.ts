@@ -29,6 +29,18 @@ import { canonicalJson } from "./gate-artifacts.ts";
 import type { ReviewArtifact } from "./stage-artifacts.ts";
 import { hasStructuralGaps } from "./ai-first.ts";
 import { Ai2ndOutputSchema, type Ai2ndOutput } from "./schema.ts";
+import { REVIEW_ITEM_KEYS } from "./review-item-keys.ts";
+
+/** Tag LLM free-text items with the locale key; stored English stays the audit record. */
+const tagFreeText = (b: ReviewBuckets): ReviewBuckets => {
+  const tag = (items: ReviewItem[]): ReviewItem[] =>
+    items.map((i) => (i.key ? i : { ...i, key: REVIEW_ITEM_KEYS.ai2FreeText }));
+  return {
+    verified: tag(b.verified),
+    could_not_verify: tag(b.could_not_verify),
+    needs_judgement: tag(b.needs_judgement),
+  };
+};
 
 export const DEFAULT_REVIEW_MONTHLY_TOKEN_CAP = 200_000;
 
@@ -183,7 +195,12 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
     const buckets: ReviewBuckets = opts.buckets ?? {
       verified: [],
       could_not_verify: [
-        { claim: "AI 2nd cross-domain review was not performed", reason: opts.reason ?? "unspecified" },
+        {
+          claim: "AI 2nd cross-domain review was not performed",
+          reason: opts.reason ?? "unspecified",
+          key: REVIEW_ITEM_KEYS.ai2NotPerformed,
+          params: { reason: opts.reason ?? "unspecified" },
+        },
       ],
       needs_judgement: [],
     };
@@ -327,7 +344,7 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
     });
   }
 
-  const buckets: ReviewBuckets = { ...parsed };
+  const buckets: ReviewBuckets = tagFreeText({ ...parsed });
   if (sel.fallbackUsed) {
     // The reviewer was NOT chosen by the matrix: label it (no PASS stamp, same
     // three buckets - this only discloses how the reviewer was picked).
@@ -339,6 +356,12 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
       {
         claim: "Reviewer chosen by fallback routing, not by a cross-validation matrix entry",
         reason: `${sel.fallbackReason}; default cross-domain lead ${sel.reviewerAgent} reviewed.${specialist}`,
+        key: REVIEW_ITEM_KEYS.ai2FallbackReviewer,
+        params: {
+          fallbackReason: sel.fallbackReason,
+          reviewerAgent: sel.reviewerAgent,
+          specialist: sel.firstStageSpecialist ?? null,
+        },
       },
     ];
   }
@@ -348,6 +371,8 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
       {
         claim: "Orchestrator agents excluded from the author-domain check",
         reason: `${sel.exemptAgents.join(", ")}: no review domain by explicit matrix exemption; the artifact domain comes from the other authoring agents.`,
+        key: REVIEW_ITEM_KEYS.ai2ExemptAgents,
+        params: { agents: sel.exemptAgents.join(", ") },
       },
     ];
   }
@@ -357,6 +382,8 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
       {
         claim: "Domain of some authoring agents could not be resolved",
         reason: `Excluded from the cross-domain check: ${sel.unresolvedAgents.join(", ")}.`,
+        key: REVIEW_ITEM_KEYS.ai2UnresolvedAgents,
+        params: { agents: sel.unresolvedAgents.join(", ") },
       },
     ];
   }

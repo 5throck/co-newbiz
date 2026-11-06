@@ -6,8 +6,16 @@
 // or auto-selected decision. Silence is not approval — a stage that was not
 // performed says so in text. The human decision controls stay in the
 // surrounding panel and are labelled as the human's decision (boundary #2).
+//
+// Localization (ADR-0184, PR3 of design 2026-11-06): items that carry a
+// `key` resolve through the message catalog via the review-item-keys contract
+// (lib/review/review-item-keys.ts + resolveKeyedItem in lib/review-display.ts).
+// Missing catalog keys fall back to the regex translation in
+// lib/review-display.ts; legacy rows (no `key`) always use that fallback. The
+// AI-2nd request carries the current locale so the LLM answers in the user's
+// language (stored English stays the audit record).
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
@@ -22,8 +30,11 @@ import {
   gateDisplayName,
   localizeItem,
   localizeNotPerformedReason,
+  resolveKeyedItem,
   reviewOriginText,
+  type LocalizedItem,
 } from "../lib/review/review-display.ts";
+import { REVIEW_ITEM_KEYS } from "../lib/review/review-item-keys.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction, useToast } from "./ui.tsx";
 
@@ -54,6 +65,11 @@ interface ReviewItem {
   structural?: boolean;
   /** "not_reached": the stage is later than the entity's current stage — informational, never an open defect (Fix 1). */
   scope?: "not_reached";
+  /** Catalog key for locale rendering (PR3) — one of the dotted keys in
+   *  lib/review/review-item-keys.ts, resolved verbatim via next-intl. */
+  key?: string;
+  /** ICU parameters interpolated into the keyed message. */
+  params?: Record<string, string | number>;
 }
 /** Not-reached items sit in could_not_verify but are neutral context, not open defects. */
 const isNotReached = (it: { scope?: string }): boolean => it.scope === "not_reached";
@@ -80,13 +96,41 @@ interface ReviewView {
 }
 
 type BucketKey = "verified" | "could_not_verify" | "needs_judgement";
-// Korean titles are exact (dissent condition on the 2026-10-09 critique): never softened.
-// English is available only as a tooltip.
-const BUCKETS: Array<{ key: BucketKey; hint: string }> = [
-  { key: "verified", hint: "산출물 자체로 확인된 항목입니다. 승인이 아닙니다." },
-  { key: "could_not_verify", hint: "검토자가 확인하지 못했다고 밝힌 항목입니다." },
-  { key: "needs_judgement", hint: "사람이 판단해야 하는 항목입니다." },
+// Bucket titles and hints come from the review.* catalog namespace (ADR-0184);
+// BUCKET_TITLE's English stays as the tooltip (English is the audit language).
+const BUCKETS: Array<{ key: BucketKey; hintKey: string }> = [
+  { key: "verified", hintKey: "review.buckets.hintVerified" },
+  { key: "could_not_verify", hintKey: "review.buckets.hintCouldNotVerify" },
+  { key: "needs_judgement", hintKey: "review.buckets.hintNeedsJudgement" },
 ];
+
+/**
+ * Locale rendering of one review item. When the item carries a catalog key
+ * that resolves in BOTH locales' shared catalog (the translator already
+ * serves the active locale; `has` guards against a missing entry), the
+ * message renders with its params. Anything else — legacy rows and keys the
+ * catalog does not know yet — falls back to the regex translation, which
+ * keeps the stored English text when it cannot translate.
+ */
+function localizedItemText(tr: ReturnType<typeof useTranslations>, it: ReviewItem): LocalizedItem {
+  const fallback = localizeItem(it);
+  const resolved = resolveKeyedItem(it);
+  if (!resolved || !tr.has(resolved.messageId)) return fallback;
+  const params: Record<string, string | number> = Object.fromEntries(
+    Object.entries(resolved.params).map(([k, v]) => [k, typeof v === "number" ? v : String(v)]),
+  );
+  // Raw ids and canonical-English params get their display form before interpolation.
+  if (resolved.messageId === REVIEW_ITEM_KEYS.ai1GateVerdict && params.gate !== undefined) {
+    params.gate = gateDisplayName(String(params.gate));
+  }
+  if (resolved.messageId === REVIEW_ITEM_KEYS.ai2NotPerformed && typeof params.reason === "string") {
+    params.reason = localizeNotPerformedReason(params.reason);
+  }
+  const claim = tr(resolved.messageId, params);
+  const reasonKey = `${resolved.messageId}Reason`;
+  const reason = tr.has(reasonKey) ? tr(reasonKey, params) : fallback.reason;
+  return { claim, reason, localized: true };
+}
 
 /** How the review block is laid out.
  *  - "expanded": decision surfaces (gate panels, inbox, proposal confirm) - buckets always visible.
@@ -102,30 +146,31 @@ function CountStrip({
   notReached?: number;
   label?: string;
 }) {
+  const tr = useTranslations();
   const warn = counts.could_not_verify > 0;
   return (
     // biome-ignore lint/a11y/useSemanticElements: an inline <span> strip; <fieldset> would change layout/styling (fieldset has block box and default border/padding)
-    <span className="review-counts" role="group" aria-label="검토 결과 건수">
+    <span className="review-counts" role="group" aria-label={tr("review.aria.counts")}>
       {label && <span className="review-counts-target">{label}</span>}
       <span className="review-count" title={BUCKET_TITLE.verified.en}>
-        {BUCKET_TITLE.verified.ko} <b className="tabular-nums">{counts.verified}</b>건
+        {tr("review.counts.verified", { count: counts.verified })}
       </span>
       <span
         className={`review-count${warn ? " review-count-warn status-chip status-amber" : ""}`}
         title={BUCKET_TITLE.could_not_verify.en}
       >
         {warn && <AlertTriangle size={14} aria-hidden="true" />}
-        {BUCKET_TITLE.could_not_verify.ko} <b className="tabular-nums">{counts.could_not_verify}</b>건
-        {warn && <span className="review-count-flag"> · 확인 필요</span>}
+        {tr("review.counts.couldNotVerify", { count: counts.could_not_verify })}
+        {warn && <span className="review-count-flag"> · {tr("review.counts.confirmNeeded")}</span>}
       </span>
       {notReached > 0 && (
         <span className="review-count" title="Not reached yet">
           <Clock size={14} aria-hidden="true" />
-          아직 도달하지 않은 단계 <b className="tabular-nums">{notReached}</b>건
+          {tr("review.counts.notReached", { count: notReached })}
         </span>
       )}
       <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
-        {BUCKET_TITLE.needs_judgement.ko} <b className="tabular-nums">{counts.needs_judgement}</b>건
+        {tr("review.counts.needsJudgement", { count: counts.needs_judgement })}
       </span>
     </span>
   );
@@ -174,6 +219,7 @@ export function ReviewBuckets({
   confirmedJudgements?: ReadonlySet<string>;
 }) {
   const tr = useTranslations();
+  const locale = useLocale();
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   const reviewGates = useMemo(() => (gates ?? []).filter((g) => REVIEW_GATE_IDS.has(g)) as ReviewGateId[], [gates]);
@@ -240,10 +286,14 @@ export function ReviewBuckets({
       if (checked) setSelfAckMeta((m) => ({ ...m, [claim]: { by: me?.userId ?? "", at: new Date().toISOString() } }));
       api.post(acksPath, { gate, claim, acked: checked }).catch((e) => {
         setSelfChecks((m) => ({ ...m, [claim]: !checked }));
-        toast(e instanceof Error ? `확인 저장 실패: ${e.message}` : "확인 저장 실패");
+        toast(
+          e instanceof Error
+            ? tr("review.errors.ackFailedWith", { message: e.message })
+            : tr("review.errors.ackFailed"),
+        );
       });
     },
-    [acksPath, me?.userId, toast],
+    [acksPath, me?.userId, toast, tr],
   );
 
   const base = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/reviews`;
@@ -264,13 +314,11 @@ export function ReviewBuckets({
         // gets an actionable empty state instead.
         const msg = e instanceof Error ? e.message : "";
         setError(
-          /^not found\.?$/i.test(msg.trim())
-            ? "이 검토/안건을 찾을 수 없습니다 — 검토/안건 보드에서 항목을 선택해 다시 들어오세요."
-            : msg || "검토 불러오기 실패",
+          /^not found\.?$/i.test(msg.trim()) ? tr("review.errors.notFound") : msg || tr("review.errors.loadFailed"),
         );
       }
     },
-    [base, canRequest],
+    [base, canRequest, tr],
   );
 
   useEffect(() => {
@@ -291,15 +339,21 @@ export function ReviewBuckets({
   const view = views[active];
   const headerAction = headerPrimary ? (
     <PrimaryAction
-      label={busy ? "요청 중…" : view?.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
+      label={
+        busy
+          ? tr("review.actions.busy")
+          : view?.ai_2nd?.current
+            ? tr("review.actions.requestAgain")
+            : tr("review.actions.request")
+      }
       onClick={() => void requestAi2nd()}
       disabled={!canRequest || busy || !view}
       disabledReason={
         !canRequest
-          ? "AI 2차 검토 요청은 analyst 권한이 필요합니다."
+          ? tr("review.errors.disabledRole")
           : busy
-            ? "요청 중입니다."
-            : "AI 1차 검토를 불러오는 중입니다."
+            ? tr("review.errors.busy")
+            : tr("review.errors.loadingFirst")
       }
     />
   ) : null;
@@ -308,15 +362,17 @@ export function ReviewBuckets({
   async function requestAi2nd() {
     if (busy) return;
     setBusy(true);
-    setStatus("AI 2차 검토를 요청했습니다. 진행 중입니다…");
+    setStatus(tr("review.status.ai2ndRequested"));
     try {
-      const r = await api.post<ReviewView>(`${base}/ai-2nd`, activeParam);
+      // The request locale rides along (additive body field) so the AI 2nd LLM
+      // answers in the user's language; the stored English stays canonical.
+      const r = await api.post<ReviewView>(`${base}/ai-2nd`, { ...activeParam, locale });
       setViews((v) => ({ ...v, [active]: r.data }));
       setStatus(ai2ndStatusMessage(r.data.ai_2nd));
       setError(null);
     } catch (e) {
       setStatus("");
-      setError(e instanceof Error ? e.message : "AI 2차 검토 요청 실패");
+      setError(e instanceof Error ? e.message : tr("review.errors.ai2ndFailed"));
     } finally {
       setBusy(false);
     }
@@ -327,13 +383,13 @@ export function ReviewBuckets({
   async function recordAudit(agreed: boolean) {
     if (!view?.ai_2nd || busy) return;
     setBusy(true);
-    setStatus(agreed ? "동의 검표를 기록했습니다." : "비동의 검표를 기록했습니다. 검토 신뢰도 KPI에 반영됩니다.");
+    setStatus(agreed ? tr("review.status.auditAgree") : tr("review.status.auditDisagree"));
     try {
       await api.post(`/api/reviews/${encodeURIComponent(view.ai_2nd.id)}/audit-sample`, { agreed });
       setError(null);
     } catch (e) {
       setStatus("");
-      setError(e instanceof Error ? e.message : "검표 기록 실패");
+      setError(e instanceof Error ? e.message : tr("review.errors.auditFailed"));
     } finally {
       setBusy(false);
     }
@@ -372,7 +428,10 @@ export function ReviewBuckets({
   const showBody = !summaryMode || open;
 
   return (
-    <section aria-label="3단계 검토" className={`market-section sizing-step mt-3 review-block review-block-${variant}`}>
+    <section
+      aria-label={tr("review.aria.block")}
+      className={`market-section sizing-step mt-3 review-block review-block-${variant}`}
+    >
       {headerAction}
       {summaryMode ? (
         // Non-dismissible by design: there is no close control, only an expand toggle.
@@ -385,7 +444,7 @@ export function ReviewBuckets({
             onClick={() => setOpen((o) => !o)}
           >
             {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-            <span className="review-strip-title">3단계 검토</span>
+            <span className="review-strip-title">{tr("review.strip.title")}</span>
             {view ? (
               <CountStrip
                 counts={displayCounts}
@@ -393,36 +452,42 @@ export function ReviewBuckets({
                 label={tabs.length > 1 ? activeLabel : undefined}
               />
             ) : (
-              <span className="review-counts-target">{error ? "불러오지 못함" : "불러오는 중…"}</span>
+              <span className="review-counts-target">
+                {error ? tr("review.strip.loadFailed") : tr("review.strip.loading")}
+              </span>
             )}
-            {view && allReviewed && <span className="status-chip status-green">✓ 종결</span>}
-            <span className="review-strip-action">{open ? "접기" : "펼쳐서 보기"}</span>
+            {view && allReviewed && <span className="status-chip status-green">✓ {tr("review.strip.closed")}</span>}
+            <span className="review-strip-action">
+              {open ? tr("review.strip.collapse") : tr("review.strip.expand")}
+            </span>
           </button>
         </div>
       ) : (
         <div className="review-head">
-          <h3 className="sizing-step-title text-[length:var(--fs-body)]">3단계 검토 — 사람 판단 전 참고 자료</h3>
+          <h3 className="sizing-step-title text-[length:var(--fs-body)]">{tr("review.head.title")}</h3>
           {view && <CountStrip counts={displayCounts} notReached={notReachedCount} />}
           {headerSlot && <span className="review-head-slot">{headerSlot}</span>}
         </div>
       )}
       <div id={panelId} hidden={!showBody}>
-        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-          검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄
-          뿐이며 결정은 아래에서 사람이 기록합니다.
-        </p>
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{tr("review.disclaimer")}</p>
         {allReviewed && (
           <p className="mb-2 text-[length:var(--fs-caption)]" role="status" data-testid="review-all-reviewed">
-            <span className="status-chip status-green">✓ 모두 사람 확인 완료</span>
-            <span className="ml-2 text-[color:var(--muted-fg)]">
-              이 검토의 확인·판단 항목을 모두 확인했습니다 — 사람 확인으로 종결되었습니다.
-            </span>
+            <span className="status-chip status-green">✓ {tr("review.allReviewed.chip")}</span>
+            <span className="ml-2 text-[color:var(--muted-fg)]">{tr("review.allReviewed.note")}</span>
           </p>
         )}
-        {tabs.length > 1 && <TabNav label="검토 대상 산출물" active={active} onSelect={setActive} tabs={tabs} />}
+        {tabs.length > 1 && (
+          <TabNav label={tr("review.aria.artifactsNav")} active={active} onSelect={setActive} tabs={tabs} />
+        )}
         <div
           {...(tabs.length > 1
-            ? { role: "tabpanel", "aria-label": `${tabs.find((t) => t.key === active)?.label ?? ""} 산출물 검토` }
+            ? {
+                role: "tabpanel",
+                "aria-label": tr("review.aria.artifactPanel", {
+                  label: tabs.find((t) => t.key === active)?.label ?? "",
+                }),
+              }
             : {})}
         >
           {error && (
@@ -431,24 +496,30 @@ export function ReviewBuckets({
             </p>
           )}
           {!view && !error && (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">검토를 불러오는 중…</p>
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tr("review.loading")}</p>
           )}
           {view && (
             <>
-              <ul className="sizing-note-list mb-2 text-[length:var(--fs-caption)]" aria-label="검토 단계 출처">
+              <ul
+                className="sizing-note-list mb-2 text-[length:var(--fs-caption)]"
+                aria-label={tr("review.aria.stageSources")}
+              >
                 {stages.map((s) => (
                   <li key={s.id}>
                     <span className="font-semibold">{reviewOriginText(s)}</span>
-                    {s.author_domain ? ` — 작성 도메인 ${s.author_domain}` : ""}
+                    {s.author_domain ? tr("review.items.authorDomain", { domain: s.author_domain }) : ""}
                     {!s.performed && s.not_performed_reason && (
-                      <span title="수행되지 않음"> — {localizeNotPerformedReason(s.not_performed_reason)}</span>
+                      <span title={tr("review.items.notPerformedTitle")}>
+                        {" "}
+                        — {localizeNotPerformedReason(s.not_performed_reason)}
+                      </span>
                     )}
-                    {!s.current && <span> — 이전 산출물 기준의 결과입니다. 산출물이 바뀌었습니다.</span>}
+                    {!s.current && <span>{tr("review.items.stale")}</span>}
                   </li>
                 ))}
                 {!view.ai_2nd && (
                   <li>
-                    <span title="Not performed">AI 2차 (교차 도메인): 아직 요청되지 않음 (수행되지 않음)</span>
+                    <span title="Not performed">{tr("review.items.ai2ndNotRequested")}</span>
                   </li>
                 )}
               </ul>
@@ -477,17 +548,22 @@ export function ReviewBuckets({
                         className="text-[length:var(--fs-body)] font-semibold mb-1"
                         title={BUCKET_TITLE[b.key].en}
                       >
-                        {BUCKET_TITLE[b.key].ko}, {openItems.length}건
+                        {tr("review.buckets.heading", {
+                          title: tr(`review.buckets.${b.key}`),
+                          count: openItems.length,
+                        })}
                       </h4>
-                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
+                        {tr(b.hintKey)}
+                      </p>
                       {b.key === "needs_judgement" && items.length > 0 && onDecisionJump && (
                         <button type="button" className="btn-ghost btn-sm mb-1" onClick={onDecisionJump}>
-                          이 항목들을 검토한 뒤 결정을 기록하세요 →
+                          {tr("review.buckets.decisionJump")}
                         </button>
                       )}
                       <ul className="review-items text-[length:var(--fs-caption)]">
                         {openItems.map(({ it, s }) => {
-                          const l = localizeItem(it);
+                          const l = localizedItemText(tr, it);
                           const claimKey = `${s.id}-${it.claim}`;
                           const confirmed = confirmedJudgements?.has(it.claim) ?? false;
                           // 확인하다 못함(could_not_verify)도 같은 ack 흐름으로 종결할 수 있다 (2026-10-21 decider).
@@ -505,15 +581,14 @@ export function ReviewBuckets({
                                 {l.reason}
                               </span>
                               <span className="block text-[color:var(--muted-fg)]">
-                                출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
+                                {tr("review.items.source", {
+                                  source: citationLabel(s.origin, s.reviewer_domain, it.evidence_ref),
+                                })}
                               </span>
                               {confirmed && (
                                 <span className="block mt-1">
-                                  <span
-                                    className="status-chip status-green"
-                                    title="이 항목은 결정 기록과 함께 사람 확인으로 저장되었습니다"
-                                  >
-                                    <span aria-hidden="true">✓</span> 사람 확인됨 — 결정 기록과 함께 저장
+                                  <span className="status-chip status-green" title={tr("review.items.confirmedTitle")}>
+                                    <span aria-hidden="true">✓</span> {tr("review.items.confirmed")}
                                   </span>
                                 </span>
                               )}
@@ -530,14 +605,15 @@ export function ReviewBuckets({
                                       )
                                     }
                                   />
-                                  <span>
-                                    사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)
-                                  </span>
+                                  <span>{tr("review.items.ackLabel")}</span>
                                 </label>
                               )}
                               {!confirmed && metaFor?.[it.claim] && (
                                 <span className="block mt-1 note" data-testid="review-ack-saved">
-                                  확인 저장됨 · {metaFor[it.claim].by} · {metaFor[it.claim].at.slice(0, 10)}
+                                  {tr("review.items.ackSaved", {
+                                    by: metaFor[it.claim].by,
+                                    date: metaFor[it.claim].at.slice(0, 10),
+                                  })}
                                 </span>
                               )}
                             </li>
@@ -548,15 +624,14 @@ export function ReviewBuckets({
                         <details className="review-dev" data-testid="review-not-reached">
                           <summary>
                             <Clock size={14} aria-hidden="true" className="inline mr-1" />
-                            <span title="Not reached yet">아직 도달하지 않은 단계, {notReachedItems.length}건</span>
+                            <span title="Not reached yet">
+                              {tr("review.items.notReachedSummary", { count: notReachedItems.length })}
+                            </span>
                           </summary>
-                          <p className="review-dev-note">
-                            아직 진행하지 않은 단계라 확인할 수 없는 항목입니다. 결함이 아니며, 해당 단계에 도달하면
-                            검토됩니다.
-                          </p>
+                          <p className="review-dev-note">{tr("review.items.notReachedNote")}</p>
                           <ul className="review-items text-[length:var(--fs-caption)]">
                             {notReachedItems.map(({ it, s }) => {
-                              const l = localizeItem(it);
+                              const l = localizedItemText(tr, it);
                               return (
                                 <li key={`${s.id}-nr-${it.claim}`}>
                                   <span className="font-semibold" title={l.localized ? it.claim : undefined}>
@@ -569,7 +644,9 @@ export function ReviewBuckets({
                                     {l.reason}
                                   </span>
                                   <span className="block text-[color:var(--muted-fg)]">
-                                    출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
+                                    {tr("review.items.source", {
+                                      source: citationLabel(s.origin, s.reviewer_domain, it.evidence_ref),
+                                    })}
                                   </span>
                                 </li>
                               );
@@ -582,12 +659,9 @@ export function ReviewBuckets({
                 })}
               </div>
               <details className="review-dev">
-                <summary>원문 기록 (개발자용)</summary>
+                <summary>{tr("review.dev.summary")}</summary>
                 {/* INTERIM-WORDING */}
-                <p className="review-dev-note">
-                  검토 결과의 영문 원문·내부 식별자·검토 기록 해시입니다. 결과를 추적하거나 번역과 대조할 때만 필요하며,
-                  일반 사용에는 열지 않아도 됩니다.
-                </p>
+                <p className="review-dev-note">{tr("review.dev.note")}</p>
                 <ul>
                   {stages.flatMap((s) =>
                     BUCKETS.flatMap((b) =>
@@ -606,7 +680,7 @@ export function ReviewBuckets({
                   )}
                 </ul>
                 <p className="review-dev-note">
-                  검토 기록 <code>{view.content_hash.slice(0, 12)}</code>
+                  {tr("review.dev.hash", { hash: view.content_hash.slice(0, 12) })}
                   {stages.map((s) => (
                     <span key={s.id}>
                       {" "}
@@ -623,7 +697,11 @@ export function ReviewBuckets({
                     disabled={busy}
                     onClick={() => void requestAi2nd()}
                   >
-                    {busy ? "요청 중…" : view.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
+                    {busy
+                      ? tr("review.actions.busy")
+                      : view.ai_2nd?.current
+                        ? tr("review.actions.requestAgain")
+                        : tr("review.actions.request")}
                   </button>
                 )}
                 {canRequest && view.ai_2nd?.performed && view.ai_2nd.current && (
@@ -634,7 +712,7 @@ export function ReviewBuckets({
                       disabled={busy}
                       onClick={() => void recordAudit(true)}
                     >
-                      이 검토에 동의 (검표)
+                      {tr("review.actions.auditAgree")}
                     </button>
                     <button
                       type="button"
@@ -642,13 +720,15 @@ export function ReviewBuckets({
                       disabled={busy}
                       onClick={() => void recordAudit(false)}
                     >
-                      이 검토에 비동의 (검표)
+                      {tr("review.actions.auditDisagree")}
                     </button>
                   </>
                 )}
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  이번 달 AI 2차 토큰 {view.token_cap.used.toLocaleString()} / {view.token_cap.cap.toLocaleString()} ·
-                  산출물이 같으면 저장된 검토를 재사용합니다
+                  {tr("review.tokenCap", {
+                    used: view.token_cap.used.toLocaleString(),
+                    cap: view.token_cap.cap.toLocaleString(),
+                  })}
                 </span>
               </div>
             </>
