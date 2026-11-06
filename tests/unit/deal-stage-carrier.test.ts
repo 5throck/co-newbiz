@@ -25,7 +25,7 @@ describe("deal stage carrier wiring (T-20261022-010/-018)", () => {
     expect(stage).not.toMatch(/track="greenfield"/);
     expect(stage).not.toMatch(/track="brownfield"/);
     expect(stage).toContain("track={track ?? undefined}");
-    expect(stage).toContain("<TrackGate routeId={params.id} track={track}");
+    expect(stage.replace(/\s+/g, " ")).toContain("<TrackGate routeId={params.id} track={track}");
   });
 
   test("S3 and the S8~S12 tab keep their existing resolvers", () => {
@@ -40,7 +40,7 @@ describe("project rail source-opportunity wiring (T-20261022-019)", () => {
 
   test("StageFrame resolves the source opportunity under /projects for the S1~S7 links", () => {
     expect(frame).toContain("useSourceOpportunity(underProjects ? routeId : undefined)");
-    expect(frame).toContain("underProjects ? sourceOppId ?? undefined : routeId");
+    expect(frame).toContain("underProjects ? (sourceOppId ?? undefined) : routeId");
   });
 
   test("StageTabs reuses the hoisted hook — one resolution, one cache", () => {

@@ -184,8 +184,7 @@ function expectHeadOrder(label: string, p: FrameParts, expectTabs: boolean): voi
   if (html.indexOf("<h1") !== h1Idx) breaks.push("the frame h1 is not the document's first h1");
   if (html.slice(headIdx + HEAD.length, h1Idx).trim() !== "") breaks.push("h1 is not the stage-head's first child");
   // Objective paragraph directly after the head…
-  if (html.slice(afterHead, objIdx).trim() !== "")
-    breaks.push("objective is not directly after the head");
+  if (html.slice(afterHead, objIdx).trim() !== "") breaks.push("objective is not directly after the head");
   // …strip directly after the objective…
   if (html.slice(objClose + "</p>".length, stripIdx).trim() !== "")
     breaks.push("strip is not directly after the objective");
@@ -409,8 +408,9 @@ describe("stage-screen wiring lock (static source)", () => {
     const s8 = src.slice(src.indexOf('if (stageId === "S8"'), src.indexOf("return <StageGuidanceTab"));
     expect(s8).not.toContain("DealEntryMarketStrip");
     expect(s8).toContain("<ProjectStageTab");
-    expect(src).toContain("router.replace(`/projects/");
-    for (const seg of ["business-case", "dd", "deal-structure", "ic-review", "portfolio"]) expect(src).toContain(`"${seg}"`);
+    expect(src).toMatch(/router\.replace\(\s*`\/projects\//);
+    for (const seg of ["business-case", "dd", "deal-structure", "ic-review", "portfolio"])
+      expect(src).toContain(`"${seg}"`);
   });
 
   test("S1 mounts its own frame (documented exception); the flat /market route stays a frame-free stub", () => {

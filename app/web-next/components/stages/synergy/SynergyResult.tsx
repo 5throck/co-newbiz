@@ -113,7 +113,8 @@ export function SynergyResult(props0: {
         <p className="text-[length:var(--fs-body)]" role="status">
           {tc("analyzingOpen")}
           {analysis.current_step}
-          {t("n5Steps")} {stepTitle ? `${stepTitle} ` : ""}{t("inProgressItRefreshesAutomatically")}
+          {t("n5Steps")} {stepTitle ? `${stepTitle} ` : ""}
+          {t("inProgressItRefreshesAutomatically")}
         </p>
       )}
       {!p && !inProgress && <p className="text-[color:var(--muted-fg)] italic">{t("noAnalysisResults")}</p>}

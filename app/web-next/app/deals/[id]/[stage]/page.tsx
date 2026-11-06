@@ -33,8 +33,12 @@ import { DealEntryMarketStrip } from "../../../../components/EntryMarketContextS
 import { LearningCorpusPanel } from "../../../../components/LearningCorpusPanel.tsx";
 
 interface ProcessView {
-  currentStage: string | null; nextStage: string | null; track: string | null;
-  blockers: string[]; requiredArtifacts: string[]; gateStatus: Record<string, string>;
+  currentStage: string | null;
+  nextStage: string | null;
+  track: string | null;
+  blockers: string[];
+  requiredArtifacts: string[];
+  gateStatus: Record<string, string>;
   stages: Array<{ id: string; status: string }>;
   /** Project carrier: source opportunity (resolveDealCarrier's CarrierProcess contract). */
   opportunity?: { id: string } | null;
@@ -44,10 +48,21 @@ interface ProcessView {
 // shows a plain notice with a link to the stage that applies instead of the working screen.
 // The track is the carrier's own track (resolved once by CarrierStageBody, T-20261022-018) —
 // null keeps every stage applicable, same as an unresolvable track did before.
-function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
-  routeId: string; track: TrackId | null; stageLabel: string; only: "greenfield" | "brownfield"; otherStage: "s5" | "s6"; children: React.ReactNode;
+function TrackGate({
+  routeId,
+  track,
+  stageLabel,
+  only,
+  otherStage,
+  children,
+}: {
+  routeId: string;
+  track: TrackId | null;
+  stageLabel: string;
+  only: "greenfield" | "brownfield";
+  otherStage: "s5" | "s6";
+  children: React.ReactNode;
 }) {
-  const trRoot = useTranslations();
   const t = useTranslations("pages.dealStage");
   if (track && track !== only) {
     const thisName = track === "greenfield" ? "Green Field" : "Brown Field";
@@ -55,12 +70,15 @@ function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
       <div className="card" role="note">
         <h2>{stageLabel}</h2>
         <p>
-          {only === "brownfield" ? t("notApplicableGreenfield") : t("notApplicableBrownfield")}
-          {" "}{t("trackIsSuffix", { p1: thisName })}
+          {only === "brownfield" ? t("notApplicableGreenfield") : t("notApplicableBrownfield")}{" "}
+          {t("trackIsSuffix", { p1: thisName })}
         </p>
         <p>
           <Link className="btn-primary" href={`/deals/${encodeURIComponent(routeId)}/${otherStage}`}>
-            {t("goToTrackStage", { p1: STAGE_META.find((m) => m.id === (otherStage === "s5" ? "S5" : "S6"))?.name ?? "", p2: track === "greenfield" ? "Green Field" : "Brown Field" })}
+            {t("goToTrackStage", {
+              p1: STAGE_META.find((m) => m.id === (otherStage === "s5" ? "S5" : "S6"))?.name ?? "",
+              p2: track === "greenfield" ? "Green Field" : "Brown Field",
+            })}
           </Link>
         </p>
       </div>
@@ -75,8 +93,13 @@ function TrackGate({ routeId, track, stageLabel, only, otherStage, children }: {
 // (T-20261022-010), and the track-fixed StageFrame/TrackGate get the carrier's track
 // instead of a hardcoded one (T-20261022-018). A project without a source opportunity
 // gets an empty state — the S1~S7 screens are opportunity-scoped by construction.
-function CarrierStageBody({ routeId, children }: { routeId: string; children: (carrier: { opportunityId: string; track: TrackId | null }) => React.ReactNode }) {
-  const trRoot = useTranslations();
+function CarrierStageBody({
+  routeId,
+  children,
+}: {
+  routeId: string;
+  children: (carrier: { opportunityId: string; track: TrackId | null }) => React.ReactNode;
+}) {
   const t = useTranslations("pages.dealStage");
   const [state, setState] = useState<
     | { status: "loading" }
@@ -84,6 +107,7 @@ function CarrierStageBody({ routeId, children }: { routeId: string; children: (c
     | { status: "error"; message: string }
   >({ status: "loading" });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch is keyed on routeId — t is only read in the error fallback; adding the translator would refetch on translator identity churn
   useEffect(() => {
     let alive = true;
     setState({ status: "loading" });
@@ -97,12 +121,17 @@ function CarrierStageBody({ routeId, children }: { routeId: string; children: (c
           track: t === "greenfield" || t === "brownfield" ? t : null,
         });
       })
-      .catch((e) => { if (alive) setState({ status: "error", message: e instanceof Error ? e.message : t("dealLoadFailed") }); });
-    return () => { alive = false; };
+      .catch((e) => {
+        if (alive) setState({ status: "error", message: e instanceof Error ? e.message : t("dealLoadFailed") });
+      });
+    return () => {
+      alive = false;
+    };
   }, [routeId]);
 
   if (state.status === "loading") return <PageState state="loading" />;
-  if (state.status === "error") return <PageState state="error" errorText={state.message} onRetry={() => window.location.reload()} />;
+  if (state.status === "error")
+    return <PageState state="error" errorText={state.message} onRetry={() => window.location.reload()} />;
   if (state.opportunityId === "") {
     return <PageState state="empty" emptyText={t("noOpportunityEmpty")} />;
   }
@@ -110,7 +139,6 @@ function CarrierStageBody({ routeId, children }: { routeId: string; children: (c
 }
 
 function StageTab() {
-  const trRoot = useTranslations();
   const t = useTranslations("pages.dealStage");
   const params = useParams<{ id: string; stage: string }>();
   const searchParams = useSearchParams();
@@ -133,9 +161,7 @@ function StageTab() {
     return (
       <main>
         <DealBreadcrumb dealId={params.id} stageId="S2" />
-        <StageFrame stageId="S2">
-          {t("s2Guidance")}
-        </StageFrame>
+        <StageFrame stageId="S2">{t("s2Guidance")}</StageFrame>
         <CarrierStageBody routeId={params.id}>
           {({ opportunityId }) => <OpportunityFunnelStage opportunityId={opportunityId} />}
         </CarrierStageBody>
@@ -150,12 +176,16 @@ function StageTab() {
     return (
       <main>
         <DealBreadcrumb dealId={params.id} stageId="S4" />
-        <StageFrame stageId="S4">
-          {t("s4Guidance")}
-        </StageFrame>
+        <StageFrame stageId="S4">{t("s4Guidance")}</StageFrame>
         <DealEntryMarketStrip routeId={params.id} />
         <CarrierStageBody routeId={params.id}>
-          {({ opportunityId }) => <RouteDecisionStage opportunityId={opportunityId} rationaleParam={searchParams.get("rationale")} tabParam={searchParams.get("tab")} />}
+          {({ opportunityId }) => (
+            <RouteDecisionStage
+              opportunityId={opportunityId}
+              rationaleParam={searchParams.get("rationale")}
+              tabParam={searchParams.get("tab")}
+            />
+          )}
         </CarrierStageBody>
       </main>
     );
@@ -169,7 +199,12 @@ function StageTab() {
     const companySurface = searchParams.get("surface") === "company";
     return (
       <main>
-        <DealBreadcrumb dealId={params.id} stageId="S3" tail={companySurface ? [{ label: t("companySurfaceLabel") }] : []} />
+        <DealBreadcrumb
+          dealId={params.id}
+          stageId="S3"
+          tail={companySurface ? [{ label: t("companySurfaceLabel") }] : []}
+        />
+        {/* biome-ignore lint/a11y/useSemanticElements: control-chip switcher group — a fieldset would change the toolbar DOM/styling shared across stage toolbars */}
         <div role="group" aria-label={t("s3SwitcherAria")} className="flex flex-wrap gap-1 mb-2">
           <Link
             href={`/deals/${params.id}/s3`}
@@ -195,9 +230,7 @@ function StageTab() {
           </>
         ) : (
           <>
-            <StageFrame stageId="S3">
-              {t("s3SynergyGuidance")}
-            </StageFrame>
+            <StageFrame stageId="S3">{t("s3SynergyGuidance")}</StageFrame>
             <DealEntryMarketStrip routeId={params.id} />
             <S3Synergy routeId={params.id} analysisId={searchParams.get("analysis") ?? undefined} />
           </>
@@ -218,7 +251,13 @@ function StageTab() {
                 {t("s5Guidance")}
               </StageFrame>
               <DealEntryMarketStrip routeId={params.id} />
-              <TrackGate routeId={params.id} track={track} stageLabel={t("s5StageLabel")} only="greenfield" otherStage="s6">
+              <TrackGate
+                routeId={params.id}
+                track={track}
+                stageLabel={t("s5StageLabel")}
+                only="greenfield"
+                otherStage="s6"
+              >
                 <GreenfieldStage opportunityId={opportunityId} />
               </TrackGate>
             </>
@@ -238,10 +277,18 @@ function StageTab() {
           {({ opportunityId, track }) => (
             <>
               <StageFrame stageId={["S6", "S7"]} track={track ?? undefined} subtitle={t("s67Heading")}>
-                {t("s67GuidancePre")}<code>{t("s67GuidanceCode")}</code>{t("s67GuidancePost")}
+                {t("s67GuidancePre")}
+                <code>{t("s67GuidanceCode")}</code>
+                {t("s67GuidancePost")}
               </StageFrame>
               <DealEntryMarketStrip routeId={params.id} />
-              <TrackGate routeId={params.id} track={track} stageLabel={t("s67StageLabel", { p1: stageId })} only="brownfield" otherStage="s5">
+              <TrackGate
+                routeId={params.id}
+                track={track}
+                stageLabel={t("s67StageLabel", { p1: stageId })}
+                only="brownfield"
+                otherStage="s5"
+              >
                 <BrownfieldStage opportunityId={opportunityId} />
               </TrackGate>
             </>
@@ -266,18 +313,29 @@ function StageTab() {
 function S3Synergy({ routeId, analysisId }: { routeId: string; analysisId?: string }) {
   const st = useDealOpportunityId(routeId);
   if (st.status === "loading") return <PageState state="loading" />;
-  if (st.status === "error") return <PageState state="error" errorText={st.message} onRetry={() => window.location.reload()} />;
-  return <SynergyStage opportunityId={st.opportunityId ?? undefined} noSourceOpportunity={st.opportunityId === null} analysisId={analysisId} embedded />;
+  if (st.status === "error")
+    return <PageState state="error" errorText={st.message} onRetry={() => window.location.reload()} />;
+  return (
+    <SynergyStage
+      opportunityId={st.opportunityId ?? undefined}
+      noSourceOpportunity={st.opportunityId === null}
+      analysisId={analysisId}
+      embedded
+    />
+  );
 }
 
 // S8~S12 프로젝트 단계 — 정본 프로젝트 화면 경로 (StageFrame의 STAGE_HREF와 동일).
 // ADR-0094/0095: carrierId가 프로젝트 id면 그대로, 기회 id면 opportunity.project_id로 해석한다.
 const PROJECT_STAGE_PATH: Record<string, string> = {
-  S8: "business-case", S9: "dd", S10: "deal-structure", S11: "ic-review", S12: "portfolio",
+  S8: "business-case",
+  S9: "dd",
+  S10: "deal-structure",
+  S11: "ic-review",
+  S12: "portfolio",
 };
 
 function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
-  const trRoot = useTranslations();
   const t = useTranslations("pages.dealStage");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -287,40 +345,57 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
   // S7)의 승격 화면으로 보낸다. 트랙을 못 받으면 기회 개요로 폴백한다.
   const [promoHref, setPromoHref] = useState<string | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch is keyed on the carrier/stage/query — t is only read in the error fallback; adding the translator would refetch on translator identity churn
   useEffect(() => {
     let alive = true;
     setError(null);
     setPromoHref(null);
     const go = (pid: string) => {
-      if (alive) router.replace(`/projects/${encodeURIComponent(pid)}/${PROJECT_STAGE_PATH[stageId]}${query ? `?${query}` : ""}`);
+      if (alive)
+        router.replace(
+          `/projects/${encodeURIComponent(pid)}/${PROJECT_STAGE_PATH[stageId]}${query ? `?${query}` : ""}`,
+        );
     };
     // 프로젝트 id 링크가 대부분이므로 프로젝트 process를 먼저 조회한다(멤버십 포함 검증) —
     // 기회 id일 때만 기회 조회로 폴백해 프로젝트 id에 대한 불필요한 404 탐침을 없앤다.
-    api.get(`/api/projects/${encodeURIComponent(carrierId)}/process`)
+    api
+      .get(`/api/projects/${encodeURIComponent(carrierId)}/process`)
       .then(() => go(carrierId))
       .catch(() => {
         api
           .get<{ project_id: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}`)
           .then((r) => {
             if (!alive) return;
-            if (r.data.project_id) { go(r.data.project_id); return; }
+            if (r.data.project_id) {
+              go(r.data.project_id);
+              return;
+            }
             setError(t("notPromoted"));
             // 캐리어 트랙으로 승격 링크의 착지 단계를 정한다 — resolveDealCarrier가
             // 이 파일의 다른 바디에서 쓰는 것과 동일한 process 뷰의 track 필드.
-            api.get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
+            api
+              .get<{ track: string | null }>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
               .then((p) => {
                 if (!alive) return;
                 setPromoHref(
-                  p.data.track === "greenfield" ? `/deals/${encodeURIComponent(carrierId)}/s5`
-                    : p.data.track === "brownfield" ? `/deals/${encodeURIComponent(carrierId)}/s7`
+                  p.data.track === "greenfield"
+                    ? `/deals/${encodeURIComponent(carrierId)}/s5`
+                    : p.data.track === "brownfield"
+                      ? `/deals/${encodeURIComponent(carrierId)}/s7`
                       : `/opportunities/${encodeURIComponent(carrierId)}`,
                 );
               })
-              .catch(() => { if (alive) setPromoHref(`/opportunities/${encodeURIComponent(carrierId)}`); });
+              .catch(() => {
+                if (alive) setPromoHref(`/opportunities/${encodeURIComponent(carrierId)}`);
+              });
           })
-          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("carrierCheckFailed")); });
+          .catch((e) => {
+            if (alive) setError(e instanceof Error ? e.message : t("carrierCheckFailed"));
+          });
       });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [carrierId, stageId, query, router]);
 
   return (
@@ -330,9 +405,13 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
         <PageState
           state="empty"
           emptyText={error}
-          emptyAction={promoHref && (
-            <Link className="btn-ghost btn-sm" href={promoHref}>{t("goToPromotion")}</Link>
-          )}
+          emptyAction={
+            promoHref && (
+              <Link className="btn-ghost btn-sm" href={promoHref}>
+                {t("goToPromotion")}
+              </Link>
+            )
+          }
         />
       )}
       {!error && <PageState state="loading" />}
@@ -349,16 +428,27 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
   const [proc, setProc] = useState<ProcessView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch is keyed on carrierId — t is only read in the error fallback; adding the translator would refetch on translator identity churn
   useEffect(() => {
     let alive = true;
-    api.get<ProcessView>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
-      .then((r) => { if (alive) setProc(r.data); })
+    api
+      .get<ProcessView>(`/api/opportunities/${encodeURIComponent(carrierId)}/process`)
+      .then((r) => {
+        if (alive) setProc(r.data);
+      })
       .catch(() => {
-        api.get<ProcessView>(`/api/projects/${encodeURIComponent(carrierId)}/process`)
-          .then((r) => { if (alive) setProc(r.data); })
-          .catch((e) => { if (alive) setError(e instanceof Error ? e.message : t("processLoadFailed")); });
+        api
+          .get<ProcessView>(`/api/projects/${encodeURIComponent(carrierId)}/process`)
+          .then((r) => {
+            if (alive) setProc(r.data);
+          })
+          .catch((e) => {
+            if (alive) setError(e instanceof Error ? e.message : t("processLoadFailed"));
+          });
       });
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [carrierId]);
 
   const stage = proc?.stages.find((s) => s.id === stageId);
@@ -374,13 +464,29 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
       {!proc && !error && <PageState state="loading" />}
 
       {proc && !applicable && (
-        <PageState state="empty" emptyText={t("notApplicableForTrack", { p1: stageId, p2: resolveLabelTokens(trackKeysText(proc.track), trRoot) })} />
+        <PageState
+          state="empty"
+          emptyText={t("notApplicableForTrack", {
+            p1: stageId,
+            p2: resolveLabelTokens(trackKeysText(proc.track), trRoot),
+          })}
+        />
       )}
       {proc && applicable && (
         <div className="market-section">
-          <p className="text-[length:var(--fs-body)]">{t("statusPrefix")} <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{(() => { const k = STAGE_STATUS_KEY[stage?.status ?? ""]; return k ? trRoot(k) : stage?.status ?? ""; })()}</span></p>
+          <p className="text-[length:var(--fs-body)]">
+            {t("statusPrefix")}{" "}
+            <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>
+              {(() => {
+                const k = STAGE_STATUS_KEY[stage?.status ?? ""];
+                return k ? trRoot(k) : (stage?.status ?? "");
+              })()}
+            </span>
+          </p>
           <ul className="sizing-note-list">
-            {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{localizeBlocker(trRoot, b)}</li>)}
+            {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b) => (
+              <li key={b}>{localizeBlocker(trRoot, b)}</li>
+            ))}
           </ul>
         </div>
       )}
