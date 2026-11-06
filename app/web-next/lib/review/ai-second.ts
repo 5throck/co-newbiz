@@ -42,7 +42,10 @@ export function monthlyTokenCap(): number {
 export const estimateTokens = estimateTokensFallback;
 
 export interface Ai2ndDeps {
-  complete: (messages: LlmMessage[], opts?: { temperature?: number; maxTokens?: number; reviewerAgent?: string }) => Promise<string>;
+  complete: (
+    messages: LlmMessage[],
+    opts?: { temperature?: number; maxTokens?: number; reviewerAgent?: string },
+  ) => Promise<string>;
   /** Preferred path (schema-validated, repaired once, real usage). Absent → legacy text path via `complete`. */
   completeStructured?: (
     messages: LlmMessage[],
@@ -57,7 +60,11 @@ export const defaultAi2ndDeps: Ai2ndDeps = {
   complete: (messages, opts = {}) =>
     complete(messages, {
       ...opts,
-      agent: { key: opts.reviewerAgent ?? "pm", purpose: "AI 2nd cross-domain review", functionName: "review.ai_second" },
+      agent: {
+        key: opts.reviewerAgent ?? "pm",
+        purpose: "AI 2nd cross-domain review",
+        functionName: "review.ai_second",
+      },
     }),
   completeStructured: async (messages, opts) => {
     const r = await completeStructured({
@@ -109,7 +116,9 @@ export function ai2ndPayloadContent(content: Record<string, unknown>): Record<st
   if (!Array.isArray(stages)) return content;
   return {
     ...content,
-    stages: stages.filter((s) => !(s && typeof s === "object" && (s as { not_reached?: unknown }).not_reached === true)),
+    stages: stages.filter(
+      (s) => !(s && typeof s === "object" && (s as { not_reached?: unknown }).not_reached === true),
+    ),
   };
 }
 
@@ -275,7 +284,11 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
   let parsed: Ai2ndOutput | null = null;
   if (deps.completeStructured) {
     try {
-      const r = await deps.completeStructured(messages, { temperature: 0, maxTokens: 1500, reviewerAgent: sel.reviewerAgent });
+      const r = await deps.completeStructured(messages, {
+        temperature: 0,
+        maxTokens: 1500,
+        reviewerAgent: sel.reviewerAgent,
+      });
       if (r) {
         parsed = r.value;
         spent = r.tokens ?? promptTokens;
@@ -290,8 +303,8 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
   } else {
     for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
       let text: string;
-        try {
-          text = await deps.complete(messages, { temperature: 0, maxTokens: 1500, reviewerAgent: sel.reviewerAgent });
+      try {
+        text = await deps.complete(messages, { temperature: 0, maxTokens: 1500, reviewerAgent: sel.reviewerAgent });
       } catch (err) {
         return record({
           ...base,
@@ -318,7 +331,9 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
   if (sel.fallbackUsed) {
     // The reviewer was NOT chosen by the matrix: label it (no PASS stamp, same
     // three buckets - this only discloses how the reviewer was picked).
-    const specialist = sel.firstStageSpecialist ? ` Specialist ${sel.firstStageSpecialist} is same-domain (first stage only).` : "";
+    const specialist = sel.firstStageSpecialist
+      ? ` Specialist ${sel.firstStageSpecialist} is same-domain (first stage only).`
+      : "";
     buckets.could_not_verify = [
       ...buckets.could_not_verify,
       {

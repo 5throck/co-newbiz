@@ -39,7 +39,10 @@ export const cleanList = (xs: readonly (string | null | undefined)[] | null | un
   (xs ?? []).map((x) => (x ?? "").trim()).filter((x) => /[\p{L}\p{N}]/u.test(x));
 
 /** `보완 필요:` blocker text from a HOLD verdict; never renders an empty list. */
-export function holdBlockerText(gate: string, missing: readonly (string | null | undefined)[] | null | undefined): string {
+export function holdBlockerText(
+  gate: string,
+  missing: readonly (string | null | undefined)[] | null | undefined,
+): string {
   return `${gate} 진행 HOLD — 보완 필요: ${cleanList(missing).join(", ") || "근거 확인"}`;
 }
 
@@ -92,39 +95,65 @@ export function localizeNotPerformedReason(text: string): string {
   if (text === "No stage of this gate has been reached yet; there is nothing to review cross-domain")
     return "이 게이트의 어느 단계에도 아직 도달하지 않아, 교차 도메인으로 검토할 내용이 없습니다.";
   if (text === "LLM provider is not configured") return "LLM 제공자가 설정되지 않아 검토하지 못했습니다.";
-  if ((m = /^monthly token cap reached \(used (\d+) of (\d+)\)$/.exec(text)))
-    return `월간 토큰 한도에 도달해 검토하지 못했습니다 (${m[2]} 중 ${m[1]} 사용).`;
+  m = /^monthly token cap reached \(used (\d+) of (\d+)\)$/.exec(text);
+  if (m) return `월간 토큰 한도에 도달해 검토하지 못했습니다 (${m[2]} 중 ${m[1]} 사용).`;
   if (/^LLM call failed(?::|$)/.test(text)) return "LLM 호출에 실패해 검토하지 못했습니다.";
-  if (text === "reviewer output was not valid after one retry") return "검토 결과가 한 번 다시 시도한 뒤에도 올바른 형식이 아니어서 쓰지 않았습니다.";
-  if (text === "reviewer domain unresolved") return "작성 에이전트의 도메인을 확인하지 못해 검토자를 정하지 못했습니다.";
-  if ((m = /^no cross-domain reviewer: authors span (.*) and the default reviewer domain (\S+) is among them$/.exec(text))) {
-    const names = m[1]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ");
+  if (text === "reviewer output was not valid after one retry")
+    return "검토 결과가 한 번 다시 시도한 뒤에도 올바른 형식이 아니어서 쓰지 않았습니다.";
+  if (text === "reviewer domain unresolved")
+    return "작성 에이전트의 도메인을 확인하지 못해 검토자를 정하지 못했습니다.";
+  m = /^no cross-domain reviewer: authors span (.*) and the default reviewer domain (\S+) is among them$/.exec(text);
+  if (m) {
+    const names = m[1]!
+      .split(/,\s*/)
+      .map((d) => reviewDomainLabel(d) ?? d)
+      .join(", ");
     return `작성자가 ${names} 도메인에 걸쳐 있고 기본 검토 도메인(${reviewDomainLabel(m[2]) ?? m[2]})도 포함되어, 다른 도메인 검토자를 정하지 못했습니다.`;
   }
-  if ((m = /^no cross-domain reviewer: authors span (.*) and no matrix or fallback reviewer outside those domains exists$/.exec(text))) {
-    const names = m[1]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ");
+  m =
+    /^no cross-domain reviewer: authors span (.*) and no matrix or fallback reviewer outside those domains exists$/.exec(
+      text,
+    );
+  if (m) {
+    const names = m[1]!
+      .split(/,\s*/)
+      .map((d) => reviewDomainLabel(d) ?? d)
+      .join(", ");
     return `작성자가 ${names} 도메인에 걸쳐 있고, 교차검증 매트릭스와 대체 규칙 어디에도 그 밖의 도메인 검토자가 없습니다.`;
   }
-  if ((m = /^(.*); default cross-domain lead (\S+) reviewed\.(.*)$/.exec(text))) {
+  m = /^(.*); default cross-domain lead (\S+) reviewed\.(.*)$/.exec(text);
+  if (m) {
     const spec = /^ Specialist (\S+) is same-domain \(first stage only\)\.$/.exec(m[3] ?? "")?.[1];
     const why = /^no matrix entry for artifact type '(.*)' x author domain '(.*)'$/.exec(m[1]!);
-    const why2 = /^matrix reviewer '(.*)' is not cross-domain for authors in (.*) \(counts as first stage only\)$/.exec(m[1]!);
+    const why2 = /^matrix reviewer '(.*)' is not cross-domain for authors in (.*) \(counts as first stage only\)$/.exec(
+      m[1]!,
+    );
     const cause = why
       ? `산출물 유형 '${why[1]}'과 작성 도메인 '${reviewDomainLabel(why[2]) ?? why[2]}' 조합이 매트릭스에 없어`
       : why2
-        ? `매트릭스 검토자 '${why2[1]}'가 작성 도메인(${why2[2]!.split(/,\s*/).map((d) => reviewDomainLabel(d) ?? d).join(", ")})과 같아 교차 검토가 되지 않아(1차 검토로만 인정)`
+        ? `매트릭스 검토자 '${why2[1]}'가 작성 도메인(${why2[2]!
+            .split(/,\s*/)
+            .map((d) => reviewDomainLabel(d) ?? d)
+            .join(", ")})과 같아 교차 검토가 되지 않아(1차 검토로만 인정)`
         : "매트릭스가 쓸 수 있는 교차 도메인 검토자를 정하지 못해";
     return `${cause} 기본 교차 도메인 리드 ${m[2]}가 검토했습니다${spec ? `. 전문 검토자 ${spec}는 같은 도메인이라 1차 검토로만 인정됩니다` : ""}.`;
   }
-  if ((m = /^(.*): no review domain by explicit matrix exemption; the artifact domain comes from the other authoring agents\.$/.exec(text)))
+  m =
+    /^(.*): no review domain by explicit matrix exemption; the artifact domain comes from the other authoring agents\.$/.exec(
+      text,
+    );
+  if (m)
     return `${m[1]}: 매트릭스의 명시적 면제로 검토 도메인이 없으며, 산출물의 도메인은 다른 작성 에이전트로 정합니다.`;
   if (text === "Reviewer chosen by fallback routing, not by a cross-validation matrix entry")
     return "검토자를 교차검증 매트릭스 항목이 아니라 대체 규칙으로 정했습니다";
-  if (text === "Orchestrator agents excluded from the author-domain check") return "조정 에이전트는 작성 도메인 판단에서 제외했습니다";
+  if (text === "Orchestrator agents excluded from the author-domain check")
+    return "조정 에이전트는 작성 도메인 판단에서 제외했습니다";
   if (text === "unspecified") return "사유가 기록되지 않았습니다.";
   if (text === "AI 2nd cross-domain review was not performed") return "AI 2차 교차 도메인 검토가 수행되지 않았습니다";
-  if (text === "Domain of some authoring agents could not be resolved") return "일부 작성 에이전트의 도메인을 확인하지 못했습니다";
-  if ((m = /^Excluded from the cross-domain check: (.*)\.$/.exec(text))) return `교차 도메인 검사에서 제외됨: ${m[1]}.`;
+  if (text === "Domain of some authoring agents could not be resolved")
+    return "일부 작성 에이전트의 도메인을 확인하지 못했습니다";
+  m = /^Excluded from the cross-domain check: (.*)\.$/.exec(text);
+  if (m) return `교차 도메인 검사에서 제외됨: ${m[1]}.`;
   return text;
 }
 
@@ -145,40 +174,47 @@ export function reviewOriginText(s: {
 export function localizeItem(it: ItemLike): LocalizedItem {
   const { claim, reason } = it;
   let m: RegExpExecArray | null;
-  if ((m = /^Stage (S\d+) \((.*)\) completion predicate is satisfied$/.exec(claim))) {
+  m = /^Stage (S\d+) \((.*)\) completion predicate is satisfied$/.exec(claim);
+  if (m) {
     return {
       claim: `${m[1]} ${m[2]} 단계의 완료 조건이 충족되었습니다`,
       reason: "완료 조건을 결정론적으로 검사했습니다. 필요한 기록이 있다는 것만 확인하며, 내용이 옳다는 뜻은 아닙니다.",
       localized: true,
     };
   }
-  if ((m = /^Substance of (S\d+) artifacts: (.*)$/.exec(claim))) {
+  m = /^Substance of (S\d+) artifacts: (.*)$/.exec(claim);
+  if (m) {
     return {
       claim: `${m[1]} 산출물의 내용: ${m[2]}`,
       reason: "산출물이 있는지는 결정론적으로 확인했습니다. 내용이 충분한지는 검토자의 판단이 필요합니다.",
       localized: true,
     };
   }
-  if ((m = /^Stage (S\d+) \((.*)\) does not apply to this track$/.exec(claim))) {
+  m = /^Stage (S\d+) \((.*)\) does not apply to this track$/.exec(claim);
+  if (m) {
     return {
       claim: `${m[1]} ${m[2]} 단계는 이 트랙에 해당하지 않습니다`,
       reason: "프로세스 정의(트랙별 적용 단계)에 따른 판정입니다.",
       localized: true,
     };
   }
-  if ((m = /^Stage (S\d+) \((.*)\) was not evaluated$/.exec(claim))) {
+  m = /^Stage (S\d+) \((.*)\) was not evaluated$/.exec(claim);
+  if (m) {
     return {
       claim: `${m[1]} ${m[2]} 단계는 평가하지 않았습니다`,
       reason: "기록된 KILL 결정으로 이 건이 종료되었습니다.",
       localized: true,
     };
   }
-  if ((m = /^Stage (S\d+) \((.*)\) is incomplete$/.exec(claim))) {
+  m = /^Stage (S\d+) \((.*)\) is incomplete$/.exec(claim);
+  if (m) {
     // reason = `${blockers.join(" / ") || fallback}${" Missing: a; b."}`
     const miss = /\s*Missing: (.*?)\.?\s*$/s.exec(reason);
     const head = miss ? reason.slice(0, miss.index) : reason;
     const blockers =
-      head.trim() === "Completion predicate not satisfied." ? "완료 조건이 충족되지 않았습니다" : stripDot(tidyReasonText(withGateNames(head.trim())));
+      head.trim() === "Completion predicate not satisfied."
+        ? "완료 조건이 충족되지 않았습니다"
+        : stripDot(tidyReasonText(withGateNames(head.trim())));
     const missing = miss ? cleanList(miss[1]!.split(";")) : [];
     return {
       claim: `${m[1]} ${m[2]} 단계가 아직 완료되지 않았습니다`,
@@ -186,7 +222,8 @@ export function localizeItem(it: ItemLike): LocalizedItem {
       localized: true,
     };
   }
-  if ((m = /^Stage (S\d+) \((.*)\) is locked behind an incomplete predecessor$/.exec(claim))) {
+  m = /^Stage (S\d+) \((.*)\) is locked behind an incomplete predecessor$/.exec(claim);
+  if (m) {
     return {
       claim: `${m[1]} ${m[2]} 단계는 앞선 단계가 끝나지 않아 잠겨 있습니다`,
       reason: "순차 진입 조건이 충족되지 않아 이 단계의 산출물은 확인하지 않았습니다.",
@@ -201,14 +238,16 @@ export function localizeItem(it: ItemLike): LocalizedItem {
       localized: true,
     };
   }
-  if ((m = /^The (\S+) gate verdict \(go \/ hold \/ kill\)$/.exec(claim))) {
+  m = /^The (\S+) gate verdict \(go \/ hold \/ kill\)$/.exec(claim);
+  if (m) {
     return {
       claim: `${gateDisplayName(m[1]!)} 게이트 판정 (진행 / 보류 / 중단)`,
       reason: "게이트 승인과 투자 결정은 사람의 몫입니다. 이 검토는 근거와 빈틈만 보여줍니다.",
       localized: true,
     };
   }
-  if ((m = /^The acceptance of stage (S\d+) artifact "(.*)"$/.exec(claim))) {
+  m = /^The acceptance of stage (S\d+) artifact "(.*)"$/.exec(claim);
+  if (m) {
     return {
       claim: `${m[1]} 산출물 "${m[2]}"의 수용 여부`,
       reason: "게이트 승인과 투자 결정은 사람의 몫입니다. 이 검토는 근거와 빈틈만 보여줍니다.",
@@ -233,7 +272,9 @@ export function localizeItem(it: ItemLike): LocalizedItem {
  * ABOVE the buckets, so this message repeats it instead of pointing at a direction.
  */
 // INTERIM-WORDING
-export function ai2ndStatusMessage(stage: { performed: boolean; not_performed_reason: string | null } | null | undefined): string {
+export function ai2ndStatusMessage(
+  stage: { performed: boolean; not_performed_reason: string | null } | null | undefined,
+): string {
   if (!stage || stage.performed) return "AI 2차 검토 결과가 갱신되었습니다.";
   const reason = stage.not_performed_reason ? localizeNotPerformedReason(stage.not_performed_reason).trim() : "";
   return reason
