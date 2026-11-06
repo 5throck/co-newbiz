@@ -37,9 +37,7 @@ const db = getDb(TEST_DB_PATH);
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
-const {
-  startPipeline, advancePipeline, resumePausedPipelines,
-} = await import("../../app/web-next/lib/pipeline.ts");
+const { startPipeline, advancePipeline, resumePausedPipelines } = await import("../../app/web-next/lib/pipeline.ts");
 const { setBusinessCaseExecutorFactory } = await import("../../app/web-next/lib/business-case-generator.ts");
 
 const NOW = new Date().toISOString();
@@ -69,19 +67,37 @@ function seedOpportunity(name: string, completeS1S3: boolean): string {
   db.run(
     `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
        attractiveness_score, synergy_score, rationale, status, created_by, created_at, capability_gap_json,
-       sizing_version_id, target_scope_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       synergy_score_confirmed_at, synergy_rationale, sizing_version_id, target_scope_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
-      id, name, completeS1S3 ? "테스트 산업" : "미분석 산업", completeS1S3 ? "크랭크샤프트" : null,
-      completeS1S3 ? 5000 : null, completeS1S3 ? 8.0 : null,
-      completeS1S3 ? 80 : null, completeS1S3 ? 70 : null,
+      id,
+      name,
+      completeS1S3 ? "테스트 산업" : "미분석 산업",
+      completeS1S3 ? "크랭크샤프트" : null,
+      completeS1S3 ? 5000 : null,
+      completeS1S3 ? 8.0 : null,
+      completeS1S3 ? 80 : null,
+      completeS1S3 ? 70 : null,
       completeS1S3 ? "전략적 적합성 근거" : null,
-      completeS1S3 ? "selected" : "identified", ANALYST, NOW,
-      completeS1S3 ? JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }) : null,
+      completeS1S3 ? "selected" : "identified",
+      ANALYST,
+      NOW,
+      // ADR-0192: NOW is post-ADR_0192_PREDICATE_DATE, so the S3 fit judgement
+      // requires a person-confirmed synergy assessment with a recorded rationale.
+      completeS1S3 ? NOW : null,
+      completeS1S3 ? "사람이 확정한 시너지 근거 (ADR-0192)" : null,
+      completeS1S3
+        ? JSON.stringify({
+            rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }],
+            updatedAt: NOW,
+          })
+        : null,
       // flow.spec v2.9.0 (ADR-0180): an S2-complete opportunity carries the
       // entry-market surface — the S1 sizing link + the person-set target scope.
       completeS1S3 ? sizingVersionId : null,
-      completeS1S3 ? JSON.stringify({ regions: ["kr"], segments: [], unit_basis: "krw_m_year", set_by: ANALYST, set_at: NOW }) : null,
+      completeS1S3
+        ? JSON.stringify({ regions: ["kr"], segments: [], unit_basis: "krw_m_year", set_by: ANALYST, set_at: NOW })
+        : null,
     ],
   );
   return id;
@@ -92,13 +108,13 @@ function seedGreenfieldAssessment(opportunityId: string): void {
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [ulid(), opportunityId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+    [ulid(), opportunityId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
   // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }), opportunityId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }),
+    opportunityId,
+  ]);
 }
 
 function count(sql: string, ...params: unknown[]): number {
@@ -136,12 +152,20 @@ beforeAll(async () => {
   viewerCookie = await loginCookie(VIEWER, "pw-viewer-12345");
 
   industryId = ulid();
-  db.run(
-    "INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)",
-    [industryId, "28119", "테스트 산업", "Test Industry", NOW],
-  );
+  db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
+    industryId,
+    "28119",
+    "테스트 산업",
+    "Test Industry",
+    NOW,
+  ]);
   companyId = ulid();
-  db.run("INSERT INTO md_company (id, name_ko, name_en, created_at) VALUES (?,?,?,?)", [companyId, "테스트 계열사", "Test Co", NOW]);
+  db.run("INSERT INTO md_company (id, name_ko, name_en, created_at) VALUES (?,?,?,?)", [
+    companyId,
+    "테스트 계열사",
+    "Test Co",
+    NOW,
+  ]);
   // Wave F-6: S1 now requires a completed sizing matrix with a recorded
   // data-confidence grade (flow.spec S1 criterion 3) for non-grandfathered opportunities.
   const analysisId = ulid();
@@ -152,7 +176,16 @@ beforeAll(async () => {
   sizingVersionId = ulid();
   db.run(
     "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at, data_confidence_grade, chain_hops) VALUES (?,?,?,?,?,?,?,?)",
-    [sizingVersionId, analysisId, 1, JSON.stringify({ matrix: { competitive: { concentration: "moderate", key_players: ["A"] } } }), "test", NOW, "B", 0],
+    [
+      sizingVersionId,
+      analysisId,
+      1,
+      JSON.stringify({ matrix: { competitive: { concentration: "moderate", key_players: ["A"] } } }),
+      "test",
+      NOW,
+      "B",
+      0,
+    ],
   );
 });
 
@@ -177,7 +210,10 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
     runId = started.pipelineRunId;
     expect(started.status).toBe("paused_for_human");
 
-    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as { paused_reason: string; current_stage: string };
+    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as {
+      paused_reason: string;
+      current_stage: string;
+    };
     expect(run.paused_reason).toBe("route_confirmation:S4");
     expect(run.current_stage).toBe("S4");
   });
@@ -221,7 +257,10 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
     const outcomes = await resumePausedPipelines({});
     const mine = outcomes.find((o) => o.action === "resumed");
     expect(mine).toBeDefined();
-    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as { status: string; paused_reason: string };
+    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as {
+      status: string;
+      paused_reason: string;
+    };
     // Greenfield: S6/S7 skipped; S5 artifacts pre-seeded → next human blocker
     // is the screening gate (S1–S7 artifacts all complete).
     expect(run.status).toBe("paused_for_human");
@@ -232,15 +271,16 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
     await recordGate(oppId, "screening");
     const outcomes = await resumePausedPipelines({});
     expect(outcomes.some((o) => o.action === "resumed")).toBe(true);
-    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as { status: string; paused_reason: string };
+    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(runId) as {
+      status: string;
+      paused_reason: string;
+    };
     expect(run.paused_reason).toBe("gate_decision:pre_fs");
 
     // The committee session produced a gate_evaluation PROPOSAL — the gate
     // decision itself is still missing (zero gate_decision rows so far).
     expect(count("SELECT COUNT(*) c FROM gate_decision")).toBe(1); // the HUMAN screening decision only
-    const proposal = count(
-      "SELECT COUNT(*) c FROM gate_evaluation WHERE gate = 'pre_fs'",
-    );
+    const proposal = count("SELECT COUNT(*) c FROM gate_evaluation WHERE gate = 'pre_fs'");
     expect(proposal).toBeGreaterThanOrEqual(1);
   });
 
@@ -253,8 +293,15 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
     const projectRow = db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string };
     expect(projectRow.project_id).not.toBeNull();
     const segments = db
-      .query("SELECT * FROM pipeline_run WHERE (entity_type = 'opportunity' AND entity_id = ?) OR (entity_type = 'project' AND entity_id = ?) ORDER BY started_at")
-      .all(oppId, projectRow.project_id) as Array<{ entity_type: string; status: string; current_stage: string | null; paused_reason: string | null }>;
+      .query(
+        "SELECT * FROM pipeline_run WHERE (entity_type = 'opportunity' AND entity_id = ?) OR (entity_type = 'project' AND entity_id = ?) ORDER BY started_at",
+      )
+      .all(oppId, projectRow.project_id) as Array<{
+      entity_type: string;
+      status: string;
+      current_stage: string | null;
+      paused_reason: string | null;
+    }>;
     expect(segments.length).toBe(2);
     expect(segments[0].entity_type).toBe("opportunity");
     expect(segments[0].status).toBe("completed"); // the S1–S7 segment closed at promotion
@@ -270,8 +317,12 @@ describe("(a) full run — boundary #2 is test-enforced", () => {
     expect(count("SELECT COUNT(*) c FROM business_case_model WHERE project_id = ?", pid)).toBeGreaterThanOrEqual(3);
     expect(count("SELECT COUNT(*) c FROM valuation_simulation WHERE project_id = ?", pid)).toBeGreaterThanOrEqual(3);
     // S9: tailored items all 'proposed', nothing approved.
-    expect(count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ?", pid)).toBeGreaterThanOrEqual(1);
-    expect(count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND status != 'proposed'", pid)).toBe(0);
+    expect(
+      count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ?", pid),
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND status != 'proposed'", pid),
+    ).toBe(0);
     // Boundary #2, project branch: no gate_decision, no adoption, no approval.
     expect(count("SELECT COUNT(*) c FROM gate_decision WHERE entity_type = 'project'")).toBe(0);
     expect(count("SELECT COUNT(*) c FROM project_checklist_item_state WHERE project_id = ?", pid)).toBe(0);
@@ -309,7 +360,9 @@ describe("(f) dd gate — the dead-rule regression", () => {
     // Next human blocker: the proposed checklist items await approval (the
     // proposal-shaped S9 work has no automation).
     await resumePausedPipelines({});
-    const run1 = db.query("SELECT * FROM pipeline_run WHERE entity_type = 'project' AND entity_id = ?").get(pid) as { paused_reason: string };
+    const run1 = db.query("SELECT * FROM pipeline_run WHERE entity_type = 'project' AND entity_id = ?").get(pid) as {
+      paused_reason: string;
+    };
     expect(run1.paused_reason).toBe("no_automation:S9");
 
     // The human approves every proposed tailored item (S9 work) via the
@@ -358,7 +411,10 @@ describe("(c) blocked automation pauses, never fails", () => {
     freshOppId = seedOpportunity("자동화 없는 단계 기회", false);
     const started = await startPipelineFor(freshOppId);
     expect(started.status).toBe("paused_for_human");
-    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(started.pipelineRunId) as { paused_reason: string; status: string };
+    const run = db.query("SELECT * FROM pipeline_run WHERE id = ?").get(started.pipelineRunId) as {
+      paused_reason: string;
+      status: string;
+    };
     expect(run.paused_reason).toBe("no_automation:S1");
     expect(run.status).toBe("paused_for_human");
   });
@@ -435,16 +491,25 @@ describe("(e) max-iteration safety cap", () => {
       const capOppId = seedOpportunity("캡 테스트 기회", true);
       seedGreenfieldAssessment(capOppId);
       // alternatives_considered: S4 completion predicate requires it (v2.4.1 alignment).
-      db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)", [ulid(), capOppId, "greenfield", "test", "M&A 대안 검토 후 제외", ANALYST, NOW]);
+      db.run(
+        "INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+        [ulid(), capOppId, "greenfield", "test", "M&A 대안 검토 후 제외", ANALYST, NOW],
+      );
       // Promotion preconditions (2026-09-12 hardening): screening + pre_fs must be GO.
       for (const gate of ["screening", "pre_fs"]) {
-        db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", capOppId, gate, "go", "test", ANALYST, NOW]);
+        db.run(
+          "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+          [ulid(), "opportunity", capOppId, gate, "go", "test", ANALYST, NOW],
+        );
       }
       const projectId = promoteOpportunity(capOppId, { promotedBy: ANALYST, needToKnowBasis: "cap test" }).project.id;
 
       const run = startPipeline({
-        entityType: "project", entityId: projectId,
-        industryId, initiatingCompanyId: companyId, startedBy: ANALYST,
+        entityType: "project",
+        entityId: projectId,
+        industryId,
+        initiatingCompanyId: companyId,
+        startedBy: ANALYST,
       });
       const result = await advancePipeline(run.id);
       expect(result.run.status).toBe("failed");

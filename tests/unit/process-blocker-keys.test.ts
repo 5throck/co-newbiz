@@ -5,7 +5,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { load as parseYaml } from "js-yaml";
-import { BLOCKER_LABELS, blocker, blockerKeyForLabel, blockerMessageKey, blockerStage, type BlockerKey } from "../../app/web-next/lib/process-blocker-keys.ts";
+import {
+  BLOCKER_LABELS,
+  blocker,
+  blockerKeyForLabel,
+  blockerMessageKey,
+  blockerStage,
+  type BlockerKey,
+} from "../../app/web-next/lib/process-blocker-keys.ts";
 import { STAGES } from "../../app/web-next/lib/process-flow.ts";
 
 const TEST_DB_PATH = "db/data/test-process-blocker-keys.sqlite";
@@ -25,11 +32,21 @@ afterAll(() => {
 });
 
 const keys = Object.keys(BLOCKER_LABELS) as BlockerKey[];
-const ko = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as { processBlockers: Record<string, string> };
-const en = JSON.parse(readFileSync("app/web-next/locales/en.json", "utf8")) as { processBlockers: Record<string, string> };
+const ko = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as {
+  processBlockers: Record<string, string>;
+};
+const en = JSON.parse(readFileSync("app/web-next/locales/en.json", "utf8")) as {
+  processBlockers: Record<string, string>;
+};
 const spec = parseYaml(readFileSync("process/flow.spec.yaml", "utf8")) as {
   meta: { version: string };
-  stages: Array<{ id: string; requiredArtifacts: string[]; completionCriteria: string[]; blockers: Array<{ key: string; artifacts?: number[]; criteria?: number[] }>; nonBlockingArtifacts?: number[] }>;
+  stages: Array<{
+    id: string;
+    requiredArtifacts: string[];
+    completionCriteria: string[];
+    blockers: Array<{ key: string; artifacts?: number[]; criteria?: number[] }>;
+    nonBlockingArtifacts?: number[];
+  }>;
 };
 
 describe("registry", () => {
@@ -58,8 +75,11 @@ describe("registry", () => {
       expect(stage.requiredArtifacts).toEqual(declared.requiredArtifacts);
       // a requiredArtifact that names its own key must equal that key's label
       for (const b of declared.blockers) {
-        const only = (b.artifacts ?? []).length === 1 && (declared.blockers.filter((x) => (x.artifacts ?? []).includes(b.artifacts![0]!)).length === 1);
-        if (only && labels.has(declared.requiredArtifacts[b.artifacts![0]!]!)) expect<string>(BLOCKER_LABELS[b.key as BlockerKey]).toBe(declared.requiredArtifacts[b.artifacts![0]!]!);
+        const only =
+          (b.artifacts ?? []).length === 1 &&
+          declared.blockers.filter((x) => (x.artifacts ?? []).includes(b.artifacts![0]!)).length === 1;
+        if (only && labels.has(declared.requiredArtifacts[b.artifacts![0]!]!))
+          expect<string>(BLOCKER_LABELS[b.key as BlockerKey]).toBe(declared.requiredArtifacts[b.artifacts![0]!]!);
       }
     }
   });
@@ -90,7 +110,7 @@ describe("i18n (processBlockers.*)", () => {
 
 describe("flow.spec 2.16.0 blockers declaration", () => {
   test("version and shape: every stage declares blockers; indices are in range; keys carry the stage prefix", () => {
-    expect(spec.meta.version).toBe("2.17.0"); // 2.17.0: D6' (no blocker change)
+    expect(spec.meta.version).toBe("2.18.0"); // 2.18.0: ADR-0192 S3 fit-judgement blocker wording (keys unchanged)
     for (const s of spec.stages) {
       expect(Array.isArray(s.blockers) && s.blockers.length > 0).toBe(true);
       for (const b of s.blockers) {
@@ -105,7 +125,11 @@ describe("flow.spec 2.16.0 blockers declaration", () => {
     expect(declared).toEqual([...keys].sort());
   });
   test("the only unblocked requiredArtifact is the S12 baseline-variance report (advisory)", () => {
-    const unblocked = spec.stages.flatMap((s) => s.requiredArtifacts.map((_, i) => [s.id, i] as const).filter(([, i]) => !s.blockers.some((b) => (b.artifacts ?? []).includes(i))));
+    const unblocked = spec.stages.flatMap((s) =>
+      s.requiredArtifacts
+        .map((_, i) => [s.id, i] as const)
+        .filter(([, i]) => !s.blockers.some((b) => (b.artifacts ?? []).includes(i))),
+    );
     expect(unblocked).toEqual([["S12", 3]]);
     expect(spec.stages.find((s) => s.id === "S12")!.nonBlockingArtifacts).toEqual([3]);
   });
@@ -114,11 +138,21 @@ describe("flow.spec 2.16.0 blockers declaration", () => {
 describe("capability register lead (D5)", () => {
   const opp = (): string => {
     const id = ulid();
-    db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [id, "o", "t", "selected", "u", new Date().toISOString()]);
+    db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+      id,
+      "o",
+      "t",
+      "selected",
+      "u",
+      new Date().toISOString(),
+    ]);
     return id;
   };
   const route = (o: string, track: string, at: string) =>
-    db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)", [ulid(), o, track, "t", "u", at]);
+    db.run(
+      "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
+      [ulid(), o, track, "t", "u", at],
+    );
   test("greenfield-agent before S4 and for a greenfield route; brownfield-agent once the latest route is brownfield", () => {
     const a = opp();
     expect(capabilityRegisterLead(db, a)).toBe("greenfield-agent");
@@ -130,7 +164,13 @@ describe("capability register lead (D5)", () => {
   });
   test("the prompt catalog binds s3.capability_gap_draft to the greenfield lead's activity, which flow.spec defines", async () => {
     const { PM_CATALOG } = await import("../../app/web-next/lib/pm-catalog.generated.ts");
-    const entry = (PM_CATALOG as Record<string, { agentKey: string; activityId: string; stageId: string }>)["s3.capability_gap_draft"]!;
-    expect(entry).toMatchObject({ agentKey: "greenfield-agent", activityId: "capability-register-greenfield", stageId: "S3" });
+    const entry = (PM_CATALOG as Record<string, { agentKey: string; activityId: string; stageId: string }>)[
+      "s3.capability_gap_draft"
+    ]!;
+    expect(entry).toMatchObject({
+      agentKey: "greenfield-agent",
+      activityId: "capability-register-greenfield",
+      stageId: "S3",
+    });
   });
 });

@@ -15,6 +15,7 @@ import {
   type Session,
 } from "./_support/browser.ts";
 import { GREENFIELD, seedGreenfieldDeal } from "./_support/deals.ts";
+import { confirmSynergy } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
@@ -33,6 +34,10 @@ beforeAll(async () => {
   });
   browser = await launchBrowser();
   analyst = await loginThroughUi(browser, app);
+  // ADR-0192: the fs GO this scenario re-confirms must fail ONLY on the
+  // reconfirmation family, so the S3 fit judgement has to be legitimately
+  // complete — confirm the synergy recommendation through the endpoint first.
+  await confirmSynergy(app, analyst, GREENFIELD.opportunityId);
   admin = await loginThroughUi(browser, app, "admin");
 }, 180_000);
 afterAll(async () => {

@@ -1,4 +1,4 @@
-// @version 1.14.0
+// @version 1.15.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -83,7 +83,10 @@ function json(value: unknown): string {
 /** Demo S3 provenance: a completed synergy analysis linked to the opportunity so
  *  the S3 list agrees with the confirmed score on the opportunity (without it the
  *  list says "no synergy analysis" while S2/S4 show a confirmed score — D-15). */
-interface NonPassRow { status: "fail" | "na"; note: string }
+interface NonPassRow {
+  status: "fail" | "na";
+  note: string;
+}
 
 /** First optional (non-mandatory) item of a checklist, or null. */
 function firstOptionalItem(checklistId: string): string | null {
@@ -94,13 +97,29 @@ function firstOptionalItem(checklistId: string): string | null {
 function nonPassDdRows(failChecklist: string, naChecklist: string): Map<string, NonPassRow> {
   const out = new Map<string, NonPassRow>();
   const failItem = firstOptionalItem(failChecklist);
-  if (failItem) out.set(`${failChecklist}:${failItem}`, { status: "fail", note: "Demo: optional item not met - the supporting evidence was not provided by the counterparty; residual risk accepted by the reviewer and carried to the IC memo (demo seed)." });
+  if (failItem)
+    out.set(`${failChecklist}:${failItem}`, {
+      status: "fail",
+      note: "Demo: optional item not met - the supporting evidence was not provided by the counterparty; residual risk accepted by the reviewer and carried to the IC memo (demo seed).",
+    });
   const naItem = firstOptionalItem(naChecklist);
-  if (naItem) out.set(`${naChecklist}:${naItem}`, { status: "na", note: "Demo: not applicable to this deal shape - no workforce transfers under this structure (demo seed)." });
+  if (naItem)
+    out.set(`${naChecklist}:${naItem}`, {
+      status: "na",
+      note: "Demo: not applicable to this deal shape - no workforce transfers under this structure (demo seed).",
+    });
   return out;
 }
 
-function seedSynergyAnalysis(db: ReturnType<typeof getDb>, id: string, oppId: string, oppName: string, score: number, now: string, actor: string): void {
+function seedSynergyAnalysis(
+  db: ReturnType<typeof getDb>,
+  id: string,
+  oppId: string,
+  oppName: string,
+  score: number,
+  now: string,
+  actor: string,
+): void {
   db.run(
     `INSERT OR IGNORE INTO synergy_analysis
      (id, company_id, status, current_step, created_by, created_at, completed_at, opportunity_id)
@@ -111,7 +130,8 @@ function seedSynergyAnalysis(db: ReturnType<typeof getDb>, id: string, oppId: st
     `INSERT OR IGNORE INTO synergy_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
      VALUES (?, ?, 1, ?, 'S1-S12 demo synergy baseline', ?, ?)`,
     [
-      `${id}-v1`, id,
+      `${id}-v1`,
+      id,
       json({
         company: { name: oppName, dartCorpCode: null },
         acquirer: null,
@@ -127,16 +147,35 @@ function seedSynergyAnalysis(db: ReturnType<typeof getDb>, id: string, oppId: st
         synergyScore: score,
         synergyRationale: "demo seed",
       }),
-      actor, now,
+      actor,
+      now,
     ],
   );
 }
 
 /** Demo operating policy so the timeline page shows SLA targets (an unset policy renders "정책 미설정"). */
 function seedStageSla(db: ReturnType<typeof getDb>, now: string, actor: string): void {
-  const targets: Array<[string, number]> = [["S1", 14], ["S2", 7], ["S3", 14], ["S4", 7], ["S5", 14], ["S6", 21], ["S7", 14], ["S8", 21], ["S9", 45], ["S10", 14], ["S11", 60], ["S12", 90]];
+  const targets: Array<[string, number]> = [
+    ["S1", 14],
+    ["S2", 7],
+    ["S3", 14],
+    ["S4", 7],
+    ["S5", 14],
+    ["S6", 21],
+    ["S7", 14],
+    ["S8", 21],
+    ["S9", 45],
+    ["S10", 14],
+    ["S11", 60],
+    ["S12", 90],
+  ];
   for (const [stage, days] of targets) {
-    db.run("INSERT OR IGNORE INTO stage_sla (stage_id, target_days, updated_by, updated_at) VALUES (?, ?, ?, ?)", [stage, days, actor, now]);
+    db.run("INSERT OR IGNORE INTO stage_sla (stage_id, target_days, updated_by, updated_at) VALUES (?, ?, ?, ?)", [
+      stage,
+      days,
+      actor,
+      now,
+    ]);
   }
 }
 
@@ -159,19 +198,45 @@ const DEMO_MATRIX: SizingMatrix = {
   industryLabel: "S1-S12 데모 산업 (데모 데이터)",
   provenance: "llm-estimate",
   synthesized: true,
-  anchor: { sources: [{ label: "데모 앵커 (실제 출처 아님)", estimate: 0.9, status: "consensus", note: "demo seed — not a real estimate" }], total: 0.9 },
+  anchor: {
+    sources: [
+      {
+        label: "데모 앵커 (실제 출처 아님)",
+        estimate: 0.9,
+        status: "consensus",
+        note: "demo seed — not a real estimate",
+      },
+    ],
+    total: 0.9,
+  },
   segments: [
     { code: "demo_core", label: "핵심 수요처 (데모)" },
     { code: "demo_aftermarket", label: "애프터마켓 (데모)" },
   ],
   regions: [
-    { code: "KR", label: "한국 (데모)", weight: 60, mix: { demo_core: 70, demo_aftermarket: 30 }, adjustment: "demo seed" },
-    { code: "ROW", label: "기타 지역 (데모)", weight: 40, mix: { demo_core: 60, demo_aftermarket: 40 }, adjustment: "demo seed" },
+    {
+      code: "KR",
+      label: "한국 (데모)",
+      weight: 60,
+      mix: { demo_core: 70, demo_aftermarket: 30 },
+      adjustment: "demo seed",
+    },
+    {
+      code: "ROW",
+      label: "기타 지역 (데모)",
+      weight: 40,
+      mix: { demo_core: 60, demo_aftermarket: 40 },
+      adjustment: "demo seed",
+    },
   ],
   baseline2026: { KR: { demo_core: 0.4, demo_aftermarket: 0.2 }, ROW: { demo_core: 0.2, demo_aftermarket: 0.1 } },
   cagrBase: { KR: { demo_core: 0.13, demo_aftermarket: 0.1 }, ROW: { demo_core: 0.1, demo_aftermarket: 0.08 } },
   chainGrade: { grade: "B", statisticalHops: 0, note: "demo seed: no statistical hop, llm-estimate source cap" },
-  chainDirection: { position: "midstream", note: "demo seed", relatedIndustries: [{ relation: "전방", name: "데모 수요 산업" }] },
+  chainDirection: {
+    position: "midstream",
+    note: "demo seed",
+    relatedIndustries: [{ relation: "전방", name: "데모 수요 산업" }],
+  },
   qualitative: { opportunityFactors: ["데모 기회 요인"], riskFactors: ["데모 위험 요인"] },
   consistency: { bottomUpCagr: 13, topDownCagr: 13, tolerance: "demo seed" }, // percent, like the pipeline (market-sizing-pipeline stores *100)
   crossValidation: [],
@@ -231,8 +296,8 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        target_universe_json, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id, sizing_version_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_universe_json, capability_gap_json, synergy_rationale, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id, sizing_version_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         DEMO.oppId,
         null,
@@ -259,6 +324,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
             { capability: "레퍼런스 고객", source: "manual", held: { status: "partial" }, mitigation: "채널 결합" },
           ],
         }),
+        "핵심 부품 역량과의 시너지를 사람이 확정한 데모 근거 (ADR-0192)",
         now,
         actor,
         DEMO.industryId,
@@ -266,7 +332,13 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       ],
     );
     // ADR-0181 slice 1 — the target scope lives in the 0151 FK tables.
-    writeTargetScope(db, DEMO.oppId, { regions: ["KR"], segments: ["demo_core"], unit_basis: "usd_m_year" }, actor, now);
+    writeTargetScope(
+      db,
+      DEMO.oppId,
+      { regions: ["KR"], segments: ["demo_core"], unit_basis: "usd_m_year" },
+      actor,
+      now,
+    );
 
     db.run(
       `INSERT OR IGNORE INTO md_project
@@ -284,7 +356,11 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         "Short List 1순위 후보와 기회 역량갭이 직접 연결됨",
       ],
     );
-    db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [DEMO.projectId, now, DEMO.oppId]);
+    db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [
+      DEMO.projectId,
+      now,
+      DEMO.oppId,
+    ]);
     seedSynergyAnalysis(db, "demo-s1-s12-synergy", DEMO.oppId, "S1-S12 데모 Brownfield 기회", 88, now, actor);
     seedStageSla(db, now, actor);
 
@@ -293,15 +369,37 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
        (id, opportunity_id, project_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
         intent, total_score, status, updated_at, is_current)
        VALUES (?, ?, ?, 'brownfield', 'm_and_a', ?, ?, ?, ?, 'capability_access', 13, 'final', ?, 1)`,
-      [DEMO.routeId, DEMO.oppId, DEMO.projectId, "역량 확보 속도가 핵심이므로 M&A형 Brownfield로 진행", "greenfield/JV 검토 후 속도·IP 확보 측면에서 후순위", actor, now, now],
+      [
+        DEMO.routeId,
+        DEMO.oppId,
+        DEMO.projectId,
+        "역량 확보 속도가 핵심이므로 M&A형 Brownfield로 진행",
+        "greenfield/JV 검토 후 속도·IP 확보 측면에서 후순위",
+        actor,
+        now,
+        now,
+      ],
     );
-    const criteria = ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"];
+    const criteria = [
+      "control_need",
+      "capability_criticality",
+      "market_uncertainty",
+      "integration_capacity",
+      "speed_to_capability",
+    ];
     for (const [idx, criterion] of criteria.entries()) {
       db.run(
         `INSERT OR IGNORE INTO route_decision_score
          (id, decision_id, intent, criterion, score, evidence_note, created_at)
          VALUES (?, ?, 'capability_access', ?, ?, ?, ?)`,
-        [`demo-s1-s12-route-score-${criterion}`, DEMO.routeId, criterion, idx === 3 ? 2 : 3, "S1-S12 demo route scoring evidence", now],
+        [
+          `demo-s1-s12-route-score-${criterion}`,
+          DEMO.routeId,
+          criterion,
+          idx === 3 ? 2 : 3,
+          "S1-S12 demo route scoring evidence",
+          now,
+        ],
       );
     }
 
@@ -383,7 +481,18 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         `INSERT OR IGNORE INTO valuation_simulation
          (id, project_id, model_id, scenario, percentile, npv_krw_m, irr, note, created_at, bep_year, payback_discounted_years)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'S1-S12 demo valuation percentile', ?, ?, ?)`,
-        [`demo-s1-s12-val-${scenario}-${percentile}`, DEMO.projectId, DEMO.modelId, scenario, percentile, npv, irr, now, 2.5, 2.5],
+        [
+          `demo-s1-s12-val-${scenario}-${percentile}`,
+          DEMO.projectId,
+          DEMO.modelId,
+          scenario,
+          percentile,
+          npv,
+          irr,
+          now,
+          2.5,
+          2.5,
+        ],
       );
     }
     // ADR-0143: brownfield S8 requires the human target-selection record
@@ -392,7 +501,15 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO process_run
        (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES (?, 'project', ?, ?, 'demo-s1-s12', 's8_target_select', 'done', 'human', ?, ?, ?, ?)`,
-      [DEMO.selectionRunId, DEMO.projectId, DEMO.projectId, actor, now, now, json({ target_id: DEMO.targetId, rationale: "S1-S12 demo — 유일한 Short List 생존 대상 선정" })],
+      [
+        DEMO.selectionRunId,
+        DEMO.projectId,
+        DEMO.projectId,
+        actor,
+        now,
+        now,
+        json({ target_id: DEMO.targetId, rationale: "S1-S12 demo — 유일한 Short List 생존 대상 선정" }),
+      ],
     );
     db.run(
       `INSERT OR IGNORE INTO process_run
@@ -406,7 +523,14 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO process_run
        (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES ('demo-s1-s12-pmi-kickoff', 'project', ?, ?, 'demo-s1-s12', 's11_pmi_kickoff', 'done', 'human', ?, ?, ?, ?)`,
-      [DEMO.projectId, DEMO.projectId, actor, now, now, json({ owner: actor, plan_note: "S1-S12 demo — Day-1 통합 계획 기준선: 인력·시스템·고객 이관 순서 확정" })],
+      [
+        DEMO.projectId,
+        DEMO.projectId,
+        actor,
+        now,
+        now,
+        json({ owner: actor, plan_note: "S1-S12 demo — Day-1 통합 계획 기준선: 인력·시스템·고객 이관 순서 확정" }),
+      ],
     );
 
     db.run(
@@ -429,16 +553,34 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
     const waiverTarget = contractOn ? contract.waiverItemFor(DD_WORKSPACE_CHECKLISTS.commercial) : null;
     // ADR-0187 P5 (M14): not every judged row is a pass - one optional commercial item fails with its reason and one optional
     // legal item is not applicable with a note (optional items only: a mandatory non-pass would block S9 by design).
-    const nonPass = humanDecisions ? nonPassDdRows(DD_WORKSPACE_CHECKLISTS.commercial, DD_WORKSPACE_CHECKLISTS.legal) : new Map<string, NonPassRow>();
-    for (const checklistId of [...Object.values(DD_WORKSPACE_CHECKLISTS), ...(subTrackDd ? (SUB_TRACK_DD_CHECKLISTS.m_and_a ?? []) : [])]) {
+    const nonPass = humanDecisions
+      ? nonPassDdRows(DD_WORKSPACE_CHECKLISTS.commercial, DD_WORKSPACE_CHECKLISTS.legal)
+      : new Map<string, NonPassRow>();
+    for (const checklistId of [
+      ...Object.values(DD_WORKSPACE_CHECKLISTS),
+      ...(subTrackDd ? (SUB_TRACK_DD_CHECKLISTS.m_and_a ?? []) : []),
+    ]) {
       for (const item of getChecklistItems(checklistId) ?? []) {
-        if (ownFamily.has(item.id) || (waiverTarget && checklistId === DD_WORKSPACE_CHECKLISTS.commercial && item.id === waiverTarget)) continue;
+        if (
+          ownFamily.has(item.id) ||
+          (waiverTarget && checklistId === DD_WORKSPACE_CHECKLISTS.commercial && item.id === waiverTarget)
+        )
+          continue;
         const np = nonPass.get(`${checklistId}:${item.id}`);
         db.run(
           `INSERT OR IGNORE INTO project_checklist_item_state
            (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [`demo-s1-s12-dd-${checklistId}-${item.id}`, DEMO.projectId, checklistId, item.id, np?.status ?? "pass", np?.note ?? "Demo DD completed", actor, now],
+          [
+            `demo-s1-s12-dd-${checklistId}-${item.id}`,
+            DEMO.projectId,
+            checklistId,
+            item.id,
+            np?.status ?? "pass",
+            np?.note ?? "Demo DD completed",
+            actor,
+            now,
+          ],
         );
       }
     }
@@ -488,15 +630,44 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         `INSERT OR IGNORE INTO dd_interview
          (id, project_id, interviewee, topic, response_summary, disagreement, follow_up, evidence_ref, claim, created_by, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?)`,
-        [`demo-s1-s12-dd-interview-${idx + 1}`, DEMO.projectId, interviewee, topic, summary, ref, claim, actor, now, now],
+        [
+          `demo-s1-s12-dd-interview-${idx + 1}`,
+          DEMO.projectId,
+          interviewee,
+          topic,
+          summary,
+          ref,
+          claim,
+          actor,
+          now,
+          now,
+        ],
       );
     }
     // S9 tool card — customer/supplier contract change-of-control
     // (customer-retention). Row 1 plots on the card (concentration >= 30).
     for (const [id, counterparty, direction, coc, clause, conc, exitLoss, ref] of [
-      ["demo-s1-s12-coc-1", "데모 주요 고객사 A", "customer", 1, "지배권 변경 시 60일 내 계약 해지 가능 (데모)", 35, 1200, "demo:contract-coc:1"],
+      [
+        "demo-s1-s12-coc-1",
+        "데모 주요 고객사 A",
+        "customer",
+        1,
+        "지배권 변경 시 60일 내 계약 해지 가능 (데모)",
+        35,
+        1200,
+        "demo:contract-coc:1",
+      ],
       ["demo-s1-s12-coc-2", "데모 주요 고객사 B", "customer", 0, null, 18, null, "demo:contract-coc:2"],
-      ["demo-s1-s12-coc-3", "데모 주요 협력사 C", "supplier", 1, "지배권 변경 시 가격 재협약 조항 (데모)", 22, 400, "demo:contract-coc:3"],
+      [
+        "demo-s1-s12-coc-3",
+        "데모 주요 협력사 C",
+        "supplier",
+        1,
+        "지배권 변경 시 가격 재협약 조항 (데모)",
+        22,
+        400,
+        "demo:contract-coc:3",
+      ],
     ] as const) {
       db.run(
         `INSERT OR IGNORE INTO contract_coc
@@ -509,16 +680,83 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
     // POSITION surrogates (ADR-0039 PII guard): never a real name. base_pay and
     // coc_payout_estimate are integer KRW won; value_impact is KRW millions
     // (day-one CoC cash outflow, bf-04).
-    for (const [id, execRef, title, basePay, cocTrigger, payout, vesting, ncMonths, ncEnf, retention, flight, impact] of [
-      ["demo-s1-s12-mgmt-1", "TARGET-CEO-01", "대표이사 (데모)", 250000000, 1, 800000000, 0, 24, 1, 600000000, "high", 800],
-      ["demo-s1-s12-mgmt-2", "TARGET-CFO-01", "재무담당 임원 (데모)", 180000000, 1, 450000000, 1, 12, 1, 400000000, "medium", 400],
-      ["demo-s1-s12-mgmt-3", "TARGET-CTO-01", "기술책임 임원 (데모)", 200000000, 0, null, 0, 12, 0, 500000000, "medium", 300],
+    for (const [
+      id,
+      execRef,
+      title,
+      basePay,
+      cocTrigger,
+      payout,
+      vesting,
+      ncMonths,
+      ncEnf,
+      retention,
+      flight,
+      impact,
+    ] of [
+      [
+        "demo-s1-s12-mgmt-1",
+        "TARGET-CEO-01",
+        "대표이사 (데모)",
+        250000000,
+        1,
+        800000000,
+        0,
+        24,
+        1,
+        600000000,
+        "high",
+        800,
+      ],
+      [
+        "demo-s1-s12-mgmt-2",
+        "TARGET-CFO-01",
+        "재무담당 임원 (데모)",
+        180000000,
+        1,
+        450000000,
+        1,
+        12,
+        1,
+        400000000,
+        "medium",
+        400,
+      ],
+      [
+        "demo-s1-s12-mgmt-3",
+        "TARGET-CTO-01",
+        "기술책임 임원 (데모)",
+        200000000,
+        0,
+        null,
+        0,
+        12,
+        0,
+        500000000,
+        "medium",
+        300,
+      ],
     ] as const) {
       db.run(
         `INSERT OR IGNORE INTO management_package
          (id, project_id, executive_ref, role_title, base_pay, coc_trigger, coc_payout_estimate, accelerated_vesting, non_compete_months, non_compete_enforceable, retention_plan_cost, flight_risk, value_impact, evidence_ref)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, DEMO.projectId, execRef, title, basePay, cocTrigger, payout, vesting, ncMonths, ncEnf, retention, flight, impact, `demo:management-package:${execRef}`],
+        [
+          id,
+          DEMO.projectId,
+          execRef,
+          title,
+          basePay,
+          cocTrigger,
+          payout,
+          vesting,
+          ncMonths,
+          ncEnf,
+          retention,
+          flight,
+          impact,
+          `demo:management-package:${execRef}`,
+        ],
       );
     }
     for (const [id, family, grade, headcount, targetMedian, acquirerMedian, gapPct, delta] of [
@@ -529,7 +767,18 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         `INSERT OR IGNORE INTO comp_benchmark
          (id, project_id, job_family, grade, headcount, target_median, acquirer_median, gap_pct, annual_cost_delta, evidence_ref)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, DEMO.projectId, family, grade, headcount, targetMedian, acquirerMedian, gapPct, delta, `demo:comp-benchmark:${family}`],
+        [
+          id,
+          DEMO.projectId,
+          family,
+          grade,
+          headcount,
+          targetMedian,
+          acquirerMedian,
+          gapPct,
+          delta,
+          `demo:comp-benchmark:${family}`,
+        ],
       );
     }
     // S11 PMI monitoring (brownfield M&A only — ADR-0161): key-talent rows are
@@ -561,7 +810,14 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
     // SPA/PMI Day-1 open) so the schedule surface shows the derived-status
     // range. Status is computed from due_date/done_at and never stored.
     for (const [id, title, category, dueDate, doneAt, notes] of [
-      ["demo-s1-s12-milestone-loi", "LOI 체결 (데모)", "contract", "2027-03-31", now, "S1-S12 데모 차터 마일스톤 — 완료 상태 데모"],
+      [
+        "demo-s1-s12-milestone-loi",
+        "LOI 체결 (데모)",
+        "contract",
+        "2027-03-31",
+        now,
+        "S1-S12 데모 차터 마일스톤 — 완료 상태 데모",
+      ],
       ["demo-s1-s12-milestone-spa", "SPA 체결 (데모)", "contract", "2027-06-30", null, "S1-S12 데모 차터 마일스톤"],
       ["demo-s1-s12-milestone-pmi-day1", "PMI Day-1 (데모)", "custom", "2027-09-30", null, "S1-S12 데모 차터 마일스톤"],
     ] as const) {
@@ -608,7 +864,17 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         `INSERT OR IGNORE INTO financing_sources_uses
          (id, project_id, kind, name, amount_krw_m, note, created_by, created_at, evidence_kind, evidence_ref)
          VALUES (?, ?, ?, ?, ?, 'S1-S12 demo balanced plan', ?, ?, ?, ?)`,
-        [`demo-s1-s12-fin-${id}`, DEMO.projectId, kind, name, amount, actor, now, kind === "source" ? (id === "debt" ? "term_sheet" : "internal_approval") : null, kind === "source" ? `demo-evidence/${id}` : null],
+        [
+          `demo-s1-s12-fin-${id}`,
+          DEMO.projectId,
+          kind,
+          name,
+          amount,
+          actor,
+          now,
+          kind === "source" ? (id === "debt" ? "term_sheet" : "internal_approval") : null,
+          kind === "source" ? `demo-evidence/${id}` : null,
+        ],
       );
     }
 
@@ -624,7 +890,19 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
          (id, run_id, project_id, source_procedure, review_cycle, venture_class, section, measure_key,
           target_value, actual_value, status, evidence_ref, observed_at, created_at)
          VALUES (?, ?, ?, 'portfolio-venture-monitoring', ?, 'driving', ?, ?, ?, ?, 'on_target', ?, ?, ?)`,
-        [`demo-s1-s12-score-${section}-${measure}`, DEMO.runId, DEMO.projectId, cycle, section, measure, target, actual, `demo:s1-s12-scorecard:${measure}`, now, now],
+        [
+          `demo-s1-s12-score-${section}-${measure}`,
+          DEMO.runId,
+          DEMO.projectId,
+          cycle,
+          section,
+          measure,
+          target,
+          actual,
+          `demo:s1-s12-scorecard:${measure}`,
+          now,
+          now,
+        ],
       );
     }
 
@@ -633,13 +911,23 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
     // cycle. The demo records a graduate_to_core decision carrying its
     // dedicated hand-off record (criterion 4 — ADR-0151 column, required for
     // decisions recorded from the 2026-10-02 migration date onward).
-    if (humanDecisions) db.run(
-      `INSERT OR IGNORE INTO venture_transition_decision
+    if (humanDecisions)
+      db.run(
+        `INSERT OR IGNORE INTO venture_transition_decision
          (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, core_handoff, created_at)
        VALUES (?, ?, ?, ?, 'graduate_to_core', 'venture-portfolio-ic', ?, ?, ?, ?, ?)`,
-      ["demo-s1-s12-transition", DEMO.runId, DEMO.projectId, cycle, now, "S1-S12 demo — 핵심사업 인계: 사업부 운영으로 이관하고 별도 트랜치 투자를 종료한다", null,
-        "핵심사업 인계: 사업부 운영으로 이관하고 별도 트랜치 투자를 종료한다 (ADR-0151 core_handoff)", now],
-    );
+        [
+          "demo-s1-s12-transition",
+          DEMO.runId,
+          DEMO.projectId,
+          cycle,
+          now,
+          "S1-S12 demo — 핵심사업 인계: 사업부 운영으로 이관하고 별도 트랜치 투자를 종료한다",
+          null,
+          "핵심사업 인계: 사업부 운영으로 이관하고 별도 트랜치 투자를 종료한다 (ADR-0151 core_handoff)",
+          now,
+        ],
+      );
   })();
 
   if (contractOn) seedBrownfieldGateContract(db);
@@ -661,26 +949,110 @@ function seedBrownfieldGateContract(db: ReturnType<typeof getDb>): void {
     const P = "project" as const;
     const step = (s: Parameters<typeof contract.recordStep>[1]) => contract.recordStep(db, s, clock);
     // Opportunity ladder: a HOLD precedes the screening GO.
-    step({ entityType: T, entityId: DEMO.oppId, gate: "screening", decision: "hold", rationale: "스크리닝 근거 자료가 부족해 시장 규모 근거를 보완한 뒤 다시 판단하기로 함", missing: ["시장 규모 근거 보완"] });
-    step({ entityType: T, entityId: DEMO.oppId, gate: "screening", decision: "go", rationale: "시장 규모 근거가 보완되었고 전략 적합성이 확인되어 사전 타당성 단계로 진행함" });
-    step({ entityType: T, entityId: DEMO.oppId, gate: "pre_fs", decision: "go", rationale: "사전 타당성 검토에서 인증 승계 쟁점과 목표 회사 후보가 정리되어 다음 단계로 진행함" });
-    step({ entityType: T, entityId: DEMO.oppId, gate: "target_screening", decision: "go", rationale: "후보 대상 스크리닝에서 유일한 생존 대상이 확인되어 본 타당성 검토로 진행함" });
+    step({
+      entityType: T,
+      entityId: DEMO.oppId,
+      gate: "screening",
+      decision: "hold",
+      rationale: "스크리닝 근거 자료가 부족해 시장 규모 근거를 보완한 뒤 다시 판단하기로 함",
+      missing: ["시장 규모 근거 보완"],
+    });
+    step({
+      entityType: T,
+      entityId: DEMO.oppId,
+      gate: "screening",
+      decision: "go",
+      rationale: "시장 규모 근거가 보완되었고 전략 적합성이 확인되어 사전 타당성 단계로 진행함",
+    });
+    step({
+      entityType: T,
+      entityId: DEMO.oppId,
+      gate: "pre_fs",
+      decision: "go",
+      rationale: "사전 타당성 검토에서 인증 승계 쟁점과 목표 회사 후보가 정리되어 다음 단계로 진행함",
+    });
+    step({
+      entityType: T,
+      entityId: DEMO.oppId,
+      gate: "target_screening",
+      decision: "go",
+      rationale: "후보 대상 스크리닝에서 유일한 생존 대상이 확인되어 본 타당성 검토로 진행함",
+    });
     // Project: the discount rate is human-confirmed before the fs GO; the six validators before the dd GO.
     contract.recordDemoWacc(db, DEMO.projectId, { subject: "target", subjectCompanyId: DEMO.companyId, clock });
-    step({ entityType: P, entityId: DEMO.projectId, gate: "fs", decision: "go", rationale: "재무 타당성 검토에서 기본 시나리오의 수익성이 허들 수준을 넘어 DD 단계로 진행함", briefRecommended: "hold", divergence: "AI 권고는 보류였으나 확정된 할인율 기준 기본 시나리오가 허들을 넘고 DD로 위험을 추가 검증할 수 있어 진행함" });
+    step({
+      entityType: P,
+      entityId: DEMO.projectId,
+      gate: "fs",
+      decision: "go",
+      rationale: "재무 타당성 검토에서 기본 시나리오의 수익성이 허들 수준을 넘어 DD 단계로 진행함",
+      briefRecommended: "hold",
+      divergence:
+        "AI 권고는 보류였으나 확정된 할인율 기준 기본 시나리오가 허들을 넘고 DD로 위험을 추가 검증할 수 있어 진행함",
+    });
     contract.recordDemoValidators(db, DEMO.projectId, clock);
     contract.recordHonestFeasibilityRows(db, DEMO.projectId, clock);
     contract.recordDemoWaiver(db, DEMO.projectId, DD_WORKSPACE_CHECKLISTS.commercial, clock);
-    step({ entityType: P, entityId: DEMO.projectId, gate: "dd", decision: "hold", rationale: "법무 실사 보고서가 아직 도착하지 않아 결정을 보류하고 보고서를 받은 뒤 다시 판단함", missing: ["법무 DD 보고서"] });
-    step({ entityType: P, entityId: DEMO.projectId, gate: "dd", decision: "go", rationale: "여섯 가지 M&A 검증이 모두 기록되었고 실사 결과가 허용 범위여서 투자심의 단계로 진행함" });
-    const entity = step({ entityType: P, entityId: DEMO.projectId, gate: "entity_ic", decision: "go", rationale: "법인 투자심의에서 사업계획과 위험 요인을 검토했고 그룹 심의 전 조건 이행을 전제로 승인함", conditions: [{ text: "그룹 심의 전에 핵심 고객 계약의 지배구조 변경 조항 회신을 확보한다", clear_by: "group_ic" }] });
-    contract.countersign(db, DEMO.projectId, entity, contract.DEMO_ENTITY_REVIEWER, "법인 투자심의 결정과 근거를 확인했고 조건 이행을 전제로 승인함", clock);
+    step({
+      entityType: P,
+      entityId: DEMO.projectId,
+      gate: "dd",
+      decision: "hold",
+      rationale: "법무 실사 보고서가 아직 도착하지 않아 결정을 보류하고 보고서를 받은 뒤 다시 판단함",
+      missing: ["법무 DD 보고서"],
+    });
+    step({
+      entityType: P,
+      entityId: DEMO.projectId,
+      gate: "dd",
+      decision: "go",
+      rationale: "여섯 가지 M&A 검증이 모두 기록되었고 실사 결과가 허용 범위여서 투자심의 단계로 진행함",
+    });
+    const entity = step({
+      entityType: P,
+      entityId: DEMO.projectId,
+      gate: "entity_ic",
+      decision: "go",
+      rationale: "법인 투자심의에서 사업계획과 위험 요인을 검토했고 그룹 심의 전 조건 이행을 전제로 승인함",
+      conditions: [
+        { text: "그룹 심의 전에 핵심 고객 계약의 지배구조 변경 조항 회신을 확보한다", clear_by: "group_ic" },
+      ],
+    });
+    contract.countersign(
+      db,
+      DEMO.projectId,
+      entity,
+      contract.DEMO_ENTITY_REVIEWER,
+      "법인 투자심의 결정과 근거를 확인했고 조건 이행을 전제로 승인함",
+      clock,
+    );
     contract.clearGroupIcConditions(db, DEMO.projectId, contract.DEMO_GROUP_REVIEWER, clock);
-    const group = step({ entityType: P, entityId: DEMO.projectId, gate: "group_ic", decision: "go", rationale: "그룹 투자심의에서 전체 포트폴리오 적합성과 자금 구조를 확인했고 조건 이행이 끝나 승인함" });
-    contract.countersign(db, DEMO.projectId, group, contract.DEMO_GROUP_REVIEWER, "그룹 투자심의 결정과 조건 이행 기록을 확인하고 승인함", clock);
+    const group = step({
+      entityType: P,
+      entityId: DEMO.projectId,
+      gate: "group_ic",
+      decision: "go",
+      rationale: "그룹 투자심의에서 전체 포트폴리오 적합성과 자금 구조를 확인했고 조건 이행이 끝나 승인함",
+    });
+    contract.countersign(
+      db,
+      DEMO.projectId,
+      group,
+      contract.DEMO_GROUP_REVIEWER,
+      "그룹 투자심의 결정과 조건 이행 기록을 확인하고 승인함",
+      clock,
+    );
     // KILL path (learning capture): a second demo opportunity stopped at screening.
     contract.seedKilledOpportunity(db, "demo-s1-s12-killed-opportunity", "S1-S12 데모: 중단된 후보 기회", clock);
-    step({ entityType: T, entityId: "demo-s1-s12-killed-opportunity", gate: "screening", decision: "kill", rationale: "시장 규모가 최소 기준에 못 미치고 진입 근거가 없어 이 기회는 중단함", learning: "시장 규모 추정에 하위 시장 합산만 사용해 과대 평가했다. 다음 스크리닝에서는 근거 출처가 둘 이상인 값만 사용한다." });
+    step({
+      entityType: T,
+      entityId: "demo-s1-s12-killed-opportunity",
+      gate: "screening",
+      decision: "kill",
+      rationale: "시장 규모가 최소 기준에 못 미치고 진입 근거가 없어 이 기회는 중단함",
+      learning:
+        "시장 규모 추정에 하위 시장 합산만 사용해 과대 평가했다. 다음 스크리닝에서는 근거 출처가 둘 이상인 값만 사용한다.",
+    });
   });
 }
 
@@ -712,19 +1084,48 @@ const GF_MATRIX: SizingMatrix = {
   industryLabel: "S1-S12 데모 신설 산업 (데모 데이터)",
   provenance: "llm-estimate",
   synthesized: true,
-  anchor: { sources: [{ label: "데모 앵커 (실제 출처 아님)", estimate: 0.8, status: "consensus", note: "demo seed — not a real estimate" }], total: 0.8 },
+  anchor: {
+    sources: [
+      {
+        label: "데모 앵커 (실제 출처 아님)",
+        estimate: 0.8,
+        status: "consensus",
+        note: "demo seed — not a real estimate",
+      },
+    ],
+    total: 0.8,
+  },
   segments: [
     { code: "demo_gf_core", label: "핵심 수요처 (데모)" },
     { code: "demo_gf_service", label: "연계 서비스 (데모)" },
   ],
   regions: [
-    { code: "KR", label: "한국 (데모)", weight: 70, mix: { demo_gf_core: 75, demo_gf_service: 25 }, adjustment: "demo seed" },
-    { code: "ROW", label: "기타 지역 (데모)", weight: 30, mix: { demo_gf_core: 65, demo_gf_service: 35 }, adjustment: "demo seed" },
+    {
+      code: "KR",
+      label: "한국 (데모)",
+      weight: 70,
+      mix: { demo_gf_core: 75, demo_gf_service: 25 },
+      adjustment: "demo seed",
+    },
+    {
+      code: "ROW",
+      label: "기타 지역 (데모)",
+      weight: 30,
+      mix: { demo_gf_core: 65, demo_gf_service: 35 },
+      adjustment: "demo seed",
+    },
   ],
-  baseline2026: { KR: { demo_gf_core: 0.35, demo_gf_service: 0.15 }, ROW: { demo_gf_core: 0.15, demo_gf_service: 0.05 } },
+  baseline2026: {
+    KR: { demo_gf_core: 0.35, demo_gf_service: 0.15 },
+    ROW: { demo_gf_core: 0.15, demo_gf_service: 0.05 },
+  },
   cagrBase: { KR: { demo_gf_core: 0.2, demo_gf_service: 0.16 }, ROW: { demo_gf_core: 0.18, demo_gf_service: 0.14 } },
   chainGrade: { grade: "B", statisticalHops: 0, note: "demo seed: no statistical hop, llm-estimate source cap" },
-  chainDirection: { position: "upstream", note: "demo seed", relatedIndustries: [{ relation: "후방", name: "데모 소재 산업" }] },
+  chainDirection: {
+    position: "upstream",
+    note: "demo seed",
+    relatedIndustries: [{ relation: "후방", name: "데모 소재 산업" }],
+  },
   qualitative: { opportunityFactors: ["데모 기회 요인 — 신규 수요"], riskFactors: ["데모 위험 요인 — 진입 지연"] },
   consistency: { bottomUpCagr: 18, topDownCagr: 17, tolerance: "demo seed" }, // percent; >=15 reads as high growth in the route advisory
   crossValidation: [],
@@ -738,7 +1139,10 @@ const GF_MATRIX: SizingMatrix = {
   },
 };
 
-export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): Promise<{ opportunityId: string; projectId: string }> {
+export async function seedGreenfieldS1ToS12Demo(
+  dbPath?: string,
+  opts: SeedOptions = {},
+): Promise<{ opportunityId: string; projectId: string }> {
   const humanDecisions = opts.humanDecisions ?? true;
   const contractOn = humanDecisions && (opts.gateDecisions ?? true);
   runMigrations(dbPath);
@@ -774,19 +1178,40 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id,
+        capability_gap_json, synergy_rationale, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id,
         sizing_version_id)
-       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        GF.oppId, null, "S1-S12 데모 Greenfield 기회", "S1-S12 데모 신설 산업", "직접 진출 밸류체인 노드 (신설)",
-        "시장 성장·자체 역량 조합에서 직접 진출 기회가 명확함", actor, now, actor, now,
+        GF.oppId,
+        null,
+        "S1-S12 데모 Greenfield 기회",
+        "S1-S12 데모 신설 산업",
+        "직접 진출 밸류체인 노드 (신설)",
+        "시장 성장·자체 역량 조합에서 직접 진출 기회가 명확함",
+        actor,
+        now,
+        actor,
+        now,
         json({
           rows: [
-            { capability: "핵심 생산 설비 운영", source: "manual", held: { status: "none" }, mitigation: "신규 채용 + 설비 도입" },
-            { capability: "품질 인증 체계", source: "manual", held: { status: "partial" }, mitigation: "Build — 내재화" },
+            {
+              capability: "핵심 생산 설비 운영",
+              source: "manual",
+              held: { status: "none" },
+              mitigation: "신규 채용 + 설비 도입",
+            },
+            {
+              capability: "품질 인증 체계",
+              source: "manual",
+              held: { status: "partial" },
+              mitigation: "Build — 내재화",
+            },
           ],
         }),
-        now, actor, GF.industryId,
+        "자사 생산·품질 역량과의 시너지를 사람이 확정한 데모 근거 (ADR-0192)",
+        now,
+        actor,
+        GF.industryId,
         GF.versionId,
       ],
     );
@@ -798,12 +1223,25 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
         project_name, charter_json, charter_confirmed_at, status, subject_company_rationale, establishment_mode)
        VALUES (?, 'DEMO-GF', ?, 'group_ic', ?, 'internal', ?, 'greenfield', ?, ?, ?, 'open', ?, 'new_entity')`,
       [
-        GF.projectId, now, GF.companyId, GF.oppId, "S1-S12 데모 Greenfield 프로젝트",
-        json({ milestones: ["법인 설립", "설비 가동", "흑자 전환"], owner: actor, note: "S1-S12 greenfield demo charter baseline" }),
-        now, "자체 역량 격차를 Build/Hire로 해소해 직접 진출",
+        GF.projectId,
+        now,
+        GF.companyId,
+        GF.oppId,
+        "S1-S12 데모 Greenfield 프로젝트",
+        json({
+          milestones: ["법인 설립", "설비 가동", "흑자 전환"],
+          owner: actor,
+          note: "S1-S12 greenfield demo charter baseline",
+        }),
+        now,
+        "자체 역량 격차를 Build/Hire로 해소해 직접 진출",
       ],
     );
-    db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [GF.projectId, now, GF.oppId]);
+    db.run("UPDATE opportunity SET project_id = ?, promoted_at = COALESCE(promoted_at, ?) WHERE id = ?", [
+      GF.projectId,
+      now,
+      GF.oppId,
+    ]);
     seedSynergyAnalysis(db, "demo-gf-synergy", GF.oppId, "S1-S12 데모 Greenfield 기회", 55, now, actor);
     seedStageSla(db, now, actor);
 
@@ -812,14 +1250,36 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
        (id, opportunity_id, project_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
         intent, total_score, status, updated_at, is_current)
        VALUES (?, ?, ?, 'greenfield', NULL, ?, ?, ?, ?, 'integration', 13, 'final', ?, 1)`,
-      [GF.routeId, GF.oppId, GF.projectId, "통제력과 내재화가 핵심이므로 자체 신설(Greenfield)로 진행", "M&A/JV 검토 후 통제력·역량 내재화 측면에서 후순위", actor, now, now],
+      [
+        GF.routeId,
+        GF.oppId,
+        GF.projectId,
+        "통제력과 내재화가 핵심이므로 자체 신설(Greenfield)로 진행",
+        "M&A/JV 검토 후 통제력·역량 내재화 측면에서 후순위",
+        actor,
+        now,
+        now,
+      ],
     );
-    for (const [idx, criterion] of ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"].entries()) {
+    for (const [idx, criterion] of [
+      "control_need",
+      "capability_criticality",
+      "market_uncertainty",
+      "integration_capacity",
+      "speed_to_capability",
+    ].entries()) {
       db.run(
         `INSERT OR IGNORE INTO route_decision_score
          (id, decision_id, intent, criterion, score, evidence_note, created_at)
          VALUES (?, ?, 'integration', ?, ?, ?, ?)`,
-        [`demo-gf-route-score-${criterion}`, GF.routeId, criterion, idx === 3 ? 2 : 3, "S1-S12 greenfield demo route scoring evidence", now],
+        [
+          `demo-gf-route-score-${criterion}`,
+          GF.routeId,
+          criterion,
+          idx === 3 ? 2 : 3,
+          "S1-S12 greenfield demo route scoring evidence",
+          now,
+        ],
       );
     }
 
@@ -828,7 +1288,16 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       `INSERT OR IGNORE INTO greenfield_assessment
        (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [GF.assessmentId, GF.oppId, "신설 법인 설립 + 설비 투자 후 단계적 가동 (Build + Hire)", "JV·M&A 대안 검토 후 통제력·내재화 우선으로 제외", "S1-S12 greenfield demo 진출전략 — 격차는 채용·내재화로 해소", actor, now, now],
+      [
+        GF.assessmentId,
+        GF.oppId,
+        "신설 법인 설립 + 설비 투자 후 단계적 가동 (Build + Hire)",
+        "JV·M&A 대안 검토 후 통제력·내재화 우선으로 제외",
+        "S1-S12 greenfield demo 진출전략 — 격차는 채용·내재화로 해소",
+        actor,
+        now,
+        now,
+      ],
     );
 
     db.run(
@@ -860,7 +1329,9 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       [GF.projectId, actor, now],
     );
     // ADR-0187 P5 (M14): one optional technical item fails with its reason, one optional HR item is not applicable with a note.
-    const gfNonPass = humanDecisions ? nonPassDdRows(DD_WORKSPACE_CHECKLISTS.technical, DD_WORKSPACE_CHECKLISTS.hr) : new Map<string, NonPassRow>();
+    const gfNonPass = humanDecisions
+      ? nonPassDdRows(DD_WORKSPACE_CHECKLISTS.technical, DD_WORKSPACE_CHECKLISTS.hr)
+      : new Map<string, NonPassRow>();
     for (const checklistId of Object.values(DD_WORKSPACE_CHECKLISTS)) {
       for (const item of getChecklistItems(checklistId) ?? []) {
         const np = gfNonPass.get(`${checklistId}:${item.id}`);
@@ -868,7 +1339,16 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
           `INSERT OR IGNORE INTO project_checklist_item_state
            (id, project_id, checklist_id, item_id, status, note, assessed_by, assessed_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [`demo-gf-dd-${checklistId}-${item.id}`, GF.projectId, checklistId, item.id, np?.status ?? "pass", np?.note ?? "Demo DD completed", actor, now],
+          [
+            `demo-gf-dd-${checklistId}-${item.id}`,
+            GF.projectId,
+            checklistId,
+            item.id,
+            np?.status ?? "pass",
+            np?.note ?? "Demo DD completed",
+            actor,
+            now,
+          ],
         );
       }
     }
@@ -886,9 +1366,16 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
         four_axis_review_completed, hypothesized_by, hypothesized_at, rationale)
        VALUES (?, ?, ?, 'asset', 'full', 'primary', 'direct', 'build', ?, ?, ?, ?, 1, ?, ?, ?)`,
       [
-        GF.structureId, GF.projectId, GF.runId,
-        "신설 법인 세무 검토 완료", "신설 법인 자체로 책임 격리", "자기자본 중심 — 초기 부담 최소화",
-        "단계적 증설 확장 (exit 아님)", actor, now, "S10 four-axis greenfield demo structure completed",
+        GF.structureId,
+        GF.projectId,
+        GF.runId,
+        "신설 법인 세무 검토 완료",
+        "신설 법인 자체로 책임 격리",
+        "자기자본 중심 — 초기 부담 최소화",
+        "단계적 증설 확장 (exit 아님)",
+        actor,
+        now,
+        "S10 four-axis greenfield demo structure completed",
       ],
     );
     for (const [id, kind, name, amount] of [
@@ -901,7 +1388,17 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
         `INSERT OR IGNORE INTO financing_sources_uses
          (id, project_id, kind, name, amount_krw_m, note, created_by, created_at, evidence_kind, evidence_ref)
          VALUES (?, ?, ?, ?, ?, 'S1-S12 greenfield demo balanced plan', ?, ?, ?, ?)`,
-        [`demo-gf-fin-${id}`, GF.projectId, kind, name, amount, actor, now, kind === "source" ? (id === "debt" ? "term_sheet" : "internal_approval") : null, kind === "source" ? `demo-evidence/${id}` : null],
+        [
+          `demo-gf-fin-${id}`,
+          GF.projectId,
+          kind,
+          name,
+          amount,
+          actor,
+          now,
+          kind === "source" ? (id === "debt" ? "term_sheet" : "internal_approval") : null,
+          kind === "source" ? `demo-evidence/${id}` : null,
+        ],
       );
     }
 
@@ -912,7 +1409,15 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
         `INSERT OR IGNORE INTO entity_establishment_step
          (id, opportunity_id, project_id, step_no, status, origin, checklist_item, evidence_url, note, owner, updated_at)
          VALUES (?, ?, ?, ?, 'done', 'internal', NULL, NULL, ?, ?, ?)`,
-        [`demo-gf-est-${stepNo}`, GF.oppId, GF.projectId, stepNo, `S1-S12 greenfield demo 설립 ${stepNo}/5 완료`, actor, now],
+        [
+          `demo-gf-est-${stepNo}`,
+          GF.oppId,
+          GF.projectId,
+          stepNo,
+          `S1-S12 greenfield demo 설립 ${stepNo}/5 완료`,
+          actor,
+          now,
+        ],
       );
     }
 
@@ -922,9 +1427,30 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     // execution-baseline import path (source='execution_baseline') stays the
     // sanctioned writer for baseline-derived rows.
     for (const [id, title, category, dueDate, doneAt, notes] of [
-      ["demo-gf-milestone-establish", "법인 설립 완료 (데모)", "custom", "2027-03-31", now, "S1-S12 greenfield 데모 차터 마일스톤 — 설립 5단계 완료와 연동"],
-      ["demo-gf-milestone-plant", "설비 가동 (데모)", "capex", "2027-09-30", null, "S1-S12 greenfield 데모 차터 마일스톤"],
-      ["demo-gf-milestone-breakeven", "흑자 전환 (데모)", "custom", "2028-06-30", null, "S1-S12 greenfield 데모 차터 마일스톤"],
+      [
+        "demo-gf-milestone-establish",
+        "법인 설립 완료 (데모)",
+        "custom",
+        "2027-03-31",
+        now,
+        "S1-S12 greenfield 데모 차터 마일스톤 — 설립 5단계 완료와 연동",
+      ],
+      [
+        "demo-gf-milestone-plant",
+        "설비 가동 (데모)",
+        "capex",
+        "2027-09-30",
+        null,
+        "S1-S12 greenfield 데모 차터 마일스톤",
+      ],
+      [
+        "demo-gf-milestone-breakeven",
+        "흑자 전환 (데모)",
+        "custom",
+        "2028-06-30",
+        null,
+        "S1-S12 greenfield 데모 차터 마일스톤",
+      ],
     ] as const) {
       db.run(
         `INSERT OR IGNORE INTO project_milestone (id, project_id, title, category, due_date, owner, source, done_at, notes, created_by, created_at)
@@ -939,13 +1465,23 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
     // S12 venture scorecard is NOT raw-inserted here: the sanctioned write path is
     // recordGreenfieldScorecardFromRequest (the POST post-management/scorecard
     // service, greenfield-only) — recorded after the S8 block below.
-    if (humanDecisions) db.run(
-      `INSERT OR IGNORE INTO venture_transition_decision
+    if (humanDecisions)
+      db.run(
+        `INSERT OR IGNORE INTO venture_transition_decision
          (id, run_id, project_id, review_cycle, decision, decided_by, decided_at, rationale, learning_capture, core_handoff, created_at)
        VALUES (?, ?, ?, ?, 'graduate_to_core', 'venture-portfolio-ic', ?, ?, ?, ?, ?)`,
-      ["demo-gf-transition", GF.runId, GF.projectId, cycle, now, "S1-S12 greenfield demo — 핵심사업 인계: 설립 법인을 사업부 운영으로 이관한다", null,
-        "핵심사업 인계: 설립 법인을 사업부 운영으로 이관한다 (ADR-0151 core_handoff)", now],
-    );
+        [
+          "demo-gf-transition",
+          GF.runId,
+          GF.projectId,
+          cycle,
+          now,
+          "S1-S12 greenfield demo — 핵심사업 인계: 설립 법인을 사업부 운영으로 이관한다",
+          null,
+          "핵심사업 인계: 설립 법인을 사업부 운영으로 이관한다 (ADR-0151 core_handoff)",
+          now,
+        ],
+      );
   })();
 
   // S8 — run the REAL generator (greenfield path: project-level subjects,
@@ -983,7 +1519,12 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
         const r3 = (n: number) => Math.round(n * 1000) / 1000;
         const plant = r3(investment * 0.8);
         const equity = r3(investment * 0.75);
-        for (const [id, amount] of [["plant", plant], ["wc", r3(investment - plant)], ["equity", equity], ["debt", r3(investment - equity)]] as const) {
+        for (const [id, amount] of [
+          ["plant", plant],
+          ["wc", r3(investment - plant)],
+          ["equity", equity],
+          ["debt", r3(investment - equity)],
+        ] as const) {
           db.run("UPDATE financing_sources_uses SET amount_krw_m = ? WHERE id = ?", [amount, `demo-gf-fin-${id}`]);
         }
       }
@@ -1009,8 +1550,20 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
           body: {
             review_cycle: cycle,
             measures: [
-              { measure_key: "revenue_vs_case", target_value: 100, value: 105, status: "on_target", evidence_ref: "src:demo-gf" },
-              { measure_key: "headcount_vs_plan", target_value: 10, value: 11, status: "on_target", evidence_ref: "src:demo-gf" },
+              {
+                measure_key: "revenue_vs_case",
+                target_value: 100,
+                value: 105,
+                status: "on_target",
+                evidence_ref: "src:demo-gf",
+              },
+              {
+                measure_key: "headcount_vs_plan",
+                target_value: 10,
+                value: 11,
+                status: "on_target",
+                evidence_ref: "src:demo-gf",
+              },
             ],
           },
         },
@@ -1037,28 +1590,39 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
           entries: {
             permit_milestones: [],
             certification_milestones: [
-              { name: "ISO 9001 품질경영 인증 (데모)", issuer: "데모 인증기관", target_date: "2027-06-30", gates_ref: null, certification_id: null },
+              {
+                name: "ISO 9001 품질경영 인증 (데모)",
+                issuer: "데모 인증기관",
+                target_date: "2027-06-30",
+                gates_ref: null,
+                certification_id: null,
+              },
             ],
             hiring_plan: [
               { role_family: "생산운영", quarter: "2027-Q1", headcount: 12 },
               { role_family: "품질관리", quarter: "2027-Q2", headcount: 4 },
             ],
-            kpi_targets: [
-              { metric_key: "revenue_vs_case", target_value: 100, unit: "ratio", due: "2027-Q4" },
-            ],
+            kpi_targets: [{ metric_key: "revenue_vs_case", target_value: 100, unit: "ratio", due: "2027-Q4" }],
             incentive_obligations: [],
           },
         },
         db,
       );
-      if (!recorded.ok) throw new Error(`greenfield demo execution baseline entries failed (${recorded.code}): ${recorded.message}`);
+      if (!recorded.ok)
+        throw new Error(`greenfield demo execution baseline entries failed (${recorded.code}): ${recorded.message}`);
       const caps = pre.listPreIcCaptures(GF.projectId, db);
       if (caps.permits.length || caps.incentives.length) {
         const adopted = pre.adoptPreIcCaptures(
-          { projectId: GF.projectId, permitTargetDates: Object.fromEntries(caps.permits.map((p) => [p.id, "2027-04-30"])), actor: "admin", now },
+          {
+            projectId: GF.projectId,
+            permitTargetDates: Object.fromEntries(caps.permits.map((p) => [p.id, "2027-04-30"])),
+            actor: "admin",
+            now,
+          },
           db,
         );
-        if (!adopted.ok) throw new Error(`greenfield demo pre-IC adoption failed (${adopted.code}): ${adopted.message}`);
+        if (!adopted.ok)
+          throw new Error(`greenfield demo pre-IC adoption failed (${adopted.code}): ${adopted.message}`);
       }
       // A confirmation must acknowledge every open reconciliation finding (R3) —
       // the demo carries no capex tranches, so the findings (if any) are the
@@ -1069,12 +1633,17 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
           projectId: GF.projectId,
           actor: "admin", // project lead (see project_member above)
           now,
-          rationale: "S1-S12 greenfield demo — 설립 실행 기준선(트랜치·인증·채용·KPI)을 프로젝트 lead가 확인했다 (데모 시드).",
-          acknowledgedFindings: findings.map((f) => ({ code: f.code, rationale: "S1-S12 greenfield demo — 데모 시드에서 인지한 대조 결과이다." })),
+          rationale:
+            "S1-S12 greenfield demo — 설립 실행 기준선(트랜치·인증·채용·KPI)을 프로젝트 lead가 확인했다 (데모 시드).",
+          acknowledgedFindings: findings.map((f) => ({
+            code: f.code,
+            rationale: "S1-S12 greenfield demo — 데모 시드에서 인지한 대조 결과이다.",
+          })),
         },
         db,
       );
-      if (!confirmed.ok) throw new Error(`greenfield demo execution baseline confirm failed (${confirmed.code}): ${confirmed.message}`);
+      if (!confirmed.ok)
+        throw new Error(`greenfield demo execution baseline confirm failed (${confirmed.code}): ${confirmed.message}`);
     }
   }
 
@@ -1088,37 +1657,102 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
  * pre-ic-captures route calls - so they carry stage_captured / captured_by / captured_at and the incentive carries its
  * clawback terms. Idempotent: every row is looked up by its natural key first.
  */
-function seedGreenfieldEvidence(db: ReturnType<typeof getDb>, pre: typeof import("../../app/web-next/lib/pre-ic-capture.ts"), now: string): void {
+function seedGreenfieldEvidence(
+  db: ReturnType<typeof getDb>,
+  pre: typeof import("../../app/web-next/lib/pre-ic-capture.ts"),
+  now: string,
+): void {
   const sites = [
-    { id: "demo-gf-site-1", name: "S1-S12 데모 후보 부지 A (데모)", infra: 4, logistics: 4, labor: 3, lead: 180, capex: 1200, total: 78, rank: 1, note: "데모: 산업단지 내 분양 부지 — 인프라 선정비" },
-    { id: "demo-gf-site-2", name: "S1-S12 데모 후보 부지 B (데모)", infra: 3, logistics: 3, labor: 4, lead: 270, capex: 1800, total: 66, rank: 2, note: "데모: 개별 입지 — 인프라 신규 투자 필요" },
+    {
+      id: "demo-gf-site-1",
+      name: "S1-S12 데모 후보 부지 A (데모)",
+      infra: 4,
+      logistics: 4,
+      labor: 3,
+      lead: 180,
+      capex: 1200,
+      total: 78,
+      rank: 1,
+      note: "데모: 산업단지 내 분양 부지 — 인프라 선정비",
+    },
+    {
+      id: "demo-gf-site-2",
+      name: "S1-S12 데모 후보 부지 B (데모)",
+      infra: 3,
+      logistics: 3,
+      labor: 4,
+      lead: 270,
+      capex: 1800,
+      total: 66,
+      rank: 2,
+      note: "데모: 개별 입지 — 인프라 신규 투자 필요",
+    },
   ];
   for (const t of sites) {
     const r = db.run(
       `INSERT OR IGNORE INTO site (id, project_id, name, region_code, infra_score, logistics_score, labor_score, permit_lead_time_days, infra_capex, total_score, rank, note, created_by, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [t.id, GF.projectId, t.name, "KR", t.infra, t.logistics, t.labor, t.lead, t.capex, t.total, t.rank, t.note, "demo-seed", now, now],
+      [
+        t.id,
+        GF.projectId,
+        t.name,
+        "KR",
+        t.infra,
+        t.logistics,
+        t.labor,
+        t.lead,
+        t.capex,
+        t.total,
+        t.rank,
+        t.note,
+        "demo-seed",
+        now,
+        now,
+      ],
     );
-    if (r.changes > 0) appendAudit(db, { actor: "demo-seed", action: "site.create", target: `${GF.projectId}:${t.id}`, now });
+    if (r.changes > 0)
+      appendAudit(db, { actor: "demo-seed", action: "site.create", target: `${GF.projectId}:${t.id}`, now });
   }
   const has = (table: "permit" | "incentive", col: "name" | "program_name", value: string) =>
-    !!db.query(`SELECT 1 FROM ${table} WHERE project_id = ? AND ${col} = ? AND stage_captured IS NOT NULL`).get(GF.projectId, value);
+    !!db
+      .query(`SELECT 1 FROM ${table} WHERE project_id = ? AND ${col} = ? AND stage_captured IS NOT NULL`)
+      .get(GF.projectId, value);
   const permits: Array<{ stage: "S5" | "S8"; name: string; agency: string; days: number }> = [
     { stage: "S5", name: "환경영향 사전 협의 (데모)", agency: "데모 지방환경청", days: 45 },
     { stage: "S8", name: "산업단지 입주 계약 및 공장설립 승인 (데모)", agency: "데모 산업단지관리공단", days: 60 },
   ];
   for (const p of permits) {
     if (has("permit", "name", p.name)) continue;
-    const r = pre.capturePermitCandidate({ projectId: GF.projectId, stage: p.stage, name: p.name, agency: p.agency, statutory_days: p.days, actor: "demo-seed", now }, db);
+    const r = pre.capturePermitCandidate(
+      {
+        projectId: GF.projectId,
+        stage: p.stage,
+        name: p.name,
+        agency: p.agency,
+        statutory_days: p.days,
+        actor: "demo-seed",
+        now,
+      },
+      db,
+    );
     if (!r.ok) throw new Error(`greenfield demo permit capture failed (${r.code}): ${r.message}`);
   }
   const program = "지방투자 보조금 (데모)";
   if (!has("incentive", "program_name", program)) {
     const r = pre.captureIncentiveCandidate(
       {
-        projectId: GF.projectId, stage: "S8", program_name: program, type: "subsidy", grantor: "데모 지방자치단체", npv_value: 1500,
+        projectId: GF.projectId,
+        stage: "S8",
+        program_name: program,
+        type: "subsidy",
+        grantor: "데모 지방자치단체",
+        npv_value: 1500,
         clawback_rule: "수령 후 5년 이내 가동 중단·이전 시 보조금 전액 환수 (데모 조건, 실제 약정 아님)",
-        application_deadline: "2027-03-31", construction_deadline: "2028-06-30", evidence_ref: "src:demo-gf", actor: "demo-seed", now,
+        application_deadline: "2027-03-31",
+        construction_deadline: "2028-06-30",
+        evidence_ref: "src:demo-gf",
+        actor: "demo-seed",
+        now,
       },
       db,
     );
@@ -1134,24 +1768,84 @@ function seedGreenfieldGateContract(db: ReturnType<typeof getDb>): void {
     const T = "opportunity" as const;
     const P = "project" as const;
     const step = (s: Parameters<typeof contract.recordStep>[1]) => contract.recordStep(db, s, clock);
-    step({ entityType: T, entityId: GF.oppId, gate: "screening", decision: "go", rationale: "신설 후보 기회의 시장 규모와 전략 적합성이 확인되어 사전 타당성 단계로 진행함" });
-    step({ entityType: T, entityId: GF.oppId, gate: "pre_fs", decision: "go", rationale: "사전 타당성 검토에서 진입 전략과 역량 격차 해소 방안이 정리되어 본 타당성 검토로 진행함" });
+    step({
+      entityType: T,
+      entityId: GF.oppId,
+      gate: "screening",
+      decision: "go",
+      rationale: "신설 후보 기회의 시장 규모와 전략 적합성이 확인되어 사전 타당성 단계로 진행함",
+    });
+    step({
+      entityType: T,
+      entityId: GF.oppId,
+      gate: "pre_fs",
+      decision: "go",
+      rationale: "사전 타당성 검토에서 진입 전략과 역량 격차 해소 방안이 정리되어 본 타당성 검토로 진행함",
+    });
     contract.recordDemoWacc(db, GF.projectId, { subject: "project_newco", subjectCompanyId: null, clock });
     // The entity_ic exit kill criterion (origin_classification_missing_at_entity_ic_exit) needs a live classification.
     contract.ensureDemoMembers(db, GF.projectId, clock());
     if (!db.query("SELECT 1 FROM project_case_classification WHERE project_id = ?").get(GF.projectId)) {
       db.run(
         "INSERT INTO project_case_classification (id, project_id, case_type, origin, technology_track, classified_by, classified_at, rationale) VALUES (?,?,?,?,?,?,?,?)",
-        [ulid(), GF.projectId, "greenfield", "internal", "none", contract.DEMO_MAKER, clock(), "S1-S12 greenfield demo - 자체 신설(내부 기원)로 분류"],
+        [
+          ulid(),
+          GF.projectId,
+          "greenfield",
+          "internal",
+          "none",
+          contract.DEMO_MAKER,
+          clock(),
+          "S1-S12 greenfield demo - 자체 신설(내부 기원)로 분류",
+        ],
       );
     }
-    step({ entityType: P, entityId: GF.projectId, gate: "fs", decision: "go", rationale: "재무 타당성 검토에서 기본 시나리오의 수익성이 확정된 허들을 넘어 DD 단계로 진행함" });
-    step({ entityType: P, entityId: GF.projectId, gate: "dd", decision: "go", rationale: "실사 결과와 인허가 경로가 허용 범위여서 투자심의 단계로 진행함" });
-    const entity = step({ entityType: P, entityId: GF.projectId, gate: "entity_ic", decision: "go", rationale: "법인 투자심의에서 설립 계획과 위험 요인을 검토했고 그룹 심의 전 조건 이행을 전제로 승인함", conditions: [{ text: "그룹 심의 전에 부지 인허가 일정 확인서를 확보한다", clear_by: "group_ic" }] });
-    contract.countersign(db, GF.projectId, entity, contract.DEMO_ENTITY_REVIEWER, "법인 투자심의 결정과 근거를 확인했고 조건 이행을 전제로 승인함", clock);
+    step({
+      entityType: P,
+      entityId: GF.projectId,
+      gate: "fs",
+      decision: "go",
+      rationale: "재무 타당성 검토에서 기본 시나리오의 수익성이 확정된 허들을 넘어 DD 단계로 진행함",
+    });
+    step({
+      entityType: P,
+      entityId: GF.projectId,
+      gate: "dd",
+      decision: "go",
+      rationale: "실사 결과와 인허가 경로가 허용 범위여서 투자심의 단계로 진행함",
+    });
+    const entity = step({
+      entityType: P,
+      entityId: GF.projectId,
+      gate: "entity_ic",
+      decision: "go",
+      rationale: "법인 투자심의에서 설립 계획과 위험 요인을 검토했고 그룹 심의 전 조건 이행을 전제로 승인함",
+      conditions: [{ text: "그룹 심의 전에 부지 인허가 일정 확인서를 확보한다", clear_by: "group_ic" }],
+    });
+    contract.countersign(
+      db,
+      GF.projectId,
+      entity,
+      contract.DEMO_ENTITY_REVIEWER,
+      "법인 투자심의 결정과 근거를 확인했고 조건 이행을 전제로 승인함",
+      clock,
+    );
     contract.clearGroupIcConditions(db, GF.projectId, contract.DEMO_GROUP_REVIEWER, clock);
-    const group = step({ entityType: P, entityId: GF.projectId, gate: "group_ic", decision: "go", rationale: "그룹 투자심의에서 포트폴리오 적합성과 자금 구조를 확인했고 조건 이행이 끝나 승인함" });
-    contract.countersign(db, GF.projectId, group, contract.DEMO_GROUP_REVIEWER, "그룹 투자심의 결정과 조건 이행 기록을 확인하고 승인함", clock);
+    const group = step({
+      entityType: P,
+      entityId: GF.projectId,
+      gate: "group_ic",
+      decision: "go",
+      rationale: "그룹 투자심의에서 포트폴리오 적합성과 자금 구조를 확인했고 조건 이행이 끝나 승인함",
+    });
+    contract.countersign(
+      db,
+      GF.projectId,
+      group,
+      contract.DEMO_GROUP_REVIEWER,
+      "그룹 투자심의 결정과 조건 이행 기록을 확인하고 승인함",
+      clock,
+    );
   });
 }
 

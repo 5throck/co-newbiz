@@ -4968,6 +4968,24 @@
         "system": "System",
         "webResearchNotConfiguredOr": "Web research not configured, or a reused analysis — no acquisition sources. See the step-by-step notes below and each tab's tables for evidence."
       },
+      "synergySelectPanel": {
+        "blockerConfirmScoreFirst": "Confirm the synergy score first.",
+        "blockerRationaleFirst": "Record the synergy rationale together with the score's Confirmed Status.",
+        "blockerRole": "Selection requires the analyst role.",
+        "blockerStatusAssessed": "First record the opportunity as assessed.",
+        "blockerStatusNotSelectable": "This opportunity cannot be selected in its current state.",
+        "doneMark": "Done",
+        "goToS4": "Go to the S4 route decision →",
+        "panelAria": "S3 completion guide",
+        "panelTitle": "Complete S3",
+        "pendingMark": "Pending",
+        "selectAction": "Select this opportunity",
+        "selectFailed": "Selection failed.",
+        "selectedDone": "This opportunity is selected.",
+        "statusLoadFailed": "Could not load the opportunity status.",
+        "stepRationale": "Synergy rationale recorded",
+        "stepScore": "Synergy score confirmed status"
+      },
       "synergyScoreEvidence": {
         "aRecommendationBeforeHumanConfirmation": "— a recommendation before human confirmation; not reflected as S4 track evidence.",
         "aVersionFromBeforeCalibration": "A version from before calibration records were kept — reason not recorded; recorded on re-analysis.",
