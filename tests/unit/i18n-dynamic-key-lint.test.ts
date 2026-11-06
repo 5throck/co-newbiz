@@ -123,7 +123,7 @@ describe("dynamic-key catalog coverage — missing-key scenario (in-memory)", ()
 
   test("empty-string catalog entries count as missing", () => {
     const catalogs = realCatalogs() as Record<string, Record<string, unknown>>;
-    const en = structuredClone(catalogs.en) as Record<string, Record<string, string>>;
+    const en = structuredClone(catalogs.en) as Record<string, Record<string, Record<string, string>>>;
     en.admin.ops.handling_delete_only = "";
     expect(scanDynamicKeyCoverage(FAMILIES, PROJECT_ROOT, { ...catalogs, en })).toEqual([
       {

@@ -25,6 +25,7 @@ import {
   syncCompanyFinancialFacts,
 } from "../../app/web-next/lib/dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "../../app/web-next/lib/company-financials.ts";
+import type { DartFinancials } from "../../app/web-next/lib/dart-client.ts";
 
 const TEST_DB_PATH = "db/data/test-dart-financial-facts.sqlite";
 type Db = ReturnType<typeof GetDb>;
@@ -44,7 +45,7 @@ function insertCompany(name: string, corpCode: string | null): string {
 type FakeItem = { name: string; value: number; unit: string; year: string; fsDiv?: "CFS" | "BFS" };
 function fakeFetcher(byCall: FakeItem[][]): FinancialsFetcherSpy {
   let call = 0;
-  const spy = ((corpCode: string, _opts?: { years?: number }) => {
+  const spy = ((corpCode: string, _opts?: { years?: number }): Promise<DartFinancials> => {
     const items = byCall[Math.min(call, byCall.length - 1)];
     call++;
     const yearlyMap = new Map<string, FakeItem[]>();
@@ -64,10 +65,7 @@ function fakeFetcher(byCall: FakeItem[][]): FinancialsFetcherSpy {
   return spy;
 }
 interface FinancialsFetcherSpy {
-  (corpCode: string, opts?: { years?: number }): Promise<{
-    corpCode: string; found: boolean; items: FakeItem[];
-    yearly: Array<{ year: string; items: FakeItem[] }>; integrity: string;
-  }>;
+  (corpCode: string, opts?: { years?: number }): Promise<DartFinancials>;
   calls: () => number;
 }
 
@@ -171,7 +169,8 @@ describe("syncCompanyFinancialFacts", () => {
     const companyId = insertCompany("㈜조회실패", "09333333");
     // retrieval failure (found: false) → DartSyncError
     const failing: FinancialsFetcherSpy = Object.assign(
-      () => Promise.resolve({ corpCode: "09876543", found: false, items: [], yearly: [], integrity: "ok" }),
+      (): Promise<DartFinancials> =>
+        Promise.resolve({ corpCode: "09876543", found: false, items: [], yearly: [], integrity: "ok" }),
       { calls: () => 0 },
     );
     await expect(syncCompanyFinancialFacts(db, companyId, { fetcher: failing })).rejects.toBeInstanceOf(DartSyncError);
