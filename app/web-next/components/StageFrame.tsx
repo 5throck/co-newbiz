@@ -72,13 +72,16 @@ function useStageLinks(track?: TrackId | null): (id: StageMetaId) => StageLink {
   const sourceOppId = useSourceOpportunity(underProjects ? routeId : undefined);
   return (id) => {
     const projectStage = PROJECT_STAGE_IDS.has(id);
-    if (!projectStage) return { href: STAGE_HREF[id](underProjects ? sourceOppId ?? undefined : routeId), reason: null };
+    if (!projectStage)
+      return { href: STAGE_HREF[id](underProjects ? (sourceOppId ?? undefined) : routeId), reason: null };
     if (underProjects) return { href: STAGE_HREF[id](undefined, routeId), reason: null };
     if (!routeId) return { href: null, reason: "프로젝트(검토/안건) 화면에서만 열립니다." };
     if (deal.state === "loading") return { href: null, reason: "프로젝트 승격 여부를 확인하는 중입니다." };
     if (!deal.ctx) return { href: null, reason: "이 안건의 정보를 확인할 수 없어 열 수 없습니다." };
     const pid = deal.ctx.projectId;
-    return pid ? { href: STAGE_HREF[id](routeId, pid), reason: null } : { href: null, reason: notPromotedReason(track) };
+    return pid
+      ? { href: STAGE_HREF[id](routeId, pid), reason: null }
+      : { href: null, reason: notPromotedReason(track) };
   };
 }
 
@@ -101,15 +104,27 @@ export function invalidateCarrierCaches(opportunityId?: string, projectId?: stri
 }
 
 export function useSourceOpportunity(projectId: string | undefined): string | null {
-  const [oppId, setOppId] = useState<string | null>(projectId ? sourceOppCache.get(projectId) ?? null : null);
+  const [oppId, setOppId] = useState<string | null>(projectId ? (sourceOppCache.get(projectId) ?? null) : null);
   useEffect(() => {
     if (!projectId) return;
-    if (sourceOppCache.has(projectId)) { setOppId(sourceOppCache.get(projectId) ?? null); return; }
+    if (sourceOppCache.has(projectId)) {
+      setOppId(sourceOppCache.get(projectId) ?? null);
+      return;
+    }
     let live = true;
-    api.get<{ opportunity: { id: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
-      .then((r) => { const id = r.data.opportunity?.id ?? null; sourceOppCache.set(projectId, id); if (live) setOppId(id); })
-      .catch(() => { /* no link when the source cannot be resolved */ });
-    return () => { live = false; };
+    api
+      .get<{ opportunity: { id: string } | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => {
+        const id = r.data.opportunity?.id ?? null;
+        sourceOppCache.set(projectId, id);
+        if (live) setOppId(id);
+      })
+      .catch(() => {
+        /* no link when the source cannot be resolved */
+      });
+    return () => {
+      live = false;
+    };
   }, [projectId]);
   return oppId;
 }
@@ -123,20 +138,28 @@ function useCarrierTrack(enabled: boolean): TrackId | null {
   const routeId = params?.id;
   const underProjects = (usePathname() ?? "").startsWith("/projects/");
   const key = routeId ? `${underProjects ? "p" : "o"}:${routeId}` : null;
-  const [track, setTrack] = useState<TrackId | null>(key ? carrierTrackCache.get(key) ?? null : null);
+  const [track, setTrack] = useState<TrackId | null>(key ? (carrierTrackCache.get(key) ?? null) : null);
   useEffect(() => {
     if (!enabled || !key || !routeId) return;
-    if (carrierTrackCache.has(key)) { setTrack(carrierTrackCache.get(key) ?? null); return; }
+    if (carrierTrackCache.has(key)) {
+      setTrack(carrierTrackCache.get(key) ?? null);
+      return;
+    }
     let live = true;
     const base = underProjects ? "projects" : "opportunities";
-    api.get<{ track: string | null }>(`/api/${base}/${encodeURIComponent(routeId)}/process`)
+    api
+      .get<{ track: string | null }>(`/api/${base}/${encodeURIComponent(routeId)}/process`)
       .then((r) => {
         const t = r.data.track === "greenfield" || r.data.track === "brownfield" ? r.data.track : null;
         carrierTrackCache.set(key, t);
         if (live) setTrack(t);
       })
-      .catch(() => { /* unknown track: keep every stage applicable */ });
-    return () => { live = false; };
+      .catch(() => {
+        /* unknown track: keep every stage applicable */
+      });
+    return () => {
+      live = false;
+    };
   }, [enabled, key, routeId, underProjects]);
   return track;
 }
@@ -167,19 +190,21 @@ export function StageFrame({
 }) {
   const ids = Array.isArray(stageId) ? stageId : [stageId];
   const primary = ids[0];
+  // biome-ignore lint/style/noNonNullAssertion: stageId is a typed StageMetaId — always present in STAGE_META
   const stage = STAGE_META.find((s) => s.id === primary)!;
   const params = useParams<{ id?: string }>();
   const carrierTrack = useCarrierTrack(track === undefined);
   const linkFor = useStageLinks(track ?? carrierTrack ?? undefined);
   // 복합 단계(S6·S7 한 화면)에서 현재 경로가 어느 단계인지 — 다음 단계 버튼의 기준점.
+  const pathname = usePathname() ?? "";
   const pathStageId = (() => {
-    const m = (usePathname() ?? "").match(/\/s(\d{1,2})$/);
+    const m = pathname.match(/\/s(\d{1,2})$/);
     const id = m ? (`S${m[1]}` as StageMetaId) : null;
     return id && ids.includes(id) ? id : null;
   })();
   const navSource = pathStageId ?? primary;
   // Under /projects/[id]/** StageTabs owns the stepper (one stepper per screen).
-  const stepperOwnedByTabs = (usePathname() ?? "").startsWith("/projects/");
+  const stepperOwnedByTabs = pathname.startsWith("/projects/");
   const projectId = stepperOwnedByTabs ? params?.id : undefined;
   const tr = useTranslations();
   const trackNow = track ?? carrierTrack ?? undefined;
@@ -206,39 +231,57 @@ export function StageFrame({
           if (!stage.applicableTracks.includes(trackNow)) return null;
           const nextId = nextApplicableStage(navSource, trackNow);
           if (!nextId) return null;
-          const nextName = STAGE_META.find((s) => s.id === nextId)!.name;
+          const nextName = STAGE_META.find((s) => s.id === nextId)?.name ?? nextId;
           const label = tr("common.stageNav.next", { name: nextName });
           // S8~S12: enabled only when the engine says this stage is complete; otherwise disabled
           // and described by the "what is left" list below.
           if (gatedProjectStage && !gateOpen) {
             return (
-              <button type="button" className="btn-primary" disabled aria-disabled="true" aria-describedby={guidance.phase === "ready" ? NEXT_MISSING_ID : undefined} title={guidance.phase === "ready" ? tr("common.stageNav.blockedHint") : tr("common.stageNav.checking")}>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled
+                aria-disabled="true"
+                aria-describedby={guidance.phase === "ready" ? NEXT_MISSING_ID : undefined}
+                title={guidance.phase === "ready" ? tr("common.stageNav.blockedHint") : tr("common.stageNav.checking")}
+              >
                 {label}
               </button>
             );
           }
           const link = linkFor(nextId);
           if (link?.href) {
-            return <Link className="btn-primary" href={link.href}>{label}</Link>;
+            return (
+              <Link className="btn-primary" href={link.href}>
+                {label}
+              </Link>
+            );
           }
           // The next stage is a project stage and the deal is not promoted yet: the real next
           // action is promotion (hosted on this track-final stage), never a link back to itself.
           if (PROJECT_STAGE_IDS.has(nextId) && !stepperOwnedByTabs && link?.reason === notPromotedReason(trackNow)) {
-            return <a className="btn-primary" href="#project-promotion">{tr("common.stageNav.promote")}</a>;
+            return (
+              <a className="btn-primary" href="#project-promotion">
+                {tr("common.stageNav.promote")}
+              </a>
+            );
           }
           return null;
         })()}
       </div>
       {subtitle && (
-        <p className="mt-[0.15rem] mb-1 font-medium text-[color:var(--muted-fg)] text-[length:var(--fs-body)] leading-snug" data-testid="stage-subtitle">{subtitle}</p>
+        <p
+          className="mt-[0.15rem] mb-1 font-medium text-[color:var(--muted-fg)] text-[length:var(--fs-body)] leading-snug"
+          data-testid="stage-subtitle"
+        >
+          {subtitle}
+        </p>
       )}
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{stage.objective}</p>
       {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →
           레일/탭)를 유지한다(2026-10-22 사용자 리포트: S2와 S11의 스트립 위치 불일치). */}
       <StageHandoffStrip primary={navSource} track={trackNow} linkFor={linkFor} outputOpen={gateOpen} />
-      {railSlot !== undefined
-        ? railSlot
-        : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
+      {railSlot !== undefined ? railSlot : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
       {/* ADR-0181 slice 5 — S8~S12 operate on the S2-decided entry market; the subject-market line
           sits in the head (inside main), resolved from the project's source opportunity. */}
       {gatedProjectStage && projectId && <DealEntryMarketStrip routeId={projectId} />}
@@ -247,9 +290,7 @@ export function StageFrame({
       {/* 단계 설명 슬롯 — 서식은 프레임이 표준화한다(0.9rem·muted·leading-relaxed,
           하단 간격 mb-4). 페이지별 클래스·<strong> 강조 금지(설계서 개정 2026-09-04). */}
       {children && (
-        <div className="mb-4 text-[length:var(--fs-body)] text-[color:var(--muted-fg)] leading-relaxed">
-          {children}
-        </div>
+        <div className="mb-4 text-[length:var(--fs-body)] text-[color:var(--muted-fg)] leading-relaxed">{children}</div>
       )}
     </>
   );
@@ -276,7 +317,17 @@ function nextApplicableStage(from: StageMetaId, track?: TrackId | null): StageMe
 /** 단계 연계 스트립 — 이 단계가 받는 입력과 넘기는 출력을 모든 단계 화면에
     표시한다 (ADR-0120 단계 연계). 다음 단계 CTA는 트랙·프로젝트 컨텍스트를
     반영해 STAGE_HREF로 연결된다. */
-function StageHandoffStrip({ primary, track, linkFor, outputOpen = true }: { primary: StageMetaId; track?: TrackId | null; linkFor: (id: StageMetaId) => StageLink; outputOpen?: boolean }) {
+function StageHandoffStrip({
+  primary,
+  track,
+  linkFor,
+  outputOpen = true,
+}: {
+  primary: StageMetaId;
+  track?: TrackId | null;
+  linkFor: (id: StageMetaId) => StageLink;
+  outputOpen?: boolean;
+}) {
   const handoff = STAGE_HANDOFF[primary];
   const nextId = nextApplicableStage(primary, track);
   // The output link follows the same predicate as the header CTA: a stage whose completion
@@ -286,16 +337,22 @@ function StageHandoffStrip({ primary, track, linkFor, outputOpen = true }: { pri
     // 품평회 2026-10-22 잔여 #6 — 단계 연계(입력·출력 계약)는 열린 채로 읽힌다
     // (opt-out). 요약을 누르면 접을 수 있으나 기본값은 노출이다.
     <details className="handoff-panel" open>
-      <summary>입력과 출력 <span className="handoff-panel-hint">이 단계가 받는 것 · 넘기는 것</span></summary>
+      <summary>
+        입력과 출력 <span className="handoff-panel-hint">이 단계가 받는 것 · 넘기는 것</span>
+      </summary>
       <div className="handoff" role="note" aria-label="단계 연계">
         <span className="handoff-hl">입력 ←</span>
         {handoff.inputs.map((inp) => (
-          <span key={inp} className="handoff-chip">{inp}</span>
+          <span key={inp} className="handoff-chip">
+            {inp}
+          </span>
         ))}
         <span className="handoff-out">
           <span className="handoff-hl">출력 →</span>
           {nextHref ? (
-            <Link href={nextHref} className="handoff-cta">{handoff.output} <span aria-hidden="true">→</span></Link>
+            <Link href={nextHref} className="handoff-cta">
+              {handoff.output} <span aria-hidden="true">→</span>
+            </Link>
           ) : (
             <span className="handoff-chip">{handoff.output}</span>
           )}
@@ -305,6 +362,15 @@ function StageHandoffStrip({ primary, track, linkFor, outputOpen = true }: { pri
   );
 }
 
+/** The same input/output strip for screens that belong to a stage but are not framed by StageFrame
+    (the S2 opportunity detail). It resolves track and links itself, so every surface of a stage shows
+    one component instead of the strip appearing on the stage tab and vanishing one click deeper. */
+export function StageHandoff({ stageId }: { stageId: StageMetaId }) {
+  const carrierTrack = useCarrierTrack(true);
+  const linkFor = useStageLinks(carrierTrack ?? undefined);
+  return <StageHandoffStrip primary={stageId} track={carrierTrack ?? undefined} linkFor={linkFor} />;
+}
+
 interface GuidanceInfo {
   status: string;
   blockers: string[];
@@ -312,21 +378,32 @@ interface GuidanceInfo {
 }
 
 function StepIcon({ state }: { state: StageRailStatus }) {
-  if (state === "complete") return <CheckCircle2 size={14} aria-hidden="true" className="stage-step-icon stage-step-icon-done" />;
-  if (state === "current") return <Circle size={14} fill="currentColor" aria-hidden="true" className="stage-step-icon stage-step-icon-current" />;
+  if (state === "complete")
+    return <CheckCircle2 size={14} aria-hidden="true" className="stage-step-icon stage-step-icon-done" />;
+  if (state === "current")
+    return (
+      <Circle size={14} fill="currentColor" aria-hidden="true" className="stage-step-icon stage-step-icon-current" />
+    );
   if (state === "skipped") return <MinusCircle size={14} aria-hidden="true" className="stage-step-icon" />;
   return null;
 }
 
 /** Single engine-state read for a project stage (process API). The header CTA, the handoff output and
     the "what is left" list all derive from this one result — no second computation. */
-export type GuidanceState = { phase: "idle" } | { phase: "loading" } | { phase: "failed" } | { phase: "ready"; info: GuidanceInfo };
+export type GuidanceState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | { phase: "failed" }
+  | { phase: "ready"; info: GuidanceInfo };
 
 function useStageGuidance(projectId: string | undefined, stageId: string): GuidanceState {
   const [state, setState] = useState<GuidanceState>({ phase: projectId ? "loading" : "idle" });
 
   useEffect(() => {
-    if (!projectId) { setState({ phase: "idle" }); return; }
+    if (!projectId) {
+      setState({ phase: "idle" });
+      return;
+    }
     let alive = true;
     setState({ phase: "loading" });
     fetch(`/api/projects/${encodeURIComponent(projectId)}/process`)
@@ -336,7 +413,10 @@ function useStageGuidance(projectId: string | undefined, stageId: string): Guida
           | { status: string; requiredArtifacts?: string[] }
           | undefined;
         if (!alive) return;
-        if (!stage) { setState({ phase: "failed" }); return; }
+        if (!stage) {
+          setState({ phase: "failed" });
+          return;
+        }
         setState({
           phase: "ready",
           info: {
@@ -348,8 +428,12 @@ function useStageGuidance(projectId: string | undefined, stageId: string): Guida
           },
         });
       })
-      .catch(() => { if (alive) setState({ phase: "failed" }); });
-    return () => { alive = false; };
+      .catch(() => {
+        if (alive) setState({ phase: "failed" });
+      });
+    return () => {
+      alive = false;
+    };
   }, [projectId, stageId]);
 
   return state;
@@ -375,18 +459,27 @@ function StageGuidance({ state, projectId, stageId }: { state: GuidanceState; pr
   }
   const items = [...new Set([...info.blockers, ...info.requiredArtifacts])];
   return (
-    <div id={NEXT_MISSING_ID} className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[length:var(--fs-caption)] text-[color:var(--primary-dim)]">
+    <div
+      id={NEXT_MISSING_ID}
+      className="mb-3 border border-[color:var(--primary-border)] bg-[color:var(--primary-bg)] rounded-lg px-3 py-2 text-[length:var(--fs-caption)] text-[color:var(--primary-dim)]"
+    >
       <b>이 단계에서 남은 것</b>
       {items.length === 0 ? (
         <p className="mt-1 mb-0">{tr("common.stageNav.missingUnknown")}</p>
       ) : (
         <ul className="mt-1 ml-4 list-disc">
-          {items.map((it) => <li key={it}>{localizeBlocker(tr, it)}</li>)}
+          {items.map((it) => (
+            <li key={it}>{localizeBlocker(tr, it)}</li>
+          ))}
         </ul>
       )}
       {/* ADR-0186 D8: the S8 discount-rate blocker's next action is the WACC session. */}
       {stageId === "S8" && projectId && items.some((it) => /WACC|discount rate/i.test(it)) && (
-        <p className="mt-1 mb-0"><Link className="underline font-semibold" href={`/projects/${encodeURIComponent(projectId)}/wacc`}>{tr("components.waccStatus.confirmLink")}</Link></p>
+        <p className="mt-1 mb-0">
+          <Link className="underline font-semibold" href={`/projects/${encodeURIComponent(projectId)}/wacc`}>
+            {tr("components.waccStatus.confirmLink")}
+          </Link>
+        </p>
       )}
     </div>
   );
@@ -398,7 +491,12 @@ function StageGuidance({ state, projectId, stageId }: { state: GuidanceState; pr
     (current/skipped), never colour alone. */
 export type StageRailStatus = "complete" | "current" | "skipped" | "pending";
 // INTERIM-WORDING: state words shown to assistive tech (full rail) and as text (compact list).
-const RAIL_STATE_TEXT: Record<StageRailStatus, string> = { complete: "완료", current: "진행 중", skipped: "건너뜀", pending: "" };
+const RAIL_STATE_TEXT: Record<StageRailStatus, string> = {
+  complete: "완료",
+  current: "진행 중",
+  skipped: "건너뜀",
+  pending: "",
+};
 
 export function StageRail({
   current,
@@ -418,6 +516,7 @@ export function StageRail({
   track = track ?? carrierTrack ?? undefined;
   const linkFor = useStageLinks(track);
   const listRef = useRef<HTMLDivElement>(null);
+  // biome-ignore lint/style/noNonNullAssertion: stageId is a typed StageMetaId — always present in STAGE_META
   const cur = STAGE_META.find((s) => s.id === current[0])!;
 
   function trackApplicable(s: (typeof STAGE_META)[number]): boolean {
@@ -448,6 +547,7 @@ export function StageRail({
   const gateIds = Array.from(new Set(current.flatMap((id) => STAGE_META.find((s) => s.id === id)?.gateIds ?? [])));
   const currentKey = current.join(",");
   // Single-row stepper: keep the current stage in view (centered) after mount / stage change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: currentKey is the re-run trigger (the current stage changed) — the effect reads the DOM, not the key
   useEffect(() => {
     const row = listRef.current;
     const el = row?.querySelector<HTMLElement>("[aria-current='step']");
@@ -455,18 +555,26 @@ export function StageRail({
     row.scrollLeft = Math.max(0, el.offsetLeft - (row.clientWidth - el.offsetWidth) / 2);
   }, [currentKey]);
 
-  const stateOf = (id: StageMetaId): StageRailStatus | null => (status ? status[id] ?? "pending" : null);
+  const stateOf = (id: StageMetaId): StageRailStatus | null => (status ? (status[id] ?? "pending") : null);
   const neighbours = status
-    ? { prev: STAGE_META.find((s) => s.sequence === cur.sequence - 1) ?? null, next: STAGE_META.find((s) => s.sequence === cur.sequence + 1) ?? null }
+    ? {
+        prev: STAGE_META.find((s) => s.sequence === cur.sequence - 1) ?? null,
+        next: STAGE_META.find((s) => s.sequence === cur.sequence + 1) ?? null,
+      }
     : null;
   const linked = STAGE_META.filter((s) => hrefFor(s));
   const tabStopId = (linked.find((s) => current.includes(s.id)) ?? linked[0])?.id;
 
   return (
-    <nav aria-label="Stages" className={`stage-stepper-wrap${sticky ? "" : " stage-stepper-wrap--static"}${status ? " stage-stepper--status" : ""}`}>
+    <nav
+      aria-label="Stages"
+      className={`stage-stepper-wrap${sticky ? "" : " stage-stepper-wrap--static"}${status ? " stage-stepper--status" : ""}`}
+    >
       <details className="stage-stepper-compact">
         <summary>
-          <span className="stage-stepper-compact-label">{cur.id} / 12 · {cur.name}</span>
+          <span className="stage-stepper-compact-label">
+            {cur.id} / 12 · {cur.name}
+          </span>
           {neighbours && (neighbours.prev || neighbours.next) && (
             // INTERIM-WORDING: previous/next labels.
             <span className="stage-stepper-compact-near">
@@ -485,16 +593,26 @@ export function StageRail({
               <li key={s.id}>
                 {href ? (
                   <Link href={href} aria-current={isCurrent ? "step" : undefined} className="stage-step-compact-link">
-                    {s.sequence}. {s.name}{status ? (RAIL_STATE_TEXT[stateOf(s.id)!] ? ` (${RAIL_STATE_TEXT[stateOf(s.id)!]})` : "") : isCurrent ? " (현재)" : ""}
+                    {s.sequence}. {s.name}
+                    {status
+                      ? RAIL_STATE_TEXT[stateOf(s.id) ?? "pending"]
+                        ? ` (${RAIL_STATE_TEXT[stateOf(s.id) ?? "pending"]})`
+                        : ""
+                      : isCurrent
+                        ? " (현재)"
+                        : ""}
                   </Link>
                 ) : (
-                  <span className="stage-step-compact-link stage-step-skipped">{s.sequence}. {s.name} ({blocked ? "승격 후 열림" : "미적용"})</span>
+                  <span className="stage-step-compact-link stage-step-skipped">
+                    {s.sequence}. {s.name} ({blocked ? "승격 후 열림" : "미적용"})
+                  </span>
                 )}
               </li>
             );
           })}
         </ol>
       </details>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: roving-tabindex container — the keydown handler only delegates arrow/Home/End to the stepper links inside it */}
       <div className="stage-stepper" ref={listRef} onKeyDown={onKeyDown}>
         {STAGE_META.map((s) => {
           const isCurrent = current.includes(s.id);
@@ -510,14 +628,20 @@ export function StageRail({
             <>
               <span className="stage-step-num">{s.sequence}</span>
               <span className="stage-step-name">{s.name}</span>
-              {status && <StepIcon state={stateOf(s.id)!} />}
-              {status && RAIL_STATE_TEXT[stateOf(s.id)!] && <span className="sr-only">{RAIL_STATE_TEXT[stateOf(s.id)!]}</span>}
+              {status && <StepIcon state={stateOf(s.id) ?? "pending"} />}
+              {status && RAIL_STATE_TEXT[stateOf(s.id) ?? "pending"] && (
+                <span className="sr-only">{RAIL_STATE_TEXT[stateOf(s.id) ?? "pending"]}</span>
+              )}
               {!status && isCurrent && <span className="stage-step-state">현재</span>}
               {skipped && <span className="stage-step-state">미적용</span>}
               {!skipped && !href && blocked && <span className="stage-step-state">승격 후</span>}
               {/* 품평회 2026-10-22 잔여 #3 — 차단 사유를 title(hover) 한정으로 두지
                   않는다. 포커스(탭·탭) 시 사유를 눈에 보이는 말풍선으로 띄운다. */}
-              {!skipped && !href && blocked && <span className="stage-step-reason" aria-hidden="true">{blocked}</span>}
+              {!skipped && !href && blocked && (
+                <span className="stage-step-reason" aria-hidden="true">
+                  {blocked}
+                </span>
+              )}
             </>
           );
           return href ? (
@@ -532,7 +656,16 @@ export function StageRail({
               {body}
             </Link>
           ) : (
-            <span key={s.id} title={title} aria-disabled="true" tabIndex={0} className={`stage-step stage-step-skipped`}>{body}</span>
+            <span
+              key={s.id}
+              title={title}
+              aria-disabled="true"
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: disabled step stays focusable so the blocked reason is revealed on keyboard focus (WCAG 2.1)
+              tabIndex={0}
+              className={`stage-step stage-step-skipped`}
+            >
+              {body}
+            </span>
           );
         })}
         {gateIds.length > 0 && (

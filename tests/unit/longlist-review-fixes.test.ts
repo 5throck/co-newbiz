@@ -2,7 +2,11 @@
 // 패턴: our-company-ui-refinement.test.ts (순수 헬퍼 단언 + 소스 계약 스캔).
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { filterTargetsByStatus, TARGET_STATUS_FILTERS, type TargetStatusFilter } from "../../app/web-next/components/stages/brownfield/longlist-filter.ts";
+import {
+  filterTargetsByStatus,
+  TARGET_STATUS_FILTERS,
+  type TargetStatusFilter,
+} from "../../app/web-next/components/stages/brownfield/longlist-filter.ts";
 import type { TargetRow } from "../../app/web-next/components/stages/brownfield/types.ts";
 
 const brownfieldDir = "./app/web-next/components/stages/brownfield/";
@@ -13,7 +17,7 @@ const css = readFileSync("./app/web-next/app/styles.css", "utf8");
 const ko = JSON.parse(readFileSync("./app/web-next/locales/ko.json", "utf8"));
 const en = JSON.parse(readFileSync("./app/web-next/locales/en.json", "utf8"));
 
-const row = (id: string, status: "pending" | "shortlisted" | "excluded"): TargetRow => ({ id, status } as TargetRow);
+const row = (id: string, status: "pending" | "shortlisted" | "excluded"): TargetRow => ({ id, status }) as TargetRow;
 
 describe("longlist status filter helper (잔여 #1)", () => {
   test("filter vocabulary covers every target status plus all", () => {
@@ -40,7 +44,9 @@ describe("longlist review-fix contracts (잔여 #1·#2)", () => {
   });
   test("the reset control clears the filter and only renders while a filter is active", () => {
     expect(longlist).toContain('t("resetFilter")');
-    expect(longlist).toMatch(/\{statusFilter !== "all" && \(\s*<button type="button" className="btn-ghost btn-sm" onClick=\{\(\) => setStatusFilter\("all"\)\}/);
+    expect(longlist).toMatch(
+      /\{statusFilter !== "all" && \(\s*<button type="button" className="btn-ghost btn-sm" onClick=\{\(\) => setStatusFilter\("all"\)\}/,
+    );
   });
   test("resetFilter catalog key exists in ko and en", () => {
     expect(ko.stages.s67.longlistSection.resetFilter).toBe("필터 초기화");
@@ -50,16 +56,22 @@ describe("longlist review-fix contracts (잔여 #1·#2)", () => {
     expect(longlist).toContain('className="cell-reason-toggle"');
     expect(longlist).toContain("aria-expanded=");
     // the old hover-only truncation span is gone
-    expect(longlist).not.toContain('max-w-[18rem] truncate');
-    expect(css).toMatch(/\.cell-reason-toggle\[aria-expanded="true"\],\s*\n\.cell-reason-toggle:focus-visible \{[^}]*white-space: normal/s);
+    expect(longlist).not.toContain("max-w-[18rem] truncate");
+    expect(css).toMatch(
+      /\.cell-reason-toggle\[aria-expanded="true"\],\s*\n\.cell-reason-toggle:focus-visible \{[^}]*white-space: normal/s,
+    );
   });
 });
 
 describe("stage frame review-fix contracts (잔여 #3·#6)", () => {
   test("blocked stages carry a focus-revealed reason bubble and are tab-reachable", () => {
     expect(stageFrame).toContain('className="stage-step-reason"');
-    expect(stageFrame).toMatch(/<span key=\{s\.id\} title=\{title\} aria-disabled="true" tabIndex=\{0\}/);
-    expect(css).toMatch(/\.stage-step-skipped:focus .stage-step-reason,\s*\n\.stage-step-skipped:focus-within .stage-step-reason \{ display: block; \}/);
+    expect(stageFrame).toMatch(
+      /<span\s+key=\{s\.id\}\s+title=\{title\}\s+aria-disabled="true"\s+(?:\/\/[^\n]*\n\s*)?tabIndex=\{0\}/,
+    );
+    expect(css).toMatch(
+      /\.stage-step-skipped:focus .stage-step-reason,\s*\n\.stage-step-skipped:focus-within .stage-step-reason \{ display: block; \}/,
+    );
   });
   test("the handoff strip opens by default (opt-out reading)", () => {
     expect(stageFrame).toMatch(/<details className="handoff-panel" open>/);
@@ -96,6 +108,8 @@ describe("group card name full text (잔여 #9)", () => {
   test("ellipsis name keeps the hover title and reveals full text on keyboard focus", () => {
     const groups = readFileSync("./app/web-next/components/stages/our-company/GroupPanels.tsx", "utf8");
     expect(groups).toContain('className="group-card-name" title={g.name}');
-    expect(css).toMatch(/\.group-card:focus .group-card-name,\s*\n\.group-card:focus-visible .group-card-name \{ white-space: normal;/);
+    expect(css).toMatch(
+      /\.group-card:focus .group-card-name,\s*\n\.group-card:focus-visible .group-card-name \{ white-space: normal;/,
+    );
   });
 });

@@ -8870,6 +8870,8 @@
       "recommendedLabel": "Recommended (unconfirmed)",
       "attractPlaceholder": "Attractiveness 0-100",
       "evaluateButton": "Evaluate attractiveness",
+      "reEvaluateButton": "Re-evaluate",
+      "reEvaluateClose": "Close re-evaluation",
       "draftGenerating": "Generating draft...",
       "aiDraftButton": "AI draft",
       "noDraft": "No draft",

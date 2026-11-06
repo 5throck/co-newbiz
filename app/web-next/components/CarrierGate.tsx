@@ -23,6 +23,7 @@ import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
 import { Breadcrumb } from "./Breadcrumb.tsx";
 import { StageFrame } from "./StageFrame.tsx";
+import type { StageMetaId } from "../lib/stage-meta.ts";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
 
@@ -33,6 +34,14 @@ export const FLAT_ROUTE_STAGE: Record<FlatRouteKey, string> = {
   synergy: "s3",
   greenfield: "s5",
   brownfield: "s6",
+};
+
+const STAGE_IDS_BY_ROUTE: Record<FlatRouteKey, StageMetaId | StageMetaId[]> = {
+  market: "S1",
+  opportunities: "S2",
+  synergy: "S3",
+  greenfield: "S5",
+  brownfield: ["S6", "S7"],
 };
 
 /** Track filter per flat route — undefined means any track (S1~S3). */
@@ -60,11 +69,31 @@ const SUMMARY_BY_ROUTE: Record<FlatRouteKey, string> = {
 /** Create action of each picker page (R2-A page contract: pickers are list + create + breadcrumb).
     S3-S7 pages need a deal that already passed S1/S2, so their create action starts a new review. */
 const CREATE_BY_ROUTE: Record<FlatRouteKey, { label: string; href: string; hint: string }> = {
-  market: { label: "새 시장분석 시작", href: "/market?new=1", hint: "산업을 새로 정해 분석을 시작합니다 — 아래 목록은 이미 진행 중인 검토/안건의 S1 화면입니다." },
-  opportunities: { label: "새 기회 등록", href: "/opportunities?new=1", hint: "기회를 직접 등록합니다 — 아래 목록은 진행 중인 검토/안건의 S2 화면입니다." },
-  synergy: { label: "그룹·계열사 프로파일 등록", href: "/our-company", hint: "시너지 평가는 그룹/계열사 프로파일이 먼저 필요합니다. 새 검토는 시장분석부터 시작합니다." },
-  greenfield: { label: "새 검토 시작 (시장분석부터)", href: "/market?new=1", hint: "새 검토는 시장분석(S1)부터 시작합니다." },
-  brownfield: { label: "새 검토 시작 (시장분석부터)", href: "/market?new=1", hint: "새 검토는 시장분석(S1)부터 시작합니다." },
+  market: {
+    label: "새 시장분석 시작",
+    href: "/market?new=1",
+    hint: "산업을 새로 정해 분석을 시작합니다 — 아래 목록은 이미 진행 중인 검토/안건의 S1 화면입니다.",
+  },
+  opportunities: {
+    label: "새 기회 등록",
+    href: "/opportunities?new=1",
+    hint: "기회를 직접 등록합니다 — 아래 목록은 진행 중인 검토/안건의 S2 화면입니다.",
+  },
+  synergy: {
+    label: "그룹·계열사 프로파일 등록",
+    href: "/our-company",
+    hint: "시너지 평가는 그룹/계열사 프로파일이 먼저 필요합니다. 새 검토는 시장분석부터 시작합니다.",
+  },
+  greenfield: {
+    label: "새 검토 시작 (시장분석부터)",
+    href: "/market?new=1",
+    hint: "새 검토는 시장분석(S1)부터 시작합니다.",
+  },
+  brownfield: {
+    label: "새 검토 시작 (시장분석부터)",
+    href: "/market?new=1",
+    hint: "새 검토는 시장분석(S1)부터 시작합니다.",
+  },
 };
 
 interface CarrierRow {
@@ -120,7 +149,7 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
       if (moved) extra.set("moved", route);
       return dealHref(id, stage, extra);
     },
-    [searchParams, stage],
+    [searchParams, stage, route],
   );
 
   // Rule 1 — query-string carrier: redirect straight through, other params preserved.
@@ -142,7 +171,8 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   // Rule 3 — exactly one carrier: redirect (client-side router.replace).
   useEffect(() => {
-    if (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew) router.replace(redirectTarget(rows[0].id, true));
+    if (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew)
+      router.replace(redirectTarget(rows[0].id, true));
   }, [rows, redirectTarget, router, startsKnownTarget, startsNew]);
 
   // Rule 4 — picker fallback: keyboard focus lands on the first row.
@@ -165,18 +195,29 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   // Same dead loop for S2 (pilot-009 C-3 re-run): the funnel's registration form
   // is the only way to create the first carrier, so with no deal (or when the
   // person asked to start from a known target) render the funnel itself.
-  if (route === "opportunities" && !carrierId && !error && rows !== null && (rows.length === 0 || startsKnownTarget || startsNew)) {
+  if (
+    route === "opportunities" &&
+    !carrierId &&
+    !error &&
+    rows !== null &&
+    (rows.length === 0 || startsKnownTarget || startsNew)
+  ) {
     return (
       <main>
         <StageFrame stageId="S2">{SUMMARY_BY_ROUTE.opportunities}</StageFrame>
-        <OpportunityFunnelStage startRegister={startsKnownTarget || startsNew ? (startsKnownTarget ? "known_target" : "name") : undefined} />
+        <OpportunityFunnelStage
+          startRegister={startsKnownTarget || startsNew ? (startsKnownTarget ? "known_target" : "name") : undefined}
+        />
       </main>
     );
   }
 
   if (carrierId || (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew)) {
+    // Keep the destination's stage head + input/output strip mounted while the redirect resolves,
+    // so the strip does not blink out between the flat route and /deals/{id}/sN.
     return (
       <main>
+        <StageFrame stageId={STAGE_IDS_BY_ROUTE[route]} track={TRACK_BY_ROUTE[route]} />
         <PageState state="loading" />
       </main>
     );
@@ -184,7 +225,9 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
 
   return (
     <main>
-      <Breadcrumb items={[{ label: "홈", href: "/" }, { label: "검토/안건", href: "/deals" }, { label: TITLE_BY_ROUTE[route] }]} />
+      <Breadcrumb
+        items={[{ label: "홈", href: "/" }, { label: "검토/안건", href: "/deals" }, { label: TITLE_BY_ROUTE[route] }]}
+      />
       <div className="stage-head">
         <h1>{TITLE_BY_ROUTE[route]}</h1>
         <PrimaryAction inline href={CREATE_BY_ROUTE[route].href} label={CREATE_BY_ROUTE[route].label} />
@@ -210,7 +253,8 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
         <div className="card">
           <h2>검토/안건 선택</h2>
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-            여러 진행 중인 검토/안건이 있어 어느 곳으로 갈지 자동으로 정할 수 없습니다 — 열 화면({TITLE_BY_ROUTE[route]})을 열 검토/안건을 선택하세요.
+            여러 진행 중인 검토/안건이 있어 어느 곳으로 갈지 자동으로 정할 수 없습니다 — 열 화면({TITLE_BY_ROUTE[route]}
+            )을 열 검토/안건을 선택하세요.
           </p>
           <div className="deal-pick-grid">
             {rows.map((o, i) => (

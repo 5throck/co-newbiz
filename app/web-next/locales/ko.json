@@ -8870,6 +8870,8 @@
       "recommendedLabel": "권고(미확정)",
       "attractPlaceholder": "매력도 0-100",
       "evaluateButton": "매력도 평가",
+      "reEvaluateButton": "재평가",
+      "reEvaluateClose": "재평가 닫기",
       "draftGenerating": "초안 생성 중...",
       "aiDraftButton": "AI 초안",
       "noDraft": "초안 없음",
