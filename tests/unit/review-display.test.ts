@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { runAiFirstChecks } from "../../app/web-next/lib/review/ai-first.ts";
+import { hasStructuralGaps, runAiFirstChecks } from "../../app/web-next/lib/review/ai-first.ts";
+import { ai2ndPayloadContent, buildAi2ndMessages } from "../../app/web-next/lib/review/ai-second.ts";
 import type { GateArtifact } from "../../app/web-next/lib/review/gate-artifacts.ts";
 import {
   BUCKET_TITLE,
@@ -66,6 +67,52 @@ describe("item 1 - empty missing join", () => {
   test("helpers", () => {
     expect(cleanList([" a ", "", null, undefined])).toEqual(["a"]);
     expect(joinBlockers(["x", "", "y"])).toBe("x / y");
+  });
+});
+
+describe("fix 1 - not-reached stages are informational", () => {
+  const st = (id: string, status: GateArtifact["stages"][number]["status"], extra: Partial<GateArtifact["stages"][number]> = {}) => ({
+    id: id as GateArtifact["stages"][number]["id"],
+    name: `n${id}`,
+    status,
+    required_artifacts: [],
+    blockers: [],
+    missing_artifacts: [],
+    ...extra,
+  });
+
+  test("S3-current entity: S4 is a non-structural not_reached item, no structural gap beyond the current stage", () => {
+    const b = runAiFirstChecks(
+      artifact([st("S1", "complete"), st("S2", "complete"), st("S3", "complete"), st("S4", "locked", { not_reached: true })]),
+    );
+    const nr = b.could_not_verify.filter((i) => i.scope === "not_reached");
+    expect(nr).toHaveLength(1);
+    expect(nr[0]!.structural).toBe(false);
+    expect(nr[0]!.claim).toContain("S4");
+    expect(hasStructuralGaps(b)).toBe(false);
+    const l = localizeItem(nr[0]!);
+    expect(l.localized).toBe(true);
+    expect(l.claim).toContain("도달하지 않았습니다");
+    expect(b.could_not_verify.length).toBeGreaterThan(1); // standing accuracy note is still declared
+  });
+
+  test("predecessor-locked (no not_reached flag), current-incomplete and terminated stay structural", () => {
+    for (const status of ["locked", "current", "terminated"] as const) {
+      const b = runAiFirstChecks(artifact([st("S1", status)]));
+      expect(hasStructuralGaps(b)).toBe(true);
+      expect(b.could_not_verify.some((i) => i.scope === "not_reached")).toBe(false);
+    }
+  });
+
+  test("AI 2nd payload excludes not_reached stages", () => {
+    const content = { gate: "screening", stages: [st("S3", "complete"), st("S4", "locked", { not_reached: true })] };
+    expect((ai2ndPayloadContent(content).stages as unknown[]).length).toBe(1);
+    const a = { ...artifact([]), content };
+    const msgs = buildAi2ndMessages(a, "platform-lead", "technical", "functional");
+    const user = msgs[1]!.content;
+    expect(user).toContain('"id":"S3"');
+    expect(user).not.toContain('"id":"S4"');
+    expect(msgs[0]!.content).toContain("not reached yet");
   });
 });
 

@@ -89,6 +89,8 @@ export function localizeNotPerformedReason(text: string): string {
   let m: RegExpExecArray | null;
   if (text === "AI 1st found structural gaps (incomplete or locked stages); nothing worth cross-domain review yet")
     return "AI 1차에서 미완료·잠김 단계 같은 구조적 빈틈이 발견되어, 아직 교차 도메인 검토를 할 단계가 아닙니다.";
+  if (text === "No stage of this gate has been reached yet; there is nothing to review cross-domain")
+    return "이 게이트의 어느 단계에도 아직 도달하지 않아, 교차 도메인으로 검토할 내용이 없습니다.";
   if (text === "LLM provider is not configured") return "LLM 제공자가 설정되지 않아 검토하지 못했습니다.";
   if ((m = /^monthly token cap reached \(used (\d+) of (\d+)\)$/.exec(text)))
     return `월간 토큰 한도에 도달해 검토하지 못했습니다 (${m[2]} 중 ${m[1]} 사용).`;
@@ -188,6 +190,14 @@ export function localizeItem(it: ItemLike): LocalizedItem {
     return {
       claim: `${m[1]} ${m[2]} 단계는 앞선 단계가 끝나지 않아 잠겨 있습니다`,
       reason: "순차 진입 조건이 충족되지 않아 이 단계의 산출물은 확인하지 않았습니다.",
+      localized: true,
+    };
+  }
+  const notReached = /^Stage (S\d+) \((.*)\) has not been reached yet$/.exec(claim);
+  if (notReached) {
+    return {
+      claim: `${notReached[1]} ${notReached[2]} 단계에는 아직 도달하지 않았습니다`,
+      reason: "이 건이 아직 앞선 단계에 있어 이 단계의 산출물은 확인하지 않았습니다.",
       localized: true,
     };
   }

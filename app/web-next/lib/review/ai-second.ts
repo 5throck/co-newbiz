@@ -100,7 +100,18 @@ const SYSTEM_PROMPT =
   '"verified" (claims you could confirm from the artifact text itself), ' +
   '"could_not_verify" (everything you could NOT check — source accuracy, missing evidence, anything outside the artifact; you MUST list at least one, because no reviewer checks everything), ' +
   '"needs_judgement" (points where a human must weigh trade-offs). ' +
-  'Each item is {"claim": string, "reason": string, "evidence_ref": string (optional)}. Use only the artifact provided; do not invent facts.';
+  'Each item is {"claim": string, "reason": string, "evidence_ref": string (optional)}. Use only the artifact provided; do not invent facts. ' +
+  "Stages the entity has not reached yet are omitted from the artifact and are out of scope: do not grade, list or speculate about them.";
+
+/** Artifact content as sent to the reviewer: stages the entity has not reached are dropped. */
+export function ai2ndPayloadContent(content: Record<string, unknown>): Record<string, unknown> {
+  const stages = content.stages;
+  if (!Array.isArray(stages)) return content;
+  return {
+    ...content,
+    stages: stages.filter((s) => !(s && typeof s === "object" && (s as { not_reached?: unknown }).not_reached === true)),
+  };
+}
 
 export function buildAi2ndMessages(
   artifact: ReviewArtifact,
@@ -114,7 +125,7 @@ export function buildAi2ndMessages(
       role: "user",
       content:
         `Reviewer persona: ${reviewerAgent} (${reviewerDomain} domain). Author domain: ${authorDomain}.\n` +
-        `Artifact key: ${artifact.artifactKey}\nArtifact:\n${canonicalJson(artifact.content)}`,
+        `Artifact key: ${artifact.artifactKey}\nArtifact:\n${canonicalJson(ai2ndPayloadContent(artifact.content))}`,
     },
   ];
 }
@@ -213,6 +224,19 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
       reviewerDomain: null,
       authorDomain: null,
       reason: "AI 1st found structural gaps (incomplete or locked stages); nothing worth cross-domain review yet",
+    });
+  }
+
+  // Every stage of the gate is still ahead of the entity: after dropping the
+  // not-reached stages the reviewer would receive an empty artifact (and spend
+  // tokens on nothing). Recorded as not performed, never as a pass.
+  if (artifact.stages.length > 0 && artifact.stages.every((s) => s.not_reached === true)) {
+    return record({
+      performed: false,
+      reviewerAgent: "none",
+      reviewerDomain: null,
+      authorDomain: null,
+      reason: "No stage of this gate has been reached yet; there is nothing to review cross-domain",
     });
   }
 

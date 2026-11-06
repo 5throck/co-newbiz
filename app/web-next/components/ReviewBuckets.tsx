@@ -8,7 +8,7 @@
 // surrounding panel and are labelled as the human's decision (boundary #2).
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
@@ -43,7 +43,11 @@ interface ReviewItem {
   reason: string;
   evidence_ref?: string;
   structural?: boolean;
+  /** "not_reached": the stage is later than the entity's current stage — informational, never an open defect (Fix 1). */
+  scope?: "not_reached";
 }
+/** Not-reached items sit in could_not_verify but are neutral context, not open defects. */
+const isNotReached = (it: { scope?: string }): boolean => it.scope === "not_reached";
 interface StageView {
   id: string;
   origin: string;
@@ -80,7 +84,7 @@ const BUCKETS: Array<{ key: BucketKey; hint: string }> = [
  *  - "summary": stage screens - content first; a non-dismissible strip with the three counts that expands to the buckets. */
 export type ReviewVariant = "expanded" | "summary";
 
-function CountStrip({ counts, label }: { counts: ReturnType<typeof bucketCounts>; label?: string }) {
+function CountStrip({ counts, notReached = 0, label }: { counts: ReturnType<typeof bucketCounts>; notReached?: number; label?: string }) {
   const warn = counts.could_not_verify > 0;
   return (
     <span className="review-counts" role="group" aria-label="검토 결과 건수">
@@ -96,6 +100,12 @@ function CountStrip({ counts, label }: { counts: ReturnType<typeof bucketCounts>
         {BUCKET_TITLE.could_not_verify.ko} <b className="tabular-nums">{counts.could_not_verify}</b>건
         {warn && <span className="review-count-flag"> · 확인 필요</span>}
       </span>
+      {notReached > 0 && (
+        <span className="review-count" title="Not reached yet">
+          <Clock size={14} aria-hidden="true" />
+          아직 도달하지 않은 단계 <b className="tabular-nums">{notReached}</b>건
+        </span>
+      )}
       <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
         {BUCKET_TITLE.needs_judgement.ko} <b className="tabular-nums">{counts.needs_judgement}</b>건
       </span>
@@ -288,8 +298,14 @@ export function ReviewBuckets({
   const claimsOf = (bucket: keyof typeof stages[number]) =>
     stages
       .filter((st) => st.performed || st.origin === "AI 1st")
-      .flatMap((st) => st[bucket] as ReadonlyArray<{ claim?: string }>)
+      .flatMap((st) => st[bucket] as ReadonlyArray<{ claim?: string; scope?: string }>)
+      .filter((it) => !isNotReached(it))
       .map((it) => String(it?.claim ?? ""));
+  // Not-reached stages are informational: shown in their own neutral count, never in the defect counts.
+  const notReachedCount = stages
+    .filter((st) => st.performed || st.origin === "AI 1st")
+    .flatMap((st) => st.could_not_verify)
+    .filter(isNotReached).length;
   const displayCounts = (() => {
     const c = { ...counts };
     c.needs_judgement = claimsOf("needs_judgement").filter((cl) => !resolvedClaims.has(cl)).length;
@@ -326,7 +342,7 @@ export function ReviewBuckets({
             {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
             <span className="review-strip-title">3단계 검토</span>
             {view ? (
-              <CountStrip counts={displayCounts} label={tabs.length > 1 ? activeLabel : undefined} />
+              <CountStrip counts={displayCounts} notReached={notReachedCount} label={tabs.length > 1 ? activeLabel : undefined} />
             ) : (
               <span className="review-counts-target">{error ? "불러오지 못함" : "불러오는 중…"}</span>
             )}
@@ -337,7 +353,7 @@ export function ReviewBuckets({
       ) : (
         <div className="review-head">
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">3단계 검토 — 사람 판단 전 참고 자료</h3>
-          {view && <CountStrip counts={displayCounts} />}
+          {view && <CountStrip counts={displayCounts} notReached={notReachedCount} />}
           {headerSlot && <span className="review-head-slot">{headerSlot}</span>}
         </div>
       )}
@@ -387,9 +403,11 @@ export function ReviewBuckets({
                   .flatMap((s) => s[b.key].map((it) => ({ it, s })));
                 const headingId = `${uid}-${b.key}`;
                 const prominent = b.key === "needs_judgement";
+                const notReachedItems = b.key === "could_not_verify" ? items.filter(({ it }) => isNotReached(it)) : [];
+                const countedItems = items.filter(({ it }) => !isNotReached(it));
                 const openItems = b.key === "needs_judgement" || b.key === "could_not_verify"
-                  ? items.filter(({ it }) => !resolvedClaims.has(it.claim))
-                  : items;
+                  ? countedItems.filter(({ it }) => !resolvedClaims.has(it.claim))
+                  : countedItems;
                 return (
                   <section
                     key={b.key}
@@ -445,6 +463,31 @@ export function ReviewBuckets({
                           );
                         })}
                       </ul>
+                    {notReachedItems.length > 0 && (
+                      <details className="review-dev" data-testid="review-not-reached">
+                        <summary>
+                          <Clock size={14} aria-hidden="true" className="inline mr-1" />
+                          <span title="Not reached yet">아직 도달하지 않은 단계, {notReachedItems.length}건</span>
+                        </summary>
+                        <p className="review-dev-note">
+                          아직 진행하지 않은 단계라 확인할 수 없는 항목입니다. 결함이 아니며, 해당 단계에 도달하면 검토됩니다.
+                        </p>
+                        <ul className="review-items text-[length:var(--fs-caption)]">
+                          {notReachedItems.map(({ it, s }) => {
+                            const l = localizeItem(it);
+                            return (
+                              <li key={`${s.id}-nr-${it.claim}`}>
+                                <span className="font-semibold" title={l.localized ? it.claim : undefined}>{l.claim}</span>
+                                <span className="block text-[color:var(--muted-fg)]" title={l.localized ? it.reason : undefined}>{l.reason}</span>
+                                <span className="block text-[color:var(--muted-fg)]">
+                                  출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </details>
+                    )}
                   </section>
                 );
               })}
