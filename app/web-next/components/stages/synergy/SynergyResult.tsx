@@ -22,10 +22,30 @@ export function SynergyResult(props0: {
   onBack: () => void;
   onRerun: () => void;
   onRefresh: () => void;
-}) {const tr = useTranslations();const t = useTranslations("stages.s3.synergyResult"); const tc = useTranslations("common");
+}) {
+  const tr = useTranslations();
+  const t = useTranslations("stages.s3.synergyResult");
+  const tc = useTranslations("common");
   const h0 = useSynergyResult(props0);
   const ctx = { ...h0 };
-  const { analysis, analysisDate, latest, synState, onBack, canCurate, inProgress, onRerun, p, tab, onTab, opportunityId, advanceToRouteDecision, advanceError, confirmForm, confirmSaving, confirmSynergyScore } = ctx;
+  const {
+    analysis,
+    analysisDate,
+    latest,
+    synState,
+    onBack,
+    canCurate,
+    inProgress,
+    p,
+    tab,
+    onTab,
+    opportunityId,
+    advanceToRouteDecision,
+    advanceError,
+    confirmForm,
+    confirmSaving,
+    confirmSynergyScore,
+  } = ctx;
   return (
     <section aria-label={t("synergyConsistencyReport")} className="market-section sizing-step">
       <PrimaryAction
@@ -33,10 +53,13 @@ export function SynergyResult(props0: {
         onClick={confirmSynergyScore}
         disabled={!canCurate || !opportunityId || confirmSaving || confirmForm.score === ""}
         disabledReason={
-          !canCurate ? t("savingTheFitEvaluationRequires")
-            : !opportunityId ? t("canBeSavedOnlyIn")
-            : confirmSaving ? tc("savingPolite")
-            : t("enterTheScoreInThe")
+          !canCurate
+            ? t("savingTheFitEvaluationRequires")
+            : !opportunityId
+              ? t("canBeSavedOnlyIn")
+              : confirmSaving
+                ? tc("savingPolite")
+                : t("enterTheScoreInThe")
         }
       />
       <SectionToolbar
@@ -44,26 +67,48 @@ export function SynergyResult(props0: {
         icon=""
         summary={
           <span className="flex items-center gap-1">
-            <span className="section-meta">{t("s3SynergyAreaSelectionAnd")} {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}</span>
-            {analysis.opportunity_name && <span className="status-chip status-in-progress" title={t("linkedOpportunityP1", { p1: analysis.opportunity_name })}>{t("opportunity")} {analysis.opportunity_name}</span>}
+            <span className="section-meta">
+              {t("s3SynergyAreaSelectionAnd")} {analysisDate} · v{latest?.version_no ?? analysis.latest_version ?? 1}
+            </span>
+            {analysis.opportunity_name && (
+              <span
+                className="status-chip status-in-progress"
+                title={t("linkedOpportunityP1", { p1: analysis.opportunity_name })}
+              >
+                {t("opportunity")} {analysis.opportunity_name}
+              </span>
+            )}
             {(() => {
-              const score = synState?.synergyScore ?? (typeof latest?.payload?.synergyScore === "number" ? latest.payload.synergyScore : null);
+              const score =
+                synState?.synergyScore ??
+                (typeof latest?.payload?.synergyScore === "number" ? latest.payload.synergyScore : null);
               if (typeof score !== "number") return null;
               // 경계 #2 — 권고(미확정)와 사람 확정을 같은 스타일로 보이지 않는다.
-              return synState?.confirmed
-                ? <span className="status-chip status-green" title={t("humanConfirmedP1", { p1: synState.confirmedAt ? ` — ${synState.confirmedAt.slice(0, 10)}` : "" })}>{t("synergyConfirmed")} {score}</span>
-                : <span className="status-chip status-amber" title={t("recommendationValueBeforeHumanConfirmation")}>{t("synergyRecommendationUnconfirmed")} {score}</span>;
+              return synState?.confirmed ? (
+                <span
+                  className="status-chip status-green"
+                  title={t("humanConfirmedP1", {
+                    p1: synState.confirmedAt ? ` — ${synState.confirmedAt.slice(0, 10)}` : "",
+                  })}
+                >
+                  {t("synergyConfirmed")} {score}
+                </span>
+              ) : (
+                <span className="status-chip status-amber" title={t("recommendationValueBeforeHumanConfirmation")}>
+                  {t("synergyRecommendationUnconfirmed")} {score}
+                </span>
+              );
             })()}
           </span>
         }
-        actions={
-          <ListBackButton onClick={onBack} />
-        }
+        actions={<ListBackButton onClick={onBack} />}
       />
 
       {inProgress && (
         <p className="text-[length:var(--fs-body)]" role="status">
-          {tc("analyzingOpen")}{analysis.current_step}{t("n5Steps")} {tr(STEP_TITLES_KEYS[analysis.current_step] ?? "")} {t("inProgressItRefreshesAutomatically")}
+          {tc("analyzingOpen")}
+          {analysis.current_step}
+          {t("n5Steps")} {tr(STEP_TITLES_KEYS[analysis.current_step] ?? "")} {t("inProgressItRefreshesAutomatically")}
         </p>
       )}
       {!p && !inProgress && <p className="text-[color:var(--muted-fg)] italic">{t("noAnalysisResults")}</p>}
@@ -72,7 +117,14 @@ export function SynergyResult(props0: {
         <>
           <div className="library-tabs" role="tablist" aria-label={t("reportSection")}>
             {TABS.map(([key, label]) => (
-              <button key={key} type="button" role="tab" aria-selected={tab === key} className={`library-tab ${tab === key ? "library-tab-active" : ""}`} onClick={() => onTab(key)}>
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                className={`library-tab ${tab === key ? "library-tab-active" : ""}`}
+                onClick={() => onTab(key)}
+              >
                 {tr(label)}
               </button>
             ))}
@@ -112,11 +164,25 @@ export function SynergyResult(props0: {
                   explicitly, and the pipeline provenance (profile reuse,
                   credit text) shows as a note. */}
               <details className="market-section" open={p.researchSources.length > 0}>
-                <summary className="cursor-pointer text-[length:var(--fs-body)]">{t("acquisitionSource")}{p.researchSources.length}{t("itemSSourcesNamedAnd")}</summary>
+                <summary className="cursor-pointer text-[length:var(--fs-body)]">
+                  {t("acquisitionSource")}
+                  {p.researchSources.length}
+                  {t("itemSSourcesNamedAnd")}
+                </summary>
                 {p.researchSources.length > 0 ? (
                   <ul className="sizing-note-list mt-2">
-                    {p.researchSources.map((s, i) => (
-                      <li key={i}><a href={s.url} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">{s.title}</a><span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span></li>
+                    {p.researchSources.map((s) => (
+                      <li key={`${s.url}|${s.title}`}>
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[color:var(--accent)] underline"
+                        >
+                          {s.title}
+                        </a>
+                        <span className="text-[color:var(--muted-fg)]"> — {s.snippet}</span>
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -126,10 +192,27 @@ export function SynergyResult(props0: {
                 )}
               </details>
               <div className="market-section">
-                <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("pipelineStepNotes")}{p.stepSummaries.length}{t("step")}</h3>
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+                  {t("pipelineStepNotes")}
+                  {p.stepSummaries.length}
+                  {t("step")}
+                </h3>
                 <ol className="mt-2 space-y-2 text-[length:var(--fs-body)]">
                   {p.stepSummaries.map((s) => (
-                    <li key={s.step}><strong>{s.step}. {s.title}</strong> <span className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}>{s.source === "llm" ? "AI" : t("system")}</span><br />{s.summary}</li>
+                    // step 번호는 한 단계에 여러 노트가 있을 수 있어 단독 키가 아니다
+                    // (step 3 요약이 최대 3건 — 표시 전용 복합키, 파이프라인 재번호 없음)
+                    <li key={`${s.step}-${s.title}`}>
+                      <strong>
+                        {s.step}. {s.title}
+                      </strong>{" "}
+                      <span
+                        className={`status-chip ${s.source === "llm" ? "status-in-progress" : "status-not-started"}`}
+                      >
+                        {s.source === "llm" ? "AI" : t("system")}
+                      </span>
+                      <br />
+                      {s.summary}
+                    </li>
                   ))}
                 </ol>
               </div>
@@ -155,13 +238,20 @@ export function SynergyResult(props0: {
                   />
                   <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                     {t("recordingAGoMarksThis")}{" "}
-                    <a href={`/deals/${encodeURIComponent(opportunityId)}/s4`} className="text-[color:var(--accent)] underline">
+                    <a
+                      href={`/deals/${encodeURIComponent(opportunityId)}/s4`}
+                      className="text-[color:var(--accent)] underline"
+                    >
                       {t("goToS4Now")}
                     </a>
                   </p>
                 </div>
               )}
-              {advanceError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">{advanceError}</p>}
+              {advanceError && (
+                <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1">
+                  {advanceError}
+                </p>
+              )}
             </>
           )}
         </>

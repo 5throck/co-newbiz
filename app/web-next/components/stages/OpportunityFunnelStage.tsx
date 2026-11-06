@@ -18,9 +18,9 @@ import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
-import { ColGroup, PrimaryAction } from "../ui.tsx";
+import { ColGroup } from "../ui.tsx";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
-import { TranslatorFn } from "../../i18n/config.ts";
+import type { TranslatorFn } from "../../i18n/config.ts";
 import { useTranslations } from "next-intl";
 
 /** Column shares (%) in header order: status, name, attractiveness, synergy, actions. */
@@ -89,16 +89,30 @@ function nextStepActions(o: OpportunityRow, t: TranslatorFn) {
       {/* R2-A item 5: every row advances ITS OWN opportunity — the header primary
           acts on the deal you entered through, which is a different row. */}
       {o.status === "identified" && (
-        <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?focus=score`} title={t("evaluateThisOpportunitySAttractiveness")}>
-          {t("attractivenessEvaluation")}<span className="sr-only"> — {o.name}</span>
+        <Link
+          className="btn-ghost btn-sm"
+          href={`/opportunities/${encodeURIComponent(o.id)}?focus=score`}
+          title={t("evaluateThisOpportunitySAttractiveness")}
+        >
+          {t("attractivenessEvaluation")}
+          <span className="sr-only"> — {o.name}</span>
         </Link>
       )}
       {(o.status === "assessed" || o.status === "selected") && (
-        <Link className="btn-ghost btn-sm" href={`/deals/${encodeURIComponent(o.id)}/s3`} title={t("proceedToThisOpportunityS")}>
-          {t("proceedToS3")}<span className="sr-only"> — {o.name}</span>
+        <Link
+          className="btn-ghost btn-sm"
+          href={`/deals/${encodeURIComponent(o.id)}/s3`}
+          title={t("proceedToThisOpportunityS")}
+        >
+          {t("proceedToS3")}
+          <span className="sr-only"> — {o.name}</span>
         </Link>
       )}
-      <Link className="btn-ghost btn-sm" href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`} title={t("goesToTheBusinessModel")}>
+      <Link
+        className="btn-ghost btn-sm"
+        href={`/opportunities/${encodeURIComponent(o.id)}?tab=sketch`}
+        title={t("goesToTheBusinessModel")}
+      >
         {t("businessModelReview")}
       </Link>
     </>
@@ -110,7 +124,16 @@ function nextStepActions(o: OpportunityRow, t: TranslatorFn) {
  * focused (R2-A item 7): "known_target" additionally moves the form to the top of the
  * page; both focus the first field (the opportunity name).
  */
-export function OpportunityFunnelStage({ opportunityId, startRegister }: { opportunityId?: string; startRegister?: "name" | "known_target" }) {const tr = useTranslations(); const t = useTranslations("stages.s2.stage"); const tc = useTranslations("common");
+export function OpportunityFunnelStage({
+  opportunityId,
+  startRegister,
+}: {
+  opportunityId?: string;
+  startRegister?: "name" | "known_target";
+}) {
+  const tr = useTranslations();
+  const t = useTranslations("stages.s2.stage");
+  const tc = useTranslations("common");
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
   const [rows, setRows] = useState<OpportunityRow[] | null>(null);
@@ -118,7 +141,14 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
   const [busy, setBusy] = useState(false);
   const [insights, setInsights] = useState<SizingInsight[] | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "", industry_id: "", known_target: "" });
+  const [form, setForm] = useState({
+    name: "",
+    market_scope: "",
+    value_chain_node: "",
+    attractiveness_score: "",
+    industry_id: "",
+    known_target: "",
+  });
 
   // KPI 클릭 = 상태 필터 (재클릭 해제)
   const [statusFilter, setStatusFilter] = useState<OpportunityRow["status"] | "">("");
@@ -133,12 +163,17 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
   const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load is refetched via useEffect(load, [load]) — adding tc would recreate load on translator identity churn and refetch on every locale re-render; tc is read at call time
   const load = useCallback(() => {
     const qs = statusFilter ? `?status=${statusFilter}` : "";
-    api.get<OpportunityRow[]>(`/api/opportunities${qs}`).then((r) => setRows(r.data)).catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
+    api
+      .get<OpportunityRow[]>(`/api/opportunities${qs}`)
+      .then((r) => setRows(r.data))
+      .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }, [statusFilter]);
 
   // ?status= 딥링크는 유지 (?opportunity= 펼침은 상세 화면 분리로 폐지 — ADR-0127)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only deep-link parse — re-running on startRegister change would re-open the create form mid-session
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("known_target") === "1" || startRegister === "known_target") {
@@ -169,7 +204,10 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
   }, [showCreateForm]);
 
   useEffect(() => {
-    api.get<{ insights: SizingInsight[] }>("/api/market-overview/insights").then((r) => setInsights(r.data.insights)).catch(() => setInsights([]));
+    api
+      .get<{ insights: SizingInsight[] }>("/api/market-overview/insights")
+      .then((r) => setInsights(r.data.insights))
+      .catch(() => setInsights([]));
   }, []);
 
   // Wave C-3 (D-3): link an existing opportunity to an analysed S1 industry
@@ -197,7 +235,14 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
         industry_id: form.industry_id || undefined,
         known_target: form.known_target.trim() ? { company_name: form.known_target.trim() } : undefined,
       });
-      setForm({ name: "", market_scope: "", value_chain_node: "", attractiveness_score: "", industry_id: "", known_target: "" });
+      setForm({
+        name: "",
+        market_scope: "",
+        value_chain_node: "",
+        attractiveness_score: "",
+        industry_id: "",
+        known_target: "",
+      });
       setShowCreateForm(false);
       // 알려진 대상으로 시작한 경우 — 안내(S1~S4)가 있는 상세 화면으로 이동한다.
       if (created.data.known_target_id) {
@@ -218,9 +263,17 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
     setDiscovering(industry);
     setError(null);
     try {
-      const res = await api.post<{ inserted: Array<{ name: string }>; source: string }>("/api/opportunities/discover", { industry });
+      const res = await api.post<{ inserted: Array<{ name: string }>; source: string }>("/api/opportunities/discover", {
+        industry,
+      });
       load();
-      setDiscoverNotice(t("p1OpportunityIesDiscoveredP2", { p1: res.data.inserted.length, p2: res.data.source === "llm" ? "AI" : t("deterministicSynthesis"), p3: res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : "" }));
+      setDiscoverNotice(
+        t("p1OpportunityIesDiscoveredP2", {
+          p1: res.data.inserted.length,
+          p2: res.data.source === "llm" ? "AI" : t("deterministicSynthesis"),
+          p3: res.data.inserted.length ? `: ${res.data.inserted.map((o) => o.name).join(", ")}` : "",
+        }),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t("opportunityDiscoveryFailed"));
     } finally {
@@ -246,7 +299,6 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
     );
   }
 
-
   const counts = useMemo(() => {
     const c: Record<string, number> = { total: rows?.length ?? 0, identified: 0, assessed: 0, selected: 0, dropped: 0 };
     for (const r of rows ?? []) c[r.status]++;
@@ -268,65 +320,105 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
     return list;
   }, [rows, sortKey, industryFilter]);
 
-  const carrierRow = opportunityId ? rows?.find((r) => r.id === opportunityId || r.project_id === opportunityId) : undefined;
   const selectedInsight = insights?.find((s) => s.industry_name === selectedIndustry) ?? null;
 
   const registerSection = (
     <>
       {canAct && (
-      <section aria-label={t("registerOpportunityManually")} className="market-section">
-        <SectionToolbar
-          title={t("registerOpportunityDirectly")}
-          icon="✍️"
-          actions={
-            <button type="button" className="btn-ghost whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
-              {t("registerOpportunityDirectly2")}
-            </button>
-          }
-        />
-        {showCreateForm && (
-          <form onSubmit={create} className="sizing-new-form mb-3">
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("knownTargetCompaniesAreAs")}</p>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{t("opportunityName")}</span>
-                <input id="opp-new-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="sizing-new-input" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{t("marketScope")}</span>
-                <input value={form.market_scope} onChange={(e) => setForm({ ...form, market_scope: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{t("knownTargetCompaniesOptional")}</span>
-                <input id="opp-known-target" value={form.known_target} onChange={(e) => setForm({ ...form, known_target: e.target.value })} placeholder={t("whenTheAcquisitionTargetIs")} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{t("s1AnalyzedIndustries")}</span>
-                <select value={form.industry_id} onChange={(e) => setForm({ ...form, industry_id: e.target.value })} className="sizing-new-input sizing-new-input-sm">
-                  <option value="">{t("doNotLink")}</option>
-                  {(insights ?? []).map((i) => (
-                    <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{t("valueChainNode")}</span>
-                <input value={form.value_chain_node} onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <label className="text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{t("attractiveness")}</span>
-                <input type="number" min={0} max={100} value={form.attractiveness_score} onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })} className="sizing-new-input sizing-new-input-sm" />
-              </label>
-              <button type="submit" className="btn-ghost" disabled={busy || !form.name.trim()}>
-                {busy ? tc("registering") : tc("register")}
+        <section aria-label={t("registerOpportunityManually")} className="market-section">
+          <SectionToolbar
+            title={t("registerOpportunityDirectly")}
+            icon="✍️"
+            actions={
+              <button
+                type="button"
+                className="btn-ghost whitespace-nowrap"
+                onClick={() => setShowCreateForm((v) => !v)}
+                aria-expanded={showCreateForm}
+              >
+                {t("registerOpportunityDirectly2")}
               </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
-                {tc("cancel")}
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
+            }
+          />
+          {showCreateForm && (
+            <form onSubmit={create} className="sizing-new-form mb-3">
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+                {t("knownTargetCompaniesAreAs")}
+              </p>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{t("opportunityName")}</span>
+                  <input
+                    id="opp-new-name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                    className="sizing-new-input"
+                  />
+                </label>
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{t("marketScope")}</span>
+                  <input
+                    value={form.market_scope}
+                    onChange={(e) => setForm({ ...form, market_scope: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm"
+                  />
+                </label>
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{t("knownTargetCompaniesOptional")}</span>
+                  <input
+                    id="opp-known-target"
+                    value={form.known_target}
+                    onChange={(e) => setForm({ ...form, known_target: e.target.value })}
+                    placeholder={t("whenTheAcquisitionTargetIs")}
+                    className="sizing-new-input sizing-new-input-sm"
+                  />
+                </label>
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{t("s1AnalyzedIndustries")}</span>
+                  <select
+                    value={form.industry_id}
+                    onChange={(e) => setForm({ ...form, industry_id: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm"
+                  >
+                    <option value="">{t("doNotLink")}</option>
+                    {(insights ?? []).map((i) => (
+                      // key는 산업+분석 복합 — 서버 dedupe 전 데이터에서도 중복 키가 없게 (방어선)
+                      <option key={`${i.industry_id}:${i.analysis_id}`} value={i.industry_id}>
+                        {i.industry_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{t("valueChainNode")}</span>
+                  <input
+                    value={form.value_chain_node}
+                    onChange={(e) => setForm({ ...form, value_chain_node: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm"
+                  />
+                </label>
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{t("attractiveness")}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.attractiveness_score}
+                    onChange={(e) => setForm({ ...form, attractiveness_score: e.target.value })}
+                    className="sizing-new-input sizing-new-input-sm"
+                  />
+                </label>
+                <button type="submit" className="btn-ghost" disabled={busy || !form.name.trim()}>
+                  {busy ? tc("registering") : tc("register")}
+                </button>
+                <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
+                  {tc("cancel")}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
       )}
     </>
   );
@@ -340,24 +432,40 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
         </div>
       )}
       {knownTargetMode && registerSection}
-      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
-      {opportunityId && <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S2")} />}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)]">
+          {error}
+        </p>
+      )}
+      {opportunityId && (
+        <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S2")} />
+      )}
 
       {/* ── KPI 요약 (클릭 = 상태 필터) ── */}
       <div className="summary-cards mb-4">
-        {([
-          ["", tc("all"), counts.total],
-          ["identified", t("discovery2"), counts.identified],
-          ["assessed", t("evaluation2"), counts.assessed],
-          ["selected", tc("shortlist"), counts.selected],
-          ["dropped", tc("exclude"), counts.dropped],
-        ] as const).map(([key, label, count]) => (
+        {(
+          [
+            ["", tc("all"), counts.total],
+            ["identified", t("discovery2"), counts.identified],
+            ["assessed", t("evaluation2"), counts.assessed],
+            ["selected", tc("shortlist"), counts.selected],
+            ["dropped", tc("exclude"), counts.dropped],
+          ] as const
+        ).map(([key, label, count]) => (
           <button
             key={label}
             type="button"
             aria-pressed={statusFilter === key}
             className={`summary-card glass text-left ${statusFilter === key ? "border-[color:var(--accent)]" : ""}`}
-            onClick={() => setStatusFilter(statusFilter === key || key === "" ? (key === "" ? "" : key as OpportunityRow["status"]) : key as OpportunityRow["status"])}
+            onClick={() =>
+              setStatusFilter(
+                statusFilter === key || key === ""
+                  ? key === ""
+                    ? ""
+                    : (key as OpportunityRow["status"])
+                  : (key as OpportunityRow["status"]),
+              )
+            }
           >
             <span className="summary-value mono-num">{count}</span>
             <span className="text-label">{label}</span>
@@ -365,11 +473,19 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
         ))}
       </div>
 
-      {discoverNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{discoverNotice}</p>}
+      {discoverNotice && (
+        <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">
+          {discoverNotice}
+        </p>
+      )}
 
       {/* ── 분석된 산업 (S1 연동, 접힘) ── */}
       <section aria-label={t("analyzedIndustries")} className="market-section">
-        <div className="section-toolbar"><span className="section-title"><h2>{t("analyzedIndustriesPickOneTo")}</h2></span></div>
+        <div className="section-toolbar">
+          <span className="section-title">
+            <h2>{t("analyzedIndustriesPickOneTo")}</h2>
+          </span>
+        </div>
         {insights !== null && insights.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {insights.map((s) => (
@@ -384,8 +500,15 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                 <span className="sizing-chip-meta">
                   CAGR {isDegeneratePct(s.bottom_up_cagr_pct) ? NOT_COMPUTABLE_TEXT : `${s.bottom_up_cagr_pct}%`}
                   {s.synthetic && <span className="status-chip status-amber ml-1">{SYNTHETIC_BADGE_TEXT}</span>}
-                  {s.escalated_cagr_pct !== null && <span title={t("cagrExternalReference085")}> {t("escalation")} {s.escalated_cagr_pct}%</span>}
-                  {s.external_forecast?.gap_pct != null ? t("gapP1P2", { p1: s.external_forecast.gap_pct > 0 ? "+" : "", p2: s.external_forecast.gap_pct }) : ""}
+                  {s.escalated_cagr_pct !== null && (
+                    <span title={t("cagrExternalReference085")}>
+                      {" "}
+                      {t("escalation")} {s.escalated_cagr_pct}%
+                    </span>
+                  )}
+                  {s.external_forecast?.gap_pct != null
+                    ? t("gapP1P2", { p1: s.external_forecast.gap_pct > 0 ? "+" : "", p2: s.external_forecast.gap_pct })
+                    : ""}
                 </span>
               </button>
             ))}
@@ -410,33 +533,51 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
                 밝혀 어느 칩을 눌렀는지 스크롤 후에도 알 수 있게 한다. */}
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <strong className="text-[length:var(--fs-body)]">{selectedInsight.industry_name}</strong>
-              {canAct && <button
-                type="button"
-                className="btn-ghost btn-sm"
-                style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
-                disabled={discovering !== null}
-                title={t("automaticallyDiscoversOpportunityCandidatesFrom")}
-                onClick={() => discoverOpportunities(selectedInsight.industry_name)}
-              >
-                {discovering === selectedInsight.industry_name ? t("discoveringOpportunities") : t("opportunityDiscoveryAutomaticFactorDerivation")}
-              </button>}
+              {canAct && (
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  style={{ marginLeft: "auto" }} /* lint-exempt: 폼 내부 헤더(SectionToolbar 외부 컨텍스트) */
+                  disabled={discovering !== null}
+                  title={t("automaticallyDiscoversOpportunityCandidatesFrom")}
+                  onClick={() => discoverOpportunities(selectedInsight.industry_name)}
+                >
+                  {discovering === selectedInsight.industry_name
+                    ? t("discoveringOpportunities")
+                    : t("opportunityDiscoveryAutomaticFactorDerivation")}
+                </button>
+              )}
             </div>
             <details>
-              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("insightDetailsOpportunityAndRisk")}</summary>
+              <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {t("insightDetailsOpportunityAndRisk")}
+              </summary>
               <div className="chart-pair mt-2">
                 <div className="chart-half sizing-grade-card">
                   <h4 className="text-[length:var(--fs-body)] mb-2">{t("opportunityFactor")}</h4>
                   <ul className="sizing-note-list">
-                    {(selectedInsight.opportunity_factors.length ? selectedInsight.opportunity_factors : [t("analysisNeedsReinforcement")]).map((f, i) => <li key={i}>{f}</li>)}
+                    {(selectedInsight.opportunity_factors.length
+                      ? selectedInsight.opportunity_factors
+                      : [t("analysisNeedsReinforcement")]
+                    ).map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
                   </ul>
                 </div>
                 <div className="chart-half sizing-grade-card">
                   <h4 className="text-[length:var(--fs-body)] mb-2">{t("riskFactor")}</h4>
                   <ul className="sizing-note-list">
-                    {(selectedInsight.risk_factors.length ? selectedInsight.risk_factors : [t("analysisNeedsReinforcement2")]).map((f, i) => <li key={i}>{f}</li>)}
+                    {(selectedInsight.risk_factors.length
+                      ? selectedInsight.risk_factors
+                      : [t("analysisNeedsReinforcement2")]
+                    ).map((f) => (
+                      <li key={f}>{f}</li>
+                    ))}
                   </ul>
                   {selectedInsight.external_forecast?.gap_analysis && (
-                    <p className="mt-2 mb-0 text-[length:var(--fs-caption)] whitespace-pre-line">{selectedInsight.external_forecast.gap_analysis}</p>
+                    <p className="mt-2 mb-0 text-[length:var(--fs-caption)] whitespace-pre-line">
+                      {selectedInsight.external_forecast.gap_analysis}
+                    </p>
                   )}
                 </div>
               </div>
@@ -454,8 +595,16 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
           filters={
             <>
               <span className="section-meta">
-                {statusFilter ? t("p1Filter", { p1: (COLUMNS.find((c) => c.status === statusFilter)?.label && tr(COLUMNS.find((c) => c.status === statusFilter)!.label)) ?? statusFilter }) : ""}
+                {statusFilter
+                  ? t("p1Filter", {
+                      p1:
+                        (COLUMNS.find((c) => c.status === statusFilter)?.label &&
+                          tr(COLUMNS.find((c) => c.status === statusFilter)?.label)) ??
+                        statusFilter,
+                    })
+                  : ""}
               </span>
+              {/* biome-ignore lint/a11y/useSemanticElements: control-chip toolbar group — a fieldset would change the toolbar DOM/styling shared across stage toolbars */}
               <span role="group" aria-label={t("industryFilter")} className="flex flex-wrap gap-1">
                 <button
                   type="button"
@@ -481,27 +630,35 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
           }
           actions={
             <>
-            {canAct && (
-            <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setShowCreateForm((v) => !v)} aria-expanded={showCreateForm}>
-              {t("registerOpportunity")}
-            </button>
-            )}
-            <span role="group" aria-label={t("sort")} className="flex gap-1">
-              {([
-                ["attractiveness", t("byAttractiveness")],
-                ["recent", t("newestFirst")],
-              ] as const).map(([key, label]) => (
+              {canAct && (
                 <button
-                  key={key}
                   type="button"
-                  aria-pressed={sortKey === key}
-                  className={`control-chip ${sortKey === key ? "status-green" : "status-not-started"}`}
-                  onClick={() => setSortKey(key)}
+                  className="btn-ghost btn-sm whitespace-nowrap"
+                  onClick={() => setShowCreateForm((v) => !v)}
+                  aria-expanded={showCreateForm}
                 >
-                  {label}
+                  {t("registerOpportunity")}
                 </button>
-              ))}
-            </span>
+              )}
+              {/* biome-ignore lint/a11y/useSemanticElements: control-chip toolbar group — a fieldset would change the toolbar DOM/styling shared across stage toolbars */}
+              <span role="group" aria-label={t("sort")} className="flex gap-1">
+                {(
+                  [
+                    ["attractiveness", t("byAttractiveness")],
+                    ["recent", t("newestFirst")],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={sortKey === key}
+                    className={`control-chip ${sortKey === key ? "status-green" : "status-not-started"}`}
+                    onClick={() => setSortKey(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </span>
             </>
           }
         />
@@ -512,96 +669,127 @@ export function OpportunityFunnelStage({ opportunityId, startRegister }: { oppor
             {statusFilter ? t("noOpportunitiesMatchTheFilter") : t("noOpportunitiesRegisteredStartOpportunity")}
           </p>
         ) : (
-          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table list-table list-wide table-fixed-pct tmin-56 opp-funnel-table" aria-label={t("opportunityFunnelList")}>
-            <caption className="sr-only">{t("opportunityFunnelList2")}</caption>
-            <ColGroup widths={FUNNEL_COL_PCT} />
-            <thead>
-              <tr>
-                <th scope="col">{tc("status")}</th>
-                {/* 열 폭은 FUNNEL_COL_PCT(%)가 정한다 — 기회명 칸은 넘치면 말줄임(…) 처리한다. */}
-                <th scope="col">{t("opportunityName2")}</th>
-                <th scope="col">{t("attractiveness2")}</th>
-                <th scope="col">{t("synergy")}</th>
-                <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((o) => (
-                <tr key={o.id} aria-current={o.id === opportunityId ? "true" : undefined}>
-                  <td>
-                    <span className={`status-chip ${o.status === "selected" ? "status-green" : o.status === "dropped" ? "status-red" : o.status === "assessed" ? "status-amber" : "status-not-started"}`}>
-                      {(() => { const col = COLUMNS.find((c) => c.status === o.status); return col ? tr(col.label) : ""; })()}
-                    </span>
-                  </td>
-                  <td>
-                    <Link
-                      href={`/opportunities/${encodeURIComponent(o.id)}`}
-                      className="block cell-truncate font-semibold text-left underline-offset-2 hover:underline"
-                      title={o.name}
-                    >
-                      {o.name}
-                    </Link>
-                    {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
-                    {o.id === opportunityId && <span className="status-chip status-amber ml-1" title={t("thisIsTheCarrierOpportunity")}>{t("thisDeal")}</span>}
-                    <span className="block text-[length:var(--fs-caption)]">
-                      {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
-                      {o.value_chain_node && <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>}
-                      {!o.market_scope && !o.value_chain_node && "—"}
-                    </span>
-                  </td>
-                  <td className="tabular-nums">
-                    {o.attractiveness_score ?? "—"}
-                    {o.attractiveness_score !== null && o.status === "identified" && (
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("proposal")}</span>
-                    )}
-                  </td>
-                  <td className="tabular-nums">
-                    {o.synergy_score ?? "—"}
-                    {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
-                    {o.synergy_score !== null && (
-                      o.synergy_score_confirmed_at
-                        ? <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("confirmed")}</span>
-                        : <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("recommendationUnconfirmed")}</span>
-                    )}
-                  </td>
-                  <td className="sizing-actions-cell"><span className="actions-row">
-                    {canAct && !o.project_id && insights && insights.length > 0 && (
-                      // S1 연결 select는 폼 컨트롤이므로 이름 열이 아니라 작업 셀에서
-                      // 편집한다(2026-10 표 인터랙션 리뷰 — 이름 열은 읽기 표면 유지).
-                      <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-                        <span className="whitespace-nowrap">{t("s1Link")}</span>
-                        <select
-                          aria-label={t("linkP1ToS1Analyzed", { p1: o.name })}
-                          value={o.industry_id ?? ""}
-                          onChange={(e) => void linkIndustry(o, e.target.value)}
-                          className="sizing-new-input sizing-new-input-sm"
-                        >
-                          <option value="">{t("notLinked")}</option>
-                          {insights.map((i) => (
-                            <option key={i.industry_id} value={i.industry_id}>{i.industry_name}</option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    {nextStepActions(o, t)}
-                    {canAct && !o.project_id && (
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        title={t("deletesThisOpportunityOpportunitiesPromoted")}
-                        onClick={() => deleteOpportunity(o)}
-                      >
-                        {tc("delete")}
-                      </button>
-                    )}
-                  </span></td>
+          // biome-ignore lint/a11y/useSemanticElements: house table-scroll pattern shared with the other stage tables (keyboard-scrollable region, WCAG 2.1)
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: tabIndex 0 is what makes the scroll region keyboard-operable
+          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            <table
+              className="data-table list-table list-wide table-fixed-pct tmin-56 opp-funnel-table"
+              aria-label={t("opportunityFunnelList")}
+            >
+              <caption className="sr-only">{t("opportunityFunnelList2")}</caption>
+              <ColGroup widths={FUNNEL_COL_PCT} />
+              <thead>
+                <tr>
+                  <th scope="col">{tc("status")}</th>
+                  {/* 열 폭은 FUNNEL_COL_PCT(%)가 정한다 — 기회명 칸은 넘치면 말줄임(…) 처리한다. */}
+                  <th scope="col">{t("opportunityName2")}</th>
+                  <th scope="col">{t("attractiveness2")}</th>
+                  <th scope="col">{t("synergy")}</th>
+                  <th scope="col">
+                    <span className="sr-only">{tc("actions")}</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table></div>
+              </thead>
+              <tbody>
+                {sortedRows.map((o) => (
+                  <tr key={o.id} aria-current={o.id === opportunityId ? "true" : undefined}>
+                    <td>
+                      <span
+                        className={`status-chip ${o.status === "selected" ? "status-green" : o.status === "dropped" ? "status-red" : o.status === "assessed" ? "status-amber" : "status-not-started"}`}
+                      >
+                        {(() => {
+                          const col = COLUMNS.find((c) => c.status === o.status);
+                          return col ? tr(col.label) : "";
+                        })()}
+                      </span>
+                    </td>
+                    <td>
+                      <Link
+                        href={`/opportunities/${encodeURIComponent(o.id)}`}
+                        className="block cell-truncate font-semibold text-left underline-offset-2 hover:underline"
+                        title={o.name}
+                      >
+                        {o.name}
+                      </Link>
+                      {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
+                      {o.id === opportunityId && (
+                        <span className="status-chip status-amber ml-1" title={t("thisIsTheCarrierOpportunity")}>
+                          {t("thisDeal")}
+                        </span>
+                      )}
+                      <span className="block text-[length:var(--fs-caption)]">
+                        {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
+                        {o.value_chain_node && (
+                          <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>
+                        )}
+                        {!o.market_scope && !o.value_chain_node && "—"}
+                      </span>
+                    </td>
+                    <td className="tabular-nums">
+                      {o.attractiveness_score ?? "—"}
+                      {o.attractiveness_score !== null && o.status === "identified" && (
+                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                          {tc("proposal")}
+                        </span>
+                      )}
+                    </td>
+                    <td className="tabular-nums">
+                      {o.synergy_score ?? "—"}
+                      {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
+                      {o.synergy_score !== null &&
+                        (o.synergy_score_confirmed_at ? (
+                          <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                            {tc("confirmed")}
+                          </span>
+                        ) : (
+                          <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                            {t("recommendationUnconfirmed")}
+                          </span>
+                        ))}
+                    </td>
+                    <td className="sizing-actions-cell">
+                      <span className="actions-row">
+                        {canAct && !o.project_id && insights && insights.length > 0 && (
+                          // S1 연결 select는 폼 컨트롤이므로 이름 열이 아니라 작업 셀에서
+                          // 편집한다(2026-10 표 인터랙션 리뷰 — 이름 열은 읽기 표면 유지).
+                          <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+                            <span className="whitespace-nowrap">{t("s1Link")}</span>
+                            <select
+                              aria-label={t("linkP1ToS1Analyzed", { p1: o.name })}
+                              value={o.industry_id ?? ""}
+                              onChange={(e) => void linkIndustry(o, e.target.value)}
+                              className="sizing-new-input sizing-new-input-sm"
+                            >
+                              <option value="">{t("notLinked")}</option>
+                              {insights.map((i) => (
+                                // key는 산업+분석 복합 — 서버 dedupe 전 데이터에서도 중복 키가 없게 (방어선)
+                                <option key={`${i.industry_id}:${i.analysis_id}`} value={i.industry_id}>
+                                  {i.industry_name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        {nextStepActions(o, t)}
+                        {canAct && !o.project_id && (
+                          <button
+                            type="button"
+                            className="btn-danger btn-sm"
+                            title={t("deletesThisOpportunityOpportunitiesPromoted")}
+                            onClick={() => deleteOpportunity(o)}
+                          >
+                            {tc("delete")}
+                          </button>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
-
 
       {!knownTargetMode && registerSection}
     </>
