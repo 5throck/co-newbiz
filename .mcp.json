@@ -10,18 +10,6 @@
       ],
       "env": {},
       "timeout": 300000
-    },
-    "graft": {
-      "command": "graft",
-      "args": [
-        "mcp"
-      ]
-    },
-    "trail": {
-      "command": "trail",
-      "args": [
-        "mcp"
-      ]
     }
   }
 }
