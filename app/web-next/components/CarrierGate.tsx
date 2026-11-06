@@ -23,6 +23,7 @@ import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
 import { Breadcrumb } from "./Breadcrumb.tsx";
 import { StageFrame } from "./StageFrame.tsx";
+import type { StageMetaId } from "../lib/stage-meta.ts";
 
 export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
 
@@ -33,6 +34,14 @@ export const FLAT_ROUTE_STAGE: Record<FlatRouteKey, string> = {
   synergy: "s3",
   greenfield: "s5",
   brownfield: "s6",
+};
+
+const STAGE_IDS_BY_ROUTE: Record<FlatRouteKey, StageMetaId | StageMetaId[]> = {
+  market: "S1",
+  opportunities: "S2",
+  synergy: "S3",
+  greenfield: "S5",
+  brownfield: ["S6", "S7"],
 };
 
 /** Track filter per flat route — undefined means any track (S1~S3). */
@@ -175,8 +184,11 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   }
 
   if (carrierId || (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew)) {
+    // Keep the destination's stage head + input/output strip mounted while the redirect resolves,
+    // so the strip does not blink out between the flat route and /deals/{id}/sN.
     return (
       <main>
+        <StageFrame stageId={STAGE_IDS_BY_ROUTE[route]} track={TRACK_BY_ROUTE[route]} />
         <PageState state="loading" />
       </main>
     );

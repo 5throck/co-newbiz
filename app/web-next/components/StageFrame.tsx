@@ -305,6 +305,15 @@ function StageHandoffStrip({ primary, track, linkFor, outputOpen = true }: { pri
   );
 }
 
+/** The same input/output strip for screens that belong to a stage but are not framed by StageFrame
+    (the S2 opportunity detail). It resolves track and links itself, so every surface of a stage shows
+    one component instead of the strip appearing on the stage tab and vanishing one click deeper. */
+export function StageHandoff({ stageId }: { stageId: StageMetaId }) {
+  const carrierTrack = useCarrierTrack(true);
+  const linkFor = useStageLinks(carrierTrack ?? undefined);
+  return <StageHandoffStrip primary={stageId} track={carrierTrack ?? undefined} linkFor={linkFor} />;
+}
+
 interface GuidanceInfo {
   status: string;
   blockers: string[];

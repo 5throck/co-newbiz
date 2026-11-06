@@ -28,6 +28,11 @@ export function SynergyResult(props0: {
   const tc = useTranslations("common");
   const h0 = useSynergyResult(props0);
   const ctx = { ...h0 };
+  // current_step is 1-based (pipeline advance(1..5) marks the step being run) while the title
+  // list is 0-based; step 0/5+ has no title. Never hand an empty/unknown key to the translator
+  // (MISSING_MESSAGE: Could not resolve `` in messages).
+  const stepKey = STEP_TITLES_KEYS[props0.analysis.current_step - 1];
+  const stepTitle = stepKey && tr.has(stepKey) ? tr(stepKey) : "";
   const {
     analysis,
     analysisDate,
@@ -108,7 +113,7 @@ export function SynergyResult(props0: {
         <p className="text-[length:var(--fs-body)]" role="status">
           {tc("analyzingOpen")}
           {analysis.current_step}
-          {t("n5Steps")} {tr(STEP_TITLES_KEYS[analysis.current_step] ?? "")} {t("inProgressItRefreshesAutomatically")}
+          {t("n5Steps")} {stepTitle ? `${stepTitle} ` : ""}{t("inProgressItRefreshesAutomatically")}
         </p>
       )}
       {!p && !inProgress && <p className="text-[color:var(--muted-fg)] italic">{t("noAnalysisResults")}</p>}

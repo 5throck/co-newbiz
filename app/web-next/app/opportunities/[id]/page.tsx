@@ -14,7 +14,7 @@ import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useConfirm } from "../../../components/crud.tsx";
 import { PageHeader, SectionToolbar } from "../../../components/layout.tsx";
 import { DealBreadcrumb } from "../../../components/DealBreadcrumb.tsx";
-import { StageRail } from "../../../components/StageFrame.tsx";
+import { StageHandoff, StageRail } from "../../../components/StageFrame.tsx";
 import { ScenarioPremises, SketchCanvas } from "../../../components/SketchCanvas.tsx";
 import { ClosureModal } from "../../../components/ClosureModal.tsx";
 import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
@@ -64,6 +64,9 @@ export function OpportunityDetail() {
   const [attractDraft, setAttractDraft] = useState("");
   const [attractReco, setAttractReco] = useState<AttractivenessReco | null>(null);
   const [attractBusy, setAttractBusy] = useState(false);
+  // 재평가: 발굴(identified) 이후에도 매력도를 다시 매길 수 있게 입력 컨트롤을 여는 토글.
+  // PUT /api/opportunities/{id}는 status 게이트가 없다(점수만 갱신) — 종결(selected/dropped)만 UI에서 막는다.
+  const [reEvaluating, setReEvaluating] = useState(false);
   const [sketchView, setSketchView] = useState<SketchView | null>(null);
   const [sketchBusy, setSketchBusy] = useState(false);
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
@@ -89,6 +92,10 @@ export function OpportunityDetail() {
     el?.scrollIntoView({ block: "center" });
     el?.focus();
   }, [wantsScoreFocus, scoreReady]);
+  // 재평가 토글을 열면 점수 입력으로 포커스를 옮긴다 (키보드·스크린리더 흐름).
+  useEffect(() => {
+    if (reEvaluating) document.getElementById("opp-score-input")?.focus();
+  }, [reEvaluating]);
   useEffect(() => {
     api.get<{ factors: OppFactors }>(`/api/opportunities/${encodeURIComponent(id)}/factors`)
       .then((r) => setFactors(r.data.factors))
@@ -141,6 +148,7 @@ export function OpportunityDetail() {
         await api.put(`/api/opportunities/${encodeURIComponent(id)}`, { status: "assessed" });
       }
       setAttractDraft("");
+      setReEvaluating(false);
       load();
     } catch (err) { setError(err instanceof Error ? err.message : t("attractEvalFailed")); }
   }
@@ -196,12 +204,16 @@ export function OpportunityDetail() {
   if (!opp) return <main><p>{tc("loading")}</p></main>;
 
   const s3Ready = opp.synergy_score !== null && opp.attractiveness_score !== null;
+  const firstEvaluation = opp.status === "identified";
+  const canReEvaluate = canAct && !firstEvaluation && opp.status !== "selected" && opp.status !== "dropped";
+  const showScoreControls = canAct && (firstEvaluation || (canReEvaluate && reEvaluating));
 
   return (
     <main>
       {confirmDialog}
       <DealBreadcrumb dealId={id} stageId="S2" tail={[{ label: tt("opportunityDetail") }]} />
       <PageHeader title={opp.name} />
+      <StageHandoff stageId="S2" />
       <StageRail current={["S2"]} />
       <SectionToolbar
         title={tt("opportunityDetail")}
@@ -245,7 +257,7 @@ export function OpportunityDetail() {
           )}
         </div>
         {opp.rationale && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>}
-        {canAct && opp.status === "identified" && (
+        {showScoreControls && (
           <div className="flex flex-wrap items-center gap-1">
             <input id="opp-score-input" type="number" min={0} max={100} aria-label={t("attractiveness")} placeholder={t("attractPlaceholder")}
               value={attractDraft} onChange={(e) => setAttractDraft(e.target.value)}
@@ -254,8 +266,14 @@ export function OpportunityDetail() {
             <button type="button" className="btn-ghost btn-sm" disabled={attractBusy} onClick={() => void generateAttractDraft()}>
               {attractBusy ? t("draftGenerating") : t("aiDraftButton")}
             </button>
+            {canReEvaluate && (
+              <button type="button" className="btn-ghost btn-sm" onClick={() => { setReEvaluating(false); setAttractDraft(""); }}>{t("reEvaluateClose")}</button>
+            )}
             {attractReco && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{attractReco.recommendation.rationale_draft.slice(0, 160) || t("noDraft")}</span>}
           </div>
+        )}
+        {canReEvaluate && !reEvaluating && (
+          <button type="button" className="btn-ghost btn-sm" aria-expanded={false} onClick={() => setReEvaluating(true)}>{t("reEvaluateButton")}</button>
         )}
         {/* S3 — 판정 결과와 S3 화면 이동 링크 (인라인 실행 없음, ADR-0127) */}
         {opp.status !== "identified" && (

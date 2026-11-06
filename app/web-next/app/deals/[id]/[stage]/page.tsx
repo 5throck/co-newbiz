@@ -378,7 +378,7 @@ function StageGuidanceTab({ carrierId, stageId }: { carrierId: string; stageId: 
       )}
       {proc && applicable && (
         <div className="market-section">
-          <p className="text-[length:var(--fs-body)]">{t("statusPrefix")} <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{trRoot(STAGE_STATUS_KEY[stage?.status ?? ""] ?? stage?.status ?? "")}</span></p>
+          <p className="text-[length:var(--fs-body)]">{t("statusPrefix")} <span className={`status-chip ${stage?.status === "complete" ? "status-green" : "status-amber"}`}>{(() => { const k = STAGE_STATUS_KEY[stage?.status ?? ""]; return k ? trRoot(k) : stage?.status ?? ""; })()}</span></p>
           <ul className="sizing-note-list">
             {[...new Set([...proc.blockers, ...proc.requiredArtifacts])].map((b, i) => <li key={i}>{localizeBlocker(trRoot, b)}</li>)}
           </ul>
