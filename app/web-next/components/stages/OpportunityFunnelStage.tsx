@@ -597,10 +597,10 @@ export function OpportunityFunnelStage({
               <span className="section-meta">
                 {statusFilter
                   ? t("p1Filter", {
-                      p1:
-                        (COLUMNS.find((c) => c.status === statusFilter)?.label &&
-                          tr(COLUMNS.find((c) => c.status === statusFilter)?.label)) ??
-                        statusFilter,
+                      p1: (() => {
+                        const col = COLUMNS.find((c) => c.status === statusFilter);
+                        return col?.label ? tr(col.label) : statusFilter;
+                      })(),
                     })
                   : ""}
               </span>
