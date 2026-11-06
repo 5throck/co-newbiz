@@ -165,6 +165,9 @@ export interface ExternalForecastGap {
    *  cagrBasis=true면 gapPct가 아닌 cagrGapPct가 격차의 본 뜻이다. */
   cagrGapPct?: number;
   cagrBasis?: boolean;
+  /** 웹 검색 접지 출처 URL (선택, v1.3.0) — 발췌에서 추출한 전망에만 실린다
+   *  (LLM 선험·기록 참조 경로에는 없다 — provenance 솔직 표기). */
+  sourceUrl?: string;
 }
 
 export interface SizingMatrix {
@@ -181,7 +184,15 @@ export interface SizingMatrix {
   chainGrade: ChainGrade;
   chainDirection: ChainDirection;
   qualitative: QualitativeFactors;
-  consistency: { bottomUpCagr: number; topDownCagr: number; tolerance: string };
+  /** 성장률 정합성 (step 5). v1.3.0 — 선택 `source`로 컨센서스 기원을 표기한다
+   *  (R9): 사람 기록 참조=user, 웹 검색 추출=web_research, LLM 선험=llm_prior.
+   *  값이 없으면(미입력) 생략한다. */
+  consistency: {
+    bottomUpCagr: number;
+    topDownCagr: number;
+    tolerance: string;
+    source?: { label: string; url?: string; origin: "user" | "web_research" | "llm_prior" };
+  };
   externalForecast?: ExternalForecastGap;
   crossValidation: CrossValidationClaim[];
   limitations: string[];
