@@ -67,6 +67,12 @@ export interface GateArtifactStage {
   /** Present only for the evaluation's current stage. */
   blockers: string[];
   missing_artifacts: string[];
+  /**
+   * True only for a `locked` stage that comes AFTER the entity's current stage
+   * (the entity simply has not got there yet). Omitted otherwise, so artifacts
+   * of already-reached stages keep their content hash.
+   */
+  not_reached?: true;
 }
 
 export interface GateArtifact {
@@ -86,16 +92,23 @@ export function buildGateArtifact(gate: ReviewGate, entityId: string): GateArtif
   const entityType = gateEntityType(gate);
   const ev = evaluateProcess({ type: entityType, id: entityId });
   const ids = gateStageIds(gate);
+  const currentSequence = ev.currentStage ? (STAGES.find((x) => x.id === ev.currentStage)?.sequence ?? null) : null;
   const stages: GateArtifactStage[] = ids.map((id) => {
     const s = ev.stages.find((x) => x.id === id);
     const current = ev.currentStage === id;
+    const status = s?.status ?? "locked";
+    const sequence = STAGES.find((x) => x.id === id)?.sequence ?? 0;
+    // Locked AND after the current stage = not reached yet. A locked stage at
+    // or before the current one (or with no current stage) stays structural.
+    const notReached = status === "locked" && currentSequence !== null && sequence > currentSequence;
     return {
       id,
       name: s?.name ?? id,
-      status: s?.status ?? "locked",
+      status,
       required_artifacts: s?.requiredArtifacts ?? [],
       blockers: current ? [...ev.blockers] : [],
       missing_artifacts: current ? [...ev.requiredArtifacts] : [],
+      ...(notReached ? { not_reached: true as const } : {}),
     };
   });
   const authorAgents = [...new Set(ids.flatMap((id) => loadStageActivities(id).map((a) => a.agent)))].sort();

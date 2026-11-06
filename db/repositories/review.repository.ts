@@ -24,6 +24,12 @@ export interface ReviewItem {
   evidence_ref?: string;
   /** AI 1st only: a structural gap (missing/incomplete) that gates AI 2nd. */
   structural?: boolean;
+  /**
+   * AI 1st only: the item concerns a stage the entity has not reached yet
+   * (informational, never structural, never blocks AI 2nd). Additive JSON
+   * inside buckets_json; legacy rows simply lack it.
+   */
+  scope?: "not_reached";
 }
 export interface ReviewBuckets {
   verified: ReviewItem[];

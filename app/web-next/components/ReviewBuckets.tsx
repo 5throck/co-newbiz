@@ -8,13 +8,22 @@
 // surrounding panel and are labelled as the human's decision (boundary #2).
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Clock } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import type { GateMetaId } from "../lib/stage-meta.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
-import { BUCKET_TITLE, ai2ndStatusMessage, bucketCounts, citationLabel, gateDisplayName, localizeItem, localizeNotPerformedReason, reviewOriginText } from "../lib/review/review-display.ts";
+import {
+  BUCKET_TITLE,
+  ai2ndStatusMessage,
+  bucketCounts,
+  citationLabel,
+  gateDisplayName,
+  localizeItem,
+  localizeNotPerformedReason,
+  reviewOriginText,
+} from "../lib/review/review-display.ts";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction, useToast } from "./ui.tsx";
 
@@ -43,7 +52,11 @@ interface ReviewItem {
   reason: string;
   evidence_ref?: string;
   structural?: boolean;
+  /** "not_reached": the stage is later than the entity's current stage — informational, never an open defect (Fix 1). */
+  scope?: "not_reached";
 }
+/** Not-reached items sit in could_not_verify but are neutral context, not open defects. */
+const isNotReached = (it: { scope?: string }): boolean => it.scope === "not_reached";
 interface StageView {
   id: string;
   origin: string;
@@ -80,9 +93,18 @@ const BUCKETS: Array<{ key: BucketKey; hint: string }> = [
  *  - "summary": stage screens - content first; a non-dismissible strip with the three counts that expands to the buckets. */
 export type ReviewVariant = "expanded" | "summary";
 
-function CountStrip({ counts, label }: { counts: ReturnType<typeof bucketCounts>; label?: string }) {
+function CountStrip({
+  counts,
+  notReached = 0,
+  label,
+}: {
+  counts: ReturnType<typeof bucketCounts>;
+  notReached?: number;
+  label?: string;
+}) {
   const warn = counts.could_not_verify > 0;
   return (
+    // biome-ignore lint/a11y/useSemanticElements: an inline <span> strip; <fieldset> would change layout/styling (fieldset has block box and default border/padding)
     <span className="review-counts" role="group" aria-label="검토 결과 건수">
       {label && <span className="review-counts-target">{label}</span>}
       <span className="review-count" title={BUCKET_TITLE.verified.en}>
@@ -96,6 +118,12 @@ function CountStrip({ counts, label }: { counts: ReturnType<typeof bucketCounts>
         {BUCKET_TITLE.could_not_verify.ko} <b className="tabular-nums">{counts.could_not_verify}</b>건
         {warn && <span className="review-count-flag"> · 확인 필요</span>}
       </span>
+      {notReached > 0 && (
+        <span className="review-count" title="Not reached yet">
+          <Clock size={14} aria-hidden="true" />
+          아직 도달하지 않은 단계 <b className="tabular-nums">{notReached}</b>건
+        </span>
+      )}
       <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
         {BUCKET_TITLE.needs_judgement.ko} <b className="tabular-nums">{counts.needs_judgement}</b>건
       </span>
@@ -151,7 +179,10 @@ export function ReviewBuckets({
   const reviewGates = useMemo(() => (gates ?? []).filter((g) => REVIEW_GATE_IDS.has(g)) as ReviewGateId[], [gates]);
   const tabs = useMemo(
     () => [
-      ...reviewGates.map((g) => ({ key: `gate:${g}`, label: gateLabelKey(g) ? tr(gateLabelKey(g)) : gateDisplayName(g) })),
+      ...reviewGates.map((g) => ({
+        key: `gate:${g}`,
+        label: gateLabelKey(g) ? tr(gateLabelKey(g)) : gateDisplayName(g),
+      })),
       ...(artifacts ?? []).filter((a) => /^stage:(S[1-9]|S1[0-2]):[1-9][0-9]*$/.test(a.key)),
     ],
     [reviewGates, artifacts, tr],
@@ -179,28 +210,41 @@ export function ReviewBuckets({
   useEffect(() => {
     if (parentOwnedAcks || !ackGate) return;
     let alive = true;
-    api.get<{ acks: Array<{ claim: string; acked: boolean; by: string; at: string }> }>(`${acksPath}?gate=${encodeURIComponent(ackGate)}`)
+    api
+      .get<{ acks: Array<{ claim: string; acked: boolean; by: string; at: string }> }>(
+        `${acksPath}?gate=${encodeURIComponent(ackGate)}`,
+      )
       .then((r) => {
         if (!alive) return;
         const checks: Record<string, boolean> = {};
         const meta: Record<string, { by: string; at: string }> = {};
         for (const a of r.data.acks) {
-          if (a.acked) { checks[a.claim] = true; meta[a.claim] = { by: a.by, at: a.at }; }
+          if (a.acked) {
+            checks[a.claim] = true;
+            meta[a.claim] = { by: a.by, at: a.at };
+          }
         }
         setSelfChecks(checks);
         setSelfAckMeta(meta);
       })
-      .catch(() => { /* acks are optional review state — the review never depends on them */ });
-    return () => { alive = false; };
+      .catch(() => {
+        /* acks are optional review state — the review never depends on them */
+      });
+    return () => {
+      alive = false;
+    };
   }, [parentOwnedAcks, acksPath, ackGate]);
-  const toggleSelf = useCallback((claim: string, checked: boolean, gate: string) => {
-    setSelfChecks((m) => ({ ...m, [claim]: checked }));
-    if (checked) setSelfAckMeta((m) => ({ ...m, [claim]: { by: me?.userId ?? "", at: new Date().toISOString() } }));
-    api.post(acksPath, { gate, claim, acked: checked }).catch((e) => {
-      setSelfChecks((m) => ({ ...m, [claim]: !checked }));
-      toast(e instanceof Error ? `확인 저장 실패: ${e.message}` : "확인 저장 실패");
-    });
-  }, [acksPath, me?.userId, toast]);
+  const toggleSelf = useCallback(
+    (claim: string, checked: boolean, gate: string) => {
+      setSelfChecks((m) => ({ ...m, [claim]: checked }));
+      if (checked) setSelfAckMeta((m) => ({ ...m, [claim]: { by: me?.userId ?? "", at: new Date().toISOString() } }));
+      api.post(acksPath, { gate, claim, acked: checked }).catch((e) => {
+        setSelfChecks((m) => ({ ...m, [claim]: !checked }));
+        toast(e instanceof Error ? `확인 저장 실패: ${e.message}` : "확인 저장 실패");
+      });
+    },
+    [acksPath, me?.userId, toast],
+  );
 
   const base = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/reviews`;
 
@@ -219,7 +263,11 @@ export function ReviewBuckets({
         // Wave C-3 (D-10): a bare "Not found." (direct URL without a real deal id)
         // gets an actionable empty state instead.
         const msg = e instanceof Error ? e.message : "";
-        setError(/^not found\.?$/i.test(msg.trim()) ? "이 검토/안건을 찾을 수 없습니다 — 검토/안건 보드에서 항목을 선택해 다시 들어오세요." : msg || "검토 불러오기 실패");
+        setError(
+          /^not found\.?$/i.test(msg.trim())
+            ? "이 검토/안건을 찾을 수 없습니다 — 검토/안건 보드에서 항목을 선택해 다시 들어오세요."
+            : msg || "검토 불러오기 실패",
+        );
       }
     },
     [base, canRequest],
@@ -229,6 +277,16 @@ export function ReviewBuckets({
     if (active) void refresh(active);
   }, [active, refresh]);
 
+  // 2026-10-21 (decider: "다 확인했음에도 종결되지 않음") — 사람 확인(ack)과 결정
+  // 기록에 들어간 항목은 버킷 건수에서 제외해 "모두 확인" 상태를 보인다. 원본
+  // 버킷 데이터는 그대로이며, 건수는 표시값일 뿐 게이트를 막지 않는다.
+  const resolvedClaims = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of confirmedJudgements ?? []) set.add(c);
+    for (const [claim, checked] of Object.entries(judgementChecks ?? selfChecks)) if (checked) set.add(claim);
+    return set;
+  }, [confirmedJudgements, judgementChecks, selfChecks]);
+
   if (tabs.length === 0) return null;
   const view = views[active];
   const headerAction = headerPrimary ? (
@@ -236,7 +294,13 @@ export function ReviewBuckets({
       label={busy ? "요청 중…" : view?.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
       onClick={() => void requestAi2nd()}
       disabled={!canRequest || busy || !view}
-      disabledReason={!canRequest ? "AI 2차 검토 요청은 analyst 권한이 필요합니다." : busy ? "요청 중입니다." : "AI 1차 검토를 불러오는 중입니다."}
+      disabledReason={
+        !canRequest
+          ? "AI 2차 검토 요청은 analyst 권한이 필요합니다."
+          : busy
+            ? "요청 중입니다."
+            : "AI 1차 검토를 불러오는 중입니다."
+      }
     />
   ) : null;
   const activeParam = active.startsWith("gate:") ? { gate: active.slice(5) } : { artifact: active };
@@ -276,20 +340,17 @@ export function ReviewBuckets({
   }
 
   const counts = bucketCounts(stages);
-  // 2026-10-21 (decider: "다 확인했음에도 종결되지 않음") — 사람 확인(ack)과 결정
-  // 기록에 들어간 항목은 버킷 건수에서 제외해 "모두 확인" 상태를 보인다. 원본
-  // 버킷 데이터는 그대로이며, 건수는 표시값일 뿐 게이트를 막지 않는다.
-  const resolvedClaims = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of confirmedJudgements ?? []) set.add(c);
-    for (const [claim, checked] of Object.entries(judgementChecks ?? selfChecks)) if (checked) set.add(claim);
-    return set;
-  }, [confirmedJudgements, judgementChecks, selfChecks]);
-  const claimsOf = (bucket: keyof typeof stages[number]) =>
+  const claimsOf = (bucket: keyof (typeof stages)[number]) =>
     stages
       .filter((st) => st.performed || st.origin === "AI 1st")
-      .flatMap((st) => st[bucket] as ReadonlyArray<{ claim?: string }>)
+      .flatMap((st) => st[bucket] as ReadonlyArray<{ claim?: string; scope?: string }>)
+      .filter((it) => !isNotReached(it))
       .map((it) => String(it?.claim ?? ""));
+  // Not-reached stages are informational: shown in their own neutral count, never in the defect counts.
+  const notReachedCount = stages
+    .filter((st) => st.performed || st.origin === "AI 1st")
+    .flatMap((st) => st.could_not_verify)
+    .filter(isNotReached).length;
   const displayCounts = (() => {
     const c = { ...counts };
     c.needs_judgement = claimsOf("needs_judgement").filter((cl) => !resolvedClaims.has(cl)).length;
@@ -326,7 +387,11 @@ export function ReviewBuckets({
             {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
             <span className="review-strip-title">3단계 검토</span>
             {view ? (
-              <CountStrip counts={displayCounts} label={tabs.length > 1 ? activeLabel : undefined} />
+              <CountStrip
+                counts={displayCounts}
+                notReached={notReachedCount}
+                label={tabs.length > 1 ? activeLabel : undefined}
+              />
             ) : (
               <span className="review-counts-target">{error ? "불러오지 못함" : "불러오는 중…"}</span>
             )}
@@ -337,91 +402,117 @@ export function ReviewBuckets({
       ) : (
         <div className="review-head">
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">3단계 검토 — 사람 판단 전 참고 자료</h3>
-          {view && <CountStrip counts={displayCounts} />}
+          {view && <CountStrip counts={displayCounts} notReached={notReachedCount} />}
           {headerSlot && <span className="review-head-slot">{headerSlot}</span>}
         </div>
       )}
       <div id={panelId} hidden={!showBody}>
-      <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-        검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄 뿐이며
-        결정은 아래에서 사람이 기록합니다.
-      </p>
-      {allReviewed && (
-        <p className="mb-2 text-[length:var(--fs-caption)]" role="status" data-testid="review-all-reviewed">
-          <span className="status-chip status-green">✓ 모두 사람 확인 완료</span>
-          <span className="ml-2 text-[color:var(--muted-fg)]">이 검토의 확인·판단 항목을 모두 확인했습니다 — 사람 확인으로 종결되었습니다.</span>
+        <p className="mb-2 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+          검토 결과는 승인·통과 표시가 아닙니다. AI가 확인한 것, 확인하지 못한 것, 사람이 판단할 것을 나누어 보여줄
+          뿐이며 결정은 아래에서 사람이 기록합니다.
         </p>
-      )}
-      {tabs.length > 1 && (
-        <TabNav
-          label="검토 대상 산출물"
-          active={active}
-          onSelect={setActive}
-          tabs={tabs}
-        />
-      )}
-      <div {...(tabs.length > 1 ? { role: "tabpanel", "aria-label": `${tabs.find((t) => t.key === active)?.label ?? ""} 산출물 검토` } : {})}>
-        {error && (
-          <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-1">
-            {error}
+        {allReviewed && (
+          <p className="mb-2 text-[length:var(--fs-caption)]" role="status" data-testid="review-all-reviewed">
+            <span className="status-chip status-green">✓ 모두 사람 확인 완료</span>
+            <span className="ml-2 text-[color:var(--muted-fg)]">
+              이 검토의 확인·판단 항목을 모두 확인했습니다 — 사람 확인으로 종결되었습니다.
+            </span>
           </p>
         )}
-        {!view && !error && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">검토를 불러오는 중…</p>}
-        {view && (
-          <>
-            <ul className="sizing-note-list mb-2 text-[length:var(--fs-caption)]" aria-label="검토 단계 출처">
-              {stages.map((s) => (
-                <li key={s.id}>
-                  <span className="font-semibold">{reviewOriginText(s)}</span>
-                  {s.author_domain ? ` — 작성 도메인 ${s.author_domain}` : ""}
-                  {!s.performed && s.not_performed_reason && <span title="수행되지 않음"> — {localizeNotPerformedReason(s.not_performed_reason)}</span>}
-                  {!s.current && <span> — 이전 산출물 기준의 결과입니다. 산출물이 바뀌었습니다.</span>}
-                </li>
-              ))}
-              {!view.ai_2nd && <li><span title="Not performed">AI 2차 (교차 도메인): 아직 요청되지 않음 (수행되지 않음)</span></li>}
-            </ul>
-            <div className="review-grid">
-              {BUCKETS.map((b) => {
-                const items = stages
-                  .filter((s) => s.performed || s.origin === "AI 1st")
-                  .flatMap((s) => s[b.key].map((it) => ({ it, s })));
-                const headingId = `${uid}-${b.key}`;
-                const prominent = b.key === "needs_judgement";
-                const openItems = b.key === "needs_judgement" || b.key === "could_not_verify"
-                  ? items.filter(({ it }) => !resolvedClaims.has(it.claim))
-                  : items;
-                return (
-                  <section
-                    key={b.key}
-                    aria-labelledby={headingId}
-                    className={`review-bucket border rounded-lg px-3 py-2 ${prominent ? "border-2 border-[color:var(--accent)]" : "border-[color:var(--border)]"}`}
-                  >
-                    <h4 id={headingId} className="text-[length:var(--fs-body)] font-semibold mb-1" title={BUCKET_TITLE[b.key].en}>
-                      {BUCKET_TITLE[b.key].ko}, {openItems.length}건
-                    </h4>
-                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
-                    {b.key === "needs_judgement" && items.length > 0 && onDecisionJump && (
-                      <button type="button" className="btn-ghost btn-sm mb-1" onClick={onDecisionJump}>
-                        이 항목들을 검토한 뒤 결정을 기록하세요 →
-                      </button>
+        {tabs.length > 1 && <TabNav label="검토 대상 산출물" active={active} onSelect={setActive} tabs={tabs} />}
+        <div
+          {...(tabs.length > 1
+            ? { role: "tabpanel", "aria-label": `${tabs.find((t) => t.key === active)?.label ?? ""} 산출물 검토` }
+            : {})}
+        >
+          {error && (
+            <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-1">
+              {error}
+            </p>
+          )}
+          {!view && !error && (
+            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">검토를 불러오는 중…</p>
+          )}
+          {view && (
+            <>
+              <ul className="sizing-note-list mb-2 text-[length:var(--fs-caption)]" aria-label="검토 단계 출처">
+                {stages.map((s) => (
+                  <li key={s.id}>
+                    <span className="font-semibold">{reviewOriginText(s)}</span>
+                    {s.author_domain ? ` — 작성 도메인 ${s.author_domain}` : ""}
+                    {!s.performed && s.not_performed_reason && (
+                      <span title="수행되지 않음"> — {localizeNotPerformedReason(s.not_performed_reason)}</span>
                     )}
+                    {!s.current && <span> — 이전 산출물 기준의 결과입니다. 산출물이 바뀌었습니다.</span>}
+                  </li>
+                ))}
+                {!view.ai_2nd && (
+                  <li>
+                    <span title="Not performed">AI 2차 (교차 도메인): 아직 요청되지 않음 (수행되지 않음)</span>
+                  </li>
+                )}
+              </ul>
+              <div className="review-grid">
+                {BUCKETS.map((b) => {
+                  const items = stages
+                    .filter((s) => s.performed || s.origin === "AI 1st")
+                    .flatMap((s) => s[b.key].map((it) => ({ it, s })));
+                  const headingId = `${uid}-${b.key}`;
+                  const prominent = b.key === "needs_judgement";
+                  const notReachedItems =
+                    b.key === "could_not_verify" ? items.filter(({ it }) => isNotReached(it)) : [];
+                  const countedItems = items.filter(({ it }) => !isNotReached(it));
+                  const openItems =
+                    b.key === "needs_judgement" || b.key === "could_not_verify"
+                      ? countedItems.filter(({ it }) => !resolvedClaims.has(it.claim))
+                      : countedItems;
+                  return (
+                    <section
+                      key={b.key}
+                      aria-labelledby={headingId}
+                      className={`review-bucket border rounded-lg px-3 py-2 ${prominent ? "border-2 border-[color:var(--accent)]" : "border-[color:var(--border)]"}`}
+                    >
+                      <h4
+                        id={headingId}
+                        className="text-[length:var(--fs-body)] font-semibold mb-1"
+                        title={BUCKET_TITLE[b.key].en}
+                      >
+                        {BUCKET_TITLE[b.key].ko}, {openItems.length}건
+                      </h4>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{b.hint}</p>
+                      {b.key === "needs_judgement" && items.length > 0 && onDecisionJump && (
+                        <button type="button" className="btn-ghost btn-sm mb-1" onClick={onDecisionJump}>
+                          이 항목들을 검토한 뒤 결정을 기록하세요 →
+                        </button>
+                      )}
                       <ul className="review-items text-[length:var(--fs-caption)]">
                         {openItems.map(({ it, s }) => {
                           const l = localizeItem(it);
                           const claimKey = `${s.id}-${it.claim}`;
                           const confirmed = confirmedJudgements?.has(it.claim) ?? false;
                           // 확인하다 못함(could_not_verify)도 같은 ack 흐름으로 종결할 수 있다 (2026-10-21 decider).
-                          const judgementable = (b.key === "needs_judgement" || b.key === "could_not_verify") && !!toggleFor && canRequest;
+                          const judgementable =
+                            (b.key === "needs_judgement" || b.key === "could_not_verify") && !!toggleFor && canRequest;
                           return (
                             <li key={claimKey}>
-                              <span className="font-semibold" title={l.localized ? it.claim : undefined}>{l.claim}</span>
-                              <span className="block text-[color:var(--muted-fg)]" title={l.localized ? it.reason : undefined}>{l.reason}</span>
+                              <span className="font-semibold" title={l.localized ? it.claim : undefined}>
+                                {l.claim}
+                              </span>
+                              <span
+                                className="block text-[color:var(--muted-fg)]"
+                                title={l.localized ? it.reason : undefined}
+                              >
+                                {l.reason}
+                              </span>
                               <span className="block text-[color:var(--muted-fg)]">
                                 출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
                               </span>
                               {confirmed && (
                                 <span className="block mt-1">
-                                  <span className="status-chip status-green" title="이 항목은 결정 기록과 함께 사람 확인으로 저장되었습니다">
+                                  <span
+                                    className="status-chip status-green"
+                                    title="이 항목은 결정 기록과 함께 사람 확인으로 저장되었습니다"
+                                  >
                                     <span aria-hidden="true">✓</span> 사람 확인됨 — 결정 기록과 함께 저장
                                   </span>
                                 </span>
@@ -431,9 +522,17 @@ export function ReviewBuckets({
                                   <input
                                     type="checkbox"
                                     checked={checksFor[it.claim] ?? false}
-                                    onChange={(e) => toggleFor(it.claim, e.target.checked, active.startsWith("gate:") ? active.slice(5) : active)}
+                                    onChange={(e) =>
+                                      toggleFor(
+                                        it.claim,
+                                        e.target.checked,
+                                        active.startsWith("gate:") ? active.slice(5) : active,
+                                      )
+                                    }
                                   />
-                                  <span>사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)</span>
+                                  <span>
+                                    사람 확인 — 내용을 검토했습니다 (즉시 저장되며, 결정 기록에도 함께 남습니다)
+                                  </span>
                                 </label>
                               )}
                               {!confirmed && metaFor?.[it.claim] && (
@@ -445,58 +544,123 @@ export function ReviewBuckets({
                           );
                         })}
                       </ul>
-                  </section>
-                );
-              })}
-            </div>
-            <details className="review-dev">
-              <summary>원문 기록 (개발자용)</summary>
-              {/* INTERIM-WORDING */}
-              <p className="review-dev-note">검토 결과의 영문 원문·내부 식별자·검토 기록 해시입니다. 결과를 추적하거나 번역과 대조할 때만 필요하며, 일반 사용에는 열지 않아도 됩니다.</p>
-              <ul>
-                {stages.flatMap((s) =>
-                  BUCKETS.flatMap((b) =>
-                    s[b.key].map((it) => (
-                      <li key={`${s.id}-${b.key}-${it.claim}`}>
-                        <code>{BUCKET_TITLE[b.key].en}</code> · <code>{s.origin}</code> — {it.claim} — {it.reason}
-                        {it.evidence_ref ? <> · <code>{it.evidence_ref}</code></> : null}
-                      </li>
-                    )),
-                  ),
+                      {notReachedItems.length > 0 && (
+                        <details className="review-dev" data-testid="review-not-reached">
+                          <summary>
+                            <Clock size={14} aria-hidden="true" className="inline mr-1" />
+                            <span title="Not reached yet">아직 도달하지 않은 단계, {notReachedItems.length}건</span>
+                          </summary>
+                          <p className="review-dev-note">
+                            아직 진행하지 않은 단계라 확인할 수 없는 항목입니다. 결함이 아니며, 해당 단계에 도달하면
+                            검토됩니다.
+                          </p>
+                          <ul className="review-items text-[length:var(--fs-caption)]">
+                            {notReachedItems.map(({ it, s }) => {
+                              const l = localizeItem(it);
+                              return (
+                                <li key={`${s.id}-nr-${it.claim}`}>
+                                  <span className="font-semibold" title={l.localized ? it.claim : undefined}>
+                                    {l.claim}
+                                  </span>
+                                  <span
+                                    className="block text-[color:var(--muted-fg)]"
+                                    title={l.localized ? it.reason : undefined}
+                                  >
+                                    {l.reason}
+                                  </span>
+                                  <span className="block text-[color:var(--muted-fg)]">
+                                    출처: {citationLabel(s.origin, s.reviewer_domain, it.evidence_ref)}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </details>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+              <details className="review-dev">
+                <summary>원문 기록 (개발자용)</summary>
+                {/* INTERIM-WORDING */}
+                <p className="review-dev-note">
+                  검토 결과의 영문 원문·내부 식별자·검토 기록 해시입니다. 결과를 추적하거나 번역과 대조할 때만 필요하며,
+                  일반 사용에는 열지 않아도 됩니다.
+                </p>
+                <ul>
+                  {stages.flatMap((s) =>
+                    BUCKETS.flatMap((b) =>
+                      s[b.key].map((it) => (
+                        <li key={`${s.id}-${b.key}-${it.claim}`}>
+                          <code>{BUCKET_TITLE[b.key].en}</code> · <code>{s.origin}</code> — {it.claim} — {it.reason}
+                          {it.evidence_ref ? (
+                            <>
+                              {" "}
+                              · <code>{it.evidence_ref}</code>
+                            </>
+                          ) : null}
+                        </li>
+                      )),
+                    ),
+                  )}
+                </ul>
+                <p className="review-dev-note">
+                  검토 기록 <code>{view.content_hash.slice(0, 12)}</code>
+                  {stages.map((s) => (
+                    <span key={s.id}>
+                      {" "}
+                      · <code>{s.id}</code>
+                    </span>
+                  ))}
+                </p>
+              </details>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {canRequest && !headerPrimary && (
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={() => void requestAi2nd()}
+                  >
+                    {busy ? "요청 중…" : view.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
+                  </button>
                 )}
-              </ul>
-              <p className="review-dev-note">
-                검토 기록 <code>{view.content_hash.slice(0, 12)}</code>
-                {stages.map((s) => <span key={s.id}> · <code>{s.id}</code></span>)}
-              </p>
-            </details>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {canRequest && !headerPrimary && (
-                <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void requestAi2nd()}>
-                  {busy ? "요청 중…" : view.ai_2nd?.current ? "AI 2차 검토 다시 요청" : "AI 2차 검토 요청"}
-                </button>
-              )}
-              {canRequest && view.ai_2nd?.performed && view.ai_2nd.current && (
-                <>
-                  <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void recordAudit(true)}>
-                    이 검토에 동의 (검표)
-                  </button>
-                  <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void recordAudit(false)}>
-                    이 검토에 비동의 (검표)
-                  </button>
-                </>
-              )}
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                이번 달 AI 2차 토큰 {view.token_cap.used.toLocaleString()} / {view.token_cap.cap.toLocaleString()} ·
-                산출물이 같으면 저장된 검토를 재사용합니다
-              </span>
-            </div>
-          </>
-        )}
-        <p role="status" aria-live="polite" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
-          {status}
-        </p>
-      </div>
+                {canRequest && view.ai_2nd?.performed && view.ai_2nd.current && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      disabled={busy}
+                      onClick={() => void recordAudit(true)}
+                    >
+                      이 검토에 동의 (검표)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      disabled={busy}
+                      onClick={() => void recordAudit(false)}
+                    >
+                      이 검토에 비동의 (검표)
+                    </button>
+                  </>
+                )}
+                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                  이번 달 AI 2차 토큰 {view.token_cap.used.toLocaleString()} / {view.token_cap.cap.toLocaleString()} ·
+                  산출물이 같으면 저장된 검토를 재사용합니다
+                </span>
+              </div>
+            </>
+          )}
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0"
+          >
+            {status}
+          </p>
+        </div>
       </div>
     </section>
   );

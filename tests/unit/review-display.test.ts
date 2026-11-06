@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { runAiFirstChecks } from "../../app/web-next/lib/review/ai-first.ts";
+import { hasStructuralGaps, runAiFirstChecks } from "../../app/web-next/lib/review/ai-first.ts";
+import { ai2ndPayloadContent, buildAi2ndMessages } from "../../app/web-next/lib/review/ai-second.ts";
 import type { GateArtifact } from "../../app/web-next/lib/review/gate-artifacts.ts";
 import {
   BUCKET_TITLE,
@@ -57,10 +58,19 @@ describe("item 1 - empty missing join", () => {
   test("real missing artifacts are still reported", () => {
     const b = runAiFirstChecks(
       artifact([
-        { id: "S4", name: "진출방식", status: "current", required_artifacts: [], blockers: [], missing_artifacts: ["트랙 결정", "대안"] },
+        {
+          id: "S4",
+          name: "진출방식",
+          status: "current",
+          required_artifacts: [],
+          blockers: [],
+          missing_artifacts: ["트랙 결정", "대안"],
+        },
       ]),
     );
-    expect(b.could_not_verify.find((i) => i.claim.includes("is incomplete"))!.reason).toContain("Missing: 트랙 결정; 대안.");
+    expect(b.could_not_verify.find((i) => i.claim.includes("is incomplete"))!.reason).toContain(
+      "Missing: 트랙 결정; 대안.",
+    );
   });
 
   test("helpers", () => {
@@ -69,11 +79,73 @@ describe("item 1 - empty missing join", () => {
   });
 });
 
+describe("fix 1 - not-reached stages are informational", () => {
+  const st = (
+    id: string,
+    status: GateArtifact["stages"][number]["status"],
+    extra: Partial<GateArtifact["stages"][number]> = {},
+  ) => ({
+    id: id as GateArtifact["stages"][number]["id"],
+    name: `n${id}`,
+    status,
+    required_artifacts: [],
+    blockers: [],
+    missing_artifacts: [],
+    ...extra,
+  });
+
+  test("S3-current entity: S4 is a non-structural not_reached item, no structural gap beyond the current stage", () => {
+    const b = runAiFirstChecks(
+      artifact([
+        st("S1", "complete"),
+        st("S2", "complete"),
+        st("S3", "complete"),
+        st("S4", "locked", { not_reached: true }),
+      ]),
+    );
+    const nr = b.could_not_verify.filter((i) => i.scope === "not_reached");
+    expect(nr).toHaveLength(1);
+    expect(nr[0]!.structural).toBe(false);
+    expect(nr[0]!.claim).toContain("S4");
+    expect(hasStructuralGaps(b)).toBe(false);
+    const l = localizeItem(nr[0]!);
+    expect(l.localized).toBe(true);
+    expect(l.claim).toContain("도달하지 않았습니다");
+    expect(b.could_not_verify.length).toBeGreaterThan(1); // standing accuracy note is still declared
+  });
+
+  test("predecessor-locked (no not_reached flag), current-incomplete and terminated stay structural", () => {
+    for (const status of ["locked", "current", "terminated"] as const) {
+      const b = runAiFirstChecks(artifact([st("S1", status)]));
+      expect(hasStructuralGaps(b)).toBe(true);
+      expect(b.could_not_verify.some((i) => i.scope === "not_reached")).toBe(false);
+    }
+  });
+
+  test("AI 2nd payload excludes not_reached stages", () => {
+    const content = { gate: "screening", stages: [st("S3", "complete"), st("S4", "locked", { not_reached: true })] };
+    expect((ai2ndPayloadContent(content).stages as unknown[]).length).toBe(1);
+    const a = { ...artifact([]), content };
+    const msgs = buildAi2ndMessages(a, "platform-lead", "technical", "functional");
+    const user = msgs[1]!.content;
+    expect(user).toContain('"id":"S3"');
+    expect(user).not.toContain('"id":"S4"');
+    expect(msgs[0]!.content).toContain("not reached yet");
+  });
+});
+
 describe("item 5 - ko catalog", () => {
   test("every AI 1st template localizes (no English fallthrough, no file paths)", () => {
     const b = runAiFirstChecks(
       artifact([
-        { id: "S1", name: "시장", status: "complete", required_artifacts: ["시장 규모"], blockers: [], missing_artifacts: [] },
+        {
+          id: "S1",
+          name: "시장",
+          status: "complete",
+          required_artifacts: ["시장 규모"],
+          blockers: [],
+          missing_artifacts: [],
+        },
         { id: "S2", name: "기회", status: "skipped", required_artifacts: [], blockers: [], missing_artifacts: [] },
         { id: "S3", name: "시너지", status: "terminated", required_artifacts: [], blockers: [], missing_artifacts: [] },
         {
@@ -119,12 +191,22 @@ describe("item 5 - ko catalog", () => {
       could_not_verify: [1],
       needs_judgement: [1, 2, 3],
     });
-    expect(bucketCounts([s("AI 1st", true), s("AI 2nd", false)])).toEqual({ verified: 2, could_not_verify: 1, needs_judgement: 3 });
+    expect(bucketCounts([s("AI 1st", true), s("AI 2nd", false)])).toEqual({
+      verified: 2,
+      could_not_verify: 1,
+      needs_judgement: 3,
+    });
   });
 });
 
 import { readFileSync } from "node:fs";
-import { localizeItem as _li, localizeNotPerformedReason, reviewDomainLabel, reviewOriginText, tidyReasonText } from "../../app/web-next/lib/review/review-display.ts";
+import {
+  localizeItem as _li,
+  localizeNotPerformedReason,
+  reviewDomainLabel,
+  reviewOriginText,
+  tidyReasonText,
+} from "../../app/web-next/lib/review/review-display.ts";
 
 describe("inbox text hygiene (QA sweep B1/B2)", () => {
   test("cleanList drops punctuation-only entries", () => {
@@ -138,7 +220,10 @@ describe("inbox text hygiene (QA sweep B1/B2)", () => {
     expect(out).not.toContain("누락된 산출물");
   });
   test("non-empty lists unchanged; unknown text passes through", () => {
-    const r = _li({ claim: "Stage S6 (X) is incomplete", reason: "screening 진행 HOLD — 보완 필요: a. Missing: b; c." }).reason;
+    const r = _li({
+      claim: "Stage S6 (X) is incomplete",
+      reason: "screening 진행 HOLD — 보완 필요: a. Missing: b; c.",
+    }).reason;
     expect(r).toContain("누락된 산출물: b; c.");
     expect(_li({ claim: "zzz", reason: "free text.." }).reason).toBe("free text.");
     expect(tidyReasonText("Some... ellipsis")).toBe("Some... ellipsis");
@@ -146,7 +231,14 @@ describe("inbox text hygiene (QA sweep B1/B2)", () => {
   });
   test("reviewOriginText", () => {
     expect(reviewOriginText({ origin: "AI 1st", performed: true })).toBe("AI 1차 (결정론 검사)");
-    expect(reviewOriginText({ origin: "AI 2nd", performed: true, reviewer_domain: "technical", reviewer_agent: "platform-lead" })).toBe("AI 2차 · 기술 도메인 · platform-lead");
+    expect(
+      reviewOriginText({
+        origin: "AI 2nd",
+        performed: true,
+        reviewer_domain: "technical",
+        reviewer_agent: "platform-lead",
+      }),
+    ).toBe("AI 2차 · 기술 도메인 · platform-lead");
     for (const s of [
       { origin: "AI 2nd", performed: false, reviewer_domain: null, reviewer_agent: "none" },
       { origin: "AI 2nd", performed: true, reviewer_domain: null, reviewer_agent: "none" },
@@ -173,7 +265,9 @@ describe("inbox text hygiene (QA sweep B1/B2)", () => {
   test("guard: every not-performed reason in ai-second.ts / domains.ts has a Korean catalog entry", () => {
     const root = "app/web-next/lib/review/";
     const src = readFileSync(root + "ai-second.ts", "utf8") + readFileSync(root + "domains.ts", "utf8");
-    const lits = [...src.matchAll(/\breason(?::|\s*\?\?)\s*"([^"]+)"|\breason:\s*`([^`]+)`/g)].map((m) => (m[1] ?? m[2]!).replace(/\$\{[^}]*\}/g, (e) => (/used|cap/.test(e) ? "5" : "x")));
+    const lits = [...src.matchAll(/\breason(?::|\s*\?\?)\s*"([^"]+)"|\breason:\s*`([^`]+)`/g)].map((m) =>
+      (m[1] ?? m[2]!).replace(/\$\{[^}]*\}/g, (e) => (/used|cap/.test(e) ? "5" : "x")),
+    );
     expect(lits.length).toBeGreaterThanOrEqual(7);
     for (const l of lits) {
       const k = localizeNotPerformedReason(l);

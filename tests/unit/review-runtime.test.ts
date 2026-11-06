@@ -207,6 +207,19 @@ describe("AI 1st (deterministic)", () => {
     expect(Object.keys(buckets).sort()).toEqual(["could_not_verify", "needs_judgement", "verified"]);
     expect(buckets.needs_judgement.some((i) => i.claim.includes("screening gate verdict"))).toBe(true);
   });
+  test("a screening-gate entity at S1: later gate stages are not_reached, non-structural; only S1 is structural", () => {
+    const opp = newOpp();
+    const artifact = buildGateArtifact("screening", opp);
+    expect(artifact.stages.find((s) => s.id === "S1")!.not_reached).toBeUndefined();
+    const later = artifact.stages.filter((s) => s.id !== "S1");
+    expect(later.length).toBeGreaterThan(0);
+    for (const s of later) expect(s.not_reached).toBe(true);
+    const buckets = runAiFirstChecks(artifact);
+    const nr = buckets.could_not_verify.filter((i) => i.scope === "not_reached");
+    expect(nr).toHaveLength(later.length);
+    expect(nr.every((i) => i.structural === false)).toBe(true);
+    expect(buckets.could_not_verify.filter((i) => i.structural === true)).toHaveLength(1);
+  });
   test("the content hash is stable for the same evidence and AI 1st is reused", () => {
     const opp = newOpp();
     const a = buildGateArtifact("pre_fs", opp);
@@ -236,9 +249,44 @@ describe("AI 2nd (LLM mocked)", () => {
     return { opp, artifact };
   }
 
+  test("a gate none of whose stages is reached is not performed and never calls the LLM", async () => {
+    const pid = newProject();
+    const artifact = buildGateArtifact("dd", pid);
+    expect(artifact.stages.every((s) => s.not_reached === true)).toBe(true);
+    const calls = { n: 0 };
+    const buckets = runAiFirstChecks(artifact);
+    const out = await runAiSecond(
+      { artifact, ai1stBuckets: buckets, userId: USER, db },
+      fakeDeps([VALID_REPLY], calls),
+    );
+    expect(out.performed).toBe(false);
+    expect(out.notPerformedReason).toContain("No stage of this gate has been reached");
+    expect(calls.n).toBe(0);
+  });
+
+  test("a screening gate with S1 complete and later stages not reached runs AI 2nd on the reached stages only", async () => {
+    const opp = newOpp();
+    const artifact = buildGateArtifact("screening", opp);
+    const reached = {
+      ...artifact,
+      stages: artifact.stages.map((s) => (s.id === "S1" ? { ...s, status: "complete" as const } : s)),
+    };
+    const calls = { n: 0 };
+    const ai1 = runAiFirstChecks(reached);
+    expect(ai1.could_not_verify.some((i) => i.structural === true)).toBe(false);
+    const out = await runAiSecond(
+      { artifact: reached, ai1stBuckets: ai1, userId: USER, db },
+      fakeDeps([VALID_REPLY], calls),
+    );
+    expect(out.notPerformedReason ?? "").not.toContain("structural gaps");
+  });
+
   test("completeStructured dep: provider token count is the recorded cost; a null result is not performed", async () => {
     const out = JSON.parse(VALID_REPLY) as ReviewBuckets;
-    const ok: Ai2ndDeps = { ...fakeDeps([VALID_REPLY], { n: 0 }), completeStructured: async () => ({ value: out, tokens: 1234 }) };
+    const ok: Ai2ndDeps = {
+      ...fakeDeps([VALID_REPLY], { n: 0 }),
+      completeStructured: async () => ({ value: out, tokens: 1234 }),
+    };
     const a = setup().artifact;
     const done = await runAiSecond({ artifact: a, ai1stBuckets: CLEAN, userId: USER, db }, ok);
     expect(done.performed).toBe(true);
@@ -491,7 +539,7 @@ describe("HTTP: human_final only via the human gate POST; review routes", () => 
       headers: { cookie: leadCookie },
       body: JSON.stringify({ gate: "dd" }),
     });
-    expect(r2.status).toBe(200); // AI 1st has structural gaps (and no LLM configured) => recorded as not performed
+    expect(r2.status).toBe(200); // no stage of the dd gate is reached yet (or AI 1st has structural gaps) => recorded as not performed
     const view = ((await r2.json()) as { data: { ai_2nd: { performed: boolean; not_performed_reason: string } } }).data;
     expect(view.ai_2nd.performed).toBe(false);
     expect(humanFinals(pid)).toHaveLength(0);
@@ -515,7 +563,12 @@ describe("HTTP: human_final only via the human gate POST; review routes", () => 
     const res = await nextRequest(`/api/projects/${pid}/gate-decisions`, {
       method: "POST",
       headers: { cookie: leadCookie },
-      body: JSON.stringify({ gate: "dd", decision: "hold", missing_artifacts: ["DD checklist"], rationale: "reviewed" }),
+      body: JSON.stringify({
+        gate: "dd",
+        decision: "hold",
+        missing_artifacts: ["DD checklist"],
+        rationale: "reviewed",
+      }),
     });
     expect(res.status).toBe(201);
     const rows = humanFinals(pid);
@@ -533,7 +586,12 @@ describe("HTTP: human_final only via the human gate POST; review routes", () => 
     const res = await nextRequest(`/api/opportunities/${o}/gate-decisions`, {
       method: "POST",
       headers: { cookie: leadCookie },
-      body: JSON.stringify({ gate: "target_screening", decision: "hold", missing_artifacts: ["S7 shortlist"], rationale: "r" }),
+      body: JSON.stringify({
+        gate: "target_screening",
+        decision: "hold",
+        missing_artifacts: ["S7 shortlist"],
+        rationale: "r",
+      }),
     });
     expect(res.status).toBe(201);
     expect(count("review_stage")).toBe(before);

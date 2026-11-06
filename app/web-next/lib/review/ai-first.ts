@@ -3,6 +3,8 @@
 // sorts the outcome into the three buckets:
 //   verified          — the stage's completion predicate is satisfied
 //   could_not_verify  — missing / incomplete / locked structure (structural),
+//                       (stages the entity has not reached yet are listed too,
+//                       as non-structural scope:"not_reached" items),
 //                       plus a standing note that content accuracy was not
 //                       examined, so this list is never empty
 //   needs_judgement   — substance of completed artifacts and the gate verdict
@@ -53,6 +55,17 @@ export function runAiFirstChecks(artifact: ReviewArtifact): ReviewBuckets {
         reason: `${joinBlockers(s.blockers) || "Completion predicate not satisfied."}${missing}`,
         evidence_ref: ref,
         structural: true,
+      });
+    } else if (s.not_reached) {
+      // Informational: the entity has not reached this stage yet. Declared (the
+      // reviewer must still see what was not checked) but not a defect, so it
+      // is non-structural and never blocks AI 2nd.
+      could.push({
+        claim: `Stage ${s.id} (${s.name}) has not been reached yet`,
+        reason: "The entity is still at an earlier stage, so this stage's artifacts were not checked.",
+        evidence_ref: ref,
+        structural: false,
+        scope: "not_reached",
       });
     } else {
       could.push({
