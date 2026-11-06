@@ -19,7 +19,7 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { deriveDataConfidence } from "../../../db/lib/data-confidence.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
-import { isWebResearchConfigured, researchSources } from "./web-research.ts";
+import { isWebResearchConfigured, researchSources, researchSourcesDetailed, type WebSource } from "./web-research.ts";
 import {
   appendExternalReference,
   acceptedCalibrationDrivers,
@@ -29,7 +29,7 @@ import {
   resolveExternalReference,
   CALIBRATION_TRIGGER_PCT,
 } from "./market-calibration.ts";
-import { GENERIC_SEGMENTS, type SizingMatrix } from "./market-sizing.ts";
+import { GENERIC_SEGMENTS, type AnchorSource, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
 import { refreshAutoSizingLinks } from "./sizing-auto-link.ts";
@@ -332,14 +332,19 @@ export function assertUsableBaseline(rawTotal: number, totalNow: number): void {
   throw new Error("기준선 매트릭스가 전부 0으로 해석되어 분석을 완료하지 못했습니다 — 재분석으로 재시도하세요");
 }
 
-// Step 5 탑다운 컨센서스 해석 — 우선순위: 기록 참조 > LLM 선험 > 0(미입력)
-// (design 2026-09-18-s1-growth-gap-calibration 추가분, 2026-11-06). 보정 루프에서
-// 사람이 기록한 외부 참조가 있으면 그 external_cagr_pct(%)를 그대로 컨센서스로
-// 쓰고 LLM 선험 질의를 건너뛴다(R1: 기록된 참조는 재분석에서 그대로 재사용 —
-// LLM 선험은 폴백일 뿐). 두 경로 모두 유효한 값이 없으면 0을 돌려준다 — 절대
+// Step 5 탑다운 컨센서스 해석 — 우선순위: 기록 참조 > 웹 검색 추출 > LLM 선험 >
+// 0(미입력) (design 2026-09-18-s1-growth-gap-calibration 추가분, 2026-11-06;
+// 웹 접지 2순위는 design 2026-11-06-s1-quantitative-web-grounding v1.3.0). 보정
+// 루프에서 사람이 기록한 외부 참조가 있으면 그 external_cagr_pct(%)를 그대로
+// 컨센서스로 쓰고 검색·LLM 선험 질의를 건너뛴다(R1: 기록된 참조는 재분석에서
+// 그대로 재사용 — 검색과 LLM 선험은 폴백일 뿐). 참조가 없고 웹 발췌 추출이
+// 성공했으면 그 값이 컨센서스가 되고 origin web_research로 표기된다(R4). 그
+// 마저 없으면 기존 LLM 선험 경로. 모두 유효한 값이 없으면 0을 돌려준다 — 절대
 // 날조하지 않는다. 요약 표기·tolerance 노트·pendingInputs 문구도 한 곳에 모은다.
 export interface TopDownConsensusSource {
   source_label: string;
+  /** 기록 참조의 원문 URL (선택) — consistency.source.url 기원 표기용(R9). */
+  source_url?: string | null;
   captured_from: string;
   external_cagr_pct: number;
 }
@@ -349,11 +354,16 @@ export interface TopDownConsensus {
   summaryLabel: string; // step-5 summary의 컨센서스 표기
   toleranceNote: string; // consistency.tolerance 노트
   pendingInputs: string[];
+  /** R9 (v1.3.0) — 컨센서스 기원 표기 (선택): 기록 참조=user, 웹 검색 추출=
+   *  web_research, LLM 선험=llm_prior. 값이 없으면(미입력) 생략. */
+  source?: { label: string; url?: string; origin: "user" | "web_research" | "llm_prior" };
 }
 
 export function resolveTopDownConsensus(input: {
   externalReference: TopDownConsensusSource | null;
-  llmCagrFrac: number | null; // LLM 선험의 cagr(분수, 예: 0.08) — 기록 참조가 있으면 질의하지 않았으므로 null
+  llmCagrFrac: number | null; // LLM 선험의 cagr(분수, 예: 0.08) — 기록 참조·웹 추출이 있으면 질의하지 않았으므로 null
+  llmSourceLabel?: string | null; // LLM 선험 응답의 출처 라벨(선택) — origin 표기용(R9)
+  webExtraction?: { cagrPct: number; sourceLabel: string; sourceUrl?: string } | null; // 웹 발췌 추출 성공분(R4) — 기록 참조가 있으면 null
 }): TopDownConsensus {
   const ref = input.externalReference && input.externalReference.external_cagr_pct > 0 ? input.externalReference : null;
   if (ref) {
@@ -364,6 +374,20 @@ export function resolveTopDownConsensus(input: {
       summaryLabel: `${topDownCagr.toFixed(1)}% (기록된 외부 참조)`,
       toleranceNote: `탑다운 컨센서스는 사람이 기록한 외부 참조(${ref.source_label}, ${ref.captured_from}) — 원문 출처 확인됨. 내부 정합성 확인으로만 사용(독립 검증 아님).`,
       pendingInputs: ["컨센서스 원문 출처 주기적 재확인"],
+      source: { label: ref.source_label, ...(ref.source_url ? { url: ref.source_url } : {}), origin: "user" },
+    };
+  }
+  // 웹 검색 추출 경로 (R4, v1.3.0) — 기록 참조 다음, LLM 선험 앞(2순위). 발췌
+  // 검증을 통과한 값만 여기에 도달하며 스니펫은 미검증 출처임을 노트에 명시한다.
+  const web = input.webExtraction && input.webExtraction.cagrPct > 0 ? input.webExtraction : null;
+  if (web) {
+    const topDownCagr = Math.round(web.cagrPct * 10) / 10;
+    return {
+      topDownCagr,
+      summaryLabel: `${topDownCagr.toFixed(1)}% (웹 검색 추출)`,
+      toleranceNote: `탑다운 컨센서스는 웹 검색 발췌에서 추출한 값(${web.sourceLabel}) — 원문 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님).`,
+      pendingInputs: ["컨센서스 원문 출처 확인 (웹 검색 발췌 기반)"],
+      source: { label: web.sourceLabel, url: web.sourceUrl, origin: "web_research" },
     };
   }
   // LLM 선험 경로(기존 동작 유지) — 분수(0.08)를 %(8.0)로 환산한다.
@@ -377,7 +401,124 @@ export function resolveTopDownConsensus(input: {
       ? "탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님)."
       : "탑다운 컨센서스 미입력 — 보정 루프에서 외부 참조를 기록하면 재분석 때 컨센서스로 사용됩니다. 내부 정합성 확인으로만 사용(독립 검증 아님).",
     pendingInputs: topDownCagr > 0 ? ["컨센서스 CAGR의 원문 출처 확인"] : ["보정 루프에서 외부 참조로 탑다운 컨센서스 CAGR 기록"],
+    ...(topDownCagr > 0 ? { source: { label: input.llmSourceLabel || "LLM 선험", origin: "llm_prior" as const } } : {}),
   };
+}
+
+// ── 웹 검색 정량 접지 공통 헬퍼 (design 2026-11-06-s1-quantitative-web-grounding,
+// v1.3.0) ── R1 우선순위: 사람 기록 참조 > 웹 검색 추출 > LLM 선험 > 미입력.
+// R2: 발췌에 없는 값을 만들어내지 않는다 — 추출 출력은 항목 단위로 검증(값 존재
+// + 상식 경계 + 발췌 인덱스 범위 + URL 일치)하고 통과분만 provenance와 함께
+// 반영한다. R7: 검색 미설정·실패·쿼터 초과·결과 공백은 모두 빈 발췌로 귀결되어
+// 호출 단계가 기존 동작(LLM 선험)으로 정확히 열화한다 — 새 고장 경로 없음.
+
+/** 정량 단계별 검색 질의 상한 — 단계당 2~3개, 4단계(step 2/4/5/5-B)로 런당 최대
+ *  ~10회(R7). limit은 기존 정성 섹션(researchSources)과 동일한 상한. */
+const EXCERPT_LIMIT = 10;
+
+/** 발췌 추출 수치의 상식 경계 — 경계 밖 값은 항목 단위로 폐기한다(날조 차단). */
+export const EXCERPT_VALUE_BOUNDS: Record<string, { min: number; max: number }> = {
+  cagr: { min: 0.001, max: 0.99 }, // 연평균 성장률(분수) — 0.1%~99%
+  size_b: { min: 0.01, max: 200000 }, // 시장규모($B) — 세계 GDP 규모를 넘는 값 폐기
+  year: { min: 2020, max: 2050 }, // 기준·전망 연도
+  target_year: { min: 2020, max: 2050 },
+};
+
+/** 추출 호출 주입 시임 — 파이프라인은 askJsonTracked을, 단위 테스트는 스텁을 넣는다. */
+export type AskJsonFn = (industry: string, instruction: string, purpose?: string) => Promise<Record<string, unknown> | null>;
+
+/** 검증 통과 발췌 항목 — provenance {label, url} 포함. */
+export interface ExcerptGroundedItem {
+  excerptIndex: number;
+  label: string; // 출처명(발췌 제목 폴백)
+  url: string; // 해당 발췌의 URL(검증 일치)
+  values: Record<string, number>;
+}
+
+/** 항목 단위 검증 (R2 공통 규격 4단) — 값 존재 + 상식 경계 통과 + 발췌 인덱스가
+ *  실제 발췌를 가리킴 + URL이 해당 발췌와 일치. 하나라도 어기면 그 항목만 버린다
+ *  (전체를 버리지 않는다 — 항목 단위 폴백). 순수 함수 — 단위 테스트 대상. */
+export function validateExcerptItems(
+  raw: unknown,
+  excerpts: Array<Pick<WebSource, "title" | "url">>,
+  numericFields: string[],
+  bounds: Record<string, { min: number; max: number }>,
+): ExcerptGroundedItem[] {
+  const items = Array.isArray(raw) ? raw : [];
+  const out: ExcerptGroundedItem[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const rec = item as Record<string, unknown>;
+    const idx = rec.excerpt_index;
+    if (!Number.isInteger(idx) || (idx as number) < 0 || (idx as number) >= excerpts.length) continue;
+    const src = excerpts[idx as number];
+    if (str(rec.url) !== src.url) continue;
+    const values: Record<string, number> = {};
+    let ok = true;
+    for (const f of numericFields) {
+      const v = rec[f];
+      const b = bounds[f];
+      if (typeof v !== "number" || !Number.isFinite(v) || !b || v < b.min || v > b.max) {
+        ok = false;
+        break;
+      }
+      values[f] = v;
+    }
+    if (!ok) continue;
+    out.push({ excerptIndex: idx as number, label: str(rec.source_label, src.title), url: src.url, values });
+  }
+  return out;
+}
+
+/** R2 공통 추출 프로토콜 — 번호 매긴 발췌(0-based) → 추출 전용 askJson 호출 1회 →
+ *  항목 단위 검증 → 통과분만 provenance와 함께 반환. 발췌가 비면 호출 자체를
+ *  발사하지 않는다(검색 공백에서의 발췌外 날조 금지 — R1/R4). */
+export async function extractFromExcerpts(opts: {
+  ask: AskJsonFn;
+  industry: string;
+  purpose: string;
+  excerpts: WebSource[];
+  /** 출력 스키마 예시 — 예: `{"source_label":"...","url":"...","excerpt_index":0,"size_b":2.5,"year":2026}` */
+  schemaHint: string;
+  numericFields: string[];
+  bounds?: Record<string, { min: number; max: number }>;
+}): Promise<ExcerptGroundedItem[]> {
+  if (opts.excerpts.length === 0) return [];
+  const numbered = opts.excerpts.map((s, i) => `[${i}] ${s.title} (${s.url})\n${s.snippet.slice(0, 400)}`).join("\n");
+  const instruction =
+    "[웹 발췌 정량 추출 — R2 프로토콜] 아래 번호 매긴 웹 발췌에서만 값을 추출하세요. " +
+    "각 항목의 excerpt_index(0-based)와 url은 해당 발췌와 정확히 일치해야 하고, 발췌에 실제로 나타난 값만 담을 수 있습니다 — " +
+    "발췌에 없는 값은 절대 만들어내지 말고 그 항목을 출력하지 마세요.\n" +
+    `JSON: {"items":[${opts.schemaHint}]}\n\n발췌:\n${numbered}`;
+  const json = await opts.ask(opts.industry, instruction, opts.purpose);
+  if (!json) return [];
+  return validateExcerptItems(json.items, opts.excerpts, opts.numericFields, opts.bounds ?? EXCERPT_VALUE_BOUNDS);
+}
+
+/** R7 — 정량 단계 공통 검색 구간. 미설정·실패·쿼터 초과(기존 서킷브레이커·쿼터
+ *  처리 재사용)·결과 공백은 모두 빈 배열 — 호출 단계는 검색 구간을 건너뛰고
+ *  기존 동작(LLM 선험)으로 정확히 열화한다. */
+async function quantitativeExcerpts(queries: string[]): Promise<WebSource[]> {
+  quantSearchQueryCount += queries.length; // R7 비용 상한 관측 시임(아래 헬퍼 참고)
+  if (!isWebResearchConfigured()) return [];
+  try {
+    const r = await researchSourcesDetailed(queries, EXCERPT_LIMIT);
+    if (r.quotaExceeded) return []; // 쿼터 초과도 검색 구간 생략 — R7 열화 보장
+    return r.sources;
+  } catch {
+    return []; // 검색 실패 — 새 고장 경로 없음(R7)
+  }
+}
+
+// R7 비용 상한 관측 시임 — 정량 단계(step 2/4/5/5-B) 검색 질의수 카운터. 프로덕션
+// 로직에는 영향이 없다(카운트만 기록). web-research.ts의 setWebResearchClockForTests
+// 계열 시임과 같은 취지다.
+let quantSearchQueryCount = 0;
+export function getQuantSearchQueryCountForTests(): number {
+  return quantSearchQueryCount;
+}
+export function resetQuantSearchQueryCountForTests(): void {
+  quantSearchQueryCount = 0;
 }
 
 export async function runSizingPipeline(db: Database, analysisId: string): Promise<void> {
@@ -635,12 +776,30 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 2: anchor triangulation (LLM proposes source estimates) ──
   advance(2);
+  // R3 (v1.3.0) — 시장규모 추정치를 여러 명명된 출처에서 웹 검색하고 추출 호출
+  // 1회로 검증한다. 검증 통과분만 아래 앵커 소스 풀에 URL과 함께 가산되고,
+  // 검색 실패·공백·추출 실패 시 빈 배열 — 기존 앵커 흐름과 합계가 그대로
+  // 유지된다(R7 열화).
+  const anchorWebExcerpts = await quantitativeExcerpts([
+    `${industry} market size 2025 estimate`,
+    `${industry} 시장 규모 보고서`,
+    `${industry} market size billion USD estimate`,
+  ]);
+  const anchorWebItems = await extractFromExcerpts({
+    ask: askJsonTracked,
+    industry,
+    purpose: "S1 step 2 — 웹 발췌 시장규모 추정 추출",
+    excerpts: anchorWebExcerpts,
+    schemaHint: `{"source_label":"출처명","url":"발췌 URL","excerpt_index":0,"size_b":2.5,"year":2026}`,
+    numericFields: ["size_b", "year"],
+  });
   const anchorJson = await askJsonTracked(
     industry,
     `2026년 글로벌 시장 규모(단위: 십억 달러) 추정치를 3개 소스 관점에서 제시하세요. JSON: {"sources":[{"label":"소스 관점 설명(기관·리포트명)","estimate":2.0,"status":"consensus|excluded","methodology":"그 소스가 시장을 어떻게 정의·측정했는지 한 문장","sourceUrl":"알려진 출처 URL(없으면 생략)","note":"비고"}]}. status는 뚜렷이 튀는 추정치 하나만 excluded로. LLM이 제시하는 total은 사용하지 않으므로 포함하지 말 것.` + demandLine + calibrationConstraints,
   );
   const rawSources = Array.isArray(anchorJson?.sources) ? (anchorJson!.sources as Array<Record<string, unknown>>) : [];
-  const anchorSources = rawSources.slice(0, 4).map((s, i) => ({
+  // 명시적 AnchorSource[] 타입 — 웹 접지 소스 가산(아래 push)과 요소 타입을 맞춘다.
+  const anchorSources: SizingMatrix["anchor"]["sources"] = rawSources.slice(0, 4).map((s, i) => ({
     label: str(s.label, `소스 관점 #${i + 1} (추정, 검증 전)`),
     estimate: num(s.estimate, 1.0),
     status: (s.status === "excluded" ? "excluded" : "consensus") as "consensus" | "excluded",
@@ -649,6 +808,20 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     asOf: new Date().toISOString().slice(0, 10),
     note: `${str(s.note, "")} — LLM 추정, 검증 전`,
   }));
+  // 웹 접지 소스 가산 (R3) — 추출 검증을 통과한 항목만, 상한 3건. URL이 붙는
+  // 앵커 소스는 이 항목들뿐이다(발췌에 없는 값은 가산되지 않는다 — R2). 기존
+  // 중앙값 이상치 제외·평균 재계산 흐름이 그대로 적용되며, 합계 변화는 접지
+  // 성공 시에만 생긴다(검색 실패 시 불변 — R7).
+  const anchorWebEntries: AnchorSource[] = anchorWebItems.slice(0, 3).map((it) => ({
+    label: it.label,
+    estimate: it.values.size_b,
+    status: "consensus" as const,
+    methodology: `웹 검색 발췌 추출 (기준 ${Math.round(it.values.year)}년)`,
+    sourceUrl: it.url,
+    asOf: new Date().toISOString().slice(0, 10),
+    note: "웹 검색 발췌에서 추출한 시장규모 추정치 — 원문 확인 전",
+  }));
+  anchorSources.push(...anchorWebEntries);
   // 결정론적 이상치 제외 — LLM 판단과 무관하게 소스 추정치의 중앙값 대비 3배 이상
   // 벗어나면 기계적으로 excluded 처리한다(교차 산정의 이상치 제외 규칙 하한).
   // 방법론상 다중 소스 규모가 수십 배 발산할 수 있으므로(예: 시장 정의 범위 차이)
@@ -698,9 +871,21 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
 
   // ── Step 4: per-cell baselines + CAGRs + band overrides ──
   advance(4);
+  // R6 (v1.3.0) — 검색으로 셀별 값을 배정하지 않는다(가짜 정밀도 방지). 대신
+  // 산업 성장 전망 발췌를 참고 맥락으로 수집해 프롬프트에 주입하고, 셀별 값의
+  // 산출 책임은 기존대로 LLM+보정 제약에 둔다. 셀 값에 provenance를 붙이지
+  // 않는다.
+  const growthExcerpts = await quantitativeExcerpts([
+    `${industry} market growth outlook forecast report`,
+    `${industry} 성장 전망 산업 전망치`,
+  ]);
+  const growthOutlookContext = growthExcerpts.length
+    ? `\n\n[산업 성장 전망 발췌 — 참고 맥락 전용] 아래 발췌는 성장 방향·구조 판단의 배경 자료입니다. 셀별 CAGR 값을 이 발췌에서 그대로 배정하지 말 것(가짜 정밀도 방지) — 셀별 값은 아래 보정 제약과 산업 지식으로 추정하세요:\n` +
+      growthExcerpts.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet.slice(0, 400)}`).join("\n")
+    : "";
   const cagrJson = await askJsonTracked(
     industry,
-    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로. 성장률은 수요처(전방) 산업의 성장률과 정합되게.` + demandLine + calibrationConstraints,
+    `권역×세그먼트별 2026 기준 시장규모(십억 달러, 합계≈${anchorTotal.toFixed(2)})와 2026→2030 CAGR(소수)을 추정하세요. JSON: {"baseline":{"china":{"${segs[0].code}":0.2,"${segs[1].code}":0.1${segs[2] ? `,"${segs[2].code}":0.05` : ""}, ...}, ...}, "cagr":{"china":{"${segs[0].code}":0.06, ...}}, "overrides":[{"region":"north_america","segment":"${segs[1].code}","down":0.02,"up":0.11,"reason":"..."}]}. 6개 권역 × ${segs.map((x) => x.code).join("|")}. baseline 합계는 앵커 ${anchorTotal.toFixed(2)}와 ±15% 이내로. 성장률은 수요처(전방) 산업의 성장률과 정합되게.` + demandLine + calibrationConstraints + growthOutlookContext,
   );
   const readMatrix = (obj: unknown): Record<string, Record<string, number>> => {
     const out: Record<string, Record<string, number>> = {};
@@ -769,14 +954,45 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 뿐이고, 추적된 호출도 낭비하지 않는다). 참조가 없을 때만 LLM에 공개
   // 컨센서스 관점값을 묻는다(정합성 비교가 실제 두 값 사이의 비교가 되도록).
   let llmCagrFrac: number | null = null;
+  let llmSourceLabel: string | null = null;
+  let webConsensus: { cagrPct: number; sourceLabel: string; sourceUrl?: string } | null = null;
   if (!externalReference) {
-    const tdJson = await askJsonTracked(
-      industry,
-      `이 산업의 공개된 시장 성장률 컨센서스(주요 시장조사기관 전망의 대표값, 연평균, 소수)를 제시하세요. JSON: {"cagr":0.08,"sourceLabel":"출처 관점(예: 글로벌 리서치 기관 전망 평균)","note":"전제 한 문장"}. 신뢰할 공개 컨센서스를 모르면 {"cagr":null}.`,
-    );
-    llmCagrFrac = typeof tdJson?.cagr === "number" ? tdJson.cagr : null;
+    // R4 (v1.3.0) — 기록 참조가 없을 때만: 공개 성장률 컨센서스를 웹 검색(2순위)
+    // 하고, 발췌가 있을 때 추출 호출 1회를 실행한다. 검색 공백에서는 추출 호출을
+    // 아예 발사하지 않는다(발췌에 없는 값의 날조 금지 — R1/R2).
+    const cagrExcerpts = await quantitativeExcerpts([
+      `${industry} market CAGR forecast consensus`,
+      `${industry} 성장률 전망 컨센서스`,
+    ]);
+    if (cagrExcerpts.length > 0) {
+      const cagrItems = await extractFromExcerpts({
+        ask: askJsonTracked,
+        industry,
+        purpose: "S1 step 5 — 웹 발췌 성장률 컨센서스 추출",
+        excerpts: cagrExcerpts,
+        schemaHint: `{"source_label":"출처명","url":"발췌 URL","excerpt_index":0,"cagr":0.08}`,
+        numericFields: ["cagr"],
+      });
+      const first = cagrItems[0];
+      if (first) {
+        webConsensus = {
+          cagrPct: Math.round(first.values.cagr * 1000) / 10,
+          sourceLabel: first.label,
+          sourceUrl: first.url,
+        };
+      }
+    }
+    if (!webConsensus) {
+      // 3순위 폴백 — 기존 LLM 선험 경로 그대로(문구·값 해석 불변).
+      const tdJson = await askJsonTracked(
+        industry,
+        `이 산업의 공개된 시장 성장률 컨센서스(주요 시장조사기관 전망의 대표값, 연평균, 소수)를 제시하세요. JSON: {"cagr":0.08,"sourceLabel":"출처 관점(예: 글로벌 리서치 기관 전망 평균)","note":"전제 한 문장"}. 신뢰할 공개 컨센서스를 모르면 {"cagr":null}.`,
+      );
+      llmCagrFrac = typeof tdJson?.cagr === "number" ? tdJson.cagr : null;
+      llmSourceLabel = str(tdJson?.sourceLabel) || null;
+    }
   }
-  const td = resolveTopDownConsensus({ externalReference, llmCagrFrac });
+  const td = resolveTopDownConsensus({ externalReference, llmCagrFrac, llmSourceLabel, webExtraction: webConsensus });
   const topDownCagr = td.topDownCagr;
   const s5 = await summarize(
     industry,
@@ -800,31 +1016,75 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   let targetYear = efTarget ? efTarget.target_year : 0;
   let externalSize = efTarget ? efTarget.external_size_b ?? 0 : 0;
   let externalCagrFrac = efTarget ? efTarget.external_cagr_pct / 100 : null;
+  let externalForecastSourceUrl: string | undefined;
   let externalNote = efTarget
-    ? `사람이 기록한 외부 참조 (${efTarget.captured_from === "user" ? "출처 확인" : efTarget.captured_from}) — 재분석 시에도 이 참조를 사용합니다.`
+    ? `${efTarget.captured_from === "user" ? "사람이 기록한 외부 참조 (출처 확인)" : `파이프라인이 저장한 외부 참조 (${efTarget.captured_from})`} — 재분석 시에도 이 참조를 사용합니다.`
     : null;
   if (!efTarget) {
-    const efJson = await askJsonTracked(
-      industry,
-      `이 산업의 공개된 미래 시장 전망치(특정 연도의 시장규모, 십억 달러)를 알고 있는가? JSON: {"available":true,"sourceLabel":"전망 출처(기관/리포트명)","targetYear":2030,"marketSize":3.5,"cagr":0.07,"note":"전망의 전제"}. 알려진 공개 전망이 없으면 {"available":false}만.`,
-    );
-    if (efJson?.available === true) {
-      sourceLabel = str(efJson.sourceLabel, "외부 전망 (검증 전)");
-      targetYear = Math.round(num(efJson.targetYear, 2030));
-      externalSize = num(efJson.marketSize, 0);
-      externalCagrFrac = typeof efJson.cagr === "number" && efJson.cagr > 0 && efJson.cagr < 1 ? efJson.cagr : null;
-      externalNote = str(efJson.note, "LLM이 제시한 공개 전망 — 출처 확인 필요");
-      // llm_prior 참조 저장 — 이 값이 다음 재분석의 고정 참조가 된다.
-      if (sourceLabel && targetYear > 2026 && (externalSize > 0 || externalCagrFrac)) {
-        appendExternalReference(db, {
-          industry_id: analysis.industry_id,
-          source_label: sourceLabel,
-          target_year: targetYear,
-          external_cagr_pct: externalCagrFrac ? Math.round(externalCagrFrac * 1000) / 10 : 0,
-          external_size_b: externalSize > 0 ? externalSize : null,
-          captured_from: "llm_prior",
-          created_by: "market-sizing-pipeline",
-        });
+    // R5 (v1.3.0) — 웹 검색 우선(2순위): 공표된 시장규모 전망(연도+규모)을
+    // 검색·추출하고, 검증 통과분을 전망으로 사용한다. 발췌가 없으면 추출 호출을
+    // 발사하지 않고 기존 LLM 선험 경로로 폴백한다(R1/R2/R7).
+    const forecastExcerpts = await quantitativeExcerpts([
+      `${industry} market size 2030 forecast $B`,
+      `${industry} market forecast 2030 billion USD`,
+      `${industry} 시장 전망 2030년 규모`,
+    ]);
+    const forecastItems = (
+      await extractFromExcerpts({
+        ask: askJsonTracked,
+        industry,
+        purpose: "S1 step 5-B — 웹 발췌 시장규모 전망 추출",
+        excerpts: forecastExcerpts,
+        schemaHint: `{"source_label":"출처명","url":"발췌 URL","excerpt_index":0,"target_year":2030,"size_b":3.5}`,
+        numericFields: ["target_year", "size_b"],
+      })
+    ).filter((it) => it.values.target_year > 2026); // 전망은 기준연도(2026) 이후만 유효
+    const fc = forecastItems[0];
+    if (fc) {
+      sourceLabel = fc.label;
+      targetYear = Math.round(fc.values.target_year);
+      externalSize = fc.values.size_b;
+      externalCagrFrac = null; // 규모 기준 전망 — 격차는 sizeGapPct로 계산된다
+      externalForecastSourceUrl = fc.url;
+      externalNote = "웹 검색 발췌에서 추출한 공개 전망 — 원문 확인 전";
+      // R9 — 웹 접지 전망을 web_research 참조로 1회 저장한다(기존 llm_prior 저장과
+      // 같은 안정화 이유 — 재분석 시 재검색 노이즈를 멈춘다). 이후 실행은 기록
+      // 참조 우선(R1 1순위)으로 이 값을 그대로 재사용한다.
+      appendExternalReference(db, {
+        industry_id: analysis.industry_id,
+        source_label: sourceLabel,
+        source_url: fc.url,
+        target_year: targetYear,
+        external_cagr_pct: 0,
+        external_size_b: externalSize,
+        captured_from: "web_research",
+        created_by: "market-sizing-pipeline",
+      });
+    }
+    if (!sourceLabel) {
+      // 3순위 폴백 — 기존 LLM 선험 경로 그대로.
+      const efJson = await askJsonTracked(
+        industry,
+        `이 산업의 공개된 미래 시장 전망치(특정 연도의 시장규모, 십억 달러)를 알고 있는가? JSON: {"available":true,"sourceLabel":"전망 출처(기관/리포트명)","targetYear":2030,"marketSize":3.5,"cagr":0.07,"note":"전망의 전제"}. 알려진 공개 전망이 없으면 {"available":false}만.`,
+      );
+      if (efJson?.available === true) {
+        sourceLabel = str(efJson.sourceLabel, "외부 전망 (검증 전)");
+        targetYear = Math.round(num(efJson.targetYear, 2030));
+        externalSize = num(efJson.marketSize, 0);
+        externalCagrFrac = typeof efJson.cagr === "number" && efJson.cagr > 0 && efJson.cagr < 1 ? efJson.cagr : null;
+        externalNote = str(efJson.note, "LLM이 제시한 공개 전망 — 출처 확인 필요");
+        // llm_prior 참조 저장 — 이 값이 다음 재분석의 고정 참조가 된다.
+        if (sourceLabel && targetYear > 2026 && (externalSize > 0 || externalCagrFrac)) {
+          appendExternalReference(db, {
+            industry_id: analysis.industry_id,
+            source_label: sourceLabel,
+            target_year: targetYear,
+            external_cagr_pct: externalCagrFrac ? Math.round(externalCagrFrac * 1000) / 10 : 0,
+            external_size_b: externalSize > 0 ? externalSize : null,
+            captured_from: "llm_prior",
+            created_by: "market-sizing-pipeline",
+          });
+        }
       }
     }
   }
@@ -852,6 +1112,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       targetYear: targetYear || 2030,
       marketSize: externalSize,
       cagr: externalCagrFrac ?? undefined,
+      sourceUrl: externalForecastSourceUrl,
       note: externalNote ?? "외부 전망 — 출처 확인 필요",
       ourMarketSize: Math.round(ourSize * 100) / 100,
       gapPct,
@@ -1053,10 +1314,19 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       : undefined;
   // 섹션별 등급은 산출 특성에서 결정론적으로 부여한다: LLM 추정 파이프라인의
   // 정량 섹션은 검증 전이므로 C 상·하한, 웹 리서치 기반 정성 섹션은 B-.
+  // R8 (v1.3.0) — 검색 접지된 정량 섹션은 한 계단 상승(앵커 C→B-, 셀별 CAGR
+  // C-→C)하고 노트는 솔직하게 쓴다("웹 검색 N건 기반 — 원문 확인 전"). 폴백
+  // 섹션은 현재 등급·노트 유지. 웹 스니펫은 미검증 출처므로 B-가 상한이다 —
+  // A 절대 불가(RAG 캡 프레이밍 유지).
+  const anchorWebGroundedCount = anchorWebEntries.filter((s) => s.status === "consensus").length;
   const sectionConfidence: SizingMatrix["sectionConfidence"] = [
-    { section: "기준 시장규모 (앵커)", grade: "C", note: "LLM 추정 다중 소스 — 벤더 리포트 원문 대조 전" },
+    anchorWebGroundedCount > 0
+      ? { section: "기준 시장규모 (앵커)", grade: "B-", note: `웹 검색 ${anchorWebGroundedCount}건 기반 — 원문 확인 전` }
+      : { section: "기준 시장규모 (앵커)", grade: "C", note: "LLM 추정 다중 소스 — 벤더 리포트 원문 대조 전" },
     { section: "권역·세그먼트 배분", grade: "C-", note: "LLM 추정 배분 — 공시 프록시 검증 전" },
-    { section: "셀별 CAGR", grade: "C-", note: "LLM 추정 — 소스 근거 입력 전" },
+    growthExcerpts.length > 0
+      ? { section: "셀별 CAGR", grade: "C", note: `웹 검색 ${growthExcerpts.length}건 기반 — 원문 확인 전` }
+      : { section: "셀별 CAGR", grade: "C-", note: "LLM 추정 — 소스 근거 입력 전" },
     { section: "경쟁 구조", grade: "C", note: "LLM 추정 — 공시 대조 전" },
     { section: "정성 분석", grade: research.length ? "B-" : "D", note: research.length ? `웹 리서치 ${research.length}건 기반 — 원문 확인 전` : "리서치 미구성 — LLM 지식만 사용" },
     { section: "수요 파이프라인", grade: pipelineResearch.length ? "B-" : "D", note: pipelineResearch.length ? `웹 리서치 ${pipelineResearch.length}건 기반 — 프로젝트 공시 확인 전` : "리서치 미구성 — LLM 지식만 사용" },
@@ -1110,6 +1380,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       bottomUpCagr: Math.round(bottomUpCagr * 1000) / 10,
       topDownCagr,
       tolerance: td.toleranceNote,
+      ...(td.source ? { source: td.source } : {}), // R9 — 컨센서스 기원 표기(user/web_research/llm_prior)
     },
     externalForecast,
     crossValidation,
@@ -1150,7 +1421,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     unit_basis: analysis.unit_basis ?? "usd_b_year", // ADR-0181 follow-up: S1 analysis-time declaration; NULL = the $B convention
   };
   const payload = JSON.stringify({
-    methodology: "systematic-market-sizing v1.2.0",
+    methodology: "systematic-market-sizing v1.3.0",
     matrix: { ...matrix, scope: declaredScope },
     stepSummaries,
     scope: declaredScope,
