@@ -24,14 +24,14 @@ const FAMILY: DynamicKeyFamily = {
   typeName: "RetentionHandling",
 };
 
-const FAMILIES: readonly DynamicKeyFamily[] = [
-  FAMILY,
-  { ...FAMILY, prefix: "handlingHint_" },
-];
+const FAMILIES: readonly DynamicKeyFamily[] = [FAMILY, { ...FAMILY, prefix: "handlingHint_" }];
 
 const realCatalogs = (): Record<string, unknown> =>
   Object.fromEntries(
-    LOCALES.map((locale) => [locale, JSON.parse(readFileSync(join(PROJECT_ROOT, "app/web-next/locales", `${locale}.json`), "utf8"))]),
+    LOCALES.map((locale) => [
+      locale,
+      JSON.parse(readFileSync(join(PROJECT_ROOT, "app/web-next/locales", `${locale}.json`), "utf8")),
+    ]),
   );
 
 describe("dynamic-key union parser", () => {
@@ -46,28 +46,20 @@ describe("dynamic-key union parser", () => {
 
   test("parses a multi-line union and ignores comments and other declarations", () => {
     const src = [
-      "// example in a comment: \"not_a_value\" | \"also_not\"",
-      "export type NotTheOne = \"decoy\";",
+      '// example in a comment: "not_a_value" | "also_not"',
+      'export type NotTheOne = "decoy";',
       "export type Handling =",
-      "  \"archive_then_delete\" | // trailing comment \"nope\"",
-      "  \"archive_only\" |",
-      "  \"delete_only\";",
-      "const x = \"unrelated\";",
+      '  "archive_then_delete" | // trailing comment "nope"',
+      '  "archive_only" |',
+      '  "delete_only";',
+      'const x = "unrelated";',
     ].join("\n");
-    expect(parseUnionTypeValues(src, "Handling")).toEqual([
-      "archive_then_delete",
-      "archive_only",
-      "delete_only",
-    ]);
+    expect(parseUnionTypeValues(src, "Handling")).toEqual(["archive_then_delete", "archive_only", "delete_only"]);
     expect(parseUnionTypeValues(src, "Missing")).toEqual([]);
   });
 
   test("an unparseable values source is itself a violation, not a silent pass", () => {
-    const violations = scanDynamicKeyCoverage(
-      [{ ...FAMILY, typeName: "NoSuchType" }],
-      PROJECT_ROOT,
-      realCatalogs(),
-    );
+    const violations = scanDynamicKeyCoverage([{ ...FAMILY, typeName: "NoSuchType" }], PROJECT_ROOT, realCatalogs());
     expect(violations).toHaveLength(1);
     expect(violations[0]!.key).toContain("unparseable");
   });
@@ -123,7 +115,7 @@ describe("dynamic-key catalog coverage — missing-key scenario (in-memory)", ()
 
   test("empty-string catalog entries count as missing", () => {
     const catalogs = realCatalogs() as Record<string, Record<string, unknown>>;
-    const en = structuredClone(catalogs.en) as Record<string, Record<string, string>>;
+    const en = structuredClone(catalogs.en) as Record<string, Record<string, Record<string, string>>>;
     en.admin.ops.handling_delete_only = "";
     expect(scanDynamicKeyCoverage(FAMILIES, PROJECT_ROOT, { ...catalogs, en })).toEqual([
       {

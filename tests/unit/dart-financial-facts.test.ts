@@ -25,6 +25,7 @@ import {
   syncCompanyFinancialFacts,
 } from "../../app/web-next/lib/dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "../../app/web-next/lib/company-financials.ts";
+import type { DartFinancials } from "../../app/web-next/lib/dart-client.ts";
 
 const TEST_DB_PATH = "db/data/test-dart-financial-facts.sqlite";
 type Db = ReturnType<typeof GetDb>;
@@ -34,17 +35,19 @@ const COMPANY = "01JTESTCOMPANY000000000000";
 
 function insertCompany(name: string, corpCode: string | null): string {
   const id = ulid();
-  db.run(
-    "INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)",
-    [id, name, corpCode, "2026-09-11T00:00:00Z"],
-  );
+  db.run("INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)", [
+    id,
+    name,
+    corpCode,
+    "2026-09-11T00:00:00Z",
+  ]);
   return id;
 }
 
 type FakeItem = { name: string; value: number; unit: string; year: string; fsDiv?: "CFS" | "BFS" };
 function fakeFetcher(byCall: FakeItem[][]): FinancialsFetcherSpy {
   let call = 0;
-  const spy = ((corpCode: string, _opts?: { years?: number }) => {
+  const spy = ((corpCode: string, _opts?: { years?: number }): Promise<DartFinancials> => {
     const items = byCall[Math.min(call, byCall.length - 1)];
     call++;
     const yearlyMap = new Map<string, FakeItem[]>();
@@ -64,10 +67,7 @@ function fakeFetcher(byCall: FakeItem[][]): FinancialsFetcherSpy {
   return spy;
 }
 interface FinancialsFetcherSpy {
-  (corpCode: string, opts?: { years?: number }): Promise<{
-    corpCode: string; found: boolean; items: FakeItem[];
-    yearly: Array<{ year: string; items: FakeItem[] }>; integrity: string;
-  }>;
+  (corpCode: string, opts?: { years?: number }): Promise<DartFinancials>;
   calls: () => number;
 }
 
@@ -123,16 +123,25 @@ describe("syncCompanyFinancialFacts", () => {
     expect(result.years).toEqual([2025]);
 
     // corp code was resolved (null → resolved) and persisted back.
-    const stored = db.query("SELECT dart_corp_code FROM md_company WHERE id = ?").get(companyId) as { dart_corp_code: string };
+    const stored = db.query("SELECT dart_corp_code FROM md_company WHERE id = ?").get(companyId) as {
+      dart_corp_code: string;
+    };
     expect(stored.dart_corp_code).toBe(result.corp_code);
 
-    const source = db.query("SELECT code, reliability_grade FROM md_source WHERE code = 'dart'").get() as { code: string; reliability_grade: string };
+    const source = db.query("SELECT code, reliability_grade FROM md_source WHERE code = 'dart'").get() as {
+      code: string;
+      reliability_grade: string;
+    };
     expect(source.reliability_grade).toBe("A");
 
-    const periods = db.query("SELECT COUNT(*) AS n FROM md_period WHERE fiscal_year = 2025 AND period_type = 'year'").get() as { n: number };
+    const periods = db
+      .query("SELECT COUNT(*) AS n FROM md_period WHERE fiscal_year = 2025 AND period_type = 'year'")
+      .get() as { n: number };
     expect(periods.n).toBe(1);
 
-    const revisions = db.query("SELECT DISTINCT revision_no FROM fact_financial WHERE company_id = ?").all(companyId) as Array<{ revision_no: number }>;
+    const revisions = db
+      .query("SELECT DISTINCT revision_no FROM fact_financial WHERE company_id = ?")
+      .all(companyId) as Array<{ revision_no: number }>;
     expect(revisions).toEqual([{ revision_no: 1 }]);
   });
 
@@ -141,13 +150,19 @@ describe("syncCompanyFinancialFacts", () => {
     await syncCompanyFinancialFacts(db, companyId, { fetcher: fakeFetcher([YEAR_2025]), corpCode: "01234567" });
 
     // identical re-sync → all unchanged
-    const same = await syncCompanyFinancialFacts(db, companyId, { fetcher: fakeFetcher([YEAR_2025]), corpCode: "01222222" });
+    const same = await syncCompanyFinancialFacts(db, companyId, {
+      fetcher: fakeFetcher([YEAR_2025]),
+      corpCode: "01222222",
+    });
     expect(same.inserted).toBe(0);
     expect(same.unchanged).toBe(4);
 
     // revenue changed → exactly one new revision for 매출액 only
     const changed = YEAR_2025.map((i) => (i.name === "매출액" ? { ...i, value: 410_000_000_000 } : i));
-    const r3 = await syncCompanyFinancialFacts(db, companyId, { fetcher: fakeFetcher([changed]), corpCode: "01222222" });
+    const r3 = await syncCompanyFinancialFacts(db, companyId, {
+      fetcher: fakeFetcher([changed]),
+      corpCode: "01222222",
+    });
     expect(r3.inserted).toBe(1);
     expect(r3.unchanged).toBe(3);
 
@@ -166,12 +181,15 @@ describe("syncCompanyFinancialFacts", () => {
 
   test("guards: unknown company and retrieval failure fail loudly", async () => {
     const fetcher = fakeFetcher([YEAR_2025]);
-    await expect(syncCompanyFinancialFacts(db, "01JNOPE000000000000000000", { fetcher })).rejects.toBeInstanceOf(DartSyncError);
+    await expect(syncCompanyFinancialFacts(db, "01JNOPE000000000000000000", { fetcher })).rejects.toBeInstanceOf(
+      DartSyncError,
+    );
 
     const companyId = insertCompany("㈜조회실패", "09333333");
     // retrieval failure (found: false) → DartSyncError
     const failing: FinancialsFetcherSpy = Object.assign(
-      () => Promise.resolve({ corpCode: "09876543", found: false, items: [], yearly: [], integrity: "ok" }),
+      (): Promise<DartFinancials> =>
+        Promise.resolve({ corpCode: "09876543", found: false, items: [], yearly: [], integrity: "ok" }),
       { calls: () => 0 },
     );
     await expect(syncCompanyFinancialFacts(db, companyId, { fetcher: failing })).rejects.toBeInstanceOf(DartSyncError);
@@ -180,7 +198,9 @@ describe("syncCompanyFinancialFacts", () => {
   test("unknown account name fails loudly instead of inventing an md_account row", async () => {
     const companyId = insertCompany("㈜미지계정", "05444444");
     const bad = fakeFetcher([[{ name: "기타특수이익", value: 1, unit: "KRW", year: "2025" }]]);
-    await expect(syncCompanyFinancialFacts(db, companyId, { fetcher: bad, corpCode: "05444444" })).rejects.toThrow(/md_account/);
+    await expect(syncCompanyFinancialFacts(db, companyId, { fetcher: bad, corpCode: "05444444" })).rejects.toThrow(
+      /md_account/,
+    );
   });
 
   test("T6 — mixed per-year fsDiv payload syncs every year (CFS one year, BFS the rest)", async () => {
