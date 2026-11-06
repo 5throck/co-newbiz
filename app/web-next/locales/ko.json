@@ -4968,6 +4968,24 @@
         "system": "시스템",
         "webResearchNotConfiguredOr": "웹 리서치 미구성 또는 재사용 분석 — 입수 출처가 없습니다. 근거는 아래 단계별 노트와 각 탭의 표를 참고하세요."
       },
+      "synergySelectPanel": {
+        "blockerConfirmScoreFirst": "먼저 시너지 점수를 확정하세요.",
+        "blockerRationaleFirst": "확정 저장 시 시너지 근거를 함께 기록하세요.",
+        "blockerRole": "선택은 analyst 권한이 필요합니다.",
+        "blockerStatusAssessed": "먼저 기회를 평가(assessed) 상태로 기록하세요.",
+        "blockerStatusNotSelectable": "이 기회는 현재 선택할 수 없는 상태입니다.",
+        "doneMark": "완료",
+        "goToS4": "S4 진출방식 결정으로 이동 →",
+        "panelAria": "S3 완료 안내",
+        "panelTitle": "S3 완료하기",
+        "pendingMark": "대기",
+        "selectAction": "이 기회 선택",
+        "selectFailed": "선택 처리에 실패했습니다.",
+        "selectedDone": "이 기회는 선택(selected) 상태입니다.",
+        "statusLoadFailed": "기회 상태를 불러오지 못했습니다.",
+        "stepRationale": "시너지 근거 기록",
+        "stepScore": "시너지 점수 확정"
+      },
       "synergyScoreEvidence": {
         "aRecommendationBeforeHumanConfirmation": "— 사람 확정 전 권고이며 S4 트랙 근거로는 반영되지 않습니다.",
         "aVersionFromBeforeCalibration": "보정 내역이 기록되기 이전 버전입니다 — 사유 미기록, 재분석 시 기록됩니다.",

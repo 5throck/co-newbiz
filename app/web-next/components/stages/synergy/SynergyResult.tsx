@@ -6,6 +6,7 @@ import { ListBackButton } from "../../ListBackButton.tsx";
 import { PrimaryAction } from "../../ui.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { useSynergyResult } from "./useSynergyResult.ts";
+import { SynergySelectPanel } from "./SynergySelectPanel.tsx";
 import { SynergyScoreEvaluationTab, SynergyShortlistTab, SynergyProfileContext } from "./SynergyTabs.tsx";
 import { SynergyCapabilityTab } from "./SynergyCapabilityTab.tsx";
 import { SynergyFlowDiagram } from "./SynergyFlowDiagram.tsx";
@@ -41,6 +42,7 @@ export function SynergyResult(props0: {
     onBack,
     canCurate,
     inProgress,
+    onRefresh,
     p,
     tab,
     onTab,
@@ -53,20 +55,34 @@ export function SynergyResult(props0: {
   } = ctx;
   return (
     <section aria-label={t("synergyConsistencyReport")} className="market-section sizing-step">
-      <PrimaryAction
-        label={confirmSaving ? tc("saving") : t("saveFitEvaluation")}
-        onClick={confirmSynergyScore}
-        disabled={!canCurate || !opportunityId || confirmSaving || confirmForm.score === ""}
-        disabledReason={
-          !canCurate
-            ? t("savingTheFitEvaluationRequires")
-            : !opportunityId
-              ? t("canBeSavedOnlyIn")
-              : confirmSaving
-                ? tc("savingPolite")
-                : t("enterTheScoreInThe")
-        }
-      />
+      {/* S3 guided completion (design 2026-11-06 §Fix 2) — once the synergy score is
+          confirmed, this panel's "Select this opportunity" becomes the screen's ONE
+          primary action and the confirm button above steps aside (edit/retract stays
+          in the score-evaluation tab). */}
+      {opportunityId && (
+        <SynergySelectPanel
+          opportunityId={opportunityId}
+          synState={synState}
+          canCurate={canCurate}
+          onSelected={onRefresh}
+        />
+      )}
+      {!synState?.confirmed && (
+        <PrimaryAction
+          label={confirmSaving ? tc("saving") : t("saveFitEvaluation")}
+          onClick={confirmSynergyScore}
+          disabled={!canCurate || !opportunityId || confirmSaving || confirmForm.score === ""}
+          disabledReason={
+            !canCurate
+              ? t("savingTheFitEvaluationRequires")
+              : !opportunityId
+                ? t("canBeSavedOnlyIn")
+                : confirmSaving
+                  ? tc("savingPolite")
+                  : t("enterTheScoreInThe")
+          }
+        />
+      )}
       <SectionToolbar
         title={t("p1SynergyConsistencyAnalysis", { p1: targetLabel(analysis, tr) })}
         icon=""

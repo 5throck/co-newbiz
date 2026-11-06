@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.17.0";
+export const GUIDE_SPEC_VERSION = "2.18.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -165,7 +165,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     ],
     "completionCriteria": [
       "기회에 synergy_score와 근거가 기록되었다",
-      "적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다",
+      "적합성 판단이 사람이 확정한 시너지 평가(synergy_score_confirmed_at 기록 + 비어 있지 않은 synergy_rationale)로 충족되었다 (ADR-0192, v2.18.0 — 2026-11-06 이전 생성 기회는 종전 기준(opportunity.rationale) 유지)",
       "최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)",
       "필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)"
     ]

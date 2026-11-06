@@ -1,4 +1,4 @@
-// @version 1.14.0
+// @version 1.15.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -231,8 +231,8 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        target_universe_json, capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id, sizing_version_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_universe_json, capability_gap_json, synergy_rationale, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id, sizing_version_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         DEMO.oppId,
         null,
@@ -259,6 +259,7 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
             { capability: "레퍼런스 고객", source: "manual", held: { status: "partial" }, mitigation: "채널 결합" },
           ],
         }),
+        "핵심 부품 역량과의 시너지를 사람이 확정한 데모 근거 (ADR-0192)",
         now,
         actor,
         DEMO.industryId,
@@ -774,9 +775,9 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
       `INSERT OR IGNORE INTO opportunity
        (id, project_id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
         attractiveness_score, synergy_score, status, rationale, decided_by, decided_at, created_by, created_at,
-        capability_gap_json, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id,
+        capability_gap_json, synergy_rationale, synergy_score_confirmed_at, synergy_score_confirmed_by, industry_id,
         sizing_version_id)
-       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, 1080000, 0.18, 75, 55, 'selected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         GF.oppId, null, "S1-S12 데모 Greenfield 기회", "S1-S12 데모 신설 산업", "직접 진출 밸류체인 노드 (신설)",
         "시장 성장·자체 역량 조합에서 직접 진출 기회가 명확함", actor, now, actor, now,
@@ -786,6 +787,7 @@ export async function seedGreenfieldS1ToS12Demo(dbPath?: string, opts: SeedOptio
             { capability: "품질 인증 체계", source: "manual", held: { status: "partial" }, mitigation: "Build — 내재화" },
           ],
         }),
+        "자사 생산·품질 역량과의 시너지를 사람이 확정한 데모 근거 (ADR-0192)",
         now, actor, GF.industryId,
         GF.versionId,
       ],

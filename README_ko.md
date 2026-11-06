@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-translated_from_hash: PLACEHOLDER
+translated_from_hash: 6057d32a73c854f48ce2e6f7ed71a80f48803d2799430175e3bab92e7eef51bf
 lang: ko
 lang_reason: source-material
 ---
@@ -152,4 +152,4 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 ---
 
 *최근 업데이트: 2026-08-24*
-*Last Updated: 2026-09-05*
+*Last Updated: 2026-11-06*

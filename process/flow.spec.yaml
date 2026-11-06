@@ -21,7 +21,15 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.17.0"
+  version: "2.18.0"
+  # v2.18.0 - ADR-0192 (owner decision, option A, 2026-11-06): S3 "strategic fit
+  #   judgement" completion criterion is satisfied by a human-confirmed synergy
+  #   assessment (synergy_score_confirmed_at set + non-empty synergy_rationale),
+  #   not by opportunity.rationale (the S2 attractiveness rationale). The
+  #   separate fit_verdict stays removed (2026-09-15 decision). Opportunities
+  #   created before 2026-11-06 keep the legacy predicate (ADR-0151/0180
+  #   grandfathering precedent). Selection (selected) remains an explicit human
+  #   action; nothing is auto-selected (boundary #2).
   # v2.17.0 - owner decisions D6' and D3' (2026-10-28; amend ADR-0187 D6/D3,
   #   decision log in docs/adr/0187-process-ssot-decision-evidence.md):
   #   - S3 synergy-analysis is LED by market-intelligence-agent: it locates the
@@ -585,7 +593,7 @@ stages:
       - 전략적 적합성 판단
     completionCriteria:
       - 기회에 synergy_score와 근거가 기록되었다
-      - 적합성 판단 근거(rationale)가 기록되고 결정론 권고(매력도·시너지 조합)가 제시되었다
+      - 적합성 판단이 사람이 확정한 시너지 평가(synergy_score_confirmed_at 기록 + 비어 있지 않은 synergy_rationale)로 충족되었다 (ADR-0192, v2.18.0 — 2026-11-06 이전 생성 기회는 종전 기준(opportunity.rationale) 유지)
       - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
       - 필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)
       # v2.14.0 (ADR-0187 H8): declares the engine blocker

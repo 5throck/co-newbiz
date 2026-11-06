@@ -69,14 +69,18 @@ function seedOpportunity(name: string, completeS1S3: boolean): string {
   db.run(
     `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
        attractiveness_score, synergy_score, rationale, status, created_by, created_at, capability_gap_json,
-       sizing_version_id, target_scope_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       synergy_score_confirmed_at, synergy_rationale, sizing_version_id, target_scope_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       id, name, completeS1S3 ? "테스트 산업" : "미분석 산업", completeS1S3 ? "크랭크샤프트" : null,
       completeS1S3 ? 5000 : null, completeS1S3 ? 8.0 : null,
       completeS1S3 ? 80 : null, completeS1S3 ? 70 : null,
       completeS1S3 ? "전략적 적합성 근거" : null,
       completeS1S3 ? "selected" : "identified", ANALYST, NOW,
+      // ADR-0192: NOW is post-ADR_0192_PREDICATE_DATE, so the S3 fit judgement
+      // requires a person-confirmed synergy assessment with a recorded rationale.
+      completeS1S3 ? NOW : null,
+      completeS1S3 ? "사람이 확정한 시너지 근거 (ADR-0192)" : null,
       completeS1S3 ? JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", source: "manual", resolution: "hire" }], updatedAt: NOW }) : null,
       // flow.spec v2.9.0 (ADR-0180): an S2-complete opportunity carries the
       // entry-market surface — the S1 sizing link + the person-set target scope.

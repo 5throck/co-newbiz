@@ -84,6 +84,18 @@ export const ADR_0151_MIGRATION_DATE = "2026-10-02";
 export const ADR_0180_PREDICATE_DATE = "2026-10-17";
 
 /**
+ * ADR-0192 predicate date — the tightened S3 "strategic fit judgement"
+ * criterion (the opportunity's synergy assessment must be human-confirmed
+ * via synergy_score_confirmed_at AND carry a non-empty synergy_rationale,
+ * the field the 2026-09-15 fit-verdict removal kept as the S3 judgement)
+ * applies only to opportunities created on/after this date. Earlier
+ * opportunities keep the legacy predicate (a non-empty attractiveness
+ * `rationale`). No backfill (ADR-0151 precedent — a tightening never
+ * retroactively un-completes in-flight work).
+ */
+export const ADR_0192_PREDICATE_DATE = "2026-11-06";
+
+/**
  * Wave F-6 migration date (migrations 0125/0126). The F4 predicate tightenings
  * (S1 confidence grade, S3 capability list, S6 per-candidate source/attributes,
  * S7 per-candidate screening evidence, S11 PMI kickoff + human reviewer record)
@@ -338,7 +350,20 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     const missing: string[] = [];
     let complete = false;
     if (opp.synergy_score === null) { blockers.push("시너지 평가가 필요합니다"); missing.push(blocker("s3.synergy_assessment")); }
-    if (!opp.rationale) { blockers.push("전략적 적합성 판단 근거가 필요합니다"); missing.push(blocker("s3.strategic_fit_judgement")); }
+    // ADR-0192 (option A): the strategic-fit judgement is the confirmed
+    // synergy assessment — synergy_score_confirmed_at set AND non-empty
+    // synergy_rationale. Grandfathered: opportunities created before
+    // ADR_0192_PREDICATE_DATE keep the legacy `opp.rationale` check (that
+    // field is the S2 attractiveness rationale).
+    if ((opp.created_at ?? "") >= ADR_0192_PREDICATE_DATE) {
+      if (opp.synergy_score_confirmed_at === null || !(opp.synergy_rationale ?? "").trim()) {
+        blockers.push("시너지 평가 확정과 근거(synergy_rationale) 기록이 필요합니다 — 시너지 평가를 확정해야 전략적 적합성 판단이 충족됩니다");
+        missing.push(blocker("s3.strategic_fit_judgement"));
+      }
+    } else if (!opp.rationale) {
+      blockers.push("전략적 적합성 판단 근거가 필요합니다");
+      missing.push(blocker("s3.strategic_fit_judgement"));
+    }
     // flow.spec S3 / Wave F-6: the required-capability list must exist with a
     // recorded source per row (grandfathered opportunities exempt).
     if (!opportunityGrandfathered(opp) && countSourcedCapabilityRows(opp.capability_gap_json) === 0) {
@@ -498,6 +523,14 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
  * carrierScopeFinished is the sanctioned signal that the S1–S7 carrier scope
  * is actually done and awaiting promotion, not working on S8.
  */
+/** Single-stage predicate evaluation for an opportunity row — used by
+ * evaluateProcess and by unit tests that target one stage's completion
+ * criteria directly (e.g. the ADR-0192 S3 fit-judgement predicate). */
+export function opportunityStageCompletion(stageId: StageId, opp: OpportunityRow): StageEvaluation {
+  const stage = STAGES.find((s) => s.id === stageId);
+  return stage ? evaluateOpportunityStage(stage, opp) : { complete: false, blockers: [], missing: [] };
+}
+
 function evaluateOpportunityStage(stage: StageDefinition, opp: OpportunityRow): StageEvaluation {
   const predicate = OPPORTUNITY_STAGE_COMPLETION[stage.id];
   return predicate ? predicate({ opp }) : { complete: false, blockers: [], missing: [] };
@@ -952,7 +985,7 @@ function evaluateProjectStage(stage: StageDefinition, project: ProjectRowLite, g
   return predicate ? predicate({ project, gateStatus }) : { complete: false, blockers: [], missing: [] };
 }
 
-interface OpportunityRow {
+export interface OpportunityRow {
   id: string;
   name: string;
   market_scope: string | null;
@@ -962,6 +995,8 @@ interface OpportunityRow {
   attractiveness_score: number | null;
   synergy_score: number | null;
   rationale: string | null;
+  synergy_score_confirmed_at: string | null;
+  synergy_rationale: string | null;
   status: string;
   target_universe_json: string | null;
   capability_gap_json: string | null;

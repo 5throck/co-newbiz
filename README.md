@@ -1,5 +1,6 @@
 ---
 sync_version: 1
+content_hash: 6057d32a73c854f48ce2e6f7ed71a80f48803d2799430175e3bab92e7eef51bf
 ---
 
 # co-newbiz
@@ -206,4 +207,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-10-11*
+*Last Updated: 2026-11-06*
