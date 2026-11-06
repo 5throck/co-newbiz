@@ -15,6 +15,9 @@ export async function GET(request: Request) {
   if (denied) return denied;
   const db = getDb();
 
+  // 산업당 최신 완료 analysis만 (가치사슬 연계 재분석이 analysis 행을 추가로
+  // 만들어도 같은 산업이 중복 노출되지 않게 한다 — dedupe는 질의에서 하고,
+  // 응답 shape은 그대로 유지한다).
   const rows = db
     .query(
       `SELECT a.id, a.completed_at,
@@ -24,22 +27,49 @@ export async function GET(request: Request) {
        JOIN md_industry i ON i.id = a.industry_id
        JOIN market_sizing_version v ON v.analysis_id = a.id
        WHERE a.status = 'completed'
+         AND a.id = (SELECT a2.id FROM market_sizing_analysis a2
+                     WHERE a2.industry_id = a.industry_id AND a2.status = 'completed'
+                     ORDER BY a2.completed_at DESC, a2.id DESC LIMIT 1)
          AND v.version_no = (SELECT MAX(version_no) FROM market_sizing_version x WHERE x.analysis_id = a.id)
        ORDER BY a.completed_at DESC`,
     )
-    .all() as Array<{ id: string; completed_at: string | null; industry_id: string; name_ko: string; ksic_code: string | null; payload: string; version_no: number }>;
+    .all() as Array<{
+    id: string;
+    completed_at: string | null;
+    industry_id: string;
+    name_ko: string;
+    ksic_code: string | null;
+    payload: string;
+    version_no: number;
+  }>;
 
   const insights = rows.map((r) => {
     type MatrixShape = {
       cagrBase?: Record<string, Record<string, number>>;
       consistency?: { bottomUpCagr?: number };
       externalForecast?: {
-        sourceLabel: string; targetYear: number; marketSize: number;
-        ourMarketSize?: number; gapPct?: number; gapAnalysis?: string; newDrivers?: string[];
+        sourceLabel: string;
+        targetYear: number;
+        marketSize: number;
+        ourMarketSize?: number;
+        gapPct?: number;
+        gapAnalysis?: string;
+        newDrivers?: string[];
       };
       qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] };
-      chainDirection?: { position?: string; note?: string; relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }> };
-      calibration?: { triggered?: boolean; ourCagrPct?: number; externalCagrPct?: number | null; gapPct?: number | null; previousGapPct?: number | null; appliedDrivers?: string[] };
+      chainDirection?: {
+        position?: string;
+        note?: string;
+        relatedIndustries?: Array<{ relation?: string; name?: string; note?: string }>;
+      };
+      calibration?: {
+        triggered?: boolean;
+        ourCagrPct?: number;
+        externalCagrPct?: number | null;
+        gapPct?: number | null;
+        previousGapPct?: number | null;
+        appliedDrivers?: string[];
+      };
     };
     let matrix: MatrixShape | null = null;
     let synthetic = false;
