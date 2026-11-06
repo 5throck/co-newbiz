@@ -9,7 +9,7 @@
 // 평가·요인·비즈니스 모델 검토 작업은 상세 화면(/opportunities/{id})에서 한다.
 // 행 액션은 선별·제외·비즈니스 모델 검토·삭제만 둔다. S3 시너지·전략적 적합성은
 // 상세 화면에서 S3 화면(/synergy)으로 이동하는 링크로 안내한다.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -19,7 +19,12 @@ import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
 import { SectionToolbar } from "../layout.tsx";
 import { ColGroup } from "../ui.tsx";
-import { AttractivenessReEvaluate } from "../AttractivenessReEvaluate.tsx";
+import {
+  AttractivenessEditor,
+  AttractivenessReEvaluateToggle,
+  attractivenessToggleId,
+  canReEvaluateAttractiveness,
+} from "../AttractivenessReEvaluate.tsx";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
 import type { TranslatorFn } from "../../i18n/config.ts";
 import { useTranslations } from "next-intl";
@@ -163,6 +168,20 @@ export function OpportunityFunnelStage({
   const [knownTargetMode, setKnownTargetMode] = useState(startRegister === "known_target");
   const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
+
+  // 재평가 편집기 — 행 id별 열림 상태. 편집기는 행 아래 전폭 하위 행에 그린다.
+  const [reEvalOpenIds, setReEvalOpenIds] = useState<ReadonlySet<string>>(new Set());
+  const toggleReEvaluate = (id: string) =>
+    reEvalOpenIds.has(id) ? closeReEvaluate(id) : setReEvalOpenIds((prev) => new Set(prev).add(id));
+  const closeReEvaluate = (id: string) => {
+    setReEvalOpenIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    // 닫으면 포커스를 토글로 되돌린다 (편집기가 사라지며 포커스를 잃지 않게).
+    requestAnimationFrame(() => document.getElementById(attractivenessToggleId(`opp-score-input-${id}`))?.focus());
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: load is refetched via useEffect(load, [load]) — adding tc would recreate load on translator identity churn and refetch on every locale re-render; tc is read at call time
   const load = useCallback(() => {
@@ -693,110 +712,126 @@ export function OpportunityFunnelStage({
               </thead>
               <tbody>
                 {sortedRows.map((o) => (
-                  <tr key={o.id} aria-current={o.id === opportunityId ? "true" : undefined}>
-                    <td>
-                      <span
-                        className={`status-chip ${o.status === "selected" ? "status-green" : o.status === "dropped" ? "status-red" : o.status === "assessed" ? "status-amber" : "status-not-started"}`}
-                      >
-                        {(() => {
-                          const col = COLUMNS.find((c) => c.status === o.status);
-                          return col ? tr(col.label) : "";
-                        })()}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        href={`/opportunities/${encodeURIComponent(o.id)}`}
-                        className="block cell-truncate font-semibold text-left underline-offset-2 hover:underline"
-                        title={o.name}
-                      >
-                        {o.name}
-                      </Link>
-                      {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
-                      {o.id === opportunityId && (
-                        <span className="status-chip status-amber ml-1" title={t("thisIsTheCarrierOpportunity")}>
-                          {t("thisDeal")}
+                  <Fragment key={o.id}>
+                    <tr aria-current={o.id === opportunityId ? "true" : undefined}>
+                      <td>
+                        <span
+                          className={`status-chip ${o.status === "selected" ? "status-green" : o.status === "dropped" ? "status-red" : o.status === "assessed" ? "status-amber" : "status-not-started"}`}
+                        >
+                          {(() => {
+                            const col = COLUMNS.find((c) => c.status === o.status);
+                            return col ? tr(col.label) : "";
+                          })()}
                         </span>
-                      )}
-                      <span className="block text-[length:var(--fs-caption)]">
-                        {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
-                        {o.value_chain_node && (
-                          <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>
+                      </td>
+                      <td>
+                        <Link
+                          href={`/opportunities/${encodeURIComponent(o.id)}`}
+                          className="block cell-truncate font-semibold text-left underline-offset-2 hover:underline"
+                          title={o.name}
+                        >
+                          {o.name}
+                        </Link>
+                        {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
+                        {o.id === opportunityId && (
+                          <span className="status-chip status-amber ml-1" title={t("thisIsTheCarrierOpportunity")}>
+                            {t("thisDeal")}
+                          </span>
                         )}
-                        {!o.market_scope && !o.value_chain_node && "—"}
-                      </span>
-                    </td>
-                    <td className="tabular-nums">
-                      {o.attractiveness_score ?? "—"}
-                      {o.attractiveness_score !== null && o.status === "identified" && (
-                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                          {tc("proposal")}
+                        <span className="block text-[length:var(--fs-caption)]">
+                          {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
+                          {o.value_chain_node && (
+                            <span className="text-[color:var(--muted-fg)]">{o.value_chain_node}</span>
+                          )}
+                          {!o.market_scope && !o.value_chain_node && "—"}
                         </span>
-                      )}
-                    </td>
-                    <td className="tabular-nums">
-                      {o.synergy_score ?? "—"}
-                      {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
-                      {o.synergy_score !== null &&
-                        (o.synergy_score_confirmed_at ? (
+                      </td>
+                      <td className="tabular-nums">
+                        {o.attractiveness_score ?? "—"}
+                        {o.attractiveness_score !== null && o.status === "identified" && (
                           <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                            {tc("confirmed")}
+                            {tc("proposal")}
                           </span>
-                        ) : (
-                          <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                            {t("recommendationUnconfirmed")}
-                          </span>
-                        ))}
-                    </td>
-                    <td className="sizing-actions-cell">
-                      <span className="actions-row">
-                        {canAct && !o.project_id && insights && insights.length > 0 && (
-                          // S1 연결 select는 폼 컨트롤이므로 이름 열이 아니라 작업 셀에서
-                          // 편집한다(2026-10 표 인터랙션 리뷰 — 이름 열은 읽기 표면 유지).
-                          <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-                            <span className="whitespace-nowrap">{t("s1Link")}</span>
-                            <select
-                              aria-label={t("linkP1ToS1Analyzed", { p1: o.name })}
-                              value={o.industry_id ?? ""}
-                              onChange={(e) => void linkIndustry(o, e.target.value)}
-                              className="sizing-new-input sizing-new-input-sm"
+                        )}
+                      </td>
+                      <td className="tabular-nums">
+                        {o.synergy_score ?? "—"}
+                        {/* 경계 #2 — 파이프라인 권고와 사람 확정을 구분해 표시한다. */}
+                        {o.synergy_score !== null &&
+                          (o.synergy_score_confirmed_at ? (
+                            <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                              {tc("confirmed")}
+                            </span>
+                          ) : (
+                            <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                              {t("recommendationUnconfirmed")}
+                            </span>
+                          ))}
+                      </td>
+                      <td className="sizing-actions-cell">
+                        <span className="actions-row">
+                          {canAct && !o.project_id && insights && insights.length > 0 && (
+                            // S1 연결 select는 폼 컨트롤이므로 이름 열이 아니라 작업 셀에서
+                            // 편집한다(2026-10 표 인터랙션 리뷰 — 이름 열은 읽기 표면 유지).
+                            <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+                              <span className="whitespace-nowrap">{t("s1Link")}</span>
+                              <select
+                                aria-label={t("linkP1ToS1Analyzed", { p1: o.name })}
+                                value={o.industry_id ?? ""}
+                                onChange={(e) => void linkIndustry(o, e.target.value)}
+                                className="sizing-new-input sizing-new-input-sm"
+                              >
+                                <option value="">{t("notLinked")}</option>
+                                {insights.map((i) => (
+                                  // key는 산업+분석 복합 — 서버 dedupe 전 데이터에서도 중복 키가 없게 (방어선)
+                                  <option key={`${i.industry_id}:${i.analysis_id}`} value={i.industry_id}>
+                                    {i.industry_name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          {/* 평가(assessed) 기회의 매력도 재평가 — 작업 칸에는 토글만 두고, 편집기(점수 입력·
+                            AI 초안 제안 문구)는 아래 전폭 하위 행에 그린다. 좁은 칸에서 긴 문구가 표를 깨지 않게. */}
+                          {canReEvaluateAttractiveness(o.status, canAct) && (
+                            <AttractivenessReEvaluateToggle
+                              opportunityName={o.name}
+                              open={reEvalOpenIds.has(o.id)}
+                              onToggle={() => toggleReEvaluate(o.id)}
+                              inputId={`opp-score-input-${o.id}`}
+                            />
+                          )}
+                          {nextStepActions(o, t)}
+                          {canAct && !o.project_id && (
+                            <button
+                              type="button"
+                              className="btn-danger btn-sm"
+                              title={t("deletesThisOpportunityOpportunitiesPromoted")}
+                              onClick={() => deleteOpportunity(o)}
                             >
-                              <option value="">{t("notLinked")}</option>
-                              {insights.map((i) => (
-                                // key는 산업+분석 복합 — 서버 dedupe 전 데이터에서도 중복 키가 없게 (방어선)
-                                <option key={`${i.industry_id}:${i.analysis_id}`} value={i.industry_id}>
-                                  {i.industry_name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        )}
-                        {/* 평가(assessed) 기회의 매력도 재평가 — 상세 화면과 같은 공용 컨트롤.
-                            발굴(identified)은 첫 평가를 상세 화면에서 하므로 여기선 그리지 않는다. */}
-                        {o.status === "assessed" && (
-                          <AttractivenessReEvaluate
+                              {tc("delete")}
+                            </button>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                    {reEvalOpenIds.has(o.id) && canReEvaluateAttractiveness(o.status, canAct) && (
+                      <tr>
+                        <td colSpan={FUNNEL_COL_PCT.length} className="bg-[color:var(--muted-bg)]">
+                          <AttractivenessEditor
                             opportunityId={o.id}
                             opportunityName={o.name}
                             status={o.status}
-                            canAct={canAct}
                             onSaved={load}
+                            onClose={() => closeReEvaluate(o.id)}
+                            autoDraft
+                            autoFocus
                             inputId={`opp-score-input-${o.id}`}
                           />
-                        )}
-                        {nextStepActions(o, t)}
-                        {canAct && !o.project_id && (
-                          <button
-                            type="button"
-                            className="btn-danger btn-sm"
-                            title={t("deletesThisOpportunityOpportunitiesPromoted")}
-                            onClick={() => deleteOpportunity(o)}
-                          >
-                            {tc("delete")}
-                          </button>
-                        )}
-                      </span>
-                    </td>
-                  </tr>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
