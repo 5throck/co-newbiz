@@ -230,6 +230,8 @@ describe("repository round-trip", () => {
       contentHash: "hash-rt",
       performed: true,
       reviewerAgent: "none",
+      authorDomain: null,
+      reviewerDomain: null,
       buckets: {
         verified: [],
         could_not_verify: [

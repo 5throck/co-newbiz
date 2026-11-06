@@ -71,7 +71,7 @@ interface ItemLike {
  * `localizeItem` remains the LEGACY fallback and is unchanged.
  */
 export function resolveKeyedItem(
-  it: Pick<ItemLike, "key" | "params">,
+  it: Partial<ItemLike>,
 ): { messageId: ReviewItemKey; params: Record<string, unknown> } | null {
   if (!it.key || !isReviewItemKey(it.key)) return null;
   return { messageId: it.key, params: it.params ?? {} };
