@@ -27,7 +27,8 @@ describe("ReviewBuckets source", () => {
   test("uses the shared helper and the renamed dev details label", () => {
     expect(src).toContain("setStatus(ai2ndStatusMessage(r.data.ai_2nd))");
     expect(src).not.toContain("사유가 아래에 표시됩니다");
-    expect(src).toContain("<summary>원문 기록 (개발자용)</summary>");
+    // PR3 (design 2026-11-06): the label renders via the catalog key (ko "원문 기록 (개발자용)" lives in locales/*/json).
+    expect(src).toContain('<summary>{tr("review.dev.summary")}</summary>');
     expect(src).not.toContain("<summary>개발자 세부정보</summary>");
   });
 });

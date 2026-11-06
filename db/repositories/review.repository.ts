@@ -30,6 +30,15 @@ export interface ReviewItem {
    * inside buckets_json; legacy rows simply lack it.
    */
   scope?: "not_reached";
+  /**
+   * Locale key from the review-item catalog (app/web-next/lib/review/
+   * review-item-keys.ts) so the UI can render localized text via next-intl.
+   * Additive JSON inside buckets_json; legacy rows simply lack it and fall
+   * back to the stored English claim/reason.
+   */
+  key?: string;
+  /** Interpolation params for `key` (e.g. { stageId: "S4", stageName: "..." }). */
+  params?: Record<string, unknown>;
 }
 export interface ReviewBuckets {
   verified: ReviewItem[];

@@ -9575,5 +9575,116 @@
     "s12_core_handoff": "Core business handoff record",
     "s12_divest_plan": "Divestment or wind-down plan",
     "s12_learning_capture": "Captured learning record"
+  },
+  "review": {
+    "aria": {
+      "block": "Three-stage review",
+      "counts": "Review result counts",
+      "stageSources": "Review stage sources",
+      "artifactsNav": "Artifacts under review",
+      "artifactPanel": "Artifact review: {label}"
+    },
+    "strip": {
+      "title": "Three-stage review",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "loadFailed": "Failed to load",
+      "loading": "Loading…",
+      "closed": "Closed"
+    },
+    "head": {
+      "title": "Three-stage review — reference material before human judgement"
+    },
+    "disclaimer": "Review results are not an approval or a pass mark. They separate what the AI verified, what it could not verify, and what a person must judge; the decision itself is recorded below by a person.",
+    "allReviewed": {
+      "chip": "All items human-confirmed",
+      "note": "Every verification and judgement item in this review has been human-confirmed — closed by human confirmation."
+    },
+    "loading": "Loading review…",
+    "counts": {
+      "verified": "{count} verified",
+      "couldNotVerify": "{count} could not verify",
+      "needsJudgement": "{count} need judgement",
+      "notReached": "{count} in stages not reached yet",
+      "confirmNeeded": "needs review"
+    },
+    "buckets": {
+      "verified": "Verified",
+      "couldNotVerify": "Could not verify",
+      "needsJudgement": "Needs judgement",
+      "heading": "{title}, {count} item(s)",
+      "hintVerified": "Verified from the artifact itself; not an approval.",
+      "hintCouldNotVerify": "Items the reviewer could not verify.",
+      "hintNeedsJudgement": "Items that require human judgement.",
+      "decisionJump": "Review these items, then record the decision →"
+    },
+    "items": {
+      "source": "Source: {source}",
+      "confirmedTitle": "This item was saved as human-confirmed together with the decision record",
+      "confirmed": "Human-confirmed — saved with the decision record",
+      "ackLabel": "Human confirmation — I have reviewed this item (saved immediately, and also kept in the decision record)",
+      "ackSaved": "Confirmed · {by} · {date}",
+      "authorDomain": " — Authoring domain {domain}",
+      "stale": " — Based on a previous artifact version — the artifact has since changed.",
+      "notPerformedTitle": "Not performed",
+      "ai2ndNotRequested": "AI 2nd (cross-domain): not yet requested (not performed)",
+      "notReachedSummary": "Stages not reached yet, {count} item(s)",
+      "notReachedNote": "These could not be verified because their stage has not been reached yet. Not defects; they are reviewed when the process reaches that stage."
+    },
+    "dev": {
+      "summary": "Raw record (for developers)",
+      "note": "The stored English originals, internal identifiers, and review record hashes. Needed only for tracing results or comparing against the translation; not required for normal use.",
+      "hash": "Review record {hash}"
+    },
+    "actions": {
+      "request": "Request AI 2nd review",
+      "requestAgain": "Request AI 2nd review again",
+      "busy": "Requesting…",
+      "auditAgree": "Agree with this review (audit sample)",
+      "auditDisagree": "Disagree with this review (audit sample)"
+    },
+    "errors": {
+      "disabledRole": "Requesting an AI 2nd review requires the analyst role or higher.",
+      "busy": "A request is in progress.",
+      "loadingFirst": "The AI 1st review is still loading.",
+      "notFound": "This review/deal could not be found — pick an item from the review/deal board and re-enter from there.",
+      "loadFailed": "Failed to load the review",
+      "ackFailed": "Failed to save the confirmation",
+      "ackFailedWith": "Failed to save the confirmation: {message}",
+      "ai2ndFailed": "Failed to request the AI 2nd review",
+      "auditFailed": "Failed to record the audit sample"
+    },
+    "status": {
+      "ai2ndRequested": "AI 2nd review requested; in progress…",
+      "auditAgree": "Agree audit sample recorded.",
+      "auditDisagree": "Disagree audit sample recorded; it counts toward the review-reliability KPI."
+    },
+    "tokenCap": "AI 2nd tokens this month {used} / {cap} · saved reviews are reused when the artifact is unchanged",
+    "ai1": {
+      "stageComplete": "Stage {stageId} ({stageName}) completion predicate is satisfied",
+      "stageCompleteReason": "The completion predicate was checked deterministically. This only confirms the required records exist; it does not mean the content is correct.",
+      "stageSubstance": "Substance of {stageId} artifacts: {artifacts}",
+      "stageSubstanceReason": "Artifact presence was checked deterministically; whether the content is sufficient requires reviewer judgement.",
+      "stageSkipped": "Stage {stageId} ({stageName}) does not apply to this track",
+      "stageSkippedReason": "Determined by the process definition (per-track applicable stages).",
+      "stageTerminated": "Stage {stageId} ({stageName}) was not evaluated",
+      "stageTerminatedReason": "The deal was ended by a recorded KILL decision.",
+      "stageIncomplete": "Stage {stageId} ({stageName}) is not yet complete",
+      "stageIncompleteReason": "{blockers} · Missing artifacts: {missing}",
+      "stageNotReached": "Stage {stageId} ({stageName}) has not been reached yet",
+      "stageNotReachedReason": "The deal is still at an earlier stage, so this stage's artifacts were not checked.",
+      "stageLocked": "Stage {stageId} ({stageName}) is locked behind an incomplete predecessor",
+      "stageLockedReason": "Sequential entry conditions are not met, so this stage's artifacts were not checked.",
+      "gateVerdict": "{gate} gate verdict (go / hold / kill)",
+      "gateVerdictReason": "Gate approval and the investment decision belong to humans; this review only reports evidence and gaps.",
+      "stageAcceptance": "Acceptance of stage {stageId} artifact \"{artifactName}\"",
+      "stageAcceptanceReason": "Gate approval and the investment decision belong to humans; this review only reports evidence and gaps.",
+      "contentAccuracy": "Accuracy, sourcing and internal consistency of artifact content",
+      "contentAccuracyReason": "AI 1st checks structural completeness only. It read and verified no record content."
+    },
+    "ai2": {
+      "notPerformed": "AI 2nd (cross-domain) review was not performed",
+      "notPerformedReason": "{reason}"
+    }
   }
 }
