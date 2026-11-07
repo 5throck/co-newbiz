@@ -1,4 +1,4 @@
-// @version 1.16.0
+// @version 1.17.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -15,6 +15,8 @@
 // evidence (stage_captured, adopted by the S11 baseline by id) and non-pass DD rows (an optional item that fails with its reason, one
 // not-applicable with its note). v1.16.0 (ADR-0194 item A): both demo opportunities carry human-recorded S4 deal-shape verdicts
 // (opportunity_deal_shape_evaluation, one viable + one not viable, each with a rationale) so kill criterion #9 reads clean at pre_fs.
+// v1.17.0 (ADR-0194 item B): the greenfield demo project carries a human-recorded site announcement (site_announcement) and a reviewed
+// infra.plan_finalized = 'yes' with effective_on on or before the announcement date (dimension_input), so kill criterion #5 reads clean at fs.
 //
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
@@ -1389,6 +1391,7 @@ export async function seedGreenfieldS1ToS12Demo(
        VALUES (?, ?, 'S1-S12 greenfield demo scorecard run', 'demo-gf-input-hash', ?, ?)`,
       [GF.runId, GF.projectId, actor, now],
     );
+    seedSiteAnnouncementEvidence(db, now, actor);
     db.run(
       `INSERT OR IGNORE INTO deal_structure_hypothesis
        (id, project_id, run_id, asset_or_stock, stake_type, instrument_mix, vehicle, commercialization_path,
@@ -1678,6 +1681,34 @@ export async function seedGreenfieldS1ToS12Demo(
   }
 
   return { opportunityId: GF.oppId, projectId: GF.projectId };
+}
+
+/**
+ * ADR-0194 item B: the demo's point-in-time evidence for kill criterion #5 - a recorded public announcement and a reviewed
+ * infra.plan_finalized = 'yes' whose effective_on (the finalized plan document's date) is BEFORE the announcement, so the
+ * criterion reads clean at fs. Dates are relative to the seed clock (past dates only, B-2). The assertion is recorded by the
+ * demo actor and reviewed by the project lead (reviewer differs from asserter). Idempotent: fixed ids, INSERT OR IGNORE.
+ */
+function seedSiteAnnouncementEvidence(db: ReturnType<typeof getDb>, now: string, actor: string): void {
+  const dayOffset = (days: number) => new Date(Date.parse(now) - days * 86_400_000).toISOString().slice(0, 10);
+  const announcedOn = dayOffset(60);
+  const planEffectiveOn = dayOffset(90);
+  const a = db.run(
+    `INSERT OR IGNORE INTO site_announcement (id, project_id, site_id, announced_on, announcement_kind, evidence_ref, recorded_by, recorded_at, superseded_by)
+     VALUES (?, ?, NULL, ?, 'public_announcement', 'doc:demo-gf-site-announcement', ?, ?, NULL)`,
+    ["demo-gf-site-announcement", GF.projectId, announcedOn, actor, now],
+  );
+  if (a.changes > 0) appendAudit(db, { actor, action: "project.site_announcement.record", target: `${GF.projectId}:public_announcement:demo-gf-site-announcement announced_on=${announcedOn}`, now });
+  const p = db.run(
+    `INSERT OR IGNORE INTO dimension_input
+     (id, run_id, project_id, var_key, value_kind, value_text, value_num, unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by)
+     VALUES (?, ?, ?, 'infra.plan_finalized', 'text', 'yes', NULL, NULL, 'doc:demo-gf-infra-plan', ?, 'admin', ?, ?, ?, NULL)`,
+    ["demo-gf-infra-plan-finalized", GF.runId, GF.projectId, actor, "S1-S12 greenfield demo: 전력·용수 인프라 계획이 부지 발표 이전에 확정됨 (데모)", now, planEffectiveOn],
+  );
+  if (p.changes > 0) {
+    appendAudit(db, { actor, action: "dimension_input_asserted", target: `${GF.projectId}:infra.plan_finalized`, now });
+    appendAudit(db, { actor: "admin", action: "dimension_input_reviewed", target: `${GF.projectId}:infra.plan_finalized:demo-gf-infra-plan-finalized`, now });
+  }
 }
 
 /**

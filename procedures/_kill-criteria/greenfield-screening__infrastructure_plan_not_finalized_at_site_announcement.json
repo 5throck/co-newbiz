@@ -5,7 +5,7 @@
   "action": "escalate_to_risk_officer",
   "predicate": {
     "op": "in",
-    "var": "infra.plan_finalized",
+    "var": "infra.plan_finalized_by_announcement",
     "values": [
       "no"
     ]
@@ -13,8 +13,8 @@
   "enabled": true,
   "policy_id": "gd-0024-class-c-decisions",
   "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); asserted var seeded by migration 0029 per ADR-0065 — threshold by criterion wording (ADR-0060 row 25)",
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized. Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.plan_finalized (boolean). ADR-0065 arms this: infra.plan_finalized is an ASSERTED fact (pilot-005 F-1 origin — a real project designated its site before power/water plans were finalized). 'no' at site announcement ESCALATES to the risk officer; unasserted stays UNASSESSED.",
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized. Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.plan_finalized (boolean). ADR-0065 arms this: infra.plan_finalized is an ASSERTED fact (pilot-005 F-1 origin — a real project designated its site before power/water plans were finalized). 'no' at site announcement ESCALATES to the risk officer; unasserted stays UNASSESSED. ADR-0194 item B (migration 0189, supersedes the gate-date reading): the predicate reads the filler-derived infra.plan_finalized_by_announcement. It is 'no' when a reviewed infra.plan_finalized = 'no' exists with a site announcement on record, or when the reviewed 'yes' carries an effective_on later than the earliest live site_announcement.announced_on; it is 'yes' when effective_on is on or before that date; every gap (no announcement, no reviewed assertion, 'yes' without effective_on) leaves the var MISSING so the criterion stays UNASSESSED and never reads clean (risk-officer B-1). Dates are human-recorded only, never inferred from observed_at, recorded_at or gate dates (B-2).",
   "evaluable_from": "S5",
   "reevaluate_at": "fs",
-  "evaluable_from_evidence": "infra.plan_finalized (project text var), to be read as of the site-announcement date, not the gate date (design 8 #5, C-6; predicate change is PR-B); project-scoped source; re-evaluated at fs, the first project gate (ADR-0193 §14.1)"
+  "evaluable_from_evidence": "infra.plan_finalized_by_announcement (derived project var: reviewed infra.plan_finalized effective_on <= earliest live site_announcement.announced_on; inputs infra.plan_finalized_on and infra.site_announced_on, ADR-0194 item B, migration 0189); project-scoped source; re-evaluated at fs, the first project gate (ADR-0193 section 14.1)"
 }

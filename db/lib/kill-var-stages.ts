@@ -22,6 +22,7 @@ export const KILL_VAR_MIN_STAGE: Readonly<Record<string, string>> = {
   // S5 greenfield site / partner work
   "infra.sites_clearing_minimums": "S5", // site_candidate
   "infra.plan_finalized": "S5", // site announcement
+  "infra.plan_finalized_by_announcement": "S5", // derived from infra.plan_finalized + site_announcement (ADR-0194 item B)
   "partner.financial_distress_red_count": "S5", // partner DD needs a named partner
   "partner.dd_ip_chain_red_count": "S5",
   // S6-S7 brownfield target work

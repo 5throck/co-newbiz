@@ -29,11 +29,11 @@ let db: Db;
 let projectId: string;
 let runId: string;
 
-/** Decision 3's column set, in declaration order — the shape contract. */
+/** Decision 3's column set, in declaration order — the shape contract (+ effective_on appended by migration 0189, ADR-0194 item B). */
 const DIMENSION_INPUT_COLUMNS = [
   "id", "run_id", "project_id", "var_key", "value_kind", "value_text",
   "value_num", "unit", "evidence_ref", "asserted_by", "reviewed_by",
-  "rationale", "observed_at", "superseded_by",
+  "rationale", "observed_at", "superseded_by", "effective_on",
 ] as const;
 
 /** Decision 5b's column set, in declaration order. */

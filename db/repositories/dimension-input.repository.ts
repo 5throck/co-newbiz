@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.3.0
 /**
  * Dimension-input repository — the single write path for `dimension_input`
  * rows (PR-5b, design of record Decision 3, migration 0013).
@@ -27,6 +27,7 @@ import { getDb } from "../client.ts";
 import { ulid } from "../lib/ulid.ts";
 import { appendAudit, logDataAccess, requireActiveMember, requireInsiderIfMnpi } from "../lib/access-control.ts";
 import { isValidEvidenceRef, EVIDENCE_REF_SHAPES } from "../lib/evidence-ref.ts";
+import { isIsoCalendarDate, seoulToday } from "../lib/iso-date.ts";
 
 export interface DimensionInputRow {
   id: string;
@@ -42,6 +43,11 @@ export interface DimensionInputRow {
   reviewed_by: string | null;
   rationale: string;
   observed_at: string;
+  /**
+   * ADR-0194 item B (migration 0189): the date on which the asserted fact became true in the world, ISO `YYYY-MM-DD`.
+   * Distinct from observed_at (when it was recorded). Only infra.plan_finalized = 'yes' requires it today.
+   */
+  effective_on: string | null;
   superseded_by: string | null;
 }
 
@@ -68,6 +74,13 @@ export interface AssertInput {
   rationale: string;
   /** ISO-8601 observation date; defaults to now. Also stamps asserted/observed bookkeeping. */
   observed_at?: string;
+  /**
+   * ISO date the asserted fact took effect (ADR-0194 item B). REQUIRED when var_key = 'infra.plan_finalized' and the value
+   * is 'yes' - taken from the finalized plan document cited in evidence_ref, never defaulted from observed_at / now / a gate
+   * date (risk-officer B-2). Must be a real calendar date and not later than today. Rejected on 'no' (a plan that is not
+   * finalized has no finalization date). Optional elsewhere.
+   */
+  effective_on?: string | null;
   now?: string;
 }
 
@@ -80,11 +93,11 @@ export interface ReviewInput {
 }
 
 const SELECT_BY_ID = `SELECT id, run_id, project_id, var_key, value_kind, value_text, value_num,
-  unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, superseded_by
+  unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by
   FROM dimension_input WHERE id = ?`;
 
 const SELECT_LIVE = `SELECT id, run_id, project_id, var_key, value_kind, value_text, value_num,
-  unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, superseded_by
+  unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by
   FROM dimension_input WHERE project_id = ? AND var_key = ? AND superseded_by IS NULL`;
 
 /** The live assertion for one (project, var), or null — what applies-when reads. */
@@ -101,10 +114,79 @@ export function getAssertionHistory(
   return db
     .query(
       `SELECT id, run_id, project_id, var_key, value_kind, value_text, value_num,
-       unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, superseded_by
+       unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by
        FROM dimension_input WHERE project_id = ? AND var_key = ? ORDER BY observed_at DESC, id DESC`
     )
     .all(projectId, varKey) as DimensionInputRow[];
+}
+
+/** Every assertion row of a project (all vars, or one), newest observed_at first. Membership is the caller's check. */
+export function listProjectAssertions(db: ReturnType<typeof getDb>, projectId: string, varKey?: string): DimensionInputRow[] {
+  return db
+    .query(
+      `SELECT id, run_id, project_id, var_key, value_kind, value_text, value_num,
+       unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by
+       FROM dimension_input WHERE project_id = ? AND (? IS NULL OR var_key = ?) ORDER BY observed_at DESC, id DESC`,
+    )
+    .all(projectId, varKey ?? null, varKey ?? null) as DimensionInputRow[];
+}
+
+/** One assertion row by id (review routes check it belongs to the project). */
+export function getAssertionById(db: ReturnType<typeof getDb>, inputId: string): DimensionInputRow | null {
+  return (db.query(SELECT_BY_ID).get(inputId) as DimensionInputRow | undefined) ?? null;
+}
+
+/** The var whose assertion carries the point-in-time effective date (ADR-0194 item B, kill criterion #5). */
+export const PLAN_FINALIZED_VAR = "infra.plan_finalized";
+/** Registered in evidence_var (migration 0189, source asserted) but filled from PLAN_FINALIZED_VAR's effective_on, never asserted itself. */
+export const PLAN_FINALIZED_ON_VAR = "infra.plan_finalized_on";
+
+/**
+ * The variables the REST assertion route accepts: registry source_kind 'asserted', minus the filler-owned
+ * infra.plan_finalized_on and the single-person routing var (which has its own route, greenfield-scope).
+ */
+export function listAssertableVars(db: ReturnType<typeof getDb>): Array<{ var_key: string; label_ko: string; value_type: "number" | "string" | "boolean"; unit: string | null; requires_evidence_ref: number }> {
+  const rows = db
+    .query("SELECT var_key, label_ko, value_type, unit, requires_evidence_ref FROM evidence_var WHERE source_kind = 'asserted' ORDER BY var_key")
+    .all() as Array<{ var_key: string; label_ko: string; value_type: "number" | "string" | "boolean"; unit: string | null; requires_evidence_ref: number }>;
+  return rows.filter((r) => r.var_key !== PLAN_FINALIZED_ON_VAR && !SINGLE_PERSON_CONFIRMATION_VARS.includes(r.var_key));
+}
+
+/**
+ * Validate and normalize `effective_on` (ADR-0194 item B, risk-officer B-2). Returns the value to store (null = none).
+ *  - a supplied date must be a real ISO calendar date and not later than today (Asia/Seoul);
+ *  - infra.plan_finalized = 'yes' REQUIRES it, together with a resolvable evidence_ref: the date is read off the finalized
+ *    plan document, so the citation is the proof. It is never defaulted from observed_at, now or a gate date;
+ *  - infra.plan_finalized = 'no' refuses it (a plan that is not finalized has no finalization date).
+ */
+function validateEffectiveOn(input: AssertInput, now: string): string | null {
+  const supplied = input.effective_on === undefined || input.effective_on === null || input.effective_on === "" ? null : input.effective_on;
+  const isPlanFinalized = input.var_key === PLAN_FINALIZED_VAR && input.value.kind === "text";
+  const planAnswer = isPlanFinalized ? (input.value as { value: string }).value.trim() : null;
+  if (supplied !== null) {
+    if (!isIsoCalendarDate(supplied)) {
+      throw new Error(`dimension_input_write_rejected: effective_on '${String(supplied)}' must be a real calendar date in YYYY-MM-DD form.`);
+    }
+    if (supplied > seoulToday(now)) {
+      throw new Error(`dimension_input_write_rejected: effective_on '${supplied}' is later than today - a fact cannot have taken effect in the future (ADR-0194, risk-officer B-2).`);
+    }
+  }
+  if (planAnswer === "yes") {
+    if (supplied === null) {
+      throw new Error(
+        `dimension_input_write_rejected: '${PLAN_FINALIZED_VAR}' = 'yes' requires effective_on - the date of the finalized plan document, as stated by the person asserting it; it is never taken from observed_at, the recording time or a gate date (ADR-0194, risk-officer B-2).`,
+      );
+    }
+    const ref = (input.evidence_ref ?? "").trim();
+    if (!ref || !isValidEvidenceRef(ref)) {
+      throw new Error(
+        `dimension_input_write_rejected: '${PLAN_FINALIZED_VAR}' = 'yes' requires an evidence_ref (${EVIDENCE_REF_SHAPES.join(" | ")}) citing the finalized plan document the effective_on date was read from (ADR-0194, risk-officer B-2).`,
+      );
+    }
+  } else if (planAnswer === "no" && supplied !== null) {
+    throw new Error(`dimension_input_write_rejected: '${PLAN_FINALIZED_VAR}' = 'no' cannot carry effective_on - a plan that is not finalized has no finalization date.`);
+  }
+  return supplied;
 }
 
 /**
@@ -136,6 +218,12 @@ export function assert(input: AssertInput, db: ReturnType<typeof getDb> = getDb(
   if (!input.rationale?.trim()) {
     throw new Error(
       `dimension_input_write_rejected: rationale is mandatory for every assertion of '${input.var_key}' — an unexplained judgement input is unauditable.`,
+    );
+  }
+
+  if (input.var_key === PLAN_FINALIZED_ON_VAR) {
+    throw new Error(
+      `dimension_input_write_rejected: '${PLAN_FINALIZED_ON_VAR}' is not asserted directly - it is read from the effective_on of the live reviewed '${PLAN_FINALIZED_VAR}' = 'yes' assertion (ADR-0194 item B); assert '${PLAN_FINALIZED_VAR}' with effective_on instead, so the var has one writer.`,
     );
   }
 
@@ -174,6 +262,8 @@ export function assert(input: AssertInput, db: ReturnType<typeof getDb> = getDb(
     throw new Error(`dimension_input_write_rejected: a text assertion of '${input.var_key}' requires a non-empty value_text.`);
   }
 
+  const effectiveOn = validateEffectiveOn(input, now);
+
   const run = db.query("SELECT id, project_id FROM run WHERE id = ?").get(input.run_id) as
     | { id: string; project_id: string }
     | undefined;
@@ -206,8 +296,8 @@ export function assert(input: AssertInput, db: ReturnType<typeof getDb> = getDb(
     db.run(
       `INSERT INTO dimension_input
          (id, run_id, project_id, var_key, value_kind, value_text, value_num, unit,
-          evidence_ref, asserted_by, reviewed_by, rationale, observed_at, superseded_by)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id,
         input.run_id,
@@ -222,6 +312,7 @@ export function assert(input: AssertInput, db: ReturnType<typeof getDb> = getDb(
         null, // born unreviewed — review() is a separate deliberate act
         input.rationale,
         observedAt,
+        effectiveOn,
         live?.id ?? null,
       ]
     );

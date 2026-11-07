@@ -143,7 +143,7 @@ export interface GateSnapshot {
     carried_in: KillCarriedIn[];
     /** ADR-0193 (risk-officer D): criteria owned by a later gate, shown as pending with their scheduled gate - never absent. Not carries (the later gate owns them). */
     scheduled: Array<{ key: string; title: string; action: string; evaluable_from: string; reevaluate_at: string; status: "pending" }>;
-    /** ADR-0193 (risk-officer C): evidence caveats on evaluated criteria, e.g. #5 read on gate-date state, not the site-announcement date. Inside the hash. */
+    /** ADR-0193 (risk-officer C): evidence caveats on evaluated criteria (none registered since ADR-0194 item B removed the #5 gate-date caveat). Inside the hash. */
     caveats: Array<{ key: string; caveat: string }>;
     /** ADR-0193 C-3: a project's first gate (fs) found no md_project.source_opportunity_id, so the opportunity carries cannot be verified. */
     lineage_missing: boolean;
@@ -223,10 +223,12 @@ export function projectKillProcedures(db: Database, projectId: string, gate: str
 
 export const PMI_PROCEDURE = "pmi-integration-execution";
 const POST_CLOSE_REASON = "post-close data not yet available";
-/** ADR-0193 C-6 open: #5 is read on the gate-date state (risk-officer condition C). Follow-up ticket: FOLLOWUP-ADR0193-C6 (placeholder; see design 13). */
-export const KILL_EVIDENCE_CAVEATS: Readonly<Record<string, string>> = {
-  "greenfield-screening:infrastructure_plan_not_finalized_at_site_announcement": "evaluated on gate-date state, not site-announcement date (ADR-0193 C-6 pending): not clean evidence",
-};
+/**
+ * Evidence caveats keyed by criterion key, shown next to an evaluated criterion and kept inside the snapshot hash. Empty since
+ * ADR-0194 item B (risk-officer B-3): #5 was the only entry ("evaluated on gate-date state, not site-announcement date"); it is
+ * now read at the site-announcement date from human-recorded data, so it carries no caveat. The mechanism stays for future entries.
+ */
+export const KILL_EVIDENCE_CAVEATS: Readonly<Record<string, string>> = {};
 /** Criteria a gate shows as pending although a later gate owns them (flow.spec 2.19.0 moved deal-shape-chain to pre_fs). */
 const SCHEDULED_ELSEWHERE: Readonly<Record<string, readonly string[]>> = { screening: ["deal-shape-chain"] };
 /** Gate-owned criteria of a procedure that a gate shares only in part (flow.spec: dd lists clean_team_protocol_breach only). */
@@ -902,6 +904,9 @@ export function snapshotInputVersion(db: Database, entityType: SnapshotEntity, e
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM dd_finding WHERE project_id = ?", entityId),
       one("SELECT COALESCE(wacc_subject,'') s FROM md_project WHERE id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM process_run WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_target_select'", entityId),
+      // ADR-0194 item B: kill criterion #5 reads the site announcements and the reviewed infra-plan assertion (with its effective_on).
+      one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM site_announcement WHERE project_id = ?", entityId),
+      one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m, COUNT(reviewed_by) r FROM dimension_input WHERE project_id = ? AND var_key = 'infra.plan_finalized'", entityId),
     );
   } else {
     parts.push(

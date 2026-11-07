@@ -1528,7 +1528,7 @@
       "id": "2026-11-07-kill-data-sources",
       "title": "kill data sources design",
       "file": "docs/designs/2026-11-07-kill-data-sources-design.md",
-      "status": "draft",
+      "status": "implemented",
       "source": "manual",
       "created": "2026-11-07",
       "last_updated": "2026-11-07"
