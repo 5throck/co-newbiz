@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ACK_NOT_REACHED_CODE,
   EMPTY_ACK_STATE,
+  ackNotReachedKeys,
   ackProblemsFromError,
+  caveatsOfKey,
+  closureView,
+  dropAckKeys,
+  isNamedGate,
+  killScopeView,
+  type GateSnapshotView,
   buildAckPayload,
   missingAckKeys,
   reasonHint,
@@ -92,5 +100,69 @@ describe("gate-ack-view", () => {
         items: [{ key: "k", reason: "too_short" }],
       }).weak,
     ).toEqual([{ key: "k", reason: "too_short" }]);
+  });
+});
+
+// ── ADR-0193: stage-scoped kill criteria view model ──
+
+const baseKill = { triggered: [], unassessed: [], inert: 0, inert_list: [] } as GateSnapshotView["kill"];
+
+describe("kill scope view (ADR-0193)", () => {
+  test("a legacy snapshot (no v2 fields) reads as empty, never throws", () => {
+    const v = killScopeView(baseKill);
+    expect(v.notReached).toEqual([]);
+    expect(v.carriedIn).toEqual([]);
+    expect(v.scheduled).toEqual([]);
+    expect(v.caveats).toEqual([]);
+    expect(v.partialTriggered).toEqual([]);
+    expect(v.closedCarries).toBe(0);
+  });
+  test("not-reached items add no required acknowledgement: the ack list is the server's required_acks only", () => {
+    const kill: GateSnapshotView["kill"] = { ...baseKill, not_reached: [{ key: "p:x", procedure: "p", criterion_id: "x", title: "X", action: "halt", evaluable_from: "S5", reevaluate_at: "pre_fs" }] };
+    expect(killScopeView(kill).notReached).toHaveLength(1);
+    expect(missingAckKeys([], EMPTY_ACK_STATE)).toEqual([]);
+    expect(buildAckPayload([], EMPTY_ACK_STATE)).toEqual([]);
+  });
+  test("closed carries are evaluated and out_of_track; open and open_monitoring are not", () => {
+    const c = (key: string, closure: "evaluated" | "open" | "out_of_track" | "open_monitoring") => ({ key, title: key, from_decision_id: null, outcome: "false" as const, closure, action: "halt", evaluable_from: "S5", reevaluate_at: "pre_fs", route_decision_id: null });
+    const v = killScopeView({ ...baseKill, carried_in: [c("a", "evaluated"), c("b", "open"), c("c", "out_of_track"), c("d", "open_monitoring")] });
+    expect(v.carriedIn).toHaveLength(4);
+    expect(v.closedCarries).toBe(2);
+  });
+  test("partial-input triggers are picked out, and stay triggered", () => {
+    const t = (key: string, partial?: boolean) => ({ key, procedure: "p", criterion_id: key, title: key, action: "halt", partial_input: partial });
+    const kill = { ...baseKill, triggered: [t("a", true), t("b", false), t("c")] };
+    expect(killScopeView(kill).partialTriggered.map((x) => x.key)).toEqual(["a"]);
+    expect(kill.triggered).toHaveLength(3);
+  });
+  test("every closure state has an icon (never colour alone); an unknown state degrades to open", () => {
+    for (const c of ["evaluated", "open", "open_monitoring", "out_of_track"]) expect(closureView(c).icon.length).toBeGreaterThan(0);
+    expect(closureView("weird").id).toBe("open");
+    expect(new Set(["evaluated", "open", "open_monitoring", "out_of_track"].map((c) => closureView(c).icon)).size).toBe(4);
+  });
+  test("caveats are looked up per key and de-duplicated", () => {
+    const kill = { ...baseKill, caveats: [{ key: "p:a", caveat: "x" }, { key: "p:a", caveat: "x" }, { key: "p:b", caveat: "y" }] };
+    expect(caveatsOfKey(kill, "p:a")).toEqual(["x"]);
+    expect(caveatsOfKey(kill, "p:z")).toEqual([]);
+    expect(caveatsOfKey(baseKill, "p:a")).toEqual([]);
+  });
+  test("only real gate ids have a label; open_monitoring and blanks do not", () => {
+    expect(isNamedGate("pre_fs")).toBe(true);
+    expect(isNamedGate("target_screening")).toBe(true);
+    expect(isNamedGate("open_monitoring")).toBe(false);
+    expect(isNamedGate("")).toBe(false);
+  });
+});
+
+describe("ack_not_reached recovery", () => {
+  test("keys come from details; garbage degrades to none", () => {
+    expect(ACK_NOT_REACHED_CODE).toBe("ack_not_reached");
+    expect(ackNotReachedKeys({ keys: ["p:a", 3, "p:b"], snapshot_hash: "h" })).toEqual(["p:a", "p:b"]);
+    expect(ackNotReachedKeys(null)).toEqual([]);
+    expect(ackNotReachedKeys({ keys: "p:a" })).toEqual([]);
+  });
+  test("dropAckKeys removes entered state for the rejected keys only", () => {
+    const st = { reasons: { "p:a": "r", "rag:overall": "rr" }, checked: { "p:a": true, "p:b": true }, sharedReason: "s", perItem: false };
+    expect(dropAckKeys(st, ["p:a"])).toEqual({ reasons: { "rag:overall": "rr" }, checked: { "p:b": true }, sharedReason: "s", perItem: false });
   });
 });
