@@ -154,7 +154,7 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
           </strong>
           {t("estimateP1P2PerCurrency", { p1: anchorCcy ?? "", p2: fmt(fxRow!.rate), p3: scale > 1 ? ` ×${fmt(scale)}` : "", p4: fmt(derived!), p5: unit ? ` ${unit}` : "", p6: fmt(flow?.computed?.factor_product ?? 1), p7: flow?.derivation.steps.length })}
           {growthLabel && t("growthP1", { p1: growthLabel })}
-          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span>}
+          {scopeChip && <>{" "}<span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span></>}
         </>
       ) : derived != null && unitUndeclared ? (
         <>
@@ -163,8 +163,8 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
             {unit ? ` ${unit}` : t("anchorUnit")}
           </strong>
           {t("factorP1ChainP2Steps", { p1: fmt(flow?.computed?.factor_product ?? 1), p2: flow?.derivation.steps.length })}
-          <span className="status-chip status-warn ml-1">{t("anchorUnitUndeclaredDeclaringThe")}</span>
-          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span>}
+          {" "}<span className="status-chip status-warn ml-1">{t("anchorUnitUndeclaredDeclaringThe")}</span>
+          {scopeChip && <>{" "}<span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span></>}
         </>
       ) : derived != null ? (
         <>
@@ -174,8 +174,8 @@ export function EntryMarketContextStrip({ opportunityId }: { opportunityId: stri
           </strong>
           {t("s1AnchorP1FactorP2", { p1: fmt(flow?.computed?.anchor_value_krw_m ?? 0), p2: fmt(flow?.computed?.factor_product ?? 1), p3: flow?.derivation.steps.length })}
           {growthLabel && t("growthP12", { p1: growthLabel })}
-          {fxMissing && <span className="status-chip status-warn ml-1">{t("referenceFxRateNotSet")}{anchorCcy}{t("cannotEstimate")}</span>}
-          {scopeChip && <span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span>}
+          {fxMissing && <>{" "}<span className="status-chip status-warn ml-1">{t("referenceFxRateNotSet")}{anchorCcy}{t("cannotEstimate")}</span></>}
+          {scopeChip && <>{" "}<span className={`${scopeChip.cls} ml-1`}>{tr(scopeChip.label)}</span></>}
         </>
       ) : (
         <span className="text-[color:var(--muted-fg)]">{t("cannotComputeTheDerivedValue")}</span>

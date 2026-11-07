@@ -2745,6 +2745,7 @@
 .table-fixed-pct td, .table-fixed-pct th { overflow-wrap: anywhere; }
 .cell-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.cell-clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 /* 품평회 2026-10-22 잔여 #2 — 잘린 셀 전문(제외 사유)을 포커스·클릭으로 펼치는
    토글. title 속성(hover 한정)은 터치·키보드 사용자가 전문에 닿게 못 하므로
    버튼으로 만들어 탭 도달 + aria-expanded 상태를 준다. */
@@ -3960,7 +3961,8 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .inbox-row:focus-visible, .stage-stepper-compact summary:focus-visible,
 .stage-step-skipped:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); }
 .stage-step-current { color: var(--primary); background: var(--primary-bg); border-color: var(--primary-border); font-weight: 600; }
-.stage-step-skipped { color: var(--muted-fg); text-decoration: line-through; cursor: help; }
+/* 승격 전·미적용 단계: 취소선(= "취소됨"으로 읽힘) 대신 흐린 점선 알약 — 상태는 "승격 후"/"미적용" 글자가 전달한다. */
+.stage-step-skipped { color: var(--muted-fg); background: transparent; border: 1px dashed var(--border); cursor: help; }
 /* 품평회 2026-10-22 잔여 #3 — 차단(승격 전) 단계의 사유를 title(hover) 한정으로
    두지 않는다. 단계 알약이 포커스(탭 도달)되면 사유를 눈에 보이는 말풍선으로
    띄운다 — 키보드·터치 사용자도 전문을 읽을 수 있다. */
@@ -4194,6 +4196,18 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 
 /* Stepper: one row, horizontal scroll, current stage scrolled into view; gate marker is separate. */
 .stage-stepper { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+/* Scroll affordance: edge fades appear only on the side that still hides steps (StageRail sets data-fade-*). */
+.stage-stepper-wrap::before, .stage-stepper-wrap::after {
+  content: ""; position: absolute; top: 1px; bottom: 1px; width: 2rem; z-index: 1; pointer-events: none;
+  opacity: 0; transition: opacity 0.2s var(--ease-spring);
+}
+.stage-stepper-wrap::before { left: 1px; border-radius: var(--radius-lg) 0 0 var(--radius-lg); background: linear-gradient(to right, var(--surface), transparent); }
+.stage-stepper-wrap::after { right: 1px; border-radius: 0 var(--radius-lg) var(--radius-lg) 0; background: linear-gradient(to left, var(--surface), transparent); }
+.stage-stepper-wrap[data-fade-left="true"]::before, .stage-stepper-wrap[data-fade-right="true"]::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .stage-stepper-wrap::before, .stage-stepper-wrap::after { transition: none; } }
+@media (max-width: 880px) { /* design-token-exempt: breakpoint (custom properties invalid in query conditions) */
+  .stage-stepper-wrap::before, .stage-stepper-wrap::after { display: none; }
+}
 .stage-step { flex: 0 0 auto; white-space: nowrap; }
 .stage-gate-marker { display: inline-flex; align-items: center; flex: 0 0 auto; margin-left: 0.25rem; padding-left: 0.5rem; border-left: 1px solid var(--border); }
 
@@ -4451,3 +4465,15 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .agent-combobox-name { color: var(--muted-fg); }
 .agent-combobox-empty { padding: var(--space-2) var(--space-3); font-size: var(--fs-body); color: var(--muted-fg); }
 .dry-run-id-cell { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+/* S3 completion (design 2026-11-07-s3-completion-into-decision-tab): status line above the tabs and the
+   decision-tab checklist. Chip and label are separate flex cells; the chip never splits or glues to text. */
+.completion-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.5rem; font-size: var(--fs-body); }
+.completion-line .status-chip { white-space: nowrap; flex: 0 0 auto; }
+.completion-steps { list-style: none; margin: 0.25rem 0 0.5rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-size: var(--fs-body); }
+.completion-steps li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+.completion-steps .status-chip { white-space: nowrap; flex: 0 0 auto; }
+/* All three steps done: one wrapping row — title + small done chips, no heading block. */
+.completion-compact { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+.completion-compact .completion-steps { margin: 0; }
+.completion-compact-title { margin: 0; font-size: var(--fs-body); font-weight: 600; }

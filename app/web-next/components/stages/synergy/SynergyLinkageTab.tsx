@@ -13,6 +13,8 @@ import { ClampedText } from "../ClampedText.tsx";
 import { CapabilityHeldDialog, HeldEvidenceButton } from "../CapabilityHeldDialog.tsx";
 import { NarrativeInput } from "../CapabilityNarrativeDialog.tsx";
 import { SourceLinks } from "./SourceLinks.tsx";
+import { ExpandableCell } from "./ExpandableCell.tsx";
+import { formatRange, mergeMarketSummaries } from "../../../lib/synergy-market-summary.ts";
 import { useTranslations } from "next-intl";
 
 // 시너지 영역 6열 — 근거·기회·위험이 긴 문단 열.
@@ -39,6 +41,7 @@ const SYNERGY_AREA_COL_PCT = [14, 10, 30, 20, 16, 10] as const;
 
 export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: SynergyPayload }) {const t = useTranslations("stages.s3.synergyLinkageTab"); const tc = useTranslations("common");
   const { tab, canCurate, showLinkageForm, setShowLinkageForm, linkageForm, setLinkageForm, linkageError, setLinkageError, linkageSaving, addLinkageItem, opportunityId, gapRows, gapBusy, discardDrafts, dismissGapNote, draftGap, saveGap, gapNote, gapDrafts, gapDirty, holdBusy, checkHolding, includeGroup, setIncludeGroup, holdReasons, gapError, updateGapHeld, updateGapRow, setGapRows, newGapCap, setNewGapCap, addGapRow, inProgress, onRerun } = ctx;
+  const mergedMarkets = mergeMarketSummaries(p.marketLinkage.marketSummaries);
   const proposePrimary = !gapDirty && gapRows.length === 0;
   const missing = countMissingRequirement(gapRows);
   const draftCount = countDraftFields(gapDrafts);
@@ -90,9 +93,24 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                   {t("linkageSynergyAreasKeyReview")}
                 </p>
               )}
-              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {t("linkedMarket")} {p.marketLinkage.marketSummaries.map((m) => `${m.industry} (CAGR ${m.cagrPct ?? "?"}%${m.gapPct !== null ? t("gapP1P2", { p1: m.gapPct > 0 ? "+" : "", p2: m.gapPct }) : ""})`).join(" · ") || t("none")}
-              </p>
+              <div className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                <span>{t("linkedMarket")}</span>{" "}
+                {mergedMarkets.length === 0 ? t("none") : (
+                  <ul className="inline-flex flex-wrap gap-x-3 gap-y-1 m-0 p-0 list-none align-top">
+                    {mergedMarkets.map((m) => {
+                      const gap = formatRange(m.gapMin, m.gapMax, true);
+                      return (
+                        <li key={m.industry}>
+                          {m.industry} (CAGR {formatRange(m.cagrMin, m.cagrMax) ?? "?"}%{gap !== null ? t("gapP1P2", { p1: "", p2: gap }) : ""})
+                          {m.gapOutlier && (
+                            <span className="status-chip status-warn ml-1" title={t("gapOutlierNote")}><span aria-hidden="true">⚠</span> {t("gapOutlier")}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
               <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
               <table className="data-table table-fixed-pct tmin-64" aria-label={t("synergyArea")}>
                 <caption className="sr-only">{t("synergyArea2")}</caption>
@@ -105,9 +123,9 @@ export function SynergyLinkageTab({ ctx, p }: { ctx: SynergyResultState; p: Syne
                     <tr key={a.area}>
                       <td className="font-semibold col-label">{a.area}</td>
                       <td className="text-[length:var(--fs-caption)] col-type">{a.synergyType}</td>
-                      <td className="text-[length:var(--fs-body)] col-text">{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> {t("source")} {a.sources.join(", ")})</span>}</td>
-                      <td className="text-[length:var(--fs-body)] col-text">{a.opportunity}</td>
-                      <td className="text-[length:var(--fs-body)] col-text">{a.risk}</td>
+                      <td className="text-[length:var(--fs-body)] col-text"><ExpandableCell>{a.rationale}{a.sources.length > 0 && <span className="text-[color:var(--muted-fg)]"> {t("source")} {a.sources.join(", ")})</span>}</ExpandableCell></td>
+                      <td className="text-[length:var(--fs-body)] col-text"><ExpandableCell>{a.opportunity}</ExpandableCell></td>
+                      <td className="text-[length:var(--fs-body)] col-text"><ExpandableCell>{a.risk}</ExpandableCell></td>
                       <td className="col-type">
                         <span className={`status-chip ${a.origin === "human" ? "status-in-progress" : "status-not-started"}`}>
                           {a.origin === "human" ? t("addPerson") : tc("aiRecommendation")}

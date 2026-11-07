@@ -228,7 +228,6 @@
   "app/web-next/lib/project-charter.ts": 9,
   "app/web-next/lib/project-goals.ts": 19,
   "app/web-next/lib/report-composer.ts": 56,
-  "app/web-next/lib/review/kill-criteria-ko.ts": 32,
   "app/web-next/lib/review/review-display.ts": 65,
   "app/web-next/lib/review/stage-artifact-labels.ts": 37,
   "app/web-next/lib/risk-assessment.ts": 5,
