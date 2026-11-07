@@ -181,7 +181,7 @@ function condText(raw: string): string {
   return raw;
 }
 
-export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", showReview = true, nextStage, goGaps, onRecorded, sequence = false, hideBrief = false, rationalePrefill = null }: {
+export function GateDecisionPanel({ opportunityId, gates, killHint, entityType = "opportunity", showReview = true, nextStage, goGaps, onRecorded, sequence = false, hideBrief = false, rationalePrefill = null, carrierStage }: {
   opportunityId: string;
   gates: GateMetaId[];
   killHint?: string | null;
@@ -199,6 +199,8 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
   hideBrief?: boolean;
   /** Parent-driven rationale prefill (proposal only; the person still records). A new nonce applies the text. */
   rationalePrefill?: { text: string; nonce: number } | null;
+  /** The stage screen hosting this panel (e.g. "S3"); scopes later unfinished stages out of the embedded review. */
+  carrierStage?: string;
 }) {const tr = useTranslations(); const t = useTranslations("components.gateDecision.panel"); const tc = useTranslations("common"); const ts = useTranslations("components.gateSnapshot"); const te = useTranslations("errors.rationale");
   const { me } = useAuth();
   const { toast } = useToast();
@@ -588,6 +590,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
           entityType={entityType}
           entityId={opportunityId}
           gates={gates}
+          carrierStage={carrierStage}
           variant="expanded"
           judgementChecks={judgementChecks}
           onToggleJudgement={canRecord ? toggleJudgement : undefined}

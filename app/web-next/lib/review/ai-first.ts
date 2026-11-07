@@ -60,7 +60,7 @@ export function runAiFirstChecks(artifact: ReviewArtifact): ReviewBuckets {
         key: REVIEW_ITEM_KEYS.ai1StageTerminated,
         params: stageParams,
       });
-    } else if (s.status === "current") {
+    } else if (s.status === "current" && !s.not_reached) {
       const missingNames = cleanList(s.missing_artifacts);
       const missing = missingNames.length > 0 ? ` Missing: ${missingNames.join("; ")}.` : "";
       could.push({

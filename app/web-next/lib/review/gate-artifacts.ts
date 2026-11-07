@@ -68,9 +68,12 @@ export interface GateArtifactStage {
   blockers: string[];
   missing_artifacts: string[];
   /**
-   * True only for a `locked` stage that comes AFTER the entity's current stage
-   * (the entity simply has not got there yet). Omitted otherwise, so artifacts
-   * of already-reached stages keep their content hash.
+   * True for a `locked` stage that comes AFTER the entity's current stage (the
+   * entity simply has not got there yet), and — when the review is requested
+   * from a stage carrier (BuildGateArtifactOptions.carrierStage) — for any
+   * unfinished stage AFTER that carrier stage (out of the review's scope).
+   * Omitted otherwise, so artifacts of already-reached stages keep their
+   * content hash.
    */
   not_reached?: true;
 }
@@ -88,11 +91,27 @@ export interface GateArtifact {
   contentHash: string;
 }
 
-export function buildGateArtifact(gate: ReviewGate, entityId: string): GateArtifact {
+export interface BuildGateArtifactOptions {
+  /**
+   * The stage screen the review is requested from (e.g. the S3 screen asking
+   * for the `screening` gate, which spans S1-S4). Stages AFTER it that are
+   * still unfinished (`current` / `locked`) are scoped out like not_reached:
+   * non-structural, informational, excluded from the AI 2nd payload. Omitted =
+   * gate-level review (inbox, proposal confirm) with the full gate span.
+   */
+  carrierStage?: StageId;
+}
+
+export function buildGateArtifact(
+  gate: ReviewGate,
+  entityId: string,
+  opts: BuildGateArtifactOptions = {},
+): GateArtifact {
   const entityType = gateEntityType(gate);
   const ev = evaluateProcess({ type: entityType, id: entityId });
   const ids = gateStageIds(gate);
   const currentSequence = ev.currentStage ? (STAGES.find((x) => x.id === ev.currentStage)?.sequence ?? null) : null;
+  const carrierSequence = opts.carrierStage ? (STAGES.find((x) => x.id === opts.carrierStage)?.sequence ?? null) : null;
   const stages: GateArtifactStage[] = ids.map((id) => {
     const s = ev.stages.find((x) => x.id === id);
     const current = ev.currentStage === id;
@@ -100,14 +119,18 @@ export function buildGateArtifact(gate: ReviewGate, entityId: string): GateArtif
     const sequence = STAGES.find((x) => x.id === id)?.sequence ?? 0;
     // Locked AND after the current stage = not reached yet. A locked stage at
     // or before the current one (or with no current stage) stays structural.
-    const notReached = status === "locked" && currentSequence !== null && sequence > currentSequence;
+    const notReached =
+      (status === "locked" && currentSequence !== null && sequence > currentSequence) ||
+      // Carrier scope: a stage after the requesting screen's stage that is not
+      // finished yet is out of scope (finished stages stay verifiable).
+      ((status === "locked" || status === "current") && carrierSequence !== null && sequence > carrierSequence);
     return {
       id,
       name: s?.name ?? id,
       status,
       required_artifacts: s?.requiredArtifacts ?? [],
-      blockers: current ? [...ev.blockers] : [],
-      missing_artifacts: current ? [...ev.requiredArtifacts] : [],
+      blockers: current && !notReached ? [...ev.blockers] : [],
+      missing_artifacts: current && !notReached ? [...ev.requiredArtifacts] : [],
       ...(notReached ? { not_reached: true as const } : {}),
     };
   });

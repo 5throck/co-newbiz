@@ -30,7 +30,7 @@ export const BLOCKER_LABELS = {
   "s2.entry_market": "진입시장 산정 (S1 링크·대상 범위·도출 사슬)",
   // S3 synergy and strategic fit
   "s3.synergy_assessment": "시너지 평가",
-  "s3.strategic_fit_judgement": "전략적 적합성 판단",
+  "s3.strategic_fit_judgement": "시너지 점수 확정·근거 (전략적 적합성 판단)",
   "s3.capability_register": "필요 역량 목록(출처 포함)",
   "s3.opportunity_selected": "기회 선택(selected)",
   // S4 route decision

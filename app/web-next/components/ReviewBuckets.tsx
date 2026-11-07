@@ -189,6 +189,7 @@ export function ReviewBuckets({
   ackMeta,
   onDecisionJump,
   confirmedJudgements,
+  carrierStage,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
@@ -217,6 +218,8 @@ export function ReviewBuckets({
   /** 판단 필요 claims already confirmed with a recorded gate decision — they
    *  render as a saved-state chip instead of a pending checkbox. */
   confirmedJudgements?: ReadonlySet<string>;
+  /** The stage screen hosting this block (e.g. "S3" on the synergy screen). Gate reviews scope the unfinished stages AFTER it out (AI 1st reports them as info, AI 2nd skips them). Omitted = whole gate span (inbox, proposal confirm). */
+  carrierStage?: string;
 }) {
   const tr = useTranslations();
   const locale = useLocale();
@@ -302,10 +305,12 @@ export function ReviewBuckets({
     async (key: string) => {
       try {
         const param: Record<string, string> = key.startsWith("gate:") ? { gate: key.slice(5) } : { artifact: key };
-        let r = await api.get<ReviewView>(`${base}?${new URLSearchParams(param)}`);
+        const isGate = key.startsWith("gate:");
+        const query = isGate && carrierStage ? { ...param, carrier_stage: carrierStage } : param;
+        let r = await api.get<ReviewView>(`${base}?${new URLSearchParams(query)}`);
         // AI 1st is deterministic and cheap — materialise it when absent/stale.
         if (canRequest && !r.data.ai_1st?.current) {
-          r = await api.post<ReviewView>(base, param);
+          r = await api.post<ReviewView>(base, isGate && carrierStage ? { ...param, carrierStage } : param);
         }
         setViews((v) => ({ ...v, [key]: r.data }));
         setError(null);
@@ -318,7 +323,7 @@ export function ReviewBuckets({
         );
       }
     },
-    [base, canRequest, tr],
+    [base, canRequest, carrierStage, tr],
   );
 
   useEffect(() => {
@@ -357,7 +362,9 @@ export function ReviewBuckets({
       }
     />
   ) : null;
-  const activeParam = active.startsWith("gate:") ? { gate: active.slice(5) } : { artifact: active };
+  const activeParam: Record<string, string> = active.startsWith("gate:")
+    ? { gate: active.slice(5), ...(carrierStage ? { carrierStage } : {}) }
+    : { artifact: active };
 
   async function requestAi2nd() {
     if (busy) return;

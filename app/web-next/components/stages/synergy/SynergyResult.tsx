@@ -282,6 +282,7 @@ export function SynergyResult(props0: {
                   <GateDecisionPanel
                     opportunityId={opportunityId}
                     gates={["screening"]}
+                    carrierStage="S3"
                     onRecorded={(decision, gate) => {
                       if (decision === "go" && gate === "screening") void advanceToRouteDecision();
                     }}
