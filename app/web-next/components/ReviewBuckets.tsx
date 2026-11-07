@@ -98,10 +98,10 @@ interface ReviewView {
 type BucketKey = "verified" | "could_not_verify" | "needs_judgement";
 // Bucket titles and hints come from the review.* catalog namespace (ADR-0184);
 // BUCKET_TITLE's English stays as the tooltip (English is the audit language).
-const BUCKETS: Array<{ key: BucketKey; hintKey: string }> = [
-  { key: "verified", hintKey: "review.buckets.hintVerified" },
-  { key: "could_not_verify", hintKey: "review.buckets.hintCouldNotVerify" },
-  { key: "needs_judgement", hintKey: "review.buckets.hintNeedsJudgement" },
+const BUCKETS: Array<{ key: BucketKey; titleKey: string; hintKey: string }> = [
+  { key: "verified", titleKey: "review.buckets.verified", hintKey: "review.buckets.hintVerified" },
+  { key: "could_not_verify", titleKey: "review.buckets.couldNotVerify", hintKey: "review.buckets.hintCouldNotVerify" },
+  { key: "needs_judgement", titleKey: "review.buckets.needsJudgement", hintKey: "review.buckets.hintNeedsJudgement" },
 ];
 
 /**
@@ -549,7 +549,7 @@ export function ReviewBuckets({
                         title={BUCKET_TITLE[b.key].en}
                       >
                         {tr("review.buckets.heading", {
-                          title: tr(`review.buckets.${b.key}`),
+                          title: tr(b.titleKey),
                           count: openItems.length,
                         })}
                       </h4>

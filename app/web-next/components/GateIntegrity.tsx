@@ -9,6 +9,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { useConfirm } from "./crud.tsx";
 import { useToast } from "./ui.tsx";
+import { useKillCriteriaLabels } from "../lib/use-kill-criteria-labels.ts";
 import {
   COUNTERSIGN_CHOICES, EMPTY_CONDITION, clearByOptions, conditionsPayload, countersignProblem, filterConditions,
   type ClearByView, type ConditionDraft, type CountersignChoice,
@@ -242,6 +243,7 @@ export function KillOverridePanel({ entityType, entityId, triggered, canAct, onC
 }) {
   const t = useTranslations("components.gateIntegrity.overrides");
   const tc = useTranslations("common");
+  const kc = useKillCriteriaLabels();
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
   const base = `/api/${entityType === "project" ? "projects" : "opportunities"}/${encodeURIComponent(entityId)}/kill-overrides`;
@@ -276,7 +278,7 @@ export function KillOverridePanel({ entityType, entityId, triggered, canAct, onC
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
-                <td>{triggered.find((k) => k.procedure === r.procedure_key && k.criterion_id === r.criterion_id)?.title ?? `${r.procedure_key} · ${r.criterion_id}`}</td>
+                <td>{kc.title(r.criterion_id, triggered.find((k) => k.procedure === r.procedure_key && k.criterion_id === r.criterion_id)?.title ?? `${r.procedure_key} · ${r.criterion_id}`)}</td>
                 <td className={`${small} ${muted}`}>{r.reason}</td>
                 <td className={small}>{t("issuedBy", { by: r.issued_by, date: r.issued_at.slice(0, 10) })}
                   {r.revoked_at && <span className="block"><span className="status-chip status-not-started"><span aria-hidden="true">✕</span> {t("revoked", { by: r.revoked_by ?? "", date: r.revoked_at.slice(0, 10) })}</span></span>}
@@ -301,7 +303,7 @@ export function KillOverridePanel({ entityType, entityId, triggered, canAct, onC
             <label className={small}><span className="block mb-1">{t("pick")}</span>
               <select className="sizing-new-input sizing-new-input-sm" value={pick} onChange={(e) => setPick(e.target.value)} aria-required="true">
                 <option value="">{t("pickPlaceholder")}</option>
-                {candidates.map((k) => <option key={k.key} value={`${k.procedure}|${k.criterion_id}`}>{k.title}</option>)}
+                {candidates.map((k) => <option key={k.key} value={`${k.procedure}|${k.criterion_id}`}>{kc.title(k.criterion_id, k.title)}</option>)}
               </select>
             </label>
             <label className={`${small} flex-1 min-w-[14rem]`} htmlFor={`${uid}-r`}><span className="block mb-1">{t("reason")}</span>

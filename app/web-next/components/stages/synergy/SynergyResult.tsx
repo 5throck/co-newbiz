@@ -1,12 +1,15 @@
 "use client";
 
 // Split from components/stages/SynergyStage.tsx (Wave U-3 decomposition); behavior unchanged.
+import { useEffect, useState } from "react";
 import { SectionToolbar } from "../../layout.tsx";
 import { ListBackButton } from "../../ListBackButton.tsx";
 import { PrimaryAction } from "../../ui.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { useSynergyResult } from "./useSynergyResult.ts";
-import { SynergySelectPanel } from "./SynergySelectPanel.tsx";
+import { COMPLETION_HEADING_ID, SynergySelectPanel } from "./SynergySelectPanel.tsx";
+import { SynergyCompletionStatusLine } from "./SynergyCompletionStatusLine.tsx";
+import { useOpportunityStatus } from "./useOpportunityStatus.ts";
 import { SynergyScoreEvaluationTab, SynergyShortlistTab, SynergyProfileContext } from "./SynergyTabs.tsx";
 import { SynergyCapabilityTab } from "./SynergyCapabilityTab.tsx";
 import { SynergyFlowDiagram } from "./SynergyFlowDiagram.tsx";
@@ -27,6 +30,7 @@ export function SynergyResult(props0: {
   const tr = useTranslations();
   const t = useTranslations("stages.s3.synergyResult");
   const tc = useTranslations("common");
+  const tsp = useTranslations("stages.s3.synergySelectPanel");
   const h0 = useSynergyResult(props0);
   const ctx = { ...h0 };
   // current_step is 1-based (pipeline advance(1..5) marks the step being run) while the title
@@ -53,20 +57,19 @@ export function SynergyResult(props0: {
     confirmSaving,
     confirmSynergyScore,
   } = ctx;
+  // The `selected` status is read once here (single GET) and shared by the status line above the
+  // tabs and the decision-tab checklist (design 2026-11-07-s3-completion-into-decision-tab §8).
+  const oppStatus = useOpportunityStatus(opportunityId);
+  const completed = oppStatus.status === "selected";
+  // Jump link: switch to the decision tab, then move focus to its checklist heading once rendered.
+  const [focusDecision, setFocusDecision] = useState(false);
+  useEffect(() => {
+    if (!focusDecision || tab !== "decision") return;
+    document.getElementById(COMPLETION_HEADING_ID)?.focus();
+    setFocusDecision(false);
+  }, [focusDecision, tab]);
   return (
     <section aria-label={t("synergyConsistencyReport")} className="market-section sizing-step">
-      {/* S3 guided completion (design 2026-11-06 §Fix 2) — once the synergy score is
-          confirmed, this panel's "Select this opportunity" becomes the screen's ONE
-          primary action and the confirm button above steps aside (edit/retract stays
-          in the score-evaluation tab). */}
-      {opportunityId && (
-        <SynergySelectPanel
-          opportunityId={opportunityId}
-          synState={synState}
-          canCurate={canCurate}
-          onSelected={onRefresh}
-        />
-      )}
       {!synState?.confirmed && (
         <PrimaryAction
           label={confirmSaving ? tc("saving") : t("saveFitEvaluation")}
@@ -120,10 +123,20 @@ export function SynergyResult(props0: {
                 </span>
               );
             })()}
+            {completed && <span className="status-chip status-green">{tsp("statusLineDone")}</span>}
           </span>
         }
         actions={<ListBackButton onClick={onBack} />}
       />
+
+      {opportunityId && p && !completed && !oppStatus.loading && (
+        <SynergyCompletionStatusLine
+          onJumpToDecision={() => {
+            setFocusDecision(true);
+            onTab("decision");
+          }}
+        />
+      )}
 
       {inProgress && (
         <p className="text-[length:var(--fs-body)]" role="status">
@@ -250,6 +263,21 @@ export function SynergyResult(props0: {
           {tab === "decision" && (
             <>
               {opportunityId && (
+                <SynergySelectPanel
+                  opportunityId={opportunityId}
+                  synState={synState}
+                  canCurate={canCurate}
+                  status={oppStatus.status}
+                  statusLoadFailed={oppStatus.loadFailed}
+                  onRetryStatus={() => void oppStatus.refresh()}
+                  onSelected={async () => {
+                    await oppStatus.refresh();
+                    onRefresh();
+                  }}
+                  onTab={onTab}
+                />
+              )}
+              {opportunityId && (
                 <div className="mt-2">
                   <GateDecisionPanel
                     opportunityId={opportunityId}
@@ -259,13 +287,7 @@ export function SynergyResult(props0: {
                     }}
                   />
                   <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                    {t("recordingAGoMarksThis")}{" "}
-                    <a
-                      href={`/deals/${encodeURIComponent(opportunityId)}/s4`}
-                      className="text-[color:var(--accent)] underline"
-                    >
-                      {t("goToS4Now")}
-                    </a>
+                    {t("recordingAGoMarksThis")}
                   </p>
                 </div>
               )}

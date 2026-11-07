@@ -11,7 +11,7 @@ import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { PageState, useToast } from "../ui.tsx";
-import { KILL_CRITERIA_KO } from "../../lib/review/kill-criteria-ko.ts";
+import { useKillCriteriaLabels } from "../../lib/use-kill-criteria-labels.ts";
 import { useTranslations } from "next-intl";
 
 type StepStatus = "pending" | "incomplete" | "pass" | "fail" | "recorded";
@@ -38,7 +38,7 @@ const AUTO_LABEL = (tr: TranslatorFn): Record<string, { label: string; cls: stri
   unassessed: { label: "stages.s11.stepsPanel.engineNotEvaluated", cls: "status-gray" },
 });
 
-export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; canAct: boolean }) {const tr = useTranslations(); const t = useTranslations("stages.s11.stepsPanel"); const tc = useTranslations("common");
+export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; canAct: boolean }) {const tr = useTranslations(); const t = useTranslations("stages.s11.stepsPanel"); const tc = useTranslations("common"); const kc = useKillCriteriaLabels();
   const { toast } = useToast();
   const [view, setView] = useState<View | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -153,12 +153,12 @@ export function IcReviewStepsPanel({ projectId, canAct }: { projectId: string; c
             <tbody>{view.kill_criteria.map((c) => (
               <tr key={c.key}>
                 <td className="text-[length:var(--fs-caption)]">{c.procedure}</td>
-                <td className="text-[length:var(--fs-caption)]" title={c.criterion_id}>{KILL_CRITERIA_KO[c.criterion_id] ?? c.title}{!c.enabled && <span className="note ml-1">{t("forecastUndefined")}</span>}</td>
-                <td className="text-[length:var(--fs-caption)]">{c.action}</td>
+                <td className="text-[length:var(--fs-caption)]" title={c.criterion_id}>{kc.title(c.criterion_id, c.title)}{!c.enabled && <span className="note ml-1">{t("forecastUndefined")}</span>}</td>
+                <td className="text-[length:var(--fs-caption)]">{kc.action(c.action)}</td>
                 <td>{c.automated ? <span className={`status-chip ${AUTO_LABEL(tr)[c.automated].cls}`}>{AUTO_LABEL(tr)[c.automated].label}</span> : <span className="note">{t("noEvaluationRun")}</span>}</td>
                 <td>
                   {canAct ? (
-                    <select aria-label={t("p1Judgement", { p1: c.title })} className="sizing-new-input sizing-new-input-sm" value={verdicts[c.key] ?? ""} onChange={(e) => setVerdicts((cur) => ({ ...cur, [c.key]: e.target.value as Verdict }))}>
+                    <select aria-label={t("p1Judgement", { p1: kc.title(c.criterion_id, c.title) })} className="sizing-new-input sizing-new-input-sm" value={verdicts[c.key] ?? ""} onChange={(e) => setVerdicts((cur) => ({ ...cur, [c.key]: e.target.value as Verdict }))}>
                       <option value="">{t("notJudged")}</option><option value="pass">pass</option><option value="fail">fail</option><option value="na">na</option>
                     </select>
                   ) : (c.verdict ?? "—")}

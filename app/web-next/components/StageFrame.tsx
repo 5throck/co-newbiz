@@ -546,6 +546,25 @@ export function StageRail({
 
   const gateIds = Array.from(new Set(current.flatMap((id) => STAGE_META.find((s) => s.id === id)?.gateIds ?? [])));
   const currentKey = current.join(",");
+  // Scroll affordance: which edges still hide steps (drives the fade overlays on the wrapper).
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useEffect(() => {
+    const row = listRef.current;
+    if (!row) return;
+    const update = () => {
+      const left = row.scrollLeft > 1;
+      const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 1;
+      setEdges((e) => (e.left === left && e.right === right ? e : { left, right }));
+    };
+    update();
+    row.addEventListener("scroll", update, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    ro?.observe(row);
+    return () => {
+      row.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, []);
   // Single-row stepper: keep the current stage in view (centered) after mount / stage change.
   // biome-ignore lint/correctness/useExhaustiveDependencies: currentKey is the re-run trigger (the current stage changed) — the effect reads the DOM, not the key
   useEffect(() => {
@@ -569,6 +588,8 @@ export function StageRail({
     <nav
       aria-label="Stages"
       className={`stage-stepper-wrap${sticky ? "" : " stage-stepper-wrap--static"}${status ? " stage-stepper--status" : ""}`}
+      data-fade-left={edges.left ? "true" : undefined}
+      data-fade-right={edges.right ? "true" : undefined}
     >
       <details className="stage-stepper-compact">
         <summary>
