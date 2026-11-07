@@ -9,7 +9,10 @@
 // enforced at the repository layer (a non-member gets 404, not 403, FR-SEC-03).
 import { getDb } from "../../../../../../../db/client.ts";
 import {
-  ANNOUNCEMENT_KINDS, SiteAnnouncementError, listSiteAnnouncements, recordSiteAnnouncement,
+  ANNOUNCEMENT_KINDS,
+  SiteAnnouncementError,
+  listSiteAnnouncements,
+  recordSiteAnnouncement,
 } from "../../../../../../../db/repositories/site-announcement.repository.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
@@ -19,7 +22,10 @@ import { route } from "../../../../../lib/route.ts";
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(auth.auth, "read");
+    if (denied) return denied;
+  }
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true })) return notFound();
   const { live, history, earliest_announced_on } = listSiteAnnouncements(getDb(), id);
@@ -43,21 +49,36 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Recording a site announcement requires the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Recording a site announcement requires the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!body || typeof body !== "object" || Array.isArray(body)) return badRequest("invalid_request", "A JSON body {announced_on, announcement_kind, evidence_ref, site_id?} is required.");
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return badRequest(
+      "invalid_request",
+      "A JSON body {announced_on, announcement_kind, evidence_ref, site_id?} is required.",
+    );
   const db = getDb();
   try {
     // Any recorded_by / recorder field in the body is ignored: the event belongs to the calling session user.
     const row = recordSiteAnnouncement(db, {
-      projectId: id, announcedOn: body.announced_on, announcementKind: body.announcement_kind, evidenceRef: body.evidence_ref,
-      siteId: body.site_id, recordedBy: ctx.userId, now: new Date().toISOString(),
+      projectId: id,
+      announcedOn: body.announced_on,
+      announcementKind: body.announcement_kind,
+      evidenceRef: body.evidence_ref,
+      siteId: body.site_id,
+      recordedBy: ctx.userId,
+      now: new Date().toISOString(),
     });
     return ok(row, 201);
   } catch (e) {
-    if (e instanceof SiteAnnouncementError) return e.kind === "project_not_found" ? notFound() : badRequest("invalid_request", e.message);
+    if (e instanceof SiteAnnouncementError)
+      return e.kind === "project_not_found" ? notFound() : badRequest("invalid_request", e.message);
     throw e;
   }
 });

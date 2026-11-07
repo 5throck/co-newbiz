@@ -6,16 +6,34 @@
  */
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
+import { normSrc } from "./helpers/src-normalize.ts";
 import { join } from "node:path";
-import { aggregateDirty, buildCompletionChecklist, buildSourceSummary, dirtyIndicatorText, filledComponentCount, GF_TAB_KEYS, GF_TAB_LABELS, parseGfTab, tabMarker } from "../../app/web-next/lib/greenfield-tabs.ts";
+import {
+  aggregateDirty,
+  buildCompletionChecklist,
+  buildSourceSummary,
+  dirtyIndicatorText,
+  filledComponentCount,
+  GF_TAB_KEYS,
+  GF_TAB_LABELS,
+  parseGfTab,
+  tabMarker,
+} from "../../app/web-next/lib/greenfield-tabs.ts";
 
 const WEB = join(import.meta.dirname, "../../app/web-next");
-const stage = readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8");
+const stage = normSrc(readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8"));
 const tabNav = readFileSync(join(WEB, "components/TabNav.tsx"), "utf8");
 
 describe("tab list and URL parser", () => {
   test("six tabs, exact labels, dependency order", () => {
-    expect(GF_TAB_KEYS.map((k) => GF_TAB_LABELS[k])).toEqual(["진출전략", "필요 역량", "인력 운영 계획", "투자비", "투자 시뮬레이션", "검토/확정"]);
+    expect(GF_TAB_KEYS.map((k) => GF_TAB_LABELS[k])).toEqual([
+      "진출전략",
+      "필요 역량",
+      "인력 운영 계획",
+      "투자비",
+      "투자 시뮬레이션",
+      "검토/확정",
+    ]);
     expect([...GF_TAB_KEYS]).toEqual(["entry", "capability", "staffing", "investment", "simulation", "review"]);
   });
   test("parseGfTab: known keys pass, unknown/empty/null fall back to entry, #suffix ignored", () => {
@@ -44,15 +62,33 @@ describe("aggregateDirty", () => {
 
 describe("buildSourceSummary", () => {
   test("four chips with text and a jump target each", () => {
-    const c = buildSourceSummary({ reflectedCapabilityCount: 2, staffingKrwM: 1234.5, manualCount: 3, needsConfirmCount: 1 });
-    expect(c.map((x) => x.text)).toEqual(["역량 2건 반영", "인력 운영 계획 인건비 1,234.5백만원", "수동 항목 3건", "확인 필요 1건"]);
+    const c = buildSourceSummary({
+      reflectedCapabilityCount: 2,
+      staffingKrwM: 1234.5,
+      manualCount: 3,
+      needsConfirmCount: 1,
+    });
+    expect(c.map((x) => x.text)).toEqual([
+      "역량 2건 반영",
+      "인력 운영 계획 인건비 1,234.5백만원",
+      "수동 항목 3건",
+      "확인 필요 1건",
+    ]);
     expect(c.map((x) => x.tab)).toEqual(["capability", "staffing", "investment", "investment"]);
-    expect(buildSourceSummary({ reflectedCapabilityCount: 0, staffingKrwM: 0, manualCount: 0, needsConfirmCount: 0 })[1].text).toBe("인력 운영 계획 인건비 0백만원");
+    expect(
+      buildSourceSummary({ reflectedCapabilityCount: 0, staffingKrwM: 0, manualCount: 0, needsConfirmCount: 0 })[1]
+        .text,
+    ).toBe("인력 운영 계획 인건비 0백만원");
   });
 });
 
 describe("completion checklist", () => {
-  const base = { entry: { filled: true, dirty: false }, capability: { filled: true, dirty: false, issues: 0 }, staffing: { filled: false, dirty: false, issues: 0 }, investment: { filled: true, dirty: false, issues: 2 } };
+  const base = {
+    entry: { filled: true, dirty: false },
+    capability: { filled: true, dirty: false, issues: 0 },
+    staffing: { filled: false, dirty: false, issues: 0 },
+    investment: { filled: true, dirty: false, issues: 2 },
+  };
   test("status precedence: dirty > empty > issues > filled", () => {
     const rows = buildCompletionChecklist({ ...base, capability: { filled: true, dirty: true, issues: 3 } });
     expect(rows.map((r) => r.status)).toEqual(["filled", "dirty", "empty", "issues"]);
@@ -72,39 +108,48 @@ describe("completion checklist", () => {
 });
 
 describe("GreenfieldStage tab structure (source)", () => {
-  const slice = (from: string, to: string) => stage.slice(stage.indexOf(from), stage.indexOf(to));
+  const slice = (from: string, to: string) => stage.slice(stage.indexOf(normSrc(from)), stage.indexOf(normSrc(to)));
   test("tablist semantics come from TabNav; default tab is entry via the parser", () => {
-    expect(tabNav).toContain('role="tablist"');
-    expect(tabNav).toContain("aria-selected");
-    expect(stage).toContain("<TabNav");
-    expect(stage).toContain("parseGfTab(searchParams.get(\"tab\"))");
-    expect(stage).toContain("GF_TAB_KEYS.map");
+    expect(tabNav).toContain(normSrc('role="tablist"'));
+    expect(tabNav).toContain(normSrc("aria-selected"));
+    expect(stage).toContain(normSrc("<TabNav"));
+    expect(stage).toContain(normSrc('parseGfTab(searchParams.get("tab"))'));
+    expect(stage).toContain(normSrc("GF_TAB_KEYS.map"));
   });
   test("every panel is a role=tabpanel that is hidden, not unmounted", () => {
-    expect(stage).toContain('role="tabpanel"');
-    expect(stage).toContain("hidden={tab !== key}");
-    expect(stage).not.toMatch(/\{tab === "(entry|capability|staffing|investment|simulation|review)" && /);
-    for (const k of GF_TAB_KEYS) expect(stage).toContain(`panel("${k}"`);
+    expect(stage).toContain(normSrc('role="tabpanel"'));
+    expect(stage).toContain(normSrc("hidden={tab !== key}"));
+    expect(stage).not.toMatch(/\{tab === "(entry|capability|staffing|investment|simulation|review)" &&\s*/);
+    for (const k of GF_TAB_KEYS) expect(stage).toContain(normSrc(`panel("${k}"`));
   });
   test("panels hold the right sections in dependency order", () => {
-    const order = GF_TAB_KEYS.map((k) => stage.indexOf(`panel("${k}"`));
+    const order = GF_TAB_KEYS.map((k) => stage.indexOf(normSrc(`panel("${k}"`)));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(slice('panel("entry"', 'panel("capability"')).toContain("<EntryStrategySection");
+    expect(slice('panel("entry"', 'panel("capability"')).toContain(normSrc("<EntryStrategySection"));
     const cap = slice('panel("capability"', 'panel("staffing"');
-    expect(cap).toContain("<CapabilityJudgementEditor");
-    expect(cap).toContain('t("saveToTheS3Register")'); // i18n: stages.s5.stage.saveToTheS3Register
+    expect(cap).toContain(normSrc("<CapabilityJudgementEditor"));
+    expect(cap).toContain(normSrc('t("saveToTheS3Register")')); // i18n: stages.s5.stage.saveToTheS3Register
     const staff = slice('panel("staffing"', 'panel("investment"');
-    expect(staff).toContain("<StaffingPlanSection");
-    expect(staff).toContain('t("thisButtonSavesTheInvestment")'); // i18n: stages.s5.stage.thisButtonSavesTheInvestment
-    expect(staff).toContain('{linesSaveButton(t("saveLaborCostItems"))}');
+    expect(staff).toContain(normSrc("<StaffingPlanSection"));
+    expect(staff).toContain(normSrc('t("thisButtonSavesTheInvestment")')); // i18n: stages.s5.stage.thisButtonSavesTheInvestment
+    expect(staff).toContain(normSrc('{linesSaveButton(t("saveLaborCostItems"))}'));
     const inv = slice('panel("investment"', 'panel("simulation"');
-    for (const s of ["invest-source-summary", "s5-horizon", "<CapabilityCostBlock", 'data-testid="invest-item-list"', 'data-testid="invest-summary"', 't("investmentItemRecommendation")', '{linesSaveButton(t("saveInvestmentItems"))}']) expect(inv).toContain(s);
-    expect(inv).not.toContain("<StaffingPlanSection");
-    expect(inv).not.toContain("invest-summary-by-category");
-    expect(inv).not.toContain("분류별 투자비 (단위");
+    for (const s of [
+      "invest-source-summary",
+      "s5-horizon",
+      "<CapabilityCostBlock",
+      'data-testid="invest-item-list"',
+      'data-testid="invest-summary"',
+      't("investmentItemRecommendation")',
+      '{linesSaveButton(t("saveInvestmentItems"))}',
+    ])
+      expect(inv).toContain(normSrc(s));
+    expect(inv).not.toContain(normSrc("<StaffingPlanSection"));
+    expect(inv).not.toContain(normSrc("invest-summary-by-category"));
+    expect(inv).not.toContain(normSrc("분류별 투자비 (단위"));
     // Order (decider): 출처 요약, 투자비 항목 추천 (AI) at the top, the item table (+ save bar, 검토 기간 in its header),
     // then 역량 해소 비용, then 투자비 요약 (tiles, charts, yearly table) last; no by-category table.
-    const at = (needle: string) => inv.indexOf(needle);
+    const at = (needle: string) => inv.indexOf(normSrc(needle));
     expect(at('data-testid="invest-source-summary"')).toBeLessThan(at('data-testid="invest-reco"'));
     expect(at('data-testid="invest-reco"')).toBeLessThan(at('t("investmentItemsS8BusinessCase")'));
     // Decider 2026-10-15: add-item control directly under the heading (above the table); save area below the table, footer and notes.
@@ -119,28 +164,37 @@ describe("GreenfieldStage tab structure (source)", () => {
     expect(at("<CapabilityCostBlock")).toBeLessThan(at('data-testid="invest-summary"'));
     expect(at('data-testid="invest-summary"')).toBeLessThan(at('data-testid="invest-summary-schedule"'));
     expect(at("s5-horizon")).toBeLessThan(at('data-testid="invest-item-list"'));
-    expect(inv).toContain('aria-expanded={recoOpen}');
+    expect(inv).toContain(normSrc("aria-expanded={recoOpen}"));
     // Charts mount only while the investment tab is active.
-    expect(inv).toContain('{investTabActive && <InvestmentSummaryCharts summary={summary} />}');
+    expect(inv).toContain(normSrc("{investTabActive && <InvestmentSummaryCharts summary={summary} />}"));
     const sim = slice('panel("simulation"', 'panel("review"');
     // ADR-0176 slice 1: the simulation tab is the deterministic band UI (no placeholder).
-    expect(sim).not.toContain("구현 예정 (ADR-0176)");
-    expect(sim).toContain('data-testid="invest-simulation"');
-    expect(sim).toContain('data-testid="invest-simulation-basis"');
-    expect(sim).toContain("data-testid={`invest-simulation-${k}`}");
-    expect(sim).toContain('data-testid="invest-simulation-schedule"');
-    expect(sim).toContain("data-testid={`invest-simulation-row-${k}`}");
-    expect(sim).toContain("{BAND_LABEL(tr)[k]}");
-    const rev = stage.slice(stage.indexOf('panel("review"'));
+    expect(sim).not.toContain(normSrc("구현 예정 (ADR-0176)"));
+    expect(sim).toContain(normSrc('data-testid="invest-simulation"'));
+    expect(sim).toContain(normSrc('data-testid="invest-simulation-basis"'));
+    expect(sim).toContain(normSrc("data-testid={`invest-simulation-${k}`}"));
+    expect(sim).toContain(normSrc('data-testid="invest-simulation-schedule"'));
+    expect(sim).toContain(normSrc("data-testid={`invest-simulation-row-${k}`}"));
+    expect(sim).toContain(normSrc("{BAND_LABEL(tr)[k]}"));
+    const rev = stage.slice(stage.indexOf(normSrc('panel("review"')));
     // i18n: review-tab copy moved to the catalog (stages.s5.stage.*) — pin the keys.
-    for (const s of ['t("evaluationEvidence")', 't("evaluationRecordConfirmedByA2")', "gf-checklist", "<GateDecisionPanel", 'gates={["pre_fs"]}']) expect(rev).toContain(s);
+    for (const s of [
+      't("evaluationEvidence")',
+      't("evaluationRecordConfirmedByA2")',
+      "gf-checklist",
+      "<GateDecisionPanel",
+      'gates={["pre_fs"]}',
+    ])
+      expect(rev).toContain(normSrc(s));
   });
   test("one save handler for 투자비 항목 저장 (no duplicated logic)", () => {
     expect(stage.match(/void saveInvestmentLines\(\)/g)?.length).toBe(1);
     expect(stage.match(/const linesSaveButton/g)?.length).toBe(1);
   });
   test("top-level unsaved indicator aggregates the per-section flags", () => {
-    expect(stage).toContain("aggregateDirty({ entry: entryIsDirty, capability: judgeDirty, staffing: staffDirty");
-    expect(stage).toContain('data-testid="gf-dirty-indicator"');
+    expect(stage).toContain(
+      normSrc("aggregateDirty({ entry: entryIsDirty, capability: judgeDirty, staffing: staffDirty"),
+    );
+    expect(stage).toContain(normSrc('data-testid="gf-dirty-indicator"'));
   });
 });

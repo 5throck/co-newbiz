@@ -1,4 +1,4 @@
-// @version 1.17.0
+// @version 1.17.1
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -425,10 +425,27 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
       );
     }
 
-    seedDealShapeVerdicts(db, "demo-s1-s12-dealshape", DEMO.oppId, [
-      { shape: "majority_stake", intent: "capability_access", viable: 1, rationale: "S1-S12 demo: 과반 지분 인수가 역량 확보 속도와 통제력 기준을 충족" },
-      { shape: "license_in", intent: "capability_access", viable: 0, rationale: "S1-S12 demo: 라이선스 도입만으로는 핵심 역량 내재화가 어려워 제외" },
-    ], now, actor);
+    seedDealShapeVerdicts(
+      db,
+      "demo-s1-s12-dealshape",
+      DEMO.oppId,
+      [
+        {
+          shape: "majority_stake",
+          intent: "capability_access",
+          viable: 1,
+          rationale: "S1-S12 demo: 과반 지분 인수가 역량 확보 속도와 통제력 기준을 충족",
+        },
+        {
+          shape: "license_in",
+          intent: "capability_access",
+          viable: 0,
+          rationale: "S1-S12 demo: 라이선스 도입만으로는 핵심 역량 내재화가 어려워 제외",
+        },
+      ],
+      now,
+      actor,
+    );
 
     const screeningStates = Object.fromEntries(screeningItems().map((item) => [item.id, "pass"]));
     for (let i = 1; i <= 3; i++) {
@@ -1310,10 +1327,27 @@ export async function seedGreenfieldS1ToS12Demo(
       );
     }
 
-    seedDealShapeVerdicts(db, "demo-gf-dealshape", GF.oppId, [
-      { shape: "spv", intent: "integration", viable: 1, rationale: "S1-S12 greenfield demo: 신설 SPV가 통제력과 내재화 기준을 충족" },
-      { shape: "joint_venture", intent: "integration", viable: 0, rationale: "S1-S12 greenfield demo: 합작은 통제력 요건에 못 미쳐 제외" },
-    ], now, actor);
+    seedDealShapeVerdicts(
+      db,
+      "demo-gf-dealshape",
+      GF.oppId,
+      [
+        {
+          shape: "spv",
+          intent: "integration",
+          viable: 1,
+          rationale: "S1-S12 greenfield demo: 신설 SPV가 통제력과 내재화 기준을 충족",
+        },
+        {
+          shape: "joint_venture",
+          intent: "integration",
+          viable: 0,
+          rationale: "S1-S12 greenfield demo: 합작은 통제력 요건에 못 미쳐 제외",
+        },
+      ],
+      now,
+      actor,
+    );
 
     // S5 — 역량 격차 평가 + 진출전략 (greenfield 전용 단계의 필수 산출물).
     db.run(
@@ -1698,16 +1732,35 @@ function seedSiteAnnouncementEvidence(db: ReturnType<typeof getDb>, now: string,
      VALUES (?, ?, NULL, ?, 'public_announcement', 'doc:demo-gf-site-announcement', ?, ?, NULL)`,
     ["demo-gf-site-announcement", GF.projectId, announcedOn, actor, now],
   );
-  if (a.changes > 0) appendAudit(db, { actor, action: "project.site_announcement.record", target: `${GF.projectId}:public_announcement:demo-gf-site-announcement announced_on=${announcedOn}`, now });
+  if (a.changes > 0)
+    appendAudit(db, {
+      actor,
+      action: "project.site_announcement.record",
+      target: `${GF.projectId}:public_announcement:demo-gf-site-announcement announced_on=${announcedOn}`,
+      now,
+    });
   const p = db.run(
     `INSERT OR IGNORE INTO dimension_input
      (id, run_id, project_id, var_key, value_kind, value_text, value_num, unit, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on, superseded_by)
      VALUES (?, ?, ?, 'infra.plan_finalized', 'text', 'yes', NULL, NULL, 'doc:demo-gf-infra-plan', ?, 'admin', ?, ?, ?, NULL)`,
-    ["demo-gf-infra-plan-finalized", GF.runId, GF.projectId, actor, "S1-S12 greenfield demo: 전력·용수 인프라 계획이 부지 발표 이전에 확정됨 (데모)", now, planEffectiveOn],
+    [
+      "demo-gf-infra-plan-finalized",
+      GF.runId,
+      GF.projectId,
+      actor,
+      "S1-S12 greenfield demo: 전력·용수 인프라 계획이 부지 발표 이전에 확정됨 (데모)",
+      now,
+      planEffectiveOn,
+    ],
   );
   if (p.changes > 0) {
     appendAudit(db, { actor, action: "dimension_input_asserted", target: `${GF.projectId}:infra.plan_finalized`, now });
-    appendAudit(db, { actor: "admin", action: "dimension_input_reviewed", target: `${GF.projectId}:infra.plan_finalized:demo-gf-infra-plan-finalized`, now });
+    appendAudit(db, {
+      actor: "admin",
+      action: "dimension_input_reviewed",
+      target: `${GF.projectId}:infra.plan_finalized:demo-gf-infra-plan-finalized`,
+      now,
+    });
   }
 }
 
