@@ -208,7 +208,7 @@ describe("GET gate-snapshot", () => {
     expect(d.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(d.cached).toBe(false);
     const s = d.snapshot;
-    expect(s).toMatchObject({ schema_version: 1, gate: "dd", entity: { type: "project", id: projectId }, track: "greenfield" });
+    expect(s).toMatchObject({ schema_version: 2, gate: "dd", entity: { type: "project", id: projectId }, track: "greenfield" });
     expect(s.kill.procedures).toEqual(["greenfield-dd"]);
     expect(s.kill.evaluated).toBeGreaterThan(0);
     expect(s.kill.eval_run_id).toBeNull();
@@ -257,7 +257,7 @@ describe("GET gate-snapshot", () => {
     expect((await nextRequest(`/api/projects/${projectId}/gate-snapshot?gate=dd`)).status).toBe(401);
   });
 
-  test("opportunity: outcomes live only in the snapshot (no ledger rows), project-only variables are UNASSESSED, no RAG/validators", async () => {
+  test("opportunity: outcomes live only in the snapshot (no ledger rows), project-only variables are not_reached at S3 (ADR-0193), no RAG/validators", async () => {
     const o = S.insertOpportunity(db, "greenfield", ANALYST);
     const before = count("SELECT COUNT(*) c FROM kill_criteria_evaluation");
     const res = await getOppSnap(o, "screening");
@@ -266,9 +266,12 @@ describe("GET gate-snapshot", () => {
     expect(d.snapshot).toMatchObject({ gate: "screening", entity: { type: "opportunity", id: o }, track: "greenfield", rag: null, validators: null, wacc: null });
     expect(d.snapshot.kill.procedures).toEqual(["greenfield-screening"]);
     expect(d.snapshot.kill.triggered).toEqual([]);
-    expect(d.snapshot.kill.unassessed.length).toBeGreaterThan(0); // never a silent pass
+    // ADR-0193: the project-scoped criteria cannot be assessed at S3; they are information only, each with its re-evaluation gate - never a silent pass, never a meaningless acknowledgement
+    expect(d.snapshot.kill.unassessed).toEqual([]);
+    expect(d.snapshot.kill.not_reached.length).toBeGreaterThan(0);
+    expect(d.snapshot.kill.not_reached.every((n: any) => n.reevaluate_at === "pre_fs")).toBe(true);
+    expect(d.snapshot.required_acks).toEqual([]);
     expect(d.snapshot.kill.eval_run_id).toBeNull();
-    expect(d.snapshot.required_acks.every((a: any) => a.kind === "kill_unassessed")).toBe(true);
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation")).toBe(before);
     expect((await getOppSnap(o, "fs")).status).toBe(400);
     expect((await getOppSnap(o, "screening", viewerCookie)).status).toBe(403);
@@ -281,7 +284,7 @@ describe("GET gate-snapshot", () => {
     expect(d.snapshot.kill.procedures).toEqual(["brownfield-screening", "greenfield-screening"]);
     const b = S.insertOpportunity(db, "brownfield", ANALYST);
     const zero = await dataOf<SnapData>(await getOppSnap(b, "screening"));
-    expect(zero.snapshot.kill.unassessed.map((u: any) => u.key)).toContain("brownfield-screening:no_viable_target_in_longlist");
+    expect(zero.snapshot.kill.not_reached.map((u: any) => u.key)).toContain("brownfield-screening:no_viable_target_in_longlist");
     db.run("INSERT INTO brownfield_target (id, opportunity_id, company_name, status, created_at, updated_at) VALUES (?,?,?,?,?,?)", [ulid(), b, "T1", "excluded", S.NOW, S.NOW]);
     clearSnapshotCache();
     const none = await dataOf<SnapData>(await getOppSnap(b, "screening"));
@@ -323,7 +326,7 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     expect(rec.acknowledgements).toBe(keys.length);
 
     const snap = db.query("SELECT * FROM gate_decision_snapshot WHERE decision_id = ?").get(rec.id) as any;
-    expect(snap).toMatchObject({ snapshot_hash: view.snapshot_hash, submitted_hash: view.snapshot_hash, schema_version: 1 });
+    expect(snap).toMatchObject({ snapshot_hash: view.snapshot_hash, submitted_hash: view.snapshot_hash, schema_version: 2 });
     expect(JSON.parse(snap.acknowledgements_json).map((a: any) => a.key)).toEqual(keys);
     // the decision-to-evaluation link: the snapshot's run is a gate_integrity_eval run holding the project's ledger
     const run = db.query("SELECT id, label, superseded_by FROM run WHERE id = ?").get(snap.eval_run_id) as any;
@@ -549,7 +552,7 @@ describe("brief x gate integrity (D3 / D9)", () => {
     const o = S.insertOpportunity(db, "greenfield", ANALYST);
     const before = count("SELECT COUNT(*) c FROM kill_criteria_evaluation");
     const d = await dataOf<any>(await postBrief(`/api/opportunities/${o}/gate-brief`, "screening"));
-    expect(d.kill.unassessed.length).toBeGreaterThan(0);
+    expect(d.kill.not_reached.length).toBeGreaterThan(0);
     expect(d.kill.eval_run_id).toBeNull();
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation")).toBe(before);
     expect(db.query("SELECT entity_type, gate FROM gate_brief_record WHERE id = ?").get(d.brief_id)).toEqual({ entity_type: "opportunity", gate: "screening" });
@@ -595,23 +598,20 @@ describe("recordGateDecisionRow - opportunity carrier and atomicity", () => {
       gateEvaluationId: null, learningCapture: decision === "kill" ? "lesson" : null, judgementConfirmationsJson: null, extras: extrasOf(body), now: new Date().toISOString(),
     });
 
-  test("opportunity: GO needs the acks of its unassessed kill items, outcomes are stored in snapshot_json only", async () => {
+  test("opportunity: a Screening GO needs no acknowledgement for not-reached criteria (ADR-0193), outcomes are stored in snapshot_json only", async () => {
     setFlags("enforce", ...SNAP);
     const o = S.insertOpportunity(db, "greenfield", ANALYST);
     const view = await dataOf<SnapData>(await getOppSnap(o, "screening"));
     const before = count("SELECT COUNT(*) c FROM kill_criteria_evaluation");
-    const none = rec(o, "go", { snapshot_hash: view.snapshot_hash });
-    expect(none.ok).toBe(false);
-    if (!none.ok) {
-      expect(none.failure.code).toBe("ack_required");
-      expect(none.failure.details!.missing).toEqual(view.snapshot.required_acks.map((a: any) => a.key));
-    }
-    const ok = rec(o, "go", { snapshot_hash: view.snapshot_hash, acknowledgements: ackAll(view.snapshot) });
+    expect(view.snapshot.required_acks).toEqual([]);
+    const ok = rec(o, "go", { snapshot_hash: view.snapshot_hash });
     expect(ok.ok).toBe(true);
     if (ok.ok) {
       const row = db.query("SELECT snapshot_json, eval_run_id FROM gate_decision_snapshot WHERE decision_id = ?").get(ok.id) as any;
       expect(row.eval_run_id).toBeNull();
-      expect(JSON.parse(row.snapshot_json).kill.unassessed.length).toBe(view.snapshot.kill.unassessed.length);
+      const stored = JSON.parse(row.snapshot_json);
+      expect(stored.kill.unassessed).toEqual([]);
+      expect(stored.kill.not_reached.map((n: any) => n.key)).toEqual(view.snapshot.kill.not_reached.map((n: any) => n.key));
     }
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation")).toBe(before);
   });

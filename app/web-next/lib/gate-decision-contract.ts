@@ -181,6 +181,29 @@ export function markConditionalConditions(
   return out;
 }
 
+/** ADR-0193: the 409 of a carry that cannot be closed by evaluation, or of a project whose lineage to its opportunity is missing. */
+export function killScopeFailure(code: string, keys: readonly string[], entityId: string): IntegrityFailure {
+  if (code === "kill_lineage_missing") {
+    return {
+      status: 409 as const, code,
+      message: `GO is not allowed - project ${entityId} has no source opportunity (md_project.source_opportunity_id is empty), so the kill criteria carried from the opportunity gates cannot be verified and are never treated as "none". Repair the link first: promote the project from its opportunity (POST /api/opportunities/{id}/promote) or have an administrator set md_project.source_opportunity_id to the originating opportunity, then record the GO again. HOLD or KILL can be recorded at any time.`,
+      details: { project_id: entityId, repair: "set md_project.source_opportunity_id to the originating opportunity (promote it, or administrator repair)" },
+    };
+  }
+  if (code === "kill_carry_unassessed") {
+    return {
+      status: 409 as const, code,
+      message: `GO is not allowed - the carried halt kill criterion(s) ${keys.join(", ")} are still unassessed at their re-evaluation gate (ADR-0193, risk-officer C-1). A carried criterion closes only by evaluation, never by acknowledgement: supply its evidence and record the GO again. HOLD or KILL can be recorded at any time.`,
+      details: { keys: [...keys] },
+    };
+  }
+  return {
+    status: 409 as const, code,
+    message: `GO is not allowed - the carried kill criterion(s) ${keys.join(", ")} cannot be classified as reached at their re-evaluation gate (registry or stage defect, ADR-0193). No override exists for this block: fix the registry entry (ADR-tracked) or the stage evidence, then record the GO again. HOLD or KILL can be recorded at any time.`,
+    details: { keys: [...keys] },
+  };
+}
+
 /** The 409 of an unconfirmed discount rate (also raised by the route-level pre-check in gate-write-checks.ts). */
 export function waccUnconfirmedFailure(subject: string | null, missing: string[]): IntegrityFailure {
   return {
@@ -246,6 +269,21 @@ export function runDecisionContract(
     //     snapshot names each hard block; the recorder cannot acknowledge them away.
     for (const hb of snapshot.hard_blocks) {
       if (hb.code === "kill_binding_unoverridden") continue;
+      // ADR-0193 hard blocks (family kill_binding). None has an override path: R-5 rejected a Group IC override of
+      // `kill_carry_overdue`, and the carried-halt and lineage rules are closed only by evaluation / by repairing the data.
+      // Risk-officer B: kill_binding=enforce is itself refused (fail closed) while a carried criterion has no data source at its scope.
+      if (hb.code === "kill_enforce_unsafe") {
+        reject({
+          status: 409 as const, code: "kill_enforce_unsafe",
+          message: `GO is refused - kill_binding is set to enforce, but the carried kill criteria ${hb.keys.join(", ")} have no data source at their re-evaluation scope, so enforcing would block every such GO or force meaningless acknowledgements (ADR-0193). Set CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING to shadow or off until they are re-scoped or sourced. HOLD or KILL can be recorded at any time.`,
+          details: { keys: hb.keys },
+        });
+        continue;
+      }
+      if (hb.code === "kill_carry_overdue" || hb.code === "kill_carry_unassessed" || hb.code === "kill_lineage_missing") {
+        reject(applyFamilyFailure("kill_binding", ctx, () => killScopeFailure(hb.code, hb.keys, input.entityId), db));
+        continue;
+      }
       // ADR-0186 D8 (family `wacc`): the discount rate is not human-confirmed (neb-policy 2.2, bf-02; no waiver path).
       if (hb.code === "wacc_unconfirmed") {
         reject(applyFamilyFailure("wacc", ctx, () => waccUnconfirmedFailure(snapshot.wacc?.subject ?? null, snapshot.wacc?.missing ?? hb.keys), db));
@@ -296,6 +334,22 @@ export function runDecisionContract(
           code: "snapshot_stale",
           message: sent ? "The gate state changed since the snapshot you reviewed; review the fresh snapshot and acknowledge again." : "snapshot_hash is required on a GO; load the gate snapshot first.",
           details: { reason: sent ? "mismatch" : "missing", snapshot_hash: built.hash, snapshot: freshSnapshotView(built) },
+        };
+      }, db),
+    );
+
+    // 3b. ADR-0193 section 4.3: an acknowledgement for a key the server classifies `not_reached` (or open-monitoring) is a
+    //     stale client, rejected - the ack set must equal the server's required set exactly.
+    reject(
+      applyFamilyFailure("snapshot_ack", ctx, () => {
+        const notAsked = new Set<string>([...snapshot.kill.not_reached.map((n) => n.key), ...snapshot.kill.carried_in.filter((c) => c.closure === "open_monitoring").map((c) => c.key)]);
+        const stale = [...new Set(input.extras.acknowledgements.flatMap((a) => [a.key, ...(a.covers ?? [])]))].filter((k) => notAsked.has(k)).sort();
+        if (stale.length === 0) return null;
+        return {
+          status: 400 as const,
+          code: "ack_not_reached",
+          message: `Acknowledgement(s) for ${stale.join(", ")} are rejected: the criterion is not reached yet at this gate (information only, re-checked at its re-evaluation gate). Reload the gate snapshot.`,
+          details: { keys: stale, snapshot_hash: built.hash },
         };
       }, db),
     );

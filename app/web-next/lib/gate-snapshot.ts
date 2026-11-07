@@ -38,16 +38,22 @@ import {
 import { buildLookup, validateRegistryEntry, type RegistryEntry as CoreRegistryEntry, type SnapshotVarRow } from "../../../packages/core-scoring/src/kill-criteria.ts";
 import { evaluatePredicate, parsePredicate } from "../../../packages/core-scoring/src/predicate.ts";
 import { snapshotHash } from "./gate-canonical.ts";
+import {
+  GATE_FIRST_STAGE, GATE_LAST_STAGE, OPEN_MONITORING, OPPORTUNITY_LAST_STAGE, carryDue, classifyKill, deriveOpenCarries, laterStage, procedureTrack,
+  type CarrySource, type RegistryScope,
+} from "./gate-kill-scope.ts";
+import { stageIndex } from "../../../packages/core-scoring/src/kill-criteria.ts";
+import { collectPredicateVars } from "../../../db/lib/applies-when.ts";
 import { ladderBlock } from "./gate-ladder.ts";
 import { ladderFor, type LadderTrack } from "./gate-sequence-view.ts";
 import { applicableKillProcedures, loadKillCriteriaRegistry } from "./ic-review-steps.ts";
-import { latestRouteDecision } from "./process-flow.ts";
+import { evaluateProcess, latestRouteDecision } from "./process-flow.ts";
 import { resolveTrack } from "./project-track.ts";
 import { scopedChecklistItems } from "./greenfield-subtrack.ts";
 import { subTrackChecklistIds } from "./dd-checklist-tailor.ts";
 
 export type SnapshotEntity = "opportunity" | "project";
-export const SNAPSHOT_ENGINE_VERSIONS = { snapshot_builder: "1", kill_registry: "adr-0057", validators: "adr-0185-core6", rag: "latest-stored" } as const;
+export const SNAPSHOT_ENGINE_VERSIONS = { snapshot_builder: "2", kill_registry: "adr-0193", validators: "adr-0185-core6", rag: "latest-stored" } as const;
 const EXPIRING_DAYS = 14;
 /** Items handled by their own rule families (validators / WACC / certification); never listed as generic non-waivable ACKs. */
 const OWN_FAMILY_ITEMS: ReadonlySet<string> = new Set(["bf-01", "bf-02", "bf-03"]);
@@ -69,6 +75,34 @@ export interface KillTriggered extends KillItem {
   /** action = halt: policy-binding (neb-policy 2.5) unless a Group IC override exists. */
   binding: boolean;
   override_id: string | null;
+  /** ADR-0193 C-5: the criterion triggered before its `evaluable_from` stage, so its input may still be partial (a possible false positive). It stays triggered. */
+  partial_input: boolean;
+}
+/** ADR-0193: a criterion whose stage is after the entity's current stage - information only, no acknowledgement, never counted as unassessed. */
+export interface KillNotReached extends KillItem {
+  evaluable_from: string;
+  reevaluate_at: string;
+}
+/** ADR-0193 (C-4): one carried key and what this gate's evaluation did with it. */
+export interface KillCarriedIn {
+  key: string;
+  /** The decision that opened the carry; null for a criterion this very snapshot found overdue or open-monitoring. */
+  from_decision_id: string | null;
+  /** Criterion title (shown by name in the IC package). */
+  title: string;
+  /** false | triggered | unassessed (evaluated here, or an S12 criterion before close); overdue (cannot be classified as reached - registry or stage defect); out_of_track. */
+  outcome: "false" | "triggered" | "unassessed" | "overdue" | "out_of_track";
+  /** Why a criterion is reported unassessed without a data source evaluation (S12 criteria before close: "post-close data not yet available"). */
+  reason: string | null;
+  /** evaluated = closed by evaluation; open = evaluated but still unassessed, or overdue; out_of_track = the route decision closed it; open_monitoring = S12, closed only by a recorded human decision on the S12 monitoring surface. */
+  closure: "evaluated" | "open" | "out_of_track" | "open_monitoring";
+  action: string;
+  evaluable_from: string;
+  reevaluate_at: string;
+  /** The route decision that closed the carry (out_of_track only), never dropped. */
+  route_decision_id: string | null;
+  /** Read-time implicit carry of a legacy acknowledged GO (design 4.4). */
+  implicit: boolean;
 }
 export interface RequiredAck {
   key: string;
@@ -100,6 +134,18 @@ export interface GateSnapshot {
     false_count: number;
     triggered: KillTriggered[];
     unassessed: KillItem[];
+    /** ADR-0193: the entity's effective current stage the classifier used (S1-S12). */
+    current_stage: string;
+    /** ADR-0193: criteria not yet evaluable at the current stage (sorted by key). Inside the hash. */
+    not_reached: KillNotReached[];
+    /** ADR-0193: carried keys from earlier recorded decisions and what this gate did with them (sorted by key). Inside the hash. */
+    carried_in: KillCarriedIn[];
+    /** ADR-0193 (risk-officer D): criteria owned by a later gate, shown as pending with their scheduled gate - never absent. Not carries (the later gate owns them). */
+    scheduled: Array<{ key: string; title: string; action: string; evaluable_from: string; reevaluate_at: string; status: "pending" }>;
+    /** ADR-0193 (risk-officer C): evidence caveats on evaluated criteria, e.g. #5 read on gate-date state, not the site-announcement date. Inside the hash. */
+    caveats: Array<{ key: string; caveat: string }>;
+    /** ADR-0193 C-3: a project's first gate (fs) found no md_project.source_opportunity_id, so the opportunity carries cannot be verified. */
+    lineage_missing: boolean;
     /** The evaluation run of this snapshot (project gates); excluded from the hash. */
     eval_run_id: string | null;
   };
@@ -149,7 +195,9 @@ export interface BuiltSnapshot {
 
 export const OPPORTUNITY_PROCEDURES: Record<string, (track: LadderTrack | null) => string[]> = {
   screening: (t) => (t ? [`${t}-screening`] : ["greenfield-screening", "brownfield-screening"]),
-  pre_fs: (t) => (t ? [`${t}-pre-fs`] : ["greenfield-pre-fs", "brownfield-pre-fs"]),
+  // ADR-0193 O-2: deal-shape-chain criteria (registry reevaluate_at pre_fs) are owned and evaluated at pre_fs;
+  // flow.spec 2.19.0 moved their killCriteriaRegistry listing there from screening (they were never evaluated before).
+  pre_fs: (t) => (t ? [`${t}-pre-fs`, "deal-shape-chain"] : ["greenfield-pre-fs", "brownfield-pre-fs", "deal-shape-chain"]),
   target_screening: () => ["brownfield-target-screening", "brownfield-target-identification"],
 };
 
@@ -160,13 +208,37 @@ export const OPPORTUNITY_PROCEDURES: Record<string, (track: LadderTrack | null) 
  */
 export function projectKillProcedures(db: Database, projectId: string, gate: string, track: LadderTrack | null): string[] {
   const all = applicableKillProcedures(db, projectId);
+  // ADR-0193 (owner decision 2026-11-07): the M&A post-close procedure is evaluated from DD for the criteria that can
+  // occur from S9 (clean-team breach). Its S12 criteria are never evaluated at a gate: they leave the IC gates as
+  // open_monitoring carries (openMonitoringCarries) and close only on the S12 monitoring surface.
+  const pmi = track === "brownfield" ? [PMI_PROCEDURE] : [];
   if (gate === "entity_ic" || gate === "group_ic") return all;
   if (gate === "fs") {
     const fs = all.filter((p) => p === "brownfield-fs" || p === "brownfield-fs-comparative");
     return track === "greenfield" ? ["greenfield-fs"] : fs;
   }
-  return all.filter((p) => p.endsWith("-dd"));
+  return [...all.filter((p) => p.endsWith("-dd")), ...(gate === "dd" ? pmi : [])];
 }
+
+export const PMI_PROCEDURE = "pmi-integration-execution";
+const POST_CLOSE_REASON = "post-close data not yet available";
+/** ADR-0193 C-6 open: #5 is read on the gate-date state (risk-officer condition C). Follow-up ticket: FOLLOWUP-ADR0193-C6 (placeholder; see design 13). */
+export const KILL_EVIDENCE_CAVEATS: Readonly<Record<string, string>> = {
+  "greenfield-screening:infrastructure_plan_not_finalized_at_site_announcement": "evaluated on gate-date state, not site-announcement date (ADR-0193 C-6 pending): not clean evidence",
+};
+/** Criteria a gate shows as pending although a later gate owns them (flow.spec 2.19.0 moved deal-shape-chain to pre_fs). */
+const SCHEDULED_ELSEWHERE: Readonly<Record<string, readonly string[]>> = { screening: ["deal-shape-chain"] };
+/** Gate-owned criteria of a procedure that a gate shares only in part (flow.spec: dd lists clean_team_protocol_breach only). */
+const GATE_CRITERION_SCOPE: Readonly<Record<string, Readonly<Record<string, ReadonlySet<string>>>>> = {
+  dd: { [PMI_PROCEDURE]: new Set(["clean_team_protocol_breach"]) },
+};
+function inGateScope(gate: string, procedure: string, criterionId: string): boolean {
+  const scope = GATE_CRITERION_SCOPE[gate]?.[procedure];
+  return !scope || scope.has(criterionId);
+}
+
+/** The variables the opportunity-scoped source can supply (see opportunityVarRows). ADR-0193 guard: a carried criterion reading any other variable has no data source at an opportunity re-evaluation gate. */
+export const OPPORTUNITY_SCOPE_VARS: readonly string[] = ["screening.viable_targets"];
 
 /** Opportunity-scoped variable source (design 3.12): only variables that exist at opportunity scope. */
 function opportunityVarRows(db: Database, opportunityId: string): SnapshotVarRow[] {
@@ -177,18 +249,21 @@ function opportunityVarRows(db: Database, opportunityId: string): SnapshotVarRow
 }
 
 interface KillOutcome { key: string; procedure: string; criterion_id: string; title: string; action: string; outcome: "triggered" | "false" | "unassessed" }
+interface KillEvaluation { outcomes: KillOutcome[]; inert: Array<{ key: string; title: string }> }
 
 function titleOf(entry: { criterion_id: string; title?: string }): string {
   return entry.title ?? entry.criterion_id;
 }
 
-function evaluateOpportunityKill(db: Database, opportunityId: string, procedures: string[]): { outcomes: KillOutcome[]; inert: Array<{ key: string; title: string }> } {
+/** `only` (ADR-0193 carries): evaluate just these `<procedure>:<criterion>` keys of a procedure that is not part of the gate's own set. */
+function evaluateOpportunityKill(db: Database, opportunityId: string, procedures: string[], only?: ReadonlySet<string>): KillEvaluation {
   const lookup = buildLookup(opportunityVarRows(db, opportunityId));
   const outcomes: KillOutcome[] = [];
   const inert: Array<{ key: string; title: string }> = [];
   for (const procedure of procedures) {
     for (const entry of loadKillCriteriaRegistry(procedure) as unknown as CoreRegistryEntry[]) {
       const key = `${procedure}:${entry.criterion_id}`;
+      if (only && !only.has(key)) continue;
       if (entry.predicate === null || entry.predicate === undefined || entry.enabled === false) {
         inert.push({ key, title: titleOf(entry) });
         continue;
@@ -201,24 +276,37 @@ function evaluateOpportunityKill(db: Database, opportunityId: string, procedures
   return { outcomes, inert };
 }
 
-function evaluateProjectKill(db: Database, o: BuildOptions, procedures: string[], runId: string, now: string): { outcomes: KillOutcome[]; inert: Array<{ key: string; title: string }> } {
+function evaluateProjectKill(db: Database, o: BuildOptions, procedures: string[], runId: string, now: string, only?: ReadonlySet<string>): KillEvaluation {
   const outcomes: KillOutcome[] = [];
   const inert: Array<{ key: string; title: string }> = [];
   for (const procedure of procedures) {
+    // A procedure shared with this gate only in part (dd lists one pmi criterion): nothing executable in scope means
+    // nothing to evaluate - never write ledger rows for the out-of-scope criteria.
+    if (GATE_CRITERION_SCOPE[o.gate]?.[procedure]) {
+      const scoped = loadKillCriteriaRegistry(procedure).filter((e) => inGateScope(o.gate, procedure, e.criterion_id));
+      if (!scoped.some((e) => e.enabled !== false && (e as { predicate?: unknown }).predicate != null)) {
+        for (const e of scoped) inert.push({ key: `${procedure}:${e.criterion_id}`, title: titleOf(e) });
+        continue;
+      }
+    }
     const { result } = recordKillCriteriaEvaluation(
       { runId, projectId: o.entityId, procedure, evaluatedBy: o.actor, evaluatedByLabel: `gate-${o.event === "snapshot" ? "decision" : o.event}:${o.actor}`, now },
       db,
     );
     const titles = new Map(loadKillCriteriaRegistry(procedure).map((e) => [e.criterion_id, titleOf(e)]));
     for (const out of result.outcomes) {
+      const key = `${procedure}:${out.criterion_id}`;
+      if (only && !only.has(key)) continue;
       outcomes.push({
-        key: `${procedure}:${out.criterion_id}`, procedure, criterion_id: out.criterion_id, title: out.title ?? titles.get(out.criterion_id) ?? out.criterion_id,
+        key, procedure, criterion_id: out.criterion_id, title: out.title ?? titles.get(out.criterion_id) ?? out.criterion_id,
         action: out.action, outcome: out.outcome === "true" ? "triggered" : out.outcome,
       });
     }
     for (const e of loadKillCriteriaRegistry(procedure)) {
+      const key = `${procedure}:${e.criterion_id}`;
+      if (only && !only.has(key)) continue;
       if (e.enabled === false || (e as { predicate?: unknown }).predicate === null || (e as { predicate?: unknown }).predicate === undefined) {
-        inert.push({ key: `${procedure}:${e.criterion_id}`, title: titleOf(e) });
+        inert.push({ key, title: titleOf(e) });
       }
     }
   }
@@ -340,11 +428,23 @@ export function requiredAcks(s: Pick<GateSnapshot, "kill" | "rag" | "nonwaivable
 
 function hardBlocks(
   snap: Pick<GateSnapshot, "kill" | "validators" | "conditions_open" | "entity" | "gate" | "track" | "wacc">,
-  extra: { certificationKeys: string[] },
+  extra: { certificationKeys: string[]; enforceUnsafeKeys?: string[] },
 ): HardBlockInfo[] {
   const out: HardBlockInfo[] = [];
+  // ADR-0193 (risk-officer B): enforce is fail-closed while a carried criterion has no data source at its re-evaluation scope.
+  if ((extra.enforceUnsafeKeys ?? []).length > 0) out.push({ code: "kill_enforce_unsafe", keys: [...(extra.enforceUnsafeKeys ?? [])].sort(), enforced: true });
   const unoverridden = snap.kill.triggered.filter((t) => t.binding && t.override_id === null).map((t) => t.key).sort();
-  if (unoverridden.length > 0) out.push({ code: "kill_binding_unoverridden", keys: unoverridden, enforced: gateIntegrityMode("kill_binding") === "enforce" });
+  const killEnforced = gateIntegrityMode("kill_binding") === "enforce";
+  if (unoverridden.length > 0) out.push({ code: "kill_binding_unoverridden", keys: unoverridden, enforced: killEnforced });
+  // ADR-0193 (R-5: no Group IC override for any of these - overdue and lineage are registry/data defects, not business risks).
+  const carried = snap.kill.carried_in ?? [];
+  const overdue = carried.filter((c) => c.outcome === "overdue").map((c) => c.key).sort();
+  if (overdue.length > 0) out.push({ code: "kill_carry_overdue", keys: overdue, enforced: killEnforced });
+  // C-1: a carried halt criterion still unassessed at its re-evaluation gate. Defer-then-acknowledge would be a silent drop.
+  const carryUnassessed = carried.filter((c) => c.outcome === "unassessed" && c.closure !== "open_monitoring" && c.action === "halt").map((c) => c.key).sort();
+  if (carryUnassessed.length > 0) out.push({ code: "kill_carry_unassessed", keys: carryUnassessed, enforced: killEnforced });
+  // C-3: lineage gap at the first project gate - never read as "no carries".
+  if (snap.kill.lineage_missing) out.push({ code: "kill_lineage_missing", keys: [snap.entity.id], enforced: killEnforced });
   // bf-01 (ADR-0186 D4): an applicable core validator is missing - brownfield dd GO, re-checked at entity_ic and group_ic.
   const validatorsMode = gateIntegrityMode("validators");
   if (validatorsMode !== "off") {
@@ -369,6 +469,169 @@ function hardBlocks(
     }
   }
   return out;
+}
+
+// ── ADR-0193 helpers: current stage, registry scope, lineage and carry sources ──
+
+/** Registry scope fields of `<procedure>:<criterion>` (evaluable_from / reevaluate_at), or null when the entry is not found. */
+function registryScopeOf(key: string): RegistryScope | null {
+  const i = key.indexOf(":");
+  const e = (loadKillCriteriaRegistry(key.slice(0, i)) as unknown as Array<CoreRegistryEntry & RegistryScope>).find((x) => x.criterion_id === key.slice(i + 1));
+  return e ? { evaluable_from: e.evaluable_from, reevaluate_at: e.reevaluate_at } : null;
+}
+
+function registryActionOf(key: string): string {
+  const i = key.indexOf(":");
+  return (loadKillCriteriaRegistry(key.slice(0, i)).find((x) => x.criterion_id === key.slice(i + 1))?.action as string | undefined) ?? "";
+}
+
+/** `<procedure>:<criterion>` keys whose registry `reevaluate_at` is open_monitoring and that apply to the track (the M&A post-close procedure). */
+function openMonitoringKeys(track: LadderTrack | null): string[] {
+  if (track !== "brownfield") return [];
+  return loadKillCriteriaRegistry(PMI_PROCEDURE)
+    .filter((e) => (e as unknown as RegistryScope).reevaluate_at === OPEN_MONITORING)
+    .map((e) => `${PMI_PROCEDURE}:${e.criterion_id}`)
+    .sort();
+}
+
+/** A track-specific procedure of the other track than the decided one: the carry is closed out_of_track, never reached. */
+function outOfTrack(procedure: string, track: LadderTrack | null): boolean {
+  const t = procedureTrack(procedure);
+  return track !== null && t !== null && t !== track;
+}
+
+/**
+ * The stage the classifier compares `evaluable_from` against: the entity's current pipeline stage from the process
+ * engine (not the gate's nominal stage - the S4 screening re-decision must see S4-reachable criteria), never earlier
+ * than the gate's own first stage (an IC GO is recorded at S11 even when S10 still reads open) and, for an
+ * opportunity, never later than its carrier's last stage S7.
+ */
+function resolveCurrentStage(o: BuildOptions): string {
+  let cur: string | null = null;
+  try {
+    cur = evaluateProcess({ type: o.entityType, id: o.entityId }).currentStage;
+  } catch {
+    cur = GATE_LAST_STAGE[o.gate] ?? null; // the process engine could not read the entity: fall back to the gate's own stage
+  }
+  let base: string = cur ?? (o.entityType === "opportunity" ? OPPORTUNITY_LAST_STAGE : "S12");
+  if (o.entityType === "opportunity" && stageIndex(base) > stageIndex(OPPORTUNITY_LAST_STAGE)) base = OPPORTUNITY_LAST_STAGE;
+  return laterStage(base, GATE_FIRST_STAGE[o.gate] ?? "S1");
+}
+
+/**
+ * Recorded decisions of the entity lineage (opportunity -> project via md_project.source_opportunity_id, the same
+ * rule as priorGate), every non-stale decision of every kind, with its stored snapshot when there is one.
+ */
+function loadCarryContext(db: Database, o: BuildOptions): { sources: CarrySource[]; opportunityId: string | null; lineageMissing: boolean } {
+  const entities: Array<[SnapshotEntity, string]> = [[o.entityType, o.entityId]];
+  let opportunityId: string | null = o.entityType === "opportunity" ? o.entityId : null;
+  let lineageMissing = false;
+  if (o.entityType === "project") {
+    opportunityId = (db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(o.entityId) as { source_opportunity_id: string | null } | null)?.source_opportunity_id ?? null;
+    if (opportunityId) entities.push(["opportunity", opportunityId]);
+    else if (o.gate === "fs") lineageMissing = true; // C-3: the first project gate never treats a gap as "no carries"
+  }
+  const sources: CarrySource[] = [];
+  for (const [type, id] of entities) {
+    const rows = db
+      .query(
+        `SELECT g.id, g.gate, g.decision, g.decided_at, s.schema_version, s.snapshot_json
+         FROM gate_decision g LEFT JOIN gate_decision_snapshot s ON s.decision_id = g.id
+         WHERE g.entity_type = ? AND g.entity_id = ? AND NOT EXISTS (SELECT 1 FROM gate_decision_stale st WHERE st.decision_id = g.id)`,
+      )
+      .all(type, id) as Array<{ id: string; gate: string; decision: string; decided_at: string; schema_version: number | null; snapshot_json: string | null }>;
+    for (const r of rows) {
+      let snapshot: Record<string, unknown> | null = null;
+      if (r.snapshot_json) {
+        try { snapshot = JSON.parse(r.snapshot_json) as Record<string, unknown>; } catch { snapshot = null; }
+      }
+      sources.push({ decision_id: r.id, gate: r.gate, decision: r.decision, decided_at: r.decided_at, schema_version: r.schema_version, snapshot });
+    }
+  }
+  return { sources, opportunityId, lineageMissing };
+}
+
+/** Legacy (schema v1) snapshots read with the ADR-0193 sections empty (design 4.4); the stored row is never rewritten. */
+export function normalizeStoredSnapshot(snapshot: unknown): unknown {
+  const snap = snapshot as { kill?: Record<string, unknown> } | null;
+  if (!snap || typeof snap !== "object" || !snap.kill) return snapshot;
+  const k = snap.kill;
+  return {
+    ...snap,
+    kill: {
+      ...k,
+      current_stage: k.current_stage ?? null,
+      not_reached: k.not_reached ?? [],
+      carried_in: k.carried_in ?? [],
+      scheduled: k.scheduled ?? [],
+      caveats: k.caveats ?? [],
+      lineage_missing: k.lineage_missing ?? false,
+      triggered: Array.isArray(k.triggered) ? (k.triggered as Array<Record<string, unknown>>).map((t) => ({ partial_input: false, ...t })) : k.triggered,
+    },
+  };
+}
+
+/** Per-schema-version canonicalisers: a stored hash is verified under the version it was written with (design 4.4). v2 only ADDED fields inside the hash, so v1 rows keep verifying unchanged. */
+const SNAPSHOT_HASHERS: Readonly<Record<number, (snapshot: unknown) => string>> = { 1: snapshotHash, 2: snapshotHash };
+
+export function verifyStoredSnapshotHash(stored: { schema_version: number; snapshot: unknown; snapshot_hash: string }): { ok: boolean; reason: string | null } {
+  const hasher = SNAPSHOT_HASHERS[stored.schema_version];
+  if (!hasher) return { ok: false, reason: `unknown schema_version ${stored.schema_version}` };
+  return hasher(stored.snapshot) === stored.snapshot_hash ? { ok: true, reason: null } : { ok: false, reason: "hash_mismatch" };
+}
+
+// ── ADR-0193 enforce guard (risk-officer B) ─────────────────────────────────
+
+export interface GuardOffender { key: string; reevaluate_at: string; missing_vars: string[] }
+
+/**
+ * Carried (deferred) opportunity criteria that have NO data source at their re-evaluation scope: a criterion owned by an
+ * earlier opportunity gate whose `reevaluate_at` is an opportunity gate, while a variable of its predicate is not supplied by
+ * the opportunity-scoped source (OPPORTUNITY_SCOPE_VARS). Under kill_binding=enforce such a carry could only ever end in
+ * `kill_carry_unassessed` / a meaningless acknowledgement, so enforce must not be enabled until it is re-scoped or sourced.
+ */
+export function carriedWithoutDataSource(): GuardOffender[] {
+  const out = new Map<string, GuardOffender>();
+  const oppGates = ["screening", "pre_fs", "target_screening"];
+  for (const gate of oppGates) {
+    for (const track of [null, "greenfield", "brownfield"] as Array<LadderTrack | null>) {
+      for (const procedure of OPPORTUNITY_PROCEDURES[gate](track)) {
+        for (const e of loadKillCriteriaRegistry(procedure) as unknown as Array<CoreRegistryEntry & RegistryScope>) {
+          if (e.predicate == null || e.enabled === false || !e.reevaluate_at) continue;
+          const deferred = gateIdx(e.reevaluate_at) > gateIdx(gate);
+          if (!deferred || gateIdx(e.reevaluate_at) > gateIdx("target_screening")) continue; // a project gate always has its data
+          const vars = [...collectPredicateVars(parsePredicate(e.predicate))];
+          const missingVars = vars.filter((v) => !OPPORTUNITY_SCOPE_VARS.includes(v));
+          if (missingVars.length > 0) out.set(`${procedure}:${e.criterion_id}`, { key: `${procedure}:${e.criterion_id}`, reevaluate_at: e.reevaluate_at, missing_vars: missingVars });
+        }
+      }
+    }
+  }
+  return [...out.values()].sort(byKey);
+}
+
+/**
+ * Fail-closed enforce guard. The unit/scenario test environment (NODE_ENV=test) bypasses it so the enforce semantics stay
+ * testable, unless CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST=on (the guard's own test). Never bypassed in dev or production.
+ */
+export function killEnforceGuard(env: Record<string, string | undefined> = process.env): { unsafe: boolean; offenders: GuardOffender[] } {
+  if (env.NODE_ENV === "test" && env.CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST !== "on") return { unsafe: false, offenders: [] };
+  const offenders = carriedWithoutDataSource();
+  return { unsafe: offenders.length > 0, offenders };
+}
+
+/** Startup check (instrumentation.ts): throws while kill_binding=enforce is configured and the guard is unsafe. */
+export function assertKillEnforceSafe(env: Record<string, string | undefined> = process.env): void {
+  if (gateIntegrityMode("kill_binding", env) !== "enforce") return;
+  const g = killEnforceGuard(env);
+  if (g.unsafe) {
+    throw new Error(`kill_enforce_unsafe: CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING=enforce is refused - carried kill criteria without a data source at their re-evaluation scope: ${g.offenders.map((o) => `${o.key} (${o.missing_vars.join(", ")} @ ${o.reevaluate_at})`).join("; ")}. Re-scope their reevaluate_at (ADR-tracked) or add an opportunity-scope source, or set the flag to shadow/off.`);
+  }
+}
+
+const GATE_IDX = ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"];
+function gateIdx(g: string): number {
+  return GATE_IDX.indexOf(g);
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────
@@ -399,36 +662,141 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
 
   let procedures: string[];
   let evalRunId: string | null = null;
-  let evaluated: { outcomes: KillOutcome[]; inert: Array<{ key: string; title: string }> };
+  const currentStage = resolveCurrentStage(o);
+  const carry = loadCarryContext(db, o);
+  const open = deriveOpenCarries(carry.sources, registryScopeOf);
+  const due = open.filter((c) => carryDue(c.reevaluate_at, o.gate));
+  const dueKeys = new Set(due.map((c) => c.key));
+  const procOf = (key: string): string => key.slice(0, key.indexOf(":"));
+
+  let evaluated: KillEvaluation;
+  let extra: KillEvaluation = { outcomes: [], inert: [] };
   if (isProject) {
     procedures = projectKillProcedures(db, o.entityId, o.gate, track);
     evalRunId = createGateEvalRun(db, { projectId: o.entityId, gate: o.gate, event: o.event, actor: o.actor, now });
     evaluated = evaluateProjectKill(db, o, procedures, evalRunId, now);
+    const extraProcs = [...new Set(due.map((c) => procOf(c.key)))].filter((p) => !procedures.includes(p) && !outOfTrack(p, track));
+    if (extraProcs.length > 0) extra = evaluateProjectKill(db, o, extraProcs, evalRunId, now, new Set(due.map((c) => c.key)));
   } else {
     procedures = (OPPORTUNITY_PROCEDURES[o.gate] ?? (() => []))(track);
     evaluated = evaluateOpportunityKill(db, o.entityId, procedures);
+    const extraProcs = [...new Set(due.map((c) => procOf(c.key)))].filter((p) => !procedures.includes(p) && !outOfTrack(p, track));
+    if (extraProcs.length > 0) extra = evaluateOpportunityKill(db, o.entityId, extraProcs, new Set(due.map((c) => c.key)));
   }
+  evaluated = { outcomes: evaluated.outcomes.filter((x) => inGateScope(o.gate, x.procedure, x.criterion_id)), inert: evaluated.inert.filter((x) => inGateScope(o.gate, procOf(x.key), x.key.slice(x.key.indexOf(":") + 1))) };
 
   const overrides = listActiveKillOverrides(db, o.entityType, o.entityId);
-  const triggered: KillTriggered[] = evaluated.outcomes
-    .filter((x) => x.outcome === "triggered")
-    .map((x) => {
-      const ov = overrideFor(overrides, x.procedure, x.criterion_id);
-      return { key: x.key, procedure: x.procedure, criterion_id: x.criterion_id, title: x.title, action: x.action, binding: x.action === "halt", override_id: ov?.id ?? null };
-    })
-    .sort(byKey);
-  const unassessed: KillItem[] = evaluated.outcomes
-    .filter((x) => x.outcome === "unassessed")
-    .map((x) => ({ key: x.key, procedure: x.procedure, criterion_id: x.criterion_id, title: x.title, action: x.action }))
-    .sort(byKey);
+  const triggered: KillTriggered[] = [];
+  const unassessed: KillItem[] = [];
+  const notReached: KillNotReached[] = [];
+  const carriedIn: KillCarriedIn[] = [];
+  let evaluatedCount = 0;
+  let falseCount = 0;
+  const isIc = o.gate === "entity_ic" || o.gate === "group_ic";
+  const routeDecisionId = (): string | null => {
+    const opp = isProject ? carry.opportunityId : o.entityId;
+    if (!opp) return null;
+    const current = db.query("SELECT id FROM route_decision WHERE opportunity_id = ? AND is_current = 1").get(opp) as { id: string } | null;
+    return current?.id ?? latestRouteDecision(opp)?.id ?? null;
+  };
+  const pushTriggered = (x: KillOutcome, partial: boolean) => {
+    const ov = overrideFor(overrides, x.procedure, x.criterion_id);
+    triggered.push({ key: x.key, procedure: x.procedure, criterion_id: x.criterion_id, title: x.title, action: x.action, binding: x.action === "halt", override_id: ov?.id ?? null, partial_input: partial });
+  };
+  const item = (x: KillOutcome): KillItem => ({ key: x.key, procedure: x.procedure, criterion_id: x.criterion_id, title: x.title, action: x.action });
+
+  // Own procedure set: classify by stage (design 3.1). Keys that are due carries are handled below, once.
+  for (const x of evaluated.outcomes) {
+    if (dueKeys.has(x.key)) continue;
+    const scope = registryScopeOf(x.key);
+    const { cls, partial_input } = classifyKill({ outcome: x.outcome, procedure: x.procedure, evaluable_from: scope?.evaluable_from, current_stage: currentStage, track });
+    if (cls === "out_of_track") continue;
+    if (cls === "not_reached") {
+      const reevaluateAt = scope?.reevaluate_at ?? "";
+      notReached.push({ ...item(x), evaluable_from: scope?.evaluable_from ?? "", reevaluate_at: reevaluateAt });
+      if (reevaluateAt !== OPEN_MONITORING && carryDue(reevaluateAt, o.gate)) {
+        // Deferred past its own re-evaluation gate: cannot be classified as reached here (design 3.3).
+        carriedIn.push({ key: x.key, title: x.title, from_decision_id: null, outcome: "overdue", closure: "open", reason: null, action: x.action, evaluable_from: scope?.evaluable_from ?? "", reevaluate_at: reevaluateAt, route_decision_id: null, implicit: false });
+      }
+      continue;
+    }
+    evaluatedCount += 1;
+    if (cls === "triggered") pushTriggered(x, partial_input);
+    else if (cls === "unassessed") unassessed.push(item(x));
+    else falseCount += 1;
+  }
+
+  // Due carries (design 3.3): evaluated here even when this gate's own procedure set would not include them.
+  const byKeyOutcome = new Map<string, KillOutcome>([...evaluated.outcomes, ...extra.outcomes].map((x) => [x.key, x]));
+  for (const c of due) {
+    const proc = procOf(c.key);
+    const crit = c.key.slice(c.key.indexOf(":") + 1);
+    const entry = (loadKillCriteriaRegistry(proc) as unknown as CoreRegistryEntry[]).find((e) => e.criterion_id === crit);
+    const base = { key: c.key, title: entry ? titleOf(entry) : crit, reason: null, from_decision_id: c.from_decision_id, action: entry?.action ?? "", evaluable_from: c.evaluable_from, reevaluate_at: c.reevaluate_at, implicit: c.implicit };
+    if (outOfTrack(proc, track)) {
+      carriedIn.push({ ...base, outcome: "out_of_track", closure: "out_of_track", route_decision_id: routeDecisionId() });
+      continue;
+    }
+    const x = byKeyOutcome.get(c.key);
+    const reached = entry && stageIndex(entry.evaluable_from ?? "S1") <= stageIndex(currentStage);
+    if (!entry || !x || !reached) {
+      carriedIn.push({ ...base, outcome: "overdue", closure: "open", route_decision_id: null });
+      continue;
+    }
+    evaluatedCount += 1;
+    if (x.outcome === "triggered") {
+      pushTriggered(x, false);
+      carriedIn.push({ ...base, outcome: "triggered", closure: "evaluated", route_decision_id: null });
+    } else if (x.outcome === "false") {
+      falseCount += 1;
+      carriedIn.push({ ...base, outcome: "false", closure: "evaluated", route_decision_id: null });
+    } else {
+      // Still unassessed at its re-evaluation gate: a halt hard-blocks (C-1, no ack path); other actions need the acknowledgement.
+      if (x.action !== "halt") unassessed.push(item(x));
+      carriedIn.push({ ...base, outcome: "unassessed", closure: "open", route_decision_id: null });
+    }
+  }
+  // S12 criteria leave the IC gates as open_monitoring carries (C-6, Q5), evaluated by DATA PHASE (risk-officer A): before
+  // close their evidence does not exist, so they are reported unassessed - "post-close data not yet available" - and kept
+  // visible in the carry list, never silently skipped, never hidden. They need no acknowledgement and cannot hard-block (no
+  // gate can obtain post-close data); IC never closes them. They close only by a recorded human decision on the S12
+  // monitoring surface (pmi-agent evidence, risk-officer review).
+  if (isIc) {
+    for (const key of openMonitoringKeys(track)) {
+      const scope = registryScopeOf(key);
+      const entry = loadKillCriteriaRegistry(key.slice(0, key.indexOf(":"))).find((e) => e.criterion_id === key.slice(key.indexOf(":") + 1));
+      carriedIn.push({ key, title: entry ? titleOf(entry) : key, from_decision_id: null, outcome: "unassessed", closure: "open_monitoring", reason: POST_CLOSE_REASON, action: registryActionOf(key), evaluable_from: scope?.evaluable_from ?? "S12", reevaluate_at: OPEN_MONITORING, route_decision_id: null, implicit: false });
+    }
+  }
+  // Evidence caveats on criteria that were actually evaluated (a false result is not clean evidence either).
+  const caveats: Array<{ key: string; caveat: string }> = [];
+  for (const x of [...evaluated.outcomes, ...extra.outcomes]) {
+    const caveat = KILL_EVIDENCE_CAVEATS[x.key];
+    if (caveat && !caveats.some((c) => c.key === x.key)) caveats.push({ key: x.key, caveat });
+  }
+  // Criteria owned by a later gate are shown as pending with their scheduled gate (not absent).
+  const scheduled: GateSnapshot["kill"]["scheduled"] = [];
+  if (!isProject) {
+    for (const procedure of SCHEDULED_ELSEWHERE[o.gate] ?? []) {
+      for (const e of loadKillCriteriaRegistry(procedure) as unknown as Array<CoreRegistryEntry & RegistryScope>) {
+        scheduled.push({ key: `${procedure}:${e.criterion_id}`, title: titleOf(e), action: e.action, evaluable_from: e.evaluable_from ?? "", reevaluate_at: e.reevaluate_at ?? "", status: "pending" });
+      }
+    }
+  }
   const kill: GateSnapshot["kill"] = {
     procedures: [...procedures].sort(),
-    evaluated: evaluated.outcomes.length,
+    evaluated: evaluatedCount,
     inert: evaluated.inert.length,
     inert_list: [...evaluated.inert].sort(byKey),
-    false_count: evaluated.outcomes.filter((x) => x.outcome === "false").length,
-    triggered,
-    unassessed,
+    false_count: falseCount,
+    triggered: triggered.sort(byKey),
+    unassessed: unassessed.sort(byKey),
+    current_stage: currentStage,
+    not_reached: notReached.sort(byKey),
+    carried_in: carriedIn.sort(byKey),
+    scheduled: scheduled.sort(byKey),
+    caveats: caveats.sort(byKey),
+    lineage_missing: carry.lineageMissing,
     eval_run_id: evalRunId,
   };
 
@@ -464,7 +832,8 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
     !isProject && o.gate === "pre_fs" && track === "brownfield"
       ? (certificationFailure(db, o.entityId)?.details?.certifications as Array<{ id: string }> | undefined)?.map((c) => c.id) ?? []
       : [];
-  const snapshot: GateSnapshot = { ...partial, required_acks: requiredAcks(partial), hard_blocks: hardBlocks(partial, { certificationKeys }) };
+  const enforceUnsafeKeys = gateIntegrityMode("kill_binding") === "enforce" ? killEnforceGuard().offenders.map((x) => x.key) : [];
+  const snapshot: GateSnapshot = { ...partial, required_acks: requiredAcks(partial), hard_blocks: hardBlocks(partial, { certificationKeys, enforceUnsafeKeys }) };
   return { snapshot, hash: snapshotHash(snapshot), evalRunId, brief };
 }
 

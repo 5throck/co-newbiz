@@ -6,6 +6,7 @@ import { getGateSnapshot } from "../../../../../../../../../db/repositories/gate
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
+import { normalizeStoredSnapshot, verifyStoredSnapshotHash } from "../../../../../../../lib/gate-snapshot.ts";
 import { route } from "../../../../../../../lib/route.ts";
 
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string; decisionId: string }> }) => {
@@ -17,5 +18,5 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   const decision = db.query("SELECT id, gate, decision FROM gate_decision WHERE id = ? AND entity_type = 'project' AND entity_id = ?").get(decisionId, id) as { id: string; gate: string; decision: string } | null;
   if (!decision) return notFound();
   const snap = getGateSnapshot(decisionId, db);
-  return ok({ decision_id: decision.id, gate: decision.gate, decision: decision.decision, legacy: snap === null, ...(snap ? { snapshot: snap.snapshot, snapshot_hash: snap.snapshot_hash, submitted_hash: snap.submitted_hash, acknowledgements: snap.acknowledgements, computed_at: snap.computed_at, schema_version: snap.schema_version } : { snapshot: null }) });
+  return ok({ decision_id: decision.id, gate: decision.gate, decision: decision.decision, legacy: snap === null, ...(snap ? { snapshot: normalizeStoredSnapshot(snap.snapshot), hash_verified: verifyStoredSnapshotHash(snap).ok, snapshot_hash: snap.snapshot_hash, submitted_hash: snap.submitted_hash, acknowledgements: snap.acknowledgements, computed_at: snap.computed_at, schema_version: snap.schema_version } : { snapshot: null }) });
 });
