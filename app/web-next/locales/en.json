@@ -9748,6 +9748,20 @@
       "notReachedSummary": "Stages not reached yet, {count} item(s)",
       "notReachedNote": "These could not be verified because their stage has not been reached yet. Not defects; they are reviewed when the process reaches that stage."
     },
+    "provenance": {
+      "summary": "Review provenance ({count})",
+      "note": "Shows how the review was routed and which AI items were kept off the decision surface. These are not counted in the three groups above and do not block a decision.",
+      "listLabel": "Review provenance list",
+      "unknownName": "not identified",
+      "fallbackReviewer": "No reviewer outside the authoring domains could be assigned, so the default cross-domain reviewer ({reviewer}) reviewed instead. Reason: {reason}",
+      "fallbackReviewerWithSpecialist": "No reviewer outside the authoring domains could be assigned, so the default cross-domain reviewer ({reviewer}) reviewed instead. Reason: {reason} The specialist agent ({specialist}) is in the same domain as the author, so it took part in the first stage only.",
+      "orchestratorExempt": "The coordinating agent ({agents}) has no review domain and was left out of the author-domain judgement.",
+      "unresolvedAgent": "The authoring agent whose domain could not be determined ({agents}) was left out of the cross-domain judgement.",
+      "filteredInternalItem": "An AI item that only concerned internal identifiers or system fields was removed from the decision items.",
+      "originalText": "Original text ({bucket}): {text}",
+      "legacyNote": "Moved here from an earlier review record.",
+      "unknownCode": "Unknown review provenance entry ({code})."
+    },
     "dev": {
       "summary": "Raw record (for developers)",
       "note": "The stored English originals, internal identifiers, and review record hashes. Needed only for tracing results or comparing against the translation; not required for normal use.",
@@ -9801,7 +9815,11 @@
     },
     "ai2": {
       "notPerformed": "AI 2nd (cross-domain) review was not performed",
-      "notPerformedReason": "{reason}"
+      "notPerformedReason": "{reason}",
+      "sourcesNotInspected": "Source documents behind the artifact were not inspected",
+      "sourcesNotInspectedReason": "This review read only the artifact snapshot; the documents, data and records it refers to were not opened or verified.",
+      "legacyScopeNotDeclared": "Scope not declared in this legacy review",
+      "legacyScopeNotDeclaredReason": "This review was recorded before reviewer-routing notes were separated from the could-not-verify list and declared no other gap. Treat the documents behind the artifact as not inspected."
     }
   }
 }

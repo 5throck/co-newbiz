@@ -8,6 +8,7 @@ import {
   insertAiReview,
   latestReviews,
   monthlyTokensUsed,
+  type ProvenanceItem,
   type ReviewBuckets,
   type ReviewItem,
   type ReviewStageRecord,
@@ -15,6 +16,7 @@ import {
 import { runAiFirstChecks } from "./ai-first.ts";
 import { defaultAi2ndDeps, monthlyTokenCap, runAiSecond, type Ai2ndDeps, type Ai2ndResult } from "./ai-second.ts";
 import { buildGateArtifact, type ReviewGate } from "./gate-artifacts.ts";
+import { reclassifyLegacyProvenance } from "./internal-item-filter.ts";
 import type { ReviewArtifact } from "./stage-artifacts.ts";
 
 export interface ReviewRunContext {
@@ -123,12 +125,20 @@ export interface ReviewStageView {
   verified: ReviewItem[];
   could_not_verify: ReviewItem[];
   needs_judgement: ReviewItem[];
+  /**
+   * How the review was routed / what was set aside (fallback reviewer, exempt or
+   * unresolved agents, filtered internal items). Not a finding: excluded from
+   * bucket counts and gate logic. Always an array (empty for AI 1st).
+   */
+  provenance: ProvenanceItem[];
 }
 
 function toView(row: ReviewStageRecord, currentHash: string): ReviewStageView {
-  const buckets = row.buckets_json
+  const stored: ReviewBuckets = row.buckets_json
     ? (JSON.parse(row.buckets_json) as ReviewBuckets)
     : { verified: [], could_not_verify: JSON.parse(row.unverified_items_json) as ReviewItem[], needs_judgement: [] };
+  // Legacy AI 2nd rows kept routing claims in could_not_verify; reclassified at read time, rows untouched.
+  const buckets = row.stage === "ai_2nd" ? reclassifyLegacyProvenance(stored) : stored;
   return {
     id: row.id,
     origin: row.stage === "ai_1st" ? "AI 1st" : "AI 2nd",
@@ -139,7 +149,10 @@ function toView(row: ReviewStageRecord, currentHash: string): ReviewStageView {
     not_performed_reason: row.not_performed_reason,
     current: row.content_hash === currentHash,
     created_at: row.created_at,
-    ...buckets,
+    verified: buckets.verified,
+    could_not_verify: buckets.could_not_verify,
+    needs_judgement: buckets.needs_judgement,
+    provenance: buckets.provenance ?? [],
   };
 }
 

@@ -1,0 +1,17 @@
+{
+  "_comment": "Korean detection vocabulary (regex fragments) for internal-item-filter.ts. Matching data, not UI text: it recognizes plumbing talk in Korean-locale LLM output and the display-only Korean forms of the routing claims. Lives in JSON so it is not a UI literal in code.",
+  "trackField": "트랙\\s*(?:필드|값|항목)|\\btrack(?:이|은|는|가)?\\s*(?:필드|값|항목|관련|null|미지정|미설정|비어|누락|없)",
+  "routingTerm": "조정\\s*에이전트|작성\\s*에이전트|작성\\s*도메인|검토자\\s*(?:배정|선정|라우팅)|대체\\s*규칙",
+  "dealTerm": "증빙|증거|리스크|위험|시장|매출|수익|이익|비용|가격|재무|규제|인허가|인증|고객|경쟁|가치평가|밸류|수요|공급|계약|법령|법규|법적|세금|세무|투자|시너지|전망|가정|예산|용량|성장|출처|자료|문서",
+  "nullish": "비어\\s*있|미설정|설정되지\\s*않|누락|없(?:음|습니다|는)|미지정",
+  "intended": "의도(?:한|된|적)|입력\\s*오류|데이터\\s*오류",
+  "proceed": "진행(?:을)?\\s*허용",
+  "routing": "제외|면제|배정|라우팅|확인하지\\s*못",
+  "legacyClaims": {
+    "fallback": "검토자를 교차검증 매트릭스 항목이 아니라 대체 규칙으로 정했습니다",
+    "exempt": "조정 에이전트는 작성 도메인 판단에서 제외했습니다",
+    "unresolved": "일부 작성 에이전트의 도메인을 확인하지 못했습니다"
+  },
+  "schemaField": "필드",
+  "identityMatch": "일치|대조|부합|원장"
+}

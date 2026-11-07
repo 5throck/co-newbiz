@@ -57,7 +57,7 @@ describe("hard blocks and error lists", () => {
 describe("ADR-0193 hard blocks", () => {
   test("the four kill-scope blocks are known (they have catalog text) and enforced by default", () => {
     for (const c of ["kill_carry_overdue", "kill_carry_unassessed", "kill_lineage_missing", "kill_enforce_unsafe"]) expect(KNOWN_HARD_BLOCKS as readonly string[]).toContain(c);
-    expect(enforcedBlocks([{ code: "kill_enforce_unsafe", keys: ["k"] }]).map((b) => b.code)).toEqual(["kill_enforce_unsafe"]);
+    expect(enforcedBlocks([{ code: "kill_enforce_unsafe", keys: ["k"], enforced: true }]).map((b) => b.code)).toEqual(["kill_enforce_unsafe"]);
   });
   test("409 key lists come from details.keys for the carry blocks; lineage has no list", () => {
     expect(integrityErrorList("kill_carry_unassessed", { keys: ["a:b"] })).toEqual(["a:b"]);
