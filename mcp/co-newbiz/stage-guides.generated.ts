@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.18.0";
+export const GUIDE_SPEC_VERSION = "2.18.1";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -161,7 +161,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     ],
     "requiredArtifacts": [
       "시너지 평가",
-      "전략적 적합성 판단"
+      "시너지 점수 확정·근거 (전략적 적합성 판단)"
     ],
     "completionCriteria": [
       "기회에 synergy_score와 근거가 기록되었다",

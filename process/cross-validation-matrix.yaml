@@ -130,9 +130,9 @@ stages:
       - { match: "시너지 평가", artifact_type: synergy }
     outputs:
       - { match: "시너지 점수", artifact_type: synergy, review: covered_by, covered_by: "시너지 평가" }
-      - { match: "전략적 적합성 평가", artifact_type: strategy, review: covered_by, covered_by: "전략적 적합성 판단" }
-      - { match: "필요 역량 목록", artifact_type: strategy, review: covered_by, covered_by: "전략적 적합성 판단" }
-      - { match: "역량 갭 분석", artifact_type: strategy, review: covered_by, covered_by: "전략적 적합성 판단" }
+      - { match: "전략적 적합성 평가", artifact_type: strategy, review: covered_by, covered_by: "시너지 점수 확정·근거 (전략적 적합성 판단)" }
+      - { match: "필요 역량 목록", artifact_type: strategy, review: covered_by, covered_by: "시너지 점수 확정·근거 (전략적 적합성 판단)" }
+      - { match: "역량 갭 분석", artifact_type: strategy, review: covered_by, covered_by: "시너지 점수 확정·근거 (전략적 적합성 판단)" }
   S4:
     default_type: strategy
     required:

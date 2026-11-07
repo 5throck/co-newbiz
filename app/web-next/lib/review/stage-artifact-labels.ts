@@ -18,7 +18,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S2:1", stageId: "S2", label: "S2 기회 등록" },
   { key: "stage:S2:2", stageId: "S2", label: "S2 진입시장 산정" },
   { key: "stage:S3:1", stageId: "S3", label: "S3 시너지 평가" },
-  { key: "stage:S3:2", stageId: "S3", label: "S3 전략적 적합성 판단" },
+  { key: "stage:S3:2", stageId: "S3", label: "S3 시너지 점수 확정·근거 (전략적 적합성 판단)" },
   { key: "stage:S4:1", stageId: "S4", label: "S4 트랙 결정" },
   { key: "stage:S4:2", stageId: "S4", label: "S4 브라운필드 진출 경로 유형" },
   { key: "stage:S4:3", stageId: "S4", label: "S4 5대 기준 채점 결과" },

@@ -54,7 +54,7 @@ function s3(o: OpportunityRow) {
   return opportunityStageCompletion("S3", o);
 }
 
-const FIT_LABEL = "전략적 적합성 판단";
+const FIT_LABEL = "시너지 점수 확정·근거 (전략적 적합성 판단)";
 const SELECTED_LABEL = "기회 선택(selected)";
 
 describe("ADR-0192 S3 predicate (option A)", () => {

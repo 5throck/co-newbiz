@@ -21,7 +21,11 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.18.0"
+  version: "2.18.1"
+  # v2.18.1 - S3 requiredArtifacts[1] label renamed "전략적 적합성 판단" ->
+  #   "시너지 점수 확정·근거 (전략적 적합성 판단)" to match ADR-0192 (the confirmed
+  #   synergy score + rationale IS the fit judgement). Blocker key
+  #   s3.strategic_fit_judgement unchanged; no stage, gate or track changes.
   # v2.18.0 - ADR-0192 (owner decision, option A, 2026-11-06): S3 "strategic fit
   #   judgement" completion criterion is satisfied by a human-confirmed synergy
   #   assessment (synergy_score_confirmed_at set + non-empty synergy_rationale),
@@ -590,7 +594,7 @@ stages:
         # 그룹/계열사 프로파일 — 자사 강점/약점·산업 노출을 버전 누적으로 관리 (S3 입력, ADR-0080·0089).
     requiredArtifacts:
       - 시너지 평가
-      - 전략적 적합성 판단
+      - 시너지 점수 확정·근거 (전략적 적합성 판단)
     completionCriteria:
       - 기회에 synergy_score와 근거가 기록되었다
       - 적합성 판단이 사람이 확정한 시너지 평가(synergy_score_confirmed_at 기록 + 비어 있지 않은 synergy_rationale)로 충족되었다 (ADR-0192, v2.18.0 — 2026-11-06 이전 생성 기회는 종전 기준(opportunity.rationale) 유지)

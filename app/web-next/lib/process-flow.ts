@@ -67,7 +67,7 @@ export const STAGES: StageDefinition[] = [
     objective: "우리가 해야 하는가? — 자사 역량과의 시너지를 평가한다",
     applicableTracks: ["all"],
     gateIds: ["screening"],
-    requiredArtifacts: ["시너지 평가", "전략적 적합성 판단"],
+    requiredArtifacts: ["시너지 평가", "시너지 점수 확정·근거 (전략적 적합성 판단)"],
   },
   {
     id: "S4",
