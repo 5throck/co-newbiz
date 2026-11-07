@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.growth_projection_decile plus fin.growth_signoff — market.growth_rate is the market, not the projection; decile basis per ADR-0018 anchoring undecided."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.growth_projection_decile plus fin.growth_signoff — market.growth_rate is the market, not the projection; decile basis per ADR-0018 anchoring undecided.",
+  "evaluable_from": "S8",
+  "reevaluate_at": "fs",
+  "evaluable_from_evidence": "S8 business case (inert, no predicate)"
 }

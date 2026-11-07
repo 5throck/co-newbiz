@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.9.0
+// @version 1.10.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -56,6 +56,13 @@
  *       checked by scripts/co-newbiz/graph-map.ts --check, which sees the
  *       registry-consistency direction that per-file validation cannot.
  *
+ * Since 1.10.0 (ADR-0193, kill-criteria stage scoping — PR-A): the kill-criteria pass
+ * also requires `evaluable_from` (flow stage S1-S12) and `reevaluate_at` (ONE gate id,
+ * or `open_monitoring` for S12) on every registry entry, rejects compound `reevaluate_at`
+ * values (risk-officer C-2), checks the gate exists in flow.spec with a stage not earlier
+ * than `evaluable_from`, and cross-checks `evaluable_from` against the var->stage map
+ * (db/lib/kill-var-stages.ts). Data + validation only; the engine does not read the fields yet.
+ *
  * Since 1.8.0 (ADR-0187 P1, finding M2): rule `activity-agent-in-procedure`
  * — every flow.spec activity's agent must hold >=1 agent_key step in each
  * procedure it lists (scripts/co-newbiz/process-ssot-check.ts). WARN-only in
@@ -89,6 +96,8 @@ import { join, resolve, dirname, basename } from "node:path";
 import { resolveProcedure } from "../scripts/co-newbiz/proc-resolve.ts";
 import { parsePredicate } from "../db/lib/predicate.ts";
 import { collectPredicateVars } from "../db/lib/applies-when.ts";
+import { KILL_VAR_MIN_STAGE } from "../db/lib/kill-var-stages.ts";
+import { checkReevaluateBinding, checkStageScopingFields, flowShapeFromSpec, type FlowShape } from "../packages/core-scoring/src/kill-criteria.ts";
 
 const ROOT = resolve(import.meta.dirname);
 const PROJECT_ROOT = resolve(ROOT, "..");
@@ -961,12 +970,23 @@ interface RegistryEntry {
   enabled: unknown;
   policy_id: unknown;
   thresholds_source: unknown;
+  evaluable_from?: unknown;
+  reevaluate_at?: unknown;
+  evaluable_from_evidence?: unknown;
 }
 
 interface KillCriteriaStats {
   declaredCount: number;
   entryCount: number;
   executable: number;
+}
+
+/** flow.spec stage order + gate hosting for the ADR-0193 checks; null when flow.spec is absent (scaffolds). */
+async function loadFlowShape(): Promise<FlowShape | null> {
+  const specFile = join(PROJECT_ROOT, "process", "flow.spec.yaml");
+  if (!existsSync(specFile)) return null;
+  const spec = yaml.load(await readFile(specFile, "utf8")) as Parameters<typeof flowShapeFromSpec>[0];
+  return flowShapeFromSpec(spec);
 }
 
 /**
@@ -1072,6 +1092,28 @@ async function validateKillCriteria(
           severity: "error",
         });
       }
+    }
+  }
+
+  // (f) ADR-0193 stage scoping: evaluable_from + single-gate reevaluate_at on every entry.
+  const flow = await loadFlowShape();
+  for (const { entry, file } of entries) {
+    let vars: string[] = [];
+    if (entry.predicate !== null && entry.predicate !== undefined) {
+      try {
+        vars = [...collectPredicateVars(parsePredicate(entry.predicate))];
+      } catch {
+        // an unparsable predicate is reported by the runtime guard (validateRegistryEntry); no var cross-check possible
+      }
+    }
+    const scoping = {
+      evaluable_from: entry.evaluable_from as string | undefined,
+      reevaluate_at: entry.reevaluate_at as string | undefined,
+      evaluable_from_evidence: entry.evaluable_from_evidence as string | undefined,
+    };
+    const problems = [...checkStageScopingFields(scoping, vars, KILL_VAR_MIN_STAGE), ...(flow ? checkReevaluateBinding(scoping, flow) : [])];
+    for (const message of problems) {
+      issues.push({ file, message: `stage scoping (ADR-0193): ${message}`, severity: "error" });
     }
   }
 

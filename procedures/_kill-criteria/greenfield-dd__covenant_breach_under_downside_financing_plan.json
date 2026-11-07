@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable. ADR-0187 phase P2 (finding M4): the Green Field entry for neb-policy section 4 criterion 4, twin of brownfield-dd__covenant_breach_with_coc_acceleration_under_downside. The brownfield predicate (risk.covenants_breached) counts breaches of the ma-11 +200bp rate-shock run, an M&A-specific downside; the greenfield downside (financing-plan-review, ADR-0187 D2 headroom threshold of 1.2x DSCR) has no evidence variable yet, so the predicate stays null and the DD gate reviewers judge it against the step 14 financing DD."
+  "notes": "declared in YAML, not yet executable. ADR-0187 phase P2 (finding M4): the Green Field entry for neb-policy section 4 criterion 4, twin of brownfield-dd__covenant_breach_with_coc_acceleration_under_downside. The brownfield predicate (risk.covenants_breached) counts breaches of the ma-11 +200bp rate-shock run, an M&A-specific downside; the greenfield downside (financing-plan-review, ADR-0187 D2 headroom threshold of 1.2x DSCR) has no evidence variable yet, so the predicate stays null and the DD gate reviewers judge it against the step 14 financing DD.",
+  "evaluable_from": "S9",
+  "reevaluate_at": "dd",
+  "evaluable_from_evidence": "downside financing plan in S9 DD (inert, no predicate)"
 }

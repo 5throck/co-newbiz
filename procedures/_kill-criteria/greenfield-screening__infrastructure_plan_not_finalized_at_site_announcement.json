@@ -13,5 +13,8 @@
   "enabled": true,
   "policy_id": "gd-0024-class-c-decisions",
   "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); asserted var seeded by migration 0029 per ADR-0065 — threshold by criterion wording (ADR-0060 row 25)",
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized. Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.plan_finalized (boolean). ADR-0065 arms this: infra.plan_finalized is an ASSERTED fact (pilot-005 F-1 origin — a real project designated its site before power/water plans were finalized). 'no' at site announcement ESCALATES to the risk officer; unasserted stays UNASSESSED."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Added per docs/pilots/pilot-005-sk-hynix-yongin-cluster.md finding F-1 — a real large-scale green-field project proceeded to site designation before power/water infrastructure plans were finalized. Classification (ADR-0060): class (iii) — no snapshot var; proposed: infra.plan_finalized (boolean). ADR-0065 arms this: infra.plan_finalized is an ASSERTED fact (pilot-005 F-1 origin — a real project designated its site before power/water plans were finalized). 'no' at site announcement ESCALATES to the risk officer; unasserted stays UNASSESSED.",
+  "evaluable_from": "S5",
+  "reevaluate_at": "pre_fs",
+  "evaluable_from_evidence": "infra.plan_finalized (project text var), to be read as of the site-announcement date, not the gate date (design 8 #5, C-6; predicate change is PR-B)"
 }

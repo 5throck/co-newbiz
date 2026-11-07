@@ -12,5 +12,8 @@
   "enabled": true,
   "policy_id": "DEC-20261027-01",
   "thresholds_source": "docs/adr/0186-gate-integrity.md D3 (Accepted): fin.dd_value_impact_unbridged = count of selected-scope dd_finding rows with a non-zero value_impact that name an assumption_key not resolving to a kind=user assumption on a non-superseded project run; direct adjustments (no key), no valid adopted case, or a stale adoption give UNASSESSED; var seeded by migration 0178; threshold >= 1 is the criterion wording itself",
-  "notes": "Activated by ADR-0186 P4. Narrowed to keyed-but-unresolved findings (valuation-agent review); UNASSESSED, never a silent pass, when direct adjustments exist, no valid adopted case exists, or the adoption is older than the newest finding. Known limitation: corrected findings have no supersede link. Halt is policy-binding (neb-policy 2.5) unless a Group IC override exists."
+  "notes": "Activated by ADR-0186 P4. Narrowed to keyed-but-unresolved findings (valuation-agent review); UNASSESSED, never a silent pass, when direct adjustments exist, no valid adopted case exists, or the adoption is older than the newest finding. Known limitation: corrected findings have no supersede link. Halt is policy-binding (neb-policy 2.5) unless a Group IC override exists.",
+  "evaluable_from": "S9",
+  "reevaluate_at": "dd",
+  "evaluable_from_evidence": "fin.dd_value_impact_unbridged; S9 DD-to-valuation bridge"
 }

@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": "Declared in procedures/_shared/business-unit-establishment-execution/schema.yaml kill_criteria (ADR-0167); activation awaits an asserted permit-holder var round per ADR-0060 §3",
-  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). When any required permit cannot be held by the existing entity, the business-unit route may not be viable; escalate to risk-officer, who may recommend switching the establishment mode to new_entity (an audited, reasoned change)."
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). When any required permit cannot be held by the existing entity, the business-unit route may not be viable; escalate to risk-officer, who may recommend switching the establishment mode to new_entity (an audited, reasoned change).",
+  "evaluable_from": "S11",
+  "reevaluate_at": "entity_ic",
+  "evaluable_from_evidence": "ADR-0167 business-unit establishment (inert, no predicate)"
 }

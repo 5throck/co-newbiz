@@ -7,5 +7,8 @@
   "enabled": true,
   "policy_id": "gd-0024-class-c-decisions",
   "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (incentive-deadline convention: earliest recorded project_incentive_deadline vs the D-M-TE-8 critical path, months ÷30.44); var seeded by migration 0026 per ADR-0063",
-  "notes": "ADR-0060 row 4 (the lone class-(ii)): threshold was a NEW thresholds-agenda item because a deadline is set by the incentive package, not a registry constant — resolved by the computed-boolean convention this entry predicted: the var compares the D-M-TE-8 critical-path duration against the EARLIEST project_incentive_deadline row at fill time (observed_at pinned to the fill; the snapshot's immutability carries the measurement moment). Missing when EITHER side is unmeasured — ADR-0049 honesty, never a defaulted no. Escalation routes the incentive-deadline conflict to the human gate; renegotiation vs site swap is a judgment call. Classification history: class (ii), var existed for the path but not the comparison — both halves now landed."
+  "notes": "ADR-0060 row 4 (the lone class-(ii)): threshold was a NEW thresholds-agenda item because a deadline is set by the incentive package, not a registry constant — resolved by the computed-boolean convention this entry predicted: the var compares the D-M-TE-8 critical-path duration against the EARLIEST project_incentive_deadline row at fill time (observed_at pinned to the fill; the snapshot's immutability carries the measurement moment). Missing when EITHER side is unmeasured — ADR-0049 honesty, never a defaulted no. Escalation routes the incentive-deadline conflict to the human gate; renegotiation vs site swap is a judgment call. Classification history: class (ii), var existed for the path but not the comparison — both halves now landed.",
+  "evaluable_from": "S8",
+  "reevaluate_at": "fs",
+  "evaluable_from_evidence": "permit.critical_path_exceeds_incentive_deadline; fs gate"
 }

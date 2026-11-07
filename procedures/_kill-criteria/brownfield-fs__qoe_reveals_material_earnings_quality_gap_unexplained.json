@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.qoe_material_gap_unexplained (boolean) — dual-blocked: no QoE var exists and 'material' is undefined."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.qoe_material_gap_unexplained (boolean) — dual-blocked: no QoE var exists and 'material' is undefined.",
+  "evaluable_from": "S8",
+  "reevaluate_at": "fs",
+  "evaluable_from_evidence": "QoE in S8 per-target analysis (inert, no predicate)"
 }

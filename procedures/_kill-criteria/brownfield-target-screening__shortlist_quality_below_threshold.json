@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": "Declared in procedures/_shared/brownfield-target-screening/schema.yaml kill_criteria (S7); thresholds are ILLUSTRATIVE until activated by a dated decision (ADR-0081 convention); activation awaits the scorecard-var round per ADR-0060 §3",
-  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Routing back to S6 widens the Long List before the screen is re-run."
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Routing back to S6 widens the Long List before the screen is re-run.",
+  "evaluable_from": "S7",
+  "reevaluate_at": "target_screening",
+  "evaluable_from_evidence": "S7 shortlist (inert, no predicate)"
 }

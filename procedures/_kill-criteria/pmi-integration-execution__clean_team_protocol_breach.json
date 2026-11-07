@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "Design §B.4: immediate halt with legal-counsel involvement — gun-jumping exposure (pre-close exchange of competitively sensitive information outside the clean-team protocol; EC fines up to 10% of revenue is the statutory ceiling, ILLUSTRATIVE as a planning prior). Declared in YAML, not yet executable — predicate null by design; a breach is an auditable event, not a snapshot variable, so the executable form (if any) depends on how breaches come to be recorded (activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; event, not state — a breach is an auditable event and may never be predicate-expressible (depends on a breach-recording schema)."
+  "notes": "Design §B.4: immediate halt with legal-counsel involvement — gun-jumping exposure (pre-close exchange of competitively sensitive information outside the clean-team protocol; EC fines up to 10% of revenue is the statutory ceiling, ILLUSTRATIVE as a planning prior). Declared in YAML, not yet executable — predicate null by design; a breach is an auditable event, not a snapshot variable, so the executable form (if any) depends on how breaches come to be recorded (activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; event, not state — a breach is an auditable event and may never be predicate-expressible (depends on a breach-recording schema).",
+  "evaluable_from": "S9",
+  "reevaluate_at": "dd",
+  "evaluable_from_evidence": "a clean-team breach can occur from S9 DD (risk-officer C-6); inert, no predicate"
 }

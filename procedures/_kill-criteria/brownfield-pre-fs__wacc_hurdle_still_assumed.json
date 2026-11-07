@@ -13,5 +13,8 @@
   "enabled": true,
   "policy_id": "gd-0024-class-c-decisions",
   "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + wacc_hurdle_still_assumed wording (ADR-0060)",
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.wacc_source_status (sourced|assumed) — threshold 'assumed' is decided by the criterion wording; the var is the blocker. ADR-0064 arms this: fin.wacc_source_status (migration 0027) reads the run's wacc/hurdle_irr assumptions — any kind='assumed' marks the whole status assumed (policy §2.2: a provisional rate invalidates the analysis); both keys absent = not sessioned = UNASSESSED, never a silent pass."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in greenfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.wacc_source_status (sourced|assumed) — threshold 'assumed' is decided by the criterion wording; the var is the blocker. ADR-0064 arms this: fin.wacc_source_status (migration 0027) reads the run's wacc/hurdle_irr assumptions — any kind='assumed' marks the whole status assumed (policy §2.2: a provisional rate invalidates the analysis); both keys absent = not sessioned = UNASSESSED, never a silent pass.",
+  "evaluable_from": "S4",
+  "reevaluate_at": "pre_fs",
+  "evaluable_from_evidence": "fin.wacc_source_status <- assumption wacc/hurdle_irr; S4 wacc-hurdle-confirmation activity"
 }
