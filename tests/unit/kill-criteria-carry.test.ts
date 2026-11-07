@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * ADR-0193 PR-B - kill-criteria stage scoping in the gate snapshot (design 2026-11-07 section 7, tests 1-13):
  * the stage classifier (not_reached / triggered / reached), carries from every recorded decision, the three hard
@@ -73,12 +73,16 @@ function addDecision(entityType: "opportunity" | "project", entityId: string, ga
 }
 const nr = (key: string, evaluable_from: string, reevaluate_at: string) => ({ key, evaluable_from, reevaluate_at });
 
-const ZERO_SITE = "greenfield-screening:zero_site_clears_infrastructure_minimums"; // halt, S5 -> pre_fs
-const PARTNER_GF = "greenfield-screening:partner_dependency_unconfirmed_and_no_alternative"; // mark_conditional, S5 -> pre_fs
+const ZERO_SITE = "greenfield-screening:zero_site_clears_infrastructure_minimums"; // halt, S5 -> fs (ADR-0193 14.1)
+const PARTNER_GF = "greenfield-screening:partner_dependency_unconfirmed_and_no_alternative"; // mark_conditional, S5 -> fs
 const NO_TARGET = "brownfield-screening:no_viable_target_in_longlist"; // halt, S6 -> pre_fs
-const HHI = "brownfield-screening:preliminary_hhi_flags_certain_block"; // escalate, S7 -> target_screening
-const INFRA_PLAN = "greenfield-screening:infrastructure_plan_not_finalized_at_site_announcement"; // escalate, S5 -> pre_fs
+const HHI = "brownfield-screening:preliminary_hhi_flags_certain_block"; // escalate, S7 -> fs
+const INFRA_PLAN = "greenfield-screening:infrastructure_plan_not_finalized_at_site_announcement"; // escalate, S5 -> fs
 const FIVE = [ZERO_SITE, INFRA_PLAN, PARTNER_GF, NO_TARGET, HHI];
+const NO_SHAPE = "deal-shape-chain:no_viable_deal_shape"; // mark_conditional, S4 -> pre_fs (needs an opportunity source, 14.2)
+const PARTNER_FIN = "deal-shape-chain:partner_dd_red_financial_distress"; // halt, S5 -> fs (14.2)
+const PARTNER_IP = "deal-shape-chain:partner_dd_red_ip_chain"; // halt, S5 -> fs (14.2)
+const RESCOPED_AT_PRE_FS = (t: "greenfield" | "brownfield") => [PARTNER_FIN, PARTNER_IP, `${t}-pre-fs:wacc_hurdle_still_assumed`, `${t}-pre-fs:certification_transferability_unconfirmed_and_load_bearing`];
 
 describe("1. S3 Screening: the five unmeasurable criteria are not_reached with their carry", () => {
   test("opportunity at S3, track undecided: 0 kill_unassessed acks, the five keys listed not_reached with reevaluate_at", () => {
@@ -90,8 +94,8 @@ describe("1. S3 Screening: the five unmeasurable criteria are not_reached with t
     expect(snapshot.required_acks.filter((a) => a.kind === "kill_unassessed")).toEqual([]);
     const byKey = new Map(snapshot.kill.not_reached.map((n) => [n.key, n]));
     for (const k of FIVE) expect(byKey.has(k)).toBe(true);
-    expect(byKey.get(ZERO_SITE)).toMatchObject({ evaluable_from: "S5", reevaluate_at: "pre_fs" });
-    expect(byKey.get(HHI)).toMatchObject({ evaluable_from: "S7", reevaluate_at: "target_screening" });
+    expect(byKey.get(ZERO_SITE)).toMatchObject({ evaluable_from: "S5", reevaluate_at: "fs" });
+    expect(byKey.get(HHI)).toMatchObject({ evaluable_from: "S7", reevaluate_at: "fs" });
     expect(byKey.get(NO_TARGET)).toMatchObject({ evaluable_from: "S6", reevaluate_at: "pre_fs" });
     expect(snapshot.kill.not_reached).toEqual([...snapshot.kill.not_reached].sort((a, b) => (a.key < b.key ? -1 : 1)));
     expect(snapshot.kill.current_stage).toMatch(/^S([1-9]|1[0-2])$/);
@@ -134,6 +138,16 @@ describe("3. reached criteria stay fail-closed", () => {
     expect(classifyKill({ outcome: "unassessed", procedure: "greenfield-fs", evaluable_from: undefined, current_stage: "S1", track: null }).cls).toBe("unassessed");
     expect(classifyKill({ outcome: "unassessed", procedure: "greenfield-fs", evaluable_from: "S8", current_stage: "S7", track: null }).cls).toBe("not_reached");
     expect(classifyKill({ outcome: "false", procedure: "greenfield-fs", evaluable_from: "S8", current_stage: "S7", track: null }).cls).toBe("not_reached");
+    // ADR-0193 14.2: a criterion whose reevaluate_at is a LATER gate than the evaluating gate is deferred even when its stage is reached
+    const deferred = { procedure: "deal-shape-chain", evaluable_from: "S5", current_stage: "S6", track: "greenfield", reevaluate_at: "fs", gate: "pre_fs" } as const;
+    expect(classifyKill({ ...deferred, outcome: "unassessed" })).toEqual({ cls: "not_reached", partial_input: false });
+    expect(classifyKill({ ...deferred, outcome: "false" }).cls).toBe("not_reached");
+    expect(classifyKill({ ...deferred, outcome: "triggered" })).toEqual({ cls: "triggered", partial_input: true }); // a trigger is never scoped away
+    // at its own gate (or later) it is reached; legacy callers without the pair are unchanged; open_monitoring never defers
+    expect(classifyKill({ ...deferred, outcome: "unassessed", gate: "fs" }).cls).toBe("unassessed");
+    expect(classifyKill({ ...deferred, outcome: "unassessed", reevaluate_at: "pre_fs" }).cls).toBe("unassessed");
+    expect(classifyKill({ ...deferred, outcome: "unassessed", reevaluate_at: undefined }).cls).toBe("unassessed");
+    expect(classifyKill({ ...deferred, outcome: "unassessed", reevaluate_at: "open_monitoring" }).cls).toBe("unassessed");
   });
   test("project fs: the S8 criterion with a missing variable still needs its kill_unassessed acknowledgement", () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
@@ -235,7 +249,7 @@ describe("6. legacy (schema v1) decisions", () => {
     const before = db.query("SELECT COUNT(*) c FROM audit_log").get() as { c: number };
     const rows = listLegacyScreeningKillAcks(db).filter((r) => r.entity_id === o);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ decision_id: id2, key: ZERO_SITE, reevaluate_at: "pre_fs", evaluable_from: "S5", implicit_carry: true, reason: "accepted at screening" });
+    expect(rows[0]).toMatchObject({ decision_id: id2, key: ZERO_SITE, reevaluate_at: "fs", evaluable_from: "S5", implicit_carry: true, reason: "accepted at screening" });
     expect((db.query("SELECT COUNT(*) c FROM audit_log").get() as { c: number }).c).toBe(before.c);
     S.insertGate(db, "opportunity", o, "pre_fs", "kill");
     expect(listLegacyScreeningKillAcks(db).filter((r) => r.entity_id === o)).toEqual([]); // not in flight any more
@@ -288,6 +302,15 @@ describe("8 + 12. track switch and HOLD carries (C-4)", () => {
     // the brownfield carry that is not yet due stays open (not listed, not dropped)
     expect(deriveOpenCarries([{ decision_id: from, gate: "screening", decision: "go", decided_at: "2026-10-28T09:00:00Z", schema_version: 2, snapshot: { kill: { not_reached: [nr(HHI, "S7", "target_screening")] } } }], () => null).map((c) => c.key)).toEqual([HHI]);
     expect(carryDue("target_screening", "pre_fs")).toBe(false);
+  });
+  test("a legacy (v1) pre_fs GO that acknowledged #12/#13 unassessed gets an implicit carry to fs (registry deferral, ADR-0193 14.2); a criterion owned by its own gate does not", () => {
+    const scope = (k: string) => (k.includes("wacc") || k.includes("certification") ? { evaluable_from: "S4", reevaluate_at: "fs" } : { evaluable_from: "S4", reevaluate_at: "pre_fs" });
+    const W = "greenfield-pre-fs:wacc_hurdle_still_assumed";
+    const C = "greenfield-pre-fs:certification_transferability_unconfirmed_and_load_bearing";
+    const OWN = "greenfield-pre-fs:entry_route_undecided_at_pre_fs_exit";
+    const open = deriveOpenCarries([{ decision_id: "legacy", gate: "pre_fs", decision: "go", decided_at: "2026-10-01T00:00:00Z", schema_version: 1, snapshot: { kill: { unassessed: [{ key: W }, { key: C }, { key: OWN }] } } }], scope);
+    expect(open.map((c) => c.key)).toEqual([C, W].sort());
+    expect(open.every((c) => c.implicit && c.reevaluate_at === "fs")).toBe(true);
   });
   test("12. a carry recorded by a HOLD is evaluated at re-entry; a KILL carries nothing", () => {
     const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
@@ -385,12 +408,17 @@ describe("13b. S12 criteria leave IC as open_monitoring carries, evaluated by da
   });
 });
 
-describe("B. enforce guard: kill_binding=enforce is fail-closed while a carried criterion has no data source at its scope", () => {
-  test("the offenders are exactly the screening-owned carries that read project-scoped variables", () => {
-    const keys = carriedWithoutDataSource().map((o) => o.key);
-    expect(keys).toEqual([HHI, INFRA_PLAN, PARTNER_GF, ZERO_SITE].sort());
-    expect(keys).not.toContain(NO_TARGET); // screening.viable_targets IS an opportunity-scope variable
-    expect(carriedWithoutDataSource().find((o) => o.key === ZERO_SITE)).toMatchObject({ reevaluate_at: "pre_fs", missing_vars: ["infra.sites_clearing_minimums"] });
+describe("B. enforce guard: kill_binding=enforce is fail-closed while a carried or own-gate criterion has no data source at its scope", () => {
+  test("real registry (ADR-0193 14.1): the #4/#5/#6/#8 carries are re-scoped to fs, so the only offender left is #9, which needs an opportunity source", () => {
+    const offenders = carriedWithoutDataSource();
+    expect(offenders.map((o) => o.key)).toEqual([NO_SHAPE]);
+    expect(offenders[0]).toMatchObject({ kind: "reached_at_own_gate", reevaluate_at: "pre_fs", missing_vars: ["dealshape.viable_shapes"] });
+    // re-scoped to a project gate (always has its data): not carried offenders any more
+    for (const k of [HHI, INFRA_PLAN, PARTNER_GF, ZERO_SITE]) expect(offenders.map((o) => o.key)).not.toContain(k);
+    // #7 reads screening.viable_targets, an opportunity-scope variable
+    expect(offenders.map((o) => o.key)).not.toContain(NO_TARGET);
+    // #10-#13 are deferred past their own gate to fs, so the reached-at-own-gate listing does not carry them
+    for (const t of ["greenfield", "brownfield"] as const) for (const k of RESCOPED_AT_PRE_FS(t)) expect(offenders.map((o) => o.key)).not.toContain(k);
   });
   test("startup check refuses enforce, accepts shadow/off, and the test environment bypass is explicit", () => {
     const enforce = { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING: "enforce" };
@@ -407,7 +435,7 @@ describe("B. enforce guard: kill_binding=enforce is fail-closed while a carried 
     const { projectId } = S.seedReadyProject(db, ANALYST);
     const view = preview("project", projectId, "fs");
     expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")).toMatchObject({ enforced: true });
-    expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")!.keys).toContain(ZERO_SITE);
+    expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")!.keys).toEqual([NO_SHAPE]);
     const go = recordProjectGo(projectId, view);
     expect(go.ok).toBe(false);
     if (!go.ok) expect(go.failure).toMatchObject({ status: 409, code: "kill_enforce_unsafe" });
@@ -432,13 +460,13 @@ describe("C. #5 caveat; D. scheduled items; E. IC package lists open carries by 
     copy.kill.caveats = [];
     expect(snapshotHash(copy)).not.toBe(hash);
   });
-  test("D. deal-shape-chain (#9-#11) shows at Screening as pending with its scheduled gate pre_fs, not absent; pre_fs owns it", () => {
+  test("D. deal-shape-chain (#9-#11) shows at Screening as pending with its scheduled gate (pre_fs / fs), not absent; pre_fs owns it", () => {
     const o = S.insertOpportunity(db, "greenfield", ANALYST);
     const { snapshot } = preview("opportunity", o, "screening");
-    expect(snapshot.kill.scheduled.map((x) => x.key)).toEqual([
-      "deal-shape-chain:no_viable_deal_shape", "deal-shape-chain:partner_dd_red_financial_distress", "deal-shape-chain:partner_dd_red_ip_chain",
-    ]);
-    expect(snapshot.kill.scheduled.every((x) => x.status === "pending" && x.reevaluate_at === "pre_fs" && x.title.length > 0)).toBe(true);
+    expect(snapshot.kill.scheduled.map((x) => x.key)).toEqual([NO_SHAPE, PARTNER_FIN, PARTNER_IP]);
+    // each item shows its own re-evaluation gate: #9 at pre_fs, #10/#11 at fs (ADR-0193 14.2)
+    expect(snapshot.kill.scheduled.every((x) => x.status === "pending" && x.title.length > 0)).toBe(true);
+    expect(snapshot.kill.scheduled.map((x) => x.reevaluate_at)).toEqual(["pre_fs", "fs", "fs"]);
     expect(snapshot.kill.procedures).not.toContain("deal-shape-chain");
     expect(preview("opportunity", o, "pre_fs").snapshot.kill.scheduled).toEqual([]);
   });
@@ -471,6 +499,69 @@ describe("overrides: a carried triggered halt is overridable on the project (R-5
     expect(PMI_PROCEDURE).toBe("pmi-integration-execution");
     expect(OPPORTUNITY_PROCEDURES.screening("greenfield")).toContain("greenfield-screening");
     expect(OPPORTUNITY_PROCEDURES.pre_fs("brownfield")).toContain("deal-shape-chain");
+  });
+});
+
+describe("RESCOPE-2 (ADR-0193 14.1/14.2): criteria listed at the opportunity pre_fs gate whose evidence is project-scoped are not_reached with a carry to fs", () => {
+  for (const track of ["greenfield", "brownfield"] as const) {
+    test(`${track} opportunity at pre_fs: #10/#11/#12/#13 are not_reached (carry to fs), never reached-unassessed; #9 is reached and honestly unassessed`, () => {
+      const o = S.insertOpportunity(db, track, ANALYST);
+      const { snapshot } = preview("opportunity", o, "pre_fs");
+      expect(snapshot.kill.procedures).toEqual(["deal-shape-chain", `${track}-pre-fs`].sort());
+      const nrByKey = new Map(snapshot.kill.not_reached.map((n) => [n.key, n]));
+      for (const k of RESCOPED_AT_PRE_FS(track)) {
+        expect(nrByKey.get(k)).toMatchObject({ reevaluate_at: "fs" });
+        expect(keysOf(snapshot.kill.unassessed)).not.toContain(k);
+        expect(snapshot.required_acks.map((a) => a.key)).not.toContain(k); // no meaningless blind acknowledgement
+        expect(keysOf(snapshot.kill.triggered)).not.toContain(k);
+      }
+      // a deferral is not an overdue carry at its own gate
+      expect(snapshot.kill.carried_in.filter((c) => RESCOPED_AT_PRE_FS(track).includes(c.key))).toEqual([]);
+      // #9 stays reached at pre_fs: no opportunity source yet, so it is unassessed (never passed) and still asks for the ack
+      expect(keysOf(snapshot.kill.unassessed)).toContain(NO_SHAPE);
+      expect(keysOf(snapshot.kill.not_reached)).not.toContain(NO_SHAPE);
+    });
+  }
+  test("a pre_fs GO recorded from that snapshot opens the carries, and the project fs gate evaluates them (carried halts hard-block while unassessed, C-1)", () => {
+    setFlags("enforce", ...SNAP);
+    const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
+    const opp = preview("opportunity", oppId, "pre_fs").snapshot;
+    addDecision("opportunity", oppId, "pre_fs", "go", { not_reached: opp.kill.not_reached, carried_in: opp.kill.carried_in, unassessed: opp.kill.unassessed });
+    const open = deriveOpenCarries([{ decision_id: "x", gate: "pre_fs", decision: "go", decided_at: "2026-10-28T09:00:00Z", schema_version: 2, snapshot: { kill: { not_reached: opp.kill.not_reached } } }], () => null).map((c) => c.key);
+    for (const k of RESCOPED_AT_PRE_FS("greenfield")) expect(open).toContain(k);
+    const { snapshot } = preview("project", projectId, "fs");
+    const ci = new Map(snapshot.kill.carried_in.map((c) => [c.key, c]));
+    for (const k of RESCOPED_AT_PRE_FS("greenfield")) expect(ci.get(k)).toMatchObject({ reevaluate_at: "fs", closure: expect.stringMatching(/^(open|evaluated)$/) });
+    expect(ci.get(PARTNER_FIN)).toMatchObject({ action: "halt" });
+  });
+});
+
+describe("RESCOPE sources at the first project gate: the re-scoped carries are assessable at fs (ADR-0193 14.1)", () => {
+  const WACC_GF = "greenfield-pre-fs:wacc_hurdle_still_assumed";
+  const carriedAt = (oppId: string, keys: Array<[string, string]>) =>
+    addDecision("opportunity", oppId, "pre_fs", "go", { not_reached: keys.map(([k, from]) => nr(k, from, "fs")), carried_in: [] });
+  test("#4: site_candidate with a complete four-flag assessment is read (no SQL error); one clearing site closes the carry false, none clearing triggers the halt", () => {
+    const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
+    carriedAt(oppId, [[ZERO_SITE, "S5"]]);
+    const before = preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE)!;
+    expect(before).toMatchObject({ outcome: "unassessed", closure: "open" }); // no site assessed: never a silent pass
+    db.run("INSERT INTO site_candidate (id, project_id, name, wastewater_capacity_sufficient, power_capacity_sufficient, industrial_water_sufficient, logistics_access_sufficient) VALUES (?,?,?,?,?,?,?)", [ulid(), projectId, "partial", 1, 1, null, null]);
+    expect(preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE)).toMatchObject({ outcome: "unassessed" }); // partial assessment cannot manufacture a clearance
+    db.run("INSERT INTO site_candidate (id, project_id, name, wastewater_capacity_sufficient, power_capacity_sufficient, industrial_water_sufficient, logistics_access_sufficient) VALUES (?,?,?,?,?,?,?)", [ulid(), projectId, "none clears", 0, 1, 1, 1]);
+    const trig = preview("project", projectId, "fs").snapshot.kill;
+    expect(keysOf(trig.triggered)).toContain(ZERO_SITE);
+    db.run("INSERT INTO site_candidate (id, project_id, name, wastewater_capacity_sufficient, power_capacity_sufficient, industrial_water_sufficient, logistics_access_sufficient) VALUES (?,?,?,?,?,?,?)", [ulid(), projectId, "clears", 1, 1, 1, 1]);
+    expect(preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE)).toMatchObject({ outcome: "false", closure: "evaluated" });
+  });
+  test("#12: a gate-evaluation run carries no assumptions, so the WACC status is read from the project's confirmed rate session (sourced closes, absent stays unassessed)", async () => {
+    const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
+    carriedAt(oppId, [[WACC_GF, "S4"]]);
+    expect(preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === WACC_GF)).toMatchObject({ outcome: "unassessed", closure: "open" });
+    const { setProjectWaccSubject, recordWaccSession } = await import("../../db/lib/wacc.ts");
+    setProjectWaccSubject(db, projectId, "project_newco", "test: subject confirmed by a person", ANALYST, S.NOW);
+    recordWaccSession(db, { projectId, wacc: 0.09, hurdleIrr: 0.12, mode: "direct", rationale: "test: person-confirmed rates", anchorRef: "test:wacc", subjectCompanyId: null, actor: ANALYST, now: S.NOW });
+    clearSnapshotCache();
+    expect(preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === WACC_GF)).toMatchObject({ outcome: "false", closure: "evaluated" });
   });
 });
 

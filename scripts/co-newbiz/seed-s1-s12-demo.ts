@@ -1,4 +1,4 @@
-// @version 1.15.0
+// @version 1.15.1
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -1783,6 +1783,14 @@ function seedGreenfieldGateContract(db: ReturnType<typeof getDb>): void {
       rationale: "사전 타당성 검토에서 진입 전략과 역량 격차 해소 방안이 정리되어 본 타당성 검토로 진행함",
     });
     contract.recordDemoWacc(db, GF.projectId, { subject: "project_newco", subjectCompanyId: null, clock });
+    // ADR-0193 14.1: zero_site_clears_infrastructure_minimums is carried from Screening and re-evaluated at fs, the first
+    // project gate; its source is site_candidate with a complete four-flag infrastructure assessment (a carried halt that is
+    // still unassessed at fs hard-blocks the GO). One demo-labelled candidate that clears all four minimums.
+    db.run(
+      `INSERT OR IGNORE INTO site_candidate (id, project_id, name, region_code, wastewater_capacity_sufficient, power_capacity_sufficient, industrial_water_sufficient, logistics_access_sufficient, infrastructure_mitigation_documented)
+       VALUES (?,?,?,?,1,1,1,1,0)`,
+      ["demo-gf-site-candidate-1", GF.projectId, "S1-S12 데모 후보 부지 A 인프라 평가 (데모)", "KR"],
+    );
     // The entity_ic exit kill criterion (origin_classification_missing_at_entity_ic_exit) needs a live classification.
     contract.ensureDemoMembers(db, GF.projectId, clock());
     if (!db.query("SELECT 1 FROM project_case_classification WHERE project_id = ?").get(GF.projectId)) {

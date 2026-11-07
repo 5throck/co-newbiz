@@ -9,6 +9,6 @@
   "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (antitrust #13 reversal, user-approved async) + ADR-0062; presumption zone = 2023 DOJ/FTC Merger Guidelines (post-merger HHI > 1800 AND delta > 100)",
   "notes": "Activated by ADR-0062 — the migration-0018 Decision 4 premise-lock reversal the Class C record authorized. antitrust.presumption_screens_triggered (migration 0025) counts antitrust_finding rows in the structural-presumption zone; NO finding row means not-yet-screened and fills missing (ADR-0049 UNASSESSED at evaluation, never a silent pass). The trigger ESCALATES to the human gate — it does not auto-kill; remedy-path existence is asked there. Scope guard: this var feeds no rag_rule (regulatory_permit keeps exclusive grading claim on antitrust_finding); the >30% share screen awaits a market-share column; filing thresholds (HSR-2026 $133.9M / KFTC 300bn-30bn / EUR 5bn-250M) stay dated profile fields. Classification history: ADR-0060 class (iii) premise-locked -> unlocked by the Class C decision.",
   "evaluable_from": "S7",
-  "reevaluate_at": "target_screening",
-  "evaluable_from_evidence": "antitrust.presumption_screens_triggered <- antitrust_finding; S7 ownership-regulatory-screening (antitrust-agent)"
+  "reevaluate_at": "fs",
+  "evaluable_from_evidence": "antitrust.presumption_screens_triggered <- antitrust_finding; S7 ownership-regulatory-screening (antitrust-agent); project-scoped source; re-evaluated at fs, the first project gate (ADR-0193 §14.1); O-4: an opportunity-scope preliminary market-level HHI source may re-point it to target_screening (ADR-tracked)"
 }

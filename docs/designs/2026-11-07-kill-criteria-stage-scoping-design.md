@@ -399,3 +399,108 @@ Kill-criteria evaluation status of this design review: no criterion is evaluated
 - FOLLOWUP-ADR0193-C6: a data source for #5's site-announcement date (evidence_var + migration; ADR trigger) so `infra.plan_finalized` can be read as of that date; keeps the `test.todo` in `tests/unit/kill-criteria-carry.test.ts` and the #5 caveat until it lands.
 - FOLLOWUP-ADR0193-RESCOPE: re-scope `reevaluate_at` to `fs` for #4, #5, #6 and #8 (their variables are project-scoped and do not exist at opportunity gates) - risk-officer decision; clears the enforce guard.
 - FOLLOWUP-ADR0193-OPPSRC: opportunity-scope sources for the parts of #10/#11 that need them (no proxy sources).
+
+## 14. Risk-officer ruling on follow-ups (2026-11-07)
+
+Reviewer: `risk-officer` (kill-criteria authority). Rulings are decision support; the owner records
+the decision and ADR-0193 status. Evidence: registry files under `procedures/_kill-criteria/`,
+`OPPORTUNITY_SCOPE_VARS` (today only `screening.viable_targets`), `carriedWithoutDataSource()` in
+`app/web-next/lib/gate-snapshot.ts`, and the `project_id NOT NULL` source tables (`site_candidate`,
+`partner_candidate`, `partner_dd_finding`, `antitrust_finding`). The first project gate is `fs` (§11).
+
+### 14.1 FOLLOWUP-ADR0193-RESCOPE: confirmed for #4, #5, #6, #8
+
+| # | File | Current (from / reevaluate_at) | New | Rationale |
+|---|---|---|---|---|
+| 4 | `greenfield-screening__zero_site_clears_infrastructure_minimums.json` | S5 / pre_fs | S5 / **fs** | `infra.sites_clearing_minimums` comes from project-scoped `site_candidate`; no opportunity-scope value can exist, so at pre_fs it can only be `unassessed`. |
+| 5 | `greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement.json` | S5 / pre_fs | S5 / **fs** | `infra.plan_finalized` is a project text var. See 14.3 for the caveat. |
+| 6 | `greenfield-screening__partner_dependency_unconfirmed_and_no_alternative.json` | S5 / pre_fs | S5 / **fs** | `risk.partner_*` come from project-scoped `partner_candidate`. The bf-dd twin (#6b, S9 / dd) stays as it is. |
+| 8 | `brownfield-screening__preliminary_hhi_flags_certain_block.json` | S7 / target_screening | S7 / **fs** | `antitrust.presumption_screens_triggered` comes from project-scoped `antitrust_finding`. Cost: a possibly blocked deal reaches S8. O-4 stays open: antitrust-agent should source a preliminary market-level HHI screen at opportunity scope; once it exists, #8 may be re-pointed back to `target_screening` (ADR-tracked). |
+
+`evaluable_from` stays unchanged for all four, because it records when the evidence can first exist,
+not where the engine can read it. Update `evaluable_from_evidence` to say "project-scoped source;
+re-evaluated at fs, the first project gate (ADR-0193 §14.1)".
+
+Why this is not a weakening: under the current scoping these four carries would end at an
+opportunity gate as `unassessed`, either as a forced `kill_carry_unassessed` block (under enforce)
+or as an empty acknowledgement (under shadow). Neither tests the condition. At `fs` the variables
+exist, C-1 still applies (a carried `halt` that is still `unassessed` at fs hard-blocks), and the
+carry chain from `screening` is kept. The deferral costs spend (S5 to S8 work on a deal that may be
+killed). It does not cost detection.
+
+Enforce-guard effect: with these four re-scoped, every deferred criterion with a predicate and a
+reevaluate_at of `target_screening` or earlier reads only `screening.viable_targets` (#7). So
+`carriedWithoutDataSource()` returns **empty**, and the `kill_enforce_unsafe` refusal clears. A unit
+test must assert the empty result against the real registry.
+
+**Same problem, not caught by the guard (new finding, RESCOPE-2).** The guard only checks
+*deferred* criteria. Criteria *first reached* at the opportunity `pre_fs` gate with project-scoped
+variables are always `unassessed` there and close with an acknowledgement. That is the
+silent-drop pattern R-2 prohibits, entered at a different point:
+
+| # | File(s) | Var | Ruling |
+|---|---|---|---|
+| 9 | `deal-shape-chain__no_viable_deal_shape.json` | `dealshape.viable_shapes` | Needs an opportunity source (14.2). Not re-scoped, because the deal shape is the S4 decision itself. |
+| 10, 11 | `deal-shape-chain__partner_dd_red_*.json` | `partner.*_red_count` | Re-scope (14.2). |
+| 12 | `{greenfield,brownfield}-pre-fs__wacc_hurdle_still_assumed.json` | `fin.wacc_source_status` | Re-scope `reevaluate_at` to `fs`. The fs WACC block (ADR-0186 D8) already re-tests it at project scope. |
+| 13 | `{greenfield,brownfield}-pre-fs__certification_transferability_unconfirmed_and_load_bearing.json` | `cert.load_bearing_unconfirmed` | Re-scope `reevaluate_at` to `fs`, unless the implementer shows that `certification` rows can be opportunity-scoped today. |
+
+Guard extension (required): `carriedWithoutDataSource()`, or a sibling check in the same enforce
+guard, must also list **reached-at-own-gate** opportunity criteria whose variables are not in
+`OPPORTUNITY_SCOPE_VARS`. Enforce stays refused until that list is empty too. Otherwise the guard
+reports "safe" while #9 to #13 are acknowledged blind.
+
+### 14.2 FOLLOWUP-ADR0193-OPPSRC: #10 and #11 (and #9)
+
+- **#10 `partner_dd_red_financial_distress` and #11 `partner_dd_red_ip_chain`: re-scope, no
+  opportunity source.** Partner DD is substantive diligence on a named partner, and
+  `partner_dd_finding` is project-scoped by design (`project_id NOT NULL`). Building an
+  opportunity-scope copy would duplicate DD before the project exists. Inferring "red" from
+  `partner_candidate` scores would be a proxy source, and proxy sources are rejected. New values:
+  `evaluable_from` S5 (unchanged), `reevaluate_at` **fs**. Because `deal-shape-chain` is listed on
+  `pre_fs` in flow.spec, at pre_fs these two must show as `not_reached` with a carry to fs. The
+  engine must not show them as reached-unassessed. If the engine cannot do that for a procedure
+  listed at its own gate, the flow.spec listing for #10/#11 must move to `fs` (ADR-0074 spec change).
+  PM is to route that choice.
+- **#9 `no_viable_deal_shape`: genuinely needs an opportunity source.** The S4 deal-shape decision
+  is an opportunity-stage artefact and is what pre_fs decides on. Minimal acceptable source:
+  `dealshape.viable_shapes` = count of deal shapes recorded **at opportunity scope** with a recorded
+  status of `viable` in the S4 route-strategy / deal-shape-chain output, read directly from that
+  record. It must not be derived from scores, route recommendations or LLM drafts. If such a record
+  does not exist at opportunity scope, report #9 `unassessed` with the reason. It must not read as
+  passed.
+- **ADR trigger:** if #9's source needs a new column or table (for example an `opportunity_id`-keyed
+  deal-shape record), that is a DB schema change and **requires an ADR**. Adding a var to
+  `OPPORTUNITY_SCOPE_VARS` that reads an existing opportunity-keyed table is an engine change only.
+  It still needs `md_var` provenance. The #10/#11/#12/#13 re-scopes are registry-only (ADR-0193
+  amendment note, no schema change).
+
+### 14.3 C-6 (#5 site-announcement date)
+
+The caveat is **still required** after the re-scope. Moving the criterion to `fs` fixes *where*
+`infra.plan_finalized` can be read. It does not fix *when* it is read: at fs the engine still reads
+the current state, not the state on the site-announcement date (pilot 005 F-1). A plan finalized
+after the announcement would read `false` (clean) for a condition that was in fact triggered.
+Keep the `kill.caveats` text and the `test.todo` until the source lands.
+
+Minimal acceptable data source: a project-scoped, human-recorded **site-announcement event** (date
+plus evidence reference, for example the board or public announcement document), and an
+**effective date** on the infrastructure-plan finalization record. The predicate is then
+`plan_finalized_on <= site_announced_on`. If either date is missing, the outcome is `unassessed`.
+It is never `false`. Dates inferred from document timestamps or from gate dates are proxies and are
+rejected. Adding the new columns or event table is a schema change, so an **ADR is required**
+(already noted in FOLLOWUP-ADR0193-C6).
+
+### 14.4 Kill-criteria evaluation status of this ruling
+
+No criterion is evaluated on any deal here (registry and process ruling only). Unassessed: n/a.
+
+### 14.5 Implementation note (2026-11-07)
+
+PM decision on the 14.2 routing: no flow.spec move. `classifyKill` gains a registry deferral rule: a criterion whose
+`reevaluate_at` is a later gate than the evaluating gate is `not_reached` with a carry even when its stage is reached
+(a trigger still wins, with `partial_input`). #10/#11/#12/#13 therefore carry from the opportunity `pre_fs` gate to `fs`;
+#9 stays reached at `pre_fs` and the enforce guard lists it (`reached_at_own_gate`). The legacy schema-v1 read-time carry
+derivation applies the same deferral. Two snapshot-filler defects exposed by the fs-time re-scope were fixed
+(`fin.wacc_source_status` fell back to nothing on a gate-evaluation run; `infra.sites_clearing_minimums` queried wrong
+columns). See the ADR-0193 amendment note.

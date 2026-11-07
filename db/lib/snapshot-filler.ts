@@ -1,4 +1,4 @@
-// @version 1.9.0
+// @version 1.10.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -64,7 +64,7 @@ import { getDb } from "../client.ts";
 import { evaluateValidatorCompleteness } from "./validator-completeness.ts";
 import type { MaValidatorKey } from "./validator-applicability.ts";
 import { listProjectAnalysisTargets } from "./wacc.ts";
-import { rateScopeState } from "./wacc-confirmation.ts";
+import { rateScopeState, resolveWaccConfirmation } from "./wacc-confirmation.ts";
 import { computeDownsideDscr } from "../../app/web-next/lib/covenant-dscr.ts";
 
 // ---------------------------------------------------------------------------
@@ -775,11 +775,23 @@ function fillPermitDeadlineVar(db: Database, projectId: string, now: Date): Snap
  * assumed — a provisional discount rate invalidates the analysis (policy
  * §2.2); both keys absent = not yet sessioned = missing.
  */
-function fillWaccSourceVar(db: Database, runId: string): SnapshotWrite {
+function fillWaccSourceVar(db: Database, runId: string, projectId: string): SnapshotWrite {
   const row = missing("fin.wacc_source_status");
   const rows = db.query("SELECT assumption_key, kind FROM assumption WHERE run_id = ? AND assumption_key IN ('wacc','hurdle_irr')").all(runId) as unknown as Array<{ assumption_key: string; kind: string }>;
   const byKey = new Map(rows.map((r) => [r.assumption_key, r.kind]));
-  if (!byKey.has("wacc") && !byKey.has("hurdle_irr")) return row;
+  if (!byKey.has("wacc") && !byKey.has("hurdle_irr")) {
+    // ADR-0193 14.1 (#12 re-scoped to fs): a gate-evaluation run is created empty, so the run's own rows can never carry the
+    // WACC session. Fall back to the project's confirmed rate state through the shared reader (same scope rule as the fs WACC
+    // block); no session at all stays missing (unassessed), never a silent pass.
+    const p = resolveWaccConfirmation(db, projectId);
+    if (p.source_status === "absent") return row;
+    row.value_text = p.source_status;
+    row.evidence_ref = "assumption";
+    const latest = db.query("SELECT MAX(a.as_of) AS at FROM assumption a JOIN run r ON r.id = a.run_id WHERE r.project_id = ? AND a.assumption_key IN ('wacc','hurdle_irr')").get(projectId) as unknown as { at: string | null };
+    row.observed_at = latest.at;
+    row.status = "present";
+    return row;
+  }
   row.value_text = [byKey.get("wacc"), byKey.get("hurdle_irr")].some((k) => k === "assumed") ? "assumed" : "sourced";
   row.evidence_ref = "assumption";
   const latest = db.query("SELECT MAX(as_of) AS at FROM assumption WHERE run_id = ? AND assumption_key IN ('wacc','hurdle_irr')").get(runId) as unknown as { at: string | null };
@@ -959,7 +971,8 @@ function fillSitesClearingMinimumsVar(db: Database, projectId: string): Snapshot
   if (total === 0) return row;
   const fullyAssessed = (db.query(
     `SELECT COUNT(*) AS n FROM site_candidate WHERE project_id = ?
-     AND ${["wastewater", "power", "industrial_water", "logistics_access"].map((c) => `${c}_sufficient IS NOT NULL`).join(" AND ")}`,
+     AND wastewater_capacity_sufficient IS NOT NULL AND power_capacity_sufficient IS NOT NULL
+     AND industrial_water_sufficient IS NOT NULL AND logistics_access_sufficient IS NOT NULL`,
   ).get(projectId) as unknown as { n: number }).n;
   if (fullyAssessed === 0) return row;
   row.value_num = (db.query(
@@ -1058,7 +1071,7 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     fillSynergyCertVar(db, opts.projectId),
     fillViableShapesVar(db, opts.projectId),
     fillPermitDeadlineVar(db, opts.projectId, now instanceof Date ? now : new Date(now)),
-    fillWaccSourceVar(db, opts.runId),
+    fillWaccSourceVar(db, opts.runId, opts.projectId),
     fillCertUnconfirmedVar(db, opts.projectId),
     fillCertInferredVar(db, opts.projectId),
     fillValidatorsMissingVar(db, opts.projectId, opts.runId, now instanceof Date ? now : new Date(now)),

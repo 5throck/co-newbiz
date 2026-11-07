@@ -46,9 +46,22 @@ export function procedureTrack(procedure: string): "greenfield" | "brownfield" |
 
 export type KillClass = "triggered" | "out_of_track" | "not_reached" | "false" | "unassessed";
 
+/** True when the entry's single `reevaluate_at` gate lies strictly after the evaluating gate (ladder gates only; open_monitoring never defers). */
+export function deferredToLaterGate(reevaluateAt: string | undefined, gate: string | undefined): boolean {
+  if (!reevaluateAt || !gate) return false;
+  const r = gateIndex(reevaluateAt);
+  const g = gateIndex(gate);
+  return r >= 0 && g >= 0 && r > g;
+}
+
 /**
  * Design 3.1, as a pure function. `evaluable_from` undefined means the entry predates the field: reached
  * (fail-closed), never silently deferred.
+ *
+ * ADR-0193 section 14.2: a criterion whose registry `reevaluate_at` is a LATER gate than the evaluating one
+ * (`gate` + `reevaluate_at` given) is deferred even when its stage is reached - e.g. a project-scoped
+ * partner-DD criterion listed at the opportunity pre_fs gate, whose evidence cannot exist there. It classifies
+ * `not_reached` and becomes a carry to its own gate, never a reached-unassessed acknowledgement. Triggered still wins.
  */
 export function classifyKill(input: {
   outcome: "triggered" | "false" | "unassessed";
@@ -56,8 +69,12 @@ export function classifyKill(input: {
   evaluable_from: string | undefined;
   current_stage: string;
   track: string | null;
+  reevaluate_at?: string;
+  gate?: string;
 }): { cls: KillClass; partial_input: boolean } {
-  const early = input.evaluable_from !== undefined && stageIndex(input.evaluable_from) > stageIndex(input.current_stage);
+  const early =
+    (input.evaluable_from !== undefined && stageIndex(input.evaluable_from) > stageIndex(input.current_stage)) ||
+    deferredToLaterGate(input.reevaluate_at, input.gate);
   // Rule 3: triggered always wins, even when the stage says the input cannot be complete yet (C-5: partial_input).
   if (input.outcome === "triggered") return { cls: "triggered", partial_input: early };
   const t = procedureTrack(input.procedure);
@@ -141,7 +158,8 @@ export function deriveOpenCarries(
         const scope = entryScope(u.key);
         const nominal = GATE_LAST_STAGE[d.gate];
         if (!scope?.evaluable_from || !scope.reevaluate_at || !nominal) continue;
-        if (stageIndex(scope.evaluable_from) > stageIndex(nominal)) {
+        // Not yet evaluable at the decision's stage, or deferred by the registry to a later gate (ADR-0193 14.2): the legacy ack closed nothing.
+        if (stageIndex(scope.evaluable_from) > stageIndex(nominal) || deferredToLaterGate(scope.reevaluate_at, d.gate)) {
           open({ key: u.key, evaluable_from: scope.evaluable_from, reevaluate_at: scope.reevaluate_at, from_decision_id: d.decision_id, implicit: true });
         }
       }
