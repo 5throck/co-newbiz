@@ -59,6 +59,79 @@ export function canonicalJson(value: unknown): string {
 
 export const sha256 = (text: string): string => createHash("sha256").update(text).digest("hex");
 
+// ---------------------------------------------------------------------------
+// AI 2nd payload sanitization (design 2026-11-07-review-internal-items §3.1).
+// Applied ONLY to the copy sent to the reviewer: the stored artifact content —
+// and therefore its content hash / cache key — is unchanged.
+// ---------------------------------------------------------------------------
+
+const OPAQUE_ID_VALUE = /^(?:[0-9A-HJKMNP-TV-Z]{26}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+
+/** Omit opaque identifiers (`*_id` keys, ULID/UUID values). `id` itself stays: stage ids (S1..S12) are review subjects. */
+export function stripOpaqueIdentifiers(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.filter((v) => !(typeof v === "string" && OPAQUE_ID_VALUE.test(v))).map(stripOpaqueIdentifiers);
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (/_id$/i.test(k)) continue;
+      if (typeof v === "string" && OPAQUE_ID_VALUE.test(v)) continue;
+      out[k] = stripOpaqueIdentifiers(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Fields that are legitimately null until a given stage has run. `track` is
+ * set by the S4 route decision. A null owned by a stage that has not run yet
+ * is annotated; any other null passes through unchanged.
+ */
+export const PENDING_FIELD_OWNER: Readonly<Record<string, { stage: StageId; label: string }>> = {
+  track: { stage: "S4", label: "route decision" },
+};
+
+const stageSequence = (id: string): number | null => STAGES.find((s) => s.id === id)?.sequence ?? null;
+
+/** Has the owning stage not completed yet, judged from the artifact's own stage context (stage order, not per gate)? */
+function ownerStagePending(owner: StageId, content: Record<string, unknown>): boolean {
+  const ownerSeq = stageSequence(owner);
+  if (ownerSeq === null) return false;
+  if (content.kind === "stage-artifact" && typeof content.stage === "string") {
+    // A stage artifact at or before the owner stage cannot see a populated field yet.
+    const seq = stageSequence(content.stage);
+    return seq !== null && seq <= ownerSeq;
+  }
+  const stages = content.stages;
+  if (!Array.isArray(stages)) return false;
+  const ownerEntry = stages.find((s) => s && typeof s === "object" && (s as { id?: unknown }).id === owner) as
+    | { status?: string }
+    | undefined;
+  if (ownerEntry) return ownerEntry.status !== "complete" && ownerEntry.status !== "skipped";
+  // The gate span does not include the owner stage: pending only when the whole span precedes it.
+  const seqs = stages
+    .map((s) => stageSequence(String((s as { id?: unknown })?.id ?? "")))
+    .filter((n): n is number => n !== null);
+  return seqs.length > 0 && seqs.every((n) => n < ownerSeq);
+}
+
+export function annotatePendingNulls(content: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...content };
+  for (const [field, owner] of Object.entries(PENDING_FIELD_OWNER)) {
+    if (field in out && out[field] === null && ownerStagePending(owner.stage, content)) {
+      out[field] = `not yet decided — set at the ${owner.stage} ${owner.label}`;
+    }
+  }
+  return out;
+}
+
+/** Identifier omission + pending-null annotation for the AI 2nd payload (call BEFORE dropping not_reached stages). */
+export function sanitizeContentForReview(content: Record<string, unknown>): Record<string, unknown> {
+  return stripOpaqueIdentifiers(annotatePendingNulls(content)) as Record<string, unknown>;
+}
+
 export interface GateArtifactStage {
   id: StageId;
   name: string;

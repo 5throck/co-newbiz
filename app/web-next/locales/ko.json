@@ -9748,6 +9748,20 @@
       "notReachedSummary": "아직 도달하지 않은 단계, {count}건",
       "notReachedNote": "아직 진행하지 않은 단계라 확인할 수 없는 항목입니다. 결함이 아니며, 해당 단계에 도달하면 검토됩니다."
     },
+    "provenance": {
+      "summary": "검토 경위 ({count})",
+      "note": "검토가 어떤 경로로 진행되었는지, 그리고 의사결정 항목에서 뺀 AI 항목을 보여 줍니다. 위 세 묶음의 건수에는 들어가지 않으며 결정을 막지 않습니다.",
+      "listLabel": "검토 경위 목록",
+      "unknownName": "확인되지 않음",
+      "fallbackReviewer": "작성 도메인과 다른 검토자를 정하지 못해 기본 교차 도메인 검토자({reviewer})가 대신 검토했습니다. 사유: {reason}",
+      "fallbackReviewerWithSpecialist": "작성 도메인과 다른 검토자를 정하지 못해 기본 교차 도메인 검토자({reviewer})가 대신 검토했습니다. 사유: {reason} 해당 분야 전문 에이전트({specialist})는 작성자와 같은 도메인이라 1차 검토에만 참여했습니다.",
+      "orchestratorExempt": "조율 역할 에이전트({agents})는 맡은 도메인이 없어 작성 도메인 판단에서 뺐습니다.",
+      "unresolvedAgent": "도메인을 확인하지 못한 작성 에이전트({agents})는 교차 도메인 판단에서 빠졌습니다.",
+      "filteredInternalItem": "내부 식별자·시스템 필드만 다룬 AI 항목을 의사결정 항목에서 뺐습니다.",
+      "originalText": "원문 ({bucket}): {text}",
+      "legacyNote": "이전 검토 기록에서 옮겨 온 항목입니다.",
+      "unknownCode": "알 수 없는 검토 경위 항목입니다 ({code})."
+    },
     "dev": {
       "summary": "원문 기록 (개발자용)",
       "note": "검토 결과의 영문 원문·내부 식별자·검토 기록 해시입니다. 결과를 추적하거나 번역과 대조할 때만 필요하며, 일반 사용에는 열지 않아도 됩니다.",
@@ -9801,7 +9815,11 @@
     },
     "ai2": {
       "notPerformed": "AI 2차 교차 도메인 검토가 수행되지 않았습니다",
-      "notPerformedReason": "{reason}"
+      "notPerformedReason": "{reason}",
+      "sourcesNotInspected": "산출물의 바탕이 된 원본 문서는 확인하지 못했습니다",
+      "sourcesNotInspectedReason": "이 검토는 산출물 요약만 읽었으며, 그 안에서 가리키는 문서·자료·기록은 열어 확인하지 못했습니다.",
+      "legacyScopeNotDeclared": "이 이전 방식 검토에는 확인 범위가 기록되어 있지 않습니다",
+      "legacyScopeNotDeclaredReason": "이 검토는 검토자 배정 메모를 '확인하지 못함' 목록과 분리하기 전에 기록되었고 다른 빈틈은 적혀 있지 않습니다. 산출물의 바탕 문서는 확인하지 못한 것으로 보십시오."
     }
   }
 }

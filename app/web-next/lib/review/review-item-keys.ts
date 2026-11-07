@@ -25,6 +25,9 @@ export const REVIEW_ITEM_KEYS = {
   ai2FallbackReviewer: "review.ai2.fallbackReviewer",
   ai2ExemptAgents: "review.ai2.exemptAgents",
   ai2UnresolvedAgents: "review.ai2.unresolvedAgents",
+  /** Standing scope declarations (internal-item-filter.ts): never-empty could_not_verify. */
+  ai2SourcesNotInspected: "review.ai2.sourcesNotInspected",
+  ai2LegacyScopeNotDeclared: "review.ai2.legacyScopeNotDeclared",
   /** Free LLM text: stored English is the audit record; kept as authored. */
   ai2FreeText: "review.ai2.freeText",
 } as const;

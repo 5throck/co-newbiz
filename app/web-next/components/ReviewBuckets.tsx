@@ -35,6 +35,7 @@ import {
   type LocalizedItem,
 } from "../lib/review/review-display.ts";
 import { REVIEW_ITEM_KEYS } from "../lib/review/review-item-keys.ts";
+import { ReviewProvenance, type ProvenanceItemView } from "./ReviewProvenance.tsx";
 import { TabNav } from "./TabNav.tsx";
 import { PrimaryAction, useToast } from "./ui.tsx";
 
@@ -86,6 +87,8 @@ interface StageView {
   verified: ReviewItem[];
   could_not_verify: ReviewItem[];
   needs_judgement: ReviewItem[];
+  /** How the review was routed / what was kept off the decision surface (design 2026-11-07). Never counted in the buckets. */
+  provenance?: ProvenanceItemView[];
 }
 interface ReviewView {
   gate: string;
@@ -665,6 +668,7 @@ export function ReviewBuckets({
                   );
                 })}
               </div>
+              <ReviewProvenance items={stages.flatMap((s) => s.provenance ?? [])} />
               <details className="review-dev">
                 <summary>{tr("review.dev.summary")}</summary>
                 {/* INTERIM-WORDING */}

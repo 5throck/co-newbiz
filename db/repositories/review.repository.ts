@@ -40,10 +40,23 @@ export interface ReviewItem {
   /** Interpolation params for `key` (e.g. { stageId: "S4", stageName: "..." }). */
   params?: Record<string, unknown>;
 }
+/**
+ * How a review was produced or what was set aside — NOT a finding about the
+ * deal. Stored additively inside buckets_json (no schema change), rendered as
+ * a collapsed "review provenance" list, never counted as a bucket item and
+ * never part of gate-blocking logic. Codes: fallback_reviewer,
+ * orchestrator_exempt, unresolved_agent, filtered_internal_item.
+ */
+export interface ProvenanceItem {
+  code: "fallback_reviewer" | "orchestrator_exempt" | "unresolved_agent" | "filtered_internal_item";
+  params: Record<string, string | number | boolean | null>;
+}
 export interface ReviewBuckets {
   verified: ReviewItem[];
   could_not_verify: ReviewItem[];
   needs_judgement: ReviewItem[];
+  /** AI 2nd only; absent on legacy rows (reclassified at read time, see lib/review/internal-item-filter.ts). */
+  provenance?: ProvenanceItem[];
 }
 
 export interface ReviewStageRecord {

@@ -17,6 +17,7 @@ import {
   findReview,
   insertAiReview,
   monthlyTokensUsed,
+  type ProvenanceItem,
   type ReviewBuckets,
   type ReviewEntityType,
   type ReviewItem,
@@ -25,7 +26,14 @@ import {
 import { complete, completeStructured, getProviderConfig, isLlmConfigured, type LlmMessage } from "../llm.ts";
 import { estimateTokens as estimateTokensFallback, totalTokens } from "../llm-usage.ts";
 import { artifactTypeFor, selectReviewer } from "./domains.ts";
-import { canonicalJson } from "./gate-artifacts.ts";
+import { canonicalJson, sanitizeContentForReview } from "./gate-artifacts.ts";
+import {
+  PROVENANCE_CODES,
+  SOURCES_NOT_INSPECTED_ITEM,
+  ensureCouldNotVerify,
+  filterInternalItems,
+  reclassifyLegacyProvenance,
+} from "./internal-item-filter.ts";
 import type { ReviewArtifact } from "./stage-artifacts.ts";
 import { hasStructuralGaps } from "./ai-first.ts";
 import { Ai2ndOutputSchema, type Ai2ndOutput } from "./schema.ts";
@@ -122,14 +130,22 @@ const SYSTEM_PROMPT =
   '"could_not_verify" (everything you could NOT check — source accuracy, missing evidence, anything outside the artifact; you MUST list at least one, because no reviewer checks everything), ' +
   '"needs_judgement" (points where a human must weigh trade-offs). ' +
   'Each item is {"claim": string, "reason": string, "evidence_ref": string (optional)}. Use only the artifact provided; do not invent facts. ' +
-  "Stages the entity has not reached yet are omitted from the artifact and are out of scope: do not grade, list or speculate about them.";
+  "Stages the entity has not reached yet are omitted from the artifact and are out of scope: do not grade, list or speculate about them. " +
+  "Do not raise items about system identifiers (entity ids, ULIDs, run ids), schema or plumbing fields, data-model nullability that an annotation in the artifact already explains (for example a field marked 'not yet decided'), or reviewer routing and agent assignment. " +
+  "Raise only matters about the deal's substance and its evidence.";
 
-/** Artifact content as sent to the reviewer: stages the entity has not reached are dropped. */
+/**
+ * Artifact content as sent to the reviewer: opaque identifiers omitted, a null
+ * owned by a stage that has not run yet (track before the S4 route decision)
+ * annotated, and stages the entity has not reached dropped. The stored
+ * artifact (and its content hash) is untouched.
+ */
 export function ai2ndPayloadContent(content: Record<string, unknown>): Record<string, unknown> {
-  const stages = content.stages;
-  if (!Array.isArray(stages)) return content;
+  const clean = sanitizeContentForReview(content);
+  const stages = clean.stages;
+  if (!Array.isArray(stages)) return clean;
   return {
-    ...content,
+    ...clean,
     stages: stages.filter(
       (s) => !(s && typeof s === "object" && (s as { not_reached?: unknown }).not_reached === true),
     ),
@@ -171,9 +187,11 @@ export function parseAi2ndOutput(text: string): Ai2ndOutput | null {
 }
 
 function toRecordBuckets(row: ReviewStageRecord): ReviewBuckets {
-  return row.buckets_json
+  const stored: ReviewBuckets = row.buckets_json
     ? (JSON.parse(row.buckets_json) as ReviewBuckets)
     : { verified: [], could_not_verify: JSON.parse(row.unverified_items_json) as ReviewItem[], needs_judgement: [] };
+  // Legacy rows keep routing claims in could_not_verify; split them out at read time.
+  return reclassifyLegacyProvenance(stored);
 }
 
 export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi2ndDeps): Promise<Ai2ndResult> {
@@ -350,48 +368,33 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
     });
   }
 
-  const buckets: ReviewBuckets = tagFreeText({ ...parsed });
+  // Conservative post-filter: LLM items that are pure plumbing (identifiers,
+  // null-field or routing talk with no deal content) leave the decision
+  // buckets; each is kept verbatim as provenance so the audit trail is intact.
+  const filtered = filterInternalItems({ ...parsed });
+  const buckets: ReviewBuckets = tagFreeText(filtered.buckets);
+  // could_not_verify is never empty — a filter that empties it must declare a real scope gap.
+  buckets.could_not_verify = ensureCouldNotVerify(buckets.could_not_verify, SOURCES_NOT_INSPECTED_ITEM);
+
+  // How the review was ROUTED is provenance, not a deal gap: it goes to
+  // `provenance`, never into the human decision buckets.
+  const provenance: ProvenanceItem[] = [];
   if (sel.fallbackUsed) {
-    // The reviewer was NOT chosen by the matrix: label it (no PASS stamp, same
-    // three buckets - this only discloses how the reviewer was picked).
-    const specialist = sel.firstStageSpecialist
-      ? ` Specialist ${sel.firstStageSpecialist} is same-domain (first stage only).`
-      : "";
-    buckets.could_not_verify = [
-      ...buckets.could_not_verify,
-      {
-        claim: "Reviewer chosen by fallback routing, not by a cross-validation matrix entry",
-        reason: `${sel.fallbackReason}; default cross-domain lead ${sel.reviewerAgent} reviewed.${specialist}`,
-        key: REVIEW_ITEM_KEYS.ai2FallbackReviewer,
-        params: {
-          fallbackReason: sel.fallbackReason,
-          reviewerAgent: sel.reviewerAgent,
-          specialist: sel.firstStageSpecialist ?? null,
-        },
+    provenance.push({
+      code: PROVENANCE_CODES.fallbackReviewer,
+      params: {
+        fallbackReason: sel.fallbackReason,
+        reviewerAgent: sel.reviewerAgent,
+        specialist: sel.firstStageSpecialist ?? null,
       },
-    ];
+    });
   }
   if (sel.exemptAgents.length > 0) {
-    buckets.could_not_verify = [
-      ...buckets.could_not_verify,
-      {
-        claim: "Orchestrator agents excluded from the author-domain check",
-        reason: `${sel.exemptAgents.join(", ")}: no review domain by explicit matrix exemption; the artifact domain comes from the other authoring agents.`,
-        key: REVIEW_ITEM_KEYS.ai2ExemptAgents,
-        params: { agents: sel.exemptAgents.join(", ") },
-      },
-    ];
+    provenance.push({ code: PROVENANCE_CODES.orchestratorExempt, params: { agents: sel.exemptAgents.join(", ") } });
   }
   if (sel.unresolvedAgents.length > 0) {
-    buckets.could_not_verify = [
-      ...buckets.could_not_verify,
-      {
-        claim: "Domain of some authoring agents could not be resolved",
-        reason: `Excluded from the cross-domain check: ${sel.unresolvedAgents.join(", ")}.`,
-        key: REVIEW_ITEM_KEYS.ai2UnresolvedAgents,
-        params: { agents: sel.unresolvedAgents.join(", ") },
-      },
-    ];
+    provenance.push({ code: PROVENANCE_CODES.unresolvedAgent, params: { agents: sel.unresolvedAgents.join(", ") } });
   }
+  buckets.provenance = [...provenance, ...filtered.dropped];
   return record({ ...base, performed: true, buckets, modelId: deps.modelId(), costTokens: spent });
 }

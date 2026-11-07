@@ -239,7 +239,7 @@ function reviewTarget(a: z.output<typeof reviewArgs>): Record<string, string> {
 const REVIEW: RegistryTool[] = [
   defineTool({
     name: "get_review_buckets",
-    description: "Latest AI 1st / AI 2nd review for a gate or stage artifact as three buckets — verified, could not verify, needs judgement. There is no PASS stamp; silence is never approval.",
+    description: "Latest AI 1st / AI 2nd review for a gate or stage artifact as three buckets — verified, could not verify, needs judgement. There is no PASS stamp; silence is never approval. Each stage also carries `provenance` (how the review was routed, internal items set aside) — not findings and not part of the buckets.",
     scope: "read", kind: "read", stageActivities: [],
     routes: ["GET /api/opportunities/{entityId}/reviews", "GET /api/projects/{entityId}/reviews"],
     inputSchema: { type: "object", properties: reviewProps, required: ["carrier", "entityId"] },
