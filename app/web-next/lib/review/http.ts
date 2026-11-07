@@ -37,7 +37,9 @@ function parseTarget(raw: unknown, entityType: ReviewEntityType): ParsedTarget {
   }
   const gate = typeof raw === "string" ? raw.replace(/^gate:/, "") : "";
   if (!isReviewGate(gate)) {
-    return { response: badRequest("invalid_request", `gate must be one of ${REVIEW_GATES.join("|")} or a stage:S#:N key.`) };
+    return {
+      response: badRequest("invalid_request", `gate must be one of ${REVIEW_GATES.join("|")} or a stage:S#:N key.`),
+    };
   }
   if (gateEntityType(gate) !== entityType) {
     return {
@@ -64,7 +66,9 @@ function authorize(
       return { response: forbidden("role_required", "AI review requests require the analyst role or higher.") };
     if (!visibleProject(ctx, entityId, { includeClosed: true })) return { response: notFound() };
   } else {
-    const denied = requireBusinessActor(ctx, mode, { viewerMessage: "AI review requests requires the analyst role or higher." });
+    const denied = requireBusinessActor(ctx, mode, {
+      viewerMessage: "AI review requests requires the analyst role or higher.",
+    });
     if (denied) return { response: denied };
     if (!getDb().query("SELECT id FROM opportunity WHERE id = ?").get(entityId)) return { response: notFound() };
   }
@@ -87,18 +91,32 @@ export async function handleReview(
   if ("response" in authz) return authz.response;
 
   let rawTarget: unknown;
+  let locale: string | undefined;
   if (action === "view") {
     const url = new URL(request.url);
     rawTarget = url.searchParams.get("gate") ?? url.searchParams.get("artifact");
   } else {
-    const body = (await request.json().catch(() => null)) as { gate?: string; artifactKey?: string; artifact?: string } | null;
+    const body = (await request.json().catch(() => null)) as {
+      gate?: string;
+      artifactKey?: string;
+      artifact?: string;
+      locale?: unknown;
+    } | null;
     rawTarget = body?.gate ?? body?.artifact ?? body?.artifactKey;
+    // Advisory only: a malformed locale never 4xx's — it is ignored and the
+    // prompt stays English (stored claim/reason text is the audit record).
+    if (typeof body?.locale === "string" && /^[a-z]{2}(-[A-Z]{2})?$/.test(body.locale)) {
+      locale = body.locale;
+    }
   }
   const parsed = parseTarget(rawTarget, entityType);
   if ("response" in parsed) return parsed.response;
 
   const artifact = "gate" in parsed ? undefined : buildStageArtifactFromKey(parsed.artifactKey, entityId);
-  const target = "gate" in parsed ? { gate: parsed.gate, entityId, userId: authz.ctx.userId } : { artifact, entityId, userId: authz.ctx.userId };
+  const target =
+    "gate" in parsed
+      ? { gate: parsed.gate, entityId, userId: authz.ctx.userId, locale }
+      : { artifact, entityId, userId: authz.ctx.userId, locale };
 
   if (action === "ai-1st") {
     runAiFirst(target);

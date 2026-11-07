@@ -101,6 +101,12 @@ Common to both options:
   text for `en`.
 - MCP `get_review_buckets` keeps returning `claim`/`reason` unchanged; `key`
   and `params` pass through additively.
+- Follow-up landed (2026-11-07): the UI-sent `locale` is now validated
+  (`/^[a-z]{2}(-[A-Z]{2})?$/`, advisory — never a 4xx) in
+  `lib/review/http.ts`, threaded through `ReviewRunContext` → `Ai2ndRequest`,
+  and `buildAi2ndMessages` appends a BCP-47 writing directive to the system
+  prompt when set (spec 2026-11-06-ai-review-stage-scope-fit-i18n; prompt is
+  byte-identical when absent).
 
 ## PR split (sequential; merge each before the next per the Sequential Branch Dependency Rule)
 

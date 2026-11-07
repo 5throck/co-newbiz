@@ -100,6 +100,8 @@ export interface Ai2ndRequest {
   artifact: ReviewArtifact;
   ai1stBuckets: ReviewBuckets;
   userId: string;
+  /** Advisory BCP-47 locale from the UI; items are written in it when set. */
+  locale?: string;
   db?: Database;
   now?: string;
 }
@@ -139,9 +141,13 @@ export function buildAi2ndMessages(
   reviewerAgent: string,
   reviewerDomain: string,
   authorDomain: string,
+  locale?: string,
 ): LlmMessage[] {
+  const system = locale
+    ? `${SYSTEM_PROMPT}\nWrite the claim and reason text of every item in ${locale} (BCP-47). Keep evidence_ref values and JSON keys exactly as specified.`
+    : SYSTEM_PROMPT;
   return [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: system },
     {
       role: "user",
       content:
@@ -289,7 +295,7 @@ export async function runAiSecond(req: Ai2ndRequest, deps: Ai2ndDeps = defaultAi
     return record({ ...base, performed: false, reason: "LLM provider is not configured" });
   }
 
-  const messages = buildAi2ndMessages(artifact, sel.reviewerAgent, sel.reviewerDomain, sel.authorDomain);
+  const messages = buildAi2ndMessages(artifact, sel.reviewerAgent, sel.reviewerDomain, sel.authorDomain, req.locale);
   const promptTokens = estimateTokens(messages.map((m) => m.content).join("\n"));
   const cap = monthlyTokenCap();
   const used = monthlyTokensUsed(entityType, artifact.entityId, now, db);
