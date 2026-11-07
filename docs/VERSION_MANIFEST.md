@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-07T01:07:38.760Z
+**Generated**: 2026-11-07T14:09:43.977Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -245,7 +245,7 @@
 | design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | N/A |
 | design-lint.ts | 2.5.0 | scripts/design-lint.ts | js-yaml |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.37.0 | scripts/dev-sync.ts | bun |
+| dev-sync.ts | 1.37.1 | scripts/dev-sync.ts | bun |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
@@ -304,14 +304,14 @@
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.24.1 | scripts/co-newbiz/newbiz.ts | N/A |
+| newbiz.ts | 1.25.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | notify-deliver.ts | 1.1.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
 | notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
 | orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
-| process-ssot-check.ts | 4.0.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
+| process-ssot-check.ts | 4.1.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
@@ -341,7 +341,7 @@
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
 | seed-demo-gate-contract.ts | 1.0.0 | scripts/co-newbiz/seed-demo-gate-contract.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
-| seed-s1-s12-demo.ts | 1.15.0 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
+| seed-s1-s12-demo.ts | 1.17.1 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |

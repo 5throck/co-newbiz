@@ -20,7 +20,7 @@ permissions: {}
 jobs:
   delete-head-ref:
     name: Delete merged PR branch
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: >-
       github.event_name == 'pull_request' &&
@@ -48,7 +48,7 @@ jobs:
 
   sweep:
     name: Sweep merged branches
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch'
     permissions:

@@ -18,7 +18,7 @@ permissions:
 jobs:
   prune-ghcr-versions:
     name: Delete old co-newbiz-web image versions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Keep newest 10 versions of co-newbiz-web
         uses: actions/delete-package-versions@e5bc658cc4c965c472efe991f8beea3981499c55 # v5

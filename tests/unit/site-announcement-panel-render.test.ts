@@ -5,14 +5,23 @@
 // other than the asserter, history collapsed, ko/en parity, and the link from the #5 snapshot row.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { normSrc } from "./helpers/src-normalize.ts";
 
 const WEB = "../../app/web-next";
-const { renderToStaticMarkup } = (await import(`${WEB}/node_modules/react-dom/server.js`)) as { renderToStaticMarkup: (el: unknown) => string };
-const { createElement } = (await import(`${WEB}/node_modules/react/index.js`)) as { createElement: (type: unknown, props: unknown, ...c: unknown[]) => unknown };
-const { NextIntlClientProvider } = (await import(`${WEB}/node_modules/next-intl`)) as { NextIntlClientProvider: unknown };
+const { renderToStaticMarkup } = (await import(`${WEB}/node_modules/react-dom/server.js`)) as {
+  renderToStaticMarkup: (el: unknown) => string;
+};
+const { createElement } = (await import(`${WEB}/node_modules/react/index.js`)) as {
+  createElement: (type: unknown, props: unknown, ...c: unknown[]) => unknown;
+};
+const { NextIntlClientProvider } = (await import(`${WEB}/node_modules/next-intl`)) as {
+  NextIntlClientProvider: unknown;
+};
 const ko = (await import(`${WEB}/locales/ko.json`)).default as Record<string, unknown>;
 const en = (await import(`${WEB}/locales/en.json`)).default as Record<string, unknown>;
-const { SiteAnnouncementPanelView } = (await import(`${WEB}/components/stages/SiteAnnouncementPanel.tsx`)) as { SiteAnnouncementPanelView: unknown };
+const { SiteAnnouncementPanelView } = (await import(`${WEB}/components/stages/SiteAnnouncementPanel.tsx`)) as {
+  SiteAnnouncementPanelView: unknown;
+};
 const { GateAckBlock } = (await import(`${WEB}/components/GateSnapshotAck.tsx`)) as { GateAckBlock: unknown };
 const { EMPTY_ACK_STATE } = (await import(`${WEB}/lib/gate-ack-view.ts`)) as { EMPTY_ACK_STATE: unknown };
 const V = await import(`${WEB}/lib/site-announcement-view.ts`);
@@ -21,33 +30,117 @@ const KINDS = ["board_resolution", "public_announcement", "mou_signing", "regula
 const TODAY = "2026-11-07";
 
 const render = (el: unknown, locale: "ko" | "en" = "ko") =>
-  renderToStaticMarkup(createElement(NextIntlClientProvider, { locale, messages: locale === "ko" ? ko : en, now: new Date(), timeZone: "Asia/Seoul" }, el));
+  renderToStaticMarkup(
+    createElement(
+      NextIntlClientProvider,
+      { locale, messages: locale === "ko" ? ko : en, now: new Date(), timeZone: "Asia/Seoul" },
+      el,
+    ),
+  );
 
 const ann = (kind: string, on: string, over: Record<string, unknown> = {}) => ({
-  id: `a-${kind}`, project_id: "p1", site_id: null, announced_on: on, announcement_kind: kind, evidence_ref: "doc:board-minutes-7",
-  recorded_by: "user-7", recorded_at: "2026-11-07T01:00:00.000Z", superseded_by: null, ...over,
+  id: `a-${kind}`,
+  project_id: "p1",
+  site_id: null,
+  announced_on: on,
+  announcement_kind: kind,
+  evidence_ref: "doc:board-minutes-7",
+  recorded_by: "user-7",
+  recorded_at: "2026-11-07T01:00:00.000Z",
+  superseded_by: null,
+  ...over,
 });
 const annData = (live: ReturnType<typeof ann>[], over: Record<string, unknown> = {}) => ({
-  project_id: "p1", live, history: [], earliest_announced_on: live.length ? live.map((r) => r.announced_on).sort()[0] : null,
-  unrecorded_kinds: KINDS.filter((k) => !live.some((r) => r.announcement_kind === k)), vocabulary: { announcement_kinds: KINDS }, ...over,
+  project_id: "p1",
+  live,
+  history: [],
+  earliest_announced_on: live.length ? live.map((r) => r.announced_on).sort()[0] : null,
+  unrecorded_kinds: KINDS.filter((k) => !live.some((r) => r.announcement_kind === k)),
+  vocabulary: { announcement_kinds: KINDS },
+  ...over,
 });
 const plan = (value: "yes" | "no", over: Record<string, unknown> = {}) => ({
-  id: "d-1", run_id: "run-1", project_id: "p1", var_key: "infra.plan_finalized", value_kind: "text", value_text: value, value_num: null, unit: null,
-  evidence_ref: "doc:plan-v3", asserted_by: "user-1", reviewed_by: null, rationale: "plan v3 signed", observed_at: "2026-11-06T01:00:00.000Z",
-  effective_on: value === "yes" ? "2026-03-01" : null, superseded_by: null, ...over,
+  id: "d-1",
+  run_id: "run-1",
+  project_id: "p1",
+  var_key: "infra.plan_finalized",
+  value_kind: "text",
+  value_text: value,
+  value_num: null,
+  unit: null,
+  evidence_ref: "doc:plan-v3",
+  asserted_by: "user-1",
+  reviewed_by: null,
+  rationale: "plan v3 signed",
+  observed_at: "2026-11-06T01:00:00.000Z",
+  effective_on: value === "yes" ? "2026-03-01" : null,
+  superseded_by: null,
+  ...over,
 });
 const planData = (rows: ReturnType<typeof plan>[], inputs?: ReturnType<typeof plan>[]) => ({
-  project_id: "p1", inputs: inputs ?? rows, live: rows.filter((r) => r.superseded_by === null),
-  vocabulary: { assertable_vars: [{ var_key: "infra.plan_finalized", label_ko: "x", value_type: "string", unit: null, requires_evidence_ref: 0 }] },
+  project_id: "p1",
+  inputs: inputs ?? rows,
+  live: rows.filter((r) => r.superseded_by === null),
+  vocabulary: {
+    assertable_vars: [
+      { var_key: "infra.plan_finalized", label_ko: "x", value_type: "string", unit: null, requires_evidence_ref: 0 },
+    ],
+  },
 });
 const noop = () => {};
-const view = (a: unknown, p: unknown, over: Record<string, unknown> = {}, locale: "ko" | "en" = "ko") => render(createElement(SiteAnnouncementPanelView, {
-  announcements: a, announcementsError: null, plan: p, planError: null, canAct: true, meId: "user-2", today: TODAY,
-  announce: { form: V.EMPTY_ANNOUNCEMENT_FORM, onForm: noop, onSubmit: noop, onEdit: noop, busy: false, problem: null, serverError: null, notice: null, loadedFromRow: false },
-  planBlock: { form: V.EMPTY_PLAN_FORM, onForm: noop, onSubmit: noop, busy: false, problem: null, serverError: null, notice: null, onReview: noop, reviewBusy: false, reviewError: null, reviewNotice: null },
-  ...over,
-}), locale);
-const withPlanForm = (f: Record<string, unknown>) => ({ planBlock: { form: { ...V.EMPTY_PLAN_FORM, ...f }, onForm: noop, onSubmit: noop, busy: false, problem: null, serverError: null, notice: null, onReview: noop, reviewBusy: false, reviewError: null, reviewNotice: null } });
+const view = (a: unknown, p: unknown, over: Record<string, unknown> = {}, locale: "ko" | "en" = "ko") =>
+  render(
+    createElement(SiteAnnouncementPanelView, {
+      announcements: a,
+      announcementsError: null,
+      plan: p,
+      planError: null,
+      canAct: true,
+      meId: "user-2",
+      today: TODAY,
+      announce: {
+        form: V.EMPTY_ANNOUNCEMENT_FORM,
+        onForm: noop,
+        onSubmit: noop,
+        onEdit: noop,
+        busy: false,
+        problem: null,
+        serverError: null,
+        notice: null,
+        loadedFromRow: false,
+      },
+      planBlock: {
+        form: V.EMPTY_PLAN_FORM,
+        onForm: noop,
+        onSubmit: noop,
+        busy: false,
+        problem: null,
+        serverError: null,
+        notice: null,
+        onReview: noop,
+        reviewBusy: false,
+        reviewError: null,
+        reviewNotice: null,
+      },
+      ...over,
+    }),
+    locale,
+  );
+const withPlanForm = (f: Record<string, unknown>) => ({
+  planBlock: {
+    form: { ...V.EMPTY_PLAN_FORM, ...f },
+    onForm: noop,
+    onSubmit: noop,
+    busy: false,
+    problem: null,
+    serverError: null,
+    notice: null,
+    onReview: noop,
+    reviewBusy: false,
+    reviewError: null,
+    reviewNotice: null,
+  },
+});
 
 describe("view logic: dates and citations", () => {
   test("isIsoCalendarDate rejects impossible dates and loose formats", () => {
@@ -63,7 +156,8 @@ describe("view logic: dates and citations", () => {
   });
   test("evidence citation vocabulary; only https becomes a link", () => {
     for (const ok of ["doc:abc", "src:KIS-2025", "https://example.org/a"]) expect(V.isValidEvidenceRef(ok)).toBe(true);
-    for (const bad of ["", "doc:", "cim.pdf#p12", "http://x.org", "doc: a b", "javascript:alert(1)"]) expect(V.isValidEvidenceRef(bad)).toBe(false);
+    for (const bad of ["", "doc:", "cim.pdf#p12", "http://x.org", "doc: a b", "javascript:alert(1)"])
+      expect(V.isValidEvidenceRef(bad)).toBe(false);
     expect(V.evidenceHref("https://example.org/a")).toBe("https://example.org/a");
     expect(V.evidenceHref("doc:abc")).toBeNull();
     expect(V.evidenceHref("javascript:alert(1)")).toBeNull();
@@ -72,10 +166,16 @@ describe("view logic: dates and citations", () => {
 
 describe("view logic: announcement rows and form", () => {
   test("announcementKindRows keeps vocabulary order, flags every row on the earliest date, marks the rest unrecorded", () => {
-    const d = annData([ann("public_announcement", "2026-05-02"), ann("board_resolution", "2026-04-01"), ann("mou_signing", "2026-04-01")]);
+    const d = annData([
+      ann("public_announcement", "2026-05-02"),
+      ann("board_resolution", "2026-04-01"),
+      ann("mou_signing", "2026-04-01"),
+    ]);
     const rows = V.announcementKindRows(d);
     expect(rows.map((r: { kind: string }) => r.kind)).toEqual(KINDS);
-    expect(rows.map((r: { state: string; earliest?: boolean }) => (r.state === "recorded" ? r.earliest : "-"))).toEqual([true, false, true, "-"]);
+    expect(rows.map((r: { state: string; earliest?: boolean }) => (r.state === "recorded" ? r.earliest : "-"))).toEqual(
+      [true, false, true, "-"],
+    );
   });
   test("an empty data set has no earliest row", () => {
     expect(V.announcementKindRows(annData([])).every((r: { state: string }) => r.state === "unrecorded")).toBe(true);
@@ -85,17 +185,36 @@ describe("view logic: announcement rows and form", () => {
     expect(f).toEqual({ announcedOn: "", kind: "", evidenceRef: "" });
     expect(V.validateAnnouncementForm(f, TODAY)).toBe("kind");
     expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution" }, TODAY)).toBe("announcedOn");
-    expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: "2026-02-30" }, TODAY)).toBe("announcedOn");
-    expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: "2026-11-08" }, TODAY)).toBe("announcedOnFuture");
+    expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: "2026-02-30" }, TODAY)).toBe(
+      "announcedOn",
+    );
+    expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: "2026-11-08" }, TODAY)).toBe(
+      "announcedOnFuture",
+    );
     expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: TODAY }, TODAY)).toBe("evidence");
-    expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: TODAY, evidenceRef: "minutes" }, TODAY)).toBe("evidenceFormat");
-    expect(V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: TODAY, evidenceRef: `doc:${"x".repeat(2001)}` }, TODAY)).toBe("evidenceTooLong");
+    expect(
+      V.validateAnnouncementForm({ ...f, kind: "board_resolution", announcedOn: TODAY, evidenceRef: "minutes" }, TODAY),
+    ).toBe("evidenceFormat");
+    expect(
+      V.validateAnnouncementForm(
+        { ...f, kind: "board_resolution", announcedOn: TODAY, evidenceRef: `doc:${"x".repeat(2001)}` },
+        TODAY,
+      ),
+    ).toBe("evidenceTooLong");
     const ok = { kind: "mou_signing", announcedOn: "2026-04-01", evidenceRef: "  doc:mou-1  " };
     expect(V.validateAnnouncementForm(ok, TODAY)).toBeNull();
-    expect(V.buildAnnouncementBody(ok)).toEqual({ announced_on: "2026-04-01", announcement_kind: "mou_signing", evidence_ref: "doc:mou-1" });
+    expect(V.buildAnnouncementBody(ok)).toEqual({
+      announced_on: "2026-04-01",
+      announcement_kind: "mou_signing",
+      evidence_ref: "doc:mou-1",
+    });
   });
   test("correction loads the person's own recorded row", () => {
-    expect(V.announcementFormFromRow(ann("mou_signing", "2026-04-01"))).toEqual({ announcedOn: "2026-04-01", kind: "mou_signing", evidenceRef: "doc:board-minutes-7" });
+    expect(V.announcementFormFromRow(ann("mou_signing", "2026-04-01"))).toEqual({
+      announcedOn: "2026-04-01",
+      kind: "mou_signing",
+      evidenceRef: "doc:board-minutes-7",
+    });
   });
 });
 
@@ -124,8 +243,15 @@ describe("view logic: plan assertion", () => {
     expect(V.showsEffectiveOn({ value: "yes" })).toBe(true);
     expect(V.showsEffectiveOn({ value: "no" })).toBe(false);
     expect(V.showsEffectiveOn({ value: "" })).toBe(false);
-    expect(V.buildPlanBody({ value: "yes", effectiveOn: "2026-03-01", evidenceRef: " doc:p ", rationale: " r " }))
-      .toEqual({ var_key: "infra.plan_finalized", value: "yes", evidence_ref: "doc:p", rationale: "r", effective_on: "2026-03-01" });
+    expect(
+      V.buildPlanBody({ value: "yes", effectiveOn: "2026-03-01", evidenceRef: " doc:p ", rationale: " r " }),
+    ).toEqual({
+      var_key: "infra.plan_finalized",
+      value: "yes",
+      evidence_ref: "doc:p",
+      rationale: "r",
+      effective_on: "2026-03-01",
+    });
     const no = V.buildPlanBody({ value: "no", effectiveOn: "2026-03-01", evidenceRef: "", rationale: "r" });
     expect(no).toEqual({ var_key: "infra.plan_finalized", value: "no", evidence_ref: "", rationale: "r" });
     expect("effective_on" in no).toBe(false);
@@ -138,10 +264,22 @@ describe("view logic: plan assertion", () => {
     expect(V.validatePlanForm(yes, TODAY, false)).toBe("effectiveOn");
     expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-11-08" }, TODAY, false)).toBe("effectiveOnFuture");
     expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01" }, TODAY, false)).toBe("evidence");
-    expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "plan.pdf" }, TODAY, false)).toBe("evidenceFormat");
-    expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "doc:p" }, TODAY, false)).toBe("rationale");
-    expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "doc:p", rationale: "x".repeat(2001) }, TODAY, false)).toBe("rationaleTooLong");
-    expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "doc:p", rationale: "ok" }, TODAY, false)).toBeNull();
+    expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "plan.pdf" }, TODAY, false)).toBe(
+      "evidenceFormat",
+    );
+    expect(V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "doc:p" }, TODAY, false)).toBe(
+      "rationale",
+    );
+    expect(
+      V.validatePlanForm(
+        { ...yes, effectiveOn: "2026-03-01", evidenceRef: "doc:p", rationale: "x".repeat(2001) },
+        TODAY,
+        false,
+      ),
+    ).toBe("rationaleTooLong");
+    expect(
+      V.validatePlanForm({ ...yes, effectiveOn: "2026-03-01", evidenceRef: "doc:p", rationale: "ok" }, TODAY, false),
+    ).toBeNull();
     const no = { ...f, value: "no", rationale: "not yet" };
     expect(V.validatePlanForm(no, TODAY, false)).toBeNull();
     expect(V.validatePlanForm(no, TODAY, true)).toBe("evidence");
@@ -153,7 +291,10 @@ describe("view logic: kill criterion #5 status", () => {
   test("missing announcement and/or plan is unassessed and lists what is missing", () => {
     expect(V.killFiveStatus(null, null)).toEqual({ kind: "unassessed", missing: ["announcement", "plan"] });
     expect(V.killFiveStatus("2026-04-01", null)).toEqual({ kind: "unassessed", missing: ["plan"] });
-    expect(V.killFiveStatus(null, reviewedYes("2026-03-01"))).toEqual({ kind: "unassessed", missing: ["announcement"] });
+    expect(V.killFiveStatus(null, reviewedYes("2026-03-01"))).toEqual({
+      kind: "unassessed",
+      missing: ["announcement"],
+    });
   });
   test("an unreviewed assertion fills nothing, and a reviewed 'yes' without a date is unassessed", () => {
     expect(V.killFiveStatus("2026-04-01", plan("yes"))).toEqual({ kind: "unassessed", missing: ["review"] });
@@ -161,12 +302,25 @@ describe("view logic: kill criterion #5 status", () => {
     expect(V.killFiveStatus("2026-04-01", reviewedYes(null))).toEqual({ kind: "unassessed", missing: ["effectiveOn"] });
   });
   test("plan on or before the announcement is clean; after it is triggered", () => {
-    expect(V.killFiveStatus("2026-04-01", reviewedYes("2026-03-01"))).toEqual({ kind: "clean", announcedOn: "2026-04-01", planOn: "2026-03-01" });
+    expect(V.killFiveStatus("2026-04-01", reviewedYes("2026-03-01"))).toEqual({
+      kind: "clean",
+      announcedOn: "2026-04-01",
+      planOn: "2026-03-01",
+    });
     expect(V.killFiveStatus("2026-04-01", reviewedYes("2026-04-01")).kind).toBe("clean");
-    expect(V.killFiveStatus("2026-04-01", reviewedYes("2026-04-02"))).toEqual({ kind: "triggered", reason: "plan_after_announcement", announcedOn: "2026-04-01", planOn: "2026-04-02" });
+    expect(V.killFiveStatus("2026-04-01", reviewedYes("2026-04-02"))).toEqual({
+      kind: "triggered",
+      reason: "plan_after_announcement",
+      announcedOn: "2026-04-01",
+      planOn: "2026-04-02",
+    });
   });
   test("a reviewed 'no' with an announcement on record is triggered", () => {
-    expect(V.killFiveStatus("2026-04-01", plan("no", { reviewed_by: "user-2" }))).toEqual({ kind: "triggered", reason: "plan_not_finalized", announcedOn: "2026-04-01" });
+    expect(V.killFiveStatus("2026-04-01", plan("no", { reviewed_by: "user-2" }))).toEqual({
+      kind: "triggered",
+      reason: "plan_not_finalized",
+      announcedOn: "2026-04-01",
+    });
   });
   test("error envelope maps to a message kind", () => {
     expect(V.killDataErrorKind(403, "role_required")).toBe("viewer");
@@ -194,35 +348,49 @@ describe("status line", () => {
     expect(html).toContain("인프라 계획 기록의 다른 사람 검토");
   });
   test("plan on or before the announcement: clean, with an icon", () => {
-    const html = view(annData([ann("board_resolution", "2026-04-01")]), planData([plan("yes", { reviewed_by: "user-2" })]));
+    const html = view(
+      annData([ann("board_resolution", "2026-04-01")]),
+      planData([plan("yes", { reviewed_by: "user-2" })]),
+    );
     expect(html).toContain('data-status="clean"');
     expect(html).toContain("계획 확정일(2026-03-01)이 부지 발표 기준일(2026-04-01) 이전이거나 같은 날입니다");
     expect(html).toContain('<span aria-hidden="true">✓</span>');
   });
   test("plan after the announcement: warning with an icon", () => {
-    const html = view(annData([ann("board_resolution", "2026-02-01")]), planData([plan("yes", { reviewed_by: "user-2" })]));
+    const html = view(
+      annData([ann("board_resolution", "2026-02-01")]),
+      planData([plan("yes", { reviewed_by: "user-2" })]),
+    );
     expect(html).toContain('data-status="triggered"');
     expect(html).toContain('data-reason="plan_after_announcement"');
     expect(html).toContain("중단 조건 #5에 해당합니다(조건부 표시)");
     expect(html).toContain('<span aria-hidden="true">⚠</span>');
   });
   test("a reviewed 'no' with an announcement: warning that the plan was not finalized", () => {
-    const html = view(annData([ann("board_resolution", "2026-02-01")]), planData([plan("no", { reviewed_by: "user-2" })]));
+    const html = view(
+      annData([ann("board_resolution", "2026-02-01")]),
+      planData([plan("no", { reviewed_by: "user-2" })]),
+    );
     expect(html).toContain('data-reason="plan_not_finalized"');
     expect(html).toContain("인프라 계획이 확정되지 않았습니다");
   });
 });
 
 describe("announcement card", () => {
-  const d = annData([ann("public_announcement", "2026-05-02"), ann("board_resolution", "2026-04-01", { evidence_ref: "https://example.org/minutes" })]);
+  const d = annData([
+    ann("public_announcement", "2026-05-02"),
+    ann("board_resolution", "2026-04-01", { evidence_ref: "https://example.org/minutes" }),
+  ]);
   const html = view(d, planData([]));
   test("every kind has a row, unrecorded kinds as icon plus text, labels localized", () => {
     expect(html.match(/data-state="unrecorded"/g)?.length).toBe(2);
     expect(html).toContain('<span aria-hidden="true">○</span> 기록 없음');
-    for (const label of ["이사회 의결", "공개 발표", "양해각서(MOU) 체결", "규제 당국 제출"]) expect(html).toContain(label);
+    for (const label of ["이사회 의결", "공개 발표", "양해각서(MOU) 체결", "규제 당국 제출"])
+      expect(html).toContain(label);
     expect(html).not.toContain(">board_resolution<");
     const enHtml = view(d, planData([]), {}, "en");
-    for (const label of ["Board resolution", "Public announcement", "MOU signing", "Regulatory filing"]) expect(enHtml).toContain(label);
+    for (const label of ["Board resolution", "Public announcement", "MOU signing", "Regulatory filing"])
+      expect(enHtml).toContain(label);
   });
   test("the earliest date is highlighted as the #5 reference (icon plus text), only on that row", () => {
     expect(html.match(/data-earliest="true"/g)?.length).toBe(1);
@@ -239,13 +407,19 @@ describe("announcement card", () => {
     expect(view(annData([]), planData([]))).toContain("기록된 부지 발표가 없습니다");
   });
   test("history is a collapsed details", () => {
-    const old = ann("board_resolution", "2026-04-09", { id: "old", superseded_by: "a-board_resolution", evidence_ref: "doc:old" });
+    const old = ann("board_resolution", "2026-04-09", {
+      id: "old",
+      superseded_by: "a-board_resolution",
+      evidence_ref: "doc:old",
+    });
     const h = view(annData([ann("board_resolution", "2026-04-01")], { history: [old] }), planData([]));
     const hist = h.match(/<details[^>]*data-testid="site-announcement-history"[\s\S]*?<\/details>/)![0];
     expect(hist).not.toContain("open=");
     expect(hist).toContain("정정 이력 (1건)");
     expect(hist).toContain("2026-04-09");
-    expect(view(annData([ann("board_resolution", "2026-04-01")]), planData([]))).not.toContain("site-announcement-history");
+    expect(view(annData([ann("board_resolution", "2026-04-01")]), planData([]))).not.toContain(
+      "site-announcement-history",
+    );
   });
 });
 
@@ -267,7 +441,9 @@ describe("human-only recording", () => {
   });
   test("the page keeps one primary action: no record or review button is btn-primary", () => {
     expect(html).not.toContain("btn-primary");
-    expect(view(annData([ann("board_resolution", "2026-04-01")]), planData([plan("yes")]))).not.toContain("btn-primary");
+    expect(view(annData([ann("board_resolution", "2026-04-01")]), planData([plan("yes")]))).not.toContain(
+      "btn-primary",
+    );
   });
   test("a viewer or admin gets the read-only note and no forms, correct or review buttons", () => {
     const h = view(annData([ann("board_resolution", "2026-04-01")]), planData([plan("yes")]), { canAct: false });
@@ -281,7 +457,17 @@ describe("human-only recording", () => {
   });
   test("problems and server errors render as alerts with an icon", () => {
     const h = view(annData([]), planData([]), {
-      announce: { form: V.EMPTY_ANNOUNCEMENT_FORM, onForm: noop, onSubmit: noop, onEdit: noop, busy: false, problem: "announcedOnFuture", serverError: "boom", notice: null, loadedFromRow: false },
+      announce: {
+        form: V.EMPTY_ANNOUNCEMENT_FORM,
+        onForm: noop,
+        onSubmit: noop,
+        onEdit: noop,
+        busy: false,
+        problem: "announcedOnFuture",
+        serverError: "boom",
+        notice: null,
+        loadedFromRow: false,
+      },
     });
     expect(h).toContain("오늘 이후 날짜는 기록할 수 없습니다.");
     expect(h).toContain('data-testid="site-announcement-server-error"');
@@ -343,7 +529,9 @@ describe("infrastructure plan block", () => {
     expect(hist).toContain("old reason");
   });
   test("review error and notice render with an icon", () => {
-    const h = view(annData([]), planData([plan("yes")]), { planBlock: { ...withPlanForm({}).planBlock, reviewError: "nope", reviewNotice: null } });
+    const h = view(annData([]), planData([plan("yes")]), {
+      planBlock: { ...withPlanForm({}).planBlock, reviewError: "nope", reviewNotice: null },
+    });
     expect(h).toContain('data-testid="infra-plan-review-error"');
   });
 });
@@ -370,7 +558,10 @@ describe("load errors", () => {
 });
 
 describe("catalog", () => {
-  const keys = (o: unknown, prefix = ""): string[] => Object.entries(o as Record<string, unknown>).flatMap(([k, v]) => (v && typeof v === "object" ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
+  const keys = (o: unknown, prefix = ""): string[] =>
+    Object.entries(o as Record<string, unknown>).flatMap(([k, v]) =>
+      v && typeof v === "object" ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`],
+    );
   const at = (o: unknown, path: string) => path.split(".").reduce((a: any, p) => a[p], o as any);
   test("ko and en carry the same keys, none empty", () => {
     const k = (ko.stages as { s5: { siteAnnouncementPanel: unknown } }).s5.siteAnnouncementPanel;
@@ -379,10 +570,33 @@ describe("catalog", () => {
     for (const o of [k, e]) for (const key of keys(o)) expect(String(at(o, key)).length).toBeGreaterThan(0);
   });
   test("the dynamic message families cover every kind the code can produce", () => {
-    const k = (ko.stages as { s5: { siteAnnouncementPanel: Record<string, Record<string, string>> } }).s5.siteAnnouncementPanel;
-    for (const p of ["kind", "announcedOn", "announcedOnFuture", "evidence", "evidenceFormat", "evidenceTooLong"]) expect(k.announceProblem[p]).toBeTruthy();
-    for (const p of ["value", "effectiveOn", "effectiveOnFuture", "evidence", "evidenceFormat", "evidenceTooLong", "rationale", "rationaleTooLong"]) expect(k.planProblem[p]).toBeTruthy();
-    for (const p of ["viewer", "admin", "notFound", "invalid", "humanOnly", "secondPerson", "reviewRejected", "noRun", "other"]) expect(k.serverError[p]).toBeTruthy();
+    const k = (ko.stages as { s5: { siteAnnouncementPanel: Record<string, Record<string, string>> } }).s5
+      .siteAnnouncementPanel;
+    for (const p of ["kind", "announcedOn", "announcedOnFuture", "evidence", "evidenceFormat", "evidenceTooLong"])
+      expect(k.announceProblem[p]).toBeTruthy();
+    for (const p of [
+      "value",
+      "effectiveOn",
+      "effectiveOnFuture",
+      "evidence",
+      "evidenceFormat",
+      "evidenceTooLong",
+      "rationale",
+      "rationaleTooLong",
+    ])
+      expect(k.planProblem[p]).toBeTruthy();
+    for (const p of [
+      "viewer",
+      "admin",
+      "notFound",
+      "invalid",
+      "humanOnly",
+      "secondPerson",
+      "reviewRejected",
+      "noRun",
+      "other",
+    ])
+      expect(k.serverError[p]).toBeTruthy();
     for (const p of ["viewer", "admin", "notFound", "other"]) expect(k.loadError[p]).toBeTruthy();
     for (const p of ["announcement", "plan", "review", "effectiveOn"]) expect(k.missing[p]).toBeTruthy();
     for (const p of KINDS) expect(k.kind[p]).toBeTruthy();
@@ -392,16 +606,43 @@ describe("catalog", () => {
 describe("gate snapshot link to the panel", () => {
   const snapshot = (key: string, procedure: string, criterion: string) => ({
     gate: "fs",
-    kill: { triggered: [], unassessed: [{ key, procedure, criterion_id: criterion, title: "Plan not finalized", action: "mark_conditional" }], inert: 0, inert_list: [] },
-    rag: null, validators: null, nonwaivable_open: [], wacc: null, waivers: { active: [], expiring_14d: [] },
-    ladder: { prior_gate: null, prior_decision: null, effective: true, blocker: null }, ai: null,
+    kill: {
+      triggered: [],
+      unassessed: [
+        { key, procedure, criterion_id: criterion, title: "Plan not finalized", action: "mark_conditional" },
+      ],
+      inert: 0,
+      inert_list: [],
+    },
+    rag: null,
+    validators: null,
+    nonwaivable_open: [],
+    wacc: null,
+    waivers: { active: [], expiring_14d: [] },
+    ladder: { prior_gate: null, prior_decision: null, effective: true, blocker: null },
+    ai: null,
     required_acks: [{ key, kind: "kill_unassessed", procedure, criterion_id: criterion, action: "mark_conditional" }],
     hard_blocks: [],
   });
-  const block = (snap: unknown, dealId?: string, locale: "ko" | "en" = "ko") => render(createElement(GateAckBlock, {
-    snapshot: snap, state: EMPTY_ACK_STATE, onChange: noop, problems: null, decision: "go", divergence: null, notice: null, dealId,
-  }), locale);
-  const five = snapshot(V.SITE_ANNOUNCEMENT_KILL_KEY, "greenfield-screening", "infrastructure_plan_not_finalized_at_site_announcement");
+  const block = (snap: unknown, dealId?: string, locale: "ko" | "en" = "ko") =>
+    render(
+      createElement(GateAckBlock, {
+        snapshot: snap,
+        state: EMPTY_ACK_STATE,
+        onChange: noop,
+        problems: null,
+        decision: "go",
+        divergence: null,
+        notice: null,
+        dealId,
+      }),
+      locale,
+    );
+  const five = snapshot(
+    V.SITE_ANNOUNCEMENT_KILL_KEY,
+    "greenfield-screening",
+    "infrastructure_plan_not_finalized_at_site_announcement",
+  );
   test("the unassessed #5 row links to the S5 review tab anchor", () => {
     const html = block(five, "opp 1");
     expect(html).toContain('data-testid="site-announcement-link"');
@@ -411,7 +652,9 @@ describe("gate snapshot link to the panel", () => {
   });
   test("no deal id, no link; other unassessed rows never get it", () => {
     expect(block(five)).not.toContain("site-announcement-link");
-    expect(block(snapshot("deal-shape-chain:no_viable_deal_shape", "deal-shape-chain", "no_viable_deal_shape"), "opp-1")).not.toContain("site-announcement-link");
+    expect(
+      block(snapshot("deal-shape-chain:no_viable_deal_shape", "deal-shape-chain", "no_viable_deal_shape"), "opp-1"),
+    ).not.toContain("site-announcement-link");
   });
   test("siteAnnouncementHref carries the tab and the anchor", () => {
     expect(V.siteAnnouncementHref("p/1")).toBe("/deals/p%2F1/s5?tab=review#site-announcement-panel");
@@ -419,10 +662,14 @@ describe("gate snapshot link to the panel", () => {
 });
 
 describe("S5 mount", () => {
-  const src = readFileSync(new URL(`${WEB}/components/stages/GreenfieldStage.tsx`, import.meta.url), "utf8");
+  const src = normSrc(readFileSync(new URL(`${WEB}/components/stages/GreenfieldStage.tsx`, import.meta.url), "utf8"));
   test("the panel mounts on the review tab, only for a promoted project, and the primary action stays after it", () => {
-    expect(src).toContain("selected.opportunity.project_id && <SiteAnnouncementPanel projectId={selected.opportunity.project_id} canAct={canAct} />");
-    const panelAt = src.indexOf("<SiteAnnouncementPanel ");
+    expect(src).toContain(
+      normSrc(
+        "selected.opportunity.project_id && <SiteAnnouncementPanel projectId={selected.opportunity.project_id} canAct={canAct} />",
+      ),
+    );
+    const panelAt = src.indexOf("<SiteAnnouncementPanel");
     expect(panelAt).toBeGreaterThan(src.indexOf('panel("review"'));
     expect(src.indexOf("<PrimaryAction", panelAt)).toBeGreaterThan(panelAt);
   });

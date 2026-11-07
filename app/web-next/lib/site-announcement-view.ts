@@ -115,14 +115,21 @@ export type AnnouncementKindRow =
   | { kind: string; state: "recorded"; row: SiteAnnouncementRow; earliest: boolean };
 
 /** One row per vocabulary kind, in vocabulary order: the live row (flagged when it carries the earliest date) or "unrecorded". */
-export function announcementKindRows(data: Pick<SiteAnnouncementData, "live" | "vocabulary" | "earliest_announced_on">): AnnouncementKindRow[] {
+export function announcementKindRows(
+  data: Pick<SiteAnnouncementData, "live" | "vocabulary" | "earliest_announced_on">,
+): AnnouncementKindRow[] {
   const liveByKind = new Map(data.live.map((r) => [r.announcement_kind, r]));
   const kinds = [...data.vocabulary.announcement_kinds];
   for (const r of data.live) if (!kinds.includes(r.announcement_kind)) kinds.push(r.announcement_kind);
   return kinds.map((kind): AnnouncementKindRow => {
     const row = liveByKind.get(kind);
     return row
-      ? { kind, state: "recorded", row, earliest: data.earliest_announced_on !== null && row.announced_on === data.earliest_announced_on }
+      ? {
+          kind,
+          state: "recorded",
+          row,
+          earliest: data.earliest_announced_on !== null && row.announced_on === data.earliest_announced_on,
+        }
       : { kind, state: "unrecorded" };
   });
 }
@@ -141,7 +148,13 @@ export function announcementFormFromRow(row: SiteAnnouncementRow): AnnouncementF
   return { announcedOn: row.announced_on, kind: row.announcement_kind, evidenceRef: row.evidence_ref };
 }
 
-export type AnnouncementProblem = "kind" | "announcedOn" | "announcedOnFuture" | "evidence" | "evidenceFormat" | "evidenceTooLong";
+export type AnnouncementProblem =
+  | "kind"
+  | "announcedOn"
+  | "announcedOnFuture"
+  | "evidence"
+  | "evidenceFormat"
+  | "evidenceTooLong";
 
 /** Early client check; the server stays authoritative. Order = field order on screen. */
 export function validateAnnouncementForm(f: AnnouncementForm, today: string): AnnouncementProblem | null {
@@ -156,7 +169,11 @@ export function validateAnnouncementForm(f: AnnouncementForm, today: string): An
 }
 
 /** Request body: no recorder field (the server takes the session user). */
-export function buildAnnouncementBody(f: AnnouncementForm): { announced_on: string; announcement_kind: string; evidence_ref: string } {
+export function buildAnnouncementBody(f: AnnouncementForm): {
+  announced_on: string;
+  announcement_kind: string;
+  evidence_ref: string;
+} {
   return { announced_on: f.announcedOn, announcement_kind: f.kind, evidence_ref: f.evidenceRef.trim() };
 }
 
@@ -217,8 +234,14 @@ export function showsEffectiveOn(f: Pick<PlanForm, "value">): boolean {
 }
 
 export type PlanProblem =
-  | "value" | "effectiveOn" | "effectiveOnFuture" | "evidence" | "evidenceFormat" | "evidenceTooLong"
-  | "rationale" | "rationaleTooLong";
+  | "value"
+  | "effectiveOn"
+  | "effectiveOnFuture"
+  | "evidence"
+  | "evidenceFormat"
+  | "evidenceTooLong"
+  | "rationale"
+  | "rationaleTooLong";
 
 /** Early client check; the server stays authoritative. 'yes' needs the document date and a resolvable citation. */
 export function validatePlanForm(f: PlanForm, today: string, evidenceRequired: boolean): PlanProblem | null {
@@ -239,7 +262,13 @@ export function validatePlanForm(f: PlanForm, today: string, evidenceRequired: b
 }
 
 /** Request body: effective_on only for 'yes' (the server refuses it on 'no'); no asserter field. */
-export function buildPlanBody(f: PlanForm): { var_key: string; value: string; evidence_ref: string; rationale: string; effective_on?: string } {
+export function buildPlanBody(f: PlanForm): {
+  var_key: string;
+  value: string;
+  evidence_ref: string;
+  rationale: string;
+  effective_on?: string;
+} {
   return {
     var_key: PLAN_VAR_KEY,
     value: f.value,
@@ -288,7 +317,15 @@ export function killFiveStatus(earliest: string | null, plan: DimensionInputRow 
 // ── errors ─────────────────────────────────────────────────────────────
 
 export type KillDataErrorKind =
-  | "viewer" | "admin" | "notFound" | "invalid" | "humanOnly" | "secondPerson" | "reviewRejected" | "noRun" | "other";
+  | "viewer"
+  | "admin"
+  | "notFound"
+  | "invalid"
+  | "humanOnly"
+  | "secondPerson"
+  | "reviewRejected"
+  | "noRun"
+  | "other";
 
 /** Maps the routes' error envelopes (400 invalid_request, 403 role_required / role_forbidden / human_only, 404, 409 ...) to a message kind. */
 export function killDataErrorKind(status: number, code: string): KillDataErrorKind {

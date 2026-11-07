@@ -8,7 +8,9 @@
 // Membership: a non-member (or an MNPI project without insider status) gets 404, not 403 (FR-SEC-03).
 import { getDb } from "../../../../../../../db/client.ts";
 import {
-  assert, listAssertableVars, listProjectAssertions,
+  assert,
+  listAssertableVars,
+  listProjectAssertions,
 } from "../../../../../../../db/repositories/dimension-input.repository.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
@@ -18,7 +20,10 @@ import { route } from "../../../../../lib/route.ts";
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(auth.auth, "read");
+    if (denied) return denied;
+  }
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true })) return notFound();
   const db = getDb();
@@ -40,17 +45,31 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Recording an assertion requires the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Recording an assertion requires the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return badRequest("invalid_request", "A JSON body {var_key, value, evidence_ref, rationale, effective_on?, observed_at?, run_id?} is required.");
+    return badRequest(
+      "invalid_request",
+      "A JSON body {var_key, value, evidence_ref, rationale, effective_on?, observed_at?, run_id?} is required.",
+    );
   }
   const db = getDb();
   const varKey = typeof body.var_key === "string" ? body.var_key.trim() : "";
   const def = listAssertableVars(db).find((v) => v.var_key === varKey);
-  if (!def) return badRequest("invalid_request", `var_key must be one of the assertable variables: ${listAssertableVars(db).map((v) => v.var_key).join(" | ")}.`);
+  if (!def)
+    return badRequest(
+      "invalid_request",
+      `var_key must be one of the assertable variables: ${listAssertableVars(db)
+        .map((v) => v.var_key)
+        .join(" | ")}.`,
+    );
   // The registry's value_type fixes the value kind (the repository re-checks coherence).
   let value: { kind: "num"; value: number } | { kind: "text"; value: string } | { kind: "bool"; value: boolean };
   if (def.value_type === "number") {
@@ -64,16 +83,33 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     value = { kind: "text", value: body.value };
   }
   const str = (v: unknown) => (typeof v === "string" ? v : undefined);
-  if (body.effective_on !== undefined && body.effective_on !== null && typeof body.effective_on !== "string") return badRequest("invalid_request", "effective_on must be a YYYY-MM-DD string.");
+  if (body.effective_on !== undefined && body.effective_on !== null && typeof body.effective_on !== "string")
+    return badRequest("invalid_request", "effective_on must be a YYYY-MM-DD string.");
   // Run scope: the explicit run_id (repository checks it belongs to the project) or the project's latest live run.
-  const runId = str(body.run_id)?.trim() || (db.query("SELECT id FROM run WHERE project_id = ? AND superseded_by IS NULL ORDER BY created_at DESC, id DESC LIMIT 1").get(id) as { id: string } | null)?.id;
-  if (!runId) return fail(409, "no_run", "This project has no analysis run - assertions are recorded run-scoped (ADR-0005).");
+  const runId =
+    str(body.run_id)?.trim() ||
+    (
+      db
+        .query(
+          "SELECT id FROM run WHERE project_id = ? AND superseded_by IS NULL ORDER BY created_at DESC, id DESC LIMIT 1",
+        )
+        .get(id) as { id: string } | null
+    )?.id;
+  if (!runId)
+    return fail(409, "no_run", "This project has no analysis run - assertions are recorded run-scoped (ADR-0005).");
   try {
     // Any asserted_by / reviewed_by field in the body is ignored: the assertion belongs to the calling session user.
     const row = assert(
       {
-        project_id: id, run_id: runId, var_key: varKey, value, evidence_ref: str(body.evidence_ref) ?? "", asserted_by: ctx.userId,
-        rationale: str(body.rationale) ?? "", observed_at: str(body.observed_at), effective_on: (body.effective_on as string | null | undefined) ?? undefined,
+        project_id: id,
+        run_id: runId,
+        var_key: varKey,
+        value,
+        evidence_ref: str(body.evidence_ref) ?? "",
+        asserted_by: ctx.userId,
+        rationale: str(body.rationale) ?? "",
+        observed_at: str(body.observed_at),
+        effective_on: (body.effective_on as string | null | undefined) ?? undefined,
       },
       db,
     );
@@ -82,7 +118,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const message = e instanceof Error ? e.message : String(e);
     // Not an active member / not an MNPI insider: indistinguishable from a missing project (404-not-403).
     if (/not an active project_member|MNPI project/.test(message)) return notFound();
-    if (message.startsWith("dimension_input_write_rejected:")) return badRequest("invalid_request", message.replace("dimension_input_write_rejected: ", ""));
+    if (message.startsWith("dimension_input_write_rejected:"))
+      return badRequest("invalid_request", message.replace("dimension_input_write_rejected: ", ""));
     throw e;
   }
 });
