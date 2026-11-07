@@ -582,13 +582,24 @@ export function verifyStoredSnapshotHash(stored: { schema_version: number; snaps
 
 // ── ADR-0193 enforce guard (risk-officer B) ─────────────────────────────────
 
-export interface GuardOffender { key: string; reevaluate_at: string; missing_vars: string[] }
+export interface GuardOffender {
+  key: string;
+  reevaluate_at: string;
+  missing_vars: string[];
+  /** `carried`: deferred to an opportunity re-evaluation gate; `reached_at_own_gate`: listed and evaluated at its own opportunity gate (ADR-0193 section 14.1, RESCOPE-2). */
+  kind: "carried" | "reached_at_own_gate";
+}
 
 /**
- * Carried (deferred) opportunity criteria that have NO data source at their re-evaluation scope: a criterion owned by an
- * earlier opportunity gate whose `reevaluate_at` is an opportunity gate, while a variable of its predicate is not supplied by
- * the opportunity-scoped source (OPPORTUNITY_SCOPE_VARS). Under kill_binding=enforce such a carry could only ever end in
- * `kill_carry_unassessed` / a meaningless acknowledgement, so enforce must not be enabled until it is re-scoped or sourced.
+ * Opportunity criteria that have NO data source at the opportunity gate where they are asked of a human. Two cases, both
+ * keyed on a predicate variable that the opportunity-scoped source (OPPORTUNITY_SCOPE_VARS) does not supply:
+ *  - `carried`: owned by an earlier opportunity gate, `reevaluate_at` is a LATER opportunity gate (a project gate always has
+ *    its data);
+ *  - `reached_at_own_gate` (risk-officer ruling 14.1, RESCOPE-2): listed at an opportunity gate with `reevaluate_at` at or
+ *    before that gate, so it is evaluated there and could only ever end `unassessed` and acknowledged blind - the silent-drop
+ *    pattern entered at a different point.
+ * Under kill_binding=enforce either could only end in `kill_carry_unassessed` / a meaningless acknowledgement, so enforce
+ * must not be enabled until it is re-scoped (registry reevaluate_at, ADR-tracked) or sourced (OPPORTUNITY_SCOPE_VARS).
  */
 export function carriedWithoutDataSource(): GuardOffender[] {
   const out = new Map<string, GuardOffender>();
@@ -597,12 +608,20 @@ export function carriedWithoutDataSource(): GuardOffender[] {
     for (const track of [null, "greenfield", "brownfield"] as Array<LadderTrack | null>) {
       for (const procedure of OPPORTUNITY_PROCEDURES[gate](track)) {
         for (const e of loadKillCriteriaRegistry(procedure) as unknown as Array<CoreRegistryEntry & RegistryScope>) {
-          if (e.predicate == null || e.enabled === false || !e.reevaluate_at) continue;
-          const deferred = gateIdx(e.reevaluate_at) > gateIdx(gate);
-          if (!deferred || gateIdx(e.reevaluate_at) > gateIdx("target_screening")) continue; // a project gate always has its data
+          if (e.predicate == null || e.enabled === false) continue;
+          const key = `${procedure}:${e.criterion_id}`;
+          const reevaluateAt = e.reevaluate_at;
+          let kind: GuardOffender["kind"];
+          if (!reevaluateAt || gateIdx(reevaluateAt) <= gateIdx(gate)) {
+            kind = "reached_at_own_gate"; // no scope (legacy) counts as reached: fail-closed
+          } else if (gateIdx(reevaluateAt) <= gateIdx("target_screening")) {
+            kind = "carried";
+          } else {
+            continue; // deferred to a project gate, which always has its data
+          }
           const vars = [...collectPredicateVars(parsePredicate(e.predicate))];
           const missingVars = vars.filter((v) => !OPPORTUNITY_SCOPE_VARS.includes(v));
-          if (missingVars.length > 0) out.set(`${procedure}:${e.criterion_id}`, { key: `${procedure}:${e.criterion_id}`, reevaluate_at: e.reevaluate_at, missing_vars: missingVars });
+          if (missingVars.length > 0 && !out.has(key)) out.set(key, { key, reevaluate_at: reevaluateAt ?? gate, missing_vars: missingVars, kind });
         }
       }
     }
@@ -625,7 +644,7 @@ export function assertKillEnforceSafe(env: Record<string, string | undefined> = 
   if (gateIntegrityMode("kill_binding", env) !== "enforce") return;
   const g = killEnforceGuard(env);
   if (g.unsafe) {
-    throw new Error(`kill_enforce_unsafe: CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING=enforce is refused - carried kill criteria without a data source at their re-evaluation scope: ${g.offenders.map((o) => `${o.key} (${o.missing_vars.join(", ")} @ ${o.reevaluate_at})`).join("; ")}. Re-scope their reevaluate_at (ADR-tracked) or add an opportunity-scope source, or set the flag to shadow/off.`);
+    throw new Error(`kill_enforce_unsafe: CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING=enforce is refused - kill criteria (carried, or reached at their own opportunity gate) without a data source at that scope: ${g.offenders.map((o) => `${o.key} (${o.missing_vars.join(", ")} @ ${o.reevaluate_at}, ${o.kind})`).join("; ")}. Re-scope their reevaluate_at (ADR-tracked) or add an opportunity-scope source, or set the flag to shadow/off.`);
   }
 }
 
@@ -709,7 +728,7 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
   for (const x of evaluated.outcomes) {
     if (dueKeys.has(x.key)) continue;
     const scope = registryScopeOf(x.key);
-    const { cls, partial_input } = classifyKill({ outcome: x.outcome, procedure: x.procedure, evaluable_from: scope?.evaluable_from, current_stage: currentStage, track });
+    const { cls, partial_input } = classifyKill({ outcome: x.outcome, procedure: x.procedure, evaluable_from: scope?.evaluable_from, current_stage: currentStage, track, reevaluate_at: scope?.reevaluate_at, gate: o.gate });
     if (cls === "out_of_track") continue;
     if (cls === "not_reached") {
       const reevaluateAt = scope?.reevaluate_at ?? "";

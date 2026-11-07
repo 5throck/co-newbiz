@@ -83,3 +83,42 @@ Implementation is staged in three PRs (design §10): PR-A registry fields + vali
 (data only), PR-B engine (snapshot, classifier, carries, hard blocks, contract), PR-C UI. The rule lives in
 `procedures/_kill-criteria/README.md` (registry shape and validation) and
 `docs/designs/2026-11-07-kill-criteria-stage-scoping-design.md` (full design of record).
+
+## ADR-0193 amendment note (2026-11-07, §14)
+
+Source: risk-officer ruling on follow-ups, design §14. Registry data and engine only; no DB schema change,
+no `flow.spec` change. The owner records the decision; this note records what was implemented.
+
+- **`reevaluate_at` re-scoped to `fs`** (`evaluable_from` unchanged, `evaluable_from_evidence` updated) for
+  criteria whose predicate variables come from project-scoped sources, which cannot exist at an
+  opportunity gate: #4 `zero_site_clears_infrastructure_minimums`, #5
+  `infrastructure_plan_not_finalized_at_site_announcement`, #6 `greenfield-screening` partner dependency
+  (the `brownfield-dd` twin stays at `dd`), #8 `preliminary_hhi_flags_certain_block`, #10/#11
+  `partner_dd_red_*` (no opportunity-scope copy of partner DD and no proxy from candidate scores), #12
+  `wacc_hurdle_still_assumed` (both `*-pre-fs`; the fs WACC block, ADR-0186 D8, re-tests it) and #13
+  `certification_transferability_unconfirmed_and_load_bearing` (both `*-pre-fs`; `certification.project_id`
+  is `NOT NULL`, so there are no opportunity-scoped rows). The deferral does not cost detection: C-1 still
+  hard-blocks a carried `halt` that is still `unassessed` at `fs`, and the carry chain is kept.
+- **Engine**: a criterion whose registry `reevaluate_at` is a later gate than the evaluating one classifies
+  `not_reached` with a carry even when its stage is reached (`classifyKill`, `deferredToLaterGate`), so
+  #10-#13 at the opportunity `pre_fs` gate are never reached-unassessed acknowledgements. A triggered result
+  is still never scoped away (it carries `partial_input`). PM decision (2026-11-07): this engine rule is kept in
+  preference to moving the `deal-shape-chain` listing to `fs` in flow.spec. The read-time carry derivation for
+  legacy schema-v1 acknowledged GOs (and the R-4 listing) applies the same deferral, so a legacy pre_fs GO that
+  acknowledged #12/#13 is not silently dropped.
+- **Enforce guard** (`carriedWithoutDataSource()`, startup check, `kill_enforce_unsafe`) now also lists
+  criteria reached at their own opportunity gate whose variables are not in `OPPORTUNITY_SCOPE_VARS`
+  (`kind: reached_at_own_gate`), not only carried ones. Against the real registry the list is now exactly
+  #9 `deal-shape-chain:no_viable_deal_shape` (`dealshape.viable_shapes` @ `pre_fs`); the four carried
+  offenders are cleared. Enforce stays refused until #9 has an opportunity-scope source.
+- **Two filler defects found and fixed because the re-scope makes them reachable at the first project gate**
+  (`db/lib/snapshot-filler.ts` 1.10.0): `fin.wacc_source_status` read only the gate-evaluation run's own
+  assumptions (that run is created empty), so it was always missing at a project gate; it now falls back to the
+  project's confirmed rate state through `resolveWaccConfirmation` (no session stays missing/unassessed, never a
+  silent pass). `infra.sites_clearing_minimums` queried non-existent `*_sufficient` columns and would throw as soon
+  as one `site_candidate` row existed; it now uses the real four-flag columns. The S1-S12 demo seed
+  (`seed-s1-s12-demo.ts` 1.15.1) adds one clearing `site_candidate` so the greenfield demo can pass fs.
+- **Open, not implemented here**: #9 source (a deal-shape record keyed at opportunity scope, read directly,
+  never derived from scores or drafts; a new table or column needs its own ADR); #5 point-in-time predicate
+  (site-announcement event and plan effective date, ADR required; the caveat and `test.todo` stay, §14.3);
+  O-4 preliminary market-level HHI source for #8 (may re-point #8 to `target_screening` later, ADR-tracked).

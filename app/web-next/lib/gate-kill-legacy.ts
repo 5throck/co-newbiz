@@ -9,7 +9,7 @@ import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
 import { stageIndex } from "../../../packages/core-scoring/src/kill-criteria.ts";
 import { loadKillCriteriaRegistry } from "./ic-review-steps.ts";
-import { GATE_LAST_STAGE } from "./gate-kill-scope.ts";
+import { GATE_LAST_STAGE, deferredToLaterGate } from "./gate-kill-scope.ts";
 
 export interface LegacyKillAckRow {
   decision_id: string;
@@ -55,7 +55,7 @@ export function listLegacyScreeningKillAcks(db: Database = getDb()): LegacyKillA
       out.push({
         decision_id: r.decision_id, entity_type: r.entity_type, entity_id: r.entity_id, entity_name: name, gate: r.gate, decided_by: r.decided_by, decided_at: r.decided_at,
         key: a.key, reason: a.reason, evaluable_from: entry?.evaluable_from ?? null, reevaluate_at: entry?.reevaluate_at ?? null,
-        implicit_carry: !!entry?.evaluable_from && !!nominal && stageIndex(entry.evaluable_from) > stageIndex(nominal),
+        implicit_carry: !!entry?.evaluable_from && !!nominal && (stageIndex(entry.evaluable_from) > stageIndex(nominal) || deferredToLaterGate(entry.reevaluate_at, r.gate)),
       });
     }
   }

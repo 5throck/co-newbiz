@@ -15,6 +15,6 @@
   "thresholds_source": "docs/decisions/2026-08-24-class-c-decisions.md (gd-0024-class-c-decisions); var seeded by migration 0027 per ADR-0064 + wacc_hurdle_still_assumed wording (ADR-0060)",
   "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Same condition also declared in brownfield-pre-fs (separate registry entry). Classification (ADR-0060): class (iii) — no snapshot var; proposed: fin.wacc_source_status (sourced|assumed) — twin of the brownfield-pre-fs entry, same proposed var. ADR-0064 arms this (twin of the brownfield entry): same fin.wacc_source_status semantics — any kind='assumed' triggers; unsessioned stays UNASSESSED.",
   "evaluable_from": "S4",
-  "reevaluate_at": "pre_fs",
-  "evaluable_from_evidence": "fin.wacc_source_status <- assumption wacc/hurdle_irr; S4 wacc-hurdle-confirmation activity"
+  "reevaluate_at": "fs",
+  "evaluable_from_evidence": "fin.wacc_source_status <- assumption wacc/hurdle_irr; S4 wacc-hurdle-confirmation activity; project-scoped source; re-evaluated at fs, the first project gate (ADR-0193 §14.1); the fs WACC block (ADR-0186 D8) re-tests it at project scope"
 }

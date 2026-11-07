@@ -115,19 +115,32 @@ describe("the real registry (44 entries)", () => {
       expect(at(`pmi-integration-execution__${k}`)).toMatchObject({ evaluable_from: "S12", reevaluate_at: "open_monitoring" });
     // #9 single gate pre_fs (C-2)
     expect(at("deal-shape-chain__no_viable_deal_shape")).toMatchObject({ evaluable_from: "S4", reevaluate_at: "pre_fs" });
-    // #6/#10/#11 partner criteria at S5 (Q3)
+    // #6/#10/#11 partner criteria at S5 (Q3); re-scoped to fs by ruling 14.1/14.2 (project-scoped sources, no proxy)
     for (const k of ["greenfield-screening__partner_dependency_unconfirmed_and_no_alternative", "deal-shape-chain__partner_dd_red_financial_distress", "deal-shape-chain__partner_dd_red_ip_chain"])
-      expect(at(k)).toMatchObject({ evaluable_from: "S5", reevaluate_at: "pre_fs" });
+      expect(at(k)).toMatchObject({ evaluable_from: "S5", reevaluate_at: "fs" });
     expect(at("brownfield-dd__partner_dependency_unconfirmed_and_no_alternative")).toMatchObject({ evaluable_from: "S9", reevaluate_at: "dd" });
-    // the five S3 screening acks the design moves to not_reached
+    // the S3 screening acks the design moves to not_reached; #4/#5/#6/#8 re-scoped to fs (ruling 14.1), #7 keeps pre_fs (opportunity-scope source)
     const five: Array<[string, string, string]> = [
       ["brownfield-screening__no_viable_target_in_longlist", "S6", "pre_fs"],
-      ["brownfield-screening__preliminary_hhi_flags_certain_block", "S7", "target_screening"],
-      ["greenfield-screening__zero_site_clears_infrastructure_minimums", "S5", "pre_fs"],
-      ["greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement", "S5", "pre_fs"],
-      ["greenfield-screening__partner_dependency_unconfirmed_and_no_alternative", "S5", "pre_fs"],
+      ["brownfield-screening__preliminary_hhi_flags_certain_block", "S7", "fs"],
+      ["greenfield-screening__zero_site_clears_infrastructure_minimums", "S5", "fs"],
+      ["greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement", "S5", "fs"],
+      ["greenfield-screening__partner_dependency_unconfirmed_and_no_alternative", "S5", "fs"],
     ];
     for (const [k, from, to] of five) expect(at(k)).toMatchObject({ evaluable_from: from, reevaluate_at: to });
+    // ruling 14.1 RESCOPE-2: #12/#13 (project-scoped wacc / certification sources) are re-evaluated at fs, evaluable_from unchanged; #9 stays at pre_fs
+    for (const t of ["greenfield", "brownfield"]) {
+      expect(at(`${t}-pre-fs__wacc_hurdle_still_assumed`)).toMatchObject({ evaluable_from: "S4", reevaluate_at: "fs" });
+      expect(at(`${t}-pre-fs__certification_transferability_unconfirmed_and_load_bearing`)).toMatchObject({ evaluable_from: "S4", reevaluate_at: "fs" });
+    }
+    // every re-scoped entry says why (project-scoped source, first project gate fs)
+    for (const k of [
+      "greenfield-screening__zero_site_clears_infrastructure_minimums", "greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
+      "greenfield-screening__partner_dependency_unconfirmed_and_no_alternative", "brownfield-screening__preliminary_hhi_flags_certain_block",
+      "deal-shape-chain__partner_dd_red_financial_distress", "deal-shape-chain__partner_dd_red_ip_chain",
+      "greenfield-pre-fs__wacc_hurdle_still_assumed", "brownfield-pre-fs__wacc_hurdle_still_assumed",
+      "greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing", "brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
+    ]) expect(String(at(k).evaluable_from_evidence)).toMatch(/project-scoped source.*fs, the first project gate|deferred to fs, the first project gate/);
     // S3-reached criteria stay at the screening gate (no ack lost)
     for (const k of ["market_structurally_unattractive", "data_confidence_not_judgeable", "strategic_fit_knock_out_failed"])
       for (const t of ["greenfield", "brownfield"]) expect(at(`${t}-screening__${k}`)).toMatchObject({ evaluable_from: "S3", reevaluate_at: "screening" });

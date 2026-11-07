@@ -269,7 +269,8 @@ describe("GET gate-snapshot", () => {
     // ADR-0193: the project-scoped criteria cannot be assessed at S3; they are information only, each with its re-evaluation gate - never a silent pass, never a meaningless acknowledgement
     expect(d.snapshot.kill.unassessed).toEqual([]);
     expect(d.snapshot.kill.not_reached.length).toBeGreaterThan(0);
-    expect(d.snapshot.kill.not_reached.every((n: any) => n.reevaluate_at === "pre_fs")).toBe(true);
+    // ADR-0193 section 14.1: #4/#5/#6 read project-scoped sources, so they are re-evaluated at fs (the first project gate)
+    expect(d.snapshot.kill.not_reached.every((n: any) => n.reevaluate_at === "fs")).toBe(true);
     expect(d.snapshot.required_acks).toEqual([]);
     expect(d.snapshot.kill.eval_run_id).toBeNull();
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation")).toBe(before);
