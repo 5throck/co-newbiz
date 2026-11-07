@@ -21,7 +21,13 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.18.1"
+  version: "2.19.0"
+  # v2.19.0 - ADR-0193 (kill-criteria stage scoping; owner decision 2026-11-07):
+  #   the dd gate now lists pmi-integration-execution__clean_team_protocol_breach
+  #   in killCriteriaRegistry. A clean-team breach can occur from S9 DD, so the
+  #   criterion is bound where it becomes evaluable (registry evaluable_from S9,
+  #   reevaluate_at dd) instead of only at S12. S12 keeps the entry for post-close
+  #   monitoring. No stage, track or artifact changes.
   # v2.18.1 - S3 requiredArtifacts[1] label renamed "전략적 적합성 판단" ->
   #   "시너지 점수 확정·근거 (전략적 적합성 판단)" to match ADR-0192 (the confirmed
   #   synergy score + rationale IS the fit judgement). Blocker key
@@ -373,6 +379,7 @@ gates:
       - brownfield-dd__certification_transferability_computed_by_inference_not_confirmation
       - brownfield-dd__covenant_breach_with_coc_acceleration_under_downside
       - brownfield-dd__partner_dependency_unconfirmed_and_no_alternative
+      - pmi-integration-execution__clean_team_protocol_breach
     fundingDecision: 투자심의 자료 작성 자원 배정
   - id: entity_ic
     name: 법인 투자심의위원회

@@ -110,7 +110,7 @@ describe("i18n (processBlockers.*)", () => {
 
 describe("flow.spec 2.16.0 blockers declaration", () => {
   test("version and shape: every stage declares blockers; indices are in range; keys carry the stage prefix", () => {
-    expect(spec.meta.version).toBe("2.18.1"); // 2.18.1: S3 fit-judgement artifact label renamed per ADR-0192 (keys unchanged)
+    expect(spec.meta.version).toBe("2.19.0"); // 2.19.0: dd gate binds pmi clean-team breach (ADR-0193); 2.18.1: S3 fit-judgement artifact label renamed per ADR-0192 (keys unchanged)
     for (const s of spec.stages) {
       expect(Array.isArray(s.blockers) && s.blockers.length > 0).toBe(true);
       for (const b of s.blockers) {

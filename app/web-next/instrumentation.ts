@@ -20,6 +20,13 @@ export async function register() {
     // best-effort — lazy loaders remain as fallback
   }
 
+  // ADR-0193 (risk-officer B): fail closed - the server does not start with kill_binding=enforce while a carried kill criterion
+  // has no data source at its re-evaluation scope. Deliberately NOT best-effort: a refused configuration must be visible.
+  {
+    const { assertKillEnforceSafe } = await import("./lib/gate-snapshot.ts");
+    assertKillEnforceSafe();
+  }
+
   // Production hardening hint (never throws, never blocks boot): warn once per
   // process when the public origin is unset or malformed.
   try {

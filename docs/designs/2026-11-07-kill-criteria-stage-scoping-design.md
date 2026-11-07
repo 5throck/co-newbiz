@@ -1,7 +1,7 @@
 ---
 title: Kill-criteria stage scoping for gate acknowledgements
 date: 2026-11-07
-status: Approved (ADR-0193 Accepted by the owner 2026-11-07) — owner Q1/Q2 decided 2026-11-07; risk-officer conditions C-1..C-7 incorporated (§12); implementation PR-A (registry data + validator + parity) landed first, PR-B/PR-C pending
+status: Approved (ADR-0193 Accepted by the owner 2026-11-07) — owner Q1/Q2 decided 2026-11-07; risk-officer conditions C-1..C-7 incorporated (§12); PR-A (registry data + validator + parity) and PR-B (engine, flow.spec 2.19.0) implemented; PR-C (UI) pending
 owner: process-governance-manager (functional domain lead)
 reviewers_required: risk-officer (kill-criteria authority), platform-lead (technical AI-2nd), owner (human approval)
 adr: docs/adr/0193-kill-criteria-stage-scoping-evaluable-from.md
@@ -381,3 +381,21 @@ Conditions to add before implementation:
 - **C-7** Test additions: tests for C-1, C-3, and C-4 (HOLD carry, out_of_track closure).
 
 Kill-criteria evaluation status of this design review: no criterion is evaluated here (process change only). Unassessed: n/a.
+
+## 13. PR-B implementation notes (2026-11-07)
+
+- O-2 resolved: `deal-shape-chain` (#9-#11) is listed on and evaluated at `pre_fs` (flow.spec 2.19.0 moved the listing; the opportunity pre_fs procedure set now includes it), matching the registry `reevaluate_at`.
+- #35 is bound to the `dd` gate in flow.spec (owner decision); the engine evaluates the pmi procedure at brownfield `dd` for that one criterion only.
+- S12 criteria (#36, #37) are evaluated by data phase (risk-officer ruling A): before close they are reported `unassessed` with the reason "post-close data not yet available" and stay visible in `carried_in` with closure `open_monitoring` at the IC gates. They are never silently skipped; they need no acknowledgement and cannot hard-block (no gate can obtain post-close data); IC never closes them.
+- The effective current stage is never earlier than the gate's first stage, and an opportunity is capped at S7.
+- Open: the #5 point-in-time predicate (C-6) is not implemented (no site-announcement-date source). Known gap: criteria whose variables are project-scoped (e.g. #4 `infra.sites_clearing_minimums`) cannot be assessed at an opportunity gate, so under `kill_binding=enforce` a carried halt such as #4 hard-blocks the opportunity pre_fs GO (kill_carry_unassessed) until an opportunity-scope source exists or the risk-officer re-points its `reevaluate_at`.
+- Enforce guard (risk-officer ruling B): `kill_binding=enforce` is fail-closed. `carriedWithoutDataSource()` lists carried criteria whose variables the opportunity-scoped source cannot supply at their opportunity `reevaluate_at` gate (today #4, #5, #6, #8). While any exist, the server refuses to start with enforce (instrumentation startup check), the snapshot carries hard block `kill_enforce_unsafe` and a GO is refused 409 (HOLD/KILL never). The unit-test environment bypasses it unless `CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST=on`.
+- Caveat on #5 (condition C): any snapshot that evaluates #5 carries `kill.caveats` "evaluated on gate-date state, not site-announcement date (ADR-0193 C-6 pending): not clean evidence". `infra.plan_finalized` is read only by the kill predicate (snapshot filler); no RAG rule or the data-confidence grade consumes kill outcomes or this variable, so there is no path by which #5 counts toward a GREEN data-confidence grade - the caveat keeps it from reading as clean evidence at the human surface.
+- Scheduled items (condition D): at Screening, `deal-shape-chain` (#9-#11) is listed in `kill.scheduled` as pending with `reevaluate_at` pre_fs, not absent.
+- IC package (condition E): `GET /api/projects/{id}/ic-package` returns `kill_carries {gate, open[], open_monitoring[]}` naming each carried criterion that is evaluated but still unassessed (closure `open`) and each S12 criterion that stays open_monitoring; null means not computable, never "none".
+
+### Follow-ups (ticket ids are placeholders until filed)
+
+- FOLLOWUP-ADR0193-C6: a data source for #5's site-announcement date (evidence_var + migration; ADR trigger) so `infra.plan_finalized` can be read as of that date; keeps the `test.todo` in `tests/unit/kill-criteria-carry.test.ts` and the #5 caveat until it lands.
+- FOLLOWUP-ADR0193-RESCOPE: re-scope `reevaluate_at` to `fs` for #4, #5, #6 and #8 (their variables are project-scoped and do not exist at opportunity gates) - risk-officer decision; clears the enforce guard.
+- FOLLOWUP-ADR0193-OPPSRC: opportunity-scope sources for the parts of #10/#11 that need them (no proxy sources).

@@ -11,6 +11,7 @@
 // derived AI PROPOSAL, performed as the calling user (boundary #1).
 // Deny-by-default: getProjectIfVisible via visibleProject — non-members get
 // 404 (FR-SEC-01); admins are excluded by role separation.
+import { previewGateSnapshot } from "../../../../../lib/gate-snapshot.ts";
 import { reconfirmNotice } from "../../../../../lib/reconfirm.ts";
 import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { getDb } from "../../../../../../../db/client.ts";
@@ -102,9 +103,31 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
     )
     .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; decided_by: string; decided_at: string }>;
 
+  // ADR-0193 (risk-officer E): carried kill criteria that were evaluated but are still unassessed (closure "open"), and the S12
+  // criteria that stay open_monitoring, are listed BY NAME for the committee. Read-only (the preview runs in a rolled-back
+  // transaction); a failure degrades to null, never to an empty-looking list.
+  let killCarries: { gate: string; open: Array<Record<string, unknown>>; open_monitoring: Array<Record<string, unknown>> } | null = null;
+  try {
+    const icGate = latest.get("entity_ic")?.decision === "go" ? "group_ic" : "entity_ic";
+    const { snapshot } = previewGateSnapshot({ entityType: "project", entityId: id, gate: icGate, actor: auth.auth.userId, db });
+    const pick = (c: (typeof snapshot.kill.carried_in)[number]) => ({
+      key: c.key, title: c.title, action: c.action, outcome: c.outcome, closure: c.closure, reason: c.reason,
+      evaluable_from: c.evaluable_from, reevaluate_at: c.reevaluate_at, from_decision_id: c.from_decision_id,
+    });
+    killCarries = {
+      gate: icGate,
+      open: snapshot.kill.carried_in.filter((c) => c.closure === "open").map(pick),
+      open_monitoring: snapshot.kill.carried_in.filter((c) => c.closure === "open_monitoring").map(pick),
+    };
+  } catch (err) {
+    console.error(`ic-package: kill carries unavailable for ${id}: ${(err as Error).message}`);
+  }
+
   return ok(
     {
       project: { id: project.id, project_no: project.project_no },
+      // ADR-0193: carried kill criteria still open at the IC gate, listed by name; null = could not be computed (not "none").
+      kill_carries: killCarries,
       // ADR-0186 D8: display contract - "provisional discount rate" until subject, WACC and hurdle are user-confirmed.
       wacc_status: waccStatusView(id, db),
       // ADR-0186 O-6: non-blocking notice while the legacy record awaits re-confirmation.

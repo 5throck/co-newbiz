@@ -23,7 +23,7 @@ const INVENTORY: Record<string, { disposition: Disposition; note: string }> = {
   // ── effective ──
   "app/web-next/lib/process-flow.ts": { disposition: "effective", note: "latestGateDecisions is the maker/checker-aware reader (S11, pipeline, deal overview, gate aging, inbox blockers); the recorder-identity query for the human-final rule stays raw by design" },
   "app/web-next/lib/gate-ladder.ts": { disposition: "effective", note: "ladderBlock over latestGateDecisions (P1 TODO resolved)" },
-  "app/web-next/lib/gate-snapshot.ts": { disposition: "effective", note: "snapshot ladder section reports prior_awaiting_countersign via countersignState" },
+  "app/web-next/lib/gate-snapshot.ts": { disposition: "effective", note: "snapshot ladder section reports prior_awaiting_countersign via countersignState; the ADR-0193 carry derivation (loadCarryContext) deliberately reads every recorded non-stale decision of the lineage raw - a carry is a fact about what a decision recorded, GO, conditional GO or HOLD, whatever its countersign state" },
   "app/web-next/lib/ic-review-steps.ts": { disposition: "effective", note: "IC review step view over latestGateDecisions" },
   "app/web-next/lib/gate-brief.ts": { disposition: "effective", note: "prior-gate context labels an IC GO awaiting its countersign" },
   "app/web-next/app/api/projects/[id]/ic-package/route.ts": { disposition: "effective", note: "gates.latest carries decision (effective), recorded_decision, awaiting_countersign, countersign_state; conditions listed" },
@@ -53,6 +53,7 @@ const INVENTORY: Record<string, { disposition: Disposition; note: string }> = {
   "db/repositories/gate-snapshot.repository.ts": { disposition: "n/a", note: "snapshot FK guard" },
   "db/repositories/project.repository.ts": { disposition: "n/a", note: "opportunity promotion preconditions" },
   "app/web-next/lib/reconfirm.ts": { disposition: "effective", note: "ic_countersign item uses latestProjectDecision + countersignState; the clearer-is-maker rule reads recorded IC deciders (identity lookup)" },
+  "app/web-next/lib/gate-kill-legacy.ts": { disposition: "raw", note: "ADR-0193 R-4 one-time listing of legacy recorded Screening acknowledgements (what was recorded, read-only)" },
   "app/web-next/lib/gate-integrity-kpis.ts": { disposition: "raw", note: "G1/G2/G5 count recorded decisions and snapshots (what was recorded, not its effectiveness); G7 reports pending countersigns separately" },
   // ── offline operator scripts ──
   "scripts/co-newbiz/gate-integrity-shadow-report.ts": { disposition: "offline", note: "read-only shadow review report (readiness counts)" },

@@ -14,7 +14,7 @@ import { insertKillOverride, KillOverrideError, listKillOverrides, revokeKillOve
 import { authenticate, requireBusinessActor } from "./auth.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "./envelope.ts";
 import { grantFailure, humanSessionDenied, rateLimited, recordRefusal, type IntegrityFailure } from "./gate-integrity.ts";
-import { OPPORTUNITY_PROCEDURES } from "./gate-snapshot.ts";
+import { OPPORTUNITY_PROCEDURES, PMI_PROCEDURE } from "./gate-snapshot.ts";
 import { applicableKillProcedures, loadKillCriteriaRegistry } from "./ic-review-steps.ts";
 import type { LadderTrack } from "./gate-sequence-view.ts";
 import { visibleProject } from "./project-visibility.ts";
@@ -24,13 +24,25 @@ export type OverrideEntity = "opportunity" | "project";
 export const KILL_OVERRIDE_ROLES = ["group-ic-reviewer"] as const;
 
 /** Procedures whose kill criteria a gate of this entity evaluates. */
-function procedureUniverse(db: Database, entityType: OverrideEntity, entityId: string): string[] {
-  if (entityType === "project") return applicableKillProcedures(db, entityId);
+function opportunityUniverse(): Set<string> {
   const set = new Set<string>();
   for (const track of [null, "greenfield", "brownfield"] as Array<LadderTrack | null>) {
     for (const gate of Object.keys(OPPORTUNITY_PROCEDURES)) for (const p of OPPORTUNITY_PROCEDURES[gate](track)) set.add(p);
   }
-  return [...set];
+  return set;
+}
+
+function procedureUniverse(db: Database, entityType: OverrideEntity, entityId: string): string[] {
+  if (entityType === "project") {
+    // ADR-0193: a project gate also evaluates the criteria CARRIED from the opportunity gates (and the pmi clean-team criterion
+    // from dd), so a triggered halt among them is overridable on the project like any other binding criterion.
+    const set = new Set<string>(applicableKillProcedures(db, entityId));
+    const linked = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(entityId) as { source_opportunity_id: string | null } | null;
+    if (linked?.source_opportunity_id) for (const p of opportunityUniverse()) set.add(p);
+    set.add(PMI_PROCEDURE);
+    return [...set];
+  }
+  return [...opportunityUniverse()];
 }
 
 function entityVisible(ctxAuth: Parameters<typeof visibleProject>[0], entityType: OverrideEntity, entityId: string): boolean {
