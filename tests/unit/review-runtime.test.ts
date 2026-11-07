@@ -21,7 +21,9 @@ const { runAiFirstChecks } = await import("../../app/web-next/lib/review/ai-firs
 const { runAiSecond, parseAi2ndOutput, monthlyTokenCap, buildAi2ndMessages } = await import(
   "../../app/web-next/lib/review/ai-second.ts"
 );
-const { runAiFirst, runReview, getReviewView, resolveArtifact } = await import("../../app/web-next/lib/review/engine.ts");
+const { runAiFirst, runReview, getReviewView, resolveArtifact } = await import(
+  "../../app/web-next/lib/review/engine.ts"
+);
 const { handleReview } = await import("../../app/web-next/lib/review/http.ts");
 const { selectReviewer, agentDomain } = await import("../../app/web-next/lib/review/domains.ts");
 const { loadStageActivities } = await import("../../app/web-next/lib/spec-activities.ts");
