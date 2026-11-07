@@ -12,5 +12,8 @@
   "enabled": true,
   "policy_id": "DEC-20261027-01",
   "thresholds_source": "docs/adr/0186-gate-integrity.md D3 (Accepted): fin.targets_meeting_hurdle = number of shortlisted targets whose gate-primary base-case point-estimate IRR (deterministic-cashflow IRR on the base p50 row, not a quantile) is at least the user-confirmed hurdle IRR; hurdle not user-confirmed or no comparative run gives UNASSESSED; var seeded by migration 0178; threshold < 1 is the criterion wording itself",
-  "notes": "Activated by ADR-0186 P4 after D8 (hurdle confirmation). Escalate-to-risk-officer is the kill-path: when every shortlisted target fails the base-scenario hurdle, the initiative cannot proceed to target selection or DD."
+  "notes": "Activated by ADR-0186 P4 after D8 (hurdle confirmation). Escalate-to-risk-officer is the kill-path: when every shortlisted target fails the base-scenario hurdle, the initiative cannot proceed to target selection or DD.",
+  "evaluable_from": "S8",
+  "reevaluate_at": "fs",
+  "evaluable_from_evidence": "fin.targets_meeting_hurdle; S8 target comparison"
 }

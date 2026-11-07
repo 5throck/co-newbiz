@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": "Declared in procedures/_shared/brownfield-target-screening/schema.yaml kill_criteria (S7, chk-target-screening ADR-0081); activation awaits the screening-result var round per ADR-0060 §3",
-  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Halt is the kill-path: when every candidate fails a non-waivable knock-out, the opportunity cannot proceed to Short List."
+  "notes": "Declared in YAML, not yet executable — predicate null by design (activation convention per ADR-0057). Halt is the kill-path: when every candidate fails a non-waivable knock-out, the opportunity cannot proceed to Short List.",
+  "evaluable_from": "S7",
+  "reevaluate_at": "target_screening",
+  "evaluable_from_evidence": "S7 target-screening activity (inert, no predicate)"
 }

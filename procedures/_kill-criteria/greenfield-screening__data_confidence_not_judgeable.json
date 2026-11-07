@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). ADR-0187 phase P2 (finding M4): mirrors the flow.spec Screening-gate killCriteria summary line; until a predicate over existing evidence variables is decided by risk-officer + quant-methodologist, the gate reviewers judge it."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). ADR-0187 phase P2 (finding M4): mirrors the flow.spec Screening-gate killCriteria summary line; until a predicate over existing evidence variables is decided by risk-officer + quant-methodologist, the gate reviewers judge it.",
+  "evaluable_from": "S3",
+  "reevaluate_at": "screening",
+  "evaluable_from_evidence": "proxy-chain data confidence is available from S1/S3 (inert, no predicate)"
 }

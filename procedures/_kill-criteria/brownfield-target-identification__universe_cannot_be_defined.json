@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": "Declared in procedures/_shared/brownfield-target-identification/schema.yaml kill_criteria (S6, ADR-0076 track separation); activation awaits the S6 routing-var round per ADR-0060 §3",
-  "notes": "Declared in YAML, not yet executable — predicate null by design until the universe-selection vars exist (activation convention per ADR-0057). Routing back to S4 reopens the route choice (ADR-0052 §A vocabulary)."
+  "notes": "Declared in YAML, not yet executable — predicate null by design until the universe-selection vars exist (activation convention per ADR-0057). Routing back to S4 reopens the route choice (ADR-0052 §A vocabulary).",
+  "evaluable_from": "S6",
+  "reevaluate_at": "pre_fs",
+  "evaluable_from_evidence": "target universe definition at S6 (inert, no predicate)"
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 4.0.0
+// @version 4.1.0
 /**
  * Process SSOT validators (ADR-0187 phase P1, design
  * docs/designs/2026-10-27-process-ssot-decision-evidence-design.md section 4.6).
@@ -37,6 +37,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { load as yamlLoad } from "js-yaml";
 import { evaluatePredicate, type Predicate, type VarSnapshot } from "../../packages/core-scoring/src/predicate.ts";
+import { checkReevaluateBinding, flowShapeFromSpec } from "../../packages/core-scoring/src/kill-criteria.ts";
 import { BLOCKER_LABELS } from "../../app/web-next/lib/process-blocker-keys.ts";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -96,6 +97,8 @@ export interface SpecStage {
   /** requiredArtifacts indices the engine deliberately does not block on. */
   nonBlockingArtifacts?: number[];
   killCriteriaRegistry?: string[];
+  /** Gates this stage hosts (ADR-0193 reads them to bind `reevaluate_at` to a stage). */
+  gates?: string[];
 }
 export interface SpecGate {
   id: string;
@@ -475,6 +478,13 @@ export function checkKillRegistryParity(input: {
   policyKoKeys?: string[];
   /** Section-4 table rows that say a criterion has no registry entry yet. */
   policyGapRows?: string[];
+  /**
+   * ADR-0193: per registry key, its declared stage scoping, checked against flow.spec -
+   * `reevaluate_at` names a gate that exists and whose stage is not earlier than `evaluable_from`.
+   * Omitted by callers that predate the field (the registry validator reports missing fields).
+   */
+  registryScoping?: Array<{ key: string; evaluable_from?: string; reevaluate_at?: string }>;
+  spec?: FlowSpec;
 }): Finding[] {
   const check: CheckId = "check-kill-registry-parity";
   const findings: Finding[] = [];
@@ -497,6 +507,16 @@ export function checkKillRegistryParity(input: {
   }
   for (const row of input.policyGapRows ?? [])
     findings.push({ check, message: `neb-policy section 4 row states a criterion with no registry entry: ${row}` });
+  if (input.registryScoping && input.spec) {
+    const flow = flowShapeFromSpec(input.spec);
+    for (const r of input.registryScoping) {
+      if (!r.evaluable_from || !r.reevaluate_at) {
+        findings.push({ check, message: `registry entry '${r.key}' lacks evaluable_from / reevaluate_at (ADR-0193)` });
+        continue;
+      }
+      for (const problem of checkReevaluateBinding(r, flow)) findings.push({ check, message: `registry entry '${r.key}': ${problem} (ADR-0193)` });
+    }
+  }
   if (input.policyKoKeys) {
     const en = new Set(input.policyKeys);
     const ko = new Set(input.policyKoKeys);
@@ -910,8 +930,14 @@ export function runAll(only?: CheckId): Finding[] {
       .map((f) => basename(f, ".json"))
       .sort();
     const koPath = join(ROOT, "policies", "group", "neb-policy_ko.md");
+    const registryScoping = registryKeys.map((key) => {
+      const e = JSON.parse(readFileSync(join(ROOT, "procedures", "_kill-criteria", `${key}.json`), "utf8")) as { evaluable_from?: string; reevaluate_at?: string };
+      return { key, evaluable_from: e.evaluable_from, reevaluate_at: e.reevaluate_at };
+    });
     findings.push(
       ...checkKillRegistryParity({
+        registryScoping,
+        spec,
         registryKeys,
         specKeys: specKillKeys(spec),
         policyKeys: policySectionKeys(read("policies/group/neb-policy.md")),

@@ -12,5 +12,8 @@
   "enabled": true,
   "policy_id": "gd-0024-class-c-decisions",
   "thresholds_source": "docs/decisions/2026-08-24-evidence-source-backlog-disposition.md (round 4) + ADR-0060 row wording; surfaces via migration 0031 — threshold by criterion wording (ADR-0060)",
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: screening.viable_targets (count) — the 'viable' screen is also pending. ADR-0067 arms this: screening.viable_targets counts knock_out_passed=1 rows on the longlist; rows-present-but-zero-viable IS the halt finding, empty list stays UNASSESSED."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). Classification (ADR-0060): class (iii) — no snapshot var; proposed: screening.viable_targets (count) — the 'viable' screen is also pending. ADR-0067 arms this: screening.viable_targets counts knock_out_passed=1 rows on the longlist; rows-present-but-zero-viable IS the halt finding, empty list stays UNASSESSED.",
+  "evaluable_from": "S6",
+  "reevaluate_at": "pre_fs",
+  "evaluable_from_evidence": "screening.viable_targets <- brownfield_target longlist (flow.spec S6, gate pre_fs)"
 }

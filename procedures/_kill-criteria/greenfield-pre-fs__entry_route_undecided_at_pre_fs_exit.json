@@ -7,5 +7,8 @@
   "enabled": false,
   "policy_id": null,
   "thresholds_source": null,
-  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). ADR-0187 phase P2 (finding M4): mirrors the flow.spec Pre-FS killCriteria summary line ('route undecided'); the route decision is a human route_decision record (boundary #2), so the gate reviewers judge it until a predicate is decided."
+  "notes": "declared in YAML, not yet executable — predicate null by design until thresholds are set (design Decision 8). ADR-0187 phase P2 (finding M4): mirrors the flow.spec Pre-FS killCriteria summary line ('route undecided'); the route decision is a human route_decision record (boundary #2), so the gate reviewers judge it until a predicate is decided.",
+  "evaluable_from": "S4",
+  "reevaluate_at": "pre_fs",
+  "evaluable_from_evidence": "route decision at S4 (inert, no predicate)"
 }

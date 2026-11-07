@@ -46,6 +46,33 @@ procedure, so the file prefix disambiguates):
   a missing `policy_id` or `thresholds_source` is a validation **error** —
   and the runtime loader (below) rejects the same shape at evaluation time.
 
+## Stage scoping fields (ADR-0193)
+
+Every entry also declares **when** the criterion can be asked of a human:
+
+```json
+"evaluable_from": "S6",
+"reevaluate_at": "pre_fs",
+"evaluable_from_evidence": "screening.viable_targets <- brownfield_target longlist (flow.spec S6, gate pre_fs)"
+```
+
+- `evaluable_from` — flow stage `S1`–`S12` from which the criterion's evidence can exist. A governance
+  choice (when the team expects the evidence), **not** derived from the variable registry; the var->stage
+  map (`db/lib/kill-var-stages.ts`) only guards against declaring a stage earlier than the data can exist.
+- `reevaluate_at` — exactly **one** gate id (a `gates[].id` of `process/flow.spec.yaml`) at which the
+  criterion becomes binding; compound values (`a|b`, `a,b`, `a or b`) are rejected (risk-officer C-2).
+  The literal `open_monitoring` is reserved for S12 criteria that no gate closes: they leave IC as
+  carries and close only by a recorded human decision on the S12 monitoring surface (C-6).
+- `evaluable_from_evidence` — free-text pointer to the variable source / flow.spec activity (non-empty
+  when present).
+
+PR-A (this change) is data + validation only: the snapshot classifier that turns a not-yet-evaluable
+criterion into `not_reached` and the carry/hard-block engine are PR-B (design
+`docs/designs/2026-11-07-kill-criteria-stage-scoping-design.md` §10). A triggered result is never
+scoped away, and a deferral is never a drop: the carry must be evaluated at `reevaluate_at`.
+Changing these fields on an existing entry is a `procedures/**` change (policy impact analysis +
+`project_policy_pin` check, ADR-tracked).
+
 ## What `_validate.ts` checks
 
 - every YAML-declared criterion must have a registry entry (missing →
@@ -56,6 +83,13 @@ procedure, so the file prefix disambiguates):
   (anti-tamper, meeting 2026-08-22 classification-practice #6c);
 - a registry entry referencing a procedure/criterion that no YAML
   declares → error (orphan);
+- (f) ADR-0193 stage scoping: `evaluable_from` and `reevaluate_at` are required on every entry
+  (error if missing); `evaluable_from` must be a known stage S1–S12; `reevaluate_at` must be a single
+  gate id that exists in flow.spec and whose (last hosting) stage is not earlier than `evaluable_from`
+  (`open_monitoring` only with S12); `evaluable_from` must not be earlier than the var->stage map
+  minimum for any variable the predicate reads, and a predicate variable missing from the map is an
+  error. `scripts/co-newbiz/process-ssot-check.ts` (`check-kill-registry-parity`) repeats the
+  gate/stage binding against flow.spec;
 - `--strict`: executable count (non-null predicates / total) compared
   against `_baseline.json` — a drop below baseline **fails the gate**
   (risk-officer F7: ratio regressions must break the gate, not hide in a
@@ -146,6 +180,7 @@ exactly this reason).
 
 - `procedures/_validate.ts` — enforcement
 - `db/lib/kill-criteria.ts` — the runtime evaluator (ADR-0057)
+- `db/lib/kill-var-stages.ts` + `packages/core-scoring/src/kill-criteria.ts` (`checkStageScopingFields`, `checkReevaluateBinding`) — ADR-0193 stage-scoping checks
 - `db/repositories/kill-criteria.repository.ts` — the evaluation recorder (`recordKillCriteriaEvaluation`) + gate-flow reader (`getRecordedEvaluation`), `kill_criteria_evaluation` (ADR-0058 §1)
 - `scripts/co-newbiz/proc-resolve.ts` — merged `kill_criteria` in resolved
   procedures (union semantics: shared list first, layer additions appended,
