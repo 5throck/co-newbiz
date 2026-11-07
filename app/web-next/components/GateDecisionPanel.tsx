@@ -745,6 +745,7 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
                 decision={form.decision}
                 notice={staleNotice}
                 projectId={entityType === "project" ? opportunityId : undefined}
+                dealId={opportunityId}
                 divergence={divergent && aiRec ? { aiRecommended: aiRec, value: divergence, onChange: setDivergence, required: form.decision === "go", problem: divergenceProblem } : null}
               />
             </div>

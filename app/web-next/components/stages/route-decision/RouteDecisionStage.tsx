@@ -20,6 +20,7 @@ import { FactGrid } from "./FactGrid.tsx";
 import { DecisionTab } from "./DecisionTab.tsx";
 import { CompetitiveTab } from "./CompetitiveTab.tsx";
 import { EvalTab } from "./EvalTab.tsx";
+import { DealShapePanel } from "./DealShapePanel.tsx";
 import { useTranslations } from "next-intl";
 
 export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {const t = useTranslations("stages.s4.routeDecisionStage"); const tc = useTranslations("common");
@@ -79,6 +80,9 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
           </p>
         </div>
       )}
+
+      {/* ── 진출 형태 평가 (ADR-0194): 탭 밖 상시 노출 — 게이트 스냅샷의 중단 조건 #9 링크가 이 앵커로 온다. 사람 기록 전용. ── */}
+      <DealShapePanel opportunityId={selected.id} canAct={canAct} />
 
       <Tabs
         label={t("s4DecisionTab")}

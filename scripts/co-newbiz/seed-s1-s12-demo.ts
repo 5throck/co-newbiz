@@ -1,4 +1,4 @@
-// @version 1.15.1
+// @version 1.16.0
 // Idempotent S1→S12 demo chain seeds — BROWNFIELD (seedS1ToS12Demo) and
 // GREENFIELD (seedGreenfieldS1ToS12Demo), one full lifecycle per track.
 //
@@ -13,7 +13,8 @@
 // GOs, a cleared condition precedent, HOLD, KILL with learning capture and a waiver; option gateDecisions:false skips it. v1.13.0 (ADR-0187 P3,
 // M1): every demo funding source carries evidence_kind / evidence_ref, as the S10 funding-evidence check requires. v1.14.0 (ADR-0187 P5, M14): greenfield site / pre-IC permit / incentive-with-clawback
 // evidence (stage_captured, adopted by the S11 baseline by id) and non-pass DD rows (an optional item that fails with its reason, one
-// not-applicable with its note).
+// not-applicable with its note). v1.16.0 (ADR-0194 item A): both demo opportunities carry human-recorded S4 deal-shape verdicts
+// (opportunity_deal_shape_evaluation, one viable + one not viable, each with a rationale) so kill criterion #9 reads clean at pre_fs.
 //
 // Usage:
 //   bun scripts/co-newbiz/seed-s1-s12-demo.ts [--db-path <path>]
@@ -251,6 +252,25 @@ const DEMO_MATRIX: SizingMatrix = {
   },
 };
 
+/** ADR-0194 item A: demo S4 deal-shape verdicts (live rows, written as the demo actor) so #9 reads clean at the opportunity pre_fs gate. */
+function seedDealShapeVerdicts(
+  db: ReturnType<typeof getDb>,
+  idPrefix: string,
+  oppId: string,
+  verdicts: ReadonlyArray<{ shape: string; intent: string; viable: 0 | 1; rationale: string }>,
+  now: string,
+  actor: string,
+): void {
+  for (const v of verdicts) {
+    db.run(
+      `INSERT OR IGNORE INTO opportunity_deal_shape_evaluation
+       (id, opportunity_id, shape, intent, viable, rationale, evidence_ref, evaluated_by, evaluated_at, superseded_by)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL)`,
+      [`${idPrefix}-${v.shape}`, oppId, v.shape, v.intent, v.viable, v.rationale, actor, now],
+    );
+  }
+}
+
 export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { opportunityId: string; projectId: string } {
   const humanDecisions = opts.humanDecisions ?? true;
   const contractOn = humanDecisions && (opts.gateDecisions ?? true);
@@ -402,6 +422,11 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
         ],
       );
     }
+
+    seedDealShapeVerdicts(db, "demo-s1-s12-dealshape", DEMO.oppId, [
+      { shape: "majority_stake", intent: "capability_access", viable: 1, rationale: "S1-S12 demo: 과반 지분 인수가 역량 확보 속도와 통제력 기준을 충족" },
+      { shape: "license_in", intent: "capability_access", viable: 0, rationale: "S1-S12 demo: 라이선스 도입만으로는 핵심 역량 내재화가 어려워 제외" },
+    ], now, actor);
 
     const screeningStates = Object.fromEntries(screeningItems().map((item) => [item.id, "pass"]));
     for (let i = 1; i <= 3; i++) {
@@ -1282,6 +1307,11 @@ export async function seedGreenfieldS1ToS12Demo(
         ],
       );
     }
+
+    seedDealShapeVerdicts(db, "demo-gf-dealshape", GF.oppId, [
+      { shape: "spv", intent: "integration", viable: 1, rationale: "S1-S12 greenfield demo: 신설 SPV가 통제력과 내재화 기준을 충족" },
+      { shape: "joint_venture", intent: "integration", viable: 0, rationale: "S1-S12 greenfield demo: 합작은 통제력 요건에 못 미쳐 제외" },
+    ], now, actor);
 
     // S5 — 역량 격차 평가 + 진출전략 (greenfield 전용 단계의 필수 산출물).
     db.run(
