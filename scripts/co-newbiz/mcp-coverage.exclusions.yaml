@@ -192,6 +192,10 @@ exclusions:
     kind: route
     route: "PATCH /api/projects/{}/waivers/{}"
     reason: A waiver is a human-owned instrument; requests are filed, decisions are human.
+  - id: dimension-input-review
+    kind: route
+    route: "POST /api/projects/{}/dimension-inputs/{}/review"
+    reason: The cross-domain second review of a recorded assertion makes it evidence (reviewed_by gate, Decision 3 boundary #2); it is a different person's act and never an agent's. Agents record assertions only (record_dimension_input).
   - id: dd-tailor-review
     kind: route
     route: "PUT /api/projects/{}/dd-checklist/tailor/{}/review"

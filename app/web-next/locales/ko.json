@@ -2847,7 +2847,8 @@
       "scheduledSummary": "평가 예정 ({count}건)",
       "scheduledChip": "예정",
       "scheduledAt": "{gate} 게이트에서 평가 예정",
-      "dealShapeLink": "진출 형태 평가를 기록하러 가기"
+      "dealShapeLink": "진출 형태 평가를 기록하러 가기",
+      "siteAnnouncementLink": "부지 발표와 인프라 계획 확정을 기록하러 가기"
     },
     "gateIntegrity": {
       "awaiting": "두 번째 검토자 확인 대기",
@@ -3410,9 +3411,7 @@
       "escalate_to_risk_officer": "위험 책임자에게 상신",
       "mark_conditional": "조건부로 표시"
     },
-    "caveats": {
-      "infrastructure_plan_not_finalized_at_site_announcement": "부지 발표일이 아니라 게이트 날짜의 상태로 평가했습니다(보완 예정). 깨끗한 근거로 보지 마세요."
-    }
+    "caveats": {}
   },
   "nav": {
     "admin": {
@@ -5873,6 +5872,123 @@
         "yrKrwMillions": "년, 백만원)",
         "yrUnitKrwMillionsAssumption": "년 · 단위 백만원 · 사람이 확정한 가정 범위(급여",
         "yrUnitKrwMillionsMonthly": "년 · 단위 백만원 · 월·분기 주기 금액은 연 환산(월 x12, 분기 x4)해 활성 연차마다 집계합니다."
+      },
+      "siteAnnouncementPanel": {
+        "title": "부지 발표와 인프라 계획",
+        "lead": "중단 조건 #5(부지를 발표할 때까지 인프라 계획이 확정되지 않음)는 인프라 계획이 확정된 날짜와 가장 이른 부지 발표일을 견줍니다. 두 기록 모두 사람이 직접 적습니다. 이 화면의 판정은 미리보기이고, 게이트에서 스냅샷이 다시 계산해 기록합니다.",
+        "noAiPrefill": "이 화면은 AI 제안이나 날짜를 미리 채우지 않습니다. 양식은 비어 있고, 오늘 날짜도 기본값으로 넣지 않습니다.",
+        "readOnly": "기록과 검토는 분석가 역할만 할 수 있습니다. 이 화면에서는 기록된 내용을 볼 수만 있습니다.",
+        "opensNewTab": "(새 탭에서 열림)",
+        "reviewed": "검토됨",
+        "reviewPending": "검토 대기",
+        "loadError": {
+          "viewer": "기록을 볼 권한이 없습니다.",
+          "admin": "관리자 역할은 사업 내용을 볼 수 없습니다. 사업 참여 권한이 있는 계정으로 확인하세요.",
+          "notFound": "이 사업을 찾을 수 없습니다.",
+          "other": "부지 발표·인프라 계획 기록을 불러오지 못했습니다. 새로고침한 뒤 다시 시도하세요."
+        },
+        "statusUnassessed": "평가 전 — 아직 없는 것: {missing}. 중단 조건 #5는 평가 전으로 남습니다.",
+        "statusClean": "계획 확정일({plan})이 부지 발표 기준일({announced}) 이전이거나 같은 날입니다 — 중단 조건 #5에 해당하지 않습니다.",
+        "statusTriggeredAfter": "계획 확정일({plan})이 부지 발표 기준일({announced})보다 늦습니다 — 중단 조건 #5에 해당합니다(조건부 표시).",
+        "statusTriggeredNotFinalized": "부지 발표 기준일({announced})까지 인프라 계획이 확정되지 않았습니다 — 중단 조건 #5에 해당합니다(조건부 표시).",
+        "missing": {
+          "announcement": "부지 발표 기록",
+          "plan": "인프라 계획 기록",
+          "review": "인프라 계획 기록의 다른 사람 검토",
+          "effectiveOn": "확정된 계획 문서의 날짜"
+        },
+        "kind": {
+          "board_resolution": "이사회 의결",
+          "public_announcement": "공개 발표",
+          "mou_signing": "양해각서(MOU) 체결",
+          "regulatory_filing": "규제 당국 제출"
+        },
+        "announceTitle": "부지 발표",
+        "announceLead": "부지를 처음 알린 사건을 종류별로 기록합니다. 같은 종류를 다시 기록하면 그 종류의 정정이 되고, 다른 종류는 별개 사건입니다. 가장 이른 날짜가 중단 조건 #5의 기준일입니다.",
+        "earliestLine": "부지 발표 기준일(가장 이른 날짜): {date}",
+        "noAnnouncementYet": "기록된 부지 발표가 없습니다 — 기준일이 없어 중단 조건 #5는 평가 전입니다",
+        "announceTableLabel": "부지 발표 종류별 현재 기록",
+        "announceTableCaption": "부지 발표 종류마다 기록된 현재 날짜, 근거 자료, 기록한 사람과 시각",
+        "colKind": "종류",
+        "colDate": "발표일",
+        "colEvidence": "근거 자료",
+        "colRecordedBy": "기록",
+        "colActions": "작업",
+        "unrecorded": "기록 없음",
+        "earliestChip": "#5 기준일(가장 이른 날짜)",
+        "recordedBy": "{who} · {when}",
+        "correct": "정정",
+        "correctAria": "{kind} 정정",
+        "announceHistorySummary": "정정 이력 ({count}건)",
+        "superseded": "정정으로 대체됨",
+        "announceFormLabel": "부지 발표 기록",
+        "announceFormLegend": "부지 발표 기록",
+        "announceFormHelp": "발표일은 근거 문서에 적힌 날짜를 그대로 적습니다. 기록하는 날이나 게이트 날짜로 채우지 않으며, 오늘 이후 날짜는 기록할 수 없습니다.",
+        "announceEditLoadedNote": "이전에 기록한 내용을 불러왔습니다. 저장하면 이전 기록은 이력으로 남고, 새 기록이 이 종류의 현재 기록이 됩니다. 다른 종류의 기록은 바뀌지 않습니다.",
+        "fieldKind": "종류",
+        "fieldAnnouncedOn": "발표일",
+        "fieldAnnounceEvidence": "근거 자료 참조 (필수)",
+        "evidencePlaceholder": "doc:문서ID, src:출처코드 또는 https://…",
+        "announceProblem": {
+          "kind": "종류를 고르세요.",
+          "announcedOn": "발표일을 올바른 날짜(YYYY-MM-DD)로 입력하세요.",
+          "announcedOnFuture": "오늘 이후 날짜는 기록할 수 없습니다.",
+          "evidence": "근거 자료 참조를 적어야 기록할 수 있습니다.",
+          "evidenceFormat": "근거 자료 참조는 doc:…, src:… 또는 https://… 형식이어야 하며 공백이 없어야 합니다.",
+          "evidenceTooLong": "근거 자료 참조는 {max}자 이내로 줄여 주세요."
+        },
+        "recording": "기록하는 중…",
+        "recordAnnouncement": "발표 기록",
+        "planTitle": "인프라 계획 확정",
+        "planLead": "인프라 계획이 확정되었는지, 확정되었다면 확정된 계획 문서의 날짜가 언제인지 기록합니다. 기록은 다른 사람의 검토를 거쳐야 중단 조건 #5의 근거가 됩니다.",
+        "currentAssertion": "현재 기록",
+        "answerYes": "확정됨",
+        "answerNo": "확정되지 않음",
+        "effectiveOnLabel": "확정된 계획 문서의 날짜",
+        "effectiveOnMissing": "날짜 없음",
+        "rationaleLabel": "근거 설명",
+        "assertedByLabel": "기록",
+        "reviewedByLabel": "검토한 사람",
+        "pendingNote": "검토 전의 기록은 중단 조건 #5의 근거로 쓰이지 않습니다. 기록한 사람이 아닌 분석가가 검토해야 합니다.",
+        "reviewing": "검토하는 중…",
+        "reviewAction": "검토함으로 표시",
+        "ownAssertionNote": "내가 기록한 항목입니다. 기록한 사람은 검토할 수 없으니 다른 분석가의 검토를 받으세요.",
+        "noAssertionYet": "인프라 계획이 확정되었는지 기록된 내용이 없습니다 — 중단 조건 #5는 평가 전입니다",
+        "planHistorySummary": "이전 기록 ({count}건)",
+        "planFormLabel": "인프라 계획 기록",
+        "planFormLegend": "인프라 계획 기록",
+        "planFormHelp": "새로 기록하면 이전 기록은 이력으로 남고, 새 기록은 다시 다른 사람의 검토를 받아야 합니다.",
+        "fieldPlanValue": "인프라 계획이 확정되었습니까",
+        "fieldEffectiveOn": "확정된 계획 문서의 날짜",
+        "effectiveOnHint": "확정된 계획 문서에 적힌 날짜를 그대로 적습니다. 기록하는 날이나 오늘 날짜로 채우지 않습니다.",
+        "fieldPlanEvidenceRequired": "근거 자료 참조 (필수)",
+        "fieldPlanEvidenceOptional": "근거 자료 참조 (선택)",
+        "fieldRationale": "근거 설명 (필수, {max}자 이내)",
+        "planProblem": {
+          "value": "확정되었는지 여부를 고르세요.",
+          "effectiveOn": "확정된 계획 문서의 날짜를 올바른 날짜(YYYY-MM-DD)로 입력하세요.",
+          "effectiveOnFuture": "오늘 이후 날짜는 기록할 수 없습니다.",
+          "evidence": "근거 자료 참조를 적어야 기록할 수 있습니다.",
+          "evidenceFormat": "근거 자료 참조는 doc:…, src:… 또는 https://… 형식이어야 하며 공백이 없어야 합니다.",
+          "evidenceTooLong": "근거 자료 참조는 {max}자 이내로 줄여 주세요.",
+          "rationale": "근거 설명을 적어야 기록할 수 있습니다.",
+          "rationaleTooLong": "근거 설명은 {max}자 이내로 줄여 주세요."
+        },
+        "recordPlan": "계획 상태 기록",
+        "announceRecorded": "부지 발표를 기록했습니다.",
+        "planRecorded": "인프라 계획 확정을 기록했습니다. 다른 사람이 검토하기 전에는 중단 조건 #5의 근거로 쓰이지 않습니다.",
+        "reviewedNotice": "검토함으로 표시했습니다.",
+        "serverError": {
+          "viewer": "기록은 분석가 역할만 할 수 있습니다.",
+          "admin": "관리자 역할은 기록할 수 없습니다.",
+          "notFound": "이 사업을 찾을 수 없습니다.",
+          "invalid": "입력한 내용을 확인하세요.",
+          "humanOnly": "검토는 사람이 직접 해야 합니다.",
+          "secondPerson": "기록한 사람은 검토할 수 없습니다. 다른 분석가의 검토를 받으세요.",
+          "reviewRejected": "이 기록은 이미 검토되었거나 새 기록으로 대체되어 검토할 수 없습니다. 화면을 새로 불러왔습니다.",
+          "noRun": "이 사업에는 분석 실행이 없어 기록할 수 없습니다.",
+          "other": "저장하지 못했습니다. 잠시 뒤 다시 시도하세요."
+        }
       }
     },
     "s67": {

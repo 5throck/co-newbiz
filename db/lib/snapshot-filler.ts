@@ -1,4 +1,4 @@
-// @version 1.10.0
+// @version 1.11.0
 /**
  * project_variable_snapshot filler — the run-scoped variable snapshot writer
  * the thresholds records' var contracts define. Design of record:
@@ -66,6 +66,7 @@ import type { MaValidatorKey } from "./validator-applicability.ts";
 import { listProjectAnalysisTargets } from "./wacc.ts";
 import { rateScopeState, resolveWaccConfirmation } from "./wacc-confirmation.ts";
 import { computeDownsideDscr } from "../../app/web-next/lib/covenant-dscr.ts";
+import { isIsoCalendarDate, seoulToday } from "./iso-date.ts";
 
 // ---------------------------------------------------------------------------
 // Public shapes
@@ -100,7 +101,7 @@ export interface SnapshotFillOptions {
 export interface SnapshotFillResult {
   runId: string;
   projectId: string;
-  /** Rows written, one per var — 22 (the filler's own completeness invariant). */
+  /** Rows written, one per var — 46 (the filler's own completeness invariant). */
   rows: SnapshotWrite[];
 }
 
@@ -164,6 +165,10 @@ export const SNAPSHOT_VAR_KEYS: readonly string[] = [
   // 0178 - ADR-0186 D3 activations (P4)
   "fin.dd_value_impact_unbridged",
   "fin.targets_meeting_hurdle",
+  // 0189 - ADR-0194 item B (kill criterion #5 point-in-time: site announcement vs plan finalization date)
+  "infra.site_announced_on",
+  "infra.plan_finalized_on",
+  "infra.plan_finalized_by_announcement",
 ];
 
 function missing(varKey: string): SnapshotWrite {
@@ -728,6 +733,65 @@ function fillSynergyCertVar(db: Database, projectId: string): SnapshotWrite {
   return row;
 }
 
+// ---------------------------------------------------------------------------
+// Family C2 - site announcement vs plan finalization date (ADR-0194 item B, migration 0189)
+// ---------------------------------------------------------------------------
+
+const SQL_LIVE_ANNOUNCEMENTS =
+  "SELECT id, announced_on, recorded_at FROM site_announcement WHERE project_id = ? AND superseded_by IS NULL ORDER BY announced_on ASC, id ASC";
+const SQL_LIVE_REVIEWED_PLAN =
+  "SELECT id, value_text, effective_on, observed_at FROM dimension_input " +
+  "WHERE project_id = ? AND var_key = 'infra.plan_finalized' AND superseded_by IS NULL AND reviewed_by IS NOT NULL";
+
+/**
+ * Kill criterion #5 point-in-time vars. Every unassessed case is `missing` - the derived boolean is NEVER 'yes' on a gap
+ * (risk-officer B-1), so the registry predicate (`in ['no']`) cannot read a gap as clean:
+ *   infra.site_announced_on                MIN(announced_on) over the LIVE announcements (C-1: earliest of any kind).
+ *                                          Dates that are not real ISO dates or lie in the future (B-2; the write path rejects
+ *                                          them, this is the read-time guard) are ignored, never repaired.
+ *   infra.plan_finalized_on                effective_on of the live REVIEWED infra.plan_finalized = 'yes' row; missing when the
+ *                                          assertion is unreviewed, 'no', or carries no valid date. Never read from observed_at.
+ *   infra.plan_finalized_by_announcement   no announcement on record, OR no live reviewed assertion, OR 'yes' without a valid
+ *                                          effective_on, OR any other answer -> missing. Reviewed 'no' with an announcement on
+ *                                          record -> 'no' (triggers). Reviewed 'yes': plan_finalized_on <= site_announced_on
+ *                                          -> 'yes' (equal dates are clean), later -> 'no'.
+ */
+function fillSiteAnnouncementVars(db: Database, projectId: string, now: Date): SnapshotWrite[] {
+  const today = seoulToday(now);
+  const announcements = (db.query(SQL_LIVE_ANNOUNCEMENTS).all(projectId) as unknown as Array<{ id: string; announced_on: string; recorded_at: string }>).filter(
+    (r) => isIsoCalendarDate(r.announced_on) && r.announced_on <= today,
+  );
+  const earliest = announcements[0] ?? null; // ordered by announced_on ASC
+  const announced: SnapshotWrite = earliest
+    ? { var_key: "infra.site_announced_on", value_num: null, value_text: earliest.announced_on, evidence_ref: `site_announcement:${earliest.id}`, observed_at: earliest.recorded_at, status: "present" }
+    : missing("infra.site_announced_on");
+
+  const plan = (db.query(SQL_LIVE_REVIEWED_PLAN).get(projectId) as unknown as { id: string; value_text: string | null; effective_on: string | null; observed_at: string } | null) ?? null;
+  const planOn = plan !== null && plan.value_text === "yes" && isIsoCalendarDate(plan.effective_on) && plan.effective_on <= today ? plan.effective_on : null;
+  const finalizedOn: SnapshotWrite =
+    plan !== null && planOn !== null
+      ? { var_key: "infra.plan_finalized_on", value_num: null, value_text: planOn, evidence_ref: `dimension_input:${plan.id}`, observed_at: plan.observed_at, status: "present" }
+      : missing("infra.plan_finalized_on");
+
+  let verdict: "yes" | "no" | null = null;
+  if (earliest !== null && plan !== null) {
+    if (plan.value_text === "no") verdict = "no";
+    else if (planOn !== null) verdict = planOn <= earliest.announced_on ? "yes" : "no";
+  }
+  const derived: SnapshotWrite =
+    verdict !== null && earliest !== null && plan !== null
+      ? {
+          var_key: "infra.plan_finalized_by_announcement",
+          value_num: null,
+          value_text: verdict,
+          evidence_ref: `site_announcement:${earliest.id};dimension_input:${plan.id}`,
+          observed_at: [earliest.recorded_at, plan.observed_at].sort().at(-1) as string,
+          status: "present",
+        }
+      : missing("infra.plan_finalized_by_announcement");
+  return [announced, finalizedOn, derived];
+}
+
 /** #14: P3 evaluations exist → present count of viable=1 shapes; none evaluated → missing (P3 not reached). */
 function fillViableShapesVar(db: Database, projectId: string): SnapshotWrite {
   const row = missing("dealshape.viable_shapes");
@@ -1039,7 +1103,7 @@ const SQL_BOUND_INDUSTRIES = "SELECT industry_id FROM project_industry WHERE pro
 
 /**
  * Fill a run's variable snapshot: one explicit row per evidence var the
- * 0017–0178 seed sets define (43), statuses per the record
+ * 0017–0189 seed sets define (46), statuses per the record
  * contracts. Runs are immutable — filling an already-filled run throws on
  * the PK.
  */
@@ -1059,6 +1123,7 @@ export function fillSnapshot(opts: SnapshotFillOptions, db: Database = getDb()):
     ...fillFactVars(db, opts.projectId, industryIds, now),
     ...fillValueChainVars(db, opts.projectId),
     ...fillAssertedVars(db, opts.projectId),
+    ...fillSiteAnnouncementVars(db, opts.projectId, now instanceof Date ? now : new Date(now)),
     fillTrlVar(db, opts.projectId),
     fillIpVar(db, opts.projectId),
     ...fillCertCountVars(db, opts.projectId),

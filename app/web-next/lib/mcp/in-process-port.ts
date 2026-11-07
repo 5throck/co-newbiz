@@ -109,6 +109,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { pattern: "/api/projects/:id/monitoring-brief", load: () => import("../../app/api/projects/[id]/monitoring-brief/route.ts") },
   { pattern: "/api/projects/:id/partners/:partnerId/findings", load: () => import("../../app/api/projects/[id]/partners/[partnerId]/findings/route.ts") },
   { pattern: "/api/projects/:id/permits", load: () => import("../../app/api/projects/[id]/permits/route.ts") },
+  { pattern: "/api/projects/:id/dimension-inputs", load: () => import("../../app/api/projects/[id]/dimension-inputs/route.ts") },
   { pattern: "/api/projects/:id/pmi/key-talent", load: () => import("../../app/api/projects/[id]/pmi/key-talent/route.ts") },
   { pattern: "/api/projects/:id/pmi/synergy-certifications", load: () => import("../../app/api/projects/[id]/pmi/synergy-certifications/route.ts") },
   { pattern: "/api/projects/:id/process", load: () => import("../../app/api/projects/[id]/process/route.ts") },
@@ -117,6 +118,7 @@ export const ROUTE_TABLE: readonly RouteEntry[] = [
   { pattern: "/api/projects/:id/reviews", load: () => import("../../app/api/projects/[id]/reviews/route.ts") },
   { pattern: "/api/projects/:id/reviews/ai-2nd", load: () => import("../../app/api/projects/[id]/reviews/ai-2nd/route.ts") },
   { pattern: "/api/projects/:id/scorecard", load: () => import("../../app/api/projects/[id]/scorecard/route.ts") },
+  { pattern: "/api/projects/:id/site-announcement", load: () => import("../../app/api/projects/[id]/site-announcement/route.ts") },
   { pattern: "/api/projects/:id/sites", load: () => import("../../app/api/projects/[id]/sites/route.ts") },
   { pattern: "/api/projects/:id/target-check", load: () => import("../../app/api/projects/[id]/target-check/route.ts") },
   { pattern: "/api/projects/:id/target-costing", load: () => import("../../app/api/projects/[id]/target-costing/route.ts") },
@@ -214,6 +216,9 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/opportunities/:id/kill-overrides" },
   { method: "POST", pattern: "/api/opportunities/:id/kill-overrides/:overrideId/revoke" },
   { method: "POST", pattern: "/api/projects/:id/waivers/:waiverId/approve" },
+  // ADR-0194 item B: the cross-domain second review of a recorded assertion (what makes it evidence) is a person's act;
+  // agents may record assertions (record_dimension_input) but never review them.
+  { method: "POST", pattern: "/api/projects/:id/dimension-inputs/:rowId/review" },
   { method: "POST", pattern: "/api/projects/:id/dd-checklist/state/confirm-na" },
   { method: "POST", pattern: "/api/admin/human-roles" },
   { method: "POST", pattern: "/api/admin/human-roles/:grantId/revoke" },

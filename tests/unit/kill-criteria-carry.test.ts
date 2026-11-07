@@ -474,15 +474,14 @@ describe("B. enforce guard: kill_binding=enforce is fail-closed while a carried 
 });
 
 describe("C. #5 caveat; D. scheduled items; E. IC package lists open carries by name", () => {
-  test("C. #5 evaluated on gate-date state carries a visible caveat inside the hash (never clean evidence)", () => {
+  test("C. #5 is read at the site-announcement date, so it carries no evidence caveat (ADR-0194 B-3: the C-6 text is gone)", () => {
     const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
     addDecision("opportunity", oppId, "screening", "go", { not_reached: [nr(INFRA_PLAN, "S5", "pre_fs")], carried_in: [] });
-    const { snapshot, hash } = preview("project", projectId, "fs");
-    expect(snapshot.kill.caveats).toEqual([{ key: INFRA_PLAN, caveat: KILL_EVIDENCE_CAVEATS[INFRA_PLAN] }]);
-    expect(KILL_EVIDENCE_CAVEATS[INFRA_PLAN]).toContain("not site-announcement date");
-    const copy = JSON.parse(JSON.stringify(snapshot));
-    copy.kill.caveats = [];
-    expect(snapshotHash(copy)).not.toBe(hash);
+    const { snapshot } = preview("project", projectId, "fs");
+    expect(KILL_EVIDENCE_CAVEATS).toEqual({});
+    expect(snapshot.kill.caveats).toEqual([]);
+    // #5 is still evaluated at fs (fail-closed): no announcement or assertion is recorded, so it reads unassessed.
+    expect(keysOf([...snapshot.kill.unassessed, ...snapshot.kill.triggered])).toContain(INFRA_PLAN);
   });
   test("D. deal-shape-chain (#9-#11) shows at Screening as pending with its scheduled gate (pre_fs / fs), not absent; pre_fs owns it", () => {
     const o = S.insertOpportunity(db, "greenfield", ANALYST);
@@ -512,9 +511,56 @@ describe("C. #5 caveat; D. scheduled items; E. IC package lists open carries by 
   });
 });
 
-describe("13c. #5 point-in-time predicate (C-6)", () => {
-  // Deferred: no site-announcement-date source exists in the schema (needs a data-source decision and an evidence_var migration).
-  test.todo("infra.plan_finalized read as of the site-announcement date", () => {});
+describe("13c. #5 point-in-time predicate (C-6, ADR-0194 item B)", () => {
+  // The full truth table lives in tests/unit/site-announcement.test.ts; here the gate snapshot proves the end-to-end read.
+  function recordPlan(projectId: string, answer: "yes" | "no", effectiveOn: string | null, reviewed = true): void {
+    const runId = ulid();
+    db.run("INSERT INTO run (id, project_id, input_hash, created_by, created_at) VALUES (?,?,?,?,?)", [runId, projectId, `hash-${runId.slice(-6)}`, ANALYST, S.NOW]);
+    db.run(
+      "INSERT INTO dimension_input (id, run_id, project_id, var_key, value_kind, value_text, evidence_ref, asserted_by, reviewed_by, rationale, observed_at, effective_on) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), runId, projectId, "infra.plan_finalized", "text", answer, "doc:plan-1", ANALYST, reviewed ? "carry-reviewer" : null, "test", "2026-11-01T00:00:00Z", effectiveOn],
+    );
+  }
+  function recordAnnouncement(projectId: string, announcedOn: string): void {
+    db.run(
+      "INSERT INTO site_announcement (id, project_id, announced_on, announcement_kind, evidence_ref, recorded_by, recorded_at) VALUES (?,?,?,?,?,?,?)",
+      [ulid(), projectId, announcedOn, "public_announcement", "doc:announcement-1", ANALYST, "2026-11-01T00:00:00Z"],
+    );
+  }
+  /** A ready greenfield project at fs whose screening decision carried #5 (the real flow: #5 is re-evaluated at fs). */
+  function seed(): string {
+    const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
+    addDecision("opportunity", oppId, "screening", "go", { not_reached: [nr(INFRA_PLAN, "S5", "pre_fs")], carried_in: [] });
+    return projectId;
+  }
+  const outcome = (projectId: string): "triggered" | "unassessed" | "clean" => {
+    const k = preview("project", projectId, "fs").snapshot.kill;
+    if (keysOf(k.triggered).includes(INFRA_PLAN)) return "triggered";
+    if (keysOf(k.unassessed).includes(INFRA_PLAN)) return "unassessed";
+    return "clean";
+  };
+  test("a plan finalized after the announcement triggers; before or on the same day is clean; every gap stays unassessed", () => {
+    const a = seed();
+    expect(outcome(a)).toBe("unassessed"); // nothing recorded
+    recordAnnouncement(a, "2026-03-10");
+    expect(outcome(a)).toBe("unassessed"); // announcement but no assertion
+    recordPlan(a, "yes", "2026-05-01");
+    expect(outcome(a)).toBe("triggered"); // finalized after the announcement
+
+    const b = seed();
+    recordAnnouncement(b, "2026-03-10");
+    recordPlan(b, "yes", "2026-03-10");
+    expect(outcome(b)).toBe("clean"); // same day counts as clean
+
+    const c = seed();
+    recordAnnouncement(c, "2026-03-10");
+    recordPlan(c, "yes", null);
+    expect(outcome(c)).toBe("unassessed"); // yes without effective_on is never clean
+    const d = seed();
+    recordAnnouncement(d, "2026-03-10");
+    recordPlan(d, "yes", "2026-01-01", false);
+    expect(outcome(d)).toBe("unassessed"); // unreviewed assertion fills nothing
+  });
 });
 
 describe("overrides: a carried triggered halt is overridable on the project (R-5 keeps overdue / carried-unassessed / lineage un-overridable)", () => {

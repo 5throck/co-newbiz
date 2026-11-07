@@ -2847,7 +2847,8 @@
       "scheduledSummary": "Scheduled evaluation ({count})",
       "scheduledChip": "Scheduled",
       "scheduledAt": "To be evaluated at the {gate} gate",
-      "dealShapeLink": "Go to the deal-shape evaluation"
+      "dealShapeLink": "Go to the deal-shape evaluation",
+      "siteAnnouncementLink": "Go to the site announcement and infrastructure plan record"
     },
     "gateIntegrity": {
       "awaiting": "Waiting for a second reviewer",
@@ -3410,9 +3411,7 @@
       "escalate_to_risk_officer": "Escalate to the risk officer",
       "mark_conditional": "Mark as conditional"
     },
-    "caveats": {
-      "infrastructure_plan_not_finalized_at_site_announcement": "Evaluated on the gate-date state, not the site-announcement date (fix pending). Do not read it as clean evidence."
-    }
+    "caveats": {}
   },
   "nav": {
     "admin": {
@@ -5873,6 +5872,123 @@
         "yrKrwMillions": "yr, KRW millions)",
         "yrUnitKrwMillionsAssumption": "yr · unit KRW millions · person-confirmed assumption scope (salary",
         "yrUnitKrwMillionsMonthly": "yr · unit KRW millions · monthly and quarterly amounts are annualized (monthly ×12, quarterly ×4) and accrued per active year."
+      },
+      "siteAnnouncementPanel": {
+        "title": "Site announcement and infrastructure plan finalization",
+        "lead": "Kill criterion #5 (infrastructure plan not finalized by the site announcement) compares the date the infrastructure plan was finalized with the earliest site announcement date. A person records both. The verdict on this screen is a preview; the gate snapshot recomputes and records it.",
+        "noAiPrefill": "This screen does not pre-fill any AI suggestion or date. The forms start empty and no date defaults to today.",
+        "readOnly": "Only the analyst role can record and review. On this screen you can only view what has been recorded.",
+        "opensNewTab": "(opens in a new tab)",
+        "reviewed": "Reviewed",
+        "reviewPending": "Awaiting review",
+        "loadError": {
+          "viewer": "You do not have permission to view these records.",
+          "admin": "The admin role cannot view business content. Check with an account that has project access.",
+          "notFound": "This project could not be found.",
+          "other": "Could not load the site announcement and infrastructure plan records. Refresh and try again."
+        },
+        "statusUnassessed": "Not yet assessed — still missing: {missing}. Kill criterion #5 stays unassessed.",
+        "statusClean": "The plan finalization date ({plan}) is on or before the site announcement reference date ({announced}) — kill criterion #5 does not apply.",
+        "statusTriggeredAfter": "The plan finalization date ({plan}) is later than the site announcement reference date ({announced}) — kill criterion #5 applies (shown as conditional).",
+        "statusTriggeredNotFinalized": "The infrastructure plan was not finalized by the site announcement reference date ({announced}) — kill criterion #5 applies (shown as conditional).",
+        "missing": {
+          "announcement": "a site announcement record",
+          "plan": "an infrastructure plan record",
+          "review": "a second-person review of the infrastructure plan record",
+          "effectiveOn": "the date of the finalized plan document"
+        },
+        "kind": {
+          "board_resolution": "Board resolution",
+          "public_announcement": "Public announcement",
+          "mou_signing": "MOU signing",
+          "regulatory_filing": "Regulatory filing"
+        },
+        "announceTitle": "Site announcement",
+        "announceLead": "Record the event that first made the site public, by kind. Recording the same kind again corrects that kind; a different kind is a separate event. The earliest date is the reference date for kill criterion #5.",
+        "earliestLine": "Site announcement reference date (earliest): {date}",
+        "noAnnouncementYet": "No site announcement is recorded — without a reference date, kill criterion #5 is unassessed",
+        "announceTableLabel": "Current record per site announcement kind",
+        "announceTableCaption": "For each site announcement kind: the current date, evidence, who recorded it and when",
+        "colKind": "Kind",
+        "colDate": "Announced on",
+        "colEvidence": "Evidence",
+        "colRecordedBy": "Recorded",
+        "colActions": "Actions",
+        "unrecorded": "Not recorded",
+        "earliestChip": "#5 reference date (earliest)",
+        "recordedBy": "{who} · {when}",
+        "correct": "Correct",
+        "correctAria": "Correct {kind}",
+        "announceHistorySummary": "Correction history ({count})",
+        "superseded": "replaced by a correction",
+        "announceFormLabel": "Record a site announcement",
+        "announceFormLegend": "Record a site announcement",
+        "announceFormHelp": "Enter the date exactly as it appears in the evidence document. It is never filled with the recording date or a gate date, and a date after today cannot be recorded.",
+        "announceEditLoadedNote": "Your earlier record was loaded. Saving keeps the earlier record in the history and makes the new one the current record for this kind. Records of other kinds are not changed.",
+        "fieldKind": "Kind",
+        "fieldAnnouncedOn": "Announced on",
+        "fieldAnnounceEvidence": "Evidence reference (required)",
+        "evidencePlaceholder": "doc:DOCUMENT-ID, src:SOURCE-CODE or https://…",
+        "announceProblem": {
+          "kind": "Choose a kind.",
+          "announcedOn": "Enter the announcement date as a valid date (YYYY-MM-DD).",
+          "announcedOnFuture": "A date after today cannot be recorded.",
+          "evidence": "An evidence reference is required to record.",
+          "evidenceFormat": "The evidence reference must look like doc:…, src:… or https://… with no spaces.",
+          "evidenceTooLong": "Shorten the evidence reference to {max} characters or fewer."
+        },
+        "recording": "Recording…",
+        "recordAnnouncement": "Record announcement",
+        "planTitle": "Infrastructure plan — Confirmed Status",
+        "planLead": "Record whether the infrastructure plan was finalized and, if so, the date of the finalized plan document. A record becomes evidence for kill criterion #5 only after a second person reviews it.",
+        "currentAssertion": "Current record",
+        "answerYes": "Finalized",
+        "answerNo": "Not finalized",
+        "effectiveOnLabel": "Date of the finalized plan document",
+        "effectiveOnMissing": "No date",
+        "rationaleLabel": "Rationale",
+        "assertedByLabel": "Recorded",
+        "reviewedByLabel": "Reviewed by",
+        "pendingNote": "A record that has not been reviewed is not used as evidence for kill criterion #5. An analyst other than the person who recorded it must review it.",
+        "reviewing": "Reviewing…",
+        "reviewAction": "Mark as reviewed",
+        "ownAssertionNote": "You recorded this one. The person who recorded it cannot review it, so ask another analyst to review it.",
+        "noAssertionYet": "No infrastructure plan record exists — kill criterion #5 is unassessed",
+        "planHistorySummary": "Earlier records ({count})",
+        "planFormLabel": "Record the infrastructure plan status",
+        "planFormLegend": "Record the infrastructure plan status",
+        "planFormHelp": "Recording again keeps the earlier record in the history, and the new record needs a second person's review again.",
+        "fieldPlanValue": "Was the infrastructure plan finalized?",
+        "fieldEffectiveOn": "Date of the finalized plan document",
+        "effectiveOnHint": "Enter the date exactly as it appears on the finalized plan document. It is never filled with the recording date or today.",
+        "fieldPlanEvidenceRequired": "Evidence reference (required)",
+        "fieldPlanEvidenceOptional": "Evidence reference (optional)",
+        "fieldRationale": "Rationale (required, up to {max} characters)",
+        "planProblem": {
+          "value": "Choose whether the plan was finalized.",
+          "effectiveOn": "Enter the date of the finalized plan document as a valid date (YYYY-MM-DD).",
+          "effectiveOnFuture": "A date after today cannot be recorded.",
+          "evidence": "An evidence reference is required to record.",
+          "evidenceFormat": "The evidence reference must look like doc:…, src:… or https://… with no spaces.",
+          "evidenceTooLong": "Shorten the evidence reference to {max} characters or fewer.",
+          "rationale": "A rationale is required to record.",
+          "rationaleTooLong": "Shorten the rationale to {max} characters or fewer."
+        },
+        "recordPlan": "Record plan status",
+        "announceRecorded": "Site announcement recorded.",
+        "planRecorded": "Infrastructure plan status recorded. It is not used as evidence for kill criterion #5 until a second person reviews it.",
+        "reviewedNotice": "Marked as reviewed.",
+        "serverError": {
+          "viewer": "Only the analyst role can record.",
+          "admin": "The admin role cannot record.",
+          "notFound": "This project could not be found.",
+          "invalid": "Check the values you entered.",
+          "humanOnly": "A person must do the review themselves.",
+          "secondPerson": "The person who recorded it cannot review it. Ask another analyst to review it.",
+          "reviewRejected": "This record was already reviewed or replaced by a newer record, so it cannot be reviewed. The screen was reloaded.",
+          "noRun": "This project has no analysis run yet, so nothing can be recorded.",
+          "other": "Could not save. Try again shortly."
+        }
       }
     },
     "s67": {

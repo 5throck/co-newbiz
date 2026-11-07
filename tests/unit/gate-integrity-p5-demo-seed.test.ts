@@ -69,6 +69,18 @@ describe("S1-S12 demo seed through the gate contract (O-5)", () => {
       seedS1ToS12Demo(path);
       await seedGreenfieldS1ToS12Demo(path);
       expect(counts()).toEqual(first);
+      // ADR-0194 item B: #5 reads clean on the greenfield demo (recorded announcement, reviewed plan finalized before it)
+      const pid = "demo-gf-project";
+      const ann = d.query("SELECT announced_on FROM site_announcement WHERE project_id = ? AND superseded_by IS NULL").all(pid) as Array<{ announced_on: string }>;
+      expect(ann).toHaveLength(1);
+      const plan = d.query("SELECT effective_on, asserted_by, reviewed_by FROM dimension_input WHERE project_id = ? AND var_key = 'infra.plan_finalized' AND superseded_by IS NULL").get(pid) as { effective_on: string; asserted_by: string; reviewed_by: string };
+      expect(plan.effective_on <= ann[0].announced_on).toBe(true);
+      expect(plan.reviewed_by).not.toBe(plan.asserted_by);
+      const { evaluateKillCriteria } = await import("../../db/lib/kill-criteria.ts");
+      const runId = `demo-gf-p5-check-${Date.now()}`;
+      d.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [runId, pid, "ADR-0194 check", "h", "demo-seed", new Date().toISOString()]);
+      const five = evaluateKillCriteria(d, { runId, projectId: pid, procedure: "greenfield-screening", now: new Date().toISOString() }).outcomes.find((o) => o.criterion_id === "infrastructure_plan_not_finalized_at_site_announcement");
+      expect(five?.outcome).toBe("false");
     } finally {
       resetDb();
       rmSync(dir, { recursive: true, force: true });

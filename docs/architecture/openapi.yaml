@@ -4708,6 +4708,86 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/dimension-inputs:
+    get:
+      operationId: getProjectDimensionInputs
+      summary: Judged-variable assertions of a project (all rows newest first, the live subset, `?var_key=` narrows) with reviewed_by and effective_on, plus the assertable-variable vocabulary. Members only (404 otherwise).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectDimensionInput
+      summary: Record one assertion {var_key, value, evidence_ref, rationale, effective_on?, observed_at?, run_id?} (analyst+, active member). Lands UNREVIEWED; asserted_by is the session user. infra.plan_finalized = 'yes' requires effective_on (finalized plan document date) with a citation evidence_ref and refuses a future date; 'no' refuses effective_on (ADR-0194 item B).
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/projects/{id}/dimension-inputs/{rowId}/review:
+    post:
+      operationId: reviewProjectDimensionInput
+      summary: Cross-domain second review of the live assertion (human-only cookie session; bearer/agent 403 human_only). Reviewer must differ from the asserter (409 second_person_required); a superseded or already-reviewed row is 409 review_rejected. reviewed_by is the session user.
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/projects/{id}/site-announcement:
+    get:
+      operationId: getProjectSiteAnnouncements
+      summary: Project site-announcement events (ADR-0194 item B) - live row per kind, superseded history, kinds not yet recorded, the closed announcement_kind vocabulary and earliest_announced_on, the reference date of kill criterion #5 (null when nothing is recorded). Members only (404 otherwise).
+      tags:
+        - Deal Review
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordProjectSiteAnnouncement
+      summary: Record one site-announcement event {announced_on (YYYY-MM-DD, not in the future), announcement_kind, evidence_ref (required citation), site_id?} (analyst+, active project member). recorded_by is the session user. Re-posting a kind corrects that kind's live row (audited with old and new date); a different kind is a separate event and the earliest live date counts. Never deleted or inferred.
+      tags:
+        - Deal Review
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/{id}/route-decision:
     get:
       operationId: getRouteDecision

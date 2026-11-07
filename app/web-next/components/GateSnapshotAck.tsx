@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useKillCriteriaLabels } from "../lib/use-kill-criteria-labels.ts";
 import { KNOWN_HARD_BLOCKS, advisoryBlocks, enforcedBlocks } from "../lib/gate-integrity-view.ts";
 import { DEAL_SHAPE_KILL_KEY, DEAL_SHAPE_PANEL_ID } from "../lib/deal-shape-view.ts";
+import { SITE_ANNOUNCEMENT_KILL_KEY, siteAnnouncementHref } from "../lib/site-announcement-view.ts";
 
 /** Loads the snapshot for one gate; `replace` swaps in the fresh one returned by a 409. */
 export function useGateSnapshot(basePath: string, gate: string, briefId: string | null, enabled: boolean) {
@@ -259,7 +260,7 @@ export interface DivergenceProps { aiRecommended: string; value: string; onChang
 /** Hard blocks, acknowledgement list and (only when the decision differs from the AI) the divergence reason. */
 export function GateAckBlock({ snapshot, state, onChange, problems, decision, divergence, notice, projectId, dealId }: {
   projectId?: string;
-  /** Opportunity or project id of the deal (route id of /deals/[id]); enables the link from the #9 row to the S4 deal-shape panel. */
+  /** Opportunity or project id of the deal (route id of /deals/[id]); enables the link from the #9 row to the S4 deal-shape panel and from the #5 row to the S5 site-announcement panel. */
   dealId?: string;
   snapshot: GateSnapshotView;
   state: AckState;
@@ -384,6 +385,9 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
                           <CaveatNotes kill={snapshot.kill} itemKey={r.key} />
                           {r.key === DEAL_SHAPE_KILL_KEY && dealId && (
                             <Link className="block underline" href={`/deals/${encodeURIComponent(dealId)}/s4#${DEAL_SHAPE_PANEL_ID}`} data-testid="deal-shape-link">{t("dealShapeLink")} →</Link>
+                          )}
+                          {r.key === SITE_ANNOUNCEMENT_KILL_KEY && dealId && (
+                            <Link className="block underline" href={siteAnnouncementHref(dealId)} data-testid="site-announcement-link">{t("siteAnnouncementLink")} →</Link>
                           )}
                         </span>
                       </label>

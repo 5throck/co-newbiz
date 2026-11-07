@@ -37,6 +37,7 @@ import { emptyStaffingPlan, findStaffingDuplicateWarnings, fitPlanToHorizon, isS
 import type { SimulationResults, TornadoKey } from "../../lib/investment-simulation.ts";
 import { buildInvestmentVectors, effectiveAssumptions, SALARY_RANGE, SALARY_INCREASE_RANGE_PP, ON_COST_RANGE_PP, RAMP_SHIFT_HALF_YEARS, CAPABILITY_RANGE, MANUAL_LINE_RANGE } from "../../lib/investment-vectors.ts";
 import { EntryStrategySection } from "./EntryStrategySection.tsx";
+import { SiteAnnouncementPanel } from "./SiteAnnouncementPanel.tsx";
 import { parseEntryStrategy, serializeEntryStrategy, type EntryFormState, type EntryModes } from "../../lib/greenfield-entry-strategy.ts";
 import {
   AMOUNT_UNIT_KRW_M, amountUnitLabel, convertManualLinesToKrw, scheduleTotals, SUB_CATEGORY_LABEL, SUB_CATEGORY_PARENT, SUB_CATEGORY_S8_NOTE, STAFFING_SUB_CATEGORY, subCategoriesOf, subCategoryDef, validSubCategory, type SubCategoryKey, applySelection, buildInvestmentSummary, DEFAULT_HORIZON_YEARS, deriveCapabilityCostLines, findDuplicateWarnings, formatKrwM, hasUnsavedReflection, confirmUnitOnAmountEdit, unitOnCurrencyChange, investmentTotals, isCapabilityEntry, manualLineAmounts, isPlanMetaEntry, lineSaveStates, manualLineIssues, manualLineKrwM, MAX_HORIZON_YEAR_LIMIT, MIN_HORIZON_YEARS, normalizeLegacyLine, planMetaOf, reflectionBody, reflectionSummary, sanityLineOversize, sanityTotalOversize, selectionPayload, unifiedFooter, unifiedInvestmentRows, validateLineYears, capabilityEndYearOf,
@@ -1449,6 +1450,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 </li>
               ))}
             </ul>
+            {/* ADR-0194 item B: the two human-recorded inputs of kill criterion #5 (project-scoped, so only once promoted). Record/review buttons are secondary; the primary action stays below. */}
+            {selected.opportunity.project_id && <SiteAnnouncementPanel projectId={selected.opportunity.project_id} canAct={canAct} />}
             <PrimaryAction
               inline
               form="greenfield-eval-form"
