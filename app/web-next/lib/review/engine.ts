@@ -24,6 +24,8 @@ export interface ReviewRunContext {
   entityId: string;
   /** The calling user (boundary #1: no agent service account). */
   userId: string;
+  /** Advisory BCP-47 locale from the UI; threaded to the AI 2nd prompt when set. */
+  locale?: string;
   db?: Database;
   now?: string;
 }
@@ -84,7 +86,14 @@ export async function runReview(
 ): Promise<{ ai1st: Ai1stResult; ai2nd: Ai2ndResult }> {
   const ai1st = runAiFirst(ctx);
   const ai2nd = await runAiSecond(
-    { artifact: ai1st.artifact, ai1stBuckets: ai1st.buckets, userId: ctx.userId, db: ctx.db, now: ctx.now },
+    {
+      artifact: ai1st.artifact,
+      ai1stBuckets: ai1st.buckets,
+      userId: ctx.userId,
+      locale: ctx.locale,
+      db: ctx.db,
+      now: ctx.now,
+    },
     deps,
   );
   return { ai1st, ai2nd };

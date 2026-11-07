@@ -18,8 +18,11 @@ const { buildGateArtifact, gateStageIds, REVIEW_GATES, gateEntityType } = await 
   "../../app/web-next/lib/review/gate-artifacts.ts"
 );
 const { runAiFirstChecks } = await import("../../app/web-next/lib/review/ai-first.ts");
-const { runAiSecond, parseAi2ndOutput, monthlyTokenCap } = await import("../../app/web-next/lib/review/ai-second.ts");
-const { runAiFirst, runReview, getReviewView } = await import("../../app/web-next/lib/review/engine.ts");
+const { runAiSecond, parseAi2ndOutput, monthlyTokenCap, buildAi2ndMessages } = await import(
+  "../../app/web-next/lib/review/ai-second.ts"
+);
+const { runAiFirst, runReview, getReviewView, resolveArtifact } = await import("../../app/web-next/lib/review/engine.ts");
+const { handleReview } = await import("../../app/web-next/lib/review/http.ts");
 const { selectReviewer, agentDomain } = await import("../../app/web-next/lib/review/domains.ts");
 const { loadStageActivities } = await import("../../app/web-next/lib/spec-activities.ts");
 const { AGENT_REGISTRY, AGENT_KEYS } = await import("../../app/web-next/lib/agent-registry.generated.ts");
@@ -622,5 +625,113 @@ describe("HTTP: human_final only via the human gate POST; review routes", () => 
       .all(pid) as Array<{ result: string }>;
     expect(tr).toHaveLength(1);
     expect(tr[0].result).toBe("next_tranche_released");
+  });
+});
+
+describe("AI 2nd request locale (spec 2026-11-06-ai-review-stage-scope-fit-i18n follow-up)", () => {
+  const directive = (locale: string) =>
+    `Write the claim and reason text of every item in ${locale} (BCP-47). Keep evidence_ref values and JSON keys exactly as specified.`;
+
+  test("buildAi2ndMessages: locale set -> directive appended; absent -> prompt unchanged", () => {
+    const artifact = buildGateArtifact("screening", newOpp());
+    const withKo = buildAi2ndMessages(artifact, "platform-lead", "technical", "functional", "ko");
+    expect(withKo[0].content).toContain(directive("ko"));
+    const without = buildAi2ndMessages(artifact, "platform-lead", "technical", "functional");
+    expect(without[0].content).not.toContain("(BCP-47)");
+    expect(without[0].content).toContain("You are a reviewer for a new-business investment review team.");
+  });
+
+  test("runAiSecond threads the locale into the LLM messages", async () => {
+    const { artifact } = (() => {
+      const opp = newOpp();
+      return { artifact: buildGateArtifact("screening", opp) };
+    })();
+    let system = "";
+    const deps: Ai2ndDeps = {
+      complete: async (messages) => {
+        system = messages[0].content;
+        return VALID_REPLY;
+      },
+      isConfigured: () => true,
+      modelId: () => "mock-model",
+    };
+    const out = await runAiSecond({ artifact, ai1stBuckets: CLEAN, userId: USER, locale: "en", db }, deps);
+    expect(out.performed).toBe(true);
+    expect(system).toContain(directive("en"));
+  });
+
+  test("http: POST locale 'ko' reaches the AI 2nd prompt; invalid locales are ignored without error", async () => {
+    // Opportunity carrier: seed a clean cached AI 1st row for the built
+    // artifact's content hash so AI 2nd actually runs against the mocked deps.
+    const opp = newOpp();
+    const artifact = buildGateArtifact("screening", opp);
+    insertAiReview({
+      stage: "ai_1st",
+      artifactKey: artifact.artifactKey,
+      entityType: "opportunity",
+      entityId: opp,
+      stageId: artifact.stageId,
+      contentHash: artifact.contentHash,
+      buckets: CLEAN,
+      authorDomain: null,
+      reviewerAgent: "deterministic-checks",
+      reviewerDomain: null,
+      performed: true,
+      requestedBy: USER,
+      db,
+    });
+    const systems: string[] = [];
+    const deps: Ai2ndDeps = {
+      complete: async (messages) => {
+        systems.push(messages[0].content);
+        return VALID_REPLY;
+      },
+      isConfigured: () => true,
+      modelId: () => "mock-model",
+    };
+    // handleReview is called directly (mocked deps); synthesize the CSRF
+    // double-submit the nextRequest helper mirrors for cookie mutations.
+    const post = (entityId: string, body: unknown) =>
+      handleReview(
+        new Request(`http://t/api/opportunities/${entityId}/reviews/ai-2nd`, {
+          method: "POST",
+          headers: { cookie: `${leadCookie}; co_newbiz_csrf=t`, "x-csrf-token": "t" },
+          body: JSON.stringify(body),
+        }),
+        "opportunity",
+        entityId,
+        "ai-2nd",
+        deps,
+      );
+    const ok = await post(opp, { gate: "screening", locale: "ko" });
+    expect(ok.status).toBe(200);
+    expect(systems.length).toBe(1);
+    expect(systems[0]).toContain(directive("ko"));
+    // A different artifact content (different opp) so no cache hit; the invalid
+    // locales are advisory — ignored, English prompt, still 200.
+    for (const bad of ["123", "<script>", "ko_KR"]) {
+      const opp2 = newOpp();
+      const a2 = buildGateArtifact("screening", opp2);
+      insertAiReview({
+        stage: "ai_1st",
+        artifactKey: a2.artifactKey,
+        entityType: "opportunity",
+        entityId: opp2,
+        stageId: a2.stageId,
+        contentHash: a2.contentHash,
+        buckets: CLEAN,
+        authorDomain: null,
+        reviewerAgent: "deterministic-checks",
+        reviewerDomain: null,
+        performed: true,
+        requestedBy: USER,
+        db,
+      });
+      const res = await post(opp2, { gate: "screening", locale: bad });
+      expect(res.status).toBe(200);
+      expect(systems.length).toBe(2);
+      expect(systems[1]).not.toContain("(BCP-47)");
+      systems.length = 1;
+    }
   });
 });
