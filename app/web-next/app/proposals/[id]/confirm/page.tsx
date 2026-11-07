@@ -354,6 +354,7 @@ export default function ProposalConfirmPage() {
                 problems={ackProblems}
                 decision={decisionIsGo ? "go" : proposedDecision === "kill" ? "kill" : "hold"}
                 notice={staleNotice}
+                dealId={proposal.entity_id}
                 divergence={divergent && aiRec ? { aiRecommended: aiRec, value: divergence, onChange: setDivergence, required: decisionIsGo, problem: divergenceProblem } : null}
               />
             </section>

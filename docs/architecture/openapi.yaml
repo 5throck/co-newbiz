@@ -4682,6 +4682,32 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/opportunities/{id}/deal-shapes:
+    get:
+      operationId: getOpportunityDealShapes
+      summary: Opportunity-scope S4 deal-shape screen (ADR-0194) - live human verdicts (one per shape), superseded history, unevaluated shapes, the live viable count that feeds kill criterion #9 (null when nothing is recorded), and the closed shape/intent vocabularies.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: recordOpportunityDealShape
+      summary: Record one deal-shape verdict {shape, intent, viable, rationale, evidence_ref?} (analyst+). evaluated_by is the session user. Re-posting a shape supersedes its live row (append-only; never deleted). Record-only - no recommendation or score path writes here.
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/{id}/route-decision:
     get:
       operationId: getRouteDecision

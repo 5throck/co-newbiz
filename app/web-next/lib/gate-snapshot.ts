@@ -47,6 +47,7 @@ import { collectPredicateVars } from "../../../db/lib/applies-when.ts";
 import { ladderBlock } from "./gate-ladder.ts";
 import { ladderFor, type LadderTrack } from "./gate-sequence-view.ts";
 import { applicableKillProcedures, loadKillCriteriaRegistry } from "./ic-review-steps.ts";
+import { summarizeLiveDealShapes } from "../../../db/repositories/opportunity-deal-shape.repository.ts";
 import { evaluateProcess, latestRouteDecision } from "./process-flow.ts";
 import { resolveTrack } from "./project-track.ts";
 import { scopedChecklistItems } from "./greenfield-subtrack.ts";
@@ -238,14 +239,26 @@ function inGateScope(gate: string, procedure: string, criterionId: string): bool
 }
 
 /** The variables the opportunity-scoped source can supply (see opportunityVarRows). ADR-0193 guard: a carried criterion reading any other variable has no data source at an opportunity re-evaluation gate. */
-export const OPPORTUNITY_SCOPE_VARS: readonly string[] = ["screening.viable_targets"];
+export const OPPORTUNITY_SCOPE_VARS: readonly string[] = ["screening.viable_targets", "dealshape.viable_shapes"];
 
-/** Opportunity-scoped variable source (design 3.12): only variables that exist at opportunity scope. */
+/**
+ * Opportunity-scoped variable source (design 3.12): only variables that exist at opportunity scope.
+ * - screening.viable_targets: shortlisted brownfield targets; absent (missing) while no target is recorded.
+ * - dealshape.viable_shapes (ADR-0194 item A): the count of LIVE viable rows of opportunity_deal_shape_evaluation, i.e.
+ *   human verdicts only (risk-officer A-1: never derived from scores, route decisions, recommendations or drafts).
+ *   No live row means the variable is absent (missing -> #9 unassessed); a recorded set with zero viable rows is
+ *   present 0 (triggered). The table has no "not yet evaluated" state (A-2): an unevaluated shape is no row.
+ */
 function opportunityVarRows(db: Database, opportunityId: string): SnapshotVarRow[] {
+  const rows: SnapshotVarRow[] = [];
   const total = (db.query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ?").get(opportunityId) as { n: number }).n;
-  if (total === 0) return [];
-  const shortlisted = (db.query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'").get(opportunityId) as { n: number }).n;
-  return [{ var_key: "screening.viable_targets", value_num: shortlisted, value_text: null, status: "present" }];
+  if (total > 0) {
+    const shortlisted = (db.query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'").get(opportunityId) as { n: number }).n;
+    rows.push({ var_key: "screening.viable_targets", value_num: shortlisted, value_text: null, status: "present" });
+  }
+  const shapes = summarizeLiveDealShapes(db, opportunityId);
+  if (shapes) rows.push({ var_key: "dealshape.viable_shapes", value_num: shapes.viable, value_text: null, status: "present" });
+  return rows;
 }
 
 interface KillOutcome { key: string; procedure: string; criterion_id: string; title: string; action: string; outcome: "triggered" | "false" | "unassessed" }
@@ -895,6 +908,7 @@ export function snapshotInputVersion(db: Database, entityType: SnapshotEntity, e
       one("SELECT COUNT(*) c, COALESCE(MAX(c.confirmed_at),'') m, COALESCE(SUM(c.load_bearing),0) l FROM certification c JOIN md_project p ON p.id = c.project_id WHERE p.source_opportunity_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(updated_at),'') m FROM brownfield_target WHERE opportunity_id = ?", entityId),
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM route_decision WHERE opportunity_id = ?", entityId),
+      one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM opportunity_deal_shape_evaluation WHERE opportunity_id = ?", entityId),
     );
   }
   return parts.join("|");

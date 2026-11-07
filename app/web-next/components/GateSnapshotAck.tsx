@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { useKillCriteriaLabels } from "../lib/use-kill-criteria-labels.ts";
 import { KNOWN_HARD_BLOCKS, advisoryBlocks, enforcedBlocks } from "../lib/gate-integrity-view.ts";
+import { DEAL_SHAPE_KILL_KEY, DEAL_SHAPE_PANEL_ID } from "../lib/deal-shape-view.ts";
 
 /** Loads the snapshot for one gate; `replace` swaps in the fresh one returned by a 409. */
 export function useGateSnapshot(basePath: string, gate: string, briefId: string | null, enabled: boolean) {
@@ -256,8 +257,10 @@ function useAckLabel(snapshot: GateSnapshotView) {
 export interface DivergenceProps { aiRecommended: string; value: string; onChange: (v: string) => void; required: boolean; problem: string | null }
 
 /** Hard blocks, acknowledgement list and (only when the decision differs from the AI) the divergence reason. */
-export function GateAckBlock({ snapshot, state, onChange, problems, decision, divergence, notice, projectId }: {
+export function GateAckBlock({ snapshot, state, onChange, problems, decision, divergence, notice, projectId, dealId }: {
   projectId?: string;
+  /** Opportunity or project id of the deal (route id of /deals/[id]); enables the link from the #9 row to the S4 deal-shape panel. */
+  dealId?: string;
   snapshot: GateSnapshotView;
   state: AckState;
   onChange: (next: AckState) => void;
@@ -379,6 +382,9 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
                           {r.action && <span className="text-[color:var(--muted-fg)]"> · {t("actionLabel", { action: kc.action(r.action) })}</span>}
                           <span className="block text-[color:var(--muted-fg)]">{t("confirmUnassessed")}</span>
                           <CaveatNotes kill={snapshot.kill} itemKey={r.key} />
+                          {r.key === DEAL_SHAPE_KILL_KEY && dealId && (
+                            <Link className="block underline" href={`/deals/${encodeURIComponent(dealId)}/s4#${DEAL_SHAPE_PANEL_ID}`} data-testid="deal-shape-link">{t("dealShapeLink")} →</Link>
+                          )}
                         </span>
                       </label>
                       {itemProblem && <p id={`${id}-msg`} role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] m-0 mt-1 ml-6">✕ {itemProblem}</p>}

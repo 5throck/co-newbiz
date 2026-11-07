@@ -26,7 +26,7 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { GATE_INTEGRITY_FAMILIES, gateIntegrityEnvName } = await import("../../app/web-next/lib/gate-integrity-flags.ts");
 const { snapshotHash } = await import("../../app/web-next/lib/gate-canonical.ts");
-const { previewGateSnapshot, clearSnapshotCache, normalizeStoredSnapshot, verifyStoredSnapshotHash, killEnforceGuard, carriedWithoutDataSource, assertKillEnforceSafe, KILL_EVIDENCE_CAVEATS } = await import("../../app/web-next/lib/gate-snapshot.ts");
+const { previewGateSnapshot, clearSnapshotCache, normalizeStoredSnapshot, verifyStoredSnapshotHash, killEnforceGuard, carriedWithoutDataSource, assertKillEnforceSafe, KILL_EVIDENCE_CAVEATS, OPPORTUNITY_SCOPE_VARS } = await import("../../app/web-next/lib/gate-snapshot.ts");
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { recordGateDecisionRow } = await import("../../app/web-next/lib/gate-decision-contract.ts");
 const { GATE_SNAPSHOT_SCHEMA_VERSION, insertGateSnapshot, getGateSnapshot } = await import("../../db/repositories/gate-snapshot.repository.ts");
@@ -408,38 +408,62 @@ describe("13b. S12 criteria leave IC as open_monitoring carries, evaluated by da
   });
 });
 
+/** Run `fn` as if #9 still had no opportunity-scope source (ADR-0194 item A not landed); the real list is restored afterwards. */
+function withoutDealShapeSource<T>(fn: () => T): T {
+  const vars = OPPORTUNITY_SCOPE_VARS as string[];
+  const at = vars.indexOf("dealshape.viable_shapes");
+  vars.splice(at, 1);
+  try {
+    return fn();
+  } finally {
+    vars.splice(at, 0, "dealshape.viable_shapes");
+  }
+}
+
 describe("B. enforce guard: kill_binding=enforce is fail-closed while a carried or own-gate criterion has no data source at its scope", () => {
-  test("real registry (ADR-0193 14.1): the #4/#5/#6/#8 carries are re-scoped to fs, so the only offender left is #9, which needs an opportunity source", () => {
-    const offenders = carriedWithoutDataSource();
+  test("real registry (ADR-0193 14.1, ADR-0194 item A): #4/#5/#6/#8 are re-scoped to fs and #9 now has an opportunity-scope source, so no offender is left", () => {
+    expect(OPPORTUNITY_SCOPE_VARS).toContain("dealshape.viable_shapes");
+    expect(carriedWithoutDataSource()).toEqual([]);
+    // #7 reads screening.viable_targets and #9 reads dealshape.viable_shapes, both opportunity-scope variables
+    const offenders = carriedWithoutDataSource().map((o) => o.key);
+    for (const k of [HHI, INFRA_PLAN, PARTNER_GF, ZERO_SITE, NO_TARGET, NO_SHAPE]) expect(offenders).not.toContain(k);
+    // #10-#13 are deferred past their own gate to fs, so the reached-at-own-gate listing does not carry them
+    for (const t of ["greenfield", "brownfield"] as const) for (const k of RESCOPED_AT_PRE_FS(t)) expect(offenders).not.toContain(k);
+  });
+  test("the guard still detects a reached-at-own-gate criterion whose variable has no opportunity source (#9 without its source, restored after)", () => {
+    const offenders = withoutDealShapeSource(() => carriedWithoutDataSource());
     expect(offenders.map((o) => o.key)).toEqual([NO_SHAPE]);
     expect(offenders[0]).toMatchObject({ kind: "reached_at_own_gate", reevaluate_at: "pre_fs", missing_vars: ["dealshape.viable_shapes"] });
-    // re-scoped to a project gate (always has its data): not carried offenders any more
-    for (const k of [HHI, INFRA_PLAN, PARTNER_GF, ZERO_SITE]) expect(offenders.map((o) => o.key)).not.toContain(k);
-    // #7 reads screening.viable_targets, an opportunity-scope variable
-    expect(offenders.map((o) => o.key)).not.toContain(NO_TARGET);
-    // #10-#13 are deferred past their own gate to fs, so the reached-at-own-gate listing does not carry them
-    for (const t of ["greenfield", "brownfield"] as const) for (const k of RESCOPED_AT_PRE_FS(t)) expect(offenders.map((o) => o.key)).not.toContain(k);
+    expect(carriedWithoutDataSource()).toEqual([]);
   });
-  test("startup check refuses enforce, accepts shadow/off, and the test environment bypass is explicit", () => {
+  test("startup check: the real registry is enforce-safe now; the refusal logic still holds when a source is missing, and the test environment bypass is explicit", () => {
     const enforce = { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING: "enforce" };
-    expect(() => assertKillEnforceSafe(enforce)).toThrow(/kill_enforce_unsafe/);
-    expect(() => assertKillEnforceSafe({ ...enforce, CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING: "shadow" })).not.toThrow();
-    expect(() => assertKillEnforceSafe({ NODE_ENV: "production" })).not.toThrow(); // production default is shadow
-    expect(killEnforceGuard({ NODE_ENV: "development" }).unsafe).toBe(true);
-    expect(killEnforceGuard({ NODE_ENV: "test" }).unsafe).toBe(false);
-    expect(killEnforceGuard({ NODE_ENV: "test", CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST: "on" }).unsafe).toBe(true);
+    expect(() => assertKillEnforceSafe(enforce)).not.toThrow(); // ADR-0194: no offender left against the real registry
+    expect(killEnforceGuard({ NODE_ENV: "development" }).unsafe).toBe(false);
+    withoutDealShapeSource(() => {
+      expect(() => assertKillEnforceSafe(enforce)).toThrow(/kill_enforce_unsafe/);
+      expect(() => assertKillEnforceSafe({ ...enforce, CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING: "shadow" })).not.toThrow();
+      expect(() => assertKillEnforceSafe({ NODE_ENV: "production" })).not.toThrow(); // production default is shadow
+      expect(killEnforceGuard({ NODE_ENV: "development" }).unsafe).toBe(true);
+      expect(killEnforceGuard({ NODE_ENV: "test" }).unsafe).toBe(false);
+      expect(killEnforceGuard({ NODE_ENV: "test", CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST: "on" }).unsafe).toBe(true);
+    });
+    expect(killEnforceGuard({ NODE_ENV: "test", CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST: "on" }).unsafe).toBe(false);
   });
-  test("decision path: with the guard live and enforce on, a GO is refused kill_enforce_unsafe (409), the snapshot flags it, HOLD is never blocked", () => {
+  test("decision path: with the guard live and a criterion lacking its source, a GO is refused kill_enforce_unsafe (409), the snapshot flags it, HOLD is never blocked; with the real registry it is not raised", () => {
     process.env.CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST = "on";
     setFlags("enforce", ...SNAP);
     const { projectId } = S.seedReadyProject(db, ANALYST);
-    const view = preview("project", projectId, "fs");
-    expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")).toMatchObject({ enforced: true });
-    expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")!.keys).toEqual([NO_SHAPE]);
-    const go = recordProjectGo(projectId, view);
-    expect(go.ok).toBe(false);
-    if (!go.ok) expect(go.failure).toMatchObject({ status: 409, code: "kill_enforce_unsafe" });
-    expect(recordProjectDecision(projectId, "hold", view).ok).toBe(true);
+    expect(preview("project", projectId, "fs").snapshot.hard_blocks.map((h) => h.code)).not.toContain("kill_enforce_unsafe");
+    withoutDealShapeSource(() => {
+      const view = preview("project", projectId, "fs");
+      expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")).toMatchObject({ enforced: true });
+      expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")!.keys).toEqual([NO_SHAPE]);
+      const go = recordProjectGo(projectId, view);
+      expect(go.ok).toBe(false);
+      if (!go.ok) expect(go.failure).toMatchObject({ status: 409, code: "kill_enforce_unsafe" });
+      expect(recordProjectDecision(projectId, "hold", view).ok).toBe(true);
+    });
   });
   test("shadow mode never raises it (the flag is not enforce)", () => {
     process.env.CO_NEWBIZ_KILL_ENFORCE_GUARD_TEST = "on";
