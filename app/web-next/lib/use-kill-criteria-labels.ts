@@ -21,5 +21,10 @@ export function useKillCriteriaLabels() {
     const k = `actions.${code}`;
     return t.has(k as never) ? t(k as never) : code;
   };
-  return { title, action, titleOfKey: (key: string, fallback: string) => title(criterionIdOfKey(key), fallback) };
+  /** Evidence caveat of a criterion (`killCriteria.caveats.<criterion_id>`); the server text is the fallback. */
+  const caveat = (criterionId: string | null | undefined, fallback: string): string => {
+    const k = `caveats.${criterionId ?? ""}`;
+    return criterionId && t.has(k as never) ? t(k as never) : fallback;
+  };
+  return { title, action, caveat, caveatOfKey: (key: string, fallback: string) => caveat(criterionIdOfKey(key), fallback), titleOfKey: (key: string, fallback: string) => title(criterionIdOfKey(key), fallback) };
 }

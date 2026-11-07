@@ -17,14 +17,53 @@ export interface SnapshotRequiredAck {
   criterion_id?: string;
   action?: string;
 }
+/** ADR-0193: a criterion whose stage is after the entity's current stage - information only, never acknowledged or counted. */
+export interface SnapshotKillNotReached extends SnapshotKillItem {
+  evaluable_from: string;
+  reevaluate_at: string;
+}
+/** ADR-0193: how a carried criterion stands at this gate. open = evaluated but still unassessed (or overdue); open_monitoring = S12, waits for post-close data. */
+export type KillClosure = "evaluated" | "open" | "out_of_track" | "open_monitoring";
+export interface SnapshotKillCarriedIn {
+  key: string;
+  title: string;
+  from_decision_id: string | null;
+  outcome: "false" | "triggered" | "unassessed" | "overdue" | "out_of_track";
+  reason?: string | null;
+  closure: KillClosure;
+  action: string;
+  evaluable_from: string;
+  reevaluate_at: string;
+  route_decision_id: string | null;
+  implicit?: boolean;
+}
+export interface SnapshotKillScheduled {
+  key: string;
+  title: string;
+  action: string;
+  evaluable_from: string;
+  reevaluate_at: string;
+  status: "pending";
+}
+export interface SnapshotKillCaveat {
+  key: string;
+  caveat: string;
+}
 export interface GateSnapshotView {
   gate: string;
   kill: {
-    triggered: Array<SnapshotKillItem & { binding?: boolean; override_id?: string | null }>;
+    triggered: Array<SnapshotKillItem & { binding?: boolean; override_id?: string | null; partial_input?: boolean }>;
     unassessed: SnapshotKillItem[];
     inert: number;
     inert_list: Array<{ key: string; title: string }>;
     evaluated?: number;
+    /** Schema v2 (ADR-0193). Absent on a legacy snapshot: read as empty. */
+    current_stage?: string;
+    not_reached?: SnapshotKillNotReached[];
+    carried_in?: SnapshotKillCarriedIn[];
+    scheduled?: SnapshotKillScheduled[];
+    caveats?: SnapshotKillCaveat[];
+    lineage_missing?: boolean;
   };
   rag: {
     overall: string | null;
@@ -184,4 +223,62 @@ export function ackKeyFamily(key: string): "kill" | "rag" | "np" | "other" {
   if (key.startsWith("rag:")) return "rag";
   if (key.startsWith("np:")) return "np";
   return "other";
+}
+
+// ── ADR-0193: stage-scoped kill criteria (not reached, carried in, scheduled, caveats, partial input) ──
+
+/** Gate ids the catalog can name (`common.gate.<id>`); anything else (e.g. `open_monitoring`) has no gate label. */
+const NAMED_GATES: ReadonlySet<string> = new Set(["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"]);
+export const isNamedGate = (g: string | null | undefined): g is string => !!g && NAMED_GATES.has(g);
+
+/** The v2 kill-scope fields with legacy snapshots read as empty. */
+export function killScopeView(kill: GateSnapshotView["kill"]): {
+  notReached: SnapshotKillNotReached[];
+  carriedIn: SnapshotKillCarriedIn[];
+  scheduled: SnapshotKillScheduled[];
+  caveats: SnapshotKillCaveat[];
+  partialTriggered: GateSnapshotView["kill"]["triggered"];
+  closedCarries: number;
+} {
+  const carriedIn = kill.carried_in ?? [];
+  return {
+    notReached: kill.not_reached ?? [],
+    carriedIn,
+    scheduled: kill.scheduled ?? [],
+    caveats: kill.caveats ?? [],
+    partialTriggered: kill.triggered.filter((t) => t.partial_input === true),
+    closedCarries: carriedIn.filter((c) => c.closure === "evaluated" || c.closure === "out_of_track").length,
+  };
+}
+
+/** Closure state -> catalog suffix and a leading icon (a state is never colour alone). */
+export const CLOSURE_VIEW: Readonly<Record<KillClosure, { icon: string; tone: "green" | "amber" | "neutral" }>> = {
+  evaluated: { icon: "✓", tone: "green" },
+  open: { icon: "⚠", tone: "amber" },
+  open_monitoring: { icon: "◐", tone: "neutral" },
+  out_of_track: { icon: "↷", tone: "neutral" },
+};
+export function closureView(closure: string): { id: KillClosure; icon: string; tone: "green" | "amber" | "neutral" } {
+  const id: KillClosure = closure in CLOSURE_VIEW ? (closure as KillClosure) : "open";
+  return { id, ...CLOSURE_VIEW[id] };
+}
+
+/** Evidence caveats of one criterion key (a key may carry several; duplicates collapse). */
+export function caveatsOfKey(kill: GateSnapshotView["kill"], key: string): string[] {
+  return [...new Set((kill.caveats ?? []).filter((c) => c.key === key).map((c) => c.caveat))];
+}
+
+/** `ack_not_reached` (400): the client asked to acknowledge a criterion the server classifies as not reached. */
+export const ACK_NOT_REACHED_CODE = "ack_not_reached";
+export function ackNotReachedKeys(details: unknown): string[] {
+  const d = (details && typeof details === "object" ? details : {}) as Record<string, unknown>;
+  return Array.isArray(d.keys) ? d.keys.filter((x): x is string => typeof x === "string") : [];
+}
+
+/** Drop entered state for keys the server no longer asks about (after `ack_not_reached` or a refreshed snapshot). */
+export function dropAckKeys(state: AckState, keys: readonly string[]): AckState {
+  const drop = new Set(keys);
+  const reasons = Object.fromEntries(Object.entries(state.reasons).filter(([k]) => !drop.has(k)));
+  const checked = Object.fromEntries(Object.entries(state.checked).filter(([k]) => !drop.has(k)));
+  return { ...state, reasons, checked };
 }

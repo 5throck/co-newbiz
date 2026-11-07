@@ -9,6 +9,7 @@ import { DD_DOMAIN_KEY, DECISION_LABEL_KEY, GATE_LABEL_KEY, RAG_DIMENSION_KEY } 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
+import { KillCarriesPanel, type KillCarriesView } from "../KillCarriesPanel.tsx";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
@@ -41,6 +42,8 @@ const PCTL_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, 
 interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
 interface IcPackage {
   wacc_status?: WaccStatusLike;
+  /** ADR-0193: carried kill criteria still open at the IC gate; null = not computable (never "none"). */
+  kill_carries?: KillCarriesView | null;
   project: { id: string; project_no: string };
   business_case: { adopted: AdoptedCase | null; adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null; note?: string };
   dd: {
@@ -306,6 +309,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
               ))}
             </ul>
           )}
+
+          {pkg && <KillCarriesPanel carries={pkg.kill_carries} />}
 
           <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("overallGrade")}</h4>
           {pkg?.rag.grade ? (

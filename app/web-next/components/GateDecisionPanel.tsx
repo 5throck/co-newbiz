@@ -20,10 +20,10 @@ import { currentTurn, gateSequenceBlocker, gateState } from "../lib/gate-sequenc
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { ConditionsEditor, GateCountersign, KillOverridePanel } from "./GateIntegrity.tsx";
-import { conditionsPayload, integrityErrorList, isAwaitingCountersign, recordedDecisionOf, type ConditionDraft } from "../lib/gate-integrity-view.ts";
+import { KNOWN_HARD_BLOCKS, conditionsPayload, integrityErrorList, isAwaitingCountersign, recordedDecisionOf, type ConditionDraft } from "../lib/gate-integrity-view.ts";
 import { WaccStatusBadge, type WaccStatusLike } from "./WaccStatusBadge.tsx";
 import { GateAckBlock, GateSnapshotSummary, useGateSnapshot } from "./GateSnapshotAck.tsx";
-import { EMPTY_ACK_STATE, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../lib/gate-ack-view.ts";
+import { ACK_NOT_REACHED_CODE, EMPTY_ACK_STATE, ackNotReachedKeys, ackProblemsFromError, buildAckPayload, dropAckKeys, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../lib/gate-ack-view.ts";
 
 const IC_GATES: readonly string[] = ["entity_ic", "group_ic"];
 
@@ -419,14 +419,26 @@ export function GateDecisionPanel({ opportunityId, gates, killHint, entityType =
       setError(err.message);
       return;
     }
+    // ADR-0193: the client asked to acknowledge a criterion the server classifies not reached - a stale view. Reload and say so plainly.
+    if (err.code === ACK_NOT_REACHED_CODE) {
+      const keys = ackNotReachedKeys(d);
+      setAckState((s) => dropAckKeys(s, keys));
+      void snap.reload();
+      setError(ts("ackNotReached", { count: keys.length }));
+      return;
+    }
     if (err.code === "divergence_reason_required") { setDivergenceProblem(err.message); setError(null); return; }
     if (err.code === "rationale_insufficient" && d.field === "divergence_reason") {
       setDivergenceProblem(typeof d.reason === "string" ? te(d.reason as never) : err.message); setError(null); return;
     }
-    if (["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed", "wacc_unconfirmed"].includes(err.code)) {
+    if ((KNOWN_HARD_BLOCKS as readonly string[]).includes(err.code)) {
       void snap.reload();
       const list = integrityErrorList(err.code, d);
-      setError(list.length > 0 ? `${err.message} (${list.join(", ")})` : err.message);
+      // The ADR-0193 blocks have catalog text (the lineage one names its repair); the server text stays the fallback for the older ones.
+      const text = err.code.startsWith("kill_carry_") || err.code === "kill_lineage_missing" || err.code === "kill_enforce_unsafe"
+        ? `${ti(`hardBlock.${err.code}.title` as never)} ${ti(`hardBlock.${err.code}.body` as never)}`
+        : err.message;
+      setError(list.length > 0 ? `${text} (${list.join(", ")})` : text);
       return;
     }
     if (err.code === "reconfirmation_required") {

@@ -2816,7 +2816,37 @@
       "divergenceRecorded": "Differed from AI ({ai}): {reason}",
       "storedSnapshot": "Stored gate state",
       "noAcks": "No acknowledgements were recorded.",
-      "rawSnapshot": "Full stored state"
+      "rawSnapshot": "Full stored state",
+      "ackNotReached": "{count} stop condition(s) you tried to acknowledge are not evaluated at this gate yet. Your view was out of date, so the latest state was reloaded. Review the acknowledgement list again and record.",
+      "killNotReached": "{count} not reached yet",
+      "partialInput": "Partial input",
+      "partialInputHint": "The input may still be partial, so this could be a false positive. The triggered result stays as it is.",
+      "partialInputNote": "These stop conditions triggered earlier than the stage they can be evaluated from. Their input may still be incomplete (for example a candidate list under construction), so they may not really apply. They are still treated as triggered.",
+      "caveatsLabel": "Evidence caveats",
+      "carriedIn": "Carried from earlier gates: {count} ({closed} closed)",
+      "closure": {
+        "evaluated": "Evaluated",
+        "open": "Not assessed",
+        "open_monitoring": "Awaiting post-close data",
+        "out_of_track": "Out of track"
+      },
+      "carryOutcome": {
+        "false": "Not triggered",
+        "triggered": "Triggered",
+        "unassessed": "Not assessed",
+        "overdue": "Overdue",
+        "out_of_track": "Out of track"
+      },
+      "carryImplicit": "derived from an earlier record",
+      "carryMonitoring": "Closes only by a person's record in post-close monitoring (S12). The investment committee cannot close it.",
+      "carryOutOfTrack": "Closed by route decision {id} (item of the earlier track)",
+      "carryReevaluated": "Evaluated from {stage} · re-checked at the {gate} gate",
+      "notReachedSummary": "Not reached yet ({count})",
+      "notReachedNote": "These stop conditions cannot be evaluated at this stage yet. They need no acknowledgement, are not counted in the items to confirm, and are re-checked at the gate shown.",
+      "notReachedWhen": "Evaluated from {stage} · re-checked at the {gate} gate",
+      "scheduledSummary": "Scheduled evaluation ({count})",
+      "scheduledChip": "Scheduled",
+      "scheduledAt": "To be evaluated at the {gate} gate"
     },
     "gateIntegrity": {
       "awaiting": "Waiting for a second reviewer",
@@ -2888,6 +2918,22 @@
         "wacc_unconfirmed": {
           "title": "GO is blocked: the discount rate is not confirmed",
           "body": "A person must confirm the WACC application subject, the WACC and the hurdle IRR in the WACC session before the feasibility GO. There is no waiver for this."
+        },
+        "kill_carry_overdue": {
+          "title": "GO is blocked: a carried stop condition is overdue",
+          "body": "The stop conditions below were carried from an earlier gate and have reached their re-evaluation gate, but cannot be classified as reached. This is a registry or stage defect, so no Group Investment Committee exception exists. Fix the registry (ADR-tracked), then record again."
+        },
+        "kill_carry_unassessed": {
+          "title": "GO is blocked: a carried stop condition is not assessed",
+          "body": "The halt stop conditions below were carried from an earlier gate and still have no evidence at their re-evaluation gate. A written acknowledgement cannot close them. Supply the evidence, assess them, then record again."
+        },
+        "kill_lineage_missing": {
+          "title": "GO is blocked: no linked source opportunity",
+          "body": "This project has no source opportunity linked, so the stop conditions carried from the opportunity gates cannot be checked. It is never read as no carried items. Promote the project from its opportunity, or ask an administrator to link it (set md_project.source_opportunity_id), then record again."
+        },
+        "kill_enforce_unsafe": {
+          "title": "GO is blocked: stop-condition enforcement is unsafe",
+          "body": "Stop conditions are set to enforce, but the carried items below have no data source at their re-evaluation scope. That would block every such GO or leave only meaningless acknowledgements. An operator must lower the mode to shadow or off, or re-scope the re-evaluation gate (ADR-tracked)."
         }
       },
       "priorAwaiting": "The previous gate has a GO that is still waiting for its second review.",
@@ -3012,6 +3058,13 @@
         "submit": "Open requirement",
         "projectLabel": "Project id"
       }
+    },
+    "killCarries": {
+      "heading": "Stop conditions carried from earlier gates",
+      "unavailable": "The carried stop conditions could not be computed. This is not none; it is unchecked. Check again on the gate decision screen.",
+      "none": "As of the {gate} gate, no carried item was evaluated and left unassessed, and none awaits post-close data.",
+      "openHeading": "Evaluated but still not assessed: {count}",
+      "monitoringHeading": "Awaiting post-close data: {count}"
     }
   },
   "errors": {
@@ -3355,6 +3408,9 @@
       "halt": "Halt",
       "escalate_to_risk_officer": "Escalate to the risk officer",
       "mark_conditional": "Mark as conditional"
+    },
+    "caveats": {
+      "infrastructure_plan_not_finalized_at_site_announcement": "Evaluated on the gate-date state, not the site-announcement date (fix pending). Do not read it as clean evidence."
     }
   },
   "nav": {

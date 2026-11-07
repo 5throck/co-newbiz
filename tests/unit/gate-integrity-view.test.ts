@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-  advisoryBlocks, clearByOptions, conditionsPayload, countersignProblem, detailList, enforcedBlocks, filterConditions,
+  KNOWN_HARD_BLOCKS, advisoryBlocks, clearByOptions, conditionsPayload, countersignProblem, detailList, enforcedBlocks, filterConditions,
   integrityErrorList, isAwaitingCountersign, recordedDecisionOf,
 } from "../../app/web-next/lib/gate-integrity-view.ts";
 
@@ -51,5 +51,17 @@ describe("hard blocks and error lists", () => {
     const rows = [{ status: "open" }, { status: "cleared" }];
     expect(filterConditions(rows, "all")).toHaveLength(2);
     expect(filterConditions(rows, "open")).toEqual([{ status: "open" }]);
+  });
+});
+
+describe("ADR-0193 hard blocks", () => {
+  test("the four kill-scope blocks are known (they have catalog text) and enforced by default", () => {
+    for (const c of ["kill_carry_overdue", "kill_carry_unassessed", "kill_lineage_missing", "kill_enforce_unsafe"]) expect(KNOWN_HARD_BLOCKS as readonly string[]).toContain(c);
+    expect(enforcedBlocks([{ code: "kill_enforce_unsafe", keys: ["k"] }]).map((b) => b.code)).toEqual(["kill_enforce_unsafe"]);
+  });
+  test("409 key lists come from details.keys for the carry blocks; lineage has no list", () => {
+    expect(integrityErrorList("kill_carry_unassessed", { keys: ["a:b"] })).toEqual(["a:b"]);
+    expect(integrityErrorList("kill_carry_overdue", { keys: ["a:b", "c:d"] })).toEqual(["a:b", "c:d"]);
+    expect(integrityErrorList("kill_lineage_missing", { project_id: "p" })).toEqual([]);
   });
 });

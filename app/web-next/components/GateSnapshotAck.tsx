@@ -7,10 +7,11 @@
 // records, the server re-checks every reason.
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Clock } from "lucide-react";
 import { api } from "../lib/api.ts";
 import {
   type AckProblems, type AckState, type GateSnapshotEnvelope, type GateSnapshotView, type SnapshotRequiredAck,
-  missingAckKeys, reasonAcks, reasonHint, unassessedAcks,
+  caveatsOfKey, closureView, isNamedGate, killScopeView, missingAckKeys, reasonAcks, reasonHint, unassessedAcks,
 } from "../lib/gate-ack-view.ts";
 import Link from "next/link";
 import { useKillCriteriaLabels } from "../lib/use-kill-criteria-labels.ts";
@@ -44,6 +45,108 @@ function Chip({ tone, children }: { tone: "green" | "amber" | "red" | "neutral";
   return <span className={`status-chip ${tone === "neutral" ? "status-not-started" : CHIP[tone]}`}>{children}</span>;
 }
 
+/** A status chip that always leads with an icon glyph, so the state never rests on colour alone. */
+function IconChip({ tone, icon, children, title }: { tone: "green" | "amber" | "red" | "neutral"; icon: React.ReactNode; children: React.ReactNode; title?: string }) {
+  return <span className={`status-chip ${tone === "neutral" ? "status-not-started" : CHIP[tone]}`} title={title}><span aria-hidden="true">{icon}</span> {children}</span>;
+}
+
+/** ADR-0193 (C-5): the criterion triggered before its evaluable stage, so its input may still be partial. */
+function PartialInputChip() {
+  const t = useTranslations("components.gateSnapshot");
+  return <IconChip tone="amber" icon="◐" title={t("partialInputHint")}>{t("partialInput")}</IconChip>;
+}
+
+/** Evidence caveats shown next to the criterion they qualify (a false result is not clean evidence either). */
+function CaveatNotes({ kill, itemKey }: { kill: GateSnapshotView["kill"]; itemKey: string }) {
+  const kc = useKillCriteriaLabels();
+  const caveats = caveatsOfKey(kill, itemKey);
+  if (caveats.length === 0) return null;
+  return <>{caveats.map((c) => <span key={c} role="note" className="block text-[color:var(--muted-fg)]" data-testid="kill-caveat"><span aria-hidden="true">ⓘ</span> {kc.caveatOfKey(itemKey, c)}</span>)}</>;
+}
+
+/**
+ * ADR-0193 (owner Q2, design 6): what the kill criteria did NOT ask at this gate.
+ * - "Not reached yet": collapsed, neutral, no checkbox, never counted as unassessed.
+ * - "Carried from earlier gates": read-only, each with its closure state (text + icon).
+ * - "Scheduled": criteria owned by a later gate, shown as pending - never absent.
+ * - Partial-input triggers and caveats that no other list already shows.
+ */
+function KillScopeNotes({ kill, gateLabel }: { kill: GateSnapshotView["kill"]; gateLabel: (g: string) => string }) {
+  const t = useTranslations("components.gateSnapshot");
+  const kc = useKillCriteriaLabels();
+  const v = killScopeView(kill);
+  const gate = (g: string) => (isNamedGate(g) ? gateLabel(g) : g);
+  const shown = new Set([...kill.triggered, ...kill.unassessed].map((i) => i.key).concat(v.carriedIn.map((c) => c.key)));
+  const looseCaveats = v.caveats.filter((c) => !shown.has(c.key));
+  if (v.notReached.length + v.carriedIn.length + v.scheduled.length + v.partialTriggered.length + looseCaveats.length === 0) return null;
+  return (
+    <div className="mt-2 grid gap-2 text-[length:var(--fs-caption)]" data-testid="gate-kill-scope">
+      {v.partialTriggered.length > 0 && (
+        <div role="note" data-testid="kill-partial-input">
+          <PartialInputChip /> <span className="text-[color:var(--muted-fg)]">{t("partialInputNote")}</span>
+          <ul className="sizing-note-list">{v.partialTriggered.map((i) => <li key={i.key}>{kc.titleOfKey(i.key, i.title)}</li>)}</ul>
+        </div>
+      )}
+      {looseCaveats.length > 0 && (
+        <ul className="sizing-note-list m-0" aria-label={t("caveatsLabel")}>
+          {looseCaveats.map((c) => <li key={c.key}><strong>{kc.titleOfKey(c.key, c.key)}</strong><CaveatNotes kill={kill} itemKey={c.key} /></li>)}
+        </ul>
+      )}
+      {v.carriedIn.length > 0 && (
+        <details className="review-dev" open={v.carriedIn.some((c) => c.closure === "open")} data-testid="kill-carried-in">
+          <summary>{t("carriedIn", { count: v.carriedIn.length, closed: v.closedCarries })}</summary>
+          <ul className="sizing-note-list">
+            {v.carriedIn.map((c) => {
+              const cv = closureView(c.closure);
+              return (
+                <li key={c.key} data-closure={cv.id}>
+                  <span className="font-semibold">{kc.titleOfKey(c.key, c.title)}</span>{" "}
+                  <IconChip tone={cv.tone} icon={cv.icon}>{t(`closure.${cv.id}` as never)}</IconChip>
+                  <span className="text-[color:var(--muted-fg)]"> · {t(`carryOutcome.${c.outcome}` as never)}{c.action && ` · ${t("actionLabel", { action: kc.action(c.action) })}`}</span>
+                  {c.implicit && <span className="text-[color:var(--muted-fg)]"> · {t("carryImplicit")}</span>}
+                  <span className="block text-[color:var(--muted-fg)]">
+                    {cv.id === "open_monitoring" ? t("carryMonitoring") : cv.id === "out_of_track" ? t("carryOutOfTrack", { id: c.route_decision_id ?? "-" }) : isNamedGate(c.reevaluate_at) ? t("carryReevaluated", { stage: c.evaluable_from, gate: gate(c.reevaluate_at) }) : ""}
+                  </span>
+                  <CaveatNotes kill={kill} itemKey={c.key} />
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
+      {v.notReached.length > 0 && (
+        <details className="review-dev" data-testid="kill-not-reached">
+          <summary><Clock size={14} aria-hidden="true" className="inline mr-1" />{t("notReachedSummary", { count: v.notReached.length })}</summary>
+          <p className="review-dev-note">{t("notReachedNote")}</p>
+          <ul className="sizing-note-list">
+            {v.notReached.map((n) => (
+              <li key={n.key}>
+                <span className="font-semibold">{kc.title(n.criterion_id, n.title)}</span>
+                {n.action && <span className="text-[color:var(--muted-fg)]"> · {t("actionLabel", { action: kc.action(n.action) })}</span>}
+                <span className="block text-[color:var(--muted-fg)]">{t("notReachedWhen", { stage: n.evaluable_from, gate: gate(n.reevaluate_at) })}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {v.scheduled.length > 0 && (
+        <details className="review-dev" data-testid="kill-scheduled">
+          <summary><Clock size={14} aria-hidden="true" className="inline mr-1" />{t("scheduledSummary", { count: v.scheduled.length })}</summary>
+          <ul className="sizing-note-list">
+            {v.scheduled.map((n) => (
+              <li key={n.key}>
+                <span className="font-semibold">{kc.titleOfKey(n.key, n.title)}</span>{" "}
+                <IconChip tone="neutral" icon="◷">{t("scheduledChip")}</IconChip>
+                <span className="block text-[color:var(--muted-fg)]">{t("scheduledAt", { gate: gate(n.reevaluate_at) })}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 /** Compact, read-only summary of the snapshot. */
 export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSnapshotView; gateLabel: (g: string) => string }) {
   const t = useTranslations("components.gateSnapshot");
@@ -55,12 +158,15 @@ export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSna
   const cap = rag?.data_confidence_cap;
   const grade = (g: string | null | undefined) => (g === "green" || g === "amber" || g === "red" ? t(`grade.${g}`) : t("gradeNone"));
   const tone = (g: string | null | undefined): "green" | "amber" | "red" | "neutral" => (g === "green" || g === "amber" || g === "red" ? g : "neutral");
+  const notReachedCount = (k.not_reached ?? []).length;
   return (
+    <>
     <dl className="grid gap-x-4 gap-y-1 text-[length:var(--fs-caption)] m-0" style={{ gridTemplateColumns: "max-content 1fr" }} aria-label={t("summaryLabel")}>
       <dt className="text-[color:var(--muted-fg)]">{t("sumKill")}</dt>
       <dd className="m-0">
         <Chip tone={k.triggered.length > 0 ? "red" : "neutral"}>{t("killTriggered", { count: k.triggered.length })}</Chip>{" "}
         <Chip tone={k.unassessed.length > 0 ? "amber" : "neutral"}>{t("killUnassessed", { count: k.unassessed.length })}</Chip>{" "}
+        {notReachedCount > 0 && <><IconChip tone="neutral" icon="◷">{t("killNotReached", { count: notReachedCount })}</IconChip>{" "}</>}
         <span className="text-[color:var(--muted-fg)]">{t("killInert", { count: k.inert })}</span>
         {k.inert_list.length > 0 && (
           <details className="inline-block ml-1">
@@ -126,6 +232,8 @@ export function GateSnapshotSummary({ snapshot, gateLabel }: { snapshot: GateSna
         </>
       )}
     </dl>
+    <KillScopeNotes kill={k} gateLabel={gateLabel} />
+    </>
   );
 }
 
@@ -203,12 +311,15 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
     const r = required.find((x) => x.key === key);
     if (r) return label(r).title;
     const k = [...snapshot.kill.triggered, ...snapshot.kill.unassessed].find((i) => i.key === key || `kill:${i.key}` === key);
-    return k ? kc.title(k.criterion_id, k.title) : key;
+    if (k) return kc.title(k.criterion_id, k.title);
+    const c = (snapshot.kill.carried_in ?? []).find((i) => i.key === key);
+    return c ? kc.titleOfKey(c.key, c.title) : kc.titleOfKey(key, key);
   };
+  const partialOf = (key: string) => snapshot.kill.triggered.some((i) => i.key === key && i.partial_input === true);
   const blockText = (code: string, part: "title" | "body") => ti(`hardBlock.${(KNOWN_HARD_BLOCKS as readonly string[]).includes(code) ? code : "kill_binding_unoverridden"}.${part}` as never);
   const blockKeyTitle = (code: string, key: string) => {
     if (code === "condition_open") return snapshot.conditions_open?.find((c) => c.id === key)?.text ?? key;
-    if (code === "kill_binding_unoverridden") return keyTitle(key);
+    if (code === "kill_binding_unoverridden" || code === "kill_carry_overdue" || code === "kill_carry_unassessed" || code === "kill_enforce_unsafe") return keyTitle(key);
     if (code === "wacc_unconfirmed") return tw(`missing.${key}` as never);
     return key;
   };
@@ -219,9 +330,11 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
         <div key={b.code} role="alert" className="border border-[color:var(--red-fg)] rounded-lg px-3 py-2 mb-2 text-[length:var(--fs-caption)]" data-testid="gate-hard-block" data-block-code={b.code}>
           <p className="font-semibold m-0 text-[color:var(--red-fg)]"><span aria-hidden="true">⛔</span> {blockText(b.code, "title")}</p>
           <p className="m-0 mt-1">{blockText(b.code, "body")}</p>
-          <ul className="sizing-note-list" aria-label={ti("hardBlock.listLabel")}>
-            {b.keys.map((k) => <li key={`${b.code}:${k}`}>{blockKeyTitle(b.code, k)}</li>)}
-          </ul>
+          {b.code !== "kill_lineage_missing" && (
+            <ul className="sizing-note-list" aria-label={ti("hardBlock.listLabel")}>
+              {b.keys.map((k) => <li key={`${b.code}:${k}`}>{blockKeyTitle(b.code, k)}</li>)}
+            </ul>
+          )}
           {b.code === "wacc_unconfirmed" && projectId && <p className="m-0 mt-1"><Link className="text-[color:var(--accent)] underline" href={`/projects/${encodeURIComponent(projectId)}/wacc`}>{tw("confirmLink")}</Link></p>}
           <p className="m-0 text-[color:var(--muted-fg)]">{ti("hardBlock.others")}</p>
         </div>
@@ -265,6 +378,7 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
                           <strong>{l.title}</strong>
                           {r.action && <span className="text-[color:var(--muted-fg)]"> · {t("actionLabel", { action: kc.action(r.action) })}</span>}
                           <span className="block text-[color:var(--muted-fg)]">{t("confirmUnassessed")}</span>
+                          <CaveatNotes kill={snapshot.kill} itemKey={r.key} />
                         </span>
                       </label>
                       {itemProblem && <p id={`${id}-msg`} role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] m-0 mt-1 ml-6">✕ {itemProblem}</p>}
@@ -328,7 +442,9 @@ export function GateAckBlock({ snapshot, state, onChange, problems, decision, di
                     <span className="status-chip status-not-started mr-1">{l.kindLabel}</span>
                     <strong>{l.title}</strong>
                     {r.action && <span className="text-[color:var(--muted-fg)]"> · {t("actionLabel", { action: kc.action(r.action) })}</span>}
+                    {partialOf(r.key) && <> <PartialInputChip /></>}
                     <span aria-hidden="true"> *</span>
+                    <CaveatNotes kill={snapshot.kill} itemKey={r.key} />
                   </label>
                   <textarea
                     id={id}

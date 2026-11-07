@@ -48,7 +48,7 @@ export function conditionsPayload(drafts: readonly ConditionDraft[]): Array<{ te
 }
 
 export interface HardBlockView { code: string; keys: string[]; enforced: boolean }
-export const KNOWN_HARD_BLOCKS = ["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed", "wacc_unconfirmed"] as const;
+export const KNOWN_HARD_BLOCKS = ["kill_binding_unoverridden", "validators_incomplete", "condition_open", "certification_unconfirmed", "wacc_unconfirmed", "kill_carry_overdue", "kill_carry_unassessed", "kill_lineage_missing", "kill_enforce_unsafe"] as const;
 export function enforcedBlocks<T extends { enforced?: boolean }>(blocks: readonly T[]): T[] {
   return blocks.filter((b) => b.enforced !== false);
 }
@@ -75,6 +75,7 @@ export function integrityErrorList(code: string, details: Record<string, unknown
   if (code === "wacc_unconfirmed") return detailList(details.missing);
   if (code === "condition_open") return detailList(details.conditions);
   if (code === "certification_unconfirmed") return detailList(details.certifications);
+  if (code === "kill_carry_overdue" || code === "kill_carry_unassessed" || code === "kill_enforce_unsafe") return detailList(details.keys);
   return [];
 }
 

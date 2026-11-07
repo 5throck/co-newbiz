@@ -14,7 +14,7 @@ import { Button, PageState, PrimaryAction } from "../../../../components/ui.tsx"
 import { ReviewBuckets } from "../../../../components/ReviewBuckets.tsx";
 import { StatusPage } from "../../../../components/StatusPage.tsx";
 import { GateAckBlock, GateSnapshotSummary } from "../../../../components/GateSnapshotAck.tsx";
-import { EMPTY_ACK_STATE, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../../../../lib/gate-ack-view.ts";
+import { ACK_NOT_REACHED_CODE, EMPTY_ACK_STATE, ackNotReachedKeys, ackProblemsFromError, buildAckPayload, reconcileAckState, type AckProblems, type AckState, type GateSnapshotEnvelope } from "../../../../lib/gate-ack-view.ts";
 
 type Payload = Record<string, unknown>;
 
@@ -180,7 +180,9 @@ export default function ProposalConfirmPage() {
         if (e.code === "ack_required" || (e.code === "rationale_insufficient" && d.field === "acknowledgements")) setAckProblems(ackProblemsFromError(e.code, d));
         if (e.code === "divergence_reason_required" || (e.code === "rationale_insufficient" && d.field === "divergence_reason")) setDivergenceProblem(e.message);
       }
-      setNotice(e instanceof ApiError ? `${e.message} (${e.code})` : t("confirmFailed"));
+      setNotice(e instanceof ApiError
+        ? (e.code === ACK_NOT_REACHED_CODE ? ts("ackNotReached", { count: ackNotReachedKeys(e.details).length }) : `${e.message} (${e.code})`)
+        : t("confirmFailed"));
       // The nonce was consumed on every attempt: re-GET for a fresh nonce and snapshot.
       load();
     } finally {
