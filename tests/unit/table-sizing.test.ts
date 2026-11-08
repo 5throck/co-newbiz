@@ -301,7 +301,7 @@ describe("table column sizing guard", () => {
     // long-text truncation classes so a later edit cannot silently drop them.
     const batch2: Array<{ file: string; label: string; tmin: string; expect: string[] }> = [
       {
-        file: "components/stages/route-decision/DecisionTab.tsx",
+        file: "components/stages/route-decision/DecisionHistory.tsx",
         label: "routeDecisionHistory",
         tmin: "tmin-64",
         expect: ["table-fixed-pct", "cell-truncate"],
