@@ -34,8 +34,6 @@ interface OpportunityRow {
   synergy_score: number | null;
   synergy_rationale: string | null;
   synergy_score_confirmed_at: string | null;
-  /** S4 진출방식 결정 확정(현재 final 결정, API route_confirmed). */
-  route_confirmed?: number | boolean | null;
   status: "identified" | "assessed" | "selected" | "dropped";
   rationale: string | null;
   created_by: string;
@@ -330,14 +328,7 @@ export function OpportunityDetail() {
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{opp.rationale}</p>
         )}
         {/* 매력도 평가·재평가 컨트롤 — S2 퍼널 행과 공용 (AttractivenessReEvaluate) */}
-        <AttractivenessReEvaluate
-          opportunityId={id}
-          status={opp.status}
-          canAct={canAct}
-          s4Confirmed={!!opp.route_confirmed}
-          hasProject={!!opp.project_id}
-          onSaved={load}
-        />
+        <AttractivenessReEvaluate opportunityId={id} status={opp.status} canAct={canAct} onSaved={load} />
         {/* S3 — 판정 결과와 S3 화면 이동 링크 (인라인 실행 없음, ADR-0127) */}
         {opp.status !== "identified" && (
           <div className="mt-2 p-2 border border-[color:var(--border)] rounded text-[length:var(--fs-caption)]">

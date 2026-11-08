@@ -2,9 +2,9 @@
 
 // 매력도 평가·재평가 컨트롤 — /opportunities/[id] 상세 화면과 S2 퍼널 행
 // (/deals/[id]/s2)이 같이 쓴다. 발굴(identified) 기회는 항상 입력을 열어 첫 평가를
-// 받고(저장 시 평가 단계로 자동 진행), 평가(assessed)·선택(selected, S4 확정 전·프로젝트
-// 승격 전) 기회는 "재평가" 토글로 입력을 연다. PUT /api/opportunities/{id}는 status
-// 게이트가 없다(점수만 갱신) — dropped와 S4 확정 이후는 UI에서만 막는다.
+// 받고(저장 시 평가 단계로 자동 진행), 평가(assessed) 기회는 "재평가" 토글로 입력을
+// 연다. PUT /api/opportunities/{id}는 status 게이트가 없다(점수만 갱신) — 종결
+// (selected/dropped)만 UI에서 막는다.
 //
 // 구성: 토글 버튼(AttractivenessReEvaluateToggle)과 편집기(AttractivenessEditor)를
 // 분리해 퍼널이 좁은 작업 칸에는 토글만, 편집기는 행 아래 전폭 하위 행에 그릴 수 있게
@@ -37,21 +37,9 @@ export function attractivenessToggleId(inputId: string = DEFAULT_INPUT_ID): stri
   return `${inputId}-toggle`;
 }
 
-/**
- * 이 기회에 재평가 토글을 보여줄지 — 쓰기 권한이 있고 (a) 평가(assessed) 상태이거나
- * (b) 선택(selected) 상태이되 S4 진출방식 결정이 아직 확정되지 않았고 프로젝트로 승격되지
- * 않았을 때(2026-11-08 소유자 결정). 선택 후 S4 확정·승격, 그리고 dropped는 숨긴다.
- * 재채점된 selected 기회는 S4 진출방식 추천의 입력을 바꾸므로 S4 확정 전까지만 허용한다.
- * s4Confirmed = 현재 확정 결정(route_decision.is_current=1, ADR-0135) — API의 route_confirmed.
- */
-export function canReEvaluateAttractiveness(
-  status: AttractivenessStatus,
-  canAct: boolean,
-  ctx: { s4Confirmed?: boolean; hasProject?: boolean } = {},
-): boolean {
-  if (!canAct) return false;
-  if (status === "assessed") return true;
-  return status === "selected" && !ctx.s4Confirmed && !ctx.hasProject;
+/** 이 기회에 재평가 토글을 보여줄지 — 평가(assessed) 상태이고 쓰기 권한이 있을 때만. */
+export function canReEvaluateAttractiveness(status: AttractivenessStatus, canAct: boolean): boolean {
+  return canAct && status === "assessed";
 }
 
 export function AttractivenessReEvaluateToggle({
@@ -250,8 +238,6 @@ export function AttractivenessReEvaluate({
   opportunityName,
   status,
   canAct,
-  s4Confirmed = false,
-  hasProject = false,
   onSaved,
   inputId = DEFAULT_INPUT_ID,
 }: {
@@ -260,10 +246,6 @@ export function AttractivenessReEvaluate({
   opportunityName?: string;
   status: AttractivenessStatus;
   canAct: boolean;
-  /** S4 진출방식 결정 확정 여부(API route_confirmed) — 확정 후엔 selected 재평가를 숨긴다. */
-  s4Confirmed?: boolean;
-  /** 프로젝트로 승격됐는지(project_id) — 승격 후엔 selected 재평가를 숨긴다. */
-  hasProject?: boolean;
   /** 저장 성공 후 호출 — 호출자가 표시 점수를 다시 불러온다. */
   onSaved: () => void;
   /** 페이지에 하나뿐이면 기본 id(딥링크 focus=score 대상)를 쓴다. 목록은 행별로 다른 id를 준다. */
@@ -271,7 +253,7 @@ export function AttractivenessReEvaluate({
 }) {
   const [open, setOpen] = useState(false);
   const firstEvaluation = status === "identified";
-  const canReEvaluate = canReEvaluateAttractiveness(status, canAct, { s4Confirmed, hasProject });
+  const canReEvaluate = canReEvaluateAttractiveness(status, canAct);
 
   if (!canAct || (!firstEvaluation && !canReEvaluate)) return null;
 
