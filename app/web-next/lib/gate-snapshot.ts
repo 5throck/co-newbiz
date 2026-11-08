@@ -58,7 +58,7 @@ import {
   classifyKill,
   deriveOpenCarries,
   laterStage,
-  procedureTrack,
+  criterionTrack,
   type CarrySource,
   type RegistryScope,
 } from "./gate-kill-scope.ts";
@@ -242,11 +242,12 @@ export interface BuiltSnapshot {
 
 export const OPPORTUNITY_PROCEDURES: Record<string, (track: LadderTrack | null) => string[]> = {
   screening: (t) => (t ? [`${t}-screening`] : ["greenfield-screening", "brownfield-screening"]),
-  // ADR-0193 O-2: deal-shape-chain criteria (registry reevaluate_at pre_fs) are owned and evaluated at pre_fs;
-  // flow.spec 2.19.0 moved their killCriteriaRegistry listing there from screening (they were never evaluated before).
+  // ADR-0193 O-2: deal-shape-chain stays listed at pre_fs so the partner-DD criteria (#10/#11, reevaluate_at fs) carry to fs on
+  // both tracks, and #9 (no_viable_deal_shape, brownfield-only) is classified not_reached there and carried to target_screening.
   pre_fs: (t) =>
     t ? [`${t}-pre-fs`, "deal-shape-chain"] : ["greenfield-pre-fs", "brownfield-pre-fs", "deal-shape-chain"],
-  target_screening: () => ["brownfield-target-screening", "brownfield-target-identification"],
+  // Deal-shape-to-S7 ruling R-2 (2026-11-08): #9 is evaluated natively at target_screening (GATE_CRITERION_SCOPE keeps #10/#11 out).
+  target_screening: () => ["brownfield-target-screening", "brownfield-target-identification", "deal-shape-chain"],
 };
 
 /**
@@ -281,11 +282,13 @@ const POST_CLOSE_REASON = "post-close data not yet available";
  * now read at the site-announcement date from human-recorded data, so it carries no caveat. The mechanism stays for future entries.
  */
 export const KILL_EVIDENCE_CAVEATS: Readonly<Record<string, string>> = {};
-/** Criteria a gate shows as pending although a later gate owns them (flow.spec 2.19.0 moved deal-shape-chain to pre_fs). */
+/** Criteria a gate shows as pending although a later gate owns them (flow.spec 2.19.0 moved deal-shape-chain off screening; 2.20.0 binds #9 at target_screening, #10/#11 at pre_fs). */
 const SCHEDULED_ELSEWHERE: Readonly<Record<string, readonly string[]>> = { screening: ["deal-shape-chain"] };
 /** Gate-owned criteria of a procedure that a gate shares only in part (flow.spec: dd lists clean_team_protocol_breach only). */
 const GATE_CRITERION_SCOPE: Readonly<Record<string, Readonly<Record<string, ReadonlySet<string>>>>> = {
   dd: { [PMI_PROCEDURE]: new Set(["clean_team_protocol_breach"]) },
+  // flow.spec 2.20.0: target_screening lists deal-shape-chain #9 only; #10/#11 stay owned by pre_fs (carried to fs).
+  target_screening: { "deal-shape-chain": new Set(["no_viable_deal_shape"]) },
 };
 function inGateScope(gate: string, procedure: string, criterionId: string): boolean {
   const scope = GATE_CRITERION_SCOPE[gate]?.[procedure];
@@ -682,7 +685,7 @@ function registryScopeOf(key: string): RegistryScope | null {
   const e = (loadKillCriteriaRegistry(key.slice(0, i)) as unknown as Array<CoreRegistryEntry & RegistryScope>).find(
     (x) => x.criterion_id === key.slice(i + 1),
   );
-  return e ? { evaluable_from: e.evaluable_from, reevaluate_at: e.reevaluate_at } : null;
+  return e ? { evaluable_from: e.evaluable_from, reevaluate_at: e.reevaluate_at, track: e.track } : null;
 }
 
 function registryActionOf(key: string): string {
@@ -703,9 +706,13 @@ function openMonitoringKeys(track: LadderTrack | null): string[] {
     .sort();
 }
 
-/** A track-specific procedure of the other track than the decided one: the carry is closed out_of_track, never reached. */
-function outOfTrack(procedure: string, track: LadderTrack | null): boolean {
-  const t = procedureTrack(procedure);
+/**
+ * A criterion of the other track than the decided one (criterionTrack: the registry entry's optional `track`, else its
+ * procedure's track): the carry is closed out_of_track, never reached. Closure takes precedence over kill_carry_overdue:
+ * a greenfield opportunity never records target_screening, so #9's carry must close at its first later gate.
+ */
+function outOfTrack(procedure: string, track: LadderTrack | null, entry?: { track?: string } | null): boolean {
+  const t = criterionTrack(procedure, entry);
   return track !== null && t !== null && t !== track;
 }
 
@@ -1017,6 +1024,7 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
       track,
       reevaluate_at: scope?.reevaluate_at,
       gate: o.gate,
+      entry_track: scope?.track,
     });
     if (cls === "out_of_track") continue;
     if (cls === "not_reached") {
@@ -1064,7 +1072,7 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
       reevaluate_at: c.reevaluate_at,
       implicit: c.implicit,
     };
-    if (outOfTrack(proc, track)) {
+    if (outOfTrack(proc, track, entry)) {
       carriedIn.push({
         ...base,
         outcome: "out_of_track",

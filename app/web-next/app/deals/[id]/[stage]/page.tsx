@@ -289,7 +289,7 @@ function StageTab() {
                 only="brownfield"
                 otherStage="s5"
               >
-                <BrownfieldStage opportunityId={opportunityId} />
+                <BrownfieldStage opportunityId={opportunityId} dealShapePanel={stageId === "S7"} />
               </TrackGate>
             </>
           )}

@@ -112,7 +112,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 |`assumption-audit`| 1.2.0 | experimental | risk-officer |2026-10-28|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
 |`company-intelligence`| 1.1.0 | experimental | market-intelligence-agent |2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
-|`deal-execution-playbook`| 1.1.0 | experimental | brownfield-agent |2026-09-08|—|Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates|
+|`deal-execution-playbook`| 1.2.0 | experimental | brownfield-agent |2026-11-08|—|Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates|
 |`forward-industry-research`| 1.1.0 | experimental | market-intelligence-agent |2026-08-29|—|ADR-0066 gap closure — forward/upstream industry qualitative research narrative feeding the driver registry|
 |`group-level-review`| 1.1.0 | experimental | group-review-agent |2026-08-20|—|Wave 5.8C (design §9.3 group review + glossary + GF/BF gate groups) — orchestrates `group-investment-review`'s 5-step Group IC sequence|
 |`handbook-sync-audit`|1.0.5|active| pm |2026-08-29|—|—|

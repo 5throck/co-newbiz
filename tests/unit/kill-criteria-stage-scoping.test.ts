@@ -14,6 +14,7 @@ import {
   OPEN_MONITORING,
   checkReevaluateBinding,
   checkStageScopingFields,
+  checkTrackField,
   flowShapeFromSpec,
   gateStage,
   type RegistryEntry,
@@ -30,17 +31,28 @@ const flow = flowShapeFromSpec(spec);
 
 const registry = readdirSync(REG_DIR)
   .filter((f) => f.includes("__") && f.endsWith(".json"))
-  .map((f) => ({ key: f.replace(/\.json$/, ""), entry: JSON.parse(readFileSync(join(REG_DIR, f), "utf8")) as RegistryEntry }));
+  .map((f) => ({
+    key: f.replace(/\.json$/, ""),
+    entry: JSON.parse(readFileSync(join(REG_DIR, f), "utf8")) as RegistryEntry,
+  }));
 
 describe("checkStageScopingFields (ADR-0193 section 4.1)", () => {
-  const ok = { evaluable_from: "S6", reevaluate_at: "pre_fs", evaluable_from_evidence: "screening.viable_targets <- longlist" };
+  const ok = {
+    evaluable_from: "S6",
+    reevaluate_at: "pre_fs",
+    evaluable_from_evidence: "screening.viable_targets <- longlist",
+  };
 
   test("a complete entry is clean", () => {
     expect(checkStageScopingFields(ok, ["screening.viable_targets"], KILL_VAR_MIN_STAGE)).toEqual([]);
   });
   test("missing evaluable_from and reevaluate_at are each rejected", () => {
-    expect(checkStageScopingFields({ reevaluate_at: "pre_fs" }).join("|")).toMatch(/missing required field 'evaluable_from'/);
-    expect(checkStageScopingFields({ evaluable_from: "S6" }).join("|")).toMatch(/missing required field 'reevaluate_at'/);
+    expect(checkStageScopingFields({ reevaluate_at: "pre_fs" }).join("|")).toMatch(
+      /missing required field 'evaluable_from'/,
+    );
+    expect(checkStageScopingFields({ evaluable_from: "S6" }).join("|")).toMatch(
+      /missing required field 'reevaluate_at'/,
+    );
     expect(checkStageScopingFields({ evaluable_from: "", reevaluate_at: " " })).toHaveLength(2);
   });
   test("an unknown stage id is rejected", () => {
@@ -49,36 +61,64 @@ describe("checkStageScopingFields (ADR-0193 section 4.1)", () => {
     }
   });
   test("compound reevaluate_at values are rejected (risk-officer C-2)", () => {
-    for (const compound of ["screening|pre_fs", "screening,pre_fs", "screening/pre_fs", "screening or pre_fs", "screening pre_fs", "pre_fs;dd", "Pre_FS"]) {
+    for (const compound of [
+      "screening|pre_fs",
+      "screening,pre_fs",
+      "screening/pre_fs",
+      "screening or pre_fs",
+      "screening pre_fs",
+      "pre_fs;dd",
+      "Pre_FS",
+    ]) {
       expect(checkStageScopingFields({ ...ok, reevaluate_at: compound }).join("|")).toMatch(/not a single gate id/);
     }
   });
   test("open_monitoring is reserved for S12", () => {
     expect(checkStageScopingFields({ evaluable_from: "S12", reevaluate_at: OPEN_MONITORING })).toEqual([]);
-    expect(checkStageScopingFields({ evaluable_from: "S9", reevaluate_at: OPEN_MONITORING }).join("|")).toMatch(/reserved for S12/);
+    expect(checkStageScopingFields({ evaluable_from: "S9", reevaluate_at: OPEN_MONITORING }).join("|")).toMatch(
+      /reserved for S12/,
+    );
   });
   test("evaluable_from earlier than the var->stage map minimum is rejected", () => {
-    const early = checkStageScopingFields({ ...ok, evaluable_from: "S3" }, ["screening.viable_targets"], KILL_VAR_MIN_STAGE);
+    const early = checkStageScopingFields(
+      { ...ok, evaluable_from: "S3" },
+      ["screening.viable_targets"],
+      KILL_VAR_MIN_STAGE,
+    );
     expect(early.join("|")).toMatch(/earlier than S6/);
     // at least as late as the latest variable
-    const multi = checkStageScopingFields({ ...ok, evaluable_from: "S5" }, ["infra.plan_finalized", "screening.viable_targets"], KILL_VAR_MIN_STAGE);
+    const multi = checkStageScopingFields(
+      { ...ok, evaluable_from: "S5" },
+      ["infra.plan_finalized", "screening.viable_targets"],
+      KILL_VAR_MIN_STAGE,
+    );
     expect(multi).toHaveLength(1);
   });
   test("a predicate variable absent from the var->stage map is rejected", () => {
-    expect(checkStageScopingFields(ok, ["brand.new_var"], KILL_VAR_MIN_STAGE).join("|")).toMatch(/no stage in the kill-criteria var->stage map/);
+    expect(checkStageScopingFields(ok, ["brand.new_var"], KILL_VAR_MIN_STAGE).join("|")).toMatch(
+      /no stage in the kill-criteria var->stage map/,
+    );
   });
   test("empty evidence string is rejected when the field is present", () => {
-    expect(checkStageScopingFields({ ...ok, evaluable_from_evidence: "  " }).join("|")).toMatch(/evaluable_from_evidence/);
+    expect(checkStageScopingFields({ ...ok, evaluable_from_evidence: "  " }).join("|")).toMatch(
+      /evaluable_from_evidence/,
+    );
   });
 });
 
 describe("checkReevaluateBinding (flow.spec binding)", () => {
   test("a gate that does not exist in flow.spec is rejected", () => {
-    expect(checkReevaluateBinding({ evaluable_from: "S5", reevaluate_at: "no_such_gate" }, flow).join("|")).toMatch(/names no gate/);
+    expect(checkReevaluateBinding({ evaluable_from: "S5", reevaluate_at: "no_such_gate" }, flow).join("|")).toMatch(
+      /names no gate/,
+    );
   });
   test("reevaluate_at earlier than evaluable_from is rejected", () => {
-    expect(checkReevaluateBinding({ evaluable_from: "S9", reevaluate_at: "screening" }, flow).join("|")).toMatch(/earlier than evaluable_from/);
-    expect(checkReevaluateBinding({ evaluable_from: "S7", reevaluate_at: "pre_fs" }, flow).join("|")).toMatch(/earlier than evaluable_from/);
+    expect(checkReevaluateBinding({ evaluable_from: "S9", reevaluate_at: "screening" }, flow).join("|")).toMatch(
+      /earlier than evaluable_from/,
+    );
+    expect(checkReevaluateBinding({ evaluable_from: "S7", reevaluate_at: "pre_fs" }, flow).join("|")).toMatch(
+      /earlier than evaluable_from/,
+    );
   });
   test("a gate at or after evaluable_from is accepted; deal-shape #9 binds the single gate pre_fs", () => {
     expect(checkReevaluateBinding({ evaluable_from: "S4", reevaluate_at: "pre_fs" }, flow)).toEqual([]);
@@ -100,7 +140,11 @@ describe("the real registry (44 entries)", () => {
     const problems: string[] = [];
     for (const { key, entry } of registry) {
       const vars = entry.predicate == null ? [] : [...collectPredicateVars(parsePredicate(entry.predicate))];
-      for (const p of [...checkStageScopingFields(entry, vars, KILL_VAR_MIN_STAGE), ...checkReevaluateBinding(entry, flow)]) problems.push(`${key}: ${p}`);
+      for (const p of [
+        ...checkStageScopingFields(entry, vars, KILL_VAR_MIN_STAGE),
+        ...checkReevaluateBinding(entry, flow),
+      ])
+        problems.push(`${key}: ${p}`);
       expect(typeof entry.evaluable_from_evidence).toBe("string");
     }
     expect(problems).toEqual([]);
@@ -109,16 +153,39 @@ describe("the real registry (44 entries)", () => {
   test("design section 8 / section 12 rulings are in the data", () => {
     const at = (k: string) => registry.find((r) => r.key === k)!.entry;
     // #35 clean-team breach: S9 (C-6)
-    expect(at("pmi-integration-execution__clean_team_protocol_breach")).toMatchObject({ evaluable_from: "S9", reevaluate_at: "dd" });
+    expect(at("pmi-integration-execution__clean_team_protocol_breach")).toMatchObject({
+      evaluable_from: "S9",
+      reevaluate_at: "dd",
+    });
     // #36/#37 S12 monitoring carries
     for (const k of ["key_talent_attrition_above_threshold_at_90d", "synergy_run_rate_uncertified_at_bau_handover"])
-      expect(at(`pmi-integration-execution__${k}`)).toMatchObject({ evaluable_from: "S12", reevaluate_at: "open_monitoring" });
-    // #9 single gate pre_fs (C-2)
-    expect(at("deal-shape-chain__no_viable_deal_shape")).toMatchObject({ evaluable_from: "S4", reevaluate_at: "pre_fs" });
-    // #6/#10/#11 partner criteria at S5 (Q3); re-scoped to fs by ruling 14.1/14.2 (project-scoped sources, no proxy)
-    for (const k of ["greenfield-screening__partner_dependency_unconfirmed_and_no_alternative", "deal-shape-chain__partner_dd_red_financial_distress", "deal-shape-chain__partner_dd_red_ip_chain"])
-      expect(at(k)).toMatchObject({ evaluable_from: "S5", reevaluate_at: "fs" });
-    expect(at("brownfield-dd__partner_dependency_unconfirmed_and_no_alternative")).toMatchObject({ evaluable_from: "S9", reevaluate_at: "dd" });
+      expect(at(`pmi-integration-execution__${k}`)).toMatchObject({
+        evaluable_from: "S12",
+        reevaluate_at: "open_monitoring",
+      });
+    // #9 single gate target_screening, brownfield-only (deal-shape-to-S7 ruling R-1/R-2, 2026-11-08; was S4 / pre_fs)
+    expect(at("deal-shape-chain__no_viable_deal_shape")).toMatchObject({
+      evaluable_from: "S7",
+      reevaluate_at: "target_screening",
+      track: "brownfield",
+    });
+    // #6 partner criterion at S5 (Q3); re-scoped to fs by ruling 14.1/14.2 (project-scoped source, no proxy)
+    expect(at("greenfield-screening__partner_dependency_unconfirmed_and_no_alternative")).toMatchObject({
+      evaluable_from: "S5",
+      reevaluate_at: "fs",
+    });
+    // #10/#11 stay track-neutral (no `track` field) and move to S8 with the project-scoped partner source (R-2); still deferred to fs
+    for (const k of [
+      "deal-shape-chain__partner_dd_red_financial_distress",
+      "deal-shape-chain__partner_dd_red_ip_chain",
+    ]) {
+      expect(at(k)).toMatchObject({ evaluable_from: "S8", reevaluate_at: "fs" });
+      expect((at(k) as { track?: string }).track).toBeUndefined();
+    }
+    expect(at("brownfield-dd__partner_dependency_unconfirmed_and_no_alternative")).toMatchObject({
+      evaluable_from: "S9",
+      reevaluate_at: "dd",
+    });
     // the S3 screening acks the design moves to not_reached; #4/#5/#6/#8 re-scoped to fs (ruling 14.1), #7 keeps pre_fs (opportunity-scope source)
     const five: Array<[string, string, string]> = [
       ["brownfield-screening__no_viable_target_in_longlist", "S6", "pre_fs"],
@@ -131,19 +198,35 @@ describe("the real registry (44 entries)", () => {
     // ruling 14.1 RESCOPE-2: #12/#13 (project-scoped wacc / certification sources) are re-evaluated at fs, evaluable_from unchanged; #9 stays at pre_fs
     for (const t of ["greenfield", "brownfield"]) {
       expect(at(`${t}-pre-fs__wacc_hurdle_still_assumed`)).toMatchObject({ evaluable_from: "S4", reevaluate_at: "fs" });
-      expect(at(`${t}-pre-fs__certification_transferability_unconfirmed_and_load_bearing`)).toMatchObject({ evaluable_from: "S4", reevaluate_at: "fs" });
+      expect(at(`${t}-pre-fs__certification_transferability_unconfirmed_and_load_bearing`)).toMatchObject({
+        evaluable_from: "S4",
+        reevaluate_at: "fs",
+      });
     }
     // every re-scoped entry says why (project-scoped source, first project gate fs)
     for (const k of [
-      "greenfield-screening__zero_site_clears_infrastructure_minimums", "greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
-      "greenfield-screening__partner_dependency_unconfirmed_and_no_alternative", "brownfield-screening__preliminary_hhi_flags_certain_block",
-      "deal-shape-chain__partner_dd_red_financial_distress", "deal-shape-chain__partner_dd_red_ip_chain",
-      "greenfield-pre-fs__wacc_hurdle_still_assumed", "brownfield-pre-fs__wacc_hurdle_still_assumed",
-      "greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing", "brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
-    ]) expect(String(at(k).evaluable_from_evidence)).toMatch(/project-scoped source.*fs, the first project gate|deferred to fs, the first project gate/);
+      "greenfield-screening__zero_site_clears_infrastructure_minimums",
+      "greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
+      "greenfield-screening__partner_dependency_unconfirmed_and_no_alternative",
+      "brownfield-screening__preliminary_hhi_flags_certain_block",
+      "deal-shape-chain__partner_dd_red_financial_distress",
+      "deal-shape-chain__partner_dd_red_ip_chain",
+      "greenfield-pre-fs__wacc_hurdle_still_assumed",
+      "brownfield-pre-fs__wacc_hurdle_still_assumed",
+      "greenfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
+      "brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
+    ])
+      expect(String(at(k).evaluable_from_evidence)).toMatch(
+        /project-scoped source.*fs, the first project gate|deferred to fs, the first project gate/,
+      );
     // S3-reached criteria stay at the screening gate (no ack lost)
-    for (const k of ["market_structurally_unattractive", "data_confidence_not_judgeable", "strategic_fit_knock_out_failed"])
-      for (const t of ["greenfield", "brownfield"]) expect(at(`${t}-screening__${k}`)).toMatchObject({ evaluable_from: "S3", reevaluate_at: "screening" });
+    for (const k of [
+      "market_structurally_unattractive",
+      "data_confidence_not_judgeable",
+      "strategic_fit_knock_out_failed",
+    ])
+      for (const t of ["greenfield", "brownfield"])
+        expect(at(`${t}-screening__${k}`)).toMatchObject({ evaluable_from: "S3", reevaluate_at: "screening" });
   });
 
   test("no entry evaluates before its gate: reevaluate_at is never an earlier stage than evaluable_from", () => {
@@ -154,7 +237,13 @@ describe("the real registry (44 entries)", () => {
 describe("check-kill-registry-parity scoping extension", () => {
   const base = { registryKeys: ["p__a"], specKeys: ["p__a"], policyKeys: [] };
   test("clean when reevaluate_at names a gate at/after evaluable_from", () => {
-    expect(checkKillRegistryParity({ ...base, spec, registryScoping: [{ key: "p__a", evaluable_from: "S5", reevaluate_at: "pre_fs" }] })).toEqual([]);
+    expect(
+      checkKillRegistryParity({
+        ...base,
+        spec,
+        registryScoping: [{ key: "p__a", evaluable_from: "S5", reevaluate_at: "pre_fs" }],
+      }),
+    ).toEqual([]);
   });
   test("flags a missing gate, an early gate, and missing fields", () => {
     const f = checkKillRegistryParity({
@@ -172,5 +261,51 @@ describe("check-kill-registry-parity scoping extension", () => {
   });
   test("callers that omit the scoping inputs keep the old behaviour", () => {
     expect(checkKillRegistryParity(base)).toEqual([]);
+  });
+  test("the optional track field is checked by the parity validator too (deal-shape-to-S7 R-1)", () => {
+    const f = checkKillRegistryParity({
+      ...base,
+      spec,
+      registryScoping: [
+        { key: "p__ok", evaluable_from: "S5", reevaluate_at: "pre_fs", track: "brownfield" },
+        { key: "greenfield-x__bad", evaluable_from: "S5", reevaluate_at: "pre_fs", track: "brownfield" },
+        { key: "p__typo", evaluable_from: "S5", reevaluate_at: "pre_fs", track: "green-field" },
+      ],
+    });
+    const msg = f.map((x) => x.message).join("\n");
+    expect(msg).not.toMatch(/p__ok/);
+    expect(msg).toMatch(/greenfield-x__bad.*contradicts the greenfield-prefixed procedure/s);
+    expect(msg).toMatch(/p__typo.*not one of greenfield \/ brownfield/s);
+  });
+});
+
+describe("checkTrackField (deal-shape-to-S7 ruling R-1: per-criterion track scope)", () => {
+  test("an absent field is clean on any procedure", () => {
+    for (const p of ["deal-shape-chain", "greenfield-fs", "brownfield-dd", "pmi-integration-execution"])
+      expect(checkTrackField({}, p)).toEqual([]);
+  });
+  test("greenfield / brownfield are accepted on a track-neutral procedure, and on a matching track-prefixed one", () => {
+    expect(checkTrackField({ track: "brownfield" }, "deal-shape-chain")).toEqual([]);
+    expect(checkTrackField({ track: "greenfield" }, "deal-shape-chain")).toEqual([]);
+    expect(checkTrackField({ track: "brownfield" }, "brownfield-target-screening")).toEqual([]);
+  });
+  test("an unknown value or a non-string is rejected", () => {
+    for (const bad of ["both", "Brownfield", "", "all", 1, null, true])
+      expect(checkTrackField({ track: bad }, "deal-shape-chain").join("|")).toMatch(
+        /not one of greenfield \/ brownfield/,
+      );
+  });
+  test("a value that contradicts a track-prefixed procedure is rejected", () => {
+    expect(checkTrackField({ track: "greenfield" }, "brownfield-dd").join("|")).toMatch(
+      /contradicts the brownfield-prefixed procedure/,
+    );
+    expect(checkTrackField({ track: "brownfield" }, "greenfield-screening").join("|")).toMatch(
+      /contradicts the greenfield-prefixed procedure/,
+    );
+  });
+  test("the real registry: only #9 carries a track, and every value is clean", () => {
+    const withTrack = registry.filter((r) => (r.entry as { track?: string }).track !== undefined).map((r) => r.key);
+    expect(withTrack).toEqual(["deal-shape-chain__no_viable_deal_shape"]);
+    for (const { key, entry } of registry) expect(checkTrackField(entry, key.slice(0, key.indexOf("__")))).toEqual([]);
   });
 });

@@ -2,6 +2,8 @@
 
 **Status**: Accepted (owner decision, 2026-11-07; recommended options adopted)
 
+> **Amended by ADR-0195 (2026-11-08)**: item A placement — #9 and the deal-shape evaluation move from the opportunity `pre_fs` gate (S4) to the end of S7 (`brownfield-target-screening` step 3.5, `reevaluate_at: target_screening`, brownfield-only).
+
 Risk-officer confirmation: confirmed 2026-11-07 with amendments A-1..C-1 (design doc)
 **Date**: 2026-11-07
 **Deciders**: Owner (decision); risk-officer (kill-criteria authority); drafted by data-architect

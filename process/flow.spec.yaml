@@ -21,7 +21,25 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.19.0"
+  version: "2.20.0"
+  # v2.20.0 - deal-shape evaluation moves from S4 to S7 (owner decision 2026-11-08,
+  #   option (a); design 2026-11-08-deal-shape-to-s7-design, process-governance +
+  #   risk-officer rulings R-1..R-5; ADR-0195 amends ADR-0193/0194):
+  #   - The S4 activity deal-shape-evaluation (brownfield-agent) moves to S7 and
+  #     now hosts brownfield-target-screening step 3.5 (deal_shape_evaluation,
+  #     human-recorded, after ranking and before the gate record). S4 hosts no
+  #     brownfield-agent activity any more; route-strategy / route-advisory (pm)
+  #     keep brownfield-pre-fs, whose step 2 is reduced to a deal-structure intent
+  #     note (1.6.0). The partner funnel deal-shape-chain stays hosted at S4.
+  #   - Kill criterion deal-shape-chain__no_viable_deal_shape (#9) re-scoped:
+  #     evaluable_from S7, reevaluate_at target_screening, brownfield-only via the
+  #     new optional registry field `track` (R-1; #10/#11 stay track-neutral and
+  #     evaluable_from S8, reevaluate_at fs). Gate registries fixed: #9 listed at
+  #     target_screening, #10/#11 at pre_fs (they were still listed at screening
+  #     although 2.19.0 already moved them to pre_fs).
+  #   - S7 outputs gain the deal-shape evaluation; the artifact is declared
+  #     non-blocking (no new engine blocker): #9 carries the RECYCLE signal, the
+  #     human gate decides. Making it a blocking artifact is a separate decision.
   # v2.19.0 - ADR-0193 (kill-criteria stage scoping; owner decision 2026-11-07):
   #   the dd gate now lists pmi-integration-execution__clean_team_protocol_breach
   #   in killCriteriaRegistry. A clean-team breach can occur from S9 DD, so the
@@ -88,7 +106,8 @@ meta:
   #   - S4 gains the regulatory-screening activity (legal-counsel) producing
   #     chk-legal-regulatory, and the checklist is an S4 requiredArtifact the
   #     Screening gate reads (finding H9); deal-shape-evaluation hosts
-  #     brownfield-pre-fs only (its step 2).
+  #     brownfield-pre-fs only (its step 2) [superseded by v2.20.0: the activity
+  #     moved to S7 and hosts brownfield-target-screening step 3.5].
   #   - S9 ip-fto-dd and region-labor-review also host greenfield-dd (W2-b,
   #     W2-d); greenfield-dd and brownfield-dd gain the missing activity steps;
   #     greenfield origin=internal DD is trimmed per D9 (M15).
@@ -317,9 +336,6 @@ gates:
       - brownfield-screening__market_structurally_unattractive
       - brownfield-screening__data_confidence_not_judgeable
       - brownfield-screening__strategic_fit_knock_out_failed
-      - deal-shape-chain__no_viable_deal_shape
-      - deal-shape-chain__partner_dd_red_financial_distress
-      - deal-shape-chain__partner_dd_red_ip_chain
     fundingDecision: Screening 통과 시 Pre-FS 예산 트랜치 개시
   - id: pre_fs
     name: Pre-FS
@@ -337,6 +353,9 @@ gates:
       - brownfield-pre-fs__entry_route_undecided_at_pre_fs_exit
       - brownfield-target-identification__universe_cannot_be_defined
       - brownfield-target-identification__minimum_coverage_not_achievable
+      # v2.20.0: partner-DD criteria #10/#11 bind here (reevaluate_at fs, carried); #9 binds at target_screening.
+      - deal-shape-chain__partner_dd_red_financial_distress
+      - deal-shape-chain__partner_dd_red_ip_chain
     fundingDecision: FS 본격 검토 자원 배정
   - id: target_screening
     name: Target Screening
@@ -349,6 +368,8 @@ gates:
     killCriteriaRegistry:
       - brownfield-target-screening__no_candidate_passes_knock_out
       - brownfield-target-screening__shortlist_quality_below_threshold
+      # v2.20.0 (risk-officer R-2): #9 binds where the human-recorded deal-shape screen is hosted (S7, brownfield-only via registry `track`).
+      - deal-shape-chain__no_viable_deal_shape
     fundingDecision: Short List 대상 사업성 분석 자원 배정
   - id: fs
     name: FS
@@ -654,20 +675,11 @@ stages:
         # ADR-0185 F-12: pm 리드는 게이트 어셈블러(gateway assembler) 의도다 —
         # 런타임 PM 프롬프트 s4.route_recommendation이 의도된 종합 표면이며, 라우트
         # 결정 자체는 사람의 route_decision이다 (경계 #2). 리드 변경 없음.
-      - id: deal-shape-evaluation
-        agent: brownfield-agent
-        skills: [deal-execution-playbook]
-        procedure: [brownfield-pre-fs]
-        # v2.15.0 (ADR-0187 P2, M2): hosts brownfield-pre-fs step 2 (structure
-        # hypothesis incl. acquisition shape, brownfield-agent). greenfield-pre-fs
-        # holds no deal-shape step (the greenfield alternative is carried by the
-        # neutral route axis, see below) and the partner-track funnel
-        # deal-shape-chain stays hosted by route-strategy / route-advisory.
-        # DEC-20261025-02 (Row 4 판정): 딜 형태 평가는 외부 결합(인수·JV·전략적
-        # 투자·소수점 지분·파트너십) 구조를 전문 검토하는 활동으로 M&A 리드
-        # (brownfield-agent)의 소관 렌즈다. greenfield 대안은 본 단계의 중립 축이
-        # 운반한다 — route-strategy·route-advisory(pm)와 ADR-0104의 greenfield
-        # 동일 5기준 채점 — 트랙별 전문 후속은 S5(greenfield)·S6~S7(brownfield)이다.
+      # v2.20.0: the deal-shape-evaluation activity moved to S7 (it hosts
+      # brownfield-target-screening step 3.5). S4 keeps the partner funnel
+      # deal-shape-chain through route-strategy / route-advisory above; the
+      # greenfield alternative is carried by the neutral route axis (the
+      # 5-criteria scoring below, ADR-0104).
       - id: route-advisory
         agent: pm
         skills: []
@@ -835,6 +847,7 @@ stages:
     objective: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)
     inputs:
       - Target Company Long List (S6)
+      - 트랙 결정·Route 유형 (S4)
       - 스크리닝 기준(전략적 적합성·역량 적합성·재무·지역·소유권/가용성·규제 제약)
       - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
     outputs:
@@ -842,6 +855,7 @@ stages:
       - Target Ranking/Score
       - Screening Evidence
       - Exclusion Reasons
+      - Deal Shape Evaluation (viable shapes, intent, rationale)
     entryCriteria:
       - S6 완료 (Long List 존재)
     activities:
@@ -857,10 +871,24 @@ stages:
         agent: brownfield-agent
         skills: [strategic-fit-screening, brownfield-feasibility, peer-benchmarking]
         procedure: [brownfield-target-screening]
+      - id: deal-shape-evaluation
+        agent: brownfield-agent
+        skills: [deal-execution-playbook]
+        procedure: [brownfield-target-screening]
+        # v2.20.0 (owner decision 2026-11-08; moved from S4): hosts
+        # brownfield-target-screening step 3.5 (deal_shape_evaluation, human-
+        # recorded: the viable external-combination shapes - M&A / JV / strategic
+        # investment / minority stake / partnership / R&BD / CVC - with intent and
+        # rationale, judged against the ranked survivors, after ranking and before
+        # the gate record). DEC-20261025-02 (Row 4): the lens stays the M&A lead's
+        # (brownfield-agent). It feeds kill criterion #9 no_viable_deal_shape
+        # (brownfield-only, reevaluate_at target_screening; RECYCLE, never a kill).
+        # The partner funnel deal-shape-chain stays hosted at S4 (route-strategy).
     requiredArtifacts:
       - Target Company Short List
       - Target Ranking/Score
       - Exclusion Reasons
+      - Deal Shape Evaluation (viable shapes, intent, rationale)
     completionCriteria:
       - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
       - Short List 후보가 knock-out 스크리닝을 통과했다
@@ -876,6 +904,8 @@ stages:
       - { key: s7.candidate_verdict, artifacts: [1, 2], criteria: [0] }
       - { key: s7.candidate_evidence, artifacts: [], criteria: [2] }
       - { key: s7.knockout_shortlist, artifacts: [0], criteria: [1] }
+    # v2.20.0: the deal-shape evaluation is declared, not blocking - #9 raises the RECYCLE signal and the human gate decides.
+    nonBlockingArtifacts: [3]
     applicableTracks: [brownfield]
     stateTransitions: { onComplete: S8, onHold: S7, onKill: terminal }
     gates: [target_screening]

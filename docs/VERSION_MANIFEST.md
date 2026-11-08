@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-08T12:44:31.972Z
+**Generated**: 2026-11-08T12:51:47.322Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -86,7 +86,7 @@
 | compliance-monitoring | 1.1.1 | active | skills/compliance-monitoring/SKILL.md | workspace | compliance check, is this gate blocked, governance KPI, gate cycle time, checklist completion rate, waiver concentration | compliance-officer |
 | customer-attrition-risk | 1.2.0 | active | skills/customer-attrition-risk/SKILL.md | workspace | customer attrition risk, change of control clause, customer concentration risk, retained seller as supplier | customer-retention-agent |
 | dd-to-valuation-bridge | 1.2.0 | active | skills/dd-to-valuation-bridge/SKILL.md | workspace | DD to valuation bridge, value_impact, does this finding move the valuation, narrative-only finding check | valuation-agent |
-| deal-execution-playbook | 1.1.0 | experimental | skills/deal-execution-playbook/SKILL.md | workspace | deal execution, closing steps, execution playbook, deal shape evaluation | brownfield-agent |
+| deal-execution-playbook | 1.2.0 | experimental | skills/deal-execution-playbook/SKILL.md | workspace | deal execution, closing steps, execution playbook, deal shape evaluation | brownfield-agent |
 | debt-and-contingent-liability-simulation | 1.1.0 | active | skills/debt-and-contingent-liability-simulation/SKILL.md | workspace | contingent liability, covenant breach test, rate shock, Monte Carlo liability integration, CoC debt acceleration | risk-officer |
 | decision-record | 1.1.2 | active | skills/decision-record/SKILL.md | workspace | decision record, record a gate ruling, go/no-go decision, escalation decision, record a decision | pm |
 | delegate-to-hub | 1.0.1 | active | skills/delegate-to-hub/SKILL.md | workspace | delegate to hub, delegation ticket, hub delegation, escalate to hub, file delegation | pm |
@@ -267,7 +267,7 @@
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
 | generate-glossary-data.ts | 1.1.0 | scripts/co-newbiz/generate-glossary-data.ts | js-yaml |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
-| generate-pm-catalog.ts | 1.4.0 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
+| generate-pm-catalog.ts | 1.4.1 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
 | generate-process-flow.ts | 1.5.0 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
 | generate-prompt-registry.ts | 2.1.1 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | js-yaml |
@@ -305,14 +305,14 @@
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.25.0 | scripts/co-newbiz/newbiz.ts | N/A |
+| newbiz.ts | 1.26.0 | scripts/co-newbiz/newbiz.ts | N/A |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | notify-deliver.ts | 1.1.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
 | notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
 | orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
-| process-ssot-check.ts | 4.1.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
+| process-ssot-check.ts | 4.2.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |

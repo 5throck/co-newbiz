@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.4.0
+ * @version 1.4.1
  */
 // generate-pm-catalog.ts — 3 SSOT 조인(prompts.json × flow.spec.yaml × agents/*.md)을
 // 런타임 PM 활동 카탈로그(app/web-next/lib/pm-catalog.generated.ts)로 투영한다
@@ -8,6 +8,11 @@
 // generate-spec-activities.ts와 동일한 규율: 결정론 출력 + --check 드리프트 게이트,
 // 생성 시점 참조 무결성 검증(프롬프트 에이전트·활동 에이전트·활동 매핑 모두 로스터/스펙에 존재).
 //
+// v1.4.1 (deal-shape-to-S7, owner decision 2026-11-08, flow.spec 2.20.0): the
+// S4.deal-shape-evaluation affinity entry is removed - the activity moved to S7,
+// a brownfield-only stage, so it no longer sits in a both-track stage with a
+// track-specialist agent (DEC-20261025-02 row 4's affinity site is gone; three
+// sites remain).
 // v1.4.0 (owner decision D6' 2026-10-28, flow.spec 2.17.0): S3.synergy-analysis
 // is led by market-intelligence-agent (s3.synergy_synergy rebinds to it);
 // financial-analyst supports by quantifying the synergy lines, so s3.synergy_fa
@@ -44,13 +49,19 @@ const CATALOG_VERSION = "1.0.0";
 interface PromptDoc {
   prompts: Array<{ key: string; agent: string | null; purpose: string; system: string; activity?: string }>;
 }
-interface SpecActivity { id: string; agent: string }
+interface SpecActivity {
+  id: string;
+  agent: string;
+}
 interface SpecStage {
   id: string;
   activities: SpecActivity[];
   applicableTracks?: string[];
 }
-interface FlowSpec { meta: { version: string }; stages: SpecStage[] }
+interface FlowSpec {
+  meta: { version: string };
+  stages: SpecStage[];
+}
 
 function sha256(text: string): string {
   return createHash("sha256").update(text.replace(/\r\n/g, "\n")).digest("hex").slice(0, 16);
@@ -73,7 +84,9 @@ function parseFrontmatter(text: string): Record<string, string> {
 }
 // agents/*.md 로스터 — generate-agent-registry.ts와 동일한 파싱 규칙.
 const roster = new Set<string>();
-for (const f of readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md")).sort()) {
+for (const f of readdirSync(AGENTS_DIR)
+  .filter((f) => f.endsWith(".md"))
+  .sort()) {
   const fm = parseFrontmatter(readFileSync(join(AGENTS_DIR, f), "utf-8"));
   if (fm.name) roster.add(fm.name);
 }
@@ -97,7 +110,8 @@ for (const p of promptsDoc.prompts) {
   if (p.activity !== undefined) {
     const hit = activityIndex.get(p.activity);
     if (!hit) die(`프롬프트 '${p.key}'의 activity '${p.activity}'가 flow.spec.yaml 활동이 아닙니다.`);
-    if (!roster.has(hit.agent)) die(`flow.spec 활동 '${p.activity}'의 agent '${hit.agent}'가 agents/ 로스터에 없습니다.`);
+    if (!roster.has(hit.agent))
+      die(`flow.spec 활동 '${p.activity}'의 agent '${hit.agent}'가 agents/ 로스터에 없습니다.`);
   }
 }
 for (const [qualified, hit] of activityIndex) {
@@ -121,27 +135,32 @@ const DUAL_ASSIGNMENTS: DualAssignment[] = [
   {
     promptKey: "s3.synergy_fa",
     activity: "S3.synergy-analysis",
-    rationale: "Sanctioned dual assignment (owner decision D6' 2026-10-28, amends ADR-0187 D6; DEC-20261028-03): financial-analyst supports the market-intelligence-agent-led synergy-analysis activity by quantifying each synergy line against the assumption register (greenfield-screening step 1.55, brownfield-screening step 2.55); the activity lead is unchanged.",
+    rationale:
+      "Sanctioned dual assignment (owner decision D6' 2026-10-28, amends ADR-0187 D6; DEC-20261028-03): financial-analyst supports the market-intelligence-agent-led synergy-analysis activity by quantifying each synergy line against the assumption register (greenfield-screening step 1.55, brownfield-screening step 2.55); the activity lead is unchanged.",
   },
   {
     promptKey: "s11.integrated_insight",
     activity: "S11.ic-preparation",
-    rationale: "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern).",
+    rationale:
+      "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern).",
   },
   {
     promptKey: "s3.attractiveness_recommendation",
     activity: "S3.strategic-fit-screening",
-    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): the attractiveness score is the risk-officer's own recommendation (red-team scoring seat) layered on the process-governance-manager-led strategic-fit-screening activity.",
+    rationale:
+      "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): the attractiveness score is the risk-officer's own recommendation (red-team scoring seat) layered on the process-governance-manager-led strategic-fit-screening activity.",
   },
   {
     promptKey: "company_profile.competitor_web_search",
     activity: "S3.our-company-profile",
-    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent market-intelligence-agent is a sanctioned secondary lens on the financial-analyst-led S3.our-company-profile activity; the activity lead is unchanged.",
+    rationale:
+      "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent market-intelligence-agent is a sanctioned secondary lens on the financial-analyst-led S3.our-company-profile activity; the activity lead is unchanged.",
   },
   {
     promptKey: "s12.milestone_suggest",
     activity: "S12.portfolio-monitoring",
-    rationale: "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent process-governance-manager is a sanctioned secondary lens on the group-review-agent-led S12.portfolio-monitoring activity; the activity lead is unchanged.",
+    rationale:
+      "Sanctioned dual assignment (ADR-0185, owner-approved 2026-10-26): prompt agent process-governance-manager is a sanctioned secondary lens on the group-review-agent-led S12.portfolio-monitoring activity; the activity lead is unchanged.",
   },
 ];
 
@@ -169,7 +188,9 @@ export function validateDualAssignments(
     }
     const prompt = prompts.find((p) => p.key === d.promptKey);
     if (!prompt || prompt.activity !== d.activity) {
-      violations.push(`이중 배정 '${d.promptKey}'가 prompts.json의 실제 매핑(activity='${d.activity}')과 어긋납니다 — stale 예외입니다.`);
+      violations.push(
+        `이중 배정 '${d.promptKey}'가 prompts.json의 실제 매핑(activity='${d.activity}')과 어긋납니다 — stale 예외입니다.`,
+      );
     }
     if (!index.has(d.activity)) {
       violations.push(`이중 배정 '${d.promptKey}'의 활동 '${d.activity}'가 flow.spec.yaml에 없습니다.`);
@@ -208,14 +229,6 @@ const SPECIALIST_TRACK_AFFINITY: SpecialistTrackAffinity[] = [
     decision: "DEC-20261025-02",
   },
   {
-    ref: "S4.deal-shape-evaluation",
-    agent: "brownfield-agent",
-    kind: "affinity",
-    track: "brownfield",
-    note: "딜 형태 평가는 외부 결합 구조의 전문 렌즈 — greenfield 대안은 pm의 route-strategy·route-advisory와 ADR-0104 동일 5기준 채점이 운반한다",
-    decision: "DEC-20261025-02",
-  },
-  {
     ref: "S9.capability-dd",
     agent: "brownfield-agent",
     kind: "scoped",
@@ -247,24 +260,38 @@ export function validateSpecialistTrackAffinity(
   for (const e of entries) {
     if (seen.has(e.ref)) violations.push(`SPECIALIST_TRACK_AFFINITY ref '${e.ref}'가 중복됩니다.`);
     seen.add(e.ref);
-    if (!AFFINITY_KINDS.has(e.kind)) violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 kind '${e.kind}'는 affinity|scoped|override 중 하나여야 합니다.`);
-    if (!AFFINITY_TRACKS.has(e.track)) violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 track '${e.track}'는 greenfield|brownfield 중 하나여야 합니다.`);
-    if (!e.note || e.note.trim().length === 0) violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 note가 비어 있습니다.`);
-    if (!e.decision || e.decision.trim().length === 0) violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 decision이 비어 있습니다.`);
+    if (!AFFINITY_KINDS.has(e.kind))
+      violations.push(
+        `SPECIALIST_TRACK_AFFINITY '${e.ref}'의 kind '${e.kind}'는 affinity|scoped|override 중 하나여야 합니다.`,
+      );
+    if (!AFFINITY_TRACKS.has(e.track))
+      violations.push(
+        `SPECIALIST_TRACK_AFFINITY '${e.ref}'의 track '${e.track}'는 greenfield|brownfield 중 하나여야 합니다.`,
+      );
+    if (!e.note || e.note.trim().length === 0)
+      violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 note가 비어 있습니다.`);
+    if (!e.decision || e.decision.trim().length === 0)
+      violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 decision이 비어 있습니다.`);
     const hit = index.get(e.ref);
     if (!hit) {
       violations.push(`SPECIALIST_TRACK_AFFINITY ref '${e.ref}'가 flow.spec.yaml 활동이 아닙니다.`);
       continue;
     }
     if (hit.agent !== e.agent) {
-      violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 agent '${e.agent}'가 flow.spec 활동 agent '${hit.agent}'와 다릅니다 — 배열은 스펙 위의 주석 계층이며 배정을 발명할 수 없습니다.`);
+      violations.push(
+        `SPECIALIST_TRACK_AFFINITY '${e.ref}'의 agent '${e.agent}'가 flow.spec 활동 agent '${hit.agent}'와 다릅니다 — 배열은 스펙 위의 주석 계층이며 배정을 발명할 수 없습니다.`,
+      );
     }
     if (!TRACK_SPECIALIST_AGENTS.has(e.agent)) {
-      violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 agent '${e.agent}'는 트랙 전문가(greenfield-agent|brownfield-agent)여야 합니다.`);
+      violations.push(
+        `SPECIALIST_TRACK_AFFINITY '${e.ref}'의 agent '${e.agent}'는 트랙 전문가(greenfield-agent|brownfield-agent)여야 합니다.`,
+      );
     }
     for (const t of ["greenfield", "brownfield"]) {
       if (!hit.trackScope.includes(t)) {
-        violations.push(`SPECIALIST_TRACK_AFFINITY '${e.ref}'의 단계(${hit.stageId}) applicableTracks에 '${t}'가 없습니다 — 양트랙 공통 단계만 마커 대상이다.`);
+        violations.push(
+          `SPECIALIST_TRACK_AFFINITY '${e.ref}'의 단계(${hit.stageId}) applicableTracks에 '${t}'가 없습니다 — 양트랙 공통 단계만 마커 대상이다.`,
+        );
       }
     }
   }
@@ -379,7 +406,9 @@ function normalizeForCheck(text: string): string {
 
 if (process.argv.includes("--check")) {
   if (normalizeForCheck(readFileSync(OUT, "utf8")) !== normalizeForCheck(next)) {
-    die(`pm-catalog.generated.ts stale (${entries.length} prompts, spec ${spec.meta.version}) — regenerate with: bun scripts/co-newbiz/generate-pm-catalog.ts`);
+    die(
+      `pm-catalog.generated.ts stale (${entries.length} prompts, spec ${spec.meta.version}) — regenerate with: bun scripts/co-newbiz/generate-pm-catalog.ts`,
+    );
   }
   console.log(`pm-catalog.generated.ts is up to date (${entries.length} prompts, ${dynamic.length} dynamic).`);
 } else {

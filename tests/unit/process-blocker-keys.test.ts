@@ -110,7 +110,7 @@ describe("i18n (processBlockers.*)", () => {
 
 describe("flow.spec 2.16.0 blockers declaration", () => {
   test("version and shape: every stage declares blockers; indices are in range; keys carry the stage prefix", () => {
-    expect(spec.meta.version).toBe("2.19.0"); // 2.19.0: dd gate binds pmi clean-team breach (ADR-0193); 2.18.1: S3 fit-judgement artifact label renamed per ADR-0192 (keys unchanged)
+    expect(spec.meta.version).toBe("2.20.0"); // 2.20.0: deal-shape evaluation moves S4 -> S7 (declared non-blocking artifact, no new blocker key); 2.19.0: dd gate binds pmi clean-team breach (ADR-0193); 2.18.1: S3 fit-judgement artifact label renamed per ADR-0192 (keys unchanged)
     for (const s of spec.stages) {
       expect(Array.isArray(s.blockers) && s.blockers.length > 0).toBe(true);
       for (const b of s.blockers) {
@@ -124,13 +124,17 @@ describe("flow.spec 2.16.0 blockers declaration", () => {
     const declared = spec.stages.flatMap((s) => s.blockers.map((b) => b.key)).sort();
     expect(declared).toEqual([...keys].sort());
   });
-  test("the only unblocked requiredArtifact is the S12 baseline-variance report (advisory)", () => {
+  test("the only unblocked requiredArtifacts are the S7 deal-shape evaluation (#9 carries the RECYCLE signal, v2.20.0) and the S12 baseline-variance report (advisory)", () => {
     const unblocked = spec.stages.flatMap((s) =>
       s.requiredArtifacts
         .map((_, i) => [s.id, i] as const)
         .filter(([, i]) => !s.blockers.some((b) => (b.artifacts ?? []).includes(i))),
     );
-    expect(unblocked).toEqual([["S12", 3]]);
+    expect(unblocked).toEqual([
+      ["S7", 3],
+      ["S12", 3],
+    ]);
+    expect(spec.stages.find((s) => s.id === "S7")!.nonBlockingArtifacts).toEqual([3]);
     expect(spec.stages.find((s) => s.id === "S12")!.nonBlockingArtifacts).toEqual([3]);
   });
 });

@@ -20,27 +20,54 @@ import { FactGrid } from "./FactGrid.tsx";
 import { DecisionTab } from "./DecisionTab.tsx";
 import { CompetitiveTab } from "./CompetitiveTab.tsx";
 import { EvalTab } from "./EvalTab.tsx";
-import { DealShapePanel } from "./DealShapePanel.tsx";
 import { useTranslations } from "next-intl";
 
-export function RouteDecisionStage(props0: { opportunityId: string; rationaleParam?: string | null; tabParam?: string | null }) {const t = useTranslations("stages.s4.routeDecisionStage"); const tc = useTranslations("common");
+export function RouteDecisionStage(props0: {
+  opportunityId: string;
+  rationaleParam?: string | null;
+  tabParam?: string | null;
+}) {
+  const t = useTranslations("stages.s4.routeDecisionStage");
+  const tc = useTranslations("common");
   const h0 = useRouteDecision(props0);
   const ctx = { ...h0 };
-  const { opportunityId, selected, advisory, tab, setTab, error, savedNotice, confirmDialog, notFound, canAct, canSubmit, saving } = ctx;
-
+  const {
+    opportunityId,
+    selected,
+    advisory,
+    tab,
+    setTab,
+    error,
+    savedNotice,
+    confirmDialog,
+    notFound,
+    canAct,
+    canSubmit,
+    saving,
+  } = ctx;
 
   if (notFound) {
     return (
       <>
-        <PrimaryAction inline label={tc("routeProposalHumanConfirm")} disabled disabledReason={t("noSelectedOpportunitySoA")} />
-      <div className="card">
-        <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
-          {t("noSelectedOpportunityFoundOnly")}{" "}
-          {/* 리뷰 2026-10-22 (저니 F5): 막다른 글이 아니라 이전 단계로 돌아가는 링크를 제공한다.
+        <PrimaryAction
+          inline
+          label={tc("routeProposalHumanConfirm")}
+          disabled
+          disabledReason={t("noSelectedOpportunitySoA")}
+        />
+        <div className="card">
+          <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
+            {t("noSelectedOpportunityFoundOnly")}{" "}
+            {/* 리뷰 2026-10-22 (저니 F5): 막다른 글이 아니라 이전 단계로 돌아가는 링크를 제공한다.
               품평회 잔여 #4 — next/link로 SPA 내비게이션 유지. */}
-          <Link className="text-[length:var(--fs-body)] underline" href={`/deals/${encodeURIComponent(opportunityId)}/s3`}>{t("goToS3SynergyAnd")}</Link>
-        </p>
-      </div>
+            <Link
+              className="text-[length:var(--fs-body)] underline"
+              href={`/deals/${encodeURIComponent(opportunityId)}/s3`}
+            >
+              {t("goToS3SynergyAnd")}
+            </Link>
+          </p>
+        </div>
       </>
     );
   }
@@ -48,8 +75,15 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   if (!selected) {
     return (
       <>
-        <PrimaryAction inline label={tc("routeProposalHumanConfirm")} disabled disabledReason={t("proposalsUnlockOnceTheDeal")} />
-        <div className="card"><p>{tc("loading")}</p></div>
+        <PrimaryAction
+          inline
+          label={tc("routeProposalHumanConfirm")}
+          disabled
+          disabledReason={t("proposalsUnlockOnceTheDeal")}
+        />
+        <div className="card">
+          <p>{tc("loading")}</p>
+        </div>
       </>
     );
   }
@@ -62,9 +96,21 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
   return (
     <>
       {tab === "decision" ? (
-        <PrimaryAction inline form="route-form" label={tc("routeProposalHumanConfirm")} disabled={proposeBlocked} disabledReason={proposeReason} />
+        <PrimaryAction
+          inline
+          form="route-form"
+          label={tc("routeProposalHumanConfirm")}
+          disabled={proposeBlocked}
+          disabledReason={proposeReason}
+        />
       ) : (
-        <PrimaryAction inline label={tc("routeProposalHumanConfirm")} onClick={() => setTab("decision")} disabled={proposeBlocked} disabledReason={proposeReason} />
+        <PrimaryAction
+          inline
+          label={tc("routeProposalHumanConfirm")}
+          onClick={() => setTab("decision")}
+          disabled={proposeBlocked}
+          disabledReason={proposeReason}
+        />
       )}
       <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S4")} />
       {/* ── 진출방식 추천 — 탭 밖 상시 노출 (2026-09-14 재설계). 예전엔 이 카드와
@@ -81,9 +127,6 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
         </div>
       )}
 
-      {/* ── 진출 형태 평가 (ADR-0194): 탭 밖 상시 노출 — 게이트 스냅샷의 중단 조건 #9 링크가 이 앵커로 온다. 사람 기록 전용. ── */}
-      <DealShapePanel opportunityId={selected.id} canAct={canAct} />
-
       <Tabs
         label={t("s4DecisionTab")}
         active={tab}
@@ -96,13 +139,20 @@ export function RouteDecisionStage(props0: { opportunityId: string; rationalePar
         ]}
       />
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)]">
+          {error}
+        </p>
+      )}
       {savedNotice && (
         // 리뷰 2026-10-22 (저니 F5): 결정 기록 직후의 전진 큐 — 엔진 nextStage의
         // 스킵 semantics와 동일(greenfield→S5, brownfield→S6).
         <p role="status" className="text-[length:var(--fs-body)]">
           {t("decisionRecordedNext")}{" "}
-          <Link className="underline" href={`/deals/${encodeURIComponent(opportunityId)}/s${savedNotice.track === "brownfield" ? "6" : "5"}`}>
+          <Link
+            className="underline"
+            href={`/deals/${encodeURIComponent(opportunityId)}/s${savedNotice.track === "brownfield" ? "6" : "5"}`}
+          >
             {savedNotice.track === "brownfield" ? t("s6TargetCandidateDiscovery") : t("s5GreenfieldEntry")}
           </Link>{" "}
           →

@@ -3,7 +3,7 @@ procedure_id: shared-deal-shape-chain
 title: "Deal-Shape Selection Chain (Partner Track)"
 scope: shared
 level: entity
-version: "1.0.1"
+version: "1.0.2"
 status: active
 # Entry is a human funnel-entry decision (a named capability gap justifies an
 # external search), made BEFORE any case classification exists — the P3
@@ -114,3 +114,6 @@ kill_criteria:
     action: halt   # partner cannot survive the alliance horizon including the exit tail [rbd 2.2]
   - condition: no_viable_deal_shape
     action: mark_conditional   # registry action vocabulary has no "Recycle" [rbd 1.1]; recycle semantics — the need returns to the scouting funnel (P0) with the screen's written feedback, it is not a Kill
+    # Owner decision 2026-11-08 (deal-shape-to-S7): this criterion is evaluated at S7 (gate target_screening), brownfield only (registry
+    # `track`), over the human-recorded deal-shape evaluation of shared-brownfield-target-screening step 3.5 — not by the S4 route funnel above.
+    # The partner funnel P0..P5 stays hosted at S4 (route-strategy); partner_dd_red_* stay track-neutral (project-scoped, reevaluate_at fs).

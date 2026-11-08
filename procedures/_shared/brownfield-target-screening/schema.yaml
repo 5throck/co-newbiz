@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-target-screening
 title: "Brown Field Target Screening (Long List → Short List)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -60,6 +60,24 @@ steps:
       partnership complexity) calibrated against peer benchmarks. Produce the
       Target Ranking/Score with per-criterion evidence and propose the Short
       List cut — the cut line itself is confirmed at the target_screening gate.
+  - id: 3.5
+    gate: Target Screening
+    agent_key: brownfield-agent
+    skill_key: deal-execution-playbook
+    output_type: deal_shape_evaluation
+    description: >
+      Deal-shape evaluation (human-recorded; moved here from S4 by the owner
+      decision of 2026-11-08): per Short List candidate (or per opportunity
+      when the shapes are candidate-independent), record the viable deal shapes
+      — M&A / JV / strategic investment / minority stake / partnership / R&BD /
+      CVC — with intent and rationale, judged against the ranked survivors of
+      step 3. Written through POST /api/opportunities/{id}/deal-shapes (MCP
+      record_deal_shape_evaluation); only human-written live rows count, and the
+      rows are never derived from the route decision, scores or LLM drafts. A
+      recorded set with zero viable shapes triggers kill criterion
+      `deal-shape-chain:no_viable_deal_shape` (RECYCLE semantics: the need
+      returns to scouting with written feedback — mark_conditional, not a Kill).
+      The binding structure stays with S10 deal-structuring step 1.
   - id: 4
     gate: Target Screening
     agent_key: process-governance-manager
@@ -67,14 +85,18 @@ steps:
     output_type: gate_pass_record
     description: >
       Confirm the Target Screening gate deliverables — Short List exists,
-      every Long List candidate has a ranking or exclusion reason, and all
-      Short List candidates passed the knock-out screens — then open S8
+      every Long List candidate has a ranking or exclusion reason, all
+      Short List candidates passed the knock-out screens, and the deal-shape
+      evaluation of step 3.5 is recorded (an unassessed
+      `no_viable_deal_shape` is acknowledged, a triggered one is a RECYCLE
+      signal for the human gate) — then open S8
       (사업성 분석) for the Short List targets.
 
 completion_criteria:
   - Short List exists and every Short List candidate passed the knock-out screens
   - Every Long List candidate carries a ranking score or a written exclusion reason
   - Screening evidence is recorded per candidate
+  - The deal-shape evaluation (viable shapes with intent and rationale) is recorded
 
 kill_criteria:
   - condition: no_candidate_passes_knock_out
@@ -87,6 +109,7 @@ legal_basis:
   - "checklists/target-screening-checklist.yaml (chk-target-screening — ADR-0081)"
   - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit, rated-scorecard convention)"
   - "shared-brownfield-screening step 3 (fact-gated HHI pre-screen rule reused in step 2)"
+  - "Owner decision 2026-11-08 (deal-shape evaluation moves from S4 to S7) and docs/designs/2026-11-08-deal-shape-to-s7-design.md; ADR-0195 (amends ADR-0193/0194)"
 
 owner_agent: brownfield-agent
-last_reviewed: "2026-08-31"
+last_reviewed: "2026-11-08"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 4.1.0
+// @version 4.2.0
 /**
  * Process SSOT validators (ADR-0187 phase P1, design
  * docs/designs/2026-10-27-process-ssot-decision-evidence-design.md section 4.6).
@@ -37,7 +37,11 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { load as yamlLoad } from "js-yaml";
 import { evaluatePredicate, type Predicate, type VarSnapshot } from "../../packages/core-scoring/src/predicate.ts";
-import { checkReevaluateBinding, flowShapeFromSpec } from "../../packages/core-scoring/src/kill-criteria.ts";
+import {
+  checkReevaluateBinding,
+  checkTrackField,
+  flowShapeFromSpec,
+} from "../../packages/core-scoring/src/kill-criteria.ts";
 import { BLOCKER_LABELS } from "../../app/web-next/lib/process-blocker-keys.ts";
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -151,7 +155,9 @@ export function extractEngineBlockers(sources: string | string[]): Map<string, E
   for (const source of Array.isArray(sources) ? sources : [sources]) {
     // `blocker("s3.x")` calls, and `blockerKey: "s4.x"` table entries (modules that
     // resolve the key at runtime, e.g. lib/checklist-gate-consumers.ts).
-    for (const m of source.matchAll(/\bblocker\(\s*"(s\d+)\.([a-z0-9_]+)"\s*\)|\bblockerKey:\s*"(s\d+)\.([a-z0-9_]+)"/g)) {
+    for (const m of source.matchAll(
+      /\bblocker\(\s*"(s\d+)\.([a-z0-9_]+)"\s*\)|\bblockerKey:\s*"(s\d+)\.([a-z0-9_]+)"/g,
+    )) {
       const stagePart = m[1] ?? m[3];
       const namePart = m[2] ?? m[4];
       const e = entry(stagePart.toUpperCase());
@@ -199,34 +205,53 @@ export function checkEngineSpecParity(
     const engineKeys = engine.get(stage.id)?.keys ?? [];
     for (const k of engineKeys) {
       if (!declaredKeys.includes(k)) {
-        findings.push({ check, message: `${stage.id}: engine blocker key "${k}" is not declared in flow.spec blockers (undeclared blocker)` });
+        findings.push({
+          check,
+          message: `${stage.id}: engine blocker key "${k}" is not declared in flow.spec blockers (undeclared blocker)`,
+        });
       }
     }
     for (const k of declaredKeys) {
       if (!engineKeys.includes(k)) {
-        findings.push({ check, message: `${stage.id}: flow.spec blocker key "${k}" is not emitted by the engine (declared, not enforced)` });
+        findings.push({
+          check,
+          message: `${stage.id}: flow.spec blocker key "${k}" is not emitted by the engine (declared, not enforced)`,
+        });
       }
       if (!registry.keys.has(k)) {
-        findings.push({ check, message: `${stage.id}: flow.spec blocker key "${k}" is not defined in process-blocker-keys.ts` });
+        findings.push({
+          check,
+          message: `${stage.id}: flow.spec blocker key "${k}" is not defined in process-blocker-keys.ts`,
+        });
       }
       if (!k.toLowerCase().startsWith(`${stage.id.toLowerCase()}.`)) {
-        findings.push({ check, message: `${stage.id}: blocker key "${k}" does not carry the stage prefix "${stage.id.toLowerCase()}."` });
+        findings.push({
+          check,
+          message: `${stage.id}: blocker key "${k}" does not carry the stage prefix "${stage.id.toLowerCase()}."`,
+        });
       }
     }
     const dupes = declaredKeys.filter((k, i) => declaredKeys.indexOf(k) !== i);
-    for (const k of new Set(dupes)) findings.push({ check, message: `${stage.id}: blocker key "${k}" is declared more than once` });
+    for (const k of new Set(dupes))
+      findings.push({ check, message: `${stage.id}: blocker key "${k}" is declared more than once` });
     const nArt = (stage.requiredArtifacts ?? []).length;
     const nCrit = (stage.completionCriteria ?? []).length;
     const covered = new Set<number>();
     for (const b of declared) {
       for (const i of b.artifacts ?? []) {
         if (!Number.isInteger(i) || i < 0 || i >= nArt)
-          findings.push({ check, message: `${stage.id}: blocker "${b.key}" covers requiredArtifacts[${i}] which does not exist (${nArt} listed)` });
+          findings.push({
+            check,
+            message: `${stage.id}: blocker "${b.key}" covers requiredArtifacts[${i}] which does not exist (${nArt} listed)`,
+          });
         else covered.add(i);
       }
       for (const i of b.criteria ?? []) {
         if (!Number.isInteger(i) || i < 0 || i >= nCrit)
-          findings.push({ check, message: `${stage.id}: blocker "${b.key}" covers completionCriteria[${i}] which does not exist (${nCrit} listed)` });
+          findings.push({
+            check,
+            message: `${stage.id}: blocker "${b.key}" covers completionCriteria[${i}] which does not exist (${nCrit} listed)`,
+          });
       }
     }
     const nonBlocking = new Set(stage.nonBlockingArtifacts ?? []);
@@ -239,15 +264,26 @@ export function checkEngineSpecParity(
       }
     }
     for (const i of nonBlocking) {
-      if (covered.has(i)) findings.push({ check, message: `${stage.id}: requiredArtifact[${i}] is both covered by a blocker key and listed in nonBlockingArtifacts` });
+      if (covered.has(i))
+        findings.push({
+          check,
+          message: `${stage.id}: requiredArtifact[${i}] is both covered by a blocker key and listed in nonBlockingArtifacts`,
+        });
     }
   }
   for (const k of registry.keys) {
-    if (!allEngineKeys.has(k)) findings.push({ check, message: `${k}: key is defined in process-blocker-keys.ts but no engine predicate emits it (dead key)` });
+    if (!allEngineKeys.has(k))
+      findings.push({
+        check,
+        message: `${k}: key is defined in process-blocker-keys.ts but no engine predicate emits it (dead key)`,
+      });
   }
   const raw = engine.get("?")?.raw ?? 0;
   if (raw > 0) {
-    findings.push({ check, message: `${raw} engine missing entr${raw === 1 ? "y" : "ies"} bypass blocker() (raw label or computed text) - every missing entry must carry a stable key` });
+    findings.push({
+      check,
+      message: `${raw} engine missing entr${raw === 1 ? "y" : "ies"} bypass blocker() (raw label or computed text) - every missing entry must carry a stable key`,
+    });
   }
   return findings;
 }
@@ -283,9 +319,7 @@ export const CHECKLIST_DECLARED_CONSUMERS: ReadonlyArray<{
     "chk-hr-dd-checklist",
     "chk-market-dd-checklist",
     "chk-financing-plan-checklist",
-  ].map(
-    (docId) => ({ docId, module: "app/web-next/lib/library.ts", symbol: "DD_WORKSPACE_CHECKLISTS", gate: "dd" }),
-  ),
+  ].map((docId) => ({ docId, module: "app/web-next/lib/library.ts", symbol: "DD_WORKSPACE_CHECKLISTS", gate: "dd" })),
 ];
 
 /**
@@ -483,7 +517,7 @@ export function checkKillRegistryParity(input: {
    * `reevaluate_at` names a gate that exists and whose stage is not earlier than `evaluable_from`.
    * Omitted by callers that predate the field (the registry validator reports missing fields).
    */
-  registryScoping?: Array<{ key: string; evaluable_from?: string; reevaluate_at?: string }>;
+  registryScoping?: Array<{ key: string; evaluable_from?: string; reevaluate_at?: string; track?: unknown }>;
   spec?: FlowSpec;
 }): Finding[] {
   const check: CheckId = "check-kill-registry-parity";
@@ -514,8 +548,15 @@ export function checkKillRegistryParity(input: {
         findings.push({ check, message: `registry entry '${r.key}' lacks evaluable_from / reevaluate_at (ADR-0193)` });
         continue;
       }
-      for (const problem of checkReevaluateBinding(r, flow)) findings.push({ check, message: `registry entry '${r.key}': ${problem} (ADR-0193)` });
+      for (const problem of checkReevaluateBinding(r, flow))
+        findings.push({ check, message: `registry entry '${r.key}': ${problem} (ADR-0193)` });
     }
+  }
+  // Deal-shape-to-S7 ruling R-1: the optional per-criterion `track` must be a known track and must not contradict a track-prefixed procedure.
+  for (const r of input.registryScoping ?? []) {
+    const procedure = r.key.includes("__") ? r.key.slice(0, r.key.indexOf("__")) : r.key;
+    for (const problem of checkTrackField(r, procedure))
+      findings.push({ check, message: `registry entry '${r.key}': ${problem} (deal-shape-to-S7 R-1)` });
   }
   if (input.policyKoKeys) {
     const en = new Set(input.policyKeys);
@@ -620,35 +661,60 @@ export function checkReviewCoverage(input: ReviewCoverageInput): Finding[] {
   // Matrix self-consistency: reviewers' domains match the roster, fallback is cross-domain.
   for (const [agent, dom] of Object.entries(m.reviewer_domains ?? {})) {
     const actual = input.agentDomains.get(agent);
-    if (actual !== dom) findings.push({ check, message: `matrix reviewer '${agent}' declares domain '${dom}' but the roster says '${actual ?? "none"}'` });
+    if (actual !== dom)
+      findings.push({
+        check,
+        message: `matrix reviewer '${agent}' declares domain '${dom}' but the roster says '${actual ?? "none"}'`,
+      });
   }
   for (const [dom, lead] of Object.entries(m.fallback ?? {})) {
     const leadDom = m.reviewer_domains?.[lead];
-    if (!leadDom || leadDom === dom) findings.push({ check, message: `fallback for author domain '${dom}' is '${lead}', which is not a cross-domain reviewer` });
+    if (!leadDom || leadDom === dom)
+      findings.push({
+        check,
+        message: `fallback for author domain '${dom}' is '${lead}', which is not a cross-domain reviewer`,
+      });
   }
   for (const [type, def] of Object.entries(types)) {
     for (const [dom, reviewer] of Object.entries(def.reviewers ?? {})) {
       if (!(reviewer in (m.reviewer_domains ?? {})))
-        findings.push({ check, message: `artifact type '${type}' x '${dom}': reviewer '${reviewer}' has no reviewer_domains entry` });
+        findings.push({
+          check,
+          message: `artifact type '${type}' x '${dom}': reviewer '${reviewer}' has no reviewer_domains entry`,
+        });
     }
   }
 
   for (const stage of input.spec.stages ?? []) {
     const reqs = (stage.requiredArtifacts ?? []).map(norm);
     const ms = m.stages?.[stage.id];
-    if (!ms) findings.push({ check, message: `${stage.id}: no stage entry in the matrix (artifact typing and output registry)` });
+    if (!ms)
+      findings.push({
+        check,
+        message: `${stage.id}: no stage entry in the matrix (artifact typing and output registry)`,
+      });
     for (const out of stage.outputs ?? []) {
       if (reqs.some((r) => startsEither(out, r))) continue;
       const entry = ms?.outputs?.find((o) => norm(out).startsWith(norm(o.match)));
       if (!entry) {
-        findings.push({ check, message: `${stage.id}: output "${norm(out).slice(0, 60)}" is not in the review registry (not a requiredArtifact and no matrix entry - skips AI-2nd)` });
+        findings.push({
+          check,
+          message: `${stage.id}: output "${norm(out).slice(0, 60)}" is not in the review registry (not a requiredArtifact and no matrix entry - skips AI-2nd)`,
+        });
       } else if (entry.review === "covered_by") {
         if (!entry.covered_by || !reqs.some((r) => r.startsWith(norm(entry.covered_by!))))
-          findings.push({ check, message: `${stage.id}: output "${entry.match}" is covered_by '${entry.covered_by ?? ""}', which is not a requiredArtifact of the stage` });
+          findings.push({
+            check,
+            message: `${stage.id}: output "${entry.match}" is covered_by '${entry.covered_by ?? ""}', which is not a requiredArtifact of the stage`,
+          });
       } else if (entry.review === "exempt") {
-        if (!entry.reason?.trim()) findings.push({ check, message: `${stage.id}: output "${entry.match}" is exempt without a reason` });
+        if (!entry.reason?.trim())
+          findings.push({ check, message: `${stage.id}: output "${entry.match}" is exempt without a reason` });
       } else {
-        findings.push({ check, message: `${stage.id}: output "${entry.match}" has review '${entry.review ?? ""}' (expected covered_by or exempt)` });
+        findings.push({
+          check,
+          message: `${stage.id}: output "${entry.match}" has review '${entry.review ?? ""}' (expected covered_by or exempt)`,
+        });
       }
     }
   }
@@ -666,7 +732,11 @@ export function checkReviewCoverage(input: ReviewCoverageInput): Finding[] {
       if (exempt.has(a.agent)) continue;
       const d = input.agentDomains.get(a.agent);
       if (d && ["functional", "technical", "industry", "region"].includes(d)) domains.add(d);
-      else findings.push({ check, message: `${stage.id}/${a.id}: author agent '${a.agent}' has no review domain and no matrix exemption` });
+      else
+        findings.push({
+          check,
+          message: `${stage.id}/${a.id}: author agent '${a.agent}' has no review domain and no matrix exemption`,
+        });
     }
     const ms = m.stages?.[stage.id];
     const usedTypes = new Set<string>(ms?.default_type ? [ms.default_type] : []);
@@ -679,7 +749,10 @@ export function checkReviewCoverage(input: ReviewCoverageInput): Finding[] {
       }
       for (const d of [...domains].sort()) {
         if (!types[t].reviewers?.[d])
-          findings.push({ check, message: `${stage.id}: no matrix entry for artifact type '${t}' x author domain '${d}'` });
+          findings.push({
+            check,
+            message: `${stage.id}: no matrix entry for artifact type '${t}' x author domain '${d}'`,
+          });
       }
     }
   }
@@ -894,10 +967,16 @@ export function runAll(only?: CheckId): Finding[] {
 
   if (want("check-engine-spec-parity")) {
     const engineSources = [...runtimeSources().entries()]
-      .filter(([path, src]) => !path.endsWith("process-blocker-keys.ts") && (path.endsWith("lib/process-flow.ts") || /\bblocker\(\s*"s\d+\.|\bblockerKey:\s*"s\d+\./.test(src)))
+      .filter(
+        ([path, src]) =>
+          !path.endsWith("process-blocker-keys.ts") &&
+          (path.endsWith("lib/process-flow.ts") || /\bblocker\(\s*"s\d+\.|\bblockerKey:\s*"s\d+\./.test(src)),
+      )
       .map(([, src]) => src);
     findings.push(
-      ...checkEngineSpecParity(spec, extractEngineBlockers(engineSources), { keys: new Set(Object.keys(BLOCKER_LABELS)) }),
+      ...checkEngineSpecParity(spec, extractEngineBlockers(engineSources), {
+        keys: new Set(Object.keys(BLOCKER_LABELS)),
+      }),
     );
   }
   if (want("check-checklist-consumers")) {
@@ -931,8 +1010,12 @@ export function runAll(only?: CheckId): Finding[] {
       .sort();
     const koPath = join(ROOT, "policies", "group", "neb-policy_ko.md");
     const registryScoping = registryKeys.map((key) => {
-      const e = JSON.parse(readFileSync(join(ROOT, "procedures", "_kill-criteria", `${key}.json`), "utf8")) as { evaluable_from?: string; reevaluate_at?: string };
-      return { key, evaluable_from: e.evaluable_from, reevaluate_at: e.reevaluate_at };
+      const e = JSON.parse(readFileSync(join(ROOT, "procedures", "_kill-criteria", `${key}.json`), "utf8")) as {
+        evaluable_from?: string;
+        reevaluate_at?: string;
+        track?: unknown;
+      };
+      return { key, evaluable_from: e.evaluable_from, reevaluate_at: e.reevaluate_at, track: e.track };
     });
     findings.push(
       ...checkKillRegistryParity({
@@ -955,9 +1038,7 @@ export function runAll(only?: CheckId): Finding[] {
     const matrix = existsSync(matrixPath) ? (yamlLoad(readFileSync(matrixPath, "utf8")) as ReviewMatrixDoc) : null;
     // A matrix gate exception counts only while neb-policy still names it (section 2.7).
     const policy = read("policies/group/neb-policy.md");
-    const namedExceptions = (matrix?.gate_exceptions ?? [])
-      .map((e) => e.gate)
-      .filter((g) => policy.includes(g));
+    const namedExceptions = (matrix?.gate_exceptions ?? []).map((e) => e.gate).filter((g) => policy.includes(g));
     findings.push(
       ...checkReviewCoverage({
         spec,
@@ -1002,7 +1083,10 @@ if (import.meta.main) {
     const counts = summarize(findings);
     console.log("\nProcess SSOT validators (ADR-0187 P4 - ERROR checks block, WARN checks report):");
     for (const c of CHECK_IDS)
-      if (!only || only === c) console.log(`  ${c.padEnd(30)} ${String(counts[c]).padStart(3)}  ${BLOCKING_CHECKS.has(c) ? "blocking" : "report-only"}`);
+      if (!only || only === c)
+        console.log(
+          `  ${c.padEnd(30)} ${String(counts[c]).padStart(3)}  ${BLOCKING_CHECKS.has(c) ? "blocking" : "report-only"}`,
+        );
   }
   const blocking = findings.some(isBlocking);
   process.exit(blocking || (args.includes("--strict") && findings.length > 0) ? 1 : 0);

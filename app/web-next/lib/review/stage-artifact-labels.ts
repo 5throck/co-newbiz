@@ -33,6 +33,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S7:1", stageId: "S7", label: "S7 대상 기업 숏리스트" },
   { key: "stage:S7:2", stageId: "S7", label: "S7 대상 순위·점수" },
   { key: "stage:S7:3", stageId: "S7", label: "S7 제외 사유" },
+  { key: "stage:S7:4", stageId: "S7", label: "S7 딜 형태 평가" },
   { key: "stage:S8:1", stageId: "S8", label: "S8 사업성 분석 결과" },
   { key: "stage:S8:2", stageId: "S8", label: "S8 시뮬레이션 NPV 분위수" },
   { key: "stage:S8:3", stageId: "S8", label: "S8 BEP 시점과 시뮬레이션 입력 스냅샷" },
