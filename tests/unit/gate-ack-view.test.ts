@@ -6,8 +6,11 @@ import {
   ackProblemsFromError,
   caveatsOfKey,
   closureView,
+  divergenceMode,
   dropAckKeys,
+  isDivergenceError,
   isNamedGate,
+  mergedDivergenceReason,
   killScopeView,
   type GateSnapshotView,
   buildAckPayload,
@@ -118,30 +121,73 @@ describe("kill scope view (ADR-0193)", () => {
     expect(v.closedCarries).toBe(0);
   });
   test("not-reached items add no required acknowledgement: the ack list is the server's required_acks only", () => {
-    const kill: GateSnapshotView["kill"] = { ...baseKill, not_reached: [{ key: "p:x", procedure: "p", criterion_id: "x", title: "X", action: "halt", evaluable_from: "S5", reevaluate_at: "pre_fs" }] };
+    const kill: GateSnapshotView["kill"] = {
+      ...baseKill,
+      not_reached: [
+        {
+          key: "p:x",
+          procedure: "p",
+          criterion_id: "x",
+          title: "X",
+          action: "halt",
+          evaluable_from: "S5",
+          reevaluate_at: "pre_fs",
+        },
+      ],
+    };
     expect(killScopeView(kill).notReached).toHaveLength(1);
     expect(missingAckKeys([], EMPTY_ACK_STATE)).toEqual([]);
     expect(buildAckPayload([], EMPTY_ACK_STATE)).toEqual([]);
   });
   test("closed carries are evaluated and out_of_track; open and open_monitoring are not", () => {
-    const c = (key: string, closure: "evaluated" | "open" | "out_of_track" | "open_monitoring") => ({ key, title: key, from_decision_id: null, outcome: "false" as const, closure, action: "halt", evaluable_from: "S5", reevaluate_at: "pre_fs", route_decision_id: null });
-    const v = killScopeView({ ...baseKill, carried_in: [c("a", "evaluated"), c("b", "open"), c("c", "out_of_track"), c("d", "open_monitoring")] });
+    const c = (key: string, closure: "evaluated" | "open" | "out_of_track" | "open_monitoring") => ({
+      key,
+      title: key,
+      from_decision_id: null,
+      outcome: "false" as const,
+      closure,
+      action: "halt",
+      evaluable_from: "S5",
+      reevaluate_at: "pre_fs",
+      route_decision_id: null,
+    });
+    const v = killScopeView({
+      ...baseKill,
+      carried_in: [c("a", "evaluated"), c("b", "open"), c("c", "out_of_track"), c("d", "open_monitoring")],
+    });
     expect(v.carriedIn).toHaveLength(4);
     expect(v.closedCarries).toBe(2);
   });
   test("partial-input triggers are picked out, and stay triggered", () => {
-    const t = (key: string, partial?: boolean) => ({ key, procedure: "p", criterion_id: key, title: key, action: "halt", partial_input: partial });
+    const t = (key: string, partial?: boolean) => ({
+      key,
+      procedure: "p",
+      criterion_id: key,
+      title: key,
+      action: "halt",
+      partial_input: partial,
+    });
     const kill = { ...baseKill, triggered: [t("a", true), t("b", false), t("c")] };
     expect(killScopeView(kill).partialTriggered.map((x) => x.key)).toEqual(["a"]);
     expect(kill.triggered).toHaveLength(3);
   });
   test("every closure state has an icon (never colour alone); an unknown state degrades to open", () => {
-    for (const c of ["evaluated", "open", "open_monitoring", "out_of_track"]) expect(closureView(c).icon.length).toBeGreaterThan(0);
+    for (const c of ["evaluated", "open", "open_monitoring", "out_of_track"])
+      expect(closureView(c).icon.length).toBeGreaterThan(0);
     expect(closureView("weird").id).toBe("open");
-    expect(new Set(["evaluated", "open", "open_monitoring", "out_of_track"].map((c) => closureView(c).icon)).size).toBe(4);
+    expect(new Set(["evaluated", "open", "open_monitoring", "out_of_track"].map((c) => closureView(c).icon)).size).toBe(
+      4,
+    );
   });
   test("caveats are looked up per key and de-duplicated", () => {
-    const kill = { ...baseKill, caveats: [{ key: "p:a", caveat: "x" }, { key: "p:a", caveat: "x" }, { key: "p:b", caveat: "y" }] };
+    const kill = {
+      ...baseKill,
+      caveats: [
+        { key: "p:a", caveat: "x" },
+        { key: "p:a", caveat: "x" },
+        { key: "p:b", caveat: "y" },
+      ],
+    };
     expect(caveatsOfKey(kill, "p:a")).toEqual(["x"]);
     expect(caveatsOfKey(kill, "p:z")).toEqual([]);
     expect(caveatsOfKey(baseKill, "p:a")).toEqual([]);
@@ -162,7 +208,47 @@ describe("ack_not_reached recovery", () => {
     expect(ackNotReachedKeys({ keys: "p:a" })).toEqual([]);
   });
   test("dropAckKeys removes entered state for the rejected keys only", () => {
-    const st = { reasons: { "p:a": "r", "rag:overall": "rr" }, checked: { "p:a": true, "p:b": true }, sharedReason: "s", perItem: false };
-    expect(dropAckKeys(st, ["p:a"])).toEqual({ reasons: { "rag:overall": "rr" }, checked: { "p:b": true }, sharedReason: "s", perItem: false });
+    const st = {
+      reasons: { "p:a": "r", "rag:overall": "rr" },
+      checked: { "p:a": true, "p:b": true },
+      sharedReason: "s",
+      perItem: false,
+    };
+    expect(dropAckKeys(st, ["p:a"])).toEqual({
+      reasons: { "rag:overall": "rr" },
+      checked: { "p:b": true },
+      sharedReason: "s",
+      perItem: false,
+    });
+  });
+});
+
+describe("gate-ack-view: merged rationale / divergence field (ADR-0186 D9)", () => {
+  test("mode: required for a GO against another AI recommendation, optional for HOLD/KILL, none when equal or no AI", () => {
+    expect(divergenceMode("hold", "go")).toBe("required");
+    expect(divergenceMode("kill", "go")).toBe("required");
+    expect(divergenceMode("go", "hold")).toBe("optional");
+    expect(divergenceMode("go", "kill")).toBe("optional");
+    expect(divergenceMode("hold", "kill")).toBe("optional");
+    expect(divergenceMode("go", "go")).toBeNull();
+    expect(divergenceMode(null, "go")).toBeNull();
+    expect(divergenceMode(undefined, "hold")).toBeNull();
+  });
+
+  test("the single field text is sent as divergence_reason (trimmed) exactly when the decision differs", () => {
+    const text = "  AI는 인허가 일정을 우려했으나 서명된 인센티브 서한이 그 위험을 해소했습니다.  ";
+    expect(mergedDivergenceReason("hold", "go", text)).toBe(text.trim());
+    expect(mergedDivergenceReason("go", "hold", text)).toBe(text.trim());
+    expect(mergedDivergenceReason("go", "go", text)).toBeUndefined();
+    expect(mergedDivergenceReason(null, "go", text)).toBeUndefined();
+    expect(mergedDivergenceReason("hold", "go", "   ")).toBeUndefined();
+  });
+
+  test("divergence 422s are recognised so they can be shown on the merged field", () => {
+    expect(isDivergenceError("divergence_reason_required", { ai_recommended: "hold" })).toBe(true);
+    expect(isDivergenceError("rationale_insufficient", { field: "divergence_reason", reason: "too_short" })).toBe(true);
+    expect(isDivergenceError("rationale_insufficient", { field: "acknowledgements" })).toBe(false);
+    expect(isDivergenceError("rationale_insufficient", null)).toBe(false);
+    expect(isDivergenceError("ack_required", {})).toBe(false);
   });
 });

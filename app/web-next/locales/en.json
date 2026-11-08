@@ -2810,6 +2810,8 @@
       "noAckNeeded": "Nothing needs acknowledgement for this GO.",
       "divergenceLabelRequired": "Why does your decision differ from the AI recommendation ({ai})? *",
       "divergenceLabelOptional": "Why does your decision differ from the AI recommendation ({ai})? (optional)",
+      "rationaleLabelDivergentRequired": "Evidence - include why this differs from the AI recommendation ({ai}) *",
+      "rationaleLabelDivergentOptional": "Evidence - add why this differs from the AI recommendation ({ai}), if so *",
       "staleChanged": "The gate state changed while you were reviewing. {added} new and {dropped} removed items; your other reasons were kept. Review and record again.",
       "legacy": "Before acknowledgements",
       "viewSnapshot": "Stored state and reasons ({count})",

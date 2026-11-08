@@ -228,7 +228,15 @@ export function ackKeyFamily(key: string): "kill" | "rag" | "np" | "other" {
 // ── ADR-0193: stage-scoped kill criteria (not reached, carried in, scheduled, caveats, partial input) ──
 
 /** Gate ids the catalog can name (`common.gate.<id>`); anything else (e.g. `open_monitoring`) has no gate label. */
-const NAMED_GATES: ReadonlySet<string> = new Set(["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"]);
+const NAMED_GATES: ReadonlySet<string> = new Set([
+  "screening",
+  "pre_fs",
+  "target_screening",
+  "fs",
+  "dd",
+  "entity_ic",
+  "group_ic",
+]);
 export const isNamedGate = (g: string | null | undefined): g is string => !!g && NAMED_GATES.has(g);
 
 /** The v2 kill-scope fields with legacy snapshots read as empty. */
@@ -281,4 +289,31 @@ export function dropAckKeys(state: AckState, keys: readonly string[]): AckState 
   const reasons = Object.fromEntries(Object.entries(state.reasons).filter(([k]) => !drop.has(k)));
   const checked = Object.fromEntries(Object.entries(state.checked).filter(([k]) => !drop.has(k)));
   return { ...state, reasons, checked };
+}
+
+/**
+ * AI-divergence on the gate decision form (ADR-0186 D9). The form shows ONE reasoning field; when the decision differs
+ * from the AI recommendation its text is also the `divergence_reason` (server: required for a GO, optional otherwise).
+ */
+export type DivergenceMode = "required" | "optional" | null;
+export function divergenceMode(aiRecommended: string | null | undefined, decision: string): DivergenceMode {
+  if (!aiRecommended || aiRecommended === decision) return null;
+  return decision === "go" ? "required" : "optional";
+}
+
+/** The `divergence_reason` to send: the merged field text when the decision differs from the AI, else nothing. */
+export function mergedDivergenceReason(
+  aiRecommended: string | null | undefined,
+  decision: string,
+  rationale: string,
+): string | undefined {
+  const text = rationale.trim();
+  return divergenceMode(aiRecommended, decision) && text ? text : undefined;
+}
+
+/** Server 422s that belong to the divergence reason (shown on the merged rationale field). */
+export function isDivergenceError(code: string, details: unknown): boolean {
+  if (code === "divergence_reason_required") return true;
+  const d = (details && typeof details === "object" ? details : {}) as Record<string, unknown>;
+  return code === "rationale_insufficient" && d.field === "divergence_reason";
 }
