@@ -17,13 +17,25 @@ import { parsePositionMeta } from "../../app/web-next/lib/committee-llm.ts";
 
 const ENV = "CO_NEWBIZ_COMMITTEE_RESPONSIVE";
 let saved: string | undefined;
-beforeEach(() => { saved = process.env[ENV]; delete process.env[ENV]; });
-afterEach(() => { if (saved === undefined) delete process.env[ENV]; else process.env[ENV] = saved; });
+beforeEach(() => {
+  saved = process.env[ENV];
+  delete process.env[ENV];
+});
+afterEach(() => {
+  if (saved === undefined) delete process.env[ENV];
+  else process.env[ENV] = saved;
+});
 
 const member = { agentKey: "market-intelligence-agent" };
 const round1: DeliberationPosition[] = [
   { memberKey: "market-intelligence-agent", positionMd: "MY OWN R1 STANCE" },
-  { memberKey: "risk-officer", positionMd: "RISK R1 VERBATIM\n\n두 번째 문단 <!--position-meta:{\"recommendation\":\"kill\",\"confidence\":80}-->", recommendation: "kill", confidence: 80, vetoDissent: true },
+  {
+    memberKey: "risk-officer",
+    positionMd: 'RISK R1 VERBATIM\n\n두 번째 문단 <!--position-meta:{"recommendation":"kill","confidence":80}-->',
+    recommendation: "kill",
+    confidence: 80,
+    vetoDissent: true,
+  },
   { memberKey: "legal-counsel", positionMd: "LEGAL R1 VERBATIM" },
 ];
 
@@ -42,7 +54,9 @@ describe("flag", () => {
 describe("flag off — pre-ADR-0196 prompt, byte-identical", () => {
   test("round 1 and round 2 match the legacy text exactly", () => {
     const r1 = deliberationPrompt(member, "안건 A", [], 1);
-    expect(r1).toBe("당신은 'market-intelligence-agent' 위원입니다. 아래 검토/안건에 대한 입장을 작성하세요.\n\n## 검토/안건\n안건 A");
+    expect(r1).toBe(
+      "당신은 'market-intelligence-agent' 위원입니다. 아래 검토/안건에 대한 입장을 작성하세요.\n\n## 검토/안건\n안건 A",
+    );
     const r2 = deliberationPrompt(member, "안건 A", [round1], 2);
     expect(r2).toBe(
       [
@@ -65,7 +79,9 @@ describe("flag off — pre-ADR-0196 prompt, byte-identical", () => {
 
   test("agenda option is ignored when responsive rounds are off", () => {
     const agenda: AgendaIssue[] = [{ id: "I1", title: "수요 전제" }];
-    expect(deliberationPrompt(member, "안건 A", [round1], 2, { agenda })).toBe(deliberationPrompt(member, "안건 A", [round1], 2));
+    expect(deliberationPrompt(member, "안건 A", [round1], 2, { agenda })).toBe(
+      deliberationPrompt(member, "안건 A", [round1], 2),
+    );
   });
 });
 
@@ -146,10 +162,12 @@ describe("responsive rounds on", () => {
   });
 
   test("a single peer: contract names the one available seat (no impossible 'at least 2')", () => {
-    const solo: DeliberationPosition[][] = [[
-      { memberKey: "market-intelligence-agent", positionMd: "ME" },
-      { memberKey: "risk-officer", positionMd: "RISK" },
-    ]];
+    const solo: DeliberationPosition[][] = [
+      [
+        { memberKey: "market-intelligence-agent", positionMd: "ME" },
+        { memberKey: "risk-officer", positionMd: "RISK" },
+      ],
+    ];
     const p = deliberationPrompt(member, "안건 A", solo, 2, { responsive: true });
     expect(p).toContain("위원 1명 이상을 seat key로 지명");
   });
@@ -159,8 +177,21 @@ describe("peer paste cap", () => {
   const big = (label: string) => `${label} ${"가".repeat(9000)}`; // ~6000 tokens by the Hangul estimate
   const mk = (r: number): DeliberationPosition[] => [
     { memberKey: "market-intelligence-agent", positionMd: `own r${r}` },
-    { memberKey: "risk-officer", positionMd: big(`RISK-R${r}-FULL`), recommendation: "kill", confidence: 80, vetoDissent: true },
-    { memberKey: "legal-counsel", positionMd: big(`LEGAL-R${r}-FULL`), recommendation: "go", confidence: 70, stanceChanged: true, respondsTo: [{ seat: "risk-officer", act: "rebut", issue: "I1" }] },
+    {
+      memberKey: "risk-officer",
+      positionMd: big(`RISK-R${r}-FULL`),
+      recommendation: "kill",
+      confidence: 80,
+      vetoDissent: true,
+    },
+    {
+      memberKey: "legal-counsel",
+      positionMd: big(`LEGAL-R${r}-FULL`),
+      recommendation: "go",
+      confidence: 70,
+      stanceChanged: true,
+      respondsTo: [{ seat: "risk-officer", act: "rebut", issue: "I1" }],
+    },
   ];
 
   test("estimator errs high for Hangul", () => {
@@ -170,10 +201,13 @@ describe("peer paste cap", () => {
   });
 
   test("under the cap every round is verbatim", () => {
-    const small = [round1, [
-      { memberKey: "market-intelligence-agent", positionMd: "own r2" },
-      { memberKey: "risk-officer", positionMd: "RISK R2 VERBATIM" },
-    ]];
+    const small = [
+      round1,
+      [
+        { memberKey: "market-intelligence-agent", positionMd: "own r2" },
+        { memberKey: "risk-officer", positionMd: "RISK R2 VERBATIM" },
+      ],
+    ];
     const p = deliberationPrompt(member, "A", small, 3, { responsive: true });
     expect(p).toContain("RISK R1 VERBATIM");
     expect(p).toContain("RISK R2 VERBATIM");
@@ -190,7 +224,9 @@ describe("peer paste cap", () => {
     expect(p).not.toContain("LEGAL-R1-FULL");
     expect(p).toContain("라운드 1 — 분량 상한으로 position-meta 요약만");
     expect(p).toContain('- risk-officer: {"recommendation":"kill","confidence":80,"veto_dissent":true}');
-    expect(p).toContain('- legal-counsel: {"recommendation":"go","confidence":70,"responds_to":[{"seat":"risk-officer","act":"rebut","issue":"I1"}],"stance_changed":true}');
+    expect(p).toContain(
+      '- legal-counsel: {"recommendation":"go","confidence":70,"responds_to":[{"seat":"risk-officer","act":"rebut","issue":"I1"}],"stance_changed":true}',
+    );
     // Own position and the contract are never capped.
     expect(p).toContain("own r2");
     expect(p).toContain("## 응답 규칙");
@@ -204,7 +240,10 @@ describe("peer paste cap", () => {
 
   test("collapsed meta falls back to the tail stored inside replayed position text", () => {
     const replay: DeliberationPosition[] = [
-      { memberKey: "risk-officer", positionMd: `${big("OLD")}\n<!--position-meta:{"recommendation":"kill","confidence":80}-->` },
+      {
+        memberKey: "risk-officer",
+        positionMd: `${big("OLD")}\n<!--position-meta:{"recommendation":"kill","confidence":80}-->`,
+      },
     ];
     const p = deliberationPrompt(member, "A", [replay, mk(2)], 3, { responsive: true, peerTokenCap: 100 });
     expect(p).toContain('- risk-officer: {"recommendation":"kill","confidence":80}');

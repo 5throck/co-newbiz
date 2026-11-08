@@ -6,7 +6,7 @@ lang_reason: source-material
 ---
 title: Committee minutes that read like a meeting
 date: 2026-11-08
-status: proposed
+status: accepted
 owner: process-governance-manager
 reviewers: [platform-lead, data-architect, risk-officer]
 related: [ADR-0096, ADR-0097, ADR-0104, ADR-0053]
@@ -169,11 +169,85 @@ Recommendation: **S2 now, with S3 deferred** behind an explicit trigger (minutes
 3. Phase C: `CommitteeMinutesView` UI on DecisionTab and the other committee panels.
 4. Existing sessions are not backfilled. Their minutes render in the new layout with "Discussion by issue: not available (session predates structured minutes)" and the full appendix. An explicit regenerate is allowed for unconfirmed sessions only.
 
-## 6. Decisions for the owner
+## 6. Owner decisions (2026-11-08, Accepted)
 
-1. Agenda: A1 (LLM with deterministic fallback, recommended), A2 deterministic only, or A3 none.
-2. Storage: S2 meta_json (recommended, no migration) or S3 a new `committee_minutes` table (migration, ADR, data-architect).
-3. Whether humans in hybrid mode may edit the chair agenda before round 2 (recommended yes).
-4. Whether regenerating unconfirmed minutes is allowed (recommended yes, analyst+, audited, never after confirmation).
-5. Whether to accept a new ADR-0196 plus amendment notes on ADR-0096 §4 and ADR-0104 (recommended), or fold everything into ADR-0104 amendments only.
-6. Language of the AI-drafted minutes: follow the topic language, as `committee.position` does (recommended).
+All nine decisions were made by the owner in chat on 2026-11-08. Quoted verbatim:
+
+- Decisions 1–6: "결정힐 6가지 사안에 대해 권장안에 동의해."
+- Decisions 7–8: the owner selected "confirm all as recommended".
+- Decision 9: "9번도 변경해주는 것으로 확정할께" (overrides the "not in this change" recommendation).
+- Scope: "다른 회의방식도 같은 형태로 바꿀 필요가 있어."
+
+| # | Question | Owner decision |
+|---|---|---|
+| 1 | Agenda | A1: LLM chair agenda with deterministic fallback |
+| 2 | Storage | S2: `process_run.meta_json`; S3 table deferred behind an explicit trigger (ADR + data-architect) |
+| 3 | Hybrid humans may edit the chair agenda before round 2 | Yes |
+| 4 | Regenerating unconfirmed minutes | Yes: analyst+, audited, refused after confirmation |
+| 5 | ADR form | New ADR-0196 plus amendment notes on ADR-0096 §4, ADR-0097, ADR-0104 (and ADR-0186 for M7) |
+| 6 | Language of AI-drafted minutes | Follows the topic language, as `committee.position` does |
+| 7 | `skills/meeting-facilitation` adopts the same minutes structure as a markdown template | Yes; `scope: common`, so via `upstream_request_create` (filed by PM) with a project-local override until it lands |
+| 8 | CLI `committee-deliberation.ts` persists agenda and minutes in `process_run` meta and renders the new layout | Yes |
+| 9 | Entity-IC and Group-IC reviews become committee sessions with meeting-form minutes | **Yes**, in scope of this change as the last phase (Phase E, §7.2) |
+
+Status: **Accepted**. ADR-0196 records the decisions.
+
+## 7. Surface inventory (extension, 2026-11-08)
+
+Every meeting-type surface moves to the same meeting form. The inventory comes from a repo sweep for `deliberationPrompt`, `runDeliberationRounds`, `agent_position`, `committee-session*`, `CommitteePanel`, "meeting", and `procedures/_committees.yaml`. That file defines exactly two committees.
+
+| # | Surface | Where | Current format | Shares `deliberation.ts` + `committee-session.ts`? | Minimal change |
+|---|---|---|---|---|---|
+| M1 | S4 route steering committee (`route-steering-committee`, gate pre_fs) | `components/stages/route-decision/{DecisionTab,useRouteDecision,RouteDecisionStage}.tsx`, shared `components/CommitteePanel.tsx` | Session; rounds of independent positions; minutes are a scorecard plus raw positions | Yes, fully | Gets §2.1–2.3 for free. DecisionTab (~L288) uses `CommitteeMinutesView` |
+| M2 | S6/S7 long list → short list committee (`target-longlist-shortlist-committee`) | `components/stages/brownfield/ShortlistSection.tsx` (~L345) → `components/CommitteePanel.tsx`; `useBrownfieldTargets.ts` | Same as M1, with a `target_ref` per target | Yes, fully | Free engine change. CommitteePanel (~L416) uses `CommitteeMinutesView`. The agenda pass names the target from `target_ref` |
+| M3 | Pipeline auto-convene (`committee_proposal:pre_fs`, ADR-0102 §2a) | `lib/pipeline.ts` (~L244) | agent_team session, proposal only | Yes (`conveneCommitteeSession`) | Free. The budget guard matters most here because nobody watches the run |
+| M4 | Committee deliberation CLI / `/meeting` engine path (ADR-0097 §7) | `scripts/co-newbiz/committee-deliberation.ts` | `runDeliberationRounds` with a `process_run`, no session meta; prints its own markdown | Partly: gets responsive rounds through `deliberation.ts`; has no agenda or minutes pass | Call the agenda and minutes hooks exported from `deliberation.ts`, write the same meta keys, render with `buildCommitteeMinutes` (decision 8) |
+| M5 | MCP `list_committee_sessions` / `get_committee_session` | `mcp/co-newbiz/tools/committee.ts` | Read-only REST wrappers | Reads the session | Pass through `agenda` and `minutesDraft`. Stays read-only |
+| M6 | IC package committee refs | `app/api/projects/[id]/ic-package/route.ts` (~L59) | Lists session ids | Reads the session | Link to `…/minutes?format=json` and the confirmation state. No content is copied, so dissent is never duplicated |
+| M7 | Entity-IC and Group-IC reviews | `procedures/_shared/{entity-ic-review,group-investment-review}/schema.yaml` | Procedure step chains; no `agent_position` rows | No | Become committee sessions (decision 9); plan in §7.2 |
+| M8 | Agent meetings (`skills/meeting-facilitation` v1.4.3, `.claude/commands/meeting.md`, `--agents/--rounds/--dialogue`) | Skill text; transcript in `memory/meeting-YYYY-MM-DD-<slug>.md` | Round-robin contributions, then PM synthesis. Already requires a dissent seat, proposal-only output and verbatim dissent | No (role-played, no app code) | Add the round 2+ response contract, a facilitator agenda after round 1, and the §2.4 section order as the transcript template (decision 7) |
+| M9 | Dry-run and pilot runs | No dedicated meeting dry-run script; pilots run M1–M4 with deterministic seats (`lib/committee-agents.ts`) | Deterministic templates | Yes, through M1–M4 | Deterministic seats emit the extended tail; the deterministic agenda and minutes fallbacks cover LLM-less runs |
+
+`deliberationPrompt` has no other consumer. Only `runDeliberationRounds` and the hybrid `advanceCommitteeSession` path call it.
+
+### 7.1 Rollout across surfaces
+
+| Phase | Surfaces | Content | Gate |
+|---|---|---|---|
+| A | M1–M4, M9 (engine) | Responsive rounds; extended meta tail; deterministic seats | Unit tests; `CO_NEWBIZ_COMMITTEE_RESPONSIVE` pilot on one M1 session |
+| B | M1–M3 (session), M4 (CLI) | Agenda pass, minutes pass, meta storage, new markdown and JSON route, regenerate/confirm rules | ADR-0196 accepted; boundary tests |
+| C | M1/M2 UI, M5, M6 | `CommitteeMinutesView`; MCP passthrough; IC package link | Design-lint; e2e |
+| D | M8 | meeting-facilitation template and response contract | Upstream request; local override reviewed by PM |
+| E | M7 | Entity-IC and Group-IC review committees (§7.2) | Procedure version bumps; policy impact analysis; `project_policy_pin` check; human approval |
+
+### 7.2 M7 change plan: Entity-IC and Group-IC as committee sessions (decision 9)
+
+**What it means.** The IC review stays a procedure step chain; the chain gains one deliberation step whose output is a committee session with meeting-form minutes. The session is decision support placed in front of the human verdict step. It does not replace any existing step, and it does not decide.
+
+**Procedures (`procedures/**` change).**
+
+- `procedures/_shared/entity-ic-review/schema.yaml` (v1.4.0 → v1.5.0): add a step between IC-package assembly (the second `process-governance-manager` step) and the `docs-writer` record step: "IC committee deliberation", `agent_key: process-governance-manager` (convene and close; chair is recorder-pattern), output `committee_session_ref` + confirmed-or-draft minutes ref. Seats are carried by the procedure as a contract (the schema supports a single `agent_key` per step): `risk-officer` (RAG proposal and kill criteria), `valuation-agent`, `financing-agent` (existing step 3.1 co-review), the track lead (`brownfield-agent` or `greenfield-agent`), `legal-counsel`, and the ADR-0097 standing functional seats as relevant. The final step (`entity-ic-reviewer`, human, ADR-0053) is unchanged.
+- `procedures/_shared/group-investment-review/schema.yaml` (v1.3.0 → v1.4.0): same insertion before the `docs-writer` step; seats `group-review-agent` (portfolio fit, intra-group, capital allocation), `risk-officer`, `financing-agent`, `ir-agent` where disclosure applies. Final step (`group-ic-reviewer`, human, ADR-0186 D6) unchanged.
+- `procedures/_committees.yaml`: register two committees, `entity-ic-committee` (gate `entity_ic`) and `group-ic-committee` (gate `group_ic`), with seat lists, `rounds`, and modes (`agent_team` default for the AI positions; `hybrid` lets human IC members add positions). Today the file defines two committees; this makes four.
+
+**flow.spec (`process/flow.spec.yaml`, ADR-0074).** S11 `investment-structuring` / `risk-review` keep hosting `entity-ic-review`, and `group-review` keeps hosting `group-investment-review` (spec comment ~L115). No new stage activity is needed, because the deliberation is a within-procedure step (AGENTS.md §7: the procedure governs its internal steps). The gate exit criteria (~L410, ~L426) gain one line: "the IC committee session exists and its minutes are referenced in the IC package". This is a recorded spec change; flow.spec version bump.
+
+**ADR-0097 seats.** The IC committees reuse the ADR-0097 seat model and the chair rule from ADR-0196: the chair facilitates (agenda and minutes passes) and votes nothing. Seat additions for IC go in `_committees.yaml`, not at runtime.
+
+**ADR-0186 interplay (gate integrity).**
+
+- The committee recommendation and scorecard are a new DISPLAY item in the `gate_decision_snapshot` at `entity_ic` / `group_ic`, alongside the existing AI recommendation. They are never an input to any HARD BLOCK or ACK rule.
+- Unconfirmed minutes at GO: ACK with reason (silence is never read as pass). Missing session: ACK with reason in the first release; hardening to HARD BLOCK needs a separate owner decision.
+- Recorded dissent appears verbatim in the snapshot reference; a GO over dissent needs no extra ACK beyond the existing items unless the owner later decides so.
+- Maker-checker and countersign (D6) are untouched: the committee session is neither maker nor checker. The minutes confirmation (ADR-0104) must be by a person, and the same person may not both confirm the minutes and countersign the GO (maker-checker extended to the minutes confirmation). The `snapshot_hash` covers the minutes `input_hash` and confirmation state, so changed minutes return 409 `snapshot_stale`.
+- Kill-criteria override (`group-ic-reviewer`) is unaffected.
+
+**IC package (M6).** `app/api/projects/[id]/ic-package/route.ts` links the IC committee sessions next to the M1/M2 refs, with confirmation state. No content copied; dissent is never duplicated.
+
+**Engine.** Sessions today are opportunity-scoped (`/opportunities/[id]/committee-sessions`). IC gates are project-scoped, so Phase E needs project-scoped convene/advance/minutes routes or a scope column. If that requires a schema change (rather than `process_run.meta_json`), it needs its own ADR and data-architect review per the workspace schema baseline.
+
+**Policy impact analysis and `project_policy_pin` (required, procedures/** change).** Before merge: run the policy impact analysis over every policy/checklist referring to the two procedures and gates `entity_ic` / `group_ic`; list in-flight projects whose `project_policy_pin` pins entity-ic-review v1.4.0 or group-investment-review v1.3.0. Pinned projects keep their pinned versions; the new step applies to new pins only, or to a pinned project only through an explicit re-pin by a human (no silent migration).
+
+**ADR.** The decision to run IC reviews as committees fits in ADR-0196 (owner decision 9; same meeting form, same boundaries). The procedure version bumps, the snapshot DISPLAY/ACK items, and the minutes maker-checker rule are recorded as an ADR-0186 amendment note. A separate ADR is warranted only if Phase E needs a schema change for project-scoped sessions; that ADR is drafted at Phase E start.
+
+**Phasing.** Phase E runs last, after A–D, because it depends on the engine (A/B), the minutes view (C), and the IC package link (C). Gate: procedure and flow.spec version bumps, policy impact analysis, `project_policy_pin` check, and human approval (procedures and gate integrity cannot pass on AI review alone).

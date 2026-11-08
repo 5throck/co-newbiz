@@ -249,6 +249,40 @@ describe("runDeliberationRounds", () => {
     }
   });
 
+  test("responsive rounds (ADR-0196): round 2 prompts add own prior position + contract + agenda; peers stay verbatim", async () => {
+    const { callAgent, calls, positions } = makeCommitteeFake(MEMBERS.map((m) => m.agentKey));
+    const prev = process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE;
+    process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE = "1";
+    try {
+      await runDeliberationRounds(
+        { entityType: "opportunity", entityId: (db.query("SELECT id FROM opportunity LIMIT 1").get() as { id: string } | null)?.id ?? ulid() },
+        {
+          committeeKey: "steering-committee",
+          agents: MEMBERS,
+          rounds: 2,
+          topic: "S4 진출 여부 검토",
+          callAgent,
+          actor: "user-001",
+          agenda: [{ id: "I1", title: "수요 전제" }],
+        },
+      );
+    } finally {
+      if (prev === undefined) delete process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE;
+      else process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE = prev;
+    }
+    for (const key of MEMBERS.map((m) => m.agentKey)) {
+      const prompts = calls.filter((c) => c.agentKey === key).map((c) => c.prompt);
+      expect(prompts[0]).not.toContain("## 응답 규칙"); // round 1 untouched
+      expect(prompts[0]).not.toContain("## 안건 쟁점");
+      expect(prompts[1]).toContain(positions.get(key)![0]); // own prior position now present
+      expect(prompts[1]).toContain("## 응답 규칙");
+      expect(prompts[1]).toContain("- I1: 수요 전제");
+      for (const other of MEMBERS.map((m) => m.agentKey)) {
+        if (other !== key) expect(prompts[1]).toContain(positions.get(other)![0]);
+      }
+    }
+  });
+
   test("agent_position rows written per round per member; member_type defaults to agent", async () => {
     const { callAgent } = makeCommitteeFake(MEMBERS.map((m) => m.agentKey));
     const result = await runDeliberationRounds(

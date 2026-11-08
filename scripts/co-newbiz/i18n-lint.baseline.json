@@ -174,7 +174,7 @@
   "app/web-next/lib/deal-overview-view.ts": 16,
   "app/web-next/lib/deal-overview.ts": 12,
   "app/web-next/lib/debt-input.ts": 1,
-  "app/web-next/lib/deliberation.ts": 4,
+  "app/web-next/lib/deliberation.ts": 17,
   "app/web-next/lib/dry-run.ts": 40,
   "app/web-next/lib/entry-market-context.ts": 7,
   "app/web-next/lib/entry-market-flow-state.ts": 36,

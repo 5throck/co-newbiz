@@ -215,3 +215,7 @@ these six standing functional seats, plus the chair (who still votes nothing).
   the two modes divergent deliberation semantics. **Follow-up**: implement a
   per-member `rounds` override across both paths in one change, then set the
   six functional seats to round-1-only in `_committees.yaml`.
+
+## Amendment (2026-11-08): chair facilitation (ADR-0196)
+
+Seats are unchanged. The chair now runs the agenda pass and the minutes pass; this stays recorder-pattern and the chair votes nothing. The seat model also applies to the new `entity-ic-committee` and `group-ic-committee` (ADR-0196 M7), whose seats are set in `procedures/_committees.yaml`.

@@ -14,6 +14,7 @@
 // ad-hoc mode both call getCommitteeCallAgent() (ADR-0097 §7).
 
 import type { AgentCallResult, CallAgent } from "./agent-orchestrator.ts";
+import { isCommitteeResponsive } from "./committee-flags.ts";
 
 export type AgentMode = "deterministic" | "llm";
 
@@ -29,7 +30,11 @@ interface RoleTemplate {
   criteriaScores: Record<string, number>;
 }
 const NEUTRAL_SCORES: Record<string, number> = {
-  control_need: 2, capability_criticality: 2, market_uncertainty: 2, integration_capacity: 2, speed_to_capability: 2,
+  control_need: 2,
+  capability_criticality: 2,
+  market_uncertainty: 2,
+  integration_capacity: 2,
+  speed_to_capability: 2,
 };
 
 /**
@@ -86,7 +91,8 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
   // None carries vetoDissent — the red-team privilege stays risk-officer's.
   "financing-agent": {
     domain: "기능 전문가 (자금 조달 — financing structure)",
-    stance: "부채/자기자본 구조, 프로젝트 파이낸스, 정부 기금·보조금, 재무 커버넌트 하한(하락 시나리오 기준)을 점검한다.",
+    stance:
+      "부채/자기자본 구조, 프로젝트 파이낸스, 정부 기금·보조금, 재무 커버넌트 하한(하락 시나리오 기준)을 점검한다.",
     recommendation: "go",
     confidence: 68,
     criteriaScores: NEUTRAL_SCORES,
@@ -121,7 +127,8 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
   },
   "ip-agent": {
     domain: "기능 전문가 (특허 — patent/IP)",
-    stance: "특허 랜드스케이프, FTO( Freedom to Operate ) 검색 범위의 한계, IP 가치 주장과 영업비밀 보호 태세를 점검한다.",
+    stance:
+      "특허 랜드스케이프, FTO( Freedom to Operate ) 검색 범위의 한계, IP 가치 주장과 영업비밀 보호 태세를 점검한다.",
     recommendation: "go",
     confidence: 65,
     criteriaScores: NEUTRAL_SCORES,
@@ -132,7 +139,13 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
     recommendation: "kill",
     confidence: 80,
     vetoDissent: true,
-    criteriaScores: { control_need: 3, capability_criticality: 3, market_uncertainty: 3, integration_capacity: 1, speed_to_capability: 1 },
+    criteriaScores: {
+      control_need: 3,
+      capability_criticality: 3,
+      market_uncertainty: 3,
+      integration_capacity: 1,
+      speed_to_capability: 1,
+    },
   },
   // Fallback for ad-hoc (/meeting) members without a template.
   default: {
@@ -144,7 +157,18 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
   },
 };
 
+/**
+ * ADR-0196 responsive-rounds tail fields. A template seat has a fixed stance,
+ * so it answers nobody by name and never changes its mind: an empty
+ * responds_to and stance_changed=false keep the tail shape identical to an LLM
+ * seat's, so no-LLM deployments and boundary tests see the same contract.
+ * Emitted only when CO_NEWBIZ_COMMITTEE_RESPONSIVE is on (flag off keeps the
+ * stored position text byte-identical).
+ */
+const RESPONSIVE_TAIL = { responds_to: [], stance_changed: false, issues: [] } as const;
+
 function positionFor(agentKey: string, prompt: string): AgentCallResult {
+  const responsive = isCommitteeResponsive();
   const t = ROLE_TEMPLATES[agentKey] ?? ROLE_TEMPLATES.default;
   // Deterministic: derived only from (agentKey, prompt) — no Date, no random.
   const topic = prompt.split("\n").find((l) => l.trim().length > 0 && !l.startsWith("당신은")) ?? prompt;
@@ -159,7 +183,7 @@ function positionFor(agentKey: string, prompt: string): AgentCallResult {
       ? "판단: 하락 시나리오와 킬 기준 관점에서 현재 검토/안건은 승인할 수 없다(veto dissent). 다른 위원의 근거가 프록시 불확실성과 하락 리스크를 실제로 상쇄한다는 검증 없이는 입장을 변경하지 않는다."
       : "판단: 현재 제출된 전제 범위 내에서는 진행(go)이 타당하다고 판단한다. 다만 레드팀 의견을 검토 후 최종 입장을 확정한다.",
     "",
-    `<!--position-meta:${JSON.stringify({ recommendation: t.recommendation, veto_dissent: t.vetoDissent === true, confidence: t.confidence, seat: agentKey, criteria_scores: t.criteriaScores })}-->`,
+    `<!--position-meta:${JSON.stringify({ recommendation: t.recommendation, veto_dissent: t.vetoDissent === true, confidence: t.confidence, seat: agentKey, criteria_scores: t.criteriaScores, ...(responsive ? RESPONSIVE_TAIL : {}) })}-->`,
   ].join("\n");
   return {
     positionMd: md,
@@ -167,6 +191,7 @@ function positionFor(agentKey: string, prompt: string): AgentCallResult {
     recommendation: t.recommendation,
     vetoDissent: t.vetoDissent,
     criteriaScores: t.criteriaScores,
+    ...(responsive ? { respondsTo: [], stanceChanged: false, issues: [] } : {}),
   };
 }
 
