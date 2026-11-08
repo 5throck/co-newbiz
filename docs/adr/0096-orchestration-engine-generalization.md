@@ -136,3 +136,7 @@ chair model's discretion.
   every time the member model evolves.
 - **Migration**: three (0064, 0065, 0066) — two row-preserving rebuilds, one
   purely additive. No flow.spec change; `docs/process-flow.md` untouched.
+
+## Amendment (2026-11-08): responsive rounds (ADR-0196)
+
+§4 is amended: round 2+ prompts also carry the member's own prior position, the chair agenda, and a response contract, with a ~6k-token peer paste cap that always keeps the latest round verbatim. Verbatim peer delivery is unchanged. §6 binds the new minutes pass: it has no write path to dissent or the recommendation.

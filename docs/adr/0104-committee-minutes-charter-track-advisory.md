@@ -50,3 +50,7 @@ greenfield side.
 - Boundary #2 is untouched: all new surfaces are read-only or human-confirmed.
 - Charter KPI pre-commits give the S11 scorecard its yardstick from promotion
   day; insufficient_evidence/deviation statuses still mark early quarters.
+
+## Amendment (2026-11-08): structured minutes (ADR-0196)
+
+Minutes are now "deterministic record + stored AI-drafted structured minutes" in `process_run.meta_json`. Human confirmation freezes the stored draft; regeneration is refused after confirmation.

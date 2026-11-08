@@ -187,3 +187,7 @@ The previously open owner questions were answered on 2026-10-27 (see Owner decis
 ## Open items for the owner
 
 None. All eight questions were answered on 2026-10-27 (Owner decisions above). Status is Accepted (approved at the merge of PR #746, commit 6fa3ed6d).
+
+## Amendment (2026-11-08): IC committee sessions (ADR-0196 M7)
+
+At `entity_ic` and `group_ic`, the IC committee recommendation and scorecard are a DISPLAY item in `gate_decision_snapshot`; unconfirmed minutes or a missing session are ACK items (hardening needs a separate owner decision). `snapshot_hash` covers the minutes `input_hash` and confirmation state. The committee session is neither maker nor checker; the person who confirms the minutes may not also countersign the GO. D6 roles and kill-criteria overrides are unchanged. Applies when Phase E lands.

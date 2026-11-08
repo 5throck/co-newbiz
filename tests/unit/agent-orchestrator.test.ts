@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { runActivityChain, type CallAgent, type AgentCallResult } from "../../app/web-next/lib/agent-orchestrator.ts";
+import { runActivityChain, type CallAgent } from "../../app/web-next/lib/agent-orchestrator.ts";
 import { runDeliberationRounds, deliberationPrompt, buildSynthesis } from "../../app/web-next/lib/deliberation.ts";
 
 const TEST_DB_PATH = "db/data/test-agent-orchestrator.sqlite";
@@ -102,7 +102,12 @@ describe("runActivityChain", () => {
   test("opportunity entity: entity addressing works, project_id left NULL", async () => {
     const oppId = ulid();
     db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
-      oppId, "opp-orch", "산업", "assessed", "user-001", NOW,
+      oppId,
+      "opp-orch",
+      "산업",
+      "assessed",
+      "user-001",
+      NOW,
     ]);
     const result = await runActivityChain(
       { entityType: "opportunity", entityId: oppId },
@@ -157,7 +162,10 @@ describe("runActivityChain", () => {
 
     expect(result.status).toBe("failed");
     expect(secondCalled).toBe(false); // chain stopped at the failure
-    const run = db.query("SELECT status, finished_at FROM process_run WHERE id = ?").get(result.processRunId) as { status: string; finished_at: string | null };
+    const run = db.query("SELECT status, finished_at FROM process_run WHERE id = ?").get(result.processRunId) as {
+      status: string;
+      finished_at: string | null;
+    };
     expect(run.status).toBe("failed");
     expect(run.finished_at).not.toBeNull();
     const statuses = db
@@ -167,21 +175,36 @@ describe("runActivityChain", () => {
       { activity_id: "act-ok", status: "done" },
       { activity_id: "act-boom", status: "failed" },
     ]);
-    expect((db.query("SELECT status FROM agent_run WHERE activity_id = 'act-boom' AND process_run_id = ?").get(result.processRunId) as { status: string }).status).toBe("failed");
+    expect(
+      (
+        db
+          .query("SELECT status FROM agent_run WHERE activity_id = 'act-boom' AND process_run_id = ?")
+          .get(result.processRunId) as { status: string }
+      ).status,
+    ).toBe("failed");
   });
 
   test("continueOnError: later activities still run, run still ends failed", async () => {
     const result = await runActivityChain(
       { entityType: "project", entityId: projectId },
       [
-        { activityId: "a", agentKey: "x", prompt: "p", execute: async () => { throw new Error("boom"); } },
+        {
+          activityId: "a",
+          agentKey: "x",
+          prompt: "p",
+          execute: async () => {
+            throw new Error("boom");
+          },
+        },
         { activityId: "b", agentKey: "y", prompt: "p", execute: async () => "ok" },
       ],
       { actor: "user-001", continueOnError: true },
     );
     expect(result.status).toBe("failed");
     expect(result.activities.map((a) => a.status)).toEqual(["failed", "done"]);
-    expect((db.query("SELECT status FROM process_run WHERE id = ?").get(result.processRunId) as { status: string }).status).toBe("failed");
+    expect(
+      (db.query("SELECT status FROM process_run WHERE id = ?").get(result.processRunId) as { status: string }).status,
+    ).toBe("failed");
   });
 });
 
@@ -189,10 +212,17 @@ describe("runActivityChain", () => {
 // runDeliberationRounds
 // ---------------------------------------------------------------------------
 
-interface CapturedCall { agentKey: string; prompt: string }
+interface CapturedCall {
+  agentKey: string;
+  prompt: string;
+}
 
 /** Fake committee: agent K in round N answers "POSITION K/N" with a unique nonce. */
-function makeCommitteeFake(keys: string[]): { callAgent: CallAgent; calls: CapturedCall[]; positions: Map<string, string[]> } {
+function makeCommitteeFake(_keys: string[]): {
+  callAgent: CallAgent;
+  calls: CapturedCall[];
+  positions: Map<string, string[]>;
+} {
   const calls: CapturedCall[] = [];
   const counts = new Map<string, number>();
   const positions = new Map<string, string[]>();
@@ -202,7 +232,8 @@ function makeCommitteeFake(keys: string[]): { callAgent: CallAgent; calls: Captu
     counts.set(agentKey, n);
     const md = `POSITION ${agentKey}/${n} nonce-${agentKey}-${n}`;
     if (!positions.has(agentKey)) positions.set(agentKey, []);
-    positions.get(agentKey)!.push(md);
+    const arr = positions.get(agentKey) ?? [];
+    arr.push(md);
     return { positionMd: md, confidence: 70 + n, recommendation: "go" };
   };
   return { callAgent, calls, positions };
@@ -214,7 +245,10 @@ describe("runDeliberationRounds", () => {
   test("round 2 prompts CONTAIN the full round-1 positions of all OTHER members, verbatim", async () => {
     const { callAgent, calls, positions } = makeCommitteeFake(MEMBERS.map((m) => m.agentKey));
     const result = await runDeliberationRounds(
-      { entityType: "opportunity", entityId: (db.query("SELECT id FROM opportunity LIMIT 1").get() as { id: string } | null)?.id ?? ulid() },
+      {
+        entityType: "opportunity",
+        entityId: (db.query("SELECT id FROM opportunity LIMIT 1").get() as { id: string } | null)?.id ?? ulid(),
+      },
       {
         committeeKey: "steering-committee",
         agents: MEMBERS,
@@ -236,15 +270,52 @@ describe("runDeliberationRounds", () => {
       // Round 1: independent — no other member's position present.
       for (const other of MEMBERS.map((m) => m.agentKey)) {
         if (other === key) continue;
-        expect(prompts[0]).not.toContain(positions.get(other)![0]);
+        expect(prompts[0]).not.toContain((positions.get(other) ?? [])[0] ?? "");
       }
       // Own position is never fed back.
-      expect(prompts[1]).not.toContain(positions.get(key)![0]);
+      expect(prompts[1]).not.toContain((positions.get(key) ?? [])[0] ?? "");
 
       // Round 2: the FULL round-1 positions of ALL OTHER members, verbatim.
       for (const other of MEMBERS.map((m) => m.agentKey)) {
         if (other === key) continue;
-        expect(prompts[1]).toContain(positions.get(other)![0]);
+        expect(prompts[1]).toContain((positions.get(other) ?? [])[0] ?? "");
+      }
+    }
+  });
+
+  test("responsive rounds (ADR-0196): round 2 prompts add own prior position + contract + agenda; peers stay verbatim", async () => {
+    const { callAgent, calls, positions } = makeCommitteeFake(MEMBERS.map((m) => m.agentKey));
+    const prev = process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE;
+    process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE = "1";
+    try {
+      await runDeliberationRounds(
+        {
+          entityType: "opportunity",
+          entityId: (db.query("SELECT id FROM opportunity LIMIT 1").get() as { id: string } | null)?.id ?? ulid(),
+        },
+        {
+          committeeKey: "steering-committee",
+          agents: MEMBERS,
+          rounds: 2,
+          topic: "S4 진출 여부 검토",
+          callAgent,
+          actor: "user-001",
+          agenda: [{ id: "I1", title: "수요 전제" }],
+        },
+      );
+    } finally {
+      if (prev === undefined) delete process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE;
+      else process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE = prev;
+    }
+    for (const key of MEMBERS.map((m) => m.agentKey)) {
+      const prompts = calls.filter((c) => c.agentKey === key).map((c) => c.prompt);
+      expect(prompts[0]).not.toContain("## 응답 규칙"); // round 1 untouched
+      expect(prompts[0]).not.toContain("## 안건 쟁점");
+      expect(prompts[1]).toContain((positions.get(key) ?? [])[0] ?? ""); // own prior position now present
+      expect(prompts[1]).toContain("## 응답 규칙");
+      expect(prompts[1]).toContain("- I1: 수요 전제");
+      for (const other of MEMBERS.map((m) => m.agentKey)) {
+        if (other !== key) expect(prompts[1]).toContain((positions.get(other) ?? [])[0] ?? "");
       }
     }
   });
@@ -257,8 +328,17 @@ describe("runDeliberationRounds", () => {
     );
 
     const rows = db
-      .query("SELECT round, member_type, agent_key, human_user_id, position_md, confidence FROM agent_position WHERE process_run_id = ? ORDER BY round, agent_key")
-      .all(result.processRunId) as { round: number; member_type: string; agent_key: string | null; human_user_id: string | null; position_md: string; confidence: number }[];
+      .query(
+        "SELECT round, member_type, agent_key, human_user_id, position_md, confidence FROM agent_position WHERE process_run_id = ? ORDER BY round, agent_key",
+      )
+      .all(result.processRunId) as {
+      round: number;
+      member_type: string;
+      agent_key: string | null;
+      human_user_id: string | null;
+      position_md: string;
+      confidence: number;
+    }[];
     expect(rows.length).toBe(6); // 3 members × 2 rounds
     expect(rows.every((r) => r.member_type === "agent" && r.agent_key !== null && r.human_user_id === null)).toBe(true);
     expect(new Set(rows.map((r) => r.round))).toEqual(new Set([1, 2]));
@@ -266,12 +346,16 @@ describe("runDeliberationRounds", () => {
   });
 
   test("human member seats write member_type='human' with human_user_id (exactly-one-of invariant)", async () => {
-    db.run("INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)", [
-      ulid(), "human-chair-01", "analyst", "active", "s", "h", 1, NOW,
-    ]);
+    db.run(
+      "INSERT INTO app_user (id, user_id, role, status, password_salt, password_hash, password_iterations, created_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "human-chair-01", "analyst", "active", "s", "h", 1, NOW],
+    );
     const { callAgent } = makeCommitteeFake(["market-analyst"]);
     const result = await runDeliberationRounds(
-      { entityType: "opportunity", entityId: (db.query("SELECT id FROM opportunity LIMIT 1").get() as { id: string }).id },
+      {
+        entityType: "opportunity",
+        entityId: (db.query("SELECT id FROM opportunity LIMIT 1").get() as { id: string }).id,
+      },
       {
         committeeKey: "steering-committee",
         agents: [
@@ -285,7 +369,9 @@ describe("runDeliberationRounds", () => {
       },
     );
     const humanRow = db
-      .query("SELECT member_type, agent_key, human_user_id FROM agent_position WHERE process_run_id = ? AND member_type = 'human'")
+      .query(
+        "SELECT member_type, agent_key, human_user_id FROM agent_position WHERE process_run_id = ? AND member_type = 'human'",
+      )
       .get(result.processRunId) as { member_type: string; agent_key: string | null; human_user_id: string };
     expect(humanRow.agent_key).toBeNull();
     expect(humanRow.human_user_id).toBe("human-chair-01");
@@ -295,11 +381,21 @@ describe("runDeliberationRounds", () => {
     const { callAgent } = makeCommitteeFake(MEMBERS.map((m) => m.agentKey));
     const result = await runDeliberationRounds(
       { entityType: "project", entityId: projectId },
-      { committeeKey: "steering-committee", agents: MEMBERS, rounds: 1, topic: "t", callAgent, gate: "pre_fs", actor: "user-001" },
+      {
+        committeeKey: "steering-committee",
+        agents: MEMBERS,
+        rounds: 1,
+        topic: "t",
+        callAgent,
+        gate: "pre_fs",
+        actor: "user-001",
+      },
     );
     const ev = db
-      .query("SELECT gate, recommendation, evaluated_by, dissent_json, process_run_id FROM gate_evaluation WHERE id = ?")
-      .get(result.evaluation!.gateEvaluationId) as Record<string, unknown>;
+      .query(
+        "SELECT gate, recommendation, evaluated_by, dissent_json, process_run_id FROM gate_evaluation WHERE id = ?",
+      )
+      .get(result.evaluation?.gateEvaluationId ?? "") as Record<string, unknown>;
     expect(ev.gate).toBe("pre_fs");
     expect(ev.recommendation).toBe("go"); // majority of the fake committee
     expect(ev.evaluated_by).toBe("process-governance-manager"); // standing chair
@@ -327,7 +423,7 @@ describe("buildSynthesis (dissent rule)", () => {
     ]);
     expect(out.recommendation).toBe("go");
     expect(out.dissents).toEqual([{ member_key: "risk-officer", position_md: RISK_DISSent_MD }]);
-    const parsed = JSON.parse(out.dissent_json!) as Array<{ member_key: string; position_md: string }>;
+    const parsed = JSON.parse(out.dissent_json ?? "[]") as Array<{ member_key: string; position_md: string }>;
     expect(parsed).toHaveLength(1);
     // Verbatim: byte-identical position text, Korean included — never summarized.
     expect(parsed[0].position_md).toBe(RISK_DISSent_MD);
@@ -362,10 +458,12 @@ describe("buildSynthesis (dissent rule)", () => {
     const member = { agentKey: "market-analyst" };
     const r1 = deliberationPrompt(member, "안건 A", [], 1);
     expect(r1).toContain("안건 A");
-    const prior = [[
-      { memberKey: "market-analyst", positionMd: "MY OWN" },
-      { memberKey: "risk-officer", positionMd: "OTHER FULL TEXT" },
-    ]];
+    const prior = [
+      [
+        { memberKey: "market-analyst", positionMd: "MY OWN" },
+        { memberKey: "risk-officer", positionMd: "OTHER FULL TEXT" },
+      ],
+    ];
     const r2 = deliberationPrompt(member, "안건 A", prior, 2);
     expect(r2).toContain("OTHER FULL TEXT");
     expect(r2).not.toContain("MY OWN");
@@ -388,7 +486,9 @@ describe("migrations 0064–0066 round trip", () => {
       );
     `);
     // Build pre-0064 state with the REAL migration files, in filename order.
-    const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql") && f < "0064").sort();
+    const files = readdirSync(MIGRATIONS_DIR)
+      .filter((f) => f.endsWith(".sql") && f < "0064")
+      .sort();
     for (const file of files) {
       sdb.run(readFileSync(join(MIGRATIONS_DIR, file), "utf-8"));
       sdb.run("INSERT INTO schema_migrations (id, filename, applied_at) VALUES (?, ?, ?)", [file, file, NOW]);
@@ -400,7 +500,17 @@ describe("migrations 0064–0066 round trip", () => {
     // Legacy (0045) shape: project_id NOT NULL, no entity columns.
     sdb.run(
       "INSERT INTO process_run (id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at) VALUES (?,?,?,?,?,?,?,?,?)",
-      [legacyRunId, pid, "2.0.0", "screening", "done", "web", "user-001", "2026-09-01T09:00:00Z", "2026-09-01T09:05:00Z"],
+      [
+        legacyRunId,
+        pid,
+        "2.0.0",
+        "screening",
+        "done",
+        "web",
+        "user-001",
+        "2026-09-01T09:00:00Z",
+        "2026-09-01T09:05:00Z",
+      ],
     );
     const before = sdb.query("SELECT * FROM process_run WHERE id = ?").get(legacyRunId);
 
@@ -414,7 +524,10 @@ describe("migrations 0064–0066 round trip", () => {
       // statements per connection, and the "SELECT *" above was prepared
       // against the PRE-0064 table shape (stale columns after the rebuild).
       resetDb();
-      const after = getDb(SURVIVAL_DB_PATH).query("SELECT * FROM process_run WHERE id = ?").get(legacyRunId) as Record<string, unknown>;
+      const after = getDb(SURVIVAL_DB_PATH).query("SELECT * FROM process_run WHERE id = ?").get(legacyRunId) as Record<
+        string,
+        unknown
+      >;
       // All original fields verbatim…
       for (const [k, v] of Object.entries(before as Record<string, unknown>)) {
         expect(after[k]).toBe(v);
@@ -436,8 +549,17 @@ describe("migrations 0064–0066 round trip", () => {
     const pr = tableColumns("process_run");
     const prByName = new Map(pr.map((c) => [c.name, c]));
     expect(pr.map((c) => c.name)).toEqual([
-      "id", "entity_type", "entity_id", "project_id", "spec_version", "stage",
-      "status", "source", "started_by", "started_at", "finished_at",
+      "id",
+      "entity_type",
+      "entity_id",
+      "project_id",
+      "spec_version",
+      "stage",
+      "status",
+      "source",
+      "started_by",
+      "started_at",
+      "finished_at",
       // 0067 (ADR-0097): additive nullable committee-session metadata column.
       "meta_json",
     ]);
@@ -455,12 +577,19 @@ describe("migrations 0064–0066 round trip", () => {
     // 0065 — member columns + relaxed agent_key.
     const ap = new Map(tableColumns("agent_position").map((c) => [c.name, c]));
     expect([...ap.keys()]).toEqual([
-      "id", "process_run_id", "member_type", "agent_key", "human_user_id",
-      "position_md", "confidence", "round", "created_at",
+      "id",
+      "process_run_id",
+      "member_type",
+      "agent_key",
+      "human_user_id",
+      "position_md",
+      "confidence",
+      "round",
+      "created_at",
     ]);
-    expect(ap.get("member_type")!.dflt_value).toBe("'agent'");
-    expect(ap.get("agent_key")!.notnull).toBe(0);
-    expect(ap.get("human_user_id")!.notnull).toBe(0);
+    expect(ap.get("member_type")?.dflt_value).toBe("'agent'");
+    expect(ap.get("agent_key")?.notnull).toBe(0);
+    expect(ap.get("human_user_id")?.notnull).toBe(0);
 
     // 0066 — purely additive columns.
     const ge = new Map(tableColumns("gate_evaluation").map((c) => [c.name, c]));
@@ -471,8 +600,12 @@ describe("migrations 0064–0066 round trip", () => {
     }
 
     // The 0064 entity index exists alongside the preserved project index.
-    const idx = db.query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='process_run'").all() as { name: string }[];
-    expect(idx.map((i) => i.name)).toEqual(expect.arrayContaining(["idx_process_run_project", "idx_process_run_entity"]));
+    const idx = db.query("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='process_run'").all() as {
+      name: string;
+    }[];
+    expect(idx.map((i) => i.name)).toEqual(
+      expect.arrayContaining(["idx_process_run_project", "idx_process_run_entity"]),
+    );
   });
 
   test("opportunity-scoped runs and human-member positions insert cleanly post-migration (FK integrity)", () => {

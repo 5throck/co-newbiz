@@ -50,6 +50,19 @@ export interface AgentCallResult {
   vetoDissent?: boolean;
   /** ADR-0104 5criteria × 1-3 scorecard input, when the executor provides one. */
   criteriaScores?: Record<string, number>;
+  /** ADR-0196 responsive rounds: whom this position answers (allowlisted). */
+  respondsTo?: PositionResponse[];
+  /** ADR-0196: true when the member states their stance changed this round. */
+  stanceChanged?: boolean;
+  /** ADR-0196: agenda issue ids (I1, I2, …) this position addresses. */
+  issues?: string[];
+}
+export type PositionAct = "agree" | "rebut" | "ask";
+export interface PositionResponse {
+  seat: string;
+  act: PositionAct;
+  /** Agenda issue id such as "I2", when the response concerns one. */
+  issue?: string;
 }
 export type CallAgent = (agentKey: string, prompt: string) => Promise<AgentCallResult>;
 
