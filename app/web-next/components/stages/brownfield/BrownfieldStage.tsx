@@ -18,7 +18,9 @@ import { ShortlistSection } from "./ShortlistSection.tsx";
 import { PrimaryAction } from "../../ui.tsx";
 import { useTranslations } from "next-intl";
 
-export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () => void }) {const t = useTranslations("stages.s67.brownfieldStage");
+/** `dealShapePanel`: mount the "진출 형태 평가" panel (ADR-0195 — recorded at the end of S7, after the short list is ranked). The /deals/[id]/s6 tab shares this body and leaves it off. */
+export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () => void; dealShapePanel?: boolean }) {
+  const t = useTranslations("stages.s67.brownfieldStage");
   const h0 = useBrownfieldBase(props0);
   const h1 = useBrownfieldUniverse({ ...h0 });
   const h2 = useBrownfieldTargets({ ...h0, ...h1 });
@@ -34,7 +36,11 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
           disabledReason={!canAct ? t("requiresTheAnalystRole") : t("runningUnlocksOnceAShortlist")}
         />
       )}
-      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)]">
+          {error}
+        </p>
+      )}
       <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs("S6", "S7")} />
 
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
@@ -52,7 +58,7 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
 
       {/* ── S7 선정 퍼널 + 게이트 결정 + 위원회 심의 + 승격(mockup 구조 —
           후보 전체 목록 아래 이어서 렌더링, 탭 없음) ── */}
-      <ShortlistSection ctx={ctx} />
+      <ShortlistSection ctx={ctx} dealShapePanel={props0.dealShapePanel === true} />
     </>
   );
 }

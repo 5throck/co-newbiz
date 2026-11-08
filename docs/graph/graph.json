@@ -4,8 +4,8 @@
     "generator": "scripts/co-newbiz/graph.ts",
     "generator_version": "0.5.0",
     "design_doc": "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
-    "node_count": 627,
-    "edge_count": 992
+    "node_count": 802,
+    "edge_count": 1233
   },
   "nodes": [
     {
@@ -759,15 +759,234 @@
       "label": "ADR-0150 — S12 lifecycle completion criteria mapped to portfolio transitions"
     },
     {
+      "id": "adr:0151",
+      "type": "adr",
+      "label": "ADR-0151 — Dedicated transition-record columns for venture_transition_decision (ADR-0150 criteria 3-5)"
+    },
+    {
+      "id": "adr:0152",
+      "type": "adr",
+      "label": "ADR-0152 — Typed, precondition-enforced closure for projects and opportunities"
+    },
+    {
+      "id": "adr:0153",
+      "type": "adr",
+      "label": "ADR-0153 — 3-stage review runtime (AI 1st, cross-domain AI 2nd, human final)"
+    },
+    {
+      "id": "adr:0154",
+      "type": "adr",
+      "label": "ADR-0154 — MCP remote transport, user-delegated OAuth 2.1, and proposal-only decision tools"
+    },
+    {
+      "id": "adr:0155",
+      "type": "adr",
+      "label": "ADR-0155 — LLM structured output, real token usage, per-deal cost and GenAI spans"
+    },
+    {
+      "id": "adr:0156",
+      "type": "adr",
+      "label": "ADR-0156 — Per-target WACC and financial analysis: a company axis on the WACC run"
+    },
+    {
+      "id": "adr:0157",
+      "type": "adr",
+      "label": "ADR-0157 — Optional per-target DD on shortlisted targets"
+    },
+    {
+      "id": "adr:0158",
+      "type": "adr",
+      "label": "ADR-0158 — Archive-or-delete cleanup of pre-ADR-0143 business-case models"
+    },
+    {
+      "id": "adr:0159",
+      "type": "adr",
+      "label": "ADR-0159 — Project-level business goals above group/affiliate standards"
+    },
+    {
+      "id": "adr:0160",
+      "type": "adr",
+      "label": "ADR-0160 — Greenfield S9 plan verification and S10 establishment structure by sub-track"
+    },
+    {
+      "id": "adr:0161",
+      "type": "adr",
+      "label": "ADR-0161 — Greenfield execution (S11) and post-management (S12) scoped by track and sub-track"
+    },
+    {
+      "id": "adr:0162",
+      "type": "adr",
+      "label": "ADR-0162 — Brownfield S9 workspace items scoped per brownfield sub-track"
+    },
+    {
+      "id": "adr:0163",
+      "type": "adr",
+      "label": "ADR-0163 — Migration runner executes statements one-by-one with stop-on-error semantics"
+    },
+    {
+      "id": "adr:0164",
+      "type": "adr",
+      "label": "ADR-0164 — venture_scorecard's unique key gains review_cycle (repeat quarters share one run)"
+    },
+    {
+      "id": "adr:0165",
+      "type": "adr",
+      "label": "ADR-0165 — Establishment steps gain a per-step assignee, server-enforced status rules, and an audited human-only reopen"
+    },
+    {
+      "id": "adr:0166",
+      "type": "adr",
+      "label": "ADR-0166 — Green Field projects default to origin `internal` at promotion (amends ADR-0047 section A.5)"
+    },
+    {
+      "id": "adr:0167",
+      "type": "adr",
+      "label": "ADR-0167 — Green Field establishment mode: new legal entity vs new business unit (amends ADR-0047 A.5 and ADR-0100)"
+    },
+    {
+      "id": "adr:0168",
+      "type": "adr",
+      "label": "ADR-0168 - S8 required-capability attainability review (5-step level scale, register JSON extension, human-only confirmation)"
+    },
+    {
+      "id": "adr:0169",
+      "type": "adr",
+      "label": "ADR-0169 - S8 two-lens view (기술적 타당성 / 재무적 타당성) and Brown Field S9 pairing"
+    },
+    {
+      "id": "adr:0170",
+      "type": "adr",
+      "label": "ADR-0170 - S3-S8 required-capability linkage (S3 single source, stale judgements, S8 read-only S3 fields)"
+    },
+    {
+      "id": "adr:0171",
+      "type": "adr",
+      "label": "ADR-0171 - Required-capability check at S5 (Green Field) and S7 per target (Brown Field)"
+    },
+    {
+      "id": "adr:0172",
+      "type": "adr",
+      "label": "ADR-0172 - Holding assessment unification (`보유 판정` category, narrative levels, `필요도`)"
+    },
+    {
+      "id": "adr:0173",
+      "type": "adr",
+      "label": "ADR-0173 - Capability closing cost and milestone linkage (`투자비에 반영`, post-management milestones)"
+    },
+    {
+      "id": "adr:0174",
+      "type": "adr",
+      "label": "ADR-0174 - Total investment definition, S5 investment summary and S8 hand-off (`투자비 요약`, `총 투자비`)"
+    },
+    {
+      "id": "adr:0175",
+      "type": "adr",
+      "label": "ADR-0175 - Staffing plan (`인력 운영 계획`) at S5 and derived labor cost"
+    },
+    {
+      "id": "adr:0176",
+      "type": "adr",
+      "label": "ADR-0176 - S5 investment simulation (투자 시뮬레이션) and S8 business-paper evaluation consumption"
+    },
+    {
+      "id": "adr:0177",
+      "type": "adr",
+      "label": "ADR-0177 - Investment account sub-categories (`세부 과목`) and quantity x unit-price helper"
+    },
+    {
+      "id": "adr:0178",
+      "type": "adr",
+      "label": "ADR-0178 - S8 valuation method: S5 plan lines as P&L items, per-item volatility, separate pre-launch investment, pinned S5 reference"
+    },
+    {
+      "id": "adr:0179",
+      "type": "adr",
+      "label": "ADR-0179 - Market-anchor scope compatibility: structured target scope, anchor scope check, sourced market share, segment-scoped sizing, plausibility guards"
+    },
+    {
+      "id": "adr:0180",
+      "type": "adr",
+      "label": "ADR-0180 - Entry-market S2 promotion: payload-shape compatibility, spec-level S2 activity, S3 linkage"
+    },
+    {
+      "id": "adr:0181",
+      "type": "adr",
+      "label": "ADR-0181 - Entry market as the subject market: integrated S2 derivation, multi-currency FX, ERD normalization principle, S3–S12 standardization"
+    },
+    {
+      "id": "adr:0182",
+      "type": "adr",
+      "label": "ADR-0182 - 시너지 4요소 관계도·탭 재배열·AI 추천·필요 역량 충족도 5팩터 확장·검토 확정 스냅샷"
+    },
+    {
+      "id": "adr:0183",
+      "type": "adr",
+      "label": "ADR-0183: 런타임 LLM 호출의 필수 PM 관문 — 활동 카탈로그 + 전체 플랫폼 패리티 + 플로우 콘솔 + 드라이런 레인"
+    },
+    {
+      "id": "adr:0184",
+      "type": "adr",
+      "label": "ADR-0184: UI i18n catalog adoption — ko/en message catalogs, ko master, cookie negotiation"
+    },
+    {
+      "id": "adr:0185",
+      "type": "adr",
+      "label": "ADR-0185: Agent and skill placement realignment (S1–S12)"
+    },
+    {
+      "id": "adr:0186",
+      "type": "adr",
+      "label": "ADR-0186: Gate integrity (acknowledged GO snapshot, binding checks, maker/checker, full ladder, WACC confirmation)"
+    },
+    {
+      "id": "adr:0187",
+      "type": "adr",
+      "label": "ADR-0187: Process SSOT and decision evidence (engine-spec parity, checklist and kill-list reconciliation, derived data confidence, pre-IC permit/incentive capture, cross-validation matrix)"
+    },
+    {
+      "id": "adr:0188",
+      "type": "adr",
+      "label": "ADR-0188: Standalone Monte Carlo Simulation Engine — Device Layer and Input-Derived Seeds"
+    },
+    {
+      "id": "adr:0189",
+      "type": "adr",
+      "label": "ADR-0189: Amend ADR-0019 — macOS launchd, a single minute-tick dispatcher, and the Docker production model"
+    },
+    {
+      "id": "adr:0190",
+      "type": "adr",
+      "label": "ADR-0190: Notification delivery — email and webhook transport, delivery ledger, recipient policy"
+    },
+    {
+      "id": "adr:0191",
+      "type": "adr",
+      "label": "ADR-0191: Amend ADR-0114 — business-target standards move from the admin console to the group screen"
+    },
+    {
+      "id": "adr:0192",
+      "type": "adr",
+      "label": "ADR-0192: S3 strategic-fit predicate reads the confirmed synergy assessment"
+    },
+    {
+      "id": "adr:0193",
+      "type": "adr",
+      "label": "ADR-0193: Kill-criteria stage scoping — `evaluable_from`, not-reached display, and mandatory carry"
+    },
+    {
+      "id": "adr:0194",
+      "type": "adr",
+      "label": "ADR-0194: Kill-criteria data sources — opportunity-scope deal-shape evaluation and point-in-time site announcement"
+    },
+    {
+      "id": "adr:0195",
+      "type": "adr",
+      "label": "ADR-0195: Deal-shape evaluation moves to the end of S7 (brownfield-only kill criterion #9)"
+    },
+    {
       "id": "agent:antitrust-agent",
       "type": "agent",
       "label": "antitrust-agent"
-    },
-    {
-      "id": "agent:architect",
-      "type": "agent",
-      "label": "architect",
-      "roster": "workspace-root"
     },
     {
       "id": "agent:backend-engineer",
@@ -832,6 +1051,12 @@
       "human_role": true
     },
     {
+      "id": "agent:execution-baseline-confirmer",
+      "type": "agent",
+      "label": "execution-baseline-confirmer",
+      "human_role": true
+    },
+    {
       "id": "agent:financial-analyst",
       "type": "agent",
       "label": "financial-analyst"
@@ -855,6 +1080,12 @@
       "id": "agent:greenfield-agent",
       "type": "agent",
       "label": "greenfield-agent"
+    },
+    {
+      "id": "agent:group-ic-reviewer",
+      "type": "agent",
+      "label": "group-ic-reviewer",
+      "human_role": true
     },
     {
       "id": "agent:group-review-agent",
@@ -967,6 +1198,12 @@
       "label": "sre"
     },
     {
+      "id": "agent:target-selector",
+      "type": "agent",
+      "label": "target-selector",
+      "human_role": true
+    },
+    {
       "id": "agent:technical-dd-agent",
       "type": "agent",
       "label": "technical-dd-agent"
@@ -1008,6 +1245,11 @@
       "label": "business_case_lines"
     },
     {
+      "id": "artifact:capability_dd_judgement",
+      "type": "artifact",
+      "label": "capability_dd_judgement"
+    },
+    {
       "id": "artifact:capability_gap_assessment",
       "type": "artifact",
       "label": "capability_gap_assessment"
@@ -1016,6 +1258,11 @@
       "id": "artifact:capex_schedule_with_permit_critical_path",
       "type": "artifact",
       "label": "capex_schedule_with_permit_critical_path"
+    },
+    {
+      "id": "artifact:capex_tranche_schedule",
+      "type": "artifact",
+      "label": "capex_tranche_schedule"
     },
     {
       "id": "artifact:certification_roadmap_map",
@@ -1088,9 +1335,19 @@
       "label": "dd_valuation_bridge"
     },
     {
+      "id": "artifact:dd_waiver_review",
+      "type": "artifact",
+      "label": "dd_waiver_review"
+    },
+    {
       "id": "artifact:deal_shape_decision",
       "type": "artifact",
       "label": "deal_shape_decision"
+    },
+    {
+      "id": "artifact:deal_shape_evaluation",
+      "type": "artifact",
+      "label": "deal_shape_evaluation"
     },
     {
       "id": "artifact:deal_structure_hypothesis",
@@ -1126,6 +1383,11 @@
       "id": "artifact:entry_strategy",
       "type": "artifact",
       "label": "entry_strategy"
+    },
+    {
+      "id": "artifact:execution_baseline_confirmation",
+      "type": "artifact",
+      "label": "execution_baseline_confirmation"
     },
     {
       "id": "artifact:financing_readiness_check",
@@ -1188,6 +1450,11 @@
       "label": "growth_projection"
     },
     {
+      "id": "artifact:hiring_plan_baseline",
+      "type": "artifact",
+      "label": "hiring_plan_baseline"
+    },
+    {
       "id": "artifact:historical_financial_base_rate",
       "type": "artifact",
       "label": "historical_financial_base_rate"
@@ -1208,6 +1475,11 @@
       "label": "incentive_npv_site_comparison"
     },
     {
+      "id": "artifact:incentive_obligation_register",
+      "type": "artifact",
+      "label": "incentive_obligation_register"
+    },
+    {
       "id": "artifact:industry_structure_simulation",
       "type": "artifact",
       "label": "industry_structure_simulation"
@@ -1221,6 +1493,11 @@
       "id": "artifact:integrated_insight_review",
       "type": "artifact",
       "label": "integrated_insight_review"
+    },
+    {
+      "id": "artifact:integration_monitoring_scorecard",
+      "type": "artifact",
+      "label": "integration_monitoring_scorecard"
     },
     {
       "id": "artifact:jv_exit_execution",
@@ -1251,6 +1528,11 @@
       "id": "artifact:kill_criteria_check",
       "type": "artifact",
       "label": "kill_criteria_check"
+    },
+    {
+      "id": "artifact:legal_regulatory_screen",
+      "type": "artifact",
+      "label": "legal_regulatory_screen"
     },
     {
       "id": "artifact:market_sizing",
@@ -1291,6 +1573,16 @@
       "id": "artifact:people_transfer_record",
       "type": "artifact",
       "label": "people_transfer_record"
+    },
+    {
+      "id": "artifact:permit_certification_milestones",
+      "type": "artifact",
+      "label": "permit_certification_milestones"
+    },
+    {
+      "id": "artifact:permit_holder_check",
+      "type": "artifact",
+      "label": "permit_holder_check"
     },
     {
       "id": "artifact:pmi_integration_plan",
@@ -1338,6 +1630,11 @@
       "label": "rag_assessment_proposed"
     },
     {
+      "id": "artifact:ramp_up_kpi_targets",
+      "type": "artifact",
+      "label": "ramp_up_kpi_targets"
+    },
+    {
       "id": "artifact:related_party_transaction_finding",
       "type": "artifact",
       "label": "related_party_transaction_finding"
@@ -1376,6 +1673,21 @@
       "id": "artifact:strategic_fit_screening_result",
       "type": "artifact",
       "label": "strategic_fit_screening_result"
+    },
+    {
+      "id": "artifact:synergy_assumption_audit",
+      "type": "artifact",
+      "label": "synergy_assumption_audit"
+    },
+    {
+      "id": "artifact:synergy_identification",
+      "type": "artifact",
+      "label": "synergy_identification"
+    },
+    {
+      "id": "artifact:synergy_score_recommendation",
+      "type": "artifact",
+      "label": "synergy_score_recommendation"
     },
     {
       "id": "artifact:target_comparison",
@@ -1503,6 +1815,271 @@
       "label": "dec:DEC-20260909-07"
     },
     {
+      "id": "dec:DEC-20261008-01",
+      "type": "decision",
+      "label": "dec:DEC-20261008-01"
+    },
+    {
+      "id": "dec:DEC-20261012-01",
+      "type": "decision",
+      "label": "dec:DEC-20261012-01"
+    },
+    {
+      "id": "dec:DEC-20261012-02",
+      "type": "decision",
+      "label": "dec:DEC-20261012-02"
+    },
+    {
+      "id": "dec:DEC-20261013-03",
+      "type": "decision",
+      "label": "dec:DEC-20261013-03"
+    },
+    {
+      "id": "dec:DEC-20261013-04",
+      "type": "decision",
+      "label": "dec:DEC-20261013-04"
+    },
+    {
+      "id": "dec:DEC-20261013-05",
+      "type": "decision",
+      "label": "dec:DEC-20261013-05"
+    },
+    {
+      "id": "dec:DEC-20261013-06",
+      "type": "decision",
+      "label": "dec:DEC-20261013-06"
+    },
+    {
+      "id": "dec:DEC-20261013-07",
+      "type": "decision",
+      "label": "dec:DEC-20261013-07"
+    },
+    {
+      "id": "dec:DEC-20261013-08",
+      "type": "decision",
+      "label": "dec:DEC-20261013-08"
+    },
+    {
+      "id": "dec:DEC-20261013-09",
+      "type": "decision",
+      "label": "dec:DEC-20261013-09"
+    },
+    {
+      "id": "dec:DEC-20261014-01",
+      "type": "decision",
+      "label": "dec:DEC-20261014-01"
+    },
+    {
+      "id": "dec:DEC-20261014-02",
+      "type": "decision",
+      "label": "dec:DEC-20261014-02"
+    },
+    {
+      "id": "dec:DEC-20261014-03",
+      "type": "decision",
+      "label": "dec:DEC-20261014-03"
+    },
+    {
+      "id": "dec:DEC-20261014-04",
+      "type": "decision",
+      "label": "dec:DEC-20261014-04"
+    },
+    {
+      "id": "dec:DEC-20261014-05",
+      "type": "decision",
+      "label": "dec:DEC-20261014-05"
+    },
+    {
+      "id": "dec:DEC-20261014-06",
+      "type": "decision",
+      "label": "dec:DEC-20261014-06"
+    },
+    {
+      "id": "dec:DEC-20261014-07",
+      "type": "decision",
+      "label": "dec:DEC-20261014-07"
+    },
+    {
+      "id": "dec:DEC-20261014-08",
+      "type": "decision",
+      "label": "dec:DEC-20261014-08"
+    },
+    {
+      "id": "dec:DEC-20261014-09",
+      "type": "decision",
+      "label": "dec:DEC-20261014-09"
+    },
+    {
+      "id": "dec:DEC-20261015-01",
+      "type": "decision",
+      "label": "dec:DEC-20261015-01"
+    },
+    {
+      "id": "dec:DEC-20261015-02",
+      "type": "decision",
+      "label": "dec:DEC-20261015-02"
+    },
+    {
+      "id": "dec:DEC-20261015-03",
+      "type": "decision",
+      "label": "dec:DEC-20261015-03"
+    },
+    {
+      "id": "dec:DEC-20261015-04",
+      "type": "decision",
+      "label": "dec:DEC-20261015-04"
+    },
+    {
+      "id": "dec:DEC-20261015-05",
+      "type": "decision",
+      "label": "dec:DEC-20261015-05"
+    },
+    {
+      "id": "dec:DEC-20261015-06",
+      "type": "decision",
+      "label": "dec:DEC-20261015-06"
+    },
+    {
+      "id": "dec:DEC-20261016-01",
+      "type": "decision",
+      "label": "dec:DEC-20261016-01"
+    },
+    {
+      "id": "dec:DEC-20261016-02",
+      "type": "decision",
+      "label": "dec:DEC-20261016-02"
+    },
+    {
+      "id": "dec:DEC-20261017-01",
+      "type": "decision",
+      "label": "dec:DEC-20261017-01"
+    },
+    {
+      "id": "dec:DEC-20261020-01",
+      "type": "decision",
+      "label": "dec:DEC-20261020-01"
+    },
+    {
+      "id": "dec:DEC-20261023-01",
+      "type": "decision",
+      "label": "dec:DEC-20261023-01"
+    },
+    {
+      "id": "dec:DEC-20261023-02",
+      "type": "decision",
+      "label": "dec:DEC-20261023-02"
+    },
+    {
+      "id": "dec:DEC-20261025-01",
+      "type": "decision",
+      "label": "dec:DEC-20261025-01"
+    },
+    {
+      "id": "dec:DEC-20261025-02",
+      "type": "decision",
+      "label": "dec:DEC-20261025-02"
+    },
+    {
+      "id": "dec:DEC-20261025-03",
+      "type": "decision",
+      "label": "dec:DEC-20261025-03"
+    },
+    {
+      "id": "dec:DEC-20261025-04",
+      "type": "decision",
+      "label": "dec:DEC-20261025-04"
+    },
+    {
+      "id": "dec:DEC-20261025-05",
+      "type": "decision",
+      "label": "dec:DEC-20261025-05"
+    },
+    {
+      "id": "dec:DEC-20261025-06",
+      "type": "decision",
+      "label": "dec:DEC-20261025-06"
+    },
+    {
+      "id": "dec:DEC-20261026-01",
+      "type": "decision",
+      "label": "dec:DEC-20261026-01"
+    },
+    {
+      "id": "dec:DEC-20261027-01",
+      "type": "decision",
+      "label": "dec:DEC-20261027-01"
+    },
+    {
+      "id": "dec:DEC-20261027-02",
+      "type": "decision",
+      "label": "dec:DEC-20261027-02"
+    },
+    {
+      "id": "dec:DEC-20261027-03",
+      "type": "decision",
+      "label": "dec:DEC-20261027-03"
+    },
+    {
+      "id": "dec:DEC-20261028-01",
+      "type": "decision",
+      "label": "dec:DEC-20261028-01"
+    },
+    {
+      "id": "dec:DEC-20261028-02",
+      "type": "decision",
+      "label": "dec:DEC-20261028-02"
+    },
+    {
+      "id": "dec:DEC-20261028-03",
+      "type": "decision",
+      "label": "dec:DEC-20261028-03"
+    },
+    {
+      "id": "dec:DEC-20261031-01",
+      "type": "decision",
+      "label": "dec:DEC-20261031-01"
+    },
+    {
+      "id": "dec:DEC-20261031-02",
+      "type": "decision",
+      "label": "dec:DEC-20261031-02"
+    },
+    {
+      "id": "dec:DEC-20261104-01",
+      "type": "decision",
+      "label": "dec:DEC-20261104-01"
+    },
+    {
+      "id": "dec:DEC-20261104-02",
+      "type": "decision",
+      "label": "dec:DEC-20261104-02"
+    },
+    {
+      "id": "dec:DEC-20261104-03",
+      "type": "decision",
+      "label": "dec:DEC-20261104-03"
+    },
+    {
+      "id": "dec:DEC-20261104-04",
+      "type": "decision",
+      "label": "dec:DEC-20261104-04"
+    },
+    {
+      "id": "dec:DEC-20261104-05",
+      "type": "decision",
+      "label": "dec:DEC-20261104-05"
+    },
+    {
+      "id": "dec:DEC-20261104-06",
+      "type": "decision",
+      "label": "dec:DEC-20261104-06"
+    },
+    {
+      "id": "dec:DEC-20261104-07",
+      "type": "decision",
+      "label": "dec:DEC-20261104-07"
+    },
+    {
       "id": "dec:market-thresholds",
       "type": "decision",
       "label": "Decision Record — Market Dimension Thresholds"
@@ -1558,6 +2135,11 @@
       "label": "brownfield-target-screening"
     },
     {
+      "id": "proc:business-unit-establishment-execution",
+      "type": "procedure",
+      "label": "business-unit-establishment-execution"
+    },
+    {
       "id": "proc:company-profile-analysis",
       "type": "procedure",
       "label": "company-profile-analysis"
@@ -1591,6 +2173,11 @@
       "id": "proc:greenfield-dd",
       "type": "procedure",
       "label": "greenfield-dd"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline",
+      "type": "procedure",
+      "label": "greenfield-execution-baseline"
     },
     {
       "id": "proc:greenfield-fs",
@@ -1693,11 +2280,12 @@
     {
       "id": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
       "type": "rule",
-      "label": "No shortlisted target meets the base-scenario hurdle in the S8 per-target FS (market_forward base p05 NPV ≤ 0 or below the confirmed hurdle IRR)",
+      "label": "No shortlisted target's base-case IRR reaches the user-confirmed hurdle",
       "action": "escalate_to_risk_officer",
-      "enabled": false,
+      "enabled": true,
+      "policy_id": "DEC-20261027-01",
       "premise_locked": false,
-      "dormant": true
+      "dormant": false
     },
     {
       "id": "rule:brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
@@ -1710,6 +2298,15 @@
       "dormant": false
     },
     {
+      "id": "rule:brownfield-pre-fs__entry_route_undecided_at_pre_fs_exit",
+      "type": "rule",
+      "label": "Entry route (greenfield / brownfield route) still undecided at Pre-FS exit",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
       "id": "rule:brownfield-pre-fs__wacc_hurdle_still_assumed",
       "type": "rule",
       "label": "WACC hurdle still assumed (no sourced input)",
@@ -1718,6 +2315,24 @@
       "policy_id": "gd-0024-class-c-decisions",
       "premise_locked": false,
       "dormant": false
+    },
+    {
+      "id": "rule:brownfield-screening__data_confidence_not_judgeable",
+      "type": "rule",
+      "label": "Data confidence is too low to judge the opportunity",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
+      "id": "rule:brownfield-screening__market_structurally_unattractive",
+      "type": "rule",
+      "label": "Market is structurally unattractive (shrinking and commoditizing)",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
     },
     {
       "id": "rule:brownfield-screening__no_viable_target_in_longlist",
@@ -1738,6 +2353,15 @@
       "policy_id": "gd-0024-class-c-decisions",
       "premise_locked": true,
       "dormant": false
+    },
+    {
+      "id": "rule:brownfield-screening__strategic_fit_knock_out_failed",
+      "type": "rule",
+      "label": "A strategic-fit knock-out item (sf-01..sf-05) failed",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
     },
     {
       "id": "rule:brownfield-target-identification__minimum_coverage_not_achievable",
@@ -1771,6 +2395,15 @@
       "type": "rule",
       "label": "Short List quality below threshold — no candidate clears the rated-scorecard bar (t-06..t-09)",
       "action": "back_to_target_identification",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
+      "id": "rule:business-unit-establishment-execution__permit_not_possible_under_existing_entity_name",
+      "type": "rule",
+      "label": "A required permit cannot be held under the existing legal entity's name",
+      "action": "escalate_to_risk_officer",
       "enabled": false,
       "premise_locked": false,
       "dormant": true
@@ -1855,13 +2488,23 @@
       "dormant": true
     },
     {
-      "id": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "id": "rule:greenfield-dd__covenant_breach_under_downside_financing_plan",
       "type": "rule",
-      "label": "DD finding with value impact not reflected in the valuation bridge",
+      "label": "Covenant breach under the downside scenario of the greenfield financing plan",
       "action": "halt",
       "enabled": false,
       "premise_locked": false,
       "dormant": true
+    },
+    {
+      "id": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "type": "rule",
+      "label": "DD finding with value impact not reflected in the valuation bridge",
+      "action": "halt",
+      "enabled": true,
+      "policy_id": "DEC-20261027-01",
+      "premise_locked": false,
+      "dormant": false
     },
     {
       "id": "rule:greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation",
@@ -1903,6 +2546,15 @@
       "dormant": false
     },
     {
+      "id": "rule:greenfield-pre-fs__entry_route_undecided_at_pre_fs_exit",
+      "type": "rule",
+      "label": "Entry route (greenfield / brownfield route) still undecided at Pre-FS exit",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
       "id": "rule:greenfield-pre-fs__wacc_hurdle_still_assumed",
       "type": "rule",
       "label": "WACC hurdle still assumed (no sourced input)",
@@ -1911,6 +2563,15 @@
       "policy_id": "gd-0024-class-c-decisions",
       "premise_locked": false,
       "dormant": false
+    },
+    {
+      "id": "rule:greenfield-screening__data_confidence_not_judgeable",
+      "type": "rule",
+      "label": "Data confidence is too low to judge the opportunity",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
     },
     {
       "id": "rule:greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
@@ -1923,6 +2584,15 @@
       "dormant": false
     },
     {
+      "id": "rule:greenfield-screening__market_structurally_unattractive",
+      "type": "rule",
+      "label": "Market is structurally unattractive (shrinking and commoditizing)",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
+    },
+    {
       "id": "rule:greenfield-screening__partner_dependency_unconfirmed_and_no_alternative",
       "type": "rule",
       "label": "Partner dependency unconfirmed with no alternative",
@@ -1931,6 +2601,15 @@
       "policy_id": "gd-0022-risk-thresholds",
       "premise_locked": false,
       "dormant": false
+    },
+    {
+      "id": "rule:greenfield-screening__strategic_fit_knock_out_failed",
+      "type": "rule",
+      "label": "A strategic-fit knock-out item (sf-01..sf-05) failed",
+      "action": "halt",
+      "enabled": false,
+      "premise_locked": false,
+      "dormant": true
     },
     {
       "id": "rule:greenfield-screening__zero_site_clears_infrastructure_minimums",
@@ -1982,7 +2661,7 @@
       "id": "skill:agent-lifecycle-manager",
       "type": "skill",
       "label": "agent-lifecycle-manager",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "status": "active"
     },
     {
@@ -2003,14 +2682,14 @@
       "id": "skill:assumption-audit",
       "type": "skill",
       "label": "assumption-audit",
-      "version": "1.0.1",
+      "version": "1.2.0",
       "status": "experimental"
     },
     {
       "id": "skill:brownfield-feasibility",
       "type": "skill",
       "label": "brownfield-feasibility",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "status": "active"
     },
     {
@@ -2031,14 +2710,14 @@
       "id": "skill:ci-triage",
       "type": "skill",
       "label": "ci-triage",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "status": "active"
     },
     {
       "id": "skill:commercial-due-diligence",
       "type": "skill",
       "label": "commercial-due-diligence",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "status": "active"
     },
     {
@@ -2052,7 +2731,7 @@
       "id": "skill:company-intelligence",
       "type": "skill",
       "label": "company-intelligence",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
@@ -2066,14 +2745,14 @@
       "id": "skill:competitive-intelligence",
       "type": "skill",
       "label": "competitive-intelligence",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "status": "active"
     },
     {
       "id": "skill:compliance-monitoring",
       "type": "skill",
       "label": "compliance-monitoring",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "status": "active"
     },
     {
@@ -2094,7 +2773,7 @@
       "id": "skill:deal-execution-playbook",
       "type": "skill",
       "label": "deal-execution-playbook",
-      "version": "1.0.1",
+      "version": "1.2.0",
       "status": "experimental"
     },
     {
@@ -2108,7 +2787,14 @@
       "id": "skill:decision-record",
       "type": "skill",
       "label": "decision-record",
-      "version": "1.1.0",
+      "version": "1.1.2",
+      "status": "active"
+    },
+    {
+      "id": "skill:delegate-to-hub",
+      "type": "skill",
+      "label": "delegate-to-hub",
+      "version": "1.0.1",
       "status": "active"
     },
     {
@@ -2129,7 +2815,7 @@
       "id": "skill:evidence-ledger",
       "type": "skill",
       "label": "evidence-ledger",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "status": "active"
     },
     {
@@ -2157,7 +2843,7 @@
       "id": "skill:financing-plan-review",
       "type": "skill",
       "label": "financing-plan-review",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "status": "active"
     },
     {
@@ -2171,7 +2857,7 @@
       "id": "skill:forward-industry-research",
       "type": "skill",
       "label": "forward-industry-research",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
@@ -2179,13 +2865,6 @@
       "type": "skill",
       "label": "gateguard",
       "version": "1.0.2",
-      "status": "active"
-    },
-    {
-      "id": "skill:graft",
-      "type": "skill",
-      "label": "graft",
-      "version": "1.0.0",
       "status": "active"
     },
     {
@@ -2199,14 +2878,14 @@
       "id": "skill:group-level-review",
       "type": "skill",
       "label": "group-level-review",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
       "id": "skill:growth-projection-modeling",
       "type": "skill",
       "label": "growth-projection-modeling",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -2227,7 +2906,7 @@
       "id": "skill:historical-financial-analysis",
       "type": "skill",
       "label": "historical-financial-analysis",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "status": "active"
     },
     {
@@ -2248,7 +2927,7 @@
       "id": "skill:i18n-layout",
       "type": "skill",
       "label": "i18n-layout",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active"
     },
     {
@@ -2283,7 +2962,7 @@
       "id": "skill:investment-feasibility-modeling",
       "type": "skill",
       "label": "investment-feasibility-modeling",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "status": "active"
     },
     {
@@ -2292,6 +2971,13 @@
       "label": "investment-vehicle-structuring",
       "version": "1.3.0",
       "status": "active"
+    },
+    {
+      "id": "skill:ip-fto-review",
+      "type": "skill",
+      "label": "ip-fto-review",
+      "version": "1.0.1",
+      "status": "experimental"
     },
     {
       "id": "skill:jv-structuring",
@@ -2346,14 +3032,14 @@
       "id": "skill:legal-due-diligence",
       "type": "skill",
       "label": "legal-due-diligence",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "status": "active"
     },
     {
       "id": "skill:legal-risk-register",
       "type": "skill",
       "label": "legal-risk-register",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
@@ -2367,7 +3053,7 @@
       "id": "skill:market-data-pipeline",
       "type": "skill",
       "label": "market-data-pipeline",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
@@ -2404,6 +3090,13 @@
       "label": "partner-sourcing-strategy",
       "version": "1.1.0",
       "status": "active"
+    },
+    {
+      "id": "skill:partnership-health-scorecard",
+      "type": "skill",
+      "label": "partnership-health-scorecard",
+      "version": "1.0.0",
+      "status": "experimental"
     },
     {
       "id": "skill:peer-benchmarking",
@@ -2444,7 +3137,7 @@
       "id": "skill:policy-and-procedure-governance",
       "type": "skill",
       "label": "policy-and-procedure-governance",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
@@ -2458,7 +3151,7 @@
       "id": "skill:project-review",
       "type": "skill",
       "label": "project-review",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "status": "active"
     },
     {
@@ -2472,7 +3165,7 @@
       "id": "skill:quality-of-earnings",
       "type": "skill",
       "label": "quality-of-earnings",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "status": "active"
     },
     {
@@ -2493,7 +3186,7 @@
       "id": "skill:regulatory-screening",
       "type": "skill",
       "label": "regulatory-screening",
-      "version": "1.0.1",
+      "version": "1.1.1",
       "status": "experimental"
     },
     {
@@ -2507,7 +3200,7 @@
       "id": "skill:sample-driven-report-writing",
       "type": "skill",
       "label": "sample-driven-report-writing",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
@@ -2528,7 +3221,7 @@
       "id": "skill:security-scan",
       "type": "skill",
       "label": "security-scan",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "status": "active"
     },
     {
@@ -2570,14 +3263,14 @@
       "id": "skill:stage-gate-governance",
       "type": "skill",
       "label": "stage-gate-governance",
-      "version": "1.4.1",
+      "version": "1.4.3",
       "status": "active"
     },
     {
       "id": "skill:standup-synthesizer",
       "type": "skill",
       "label": "standup-synthesizer",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "status": "active"
     },
     {
@@ -2591,7 +3284,7 @@
       "id": "skill:sync",
       "type": "skill",
       "label": "sync",
-      "version": "1.7.0",
+      "version": "1.9.0",
       "status": "active"
     },
     {
@@ -2612,14 +3305,14 @@
       "id": "skill:target-costing-analysis",
       "type": "skill",
       "label": "target-costing-analysis",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
       "id": "skill:team-builder",
       "type": "skill",
       "label": "team-builder",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
@@ -2647,7 +3340,7 @@
       "id": "skill:two-tier-approval-chain",
       "type": "skill",
       "label": "two-tier-approval-chain",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "status": "active"
     },
     {
@@ -2675,35 +3368,35 @@
       "id": "skill:value-chain-driver-identification",
       "type": "skill",
       "label": "value-chain-driver-identification",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
       "id": "skill:value-chain-linkage-analysis",
       "type": "skill",
       "label": "value-chain-linkage-analysis",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "status": "active"
     },
     {
       "id": "skill:value-chain-stage-financials",
       "type": "skill",
       "label": "value-chain-stage-financials",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "status": "experimental"
     },
     {
       "id": "skill:wacc-input-session",
       "type": "skill",
       "label": "wacc-input-session",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "status": "active"
     },
     {
       "id": "skill:waiver-management",
       "type": "skill",
       "label": "waiver-management",
-      "version": "1.0.1",
+      "version": "1.1.2",
       "status": "experimental"
     },
     {
@@ -2724,14 +3417,14 @@
       "id": "stage.co-newbiz.S2",
       "type": "stage",
       "label": "Target Screening",
-      "order": 2,
+      "order": 3,
       "gate_alias": "Target Screening"
     },
     {
       "id": "stage.co-newbiz.S3",
       "type": "stage",
       "label": "Pre-FS",
-      "order": 3,
+      "order": 2,
       "gate_alias": "Pre-FS"
     },
     {
@@ -2794,6 +3487,12 @@
       "gate": "DD"
     },
     {
+      "id": "proc:brownfield-dd#12.5",
+      "type": "step",
+      "label": "brownfield-dd step 12.5",
+      "gate": "DD"
+    },
+    {
       "id": "proc:brownfield-dd#13",
       "type": "step",
       "label": "brownfield-dd step 13",
@@ -2824,9 +3523,21 @@
       "gate": "DD"
     },
     {
+      "id": "proc:brownfield-dd#3.5",
+      "type": "step",
+      "label": "brownfield-dd step 3.5",
+      "gate": "DD"
+    },
+    {
       "id": "proc:brownfield-dd#4",
       "type": "step",
       "label": "brownfield-dd step 4",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:brownfield-dd#4.5",
+      "type": "step",
+      "label": "brownfield-dd step 4.5",
       "gate": "DD"
     },
     {
@@ -2836,9 +3547,21 @@
       "gate": "DD"
     },
     {
+      "id": "proc:brownfield-dd#5.5",
+      "type": "step",
+      "label": "brownfield-dd step 5.5",
+      "gate": "DD"
+    },
+    {
       "id": "proc:brownfield-dd#6",
       "type": "step",
       "label": "brownfield-dd step 6",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:brownfield-dd#6.5",
+      "type": "step",
+      "label": "brownfield-dd step 6.5",
       "gate": "DD"
     },
     {
@@ -3004,6 +3727,24 @@
       "gate": "Screening"
     },
     {
+      "id": "proc:brownfield-screening#2.5",
+      "type": "step",
+      "label": "brownfield-screening step 2.5",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:brownfield-screening#2.55",
+      "type": "step",
+      "label": "brownfield-screening step 2.55",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:brownfield-screening#2.6",
+      "type": "step",
+      "label": "brownfield-screening step 2.6",
+      "gate": "Screening"
+    },
+    {
       "id": "proc:brownfield-screening#3",
       "type": "step",
       "label": "brownfield-screening step 3",
@@ -3013,6 +3754,12 @@
       "id": "proc:brownfield-screening#3.5",
       "type": "step",
       "label": "brownfield-screening step 3.5",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:brownfield-screening#3.7",
+      "type": "step",
+      "label": "brownfield-screening step 3.7",
       "gate": "Screening"
     },
     {
@@ -3052,10 +3799,52 @@
       "gate": "Target Screening"
     },
     {
+      "id": "proc:brownfield-target-screening#3.5",
+      "type": "step",
+      "label": "brownfield-target-screening step 3.5",
+      "gate": "Target Screening"
+    },
+    {
       "id": "proc:brownfield-target-screening#4",
       "type": "step",
       "label": "brownfield-target-screening step 4",
       "gate": "Target Screening"
+    },
+    {
+      "id": "proc:business-unit-establishment-execution#1",
+      "type": "step",
+      "label": "business-unit-establishment-execution step 1",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:business-unit-establishment-execution#2",
+      "type": "step",
+      "label": "business-unit-establishment-execution step 2",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:business-unit-establishment-execution#3",
+      "type": "step",
+      "label": "business-unit-establishment-execution step 3",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:business-unit-establishment-execution#3.5",
+      "type": "step",
+      "label": "business-unit-establishment-execution step 3.5",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:business-unit-establishment-execution#4",
+      "type": "step",
+      "label": "business-unit-establishment-execution step 4",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:business-unit-establishment-execution#5",
+      "type": "step",
+      "label": "business-unit-establishment-execution step 5",
+      "gate": "Entity IC"
     },
     {
       "id": "proc:company-profile-analysis#1",
@@ -3148,6 +3937,30 @@
       "gate": "DD"
     },
     {
+      "id": "proc:deal-structuring#4",
+      "type": "step",
+      "label": "deal-structuring step 4",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:deal-structuring#5",
+      "type": "step",
+      "label": "deal-structuring step 5",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:deal-structuring#6",
+      "type": "step",
+      "label": "deal-structuring step 6",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:deal-structuring#7",
+      "type": "step",
+      "label": "deal-structuring step 7",
+      "gate": "DD"
+    },
+    {
       "id": "proc:entity-establishment-execution#1",
       "type": "step",
       "label": "entity-establishment-execution step 1",
@@ -3193,6 +4006,12 @@
       "id": "proc:entity-ic-review#3",
       "type": "step",
       "label": "entity-ic-review step 3",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:entity-ic-review#3.1",
+      "type": "step",
+      "label": "entity-ic-review step 3.1",
       "gate": "Entity IC"
     },
     {
@@ -3244,6 +4063,54 @@
       "gate": "DD"
     },
     {
+      "id": "proc:greenfield-dd#10",
+      "type": "step",
+      "label": "greenfield-dd step 10",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#11",
+      "type": "step",
+      "label": "greenfield-dd step 11",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#12",
+      "type": "step",
+      "label": "greenfield-dd step 12",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#13",
+      "type": "step",
+      "label": "greenfield-dd step 13",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#14",
+      "type": "step",
+      "label": "greenfield-dd step 14",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#15",
+      "type": "step",
+      "label": "greenfield-dd step 15",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#16",
+      "type": "step",
+      "label": "greenfield-dd step 16",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#17",
+      "type": "step",
+      "label": "greenfield-dd step 17",
+      "gate": "DD"
+    },
+    {
       "id": "proc:greenfield-dd#2",
       "type": "step",
       "label": "greenfield-dd step 2",
@@ -3266,6 +4133,66 @@
       "type": "step",
       "label": "greenfield-dd step 5",
       "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#6",
+      "type": "step",
+      "label": "greenfield-dd step 6",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#7",
+      "type": "step",
+      "label": "greenfield-dd step 7",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#8",
+      "type": "step",
+      "label": "greenfield-dd step 8",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-dd#9",
+      "type": "step",
+      "label": "greenfield-dd step 9",
+      "gate": "DD"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline#1",
+      "type": "step",
+      "label": "greenfield-execution-baseline step 1",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline#2",
+      "type": "step",
+      "label": "greenfield-execution-baseline step 2",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline#3",
+      "type": "step",
+      "label": "greenfield-execution-baseline step 3",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline#4",
+      "type": "step",
+      "label": "greenfield-execution-baseline step 4",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline#5",
+      "type": "step",
+      "label": "greenfield-execution-baseline step 5",
+      "gate": "Entity IC"
+    },
+    {
+      "id": "proc:greenfield-execution-baseline#6",
+      "type": "step",
+      "label": "greenfield-execution-baseline step 6",
+      "gate": "Entity IC"
     },
     {
       "id": "proc:greenfield-fs#1",
@@ -3400,6 +4327,24 @@
       "gate": "Screening"
     },
     {
+      "id": "proc:greenfield-screening#1.5",
+      "type": "step",
+      "label": "greenfield-screening step 1.5",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:greenfield-screening#1.55",
+      "type": "step",
+      "label": "greenfield-screening step 1.55",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:greenfield-screening#1.6",
+      "type": "step",
+      "label": "greenfield-screening step 1.6",
+      "gate": "Screening"
+    },
+    {
       "id": "proc:greenfield-screening#2",
       "type": "step",
       "label": "greenfield-screening step 2",
@@ -3421,6 +4366,12 @@
       "id": "proc:greenfield-screening#4",
       "type": "step",
       "label": "greenfield-screening step 4",
+      "gate": "Screening"
+    },
+    {
+      "id": "proc:greenfield-screening#4.5",
+      "type": "step",
+      "label": "greenfield-screening step 4.5",
       "gate": "Screening"
     },
     {
@@ -3544,6 +4495,12 @@
       "gate": "post_close"
     },
     {
+      "id": "proc:pmi-integration-execution#6",
+      "type": "step",
+      "label": "pmi-integration-execution step 6",
+      "gate": "post_close"
+    },
+    {
       "id": "proc:portfolio-venture-monitoring#1",
       "type": "step",
       "label": "portfolio-venture-monitoring step 1",
@@ -3592,14 +4549,24 @@
       "label": "deliverables.required_unreviewed"
     },
     {
+      "id": "var:fin.dd_value_impact_unbridged",
+      "type": "var",
+      "label": "fin.dd_value_impact_unbridged"
+    },
+    {
+      "id": "var:fin.targets_meeting_hurdle",
+      "type": "var",
+      "label": "fin.targets_meeting_hurdle"
+    },
+    {
       "id": "var:fin.wacc_source_status",
       "type": "var",
       "label": "fin.wacc_source_status"
     },
     {
-      "id": "var:infra.plan_finalized",
+      "id": "var:infra.plan_finalized_by_announcement",
       "type": "var",
-      "label": "infra.plan_finalized"
+      "label": "infra.plan_finalized_by_announcement"
     },
     {
       "id": "var:infra.sites_clearing_minimums",
@@ -3932,6 +4899,36 @@
       "source_ref": "docs/decisions/DEC-20260909-07.md"
     },
     {
+      "type": "activates_reverses",
+      "from": "dec:DEC-20261028-01",
+      "to": "rule:greenfield-dd__covenant_breach_under_downside_financing_plan",
+      "source_ref": "docs/decisions/DEC-20261028-01.md"
+    },
+    {
+      "type": "amends",
+      "from": "adr:0157",
+      "to": "adr:0143",
+      "source_ref": "docs/adr/0157-optional-per-target-dd.md"
+    },
+    {
+      "type": "amends",
+      "from": "adr:0166",
+      "to": "adr:0047",
+      "source_ref": "docs/adr/0166-greenfield-default-origin-internal.md"
+    },
+    {
+      "type": "amends",
+      "from": "adr:0167",
+      "to": "adr:0047",
+      "source_ref": "docs/adr/0167-greenfield-establishment-mode.md"
+    },
+    {
+      "type": "amends",
+      "from": "adr:0167",
+      "to": "adr:0100",
+      "source_ref": "docs/adr/0167-greenfield-establishment-mode.md"
+    },
+    {
       "type": "anchored_by",
       "from": "rule:brownfield-dd__any_of_six_ma_validators_missing_at_dd_exit",
       "to": "adr:0062",
@@ -4041,6 +5038,36 @@
     },
     {
       "type": "anchored_by",
+      "from": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "to": "dec:DEC-20261027-01",
+      "source_ref": "procedures/_kill-criteria/brownfield-fs-comparative__no_target_meets_base_scenario_hurdle.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "to": "dec:DEC-20261027-03",
+      "source_ref": "procedures/_kill-criteria/brownfield-fs-comparative__no_target_meets_base_scenario_hurdle.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "to": "dec:DEC-20261028-01",
+      "source_ref": "procedures/_kill-criteria/brownfield-fs-comparative__no_target_meets_base_scenario_hurdle.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "to": "dec:DEC-20261028-02",
+      "source_ref": "procedures/_kill-criteria/brownfield-fs-comparative__no_target_meets_base_scenario_hurdle.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "to": "dec:DEC-20261028-03",
+      "source_ref": "procedures/_kill-criteria/brownfield-fs-comparative__no_target_meets_base_scenario_hurdle.json"
+    },
+    {
+      "type": "anchored_by",
       "from": "rule:brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing",
       "to": "adr:0062",
       "source_ref": "procedures/_kill-criteria/brownfield-pre-fs__certification_transferability_unconfirmed_and_load_bearing.json"
@@ -4434,6 +5461,36 @@
       "from": "rule:entity-ic-review__analysis_task_reviewed_by_null_on_required_deliverable",
       "to": "adr:0068",
       "source_ref": "procedures/_kill-criteria/entity-ic-review__analysis_task_reviewed_by_null_on_required_deliverable.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "to": "dec:DEC-20261027-01",
+      "source_ref": "procedures/_kill-criteria/greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "to": "dec:DEC-20261027-03",
+      "source_ref": "procedures/_kill-criteria/greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "to": "dec:DEC-20261028-01",
+      "source_ref": "procedures/_kill-criteria/greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "to": "dec:DEC-20261028-02",
+      "source_ref": "procedures/_kill-criteria/greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge.json"
+    },
+    {
+      "type": "anchored_by",
+      "from": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "to": "dec:DEC-20261028-03",
+      "source_ref": "procedures/_kill-criteria/greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge.json"
     },
     {
       "type": "anchored_by",
@@ -4740,6 +5797,12 @@
       "from": "rule:pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover",
       "to": "adr:0068",
       "source_ref": "procedures/_kill-criteria/pmi-integration-execution__synergy_run_rate_uncertified_at_bau_handover.json"
+    },
+    {
+      "type": "consumes",
+      "from": "proc:brownfield-dd#5.5",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[5.5] (inferred: exact token)"
     },
     {
       "type": "consumes",
@@ -4752,6 +5815,18 @@
       "from": "proc:greenfield-dd#4",
       "to": "artifact:dd_finding",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[4] (inferred: exact token)"
+    },
+    {
+      "type": "consumes",
+      "from": "proc:greenfield-dd#6",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[6] (inferred: exact token)"
+    },
+    {
+      "type": "consumes",
+      "from": "proc:greenfield-dd#9",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[9] (inferred: exact token)"
     },
     {
       "type": "evaluates",
@@ -4782,6 +5857,12 @@
       "from": "rule:brownfield-dd__partner_dependency_unconfirmed_and_no_alternative",
       "to": "var:risk.partner_dependency_risk",
       "source_ref": "procedures/_kill-criteria/brownfield-dd__partner_dependency_unconfirmed_and_no_alternative.json"
+    },
+    {
+      "type": "evaluates",
+      "from": "rule:brownfield-fs-comparative__no_target_meets_base_scenario_hurdle",
+      "to": "var:fin.targets_meeting_hurdle",
+      "source_ref": "procedures/_kill-criteria/brownfield-fs-comparative__no_target_meets_base_scenario_hurdle.json"
     },
     {
       "type": "evaluates",
@@ -4851,6 +5932,12 @@
     },
     {
       "type": "evaluates",
+      "from": "rule:greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge",
+      "to": "var:fin.dd_value_impact_unbridged",
+      "source_ref": "procedures/_kill-criteria/greenfield-dd__dd_finding_with_value_impact_not_in_valuation_bridge.json"
+    },
+    {
+      "type": "evaluates",
       "from": "rule:greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation",
       "to": "var:infra.wastewater_insufficient_no_mitigation",
       "source_ref": "procedures/_kill-criteria/greenfield-dd__wastewater_capacity_insufficient_and_no_mitigation.json"
@@ -4876,7 +5963,7 @@
     {
       "type": "evaluates",
       "from": "rule:greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement",
-      "to": "var:infra.plan_finalized",
+      "to": "var:infra.plan_finalized_by_announcement",
       "source_ref": "procedures/_kill-criteria/greenfield-screening__infrastructure_plan_not_finalized_at_site_announcement.json"
     },
     {
@@ -4953,6 +6040,12 @@
     },
     {
       "type": "in_stage",
+      "from": "proc:business-unit-establishment-execution",
+      "to": "stage.co-newbiz.S6",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
+    },
+    {
+      "type": "in_stage",
       "from": "proc:company-profile-analysis",
       "to": "stage.co-newbiz.S1",
       "source_ref": "procedures/_shared/company-profile-analysis/schema.yaml"
@@ -4986,6 +6079,12 @@
       "from": "proc:greenfield-dd",
       "to": "stage.co-newbiz.S5",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "in_stage",
+      "from": "proc:greenfield-execution-baseline",
+      "to": "stage.co-newbiz.S6",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
     },
     {
       "type": "in_stage",
@@ -5061,6 +6160,24 @@
     },
     {
       "type": "member_of",
+      "from": "skill:assumption-audit",
+      "to": "proc:brownfield-screening",
+      "source_ref": "skills/assumption-audit/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:assumption-audit",
+      "to": "proc:greenfield-screening",
+      "source_ref": "skills/assumption-audit/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:brownfield-feasibility",
+      "to": "proc:brownfield-dd",
+      "source_ref": "skills/brownfield-feasibility/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:brownfield-feasibility",
       "to": "proc:brownfield-pre-fs",
       "source_ref": "skills/brownfield-feasibility/SKILL.md"
@@ -5092,6 +6209,12 @@
     {
       "type": "member_of",
       "from": "skill:certification-roadmap",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "skills/certification-roadmap/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:certification-roadmap",
       "to": "proc:greenfield-pre-fs",
       "source_ref": "skills/certification-roadmap/SKILL.md"
     },
@@ -5104,13 +6227,37 @@
     {
       "type": "member_of",
       "from": "skill:certification-transferability",
+      "to": "proc:brownfield-pre-fs",
+      "source_ref": "skills/certification-transferability/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:certification-transferability",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "skills/certification-transferability/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:certification-transferability",
       "to": "proc:entity-establishment-execution",
+      "source_ref": "skills/certification-transferability/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:certification-transferability",
+      "to": "proc:greenfield-pre-fs",
       "source_ref": "skills/certification-transferability/SKILL.md"
     },
     {
       "type": "member_of",
       "from": "skill:commercial-due-diligence",
       "to": "proc:brownfield-dd",
+      "source_ref": "skills/commercial-due-diligence/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:commercial-due-diligence",
+      "to": "proc:greenfield-dd",
       "source_ref": "skills/commercial-due-diligence/SKILL.md"
     },
     {
@@ -5151,6 +6298,12 @@
     },
     {
       "type": "member_of",
+      "from": "skill:competitive-intelligence",
+      "to": "proc:greenfield-dd",
+      "source_ref": "skills/competitive-intelligence/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:compliance-monitoring",
       "to": "proc:brownfield-dd",
       "source_ref": "skills/compliance-monitoring/SKILL.md"
@@ -5172,6 +6325,12 @@
       "from": "skill:dd-to-valuation-bridge",
       "to": "proc:greenfield-dd",
       "source_ref": "skills/dd-to-valuation-bridge/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:deal-execution-playbook",
+      "to": "proc:brownfield-target-screening",
+      "source_ref": "skills/deal-execution-playbook/SKILL.md"
     },
     {
       "type": "member_of",
@@ -5223,6 +6382,18 @@
     },
     {
       "type": "member_of",
+      "from": "skill:financing-plan-review",
+      "to": "proc:greenfield-dd",
+      "source_ref": "skills/financing-plan-review/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:financing-plan-review",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "skills/financing-plan-review/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:forward-industry-research",
       "to": "proc:brownfield-screening",
       "source_ref": "skills/forward-industry-research/SKILL.md"
@@ -5237,6 +6408,12 @@
       "type": "member_of",
       "from": "skill:greenfield-feasibility",
       "to": "proc:greenfield-capability-assessment",
+      "source_ref": "skills/greenfield-feasibility/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:greenfield-feasibility",
+      "to": "proc:greenfield-execution-baseline",
       "source_ref": "skills/greenfield-feasibility/SKILL.md"
     },
     {
@@ -5266,6 +6443,12 @@
     {
       "type": "member_of",
       "from": "skill:historical-financial-analysis",
+      "to": "proc:greenfield-dd",
+      "source_ref": "skills/historical-financial-analysis/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:historical-financial-analysis",
       "to": "proc:greenfield-fs",
       "source_ref": "skills/historical-financial-analysis/SKILL.md"
     },
@@ -5273,6 +6456,12 @@
       "type": "member_of",
       "from": "skill:incentive-clawback-assessment",
       "to": "proc:brownfield-dd",
+      "source_ref": "skills/incentive-clawback-assessment/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:incentive-clawback-assessment",
+      "to": "proc:greenfield-execution-baseline",
       "source_ref": "skills/incentive-clawback-assessment/SKILL.md"
     },
     {
@@ -5308,6 +6497,18 @@
     {
       "type": "member_of",
       "from": "skill:investment-feasibility-modeling",
+      "to": "proc:brownfield-screening",
+      "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:investment-feasibility-modeling",
+      "to": "proc:deal-structuring",
+      "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:investment-feasibility-modeling",
       "to": "proc:greenfield-capability-assessment",
       "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
     },
@@ -5315,6 +6516,12 @@
       "type": "member_of",
       "from": "skill:investment-feasibility-modeling",
       "to": "proc:greenfield-fs",
+      "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:investment-feasibility-modeling",
+      "to": "proc:greenfield-screening",
       "source_ref": "skills/investment-feasibility-modeling/SKILL.md"
     },
     {
@@ -5337,6 +6544,18 @@
     },
     {
       "type": "member_of",
+      "from": "skill:ip-fto-review",
+      "to": "proc:brownfield-dd",
+      "source_ref": "skills/ip-fto-review/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:ip-fto-review",
+      "to": "proc:greenfield-dd",
+      "source_ref": "skills/ip-fto-review/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:jv-structuring",
       "to": "proc:deal-shape-chain",
       "source_ref": "skills/jv-structuring/SKILL.md"
@@ -5346,6 +6565,12 @@
       "from": "skill:jv-structuring",
       "to": "proc:jv-lifecycle-governance",
       "source_ref": "skills/jv-structuring/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:k-law",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "skills/k-law/SKILL.md"
     },
     {
       "type": "member_of",
@@ -5363,6 +6588,12 @@
       "type": "member_of",
       "from": "skill:legal-due-diligence",
       "to": "proc:entity-establishment-execution",
+      "source_ref": "skills/legal-due-diligence/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:legal-due-diligence",
+      "to": "proc:greenfield-dd",
       "source_ref": "skills/legal-due-diligence/SKILL.md"
     },
     {
@@ -5392,7 +6623,19 @@
     {
       "type": "member_of",
       "from": "skill:org-readiness-assessment",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "skills/org-readiness-assessment/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:org-readiness-assessment",
       "to": "proc:entity-establishment-execution",
+      "source_ref": "skills/org-readiness-assessment/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:org-readiness-assessment",
+      "to": "proc:greenfield-dd",
       "source_ref": "skills/org-readiness-assessment/SKILL.md"
     },
     {
@@ -5406,6 +6649,18 @@
       "from": "skill:partner-sourcing-strategy",
       "to": "proc:deal-shape-chain",
       "source_ref": "skills/partner-sourcing-strategy/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:partnership-health-scorecard",
+      "to": "proc:deal-shape-chain",
+      "source_ref": "skills/partnership-health-scorecard/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:partnership-health-scorecard",
+      "to": "proc:jv-lifecycle-governance",
+      "source_ref": "skills/partnership-health-scorecard/SKILL.md"
     },
     {
       "type": "member_of",
@@ -5429,6 +6684,12 @@
       "type": "member_of",
       "from": "skill:permit-pathway-mapping",
       "to": "proc:brownfield-pre-fs",
+      "source_ref": "skills/permit-pathway-mapping/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:permit-pathway-mapping",
+      "to": "proc:business-unit-establishment-execution",
       "source_ref": "skills/permit-pathway-mapping/SKILL.md"
     },
     {
@@ -5500,6 +6761,12 @@
     {
       "type": "member_of",
       "from": "skill:quality-of-earnings",
+      "to": "proc:brownfield-dd",
+      "source_ref": "skills/quality-of-earnings/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:quality-of-earnings",
       "to": "proc:brownfield-fs",
       "source_ref": "skills/quality-of-earnings/SKILL.md"
     },
@@ -5508,6 +6775,12 @@
       "from": "skill:rag-scoring-framework",
       "to": "proc:entity-ic-review",
       "source_ref": "skills/rag-scoring-framework/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:regional-incentive-sourcing",
+      "to": "proc:deal-structuring",
+      "source_ref": "skills/regional-incentive-sourcing/SKILL.md"
     },
     {
       "type": "member_of",
@@ -5524,7 +6797,25 @@
     {
       "type": "member_of",
       "from": "skill:regulatory-screening",
+      "to": "proc:brownfield-dd",
+      "source_ref": "skills/regulatory-screening/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:regulatory-screening",
       "to": "proc:brownfield-screening",
+      "source_ref": "skills/regulatory-screening/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:regulatory-screening",
+      "to": "proc:greenfield-dd",
+      "source_ref": "skills/regulatory-screening/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:regulatory-screening",
+      "to": "proc:greenfield-screening",
       "source_ref": "skills/regulatory-screening/SKILL.md"
     },
     {
@@ -5614,6 +6905,12 @@
     {
       "type": "member_of",
       "from": "skill:stage-gate-governance",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "skills/stage-gate-governance/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:stage-gate-governance",
       "to": "proc:company-profile-analysis",
       "source_ref": "skills/stage-gate-governance/SKILL.md"
     },
@@ -5633,6 +6930,12 @@
       "type": "member_of",
       "from": "skill:stage-gate-governance",
       "to": "proc:greenfield-dd",
+      "source_ref": "skills/stage-gate-governance/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:stage-gate-governance",
+      "to": "proc:greenfield-execution-baseline",
       "source_ref": "skills/stage-gate-governance/SKILL.md"
     },
     {
@@ -5715,6 +7018,12 @@
     },
     {
       "type": "member_of",
+      "from": "skill:talent-pipeline-planning",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "skills/talent-pipeline-planning/SKILL.md"
+    },
+    {
+      "type": "member_of",
       "from": "skill:target-costing-analysis",
       "to": "proc:brownfield-fs",
       "source_ref": "skills/target-costing-analysis/SKILL.md"
@@ -5729,6 +7038,12 @@
       "type": "member_of",
       "from": "skill:technical-due-diligence",
       "to": "proc:brownfield-dd",
+      "source_ref": "skills/technical-due-diligence/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:technical-due-diligence",
+      "to": "proc:greenfield-dd",
       "source_ref": "skills/technical-due-diligence/SKILL.md"
     },
     {
@@ -5764,6 +7079,12 @@
     {
       "type": "member_of",
       "from": "skill:value-chain-linkage-analysis",
+      "to": "proc:brownfield-screening",
+      "source_ref": "skills/value-chain-linkage-analysis/SKILL.md"
+    },
+    {
+      "type": "member_of",
+      "from": "skill:value-chain-linkage-analysis",
       "to": "proc:greenfield-screening",
       "source_ref": "skills/value-chain-linkage-analysis/SKILL.md"
     },
@@ -5792,6 +7113,12 @@
       "source_ref": "skills/wacc-input-session/SKILL.md"
     },
     {
+      "type": "member_of",
+      "from": "skill:waiver-management",
+      "to": "proc:greenfield-dd",
+      "source_ref": "skills/waiver-management/SKILL.md"
+    },
+    {
       "type": "owns",
       "from": "agent:antitrust-agent",
       "to": "skill:antitrust-screening",
@@ -5799,13 +7126,7 @@
     },
     {
       "type": "owns",
-      "from": "agent:architect",
-      "to": "skill:design-foundation",
-      "source_ref": "skills/design-foundation/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:architect",
+      "from": "agent:backend-engineer",
       "to": "skill:zod-contract-gate",
       "source_ref": "skills/zod-contract-gate/SKILL.md"
     },
@@ -5814,6 +7135,12 @@
       "from": "agent:brownfield-agent",
       "to": "skill:brownfield-feasibility",
       "source_ref": "skills/brownfield-feasibility/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:brownfield-agent",
+      "to": "skill:deal-execution-playbook",
+      "source_ref": "skills/deal-execution-playbook/SKILL.md"
     },
     {
       "type": "owns",
@@ -5841,9 +7168,21 @@
     },
     {
       "type": "owns",
+      "from": "agent:compliance-officer",
+      "to": "skill:waiver-management",
+      "source_ref": "skills/waiver-management/SKILL.md"
+    },
+    {
+      "type": "owns",
       "from": "agent:customer-retention-agent",
       "to": "skill:customer-attrition-risk",
       "source_ref": "skills/customer-attrition-risk/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:design-system-agent",
+      "to": "skill:design-foundation",
+      "source_ref": "skills/design-foundation/SKILL.md"
     },
     {
       "type": "owns",
@@ -5868,6 +7207,12 @@
       "from": "agent:financial-analyst",
       "to": "skill:historical-financial-analysis",
       "source_ref": "skills/historical-financial-analysis/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:financial-analyst",
+      "to": "skill:k-dart",
+      "source_ref": "skills/k-dart/SKILL.md"
     },
     {
       "type": "owns",
@@ -5901,6 +7246,18 @@
     },
     {
       "type": "owns",
+      "from": "agent:financial-analyst",
+      "to": "skill:value-chain-stage-financials",
+      "source_ref": "skills/value-chain-stage-financials/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:greenfield-agent",
+      "to": "skill:community-partnership-planning",
+      "source_ref": "skills/community-partnership-planning/SKILL.md"
+    },
+    {
+      "type": "owns",
       "from": "agent:greenfield-agent",
       "to": "skill:greenfield-feasibility",
       "source_ref": "skills/greenfield-feasibility/SKILL.md"
@@ -5920,6 +7277,12 @@
     {
       "type": "owns",
       "from": "agent:group-review-agent",
+      "to": "skill:group-level-review",
+      "source_ref": "skills/group-level-review/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:group-review-agent",
       "to": "skill:intra-group-transaction-compliance",
       "source_ref": "skills/intra-group-transaction-compliance/SKILL.md"
     },
@@ -5932,14 +7295,14 @@
     {
       "type": "owns",
       "from": "agent:hr-integration-agent",
-      "to": "skill:community-partnership-planning",
-      "source_ref": "skills/community-partnership-planning/SKILL.md"
+      "to": "skill:compensation-harmonization-analysis",
+      "source_ref": "skills/compensation-harmonization-analysis/SKILL.md"
     },
     {
       "type": "owns",
       "from": "agent:hr-integration-agent",
-      "to": "skill:compensation-harmonization-analysis",
-      "source_ref": "skills/compensation-harmonization-analysis/SKILL.md"
+      "to": "skill:management-incentive-review",
+      "source_ref": "skills/management-incentive-review/SKILL.md"
     },
     {
       "type": "owns",
@@ -5961,15 +7324,21 @@
     },
     {
       "type": "owns",
-      "from": "agent:incentive-agent",
-      "to": "skill:management-incentive-review",
-      "source_ref": "skills/management-incentive-review/SKILL.md"
+      "from": "agent:ip-agent",
+      "to": "skill:ip-fto-review",
+      "source_ref": "skills/ip-fto-review/SKILL.md"
     },
     {
       "type": "owns",
       "from": "agent:legal-counsel",
       "to": "skill:certification-transferability",
       "source_ref": "skills/certification-transferability/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:legal-counsel",
+      "to": "skill:k-law",
+      "source_ref": "skills/k-law/SKILL.md"
     },
     {
       "type": "owns",
@@ -5985,6 +7354,18 @@
     },
     {
       "type": "owns",
+      "from": "agent:legal-counsel",
+      "to": "skill:regulatory-screening",
+      "source_ref": "skills/regulatory-screening/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:market-intelligence-agent",
+      "to": "skill:company-intelligence",
+      "source_ref": "skills/company-intelligence/SKILL.md"
+    },
+    {
+      "type": "owns",
       "from": "agent:market-intelligence-agent",
       "to": "skill:competitive-intelligence",
       "source_ref": "skills/competitive-intelligence/SKILL.md"
@@ -5992,8 +7373,26 @@
     {
       "type": "owns",
       "from": "agent:market-intelligence-agent",
+      "to": "skill:forward-industry-research",
+      "source_ref": "skills/forward-industry-research/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:market-intelligence-agent",
+      "to": "skill:market-data-pipeline",
+      "source_ref": "skills/market-data-pipeline/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:market-intelligence-agent",
       "to": "skill:systematic-market-sizing",
       "source_ref": "skills/systematic-market-sizing/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:market-intelligence-agent",
+      "to": "skill:value-chain-linkage-analysis",
+      "source_ref": "skills/value-chain-linkage-analysis/SKILL.md"
     },
     {
       "type": "owns",
@@ -6012,6 +7411,12 @@
       "from": "agent:partnership-agent",
       "to": "skill:partner-sourcing-strategy",
       "source_ref": "skills/partner-sourcing-strategy/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:partnership-agent",
+      "to": "skill:partnership-health-scorecard",
+      "source_ref": "skills/partnership-health-scorecard/SKILL.md"
     },
     {
       "type": "owns",
@@ -6046,6 +7451,12 @@
     {
       "type": "owns",
       "from": "agent:pm",
+      "to": "skill:delegate-to-hub",
+      "source_ref": "skills/delegate-to-hub/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:pm",
       "to": "skill:documentation-writing",
       "source_ref": "skills/documentation-writing/SKILL.md"
     },
@@ -6072,12 +7483,6 @@
       "from": "agent:pm",
       "to": "skill:gateguard",
       "source_ref": "skills/gateguard/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:pm",
-      "to": "skill:graft",
-      "source_ref": "skills/graft/SKILL.md"
     },
     {
       "type": "owns",
@@ -6226,50 +7631,8 @@
     {
       "type": "owns",
       "from": "agent:process-governance-manager",
-      "to": "skill:assumption-audit",
-      "source_ref": "skills/assumption-audit/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:company-intelligence",
-      "source_ref": "skills/company-intelligence/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:deal-execution-playbook",
-      "source_ref": "skills/deal-execution-playbook/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:forward-industry-research",
-      "source_ref": "skills/forward-industry-research/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:group-level-review",
-      "source_ref": "skills/group-level-review/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
       "to": "skill:insight-synthesis",
       "source_ref": "skills/insight-synthesis/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:legal-risk-register",
-      "source_ref": "skills/legal-risk-register/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:market-data-pipeline",
-      "source_ref": "skills/market-data-pipeline/SKILL.md"
     },
     {
       "type": "owns",
@@ -6282,12 +7645,6 @@
       "from": "agent:process-governance-manager",
       "to": "skill:rag-scoring-framework",
       "source_ref": "skills/rag-scoring-framework/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:regulatory-screening",
-      "source_ref": "skills/regulatory-screening/SKILL.md"
     },
     {
       "type": "owns",
@@ -6310,32 +7667,14 @@
     {
       "type": "owns",
       "from": "agent:process-governance-manager",
-      "to": "skill:target-costing-analysis",
-      "source_ref": "skills/target-costing-analysis/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
       "to": "skill:two-tier-approval-chain",
       "source_ref": "skills/two-tier-approval-chain/SKILL.md"
     },
     {
       "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:value-chain-driver-identification",
-      "source_ref": "skills/value-chain-driver-identification/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:value-chain-stage-financials",
-      "source_ref": "skills/value-chain-stage-financials/SKILL.md"
-    },
-    {
-      "type": "owns",
-      "from": "agent:process-governance-manager",
-      "to": "skill:waiver-management",
-      "source_ref": "skills/waiver-management/SKILL.md"
+      "from": "agent:quant-methodologist",
+      "to": "skill:k-opendata",
+      "source_ref": "skills/k-opendata/SKILL.md"
     },
     {
       "type": "owns",
@@ -6346,20 +7685,38 @@
     {
       "type": "owns",
       "from": "agent:quant-methodologist",
+      "to": "skill:target-costing-analysis",
+      "source_ref": "skills/target-costing-analysis/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:quant-methodologist",
       "to": "skill:unit-conversion-calibration",
       "source_ref": "skills/unit-conversion-calibration/SKILL.md"
     },
     {
       "type": "owns",
       "from": "agent:quant-methodologist",
-      "to": "skill:value-chain-linkage-analysis",
-      "source_ref": "skills/value-chain-linkage-analysis/SKILL.md"
+      "to": "skill:value-chain-driver-identification",
+      "source_ref": "skills/value-chain-driver-identification/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:risk-officer",
+      "to": "skill:assumption-audit",
+      "source_ref": "skills/assumption-audit/SKILL.md"
     },
     {
       "type": "owns",
       "from": "agent:risk-officer",
       "to": "skill:debt-and-contingent-liability-simulation",
       "source_ref": "skills/debt-and-contingent-liability-simulation/SKILL.md"
+    },
+    {
+      "type": "owns",
+      "from": "agent:risk-officer",
+      "to": "skill:legal-risk-register",
+      "source_ref": "skills/legal-risk-register/SKILL.md"
     },
     {
       "type": "owns",
@@ -6435,6 +7792,12 @@
     },
     {
       "type": "produces",
+      "from": "proc:brownfield-dd#12.5",
+      "to": "artifact:financing_readiness_check",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[12.5]"
+    },
+    {
+      "type": "produces",
       "from": "proc:brownfield-dd#13",
       "to": "artifact:dd_finding",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[13]"
@@ -6465,9 +7828,21 @@
     },
     {
       "type": "produces",
+      "from": "proc:brownfield-dd#3.5",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "produces",
       "from": "proc:brownfield-dd#4",
       "to": "artifact:dd_finding",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-dd#4.5",
+      "to": "artifact:capability_dd_judgement",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[4.5]"
     },
     {
       "type": "produces",
@@ -6477,9 +7852,21 @@
     },
     {
       "type": "produces",
+      "from": "proc:brownfield-dd#5.5",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[5.5]"
+    },
+    {
+      "type": "produces",
       "from": "proc:brownfield-dd#6",
       "to": "artifact:dd_finding",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-dd#6.5",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6.5]"
     },
     {
       "type": "produces",
@@ -6645,6 +8032,24 @@
     },
     {
       "type": "produces",
+      "from": "proc:brownfield-screening#2.5",
+      "to": "artifact:synergy_identification",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-screening#2.55",
+      "to": "artifact:synergy_score_recommendation",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.55]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-screening#2.6",
+      "to": "artifact:synergy_assumption_audit",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.6]"
+    },
+    {
+      "type": "produces",
       "from": "proc:brownfield-screening#3",
       "to": "artifact:preliminary_hhi_screen",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3]"
@@ -6654,6 +8059,12 @@
       "from": "proc:brownfield-screening#3.5",
       "to": "artifact:forward_industry_research",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:brownfield-screening#3.7",
+      "to": "artifact:legal_regulatory_screen",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.7]"
     },
     {
       "type": "produces",
@@ -6693,9 +8104,51 @@
     },
     {
       "type": "produces",
+      "from": "proc:brownfield-target-screening#3.5",
+      "to": "artifact:deal_shape_evaluation",
+      "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "produces",
       "from": "proc:brownfield-target-screening#4",
       "to": "artifact:gate_pass_record",
       "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:business-unit-establishment-execution#1",
+      "to": "artifact:formation_readiness_check",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[1]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:business-unit-establishment-execution#2",
+      "to": "artifact:statutory_filing_record",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[2]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:business-unit-establishment-execution#3",
+      "to": "artifact:permit_holder_check",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[3]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:business-unit-establishment-execution#3.5",
+      "to": "artifact:certification_transferability_check",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:business-unit-establishment-execution#4",
+      "to": "artifact:people_transfer_record",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:business-unit-establishment-execution#5",
+      "to": "artifact:gate_pass_record",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[5]"
     },
     {
       "type": "produces",
@@ -6789,6 +8242,30 @@
     },
     {
       "type": "produces",
+      "from": "proc:deal-structuring#4",
+      "to": "artifact:deal_structure_review",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:deal-structuring#5",
+      "to": "artifact:financing_sources_uses_plan",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:deal-structuring#6",
+      "to": "artifact:deal_structure_review",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[6]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:deal-structuring#7",
+      "to": "artifact:deal_structure_review",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[7]"
+    },
+    {
+      "type": "produces",
       "from": "proc:entity-establishment-execution#1",
       "to": "artifact:formation_readiness_check",
       "source_ref": "procedures/_shared/entity-establishment-execution/schema.yaml#steps[1]"
@@ -6834,6 +8311,12 @@
       "from": "proc:entity-ic-review#3",
       "to": "artifact:ic_memo",
       "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[3]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:entity-ic-review#3.1",
+      "to": "artifact:ic_memo",
+      "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[3.1]"
     },
     {
       "type": "produces",
@@ -6885,6 +8368,54 @@
     },
     {
       "type": "produces",
+      "from": "proc:greenfield-dd#10",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[10]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#11",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[11]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#12",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[12]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#13",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[13]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#14",
+      "to": "artifact:financing_readiness_check",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[14]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#15",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[15]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#16",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[16]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#17",
+      "to": "artifact:dd_waiver_review",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[17]"
+    },
+    {
+      "type": "produces",
       "from": "proc:greenfield-dd#2",
       "to": "artifact:dd_finding",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[2]"
@@ -6906,6 +8437,66 @@
       "from": "proc:greenfield-dd#5",
       "to": "artifact:gate_pass_record",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#6",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#7",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[7]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#8",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[8]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-dd#9",
+      "to": "artifact:dd_finding",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[9]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-execution-baseline#1",
+      "to": "artifact:capex_tranche_schedule",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[1]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-execution-baseline#2",
+      "to": "artifact:permit_certification_milestones",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[2]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-execution-baseline#3",
+      "to": "artifact:hiring_plan_baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[3]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-execution-baseline#4",
+      "to": "artifact:ramp_up_kpi_targets",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-execution-baseline#5",
+      "to": "artifact:incentive_obligation_register",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-execution-baseline#6",
+      "to": "artifact:execution_baseline_confirmation",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[6]"
     },
     {
       "type": "produces",
@@ -7041,6 +8632,24 @@
     },
     {
       "type": "produces",
+      "from": "proc:greenfield-screening#1.5",
+      "to": "artifact:synergy_identification",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.5]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-screening#1.55",
+      "to": "artifact:synergy_score_recommendation",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.55]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-screening#1.6",
+      "to": "artifact:synergy_assumption_audit",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.6]"
+    },
+    {
+      "type": "produces",
       "from": "proc:greenfield-screening#2",
       "to": "artifact:market_sizing",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2]"
@@ -7062,6 +8671,12 @@
       "from": "proc:greenfield-screening#4",
       "to": "artifact:site_candidate_scored",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[4]"
+    },
+    {
+      "type": "produces",
+      "from": "proc:greenfield-screening#4.5",
+      "to": "artifact:legal_regulatory_screen",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[4.5]"
     },
     {
       "type": "produces",
@@ -7185,6 +8800,12 @@
     },
     {
       "type": "produces",
+      "from": "proc:pmi-integration-execution#6",
+      "to": "artifact:integration_monitoring_scorecard",
+      "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[6]"
+    },
+    {
+      "type": "produces",
       "from": "proc:portfolio-venture-monitoring#1",
       "to": "artifact:portfolio_scorecard_rollup",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[1]"
@@ -7204,19 +8825,19 @@
     {
       "type": "stage_follows",
       "from": "stage.co-newbiz.S1",
-      "to": "stage.co-newbiz.S2",
-      "source_ref": "process/stages.yaml"
-    },
-    {
-      "type": "stage_follows",
-      "from": "stage.co-newbiz.S2",
       "to": "stage.co-newbiz.S3",
       "source_ref": "process/stages.yaml"
     },
     {
       "type": "stage_follows",
-      "from": "stage.co-newbiz.S3",
+      "from": "stage.co-newbiz.S2",
       "to": "stage.co-newbiz.S4",
+      "source_ref": "process/stages.yaml"
+    },
+    {
+      "type": "stage_follows",
+      "from": "stage.co-newbiz.S3",
+      "to": "stage.co-newbiz.S2",
       "source_ref": "process/stages.yaml"
     },
     {
@@ -7269,6 +8890,12 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:brownfield-dd#12.5",
+      "to": "agent:financing-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[12.5]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:brownfield-dd#13",
       "to": "agent:hr-integration-agent",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[13]"
@@ -7299,9 +8926,21 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:brownfield-dd#3.5",
+      "to": "agent:ip-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:brownfield-dd#4",
       "to": "agent:market-intelligence-agent",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-dd#4.5",
+      "to": "agent:brownfield-agent",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[4.5]"
     },
     {
       "type": "step_by_agent",
@@ -7311,9 +8950,21 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:brownfield-dd#5.5",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[5.5]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:brownfield-dd#6",
       "to": "agent:antitrust-agent",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-dd#6.5",
+      "to": "agent:region-lead",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6.5]"
     },
     {
       "type": "step_by_agent",
@@ -7342,7 +8993,7 @@
     {
       "type": "step_by_agent",
       "from": "proc:brownfield-fs-comparative#2",
-      "to": "agent:pm",
+      "to": "agent:target-selector",
       "source_ref": "procedures/_shared/brownfield-fs-comparative/schema.yaml#steps[2]"
     },
     {
@@ -7479,6 +9130,24 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:brownfield-screening#2.5",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-screening#2.55",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.55]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-screening#2.6",
+      "to": "agent:risk-officer",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.6]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:brownfield-screening#3",
       "to": "agent:antitrust-agent",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3]"
@@ -7488,6 +9157,12 @@
       "from": "proc:brownfield-screening#3.5",
       "to": "agent:market-intelligence-agent",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:brownfield-screening#3.7",
+      "to": "agent:legal-counsel",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.7]"
     },
     {
       "type": "step_by_agent",
@@ -7527,9 +9202,51 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:brownfield-target-screening#3.5",
+      "to": "agent:brownfield-agent",
+      "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:brownfield-target-screening#4",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:business-unit-establishment-execution#1",
+      "to": "agent:process-governance-manager",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:business-unit-establishment-execution#2",
+      "to": "agent:legal-counsel",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[2]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:business-unit-establishment-execution#3",
+      "to": "agent:legal-counsel",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:business-unit-establishment-execution#3.5",
+      "to": "agent:legal-counsel",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:business-unit-establishment-execution#4",
+      "to": "agent:hr-integration-agent",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:business-unit-establishment-execution#5",
+      "to": "agent:process-governance-manager",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[5]"
     },
     {
       "type": "step_by_agent",
@@ -7623,6 +9340,30 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:deal-structuring#4",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:deal-structuring#5",
+      "to": "agent:financing-agent",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:deal-structuring#6",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:deal-structuring#7",
+      "to": "agent:incentive-agent",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[7]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:entity-establishment-execution#1",
       "to": "agent:legal-counsel",
       "source_ref": "procedures/_shared/entity-establishment-execution/schema.yaml#steps[1]"
@@ -7668,6 +9409,12 @@
       "from": "proc:entity-ic-review#3",
       "to": "agent:brownfield-agent",
       "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:entity-ic-review#3.1",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[3.1]"
     },
     {
       "type": "step_by_agent",
@@ -7719,6 +9466,54 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:greenfield-dd#10",
+      "to": "agent:legal-counsel",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[10]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#11",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[11]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#12",
+      "to": "agent:hr-integration-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[12]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#13",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[13]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#14",
+      "to": "agent:financing-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[14]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#15",
+      "to": "agent:ip-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[15]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#16",
+      "to": "agent:region-lead",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[16]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#17",
+      "to": "agent:compliance-officer",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[17]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:greenfield-dd#2",
       "to": "agent:greenfield-agent",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[2]"
@@ -7740,6 +9535,66 @@
       "from": "proc:greenfield-dd#5",
       "to": "agent:process-governance-manager",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#6",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#7",
+      "to": "agent:technical-dd-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[7]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#8",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[8]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-dd#9",
+      "to": "agent:commercial-dd-agent",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[9]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-execution-baseline#1",
+      "to": "agent:financing-agent",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-execution-baseline#2",
+      "to": "agent:certification-agent",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[2]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-execution-baseline#3",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-execution-baseline#4",
+      "to": "agent:greenfield-agent",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-execution-baseline#5",
+      "to": "agent:incentive-agent",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-execution-baseline#6",
+      "to": "agent:execution-baseline-confirmer",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[6]"
     },
     {
       "type": "step_by_agent",
@@ -7840,7 +9695,7 @@
     {
       "type": "step_by_agent",
       "from": "proc:greenfield-pre-fs#3",
-      "to": "agent:greenfield-agent",
+      "to": "agent:site-facility-agent",
       "source_ref": "procedures/_shared/greenfield-pre-fs/schema.yaml#steps[3]"
     },
     {
@@ -7875,6 +9730,24 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:greenfield-screening#1.5",
+      "to": "agent:market-intelligence-agent",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.5]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-screening#1.55",
+      "to": "agent:financial-analyst",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.55]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-screening#1.6",
+      "to": "agent:risk-officer",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.6]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:greenfield-screening#2",
       "to": "agent:market-intelligence-agent",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[2]"
@@ -7888,7 +9761,7 @@
     {
       "type": "step_by_agent",
       "from": "proc:greenfield-screening#3",
-      "to": "agent:greenfield-agent",
+      "to": "agent:site-facility-agent",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[3]"
     },
     {
@@ -7896,6 +9769,12 @@
       "from": "proc:greenfield-screening#4",
       "to": "agent:greenfield-agent",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_by_agent",
+      "from": "proc:greenfield-screening#4.5",
+      "to": "agent:legal-counsel",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[4.5]"
     },
     {
       "type": "step_by_agent",
@@ -7936,7 +9815,7 @@
     {
       "type": "step_by_agent",
       "from": "proc:group-investment-review#5",
-      "to": "agent:process-governance-manager",
+      "to": "agent:group-ic-reviewer",
       "source_ref": "procedures/_shared/group-investment-review/schema.yaml#steps[5]"
     },
     {
@@ -8019,6 +9898,12 @@
     },
     {
       "type": "step_by_agent",
+      "from": "proc:pmi-integration-execution#6",
+      "to": "agent:pmi-agent",
+      "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_by_agent",
       "from": "proc:portfolio-venture-monitoring#1",
       "to": "agent:group-review-agent",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[1]"
@@ -8061,6 +9946,12 @@
     },
     {
       "type": "step_of",
+      "from": "proc:brownfield-dd#12.5",
+      "to": "proc:brownfield-dd",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:brownfield-dd#13",
       "to": "proc:brownfield-dd",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
@@ -8091,7 +9982,19 @@
     },
     {
       "type": "step_of",
+      "from": "proc:brownfield-dd#3.5",
+      "to": "proc:brownfield-dd",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:brownfield-dd#4",
+      "to": "proc:brownfield-dd",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-dd#4.5",
       "to": "proc:brownfield-dd",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
     },
@@ -8103,7 +10006,19 @@
     },
     {
       "type": "step_of",
+      "from": "proc:brownfield-dd#5.5",
+      "to": "proc:brownfield-dd",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:brownfield-dd#6",
+      "to": "proc:brownfield-dd",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-dd#6.5",
       "to": "proc:brownfield-dd",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml"
     },
@@ -8271,6 +10186,24 @@
     },
     {
       "type": "step_of",
+      "from": "proc:brownfield-screening#2.5",
+      "to": "proc:brownfield-screening",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-screening#2.55",
+      "to": "proc:brownfield-screening",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-screening#2.6",
+      "to": "proc:brownfield-screening",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:brownfield-screening#3",
       "to": "proc:brownfield-screening",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
@@ -8278,6 +10211,12 @@
     {
       "type": "step_of",
       "from": "proc:brownfield-screening#3.5",
+      "to": "proc:brownfield-screening",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:brownfield-screening#3.7",
       "to": "proc:brownfield-screening",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml"
     },
@@ -8319,9 +10258,51 @@
     },
     {
       "type": "step_of",
+      "from": "proc:brownfield-target-screening#3.5",
+      "to": "proc:brownfield-target-screening",
+      "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:brownfield-target-screening#4",
       "to": "proc:brownfield-target-screening",
       "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:business-unit-establishment-execution#1",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:business-unit-establishment-execution#2",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:business-unit-establishment-execution#3",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:business-unit-establishment-execution#3.5",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:business-unit-establishment-execution#4",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:business-unit-establishment-execution#5",
+      "to": "proc:business-unit-establishment-execution",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml"
     },
     {
       "type": "step_of",
@@ -8415,6 +10396,30 @@
     },
     {
       "type": "step_of",
+      "from": "proc:deal-structuring#4",
+      "to": "proc:deal-structuring",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:deal-structuring#5",
+      "to": "proc:deal-structuring",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:deal-structuring#6",
+      "to": "proc:deal-structuring",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:deal-structuring#7",
+      "to": "proc:deal-structuring",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:entity-establishment-execution#1",
       "to": "proc:entity-establishment-execution",
       "source_ref": "procedures/_shared/entity-establishment-execution/schema.yaml"
@@ -8458,6 +10463,12 @@
     {
       "type": "step_of",
       "from": "proc:entity-ic-review#3",
+      "to": "proc:entity-ic-review",
+      "source_ref": "procedures/_shared/entity-ic-review/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:entity-ic-review#3.1",
       "to": "proc:entity-ic-review",
       "source_ref": "procedures/_shared/entity-ic-review/schema.yaml"
     },
@@ -8511,6 +10522,54 @@
     },
     {
       "type": "step_of",
+      "from": "proc:greenfield-dd#10",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#11",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#12",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#13",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#14",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#15",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#16",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#17",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:greenfield-dd#2",
       "to": "proc:greenfield-dd",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
@@ -8532,6 +10591,66 @@
       "from": "proc:greenfield-dd#5",
       "to": "proc:greenfield-dd",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#6",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#7",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#8",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-dd#9",
+      "to": "proc:greenfield-dd",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-execution-baseline#1",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-execution-baseline#2",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-execution-baseline#3",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-execution-baseline#4",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-execution-baseline#5",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-execution-baseline#6",
+      "to": "proc:greenfield-execution-baseline",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml"
     },
     {
       "type": "step_of",
@@ -8667,6 +10786,24 @@
     },
     {
       "type": "step_of",
+      "from": "proc:greenfield-screening#1.5",
+      "to": "proc:greenfield-screening",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-screening#1.55",
+      "to": "proc:greenfield-screening",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-screening#1.6",
+      "to": "proc:greenfield-screening",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:greenfield-screening#2",
       "to": "proc:greenfield-screening",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
@@ -8686,6 +10823,12 @@
     {
       "type": "step_of",
       "from": "proc:greenfield-screening#4",
+      "to": "proc:greenfield-screening",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
+    },
+    {
+      "type": "step_of",
+      "from": "proc:greenfield-screening#4.5",
       "to": "proc:greenfield-screening",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml"
     },
@@ -8811,6 +10954,12 @@
     },
     {
       "type": "step_of",
+      "from": "proc:pmi-integration-execution#6",
+      "to": "proc:pmi-integration-execution",
+      "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml"
+    },
+    {
+      "type": "step_of",
       "from": "proc:portfolio-venture-monitoring#1",
       "to": "proc:portfolio-venture-monitoring",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml"
@@ -8853,6 +11002,12 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:brownfield-dd#12.5",
+      "to": "skill:financing-plan-review",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[12.5]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:brownfield-dd#13",
       "to": "skill:org-readiness-assessment",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[13]"
@@ -8883,9 +11038,21 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:brownfield-dd#3.5",
+      "to": "skill:ip-fto-review",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:brownfield-dd#4",
       "to": "skill:competitive-intelligence",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-dd#4.5",
+      "to": "skill:brownfield-feasibility",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[4.5]"
     },
     {
       "type": "step_uses_skill",
@@ -8895,9 +11062,21 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:brownfield-dd#5.5",
+      "to": "skill:quality-of-earnings",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[5.5]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:brownfield-dd#6",
       "to": "skill:antitrust-screening",
       "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-dd#6.5",
+      "to": "skill:regulatory-screening",
+      "source_ref": "procedures/_shared/brownfield-dd/schema.yaml#steps[6.5]"
     },
     {
       "type": "step_uses_skill",
@@ -9034,7 +11213,7 @@
     {
       "type": "step_uses_skill",
       "from": "proc:brownfield-pre-fs#3",
-      "to": "skill:permit-pathway-mapping",
+      "to": "skill:certification-transferability",
       "source_ref": "procedures/_shared/brownfield-pre-fs/schema.yaml#steps[3]"
     },
     {
@@ -9063,6 +11242,24 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:brownfield-screening#2.5",
+      "to": "skill:value-chain-linkage-analysis",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-screening#2.55",
+      "to": "skill:investment-feasibility-modeling",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.55]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-screening#2.6",
+      "to": "skill:assumption-audit",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[2.6]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:brownfield-screening#3",
       "to": "skill:antitrust-screening",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3]"
@@ -9072,6 +11269,12 @@
       "from": "proc:brownfield-screening#3.5",
       "to": "skill:forward-industry-research",
       "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:brownfield-screening#3.7",
+      "to": "skill:regulatory-screening",
+      "source_ref": "procedures/_shared/brownfield-screening/schema.yaml#steps[3.7]"
     },
     {
       "type": "step_uses_skill",
@@ -9111,9 +11314,51 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:brownfield-target-screening#3.5",
+      "to": "skill:deal-execution-playbook",
+      "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:brownfield-target-screening#4",
       "to": "skill:stage-gate-governance",
       "source_ref": "procedures/_shared/brownfield-target-screening/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:business-unit-establishment-execution#1",
+      "to": "skill:stage-gate-governance",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:business-unit-establishment-execution#2",
+      "to": "skill:k-law",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[2]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:business-unit-establishment-execution#3",
+      "to": "skill:permit-pathway-mapping",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:business-unit-establishment-execution#3.5",
+      "to": "skill:certification-transferability",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[3.5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:business-unit-establishment-execution#4",
+      "to": "skill:org-readiness-assessment",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:business-unit-establishment-execution#5",
+      "to": "skill:stage-gate-governance",
+      "source_ref": "procedures/_shared/business-unit-establishment-execution/schema.yaml#steps[5]"
     },
     {
       "type": "step_uses_skill",
@@ -9184,7 +11429,7 @@
     {
       "type": "step_uses_skill",
       "from": "proc:deal-shape-chain#6",
-      "to": "skill:project-review",
+      "to": "skill:partnership-health-scorecard",
       "source_ref": "procedures/_shared/deal-shape-chain/schema.yaml#steps[6]"
     },
     {
@@ -9204,6 +11449,30 @@
       "from": "proc:deal-structuring#3",
       "to": "skill:financing-plan-review",
       "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:deal-structuring#4",
+      "to": "skill:investment-vehicle-structuring",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:deal-structuring#5",
+      "to": "skill:financing-plan-review",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:deal-structuring#6",
+      "to": "skill:investment-feasibility-modeling",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:deal-structuring#7",
+      "to": "skill:regional-incentive-sourcing",
+      "source_ref": "procedures/_shared/deal-structuring/schema.yaml#steps[7]"
     },
     {
       "type": "step_uses_skill",
@@ -9255,6 +11524,12 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:entity-ic-review#3.1",
+      "to": "skill:dd-to-valuation-bridge",
+      "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[3.1]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:entity-ic-review#4",
       "to": "skill:financing-plan-review",
       "source_ref": "procedures/_shared/entity-ic-review/schema.yaml#steps[4]"
@@ -9303,6 +11578,54 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#10",
+      "to": "skill:legal-due-diligence",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[10]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#11",
+      "to": "skill:historical-financial-analysis",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[11]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#12",
+      "to": "skill:org-readiness-assessment",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[12]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#13",
+      "to": "skill:competitive-intelligence",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[13]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#14",
+      "to": "skill:financing-plan-review",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[14]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#15",
+      "to": "skill:ip-fto-review",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[15]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#16",
+      "to": "skill:regulatory-screening",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[16]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#17",
+      "to": "skill:waiver-management",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[17]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:greenfield-dd#2",
       "to": "skill:talent-pipeline-planning",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[2]"
@@ -9324,6 +11647,66 @@
       "from": "proc:greenfield-dd#5",
       "to": "skill:stage-gate-governance",
       "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#6",
+      "to": "skill:org-readiness-assessment",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#7",
+      "to": "skill:technical-due-diligence",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[7]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#8",
+      "to": "skill:org-readiness-assessment",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[8]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-dd#9",
+      "to": "skill:commercial-due-diligence",
+      "source_ref": "procedures/_shared/greenfield-dd/schema.yaml#steps[9]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-execution-baseline#1",
+      "to": "skill:financing-plan-review",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-execution-baseline#2",
+      "to": "skill:certification-roadmap",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[2]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-execution-baseline#3",
+      "to": "skill:talent-pipeline-planning",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[3]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-execution-baseline#4",
+      "to": "skill:greenfield-feasibility",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-execution-baseline#5",
+      "to": "skill:incentive-clawback-assessment",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-execution-baseline#6",
+      "to": "skill:stage-gate-governance",
+      "source_ref": "procedures/_shared/greenfield-execution-baseline/schema.yaml#steps[6]"
     },
     {
       "type": "step_uses_skill",
@@ -9436,7 +11819,7 @@
     {
       "type": "step_uses_skill",
       "from": "proc:greenfield-pre-fs#5",
-      "to": "skill:permit-pathway-mapping",
+      "to": "skill:certification-transferability",
       "source_ref": "procedures/_shared/greenfield-pre-fs/schema.yaml#steps[5]"
     },
     {
@@ -9456,6 +11839,24 @@
       "from": "proc:greenfield-screening#1",
       "to": "skill:strategic-fit-screening",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-screening#1.5",
+      "to": "skill:value-chain-linkage-analysis",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.5]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-screening#1.55",
+      "to": "skill:investment-feasibility-modeling",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.55]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-screening#1.6",
+      "to": "skill:assumption-audit",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[1.6]"
     },
     {
       "type": "step_uses_skill",
@@ -9480,6 +11881,12 @@
       "from": "proc:greenfield-screening#4",
       "to": "skill:regional-incentive-sourcing",
       "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[4]"
+    },
+    {
+      "type": "step_uses_skill",
+      "from": "proc:greenfield-screening#4.5",
+      "to": "skill:regulatory-screening",
+      "source_ref": "procedures/_shared/greenfield-screening/schema.yaml#steps[4.5]"
     },
     {
       "type": "step_uses_skill",
@@ -9532,7 +11939,7 @@
     {
       "type": "step_uses_skill",
       "from": "proc:jv-lifecycle-governance#2",
-      "to": "skill:project-review",
+      "to": "skill:partnership-health-scorecard",
       "source_ref": "procedures/_shared/jv-lifecycle-governance/schema.yaml#steps[2]"
     },
     {
@@ -9603,6 +12010,12 @@
     },
     {
       "type": "step_uses_skill",
+      "from": "proc:pmi-integration-execution#6",
+      "to": "skill:pmi-planning",
+      "source_ref": "procedures/_shared/pmi-integration-execution/schema.yaml#steps[6]"
+    },
+    {
+      "type": "step_uses_skill",
       "from": "proc:portfolio-venture-monitoring#1",
       "to": "skill:portfolio-fit-assessment",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[1]"
@@ -9610,7 +12023,7 @@
     {
       "type": "step_uses_skill",
       "from": "proc:portfolio-venture-monitoring#2",
-      "to": "skill:project-review",
+      "to": "skill:portfolio-fit-assessment",
       "source_ref": "procedures/_shared/portfolio-venture-monitoring/schema.yaml#steps[2]"
     },
     {

@@ -5,7 +5,7 @@
 // this projection mirrors the spec.)
 import type { SpecStage } from "./spec-activities.ts";
 
-export const SPEC_VERSION = "2.19.0";
+export const SPEC_VERSION = "2.20.0";
 export const SPEC_STAGES: SpecStage[] = [
   {
     "id": "S1",
@@ -210,16 +210,6 @@ export const SPEC_STAGES: SpecStage[] = [
         ]
       },
       {
-        "id": "deal-shape-evaluation",
-        "agent": "brownfield-agent",
-        "skills": [
-          "deal-execution-playbook"
-        ],
-        "procedure": [
-          "brownfield-pre-fs"
-        ]
-      },
-      {
         "id": "route-advisory",
         "agent": "pm",
         "skills": [],
@@ -376,6 +366,16 @@ export const SPEC_STAGES: SpecStage[] = [
           "strategic-fit-screening",
           "brownfield-feasibility",
           "peer-benchmarking"
+        ],
+        "procedure": [
+          "brownfield-target-screening"
+        ]
+      },
+      {
+        "id": "deal-shape-evaluation",
+        "agent": "brownfield-agent",
+        "skills": [
+          "deal-execution-playbook"
         ],
         "procedure": [
           "brownfield-target-screening"

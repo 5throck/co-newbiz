@@ -4,12 +4,25 @@
 //
 // Nothing here changes a criterion's condition, action or predicate. It only decides WHEN a criterion is
 // asked of a human and guarantees that a deferral is never a drop (design 2026-11-07, sections 3 and 4).
-import { FLOW_STAGE_IDS, OPEN_MONITORING, stageIndex } from "../../../packages/core-scoring/src/kill-criteria.ts";
+import {
+  FLOW_STAGE_IDS,
+  OPEN_MONITORING,
+  procedureTrackOf,
+  stageIndex,
+} from "../../../packages/core-scoring/src/kill-criteria.ts";
 
 export { OPEN_MONITORING };
 
 /** The gate ladder (flow.spec gates, in order). `reevaluate_at <= G` is an index comparison on this list. */
-export const GATE_ORDER: readonly string[] = ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"];
+export const GATE_ORDER: readonly string[] = [
+  "screening",
+  "pre_fs",
+  "target_screening",
+  "fs",
+  "dd",
+  "entity_ic",
+  "group_ic",
+];
 
 export function gateIndex(gate: string): number {
   return GATE_ORDER.indexOf(gate);
@@ -17,7 +30,13 @@ export function gateIndex(gate: string): number {
 
 /** Last stage hosting each gate (flow.spec `gates:` of stages); the fallback current stage when the process engine cannot say. */
 export const GATE_LAST_STAGE: Readonly<Record<string, string>> = {
-  screening: "S4", pre_fs: "S6", target_screening: "S7", fs: "S8", dd: "S9", entity_ic: "S11", group_ic: "S11",
+  screening: "S4",
+  pre_fs: "S6",
+  target_screening: "S7",
+  fs: "S8",
+  dd: "S9",
+  entity_ic: "S11",
+  group_ic: "S11",
 };
 
 /**
@@ -27,7 +46,13 @@ export const GATE_LAST_STAGE: Readonly<Record<string, string>> = {
  * therefore still reads the entity's real stage.
  */
 export const GATE_FIRST_STAGE: Readonly<Record<string, string>> = {
-  screening: "S1", pre_fs: "S4", target_screening: "S7", fs: "S8", dd: "S9", entity_ic: "S11", group_ic: "S11",
+  screening: "S1",
+  pre_fs: "S4",
+  target_screening: "S7",
+  fs: "S8",
+  dd: "S9",
+  entity_ic: "S11",
+  group_ic: "S11",
 };
 
 /** Opportunity carriers end at S7 (ADR-0094); evaluateProcess can read S8 for a finished, unpromoted opportunity. */
@@ -39,9 +64,20 @@ export function laterStage(a: string, b: string): string {
 
 /** The track a procedure belongs to (`greenfield-*` / `brownfield-*`), or null for track-neutral procedures. */
 export function procedureTrack(procedure: string): "greenfield" | "brownfield" | null {
-  if (procedure.startsWith("greenfield-")) return "greenfield";
-  if (procedure.startsWith("brownfield-")) return "brownfield";
-  return null;
+  return procedureTrackOf(procedure);
+}
+
+/**
+ * The track a CRITERION belongs to (deal-shape-to-S7 ruling R-1): the registry entry's optional `track` field when
+ * present, else its procedure's track. Scoping is per criterion because a track-neutral procedure can carry both a
+ * brownfield-only criterion (deal-shape-chain #9) and track-neutral ones (#10/#11, project-scoped partner DD).
+ */
+export function criterionTrack(
+  procedure: string,
+  entry?: { track?: string } | null,
+): "greenfield" | "brownfield" | null {
+  if (entry?.track === "greenfield" || entry?.track === "brownfield") return entry.track;
+  return procedureTrack(procedure);
 }
 
 export type KillClass = "triggered" | "out_of_track" | "not_reached" | "false" | "unassessed";
@@ -71,13 +107,15 @@ export function classifyKill(input: {
   track: string | null;
   reevaluate_at?: string;
   gate?: string;
+  /** The registry entry's optional `track` field (criterionTrack); absent = follow the procedure. */
+  entry_track?: string;
 }): { cls: KillClass; partial_input: boolean } {
   const early =
     (input.evaluable_from !== undefined && stageIndex(input.evaluable_from) > stageIndex(input.current_stage)) ||
     deferredToLaterGate(input.reevaluate_at, input.gate);
   // Rule 3: triggered always wins, even when the stage says the input cannot be complete yet (C-5: partial_input).
   if (input.outcome === "triggered") return { cls: "triggered", partial_input: early };
-  const t = procedureTrack(input.procedure);
+  const t = criterionTrack(input.procedure, { track: input.entry_track });
   if (input.track !== null && t !== null && t !== input.track) return { cls: "out_of_track", partial_input: false };
   if (early) return { cls: "not_reached", partial_input: false };
   return { cls: input.outcome, partial_input: false };
@@ -107,6 +145,8 @@ export interface CarrySource {
 export interface RegistryScope {
   evaluable_from?: string;
   reevaluate_at?: string;
+  /** Optional per-criterion track scope (criterionTrack). */
+  track?: string;
 }
 
 export interface OpenCarry {
@@ -136,7 +176,9 @@ export function deriveOpenCarries(
   sources: readonly CarrySource[],
   entryScope: (key: string) => RegistryScope | null,
 ): OpenCarry[] {
-  const ordered = [...sources].sort((a, b) => (a.decided_at < b.decided_at ? -1 : a.decided_at > b.decided_at ? 1 : a.decision_id < b.decision_id ? -1 : 1));
+  const ordered = [...sources].sort((a, b) =>
+    a.decided_at < b.decided_at ? -1 : a.decided_at > b.decided_at ? 1 : a.decision_id < b.decision_id ? -1 : 1,
+  );
   const state = new Map<string, OpenCarry & { closed: boolean }>();
   const open = (c: OpenCarry) => state.set(c.key, { ...c, closed: false });
   for (const d of ordered) {
@@ -147,20 +189,38 @@ export function deriveOpenCarries(
     for (const c of kill.carried_in ?? []) {
       const cur = state.get(c.key);
       if (!cur) continue;
-      const closed = (c.closure === "evaluated" && (c.outcome === "false" || c.outcome === "triggered")) || c.closure === "out_of_track";
+      const closed =
+        (c.closure === "evaluated" && (c.outcome === "false" || c.outcome === "triggered")) ||
+        c.closure === "out_of_track";
       if (closed) cur.closed = true;
     }
     // 2. new carries
     if ((d.schema_version ?? 1) >= 2) {
-      for (const n of kill.not_reached ?? []) open({ key: n.key, evaluable_from: n.evaluable_from, reevaluate_at: n.reevaluate_at, from_decision_id: d.decision_id, implicit: false });
+      for (const n of kill.not_reached ?? [])
+        open({
+          key: n.key,
+          evaluable_from: n.evaluable_from,
+          reevaluate_at: n.reevaluate_at,
+          from_decision_id: d.decision_id,
+          implicit: false,
+        });
     } else if (d.decision === "go") {
       for (const u of kill.unassessed ?? []) {
         const scope = entryScope(u.key);
         const nominal = GATE_LAST_STAGE[d.gate];
         if (!scope?.evaluable_from || !scope.reevaluate_at || !nominal) continue;
         // Not yet evaluable at the decision's stage, or deferred by the registry to a later gate (ADR-0193 14.2): the legacy ack closed nothing.
-        if (stageIndex(scope.evaluable_from) > stageIndex(nominal) || deferredToLaterGate(scope.reevaluate_at, d.gate)) {
-          open({ key: u.key, evaluable_from: scope.evaluable_from, reevaluate_at: scope.reevaluate_at, from_decision_id: d.decision_id, implicit: true });
+        if (
+          stageIndex(scope.evaluable_from) > stageIndex(nominal) ||
+          deferredToLaterGate(scope.reevaluate_at, d.gate)
+        ) {
+          open({
+            key: u.key,
+            evaluable_from: scope.evaluable_from,
+            reevaluate_at: scope.reevaluate_at,
+            from_decision_id: d.decision_id,
+            implicit: true,
+          });
         }
       }
     }

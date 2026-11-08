@@ -5246,68 +5246,6 @@
         "toKnowledgeNotSubstitutable": "1=substitutable to 3=tacit knowledge, not substitutable",
         "verifiedToAndRegulationUncertain": "1=demand verified to 3=demand and regulation uncertain"
       },
-      "dealShapePanel": {
-        "title": "Deal-shape evaluation",
-        "lead": "A person records, for each external-combination entry shape, whether it is viable. The recorded evaluations are the evidence for kill criterion #9 (no viable deal shape).",
-        "noAiPrefill": "This panel does not pre-fill any AI suggestion. The form starts empty, and only evaluations a person judged are recorded.",
-        "statusUnassessed": "No evaluation has been recorded yet — kill criterion #9 stays unassessed",
-        "statusTriggered": "None of the recorded shapes is viable — kill criterion #9 applies (shown as conditional).",
-        "statusViable": "{count} viable shapes (of {evaluated} evaluated, {total} in total)",
-        "tableLabel": "Evaluation per deal shape",
-        "tableCaption": "Current recorded evaluation per deal shape: verdict, intent, rationale, who recorded it and when",
-        "colShape": "Deal shape",
-        "colVerdict": "Verdict",
-        "colIntent": "Intent",
-        "colRationale": "Rationale",
-        "colRecordedBy": "Recorded",
-        "colActions": "Actions",
-        "verdictViable": "Viable",
-        "verdictNotViable": "Not viable",
-        "verdictUnevaluated": "Not evaluated",
-        "noRecordYet": "No record yet",
-        "evidenceRef": "Evidence: {ref}",
-        "recordedBy": "{who} · {when}",
-        "edit": "Edit",
-        "editAria": "Edit the {shape} evaluation",
-        "editLoadedNote": "Your earlier recorded evaluation is loaded. Saving keeps the previous one in the history, and the new one becomes the current evaluation of this shape.",
-        "historySummary": "Evaluation history ({count})",
-        "superseded": "superseded by a newer evaluation",
-        "formLabel": "Record a deal-shape evaluation",
-        "formLegend": "Record an evaluation",
-        "fieldShape": "Deal shape",
-        "fieldIntent": "Intent",
-        "fieldViable": "Viability",
-        "fieldRationale": "Rationale (required, up to {max} characters)",
-        "fieldEvidence": "Evidence reference (optional)",
-        "record": "Record evaluation",
-        "recording": "Recording…",
-        "recorded": "Evaluation recorded.",
-        "readOnly": "Only the analyst role can record evaluations. This panel is read-only for you.",
-        "problem": {
-          "shape": "Choose a deal shape.",
-          "intent": "Choose an intent.",
-          "viable": "Choose viable or not viable.",
-          "rationale": "A rationale is required to record.",
-          "rationaleTooLong": "Shorten the rationale to {max} characters or fewer.",
-          "evidenceTooLong": "Shorten the evidence reference to {max} characters or fewer."
-        },
-        "loadError": {
-          "viewer": "You do not have permission to view evaluations.",
-          "admin": "The admin role cannot view business content. Check with an account that has project access.",
-          "notFound": "This opportunity was not found.",
-          "other": "Could not load the deal-shape evaluations. Refresh and try again."
-        },
-        "serverError": {
-          "viewer": "Only the analyst role can record evaluations.",
-          "admin": "The admin role cannot record evaluations.",
-          "notFound": "This opportunity was not found.",
-          "other": "Could not record the evaluation. Try again shortly."
-        },
-        "shape": {
-          "license_in": "License-in",
-          "co_development": "Co-development"
-        }
-      },
       "decisionTab": {
         "allMonths": "All months",
         "allYears": "All years",
@@ -6189,6 +6127,69 @@
         "minimumCandidateCount": "Minimum candidate count",
         "referenceNotAForcedFormula": "Reference (not a forced formula): among S3 required capabilities, not-held",
         "saveTargetMarket": "Save target market"
+      },
+      "dealShapePanel": {
+        "title": "Deal-shape evaluation",
+        "lead": "Once the short list is set, a person judges whether each way of entering through an external combination is viable and records it. The recorded evaluations are the basis of kill criterion #9 (no viable deal shape).",
+        "noAiPrefill": "This panel does not pre-fill any AI suggestion. The form starts empty, and only evaluations a person judged are recorded.",
+        "statusUnassessed": "No evaluation has been recorded yet — kill criterion #9 stays unassessed",
+        "statusTriggered": "None of the recorded shapes is viable — kill criterion #9 applies (shown as conditional).",
+        "statusViable": "{count} viable shapes (of {evaluated} evaluated, {total} in total)",
+        "tableLabel": "Evaluation per deal shape",
+        "tableCaption": "Current recorded evaluation per deal shape: verdict, intent, rationale, who recorded it and when",
+        "colShape": "Deal shape",
+        "colVerdict": "Verdict",
+        "colIntent": "Intent",
+        "colRationale": "Rationale",
+        "colRecordedBy": "Recorded",
+        "colActions": "Actions",
+        "verdictViable": "Viable",
+        "verdictNotViable": "Not viable",
+        "verdictUnevaluated": "Not evaluated",
+        "noRecordYet": "No record yet",
+        "evidenceRef": "Evidence: {ref}",
+        "recordedBy": "{who} · {when}",
+        "edit": "Edit",
+        "editAria": "Edit the {shape} evaluation",
+        "editLoadedNote": "Your earlier recorded evaluation is loaded. Saving keeps the previous one in the history, and the new one becomes the current evaluation of this shape.",
+        "historySummary": "Evaluation history ({count})",
+        "superseded": "superseded by a newer evaluation",
+        "formLabel": "Record a deal-shape evaluation",
+        "formLegend": "Record an evaluation",
+        "fieldShape": "Deal shape",
+        "fieldIntent": "Intent",
+        "fieldViable": "Viability",
+        "fieldRationale": "Rationale (required, up to {max} characters)",
+        "fieldEvidence": "Evidence reference (optional)",
+        "record": "Record evaluation",
+        "recording": "Recording…",
+        "recorded": "Evaluation recorded.",
+        "readOnly": "Only the analyst role can record evaluations. This panel is read-only for you.",
+        "problem": {
+          "shape": "Choose a deal shape.",
+          "intent": "Choose an intent.",
+          "viable": "Choose viable or not viable.",
+          "rationale": "A rationale is required to record.",
+          "rationaleTooLong": "Shorten the rationale to {max} characters or fewer.",
+          "evidenceTooLong": "Shorten the evidence reference to {max} characters or fewer."
+        },
+        "loadError": {
+          "viewer": "You do not have permission to view evaluations.",
+          "admin": "The admin role cannot view business content. Check with an account that has project access.",
+          "notFound": "This opportunity was not found.",
+          "other": "Could not load the deal-shape evaluations. Refresh and try again."
+        },
+        "serverError": {
+          "viewer": "Only the analyst role can record evaluations.",
+          "admin": "The admin role cannot record evaluations.",
+          "notFound": "This opportunity was not found.",
+          "other": "Could not record the evaluation. Try again shortly.",
+          "notOpen": "Deal-shape evaluations can only be recorded for a brownfield (M&A) opportunity that has reached target selection (S7)."
+        },
+        "shape": {
+          "license_in": "License-in",
+          "co_development": "Co-development"
+        }
       }
     },
     "s8": {

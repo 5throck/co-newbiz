@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.10.0
+// @version 1.11.0
 /**
  * Procedure Schema Validator — co-newbiz
  *
@@ -56,6 +56,10 @@
  *       checked by scripts/co-newbiz/graph-map.ts --check, which sees the
  *       registry-consistency direction that per-file validation cannot.
  *
+ * Since 1.11.0 (deal-shape-to-S7 ruling R-1, 2026-11-08): the kill-criteria pass also accepts
+ * an optional per-criterion `track` field (greenfield | brownfield) and rejects an unknown value
+ * or one that contradicts a track-prefixed procedure (checkTrackField, packages/core-scoring).
+ *
  * Since 1.10.0 (ADR-0193, kill-criteria stage scoping — PR-A): the kill-criteria pass
  * also requires `evaluable_from` (flow stage S1-S12) and `reevaluate_at` (ONE gate id,
  * or `open_monitoring` for S12) on every registry entry, rejects compound `reevaluate_at`
@@ -97,7 +101,7 @@ import { resolveProcedure } from "../scripts/co-newbiz/proc-resolve.ts";
 import { parsePredicate } from "../db/lib/predicate.ts";
 import { collectPredicateVars } from "../db/lib/applies-when.ts";
 import { KILL_VAR_MIN_STAGE } from "../db/lib/kill-var-stages.ts";
-import { checkReevaluateBinding, checkStageScopingFields, flowShapeFromSpec, type FlowShape } from "../packages/core-scoring/src/kill-criteria.ts";
+import { checkReevaluateBinding, checkStageScopingFields, checkTrackField, flowShapeFromSpec, type FlowShape } from "../packages/core-scoring/src/kill-criteria.ts";
 
 const ROOT = resolve(import.meta.dirname);
 const PROJECT_ROOT = resolve(ROOT, "..");
@@ -973,6 +977,7 @@ interface RegistryEntry {
   evaluable_from?: unknown;
   reevaluate_at?: unknown;
   evaluable_from_evidence?: unknown;
+  track?: unknown;
 }
 
 interface KillCriteriaStats {
@@ -1111,7 +1116,11 @@ async function validateKillCriteria(
       reevaluate_at: entry.reevaluate_at as string | undefined,
       evaluable_from_evidence: entry.evaluable_from_evidence as string | undefined,
     };
-    const problems = [...checkStageScopingFields(scoping, vars, KILL_VAR_MIN_STAGE), ...(flow ? checkReevaluateBinding(scoping, flow) : [])];
+    const problems = [
+      ...checkStageScopingFields(scoping, vars, KILL_VAR_MIN_STAGE),
+      ...(flow ? checkReevaluateBinding(scoping, flow) : []),
+      ...checkTrackField(entry, typeof entry.procedure === "string" ? entry.procedure : ""),
+    ];
     for (const message of problems) {
       issues.push({ file, message: `stage scoping (ADR-0193): ${message}`, severity: "error" });
     }

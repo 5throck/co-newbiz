@@ -13,7 +13,7 @@
   "policy_id": "gd-0024-class-c-decisions",
   "thresholds_source": "docs/decisions/2026-08-24-evidence-source-backlog-disposition.md (round 4) + ADR-0060 row wording; surfaces via migration 0031 — threshold by criterion wording (ADR-0060)",
   "notes": "Design section A.4 [rbd 2.2]: partner financial distress such that the partner cannot survive the alliance horizon INCLUDING the exit tail (post-exit obligations, wind-down costs). Declared in YAML, not yet executable — predicate null by design until the thresholds meeting (ADR-0052 open questions; activation convention per ADR-0057). Classification (ADR-0060): class (iii) — no snapshot var; proposed: partner.financial_distress (form TBD) — 'red finding in machine-readable form' is itself the pending item. ADR-0067 arms this: partner.financial_distress_red_count >= 1 halts — the machine-readable red form is a partner_dd_finding row at severity='red' (workstream='financial_distress').",
-  "evaluable_from": "S5",
+  "evaluable_from": "S8",
   "reevaluate_at": "fs",
-  "evaluable_from_evidence": "partner.financial_distress_red_count; partner DD needs a named partner after the S4 shape (Q3 = S5); project-scoped source (partner_dd_finding.project_id NOT NULL); listed at pre_fs but deferred to fs, the first project gate - no opportunity source, no proxy (ADR-0193 §14.2)"
+  "evaluable_from_evidence": "partner.financial_distress_red_count; partner DD needs a named partner after the shape evaluation (S7, Short List; the shape evaluation moved from S4 on 2026-11-08, so evaluable_from moved S5 -> S8 with the project-scoped partner source); project-scoped source (partner_dd_finding.project_id NOT NULL); listed at pre_fs (flow.spec 2.20.0) but deferred to fs, the first project gate - no opportunity source, no proxy (ADR-0193 §14.2)"
 }

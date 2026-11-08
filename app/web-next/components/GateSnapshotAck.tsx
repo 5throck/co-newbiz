@@ -265,7 +265,6 @@ export function GateSnapshotSummary({
 }) {
   const t = useTranslations("components.gateSnapshot");
   const ti = useTranslations("components.gateIntegrity");
-  const tw = useTranslations("components.waccStatus");
   const kc = useKillCriteriaLabels();
   const k = snapshot.kill;
   const rag = snapshot.rag;
@@ -453,7 +452,7 @@ export function GateAckBlock({
   dealId,
 }: {
   projectId?: string;
-  /** Opportunity or project id of the deal (route id of /deals/[id]); enables the link from the #9 row to the S4 deal-shape panel and from the #5 row to the S5 site-announcement panel. */
+  /** Opportunity or project id of the deal (route id of /deals/[id]); enables the link from the #9 row to the S7 deal-shape panel and from the #5 row to the S5 site-announcement panel. */
   dealId?: string;
   snapshot: GateSnapshotView;
   state: AckState;
@@ -657,7 +656,7 @@ export function GateAckBlock({
                           {r.key === DEAL_SHAPE_KILL_KEY && dealId && (
                             <Link
                               className="block underline"
-                              href={`/deals/${encodeURIComponent(dealId)}/s4#${DEAL_SHAPE_PANEL_ID}`}
+                              href={`/deals/${encodeURIComponent(dealId)}/s7#${DEAL_SHAPE_PANEL_ID}`}
                               data-testid="deal-shape-link"
                             >
                               {t("dealShapeLink")} →

@@ -22,6 +22,7 @@ output_types:
   target_screening_result: "BF target screening S7 — per-candidate chk-target-screening verdict (knock-out + rated score) (ADR-0081)"
   target_regulatory_screen: "BF target screening — ownership/regulatory/geographic knock-out screen against chk-target-screening t-01..t-03 (ADR-0081)"
   target_ranking: "BF target screening — rated scorecard ranking (t-06..t-09) producing the Target Ranking/Score (ADR-0081)"
+  deal_shape_evaluation: "BF target screening S7 — human-recorded viable external-combination deal shapes with intent and rationale (opportunity_deal_shape_evaluation; feeds kill criterion no_viable_deal_shape)"
   capability_gap_assessment: "GF capability assessment — required-vs-owned capability gap table with severity (ADR-0076 S5)"
   entry_strategy: "GF capability assessment — Build/Partner/Hire/Invest entry-strategy decision with alternatives (ADR-0076 S5)"
   business_case_lines: "GF capability assessment — cost/revenue Business Case lines feeding S8 (ADR-0076 S5)"

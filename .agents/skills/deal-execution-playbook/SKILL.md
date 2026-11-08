@@ -5,9 +5,9 @@ owner: brownfield-agent
 lifecycle:
   phase: draft
 status: experimental
-version: "1.1.0"
+version: "1.2.0"
 description: >
-  Implements the route-strategy and deal-shape-evaluation activities (S6): turning the selected route and deal shape into an execution sequence of counterparties, approvals and dependencies. Does not structure a JV (jv-structuring) or source partners (partner-sourcing-strategy).
+  Implements the route-strategy (S4) and deal-shape-evaluation (S7) activities: turning the selected route and deal shape into an execution sequence of counterparties, approvals and dependencies. Does not structure a JV (jv-structuring) or source partners (partner-sourcing-strategy).
   Use when: "deal execution", "closing steps", "execution playbook", "deal shape evaluation".
 metadata:
   triggers:
@@ -15,11 +15,13 @@ metadata:
     - closing steps
     - execution playbook
     - deal shape evaluation
+  procedure_keys:
+    - brownfield-target-screening
 ---
 
 # deal-execution-playbook
 
-Owned by `brownfield-agent`. Referenced from: route-strategy and deal-shape-evaluation activities in `process/flow.spec.yaml`; `deal-shape-chain`.
+Owned by `brownfield-agent`. Referenced from: the route-strategy (S4) and deal-shape-evaluation (S7) activities in `process/flow.spec.yaml`; `deal-shape-chain`; `brownfield-target-screening` (step 3.5).
 
 The owning procedure is authoritative for what happens and when; this skill carries only how to do the work and never restates procedure steps.
 
