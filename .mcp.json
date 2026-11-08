@@ -1,16 +1,5 @@
 {
   "mcpServers": {
-    "co-newbiz": {
-      "command": "bun",
-      "args": [
-        "run",
-        "--env-file",
-        ".env",
-        "./mcp/co-newbiz/index.ts"
-      ],
-      "env": {},
-      "timeout": 300000
-    },
     "trail": {
       "command": "trail",
       "args": [
