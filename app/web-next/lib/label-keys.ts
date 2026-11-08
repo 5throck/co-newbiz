@@ -233,6 +233,9 @@ export const SUB_TRACK_KEY: Record<string, string> = {
   corporate_venture: "common.subTrack.corporate_venture",
 };
 
+/** Route (sub-track) code -> `common.subTrack.*` catalog key; an unknown code falls back to the raw code. */
+export const subTrackLabelKey = (code: string): string => SUB_TRACK_KEY[code] ?? code;
+
 /** Undecided track wording (process page / deal page). */
 export const TRACK_UNDECIDED_KEY = "common.trackUndecided";
 
