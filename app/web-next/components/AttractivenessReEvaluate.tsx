@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "../lib/api.ts";
+import { type AttractivenessStatus, canReEvaluateAttractiveness } from "../lib/attractiveness-reevaluate.ts";
 
 interface AttractivenessReco {
   recommendation: {
@@ -22,8 +23,6 @@ interface AttractivenessReco {
     cautions?: string[];
   };
 }
-
-export type AttractivenessStatus = "identified" | "assessed" | "selected" | "dropped";
 
 const DEFAULT_INPUT_ID = "opp-score-input";
 
@@ -35,23 +34,6 @@ export function attractivenessEditorId(inputId: string = DEFAULT_INPUT_ID): stri
 /** 재평가 토글 id — 닫을 때 포커스를 되돌리는 대상. */
 export function attractivenessToggleId(inputId: string = DEFAULT_INPUT_ID): string {
   return `${inputId}-toggle`;
-}
-
-/**
- * 이 기회에 재평가 토글을 보여줄지 — 쓰기 권한이 있고 (a) 평가(assessed) 상태이거나
- * (b) 선택(selected) 상태이되 S4 진출방식 결정이 아직 확정되지 않았고 프로젝트로 승격되지
- * 않았을 때(2026-11-08 소유자 결정). 선택 후 S4 확정·승격, 그리고 dropped는 숨긴다.
- * 재채점된 selected 기회는 S4 진출방식 추천의 입력을 바꾸므로 S4 확정 전까지만 허용한다.
- * s4Confirmed = 현재 확정 결정(route_decision.is_current=1, ADR-0135) — API의 route_confirmed.
- */
-export function canReEvaluateAttractiveness(
-  status: AttractivenessStatus,
-  canAct: boolean,
-  ctx: { s4Confirmed?: boolean; hasProject?: boolean } = {},
-): boolean {
-  if (!canAct) return false;
-  if (status === "assessed") return true;
-  return status === "selected" && !ctx.s4Confirmed && !ctx.hasProject;
 }
 
 export function AttractivenessReEvaluateToggle({
