@@ -20,15 +20,28 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
-  CallToolRequestSchema, ErrorCode, GetPromptRequestSchema, ListPromptsRequestSchema, ListResourcesRequestSchema,
-  ListResourceTemplatesRequestSchema, ListToolsRequestSchema, McpError, ReadResourceRequestSchema,
+  CallToolRequestSchema,
+  ErrorCode,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ListToolsRequestSchema,
+  McpError,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { ToolDefinition } from "./shared/types.ts";
 import { MCPValidationError } from "./shared/errors.ts";
 import {
-  MCPScopeError, defineTool, optString, requiredString,
-  type McpTransportKind, type RegistryTool, type ToolContext, type ToolScope,
+  MCPScopeError,
+  defineTool,
+  optString,
+  requiredString,
+  type McpTransportKind,
+  type RegistryTool,
+  type ToolContext,
+  type ToolScope,
 } from "./define.ts";
 import { STAGE_TOOLS } from "./tools/stage-tools.ts";
 import { DECISION_TOOLS } from "./tools/decision-tools.ts";
@@ -48,15 +61,23 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "search_interpretations",
     description: "Search the governance interpretation registry.",
-    scope: "read", kind: "read", stageActivities: [],
-    inputSchema: { type: "object", properties: { doc: { type: "string" }, clause: { type: "string" }, q: { type: "string" } } },
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
+    inputSchema: {
+      type: "object",
+      properties: { doc: { type: "string" }, clause: { type: "string" }, q: { type: "string" } },
+    },
     args: z.object({ doc: optString, clause: optString, q: optString }),
     handler: (ctx, a) => searchInterpretations(ctx.port, a),
   }),
   defineTool({
     name: "get_procedure",
-    description: "Merged shared/region/entity procedure result (proc:resolve equivalent), with per-step source attribution.",
-    scope: "read", kind: "read", stageActivities: [],
+    description:
+      "Merged shared/region/entity procedure result (proc:resolve equivalent), with per-step source attribution.",
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: {
       type: "object",
       properties: { procedure: { type: "string" }, entity: { type: "string" }, region: { type: "string" } },
@@ -68,7 +89,9 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "lookup_term",
     description: "Glossary term lookup — the same source that backs the web UI's tooltip.",
-    scope: "read", kind: "read", stageActivities: [],
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: { type: "object", properties: { term: { type: "string" } }, required: ["term"] },
     args: z.object({ term: requiredString }),
     handler: (ctx, a) => lookupTerm(ctx.port, a.term),
@@ -76,31 +99,45 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "list_notifications",
     description: "The caller's pending and recent notifications.",
-    scope: "read", kind: "read", stageActivities: [],
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: { type: "object", properties: {} },
     args: z.object({}),
     handler: (ctx) => listNotifications(ctx.port),
   }),
   defineTool({
     name: "get_pipeline_status",
-    description: "Pipeline status for an opportunity (read-only, ADR-0102) — active run status, current stage, paused reason, and deep link to the pending human action screen.",
-    scope: "read", kind: "read", stageActivities: [],
+    description:
+      "Pipeline status for an opportunity (read-only, ADR-0102) — active run status, current stage, paused reason, and deep link to the pending human action screen.",
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
     args: z.object({ opportunityId: requiredString }),
     handler: (ctx, a) => getPipelineStatus(ctx.port, a.opportunityId),
   }),
   defineTool({
     name: "search_series",
-    description: "Distinct market/industry series catalog derived from fact_market_observation, with observation counts and period coverage.",
-    scope: "read", kind: "read", stageActivities: ["market-research"],
-    inputSchema: { type: "object", properties: { q: { type: "string", description: "Optional substring filter on series_id." } } },
+    description:
+      "Distinct market/industry series catalog derived from fact_market_observation, with observation counts and period coverage.",
+    scope: "read",
+    kind: "read",
+    stageActivities: ["market-research"],
+    inputSchema: {
+      type: "object",
+      properties: { q: { type: "string", description: "Optional substring filter on series_id." } },
+    },
     args: z.object({ q: optString }),
     handler: (ctx, a) => searchSeries(ctx.port, a.q),
   }),
   defineTool({
     name: "get_observations",
-    description: "Observations for one series — latest revision per period by default; every revision row with all_revisions.",
-    scope: "read", kind: "read", stageActivities: ["market-research"],
+    description:
+      "Observations for one series — latest revision per period by default; every revision row with all_revisions.",
+    scope: "read",
+    kind: "read",
+    stageActivities: ["market-research"],
     inputSchema: {
       type: "object",
       properties: {
@@ -111,12 +148,15 @@ const BASE_TOOLS: readonly RegistryTool[] = [
       required: ["seriesId"],
     },
     args: z.object({ seriesId: requiredString, period_id: optString, all_revisions: z.boolean().optional() }),
-    handler: (ctx, a) => getObservations(ctx.port, a.seriesId, { period_id: a.period_id, all_revisions: a.all_revisions === true }),
+    handler: (ctx, a) =>
+      getObservations(ctx.port, a.seriesId, { period_id: a.period_id, all_revisions: a.all_revisions === true }),
   }),
   defineTool({
     name: "list_data_changes",
     description: "data_change_log scan — new/revised/deleted detections, newest first.",
-    scope: "read", kind: "read", stageActivities: [],
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: {
       type: "object",
       properties: { series_id: { type: "string" }, limit: { type: "number", description: "1-500, default 100." } },
@@ -127,28 +167,59 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "list_opportunities",
     description: "Opportunity funnel registry (S2) — status/project_id filters.",
-    scope: "read", kind: "read", stageActivities: ["opportunity-discovery"],
-    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["identified", "assessed", "selected", "dropped"] }, project_id: { type: "string" } } },
+    scope: "read",
+    kind: "read",
+    stageActivities: ["opportunity-discovery"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["identified", "assessed", "selected", "dropped"] },
+        project_id: { type: "string" },
+      },
+    },
     args: z.object({ status: optString, project_id: optString }),
     handler: (ctx, a) => listOpportunities(ctx.port, a.status),
   }),
   defineTool({
     name: "create_opportunity",
     description: "Register an opportunity (S2) — analyst+; audited.",
-    scope: "write", kind: "write", stageActivities: ["opportunity-discovery"],
-    inputSchema: { type: "object", properties: { name: { type: "string" }, market_scope: { type: "string" }, value_chain_node: { type: "string" }, market_size_krw_m: { type: "number" }, growth_rate: { type: "number" }, attractiveness_score: { type: "integer" }, synergy_score: { type: "integer" }, rationale: { type: "string" } }, required: ["name"] },
+    scope: "write",
+    kind: "write",
+    stageActivities: ["opportunity-discovery"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        market_scope: { type: "string" },
+        value_chain_node: { type: "string" },
+        market_size_krw_m: { type: "number" },
+        growth_rate: { type: "number" },
+        attractiveness_score: { type: "integer" },
+        synergy_score: { type: "integer" },
+        rationale: { type: "string" },
+      },
+      required: ["name"],
+    },
     args: z.object({
-      name: requiredString, market_scope: optString, value_chain_node: optString,
-      market_size_krw_m: z.number().optional(), growth_rate: z.number().optional(),
-      attractiveness_score: z.number().optional(), synergy_score: z.number().optional(),
-      status: optString, rationale: optString,
+      name: requiredString,
+      market_scope: optString,
+      value_chain_node: optString,
+      market_size_krw_m: z.number().optional(),
+      growth_rate: z.number().optional(),
+      attractiveness_score: z.number().optional(),
+      synergy_score: z.number().optional(),
+      status: optString,
+      rationale: optString,
     }),
     handler: (ctx, a) => createOpportunity(ctx.port, a),
   }),
   defineTool({
     name: "get_process_evaluation",
-    description: "Derived process state (S1-S11) — currentStage, completedStages, gateStatus, requiredArtifacts. Never persisted.",
-    scope: "read", kind: "read", stageActivities: [],
+    description:
+      "Derived process state (S1-S11) — currentStage, completedStages, gateStatus, requiredArtifacts. Never persisted.",
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
     args: z.object({ opportunityId: requiredString }),
     handler: (ctx, a) => getProcessEvaluation(ctx.port, a.opportunityId),
@@ -156,7 +227,9 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "get_gate_decisions",
     description: "Gate decision records (GO/HOLD/KILL) for an opportunity.",
-    scope: "read", kind: "read", stageActivities: [],
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
     args: z.object({ opportunityId: requiredString }),
     handler: (ctx, a) => listGateDecisions(ctx.port, a.opportunityId),
@@ -164,47 +237,87 @@ const BASE_TOOLS: readonly RegistryTool[] = [
   defineTool({
     name: "list_committee_sessions",
     description: "List steering-committee deliberation sessions for an opportunity (ADR-0097).",
-    scope: "read", kind: "read", stageActivities: [],
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
     inputSchema: { type: "object", properties: { opportunityId: { type: "string" } }, required: ["opportunityId"] },
     args: z.object({ opportunityId: requiredString }),
     handler: (ctx, a) => listCommitteeSessions(ctx.port, a.opportunityId),
   }),
   defineTool({
     name: "get_committee_session",
-    description: "Full committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent. Read-only.",
-    scope: "read", kind: "read", stageActivities: [],
-    inputSchema: { type: "object", properties: { opportunityId: { type: "string" }, sessionId: { type: "string" } }, required: ["opportunityId", "sessionId"] },
+    description:
+      "Full committee-session transcript — per-round positions, chair agenda (proposal), AI-drafted minutes draft (minutes_draft in meta), chair PROPOSAL, verbatim dissent. Read-only (ADR-0196).",
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
+    inputSchema: {
+      type: "object",
+      properties: { opportunityId: { type: "string" }, sessionId: { type: "string" } },
+      required: ["opportunityId", "sessionId"],
+    },
     args: z.object({ opportunityId: requiredString, sessionId: requiredString }),
     handler: (ctx, a) => getCommitteeSession(ctx.port, a.opportunityId, a.sessionId),
   }),
   defineTool({
     name: "get_project_ic_package",
-    description: "S10 IC package (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress.",
+    description:
+      "S10 IC package (read-only) — adopted business case + simulations, DD completion, AI-proposed RAG grade (labeled a proposal), entity_ic/group_ic gate history, establishment progress.",
     // greenfield-execution-baseline (ADR-0161): read context for the S11 baseline drafts; the step-6 confirmation stays human-only.
-    scope: "read", kind: "read", stageActivities: ["ic-preparation", "greenfield-execution-baseline"],
+    scope: "read",
+    kind: "read",
+    stageActivities: ["ic-preparation", "greenfield-execution-baseline"],
     inputSchema: { type: "object", properties: { projectId: { type: "string" } }, required: ["projectId"] },
     args: z.object({ projectId: requiredString }),
     handler: (ctx, a) => getProjectIcPackage(ctx.port, a.projectId),
   }),
   defineTool({
     name: "get_portfolio_scorecard",
-    description: "S11 portfolio scorecard (read-only) — quarterly rollup (financial/strategic sections, class rollup, insufficient_evidence), per-cycle trend, and venture-portfolio-IC transition-decision history. The transition-decision POST is deliberately not MCP-exposed (ADR-0101 §5).",
-    scope: "read", kind: "read", stageActivities: [],
-    inputSchema: { type: "object", properties: { projectId: { type: "string" }, reviewCycle: { type: "string", description: "YYYY-Qn — optional explicit review cycle; defaults to the latest" } }, required: ["projectId"] },
+    description:
+      "S11 portfolio scorecard (read-only) — quarterly rollup (financial/strategic sections, class rollup, insufficient_evidence), per-cycle trend, and venture-portfolio-IC transition-decision history. The transition-decision POST is deliberately not MCP-exposed (ADR-0101 §5).",
+    scope: "read",
+    kind: "read",
+    stageActivities: [],
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string" },
+        reviewCycle: {
+          type: "string",
+          description: "YYYY-Qn — optional explicit review cycle; defaults to the latest",
+        },
+      },
+      required: ["projectId"],
+    },
     args: z.object({ projectId: requiredString, reviewCycle: optString }),
     handler: (ctx, a) => getPortfolioScorecard(ctx.port, a.projectId, a.reviewCycle),
   }),
   defineTool({
     name: "get_project_dd_workspace",
-    description: "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, the completion summary, and targets[] (comparison table source). Default scope is the selected target the gate judges; optional target_id reads an opened comparison target. Read-only; tailoring review and opening DD on another target are web-first human decisions.",
+    description:
+      "S9 tailored DD workspace (S1-S11 chain) — standard checklist items with live judgment state, custom items with provenance, findings, the completion summary, and targets[] (comparison table source). Default scope is the selected target the gate judges; optional target_id reads an opened comparison target. Read-only; tailoring review and opening DD on another target are web-first human decisions.",
     // flow.spec v2.7.0 (ADR-0160 addendum c): the workspace renders all seven
     // ADR-0148 domains, so the four added S9 activities read through it too.
-    scope: "read", kind: "read", stageActivities: ["commercial-dd", "technical-dd", "legal-dd", "financial-dd", "hr-dd", "market-dd", "financing-dd"],
+    scope: "read",
+    kind: "read",
+    stageActivities: [
+      "commercial-dd",
+      "technical-dd",
+      "legal-dd",
+      "financial-dd",
+      "hr-dd",
+      "market-dd",
+      "financing-dd",
+    ],
     inputSchema: {
       type: "object",
       properties: {
         projectId: { type: "string", description: "Project ULID (promoted at S8)." },
-        target_id: { type: "string", description: "Optional (ADR-0157): an OPENED comparison target. Omitted = the selected target the dd gate judges. Opening DD is a human act; this tool never opens it." },
+        target_id: {
+          type: "string",
+          description:
+            "Optional (ADR-0157): an OPENED comparison target. Omitted = the selected target the dd gate judges. Opening DD is a human act; this tool never opens it.",
+        },
       },
       required: ["projectId"],
     },
@@ -230,7 +343,11 @@ const BASE_META: Record<string, { routes: string[]; activities?: string[]; artif
   list_committee_sessions: { routes: ["GET /api/opportunities/{opportunityId}/committee-sessions"] },
   get_committee_session: { routes: ["GET /api/opportunities/{opportunityId}/committee-sessions/{sessionId}"] },
   get_project_ic_package: { routes: ["GET /api/projects/{projectId}/ic-package"], artifacts: ["stage:S11:1"] },
-  get_portfolio_scorecard: { routes: ["GET /api/projects/{projectId}/scorecard"], activities: ["portfolio-monitoring", "integration-monitoring", "partnership-monitoring"], artifacts: ["stage:S12:1", "stage:S12:4"] },
+  get_portfolio_scorecard: {
+    routes: ["GET /api/projects/{projectId}/scorecard"],
+    activities: ["portfolio-monitoring", "integration-monitoring", "partnership-monitoring"],
+    artifacts: ["stage:S12:1", "stage:S12:4"],
+  },
   get_project_dd_workspace: { routes: ["GET /api/projects/{projectId}/dd"] },
 };
 
@@ -273,7 +390,9 @@ export async function callTool(
 
 /** SHA-256 of the canonical JSON arguments — audit stores this, never the arguments (ADR-0154 audit rule). */
 export function hashArgs(args: unknown): string {
-  return createHash("sha256").update(JSON.stringify(args ?? {})).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(args ?? {}))
+    .digest("hex");
 }
 
 export interface ToolCallRecord {
@@ -296,7 +415,10 @@ export { MCPScopeError };
 export type { RegistryTool, ToolContext, ToolScope, McpTransportKind };
 
 export function buildMcpServer(opts: BuildServerOptions): Server {
-  const server = new Server({ name: "co-newbiz-mcp", version: "1.9.0" }, { capabilities: { tools: {}, prompts: {}, resources: {} } });
+  const server = new Server(
+    { name: "co-newbiz-mcp", version: "1.9.0" },
+    { capabilities: { tools: {}, prompts: {}, resources: {} } },
+  );
   const tools = toolsFor(opts.transport);
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: tools.map(toToolDefinition) }));
@@ -314,10 +436,22 @@ export function buildMcpServer(opts: BuildServerOptions): Server {
       const envelopeError = readEnvelopeError(result);
       const tool = tools.find((t) => t.name === name);
       if (tool?.kind === "propose" && envelopeError === null) pointToConfirmPage(server, tool, result, opts.log);
-      opts.onToolCall?.({ name, scope, ok: envelopeError === null, errorCode: envelopeError, argsHash, authInfo: extra.authInfo });
+      opts.onToolCall?.({
+        name,
+        scope,
+        ok: envelopeError === null,
+        errorCode: envelopeError,
+        argsHash,
+        authInfo: extra.authInfo,
+      });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
-      const code = err instanceof MCPScopeError ? err.code : err instanceof MCPValidationError ? "invalid_arguments" : "tool_error";
+      const code =
+        err instanceof MCPScopeError
+          ? err.code
+          : err instanceof MCPValidationError
+            ? "invalid_arguments"
+            : "tool_error";
       opts.onToolCall?.({ name, scope, ok: false, errorCode: code, argsHash, authInfo: extra.authInfo });
       opts.log?.(`Tool ${name} failed: ${code}`);
       const message = err instanceof Error ? err.message : String(err);
@@ -341,7 +475,10 @@ function registerPromptsAndResources(server: Server, tools: readonly RegistryToo
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({
     prompts: STAGE_IDS.map((id) => {
       const spec = getStageSpec(id);
-      return { name: promptName(id), description: `Work guide for ${id} ${spec?.name ?? ""}: objective, activities, artifacts, gates and the tools that serve them.` };
+      return {
+        name: promptName(id),
+        description: `Work guide for ${id} ${spec?.name ?? ""}: objective, activities, artifacts, gates and the tools that serve them.`,
+      };
     }),
   }));
 
@@ -356,21 +493,43 @@ function registerPromptsAndResources(server: Server, tools: readonly RegistryToo
 
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
-      { uri: "glossary://index", name: "Glossary index", description: "Every glossary term key with its Korean and English names.", mimeType: JSON_MIME },
-      { uri: "flowspec://index", name: "Flow spec index", description: "Spec version and the S1-S12 stage list.", mimeType: JSON_MIME },
+      {
+        uri: "glossary://index",
+        name: "Glossary index",
+        description: "Every glossary term key with its Korean and English names.",
+        mimeType: JSON_MIME,
+      },
+      {
+        uri: "flowspec://index",
+        name: "Flow spec index",
+        description: "Spec version and the S1-S12 stage list.",
+        mimeType: JSON_MIME,
+      },
     ],
   }));
 
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
     resourceTemplates: [
-      { uriTemplate: "glossary://term/{key}", name: "Glossary term", description: "One glossary term (same source as lookup_term).", mimeType: JSON_MIME },
-      { uriTemplate: "flowspec://stage/{id}", name: "Flow spec stage", description: "Read-only slice of process/flow.spec.yaml for one stage (S1-S12).", mimeType: JSON_MIME },
+      {
+        uriTemplate: "glossary://term/{key}",
+        name: "Glossary term",
+        description: "One glossary term (same source as lookup_term).",
+        mimeType: JSON_MIME,
+      },
+      {
+        uriTemplate: "flowspec://stage/{id}",
+        name: "Flow spec stage",
+        description: "Read-only slice of process/flow.spec.yaml for one stage (S1-S12).",
+        mimeType: JSON_MIME,
+      },
     ],
   }));
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
     const uri = request.params.uri;
-    const asJson = (value: unknown) => ({ contents: [{ uri, mimeType: JSON_MIME, text: JSON.stringify(value, null, 2) }] });
+    const asJson = (value: unknown) => ({
+      contents: [{ uri, mimeType: JSON_MIME, text: JSON.stringify(value, null, 2) }],
+    });
 
     if (uri === "flowspec://index") return asJson(flowspecIndex());
     const stageMatch = /^flowspec:\/\/stage\/([^/]+)$/.exec(uri);
@@ -384,9 +543,14 @@ function registerPromptsAndResources(server: Server, tools: readonly RegistryToo
     if (uri === "glossary://index" || termMatch) {
       const ctx = opts.resolveContext({ authInfo: extra.authInfo });
       if (ctx.scopes && !ctx.scopes.includes("read")) {
-        throw new McpError(ErrorCode.InvalidRequest, "Reading glossary resources needs the 'read' scope; this token does not carry it.");
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          "Reading glossary resources needs the 'read' scope; this token does not carry it.",
+        );
       }
-      return asJson(termMatch ? await lookupTerm(ctx.port, decodeURIComponent(termMatch[1])) : await listGlossary(ctx.port));
+      return asJson(
+        termMatch ? await lookupTerm(ctx.port, decodeURIComponent(termMatch[1])) : await listGlossary(ctx.port),
+      );
     }
     throw new McpError(ErrorCode.InvalidParams, `Unknown resource: ${uri}`);
   });
@@ -400,7 +564,12 @@ function registerPromptsAndResources(server: Server, tools: readonly RegistryToo
  * effort and non-blocking: a client that cannot elicit just gets the URL in
  * the tool result.
  */
-function pointToConfirmPage(server: Server, tool: RegistryTool, result: unknown, log?: (message: string) => void): void {
+function pointToConfirmPage(
+  server: Server,
+  tool: RegistryTool,
+  result: unknown,
+  log?: (message: string) => void,
+): void {
   const data = (result as { data?: { proposal_id?: unknown; confirm_url?: unknown } } | null)?.data;
   const url = typeof data?.confirm_url === "string" ? data.confirm_url : null;
   const proposalId = typeof data?.proposal_id === "string" ? data.proposal_id : null;
@@ -411,7 +580,9 @@ function pointToConfirmPage(server: Server, tool: RegistryTool, result: unknown,
   const request = caps.elicitation.url
     ? server.elicitInput({ mode: "url", message, elicitationId: proposalId, url }, { timeout: 60_000 })
     : server.elicitInput({ message, requestedSchema: { type: "object", properties: {} } }, { timeout: 60_000 });
-  request.catch((err: unknown) => log?.(`Elicitation for ${tool.name} not delivered: ${err instanceof Error ? err.message : String(err)}`));
+  request.catch((err: unknown) =>
+    log?.(`Elicitation for ${tool.name} not delivered: ${err instanceof Error ? err.message : String(err)}`),
+  );
 }
 
 function readEnvelopeError(result: unknown): string | null {

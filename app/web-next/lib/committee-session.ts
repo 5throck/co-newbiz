@@ -27,13 +27,20 @@ import {
   buildSynthesis,
   deliberationPrompt,
   runDeliberationRounds,
+  type AgendaIssue,
+  type AgendaPassResult,
   type DeliberationPosition,
+  type MinutesPassResult,
 } from "./deliberation.ts";
 import {
-  type CallAgent,
-  type EntityRef,
-  type Recommendation,
-} from "./agent-orchestrator.ts";
+  runChairAgenda,
+  runChairMinutes,
+  minutesInputHashFor,
+  type ChairPositionRow,
+  type AgendaMeta,
+  type MinutesDraft,
+} from "./committee-chair.ts";
+import type { CallAgent, EntityRef, Recommendation } from "./agent-orchestrator.ts";
 import { getCommitteeCallAgent } from "./committee-agents.ts";
 import { COMMITTEE_REGISTRY } from "./committee-registry.generated.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
@@ -72,6 +79,15 @@ export interface SessionMeta {
   brief_md?: string;
   synthesized?: boolean;
   evaluation_id?: string;
+  /** ADR-0196 phase B: the chair agenda (proposal; hybrid humans may edit it). */
+  agenda?: AgendaIssue[];
+  /** How the agenda was produced (llm / fallback / human_edited). */
+  agenda_meta?: AgendaMeta;
+  /** AI-drafted structured minutes (zod-validated, ref-resolved). */
+  minutes_draft?: MinutesDraft;
+  /** ADR-0104 chair sign-off — set once; freezes minutes_draft. */
+  minutes_confirmed_by?: string;
+  minutes_confirmed_at?: string;
 }
 
 let cachedRegistry: Record<string, CommitteeDef> | null = null;
@@ -108,7 +124,7 @@ export function seatsForSession(committee: CommitteeDef, track?: string): Commit
   return committee.members.filter((m) => {
     const match = typeof m.applies_when === "string" ? m.applies_when.match(/track\s*==\s*(\w+)/) : null;
     if (!match) return true;
-    return track !== undefined && m.applies_when!.includes(`track == ${track}`);
+    return track !== undefined && m.applies_when?.includes(`track == ${track}`);
   });
 }
 
@@ -149,11 +165,20 @@ export function committeeSessionForOpportunity(
 ): { id: string; stage: string } | null {
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(opportunityId)) return null;
-  const run = db.query("SELECT id, entity_type, entity_id, stage, meta_json FROM process_run WHERE id = ?").get(sessionId) as
+  const run = db
+    .query("SELECT id, entity_type, entity_id, stage, meta_json FROM process_run WHERE id = ?")
+    .get(sessionId) as
     | { id: string; entity_type: string; entity_id: string; stage: string; meta_json: string | null }
     | undefined;
-  if (!run || run.entity_type !== "opportunity" || run.entity_id !== opportunityId || !isCommitteeRun(run.stage, run.meta_json)) return null;
-  const promoted = db.query("SELECT id FROM md_project WHERE source_opportunity_id = ?").all(opportunityId) as { id: string }[];
+  if (
+    run?.entity_type !== "opportunity" ||
+    run.entity_id !== opportunityId ||
+    !isCommitteeRun(run.stage, run.meta_json)
+  )
+    return null;
+  const promoted = db.query("SELECT id FROM md_project WHERE source_opportunity_id = ?").all(opportunityId) as {
+    id: string;
+  }[];
   if (promoted.length > 0 && !promoted.some((p) => canSeeProject(p.id))) return null;
   return { id: run.id, stage: run.stage };
 }
@@ -173,8 +198,86 @@ function readMeta(runId: string): { meta: SessionMeta; run: Record<string, unkno
 function writeMeta(runId: string, meta: SessionMeta): void {
   const run = getDb().query("SELECT stage FROM process_run WHERE id = ?").get(runId) as { stage: string } | undefined;
   // The engine creates the run first, so writeMeta only refuses stage ledgers here.
-  if (!run || /^s\d+_/.test(run.stage)) throw new CommitteeError("not_found", `committee session '${runId}' does not exist`);
+  if (!run || /^s\d+_/.test(run.stage))
+    throw new CommitteeError("not_found", `committee session '${runId}' does not exist`);
   getDb().run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(meta), runId]);
+}
+
+// ── Chair passes (ADR-0196 §2.2/§2.3, phase B) ─────────────────────────────
+
+/** agent_position rows as the chair passes see them (id, seat, round, text). */
+function loadChairRows(runId: string, maxRound?: number): ChairPositionRow[] {
+  return loadPositions(runId)
+    .filter((p) => maxRound === undefined || p.round <= maxRound)
+    .map((p) => ({
+      id: p.id,
+      seat: p.agentKey ?? p.humanUserId ?? `round-${p.round}`,
+      memberType: p.memberType,
+      round: p.round,
+      positionMd: p.positionMd,
+    }));
+}
+
+function toAgendaMeta(r: {
+  source: "llm" | "fallback";
+  model?: string;
+  promptVersion: string;
+  inputHash: string;
+  createdAt: string;
+}): AgendaMeta {
+  return {
+    source: r.source,
+    ...(r.model ? { model: r.model } : {}),
+    prompt_version: r.promptVersion,
+    input_hash: r.inputHash,
+    created_at: r.createdAt,
+  };
+}
+
+function toMinutesDraft(r: {
+  json: unknown;
+  fallback: boolean;
+  model?: string;
+  promptVersion: string;
+  inputHash: string;
+  createdAt: string;
+}): MinutesDraft {
+  return {
+    json: r.json as MinutesDraft["json"],
+    fallback: r.fallback,
+    ...(r.model ? { model: r.model } : {}),
+    prompt_version: r.promptVersion,
+    input_hash: r.inputHash,
+    created_at: r.createdAt,
+  };
+}
+
+/**
+ * Human agenda edit (ADR-0196 §2.2, decision 3): a hybrid/human_only convener
+ * may replace the chair agenda before round 2. Ids are normalized to
+ * I1..In (the agenda is framing, not data — but the minutes schema binds
+ * discussion issue_ids to it, so the ids stay engine-owned). Bounded to
+ * 1–5 single-line issues.
+ */
+function normalizeHumanAgenda(input: unknown): AgendaIssue[] | null {
+  if (!Array.isArray(input) || input.length < 1 || input.length > 5) return null;
+  const clean: AgendaIssue[] = [];
+  for (const item of input) {
+    if (!item || typeof item !== "object") return null;
+    const title = (item as { title?: unknown }).title;
+    if (typeof title !== "string" || title.trim() === "" || title.length > 200) return null;
+    clean.push({ id: `I${clean.length + 1}`, title: title.trim() });
+  }
+  return clean;
+}
+
+async function runAgendaPassForRun(runId: string, topic: string, maxRound: number): Promise<AgendaPassResult> {
+  return runChairAgenda({ topic, rows: loadChairRows(runId, maxRound) });
+}
+
+async function runMinutesPassForRun(runId: string, _topic: string, agenda: AgendaIssue[]): Promise<MinutesPassResult> {
+  const rows = loadChairRows(runId);
+  return runChairMinutes({ agenda, rows, seats: rows.map((r) => r.seat) });
 }
 
 interface SessionRow {
@@ -328,10 +431,16 @@ function loadSpecVersion(): string {
 export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOpts): Promise<ConveneResult> {
   const committee = getCommittee(opts.committeeKey);
   if (!committee) {
-    throw new CommitteeError("unknown_committee", `committees '${opts.committeeKey}' is not registered in procedures/_committees.yaml`);
+    throw new CommitteeError(
+      "unknown_committee",
+      `committees '${opts.committeeKey}' is not registered in procedures/_committees.yaml`,
+    );
   }
   if (!committee.decision_modes_allowed.includes(opts.decisionMode)) {
-    throw new CommitteeError("mode_not_allowed", `committee '${opts.committeeKey}' allows [${committee.decision_modes_allowed.join(", ")}] — '${opts.decisionMode}' is not allowed`);
+    throw new CommitteeError(
+      "mode_not_allowed",
+      `committee '${opts.committeeKey}' allows [${committee.decision_modes_allowed.join(", ")}] — '${opts.decisionMode}' is not allowed`,
+    );
   }
   // S7 committee (applies_to brownfield_target) convenes the target_screening
   // gate — the same key the human GateDecisionPanel below records (0111).
@@ -352,22 +461,39 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
       .filter((m) => m.type === "agent")
       .map((m) => ({ agentKey: m.key }));
     if (agents.length === 0) {
-      throw new CommitteeError("no_agent_members", `committee '${opts.committeeKey}' has no agent members for agent_team mode`);
+      throw new CommitteeError(
+        "no_agent_members",
+        `committee '${opts.committeeKey}' has no agent members for agent_team mode`,
+      );
     }
+    const topic = sessionTopic(committee, opts);
     const result = await runDeliberationRounds(entity, {
       committeeKey: opts.committeeKey,
       agents,
       rounds: committee.rounds,
-      topic: sessionTopic(committee, opts),
+      topic,
       callAgent: opts.callAgent ?? getCommitteeCallAgent(),
       gate,
       actor: opts.actor,
       stage: opts.committeeKey,
       source: opts.source ?? "web",
       chair: committee.chair,
+      // ADR-0196 phase B: the chair agenda pass after round 1 and the
+      // minutes pass at synthesis. Both compute + return; persistence into
+      // meta_json happens in the writeMeta below (one writer per meta key).
+      chairAgendaPass:
+        committee.rounds >= 2 ? async (ctx) => runAgendaPassForRun(ctx.processRunId, ctx.topic, 1) : undefined,
+      chairMinutesPass: async (ctx) => runMinutesPassForRun(ctx.processRunId, ctx.topic, ctx.agenda),
     });
-    // Mark the engine-created run as this session (meta_json, 0067).
-    writeMeta(result.processRunId, { ...meta, synthesized: true, evaluation_id: result.evaluation!.gateEvaluationId });
+    // Mark the engine-created run as this session (meta_json, 0067) and
+    // persist the chair-pass results with it.
+    writeMeta(result.processRunId, {
+      ...meta,
+      synthesized: true,
+      evaluation_id: result.evaluation?.gateEvaluationId,
+      ...(result.agenda ? { agenda: result.agenda.agenda, agenda_meta: toAgendaMeta(result.agenda) } : {}),
+      ...(result.minutesDraft ? { minutes_draft: toMinutesDraft(result.minutesDraft) } : {}),
+    });
     return {
       sessionId: result.processRunId,
       committeeKey: opts.committeeKey,
@@ -393,14 +519,18 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
     for (const seat of agentSeats) {
       const member = { agentKey: seat.key };
       const out = await (opts.callAgent ?? getCommitteeCallAgent())(seat.key, deliberationPrompt(member, topic, [], 1));
-      writeAgentPosition(runId, {
-        memberKey: seat.key,
-        memberType: "agent",
-        positionMd: out.positionMd,
-        confidence: out.confidence,
-        recommendation: out.recommendation,
-        vetoDissent: out.vetoDissent,
-      }, 1);
+      writeAgentPosition(
+        runId,
+        {
+          memberKey: seat.key,
+          memberType: "agent",
+          positionMd: out.positionMd,
+          confidence: out.confidence,
+          recommendation: out.recommendation,
+          vetoDissent: out.vetoDissent,
+        },
+        1,
+      );
     }
   }
 
@@ -427,23 +557,32 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
   const session = readMeta(opts.sessionId);
   if (!session) throw new CommitteeError("not_found", `committee session '${opts.sessionId}' does not exist`);
   if (session.meta.decision_mode === "agent_team") {
-    throw new CommitteeError("human_seat_closed", "agent_team sessions have no human seats — humans confirm via the gate record, not deliberation");
+    throw new CommitteeError(
+      "human_seat_closed",
+      "agent_team sessions have no human seats — humans confirm via the gate record, not deliberation",
+    );
   }
   if (session.meta.synthesized) {
     throw new CommitteeError("session_closed", "this session is already synthesized");
   }
-  const committee = getCommittee(session.meta.committee_key)!;
+  const committee = getCommittee(session.meta.committee_key) as CommitteeDef;
   if (opts.seat) {
     const seat = committee.members.find((m) => m.key === opts.seat);
     if (!seat) {
-      throw new CommitteeError("unknown_seat", `'${opts.seat}' is not a member of committee '${session.meta.committee_key}'`);
+      throw new CommitteeError(
+        "unknown_seat",
+        `'${opts.seat}' is not a member of committee '${session.meta.committee_key}'`,
+      );
     }
     // Seat binding (integrity): a human speaks under their OWN app_user
     // identity (human_user_id, set from the authenticated session — never the
     // body). Claiming an AGENT seat would put a human voice under an agent's
     // name in the transcript, so only human_role seats are claimable.
     if (seat.type !== "human_role") {
-      throw new CommitteeError("seat_not_assignable", `'${opts.seat}' is an agent seat — human positions are recorded under the submitter's own user identity, never under another member's seat`);
+      throw new CommitteeError(
+        "seat_not_assignable",
+        `'${opts.seat}' is an agent seat — human positions are recorded under the submitter's own user identity, never under another member's seat`,
+      );
     }
   }
   const positions = loadPositions(opts.sessionId);
@@ -454,7 +593,10 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
     (p) => p.round === round && p.memberType === "human" && (p.humanUserId ?? "") === opts.humanUserId,
   );
   if (alreadyThisRound) {
-    throw new CommitteeError("duplicate_position", `user '${opts.humanUserId}' already submitted a position for round ${round} of this session`);
+    throw new CommitteeError(
+      "duplicate_position",
+      `user '${opts.humanUserId}' already submitted a position for round ${round} of this session`,
+    );
   }
   const marker = `<!--position-meta:${JSON.stringify({
     recommendation: opts.recommendation,
@@ -489,13 +631,13 @@ export interface AdvanceResult {
  */
 export async function advanceCommitteeSession(
   sessionId: string,
-  opts: { actor: string; callAgent?: CallAgent },
+  opts: { actor: string; callAgent?: CallAgent; agenda?: unknown },
 ): Promise<AdvanceResult> {
   const session = readMeta(sessionId);
   if (!session) throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
   const { meta } = session;
   if (meta.synthesized) throw new CommitteeError("session_closed", "this session is already synthesized");
-  const committee = getCommittee(meta.committee_key)!;
+  const committee = getCommittee(meta.committee_key) as CommitteeDef;
   const callAgent = opts.callAgent ?? getCommitteeCallAgent();
   const positions = loadPositions(sessionId);
   const currentRound = positions.length === 0 ? 0 : Math.max(...positions.map((p) => p.round));
@@ -509,29 +651,72 @@ export async function advanceCommitteeSession(
     actor: opts.actor,
   });
 
+  // A malformed agenda body is refused up front (ADR-0196 decision 3) —
+  // before the human-voice gate, so the caller learns the shape error first.
+  const humanAgenda = opts.agenda === undefined ? undefined : normalizeHumanAgenda(opts.agenda);
+  if (opts.agenda !== undefined && !humanAgenda) {
+    throw new CommitteeError("invalid_agenda", "the agenda body must be 1-5 issues shaped [{title: string}]");
+  }
+
   const needsHumanVoice = meta.decision_mode !== "agent_team"; // always true here (agent_team convenes complete)
   if (needsHumanVoice && currentRound >= 1 && !hasHumanInCurrentRound) {
-    throw new CommitteeError("human_position_required", `round ${currentRound} needs at least one human position before advancing (hybrid/human_only mode)`);
+    throw new CommitteeError(
+      "human_position_required",
+      `round ${currentRound} needs at least one human position before advancing (hybrid/human_only mode)`,
+    );
   }
 
   if (currentRound < committee.rounds) {
     const nextRound = currentRound + 1;
+    // Chair agenda (ADR-0196 §2.2): exactly once, before round 2, when the
+    // committee runs 2+ rounds. A human override (decision 3) wins over the
+    // chair pass; otherwise the pass reads the round-1 positions.
+    if (nextRound === 2 && !meta.agenda && committee.rounds >= 2) {
+      if (humanAgenda) {
+        meta.agenda = humanAgenda;
+        meta.agenda_meta = {
+          source: "human_edited",
+          prompt_version: "human-edit",
+          input_hash: "n/a",
+          created_at: nowIso(),
+        };
+      } else if (opts.agenda === undefined) {
+        const pass = await runAgendaPassForRun(sessionId, topic, 1);
+        meta.agenda = pass.agenda;
+        meta.agenda_meta = toAgendaMeta(pass);
+      }
+      writeMeta(sessionId, meta);
+    }
     if (meta.decision_mode === "hybrid") {
       // Rounds 2+: each agent member receives the FULL prior-round positions
       // of all OTHER members, verbatim — the engine's core requirement
       // (ADR-0096 §4), replayed from the recorded agent_position rows.
-      const priorRounds: DeliberationPosition[][] = groupByRound(positions.slice(0, positions.findIndex((p) => p.round === nextRound) === -1 ? positions.length : positions.findIndex((p) => p.round === nextRound)));
+      const priorRounds: DeliberationPosition[][] = groupByRound(
+        positions.slice(
+          0,
+          positions.findIndex((p) => p.round === nextRound) === -1
+            ? positions.length
+            : positions.findIndex((p) => p.round === nextRound),
+        ),
+      );
       for (const seat of seatsForSession(committee, meta.track).filter((m) => m.type === "agent")) {
         const member = { agentKey: seat.key };
-        const out = await callAgent(seat.key, deliberationPrompt(member, topic, priorRounds, nextRound));
-        writeAgentPosition(sessionId, {
-          memberKey: seat.key,
-          memberType: "agent",
-          positionMd: out.positionMd,
-          confidence: out.confidence,
-          recommendation: out.recommendation,
-          vetoDissent: out.vetoDissent,
-        }, nextRound);
+        const out = await callAgent(
+          seat.key,
+          deliberationPrompt(member, topic, priorRounds, nextRound, { agenda: meta.agenda }),
+        );
+        writeAgentPosition(
+          sessionId,
+          {
+            memberKey: seat.key,
+            memberType: "agent",
+            positionMd: out.positionMd,
+            confidence: out.confidence,
+            recommendation: out.recommendation,
+            vetoDissent: out.vetoDissent,
+          },
+          nextRound,
+        );
       }
     }
     return { status: "round_started", round: nextRound, evaluation: null };
@@ -543,7 +728,8 @@ export async function advanceCommitteeSession(
 function groupByRound(rows: SessionRow[]): DeliberationPosition[][] {
   const rounds: DeliberationPosition[][] = [];
   for (const r of rows) {
-    (rounds[r.round - 1] ??= []).push({
+    if (!rounds[r.round - 1]) rounds[r.round - 1] = [];
+    rounds[r.round - 1].push({
       memberKey: r.memberType === "human" ? (r.humanUserId ?? "human") : (r.agentKey ?? "agent"),
       memberType: r.memberType === "human" ? "human" : "agent",
       humanUserId: r.humanUserId ?? undefined,
@@ -556,7 +742,11 @@ function groupByRound(rows: SessionRow[]): DeliberationPosition[][] {
 }
 
 /** Chair synthesis — buildSynthesis dissent rule, gate_evaluation PROPOSAL. */
-async function synthesize(sessionId: string, meta: SessionMeta, committee: CommitteeDef): Promise<{ evaluation: AdvanceResult["evaluation"] }> {
+async function synthesize(
+  sessionId: string,
+  meta: SessionMeta,
+  committee: CommitteeDef,
+): Promise<{ evaluation: AdvanceResult["evaluation"] }> {
   const finalRound = Math.max(...loadPositions(sessionId).map((p) => p.round));
   const finalPositions = groupByRound(loadPositions(sessionId))[finalRound - 1] ?? [];
   // The dissent rule is buildSynthesis's, always — never the chair model's.
@@ -569,7 +759,11 @@ async function synthesize(sessionId: string, meta: SessionMeta, committee: Commi
       evalId,
       sessionId,
       meta.gate,
-      JSON.stringify({ committee: meta.committee_key, decision_mode: meta.decision_mode, target_ref: meta.target_ref ?? null }),
+      JSON.stringify({
+        committee: meta.committee_key,
+        decision_mode: meta.decision_mode,
+        target_ref: meta.target_ref ?? null,
+      }),
       null,
       null,
       recommendation,
@@ -578,7 +772,33 @@ async function synthesize(sessionId: string, meta: SessionMeta, committee: Commi
       dissent_json,
     ],
   );
-  writeMeta(sessionId, { ...meta, synthesized: true, evaluation_id: evalId });
+  // Chair minutes pass (ADR-0196 §2.3): once, at synthesis. Stored in meta
+  // (S2); a GET later renders the STORED draft and never calls the LLM.
+  let minutesDraft: MinutesDraft | undefined;
+  try {
+    minutesDraft = toMinutesDraft(
+      await runMinutesPassForRun(
+        sessionId,
+        sessionTopic(committee, {
+          committeeKey: meta.committee_key,
+          decisionMode: meta.decision_mode,
+          gate: meta.gate as ConveneOpts["gate"],
+          targetRef: meta.target_ref,
+          briefMd: meta.brief_md,
+          actor: "chair",
+        }),
+        meta.agenda ?? [],
+      ),
+    );
+  } catch {
+    minutesDraft = undefined; // the run never fails because of the minutes
+  }
+  writeMeta(sessionId, {
+    ...meta,
+    synthesized: true,
+    evaluation_id: evalId,
+    ...(minutesDraft ? { minutes_draft: minutesDraft } : {}),
+  });
   getDb().run("UPDATE process_run SET status = 'done', finished_at = ? WHERE id = ?", [nowIso(), sessionId]);
   return {
     evaluation: { gateEvaluationId: evalId, gate: meta.gate, recommendation, dissentJson: dissent_json },
@@ -591,9 +811,33 @@ export interface CommitteeTranscript {
   sessionId: string;
   status: string;
   meta: SessionMeta;
+  /** ADR-0196 phase B: the stored chair agenda (proposal), if generated. */
+  agenda: AgendaIssue[] | null;
+  /** How the agenda was produced. */
+  agendaMeta: AgendaMeta | null;
+  /** The stored AI-drafted minutes draft (S2), if generated. */
+  minutesDraft: MinutesDraft | null;
   committee: CommitteeDef | null;
-  rounds: Array<{ round: number; positions: Array<{ positionId: string; memberType: string; agentKey: string | null; humanUserId: string | null; positionMd: string; confidence: number | null; createdAt: string }> }>;
-  evaluation: { gateEvaluationId: string; gate: string; recommendation: string; dissentJson: string | null; evaluatedBy: string; createdAt: string } | null;
+  rounds: Array<{
+    round: number;
+    positions: Array<{
+      positionId: string;
+      memberType: string;
+      agentKey: string | null;
+      humanUserId: string | null;
+      positionMd: string;
+      confidence: number | null;
+      createdAt: string;
+    }>;
+  }>;
+  evaluation: {
+    gateEvaluationId: string;
+    gate: string;
+    recommendation: string;
+    dissentJson: string | null;
+    evaluatedBy: string;
+    createdAt: string;
+  } | null;
 }
 
 export function getCommitteeSession(sessionId: string): CommitteeTranscript | null {
@@ -601,7 +845,8 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
   if (!session) return null;
   const rounds: CommitteeTranscript["rounds"] = [];
   for (const p of loadPositions(sessionId)) {
-    (rounds[p.round - 1] ??= { round: p.round, positions: [] }).positions.push({
+    if (!rounds[p.round - 1]) rounds[p.round - 1] = { round: p.round, positions: [] };
+    rounds[p.round - 1].positions.push({
       positionId: p.id,
       memberType: p.memberType,
       agentKey: p.agentKey,
@@ -613,8 +858,19 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
   }
   let evaluation: CommitteeTranscript["evaluation"] = null;
   if (session.meta.evaluation_id) {
-    const ev = getDb().query("SELECT id, gate, recommendation, dissent_json, evaluated_by, created_at FROM gate_evaluation WHERE id = ?").get(session.meta.evaluation_id) as
-      | { id: string; gate: string; recommendation: string; dissent_json: string | null; evaluated_by: string; created_at: string }
+    const ev = getDb()
+      .query(
+        "SELECT id, gate, recommendation, dissent_json, evaluated_by, created_at FROM gate_evaluation WHERE id = ?",
+      )
+      .get(session.meta.evaluation_id) as
+      | {
+          id: string;
+          gate: string;
+          recommendation: string;
+          dissent_json: string | null;
+          evaluated_by: string;
+          created_at: string;
+        }
       | undefined;
     if (ev) {
       evaluation = {
@@ -631,6 +887,9 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
     sessionId,
     status: String(session.run.status),
     meta: session.meta,
+    agenda: session.meta.agenda ?? null,
+    agendaMeta: session.meta.agenda_meta ?? null,
+    minutesDraft: session.meta.minutes_draft ?? null,
     committee: getCommittee(session.meta.committee_key),
     rounds,
     evaluation,
@@ -638,15 +897,64 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
 }
 
 /** List committee sessions for an opportunity (process_run rows with meta). */
-export function listCommitteeSessions(entityId: string): Array<{ sessionId: string; meta: SessionMeta; status: string; startedAt: string }> {
+export function listCommitteeSessions(
+  entityId: string,
+): Array<{ sessionId: string; meta: SessionMeta; status: string; startedAt: string }> {
   const rows = getDb()
-    .query("SELECT id, meta_json, status, started_at FROM process_run WHERE entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC")
+    .query(
+      "SELECT id, meta_json, status, started_at FROM process_run WHERE entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC",
+    )
     .all(entityId) as Array<{ id: string; meta_json: string; status: string; started_at: string }>;
   return rows.flatMap((r) => {
     try {
-      return [{ sessionId: r.id, meta: JSON.parse(r.meta_json) as SessionMeta, status: r.status, startedAt: r.started_at }];
+      return [
+        { sessionId: r.id, meta: JSON.parse(r.meta_json) as SessionMeta, status: r.status, startedAt: r.started_at },
+      ];
     } catch {
       return [];
     }
   });
+}
+
+// ── Minutes regeneration (ADR-0196 decision 4) ─────────────────────────────
+
+/**
+ * Regenerate the AI-drafted minutes draft. Allowed ONLY while the minutes
+ * are unconfirmed AND (the input hash changed OR the stored draft is a
+ * fallback). Never callable after `minutes_confirmed_by` is set (ADR-0104 —
+ * confirmation freezes the draft). Audited by the route, not here.
+ */
+export async function regenerateCommitteeMinutes(sessionId: string): Promise<MinutesDraft> {
+  const session = readMeta(sessionId);
+  if (!session) throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
+  const { meta } = session;
+  if (meta.minutes_confirmed_by) {
+    throw new CommitteeError("minutes_already_confirmed", "minutes are confirmed — the record is frozen (ADR-0104)");
+  }
+  const rows = loadChairRows(sessionId);
+  const agenda = meta.agenda ?? [];
+  const currentHash = minutesInputHashFor(agenda, rows);
+  if (meta.minutes_draft && !meta.minutes_draft.fallback && meta.minutes_draft.input_hash === currentHash) {
+    throw new CommitteeError(
+      "regenerate_not_needed",
+      "the stored minutes match the current input — regeneration is not applicable",
+    );
+  }
+  const draft = toMinutesDraft(
+    await runMinutesPassForRun(
+      sessionId,
+      sessionTopic(getCommittee(meta.committee_key) as CommitteeDef, {
+        committeeKey: meta.committee_key,
+        decisionMode: meta.decision_mode,
+        gate: meta.gate as ConveneOpts["gate"],
+        targetRef: meta.target_ref,
+        briefMd: meta.brief_md,
+        actor: "chair",
+      }),
+      agenda,
+    ),
+  );
+  meta.minutes_draft = draft;
+  writeMeta(sessionId, meta);
+  return draft;
 }

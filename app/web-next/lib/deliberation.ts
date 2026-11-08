@@ -74,6 +74,10 @@ export interface DeliberationResult {
     recommendation: Recommendation;
     dissentJson: string | null;
   } | null;
+  /** ADR-0196 phase B — chair agenda pass result when the hook ran. */
+  agenda?: AgendaPassResult;
+  /** ADR-0196 phase B — chair minutes pass result when the hook ran. */
+  minutesDraft?: MinutesPassResult;
   status: RunStatus;
 }
 
@@ -97,6 +101,47 @@ export interface RunDeliberationOpts extends RunOpts {
    * explicitly or omit it.
    */
   agenda?: AgendaIssue[];
+  /**
+   * Chair agenda pass (ADR-0196 §2.2, phase B) — run once after round 1 when
+   * rounds >= 2; its agenda threads into the round 2+ prompts. Injected by
+   * the caller (committee-session.ts, the CLI) so this engine stays
+   * DB/LLM-agnostic; null/throwing hooks simply skip the pass.
+   */
+  chairAgendaPass?: (ctx: {
+    processRunId: string;
+    topic: string;
+    round1Positions: DeliberationPosition[];
+  }) => Promise<AgendaPassResult | null>;
+  /**
+   * Chair minutes pass (ADR-0196 §2.3, phase B) — run once after the
+   * gate_evaluation insert; its result is persisted by the caller into
+   * process_run.meta_json. Never fails the run.
+   */
+  chairMinutesPass?: (ctx: {
+    processRunId: string;
+    topic: string;
+    rounds: DeliberationPosition[][];
+    agenda: AgendaIssue[];
+    evaluation: { recommendation: Recommendation; dissentJson: string | null };
+  }) => Promise<MinutesPassResult | null>;
+}
+
+export interface AgendaPassResult {
+  agenda: AgendaIssue[];
+  source: "llm" | "fallback";
+  model?: string;
+  promptVersion: string;
+  inputHash: string;
+  createdAt: string;
+}
+
+export interface MinutesPassResult {
+  json: unknown;
+  fallback: boolean;
+  model?: string;
+  promptVersion: string;
+  inputHash: string;
+  createdAt: string;
 }
 
 /** One chair-proposed discussion issue (ADR-0196 §2.2). */
@@ -312,10 +357,13 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
   const runId = insertProcessRun(entity, opts.stage ?? opts.committeeKey, opts);
 
   try {
+    let agendaResult: AgendaPassResult | undefined;
     for (let round = 1; round <= Math.max(1, opts.rounds); round++) {
       const roundPositions: DeliberationPosition[] = [];
       for (const member of opts.agents) {
-        const prompt = deliberationPrompt(member, opts.topic, priorRounds, round, { agenda: opts.agenda });
+        const prompt = deliberationPrompt(member, opts.topic, priorRounds, round, {
+          agenda: opts.agenda ?? agendaResult?.agenda,
+        });
         const out = await opts.callAgent(member.agentKey, prompt);
         const position: DeliberationPosition = {
           memberKey: member.agentKey,
@@ -334,6 +382,18 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
       }
       rounds.push({ round, positions: roundPositions });
       priorRounds.push(roundPositions);
+      // Chair agenda pass (ADR-0196 section 2.2): once, after round 1, when
+      // the committee runs 2+ rounds. A null/throwing hook skips the pass;
+      // the agenda then threads into every round 2+ prompt above.
+      if (round === 1 && Math.max(1, opts.rounds) >= 2 && opts.chairAgendaPass) {
+        try {
+          agendaResult =
+            (await opts.chairAgendaPass({ processRunId: runId, topic: opts.topic, round1Positions: roundPositions })) ??
+            undefined;
+        } catch {
+          agendaResult = undefined; // a chair pass never fails the run
+        }
+      }
     }
 
     const finalPositions = rounds[rounds.length - 1].positions;
@@ -360,6 +420,21 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
         dissentJson,
       ],
     );
+    let minutesDraft: MinutesPassResult | undefined;
+    if (opts.chairMinutesPass) {
+      try {
+        minutesDraft =
+          (await opts.chairMinutesPass({
+            processRunId: runId,
+            topic: opts.topic,
+            rounds: priorRounds,
+            agenda: opts.agenda ?? agendaResult?.agenda ?? [],
+            evaluation: { recommendation: synthesis.recommendation, dissentJson },
+          })) ?? undefined;
+      } catch {
+        minutesDraft = undefined; // a chair pass never fails the run
+      }
+    }
     finishProcessRun(runId, "done");
     return {
       processRunId: runId,
@@ -370,6 +445,8 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
         recommendation: synthesis.recommendation,
         dissentJson,
       },
+      ...(agendaResult ? { agenda: agendaResult } : {}),
+      ...(minutesDraft ? { minutesDraft } : {}),
       status: "done",
     };
   } catch (err) {
