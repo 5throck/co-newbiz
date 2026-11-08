@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import { runActivityChain, type CallAgent, type AgentCallResult } from "../../app/web-next/lib/agent-orchestrator.ts";
+import { runActivityChain, type CallAgent } from "../../app/web-next/lib/agent-orchestrator.ts";
 import { runDeliberationRounds, deliberationPrompt, buildSynthesis } from "../../app/web-next/lib/deliberation.ts";
 
 const TEST_DB_PATH = "db/data/test-agent-orchestrator.sqlite";
@@ -395,7 +395,7 @@ describe("runDeliberationRounds", () => {
       .query(
         "SELECT gate, recommendation, evaluated_by, dissent_json, process_run_id FROM gate_evaluation WHERE id = ?",
       )
-      .get(result.evaluation!.gateEvaluationId) as Record<string, unknown>;
+      .get(result.evaluation?.gateEvaluationId ?? "") as Record<string, unknown>;
     expect(ev.gate).toBe("pre_fs");
     expect(ev.recommendation).toBe("go"); // majority of the fake committee
     expect(ev.evaluated_by).toBe("process-governance-manager"); // standing chair
@@ -423,7 +423,7 @@ describe("buildSynthesis (dissent rule)", () => {
     ]);
     expect(out.recommendation).toBe("go");
     expect(out.dissents).toEqual([{ member_key: "risk-officer", position_md: RISK_DISSent_MD }]);
-    const parsed = JSON.parse(out.dissent_json!) as Array<{ member_key: string; position_md: string }>;
+    const parsed = JSON.parse(out.dissent_json ?? "[]") as Array<{ member_key: string; position_md: string }>;
     expect(parsed).toHaveLength(1);
     // Verbatim: byte-identical position text, Korean included — never summarized.
     expect(parsed[0].position_md).toBe(RISK_DISSent_MD);
@@ -587,9 +587,9 @@ describe("migrations 0064–0066 round trip", () => {
       "round",
       "created_at",
     ]);
-    expect(ap.get("member_type")!.dflt_value).toBe("'agent'");
-    expect(ap.get("agent_key")!.notnull).toBe(0);
-    expect(ap.get("human_user_id")!.notnull).toBe(0);
+    expect(ap.get("member_type")?.dflt_value).toBe("'agent'");
+    expect(ap.get("agent_key")?.notnull).toBe(0);
+    expect(ap.get("human_user_id")?.notnull).toBe(0);
 
     // 0066 — purely additive columns.
     const ge = new Map(tableColumns("gate_evaluation").map((c) => [c.name, c]));

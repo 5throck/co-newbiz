@@ -268,11 +268,11 @@ describe("deterministic seats emit the extended tail", () => {
       expect(out.issues).toEqual([]);
       const parsed = parsePositionMeta(out.positionMd);
       expect(parsed).not.toBeNull();
-      expect(parsed!.recommendation).toBe(out.recommendation);
-      expect(parsed!.criteriaScores).toEqual(out.criteriaScores);
-      expect(parsed!.respondsTo).toEqual([]);
-      expect(parsed!.stanceChanged).toBe(false);
-      expect(parsed!.issues).toEqual([]);
+      expect(parsed?.recommendation).toBe(out.recommendation);
+      expect(parsed?.criteriaScores).toEqual(out.criteriaScores);
+      expect(parsed?.respondsTo).toEqual([]);
+      expect(parsed?.stanceChanged).toBe(false);
+      expect(parsed?.issues).toEqual([]);
     }
   });
 
