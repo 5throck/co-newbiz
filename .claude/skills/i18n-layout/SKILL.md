@@ -6,10 +6,10 @@ description: >
   script-specific font selection (Hangul focus). Use when: encoding is
   corrupted or mojibake appears, an RTL locale must render correctly,
   fonts must be chosen for a script, or CRLF/BOM issues surface.
-version: 1.0.0
+version: 1.1.0
 owner: pm
 status: active
-last_reviewed: 2026-08-24
+last_reviewed: 2026-11-06
 scope: common
 metadata:
   type: process
@@ -89,7 +89,7 @@ Latin and Hangul/Han glyphs have different natural heights; mixed-script lines n
 
 ## HWP Documents
 
-HWP (Korean word processor) document handling is a document-processing domain, not a layout rule: it is owned by the co-consult variant's `hwp-document-processing` skill. Route HWP extraction, conversion, and authoring questions there — do not duplicate its procedures here. The layout-relevant reminder: HWP content exported to this workspace converts to UTF-8 at the boundary (see Legacy Korean code pages above).
+HWP/HWPX authoring and conversion tooling is provided by the co-work hub (the fleet's HWP capability: kordoc/rhwp adapter + document pipeline) — delegate HWP document work to the co-work hub through the hub-and-spoke channel (DEC-20261107-01). This suite keeps only the layout concerns: HWP content brought into this workspace converts to UTF-8 at the boundary (see Legacy Korean code pages above).
 
 ## Boundary
 

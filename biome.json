@@ -37,6 +37,26 @@
   },
   "overrides": [
     {
+      "includes": [
+        "scripts/audit.ts",
+        "scripts/generate-skill-graph.ts",
+        "scripts/handbook/check-authoring.ts",
+        "scripts/helpers/security-validator.ts",
+        "scripts/lib/upgrade-policy.ts",
+        "scripts/validate-templates.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noAssignInExpressions": "off",
+            "noImplicitAnyLet": "off",
+            "noControlCharactersInRegex": "off",
+            "useIterableCallbackReturn": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["db/lib/snapshot-filler.ts"],
       "formatter": { "enabled": false }
     },

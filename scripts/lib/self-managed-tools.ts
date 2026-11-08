@@ -1,5 +1,14 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
+// v1.3.0 (2026-11-06/08, T-20261108-004 — E2E nightly red, co-work scaffold
+//          only, 14/15 variants green): PROJECT-MODE external-deps vendoring
+//          — when <rootDir>/external-deps.json exists, its install_dirs
+//          (extractInstallDirsLoose from ./external-deps.ts, data-driven)
+//          join the path set with trailing slash, so vendored upstream
+//          content (external/<id>/skills/... — scaffold-time clones per
+//          DEC-20261106-04 "consumed as-is") is self-managed: no owner
+//          frontmatter, no lifecycle record, no falsified provenance.
+//          Workspace root has no external-deps.json (inert at L0).
 // v1.2.0 (2026-10-31, design docs/designs/2026-10-31-graft-trail-migration-design.md,
 //           U-20261031-009): trail-era default paths — the vendor renamed graft to
 //           trail (0.28, @trailhq/trail-code) and `trail init` creates `.trail/` +
@@ -30,8 +39,9 @@
 // such paths instead of each check hard-coding tool names — a future self-managing
 // tool registers here and every consumer follows.
 
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { extractInstallDirsLoose } from "./external-deps.ts";
 
 export interface SelfManagedTool {
   name: string;
@@ -39,7 +49,7 @@ export interface SelfManagedTool {
   paths: string[];
 }
 
-const REGISTRY_REL = join('docs', 'self-managed-surfaces.json');
+const REGISTRY_REL = join("docs", "self-managed-surfaces.json");
 
 /**
  * Built-in default exclusion set (U-20261009-001; trail-era paths per design
@@ -55,19 +65,19 @@ const REGISTRY_REL = join('docs', 'self-managed-surfaces.json');
  */
 export const DEFAULT_SELF_MANAGED_PATHS: readonly string[] = [
   // Trail-era (design 2026-10-31-graft-trail-migration R2.1/R2.2).
-  '.trail/',
-  '.claude/helpers/trail-hooks.cjs',
-  '.claude/helpers/trail-statusline.cjs',
+  ".trail/",
+  ".claude/helpers/trail-hooks.cjs",
+  ".claude/helpers/trail-statusline.cjs",
   // Graft-era legacy (kept until fleet convergence — design R2.6 non-goal).
-  '.claude/skills/graft/',
-  '.agents/skills/graft/',
-  '.codex/skills/graft/',
-  '.gemini/skills/graft/',
-  '.hermes/skills/graft/',
-  '.claude/helpers/graft-hooks.cjs',
-  '.claude/helpers/graft-statusline.cjs',
-  '.claude/helpers/graft.local.json',
-  'skills/graft/',
+  ".claude/skills/graft/",
+  ".agents/skills/graft/",
+  ".codex/skills/graft/",
+  ".gemini/skills/graft/",
+  ".hermes/skills/graft/",
+  ".claude/helpers/graft-hooks.cjs",
+  ".claude/helpers/graft-statusline.cjs",
+  ".claude/helpers/graft.local.json",
+  "skills/graft/",
 ];
 
 /**
@@ -79,8 +89,11 @@ export const DEFAULT_SELF_MANAGED_PATHS: readonly string[] = [
  * to prevent.
  */
 function envExtraPaths(): string[] {
-  const raw = process.env.SELF_MANAGED_SURFACES_EXCL ?? '';
-  return raw.split(',').map((p) => p.trim().replace(/\\/g, '/').replace(/^\.\//, '')).filter(Boolean);
+  const raw = process.env.SELF_MANAGED_SURFACES_EXCL ?? "";
+  return raw
+    .split(",")
+    .map((p) => p.trim().replace(/\\/g, "/").replace(/^\.\//, ""))
+    .filter(Boolean);
 }
 
 let cache: { rootDir: string; tools: SelfManagedTool[]; pathSet: Set<string> } | null = null;
@@ -96,7 +109,7 @@ export function loadSelfManagedTools(rootDir = process.cwd()): SelfManagedTool[]
   let tools: SelfManagedTool[] = [];
   if (existsSync(registryPath)) {
     try {
-      const data = JSON.parse(readFileSync(registryPath, 'utf-8'));
+      const data = JSON.parse(readFileSync(registryPath, "utf-8"));
       if (Array.isArray(data.tools)) tools = data.tools;
     } catch (err) {
       throw new Error(`[self-managed-tools] ${REGISTRY_REL} is not valid JSON: ${(err as Error).message}`);
@@ -106,14 +119,15 @@ export function loadSelfManagedTools(rootDir = process.cwd()): SelfManagedTool[]
   // a named entry under EITHER spelling suppresses the built-in default row (the
   // path set is unioned below regardless, so this only keeps tools[] clean).
   const hasNamedToolEntry = tools.some(
-    (t) => (t.name === 'graft' || t.name === 'trail') && Array.isArray(t.paths) && t.paths.length > 0,
+    (t) => (t.name === "graft" || t.name === "trail") && Array.isArray(t.paths) && t.paths.length > 0,
   );
   const effective: SelfManagedTool[] = hasNamedToolEntry
     ? tools
     : [
         {
-          name: 'trail',
-          reason: 'built-in default (U-20261009-001; renamed from graft per design 2026-10-31-graft-trail-migration): third-party tool-owned surfaces excluded even without docs/self-managed-surfaces.json — see scripts/lib/self-managed-tools.ts',
+          name: "trail",
+          reason:
+            "built-in default (U-20261009-001; renamed from graft per design 2026-10-31-graft-trail-migration): third-party tool-owned surfaces excluded even without docs/self-managed-surfaces.json — see scripts/lib/self-managed-tools.ts",
           paths: [...DEFAULT_SELF_MANAGED_PATHS],
         },
         ...tools,
@@ -128,8 +142,8 @@ function buildPathSet(tools: SelfManagedTool[]): Set<string> {
   for (const p of envExtraPaths()) set.add(p);
   for (const t of tools) {
     for (const p of t.paths) {
-      const norm = p.replace(/\\/g, '/').replace(/^\.\//, '');
-      set.add(norm.endsWith('/') ? norm : `${norm}`);
+      const norm = p.replace(/\\/g, "/").replace(/^\.\//, "");
+      set.add(norm.endsWith("/") ? norm : `${norm}`);
     }
   }
   return set;
@@ -137,15 +151,29 @@ function buildPathSet(tools: SelfManagedTool[]): Set<string> {
 
 function pathSet(rootDir = process.cwd()): Set<string> {
   loadSelfManagedTools(rootDir);
-  return cache!.pathSet;
+  const set = new Set(cache?.pathSet);
+  // v1.3.0 project-mode external-deps vendoring (T-20261108-004): union the
+  // install_dirs from <rootDir>/external-deps.json (data-driven, extracted
+  // by scripts/lib/external-deps.ts extractInstallDirsLoose). Absent file =
+  // inert (workspace root). Dirs carry the trailing-slash directory entry
+  // convention isSelfManagedPath matches.
+  try {
+    const depsRaw = readFileSync(join(rootDir, "external-deps.json"), "utf-8");
+    for (const dir of extractInstallDirsLoose(depsRaw)) {
+      set.add(dir.endsWith("/") ? dir : `${dir}/`);
+    }
+  } catch {
+    // no external-deps.json / unreadable — inert
+  }
+  return set;
 }
 
 /** True when `rel` (repo-relative, forward slashes) IS a registered path or lives
  *  inside a registered directory entry (trailing slash in the registry). */
 export function isSelfManagedPath(rel: string, rootDir = process.cwd()): boolean {
-  const norm = rel.replace(/\\/g, '/').replace(/^\.\//, '');
+  const norm = rel.replace(/\\/g, "/").replace(/^\.\//, "");
   for (const p of pathSet(rootDir)) {
-    if (p.endsWith('/') ? norm.startsWith(p) : norm === p) return true;
+    if (p.endsWith("/") ? norm.startsWith(p) : norm === p) return true;
   }
   return false;
 }
