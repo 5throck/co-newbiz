@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-pre-fs
 title: "Brown Field Pre-Feasibility"
 scope: shared
 level: entity
-version: "1.5.0"
+version: "1.6.0"
 status: active
 applicability: mandatory
 workflow_type: core
@@ -25,27 +25,24 @@ steps:
     skill_key: brownfield-feasibility
     output_type: deal_structure_hypothesis
     description: >
-      Structure hypothesis (asset vs. stock, full vs. partial stake, primary
-      vs. secondary instrument mix, AND acquisition vehicle — direct / SPC /
-      holdco, per docs/pilots/pilot-009-emart-ebay-korea.md finding F-3, a
-      real case structured through a purpose-built SPC) — see
-      docs/pilots/pilot-002-hanwha-impact-hsd-engine.md §2 for a real worked
-      example of a mixed secondary-purchase + primary-rights-issue structure.
-      For R&BD deals (technology_track: rbd on the 3-axis classification —
-      technology/IP acquisition, license-in, internal-venture spin-off
-      carve-out, OR minority venture investment; the retired `case_subtype`
-      field was folded into `technology_track` by ADR-0047) — the structure
-      hypothesis must
-      also cover `checklists/rbd-technology-checklist.yaml` rbd-04's
-      build/license/spin-off/minority-invest choice explicitly. Minority
-      venture investment was added as a fourth R&BD deal shape per
-      docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 — not
-      every R&BD review is an acquisition/license/absorption thesis; some are
-      a minority-stake venture-investment thesis in an independently-founded,
-      university- or government-research-backed target. See
-      docs/pilots/pilot-011-posco-amberoad.md for a real internal-venture-to-spin-off
-      worked example and docs/pilots/pilot-014-c2y-university-techholdings.md
-      for a real minority-investment-shaped example.
+      Deal-structure intent note (reduced in 1.6.0). Record the Pre-FS intent
+      for the four structure axes only — asset vs. stock, full vs. partial
+      stake, primary vs. secondary instrument mix, and acquisition vehicle
+      (direct / SPC / holdco, per docs/pilots/pilot-009-emart-ebay-korea.md
+      finding F-3) — as a hypothesis the FS can price. The deal SHAPE (M&A / JV
+      / strategic investment / minority stake / partnership / R&BD / CVC) is no
+      longer judged here: it is evaluated against the ranked Short List in
+      `shared-brownfield-target-screening` step 3.5 (owner decision 2026-11-08,
+      flow.spec 2.20.0), and the binding structure is decided at S10
+      `deal-structuring` step 1. For R&BD deals (technology_track: rbd on the
+      3-axis classification, ADR-0047) the note still names
+      `checklists/rbd-technology-checklist.yaml` rbd-04's build / license /
+      spin-off / minority-invest choice as an open question for the shape
+      evaluation. Real worked examples of the structures:
+      docs/pilots/pilot-002-hanwha-impact-hsd-engine.md §2 (mixed secondary +
+      primary rights issue), docs/pilots/pilot-011-posco-amberoad.md (internal
+      venture spin-off) and docs/pilots/pilot-014-c2y-university-techholdings.md
+      (minority venture investment).
   - id: 3
     gate: Pre-FS
     agent_key: certification-agent
@@ -94,6 +91,7 @@ legal_basis:
   - "docs/pilots/pilot-014-c2y-university-techholdings.md finding F-4 (minority venture investment as an R&BD deal shape)"
 
   - "ADR-0187 (process SSOT and decision evidence) phase P2 — Pre-FS kill-criteria declaration (M4)"
+  - "Owner decision 2026-11-08 (deal-shape evaluation moves from S4 to S7): step 2 reduced to a deal-structure intent note — docs/designs/2026-11-08-deal-shape-to-s7-design.md; ADR-0195"
 
 owner_agent: process-governance-manager
-last_reviewed: "2026-10-28"
+last_reviewed: "2026-11-08"

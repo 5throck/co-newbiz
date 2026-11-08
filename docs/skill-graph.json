@@ -973,6 +973,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0195",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -2206,8 +2211,8 @@
       "name": "deal-execution-playbook",
       "scope": "root",
       "capability": "deal-execution-playbook",
-      "content_hash": "19483adc1927575b",
-      "version": "1.1.0",
+      "content_hash": "7a4be8e9304de1eb",
+      "version": "1.2.0",
       "mirrors": [
         "skills/deal-execution-playbook/SKILL.md",
         ".claude/skills/deal-execution-playbook/SKILL.md",

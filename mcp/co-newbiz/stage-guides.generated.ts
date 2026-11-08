@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.19.0";
+export const GUIDE_SPEC_VERSION = "2.20.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -193,13 +193,6 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         ]
       },
       {
-        "id": "deal-shape-evaluation",
-        "agent": "brownfield-agent",
-        "procedure": [
-          "brownfield-pre-fs"
-        ]
-      },
-      {
         "id": "route-advisory",
         "agent": "pm",
         "procedure": [
@@ -360,12 +353,20 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
         "procedure": [
           "brownfield-target-screening"
         ]
+      },
+      {
+        "id": "deal-shape-evaluation",
+        "agent": "brownfield-agent",
+        "procedure": [
+          "brownfield-target-screening"
+        ]
       }
     ],
     "requiredArtifacts": [
       "Target Company Short List",
       "Target Ranking/Score",
-      "Exclusion Reasons"
+      "Exclusion Reasons",
+      "Deal Shape Evaluation (viable shapes, intent, rationale)"
     ],
     "completionCriteria": [
       "모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다",

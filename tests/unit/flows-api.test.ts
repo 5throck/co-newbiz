@@ -60,11 +60,30 @@ const NEWER = new Date(Date.now() - 5 * DAY_MS).toISOString();
 let projectId: string;
 let opportunityId: string;
 
-function seedRun(entityType: "project" | "opportunity", entityId: string, runId: string, stage: string, startedAt: string, status = "done") {
+function seedRun(
+  entityType: "project" | "opportunity",
+  entityId: string,
+  runId: string,
+  stage: string,
+  startedAt: string,
+  status = "done",
+) {
   db.run(
     `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [runId, entityType, entityId, entityType === "project" ? entityId : null, "2.10.1", stage, status, "agent", "alice", startedAt, startedAt],
+    [
+      runId,
+      entityType,
+      entityId,
+      entityType === "project" ? entityId : null,
+      "2.10.1",
+      stage,
+      status,
+      "agent",
+      "alice",
+      startedAt,
+      startedAt,
+    ],
   );
   db.run(
     `INSERT INTO activity_run (id, process_run_id, activity_id, status, source, started_at, finished_at) VALUES (?,?,?,?,?,?,?)`,
@@ -94,9 +113,22 @@ function seedCall(opts: {
                                latency_ms, created_by, created_at, input_tokens, output_tokens, cost_usd)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
-      ulid(), opts.agentKey, opts.purpose, opts.contextType ?? null, opts.contextId ?? null,
-      opts.source ?? "llm", "openai", "gpt-test", opts.ok ?? 1, opts.error ?? null,
-      100, "system", opts.createdAt, opts.inputTokens ?? null, opts.outputTokens ?? null, opts.costUsd ?? null,
+      ulid(),
+      opts.agentKey,
+      opts.purpose,
+      opts.contextType ?? null,
+      opts.contextId ?? null,
+      opts.source ?? "llm",
+      "openai",
+      "gpt-test",
+      opts.ok ?? 1,
+      opts.error ?? null,
+      100,
+      "system",
+      opts.createdAt,
+      opts.inputTokens ?? null,
+      opts.outputTokens ?? null,
+      opts.costUsd ?? null,
     ],
   );
 }
@@ -119,7 +151,10 @@ beforeAll(async () => {
 
   projectId = ulid();
   db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [projectId, "NP-FLOWS", NOW]);
-  db.run("INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)", [projectId, "alice", "lead", "root", NOW, "flows api test"]);
+  db.run(
+    "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
+    [projectId, "alice", "lead", "root", NOW, "flows api test"],
+  );
 
   opportunityId = ulid();
   seedRun("project", projectId, ulid(), "S8", NEWER);
@@ -127,9 +162,33 @@ beforeAll(async () => {
   seedRun("project", projectId, ulid(), "S1", OLDER, "failed");
 
   // 카탈로그 purpose(pm-catalog.generated.ts의 정확한 문자열)와 미매핑 purpose.
-  seedCall({ agentKey: "market-intelligence-agent", purpose: "S1 시장규모 산정 — 근거 기반 도출", contextType: "project", contextId: projectId, createdAt: NEWER, inputTokens: 100, outputTokens: 50, costUsd: 0.01 });
-  seedCall({ agentKey: "market-intelligence-agent", purpose: "S1 시장규모 산정 — 근거 기반 도출", contextType: "project", contextId: projectId, createdAt: MID, ok: 0, error: "boom" });
-  seedCall({ agentKey: "market-intelligence-agent", purpose: "외부 단발 목적", source: "synthesis", createdAt: OLDER, ok: 0, error: "synth fail — 요약 집계에서 제외되어야 한다" });
+  seedCall({
+    agentKey: "market-intelligence-agent",
+    purpose: "S1 시장규모 산정 — 근거 기반 도출",
+    contextType: "project",
+    contextId: projectId,
+    createdAt: NEWER,
+    inputTokens: 100,
+    outputTokens: 50,
+    costUsd: 0.01,
+  });
+  seedCall({
+    agentKey: "market-intelligence-agent",
+    purpose: "S1 시장규모 산정 — 근거 기반 도출",
+    contextType: "project",
+    contextId: projectId,
+    createdAt: MID,
+    ok: 0,
+    error: "boom",
+  });
+  seedCall({
+    agentKey: "market-intelligence-agent",
+    purpose: "외부 단발 목적",
+    source: "synthesis",
+    createdAt: OLDER,
+    ok: 0,
+    error: "synth fail — 요약 집계에서 제외되어야 한다",
+  });
 });
 
 afterAll(async () => {
@@ -145,7 +204,10 @@ afterAll(async () => {
 });
 
 async function errCode(res: Response): Promise<string | undefined> {
-  const body = (await res.clone().json().catch(() => null)) as { error?: { code?: string } } | null;
+  const body = (await res
+    .clone()
+    .json()
+    .catch(() => null)) as { error?: { code?: string } } | null;
   return body?.error?.code;
 }
 
@@ -178,11 +240,26 @@ describe("GET /api/flows — blueprint (generated projections only)", () => {
   test("12 stages with names, direct track projection, activities, agents, skills and prompts", async () => {
     const body = await req("/api/flows", { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
     const stages = body.data.stages as Array<Record<string, unknown>>;
-    expect(stages.map((s) => s.id)).toEqual(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12"]);
+    expect(stages.map((s) => s.id)).toEqual([
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "S8",
+      "S9",
+      "S10",
+      "S11",
+      "S12",
+    ]);
     // design 2026-10-25 §6.1: name·applicableTracks는 SPEC_STAGES 직접 투영이다 —
     // PM_CATALOG trackScope 합집합 유도(임시 방편)는 제거되었다. 모든 단계가
     // 스펙 값과 정확히 일치하는지 단언한다.
-    const spec = (await import("js-yaml")).load(await Bun.file(join(PROJECT_ROOT, "process", "flow.spec.yaml")).text()) as {
+    const spec = (await import("js-yaml")).load(
+      await Bun.file(join(PROJECT_ROOT, "process", "flow.spec.yaml")).text(),
+    ) as {
       stages: Array<{ id: string; name: string; applicableTracks: string[] }>;
     };
     for (const [i, stage] of stages.entries()) {
@@ -209,7 +286,7 @@ describe("GET /api/flows — blueprint (generated projections only)", () => {
   test("specialistMarkers come from SPECIALIST_TRACK_AFFINITY (kind + note, awareness-only)", async () => {
     const body = await req("/api/flows", { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
     const markers = body.data.specialistMarkers as Array<Record<string, unknown>>;
-    expect(markers.length).toBe(4);
+    expect(markers.length).toBe(3); // deal-shape-to-S7: S4.deal-shape-evaluation left the both-track affinity set
     for (const m of markers) {
       expect(typeof m.stageId).toBe("string");
       expect(typeof m.activityId).toBe("string");
@@ -219,7 +296,7 @@ describe("GET /api/flows — blueprint (generated projections only)", () => {
     const override = markers.find((m) => `${m.stageId}.${m.activityId}` === "S11.investment-structuring");
     expect(override!.kind).toBe("override");
     const kinds = markers.map((m) => m.kind).sort();
-    expect(kinds).toEqual(["affinity", "affinity", "override", "scoped"]);
+    expect(kinds).toEqual(["affinity", "override", "scoped"]);
   });
 
   test("dynamic items (agentKey null) and prompt system text, agents roster", async () => {
@@ -286,34 +363,48 @@ describe("GET /api/flows/runs — run ledger", () => {
   });
 
   test("filter: agentKey, ok, source, entityType+entityId", async () => {
-    const byAgent = await req(`/api/flows/runs?agentKey=market-intelligence-agent`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const byAgent = await req(`/api/flows/runs?agentKey=market-intelligence-agent`, {
+      headers: { cookie: analystCookie },
+    }).then((r: Response) => r.json());
     expect(byAgent.data.processRuns.length).toBe(3);
     expect(byAgent.data.llmCalls.length).toBe(3);
 
-    const failures = await req(`/api/flows/runs?ok=0`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const failures = await req(`/api/flows/runs?ok=0`, { headers: { cookie: analystCookie } }).then((r: Response) =>
+      r.json(),
+    );
     // 런 사상: failed process_run 1건 + llm 실패 2건(synthesis 실패 포함 — ok 필터는 소스를 가리지 않는다).
     expect(failures.data.processRuns.length).toBe(1);
     expect(failures.data.llmCalls.length).toBe(2);
     expect(failures.data.llmCalls.every((c: Record<string, unknown>) => c.ok === 0)).toBe(true);
 
-    const llmOnly = await req(`/api/flows/runs?source=llm`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const llmOnly = await req(`/api/flows/runs?source=llm`, { headers: { cookie: analystCookie } }).then(
+      (r: Response) => r.json(),
+    );
     expect(llmOnly.data.llmCalls.length).toBe(2);
 
-    const byEntity = await req(`/api/flows/runs?entityType=project&entityId=${projectId}`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const byEntity = await req(`/api/flows/runs?entityType=project&entityId=${projectId}`, {
+      headers: { cookie: analystCookie },
+    }).then((r: Response) => r.json());
     expect(byEntity.data.processRuns.length).toBe(2);
     expect(byEntity.data.llmCalls.length).toBe(2);
   });
 
   test("cursor: before returns strictly older rows; nextBefore meta feeds the next page", async () => {
-    const first = await req(`/api/flows/runs?limit=2`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const first = await req(`/api/flows/runs?limit=2`, { headers: { cookie: analystCookie } }).then((r: Response) =>
+      r.json(),
+    );
     expect(first.data.processRuns.map((r: Record<string, unknown>) => r.stage)).toEqual(["S8", "S3"]);
     expect(first.meta.nextBefore.processRuns).toBe(MID);
-    const second = await req(`/api/flows/runs?limit=2&before=${first.meta.nextBefore.processRuns}`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const second = await req(`/api/flows/runs?limit=2&before=${first.meta.nextBefore.processRuns}`, {
+      headers: { cookie: analystCookie },
+    }).then((r: Response) => r.json());
     expect(second.data.processRuns.map((r: Record<string, unknown>) => r.stage)).toEqual(["S1"]);
   });
 
   test("summary window: errors exclude synthesis, catalog provenance, per-stage error counts", async () => {
-    const body = await req(`/api/flows/runs?window=30d`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const body = await req(`/api/flows/runs?window=30d`, { headers: { cookie: analystCookie } }).then((r: Response) =>
+      r.json(),
+    );
     const summary = body.data.summary;
     expect(summary.window).toBe("30d");
     expect(summary.calls).toBe(3);
@@ -344,7 +435,9 @@ describe("GET /api/flows/runs — run ledger", () => {
   });
 
   test("includeDryRun=1 includes dry-run rows; the note appears only when the filter is off (Row 5 wiring)", async () => {
-    const on = await req(`/api/flows/runs?includeDryRun=1`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());
+    const on = await req(`/api/flows/runs?includeDryRun=1`, { headers: { cookie: analystCookie } }).then(
+      (r: Response) => r.json(),
+    );
     expect(on.meta.includeDryRun).toBe(true);
     expect(on.meta.includeDryRunNote).toBeUndefined();
     const off = await req(`/api/flows/runs`, { headers: { cookie: analystCookie } }).then((r: Response) => r.json());

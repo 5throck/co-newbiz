@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * ADR-0193 var->stage map: for every variable a kill-criteria predicate reads, the earliest
  * flow stage at which its snapshot filler / opportunity-var source can produce a value.
@@ -14,7 +14,7 @@
  */
 export const KILL_VAR_MIN_STAGE: Readonly<Record<string, string>> = {
   // opportunity / early project track
-  "dealshape.viable_shapes": "S4", // deal-shape-chain hosted by S4 route-strategy
+  "dealshape.viable_shapes": "S7", // human-recorded deal-shape evaluation hosted by S7 brownfield-target-screening step 3.5 (owner decision 2026-11-08)
   "fin.wacc_source_status": "S4", // assumption wacc/hurdle_irr, S4 wacc-hurdle-confirmation
   "cert.load_bearing_unconfirmed": "S4", // certification, S4 certification-screen
   "risk.partner_candidates_active": "S4", // partner_candidate rows, partner track after the S4 route
@@ -23,8 +23,8 @@ export const KILL_VAR_MIN_STAGE: Readonly<Record<string, string>> = {
   "infra.sites_clearing_minimums": "S5", // site_candidate
   "infra.plan_finalized": "S5", // site announcement
   "infra.plan_finalized_by_announcement": "S5", // derived from infra.plan_finalized + site_announcement (ADR-0194 item B)
-  "partner.financial_distress_red_count": "S5", // partner DD needs a named partner
-  "partner.dd_ip_chain_red_count": "S5",
+  "partner.financial_distress_red_count": "S8", // partner DD needs a named partner after the S7 shape evaluation; project-scoped source
+  "partner.dd_ip_chain_red_count": "S8",
   // S6-S7 brownfield target work
   "screening.viable_targets": "S6", // brownfield_target longlist
   "antitrust.presumption_screens_triggered": "S7", // antitrust_finding (ownership-regulatory-screening)

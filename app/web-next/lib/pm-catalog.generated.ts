@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.19.0";
+export const SPEC_VERSION = "2.20.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
   "promptsJson": "2763b522c3588953",
-  "flowSpecYaml": "1bdd81adfc0a1559",
+  "flowSpecYaml": "d2789c7b1f65127e",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -515,14 +515,6 @@ export const SPECIALIST_TRACK_AFFINITY: SpecialistTrackAffinity[] = [
     "kind": "affinity",
     "track": "greenfield",
     "note": "S2는 트랙 미결정 — 모든 기회가 후보 신사업이며 스케치는 트랙 중립 가설 산출물(requiredCapabilities→S3→S4)이다",
-    "decision": "DEC-20261025-02"
-  },
-  {
-    "ref": "S4.deal-shape-evaluation",
-    "agent": "brownfield-agent",
-    "kind": "affinity",
-    "track": "brownfield",
-    "note": "딜 형태 평가는 외부 결합 구조의 전문 렌즈 — greenfield 대안은 pm의 route-strategy·route-advisory와 ADR-0104 동일 5기준 채점이 운반한다",
     "decision": "DEC-20261025-02"
   },
   {

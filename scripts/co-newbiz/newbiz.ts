@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-// @version 1.25.0
+// @version 1.26.0
+// 1.26.0: adds the read-only `kill:deal-shape-s7-listing [--json]` case (deal-shape-to-S7 ruling R-4, 2026-11-08).
 // 1.24.1: lint-gate cleanup only (biome whole-file scan on the changed file blocked the quality
 // gate) — `result.catalog` guards replace the `catalog!` non-null assertions in the fetch and
 // md:sync cases (md:sync gains an explicit unreachable-branch guard: dart/law are catalog
@@ -87,6 +88,11 @@
  *                   legacy Screening kill_unassessed acknowledgements on in-flight
  *                   entities and the later gate that now re-asks each (ADR-0193 R-4);
  *                   [--json] prints the rows as JSON
+ *   kill:deal-shape-s7-listing
+ *                   One-time, read-only, non-blocking listing for the risk-officer of the deal-shape
+ *                   re-scope to S7 (ruling R-4): brownfield opportunities already past target_screening whose
+ *                   only #9 record is a pre_fs acknowledgement, and greenfield opportunities with live
+ *                   deal-shape rows but zero viable shapes; [--json] prints the rows as JSON
  *   fin:project     One project's financial rollup as JSON — business-case
  *                   year-1 nets per scenario, valuation simulation
  *                   percentiles, charter KPI targets (read-only)
@@ -141,7 +147,7 @@ function emitFetchEvent(e: FetchSourceEvent): void {
 function printUsage(): void {
   console.log("Usage: bun scripts/co-newbiz/newbiz.ts <command>");
   console.log(
-    'Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, governance:sync [--dry-run|--check], policy:impact --policy <id-or-doc-path>, kill:legacy-ack-listing [--json], fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale "..."] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title "..." [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]',
+    'Commands: db:migrate, status, db:export [--dialect postgres] [--out <file>] [--db-path <path>], proc:resolve --procedure <name> [--entity <code>] [--region <code>] [--json], graph [--check] [--no-consumes], context --skill <name> | --gate <Gate>, fetch --source <dart|ecos|krx|kosis|law|opendata> [--series <id>] [--list] [--from YYYY-MM] [--to YYYY-MM] [--all], md:sync --source <dart|law> [--all], calibrate --from-industry <id> --to-industry <id> --from-series <id> --to-series <id> --from YYYY-MM --to YYYY-MM, convert --value <n> (--from-unit <code> --to-unit <code> | --chain <id>), policy:sync, governance:sync [--dry-run|--check], policy:impact --policy <id-or-doc-path>, kill:legacy-ack-listing [--json], kill:deal-shape-s7-listing [--json], fin:project --project <id>, fin:analyze <canonical-model-json-path>, fin:pipeline <dart-json-path>, fin:driver-tree <canonical-model-json-path>, simulate <scenario-json-path>, rag <scenario-json-path> [--db-path <path>], watch:run [--rescenarios-dir <dir>] [--db-path <path>], model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>], diff <runA> <runB> [--db-path <path>], report <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary], scorecard:rollup [--review-cycle <YYYY-Qn>] [--db-path <path>], user:create <user-id> --role <admin|analyst|viewer> [--display-name <name>] [--db-path <path>], user:approve <user-id> [--db-path <path>], user:list [--db-path <path>], user:reset-password <user-id> [--db-path <path>], assume --run <id> --key <key> --kind <live|user|derived|assumed> --value <n> [--rationale "..."] [--anchor-ref <ref>] [--ttl-days <N>] [--as-of YYYY-MM-DD] [--db-path <path>], wacc:derivation --project <id> [--db-path <path>], glossary:lint [--root <dir>]... [--quiet-known], adr:new --title "..." [--status <status>] [--date YYYY-MM-DD] [--dir <dir>]',
   );
 }
 
@@ -746,9 +752,38 @@ switch (command) {
     if (args.includes("--json")) {
       console.log(JSON.stringify(rows, null, 2));
     } else {
-      console.log(`kill:legacy-ack-listing - ${rows.length} legacy Screening kill_unassessed acknowledgement(s) on in-flight entities (read-only, non-blocking; ADR-0193 R-4).`);
+      console.log(
+        `kill:legacy-ack-listing - ${rows.length} legacy Screening kill_unassessed acknowledgement(s) on in-flight entities (read-only, non-blocking; ADR-0193 R-4).`,
+      );
       for (const r of rows) {
-        console.log(`  ${r.entity_type}:${r.entity_id}${r.entity_name ? ` (${r.entity_name})` : ""} decided by ${r.decided_by} at ${r.decided_at}: ${r.key} -> ${r.implicit_carry ? `implicit carry, re-asked at ${r.reevaluate_at}` : "reached at Screening"}`);
+        console.log(
+          `  ${r.entity_type}:${r.entity_id}${r.entity_name ? ` (${r.entity_name})` : ""} decided by ${r.decided_by} at ${r.decided_at}: ${r.key} -> ${r.implicit_carry ? `implicit carry, re-asked at ${r.reevaluate_at}` : "reached at Screening"}`,
+        );
+      }
+    }
+    break;
+  }
+  case "kill:deal-shape-s7-listing": {
+    const { listDealShapeRescope } = await import("../../app/web-next/lib/gate-kill-deal-shape.ts");
+    const listing = listDealShapeRescope(getDb());
+    if (args.includes("--json")) {
+      console.log(JSON.stringify(listing, null, 2));
+    } else {
+      console.log(
+        `kill:deal-shape-s7-listing - ${listing.past_target_screening.length} brownfield opportunity(ies) past target_screening whose only #9 record is a pre_fs acknowledgement (read-only, non-blocking; deal-shape-to-S7 R-4).`,
+      );
+      for (const r of listing.past_target_screening) {
+        console.log(
+          `  ${r.opportunity_id}${r.opportunity_name ? ` (${r.opportunity_name})` : ""}: pre_fs ack by ${r.pre_fs_decided_by} at ${r.pre_fs_decided_at} ("${r.acknowledgement_reason}"); target_screening GO ${r.target_screening_decision_id} at ${r.target_screening_decided_at}; live deal-shape rows now: ${r.live_recorded === null ? "none" : `${r.live_viable}/${r.live_recorded} viable`}`,
+        );
+      }
+      console.log(
+        `kill:deal-shape-s7-listing - ${listing.greenfield_zero_viable.length} greenfield opportunity(ies) with live deal-shape rows and zero viable shapes (stay visible as a trigger; action mark_conditional / RECYCLE).`,
+      );
+      for (const r of listing.greenfield_zero_viable) {
+        console.log(
+          `  ${r.opportunity_id}${r.opportunity_name ? ` (${r.opportunity_name})` : ""}: ${r.live_recorded} live row(s), latest ${r.latest_at}`,
+        );
       }
     }
     break;

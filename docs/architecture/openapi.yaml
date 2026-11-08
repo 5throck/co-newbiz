@@ -4685,7 +4685,7 @@ paths:
   /api/opportunities/{id}/deal-shapes:
     get:
       operationId: getOpportunityDealShapes
-      summary: Opportunity-scope S4 deal-shape screen (ADR-0194) - live human verdicts (one per shape), superseded history, unevaluated shapes, the live viable count that feeds kill criterion #9 (null when nothing is recorded), and the closed shape/intent vocabularies.
+      summary: Opportunity-scope deal-shape evaluation (ADR-0194; hosted at S7 target screening, brownfield only - ADR-0195) - live human verdicts (one per shape), superseded history, unevaluated shapes, the live viable count that feeds kill criterion #9 (null when nothing is recorded), and the closed shape/intent vocabularies.
       tags:
         - Analysis
       responses:
@@ -4697,16 +4697,20 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordOpportunityDealShape
-      summary: Record one deal-shape verdict {shape, intent, viable, rationale, evidence_ref?} (analyst+). evaluated_by is the session user. Re-posting a shape supersedes its live row (append-only; never deleted). Record-only - no recommendation or score path writes here.
+      summary: Record one deal-shape verdict {shape, intent, viable, rationale, evidence_ref?} (analyst+). evaluated_by is the session user. Re-posting a shape supersedes its live row (append-only; never deleted). Record-only - no recommendation or score path writes here. Refused with 409 `deal_shape_not_open` (error.details.reason = `stage_not_reached` | `track_not_brownfield`) before the opportunity has reached S7 or when its current (is_current) route decision is not brownfield; reads are never guarded.
       tags:
         - Analysis
       responses:
         '201':
           $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/dimension-inputs:
     get:

@@ -1,4 +1,4 @@
-// ADR-0194 item A (PR-1): view logic of the S4 deal-shape evaluation panel (design 2026-11-07-kill-data-sources §3.6).
+// ADR-0194 item A (PR-1): view logic of the deal-shape evaluation panel (design 2026-11-07-kill-data-sources §3.6; relocated from S4 to S7 by ADR-0195).
 // Pure data mapping, no React: the panel renders these results, tests pin them.
 // A verdict is a human-recorded fact. Nothing here derives, suggests or pre-fills a verdict.
 
@@ -31,13 +31,10 @@ export const EVIDENCE_MAX = 2000;
 /** The kill criterion this panel feeds, as the snapshot's acknowledgement key (`<procedure>:<criterion_id>`). */
 export const DEAL_SHAPE_KILL_KEY = "deal-shape-chain:no_viable_deal_shape";
 
-/** Anchor on the S4 screen where the panel mounts. */
+/** Anchor on the S7 target-screening screen where the panel mounts (the #9 snapshot link targets it). */
 export const DEAL_SHAPE_PANEL_ID = "deal-shape-panel";
 
-export type ViableStatus =
-  | { kind: "unassessed" }
-  | { kind: "triggered" }
-  | { kind: "viable"; count: number };
+export type ViableStatus = { kind: "unassessed" } | { kind: "triggered" } | { kind: "viable"; count: number };
 
 /** null stays "unassessed" - it must never be read as zero. A recorded 0 triggers #9 (shown as conditional). */
 export function viableStatus(count: number | null): ViableStatus {
@@ -70,11 +67,23 @@ export interface DealShapeForm {
   evidenceRef: string;
 }
 
-export const EMPTY_DEAL_SHAPE_FORM: DealShapeForm = { shape: "", intent: "", viable: null, rationale: "", evidenceRef: "" };
+export const EMPTY_DEAL_SHAPE_FORM: DealShapeForm = {
+  shape: "",
+  intent: "",
+  viable: null,
+  rationale: "",
+  evidenceRef: "",
+};
 
 /** Loads a previously RECORDED row (the person's own earlier entry) into the form for correction. */
 export function formFromRow(row: DealShapeRow): DealShapeForm {
-  return { shape: row.shape, intent: row.intent, viable: row.viable, rationale: row.rationale, evidenceRef: row.evidence_ref ?? "" };
+  return {
+    shape: row.shape,
+    intent: row.intent,
+    viable: row.viable,
+    rationale: row.rationale,
+    evidenceRef: row.evidence_ref ?? "",
+  };
 }
 
 export type FormProblem = "shape" | "intent" | "viable" | "rationale" | "rationaleTooLong" | "evidenceTooLong";
@@ -92,7 +101,13 @@ export function validateDealShapeForm(f: DealShapeForm): FormProblem | null {
 }
 
 /** Request body: no evaluator field (the server takes the session user), optional evidence omitted when blank. */
-export function buildDealShapeBody(f: DealShapeForm): { shape: string; intent: string; viable: boolean; rationale: string; evidence_ref?: string } {
+export function buildDealShapeBody(f: DealShapeForm): {
+  shape: string;
+  intent: string;
+  viable: boolean;
+  rationale: string;
+  evidence_ref?: string;
+} {
   const evidence = f.evidenceRef.trim();
   return {
     shape: f.shape,
@@ -103,13 +118,18 @@ export function buildDealShapeBody(f: DealShapeForm): { shape: string; intent: s
   };
 }
 
-export type DealShapeErrorKind = "viewer" | "admin" | "notFound" | "invalid" | "other";
+export type DealShapeErrorKind = "viewer" | "admin" | "notFound" | "invalid" | "notOpen" | "conflict" | "other";
 
-/** Maps the route's error envelope to a message kind (400 invalid_request, 403 role_required / role_forbidden, 404). */
+/**
+ * Maps the route's error envelope to a message kind (400 invalid_request, 403 role_required / role_forbidden, 404,
+ * 409). The route returns 409 when the opportunity is before S7 or not brownfield: `deal_shape_not_open` gets its own
+ * message; any other 409 is shown with the server's own message ("conflict"), so a renamed code still reads correctly.
+ */
 export function dealShapeErrorKind(status: number, code: string): DealShapeErrorKind {
   if (status === 403 && code === "role_required") return "viewer";
   if (status === 403 && code === "role_forbidden") return "admin";
   if (status === 404) return "notFound";
   if (status === 400 && code === "invalid_request") return "invalid";
+  if (status === 409) return code === "deal_shape_not_open" ? "notOpen" : "conflict";
   return "other";
 }

@@ -27,7 +27,7 @@
 | `root/compliance-monitoring` | L3 | 1.1.1 | root/compliance-officer | root/phase 4 | root/customer-attrition-risk (composes_with), root/debt-and-contingent-liability-simulation (composes_with), root/financing-plan-review (composes_with), root/incentive-clawback-assessment (composes_with), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/stage-gate-governance (follows), root/technical-due-diligence (composes_with) | — | — |
 | `root/customer-attrition-risk` | L3 | 1.2.0 | root/customer-retention-agent | root/phase 4 | root/debt-and-contingent-liability-simulation (composes_with), root/financing-plan-review (composes_with), root/incentive-clawback-assessment (follows), root/legal-due-diligence (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with) | — | — |
 | `root/dd-to-valuation-bridge` | L3 | 1.2.0 | root/brownfield-agent, root/risk-officer, root/valuation-agent | root/phase 4, root/phase 5 | root/brownfield-feasibility (composes_with), root/executive-presentation (composes_with), root/financing-plan-review (follows), root/insight-synthesis (composes_with), root/rag-scoring-framework (composes_with), root/site-visit-protocol (composes_with), root/stage-gate-governance (composes_with), root/stage-gate-governance (follows), root/talent-pipeline-planning (composes_with) | — | — |
-| `root/deal-execution-playbook` | L3 | 1.1.0 | root/brownfield-agent, root/process-governance-manager | — | — | — | — |
+| `root/deal-execution-playbook` | L3 | 1.2.0 | root/brownfield-agent, root/process-governance-manager | — | — | — | — |
 | `root/debt-and-contingent-liability-simulation` | L3 | 1.1.0 | root/risk-officer, root/valuation-agent | root/phase 4 | root/certification-transferability (follows), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/decision-record` | L3 | 1.1.2 | — | — | root/evidence-ledger (composes_with), root/stage-gate-governance | — | — |
 | `root/delegate-to-hub` | L3 | 1.0.1 | — | — | — | — | — |
@@ -353,6 +353,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0192` | adr | — | — | — |
 | `adr:0193` | adr | — | — | — |
 | `adr:0194` | adr | — | — | — |
+| `adr:0195` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -588,7 +589,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 182 | (expected until docs `references` edges are mined) |
+| adr | 183 | (expected until docs `references` edges are mined) |
 | agent | 13 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ir-agent, root/platform-lead, root/release-engineer, root/security-engineer, root/sre |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 8 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer |

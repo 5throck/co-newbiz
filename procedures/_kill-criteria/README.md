@@ -65,6 +65,14 @@ Every entry also declares **when** the criterion can be asked of a human:
   carries and close only by a recorded human decision on the S12 monitoring surface (C-6).
 - `evaluable_from_evidence` — free-text pointer to the variable source / flow.spec activity (non-empty
   when present).
+- `track` (optional, deal-shape-to-S7 ruling R-1, 2026-11-08) — `greenfield` or `brownfield`: the
+  criterion applies to that track only, even inside a track-neutral procedure. Absent = the criterion
+  follows its procedure (`greenfield-*` / `brownfield-*` prefix, else track-neutral). Today only
+  `deal-shape-chain__no_viable_deal_shape` (#9) carries it (`brownfield`: its source is the
+  human-recorded S7 deal-shape screen, hosted by brownfield-target-screening step 3.5; #10/#11 stay
+  track-neutral because their project-scoped partner-DD source has no track gate). On the other
+  track the criterion closes `out_of_track` (a carry names the route decision), never `overdue`; a
+  triggered result is never scoped away. Scoping is per criterion, never per procedure.
 
 PR-A (this change) is data + validation only: the snapshot classifier that turns a not-yet-evaluable
 criterion into `not_reached` and the carry/hard-block engine are PR-B (design
@@ -90,6 +98,8 @@ Changing these fields on an existing entry is a `procedures/**` change (policy i
   minimum for any variable the predicate reads, and a predicate variable missing from the map is an
   error. `scripts/co-newbiz/process-ssot-check.ts` (`check-kill-registry-parity`) repeats the
   gate/stage binding against flow.spec;
+- `track` (optional): must be `greenfield` or `brownfield` and must not contradict a track-prefixed
+  procedure (`checkTrackField`; also repeated by `check-kill-registry-parity`);
 - `--strict`: executable count (non-null predicates / total) compared
   against `_baseline.json` — a drop below baseline **fails the gate**
   (risk-officer F7: ratio regressions must break the gate, not hide in a
@@ -180,7 +190,8 @@ exactly this reason).
 
 - `procedures/_validate.ts` — enforcement
 - `db/lib/kill-criteria.ts` — the runtime evaluator (ADR-0057)
-- `db/lib/kill-var-stages.ts` + `packages/core-scoring/src/kill-criteria.ts` (`checkStageScopingFields`, `checkReevaluateBinding`) — ADR-0193 stage-scoping checks
+- `db/lib/kill-var-stages.ts` + `packages/core-scoring/src/kill-criteria.ts` (`checkStageScopingFields`, `checkReevaluateBinding`, `checkTrackField`) — ADR-0193 stage-scoping and per-criterion track checks
+- `newbiz.ts kill:legacy-ack-listing` and `newbiz.ts kill:deal-shape-s7-listing` (`app/web-next/lib/gate-kill-legacy.ts`, `gate-kill-deal-shape.ts`) — read-only listings for human review (legacy acknowledgements; the deal-shape S7 re-scope)
 - `db/repositories/kill-criteria.repository.ts` — the evaluation recorder (`recordKillCriteriaEvaluation`) + gate-flow reader (`getRecordedEvaluation`), `kill_criteria_evaluation` (ADR-0058 §1)
 - `scripts/co-newbiz/proc-resolve.ts` — merged `kill_criteria` in resolved
   procedures (union semantics: shared list first, layer additions appended,

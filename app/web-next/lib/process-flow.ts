@@ -118,7 +118,13 @@ export const STAGES: StageDefinition[] = [
       "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)",
     applicableTracks: ["brownfield"],
     gateIds: ["target_screening"],
-    requiredArtifacts: ["Target Company Short List", "Target Ranking/Score", "Exclusion Reasons"],
+    // v2.20.0: the deal-shape evaluation is declared in the spec as a non-blocking artifact (kill criterion #9 carries the RECYCLE signal).
+    requiredArtifacts: [
+      "Target Company Short List",
+      "Target Ranking/Score",
+      "Exclusion Reasons",
+      "Deal Shape Evaluation (viable shapes, intent, rationale)",
+    ],
   },
   {
     id: "S8",

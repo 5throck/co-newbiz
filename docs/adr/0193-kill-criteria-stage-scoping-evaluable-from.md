@@ -1,6 +1,8 @@
 # ADR-0193: Kill-criteria stage scoping — `evaluable_from`, not-reached display, and mandatory carry
 
 **Status**: Accepted (owner decision, 2026-11-07; risk-officer review recorded in design §12)
+
+> **Amended by ADR-0195 (2026-11-08)**: the kill-criteria registry gains a per-criterion `track` field (read via `criterionTrack()`); #9 is `track: brownfield`, #10/#11 stay track-neutral.
 **Date**: 2026-11-07
 **Deciders**: Owner (decision) and risk-officer (kill-criteria authority); drafted by process-governance-manager
 **Related**: ADR-0037 (waivers), ADR-0053 (human decision steps), ADR-0074 (flow.spec SSOT), ADR-0180 (grandfathering precedent), ADR-0192 (S3 fit predicate), design `2026-11-07-kill-criteria-stage-scoping-design`, CHANGELOG 2026-11-06 (AI 1st `not_reached`)

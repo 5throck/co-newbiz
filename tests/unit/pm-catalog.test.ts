@@ -26,13 +26,17 @@ const ROOT = join(import.meta.dirname, "..", "..");
 
 // flow.spec.yaml 원문 — applicableTracks는 spec-activities.generated.ts 투영에
 // 없으므로 단계 트랙 범위 검증만 YAML에서 직접 읽는다.
-const specStages = (yamlLoad(readFileSync(join(ROOT, "process", "flow.spec.yaml"), "utf8")) as {
-  stages: Array<{ id: string; activities: Array<{ id: string; agent: string }>; applicableTracks?: string[] }>;
-}).stages;
+const specStages = (
+  yamlLoad(readFileSync(join(ROOT, "process", "flow.spec.yaml"), "utf8")) as {
+    stages: Array<{ id: string; activities: Array<{ id: string; agent: string }>; applicableTracks?: string[] }>;
+  }
+).stages;
 
 describe("pm catalog (ADR-0183 D1)", () => {
   test("generated file is in sync with the SSOTs (generator --check is clean)", () => {
-    const proc = Bun.spawnSync(["bun", join(ROOT, "scripts", "co-newbiz", "generate-pm-catalog.ts"), "--check"], { cwd: ROOT });
+    const proc = Bun.spawnSync(["bun", join(ROOT, "scripts", "co-newbiz", "generate-pm-catalog.ts"), "--check"], {
+      cwd: ROOT,
+    });
     if (proc.exitCode !== 0) {
       console.error(new TextDecoder().decode(proc.stderr));
     }
@@ -56,7 +60,10 @@ describe("pm catalog (ADR-0183 D1)", () => {
   });
 
   test("dynamic entries are exactly the two known agent=null prompts", () => {
-    const nullAgentKeys = Object.values(PM_CATALOG).filter((e) => e.agentKey === null).map((e) => e.promptKey).sort();
+    const nullAgentKeys = Object.values(PM_CATALOG)
+      .filter((e) => e.agentKey === null)
+      .map((e) => e.promptKey)
+      .sort();
     expect(nullAgentKeys).toEqual(["committee.position", "s8.business_case_prose"]);
     expect([...DYNAMIC_AGENT_PROMPTS].sort()).toEqual(nullAgentKeys);
   });
@@ -100,12 +107,18 @@ describe("pm catalog (ADR-0183 D1)", () => {
     }
     // 유일한 이중 배정은 실제로 어긋난다 — 예외가 유명무실하지 않음을 보장.
     const insight = PM_CATALOG["s11.integrated_insight"];
-    const icOwner = specStages.find((s) => s.id === "S11")!.activities?.find((a) => a.id === "ic-preparation")!.agent;
+    const icOwner = specStages.find((s) => s.id === "S11")!.activities?.find((a) => a.id === "ic-preparation")?.agent;
     expect(insight.agentKey).not.toBe(icOwner);
   });
 
   test("dual assignments are exactly the documented set with rationales", () => {
-    expect(DUAL_ASSIGNMENTS.map((d) => d.promptKey as string)).toEqual(["s3.synergy_fa", "s11.integrated_insight", "s3.attractiveness_recommendation", "company_profile.competitor_web_search", "s12.milestone_suggest"]); // ADR-0185; s3.synergy_fa left the set under ADR-0187 D6 and returned under D6' (2026-10-28) as financial-analyst's quantification support lens on the market-intelligence-agent-led synergy-analysis
+    expect(DUAL_ASSIGNMENTS.map((d) => d.promptKey as string)).toEqual([
+      "s3.synergy_fa",
+      "s11.integrated_insight",
+      "s3.attractiveness_recommendation",
+      "company_profile.competitor_web_search",
+      "s12.milestone_suggest",
+    ]); // ADR-0185; s3.synergy_fa left the set under ADR-0187 D6 and returned under D6' (2026-10-28) as financial-analyst's quantification support lens on the market-intelligence-agent-led synergy-analysis
     for (const d of DUAL_ASSIGNMENTS) {
       expect(d.rationale.trim().length).toBeGreaterThan(0);
       expect(d.activity).toMatch(/^S\d+\.[a-z-]+$/);
@@ -114,12 +127,14 @@ describe("pm catalog (ADR-0183 D1)", () => {
     }
   });
 
-  test("specialist track affinity is exactly the four DEC-20261025-02 sites and passes the die rules", () => {
+  test("specialist track affinity is exactly the three remaining DEC-20261025-02 sites and passes the die rules", () => {
     // DEC-20261025-02 §11.3 — 배열은 스펙 위의 엄격한 주석 계층이다: ref 실재,
     // 활동 agent 일치, 트랙 전문가 로스터, 양트랙 공통 단계, note·decision 공백 금지.
-    expect(SPECIALIST_TRACK_AFFINITY.length).toBe(4);
+    // deal-shape-to-S7 (2026-11-08, flow.spec 2.20.0): S4.deal-shape-evaluation moved to S7, a brownfield-only stage, so it left the
+    // both-track affinity set (the die rules below would reject it: "양트랙 공통 단계만 마커 대상").
+    expect(SPECIALIST_TRACK_AFFINITY.length).toBe(3);
     expect([...new Set(SPECIALIST_TRACK_AFFINITY.map((e) => e.ref))].sort()).toEqual(
-      ["S2.business-model-sketch", "S4.deal-shape-evaluation", "S9.capability-dd", "S11.investment-structuring"].sort(),
+      ["S2.business-model-sketch", "S9.capability-dd", "S11.investment-structuring"].sort(),
     );
     for (const e of SPECIALIST_TRACK_AFFINITY) {
       const dot = e.ref.indexOf(".");
@@ -139,10 +154,10 @@ describe("pm catalog (ADR-0183 D1)", () => {
     for (const e of SPECIALIST_TRACK_AFFINITY) expect(e.decision).toBe("DEC-20261025-02");
   });
 
-  test("specialist affinity kinds are 2 affinity + 1 scoped + 1 override", () => {
+  test("specialist affinity kinds are 1 affinity + 1 scoped + 1 override", () => {
     const counts = { affinity: 0, scoped: 0, override: 0 };
     for (const e of SPECIALIST_TRACK_AFFINITY) counts[e.kind] += 1;
-    expect(counts).toEqual({ affinity: 2, scoped: 1, override: 1 });
+    expect(counts).toEqual({ affinity: 1, scoped: 1, override: 1 });
   });
 
   test("mapped activities exist in the spec-activities projection ids", () => {
@@ -179,10 +194,19 @@ describe("pm catalog generator hard-fail (D2 / specialist affinity die validatio
     ]) {
       mkdirSync(d, { recursive: true });
     }
-    copyFileSync(join(ROOT, "scripts", "co-newbiz", "generate-pm-catalog.ts"), join(FIXTURE, "scripts", "co-newbiz", "generate-pm-catalog.ts"));
-    copyFileSync(join(ROOT, "scripts", "lib", "error-handling.ts"), join(FIXTURE, "scripts", "lib", "error-handling.ts"));
+    copyFileSync(
+      join(ROOT, "scripts", "co-newbiz", "generate-pm-catalog.ts"),
+      join(FIXTURE, "scripts", "co-newbiz", "generate-pm-catalog.ts"),
+    );
+    copyFileSync(
+      join(ROOT, "scripts", "lib", "error-handling.ts"),
+      join(FIXTURE, "scripts", "lib", "error-handling.ts"),
+    );
     copyFileSync(join(ROOT, "process", "flow.spec.yaml"), join(FIXTURE, "process", "flow.spec.yaml"));
-    copyFileSync(join(ROOT, "app", "web-next", "prompts", "prompts.json"), join(FIXTURE, "app", "web-next", "prompts", "prompts.json"));
+    copyFileSync(
+      join(ROOT, "app", "web-next", "prompts", "prompts.json"),
+      join(FIXTURE, "app", "web-next", "prompts", "prompts.json"),
+    );
     for (const f of readdirSync(join(ROOT, "agents"))) {
       if (f.endsWith(".md")) copyFileSync(join(ROOT, "agents", f), join(FIXTURE, "agents", f));
     }
@@ -224,12 +248,12 @@ describe("pm catalog generator hard-fail (D2 / specialist affinity die validatio
 
   test("dies when a SPECIALIST_TRACK_AFFINITY ref no longer matches the spec agent", () => {
     buildFixture();
-    // S4.deal-shape-evaluation은 매핑된 프롬프트가 없어 D2 검증을 건드리지
+    // S9.capability-dd는 매핑된 프롬프트가 없어 D2 검증을 건드리지
     // 않는다 — 어필리티 die 규칙만 깨진다.
     overwrite(
       join(FIXTURE, "process", "flow.spec.yaml"),
-      `- id: deal-shape-evaluation\n        agent: brownfield-agent`,
-      `- id: deal-shape-evaluation\n        agent: pm`,
+      `- id: capability-dd\n        agent: brownfield-agent`,
+      `- id: capability-dd\n        agent: pm`,
     );
     const { code, stderr } = runGenerator();
     expect(code).toBe(1);
@@ -240,7 +264,7 @@ describe("pm catalog generator hard-fail (D2 / specialist affinity die validatio
     buildFixture();
     overwrite(
       join(FIXTURE, "scripts", "co-newbiz", "generate-pm-catalog.ts"),
-      `rationale: "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern).",`,
+      `rationale:\n      "Cross-domain integrated insight is the process-governance-manager charter (auxiliary review lens) layered on the pm-owned ic-preparation activity; procedure schema supports one agent_key per step (ADR-0161 Q6 pattern).",`,
       `rationale: "",`,
     );
     const { code, stderr } = runGenerator();

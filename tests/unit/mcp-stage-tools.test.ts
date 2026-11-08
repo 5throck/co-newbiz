@@ -15,15 +15,21 @@ const ROOT = resolve(import.meta.dirname, "..", "..");
 const { REGISTRY, callTool, toolsFor } = await import("../../mcp/co-newbiz/registry.ts");
 const { MCPScopeError } = await import("../../mcp/co-newbiz/define.ts");
 const { runCoverage } = await import("../../scripts/co-newbiz/mcp-coverage.ts");
-const { HUMAN_ONLY_ROUTES, ROUTE_TABLE, InProcessRestPort, isHumanOnly, matchRoute } = await import("../../app/web-next/lib/mcp/in-process-port.ts");
+const { HUMAN_ONLY_ROUTES, ROUTE_TABLE, InProcessRestPort, isHumanOnly, matchRoute } = await import(
+  "../../app/web-next/lib/mcp/in-process-port.ts"
+);
 
 type Call = { method: string; path: string; body: unknown };
 
 function recorder(): { port: RestPort; calls: Call[] } {
   const calls: Call[] = [];
-  const reply = async <T,>(method: string, path: string, body?: unknown): Promise<Envelope<T>> => {
+  const reply = async <T>(method: string, path: string, body?: unknown): Promise<Envelope<T>> => {
     calls.push({ method, path, body });
-    return { data: { proposal_id: "P1", confirm_url: "/proposals/P1/confirm", status: "pending" } as T, meta: {}, error: null };
+    return {
+      data: { proposal_id: "P1", confirm_url: "/proposals/P1/confirm", status: "pending" } as T,
+      meta: {},
+      error: null,
+    };
   };
   return {
     calls,
@@ -48,7 +54,7 @@ describe("coverage gate", () => {
     // Artifacts 34: v2.9.0 added the S2 required artifact 진입시장 산정
     // (stage:S2:2, read via get_entry_market_derivation).
     expect(report.activities).toBe(60); // ADR-0185: +9 (7 S9 DD validators, 2 S4); ADR-0187 P0: +3 (S3 synergy-red-team, capability-register-greenfield/-brownfield); P2: +1 (S4 regulatory-screening, human-only exclusion)
-    expect(report.artifacts).toBe(37); // ADR-0187 P2: +1 (stage:S4:5 legal-regulatory screen); P3: +2 (stage:S5:3/4 feasibility and site-selection checklists) - all via propose_gate_decision
+    expect(report.artifacts).toBe(38); // deal-shape-to-S7: +1 (stage:S7:4 deal-shape evaluation, covered by get/record_deal_shape_evaluation); was 37: ADR-0187 P2: +1 (stage:S4:5 legal-regulatory screen); P3: +2 (stage:S5:3/4 feasibility and site-selection checklists) - all via propose_gate_decision
   });
 
   test("the coverage script fails when a human-only route gains a tool (self-test)", async () => {
@@ -76,11 +82,25 @@ describe("coverage gate", () => {
   });
 
   test("the in-process route guard refuses every human-only mutation", async () => {
-    const port = new InProcessRestPort({ userId: "alice", role: "analyst", scopes: ["read", "write", "propose"], mustChangePassword: false, tokenId: "t", clientId: "c" });
+    const port = new InProcessRestPort({
+      userId: "alice",
+      role: "analyst",
+      scopes: ["read", "write", "propose"],
+      mustChangePassword: false,
+      tokenId: "t",
+      clientId: "c",
+    });
     for (const rule of HUMAN_ONLY_ROUTES) {
       const path = rule.pattern.replace(/:\w+/g, "x1");
       const body = rule.bodyField ? { [rule.bodyField.field]: rule.bodyField.value } : {};
-      const call = rule.method === "POST" ? port.post(path, body) : rule.method === "PUT" ? port.put(path, body) : rule.method === "PATCH" ? port.patch(path, body) : port.delete(path);
+      const call =
+        rule.method === "POST"
+          ? port.post(path, body)
+          : rule.method === "PUT"
+            ? port.put(path, body)
+            : rule.method === "PATCH"
+              ? port.patch(path, body)
+              : port.delete(path);
       const res = await call;
       expect(res.error?.code, `${rule.method} ${rule.pattern}`).toBe("human_only");
     }
@@ -113,10 +133,17 @@ describe("registry shape", () => {
   });
 
   test("all six decision kinds plus the establishment-mode proposal are propose tools that only POST /api/proposals", () => {
-    const propose = REGISTRY.filter((t) => t.kind === "propose").map((t) => t.name).sort();
+    const propose = REGISTRY.filter((t) => t.kind === "propose")
+      .map((t) => t.name)
+      .sort();
     expect(propose).toEqual([
-      "propose_approval", "propose_case_adoption", "propose_establishment_mode", "propose_gate_decision",
-      "propose_route_decision", "propose_target_selection", "propose_transition_decision",
+      "propose_approval",
+      "propose_case_adoption",
+      "propose_establishment_mode",
+      "propose_gate_decision",
+      "propose_route_decision",
+      "propose_target_selection",
+      "propose_transition_decision",
     ]);
     for (const name of propose) {
       expect(REGISTRY.find((t) => t.name === name)?.routes).toEqual(["POST /api/proposals"]);
@@ -147,9 +174,19 @@ describe("registry shape", () => {
 
   test("write scope implies neither read nor propose, and propose implies neither", async () => {
     const { port } = recorder();
-    await expect(callTool("http", { port, scopes: ["write"] }, "get_opportunity", { opportunityId: "o1" })).rejects.toBeInstanceOf(MCPScopeError);
-    await expect(callTool("http", { port, scopes: ["write"] }, "propose_case_adoption", { projectId: "p", model_id: "m", rationale: "r" })).rejects.toBeInstanceOf(MCPScopeError);
-    await expect(callTool("http", { port, scopes: ["propose"] }, "create_opportunity", { name: "x" })).rejects.toBeInstanceOf(MCPScopeError);
+    await expect(
+      callTool("http", { port, scopes: ["write"] }, "get_opportunity", { opportunityId: "o1" }),
+    ).rejects.toBeInstanceOf(MCPScopeError);
+    await expect(
+      callTool("http", { port, scopes: ["write"] }, "propose_case_adoption", {
+        projectId: "p",
+        model_id: "m",
+        rationale: "r",
+      }),
+    ).rejects.toBeInstanceOf(MCPScopeError);
+    await expect(
+      callTool("http", { port, scopes: ["propose"] }, "create_opportunity", { name: "x" }),
+    ).rejects.toBeInstanceOf(MCPScopeError);
   });
 });
 
@@ -157,7 +194,10 @@ describe("thin wrappers", () => {
   test("a route tool forwards ids, body, and query to exactly one route", async () => {
     const { port, calls } = recorder();
     await callTool("stdio", { port }, "record_candidate_screening", {
-      opportunityId: "o 1", targetId: "t1", criterionId: "c1", body: { status: "met" },
+      opportunityId: "o 1",
+      targetId: "t1",
+      criterionId: "c1",
+      body: { status: "met" },
     });
     await callTool("stdio", { port }, "list_market_analyses", { query: { limit: 5, q: "a b" } });
     expect(calls).toEqual([
@@ -169,7 +209,10 @@ describe("thin wrappers", () => {
   test("record_deal_structure refuses the human-only four-axis completion", async () => {
     const { port, calls } = recorder();
     await expect(
-      callTool("stdio", { port }, "record_deal_structure", { projectId: "p1", body: { action: "complete_four_axis", hypothesis_id: "h", artifact_ref: "a" } }),
+      callTool("stdio", { port }, "record_deal_structure", {
+        projectId: "p1",
+        body: { action: "complete_four_axis", hypothesis_id: "h", artifact_ref: "a" },
+      }),
     ).rejects.toThrow(/human-only/);
     expect(calls).toEqual([]);
     await callTool("stdio", { port }, "record_deal_structure", { projectId: "p1", body: { action: "hypothesize" } });
@@ -179,11 +222,17 @@ describe("thin wrappers", () => {
   test("record_establishment refuses done (ADR-0165) but records in_progress / halted / escalated", async () => {
     const { port, calls } = recorder();
     await expect(
-      callTool("stdio", { port }, "record_establishment", { projectId: "p1", body: { step_no: 1, status: "done", origin: "internal", note: "n" } }),
+      callTool("stdio", { port }, "record_establishment", {
+        projectId: "p1",
+        body: { step_no: 1, status: "done", origin: "internal", note: "n" },
+      }),
     ).rejects.toThrow(/human-only/);
     expect(calls).toEqual([]);
     for (const status of ["in_progress", "halted", "escalated"]) {
-      await callTool("stdio", { port }, "record_establishment", { projectId: "p1", body: { step_no: 1, status, origin: "internal" } });
+      await callTool("stdio", { port }, "record_establishment", {
+        projectId: "p1",
+        body: { step_no: 1, status, origin: "internal" },
+      });
     }
     expect(calls).toHaveLength(3);
     expect(isHumanOnly("PUT", "/api/projects/p1/establishment/assignee", {})).toBe(true);
@@ -192,17 +241,28 @@ describe("thin wrappers", () => {
 
   test("propose tools call POST /api/proposals with the right kind and never a decision route", async () => {
     const { port, calls } = recorder();
-    await callTool("stdio", { port }, "propose_gate_decision", { entityId: "o1", gate: "screening", decision: "go", rationale: "r" });
+    await callTool("stdio", { port }, "propose_gate_decision", {
+      entityId: "o1",
+      gate: "screening",
+      decision: "go",
+      rationale: "r",
+    });
     await callTool("stdio", { port }, "propose_case_adoption", { projectId: "p1", model_id: "m1", rationale: "r" });
-    await callTool("stdio", { port }, "propose_approval", { projectId: "p1", subject: "charter_baseline", rationale: "r" });
+    await callTool("stdio", { port }, "propose_approval", {
+      projectId: "p1",
+      subject: "charter_baseline",
+      rationale: "r",
+    });
     expect(calls.every((c) => c.method === "POST" && c.path === "/api/proposals")).toBe(true);
     expect(calls.map((c) => (c.body as { kind: string }).kind)).toEqual(["gate_decision", "case_adoption", "approval"]);
   });
 });
 
 describe("import graph — propose paths cannot reach a decision writer (ADR-0153 pattern)", () => {
-  const DECISION_TABLES = /(INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+(gate_decision|route_decision\w*|venture_transition_decision|closure_record|approval\w*|review_stage)\b/i;
-  const FORBIDDEN_IMPORT = /(gate-decisions|route-decision|transition-decision|business-case\/adopt|target-selection|charter\/confirm|closure|pmi-kickoff|human-final|review\.repository)/;
+  const DECISION_TABLES =
+    /(INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+(gate_decision|route_decision\w*|venture_transition_decision|closure_record|approval\w*|review_stage)\b/i;
+  const FORBIDDEN_IMPORT =
+    /(gate-decisions|route-decision|transition-decision|business-case\/adopt|target-selection|charter\/confirm|closure|pmi-kickoff|human-final|review\.repository)/;
   const FILES = [
     "db/repositories/decision-proposal.repository.ts",
     "app/web-next/app/api/proposals/route.ts",

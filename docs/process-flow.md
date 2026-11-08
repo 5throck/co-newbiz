@@ -107,7 +107,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - S1 시장분석: `market-intelligence-agent`
 - S2 기회 발굴: `market-intelligence-agent`, `greenfield-agent`
 - S3 시너지·전략적 적합성: `process-governance-manager`, `market-intelligence-agent`, `risk-officer`, `greenfield-agent`, `brownfield-agent`, `financial-analyst`
-- S4 진출방식 결정: `pm`, `brownfield-agent`, `valuation-agent`, `certification-agent`, `legal-counsel`
+- S4 진출방식 결정: `pm`, `valuation-agent`, `certification-agent`, `legal-counsel`
 - S5 자체 진출: `greenfield-agent`, `financial-analyst`
 - S6 대상 후보 발굴: `brownfield-agent`, `market-intelligence-agent`
 - S7 대상 선정: `brownfield-agent`, `antitrust-agent`
@@ -273,7 +273,6 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **Activities**
 - route-strategy · agent: `pm` · skills: `deal-execution-playbook`, `jv-structuring`, `partner-sourcing-strategy`, `brownfield-feasibility`, `greenfield-feasibility`, `site-infrastructure-assessment`, `regional-incentive-sourcing`, `partner-due-diligence`, `partnership-health-scorecard`, `investment-vehicle-structuring` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
-- deal-shape-evaluation · agent: `brownfield-agent` · skills: `deal-execution-playbook` · procedure: `brownfield-pre-fs`
 - route-advisory · agent: `pm` · skills:  · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`, `deal-shape-chain`
 - wacc-hurdle-confirmation · agent: `valuation-agent` · skills: `wacc-input-session` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`
 - certification-screen · agent: `certification-agent` · skills: `certification-roadmap`, `certification-transferability` · procedure: `greenfield-pre-fs`, `brownfield-pre-fs`
@@ -424,6 +423,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **입력**
 - Target Company Long List (S6)
+- 트랙 결정·Route 유형 (S4)
 - 스크리닝 기준(전략적 적합성·역량 적합성·재무·지역·소유권/가용성·규제 제약)
 - 진입시장 산정 (S2 확정 — ADR-0181; S3~S12의 기준 시장, ADR-0187 M9)
 
@@ -431,11 +431,13 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - target-screening · agent: `brownfield-agent` · skills: `brownfield-feasibility`, `strategic-fit-screening`, `peer-benchmarking` · procedure: `brownfield-target-screening`
 - ownership-regulatory-screening · agent: `antitrust-agent` · skills: `antitrust-screening`, `regulatory-screening` · procedure: `brownfield-target-screening`
 - target-ranking · agent: `brownfield-agent` · skills: `strategic-fit-screening`, `brownfield-feasibility`, `peer-benchmarking` · procedure: `brownfield-target-screening`
+- deal-shape-evaluation · agent: `brownfield-agent` · skills: `deal-execution-playbook` · procedure: `brownfield-target-screening`
 
 **필수 산출물**
 - Target Company Short List
 - Target Ranking/Score
 - Exclusion Reasons
+- Deal Shape Evaluation (viable shapes, intent, rationale)
 
 **완료 기준**
 - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
@@ -447,6 +449,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - `s7.candidate_verdict` — 산출물 2, 3 · 완료 기준 1
 - `s7.candidate_evidence` — 완료 기준 3
 - `s7.knockout_shortlist` — 산출물 1 · 완료 기준 2
+- 비차단 산출물: 4
 
 **적용 트랙**: brownfield
 

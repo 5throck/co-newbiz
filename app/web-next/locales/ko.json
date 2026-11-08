@@ -5246,68 +5246,6 @@
         "toKnowledgeNotSubstitutable": "1=대체 가능 ~ 3=암묵적 지식·대체 불가",
         "verifiedToAndRegulationUncertain": "1=수요 검증됨 ~ 3=수요·규제 불확실"
       },
-      "dealShapePanel": {
-        "title": "진출 형태 평가",
-        "lead": "외부 결합으로 진출하는 형태마다 가능한지 사람이 판단해 기록합니다. 기록된 평가가 중단 조건 #9(가능한 딜 형태 없음)의 근거가 됩니다.",
-        "noAiPrefill": "이 화면은 AI 제안을 미리 채우지 않습니다. 양식은 비어 있고, 기록은 사람이 직접 판단한 평가만 남습니다.",
-        "statusUnassessed": "아직 기록된 평가가 없습니다 — 중단 조건 #9는 평가 전으로 남습니다",
-        "statusTriggered": "기록된 형태 중 가능한 형태가 없습니다 — 중단 조건 #9에 해당합니다(조건부 표시).",
-        "statusViable": "가능한 형태 {count}건 (평가한 {evaluated}건 중, 전체 {total}건)",
-        "tableLabel": "진출 형태별 평가",
-        "tableCaption": "진출 형태마다 기록된 현재 평가: 가능 여부, 의도, 근거, 기록한 사람과 시각",
-        "colShape": "진출 형태",
-        "colVerdict": "평가",
-        "colIntent": "의도",
-        "colRationale": "근거",
-        "colRecordedBy": "기록",
-        "colActions": "작업",
-        "verdictViable": "가능",
-        "verdictNotViable": "불가",
-        "verdictUnevaluated": "평가 전",
-        "noRecordYet": "아직 기록 없음",
-        "evidenceRef": "근거 자료: {ref}",
-        "recordedBy": "{who} · {when}",
-        "edit": "수정",
-        "editAria": "{shape} 평가 수정",
-        "editLoadedNote": "이전에 기록한 평가를 불러왔습니다. 저장하면 이전 평가는 이력으로 남고, 새 평가가 이 형태의 현재 평가가 됩니다.",
-        "historySummary": "평가 이력 ({count}건)",
-        "superseded": "새 평가로 대체됨",
-        "formLabel": "진출 형태 평가 기록",
-        "formLegend": "평가 기록",
-        "fieldShape": "진출 형태",
-        "fieldIntent": "의도",
-        "fieldViable": "가능 여부",
-        "fieldRationale": "근거 (필수, {max}자 이내)",
-        "fieldEvidence": "근거 자료 참조 (선택)",
-        "record": "평가 기록",
-        "recording": "기록하는 중…",
-        "recorded": "평가를 기록했습니다.",
-        "readOnly": "평가 기록은 분석가 역할만 할 수 있습니다. 이 화면에서는 기록된 평가를 볼 수만 있습니다.",
-        "problem": {
-          "shape": "진출 형태를 고르세요.",
-          "intent": "의도를 고르세요.",
-          "viable": "가능 또는 불가를 고르세요.",
-          "rationale": "근거를 적어야 기록할 수 있습니다.",
-          "rationaleTooLong": "근거는 {max}자 이내로 줄여 주세요.",
-          "evidenceTooLong": "근거 자료 참조는 {max}자 이내로 줄여 주세요."
-        },
-        "loadError": {
-          "viewer": "평가를 볼 권한이 없습니다.",
-          "admin": "관리자 역할은 사업 내용을 볼 수 없습니다. 사업 참여 권한이 있는 계정으로 확인하세요.",
-          "notFound": "이 사업 기회를 찾을 수 없습니다.",
-          "other": "진출 형태 평가를 불러오지 못했습니다. 새로고침한 뒤 다시 시도하세요."
-        },
-        "serverError": {
-          "viewer": "평가 기록은 분석가 역할만 할 수 있습니다.",
-          "admin": "관리자 역할은 평가를 기록할 수 없습니다.",
-          "notFound": "이 사업 기회를 찾을 수 없습니다.",
-          "other": "평가를 기록하지 못했습니다. 잠시 뒤 다시 시도하세요."
-        },
-        "shape": {
-          "license_in": "라이선스 도입",
-          "co_development": "공동 개발"
-        }
-      },
       "decisionTab": {
         "allMonths": "전체 월",
         "allYears": "전체 연도",
@@ -6189,6 +6127,69 @@
         "minimumCandidateCount": "최소 후보 수",
         "referenceNotAForcedFormula": "참고(강제 공식 아님): S3 필요 역량 중 미보유",
         "saveTargetMarket": "목표 시장 저장"
+      },
+      "dealShapePanel": {
+        "title": "진출 형태 평가",
+        "lead": "단축 후보 목록(최종 후보 목록)을 정한 뒤, 외부 결합으로 진출하는 형태마다 가능한지 사람이 판단해 기록합니다. 기록된 평가가 중단 조건 #9(가능한 딜 형태 없음)의 근거가 됩니다.",
+        "noAiPrefill": "이 화면은 AI 제안을 미리 채우지 않습니다. 양식은 비어 있고, 기록은 사람이 직접 판단한 평가만 남습니다.",
+        "statusUnassessed": "아직 기록된 평가가 없습니다 — 중단 조건 #9는 평가 전으로 남습니다",
+        "statusTriggered": "기록된 형태 중 가능한 형태가 없습니다 — 중단 조건 #9에 해당합니다(조건부 표시).",
+        "statusViable": "가능한 형태 {count}건 (평가한 {evaluated}건 중, 전체 {total}건)",
+        "tableLabel": "진출 형태별 평가",
+        "tableCaption": "진출 형태마다 기록된 현재 평가: 가능 여부, 의도, 근거, 기록한 사람과 시각",
+        "colShape": "진출 형태",
+        "colVerdict": "평가",
+        "colIntent": "의도",
+        "colRationale": "근거",
+        "colRecordedBy": "기록",
+        "colActions": "작업",
+        "verdictViable": "가능",
+        "verdictNotViable": "불가",
+        "verdictUnevaluated": "평가 전",
+        "noRecordYet": "아직 기록 없음",
+        "evidenceRef": "근거 자료: {ref}",
+        "recordedBy": "{who} · {when}",
+        "edit": "수정",
+        "editAria": "{shape} 평가 수정",
+        "editLoadedNote": "이전에 기록한 평가를 불러왔습니다. 저장하면 이전 평가는 이력으로 남고, 새 평가가 이 형태의 현재 평가가 됩니다.",
+        "historySummary": "평가 이력 ({count}건)",
+        "superseded": "새 평가로 대체됨",
+        "formLabel": "진출 형태 평가 기록",
+        "formLegend": "평가 기록",
+        "fieldShape": "진출 형태",
+        "fieldIntent": "의도",
+        "fieldViable": "가능 여부",
+        "fieldRationale": "근거 (필수, {max}자 이내)",
+        "fieldEvidence": "근거 자료 참조 (선택)",
+        "record": "평가 기록",
+        "recording": "기록하는 중…",
+        "recorded": "평가를 기록했습니다.",
+        "readOnly": "평가 기록은 분석가 역할만 할 수 있습니다. 이 화면에서는 기록된 평가를 볼 수만 있습니다.",
+        "problem": {
+          "shape": "진출 형태를 고르세요.",
+          "intent": "의도를 고르세요.",
+          "viable": "가능 또는 불가를 고르세요.",
+          "rationale": "근거를 적어야 기록할 수 있습니다.",
+          "rationaleTooLong": "근거는 {max}자 이내로 줄여 주세요.",
+          "evidenceTooLong": "근거 자료 참조는 {max}자 이내로 줄여 주세요."
+        },
+        "loadError": {
+          "viewer": "평가를 볼 권한이 없습니다.",
+          "admin": "관리자 역할은 사업 내용을 볼 수 없습니다. 사업 참여 권한이 있는 계정으로 확인하세요.",
+          "notFound": "이 사업 기회를 찾을 수 없습니다.",
+          "other": "진출 형태 평가를 불러오지 못했습니다. 새로고침한 뒤 다시 시도하세요."
+        },
+        "serverError": {
+          "viewer": "평가 기록은 분석가 역할만 할 수 있습니다.",
+          "admin": "관리자 역할은 평가를 기록할 수 없습니다.",
+          "notFound": "이 사업 기회를 찾을 수 없습니다.",
+          "other": "평가를 기록하지 못했습니다. 잠시 뒤 다시 시도하세요.",
+          "notOpen": "진출 형태 평가는 대상 선정(S7)에 들어선 인수합병(브라운필드) 사업 기회에서만 기록할 수 있습니다."
+        },
+        "shape": {
+          "license_in": "라이선스 도입",
+          "co_development": "공동 개발"
+        }
       }
     },
     "s8": {

@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Pure kill-criteria predicates (packages/core-scoring, Wave D) — registry
  * entry validation and snapshot-row coercion. No DB, fs or env access: the
@@ -26,6 +26,12 @@ export interface RegistryEntry {
   reevaluate_at?: string;
   /** ADR-0193: human-readable evidence for the declared stage (variable source / flow.spec activity). */
   evaluable_from_evidence?: string;
+  /**
+   * Deal-shape-to-S7 ruling R-1 (2026-11-08): optional per-criterion track scope. Absent = the criterion follows its procedure
+   * (`greenfield-*` / `brownfield-*` prefix, else track-neutral). Present = the criterion applies to that track only, even
+   * when its procedure is track-neutral (deal-shape-chain `no_viable_deal_shape`: brownfield only).
+   */
+  track?: string;
 }
 
 /**
@@ -176,5 +182,34 @@ export function checkReevaluateBinding(
   if (host === null) return [`reevaluate_at gate '${at}' is hosted by no flow.spec stage`];
   if (stageIndex(host) < stageIndex(from))
     return [`reevaluate_at gate '${at}' (stage ${host}) is earlier than evaluable_from '${from}' — the criterion would be re-asked before it can be evaluated`];
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Per-criterion track scope (deal-shape-to-S7 ruling R-1, 2026-11-08).
+// ---------------------------------------------------------------------------
+
+/** The tracks a registry entry's optional `track` field may name. */
+export const KILL_TRACKS: readonly string[] = ["greenfield", "brownfield"];
+
+/** The track a procedure belongs to by its key prefix (`greenfield-*` / `brownfield-*`), or null for track-neutral procedures. */
+export function procedureTrackOf(procedure: string): "greenfield" | "brownfield" | null {
+  if (procedure.startsWith("greenfield-")) return "greenfield";
+  if (procedure.startsWith("brownfield-")) return "brownfield";
+  return null;
+}
+
+/**
+ * Registry check for the optional `track` field: the value must be one of KILL_TRACKS and must not contradict a
+ * track-prefixed procedure (a `greenfield-*` criterion cannot declare `brownfield`). Returns problem strings
+ * (empty = clean, including when the field is absent).
+ */
+export function checkTrackField(entry: { track?: unknown }, procedure: string): string[] {
+  if (entry.track === undefined) return [];
+  if (typeof entry.track !== "string" || !KILL_TRACKS.includes(entry.track))
+    return [`track '${String(entry.track)}' is not one of ${KILL_TRACKS.join(" / ")}`];
+  const t = procedureTrackOf(procedure);
+  if (t !== null && t !== entry.track)
+    return [`track '${entry.track}' contradicts the ${t}-prefixed procedure '${procedure}' (a track-prefixed procedure already fixes its track)`];
   return [];
 }
