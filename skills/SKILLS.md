@@ -17,7 +17,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | skill | version | status | owner | last_reviewed | removal-date | notes |
 |-------|---------|--------|-------|---------------|--------------|-------|
 | `accessibility-audit` | 1.1.0 | active | pm | 2026-09-06 | - | - |
-| `agent-lifecycle-manager` | 1.3.1 | active | pm | 2026-09-21 | — | — |
+| `agent-lifecycle-manager` | 1.4.0 | active | pm | 2026-11-06 | — | — |
 | `antitrust-screening` | 1.1.0 | active | antitrust-agent | 2026-08-23 | — | Wave 5.8D (design §9.3 M&A special-topics group) — HHI incl. common-ownership combinations (pilot 010 F-2) |
 | `api-documentation` | 1.0.2 | active | pm | 2026-07-19 | — | — |
 | `brownfield-feasibility` | 1.2.1 | active | brownfield-agent | 2026-10-28 | — | Wave 5.8C — Brown Field Screening/Pre-FS/FS/DD incl. six-validator completeness gate |
@@ -49,7 +49,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `historical-financial-analysis` | 1.0.1 | active | financial-analyst | 2026-10-28 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
 | `i18n-audit` | 1.0.0 | active | pm | 2026-08-29 | — | — |
 | `i18n-formatting` | 1.0.0 | active | pm | 2026-08-24 | — | — |
-| `i18n-layout` | 1.0.0 | active | pm | 2026-08-24 | — | — |
+| `i18n-layout` | 1.1.0 | active | pm | 2026-11-06 | — | — |
 | `i18n-locale-config` | 1.0.0 | active | pm | 2026-08-24 | — | — |
 | `incentive-clawback-assessment` | 1.1.0 | active | incentive-agent | 2026-08-23 | — | Wave 5.8D — ADR-0030 one-table acquisition/clawback design |
 | `insight-synthesis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — cross-domain synthesis for stage-gate decisions |
@@ -85,16 +85,16 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `research-analysis` | 1.0.2 | active | pm | 2026-07-19 | — | — |
 | `scenario-planning` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — discrete downside/base/upside cases incl. mandatory +200bp rate-shock test |
 | `script-lifecycle-manager` | 1.2.2 | active | pm | 2026-05-30 | — | — |
-| `security-scan` | 1.2.0 | active | pm | 2026-08-30 | — | Reassigned from security-expert — not defined in templates/common/agents/ or any variant, caused orphan on every propagated variant |
+| `security-scan` | 1.3.0 | active | pm | 2026-11-04 | — | Reassigned from security-expert — not defined in templates/common/agents/ or any variant, caused orphan on every propagated variant |
 | `service-design` | 1.1.0 | active | pm | 2026-09-27 | — | — |
 | `site-infrastructure-assessment` | 1.1.0 | active | greenfield-agent | 2026-08-23 | — | Wave 5.8C — mandatory infrastructure-minimums exclusion filter |
 | `site-visit-protocol` | 1.1.0 | active | technical-dd-agent | 2026-08-23 | — | Wave 5.8H — evidence-capture discipline (photo/measurement/log) |
 | `skill-lifecycle-manager` | 1.5.0 | active | pm | 2026-09-21 | — | — |
 | `source-command-commit-push-pr` | 1.0.3 | active | pm | — | — | — |
 | `stage-gate-governance` | 1.4.3 | active | process-governance-manager | 2026-10-27 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
-| `standup-synthesizer` | 1.0.0 | active | pm | 2026-08-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
+| `standup-synthesizer` | 1.1.0 | active | pm | 2026-11-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
-| `sync` | 1.8.0 | active | pm | 2026-10-08 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
+| `sync` | 1.9.0 | active | pm | 2026-11-07 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
 | `systematic-market-sizing` | 1.5.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `talent-pipeline-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — Green Field local labor-market supply assessment |
 | `target-costing-analysis` | 1.1.0 | experimental | quant-methodologist | — | — | Added by fleet resync reconcile backfill (2026-09-22) |

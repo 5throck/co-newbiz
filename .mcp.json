@@ -10,6 +10,12 @@
       ],
       "env": {},
       "timeout": 300000
+    },
+    "trail": {
+      "command": "trail",
+      "args": [
+        "mcp"
+      ]
     }
   }
 }

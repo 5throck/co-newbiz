@@ -1,106 +1,287 @@
 {
   "schemaVersion": 2,
-  "timestamp": "2026-11-02T22:52:28.181Z",
+  "timestamp": "2026-11-08T03:39:42.628Z",
   "project": "co-newbiz",
-  "templateVersion": "0.28.0",
-  "templateSha": "0a26732b2131856f30271b7e46dae85d9028c8be",
-  "baseSha": "a83f668c944eeb1b12b2609e17d1a87510aa99c5",
+  "templateVersion": "0.30.0",
+  "templateSha": "46a213d08d997fe0c7fb34737fe264ea1bcaa217",
+  "baseSha": "2cc51d74d273a86e76ed460be5dcf276923307dc",
   "files": [
-    ".agents/mcp.json",
+    ".agents/skills/agent-lifecycle-manager/SKILL.md",
+    ".agents/skills/i18n-layout/SKILL.md",
+    ".agents/skills/security-scan/SKILL.md",
+    ".agents/skills/standup-synthesizer/SKILL.md",
+    ".agents/skills/sync/SKILL.md",
     ".claude/settings.json",
+    ".claude/skills/agent-lifecycle-manager/SKILL.md",
+    ".claude/skills/i18n-layout/SKILL.md",
+    ".claude/skills/security-scan/SKILL.md",
+    ".claude/skills/standup-synthesizer/SKILL.md",
+    ".claude/skills/sync/SKILL.md",
+    ".codex/skills/agent-lifecycle-manager/SKILL.md",
+    ".codex/skills/i18n-layout/SKILL.md",
+    ".codex/skills/security-scan/SKILL.md",
+    ".codex/skills/standup-synthesizer/SKILL.md",
+    ".codex/skills/sync/SKILL.md",
+    ".gemini/settings.json",
+    ".gemini/skills/agent-lifecycle-manager/SKILL.md",
+    ".gemini/skills/i18n-layout/SKILL.md",
+    ".gemini/skills/security-scan/SKILL.md",
+    ".gemini/skills/standup-synthesizer/SKILL.md",
+    ".gemini/skills/sync/SKILL.md",
+    ".github/workflows/ci.yml",
+    ".github/workflows/delete-merged-branches.yml",
+    ".hermes/skills/agent-lifecycle-manager/SKILL.md",
+    ".hermes/skills/i18n-layout/SKILL.md",
+    ".hermes/skills/security-scan/SKILL.md",
+    ".hermes/skills/standup-synthesizer/SKILL.md",
+    ".hermes/skills/sync/SKILL.md",
     ".mcp.json",
-    "AGENTS.md",
-    "docs/standards/llm-interaction-standard.md",
-    "docs/workspace-schema.json",
-    "opencode.json",
+    "HERMES.md",
+    "agents/i18n-specialist.md",
+    "docs/governance/agents/execution-plan-templates.md",
     "scripts/SCRIPTS.md",
     "scripts/audit.ts",
-    "scripts/helpers/template-utils.ts",
-    "scripts/hooks/gateguard-fact-force.ts",
-    "scripts/lib/managed-block-merge.ts",
-    "scripts/lib/model-literal-patterns.ts",
+    "scripts/evidence-backport-scan.ts",
+    "scripts/generate-skill-graph.ts",
+    "scripts/handbook/check-authoring.ts",
+    "scripts/helpers/hub-topology.ts",
+    "scripts/helpers/pre-commit-script-gate.ts",
+    "scripts/helpers/security-validator.ts",
+    "scripts/hooks/pre-commit.ts",
+    "scripts/hooks/pre-push.ts",
+    "scripts/lib/self-managed-tools.ts",
     "scripts/lib/upgrade-policy.ts",
+    "scripts/lifecycle-sync-audit.ts",
+    "scripts/skill-lifecycle-audit.ts",
     "scripts/validate-doc-folder.ts",
     "scripts/validate-templates.ts",
-    "skills/.sync-skills-managed.json",
+    "scripts/verify-scripts.ts",
     "skills/SKILLS.md",
+    "skills/agent-lifecycle-manager/SKILL.md",
+    "skills/i18n-layout/SKILL.md",
+    "skills/security-scan/SKILL.md",
+    "skills/standup-synthesizer/SKILL.md",
+    "skills/sync/SKILL.md",
     "template-version.txt",
-    ".agents/skills/delegate-to-hub/SKILL.md",
-    ".claude/skills/delegate-to-hub/SKILL.md",
-    ".codex/skills/delegate-to-hub/SKILL.md",
-    ".gemini/skills/delegate-to-hub/SKILL.md",
-    ".hermes/skills/delegate-to-hub/SKILL.md",
-    "scripts/helpers/hub-topology.ts",
-    "scripts/hooks/agent-model-gate.ts",
-    "skills/delegate-to-hub/SKILL.md"
+    "external-deps.json",
+    "scripts/external-deps.ts",
+    "scripts/helpers/agent-mechanical-date-bump.ts",
+    "scripts/helpers/audit-hook-sweep.ts",
+    "scripts/helpers/memory-union-verify.ts",
+    "scripts/helpers/ticket-drift.ts",
+    "scripts/hooks/delete-guard.ts",
+    "scripts/lib/external-deps.ts",
+    "scripts/lib/fleet.ts",
+    "scripts/lib/git-aware-scan.ts",
+    "scripts/lib/trail-block-parity.ts"
   ],
   "baselines": {
-    ".agents/mcp.json": {
-      "hash": "c1391d865620cde604fcdab1b87b329853ffeb16d5a385f10a1b9d3b443a9492",
-      "templateVersion": "0.28.0"
-    },
     ".claude/settings.json": {
-      "hash": "d4959ad413c7a2e6b195b2074336505f7f264c0ecb1dc2c102ef5c5ee7ccc331",
-      "templateVersion": "0.28.0"
+      "hash": "728e8c6839cbff2450dca1dff251e861e504e6d4af1dc1ac6a71bda3898b46b7",
+      "templateVersion": "0.30.0"
+    },
+    ".gemini/settings.json": {
+      "hash": "73b88c4a673c4e27ec9b653921d16cf3db3b8cadbb6e56ce4bd561a9e4e2077b",
+      "templateVersion": "0.30.0"
     },
     ".githooks/commit-msg": {
       "hash": "cd819a49144f4f94ce66ba590dc07d1508dc70238b97d0eeeea047acc3ba950c",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     ".githooks/post-checkout": {
       "hash": "53c0cb9125f5d772e128f49cd4d8f21a4ea196d1ec5af6557ff49a3a5484db96",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     ".githooks/pre-commit": {
       "hash": "737e7f7e55f1c3498308aa7f8c88313e21d6a4b7c54f64e6d82b54a96c7490a0",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     ".githooks/pre-push": {
       "hash": "1d30c52e9bc760e38fbb699c60f8aa1daed7f456a540356c7112a4932098cb95",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     ".githooks/pre-rebase": {
       "hash": "654ed0472185851cdc45d0d6e5062425a8ecd51b8ee13d00165004939ac34973",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
+    },
+    ".github/workflows/delete-merged-branches.yml": {
+      "hash": "0b49e1c1ac524cdcabc9d80c00c56a2f68c9c45c97bef3db96d2450feefc9c74",
+      "templateVersion": "0.30.0"
     },
     ".gitignore": {
       "hash": "b1a1ceafb6d19f9aa7f01b3ffbac6816acc873b47713adfdd14ff327d5bfb985",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     ".mcp.json": {
-      "hash": "b7d34aa6ba42ba0447dba08d3d6ce3f060e58fb799d168f8bc76ec8125b20d43",
-      "templateVersion": "0.28.0"
+      "hash": "3eeeb200037df17e0782e4293b8d82eda4382c898d35e8883fee19e835aec1c3",
+      "templateVersion": "0.30.0"
     },
     "AGENTS.md": {
-      "hash": "00e4272382e046cb5d6fb0d827a24dd4d5995b211e83b3093a57c87de47c4d5d",
-      "templateVersion": "0.28.0"
+      "hash": "de74c8fd0e395ed35ad9a5247225fc8270bfcb42b203a81ac717c5269202f32b",
+      "templateVersion": "0.30.0"
     },
     "CLAUDE.md": {
       "hash": "c44481d0daa63513fb991fd4d1c782f0d721209bd41d25f51011d13833995abf",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     "CODEX.md": {
       "hash": "7ec254ee5a32fc028efd2bb9a7fe747693d2287663e97e2a03a4067143949328",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     "GEMINI.md": {
       "hash": "caef2e1c49e43c87d1ae6e298f74340cd0a6025ea509a5304b4b696fe60100c9",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     "HERMES.md": {
-      "hash": "edd5cd09943c717a853c1465bf7a12d165bb196e20a32c518bee04467bb48697",
-      "templateVersion": "0.28.0"
+      "hash": "aab73d4767136a8473df0c23ea5f9b40480e7dfba4731554396e7e31b85e8b25",
+      "templateVersion": "0.30.0"
+    },
+    "agents/i18n-specialist.md": {
+      "hash": "a1a0539fbc2d361bb2044879df8aa666b4986a2994989dd780556f64c843e6ca",
+      "templateVersion": "0.30.0"
     },
     "agents/pm.md": {
       "hash": "cffbb500c74870288c2c06deae36c042bdad554222e68bb499710fb1cdc6a0c7",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
+    },
+    "docs/governance/agents/execution-plan-templates.md": {
+      "hash": "f77438aeda9acd0b1f52da881dfcc8e7a1f601d517b7c2543c3b9242985a6c42",
+      "templateVersion": "0.30.0"
     },
     "docs/phase-definitions.md": {
       "hash": "242ee30b580d6669f8fe173aefd34564be4f84ef9af8c464e10f1c1f99b64405",
-      "templateVersion": "0.28.0"
+      "templateVersion": "0.30.0"
     },
     "docs/security.md": {
       "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/audit.ts": {
+      "hash": "b923f5ba586393399ecaa6607285cec41b594aa45a9dc94b89fccd0d63b3e1c9",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/evidence-backport-scan.ts": {
+      "hash": "091755cb85604ffeec6a4b324eb3ebdbaabab76c468e0eaf964767f4ea99c5bb",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/external-deps.ts": {
+      "hash": "b6029141dd9e4dccd1db46424e8d0e086cc8b9c5066ee9db4ef8314a0448d373",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/generate-skill-graph.ts": {
+      "hash": "f956ae6e07c0119ee2f30eb30d225ae1571d2426772d55d6058f2e6b2a14499d",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/handbook/check-authoring.ts": {
+      "hash": "e6672b6a2104d47fa47a3a07431ca7d93197c69ce6a55d632190d7572121449a",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/agent-mechanical-date-bump.ts": {
+      "hash": "b0e93cfbacf80937de717d4fc88c2f0ae7dca1c11b7a834b9499daf21a34df0d",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/audit-hook-sweep.ts": {
+      "hash": "bbc828244f8309a2b6d8bc1f3b2af04426e91b3dd2c73fa8cdc6393313ede457",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/hub-topology.ts": {
+      "hash": "a112a2ccc09847431bd0719c00653a50de3b75324e3b5f13816a08db44ffb17e",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/memory-union-verify.ts": {
+      "hash": "b8a970174ea593bded1c06eae21b822524956eba490f9ada2ee6697b655668e4",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/pre-commit-script-gate.ts": {
+      "hash": "b12f58ff2b512f23fad9e88487f085d8b21afa5fbd6ce4bd19e825a34fbb95ca",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/security-validator.ts": {
+      "hash": "26e051ca661c3cebac70593517f164e5ef7a99fc8be78c7f7bb3fa8e59c6c858",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/helpers/ticket-drift.ts": {
+      "hash": "d1a289ac770c55f1d0017c3ef941ed6f3f8c61c78f6ea939dab0e166fa7294ed",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/hooks/delete-guard.ts": {
+      "hash": "63c714e9912e3cd31e28659b68fe998c2848e48e4bda9c4965a30669f7f1ea0b",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/hooks/pre-commit.ts": {
+      "hash": "2b670bc0fbda29e1b11863edee1b67b35977b6408066e32a0717a936da383152",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/hooks/pre-push.ts": {
+      "hash": "5973da98377ef73c1080c727f0ab4b029d4e37883a78919f2ec816fa1899742b",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lib/external-deps.ts": {
+      "hash": "b9bae44931aacab92c1d6d919e6cdd0a0c52a37fcf1273234c9ff5b2e07c4e95",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lib/fleet.ts": {
+      "hash": "7f04a4798a84721fe72a76f3fb6565ec9c3c2b022c959e4843cb31f4bdf3c216",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lib/git-aware-scan.ts": {
+      "hash": "614aa6738f2953e00f1c405324c271733684725c253b5b38ca082a4008a7e13b",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lib/self-managed-tools.ts": {
+      "hash": "8a78ec9e6d4d2f0648ad76acf2bf066c4874fef327c12fd6a6a73ae88f9a0428",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lib/trail-block-parity.ts": {
+      "hash": "3b92bc1357cadaaf5af0023cfc082f38454389784145d1e0b79a83e7ac49a2d3",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lib/upgrade-policy.ts": {
+      "hash": "1f315ab464101ad02da78d3e7d1df31deafcfa366a889cf694e2b4aaa2fafb28",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/lifecycle-sync-audit.ts": {
+      "hash": "2972eebe2e5a5d4659ac91bc5c3ad9c743bacff655386a33b6374ee7868a5851",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/skill-lifecycle-audit.ts": {
+      "hash": "6d17c83482651b40c82b52de8a75bbd6ed0afd65c8fa8d1acceb21fcfdf3f59b",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/validate-doc-folder.ts": {
+      "hash": "cf8d641e759e1f54c20b6e2d3134c53349a6b9bf99498f7c5c85789b474ba437",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/validate-templates.ts": {
+      "hash": "1243bbaf3f34bf49656d45321695220798ef13e4d6a12c01c6483e8bcda4dc2a",
+      "templateVersion": "0.30.0"
+    },
+    "scripts/verify-scripts.ts": {
+      "hash": "1a9c9cdf20c5ffc6a3345ebf0858de4ebe322b5b1b6eaafce49665e86c82b0f1",
+      "templateVersion": "0.30.0"
+    },
+    "skills/agent-lifecycle-manager/SKILL.md": {
+      "hash": "0da51de4050a7f0ee19a48feeba379a167006235151435ca1d8315d0009116dc",
+      "templateVersion": "0.30.0"
+    },
+    "skills/i18n-layout/SKILL.md": {
+      "hash": "a107e19ec7baf5f66993ea2ed613aa35aa4c7f1129dc227b3d8d8f99499f7a74",
+      "templateVersion": "0.30.0"
+    },
+    "skills/security-scan/SKILL.md": {
+      "hash": "c4e51d62c7353460cc910f73a596fbbdeb8967d8549048d28c72d372b1e352c0",
+      "templateVersion": "0.30.0"
+    },
+    "skills/standup-synthesizer/SKILL.md": {
+      "hash": "841fd83dd1c47d9f5aa000b5c61eed0c29ba07380b47c84a1afe8e0784c254e9",
+      "templateVersion": "0.30.0"
+    },
+    "skills/sync/SKILL.md": {
+      "hash": "a3e60e77d70f3d558be8605ffd7394559a386d17b1bbfbde764aa03ae93c1d7b",
+      "templateVersion": "0.30.0"
+    },
+    ".agents/mcp.json": {
+      "hash": "c1391d865620cde604fcdab1b87b329853ffeb16d5a385f10a1b9d3b443a9492",
       "templateVersion": "0.28.0"
     },
     "docs/standards/llm-interaction-standard.md": {
@@ -113,14 +294,6 @@
     },
     "opencode.json": {
       "hash": "e2c4c8d0e0ddf739642b9e86a28870ad45452ddba83c28cfb0c3f5af5e894302",
-      "templateVersion": "0.28.0"
-    },
-    "scripts/audit.ts": {
-      "hash": "3ca32ead3b11d8c6b77242dd1a1ed7ce742283e628a632250c73c83b8c884c29",
-      "templateVersion": "0.28.0"
-    },
-    "scripts/helpers/hub-topology.ts": {
-      "hash": "eaeb6d932170b88da4824b311d4d3aa7ec3dce7de1072f3edfbe316c29037df3",
       "templateVersion": "0.28.0"
     },
     "scripts/helpers/template-utils.ts": {
@@ -143,40 +316,12 @@
       "hash": "eccdd716d13f915d856b1aa13619b71ffd7e0cb493c059277d028c714bbd3851",
       "templateVersion": "0.28.0"
     },
-    "scripts/lib/upgrade-policy.ts": {
-      "hash": "e91d652e78627fc2cfb8edbb4c6c8dfbffb0efeb59617efc29b73c8b36174ee3",
-      "templateVersion": "0.28.0"
-    },
-    "scripts/validate-doc-folder.ts": {
-      "hash": "6710b4490aa1cfc7d4465a02df8ba13e40788fb6fff795ceba667b334405a211",
-      "templateVersion": "0.28.0"
-    },
-    "scripts/validate-templates.ts": {
-      "hash": "cd27e5d9aba70136b7e20883472b3d6fdc206c755e07a6d582a2eb79077b6b05",
-      "templateVersion": "0.28.0"
-    },
     "skills/delegate-to-hub/SKILL.md": {
       "hash": "b244598189110854f922b52a0a6466f6515b251c4ead200fce076acb1f7f0f5c",
       "templateVersion": "0.28.0"
     },
-    ".gemini/settings.json": {
-      "hash": "a4d7e916b75d10c96c01ec59bf99b06a12ccea208f957d9a763039a0a7e7ba89",
-      "templateVersion": "0.26.0"
-    },
-    "docs/governance/agents/execution-plan-templates.md": {
-      "hash": "335eb7aea42c683387f592569008ba3f012a5ae97b7ab85a43e9d86801c43ef2",
-      "templateVersion": "0.26.0"
-    },
     "scripts/lib/hook-dedupe.ts": {
       "hash": "bd5e5d48f5b701990fe08820f31bd043035e20b3060ffc969e29cffab99296f4",
-      "templateVersion": "0.26.0"
-    },
-    "scripts/lib/self-managed-tools.ts": {
-      "hash": "67a76973c1a5d591db16ea1586be87fd6b5c09ec08f30722f1ebf7737dc63de8",
-      "templateVersion": "0.26.0"
-    },
-    "scripts/lifecycle-sync-audit.ts": {
-      "hash": "219b6878d43e68e7f8f89a1f56cd2407123d0a899a1d2220956c1b7a41f0b2f1",
       "templateVersion": "0.26.0"
     },
     "scripts/skill-session-review.ts": {
@@ -223,10 +368,6 @@
       "hash": "66a58c9a7719435626068ee67e40a48efba6b5f4737d1dcdfaafec250d1f308c",
       "templateVersion": "0.25.0"
     },
-    "scripts/hooks/pre-commit.ts": {
-      "hash": "81e5da2a87c69fc99d4b106ddc5e5f9a21ebfa86faf46be5a3ef015f0ed84b74",
-      "templateVersion": "0.25.0"
-    },
     "scripts/lib/generator-manifest.ts": {
       "hash": "4aab4568df02565690b8425cd7f9e58816f41604b3376ec751d207bf669b8fad",
       "templateVersion": "0.25.0"
@@ -239,10 +380,6 @@
       "hash": "986d34fefb6dc9d14342d04be6f3a37b86b69fbe70ec8769aeb7458cd27ae5c9",
       "templateVersion": "0.25.0"
     },
-    "scripts/skill-lifecycle-audit.ts": {
-      "hash": "bb7ac30e454ba386a10426987bb10fd1dd9b3729dc465ba8a4a614bef5c40b1f",
-      "templateVersion": "0.25.0"
-    },
     "scripts/sync-agent-mirrors.ts": {
       "hash": "d80fdc790e830802998b221195979ef4ca4548d00c8a937c61e540e0bb8a1c30",
       "templateVersion": "0.25.0"
@@ -251,16 +388,8 @@
       "hash": "8bf65f5b805237c34b710c1e98946ad89530f98373d98a2aae2087d30e31926f",
       "templateVersion": "0.25.0"
     },
-    "agents/i18n-specialist.md": {
-      "hash": "0afd545c5319f149267089925b47bc137318b36b2f659fd93ccf325c859b5cec",
-      "templateVersion": "0.23.0"
-    },
     "scripts/generate-version-manifest.ts": {
       "hash": "70067ba1f51b867d361c22825e4acc171bbe910829cb4e29d9b4affeb897f2a0",
-      "templateVersion": "0.23.0"
-    },
-    "scripts/hooks/pre-push.ts": {
-      "hash": "4fd20f927baeb141cfe5f4c1f284e12647f24061bf9a8f24ef8101b9ff2736fa",
       "templateVersion": "0.23.0"
     },
     "scripts/regenerate-agents-md.ts": {
@@ -293,10 +422,6 @@
     },
     "scripts/compile-tokens.ts": {
       "hash": "ed08b09a92ff8044ccb4503c79219d3090cd7cbc35d60845fcb812875f257057",
-      "templateVersion": "0.22.0"
-    },
-    "scripts/helpers/pre-commit-script-gate.ts": {
-      "hash": "fdaacb7748ad8e0b87ef941029a35ace76a874d573e6fe6ce6e3a4032442a803",
       "templateVersion": "0.22.0"
     },
     "scripts/helpers/theme-token-policy.ts": {
@@ -1241,6 +1366,14 @@
       "path": "HERMES.md",
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
+      "verdict": "TEMPLATE_DELTA",
+      "detail": "template-authoritative managed block restamped (template wins): COMMON-HERMES — project block diverged from the template and was restamped (53 line(s) → 54 line(s))",
+      "severity": "INFO"
+    },
+    {
+      "path": "HERMES.md",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
       "severity": "INFO"
@@ -1262,11 +1395,19 @@
       "severity": "INFO"
     },
     {
+      "path": ".github/workflows/ci.yml",
+      "policy": "MERGE_MANAGED",
+      "pass": "MERGE",
+      "verdict": "MERGE",
+      "detail": "ci.yml merge delivered — template-owned jobs authoritative, PROJECT-JOBS region preserved",
+      "severity": "INFO"
+    },
+    {
       "path": "AGENTS.md",
       "policy": "MERGE_MANAGED",
       "pass": "DOCS_MERGE",
       "verdict": "REGION_IN_SYNC",
-      "detail": "39 of 144 out-of-zone lines byte-equal — in-sync regions carry no write channel; 46 divergent block(s) below",
+      "detail": "51 of 144 out-of-zone lines byte-equal — in-sync regions carry no write channel; 27 divergent block(s) below",
       "severity": "INFO"
     },
     {
@@ -1481,169 +1622,9 @@
       "path": "AGENTS.md",
       "policy": "MERGE_MANAGED",
       "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (3 line(s)) after '### Deal Pipeline Orchestration (S1–S12)' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
       "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (60 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
+      "detail": "template line-block (55 line(s)) absent from the project copy after '### Deal Pipeline Orchestration (S1–S12)' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
       "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "AGENTS.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "DOCS_MERGE",
-      "verdict": "TEMPLATE_DELTA",
-      "detail": "template-authoritative managed block restamped (template wins): COMMON-AGENTS — project block diverged from the template and was restamped (31 line(s) → 35 line(s))",
-      "severity": "INFO"
     },
     {
       "path": "AGENTS.md",
@@ -1661,7 +1642,7 @@
       "detail": "project copy already matches the template (in sync)",
       "baseline": {
         "hash": "242ee30b580d6669f8fe173aefd34564be4f84ef9af8c464e10f1c1f99b64405",
-        "templateVersion": "0.26.0"
+        "templateVersion": "0.28.0"
       },
       "severity": "INFO"
     },
@@ -1686,78 +1667,230 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "2.60.0 → 2.61.0 — version-gated delivery over the delivered baseline",
+      "detail": "2.61.0 → 2.64.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "f0cece80ffb041ed5dc2a37693796fc707c8a18d787a6861fff460b2dc3d2fa8",
+        "hash": "3ca32ead3b11d8c6b77242dd1a1ed7ce742283e628a632250c73c83b8c884c29",
+        "templateVersion": "0.28.0"
+      },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/dev-sync.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "CONFLICT",
+      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "baseline": {
+        "hash": "642a0086240b4aa578706c4452dc1910832519b80883b8330c0640727cc1445b",
         "templateVersion": "0.25.0"
       },
+      "severity": "ERROR"
+    },
+    {
+      "path": "scripts/evidence-backport-scan.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/external-deps.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/generate-skill-graph.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "2.0.0 → 2.0.1 — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/handbook/check-authoring.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/helpers/agent-mechanical-date-bump.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/helpers/audit-hook-sweep.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
       "severity": "INFO"
     },
     {
       "path": "scripts/helpers/hub-topology.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.1.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/template-utils.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift — restored to canonical (ADR-0085 D3 integrity rule)",
-      "severity": "WARN"
-    },
-    {
-      "path": "scripts/hooks/agent-model-gate.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.3.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/hooks/gateguard-fact-force.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.3.0 → 1.3.2 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/managed-block-merge.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.5.0 → 1.6.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.1.0 → 1.2.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "c9228d105918b2188170478fa821198c5dbddfaa11a36025e1c5b79adf38c0ba",
-        "templateVersion": "0.22.1"
+        "hash": "eaeb6d932170b88da4824b311d4d3aa7ec3dce7de1072f3edfbe316c29037df3",
+        "templateVersion": "0.28.0"
       },
       "severity": "INFO"
     },
     {
-      "path": "scripts/lib/model-literal-patterns.ts",
+      "path": "scripts/helpers/memory-union-verify.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift — restored to canonical (ADR-0085 D3 integrity rule)",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.2.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/helpers/pre-commit-script-gate.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.1.0 → 1.2.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "5febf3602e7c314582292079cbb148d0c1c76204767bd42c8f5ffc27dbe89967",
+        "hash": "fdaacb7748ad8e0b87ef941029a35ace76a874d573e6fe6ce6e3a4032442a803",
+        "templateVersion": "0.22.0"
+      },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/helpers/security-validator.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.1.1 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/helpers/ticket-drift.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/hooks/delete-guard.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.2.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/hooks/pre-commit.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.12.0 → 1.14.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "81e5da2a87c69fc99d4b106ddc5e5f9a21ebfa86faf46be5a3ef015f0ed84b74",
+        "templateVersion": "0.25.0"
+      },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/hooks/pre-push.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.7.0 → 1.7.1 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "4fd20f927baeb141cfe5f4c1f284e12647f24061bf9a8f24ef8101b9ff2736fa",
+        "templateVersion": "0.23.0"
+      },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lib/external-deps.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.2.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lib/fleet.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lib/git-aware-scan.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lib/self-managed-tools.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "67a76973c1a5d591db16ea1586be87fd6b5c09ec08f30722f1ebf7737dc63de8",
         "templateVersion": "0.26.0"
       },
-      "severity": "WARN"
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lib/trail-block-parity.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
+      "severity": "INFO"
     },
     {
       "path": "scripts/lib/upgrade-policy.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.34.0 → 1.36.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.36.0 → 1.38.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "6a06bcc8ac090fdac68a3a32c0ffe66e82fe878e2b297dbc463eeb4ac8fe8ada",
+        "hash": "e91d652e78627fc2cfb8edbb4c6c8dfbffb0efeb59617efc29b73c8b36174ee3",
+        "templateVersion": "0.28.0"
+      },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/lifecycle-sync-audit.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.20.1 → 1.21.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "219b6878d43e68e7f8f89a1f56cd2407123d0a899a1d2220956c1b7a41f0b2f1",
         "templateVersion": "0.26.0"
+      },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/skill-lifecycle-audit.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.10.0 → 1.11.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "bb7ac30e454ba386a10426987bb10fd1dd9b3729dc465ba8a4a614bef5c40b1f",
+        "templateVersion": "0.25.0"
       },
       "severity": "INFO"
     },
@@ -1766,10 +1899,10 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.2.2 → 1.2.3 — version-gated delivery over the delivered baseline",
+      "detail": "1.2.3 → 1.3.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "2e01dfa8f2226fd6383311615339d83bb7c98f1833731e605753480b93e83b97",
-        "templateVersion": "0.25.0"
+        "hash": "6710b4490aa1cfc7d4465a02df8ba13e40788fb6fff795ceba667b334405a211",
+        "templateVersion": "0.28.0"
       },
       "severity": "INFO"
     },
@@ -1778,11 +1911,19 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.67.0 → 1.70.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.70.0 → 1.75.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "38631cd1115e81c1712bad2eacfe0874d0a69e0c6607cb2fb0cef924f7748111",
-        "templateVersion": "0.26.0"
+        "hash": "cd27e5d9aba70136b7e20883472b3d6fdc206c755e07a6d582a2eb79077b6b05",
+        "templateVersion": "0.28.0"
       },
+      "severity": "INFO"
+    },
+    {
+      "path": "scripts/verify-scripts.ts",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: scripts/",
+      "verdict": "ADOPT",
+      "detail": "1.13.0 → 1.14.0 — version-gated delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
@@ -1799,6 +1940,18 @@
       "pass": "SYNC_IF_NEWER: agents/",
       "verdict": "STUB_VERSION_DIVERGENCE",
       "detail": "stub version 1.2.0 pinned vs counterpart 1.4.2 — backfill never overwrites; bump the stub version to re-arm version-gated delivery, or adopt via --disposition adopt-template",
+      "severity": "INFO"
+    },
+    {
+      "path": "agents/i18n-specialist.md",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: agents/",
+      "verdict": "ADOPT",
+      "detail": "1.3.1 → 1.3.2 — version-gated delivery over the delivered baseline (lifecycle block preserved)",
+      "baseline": {
+        "hash": "0afd545c5319f149267089925b47bc137318b36b2f659fd93ccf325c859b5cec",
+        "templateVersion": "0.23.0"
+      },
       "severity": "INFO"
     },
     {
@@ -2162,11 +2315,11 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/delegate-to-hub/SKILL.md",
+      "path": "skills/standup-synthesizer/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "NEW",
-      "detail": "whole skill directory delivered (none) → 1.0.1 (contract common_skill bypassed the allowlist)",
+      "verdict": "ADOPT",
+      "detail": "1.0.0 → 1.1.0 — version-gated whole-directory delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
@@ -2176,6 +2329,14 @@
       "verdict": "DRIFT_PRESERVE",
       "detail": "same-version content drift — project copy PRESERVED (ADR-0085 D3)",
       "severity": "WARN"
+    },
+    {
+      "path": "skills/security-scan/SKILL.md",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: skills/",
+      "verdict": "ADOPT",
+      "detail": "1.2.0 → 1.3.0 — version-gated whole-directory delivery over the delivered baseline",
+      "severity": "INFO"
     },
     {
       "path": "skills/decision-record/SKILL.md",
@@ -2202,6 +2363,14 @@
       "severity": "WARN"
     },
     {
+      "path": "skills/agent-lifecycle-manager/SKILL.md",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: skills/",
+      "verdict": "ADOPT",
+      "detail": "1.3.1 → 1.4.0 — version-gated whole-directory delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
       "path": "skills/k-law/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
@@ -2213,9 +2382,17 @@
       "path": "skills/sync/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "DRIFT_PRESERVE",
-      "detail": "same-version content drift — project copy PRESERVED (ADR-0085 D3)",
-      "severity": "WARN"
+      "verdict": "ADOPT",
+      "detail": "1.8.0 → 1.9.0 — version-gated whole-directory delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": "skills/i18n-layout/SKILL.md",
+      "policy": "SYNC",
+      "pass": "SYNC_IF_NEWER: skills/",
+      "verdict": "ADOPT",
+      "detail": "1.0.0 → 1.1.0 — version-gated whole-directory delivery over the delivered baseline",
+      "severity": "INFO"
     },
     {
       "path": "skills/evidence-ledger/SKILL.md",
@@ -2770,15 +2947,7 @@
       "severity": "INFO"
     },
     {
-      "path": ".mcp.json",
-      "policy": "JSON_MERGE",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "MERGE",
-      "detail": "settings deep-merged — project-only entries preserved: mcpServers.co-newbiz, mcpServers.graft",
-      "severity": "INFO"
-    },
-    {
-      "path": ".agents/mcp.json",
+      "path": ".gemini/settings.json",
       "policy": "JSON_MERGE",
       "pass": "TEMPLATE TREE SYNC",
       "verdict": "MERGE",
@@ -2786,11 +2955,19 @@
       "severity": "INFO"
     },
     {
+      "path": ".mcp.json",
+      "policy": "JSON_MERGE",
+      "pass": "TEMPLATE TREE SYNC",
+      "verdict": "MERGE",
+      "detail": "settings deep-merged — project-only entries preserved: mcpServers.co-newbiz",
+      "severity": "INFO"
+    },
+    {
       "path": ".claude/settings.json",
       "policy": "JSON_MERGE",
       "pass": "TEMPLATE TREE SYNC",
       "verdict": "MERGE",
-      "detail": "settings deep-merged — project-only entries preserved: permissions.allow[], permissions.allow[], permissions.allow[], permissions.allow[], permissions.allow[], permissions.allow[], permissions.allow[], hooks.PreToolUse[], hooks.PostToolUse[], hooks.PostToolUse[], hooks.SessionStart[], hooks.UserPromptSubmit[], hooks.Stop[], hooks.SessionEnd, hooks.PostToolUseFailure, footerLinksRegexes[], statusLine, subagentStatusLine",
+      "detail": "settings deep-merged — project-only entries preserved: permissions.allow[], permissions.allow[]",
       "severity": "INFO"
     },
     {
@@ -2800,22 +2977,6 @@
       "verdict": "SEED_SKIP",
       "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
-    },
-    {
-      "path": "docs/workspace-schema.json",
-      "policy": "SCHEMA_MERGE",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "MERGE",
-      "detail": "schema merge — landed: hub_topology; preserved: —; landed template deltas: 0; template changes withheld (project-wins): 1",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/workspace-schema.json",
-      "policy": "SCHEMA_MERGE",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "TEMPLATE_DELTA",
-      "detail": "template change withheld (project-wins): rootAllowlist.dirs — project [\".git\",\"scripts\",\"tests\",\"agents\",\"skills\",\"docs\",\"memory\",\"templates\",\"tickets\",\"schemas\",\".claude\",\".gemini\",\".githo… (624 chars) vs template [\".git\",\"scripts\",\"tests\",\"agents\",\"skills\",\"docs\",\"memory\",\"templates\",\"tickets\",\"schemas\",\".claude\",\".gemini\",\".githo… (633 chars)",
-      "severity": "WARN"
     },
     {
       "path": "docs/lifecycle/agents/pm.md",
@@ -2882,11 +3043,15 @@
       "severity": "INFO"
     },
     {
-      "path": "docs/standards/llm-interaction-standard.md",
+      "path": "docs/governance/agents/execution-plan-templates.md",
       "policy": "SYNC",
       "pass": "TEMPLATE TREE SYNC",
       "verdict": "ADOPT",
       "detail": "(content changed) — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "335eb7aea42c683387f592569008ba3f012a5ae97b7ab85a43e9d86801c43ef2",
+        "templateVersion": "0.26.0"
+      },
       "severity": "INFO"
     },
     {
@@ -2906,11 +3071,43 @@
       "severity": "INFO"
     },
     {
-      "path": "opencode.json",
-      "policy": "JSON_MERGE",
+      "path": ".github/workflows/delete-merged-branches.yml",
+      "policy": "SYNC",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "MERGE",
-      "detail": "settings deep-merged — project-only entries preserved: mcp.graft, $schema",
+      "verdict": "ADOPT",
+      "detail": "(content changed) — version-gated delivery over the delivered baseline",
+      "severity": "INFO"
+    },
+    {
+      "path": ".trail/README.md",
+      "policy": "ADD_IF_MISSING",
+      "pass": "TEMPLATE TREE SYNC",
+      "verdict": "SEED_SKIP",
+      "detail": "project copy exists — add-if-missing seed withheld (project-owned config)",
+      "severity": "INFO"
+    },
+    {
+      "path": ".trail/.gitignore",
+      "policy": "ADD_IF_MISSING",
+      "pass": "TEMPLATE TREE SYNC",
+      "verdict": "SEED_SKIP",
+      "detail": "project copy exists — add-if-missing seed withheld (project-owned config)",
+      "severity": "INFO"
+    },
+    {
+      "path": ".trail/hook.cjs",
+      "policy": "ADD_IF_MISSING",
+      "pass": "TEMPLATE TREE SYNC",
+      "verdict": "SEED_SKIP",
+      "detail": "project copy exists — add-if-missing seed withheld (project-owned config)",
+      "severity": "INFO"
+    },
+    {
+      "path": "external-deps.json",
+      "policy": "PROJECT_STATE",
+      "pass": "EXTERNAL DEPS",
+      "verdict": "NEW",
+      "detail": "template seed delivered (project copy absent)",
       "severity": "INFO"
     },
     {
@@ -2921,7 +3118,7 @@
       "detail": "template copy delivered over the delivered baseline (version-gated)",
       "baseline": {
         "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
-        "templateVersion": "0.26.0"
+        "templateVersion": "0.28.0"
       },
       "severity": "INFO"
     },
