@@ -23,8 +23,8 @@ import {
   AttractivenessEditor,
   AttractivenessReEvaluateToggle,
   attractivenessToggleId,
-  canReEvaluateAttractiveness,
 } from "../AttractivenessReEvaluate.tsx";
+import { canReEvaluateAttractiveness } from "../../lib/attractiveness-reevaluate.ts";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
 import type { TranslatorFn } from "../../i18n/config.ts";
 import { useTranslations } from "next-intl";

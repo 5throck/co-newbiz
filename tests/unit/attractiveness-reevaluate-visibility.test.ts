@@ -9,7 +9,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { canReEvaluateAttractiveness } from "../../app/web-next/components/AttractivenessReEvaluate.tsx";
+import { canReEvaluateAttractiveness } from "../../app/web-next/lib/attractiveness-reevaluate.ts";
 
 describe("canReEvaluateAttractiveness", () => {
   test("assessed: yes (with or without context)", () => {
