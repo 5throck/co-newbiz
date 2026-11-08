@@ -2810,6 +2810,8 @@
       "noAckNeeded": "이 GO에는 따로 확인할 항목이 없습니다.",
       "divergenceLabelRequired": "AI 권고({ai})와 결정이 다른 이유는 무엇입니까? *",
       "divergenceLabelOptional": "AI 권고({ai})와 결정이 다른 이유는 무엇입니까? (선택)",
+      "rationaleLabelDivergentRequired": "근거 — AI 권고({ai})와 다른 이유를 포함해 주세요 *",
+      "rationaleLabelDivergentOptional": "근거 — AI 권고({ai})와 다른 이유가 있다면 함께 적어 주세요 *",
       "staleChanged": "검토하는 동안 진행 상태가 바뀌었습니다. 새 항목 {added}건, 사라진 항목 {dropped}건이며 나머지 사유는 그대로 두었습니다. 다시 확인하고 기록해 주세요.",
       "legacy": "확인 절차 도입 전 기록",
       "viewSnapshot": "저장된 상태와 사유 ({count})",
