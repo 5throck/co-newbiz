@@ -20,12 +20,12 @@
 // every fleet-iteration tool hard-fails rather than guessing (fail-closed,
 // mirroring helpers/hub-topology.ts).
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
 /** Repo root when a caller omits one: scripts/lib/ → the checkout root. */
 function defaultRoot(): string {
-  return resolve(import.meta.dir, '..', '..');
+  return resolve(import.meta.dir, "..", "..");
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -49,9 +49,9 @@ export interface FleetRegistry {
 export type LoadFleetRegistryResult =
   | { ok: true; registry: FleetRegistry }
   /** File absent → zero exclusions, historical glob behavior (design §4). */
-  | { ok: false; error: 'absent-file' }
+  | { ok: false; error: "absent-file" }
   /** File malformed → callers hard-fail, never guess (fail-closed). */
-  | { ok: false; error: 'malformed'; detail: string };
+  | { ok: false; error: "malformed"; detail: string };
 
 // ── Validation ─────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ const DECISION_REF_RE = /^DEC-\d{8}-\d{2,4}$/;
 /** Real-calendar check behind the YYYY-MM-DD shape (rejects 2026-02-31). */
 function isValidCalendarDate(s: string): boolean {
   if (!DATE_RE.test(s)) return false;
-  const [y, m, d] = s.split('-').map(Number);
+  const [y, m, d] = s.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
@@ -72,9 +72,11 @@ function isValidCalendarDate(s: string): boolean {
  * rules). Returns the cleaned registry, or a fail-closed detail string.
  * Unknown keys are ignored forward-compatibly.
  */
-export function validateFleetRegistryPayload(payload: unknown): { ok: true; registry: FleetRegistry } | { ok: false; detail: string } {
-  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
-    return { ok: false, detail: 'top-level payload must be a JSON object' };
+export function validateFleetRegistryPayload(
+  payload: unknown,
+): { ok: true; registry: FleetRegistry } | { ok: false; detail: string } {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    return { ok: false, detail: "top-level payload must be a JSON object" };
   }
   const raw = payload as Record<string, unknown>;
   if (raw.version !== 1) {
@@ -87,26 +89,26 @@ export function validateFleetRegistryPayload(payload: unknown): { ok: true; regi
   const excluded: FleetExclusion[] = [];
   for (let i = 0; i < raw.excluded.length; i++) {
     const row = raw.excluded[i] as Record<string, unknown>;
-    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+    if (typeof row !== "object" || row === null || Array.isArray(row)) {
       return { ok: false, detail: `excluded[${i}] must be an object` };
     }
     const id = row.id;
-    if (typeof id !== 'string' || !FLEET_ID_RE.test(id)) {
+    if (typeof id !== "string" || !FLEET_ID_RE.test(id)) {
       return {
         ok: false,
         detail: `excluded[${i}].id must match ^co-[a-z0-9-]{1,40}$, got ${JSON.stringify(id)}`,
       };
     }
-    if (typeof row.reason !== 'string' || row.reason.trim().length === 0) {
+    if (typeof row.reason !== "string" || row.reason.trim().length === 0) {
       return { ok: false, detail: `excluded[${i}] (${id}).reason must be a non-empty string` };
     }
-    if (typeof row.decided !== 'string' || !isValidCalendarDate(row.decided)) {
+    if (typeof row.decided !== "string" || !isValidCalendarDate(row.decided)) {
       return {
         ok: false,
         detail: `excluded[${i}] (${id}).decided must be a valid YYYY-MM-DD date, got ${JSON.stringify(row.decided)}`,
       };
     }
-    if (typeof row.decision_ref !== 'string' || !DECISION_REF_RE.test(row.decision_ref)) {
+    if (typeof row.decision_ref !== "string" || !DECISION_REF_RE.test(row.decision_ref)) {
       return {
         ok: false,
         detail: `excluded[${i}] (${id}).decision_ref must match DEC-YYYYMMDD-NN, got ${JSON.stringify(row.decision_ref)}`,
@@ -125,7 +127,7 @@ export function validateFleetRegistryPayload(payload: unknown): { ok: true; regi
 
 /** Registry path relative to the workspace root. L0-only — never propagated. */
 export function fleetRegistryPath(root: string = defaultRoot()): string {
-  return join(root, 'docs', 'fleet-membership.json');
+  return join(root, "docs", "fleet-membership.json");
 }
 
 /**
@@ -137,19 +139,19 @@ export function fleetRegistryPath(root: string = defaultRoot()): string {
  */
 export function loadFleetRegistry(root: string = defaultRoot()): LoadFleetRegistryResult {
   const path = fleetRegistryPath(root);
-  if (!existsSync(path)) return { ok: false, error: 'absent-file' };
+  if (!existsSync(path)) return { ok: false, error: "absent-file" };
   let payload: unknown;
   try {
-    payload = JSON.parse(readFileSync(path, 'utf-8'));
+    payload = JSON.parse(readFileSync(path, "utf-8"));
   } catch (err) {
     return {
       ok: false,
-      error: 'malformed',
+      error: "malformed",
       detail: `${path} is not valid JSON (${err instanceof Error ? err.message : String(err)})`,
     };
   }
   const validated = validateFleetRegistryPayload(payload);
-  if (!validated.ok) return { ok: false, error: 'malformed', detail: validated.detail };
+  if (!validated.ok) return { ok: false, error: "malformed", detail: validated.detail };
   return { ok: true, registry: validated.registry };
 }
 
@@ -161,7 +163,7 @@ export function loadFleetRegistry(root: string = defaultRoot()): LoadFleetRegist
 export function fleetExclusions(root: string = defaultRoot()): FleetExclusion[] {
   const result = loadFleetRegistry(root);
   if (result.ok) return result.registry.excluded;
-  if (result.error === 'absent-file') return [];
+  if (result.error === "absent-file") return [];
   throw new Error(`Malformed fleet registry (docs/fleet-membership.json): ${result.detail}`);
 }
 
@@ -178,7 +180,7 @@ export function excludedFleetIds(root: string = defaultRoot()): Set<string> {
  * loaded registry; callers iterating in a hot loop may pass their own set.
  */
 export function isFleetMember(name: string, exclusions: ReadonlySet<string> = excludedFleetIds()): boolean {
-  return name.startsWith('co-') && !exclusions.has(name);
+  return name.startsWith("co-") && !exclusions.has(name);
 }
 
 /**
@@ -191,7 +193,7 @@ export function isFleetMember(name: string, exclusions: ReadonlySet<string> = ex
  */
 export function listFleetProjects(root: string = defaultRoot()): string[] {
   const exclusions = excludedFleetIds(root);
-  const dir = join(root, 'Projects');
+  const dir = join(root, "Projects");
   if (!existsSync(dir)) return [];
   const out: string[] = [];
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -199,7 +201,7 @@ export function listFleetProjects(root: string = defaultRoot()): string[] {
       // Forward-slash normalized (design §5 "Projects/<name>"): every node fs
       // API accepts '/' on Windows, and platform-independent output keeps the
       // CLI/JSON contracts and consumer string handling deterministic.
-      out.push(join('Projects', e.name).replace(/\\/g, '/'));
+      out.push(join("Projects", e.name).replace(/\\/g, "/"));
     }
   }
   return out.sort();
@@ -216,9 +218,9 @@ export function isFleetProjectPath(path: string, root: string = defaultRoot()): 
   const base = resolve(root);
   const target = resolve(base, path);
   const rel = relative(base, target);
-  if (rel.length === 0 || rel.startsWith('..') || isAbsolute(rel)) return false;
+  if (rel.length === 0 || rel.startsWith("..") || isAbsolute(rel)) return false;
   const parts = rel.split(/[\\/]/);
-  if (parts.length !== 2 || parts[0] !== 'Projects') return false;
+  if (parts.length !== 2 || parts[0] !== "Projects") return false;
   return isFleetMember(parts[1], excludedFleetIds(root));
 }
 
@@ -234,11 +236,11 @@ export function exclusionNotice(projectPath: string, root: string = defaultRoot(
   const base = resolve(root);
   const target = resolve(base, projectPath);
   const rel = relative(base, target);
-  if (rel.length === 0 || rel.startsWith('..') || isAbsolute(rel)) return null;
+  if (rel.length === 0 || rel.startsWith("..") || isAbsolute(rel)) return null;
   const parts = rel.split(/[\\/]/);
-  if (parts.length !== 2 || parts[0] !== 'Projects') return null;
+  if (parts.length !== 2 || parts[0] !== "Projects") return null;
   const name = parts[1];
-  if (!name.startsWith('co-')) return null;
+  if (!name.startsWith("co-")) return null;
   const exclusions = fleetExclusions(root);
   const row = exclusions.find((e) => e.id === name);
   if (!row) return null;

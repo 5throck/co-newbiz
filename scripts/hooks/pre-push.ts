@@ -41,20 +41,17 @@ export function isZeroOid(oid: string | undefined): boolean {
 // full gate. An empty stdin line set is NOT a pure deletion: the hook's
 // no-ref-updates fallback (branch protection) still applies.
 export function isPureDeletionPush(refUpdates: PushRefUpdate[]): boolean {
-  return refUpdates.length > 0 && refUpdates.every(r => isZeroOid(r.localOid));
+  return refUpdates.length > 0 && refUpdates.every((r) => isZeroOid(r.localOid));
 }
 
 // Refuses a pure deletion push that removes refs/heads/pr/* remote branches
 // unless the operator opts in with ALLOW_REMOTE_BRANCH_DELETE=1. Returns the
 // failure reason, or null to allow.
-export function branchDeletionGuardError(
-  deletedRemoteRefs: string[],
-  allowRemoteBranchDelete: boolean,
-): string | null {
-  const prBranches = deletedRemoteRefs.filter(r => /^refs\/heads\/pr\//.test(r));
+export function branchDeletionGuardError(deletedRemoteRefs: string[], allowRemoteBranchDelete: boolean): string | null {
+  const prBranches = deletedRemoteRefs.filter((r) => /^refs\/heads\/pr\//.test(r));
   if (prBranches.length === 0) return null;
   if (allowRemoteBranchDelete) return null;
-  const names = prBranches.map(r => r.replace("refs/heads/", "")).join(", ");
+  const names = prBranches.map((r) => r.replace("refs/heads/", "")).join(", ");
   return (
     `refusing to delete pr/* remote branch(es): ${names}. ` +
     `To confirm an intentional cleanup, re-run with ALLOW_REMOTE_BRANCH_DELETE=1.`
@@ -72,10 +69,13 @@ async function readPushRefUpdates(): Promise<PushRefUpdate[]> {
     }
     const stdin = Buffer.concat(chunks).toString("utf8").trim();
     if (!stdin) return [];
-    return stdin.split("\n").filter(Boolean).map(line => {
-      const [localRef, localOid, remoteRef, remoteOid] = line.split(" ");
-      return { localRef, localOid, remoteRef, remoteOid };
-    });
+    return stdin
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [localRef, localOid, remoteRef, remoteOid] = line.split(" ");
+        return { localRef, localOid, remoteRef, remoteOid };
+      });
   } catch {
     return [];
   }
@@ -94,7 +94,7 @@ async function collectPushedChangedFiles(refUpdates: PushRefUpdate[]): Promise<s
       // Existing remote ref — net diff of the pushed range
       const range = `${ref.remoteOid}..${ref.localOid}`;
       const out = await $`git diff --name-only ${range}`.nothrow().text();
-      for (const line of out.split('\n')) {
+      for (const line of out.split("\n")) {
         const f = line.trim();
         if (f) files.add(f);
       }
@@ -102,11 +102,13 @@ async function collectPushedChangedFiles(refUpdates: PushRefUpdate[]): Promise<s
       // New branch with no remote counterpart — list each pushed commit
       // and diff it individually (same scope the gitleaks scan uses here).
       const shas = (await $`git rev-list ${ref.localOid} --not --remotes`.nothrow().text())
-        .split('\n').map((s: string) => s.trim()).filter(Boolean);
+        .split("\n")
+        .map((s: string) => s.trim())
+        .filter(Boolean);
       for (const sha of shas) {
         if (!/^[0-9a-f]{40,64}$/.test(sha)) continue;
         const out = await $`git diff-tree --no-commit-id --name-only -r ${sha}`.nothrow().text();
-        for (const line of out.split('\n')) {
+        for (const line of out.split("\n")) {
           const f = line.trim();
           if (f) files.add(f);
         }
@@ -150,7 +152,7 @@ async function main() {
   // running the gate battery and blocking branch-cleanup pushes.
   if (isPureDeletionPush(refUpdates)) {
     const guardError = branchDeletionGuardError(
-      refUpdates.map(r => r.remoteRef),
+      refUpdates.map((r) => r.remoteRef),
       process.env.ALLOW_REMOTE_BRANCH_DELETE === "1",
     );
     if (guardError) {
@@ -166,7 +168,7 @@ async function main() {
   try {
     await $`which gitleaks`;
     try {
-      const pushedUpdates = refUpdates.filter(r => !isZeroOid(r.localOid));
+      const pushedUpdates = refUpdates.filter((r) => !isZeroOid(r.localOid));
       if (pushedUpdates.length > 0) {
         // Use gitleaks in git-aware mode with --log-opts to restrict scanning
         // to only the commit ranges being pushed. Collect unique commit SHAs
@@ -185,7 +187,7 @@ async function main() {
               // them into a single string (e.g. "sha1 sha2..localOid") produces
               // an invalid git-rev-list argument once more than one remote ref
               // exists (always true: `origin/HEAD` sits alongside `origin/main`).
-              const uniqueRemoteShas = [...new Set(remoteRefs.split('\n').filter(Boolean))];
+              const uniqueRemoteShas = [...new Set(remoteRefs.split("\n").filter(Boolean))];
               for (const sha of uniqueRemoteShas) revListArgs.push(`^${sha}`);
               revListArgs.push(ref.localOid);
             } else {
@@ -206,26 +208,29 @@ async function main() {
           // shape) so push-time scans run under the same reviewed policy as
           // commit-time — implicit discovery can miss the dot-named file and
           // silently deviate from the .gitleaks.toml allowlist.
-          const gitleaksArgs = ['detect', '--redact'];
-          if (existsSync('.gitleaks.toml')) gitleaksArgs.push('--config', '.gitleaks.toml');
-          gitleaksArgs.push('--log-opts', shellEscapeRevListArgs(revListArgs));
+          const gitleaksArgs = ["detect", "--redact"];
+          if (existsSync(".gitleaks.toml")) gitleaksArgs.push("--config", ".gitleaks.toml");
+          gitleaksArgs.push("--log-opts", shellEscapeRevListArgs(revListArgs));
           await $`gitleaks ${gitleaksArgs}`;
         }
       }
       // Tag-only or deletion pushes: nothing to scan, pass through
       console.log("  ✅ Secret scan passed");
     } catch {
-      console.error("\n\x1b[31m❌ Secret scan failed — push blocked. Run 'gitleaks detect' to see detected secrets.\x1b[0m");
+      console.error(
+        "\n\x1b[31m❌ Secret scan failed — push blocked. Run 'gitleaks detect' to see detected secrets.\x1b[0m",
+      );
       process.exit(1);
     }
   } catch {
     // gitleaks not installed — run minimal regex fallback
     console.warn("  ⚠️  gitleaks not installed — running regex secret scan fallback");
-    const { stdout } = await $`git grep -rn -E "sk-ant-api03-[A-Za-z0-9_-]{93}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|sk-proj-[A-Za-z0-9_-]+" -- "*.ts" "*.js" "*.mjs" "*.py" "*.sh" "*.json" "*.md" "*.env" "*.env.*" "*.yml" "*.yaml" "*.toml" "*.cfg" "*.ini" "*.html"`.nothrow();
+    const { stdout } =
+      await $`git grep -rn -E "sk-ant-api03-[A-Za-z0-9_-]{93}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|sk-proj-[A-Za-z0-9_-]+" -- "*.ts" "*.js" "*.mjs" "*.py" "*.sh" "*.json" "*.md" "*.env" "*.env.*" "*.yml" "*.yaml" "*.toml" "*.cfg" "*.ini" "*.html"`.nothrow();
     const matches = stdout.toString().trim();
     if (matches) {
       console.error("\n\x1b[31m❌ Potential secrets found — push blocked. Install gitleaks for full coverage.\x1b[0m");
-      console.error(matches.split('\n').slice(0, 5).join('\n'));
+      console.error(matches.split("\n").slice(0, 5).join("\n"));
       process.exit(1);
     }
     console.log("  ✅ Regex secret scan passed (install gitleaks for full coverage)");
@@ -254,11 +259,11 @@ async function main() {
   // commits; when the push touches no test files, skip tests entirely.
   console.log("=== pre-push changed-path tests ===");
   const changedTestFiles = (await collectPushedChangedFiles(refUpdates))
-    .map(f => f.replace(/\\/g, '/'))
+    .map((f) => f.replace(/\\/g, "/"))
     // Deleted test files appear in the pushed-range diff but cannot be
     // re-run — bun test would fail with "filters did not match any test
     // files" and block every deletion push (observed 2026-11-04, PR #1848).
-    .filter(f => f.startsWith('tests/') && f.endsWith('.test.ts') && existsSync(f));
+    .filter((f) => f.startsWith("tests/") && f.endsWith(".test.ts") && existsSync(f));
   if (changedTestFiles.length > 0) {
     try {
       console.log(`Running ${changedTestFiles.length} changed test file(s)...`);
@@ -272,7 +277,7 @@ async function main() {
   }
 
   // Tag-only pushes bypass the branch protection check — tags are not commits to main.
-  const isTagOnlyPush = refUpdates.length > 0 && refUpdates.every(r => r.localRef?.startsWith("refs/tags/"));
+  const isTagOnlyPush = refUpdates.length > 0 && refUpdates.every((r) => r.localRef?.startsWith("refs/tags/"));
   if (isTagOnlyPush) return;
 
   // Branch protection is keyed off the *remote* ref actually being updated, not the
@@ -282,12 +287,11 @@ async function main() {
   // out locally, while it would have missed `git push origin HEAD:main` run from a
   // different local branch. Deletions (localOid all-zero) push no commits and are exempt.
   if (refUpdates.length > 0) {
-    const blockedUpdate = refUpdates.find(r =>
-      !isZeroOid(r.localOid) &&
-      (r.remoteRef === "refs/heads/main" || r.remoteRef === "refs/heads/master")
+    const blockedUpdate = refUpdates.find(
+      (r) => !isZeroOid(r.localOid) && (r.remoteRef === "refs/heads/main" || r.remoteRef === "refs/heads/master"),
     );
     if (blockedUpdate) {
-      const branchName = blockedUpdate.remoteRef.replace(/^refs\/heads\//, '');
+      const branchName = blockedUpdate.remoteRef.replace(/^refs\/heads\//, "");
       console.error(`\n\x1b[31m❌ Direct push to '${branchName}' is blocked. Use a PR branch.\x1b[0m`);
       process.exit(1);
     }
@@ -306,7 +310,7 @@ async function main() {
 // Guarded so unit tests can import the exported helpers without executing
 // the hook (git invokes this file directly, where import.meta.main is true).
 if (import.meta.main) {
-  main().catch(err => {
+  main().catch((err) => {
     console.error(err);
     process.exit(1);
   });

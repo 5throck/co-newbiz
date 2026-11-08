@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-08T05:49:40.911Z
+**Generated**: 2026-11-08T09:30:04.217Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -368,7 +368,7 @@
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | N/A |
 | validate-agents.ts | 1.4.1 | scripts/validate-agents.ts | N/A |
 | validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | js-yaml |
-| validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | fs, path |
+| validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | N/A |
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
 | validate-md-language.ts | 1.16.1 | scripts/validate-md-language.ts | fs |
@@ -386,7 +386,7 @@
 | verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.1 | scripts/verify-platform-lifecycle.ts | N/A |
 | verify-readme-sync.ts | 1.5.0 | scripts/verify-readme-sync.ts | bun, fs, path |
-| verify-scripts.ts | 1.14.0 | scripts/verify-scripts.ts | fs, path |
+| verify-scripts.ts | 1.14.0 | scripts/verify-scripts.ts | N/A |
 | verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | N/A |
 | verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | N/A |
 | watch-evaluate.ts | 1.0.0 | scripts/co-newbiz/jobs/watch-evaluate.ts | N/A |

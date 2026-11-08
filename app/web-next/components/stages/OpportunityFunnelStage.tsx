@@ -23,8 +23,8 @@ import {
   AttractivenessEditor,
   AttractivenessReEvaluateToggle,
   attractivenessToggleId,
-  canReEvaluateAttractiveness,
 } from "../AttractivenessReEvaluate.tsx";
+import { canReEvaluateAttractiveness } from "../../lib/attractiveness-reevaluate.ts";
 import { isDegeneratePct, NOT_COMPUTABLE_TEXT, SYNTHETIC_BADGE_TEXT } from "../../lib/synthetic-value.ts";
 import type { TranslatorFn } from "../../i18n/config.ts";
 import { useTranslations } from "next-intl";
@@ -45,6 +45,8 @@ interface OpportunityRow {
   synergy_score: number | null;
   synergy_rationale: string | null;
   synergy_score_confirmed_at: string | null;
+  /** S4 진출방식 결정 확정(현재 final 결정, API route_confirmed) — selected 재평가 가시성 판단. */
+  route_confirmed?: number | boolean | null;
   status: "identified" | "assessed" | "selected" | "dropped";
   rationale: string | null;
   created_by: string;
@@ -182,6 +184,10 @@ export function OpportunityFunnelStage({
     // 닫으면 포커스를 토글로 되돌린다 (편집기가 사라지며 포커스를 잃지 않게).
     requestAnimationFrame(() => document.getElementById(attractivenessToggleId(`opp-score-input-${id}`))?.focus());
   };
+
+  // 재평가 가능 여부 — assessed, 또는 selected(S4 확정 전·프로젝트 승격 전).
+  const reEvaluable = (o: OpportunityRow) =>
+    canReEvaluateAttractiveness(o.status, canAct, { s4Confirmed: !!o.route_confirmed, hasProject: !!o.project_id });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: load is refetched via useEffect(load, [load]) — adding tc would recreate load on translator identity churn and refetch on every locale re-render; tc is read at call time
   const load = useCallback(() => {
@@ -791,9 +797,9 @@ export function OpportunityFunnelStage({
                               </select>
                             </label>
                           )}
-                          {/* 평가(assessed) 기회의 매력도 재평가 — 작업 칸에는 토글만 두고, 편집기(점수 입력·
+                          {/* 평가(assessed)·선택(selected, S4 확정 전) 기회의 매력도 재평가 — 작업 칸에는 토글만 두고, 편집기(점수 입력·
                             AI 초안 제안 문구)는 아래 전폭 하위 행에 그린다. 좁은 칸에서 긴 문구가 표를 깨지 않게. */}
-                          {canReEvaluateAttractiveness(o.status, canAct) && (
+                          {reEvaluable(o) && (
                             <AttractivenessReEvaluateToggle
                               opportunityName={o.name}
                               open={reEvalOpenIds.has(o.id)}
@@ -815,7 +821,7 @@ export function OpportunityFunnelStage({
                         </span>
                       </td>
                     </tr>
-                    {reEvalOpenIds.has(o.id) && canReEvaluateAttractiveness(o.status, canAct) && (
+                    {reEvalOpenIds.has(o.id) && reEvaluable(o) && (
                       <tr>
                         <td colSpan={FUNNEL_COL_PCT.length} className="bg-[color:var(--muted-bg)]">
                           <AttractivenessEditor

@@ -227,7 +227,10 @@ function detectF2(projectPath: string): FormSignal[] {
         (evidenceVarMigrations.length > 0
           ? `${evidenceVarMigrations.length} evidence-var migration(s) + ${killCriteriaFiles.length} _kill-criteria predicate(s)`
           : ""),
-      files: killCriteriaFiles.length > 0 ? killCriteriaFiles.map((f) => join(killCriteriaDir, f)) : evidenceVarMigrations.map((f) => join(migrationsDir, f)),
+      files:
+        killCriteriaFiles.length > 0
+          ? killCriteriaFiles.map((f) => join(killCriteriaDir, f))
+          : evidenceVarMigrations.map((f) => join(migrationsDir, f)),
     });
   }
   return signals;
@@ -258,7 +261,9 @@ function detectF3(projectPath: string, metaSchema: any | null): FormSignal[] {
   // base meta-model missing $id) didn't validate. Real record-level schemas may live
   // at *.json without the .schema. suffix (verified in co-safety).
   if (valid.length === 0) {
-    const fallbackFiles = walk(modelsDir).filter((f) => f.endsWith(".json") && !f.endsWith("README.md") && !schemaFiles.includes(f));
+    const fallbackFiles = walk(modelsDir).filter(
+      (f) => f.endsWith(".json") && !f.endsWith("README.md") && !schemaFiles.includes(f),
+    );
     const fallbackValid: string[] = [];
     for (const f of fallbackFiles) {
       const schema = readJson(f);
@@ -393,7 +398,7 @@ function computeSpan(
   projectPath: string,
   deltas: DeltaRecord[],
   nodeIds: string[],
-  planePaths: string[]
+  planePaths: string[],
 ): TimeSpanResult {
   const touching = deltasTouching(deltas, nodeIds);
   if (touching.length > 0) {
@@ -442,7 +447,10 @@ function testM1(projectPath: string, resolvesInPlane: (ref: string) => boolean):
     if (!m) continue;
     const raw = m[1].trim();
     if (raw.length === 0) continue; // empty evidence_refs excluded from denominator, not a failure
-    const refs = raw.split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+    const refs = raw
+      .split(",")
+      .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+      .filter(Boolean);
     if (refs.some((r) => resolvesInPlane(r))) {
       citing++;
       citingFiles.push(f);
@@ -488,11 +496,12 @@ function testM4(span: TimeSpanResult): MaturityResult {
     id: "M4",
     pass: true,
     unverifiedByDelta: true,
-    detail: "git-log fallback cannot distinguish a removed edge from a reformatted file; no fatal errors found in recent commits over plane paths, but this is UNVERIFIED-BY-DELTA",
+    detail:
+      "git-log fallback cannot distinguish a removed edge from a reformatted file; no fatal errors found in recent commits over plane paths, but this is UNVERIFIED-BY-DELTA",
   };
 }
 
-function testM3(form: Form, projectPath: string, plane: string): MaturityResult {
+function testM3(form: Form, projectPath: string, _plane: string): MaturityResult {
   // Hygiene gate: best-effort per-form check for unresolved CONTESTED / dangling SUPERSEDED.
   if (form === "F1") {
     const docsDir = join(projectPath, "docs");
@@ -507,12 +516,22 @@ function testM3(form: Form, projectPath: string, plane: string): MaturityResult 
   if (form === "F2") {
     const killDir = join(projectPath, "procedures", "_kill-criteria");
     const count = existsSync(killDir) ? readdirSync(killDir).filter((f) => f.endsWith(".json")).length : 0;
-    return { id: "M3", pass: true, detail: `${count} _kill-criteria predicate file(s) present; no reversal-ledger check implemented, reported informational` };
+    return {
+      id: "M3",
+      pass: true,
+      detail: `${count} _kill-criteria predicate file(s) present; no reversal-ledger check implemented, reported informational`,
+    };
   }
   if (form === "F3") {
     const migDir = join(projectPath, "evidence-models", "migrations");
     const hasReadme = existsSync(join(migDir, "README.md"));
-    return { id: "M3", pass: true, detail: hasReadme ? "evidence-models/migrations/README.md present" : "no migrations/ dir found (no supersession claims to check)" };
+    return {
+      id: "M3",
+      pass: true,
+      detail: hasReadme
+        ? "evidence-models/migrations/README.md present"
+        : "no migrations/ dir found (no supersession claims to check)",
+    };
   }
   return { id: "M3", pass: false, detail: "form F0/MIXED/none — cannot evaluate supersession discipline" };
 }
@@ -528,7 +547,10 @@ function testM5(projectPath: string, files: string[]): MaturityResult {
   return {
     id: "M5",
     pass: flagged.length === 0,
-    detail: flagged.length === 0 ? "no country-mark/client-identifier filenames detected (static scan only)" : `flagged filename(s): ${flagged.join(", ")}`,
+    detail:
+      flagged.length === 0
+        ? "no country-mark/client-identifier filenames detected (static scan only)"
+        : `flagged filename(s): ${flagged.join(", ")}`,
   };
 }
 
@@ -627,7 +649,7 @@ function testM6(projectPath: string, form: Form, planeTargets: string[]): M6Resu
 // Plane assembly + verdict
 // ---------------------------------------------------------------------------
 
-function resolvesRefInPlane(form: Form, ref: string, planeTargets: string[]): boolean {
+function resolvesRefInPlane(_form: Form, ref: string, planeTargets: string[]): boolean {
   return planeTargets.some((t) => ref.includes(t) || t.includes(ref));
 }
 
@@ -649,7 +671,11 @@ function ledgerEvidenceIds(projectPath: string): string[] {
   return ids;
 }
 
-function planeTargetsForForm(form: Form, projectPath: string, signalFiles: string[] | undefined): { targets: string[]; paths: string[]; nodeIds: string[] } {
+function planeTargetsForForm(
+  form: Form,
+  projectPath: string,
+  signalFiles: string[] | undefined,
+): { targets: string[]; paths: string[]; nodeIds: string[] } {
   const paths = signalFiles ?? [];
   if (form === "F1") {
     return { targets: ["ledger", "evidence-ledger"], paths, nodeIds: ["evidence-ledger"] };
@@ -658,7 +684,7 @@ function planeTargetsForForm(form: Form, projectPath: string, signalFiles: strin
     return { targets: ["evidence_var", "_kill-criteria"], paths, nodeIds: ["evidence_var", "kill-criteria"] };
   }
   if (form === "F3") {
-    const targets = paths.map((f) => (f.split(/[\\/]/).pop() ?? f));
+    const targets = paths.map((f) => f.split(/[\\/]/).pop() ?? f);
     // Dual-currency resolution: EV ledger ids join the schema-file basenames so
     // decision records citing the plane's own ledger satisfy M1 (T-20261013-011).
     for (const id of ledgerEvidenceIds(projectPath)) {
@@ -669,7 +695,12 @@ function planeTargetsForForm(form: Form, projectPath: string, signalFiles: strin
   return { targets: [], paths: [], nodeIds: [] };
 }
 
-function evaluatePlane(projectPath: string, signal: FormSignal, allSignals: FormSignal[], deltas: DeltaRecord[]): PlaneResult {
+function evaluatePlane(
+  projectPath: string,
+  signal: FormSignal,
+  allSignals: FormSignal[],
+  deltas: DeltaRecord[],
+): PlaneResult {
   const forms = allSignals.map((s) => s.form);
   const isMixed = new Set(forms).size > 1;
   const form: Form = isMixed ? "MIXED" : signal.form;
@@ -682,7 +713,12 @@ function evaluatePlane(projectPath: string, signal: FormSignal, allSignals: Form
       form,
       maturity: [],
       verdict: "NEEDS_TRIAGE",
-      notes: [...notes, form === "MIXED" ? `mixed forms detected: ${forms.join(", ")} — human triage, half-finished migration risk` : "routes to human triage per design §4.2"],
+      notes: [
+        ...notes,
+        form === "MIXED"
+          ? `mixed forms detected: ${forms.join(", ")} — human triage, half-finished migration risk`
+          : "routes to human triage per design §4.2",
+      ],
     };
   }
 
@@ -766,7 +802,7 @@ function markdownReport(reports: ProjectReport[]): string {
         return (m.pass ? "PASS" : "FAIL") + (m.unverifiedByDelta ? "*" : "");
       };
       lines.push(
-        `| ${plane.plane} | ${plane.forms.join(",")} | ${get("M1")} | ${get("M2")} | ${get("M3")} | ${get("M4")} | ${get("M5")} | ${get("M6a")} | ${get("M6b")} | **${plane.verdict}** |`
+        `| ${plane.plane} | ${plane.forms.join(",")} | ${get("M1")} | ${get("M2")} | ${get("M3")} | ${get("M4")} | ${get("M5")} | ${get("M6a")} | ${get("M6b")} | **${plane.verdict}** |`,
       );
     }
     lines.push("");

@@ -16,7 +16,10 @@ const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
 export async function GET(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(auth.auth, "read");
+    if (denied) return denied;
+  }
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
   const projectId = url.searchParams.get("project_id");
@@ -32,7 +35,9 @@ export async function GET(request: Request) {
       `SELECT id, project_id, name, market_scope, industry_id, value_chain_node, market_size_krw_m,
               growth_rate, attractiveness_score, synergy_score, synergy_rationale, synergy_score_confirmed_at, status, rationale,
               decided_by, decided_at, created_by, created_at, deleted_at,
-              EXISTS (SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = opportunity.id) AS route_decided
+              EXISTS (SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = opportunity.id) AS route_decided,
+              -- authoritative "S4 confirmed": a current final decision (ADR-0135); route_decided above also counts drafts
+              EXISTS (SELECT 1 FROM route_decision rd WHERE rd.opportunity_id = opportunity.id AND rd.is_current = 1) AS route_confirmed
        FROM opportunity
        WHERE (deleted_at IS NULL OR (? = 1 AND project_id IS NOT NULL))
          AND (? IS NULL OR status = ?)
@@ -47,19 +52,32 @@ export async function POST(request: Request) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Opportunity registration requires the analyst role." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Opportunity registration requires the analyst role.",
+    });
+    if (denied) return denied;
+  }
   const body = (await request.json().catch(() => null)) as {
-    name?: string; market_scope?: string; value_chain_node?: string;
-    market_size_krw_m?: number; growth_rate?: number;
-    attractiveness_score?: number; synergy_score?: number;
-    status?: string; rationale?: string;
+    name?: string;
+    market_scope?: string;
+    value_chain_node?: string;
+    market_size_krw_m?: number;
+    growth_rate?: number;
+    attractiveness_score?: number;
+    synergy_score?: number;
+    status?: string;
+    rationale?: string;
     industry_id?: string | null;
     // Wave C-3 (D-5): start from a named target. Pre-fills S6; S1–S4 still apply.
     known_target?: { company_name?: string; dart_corp_code?: string | null; note?: string | null } | null;
   } | null;
   if (!body?.name?.trim()) return badRequest("invalid_request", "name is required.");
   if (body.status === "dropped") {
-    return badRequest("typed_closure_required", "dropped cannot be set at creation — exclude via POST /api/opportunities/[id]/close (ADR-0152).");
+    return badRequest(
+      "typed_closure_required",
+      "dropped cannot be set at creation — exclude via POST /api/opportunities/[id]/close (ADR-0152).",
+    );
   }
   if (body.status && !STATUSES.has(body.status)) {
     return badRequest("invalid_request", `status must be one of ${[...STATUSES].join("|")}.`);
@@ -96,10 +114,23 @@ export async function POST(request: Request) {
                               growth_rate, attractiveness_score, synergy_score, synergy_rationale, status, rationale,
                               created_by, created_at, industry_id)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, null, body.name.trim(), body.market_scope?.trim() ?? null, body.value_chain_node?.trim() ?? null,
-      body.market_size_krw_m ?? null, body.growth_rate ?? null, attractiveness, synergy,
+    [
+      id,
       null,
-      status, body.rationale?.trim() ?? null, ctx.userId, now, industryId],
+      body.name.trim(),
+      body.market_scope?.trim() ?? null,
+      body.value_chain_node?.trim() ?? null,
+      body.market_size_krw_m ?? null,
+      body.growth_rate ?? null,
+      attractiveness,
+      synergy,
+      null,
+      status,
+      body.rationale?.trim() ?? null,
+      ctx.userId,
+      now,
+      industryId,
+    ],
   );
   appendAudit(db, { actor: ctx.userId, action: "opportunity_create", target: `${id}:${body.name.trim()}`, now });
   // ADR-0179 amendment slice B (auto-link addition): when the industry
@@ -114,10 +145,17 @@ export async function POST(request: Request) {
     // source, and the Target Universe is pre-defined around it (min 1
     // candidate). S1–S4 are NOT skipped — the S6 stage stays locked behind them.
     const note = `${KNOWN_TARGET_NOTE_PREFIX} ${body.known_target?.note?.trim() || "사용자가 대상을 직접 지정하여 검토를 시작"}`;
-    const target = createTarget(id, knownTargetName, body.known_target?.dart_corp_code?.trim() || null, note, { actorUserId: ctx.userId });
+    const target = createTarget(id, knownTargetName, body.known_target?.dart_corp_code?.trim() || null, note, {
+      actorUserId: ctx.userId,
+    });
     knownTargetId = target.id;
     db.run("UPDATE opportunity SET target_universe_json = ? WHERE id = ?", [
-      JSON.stringify({ definition: `알려진 대상 ${knownTargetName} 기반 검토`, criteria: [], scope: null, min_long_list: 1 }),
+      JSON.stringify({
+        definition: `알려진 대상 ${knownTargetName} 기반 검토`,
+        criteria: [],
+        scope: null,
+        min_long_list: 1,
+      }),
       id,
     ]);
     appendAudit(db, { actor: ctx.userId, action: "known_target.start", target: `${id}:${knownTargetName}`, now });
