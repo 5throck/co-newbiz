@@ -2807,7 +2807,6 @@
       "ackLegend": "Acknowledge before recording GO ({count})",
       "ackIntro": "Give a reason for each item below. Your reasons are stored with the decision.",
       "actionLabel": "action: {action}",
-      "noAckNeeded": "Nothing needs acknowledgement for this GO.",
       "divergenceLabelRequired": "Why does your decision differ from the AI recommendation ({ai})? *",
       "divergenceLabelOptional": "Why does your decision differ from the AI recommendation ({ai})? (optional)",
       "rationaleLabelDivergentRequired": "Evidence - include why this differs from the AI recommendation ({ai}) *",

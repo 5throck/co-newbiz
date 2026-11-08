@@ -556,6 +556,9 @@ export function GateDecisionPanel({
 
   const holdNeedsMissing = form.decision === "hold" && !form.missing.split(/[\n,]/).some((x) => x.trim());
   const gateBlocker = seq ? gateSequenceBlocker(gates, form.gate, latest) : null;
+  // Owner decision 2026-11-08: the empty-rationale reason is exposed to assistive tech only (sr-only),
+  // never as visible text; every other submit reason stays visible.
+  const rationaleMissing = !saving && !gateBlocker && !form.rationale.trim();
   const submitReason = saving
     ? t("recording")
     : gateBlocker
@@ -1277,7 +1280,12 @@ export function GateDecisionPanel({
               {saving ? tc("recording") : tc("decision")}
             </button>
             {submitReason && (
-              <span id={`${formId}-reason`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              <span
+                id={`${formId}-reason`}
+                className={
+                  rationaleMissing ? "sr-only" : "text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                }
+              >
                 {submitReason}
               </span>
             )}

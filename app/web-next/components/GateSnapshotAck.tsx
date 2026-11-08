@@ -511,7 +511,6 @@ export function GateAckBlock({
   const tw = useTranslations("components.waccStatus");
   const enforced = enforcedBlocks(snapshot.hard_blocks);
   const advisory = advisoryBlocks(snapshot.hard_blocks);
-  const hardBlocked = enforced.length > 0;
   const keyTitle = (key: string) => {
     const r = required.find((x) => x.key === key);
     if (r) return label(r).title;
@@ -808,9 +807,6 @@ export function GateAckBlock({
             })}
           </ul>
         </fieldset>
-      )}
-      {isGo && required.length === 0 && !hardBlocked && (
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">{t("noAckNeeded")}</p>
       )}
       {divergence && (
         <div className="mt-3">
