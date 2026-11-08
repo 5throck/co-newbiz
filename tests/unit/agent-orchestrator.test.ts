@@ -192,7 +192,7 @@ describe("runActivityChain", () => {
 interface CapturedCall { agentKey: string; prompt: string }
 
 /** Fake committee: agent K in round N answers "POSITION K/N" with a unique nonce. */
-function makeCommitteeFake(keys: string[]): { callAgent: CallAgent; calls: CapturedCall[]; positions: Map<string, string[]> } {
+function makeCommitteeFake(_keys: string[]): { callAgent: CallAgent; calls: CapturedCall[]; positions: Map<string, string[]> } {
   const calls: CapturedCall[] = [];
   const counts = new Map<string, number>();
   const positions = new Map<string, string[]>();
@@ -202,7 +202,7 @@ function makeCommitteeFake(keys: string[]): { callAgent: CallAgent; calls: Captu
     counts.set(agentKey, n);
     const md = `POSITION ${agentKey}/${n} nonce-${agentKey}-${n}`;
     if (!positions.has(agentKey)) positions.set(agentKey, []);
-    positions.get(agentKey)!.push(md);
+    const arr = positions.get(agentKey) ?? []; arr.push(md);
     return { positionMd: md, confidence: 70 + n, recommendation: "go" };
   };
   return { callAgent, calls, positions };
@@ -236,15 +236,15 @@ describe("runDeliberationRounds", () => {
       // Round 1: independent — no other member's position present.
       for (const other of MEMBERS.map((m) => m.agentKey)) {
         if (other === key) continue;
-        expect(prompts[0]).not.toContain(positions.get(other)![0]);
+        expect(prompts[0]).not.toContain((positions.get(other) ?? [])[0] ?? '');
       }
       // Own position is never fed back.
-      expect(prompts[1]).not.toContain(positions.get(key)![0]);
+      expect(prompts[1]).not.toContain((positions.get(key) ?? [])[0] ?? '');
 
       // Round 2: the FULL round-1 positions of ALL OTHER members, verbatim.
       for (const other of MEMBERS.map((m) => m.agentKey)) {
         if (other === key) continue;
-        expect(prompts[1]).toContain(positions.get(other)![0]);
+        expect(prompts[1]).toContain((positions.get(other) ?? [])[0] ?? '');
       }
     }
   });
@@ -274,11 +274,11 @@ describe("runDeliberationRounds", () => {
       const prompts = calls.filter((c) => c.agentKey === key).map((c) => c.prompt);
       expect(prompts[0]).not.toContain("## 응답 규칙"); // round 1 untouched
       expect(prompts[0]).not.toContain("## 안건 쟁점");
-      expect(prompts[1]).toContain(positions.get(key)![0]); // own prior position now present
+      expect(prompts[1]).toContain((positions.get(key) ?? [])[0] ?? ''); // own prior position now present
       expect(prompts[1]).toContain("## 응답 규칙");
       expect(prompts[1]).toContain("- I1: 수요 전제");
       for (const other of MEMBERS.map((m) => m.agentKey)) {
-        if (other !== key) expect(prompts[1]).toContain(positions.get(other)![0]);
+        if (other !== key) expect(prompts[1]).toContain((positions.get(other) ?? [])[0] ?? '');
       }
     }
   });
