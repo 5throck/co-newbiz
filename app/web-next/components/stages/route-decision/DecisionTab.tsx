@@ -123,9 +123,11 @@ export function DecisionTab({ ctx, selected }: { ctx: RouteDecisionStageState; s
                   </span>
                   <select value={subTrack} onChange={(e) => setSubTrack(e.target.value)} className="sizing-new-input">
                     <option value="">{tc("selectEllipsis")}</option>
-                    {Object.entries(subs)
-                      .filter(([k]) => !overrideBlocked || !OVERRIDDEN_SUBS.includes(k))
-                      .map(([k]) => (
+                    {/* subs is a string array (constants.ts) — iterate values,
+                        not Object.entries (indexes would leak into value/label). */}
+                    {subs
+                      .filter((k) => !overrideBlocked || !OVERRIDDEN_SUBS.includes(k))
+                      .map((k) => (
                         <option key={k} value={k}>
                           {resolveLabelTokens(subTrackLabelKey(k), tr)}
                         </option>
