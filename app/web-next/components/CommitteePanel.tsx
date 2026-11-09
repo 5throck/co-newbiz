@@ -15,6 +15,7 @@ import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { PrimaryAction } from "./ui.tsx";
 import { useTranslations } from "next-intl";
 import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY } from "../lib/label-keys.ts";
+import { formatDateTime } from "../lib/format.ts";
 import { MinutesDialog } from "./CommitteeMinutesView.tsx";
 
 interface SessionPosition {
@@ -446,7 +447,7 @@ export function CommitteePanel({
                   }}
                 >
                   <span className="flex items-center gap-2 text-[length:var(--fs-caption)]">
-                    <span className="tabular-nums">{s.startedAt.slice(0, 16).replace("T", " ")}</span>
+                    <span className="tabular-nums">{formatDateTime(s.startedAt)}</span>
                     <span className="text-[color:var(--muted-fg)]">
                       {s.meta.decision_mode} · {s.meta.gate}
                     </span>
@@ -475,7 +476,7 @@ export function CommitteePanel({
           <p className="text-[length:var(--fs-caption)] font-semibold mb-2">
             심의 결과 — {(() => {
               const s = sessions.find((x) => x.sessionId === transcript.sessionId);
-              return s ? `${s.startedAt.slice(0, 16).replace("T", " ")} 소집분` : "세션";
+              return s ? `${formatDateTime(s.startedAt)} 소집분` : "세션";
             })()}
           </p>
           {/* 의장 종합(PROPOSAL) + 소수 의견 — 목업 grid2e 두 카드 */}
