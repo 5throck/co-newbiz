@@ -1385,6 +1385,7 @@
       "contested": "쟁점 분분",
       "discussion": "쟁점별 논의",
       "agreements": "합의 사항",
+            "close": "닫기",
       "downloadMd": "다운로드 (.md)",
       "draft": "초안",
       "fallbackDraft": "결정론적 대체 생성 (LLM 미사용)",
