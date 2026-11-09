@@ -27,12 +27,13 @@ const { readFileSync } = await import("node:fs");
 // ── Registry validation (procedures/_validate.ts committee pass) ────────────
 
 describe("_committees.yaml validation", () => {
-  testReal("the shipped registry passes with both committees", () => {
+  testReal("the shipped registry passes with all four committees", () => {
     const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), {
       schema: yaml.JSON_SCHEMA,
     });
     const result = validateCommitteeRegistry(doc, new Set<string>());
-    expect(result.committeeCount).toBe(2);
+    // ADR-0196 Phase E: the two IC committees join the two deliberation ones.
+    expect(result.committeeCount).toBe(4);
     expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
   });
 
@@ -150,7 +151,8 @@ describe("_committees.yaml functional-expert composition", () => {
       schema: yaml.JSON_SCHEMA,
     });
     const result = validateCommitteeRegistry(doc, new Set<string>());
-    expect(result.committeeCount).toBe(2);
+    // ADR-0196 Phase E: four committees (two deliberation + two IC).
+    expect(result.committeeCount).toBe(4);
     expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
   });
 

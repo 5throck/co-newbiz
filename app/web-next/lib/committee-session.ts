@@ -88,6 +88,11 @@ export interface SessionMeta {
   /** ADR-0104 chair sign-off — set once; freezes minutes_draft. */
   minutes_confirmed_by?: string;
   minutes_confirmed_at?: string;
+  /** The round advance() has started. Human_only sessions write no agent
+   * rows, so the human-position round must come from here instead of
+   * max(agent_position.round) — otherwise a 2-round human_only session
+   * never gets its round-2 positions and never reaches synthesis. */
+  current_round?: number;
 }
 
 let cachedRegistry: Record<string, CommitteeDef> | null = null;
@@ -180,6 +185,24 @@ export function committeeSessionForOpportunity(
     id: string;
   }[];
   if (promoted.length > 0 && !promoted.some((p) => canSeeProject(p.id))) return null;
+  return { id: run.id, stage: run.stage };
+}
+
+/**
+ * Route binding for /api/projects/:id/committee-sessions/:sessionId/* (the
+ * project-scoped surface — ADR-0196 Phase E): the run must exist, be a
+ * committee session, and address THIS project. The project routes gate
+ * membership themselves via visibleProject (deny-by-default), so no
+ * promoted-opportunity check is needed here. Null = 404.
+ */
+export function committeeSessionForProject(projectId: string, sessionId: string): { id: string; stage: string } | null {
+  const run = getDb()
+    .query("SELECT id, entity_type, entity_id, stage, meta_json FROM process_run WHERE id = ?")
+    .get(sessionId) as
+    | { id: string; entity_type: string; entity_id: string; stage: string; meta_json: string | null }
+    | undefined;
+  if (run?.entity_type !== "project" || run.entity_id !== projectId || !isCommitteeRun(run.stage, run.meta_json))
+    return null;
   return { id: run.id, stage: run.stage };
 }
 
@@ -598,8 +621,15 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
       );
     }
   }
+  // The active round: advance() records it in meta (current_round) — the
+  // authoritative signal for human_only sessions, where no agent rows exist
+  // to derive max(round) from. The max-position fallback keeps hybrid
+  // sessions (whose agent rows already carry the round) working unchanged.
   const positions = loadPositions(opts.sessionId);
-  const round = positions.length === 0 ? 1 : Math.max(...positions.map((p) => p.round));
+  const round = Math.min(
+    session.meta.current_round ?? (positions.length === 0 ? 1 : Math.max(...positions.map((p) => p.round))),
+    committee.rounds,
+  );
   // One position per (round, human member): a repeat submission in the same
   // round would double-count that member's voice at synthesis.
   const alreadyThisRound = positions.some(
@@ -704,8 +734,14 @@ export async function advanceCommitteeSession(
         meta.agenda = pass.agenda;
         meta.agenda_meta = toAgendaMeta(pass);
       }
-      writeMeta(sessionId, meta);
     }
+    // Track the started round in meta (phase B defect fix): human_only
+    // sessions write no agent rows, so submitHumanPosition cannot derive
+    // the active round from max(agent_position.round) — it reads this key
+    // instead. Hybrid sessions carry the same key redundantly (their agent
+    // rows agree with it), so they are unaffected.
+    meta.current_round = nextRound;
+    writeMeta(sessionId, meta);
     if (meta.decision_mode === "hybrid") {
       // Rounds 2+: each agent member receives the FULL prior-round positions
       // of all OTHER members, verbatim — the engine's core requirement
@@ -915,15 +951,16 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
   };
 }
 
-/** List committee sessions for an opportunity (process_run rows with meta). */
+/** List committee sessions for an entity (process_run rows with meta). */
 export function listCommitteeSessions(
   entityId: string,
+  entityType: "opportunity" | "project" = "opportunity",
 ): Array<{ sessionId: string; meta: SessionMeta; status: string; startedAt: string }> {
   const rows = getDb()
     .query(
-      "SELECT id, meta_json, status, started_at FROM process_run WHERE entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC",
+      "SELECT id, meta_json, status, started_at FROM process_run WHERE entity_type = ? AND entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC",
     )
-    .all(entityId) as Array<{ id: string; meta_json: string; status: string; started_at: string }>;
+    .all(entityType, entityId) as Array<{ id: string; meta_json: string; status: string; started_at: string }>;
   return rows.flatMap((r) => {
     try {
       return [

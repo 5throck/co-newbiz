@@ -18,6 +18,9 @@ metadata:
     - collaborative decision
     - multi-agent coordination
     - facilitate meeting
+  procedure_keys:
+    - entity-ic-review
+    - group-investment-review
 ---
 
 ## Context

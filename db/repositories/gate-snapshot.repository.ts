@@ -20,7 +20,7 @@ import { ulid } from "../lib/ulid.ts";
 /** The dedicated run kind: carried in run.label (the run table has no kind column). */
 export const GATE_INTEGRITY_EVAL_KIND = "gate_integrity_eval";
 /** 2 (ADR-0193): kill.current_stage / not_reached / carried_in / lineage_missing and triggered[].partial_input are inside the hash. Version 1 rows verify under the same canonicaliser (versioned in gate-snapshot.ts). */
-export const GATE_SNAPSHOT_SCHEMA_VERSION = 2;
+export const GATE_SNAPSHOT_SCHEMA_VERSION = 3;
 
 export type EvalEvent = "brief" | "decision" | "snapshot";
 
@@ -29,11 +29,22 @@ export type EvalEvent = "brief" | "decision" | "snapshot";
  * superseded by itself so the consumers that pick "the latest live run of a project" (S12 scorecard,
  * greenfield sub-track) skip it; versioning.createRun skips it by label.
  */
-export function createGateEvalRun(db: Database, input: { projectId: string; gate: string; event: EvalEvent; actor: string; now: string }): string {
+export function createGateEvalRun(
+  db: Database,
+  input: { projectId: string; gate: string; event: EvalEvent; actor: string; now: string },
+): string {
   const id = ulid();
   db.run(
     "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at, superseded_by) VALUES (?,?,?,?,?,?,?)",
-    [id, input.projectId, `${GATE_INTEGRITY_EVAL_KIND}:${input.event}:${input.gate}`, GATE_INTEGRITY_EVAL_KIND, input.actor, input.now, id],
+    [
+      id,
+      input.projectId,
+      `${GATE_INTEGRITY_EVAL_KIND}:${input.event}:${input.gate}`,
+      GATE_INTEGRITY_EVAL_KIND,
+      input.actor,
+      input.now,
+      id,
+    ],
   );
   return id;
 }
@@ -59,15 +70,25 @@ export interface InsertSnapshotInput {
 
 export function insertGateSnapshot(db: Database, input: InsertSnapshotInput): void {
   if (!db.query("SELECT id FROM gate_decision WHERE id = ?").get(input.decisionId)) {
-    throw new Error(`gate_snapshot_rejected: decision '${input.decisionId}' does not exist - a snapshot belongs to exactly one recorded decision.`);
+    throw new Error(
+      `gate_snapshot_rejected: decision '${input.decisionId}' does not exist - a snapshot belongs to exactly one recorded decision.`,
+    );
   }
   db.run(
     `INSERT INTO gate_decision_snapshot
        (decision_id, schema_version, snapshot_json, snapshot_hash, submitted_hash, acknowledgements_json, computed_at, engine_versions_json, eval_run_id, brief_id)
      VALUES (?,?,?,?,?,?,?,?,?,?)`,
     [
-      input.decisionId, input.schemaVersion, input.snapshotJson, input.snapshotHash, input.submittedHash,
-      JSON.stringify(input.acknowledgements), input.computedAt, input.engineVersionsJson, input.evalRunId, input.briefId,
+      input.decisionId,
+      input.schemaVersion,
+      input.snapshotJson,
+      input.snapshotHash,
+      input.submittedHash,
+      JSON.stringify(input.acknowledgements),
+      input.computedAt,
+      input.engineVersionsJson,
+      input.evalRunId,
+      input.briefId,
     ],
   );
 }
@@ -85,14 +106,28 @@ export interface StoredGateSnapshot {
 }
 
 export function getGateSnapshot(decisionId: string, db: Database = getDb()): StoredGateSnapshot | null {
-  const row = db.query("SELECT * FROM gate_decision_snapshot WHERE decision_id = ?").get(decisionId) as
-    | { decision_id: string; schema_version: number; snapshot_json: string; snapshot_hash: string; submitted_hash: string | null; acknowledgements_json: string; computed_at: string; eval_run_id: string | null; brief_id: string | null }
-    | null;
+  const row = db.query("SELECT * FROM gate_decision_snapshot WHERE decision_id = ?").get(decisionId) as {
+    decision_id: string;
+    schema_version: number;
+    snapshot_json: string;
+    snapshot_hash: string;
+    submitted_hash: string | null;
+    acknowledgements_json: string;
+    computed_at: string;
+    eval_run_id: string | null;
+    brief_id: string | null;
+  } | null;
   if (!row) return null;
   return {
-    decision_id: row.decision_id, schema_version: row.schema_version, snapshot: JSON.parse(row.snapshot_json), snapshot_hash: row.snapshot_hash,
-    submitted_hash: row.submitted_hash, acknowledgements: JSON.parse(row.acknowledgements_json) as Acknowledgement[], computed_at: row.computed_at,
-    eval_run_id: row.eval_run_id, brief_id: row.brief_id,
+    decision_id: row.decision_id,
+    schema_version: row.schema_version,
+    snapshot: JSON.parse(row.snapshot_json),
+    snapshot_hash: row.snapshot_hash,
+    submitted_hash: row.submitted_hash,
+    acknowledgements: JSON.parse(row.acknowledgements_json) as Acknowledgement[],
+    computed_at: row.computed_at,
+    eval_run_id: row.eval_run_id,
+    brief_id: row.brief_id,
   };
 }
 
@@ -118,7 +153,20 @@ export function insertBriefRecord(db: Database, input: Omit<BriefRecord, "id"> &
   db.run(
     `INSERT INTO gate_brief_record (id, entity_type, entity_id, gate, recommended, confidence, source, rationale_draft_hash, llm_call_ref, eval_run_id, generated_by, generated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, input.entity_type, input.entity_id, input.gate, input.recommended, input.confidence, input.source, input.rationale_draft_hash, input.llm_call_ref, input.eval_run_id, input.generated_by, input.generated_at],
+    [
+      id,
+      input.entity_type,
+      input.entity_id,
+      input.gate,
+      input.recommended,
+      input.confidence,
+      input.source,
+      input.rationale_draft_hash,
+      input.llm_call_ref,
+      input.eval_run_id,
+      input.generated_by,
+      input.generated_at,
+    ],
   );
   return id;
 }
@@ -130,7 +178,14 @@ export function getBriefRecord(db: Database, id: string): BriefRecord | null {
 /** The default brief for a decision: the caller's most recent brief for the same gate within `withinHours` (D9). */
 export function latestBriefRecord(
   db: Database,
-  input: { entityType: "opportunity" | "project"; entityId: string; gate: string; userId: string; now: string; withinHours?: number },
+  input: {
+    entityType: "opportunity" | "project";
+    entityId: string;
+    gate: string;
+    userId: string;
+    now: string;
+    withinHours?: number;
+  },
 ): BriefRecord | null {
   const since = new Date(new Date(input.now).getTime() - (input.withinHours ?? 24) * 3_600_000).toISOString();
   return (
@@ -157,8 +212,14 @@ export interface KillOverrideRow {
 }
 
 /** Active (not revoked) overrides of one entity. */
-export function listActiveKillOverrides(db: Database, entityType: "opportunity" | "project", entityId: string): KillOverrideRow[] {
+export function listActiveKillOverrides(
+  db: Database,
+  entityType: "opportunity" | "project",
+  entityId: string,
+): KillOverrideRow[] {
   return db
-    .query("SELECT id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at FROM kill_criteria_override WHERE entity_type = ? AND entity_id = ? AND revoked_at IS NULL ORDER BY procedure_key, criterion_id")
+    .query(
+      "SELECT id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at FROM kill_criteria_override WHERE entity_type = ? AND entity_id = ? AND revoked_at IS NULL ORDER BY procedure_key, criterion_id",
+    )
     .all(entityType, entityId) as KillOverrideRow[];
 }

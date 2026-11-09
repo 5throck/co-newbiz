@@ -88,6 +88,13 @@ const ROLE_TEMPLATES: Record<string, RoleTemplate> = {
     confidence: 65,
     criteriaScores: NEUTRAL_SCORES,
   },
+  "group-review-agent": {
+    domain: "그룹 관점 (portfolio fit — entity 관점과 구분되는 그룹 차원 검토)",
+    stance: "포트폴리오 적합성, 그룹 내 거래 컴플라이언스, 동시 진행 제안 간 자본 배분 우선순위를 점검한다.",
+    recommendation: "go",
+    confidence: 68,
+    criteriaScores: NEUTRAL_SCORES,
+  },
   // Standing functional-expert seats (ADR-0097 Amendment 2026-09-04):
   // financing / site & facility / legal / HR & labor / IR / patent-IP.
   // None carries vetoDissent — the red-team privilege stays risk-officer's.

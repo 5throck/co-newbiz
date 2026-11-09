@@ -4838,6 +4838,101 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/projects/{id}/committee-sessions:
+    get:
+      operationId: listProjectCommitteeSessions
+      summary: Committee deliberation sessions for a project — the IC committees (entity_ic / group_ic, ADR-0196 phase E). Deny-by-default via visibleProject.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: conveneProjectCommitteeSession
+      summary: Convene an IC committee session on the project (analyst+). agent_team runs the full deliberation and lands a gate_evaluation PROPOSAL — never the gate decision; refuses with llm_required when no provider is configured.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}/committee-sessions/{sessionId}:
+    get:
+      operationId: getProjectCommitteeSessionTranscript
+      summary: Full project committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}/committee-sessions/{sessionId}/positions:
+    post:
+      operationId: submitProjectCommitteeHumanPosition
+      summary: Submit a human member's position in human_only/hybrid modes on a project session (human_user_id comes from the session, never the body).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}/committee-sessions/{sessionId}/advance:
+    post:
+      operationId: advanceProjectCommitteeSession
+      summary: Advance a project committee session to the next round or run the chair synthesis (gate_evaluation PROPOSAL only — the IC verdict stays human-only).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}/committee-sessions/{sessionId}/minutes:
+    get:
+      operationId: getProjectCommitteeMinutes
+      summary: IC committee minutes as text/markdown (?format=json for the structured view payload).
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Markdown minutes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: confirmProjectCommitteeMinutes
+      summary: Confirm (or regenerate) the IC committee minutes — confirmation is a person action and the confirmer may not countersign the GO (ADR-0186 maker-checker extension).
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/opportunities/{id}/committee-sessions:
     get:
       operationId: listCommitteeSessions

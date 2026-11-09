@@ -71,15 +71,19 @@ describe("registry", () => {
   test("every requiredArtifact the engine mirrors verbatim from flow.spec is a registered label or an unblocked one", () => {
     const labels = new Set<string>(Object.values(BLOCKER_LABELS));
     for (const stage of STAGES) {
-      const declared = spec.stages.find((s) => s.id === stage.id)!;
+      const declared = spec.stages.find((s) => s.id === stage.id);
+      if (!declared) throw new Error(`flow.spec is missing stage ${stage.id}`);
       expect(stage.requiredArtifacts).toEqual(declared.requiredArtifacts);
       // a requiredArtifact that names its own key must equal that key's label
       for (const b of declared.blockers) {
+        const first = b.artifacts?.[0];
+        if (first === undefined) continue;
+        const label = declared.requiredArtifacts[first];
         const only =
           (b.artifacts ?? []).length === 1 &&
-          declared.blockers.filter((x) => (x.artifacts ?? []).includes(b.artifacts![0]!)).length === 1;
-        if (only && labels.has(declared.requiredArtifacts[b.artifacts![0]!]!))
-          expect<string>(BLOCKER_LABELS[b.key as BlockerKey]).toBe(declared.requiredArtifacts[b.artifacts![0]!]!);
+          declared.blockers.filter((x) => (x.artifacts ?? []).includes(first)).length === 1;
+        if (only && label !== undefined && labels.has(label))
+          expect<string>(BLOCKER_LABELS[b.key as BlockerKey]).toBe(label);
       }
     }
   });
@@ -94,23 +98,24 @@ describe("i18n (processBlockers.*)", () => {
   });
   test("en text is English, ko text is Korean, both non-empty", () => {
     for (const k of keys.map(catalogKey)) {
-      expect(ko.processBlockers[k]!.trim().length).toBeGreaterThan(0);
-      expect(en.processBlockers[k]!.trim().length).toBeGreaterThan(0);
-      expect(/[가-힣]/.test(en.processBlockers[k]!)).toBe(false);
-      expect(/[가-힣]/.test(ko.processBlockers[k]!)).toBe(true);
+      expect(ko.processBlockers[k]?.trim().length).toBeGreaterThan(0);
+      expect(en.processBlockers[k]?.trim().length).toBeGreaterThan(0);
+      expect(/[가-힣]/.test(en.processBlockers[k] ?? "")).toBe(false);
+      expect(/[가-힣]/.test(ko.processBlockers[k] ?? "")).toBe(true);
     }
   });
   test("a stored label resolves to its catalog key", () => {
     expect(blockerMessageKey("시너지 평가")).toBe("processBlockers.s3_synergy_assessment");
     expect(blockerMessageKey("검토한 대안", "S5")).toBe("processBlockers.s5_alternatives_considered");
     expect(blockerMessageKey("free text")).toBeUndefined();
-    expect(en.processBlockers[blockerMessageKey("시너지 평가")!.split(".")[1]!]).toBe("Synergy assessment");
+    const msgKey = blockerMessageKey("시너지 평가")?.split(".")[1];
+    expect(en.processBlockers[msgKey ?? ""]).toBe("Synergy assessment");
   });
 });
 
 describe("flow.spec 2.16.0 blockers declaration", () => {
   test("version and shape: every stage declares blockers; indices are in range; keys carry the stage prefix", () => {
-    expect(spec.meta.version).toBe("2.20.0"); // 2.20.0: deal-shape evaluation moves S4 -> S7 (declared non-blocking artifact, no new blocker key); 2.19.0: dd gate binds pmi clean-team breach (ADR-0193); 2.18.1: S3 fit-judgement artifact label renamed per ADR-0192 (keys unchanged)
+    expect(spec.meta.version).toBe("2.21.0"); // 2.21.0: ADR-0196 phase E adds the IC-committee exit criterion at entity_ic/group_ic (no blocker key change); 2.20.0: deal-shape evaluation moves S4 -> S7 (declared non-blocking artifact, no new blocker key); 2.19.0: dd gate binds pmi clean-team breach (ADR-0193)
     for (const s of spec.stages) {
       expect(Array.isArray(s.blockers) && s.blockers.length > 0).toBe(true);
       for (const b of s.blockers) {
@@ -134,8 +139,8 @@ describe("flow.spec 2.16.0 blockers declaration", () => {
       ["S7", 3],
       ["S12", 3],
     ]);
-    expect(spec.stages.find((s) => s.id === "S7")!.nonBlockingArtifacts).toEqual([3]);
-    expect(spec.stages.find((s) => s.id === "S12")!.nonBlockingArtifacts).toEqual([3]);
+    expect(spec.stages.find((s) => s.id === "S7")?.nonBlockingArtifacts).toEqual([3]);
+    expect(spec.stages.find((s) => s.id === "S12")?.nonBlockingArtifacts).toEqual([3]);
   });
 });
 
@@ -170,7 +175,7 @@ describe("capability register lead (D5)", () => {
     const { PM_CATALOG } = await import("../../app/web-next/lib/pm-catalog.generated.ts");
     const entry = (PM_CATALOG as Record<string, { agentKey: string; activityId: string; stageId: string }>)[
       "s3.capability_gap_draft"
-    ]!;
+    ];
     expect(entry).toMatchObject({
       agentKey: "greenfield-agent",
       activityId: "capability-register-greenfield",
