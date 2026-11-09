@@ -6,18 +6,26 @@
  * calls-the-LLM rule (spy on complete), and the regeneration rules
  * (analyst+, audited, refused after confirm / when nothing changed).
  */
-import { describe, test, expect, beforeAll, afterAll, mock } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, afterEach, mock } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-committee-minutes.sqlite");
-process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
-process.env.CO_NEWBIZ_COMMITTEE_AGENTS = "deterministic";
-process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE = "1";
+// Coverage runs share one process across files: capture and restore every
+// env var and module mock this suite touches, or the llm-executors /
+// agent-orchestrator suites inherit our "no LLM" state.
+const PREV_ENV: Record<string, string | undefined> = {};
+function setEnv(key: string, value: string): void {
+  PREV_ENV[key] = process.env[key];
+  process.env[key] = value;
+}
+setEnv("CO_NEWBIZ_DB_PATH", TEST_DB_PATH);
+setEnv("CO_NEWBIZ_COMMITTEE_AGENTS", "deterministic");
+setEnv("CO_NEWBIZ_COMMITTEE_RESPONSIVE", "1");
 // Chair passes must stay deterministic in tests even on a machine with a
 // real provider in the root .env — force "no LLM" (the fallback contract).
-process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+setEnv("CO_NEWBIZ_LLM_PROVIDER", "none");
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -26,6 +34,15 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
+
+// Snapshot of the pristine llm module (spread BEFORE any mock.module call).
+// bun's cross-file mock.module restore only works with this afterEach +
+// mock.restore() pattern — see dd-tailor-korean.test.ts.
+const PRISTINE_LLM = { ...(await import("../../app/web-next/lib/llm.ts")) };
+const llmResets: Array<() => void> = [];
+afterEach(() => {
+  for (const r of llmResets.splice(0)) r();
+});
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
@@ -61,6 +78,12 @@ beforeAll(async () => {
 afterAll(async () => {
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+  // Restore the env this suite overrode; per-test llm mock restoration
+  // happens in afterEach.
+  for (const [k, v] of Object.entries(PREV_ENV)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
 });
 
 async function createOpportunity(name = "Minutes test opportunity"): Promise<string> {
@@ -184,10 +207,14 @@ describe("agent_team minutes (deterministic fallback, S2 storage)", () => {
   });
 
   test("a GET never calls the LLM — complete() is never invoked while rendering", async () => {
-    const llm = await import("../../app/web-next/lib/llm.ts");
     let calls = 0;
+    // Restore the mock before the next test AND before later files in the same
+    // coverage process — bun's mock.module is process-global and does not
+    // restore on its own (see dd-tailor-korean.test.ts for the pattern).
+    llmResets.push(() => mock.restore());
+    llmResets.push(() => mock.module("../../app/web-next/lib/llm.ts", () => ({ ...PRISTINE_LLM })));
     mock.module("../../app/web-next/lib/llm.ts", () => ({
-      ...llm,
+      ...PRISTINE_LLM,
       complete: async () => {
         calls += 1;
         throw new Error("LLM must not be called on a GET");

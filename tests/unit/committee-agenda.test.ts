@@ -5,17 +5,24 @@
  * fallback, prompt threading into round 2+, and the human agenda edit on
  * the hybrid advance route (decision 3).
  */
-import { describe, test, expect, beforeAll, afterAll, mock } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, afterEach, mock } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-committee-agenda.sqlite");
-process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
-process.env.CO_NEWBIZ_COMMITTEE_AGENTS = "deterministic";
+// Coverage runs share one process across files: capture and restore every
+// env var and module mock this suite touches (see committee-minutes.test.ts).
+const PREV_ENV: Record<string, string | undefined> = {};
+function setEnv(key: string, value: string): void {
+  PREV_ENV[key] = process.env[key];
+  process.env[key] = value;
+}
+setEnv("CO_NEWBIZ_DB_PATH", TEST_DB_PATH);
+setEnv("CO_NEWBIZ_COMMITTEE_AGENTS", "deterministic");
 // Chair passes must stay deterministic in tests even on a machine with a
 // real provider in the root .env — force "no LLM" (the fallback contract).
-process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+setEnv("CO_NEWBIZ_LLM_PROVIDER", "none");
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -24,6 +31,15 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
+
+// Snapshot of the pristine llm module (spread BEFORE any mock.module call).
+// bun's cross-file mock.module restore only works with this afterEach +
+// mock.restore() pattern — see dd-tailor-korean.test.ts.
+const PRISTINE_LLM = { ...(await import("../../app/web-next/lib/llm.ts")) };
+const llmResets: Array<() => void> = [];
+afterEach(() => {
+  for (const r of llmResets.splice(0)) r();
+});
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
@@ -72,6 +88,11 @@ beforeAll(async () => {
 afterAll(async () => {
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+  // Restore env overrides; per-test llm mock restoration happens in afterEach.
+  for (const [k, v] of Object.entries(PREV_ENV)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
 });
 
 async function createOpportunity(): Promise<string> {
@@ -222,9 +243,13 @@ describe("runChairAgenda — LLM path and failure fallback", () => {
   });
 
   test("a budget/rate-limit error degrades to the fallback — the pass never throws", async () => {
-    const llm = await import("../../app/web-next/lib/llm.ts");
+    // Restore the mock before the next test AND before later files in the same
+    // coverage process — bun's mock.module is process-global and does not
+    // restore on its own (see dd-tailor-korean.test.ts for the pattern).
+    llmResets.push(() => mock.restore());
+    llmResets.push(() => mock.module("../../app/web-next/lib/llm.ts", () => ({ ...PRISTINE_LLM })));
     mock.module("../../app/web-next/lib/llm.ts", () => ({
-      ...llm,
+      ...PRISTINE_LLM,
       complete: async () => {
         throw new Error("LLM HTTP 429: budget exceeded");
       },
@@ -254,7 +279,6 @@ describe("runChairAgenda — LLM path and failure fallback", () => {
     const out = await patched({ topic: "안건", rows });
     expect(out.source).toBe("fallback");
     void chair;
-    void llm;
   });
 });
 
@@ -262,7 +286,7 @@ describe("runDeliberationRounds agenda threading (agent_team)", () => {
   test("round 2+ prompts carry the agenda produced by the chair pass", async () => {
     // The agenda block is part of the responsive round-2+ prompt (ADR-0196
     // §2.1/§2.2) — turn the phase-A flag on for this test.
-    process.env.CO_NEWBIZ_COMMITTEE_RESPONSIVE = "1";
+    setEnv("CO_NEWBIZ_COMMITTEE_RESPONSIVE", "1");
     getDb().run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [
       "agenda-thread-anchor",
       "TEST",
