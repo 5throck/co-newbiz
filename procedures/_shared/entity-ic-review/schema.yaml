@@ -3,12 +3,26 @@ procedure_id: shared-entity-ic-review
 title: "Entity Investment Committee Review"
 scope: shared
 level: entity
-version: "1.4.0"
+version: "1.5.0"
 status: active
 applicability: mandatory
 workflow_type: core
 gate: "Entity IC"
 
+# v1.5.0 (ADR-0196 Phase E, decision 9; design 2026-11-08-committee-minutes-as-meeting-design §7.2):
+# one new step 4.5.5 "IC committee deliberation" between the integrated insight
+# review (step 4.5, IC-package assembly) and the decision deck (step 4.6). The
+# step convenes entity-ic-committee (procedures/_committees.yaml) and closes it
+# with committee_session_ref + confirmed-or-draft minutes in the IC package.
+# The session is decision support placed in front of the human verdict step —
+# it decides nothing and replaces no step. Seats are carried by the procedure
+# as a contract (the schema supports a single agent_key per step, so the
+# deliberation step is convened and closed by process-governance-manager in
+# the recorder pattern — the chair facilitates and votes nothing): risk-officer
+# (RAG proposal and kill criteria), valuation-agent, financing-agent (existing
+# step 3.1 co-review), the track lead (brownfield-agent or greenfield-agent),
+# legal-counsel, and the ADR-0097 standing functional seats as relevant. The
+# final human step (entity-ic-reviewer, ADR-0053) is unchanged.
 # v1.4.0 (ADR-0186, Accepted 2026-10-27): wording only — step 2 points to the
 # server-computed gate snapshot (kill outcomes, RAG, validators, WACC state,
 # waivers, conditions) that the recorder acknowledges at step 5; the step 5
@@ -96,6 +110,27 @@ steps:
       Build the Entity IC decision deck (Pyramid-Principle structure,
       one-page summary) from the integrated insight and valuation inputs
       (graph-pilot wiring).
+  - id: 4.5.5
+    gate: "Entity IC"
+    agent_key: process-governance-manager
+    skill_key: meeting-facilitation
+    output_type: ic_committee_deliberation
+    description: >
+      Convene and close the entity-ic-committee session
+      (procedures/_committees.yaml; ADR-0196 decision 9, ADR-0097 seat model,
+      ADR-0053 recorder pattern — the chair facilitates agenda and minutes
+      passes and votes nothing) over the assembled IC package. Seats carried
+      by this procedure as a contract: risk-officer (RAG proposal and Kill
+      Criteria), valuation-agent, financing-agent (step 3.1 co-review), the
+      track lead (brownfield-agent or greenfield-agent per case_type),
+      legal-counsel, and the ADR-0097 standing functional seats as relevant.
+      Output is a committee session reference (committee_session_ref) plus
+      confirmed-or-draft meeting-form minutes referenced from the IC package
+      — decision support placed in front of the human verdict step; the
+      session proposes, it never decides (design boundary 2). Recorded
+      dissent is carried verbatim; minutes confirmation (ADR-0104) must be by
+      a person, and that person may not also countersign the step 5 GO
+      (maker-checker extended to the minutes confirmation).
   - id: 5
     gate: "Entity IC"
     agent_key: entity-ic-reviewer   # human role — procedures/_human-roles.yaml registry (ADR-0053)
@@ -128,6 +163,7 @@ legal_basis:
   - "Design v1.0 §8.9-1, §10.1-2 (three-stage review model)"
   - "docs/governance/process-map.md — Entity IC row"
   - "ADR-0161 (v1.3.0 — track-scoped IC memo owner, Q6; Proposed)"
+  - "ADR-0196 (v1.5.0 — IC committee deliberation step, Phase E decision 9)"
   - "docs/manuals/business-manual.md §1, §3"
   - "docs/pilots/pilot-003-doosan-bobcat-robotics.md finding F-2 (withdrawn_pending_resubmission state)"
   - "checklists/financing-plan-checklist.yaml (chk-financing — precondition evidence list)"

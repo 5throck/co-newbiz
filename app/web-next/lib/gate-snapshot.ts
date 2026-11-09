@@ -72,10 +72,11 @@ import { evaluateProcess, latestRouteDecision } from "./process-flow.ts";
 import { resolveTrack } from "./project-track.ts";
 import { scopedChecklistItems } from "./greenfield-subtrack.ts";
 import { subTrackChecklistIds } from "./dd-checklist-tailor.ts";
+import { listCommitteeSessions } from "./committee-session.ts";
 
 export type SnapshotEntity = "opportunity" | "project";
 export const SNAPSHOT_ENGINE_VERSIONS = {
-  snapshot_builder: "2",
+  snapshot_builder: "3",
   kill_registry: "adr-0193",
   validators: "adr-0185-core6",
   rag: "latest-stored",
@@ -215,6 +216,24 @@ export interface GateSnapshot {
     prior_awaiting_countersign: boolean;
   };
   ai: { brief_id: string; recommended: string | null; confidence: string | null; source: string } | null;
+  /** ADR-0196 Phase E (design §7.2, ADR-0186 amendment): the project's IC
+   * committee sessions at entity_ic / group_ic — DISPLAY only, never an
+   * input to any hard block or ACK rule. Inside the hash: the snapshot_hash
+   * covers each session's minutes input_hash and confirmation state, so
+   * changed or confirmed-then-altered minutes stale the decision (409
+   * snapshot_stale). null outside project IC gates. */
+  committee: {
+    sessions: Array<{
+      sessionId: string;
+      committeeKey: string;
+      decisionMode: string;
+      gate: string;
+      synthesized: boolean;
+      minutesConfirmed: boolean;
+      minutesInputHash: string | null;
+      recommendation: string | null;
+    }>;
+  } | null;
   required_acks: RequiredAck[];
   hard_blocks: HardBlockInfo[];
 }
@@ -571,10 +590,37 @@ function aiSection(brief: BriefRecord | null): GateSnapshot["ai"] {
     : null;
 }
 
+/** The project's project-scoped committee sessions for the IC DISPLAY section (latest 10, newest first). */
+function committeeSection(db: Database, projectId: string, gate: string): GateSnapshot["committee"] {
+  if (gate !== "entity_ic" && gate !== "group_ic") return null;
+  const sessions = listCommitteeSessions(projectId, "project")
+    .slice(0, 10)
+    .map((s) => {
+      const rec = s.meta.evaluation_id
+        ? ((
+            db.query("SELECT recommendation FROM gate_evaluation WHERE id = ?").get(s.meta.evaluation_id) as
+              | { recommendation: string }
+              | undefined
+          )?.recommendation ?? null)
+        : null;
+      return {
+        sessionId: s.sessionId,
+        committeeKey: s.meta.committee_key,
+        decisionMode: s.meta.decision_mode,
+        gate: s.meta.gate,
+        synthesized: s.meta.synthesized === true,
+        minutesConfirmed: typeof s.meta.minutes_confirmed_by === "string" && s.meta.minutes_confirmed_by !== "",
+        minutesInputHash: s.meta.minutes_draft?.input_hash ?? null,
+        recommendation: rec,
+      };
+    });
+  return { sessions };
+}
+
 // ── Required acknowledgements and hard-block info (pure over the snapshot) ──
 
 export function requiredAcks(
-  s: Pick<GateSnapshot, "kill" | "rag" | "nonwaivable_open" | "conditions_open" | "entity">,
+  s: Pick<GateSnapshot, "kill" | "rag" | "nonwaivable_open" | "conditions_open" | "entity" | "gate" | "committee">,
 ): RequiredAck[] {
   const acks: RequiredAck[] = [];
   for (const t of s.kill.triggered) {
@@ -600,6 +646,21 @@ export function requiredAcks(
     else if (s.rag.overall === "red") acks.push({ key: "rag:overall", kind: "rag_red" });
   }
   for (const n of s.nonwaivable_open) acks.push({ key: n.key, kind: "nonwaivable_open" });
+  // ADR-0196 Phase E (ADR-0186 amendment): unconfirmed IC minutes at GO are
+  // ACKed with a reason (silence is never read as pass); a missing session
+  // is ACKed in this first release (hardening to HARD BLOCK needs its own
+  // owner decision). The committee RECOMMENDATION itself is never an ack —
+  // it is display data, not a gate input.
+  if (s.entity.type === "project" && (s.gate === "entity_ic" || s.gate === "group_ic")) {
+    const sessions = s.committee?.sessions ?? [];
+    if (sessions.length === 0) {
+      acks.push({ key: "committee:session_missing", kind: "committee_session_missing" });
+    } else {
+      for (const sess of sessions.filter((x) => !x.minutesConfirmed)) {
+        acks.push({ key: `committee:minutes_unconfirmed:${sess.sessionId}`, kind: "committee_minutes_unconfirmed" });
+      }
+    }
+  }
   return acks.sort(byKey);
 }
 
@@ -817,7 +878,11 @@ export function normalizeStoredSnapshot(snapshot: unknown): unknown {
 }
 
 /** Per-schema-version canonicalisers: a stored hash is verified under the version it was written with (design 4.4). v2 only ADDED fields inside the hash, so v1 rows keep verifying unchanged. */
-const SNAPSHOT_HASHERS: Readonly<Record<number, (snapshot: unknown) => string>> = { 1: snapshotHash, 2: snapshotHash };
+const SNAPSHOT_HASHERS: Readonly<Record<number, (snapshot: unknown) => string>> = {
+  1: snapshotHash,
+  2: snapshotHash,
+  3: snapshotHash,
+};
 
 export function verifyStoredSnapshotHash(stored: {
   schema_version: number;
@@ -1197,6 +1262,7 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
       .sort((a, b) => (a.id < b.id ? -1 : 1)),
     ladder: ladderSection(db, o, track),
     ai: aiSection(brief),
+    committee: isProject ? committeeSection(db, o.entityId, o.gate) : null,
   };
   const certificationKeys =
     !isProject && o.gate === "pre_fs" && track === "brownfield"

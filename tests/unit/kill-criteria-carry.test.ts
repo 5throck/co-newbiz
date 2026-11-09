@@ -539,7 +539,7 @@ describe("7. the contract rejects an acknowledgement for a not_reached key", () 
     expect(clean.ok).toBe(true);
     if (clean.ok) {
       const stored = getGateSnapshot(clean.id, db)!;
-      expect(stored.schema_version).toBe(2);
+      expect(stored.schema_version).toBe(3);
       expect(verifyStoredSnapshotHash(stored).ok).toBe(true);
       // the GO is now a recorded carry source for later gates
       expect(

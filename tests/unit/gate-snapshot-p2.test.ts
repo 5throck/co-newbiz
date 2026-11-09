@@ -30,8 +30,12 @@ const db = getDb(TEST_DB_PATH);
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
-const { GATE_INTEGRITY_FAMILIES, gateIntegrityEnvName } = await import("../../app/web-next/lib/gate-integrity-flags.ts");
-const { canonicalJson, canonicalNumber, snapshotHash, VOLATILE_KEYS } = await import("../../app/web-next/lib/gate-canonical.ts");
+const { GATE_INTEGRITY_FAMILIES, gateIntegrityEnvName } = await import(
+  "../../app/web-next/lib/gate-integrity-flags.ts"
+);
+const { canonicalJson, canonicalNumber, snapshotHash, VOLATILE_KEYS } = await import(
+  "../../app/web-next/lib/gate-canonical.ts"
+);
 const { clearSnapshotCache } = await import("../../app/web-next/lib/gate-snapshot.ts");
 const { processAcknowledgements } = await import("../../app/web-next/lib/gate-decision-contract.ts");
 const S = await import("./_gate-integrity-support.ts");
@@ -57,7 +61,10 @@ async function login(userId: string, role: "analyst" | "viewer"): Promise<string
   await createUser(db, { userId, role, password: `pw-${userId}-123456`, createdBy: "test", now: S.NOW });
   approveUser(db, { userId, approvedBy: "test", now: S.NOW });
   db.run("UPDATE app_user SET must_change_password = 0 WHERE user_id = ?", [userId]);
-  const res = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId, password: `pw-${userId}-123456` }) });
+  const res = await nextRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ userId, password: `pw-${userId}-123456` }),
+  });
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 }
 
@@ -73,23 +80,44 @@ afterAll(() => {
 });
 
 const postProject = (pid: string, body: Record<string, unknown>, c = cookie) =>
-  nextRequest(`/api/projects/${pid}/gate-decisions`, { method: "POST", headers: { cookie: c }, body: JSON.stringify(body) });
+  nextRequest(`/api/projects/${pid}/gate-decisions`, {
+    method: "POST",
+    headers: { cookie: c },
+    body: JSON.stringify(body),
+  });
 const postOpp = (oid: string, body: Record<string, unknown>, c = cookie) =>
-  nextRequest(`/api/opportunities/${oid}/gate-decisions`, { method: "POST", headers: { cookie: c }, body: JSON.stringify(body) });
-const getSnap = (pid: string, gate: string, c = cookie, extra = "") => nextRequest(`/api/projects/${pid}/gate-snapshot?gate=${gate}${extra}`, { headers: { cookie: c } });
-const getOppSnap = (oid: string, gate: string, c = cookie, extra = "") => nextRequest(`/api/opportunities/${oid}/gate-snapshot?gate=${gate}${extra}`, { headers: { cookie: c } });
-const errOf = async (res: Response) => ((await res.json()) as { error: { code: string; details?: Record<string, any> } }).error;
+  nextRequest(`/api/opportunities/${oid}/gate-decisions`, {
+    method: "POST",
+    headers: { cookie: c },
+    body: JSON.stringify(body),
+  });
+const getSnap = (pid: string, gate: string, c = cookie, extra = "") =>
+  nextRequest(`/api/projects/${pid}/gate-snapshot?gate=${gate}${extra}`, { headers: { cookie: c } });
+const getOppSnap = (oid: string, gate: string, c = cookie, extra = "") =>
+  nextRequest(`/api/opportunities/${oid}/gate-snapshot?gate=${gate}${extra}`, { headers: { cookie: c } });
+const errOf = async (res: Response) =>
+  ((await res.json()) as { error: { code: string; details?: Record<string, any> } }).error;
 const dataOf = async <T = any>(res: Response) => ((await res.json()) as { data: T }).data;
 
-interface SnapData { snapshot_hash: string; snapshot: any; cached: boolean }
+interface SnapData {
+  snapshot_hash: string;
+  snapshot: any;
+  cached: boolean;
+}
 const count = (sql: string, ...args: unknown[]) => (db.query(sql).get(...(args as any[])) as { c: number }).c;
 const evalRuns = (pid: string, event?: string) =>
-  db.query("SELECT id, label FROM run WHERE project_id = ? AND label LIKE ? ORDER BY created_at, id").all(pid, `gate_integrity_eval:${event ?? "%"}:%`) as Array<{ id: string; label: string }>;
+  db
+    .query("SELECT id, label FROM run WHERE project_id = ? AND label LIKE ? ORDER BY created_at, id")
+    .all(pid, `gate_integrity_eval:${event ?? "%"}:%`) as Array<{ id: string; label: string }>;
 const REASON = "이 항목은 위험을 인지했으며 후속 조치 일정을 확인한 뒤 진행함";
 
 /** Ack payload for every required key of a snapshot, one reason each (the happy path of the recorder). */
 function ackAll(snapshot: any): Array<{ key: string; kind: string; reason: string }> {
-  return (snapshot.required_acks as Array<{ key: string; kind: string }>).map((a) => ({ key: a.key, kind: a.kind, reason: REASON }));
+  return (snapshot.required_acks as Array<{ key: string; kind: string }>).map((a) => ({
+    key: a.key,
+    kind: a.kind,
+    reason: REASON,
+  }));
 }
 
 // A project that has fs GO recorded so entity-level gates are reachable, plus one unreviewed deliverable
@@ -106,44 +134,107 @@ describe("migrations 0173 / 0174", () => {
     const { readdirSync, readFileSync } = require("node:fs") as typeof import("node:fs");
     const { splitSqlStatements } = require("../../db/migrate.ts") as typeof import("../../db/migrate.ts");
     const dir = join(PROJECT_ROOT, "db/migrations");
-    const files = readdirSync(dir).filter((f: string) => f.endsWith(".sql")).sort();
+    const files = readdirSync(dir)
+      .filter((f: string) => f.endsWith(".sql"))
+      .sort();
     const names = ["0173_gate_decision_snapshot.sql", "0174_kill_criteria_override.sql"];
     const mem = new Database(":memory:");
     mem.run("PRAGMA foreign_keys = ON");
-    mem.run("CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)");
-    const apply = (f: string) => { for (const st of splitSqlStatements(readFileSync(join(dir, f), "utf-8"))) mem.run(st); };
+    mem.run(
+      "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)",
+    );
+    const apply = (f: string) => {
+      for (const st of splitSqlStatements(readFileSync(join(dir, f), "utf-8"))) mem.run(st);
+    };
     for (const f of files) if (!names.includes(f)) apply(f); // includes 0176 and 0177
     expect(files.indexOf("0176_human_role_grant.sql")).toBeGreaterThan(-1);
-    mem.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES ('g1','opportunity','o1','screening','go','r','u',?)", [S.NOW]);
+    mem.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES ('g1','opportunity','o1','screening','go','r','u',?)",
+      [S.NOW],
+    );
     for (const n of names) apply(n);
-    expect(mem.query("SELECT ai_recommended_decision, ai_brief_id, divergence_reason FROM gate_decision WHERE id='g1'").get()).toEqual({ ai_recommended_decision: null, ai_brief_id: null, divergence_reason: null });
+    expect(
+      mem
+        .query("SELECT ai_recommended_decision, ai_brief_id, divergence_reason FROM gate_decision WHERE id='g1'")
+        .get(),
+    ).toEqual({ ai_recommended_decision: null, ai_brief_id: null, divergence_reason: null });
     // the brief_id columns are real foreign keys
     expect(() => mem.run("UPDATE gate_decision SET ai_brief_id = 'nope' WHERE id = 'g1'")).toThrow(/FOREIGN KEY/);
-    expect(() => mem.run("INSERT INTO gate_decision_snapshot (decision_id, schema_version, snapshot_json, snapshot_hash, computed_at, engine_versions_json, brief_id) VALUES ('g1',1,'{}','h','t','{}','nope')")).toThrow(/FOREIGN KEY/);
+    expect(() =>
+      mem.run(
+        "INSERT INTO gate_decision_snapshot (decision_id, schema_version, snapshot_json, snapshot_hash, computed_at, engine_versions_json, brief_id) VALUES ('g1',1,'{}','h','t','{}','nope')",
+      ),
+    ).toThrow(/FOREIGN KEY/);
     // the runner itself finds nothing pending on the scratch DB
     expect(runMigrations(TEST_DB_PATH).applied).toEqual([]);
   });
 
   test("gate_decision_snapshot and gate_brief_record are append-only (UPDATE and DELETE are rejected by trigger)", () => {
-    const { insertGateSnapshot, insertBriefRecord } = require("../../db/repositories/gate-snapshot.repository.ts") as typeof import("../../db/repositories/gate-snapshot.repository.ts");
+    const { insertGateSnapshot, insertBriefRecord } =
+      require("../../db/repositories/gate-snapshot.repository.ts") as typeof import("../../db/repositories/gate-snapshot.repository.ts");
     const o = S.insertOpportunity(db, "greenfield");
     const gid = S.insertGate(db, "opportunity", o, "screening", "go");
-    insertGateSnapshot(db, { decisionId: gid, schemaVersion: 1, snapshotJson: "{}", snapshotHash: "h", submittedHash: null, acknowledgements: [], computedAt: S.NOW, engineVersionsJson: "{}", evalRunId: null, briefId: null });
-    expect(() => db.run("UPDATE gate_decision_snapshot SET snapshot_hash = 'x' WHERE decision_id = ?", [gid])).toThrow(/append-only/);
+    insertGateSnapshot(db, {
+      decisionId: gid,
+      schemaVersion: 1,
+      snapshotJson: "{}",
+      snapshotHash: "h",
+      submittedHash: null,
+      acknowledgements: [],
+      computedAt: S.NOW,
+      engineVersionsJson: "{}",
+      evalRunId: null,
+      briefId: null,
+    });
+    expect(() => db.run("UPDATE gate_decision_snapshot SET snapshot_hash = 'x' WHERE decision_id = ?", [gid])).toThrow(
+      /append-only/,
+    );
     expect(() => db.run("DELETE FROM gate_decision_snapshot WHERE decision_id = ?", [gid])).toThrow(/append-only/);
-    const bid = insertBriefRecord(db, { entity_type: "opportunity", entity_id: o, gate: "screening", recommended: "go", confidence: "high", source: "synthesis", rationale_draft_hash: null, llm_call_ref: null, eval_run_id: null, generated_by: ANALYST, generated_at: S.NOW });
-    expect(() => db.run("UPDATE gate_brief_record SET recommended = 'kill' WHERE id = ?", [bid])).toThrow(/append-only/);
+    const bid = insertBriefRecord(db, {
+      entity_type: "opportunity",
+      entity_id: o,
+      gate: "screening",
+      recommended: "go",
+      confidence: "high",
+      source: "synthesis",
+      rationale_draft_hash: null,
+      llm_call_ref: null,
+      eval_run_id: null,
+      generated_by: ANALYST,
+      generated_at: S.NOW,
+    });
+    expect(() => db.run("UPDATE gate_brief_record SET recommended = 'kill' WHERE id = ?", [bid])).toThrow(
+      /append-only/,
+    );
     expect(() => db.run("DELETE FROM gate_brief_record WHERE id = ?", [bid])).toThrow(/append-only/);
   });
 
   test("a snapshot needs an existing decision (foreign key and repository guard)", () => {
-    const { insertGateSnapshot } = require("../../db/repositories/gate-snapshot.repository.ts") as typeof import("../../db/repositories/gate-snapshot.repository.ts");
-    expect(() => insertGateSnapshot(db, { decisionId: "nope", schemaVersion: 1, snapshotJson: "{}", snapshotHash: "h", submittedHash: null, acknowledgements: [], computedAt: S.NOW, engineVersionsJson: "{}", evalRunId: null, briefId: null })).toThrow(/does not exist/);
+    const { insertGateSnapshot } =
+      require("../../db/repositories/gate-snapshot.repository.ts") as typeof import("../../db/repositories/gate-snapshot.repository.ts");
+    expect(() =>
+      insertGateSnapshot(db, {
+        decisionId: "nope",
+        schemaVersion: 1,
+        snapshotJson: "{}",
+        snapshotHash: "h",
+        submittedHash: null,
+        acknowledgements: [],
+        computedAt: S.NOW,
+        engineVersionsJson: "{}",
+        evalRunId: null,
+        briefId: null,
+      }),
+    ).toThrow(/does not exist/);
   });
 
   test("kill_criteria_override: one active override per (entity, procedure, criterion); never deleted", () => {
     const o = S.insertOpportunity(db, "greenfield");
-    const ins = () => db.run("INSERT INTO kill_criteria_override (id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", o, "p", "c", "r", "u", S.NOW]);
+    const ins = () =>
+      db.run(
+        "INSERT INTO kill_criteria_override (id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at) VALUES (?,?,?,?,?,?,?,?)",
+        [ulid(), "opportunity", o, "p", "c", "r", "u", S.NOW],
+      );
     ins();
     expect(ins).toThrow(/UNIQUE/);
     expect(() => db.run("DELETE FROM kill_criteria_override WHERE entity_id = ?", [o])).toThrow(/never deleted/);
@@ -154,7 +245,9 @@ describe("migrations 0173 / 0174", () => {
 
 describe("canonical hash", () => {
   test("keys are sorted, numbers have a fixed format, undefined is dropped, null is kept", () => {
-    expect(canonicalJson({ b: 1, a: [2, { d: 1, c: 2 }], z: undefined, n: null })).toBe('{"a":[2,{"c":2,"d":1}],"b":1,"n":null}');
+    expect(canonicalJson({ b: 1, a: [2, { d: 1, c: 2 }], z: undefined, n: null })).toBe(
+      '{"a":[2,{"c":2,"d":1}],"b":1,"n":null}',
+    );
     expect(canonicalNumber(1e21)).toBe("1000000000000000000000");
     expect(canonicalNumber(1e-7)).toBe("0.0000001");
     expect(canonicalNumber(-0)).toBe("0");
@@ -164,11 +257,29 @@ describe("canonical hash", () => {
   });
 
   test("the hash ignores key order and volatile ids/timestamps, and changes with any decision-relevant value", () => {
-    const a = { gate: "dd", kill: { eval_run_id: "r1", n: 1 }, computed_at: "t1", ai: { brief_id: "b1", recommended: "go" }, rag: { assessment_id: "x", overall: "green" } };
-    const b = { rag: { overall: "green", assessment_id: "y" }, ai: { recommended: "go", brief_id: "b2" }, computed_at: "t2", kill: { n: 1, eval_run_id: "r2" }, gate: "dd" };
+    const a = {
+      gate: "dd",
+      kill: { eval_run_id: "r1", n: 1 },
+      computed_at: "t1",
+      ai: { brief_id: "b1", recommended: "go" },
+      rag: { assessment_id: "x", overall: "green" },
+    };
+    const b = {
+      rag: { overall: "green", assessment_id: "y" },
+      ai: { recommended: "go", brief_id: "b2" },
+      computed_at: "t2",
+      kill: { n: 1, eval_run_id: "r2" },
+      gate: "dd",
+    };
     expect(snapshotHash(a)).toBe(snapshotHash(b));
     expect(snapshotHash({ ...a, ai: { brief_id: "b1", recommended: "hold" } })).not.toBe(snapshotHash(a));
-    expect([...VOLATILE_KEYS].sort()).toEqual(["assessment_id", "brief_id", "computed_at", "eval_run_id", "generated_at"]);
+    expect([...VOLATILE_KEYS].sort()).toEqual([
+      "assessment_id",
+      "brief_id",
+      "computed_at",
+      "eval_run_id",
+      "generated_at",
+    ]);
   });
 });
 
@@ -180,18 +291,27 @@ describe("acknowledgement matching (pure)", () => {
     { key: "rag:overall", kind: "rag_red" },
   ];
   test("one reason may cover several unassessed items of the SAME procedure; one stored entry per item", () => {
-    const r = processAcknowledgements(required, [{ key: "a:1", reason: REASON, covers: ["a:2"] }, { key: "b:1", reason: REASON }, { key: "rag:overall", reason: REASON }]);
+    const r = processAcknowledgements(required, [
+      { key: "a:1", reason: REASON, covers: ["a:2"] },
+      { key: "b:1", reason: REASON },
+      { key: "rag:overall", reason: REASON },
+    ]);
     expect(r.missing).toEqual([]);
     expect(r.covered.map((c) => c.key)).toEqual(["a:1", "a:2", "b:1", "rag:overall"]);
   });
   test("covering across procedures, or covering a non-unassessed key, is invalid; unknown keys are reported", () => {
-    const r = processAcknowledgements(required, [{ key: "a:1", reason: REASON, covers: ["b:1", "rag:overall", "zzz"] }]);
+    const r = processAcknowledgements(required, [
+      { key: "a:1", reason: REASON, covers: ["b:1", "rag:overall", "zzz"] },
+    ]);
     expect(r.invalid.map((i) => i.key).sort()).toEqual(["b:1", "rag:overall"]);
     expect(r.unknown).toEqual(["zzz"]);
     expect(r.missing).toEqual(["a:2", "b:1", "rag:overall"]);
   });
   test("a weak reason is reported as weak (not missing); a kind mismatch is invalid", () => {
-    const r = processAcknowledgements(required, [{ key: "rag:overall", reason: "ok" }, { key: "a:1", kind: "rag_red", reason: REASON }]);
+    const r = processAcknowledgements(required, [
+      { key: "rag:overall", reason: "ok" },
+      { key: "a:1", kind: "rag_red", reason: REASON },
+    ]);
     expect(r.weak.map((w) => w.key)).toEqual(["rag:overall"]);
     expect(r.invalid).toEqual([{ key: "a:1", problem: "kind_mismatch" }]);
     expect(r.missing).toEqual(["a:1", "a:2", "b:1"]);
@@ -208,7 +328,12 @@ describe("GET gate-snapshot", () => {
     expect(d.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(d.cached).toBe(false);
     const s = d.snapshot;
-    expect(s).toMatchObject({ schema_version: 2, gate: "dd", entity: { type: "project", id: projectId }, track: "greenfield" });
+    expect(s).toMatchObject({
+      schema_version: 3,
+      gate: "dd",
+      entity: { type: "project", id: projectId },
+      track: "greenfield",
+    });
     expect(s.kill.procedures).toEqual(["greenfield-dd"]);
     expect(s.kill.evaluated).toBeGreaterThan(0);
     expect(s.kill.eval_run_id).toBeNull();
@@ -238,14 +363,22 @@ describe("GET gate-snapshot", () => {
   test("the hash moves when decision-relevant state moves (a new waiver-free input: an RAG-visible change)", async () => {
     const { projectId } = readyAtDd();
     const before = await dataOf<SnapData>(await getSnap(projectId, "dd"));
-    db.run("INSERT INTO analysis_task (id, project_id, deliverable_type, reviewed_by) VALUES (?,?,?,NULL)", [ulid(), projectId, "dd_report"]);
+    db.run("INSERT INTO analysis_task (id, project_id, deliverable_type, reviewed_by) VALUES (?,?,?,NULL)", [
+      ulid(),
+      projectId,
+      "dd_report",
+    ]);
     clearSnapshotCache();
     const after = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
     expect(after.snapshot_hash).not.toBe(before.snapshot_hash);
     // the unreviewed deliverable triggers the entity-ic-review halt criterion
-    expect(after.snapshot.kill.triggered.map((t: any) => t.key)).toContain("entity-ic-review:analysis_task_reviewed_by_null_on_required_deliverable");
+    expect(after.snapshot.kill.triggered.map((t: any) => t.key)).toContain(
+      "entity-ic-review:analysis_task_reviewed_by_null_on_required_deliverable",
+    );
     expect(after.snapshot.hard_blocks[0].code).toBe("kill_binding_unoverridden");
-    expect(after.snapshot.hard_blocks[0].keys).toContain("entity-ic-review:analysis_task_reviewed_by_null_on_required_deliverable");
+    expect(after.snapshot.hard_blocks[0].keys).toContain(
+      "entity-ic-review:analysis_task_reviewed_by_null_on_required_deliverable",
+    );
   });
 
   test("visibility: a non-member gets 404, a viewer 403, no gate param 400; an unknown gate 400", async () => {
@@ -263,7 +396,14 @@ describe("GET gate-snapshot", () => {
     const res = await getOppSnap(o, "screening");
     expect(res.status).toBe(200);
     const d = await dataOf<SnapData>(res);
-    expect(d.snapshot).toMatchObject({ gate: "screening", entity: { type: "opportunity", id: o }, track: "greenfield", rag: null, validators: null, wacc: null });
+    expect(d.snapshot).toMatchObject({
+      gate: "screening",
+      entity: { type: "opportunity", id: o },
+      track: "greenfield",
+      rag: null,
+      validators: null,
+      wacc: null,
+    });
     expect(d.snapshot.kill.procedures).toEqual(["greenfield-screening"]);
     expect(d.snapshot.kill.triggered).toEqual([]);
     // ADR-0193: the project-scoped criteria cannot be assessed at S3; they are information only, each with its re-evaluation gate - never a silent pass, never a meaningless acknowledgement
@@ -285,11 +425,18 @@ describe("GET gate-snapshot", () => {
     expect(d.snapshot.kill.procedures).toEqual(["brownfield-screening", "greenfield-screening"]);
     const b = S.insertOpportunity(db, "brownfield", ANALYST);
     const zero = await dataOf<SnapData>(await getOppSnap(b, "screening"));
-    expect(zero.snapshot.kill.not_reached.map((u: any) => u.key)).toContain("brownfield-screening:no_viable_target_in_longlist");
-    db.run("INSERT INTO brownfield_target (id, opportunity_id, company_name, status, created_at, updated_at) VALUES (?,?,?,?,?,?)", [ulid(), b, "T1", "excluded", S.NOW, S.NOW]);
+    expect(zero.snapshot.kill.not_reached.map((u: any) => u.key)).toContain(
+      "brownfield-screening:no_viable_target_in_longlist",
+    );
+    db.run(
+      "INSERT INTO brownfield_target (id, opportunity_id, company_name, status, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), b, "T1", "excluded", S.NOW, S.NOW],
+    );
     clearSnapshotCache();
     const none = await dataOf<SnapData>(await getOppSnap(b, "screening"));
-    expect(none.snapshot.kill.triggered.map((t: any) => t.key)).toContain("brownfield-screening:no_viable_target_in_longlist");
+    expect(none.snapshot.kill.triggered.map((t: any) => t.key)).toContain(
+      "brownfield-screening:no_viable_target_in_longlist",
+    );
     expect(none.snapshot.hard_blocks[0]).toMatchObject({ code: "kill_binding_unoverridden" });
   });
 });
@@ -310,7 +457,12 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     expect(stale.details).toMatchObject({ reason: "missing", snapshot_hash: view.snapshot_hash });
     expect(stale.details!.snapshot.required_acks.map((a: any) => a.key)).toEqual(keys);
 
-    const noAcks = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: view.snapshot_hash });
+    const noAcks = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: view.snapshot_hash,
+    });
     expect(noAcks.status).toBe(422);
     const need = await errOf(noAcks);
     expect(need.code).toBe("ack_required");
@@ -320,30 +472,52 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     expect(count("SELECT COUNT(*) c FROM run WHERE project_id = ?", projectId)).toBe(runsBefore);
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation WHERE project_id = ?", projectId)).toBe(0);
 
-    const ok = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: view.snapshot_hash, acknowledgements: ackAll(view.snapshot) });
+    const ok = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: view.snapshot_hash,
+      acknowledgements: ackAll(view.snapshot),
+    });
     expect(ok.status).toBe(201);
     const rec = await dataOf<{ id: string; snapshot_hash: string; acknowledgements: number }>(ok);
     expect(rec.snapshot_hash).toBe(view.snapshot_hash);
     expect(rec.acknowledgements).toBe(keys.length);
 
     const snap = db.query("SELECT * FROM gate_decision_snapshot WHERE decision_id = ?").get(rec.id) as any;
-    expect(snap).toMatchObject({ snapshot_hash: view.snapshot_hash, submitted_hash: view.snapshot_hash, schema_version: 2 });
+    expect(snap).toMatchObject({
+      snapshot_hash: view.snapshot_hash,
+      submitted_hash: view.snapshot_hash,
+      schema_version: 3,
+    });
     expect(JSON.parse(snap.acknowledgements_json).map((a: any) => a.key)).toEqual(keys);
     // the decision-to-evaluation link: the snapshot's run is a gate_integrity_eval run holding the project's ledger
     const run = db.query("SELECT id, label, superseded_by FROM run WHERE id = ?").get(snap.eval_run_id) as any;
     expect(run.label).toBe("gate_integrity_eval:decision:fs");
     expect(run.superseded_by).toBe(run.id);
-    const ledger = db.query("SELECT evaluated_by, procedure_key FROM kill_criteria_evaluation WHERE run_id = ?").all(run.id) as any[];
+    const ledger = db
+      .query("SELECT evaluated_by, procedure_key FROM kill_criteria_evaluation WHERE run_id = ?")
+      .all(run.id) as any[];
     expect(ledger.length).toBe(view.snapshot.kill.evaluated);
     expect(ledger.every((r) => r.evaluated_by === `gate-decision:${ANALYST}`)).toBe(true);
     expect(JSON.parse(snap.snapshot_json).kill.eval_run_id).toBe(run.id);
     expect(count("SELECT COUNT(*) c FROM audit_log WHERE action = 'gate_snapshot.record'")).toBeGreaterThan(0);
     // the history marks it as NOT legacy; the stored snapshot is readable through the visible-project check
-    const hist = await dataOf<any>(await nextRequest(`/api/projects/${projectId}/gate-decisions`, { headers: { cookie } }));
+    const hist = await dataOf<any>(
+      await nextRequest(`/api/projects/${projectId}/gate-decisions`, { headers: { cookie } }),
+    );
     expect(hist.history[0]).toMatchObject({ legacy: false, snapshot_hash: view.snapshot_hash });
-    const stored = await dataOf<any>(await nextRequest(`/api/projects/${projectId}/gate-decisions/${rec.id}/snapshot`, { headers: { cookie } }));
+    const stored = await dataOf<any>(
+      await nextRequest(`/api/projects/${projectId}/gate-decisions/${rec.id}/snapshot`, { headers: { cookie } }),
+    );
     expect(stored).toMatchObject({ legacy: false, snapshot_hash: view.snapshot_hash });
-    expect((await nextRequest(`/api/projects/${projectId}/gate-decisions/${rec.id}/snapshot`, { headers: { cookie: otherCookie } })).status).toBe(404);
+    expect(
+      (
+        await nextRequest(`/api/projects/${projectId}/gate-decisions/${rec.id}/snapshot`, {
+          headers: { cookie: otherCookie },
+        })
+      ).status,
+    ).toBe(404);
   });
 
   test("a state change between viewing and recording is 409 snapshot_stale with the FRESH snapshot; the retry succeeds", async () => {
@@ -353,9 +527,27 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     const gov = S.insertGovernanceDoc(db);
     db.run(
       "INSERT INTO waiver (id, project_id, governance_doc_id, clause_ref, reason, requested_by, approver_role, approved_by, approved_at, expires_at, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,'active',?)",
-      [ulid(), projectId, gov, "chk x-1", "test", ANALYST, "entity-ic-reviewer", OTHER, S.NOW, "2099-01-01T00:00:00Z", S.NOW],
+      [
+        ulid(),
+        projectId,
+        gov,
+        "chk x-1",
+        "test",
+        ANALYST,
+        "entity-ic-reviewer",
+        OTHER,
+        S.NOW,
+        "2099-01-01T00:00:00Z",
+        S.NOW,
+      ],
     );
-    const res = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: seen.snapshot_hash, acknowledgements: ackAll(seen.snapshot) });
+    const res = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: seen.snapshot_hash,
+      acknowledgements: ackAll(seen.snapshot),
+    });
     expect(res.status).toBe(409);
     const e = await errOf(res);
     expect(e.code).toBe("snapshot_stale");
@@ -365,7 +557,13 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     // the fresh snapshot primed the GET cache: the recorder re-reads the same hash and can retry
     const fresh = await dataOf<SnapData>(await getSnap(projectId, "fs"));
     expect(fresh.snapshot_hash).toBe(e.details!.snapshot_hash);
-    const retry = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: fresh.snapshot_hash, acknowledgements: ackAll(fresh.snapshot) });
+    const retry = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: fresh.snapshot_hash,
+      acknowledgements: ackAll(fresh.snapshot),
+    });
     expect(retry.status).toBe(201);
   });
 
@@ -374,28 +572,60 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
     const view = await dataOf<SnapData>(await getSnap(projectId, "fs"));
     const weak = ackAll(view.snapshot).map((a) => ({ ...a, reason: "ok" }));
-    const w = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: view.snapshot_hash, acknowledgements: weak });
+    const w = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: view.snapshot_hash,
+      acknowledgements: weak,
+    });
     expect(w.status).toBe(422);
     const we = await errOf(w);
     expect(we.code).toBe("rationale_insufficient");
     expect(we.details).toMatchObject({ field: "acknowledgements", profile: "ack" });
     const extra = [...ackAll(view.snapshot), { key: "kill:nope:nothing", kind: "kill_unassessed", reason: REASON }];
-    const u = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: view.snapshot_hash, acknowledgements: extra });
+    const u = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: view.snapshot_hash,
+      acknowledgements: extra,
+    });
     expect(u.status).toBe(422);
     expect((await errOf(u)).details!.unknown).toEqual(["kill:nope:nothing"]);
-    const malformed = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, snapshot_hash: view.snapshot_hash, acknowledgements: [{ key: 1 }] });
+    const malformed = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      snapshot_hash: view.snapshot_hash,
+      acknowledgements: [{ key: 1 }],
+    });
     expect(malformed.status).toBe(400);
   });
 
   test("HOLD and KILL need no hash and no acknowledgements and still store a snapshot", async () => {
     setFlags("enforce", ...SNAP);
     const { projectId } = S.seedReadyProject(db, ANALYST);
-    const hold = await postProject(projectId, { gate: "fs", decision: "hold", rationale: "x", missing_artifacts: ["Business case adoption"] });
+    const hold = await postProject(projectId, {
+      gate: "fs",
+      decision: "hold",
+      rationale: "x",
+      missing_artifacts: ["Business case adoption"],
+    });
     expect(hold.status).toBe(201);
-    const kill = await postProject(projectId, { gate: "fs", decision: "kill", rationale: "x", learning_capture: "lesson" });
+    const kill = await postProject(projectId, {
+      gate: "fs",
+      decision: "kill",
+      rationale: "x",
+      learning_capture: "lesson",
+    });
     expect(kill.status).toBe(201);
     for (const r of [await dataOf<any>(hold), await dataOf<any>(kill)] as Array<{ id?: string }>) void r;
-    const rows = db.query("SELECT d.decision, s.snapshot_hash, s.acknowledgements_json, s.submitted_hash, s.eval_run_id FROM gate_decision d JOIN gate_decision_snapshot s ON s.decision_id = d.id WHERE d.entity_id = ? ORDER BY d.decided_at, d.id").all(projectId) as any[];
+    const rows = db
+      .query(
+        "SELECT d.decision, s.snapshot_hash, s.acknowledgements_json, s.submitted_hash, s.eval_run_id FROM gate_decision d JOIN gate_decision_snapshot s ON s.decision_id = d.id WHERE d.entity_id = ? ORDER BY d.decided_at, d.id",
+      )
+      .all(projectId) as any[];
     expect(rows.map((r) => r.decision)).toEqual(["hold", "kill"]);
     for (const r of rows) {
       expect(r.snapshot_hash).toMatch(/^[0-9a-f]{64}$/);
@@ -410,7 +640,12 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     const res = await postProject(projectId, { gate: "fs", decision: "go", rationale: "ok" });
     expect(res.status).toBe(201);
     expect((await dataOf<any>(res)).snapshot_hash).toBeNull();
-    expect(count("SELECT COUNT(*) c FROM gate_decision_snapshot s JOIN gate_decision d ON d.id = s.decision_id WHERE d.entity_id = ?", projectId)).toBe(0);
+    expect(
+      count(
+        "SELECT COUNT(*) c FROM gate_decision_snapshot s JOIN gate_decision d ON d.id = s.decision_id WHERE d.entity_id = ?",
+        projectId,
+      ),
+    ).toBe(0);
     expect(evalRuns(projectId)).toHaveLength(0);
   });
 
@@ -422,9 +657,15 @@ describe("POST gate-decisions - snapshot contract (project, enforce)", () => {
     const id = (await dataOf<any>(res)).id;
     const target = `project:${projectId}:fs`;
     for (const code of ["snapshot_stale", "ack_required"]) {
-      expect(db.query("SELECT 1 FROM audit_log WHERE action = ? AND target = ?").all(`gate_integrity.would_block:${code}`, target)).toHaveLength(1);
+      expect(
+        db
+          .query("SELECT 1 FROM audit_log WHERE action = ? AND target = ?")
+          .all(`gate_integrity.would_block:${code}`, target),
+      ).toHaveLength(1);
     }
-    const snap = db.query("SELECT submitted_hash, acknowledgements_json FROM gate_decision_snapshot WHERE decision_id = ?").get(id) as any;
+    const snap = db
+      .query("SELECT submitted_hash, acknowledgements_json FROM gate_decision_snapshot WHERE decision_id = ?")
+      .get(id) as any;
     expect(snap).toEqual({ submitted_hash: null, acknowledgements_json: "[]" });
   });
 });
@@ -434,16 +675,29 @@ describe("POST gate-decisions - kill binding (HB) and the Group IC override", ()
     const { projectId } = S.seedReadyProject(db, ANALYST);
     S.insertGate(db, "project", projectId, "fs", "go");
     S.insertGate(db, "project", projectId, "dd", "go");
-    db.run("INSERT INTO analysis_task (id, project_id, deliverable_type, reviewed_by) VALUES (?,?,?,NULL)", [ulid(), projectId, "dd_report"]);
+    db.run("INSERT INTO analysis_task (id, project_id, deliverable_type, reviewed_by) VALUES (?,?,?,NULL)", [
+      ulid(),
+      projectId,
+      "dd_report",
+    ]);
     const view = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
     return { projectId, keys: view.snapshot.hard_blocks[0].keys as string[] };
   }
   const entityIc = (projectId: string, extra: Record<string, unknown> = {}) =>
-    postProject(projectId, { gate: "entity_ic", decision: "go", rationale: "Entity IC reviewed the package and agrees to proceed.", gap_rationale: "Known gaps are accepted with a follow-up plan.", ...extra });
+    postProject(projectId, {
+      gate: "entity_ic",
+      decision: "go",
+      rationale: "Entity IC reviewed the package and agrees to proceed.",
+      gap_rationale: "Known gaps are accepted with a follow-up plan.",
+      ...extra,
+    });
   const override = (projectId: string, key: string, by: string) => {
     const [procedure, criterion] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
     const id = ulid();
-    db.run("INSERT INTO kill_criteria_override (id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at) VALUES (?,?,?,?,?,?,?,?)", ["ov-" + id, "project", projectId, procedure, criterion, "Group IC accepted this exception", by, S.NOW]);
+    db.run(
+      "INSERT INTO kill_criteria_override (id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at) VALUES (?,?,?,?,?,?,?,?)",
+      ["ov-" + id, "project", projectId, procedure, criterion, "Group IC accepted this exception", by, S.NOW],
+    );
     return "ov-" + id;
   };
 
@@ -457,7 +711,12 @@ describe("POST gate-decisions - kill binding (HB) and the Group IC override", ()
     expect(e.code).toBe("kill_binding_unoverridden");
     expect(e.details!.keys).toEqual(keys);
     expect(count("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ? AND gate = 'entity_ic'", projectId)).toBe(0);
-    const hold = await postProject(projectId, { gate: "entity_ic", decision: "hold", rationale: "x", missing_artifacts: ["unreviewed deliverable"] });
+    const hold = await postProject(projectId, {
+      gate: "entity_ic",
+      decision: "hold",
+      rationale: "x",
+      missing_artifacts: ["unreviewed deliverable"],
+    });
     expect(hold.status).toBe(201);
   });
 
@@ -468,7 +727,8 @@ describe("POST gate-decisions - kill binding (HB) and the Group IC override", ()
     const selfIssued = await entityIc(projectId);
     expect(selfIssued.status).toBe(409);
     expect((await errOf(selfIssued)).details!.self_issued).toEqual(keys);
-    for (const id of own) db.run("UPDATE kill_criteria_override SET revoked_at = ?, revoked_by = ? WHERE id = ?", [S.NOW, "admin", id]);
+    for (const id of own)
+      db.run("UPDATE kill_criteria_override SET revoked_at = ?, revoked_by = ? WHERE id = ?", [S.NOW, "admin", id]);
     const ids = keys.map((k) => override(projectId, k, OTHER));
     const ok = await entityIc(projectId, { kill_override_id: ids[0] });
     expect(ok.status).toBe(201);
@@ -483,12 +743,17 @@ describe("POST gate-decisions - kill binding (HB) and the Group IC override", ()
     clearSnapshotCache();
     const view = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
     expect(view.snapshot.hard_blocks).toEqual([]);
-    const overridden = view.snapshot.required_acks.filter((a: any) => a.kind === "kill_override").map((a: any) => a.key);
+    const overridden = view.snapshot.required_acks
+      .filter((a: any) => a.kind === "kill_override")
+      .map((a: any) => a.key);
     expect(overridden).toEqual(keys);
     const miss = await entityIc(projectId, { snapshot_hash: view.snapshot_hash });
     expect(miss.status).toBe(422);
     expect((await errOf(miss)).details!.missing).toEqual(view.snapshot.required_acks.map((a: any) => a.key));
-    const ok = await entityIc(projectId, { snapshot_hash: view.snapshot_hash, acknowledgements: ackAll(view.snapshot) });
+    const ok = await entityIc(projectId, {
+      snapshot_hash: view.snapshot_hash,
+      acknowledgements: ackAll(view.snapshot),
+    });
     expect(ok.status).toBe(201);
   });
 
@@ -509,14 +774,18 @@ describe("POST gate-decisions - kill binding (HB) and the Group IC override", ()
     const res = await entityIc(projectId, { snapshot_hash: view.snapshot_hash, acknowledgements: acks });
     expect(res.status).toBe(201);
     const id = (await dataOf<any>(res)).id;
-    const stored = JSON.parse((db.query("SELECT acknowledgements_json FROM gate_decision_snapshot WHERE decision_id = ?").get(id) as any).acknowledgements_json) as Array<{ key: string; reason: string }>;
+    const stored = JSON.parse(
+      (db.query("SELECT acknowledgements_json FROM gate_decision_snapshot WHERE decision_id = ?").get(id) as any)
+        .acknowledgements_json,
+    ) as Array<{ key: string; reason: string }>;
     expect(stored.map((a) => a.key).sort()).toEqual(view.snapshot.required_acks.map((a: any) => a.key).sort());
     expect(group!.every((k) => stored.find((a) => a.key === k)?.reason === REASON)).toBe(true);
   });
 });
 
 describe("brief x gate integrity (D3 / D9)", () => {
-  const postBrief = (url: string, gate: string, c = cookie) => nextRequest(url, { method: "POST", headers: { cookie: c }, body: JSON.stringify({ gate }) });
+  const postBrief = (url: string, gate: string, c = cookie) =>
+    nextRequest(url, { method: "POST", headers: { cookie: c }, body: JSON.stringify({ gate }) });
 
   test("project brief: one gate_integrity_eval run with kill_criteria_evaluation rows, a kill block, a brief record and a brief_id", async () => {
     setFlags("shadow", ...SNAP);
@@ -530,10 +799,22 @@ describe("brief x gate integrity (D3 / D9)", () => {
     const runs = evalRuns(projectId, "brief");
     expect(runs).toHaveLength(1);
     expect(runs[0].label).toBe("gate_integrity_eval:brief:dd");
-    expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation WHERE run_id = ?", runs[0].id)).toBe(d.kill.evaluated);
-    expect((db.query("SELECT evaluated_by FROM kill_criteria_evaluation WHERE run_id = ? LIMIT 1").get(runs[0].id) as any).evaluated_by).toBe(`gate-brief:${ANALYST}`);
+    expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation WHERE run_id = ?", runs[0].id)).toBe(
+      d.kill.evaluated,
+    );
+    expect(
+      (db.query("SELECT evaluated_by FROM kill_criteria_evaluation WHERE run_id = ? LIMIT 1").get(runs[0].id) as any)
+        .evaluated_by,
+    ).toBe(`gate-brief:${ANALYST}`);
     const rec = db.query("SELECT * FROM gate_brief_record WHERE id = ?").get(d.brief_id) as any;
-    expect(rec).toMatchObject({ entity_type: "project", entity_id: projectId, gate: "dd", generated_by: ANALYST, eval_run_id: runs[0].id, source: "synthesis" });
+    expect(rec).toMatchObject({
+      entity_type: "project",
+      entity_id: projectId,
+      gate: "dd",
+      generated_by: ANALYST,
+      eval_run_id: runs[0].id,
+      source: "synthesis",
+    });
     // each brief is its own evaluation event: a second brief opens a second run, never a unique-key collision
     expect((await postBrief(`/api/projects/${projectId}/gate-brief`, "dd")).status).toBe(200);
     expect(evalRuns(projectId, "brief")).toHaveLength(2);
@@ -556,7 +837,10 @@ describe("brief x gate integrity (D3 / D9)", () => {
     expect(d.kill.not_reached.length).toBeGreaterThan(0);
     expect(d.kill.eval_run_id).toBeNull();
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation")).toBe(before);
-    expect(db.query("SELECT entity_type, gate FROM gate_brief_record WHERE id = ?").get(d.brief_id)).toEqual({ entity_type: "opportunity", gate: "screening" });
+    expect(db.query("SELECT entity_type, gate FROM gate_brief_record WHERE id = ?").get(d.brief_id)).toEqual({
+      entity_type: "opportunity",
+      gate: "screening",
+    });
   });
 
   test("divergence (D9): a GO against a different AI recommendation needs divergence_reason; HOLD never does; the pair is stored on the decision", async () => {
@@ -564,30 +848,64 @@ describe("brief x gate integrity (D3 / D9)", () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
     const mk = (recommended: string, gate = "fs") => {
       const id = ulid();
-      db.run("INSERT INTO gate_brief_record (id, entity_type, entity_id, gate, recommended, confidence, source, generated_by, generated_at) VALUES (?,?,?,?,?,?,?,?,?)", [id, "project", projectId, gate, recommended, "high", "llm", ANALYST, new Date().toISOString()]);
+      db.run(
+        "INSERT INTO gate_brief_record (id, entity_type, entity_id, gate, recommended, confidence, source, generated_by, generated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        [id, "project", projectId, gate, recommended, "high", "llm", ANALYST, new Date().toISOString()],
+      );
       return id;
     };
     const briefId = mk("hold");
     const none = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, brief_id: briefId });
     expect(none.status).toBe(422);
     expect((await errOf(none)).code).toBe("divergence_reason_required");
-    const weak = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, brief_id: briefId, divergence_reason: "ok" });
+    const weak = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      brief_id: briefId,
+      divergence_reason: "ok",
+    });
     expect(weak.status).toBe(422);
     expect((await errOf(weak)).details).toMatchObject({ field: "divergence_reason" });
-    expect((await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, brief_id: "no-such-brief" })).status).toBe(400);
-    const good = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, brief_id: briefId, divergence_reason: "The AI weighted the permit timeline; the signed incentive letter removes that risk." });
+    expect(
+      (await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE, brief_id: "no-such-brief" }))
+        .status,
+    ).toBe(400);
+    const good = await postProject(projectId, {
+      gate: "fs",
+      decision: "go",
+      rationale: S.GENUINE,
+      brief_id: briefId,
+      divergence_reason: "The AI weighted the permit timeline; the signed incentive letter removes that risk.",
+    });
     expect(good.status).toBe(201);
-    const row = db.query("SELECT ai_recommended_decision, ai_brief_id, divergence_reason FROM gate_decision WHERE id = ?").get((await dataOf<any>(good)).id) as any;
-    expect(row).toEqual({ ai_recommended_decision: "hold", ai_brief_id: briefId, divergence_reason: "The AI weighted the permit timeline; the signed incentive letter removes that risk." });
+    const row = db
+      .query("SELECT ai_recommended_decision, ai_brief_id, divergence_reason FROM gate_decision WHERE id = ?")
+      .get((await dataOf<any>(good)).id) as any;
+    expect(row).toEqual({
+      ai_recommended_decision: "hold",
+      ai_brief_id: briefId,
+      divergence_reason: "The AI weighted the permit timeline; the signed incentive letter removes that risk.",
+    });
     // a recommendation that agrees, or a decision that is not a GO, needs nothing
-    expect((await postProject(projectId, { gate: "dd", decision: "go", rationale: S.GENUINE_2, brief_id: mk("go", "dd") })).status).toBe(201);
-    const holdWithDiv = await postProject(projectId, { gate: "dd", decision: "hold", rationale: "x", missing_artifacts: ["DD report"], brief_id: mk("go", "dd") });
+    expect(
+      (await postProject(projectId, { gate: "dd", decision: "go", rationale: S.GENUINE_2, brief_id: mk("go", "dd") }))
+        .status,
+    ).toBe(201);
+    const holdWithDiv = await postProject(projectId, {
+      gate: "dd",
+      decision: "hold",
+      rationale: "x",
+      missing_artifacts: ["DD report"],
+      brief_id: mk("go", "dd"),
+    });
     expect(holdWithDiv.status).toBe(201);
   });
 });
 
 describe("recordGateDecisionRow - opportunity carrier and atomicity", () => {
-  const { recordGateDecisionRow, parseDecisionExtras } = require("../../app/web-next/lib/gate-decision-contract.ts") as typeof import("../../app/web-next/lib/gate-decision-contract.ts");
+  const { recordGateDecisionRow, parseDecisionExtras } =
+    require("../../app/web-next/lib/gate-decision-contract.ts") as typeof import("../../app/web-next/lib/gate-decision-contract.ts");
   const extrasOf = (body: Record<string, unknown>) => {
     const p = parseDecisionExtras(body);
     if (!p.ok) throw new Error("bad extras");
@@ -595,8 +913,18 @@ describe("recordGateDecisionRow - opportunity carrier and atomicity", () => {
   };
   const rec = (o: string, decision: "go" | "hold" | "kill", body: Record<string, unknown> = {}, gate = "screening") =>
     recordGateDecisionRow(db, {
-      entityType: "opportunity", entityId: o, gate, decision, storedRationale: S.GENUINE, missingArtifactsJson: decision === "hold" ? '["x"]' : null, actor: ANALYST,
-      gateEvaluationId: null, learningCapture: decision === "kill" ? "lesson" : null, judgementConfirmationsJson: null, extras: extrasOf(body), now: new Date().toISOString(),
+      entityType: "opportunity",
+      entityId: o,
+      gate,
+      decision,
+      storedRationale: S.GENUINE,
+      missingArtifactsJson: decision === "hold" ? '["x"]' : null,
+      actor: ANALYST,
+      gateEvaluationId: null,
+      learningCapture: decision === "kill" ? "lesson" : null,
+      judgementConfirmationsJson: null,
+      extras: extrasOf(body),
+      now: new Date().toISOString(),
     });
 
   test("opportunity: a Screening GO needs no acknowledgement for not-reached criteria (ADR-0193), outcomes are stored in snapshot_json only", async () => {
@@ -608,11 +936,15 @@ describe("recordGateDecisionRow - opportunity carrier and atomicity", () => {
     const ok = rec(o, "go", { snapshot_hash: view.snapshot_hash });
     expect(ok.ok).toBe(true);
     if (ok.ok) {
-      const row = db.query("SELECT snapshot_json, eval_run_id FROM gate_decision_snapshot WHERE decision_id = ?").get(ok.id) as any;
+      const row = db
+        .query("SELECT snapshot_json, eval_run_id FROM gate_decision_snapshot WHERE decision_id = ?")
+        .get(ok.id) as any;
       expect(row.eval_run_id).toBeNull();
       const stored = JSON.parse(row.snapshot_json);
       expect(stored.kill.unassessed).toEqual([]);
-      expect(stored.kill.not_reached.map((n: any) => n.key)).toEqual(view.snapshot.kill.not_reached.map((n: any) => n.key));
+      expect(stored.kill.not_reached.map((n: any) => n.key)).toEqual(
+        view.snapshot.kill.not_reached.map((n: any) => n.key),
+      );
     }
     expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation")).toBe(before);
   });
@@ -620,36 +952,70 @@ describe("recordGateDecisionRow - opportunity carrier and atomicity", () => {
   test("opportunity: a triggered halt (no viable target) blocks GO with kill_binding_unoverridden but HOLD and KILL still store a snapshot", () => {
     setFlags("enforce", ...SNAP);
     const b = S.insertOpportunity(db, "brownfield", ANALYST);
-    db.run("INSERT INTO brownfield_target (id, opportunity_id, company_name, status, created_at, updated_at) VALUES (?,?,?,?,?,?)", [ulid(), b, "T1", "excluded", S.NOW, S.NOW]);
+    db.run(
+      "INSERT INTO brownfield_target (id, opportunity_id, company_name, status, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+      [ulid(), b, "T1", "excluded", S.NOW, S.NOW],
+    );
     const go = rec(b, "go");
     expect(go.ok).toBe(false);
     if (!go.ok) expect(go.failure.code).toBe("kill_binding_unoverridden");
     const hold = rec(b, "hold");
     const kill = rec(b, "kill");
     expect(hold.ok && kill.ok).toBe(true);
-    if (hold.ok) expect(db.query("SELECT COUNT(*) c FROM gate_decision_snapshot WHERE decision_id = ?").get(hold.id)).toEqual({ c: 1 });
+    if (hold.ok)
+      expect(db.query("SELECT COUNT(*) c FROM gate_decision_snapshot WHERE decision_id = ?").get(hold.id)).toEqual({
+        c: 1,
+      });
   });
 
   test("atomicity (fault injection): a failing snapshot insert unwinds the decision, the evaluation run, the ledger and the audit rows", async () => {
     setFlags("enforce", ...SNAP);
     const { projectId } = S.seedReadyProject(db, ANALYST);
-    const marks = { decisions: count("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?", projectId), runs: count("SELECT COUNT(*) c FROM run WHERE project_id = ?", projectId), audits: count("SELECT COUNT(*) c FROM audit_log WHERE action = 'gate_decision.record' AND target LIKE ?", `${projectId}:%`) };
-    db.run("CREATE TRIGGER trg_fault_inject BEFORE INSERT ON gate_decision_snapshot BEGIN SELECT RAISE(ABORT, 'injected fault'); END");
+    const marks = {
+      decisions: count("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?", projectId),
+      runs: count("SELECT COUNT(*) c FROM run WHERE project_id = ?", projectId),
+      audits: count(
+        "SELECT COUNT(*) c FROM audit_log WHERE action = 'gate_decision.record' AND target LIKE ?",
+        `${projectId}:%`,
+      ),
+    };
+    db.run(
+      "CREATE TRIGGER trg_fault_inject BEFORE INSERT ON gate_decision_snapshot BEGIN SELECT RAISE(ABORT, 'injected fault'); END",
+    );
     try {
-      const res = await postProject(projectId, { gate: "fs", decision: "hold", rationale: "x", missing_artifacts: ["Business case adoption"] });
+      const res = await postProject(projectId, {
+        gate: "fs",
+        decision: "hold",
+        rationale: "x",
+        missing_artifacts: ["Business case adoption"],
+      });
       expect(res.status).toBe(500);
       expect((await errOf(res)).code).toBe("internal_error");
       expect(count("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?", projectId)).toBe(marks.decisions);
       expect(count("SELECT COUNT(*) c FROM run WHERE project_id = ?", projectId)).toBe(marks.runs);
       expect(count("SELECT COUNT(*) c FROM kill_criteria_evaluation WHERE project_id = ?", projectId)).toBe(0);
-      expect(count("SELECT COUNT(*) c FROM audit_log WHERE action = 'gate_decision.record' AND target LIKE ?", `${projectId}:%`)).toBe(marks.audits);
+      expect(
+        count(
+          "SELECT COUNT(*) c FROM audit_log WHERE action = 'gate_decision.record' AND target LIKE ?",
+          `${projectId}:%`,
+        ),
+      ).toBe(marks.audits);
 
       // shadow degrades: recording is never broken by a snapshot fault - the legacy write happens and the fault is audited
       setFlags("shadow", ...SNAP);
-      const shadow = await postProject(projectId, { gate: "fs", decision: "hold", rationale: "x", missing_artifacts: ["Business case adoption"] });
+      const shadow = await postProject(projectId, {
+        gate: "fs",
+        decision: "hold",
+        rationale: "x",
+        missing_artifacts: ["Business case adoption"],
+      });
       expect(shadow.status).toBe(201);
       expect(count("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?", projectId)).toBe(marks.decisions + 1);
-      expect(db.query("SELECT 1 FROM audit_log WHERE action = 'gate_integrity.would_block:snapshot_error' AND target = ?").all(`project:${projectId}:fs`)).toHaveLength(1);
+      expect(
+        db
+          .query("SELECT 1 FROM audit_log WHERE action = 'gate_integrity.would_block:snapshot_error' AND target = ?")
+          .all(`project:${projectId}:fs`),
+      ).toHaveLength(1);
     } finally {
       db.run("DROP TRIGGER trg_fault_inject");
     }
@@ -661,14 +1027,31 @@ describe("evaluation runs stay out of the run lineage", () => {
     const { createRun } = await import("../../db/lib/versioning.ts");
     const { createGateEvalRun } = await import("../../db/repositories/gate-snapshot.repository.ts");
     const { projectId } = S.seedReadyProject(db, ANALYST);
-    const first = createRun(db, { projectId, createdBy: ANALYST, overrides: { discount_rate: 0.1 }, now: "2026-10-27T10:00:00.000Z" });
-    const evalRunId = createGateEvalRun(db, { projectId, gate: "fs", event: "decision", actor: ANALYST, now: "2026-10-27T10:05:00.000Z" });
+    const first = createRun(db, {
+      projectId,
+      createdBy: ANALYST,
+      overrides: { discount_rate: 0.1 },
+      now: "2026-10-27T10:00:00.000Z",
+    });
+    const evalRunId = createGateEvalRun(db, {
+      projectId,
+      gate: "fs",
+      event: "decision",
+      actor: ANALYST,
+      now: "2026-10-27T10:05:00.000Z",
+    });
     const second = createRun(db, { projectId, createdBy: ANALYST, now: "2026-10-27T10:10:00.000Z" });
     // lineage came from the real run, not from the (input-less) evaluation run
-    expect(db.query("SELECT assumption_key, value FROM run_input WHERE run_id = ?").all(second.run_id)).toEqual([{ assumption_key: "discount_rate", value: 0.1 }]);
+    expect(db.query("SELECT assumption_key, value FROM run_input WHERE run_id = ?").all(second.run_id)).toEqual([
+      { assumption_key: "discount_rate", value: 0.1 },
+    ]);
     expect(first.run_id).not.toBe(second.run_id);
     // the "latest live run" readers filter superseded_by IS NULL: an evaluation run is superseded by itself
-    const live = db.query("SELECT id FROM run WHERE project_id = ? AND superseded_by IS NULL ORDER BY created_at DESC, id DESC LIMIT 1").get(projectId) as { id: string };
+    const live = db
+      .query(
+        "SELECT id FROM run WHERE project_id = ? AND superseded_by IS NULL ORDER BY created_at DESC, id DESC LIMIT 1",
+      )
+      .get(projectId) as { id: string };
     expect(live.id).not.toBe(evalRunId);
   });
 });
@@ -678,8 +1061,21 @@ describe("data-architect follow-ups", () => {
     const { createGateEvalRun } = await import("../../db/repositories/gate-snapshot.repository.ts");
     const { projectId } = S.seedReadyProject(db, ANALYST);
     const real = ulid();
-    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [real, projectId, "real", "h", ANALYST, "2026-10-27T10:00:00.000Z"]);
-    createGateEvalRun(db, { projectId, gate: "fs", event: "decision", actor: ANALYST, now: "2026-10-27T11:00:00.000Z" });
+    db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+      real,
+      projectId,
+      "real",
+      "h",
+      ANALYST,
+      "2026-10-27T10:00:00.000Z",
+    ]);
+    createGateEvalRun(db, {
+      projectId,
+      gate: "fs",
+      event: "decision",
+      actor: ANALYST,
+      now: "2026-10-27T11:00:00.000Z",
+    });
     const src = await Bun.file(join(PROJECT_ROOT, "scripts/co-newbiz/watch-run.ts")).text();
     const sql = /"(SELECT id FROM run WHERE project_id = \? AND [^"]*LIMIT 1)"/.exec(src)?.[1];
     expect(sql).toBeTruthy();
@@ -687,11 +1083,24 @@ describe("data-architect follow-ups", () => {
   });
 
   test("db-integrity --fix never deletes a gate decision once the 0175 delete guard exists: orphans are reported, none removed", async () => {
-    const { deleteOrphanGateDecisions, findGateDecisionReferenceIssues } = await import("../../scripts/co-newbiz/db-integrity.ts");
+    const { deleteOrphanGateDecisions, findGateDecisionReferenceIssues } = await import(
+      "../../scripts/co-newbiz/db-integrity.ts"
+    );
     const { insertGateSnapshot } = await import("../../db/repositories/gate-snapshot.repository.ts");
     const kept = S.insertGate(db, "opportunity", "missing-opp-1", "screening", "go");
     const plain = S.insertGate(db, "opportunity", "missing-opp-2", "screening", "go");
-    insertGateSnapshot(db, { decisionId: kept, schemaVersion: 1, snapshotJson: "{}", snapshotHash: "h", submittedHash: null, acknowledgements: [], computedAt: S.NOW, engineVersionsJson: "{}", evalRunId: null, briefId: null });
+    insertGateSnapshot(db, {
+      decisionId: kept,
+      schemaVersion: 1,
+      snapshotJson: "{}",
+      snapshotHash: "h",
+      submittedHash: null,
+      acknowledgements: [],
+      computedAt: S.NOW,
+      engineVersionsJson: "{}",
+      evalRunId: null,
+      briefId: null,
+    });
     expect(findGateDecisionReferenceIssues(db).map((i) => i.id)).toEqual(expect.arrayContaining([kept, plain]));
     expect(deleteOrphanGateDecisions(db)).toBe(0);
     expect(db.query("SELECT 1 FROM gate_decision WHERE id = ?").get(kept)).toBeTruthy();

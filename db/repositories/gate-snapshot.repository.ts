@@ -20,7 +20,7 @@ import { ulid } from "../lib/ulid.ts";
 /** The dedicated run kind: carried in run.label (the run table has no kind column). */
 export const GATE_INTEGRITY_EVAL_KIND = "gate_integrity_eval";
 /** 2 (ADR-0193): kill.current_stage / not_reached / carried_in / lineage_missing and triggered[].partial_input are inside the hash. Version 1 rows verify under the same canonicaliser (versioned in gate-snapshot.ts). */
-export const GATE_SNAPSHOT_SCHEMA_VERSION = 2;
+export const GATE_SNAPSHOT_SCHEMA_VERSION = 3;
 
 export type EvalEvent = "brief" | "decision" | "snapshot";
 

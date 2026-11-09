@@ -68,13 +68,12 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   // ADR-0158: an archived legacy model that a human adopted still resolves here.
   const adoptedCase: BusinessCaseView | null = findAdoptedCase(list);
 
-  // Committee deliberation refs (ADR-0104, ADR-0196 Phase C M6) — sessions
-  // convened for this project give the IC the deliberation provenance. The
-  // minutes REST surface is opportunity-scoped only (committeeSessionForOpportunity
-  // requires entity_type='opportunity'), so minutesUrl is exposed ONLY for
-  // opportunity-scoped sessions; project-scoped rows expose the confirmation
-  // state without a link. Read-only — no minutes content is copied here, so
-  // dissent is never duplicated.
+  // Committee deliberation refs (ADR-0104, ADR-0196 Phase E) — sessions
+  // convened for this project give the IC the deliberation provenance. Both
+  // the opportunity- and project-scoped minutes surfaces link (the
+  // project-scoped one lives at /api/projects/[id]/committee-sessions).
+  // Read-only — no minutes content is copied here, so dissent is never
+  // duplicated.
   const sourceOpportunityId =
     (
       db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(id) as
@@ -318,10 +317,11 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
         startedAt: r.started_at,
         committeeKey: r.committeeKey,
         decisionMode: r.decisionMode,
-        minutesUrl:
-          r.entityType === "opportunity" && r.entityId
+        minutesUrl: r.entityId
+          ? r.entityType === "opportunity"
             ? `/api/opportunities/${encodeURIComponent(r.entityId)}/committee-sessions/${encodeURIComponent(r.sessionId)}/minutes`
-            : null,
+            : `/api/projects/${encodeURIComponent(r.entityId)}/committee-sessions/${encodeURIComponent(r.sessionId)}/minutes`
+          : null,
         minutesConfirmed: r.minutesConfirmedBy != null,
       })),
       establishment: (() => {

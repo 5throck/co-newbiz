@@ -110,7 +110,7 @@ describe("i18n (processBlockers.*)", () => {
 
 describe("flow.spec 2.16.0 blockers declaration", () => {
   test("version and shape: every stage declares blockers; indices are in range; keys carry the stage prefix", () => {
-    expect(spec.meta.version).toBe("2.20.0"); // 2.20.0: deal-shape evaluation moves S4 -> S7 (declared non-blocking artifact, no new blocker key); 2.19.0: dd gate binds pmi clean-team breach (ADR-0193); 2.18.1: S3 fit-judgement artifact label renamed per ADR-0192 (keys unchanged)
+    expect(spec.meta.version).toBe("2.21.0"); // 2.21.0: ADR-0196 phase E adds the IC-committee exit criterion at entity_ic/group_ic (no blocker key change); 2.20.0: deal-shape evaluation moves S4 -> S7 (declared non-blocking artifact, no new blocker key); 2.19.0: dd gate binds pmi clean-team breach (ADR-0193)
     for (const s of spec.stages) {
       expect(Array.isArray(s.blockers) && s.blockers.length > 0).toBe(true);
       for (const b of s.blockers) {

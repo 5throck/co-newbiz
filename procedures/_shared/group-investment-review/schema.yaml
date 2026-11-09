@@ -3,11 +3,22 @@ procedure_id: shared-group-investment-review
 title: "Group Investment Committee Review"
 scope: shared
 level: group
-version: "1.3.0"
+version: "1.4.0"
 status: active
 applicability: mandatory
 workflow_type: core
 gate: "Group IC"
+
+# v1.4.0 (ADR-0196 Phase E, decision 9; design 2026-11-08-committee-minutes-as-meeting-design §7.2):
+# one new step 4.4 "Group IC committee deliberation" before the decision deck
+# (step 4.5). The step convenes group-ic-committee (procedures/_committees.yaml)
+# and closes it with committee_session_ref + confirmed-or-draft minutes in the
+# Group IC package. The session is decision support placed in front of the
+# human verdict step — it decides nothing and replaces no step. Seats carried
+# by the procedure as a contract: group-review-agent (portfolio fit,
+# intra-group transactions, capital allocation), risk-officer, financing-agent,
+# and ir-agent where disclosure applies. The final human step
+# (group-ic-reviewer, ADR-0053 / ADR-0186 D6) is unchanged.
 
 steps:
   - id: 1
@@ -40,6 +51,26 @@ steps:
       same review cycle using the formula from meeting M2 D-M2-2: IRR-over-hurdle
       spread + RAG grade + capital requested, normalized to the cycle's capital
       budget, ties broken by risk-officer flags.
+  - id: 4.4
+    gate: "Group IC"
+    agent_key: process-governance-manager
+    skill_key: meeting-facilitation
+    output_type: group_ic_committee_deliberation
+    description: >
+      Convene and close the group-ic-committee session
+      (procedures/_committees.yaml; ADR-0196 decision 9, ADR-0097 seat model,
+      ADR-0053 recorder pattern — the chair facilitates agenda and minutes
+      passes and votes nothing) over the ranked group agenda. Seats carried
+      by this procedure as a contract: group-review-agent (portfolio fit,
+      intra-group transaction compliance, capital allocation), risk-officer,
+      financing-agent, and ir-agent where disclosure applies. Output is a
+      committee session reference (committee_session_ref) plus
+      confirmed-or-draft meeting-form minutes referenced from the Group IC
+      package — decision support placed in front of the human verdict step;
+      the session proposes, it never decides (design boundary 2). Recorded
+      dissent is carried verbatim; minutes confirmation (ADR-0104) must be by
+      a person, and that person may not also countersign the step 5 GO
+      (maker-checker extended to the minutes confirmation).
   - id: 4.5
     gate: "Group IC"
     agent_key: docs-writer
@@ -74,6 +105,7 @@ legal_basis:
   - "Group New Business Review Policy §3, §4"
   - "Design v1.0 §6.4"
   - "Meeting M2 (m2-entity-group-boundary.md)"
+  - "ADR-0196 (v1.4.0 — Group IC committee deliberation step, Phase E decision 9)"
 
 owner_agent: group-review-agent
 last_reviewed: "2026-08-23"

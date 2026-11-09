@@ -2962,7 +2962,7 @@
       "name": "meeting-facilitation",
       "scope": "root",
       "capability": "meeting-facilitation",
-      "content_hash": "4514fc0c89279ad1",
+      "content_hash": "d78142170434628e",
       "version": "1.4.4",
       "mirrors": [
         "skills/meeting-facilitation/SKILL.md",
