@@ -21,7 +21,11 @@ const PROJECT_ROOT = join(import.meta.dirname, "../..");
 
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-committee-boundary.sqlite");
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
-process.env.CO_NEWBIZ_COMMITTEE_AGENTS = "deterministic";
+// Owner decision 10 (ADR-0196 amendment 2026-11-09): the mode env var is
+// gone — REST convene requires the provider seam to be registered, so this
+// suite injects the deterministic agent AS the factory. The provider is
+// forced offline so the ADR-0196 chair passes stay deterministic.
+process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -30,6 +34,9 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
+
+const { setCallAgentFactory, deterministicCallAgent } = await import("../../app/web-next/lib/committee-agents.ts");
+setCallAgentFactory(() => deterministicCallAgent());
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
@@ -105,24 +112,34 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     expect(confirmingRowCounts(oppId)).toEqual({ gate: 0, route: 0, target: 0 });
 
     // The proposal exists as a gate_evaluation, with verbatim dissent.
-    const ev = db.query("SELECT id, gate, recommendation, dissent_json, evaluated_by FROM gate_evaluation WHERE id = ?")
-      .get(evaluationId) as { id: string; gate: string; recommendation: string; dissent_json: string | null; evaluated_by: string };
+    const ev = db
+      .query("SELECT id, gate, recommendation, dissent_json, evaluated_by FROM gate_evaluation WHERE id = ?")
+      .get(evaluationId) as {
+      id: string;
+      gate: string;
+      recommendation: string;
+      dissent_json: string | null;
+      evaluated_by: string;
+    };
     expect(ev).toBeDefined();
     expect(ev.gate).toBe("pre_fs");
     expect(ev.evaluated_by).toBe("process-governance-manager"); // chair, synthesis only — votes nothing
     expect(ev.dissent_json).toBeTruthy();
 
     // Dissent carries the risk-officer position VERBATIM — never a paraphrase.
-    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: analystCookie } });
+    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, {
+      headers: { cookie: analystCookie },
+    });
     expect(transcript.status).toBe(200);
     const t = (await transcript.json()).data;
-    const riskOfficer = t.rounds.flatMap((r: { positions: Array<{ agentKey: string | null; positionMd: string }> }) => r.positions)
+    const riskOfficer = t.rounds
+      .flatMap((r: { positions: Array<{ agentKey: string | null; positionMd: string }> }) => r.positions)
       .find((p: { agentKey: string | null }) => p.agentKey === "risk-officer");
     expect(riskOfficer).toBeDefined();
-    const dissents = JSON.parse(ev.dissent_json!) as Array<{ member_key: string; position_md: string }>;
+    const dissents = JSON.parse(ev.dissent_json ?? "[]") as Array<{ member_key: string; position_md: string }>;
     const roDissent = dissents.find((d) => d.member_key === "risk-officer");
     expect(roDissent).toBeDefined();
-    expect(roDissent!.position_md).toBe(riskOfficer!.positionMd);
+    expect(roDissent?.position_md).toBe(riskOfficer?.positionMd);
 
     // agent_team sessions have no human seats — deliberation cannot be
     // used as a side channel to confirm.
@@ -142,7 +159,13 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     const confirm = await req(`/api/opportunities/${oppId}/gate-decisions`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ gate: "pre_fs", decision: "hold", missing_artifacts: ["S4 route decision"], rationale: "위원회 PROPOSAL 확인 후 인적 결재", gate_evaluation_id: evaluationId }),
+      body: JSON.stringify({
+        gate: "pre_fs",
+        decision: "hold",
+        missing_artifacts: ["S4 route decision"],
+        rationale: "위원회 PROPOSAL 확인 후 인적 결재",
+        gate_evaluation_id: evaluationId,
+      }),
     });
     expect(confirm.status).toBe(201);
 
@@ -151,8 +174,10 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     expect(rows.gate).toBe(1);
     expect(rows.route).toBe(0);
     expect(rows.target).toBe(0);
-    const gd = db.query("SELECT gate_evaluation_id, decided_by FROM gate_decision WHERE gate = 'pre_fs'").get() as
-      | { gate_evaluation_id: string | null; decided_by: string };
+    const gd = db.query("SELECT gate_evaluation_id, decided_by FROM gate_decision WHERE gate = 'pre_fs'").get() as {
+      gate_evaluation_id: string | null;
+      decided_by: string;
+    };
     expect(gd.gate_evaluation_id).toBe(evaluationId);
     expect(gd.decided_by).toBe("alice"); // a human account, not a committee chair
   });
@@ -166,7 +191,9 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     });
     expect(res.status).toBe(201);
     const { data } = await res.json();
-    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, { headers: { cookie: analystCookie } });
+    const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, {
+      headers: { cookie: analystCookie },
+    });
     expect(transcript.status).toBe(200);
     const t = (await transcript.json()).data;
     expect(t.meta.committee_key).toBe("target-longlist-shortlist-committee");
@@ -257,7 +284,9 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
 
     // The session belongs to oppA's process_run — under oppB's path it is
     // simply not found (existence protection on every session surface).
-    const get = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}`, { headers: { cookie: analystCookie } });
+    const get = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}`, {
+      headers: { cookie: analystCookie },
+    });
     expect(get.status).toBe(404);
     const pos = await req(`/api/opportunities/${oppB}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
@@ -273,4 +302,3 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     expect(adv.status).toBe(404);
   });
 });
-

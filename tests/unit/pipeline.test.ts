@@ -25,6 +25,13 @@ import { existsSync, rmSync } from "node:fs";
 
 const TEST_DB_PATH = "db/data/test-pipeline.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
+// Owner decision 10 (ADR-0196 amendment 2026-11-09): the mode env var is
+// gone. This suite convenes the committee_proposal rule on the deterministic
+// engine via the provider seam (injected deterministic factory); the
+// provider is forced offline so the chair passes stay deterministic.
+process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+process.env.CO_NEWBIZ_LLM_API_KEY = "";
+process.env.CO_NEWBIZ_LLM_MODEL = "";
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -39,6 +46,10 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { startPipeline, advancePipeline, resumePausedPipelines } = await import("../../app/web-next/lib/pipeline.ts");
 const { setBusinessCaseExecutorFactory } = await import("../../app/web-next/lib/business-case-generator.ts");
+// Owner decision 10: inject the deterministic committee agent through the
+// provider seam so the committee_proposal rule convenes in this suite.
+const { setCallAgentFactory, deterministicCallAgent } = await import("../../app/web-next/lib/committee-agents.ts");
+setCallAgentFactory(() => deterministicCallAgent());
 
 const NOW = new Date().toISOString();
 

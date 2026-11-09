@@ -16,15 +16,10 @@
 // pipeline_run state and notification rows (trigger_type 'pipeline_paused').
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
-import {
-  evaluateProcess,
-  type GateId,
-  type ProcessEntity,
-  type ProcessEvaluation,
-} from "./process-flow.ts";
+import { evaluateProcess, type GateId, type ProcessEntity, type ProcessEvaluation } from "./process-flow.ts";
 import { generateBusinessCases } from "./business-case-generator.ts";
 import { tailorDdChecklist, ddCompletionSummary } from "./dd-checklist-tailor.ts";
-import { conveneCommitteeSession, getCommittee, listCommitteeSessions } from "./committee-session.ts";
+import { CommitteeError, conveneCommitteeSession, getCommittee, listCommitteeSessions } from "./committee-session.ts";
 import { promoteOpportunity } from "../../../db/repositories/project.repository.ts";
 
 export type PipelineStatus = "running" | "paused_for_human" | "completed" | "failed" | "killed" | "withdrawn";
@@ -65,11 +60,18 @@ function getRun(id: string): PipelineRunRow {
   return row;
 }
 
-function setRunState(id: string, status: PipelineStatus, fields: { currentStage?: string | null; pausedReason?: string | null } = {}): void {
-  getDb().run(
-    "UPDATE pipeline_run SET status = ?, current_stage = ?, paused_reason = ?, updated_at = ? WHERE id = ?",
-    [status, fields.currentStage ?? null, fields.pausedReason ?? null, nowIso(), id],
-  );
+function setRunState(
+  id: string,
+  status: PipelineStatus,
+  fields: { currentStage?: string | null; pausedReason?: string | null } = {},
+): void {
+  getDb().run("UPDATE pipeline_run SET status = ?, current_stage = ?, paused_reason = ?, updated_at = ? WHERE id = ?", [
+    status,
+    fields.currentStage ?? null,
+    fields.pausedReason ?? null,
+    nowIso(),
+    id,
+  ]);
 }
 
 /**
@@ -98,7 +100,9 @@ export function startPipeline(opts: {
     throw new PipelineError("not_found", `${opts.entityType} '${opts.entityId}' not found.`);
   }
   if (opts.entityType === "project") {
-    const status = db.query("SELECT status FROM md_project WHERE id = ?").get(opts.entityId) as { status: string } | undefined;
+    const status = db.query("SELECT status FROM md_project WHERE id = ?").get(opts.entityId) as
+      | { status: string }
+      | undefined;
     if (status?.status !== "open") {
       throw new PipelineError("not_found", `project '${opts.entityId}' is not open.`);
     }
@@ -118,7 +122,10 @@ export function startPipeline(opts: {
       )
       .get(ids.opportunityId, ids.projectId, ids.opportunityId, ids.projectId) as { id: string } | undefined;
     if (active) {
-      throw new PipelineError("active_run_exists", `An active pipeline run ('${active.id}') already exists for this entity.`);
+      throw new PipelineError(
+        "active_run_exists",
+        `An active pipeline run ('${active.id}') already exists for this entity.`,
+      );
     }
     const id = ulid();
     const now = nowIso();
@@ -133,13 +140,20 @@ export function startPipeline(opts: {
 }
 
 /** The opportunity/project key pair an entity maps to across a promotion. */
-function relatedEntityIds(entityType: "opportunity" | "project", entityId: string): { opportunityId: string; projectId: string } {
+function relatedEntityIds(
+  entityType: "opportunity" | "project",
+  entityId: string,
+): { opportunityId: string; projectId: string } {
   const db = getDb();
   if (entityType === "opportunity") {
-    const row = db.query("SELECT project_id FROM opportunity WHERE id = ?").get(entityId) as { project_id: string | null } | undefined;
+    const row = db.query("SELECT project_id FROM opportunity WHERE id = ?").get(entityId) as
+      | { project_id: string | null }
+      | undefined;
     return { opportunityId: entityId, projectId: row?.project_id ?? "" };
   }
-  const row = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(entityId) as { source_opportunity_id: string | null } | undefined;
+  const row = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(entityId) as
+    | { source_opportunity_id: string | null }
+    | undefined;
   return { opportunityId: row?.source_opportunity_id ?? "", projectId: entityId };
 }
 
@@ -172,10 +186,17 @@ interface Rule {
 /** A promotion inside the loop re-points the run to a NEW project segment. */
 interface RuleOutcome {
   promotedProjectId?: string;
+  /** Owner decision 10 (ADR-0196): an automation may stop the loop with a
+   * recorded skip notice instead of completing (committee M3 llm_required). */
+  pausedReason?: string;
 }
 
 function count(sql: string, ...params: unknown[]): number {
-  return (getDb().query(sql).get(...params) as { c: number }).c;
+  return (
+    getDb()
+      .query(sql)
+      .get(...params) as { c: number }
+  ).c;
 }
 
 const OPPORTUNITY_GATES: GateId[] = ["screening", "pre_fs", "target_screening"];
@@ -230,7 +251,8 @@ const OPPORTUNITY_RULES: Rule[] = [
     // pipeline never writes a route_decision.
     key: "route_confirmation:S4",
     kind: "human",
-    when: ({ ev }) => ev.currentStage === "S4" && (ev.track === null || (ev.track === "brownfield" && ev.subTrack === null)),
+    when: ({ ev }) =>
+      ev.currentStage === "S4" && (ev.track === null || (ev.track === "brownfield" && ev.subTrack === null)),
   },
   {
     key: "manual_input:S4",
@@ -250,24 +272,38 @@ const OPPORTUNITY_RULES: Rule[] = [
       if (entity.type !== "opportunity" || ev.terminated) return false;
       if (firstPendingGate(ev, OPPORTUNITY_GATES) !== "pre_fs") return false;
       const committee = getCommittee("route-steering-committee");
-      if (!committee || !committee.decision_modes_allowed.includes("agent_team")) return false;
+      if (!committee?.decision_modes_allowed.includes("agent_team")) return false;
       const already = listCommitteeSessions(entity.id).some((s) => s.meta.gate === "pre_fs");
       return !already;
     },
     signature: () => "pre_fs",
-    run: async ({ entity, ev, actor }) => {
-      await conveneCommitteeSession(
-        { entityType: "opportunity", entityId: entity.id },
-        {
-          committeeKey: "route-steering-committee",
-          decisionMode: "agent_team",
-          gate: "pre_fs",
-          // Conditional seats (applies_when: track == ...) resolve by track.
-          track: ev.track ?? undefined,
-          actor,
-          source: "system",
-        },
-      );
+    run: async ({ run, entity, ev, actor }) => {
+      try {
+        await conveneCommitteeSession(
+          { entityType: "opportunity", entityId: entity.id },
+          {
+            committeeKey: "route-steering-committee",
+            decisionMode: "agent_team",
+            gate: "pre_fs",
+            // Conditional seats (applies_when: track == ...) resolve by track.
+            track: ev.track ?? undefined,
+            actor,
+            source: "system",
+          },
+        );
+      } catch (err) {
+        // Owner decision 10 (ADR-0196 amendment 2026-11-09): when the LLM is
+        // not configured, SKIP the convene — never convene a hollow
+        // deterministic session and never fail the run. Pause with a recorded
+        // notice (insertPauseNotification fires inside pauseRun) so the
+        // reviewer convenes later, once the provider is configured.
+        if (err instanceof CommitteeError && err.code === "llm_required") {
+          pauseRun(getRun(run.id), "committee_llm_required:pre_fs", ev.currentStage);
+          return { pausedReason: "committee_llm_required:pre_fs" };
+        }
+        throw err;
+      }
+      return undefined;
     },
   },
   {
@@ -294,7 +330,9 @@ const OPPORTUNITY_RULES: Rule[] = [
       if (entity.type !== "opportunity" || ev.terminated) return false;
       if (firstPendingGate(ev, OPPORTUNITY_GATES) !== null) return false;
       if (!ev.carrierScopeFinished) return false;
-      const row = getDb().query("SELECT project_id FROM opportunity WHERE id = ?").get(entity.id) as { project_id: string | null } | undefined;
+      const row = getDb().query("SELECT project_id FROM opportunity WHERE id = ?").get(entity.id) as
+        | { project_id: string | null }
+        | undefined;
       return !!row && row.project_id === null;
     },
     signature: () => "promote",
@@ -326,8 +364,13 @@ const PROJECT_RULES: Rule[] = [
     // every item lands 'proposed'; approval is the human boundary decision.
     key: "tailor_dd_checklist:S9",
     kind: "automatable",
-    when: ({ entity }) => count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL", entity.id) === 0,
-    signature: ({ entity }) => `${count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL", entity.id)}`,
+    when: ({ entity }) =>
+      count(
+        "SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL",
+        entity.id,
+      ) === 0,
+    signature: ({ entity }) =>
+      `${count("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ? AND target_id IS NULL", entity.id)}`,
     run: async ({ entity, actor }) => {
       await tailorDdChecklist(entity.id, { actor, source: "system" });
     },
@@ -406,7 +449,9 @@ export function maybeReopenStaleS12(
   evaluate: (entity: ProcessEntity) => Pick<ProcessEvaluation, "currentStage"> = evaluateProcess,
 ): PipelineRunRow {
   if (run.status !== "completed" || run.entity_type !== "project" || run.current_stage !== "S12") return run;
-  const project = getDb().query("SELECT status FROM md_project WHERE id = ?").get(run.entity_id) as { status: string } | undefined;
+  const project = getDb().query("SELECT status FROM md_project WHERE id = ?").get(run.entity_id) as
+    | { status: string }
+    | undefined;
   if (project?.status !== "open") return run;
   let stale = false;
   try {
@@ -465,7 +510,9 @@ export async function advancePipeline(pipelineRunId: string, opts: { actor?: str
     try {
       ev = evaluateProcess(entity);
     } catch (err) {
-      setRunState(run.id, "failed", { pausedReason: `entity_evaluation_failed:${(err as Error).message.slice(0, 120)}` });
+      setRunState(run.id, "failed", {
+        pausedReason: `entity_evaluation_failed:${(err as Error).message.slice(0, 120)}`,
+      });
       return { run: getRun(run.id), actions };
     }
     const actor = opts.actor ?? run.started_by;
@@ -513,6 +560,11 @@ export async function advancePipeline(pipelineRunId: string, opts: { actor?: str
 
     try {
       const outcome = await rule.run?.(ctx);
+      if (outcome?.pausedReason) {
+        pauseRun(run, outcome.pausedReason, ev.currentStage);
+        actions.push(`paused:${outcome.pausedReason}`);
+        return { run: getRun(run.id), actions };
+      }
       actions.push(`auto:${rule.key}`);
       if (outcome?.promotedProjectId) {
         run = openProjectSegment(run, outcome.promotedProjectId);
@@ -520,7 +572,10 @@ export async function advancePipeline(pipelineRunId: string, opts: { actor?: str
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setRunState(run.id, "failed", { currentStage: ev.currentStage, pausedReason: `automation_failed:${rule.key}:${message.slice(0, 160)}` });
+      setRunState(run.id, "failed", {
+        currentStage: ev.currentStage,
+        pausedReason: `automation_failed:${rule.key}:${message.slice(0, 160)}`,
+      });
       actions.push(`failed:${rule.key}`);
       return { run: getRun(run.id), actions };
     }
@@ -529,7 +584,10 @@ export async function advancePipeline(pipelineRunId: string, opts: { actor?: str
   // Safety cap exceeded — the automations kept changing state without ever
   // reaching a terminal state. Fail loudly, never spin silently (ADR-0102 §2).
   const current = getRun(run.id);
-  setRunState(run.id, "failed", { currentStage: current.current_stage, pausedReason: `max_iterations_exceeded:${MAX_PIPELINE_ITERATIONS}` });
+  setRunState(run.id, "failed", {
+    currentStage: current.current_stage,
+    pausedReason: `max_iterations_exceeded:${MAX_PIPELINE_ITERATIONS}`,
+  });
   return { run: getRun(run.id), actions };
 }
 
@@ -594,11 +652,15 @@ function resolveResponsibleUser(run: PipelineRunRow): string {
   const db = getDb();
   if (run.entity_type === "project") {
     const lead = db
-      .query("SELECT user_id FROM project_member WHERE project_id = ? AND revoked_at IS NULL AND project_role = 'lead' ORDER BY granted_at DESC LIMIT 1")
+      .query(
+        "SELECT user_id FROM project_member WHERE project_id = ? AND revoked_at IS NULL AND project_role = 'lead' ORDER BY granted_at DESC LIMIT 1",
+      )
       .get(run.entity_id) as { user_id: string } | undefined;
     if (lead) return lead.user_id;
   } else {
-    const creator = db.query("SELECT created_by FROM opportunity WHERE id = ?").get(run.entity_id) as { created_by: string } | undefined;
+    const creator = db.query("SELECT created_by FROM opportunity WHERE id = ?").get(run.entity_id) as
+      | { created_by: string }
+      | undefined;
     if (creator?.created_by) return creator.created_by;
   }
   return run.started_by;
@@ -615,12 +677,23 @@ function resolveResponsibleUser(run: PipelineRunRow): string {
 function openProjectSegment(opportunityRun: PipelineRunRow, projectId: string): PipelineRunRow {
   const db = getDb();
   const now = nowIso();
-  db.run("UPDATE pipeline_run SET status = 'completed', current_stage = 'S7', paused_reason = NULL, updated_at = ? WHERE id = ?", [now, opportunityRun.id]);
+  db.run(
+    "UPDATE pipeline_run SET status = 'completed', current_stage = 'S7', paused_reason = NULL, updated_at = ? WHERE id = ?",
+    [now, opportunityRun.id],
+  );
   const id = ulid();
   db.run(
     `INSERT INTO pipeline_run (id, entity_type, entity_id, industry_id, initiating_company_id, status, current_stage, paused_reason, started_by, started_at, updated_at)
      VALUES (?,'project',?,?,?,'running','S8',NULL,?,?,?)`,
-    [id, projectId, opportunityRun.industry_id, opportunityRun.initiating_company_id, opportunityRun.started_by, now, now],
+    [
+      id,
+      projectId,
+      opportunityRun.industry_id,
+      opportunityRun.initiating_company_id,
+      opportunityRun.started_by,
+      now,
+      now,
+    ],
   );
   return getRun(id);
 }
@@ -628,7 +701,9 @@ function openProjectSegment(opportunityRun: PipelineRunRow, projectId: string): 
 /** A promotion recorded outside this loop re-points the run the same way. */
 function maybeRePointAfterExternalPromotion(run: PipelineRunRow): PipelineRunRow | null {
   if (run.entity_type !== "opportunity") return null;
-  const row = getDb().query("SELECT project_id FROM opportunity WHERE id = ?").get(run.entity_id) as { project_id: string | null } | undefined;
+  const row = getDb().query("SELECT project_id FROM opportunity WHERE id = ?").get(run.entity_id) as
+    | { project_id: string | null }
+    | undefined;
   if (!row?.project_id) return null;
   return openProjectSegment(run, row.project_id);
 }
@@ -674,7 +749,11 @@ export async function resumePausedPipelines(opts: { actor?: string } = {}): Prom
     }
     const nextHumanKey = firstHumanRuleKey(entity, ev);
     if (nextHumanKey !== null && sameReason(nextHumanKey, run.paused_reason)) {
-      outcomes.push({ pipelineRunId: run.id, action: "left_paused", detail: `blocker unchanged: ${run.paused_reason}` });
+      outcomes.push({
+        pipelineRunId: run.id,
+        action: "left_paused",
+        detail: `blocker unchanged: ${run.paused_reason}`,
+      });
       continue;
     }
     db.run("UPDATE pipeline_run SET status = 'running', updated_at = ? WHERE id = ?", [nowIso(), run.id]);
@@ -697,10 +776,21 @@ function sameReason(a: string, b: string | null): boolean {
 /** Classification-only: the first HUMAN rule that would fire (no execution). */
 function firstHumanRuleKey(entity: ProcessEntity, ev: ProcessEvaluation): string | null {
   const placeholderRun: PipelineRunRow = {
-    id: "", entity_type: entity.type, entity_id: entity.id, industry_id: "", initiating_company_id: "",
-    status: "running", current_stage: null, paused_reason: null, started_by: "", started_at: "", updated_at: "",
+    id: "",
+    entity_type: entity.type,
+    entity_id: entity.id,
+    industry_id: "",
+    initiating_company_id: "",
+    status: "running",
+    current_stage: null,
+    paused_reason: null,
+    started_by: "",
+    started_at: "",
+    updated_at: "",
   };
-  const rule = rulesFor(entity).find((r) => r.kind === "human" && r.when({ run: placeholderRun, entity, ev, actor: "" }));
+  const rule = rulesFor(entity).find(
+    (r) => r.kind === "human" && r.when({ run: placeholderRun, entity, ev, actor: "" }),
+  );
   return rule ? humanKey(rule, ev) : null;
 }
 
@@ -712,7 +802,12 @@ export function pauseLinkFor(reason: string, run: Pick<PipelineRunRow, "entity_t
   // 캐리어 id를 알 때는 딜 캐리어 탭(/deals/{id}/sN)으로 직행하고(route-cleanup
   // design §4.3), 모르면 플랫 라우트로 보낸다 — 플랫 라우트는 이제 캐리어
   // 리다이렉트 스텁(CarrierGate)이라 어차피 같은 곳에 도달한다.
-  if (reason.startsWith("route_confirmation") || reason === "gate_decision:screening" || reason === "gate_decision:pre_fs" || reason.startsWith("promotion_")) {
+  if (
+    reason.startsWith("route_confirmation") ||
+    reason === "gate_decision:screening" ||
+    reason === "gate_decision:pre_fs" ||
+    reason.startsWith("promotion_")
+  ) {
     return opportunityId ? `/deals/${opportunityId}/s4` : "/route-decision";
   }
   if (reason.startsWith("manual_input")) return opportunityId ? `/deals/${opportunityId}/s2` : "/opportunities";

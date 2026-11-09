@@ -1,22 +1,24 @@
 // committee-agents — the pluggable member-executor seam for committee
-// deliberation (ADR-0097 §5). Live LLM agent calls are environment-dependent,
-// so the committee session engine takes its CallAgent strategy from here:
+// deliberation (ADR-0097 §5, owner decision 10 / ADR-0196 amendment
+// 2026-11-09). Committee meetings run only when the LLM is actually
+// available:
 //
-//   - "deterministic" (default): a local, dependency-free implementation that
-//     emits a role-templated position per agent (industry / region / quant /
-//     red team / domain expert). No external LLM, fully reproducible — the
-//     same implementation the boundary-#2 regression tests drive end-to-end.
-//   - "llm": the documented seam for a future LLM-backed implementation.
-//     Supply it via setCallAgentFactory() (server-side bootstrap) — this
-//     module deliberately contains no LLM client and no API key handling.
+//   - LLM (the only real-meeting path): registered at server bootstrap via
+//     setCallAgentFactory() when an LLM provider is configured. This module
+//     deliberately contains no LLM client and no API key handling.
+//   - Deterministic (the role-templated position emitter): NO longer a
+//     silent fallback. It is reachable only through explicit injection —
+//     the opts.callAgent seam (tests, dry-run tooling) or the CLI
+//     --deterministic flag.
+//
+// When no factory is registered, getCommitteeCallAgent() throws the
+// llm_required guidance instead of silently emitting template positions.
 //
 // One engine, two consumers: the steering-committee session and the /meeting
 // ad-hoc mode both call getCommitteeCallAgent() (ADR-0097 §7).
 
 import type { AgentCallResult, CallAgent } from "./agent-orchestrator.ts";
 import { isCommitteeResponsive } from "./committee-flags.ts";
-
-export type AgentMode = "deterministic" | "llm";
 
 interface RoleTemplate {
   domain: string;
@@ -200,27 +202,57 @@ type CallAgentFactory = () => CallAgent;
 let factory: CallAgentFactory | null = null;
 
 /**
- * The seam: a future LLM-backed implementation registers a factory here at
- * server bootstrap. Nothing else in this module needs to change — the
- * session engine and /meeting are agnostic to which strategy is active.
+ * The seam: the LLM-backed implementation registers a factory here at server
+ * bootstrap (instrumentation.ts, when the provider is configured). Nothing
+ * else in this module needs to change — the session engine and /meeting are
+ * agnostic to which strategy is active.
  */
 export function setCallAgentFactory(next: CallAgentFactory | null): void {
   factory = next;
 }
 
 /**
- * Whether the seats (and the ADR-0196 chair passes) reach the LLM: the mode
- * is opted in AND the bootstrap seam registered a factory. Tests never
- * register the factory, so deliberation stays deterministic there even with
- * a provider configured in the environment.
+ * Whether the seats (and the ADR-0196 chair passes) reach the LLM: the
+ * bootstrap seam registered a factory. Tests never register the real
+ * factory, so chair passes stay deterministic there.
  */
 export function committeeSeatsUseLlm(): boolean {
-  return (process.env.CO_NEWBIZ_COMMITTEE_AGENTS ?? "deterministic") === "llm" && factory !== null;
+  return factory !== null;
+}
+
+/**
+ * Owner decision 10 (2026-11-09, ADR-0196 amendment): committee meetings run
+ * only when the LLM is actually available. Without a configured provider,
+ * convening must STOP with this guidance instead of silently running
+ * template positions.
+ */
+export const COMMITTEE_LLM_GUIDANCE =
+  "Committee deliberation needs a configured LLM provider. Configure it, or convene a hybrid/human_only session for human-led review, or pass an explicit callAgent for an injected deterministic run.";
+
+/** Thrown by getCommitteeCallAgent when no provider is configured. */
+export class CommitteeLlmRequiredError extends Error {
+  readonly code = "llm_required";
+  constructor() {
+    super(COMMITTEE_LLM_GUIDANCE);
+  }
+}
+
+/** Whether an LLM-backed callAgent can actually be constructed right now. */
+export function committeeLlmAvailable(): boolean {
+  return factory !== null;
+}
+
+/**
+ * The local, dependency-free role-templated implementation (industry /
+ * region / quant / red team / domain expert). No external LLM, fully
+ * reproducible. NOT a silent fallback — reachable only via explicit
+ * injection (tests, dry-run tooling, the CLI --deterministic flag).
+ */
+export function deterministicCallAgent(): CallAgent {
+  return (agentKey, prompt) => Promise.resolve(positionFor(agentKey, prompt));
 }
 
 export function getCommitteeCallAgent(): CallAgent {
-  const mode = (process.env.CO_NEWBIZ_COMMITTEE_AGENTS ?? "deterministic") as AgentMode;
-  if (mode === "llm" && factory !== null) return factory();
-  // Default and fallback: the local deterministic implementation.
-  return (agentKey, prompt) => Promise.resolve(positionFor(agentKey, prompt));
+  if (factory !== null) return factory();
+  throw new CommitteeLlmRequiredError();
 }

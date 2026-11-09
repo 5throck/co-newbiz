@@ -12,7 +12,11 @@ import {
   type AgendaIssue,
 } from "../../app/web-next/lib/deliberation.ts";
 import { isCommitteeResponsive } from "../../app/web-next/lib/committee-flags.ts";
-import { getCommitteeCallAgent } from "../../app/web-next/lib/committee-agents.ts";
+import {
+  deterministicCallAgent,
+  getCommitteeCallAgent,
+  setCallAgentFactory,
+} from "../../app/web-next/lib/committee-agents.ts";
 import { parsePositionMeta } from "../../app/web-next/lib/committee-llm.ts";
 
 const ENV = "CO_NEWBIZ_COMMITTEE_RESPONSIVE";
@@ -20,6 +24,9 @@ let saved: string | undefined;
 beforeEach(() => {
   saved = process.env[ENV];
   delete process.env[ENV];
+  // Deterministic seats by explicit injection — getCommitteeCallAgent no
+  // longer falls back silently without a configured provider.
+  setCallAgentFactory(() => deterministicCallAgent());
 });
 afterEach(() => {
   if (saved === undefined) delete process.env[ENV];

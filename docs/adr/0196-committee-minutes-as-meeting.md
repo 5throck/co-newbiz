@@ -45,3 +45,15 @@ Committee minutes today are a seat scorecard plus raw positions. Seats write ind
 - M7 changes `procedures/**` (entity-ic-review v1.5.0, group-investment-review v1.4.0): policy impact analysis and a `project_policy_pin` check are required before merge; pinned in-flight projects keep their pinned versions unless a human re-pins.
 - `skills/meeting-facilitation` is `scope: common`: the template change goes upstream via `upstream_request_create` (filed by PM), with a project-local override marked `LOCAL-PATCH(upstream-request: <id>)` until it lands.
 - Cost: one agenda call (~600 tokens) and one minutes call (~2500 tokens) per session.
+
+## Amendment (2026-11-09): decision 10 — convening gated on LLM availability (owner decision, 2026-11-09 chat)
+
+Committee meetings run only when the LLM is actually available. The silent deterministic fallback no longer convenes a real meeting on template positions.
+
+- There is NO mode env var (`CO_NEWBIZ_COMMITTEE_AGENTS` is removed). The LLM-backed callAgent is registered at the provider seam (`setCallAgentFactory`, instrumentation bootstrap) whenever `CO_NEWBIZ_LLM_PROVIDER/_API_KEY/_MODEL` configure a provider.
+- `agent_team` and `hybrid` sessions convene only when an LLM-backed callAgent can actually be constructed; otherwise convening STOPS with `CommitteeError("llm_required", <guidance>)` ("지금은 소집할 수 없습니다"). Hybrid is refused at convene time so the session never opens and dies at advance.
+- The deterministic emitter is reachable ONLY via explicit injection: the `opts.callAgent` seam (tests, dry-run tooling) or the CLI `committee-deliberation.ts --deterministic` flag. The engine itself never silently falls back.
+- `human_only` sessions are unaffected — no agent calls, work with no LLM.
+- Pipeline auto-convene (M3) catches `llm_required` and skips the convene with a recorded pause notice (notification included), instead of failing the run or convening a hollow session.
+- An explicitly passed `opts.callAgent` is the caller's own choice and is never guarded.
+- Error surfacing: `llm_required` maps to a clear ko/en convening-stopped message in the locale catalog.

@@ -41,7 +41,7 @@ import {
   type MinutesDraft,
 } from "./committee-chair.ts";
 import type { CallAgent, EntityRef, Recommendation } from "./agent-orchestrator.ts";
-import { getCommitteeCallAgent } from "./committee-agents.ts";
+import { COMMITTEE_LLM_GUIDANCE, committeeLlmAvailable, getCommitteeCallAgent } from "./committee-agents.ts";
 import { COMMITTEE_REGISTRY } from "./committee-registry.generated.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
 
@@ -454,6 +454,19 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
     ...(opts.briefMd ? { brief_md: opts.briefMd } : {}),
   };
 
+  // Owner decision 10 (ADR-0196 amendment 2026-11-09): agent-backed
+  // deliberation convenes only when an LLM-backed callAgent can actually be
+  // constructed (the bootstrap factory is registered). An explicitly passed
+  // opts.callAgent is the caller's own choice (injected deterministic run,
+  // tests) and is not guarded here.
+  if (
+    (opts.decisionMode === "agent_team" || opts.decisionMode === "hybrid") &&
+    opts.callAgent === undefined &&
+    !committeeLlmAvailable()
+  ) {
+    throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
+  }
+
   // agent_team: agents propose through the full engine — one call, all
   // rounds, chair synthesis included (never a confirming record).
   if (opts.decisionMode === "agent_team") {
@@ -638,6 +651,12 @@ export async function advanceCommitteeSession(
   const { meta } = session;
   if (meta.synthesized) throw new CommitteeError("session_closed", "this session is already synthesized");
   const committee = getCommittee(meta.committee_key) as CommitteeDef;
+  // Same policy as convene (owner decision 10): the default agent path needs
+  // a configured provider; an injected callAgent is the caller's choice.
+  // human_only sessions run no agent rounds and stay exempt.
+  if (meta.decision_mode !== "human_only" && opts.callAgent === undefined && !committeeLlmAvailable()) {
+    throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
+  }
   const callAgent = opts.callAgent ?? getCommitteeCallAgent();
   const positions = loadPositions(sessionId);
   const currentRound = positions.length === 0 ? 0 : Math.max(...positions.map((p) => p.round));
