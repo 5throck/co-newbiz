@@ -1,9 +1,9 @@
 // committee-llm — the LLM-mode CallAgent implementation for committee
 // deliberation (ADR-0097 §5, the seam documented in lib/committee-agents.ts).
-// Registered at server bootstrap (instrumentation.ts) when
-// CO_NEWBIZ_COMMITTEE_AGENTS=llm AND the multi-provider LLM client
-// (lib/llm.ts, ADR-0074) is configured; without both, deliberation stays on
-// the deterministic templates — the boundary-#2 regression tests and any
+// Registered at server bootstrap (instrumentation.ts) when the multi-provider
+// LLM client (lib/llm.ts, ADR-0074) is configured; without it, deliberation
+// refuses with llm_required (ADR-0196 decision 10 — no mode env var). The
+// boundary-#2 regression tests and any
 // LLM-less deployment must keep working unchanged.
 //
 // Contract in/out (agent-orchestrator.ts): (agentKey, prompt) →
