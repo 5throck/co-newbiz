@@ -6,25 +6,31 @@
 import { committeeSessionForOpportunity } from "../../../../../../../lib/committee-session.ts";
 import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { CommitteeError, advanceCommitteeSession } from "../../../../../../../lib/committee-session.ts";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string; sessionId: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Committee facilitation requires the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Committee facilitation requires the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id, sessionId } = await params;
   const db = getDb();
   // Session binding (opportunity + committee stage + promoted-project visibility).
-  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true }))) return notFound();
+  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true })))
+    return notFound();
   try {
-    const result = await advanceCommitteeSession(sessionId, { actor: ctx.userId });
+    // ADR-0196 §2.2 (decision 3): a hybrid/human_only convener may replace
+    // the chair agenda before round 2 via the optional `agenda` body.
+    const body = (await request.json().catch(() => ({}))) as { agenda?: unknown } | null;
+    const result = await advanceCommitteeSession(sessionId, { actor: ctx.userId, agenda: body?.agenda });
     appendAudit(db, {
       actor: ctx.userId,
       action: `committee_session.${result.status}`,

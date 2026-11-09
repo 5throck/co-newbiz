@@ -122,6 +122,37 @@ export function parsePositionMeta(text: string, opts: { knownSeats?: readonly st
   }
 }
 
+/**
+ * Chair agenda pass caller (ADR-0196 §2.2): committee.agenda system prompt,
+ * temperature 0.2, ~600 output tokens. Returns the RAW model text — parsing,
+ * the 2–5 issue clamp, and the deterministic fallback live in
+ * committee-chair.ts so the fallback rule is testable without an LLM.
+ * Throws on any LLM error (including budget/rate limit) — the caller falls
+ * back; the run never fails because of a chair pass.
+ */
+export function makeLlmChairAgenda(): (material: string) => Promise<string> {
+  return async (material) =>
+    complete([systemMessage("committee.agenda"), { role: "user", content: material }], {
+      temperature: 0.2,
+      maxTokens: 600,
+      agent: promptAgent("committee.agenda", { key: "process-governance-manager" }),
+    });
+}
+
+/**
+ * Chair minutes pass caller (ADR-0196 §2.3): committee.minutes system
+ * prompt, temperature 0.2, ~2500 output tokens. Same raw-text contract as
+ * makeLlmChairAgenda.
+ */
+export function makeLlmChairMinutes(): (material: string) => Promise<string> {
+  return async (material) =>
+    complete([systemMessage("committee.minutes"), { role: "user", content: material }], {
+      temperature: 0.2,
+      maxTokens: 2500,
+      agent: promptAgent("committee.minutes", { key: "process-governance-manager" }),
+    });
+}
+
 export function makeLlmCommitteeAgent(): (agentKey: string, prompt: string) => Promise<AgentCallResult> {
   return async (agentKey, prompt) => {
     const user = `당신은 ${agentKey} 입니다.\n\n${prompt}`;

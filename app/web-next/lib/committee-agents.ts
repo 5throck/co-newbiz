@@ -208,6 +208,16 @@ export function setCallAgentFactory(next: CallAgentFactory | null): void {
   factory = next;
 }
 
+/**
+ * Whether the seats (and the ADR-0196 chair passes) reach the LLM: the mode
+ * is opted in AND the bootstrap seam registered a factory. Tests never
+ * register the factory, so deliberation stays deterministic there even with
+ * a provider configured in the environment.
+ */
+export function committeeSeatsUseLlm(): boolean {
+  return (process.env.CO_NEWBIZ_COMMITTEE_AGENTS ?? "deterministic") === "llm" && factory !== null;
+}
+
 export function getCommitteeCallAgent(): CallAgent {
   const mode = (process.env.CO_NEWBIZ_COMMITTEE_AGENTS ?? "deterministic") as AgentMode;
   if (mode === "llm" && factory !== null) return factory();

@@ -81,8 +81,8 @@ call_sites:
     json_parse_migration: "Deferred: chain steps feed raw reply text to later steps; stage-reco scores schema validity of the current replies but has no LLM baseline yet."
     suites: [stage-reco]
   - file: app/web-next/lib/committee-llm.ts
-    sites: 1
-    json_parse_migration: "Deferred: output is markdown plus a position-meta tail, not a JSON value; the committee suite scores that tail. Needs a design change, not a drop-in swap."
+    sites: 3
+    json_parse_migration: "Deferred: output is markdown plus a position-meta tail, not a JSON value; the committee suite scores that tail. ADR-0196 phase B adds the chair agenda/minutes passes (committee-chair.ts) — same recorder-pattern seam, JSON output parsed in committee-chair, deterministic fallback when the LLM path fails."
     suites: [committee]
   - file: app/web-next/lib/company-profile-crosscheck.ts
     sites: 1

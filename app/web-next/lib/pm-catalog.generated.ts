@@ -51,7 +51,7 @@ export const CATALOG_VERSION = "1.0.0";
 export const SPEC_VERSION = "2.20.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "a566140718e029e0",
+  "promptsJson": "a82b1be02f614a24",
   "flowSpecYaml": "d2789c7b1f65127e",
   "agentRoster": "4f4cf81169a7e46f"
 };
@@ -472,11 +472,27 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
     "stageId": null,
     "purpose": "플로우 콘솔 개선 제안 — 프롬프트 개선 초안 또는 에이전트 재배정 후보를 근거와 함께 산출(제안 전용)",
     "trackScope": []
+  },
+  "committee.agenda": {
+    "promptKey": "committee.agenda",
+    "agentKey": null,
+    "activityId": null,
+    "stageId": null,
+    "purpose": "Chair agenda pass draft - 2-5 discussion issues, proposal only (ADR-0196)",
+    "trackScope": []
+  },
+  "committee.minutes": {
+    "promptKey": "committee.minutes",
+    "agentKey": null,
+    "activityId": null,
+    "stageId": null,
+    "purpose": "Chair minutes pass draft - structured minutes JSON, proposal only (ADR-0196)",
+    "trackScope": []
   }
 };
 
 /** agent=null 동적 항목 — 실행 시점 활동 맥락(호출자가 선언한 agent 메타)으로 귀속된다. */
-export const DYNAMIC_AGENT_PROMPTS: PromptKey[] = ["s8.business_case_prose","committee.position"];
+export const DYNAMIC_AGENT_PROMPTS: PromptKey[] = ["s8.business_case_prose","committee.position","committee.agenda","committee.minutes"];
 
 /** 문서화된 이중 배정 — 유일한 "보조 관점" 예외 (근거 필수, 신규는 게이트 판정 요구). */
 export const DUAL_ASSIGNMENTS: DualAssignment[] = [

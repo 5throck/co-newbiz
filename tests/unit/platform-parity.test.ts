@@ -90,8 +90,12 @@ describe("platform parity: pm-catalog.generated.ts vs the roster (ADR-0183 D3)",
       if (entry.agentKey !== null) {
         expect(AGENT_KEYS.has(entry.agentKey)).toBeTrue();
       } else {
-        // Dynamic entries are allowed only as the explicitly-known agent=null pair.
-        expect(["committee.position", "s8.business_case_prose"]).toContain(promptKey);
+        // Dynamic entries are allowed only as the explicitly-known agent=null pairs
+        // (committee.position seats the agent at call time; ADR-0196 phase B adds
+        // the chair passes, which seat the process-governance-manager chair voice).
+        expect(["committee.position", "committee.agenda", "committee.minutes", "s8.business_case_prose"]).toContain(
+          promptKey,
+        );
       }
     }
   });
@@ -126,10 +130,11 @@ describe("platform parity: variant audit hook wiring (ADR-0183 D3)", () => {
       script_manifest?: { local?: Array<{ name?: string; path?: string }> };
     };
     const declared = (manifest.script_manifest?.local ?? []).filter(
-      (e) => e?.name === "audit-variant" && typeof e.path === "string" && e.path,
+      (e): e is { name: string; path: string } =>
+        e?.name === "audit-variant" && typeof e.path === "string" && e.path !== "",
     );
     expect(declared.length).toBe(1);
-    expect(readFileSync(join(ROOT, declared[0]!.path!), "utf-8")).toContain("@version");
+    expect(readFileSync(join(ROOT, declared[0].path), "utf-8")).toContain("@version");
   });
 });
 

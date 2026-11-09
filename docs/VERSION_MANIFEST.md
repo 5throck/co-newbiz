@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-08T14:41:41.887Z
+**Generated**: 2026-11-09T03:46:12.019Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -226,7 +226,7 @@
 | check-wiki-nav.ts | 1.0.2 | scripts/co-newbiz/check-wiki-nav.ts | N/A |
 | cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | N/A |
 | clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | N/A |
-| committee-deliberation.ts | 1.1.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
+| committee-deliberation.ts | 1.2.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
 | common.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/common.ts | N/A |
 | compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | N/A |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |

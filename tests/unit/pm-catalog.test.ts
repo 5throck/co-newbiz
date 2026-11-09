@@ -59,12 +59,18 @@ describe("pm catalog (ADR-0183 D1)", () => {
     }
   });
 
-  test("dynamic entries are exactly the two known agent=null prompts", () => {
+  test("dynamic entries are exactly the known agent=null prompts", () => {
     const nullAgentKeys = Object.values(PM_CATALOG)
       .filter((e) => e.agentKey === null)
       .map((e) => e.promptKey)
       .sort();
-    expect(nullAgentKeys).toEqual(["committee.position", "s8.business_case_prose"]);
+    // ADR-0196 phase B adds the chair agenda/minutes passes (dynamic chair voice).
+    expect(nullAgentKeys).toEqual([
+      "committee.agenda",
+      "committee.minutes",
+      "committee.position",
+      "s8.business_case_prose",
+    ]);
     expect([...DYNAMIC_AGENT_PROMPTS].sort()).toEqual(nullAgentKeys);
   });
 
@@ -78,13 +84,15 @@ describe("pm catalog (ADR-0183 D1)", () => {
       }
       const stage = specStages.find((s) => s.id === entry.stageId);
       expect(stage).toBeDefined();
-      const activity = stage!.activities?.find((a) => a.id === entry.activityId);
+      if (!stage) continue;
+      const activity = stage.activities?.find((a) => a.id === entry.activityId);
       expect(activity).toBeDefined();
+      if (!activity) continue;
       // 활동 에이전트는 로스터에 있어야 한다 — 프롬프트 에이전트 일치는 아래
       // 전용 테스트(D2 규칙)가 검증한다.
-      expect(roster.has(activity!.agent)).toBeTrue();
+      expect(roster.has(activity.agent)).toBeTrue();
       // trackScope는 단계 applicableTracks의 결정론 투영이다.
-      expect(entry.trackScope).toEqual(stage!.applicableTracks ?? []);
+      expect(entry.trackScope).toEqual(stage.applicableTracks ?? []);
     }
   });
 
@@ -98,16 +106,18 @@ describe("pm catalog (ADR-0183 D1)", () => {
       if (entry.activityId === null || entry.agentKey === null) continue;
       const stage = specStages.find((s) => s.id === entry.stageId);
       expect(stage).toBeDefined();
-      const activity = stage!.activities?.find((a) => a.id === entry.activityId);
+      if (!stage) continue;
+      const activity = stage.activities?.find((a) => a.id === entry.activityId);
       expect(activity).toBeDefined();
+      if (!activity) continue;
       const specRef = `${entry.stageId}.${entry.activityId}`;
       if (!dual.has(`${entry.promptKey}\u0000${specRef}`)) {
-        expect(entry.agentKey).toBe(activity!.agent);
+        expect(entry.agentKey).toBe(activity.agent);
       }
     }
     // 유일한 이중 배정은 실제로 어긋난다 — 예외가 유명무실하지 않음을 보장.
     const insight = PM_CATALOG["s11.integrated_insight"];
-    const icOwner = specStages.find((s) => s.id === "S11")!.activities?.find((a) => a.id === "ic-preparation")?.agent;
+    const icOwner = specStages.find((s) => s.id === "S11")?.activities?.find((a) => a.id === "ic-preparation")?.agent;
     expect(insight.agentKey).not.toBe(icOwner);
   });
 
@@ -123,7 +133,7 @@ describe("pm catalog (ADR-0183 D1)", () => {
       expect(d.rationale.trim().length).toBeGreaterThan(0);
       expect(d.activity).toMatch(/^S\d+\.[a-z-]+$/);
       const stage = specStages.find((s) => s.id === "S11");
-      expect(stage!.activities?.some((a) => a.id === "ic-preparation")).toBeTrue();
+      expect(stage?.activities?.some((a) => a.id === "ic-preparation")).toBeTrue();
     }
   });
 
@@ -140,11 +150,11 @@ describe("pm catalog (ADR-0183 D1)", () => {
       const dot = e.ref.indexOf(".");
       const stage = specStages.find((s) => s.id === e.ref.slice(0, dot));
       expect(stage).toBeDefined();
-      const activity = stage!.activities?.find((a) => a.id === e.ref.slice(dot + 1));
+      const activity = stage?.activities?.find((a) => a.id === e.ref.slice(dot + 1));
       expect(activity).toBeDefined();
-      expect(activity!.agent).toBe(e.agent);
+      expect(activity?.agent).toBe(e.agent);
       expect(["greenfield-agent", "brownfield-agent"]).toContain(e.agent);
-      expect([...(stage!.applicableTracks ?? [])].sort()).toEqual(["brownfield", "greenfield"]);
+      expect([...(stage?.applicableTracks ?? [])].sort()).toEqual(["brownfield", "greenfield"]);
       expect(e.note.trim().length).toBeGreaterThan(0);
       expect(e.decision.trim().length).toBeGreaterThan(0);
     }
