@@ -418,7 +418,7 @@ describe("GET gate-snapshot", () => {
     // committee session rule is the only reason the GO is refused.
     clearSnapshotCache();
     const pre = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
-    for (const t of pre.snapshot.kill.triggered.filter((x) => x.binding)) {
+    for (const t of pre.snapshot.kill.triggered.filter((x) => (x as { binding?: boolean }).binding)) {
       const [procedure, criterion] = [t.key.slice(0, t.key.indexOf(":")), t.key.slice(t.key.indexOf(":") + 1)];
       db.run(
         "INSERT INTO kill_criteria_override (id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at) VALUES (?,?,?,?,?,?,?,?)",
