@@ -66,6 +66,36 @@ export type MinutesDiscussion = z.infer<typeof minutesDiscussionSchema>;
 export type CommitteeMinutesJson = z.infer<typeof committeeMinutesSchema>;
 
 /**
+ * Tolerant pre-normalization for model output that deviates from the stored
+ * shape in the two ways models actually deviate: a separate top-level
+ * `resolutions` array instead of the per-item `resolution` field, and items
+ * missing `resolution` altogether (defaulted to "unresolved"). Unknown keys
+ * are dropped by zod; this only repairs shape, never content.
+ */
+function normalizeMinutesDraft(raw: unknown): unknown {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const draft = { ...(raw as Record<string, unknown>) };
+  const resolutions = Array.isArray(draft.resolutions) ? (draft.resolutions as Array<Record<string, unknown>>) : [];
+  const byIssue = new Map(
+    resolutions.filter((r) => typeof r.issue_id === "string").map((r) => [r.issue_id as string, r]),
+  );
+  delete draft.resolutions;
+  if (Array.isArray(draft.discussion)) {
+    draft.discussion = (draft.discussion as Array<Record<string, unknown>>).map((d) => {
+      if (d.resolution === undefined) {
+        const r = byIssue.get(d.issue_id as string);
+        if (r?.resolution !== undefined) d.resolution = r.resolution;
+        else d.resolution = "unresolved";
+      }
+      if (d.resolution_note === undefined && byIssue.get(d.issue_id as string)?.note !== undefined)
+        d.resolution_note = byIssue.get(d.issue_id as string)?.note;
+      return d;
+    });
+  }
+  return draft;
+}
+
+/**
  * Resolve a parsed minutes draft against the session it claims to describe:
  * drops exchanges whose seat never spoke or whose position_ref does not
  * resolve to a session position id, and discussion entries whose issue is not
@@ -76,7 +106,7 @@ export function resolveMinutesDraft(
   raw: unknown,
   ctx: { knownSeats: readonly string[]; positionIds: readonly string[]; agendaIds: readonly string[] },
 ): CommitteeMinutesJson | null {
-  const parsed = committeeMinutesSchema.safeParse(raw);
+  const parsed = committeeMinutesSchema.safeParse(normalizeMinutesDraft(raw));
   if (!parsed.success) return null;
   const draft = parsed.data;
   const seats = new Set(ctx.knownSeats);

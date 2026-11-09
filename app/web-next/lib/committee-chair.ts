@@ -328,8 +328,15 @@ export async function runChairMinutes(opts: {
         agendaIds: opts.agenda.map((a) => a.id),
       });
       if (json) fallback = false;
-    } catch {
-      json = null; // budget/rate-limit/outage → deterministic fallback
+    } catch (err) {
+      // budget/rate-limit/outage or unparseable output → deterministic fallback.
+      // Logged, never silent: a systematically failing minutes pass would
+      // otherwise look like a working (but empty) minutes surface.
+      console.warn(
+        "[committee-chair] minutes LLM pass failed, using deterministic fallback:",
+        err instanceof Error ? err.message : String(err),
+      );
+      json = null;
     }
   }
   json ??= computeMinutesFallback(opts.agenda, opts.rows);
