@@ -1375,6 +1375,11 @@
     "classification": "분류",
     "close": "닫기",
     "collapse": "접기",
+    "committee": {
+      "conveneFailed": "위원회 소집 실패",
+      "conveningProgress": "심의 진행 중... 완료되면 자동으로 표시됩니다.",
+      "conveningTimeout": "심의가 10분 안에 끝나지 않았습니다 — 소집 이력에서 상태를 확인해 주세요."
+    },
     "committeeMinutes": {
       "actionItems": "실행 항목",
       "agenda": "안건 쟁점 (의장 제안)",

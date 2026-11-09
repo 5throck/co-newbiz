@@ -150,7 +150,14 @@ export function CommitteePanel({
   const loadSessions = useCallback(() => {
     api
       .get<{
-        sessions: Array<{ sessionId: string; meta: SessionTranscript["meta"]; status: string; startedAt: string }>;
+        sessions: Array<{
+          sessionId: string;
+          meta: SessionTranscript["meta"];
+          status: string;
+          startedAt: string;
+          convening?: boolean;
+          conveningError?: string | null;
+        }>;
       }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`)
       .then((r) => setSessions(r.data.sessions))
       .catch(() => setSessions([]));
@@ -172,6 +179,16 @@ export function CommitteePanel({
     loadSessions();
   }, [loadSessions]);
 
+  // Post-convene refresh — the same follow-up the synchronous path always did
+  // (history row refresh + auto-expand + transcript load).
+  function finalizeConvene(sessionId: string) {
+    setNotice(`위원회 세션이 소집되었습니다 (${sessionId.slice(-6)}).`);
+    loadSessions();
+    loadTranscript(sessionId);
+    setExpandedSessionId(sessionId); // 새 세션은 자동으로 펼친다
+    setHistoryOpen(true); // 방금 소집한 행을 바로 보여준다
+  }
+
   async function convene() {
     if (busy) return;
     setBusy(true);
@@ -184,7 +201,7 @@ export function CommitteePanel({
         const fresh = await beforeConvene();
         if (fresh) effectiveBrief = fresh;
       }
-      const r = await api.post<{ sessionId: string }>(
+      const r = await api.post<{ sessionId: string; status: string }>(
         `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`,
         {
           committeeKey,
@@ -194,11 +211,39 @@ export function CommitteePanel({
           ...(effectiveBrief ? { briefMd: effectiveBrief } : {}),
         },
       );
-      setNotice(`위원회 세션이 소집되었습니다 (${r.data.sessionId.slice(-6)}).`);
-      loadSessions();
-      loadTranscript(r.data.sessionId);
-      setExpandedSessionId(r.data.sessionId); // 새 세션은 자동으로 펼친다
-      setHistoryOpen(true); // 방금 소집한 행을 바로 보여준다
+      if (r.data.status === "convening") {
+        // Async convene contract (202): the deliberation runs server-side in
+        // the background — poll the session list until it leaves the convening
+        // state (done or failed), then run the same refresh the synchronous
+        // path did. Hard stop after ~10 minutes.
+        setNotice(tr("common.committee.conveningProgress"));
+        const deadline = Date.now() + 10 * 60 * 1000;
+        let settled: { ok: boolean; error?: string } | null = null;
+        while (Date.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          try {
+            const list = await api.get<{
+              sessions: Array<{ sessionId: string; convening?: boolean; conveningError?: string | null }>;
+            }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`);
+            const s = list.data.sessions.find((x) => x.sessionId === r.data.sessionId);
+            if (s && !s.convening) {
+              settled = s.conveningError ? { ok: false, error: s.conveningError } : { ok: true };
+              break;
+            }
+          } catch {
+            // transient poll failure — keep polling until the deadline
+          }
+        }
+        if (settled?.ok) {
+          finalizeConvene(r.data.sessionId);
+        } else if (settled && !settled.ok) {
+          setError(settled.error ?? tr("common.committee.conveneFailed"));
+        } else {
+          setError(tr("common.committee.conveningTimeout"));
+        }
+      } else {
+        finalizeConvene(r.data.sessionId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "위원회 소집 실패");
     } finally {

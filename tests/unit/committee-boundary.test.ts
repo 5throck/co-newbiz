@@ -91,22 +91,42 @@ function confirmingRowCounts(oppId: string): { gate: number; route: number; targ
   };
 }
 
+/**
+ * Async convene contract (202): the deliberation runs in the background of the
+ * SAME test process — poll the session meta until it leaves the convening
+ * state, then continue with the assertions.
+ */
+async function waitForSessionSettled(sessionId: string): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const row = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(sessionId) as { meta_json: string };
+    const meta = JSON.parse(row.meta_json) as { convening?: boolean };
+    if (!meta.convening) return meta;
+    await Bun.sleep(20);
+  }
+  throw new Error(`committee session ${sessionId} did not settle in time`);
+}
+
 describe("committee deliberation boundary (ADR-0097 §8)", () => {
   test("agent_team session proposes; nothing confirms without a human", async () => {
     const oppId = await createOpportunity();
 
-    // Convene: full engine run at convene time with the deterministic
-    // member executor (risk-officer = kill + veto dissent; others go).
+    // Convene: 202 + background deliberation with the deterministic member
+    // executor (risk-officer = kill + veto dissent; others go).
     const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {
       method: "POST",
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "agent_team" }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
     const { data } = await res.json();
     expect(data.decisionMode).toBe("agent_team");
-    expect(data.evaluation).not.toBeNull();
-    const evaluationId = data.evaluation.gateEvaluationId as string;
+    expect(data.status).toBe("convening");
+    const meta = await waitForSessionSettled(data.sessionId as string);
+    expect(meta.convening_error).toBeUndefined();
+    expect(meta.synthesized).toBe(true);
+    const evaluationId = meta.evaluation_id as string;
+    expect(evaluationId).toBeTruthy();
 
     // BOUNDARY #2: no confirming record may exist from the session.
     expect(confirmingRowCounts(oppId)).toEqual({ gate: 0, route: 0, target: 0 });
@@ -189,8 +209,9 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "target-longlist-shortlist-committee", decisionMode: "human_only" }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
     const { data } = await res.json();
+    expect(data.status).toBe("ready"); // human_only convenes synchronously — no background deliberation
     const transcript = await req(`/api/opportunities/${oppId}/committee-sessions/${data.sessionId}`, {
       headers: { cookie: analystCookie },
     });
@@ -207,8 +228,9 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "hybrid" }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
     const sessionId = (await res.json()).data.sessionId as string;
+    await waitForSessionSettled(sessionId); // hybrid round-1 agent positions run in the background
 
     // Round 1 has agent positions only — advance is refused.
     const advance1 = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/advance`, {
@@ -279,7 +301,7 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "human_only" }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
     const sessionId = (await res.json()).data.sessionId as string;
 
     // The session belongs to oppA's process_run — under oppB's path it is

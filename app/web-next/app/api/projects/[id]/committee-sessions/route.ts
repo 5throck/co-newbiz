@@ -12,8 +12,9 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import {
   DECISION_MODES,
   CommitteeError,
-  conveneCommitteeSession,
+  createCommitteeSession,
   listCommitteeSessions,
+  runCommitteeSession,
   type DecisionMode,
 } from "../../../../../lib/committee-session.ts";
 
@@ -72,7 +73,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!project) return notFound();
 
   try {
-    const result = await conveneCommitteeSession(
+    // Async convene contract (same as the opportunity-side POST): fast create,
+    // background deliberation, 202 — see the opportunity route comment.
+    const created = createCommitteeSession(
       { entityType: "project", entityId: id },
       {
         committeeKey: body.committeeKey,
@@ -88,10 +91,35 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     appendAudit(db, {
       actor: ctx.userId,
       action: "committee_session.convene",
-      target: `${id}:${result.sessionId}:${body.committeeKey}`,
+      target: `${id}:${created.sessionId}:${body.committeeKey}`,
       now: new Date().toISOString(),
     });
-    return ok(result, 201);
+    if (created.convening) {
+      // Fire-and-forget: runCommitteeSession marks meta.convening_error +
+      // process_run.status 'failed' on failure (never hangs silently); this
+      // catch only logs the rethrown error.
+      void runCommitteeSession(created.sessionId).catch((err: unknown) => {
+        console.error(`committee session ${created.sessionId} deliberation failed:`, err);
+      });
+      return ok(
+        {
+          sessionId: created.sessionId,
+          committeeKey: created.committeeKey,
+          decisionMode: created.decisionMode,
+          status: "convening",
+        },
+        202,
+      );
+    }
+    return ok(
+      {
+        sessionId: created.sessionId,
+        committeeKey: created.committeeKey,
+        decisionMode: created.decisionMode,
+        status: "ready",
+      },
+      202,
+    );
   } catch (err) {
     if (err instanceof CommitteeError) return badRequest(err.code, err.message);
     return badRequest("convene_failed", err instanceof Error ? err.message : String(err));

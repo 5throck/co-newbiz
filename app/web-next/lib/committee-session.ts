@@ -93,6 +93,13 @@ export interface SessionMeta {
    * max(agent_position.round) — otherwise a 2-round human_only session
    * never gets its round-2 positions and never reaches synthesis. */
   current_round?: number;
+  /** Async convening (ADR tunnel-timeout split): deliberation has been kicked
+   * off in the background and has not finished (or failed) yet. Cleared by
+   * runCommitteeSession on completion. */
+  convening?: boolean;
+  /** Why the background deliberation failed (convening_error contract) —
+   * surfaced by the list endpoint so the UI never hangs silently. */
+  convening_error?: string;
 }
 
 let cachedRegistry: Record<string, CommitteeDef> | null = null;
@@ -446,12 +453,19 @@ function loadSpecVersion(): string {
 }
 
 /**
- * Convene a committee session. agent_team deliberates end-to-end now (the
- * engine's full runDeliberationRounds — all rounds, synthesis, dissent);
- * human_only/hybrid create the session shell and (hybrid) run round 1 agent
- * positions, then wait for human positions.
+ * Create (convene) a committee session — the synchronous, fast half of the
+ * split convene path. Runs ALL validation (committee key, decision mode,
+ * llm_required guard, agent_team membership) BEFORE any insert, then inserts
+ * the session run. For the LLM-backed modes (agent_team / hybrid) the row is
+ * marked meta.convening = true and the deliberation is executed later by
+ * runCommitteeSession (the Cloudflare-tunnel 100s proxy timeout makes the
+ * synchronous full deliberation structurally impossible over the tunnel).
+ * process_run.status semantics stay untouched ("running" at creation,
+ * exactly as insertProcessRun writes today) — the convening state lives in
+ * meta_json only, and listCommitteeSessions exposes it through
+ * session.convening / session.conveningError.
  */
-export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOpts): Promise<ConveneResult> {
+export function createCommitteeSession(entity: EntityRef, opts: ConveneOpts): CreateSessionResult {
   const committee = getCommittee(opts.committeeKey);
   if (!committee) {
     throw new CommitteeError(
@@ -465,6 +479,19 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
       `committee '${opts.committeeKey}' allows [${committee.decision_modes_allowed.join(", ")}] — '${opts.decisionMode}' is not allowed`,
     );
   }
+  // Owner decision 10 (ADR-0196 amendment 2026-11-09): agent-backed
+  // deliberation convenes only when an LLM-backed callAgent can actually be
+  // constructed (the bootstrap factory is registered). An explicitly passed
+  // opts.callAgent is the caller's own choice (injected deterministic run,
+  // tests) and is not guarded here. Fires BEFORE the session row exists, so
+  // an unconfigured LLM never yields a 202.
+  if (
+    (opts.decisionMode === "agent_team" || opts.decisionMode === "hybrid") &&
+    opts.callAgent === undefined &&
+    !committeeLlmAvailable()
+  ) {
+    throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
+  }
   // S7 committee (applies_to brownfield_target) convenes the target_screening
   // gate — the same key the human GateDecisionPanel below records (0111).
   const gate = opts.gate ?? (committee.applies_to === "brownfield_target" ? "target_screening" : "pre_fs");
@@ -476,87 +503,141 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
     ...(opts.track ? { track: opts.track } : {}),
     ...(opts.briefMd ? { brief_md: opts.briefMd } : {}),
   };
-
-  // Owner decision 10 (ADR-0196 amendment 2026-11-09): agent-backed
-  // deliberation convenes only when an LLM-backed callAgent can actually be
-  // constructed (the bootstrap factory is registered). An explicitly passed
-  // opts.callAgent is the caller's own choice (injected deterministic run,
-  // tests) and is not guarded here.
-  if (
-    (opts.decisionMode === "agent_team" || opts.decisionMode === "hybrid") &&
-    opts.callAgent === undefined &&
-    !committeeLlmAvailable()
-  ) {
-    throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
-  }
-
-  // agent_team: agents propose through the full engine — one call, all
-  // rounds, chair synthesis included (never a confirming record).
+  // agent_team needs agent members — validated at create time so a bad
+  // request never reaches the async half.
   if (opts.decisionMode === "agent_team") {
-    const agents = seatsForSession(committee, opts.track)
-      .filter((m) => m.type === "agent")
-      .map((m) => ({ agentKey: m.key }));
+    const agents = seatsForSession(committee, opts.track).filter((m) => m.type === "agent");
     if (agents.length === 0) {
       throw new CommitteeError(
         "no_agent_members",
         `committee '${opts.committeeKey}' has no agent members for agent_team mode`,
       );
     }
-    const topic = sessionTopic(committee, opts);
-    const result = await runDeliberationRounds(entity, {
-      committeeKey: opts.committeeKey,
-      agents,
-      rounds: committee.rounds,
-      topic,
-      callAgent: opts.callAgent ?? getCommitteeCallAgent(),
-      gate,
-      actor: opts.actor,
-      stage: opts.committeeKey,
-      source: opts.source ?? "web",
-      chair: committee.chair,
-      // ADR-0196 phase B: the chair agenda pass after round 1 and the
-      // minutes pass at synthesis. Both compute + return; persistence into
-      // meta_json happens in the writeMeta below (one writer per meta key).
-      chairAgendaPass:
-        committee.rounds >= 2 ? async (ctx) => runAgendaPassForRun(ctx.processRunId, ctx.topic, 1) : undefined,
-      chairMinutesPass: async (ctx) => runMinutesPassForRun(ctx.processRunId, ctx.topic, ctx.agenda),
-    });
-    // Mark the engine-created run as this session (meta_json, 0067) and
-    // persist the chair-pass results with it.
-    writeMeta(result.processRunId, {
-      ...meta,
-      synthesized: true,
-      evaluation_id: result.evaluation?.gateEvaluationId,
-      ...(result.agenda ? { agenda: result.agenda.agenda, agenda_meta: toAgendaMeta(result.agenda) } : {}),
-      ...(result.minutesDraft ? { minutes_draft: toMinutesDraft(result.minutesDraft) } : {}),
-    });
-    return {
-      sessionId: result.processRunId,
-      committeeKey: opts.committeeKey,
-      decisionMode: opts.decisionMode,
-      evaluation: result.evaluation
-        ? {
-            gateEvaluationId: result.evaluation.gateEvaluationId,
-            gate: result.evaluation.gate,
-            recommendation: result.evaluation.recommendation,
-            dissentJson: result.evaluation.dissentJson,
-          }
-        : null,
-    };
   }
+  const needsRun = opts.decisionMode !== "human_only";
+  const runId = createSessionRun(entity, committee, opts, needsRun ? { ...meta, convening: true } : meta);
+  return {
+    sessionId: runId,
+    committeeKey: opts.committeeKey,
+    decisionMode: opts.decisionMode,
+    convening: needsRun,
+  };
+}
 
-  const runId = createSessionRun(entity, committee, opts, meta);
+export interface CreateSessionResult {
+  sessionId: string;
+  committeeKey: string;
+  decisionMode: DecisionMode;
+  /** true = deliberation runs in the background (runCommitteeSession). */
+  convening: boolean;
+}
 
-  // hybrid: round 1 agent positions run at convene (engine round semantics:
-  // independent positions); humans join via submitHumanPosition per round.
-  if (opts.decisionMode === "hybrid") {
-    const agentSeats = seatsForSession(committee, opts.track).filter((m) => m.type === "agent");
-    const topic = sessionTopic(committee, opts);
+/**
+ * Execute the background half of the split convene path: the full deliberation
+ * rounds + chair synthesis for an agent_team session, or round-1 agent
+ * positions for a hybrid session — exactly what conveneCommitteeSession did
+ * synchronously. Marks meta.convening = false on completion; on failure marks
+ * meta.convening_error and process_run.status = 'failed' before rethrowing,
+ * so the session never hangs silently in the convening state.
+ */
+export async function runCommitteeSession(
+  sessionId: string,
+  opts: { callAgent?: CallAgent } = {},
+): Promise<ConveneResult> {
+  const session = readMeta(sessionId);
+  if (!session) throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
+  const meta = session.meta;
+  if (meta.convening !== true) {
+    throw new CommitteeError("not_convening", `committee session '${sessionId}' is not in the convening state`);
+  }
+  const committee = getCommittee(meta.committee_key) as CommitteeDef;
+  const run = session.run as { entity_type: string; entity_id: string; started_by: unknown; source: unknown };
+  const entity: EntityRef = {
+    entityType: run.entity_type === "project" ? "project" : "opportunity",
+    entityId: String(run.entity_id),
+  };
+  const convOpts: ConveneOpts = {
+    committeeKey: meta.committee_key,
+    decisionMode: meta.decision_mode,
+    gate: meta.gate as ConveneOpts["gate"],
+    targetRef: meta.target_ref,
+    track: meta.track,
+    briefMd: meta.brief_md,
+    actor: typeof run.started_by === "string" ? run.started_by : "system",
+    callAgent: opts.callAgent,
+    source: typeof run.source === "string" ? run.source : "web",
+  };
+  try {
+    if (meta.decision_mode === "agent_team") {
+      // agent_team: agents propose through the full engine — one call, all
+      // rounds, chair synthesis included (never a confirming record).
+      const agents = seatsForSession(committee, meta.track)
+        .filter((m) => m.type === "agent")
+        .map((m) => ({ agentKey: m.key }));
+      const topic = sessionTopic(committee, convOpts);
+      const result = await runDeliberationRounds(entity, {
+        committeeKey: meta.committee_key,
+        agents,
+        rounds: committee.rounds,
+        topic,
+        callAgent: opts.callAgent ?? getCommitteeCallAgent(),
+        gate: meta.gate as ConveneOpts["gate"],
+        actor: convOpts.actor,
+        stage: meta.committee_key,
+        source: convOpts.source,
+        chair: committee.chair,
+        // ADR-0196 phase B: the chair agenda pass after round 1 and the
+        // minutes pass at synthesis. Both compute + return; persistence into
+        // meta_json happens in the writeMeta below (one writer per meta key).
+        chairAgendaPass:
+          committee.rounds >= 2 ? async (ctx) => runAgendaPassForRun(ctx.processRunId, ctx.topic, 1) : undefined,
+        chairMinutesPass: async (ctx) => runMinutesPassForRun(ctx.processRunId, ctx.topic, ctx.agenda),
+      });
+      // The engine creates its OWN process_run; the async contract keeps the
+      // sessionId the client already holds stable, so migrate the engine
+      // run's rows onto the shell run and drop the engine run. agent_position
+      // and gate_evaluation are moved wholesale (created_at ordering intact),
+      // and the meta (with the chair-pass results) lands on the shell.
+      const db = getDb();
+      db.run("UPDATE agent_position SET process_run_id = ? WHERE process_run_id = ?", [sessionId, result.processRunId]);
+      db.run("UPDATE gate_evaluation SET process_run_id = ? WHERE process_run_id = ?", [
+        sessionId,
+        result.processRunId,
+      ]);
+      db.run("DELETE FROM process_run WHERE id = ?", [result.processRunId]);
+      writeMeta(sessionId, {
+        ...meta,
+        convening: false,
+        synthesized: true,
+        evaluation_id: result.evaluation?.gateEvaluationId,
+        ...(result.agenda ? { agenda: result.agenda.agenda, agenda_meta: toAgendaMeta(result.agenda) } : {}),
+        ...(result.minutesDraft ? { minutes_draft: toMinutesDraft(result.minutesDraft) } : {}),
+      });
+      db.run("UPDATE process_run SET status = 'done', finished_at = ? WHERE id = ?", [nowIso(), sessionId]);
+      return {
+        sessionId,
+        committeeKey: meta.committee_key,
+        decisionMode: meta.decision_mode,
+        evaluation: result.evaluation
+          ? {
+              gateEvaluationId: result.evaluation.gateEvaluationId,
+              gate: result.evaluation.gate,
+              recommendation: result.evaluation.recommendation,
+              dissentJson: result.evaluation.dissentJson,
+            }
+          : null,
+      };
+    }
+    // hybrid: round 1 agent positions run in the background (engine round
+    // semantics: independent positions); humans join via submitHumanPosition
+    // per round afterwards, exactly as before the split.
+    const agentSeats = seatsForSession(committee, meta.track).filter((m) => m.type === "agent");
+    const topic = sessionTopic(committee, convOpts);
     for (const seat of agentSeats) {
       const member = { agentKey: seat.key };
       const out = await (opts.callAgent ?? getCommitteeCallAgent())(seat.key, deliberationPrompt(member, topic, [], 1));
       writeAgentPosition(
-        runId,
+        sessionId,
         {
           memberKey: seat.key,
           memberType: "agent",
@@ -568,9 +649,53 @@ export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOp
         1,
       );
     }
+    writeMeta(sessionId, { ...meta, convening: false });
+    return { sessionId, committeeKey: meta.committee_key, decisionMode: meta.decision_mode, evaluation: null };
+  } catch (err) {
+    markConveningFailed(sessionId, err);
+    throw err;
   }
+}
 
-  return { sessionId: runId, committeeKey: opts.committeeKey, decisionMode: opts.decisionMode, evaluation: null };
+/**
+ * Mark a session's background deliberation as failed (meta.convening_error,
+ * process_run.status 'failed'). Best-effort — never masks the original error.
+ */
+function markConveningFailed(sessionId: string, err: unknown): void {
+  try {
+    const session = readMeta(sessionId);
+    if (!session) return;
+    writeMeta(sessionId, {
+      ...session.meta,
+      convening: false,
+      convening_error: err instanceof Error ? err.message : String(err),
+    });
+    getDb().run("UPDATE process_run SET status = 'failed' WHERE id = ?", [sessionId]);
+  } catch {
+    // best effort — the original error propagates instead
+  }
+}
+
+/**
+ * Convene a committee session (synchronous composition of the split path —
+ * kept for the CLI and the existing tests): createCommitteeSession for all
+ * validation and the session row, then runCommitteeSession awaited inline.
+ * agent_team deliberates end-to-end now (the engine's full
+ * runDeliberationRounds — all rounds, synthesis, dissent); human_only/hybrid
+ * create the session shell and (hybrid) run round 1 agent positions, then
+ * wait for human positions.
+ */
+export async function conveneCommitteeSession(entity: EntityRef, opts: ConveneOpts): Promise<ConveneResult> {
+  const created = createCommitteeSession(entity, opts);
+  if (!created.convening) {
+    return {
+      sessionId: created.sessionId,
+      committeeKey: created.committeeKey,
+      decisionMode: created.decisionMode,
+      evaluation: null,
+    };
+  }
+  return runCommitteeSession(created.sessionId, { callAgent: opts.callAgent });
 }
 
 // ── Human positions (the 0065 human seat) ──────────────────────────────────
@@ -955,7 +1080,16 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
 export function listCommitteeSessions(
   entityId: string,
   entityType: "opportunity" | "project" = "opportunity",
-): Array<{ sessionId: string; meta: SessionMeta; status: string; startedAt: string }> {
+): Array<{
+  sessionId: string;
+  meta: SessionMeta;
+  status: string;
+  startedAt: string;
+  /** Async convening contract: deliberation still running in the background. */
+  convening: boolean;
+  /** Populated when the background deliberation failed (never silent). */
+  conveningError: string | null;
+}> {
   const rows = getDb()
     .query(
       "SELECT id, meta_json, status, started_at FROM process_run WHERE entity_type = ? AND entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC",
@@ -963,8 +1097,16 @@ export function listCommitteeSessions(
     .all(entityType, entityId) as Array<{ id: string; meta_json: string; status: string; started_at: string }>;
   return rows.flatMap((r) => {
     try {
+      const meta = JSON.parse(r.meta_json) as SessionMeta;
       return [
-        { sessionId: r.id, meta: JSON.parse(r.meta_json) as SessionMeta, status: r.status, startedAt: r.started_at },
+        {
+          sessionId: r.id,
+          meta,
+          status: r.status,
+          startedAt: r.started_at,
+          convening: meta.convening === true,
+          conveningError: meta.convening_error ?? null,
+        },
       ];
     } catch {
       return [];

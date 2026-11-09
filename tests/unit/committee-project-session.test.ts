@@ -86,14 +86,32 @@ afterAll(async () => {
   }
 });
 
+/**
+ * Async convene contract (202): the deliberation runs in the background of
+ * the SAME test process — wait until the session leaves the convening state
+ * before continuing with the route-level assertions.
+ */
+async function waitForSessionSettled(sessionId: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const row = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(sessionId) as { meta_json: string };
+    const meta = JSON.parse(row.meta_json) as { convening?: boolean };
+    if (!meta.convening) return;
+    await Bun.sleep(20);
+  }
+  throw new Error(`committee session ${sessionId} did not settle in time`);
+}
+
 async function conveneProjectSession(body: Record<string, unknown>): Promise<{ sessionId: string }> {
   const res = await req(`/api/projects/${projectId}/committee-sessions`, {
     method: "POST",
     headers: { cookie: analystCookie },
     body: JSON.stringify(body),
   });
-  expect(res.status).toBe(201);
-  return (await res.json()).data;
+  expect(res.status).toBe(202);
+  const data = (await res.json()).data as { sessionId: string; status: string };
+  await waitForSessionSettled(data.sessionId);
+  return data as { sessionId: string };
 }
 
 describe("project-scoped committee sessions (ADR-0196 Phase E)", () => {
@@ -294,7 +312,7 @@ describe("project-scoped committee sessions (ADR-0196 Phase E)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "human_only" }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
     const oppSessionId = (await res.json()).data.sessionId as string;
 
     // NOT visible under the project routes.

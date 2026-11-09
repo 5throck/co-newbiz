@@ -38,6 +38,22 @@ const { setCallAgentFactory, deterministicCallAgent } = await import("../../app/
 setCallAgentFactory(() => deterministicCallAgent());
 const db = getDb(TEST_DB_PATH);
 
+/**
+ * Async convene contract (202): the deliberation runs in the background of
+ * the SAME test process — wait until the session leaves the convening state
+ * before continuing with the route-level assertions.
+ */
+async function waitForSessionSettled(sessionId: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const row = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(sessionId) as { meta_json: string };
+    const meta = JSON.parse(row.meta_json) as { convening?: boolean };
+    if (!meta.convening) return;
+    await Bun.sleep(20);
+  }
+  throw new Error(`committee session ${sessionId} did not settle in time`);
+}
+
 // Snapshot of the pristine llm module (spread BEFORE any mock.module call).
 // bun's cross-file mock.module restore only works with this afterEach +
 // mock.restore() pattern — see dd-tailor-korean.test.ts.
@@ -343,8 +359,9 @@ describe("hybrid agenda via the advance route (decision 3)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "hybrid" }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202);
     const sessionId = (await res.json()).data.sessionId as string;
+    await waitForSessionSettled(sessionId);
 
     // A malformed agenda body is refused before the round starts.
     const bad = await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/advance`, {
@@ -392,7 +409,9 @@ describe("hybrid agenda via the advance route (decision 3)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "hybrid" }),
     });
+    expect(res.status).toBe(202);
     const sessionId = (await res.json()).data.sessionId as string;
+    await waitForSessionSettled(sessionId);
     await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
       headers: { cookie: analystCookie },

@@ -1375,6 +1375,11 @@
     "classification": "Classification",
     "close": "Close",
     "collapse": "Collapse",
+    "committee": {
+      "conveneFailed": "Committee convening failed",
+      "conveningProgress": "Deliberation in progress... it will appear here automatically when done.",
+      "conveningTimeout": "Deliberation did not finish within 10 minutes — check the session history."
+    },
     "committeeMinutes": {
       "actionItems": "Action items",
       "agenda": "Agenda (chair proposal)",
