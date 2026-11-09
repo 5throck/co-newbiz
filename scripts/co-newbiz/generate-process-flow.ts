@@ -1,4 +1,4 @@
-// @version 1.5.0
+// @version 1.5.1
 // Process Flow Spec → docs/process-flow.md generator (ADR-0074).
 // process/flow.spec.yaml is the SSOT; this script regenerates the markdown
 // reference. The drift test (tests/unit/process-flow.test.ts) validates the
@@ -94,7 +94,10 @@ function stageSection(s: Stage): string {
     "",
     "**Activities**",
     s.activities
-      .map((a) => `- ${a.id} · agent: \`${a.agent}\` · skills: ${a.skills.map((x) => `\`${x}\``).join(", ")} · procedure: ${a.procedure.map((x) => `\`${x}\``).join(", ")}`)
+      .map(
+        (a) =>
+          `- ${a.id} · agent: \`${a.agent}\` · skills: ${a.skills.map((x) => `\`${x}\``).join(", ")} · procedure: ${a.procedure.map((x) => `\`${x}\``).join(", ")}`,
+      )
       .join("\n"),
     "",
     "**필수 산출물**",
@@ -114,12 +117,15 @@ function stageSection(s: Stage): string {
 /** Engine blocker keys (ADR-0187 P3): the stable ids check-engine-spec-parity compares. */
 function blockerSection(s: Stage): string {
   if (!s.blockers?.length) return "";
-  const cover = (label: string, idx: number[] | undefined) => (idx?.length ? `${label} ${idx.map((i) => i + 1).join(", ")}` : "");
+  const cover = (label: string, idx: number[] | undefined) =>
+    idx?.length ? `${label} ${idx.map((i) => i + 1).join(", ")}` : "";
   const rows = s.blockers.map((b) => {
     const covers = [cover("산출물", b.artifacts), cover("완료 기준", b.criteria)].filter(Boolean).join(" · ");
     return `- \`${b.key}\`${covers ? ` — ${covers}` : ""}`;
   });
-  const nb = s.nonBlockingArtifacts?.length ? [`- 비차단 산출물: ${s.nonBlockingArtifacts.map((i) => i + 1).join(", ")}`] : [];
+  const nb = s.nonBlockingArtifacts?.length
+    ? [`- 비차단 산출물: ${s.nonBlockingArtifacts.map((i) => i + 1).join(", ")}`]
+    : [];
   return ["**엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)", ...rows, ...nb, ""].join("\n");
 }
 
@@ -267,12 +273,17 @@ the pipeline when preconditions are met (pipeline.ts:276–290).
 
 Declared gaps, not hidden ones:
 
-- **LLM-backed executors** — all generation executors default to deterministic
+- **LLM-backed executors** — most generation executors default to deterministic
   behavior; LLM modes exist behind env seams and are opt-in:
   \`CO_NEWBIZ_BUSINESS_CASE_AGENTS=llm\` (S8, business-case-generator.ts:18,
   \`setExecutorFactory\` pattern), \`CO_NEWBIZ_DD_TAILOR_AGENTS\` (S9 WebSearch
-  tailoring), \`CO_NEWBIZ_COMMITTEE_AGENTS\` (committee deliberation), and the
+  tailoring), and the
   \`CO_NEWBIZ_LLM_PROVIDER / _MODEL / _BASE_URL / _API_KEY\` family.
+  Committee deliberation (owner decision 10, ADR-0196 amendment 2026-11-09)
+  has NO mode env var: meetings run only when the LLM provider is configured
+  (\`CO_NEWBIZ_LLM_PROVIDER / _API_KEY / _MODEL\`); without it, convening
+  refuses with \`llm_required\` (the CLI \`--deterministic\` flag or an
+  injected callAgent is the only deterministic path).
 - **Round-1-only functional-seat participation** — with 12 members,
   per-member \`rounds: 1\` for functional seats was considered and deferred;
   expressing it cleanly requires touching both the hybrid path in
@@ -290,7 +301,7 @@ Declared gaps, not hidden ones:
 function generate(spec: FlowSpec): string {
   const parts: string[] = [HEADER];
   parts.push("## 프로세스 흐름 요약\n");
-  parts.push(spec.stages.map((s) => `${s.id} ${s.name}${trackTag(s)}`).join(" → ") + "\n");
+  parts.push(`${spec.stages.map((s) => `${s.id} ${s.name}${trackTag(s)}`).join(" → ")}\n`);
   parts.push("엔티티 라이프사이클:");
   for (const [entity, stages] of Object.entries(spec.meta.entity_lifecycles)) {
     parts.push(`- ${entity}: ${stages.join(" → ")}`);
@@ -304,16 +315,18 @@ function generate(spec: FlowSpec): string {
     );
   }
   parts.push("## 설계 원칙 및 에이전트 오케스트레이션\n");
-  parts.push("이 프로세스는 Agentic-first, Human-final 원칩으로 운영된다 — 에이전트가 스테이지를 실행·권고하고, 사람은 IC 승인과 예외 개입만 수행한다 (docs/design-system/design-guide.md, ADR-0074).\n");
+  parts.push(
+    "이 프로세스는 Agentic-first, Human-final 원칩으로 운영된다 — 에이전트가 스테이지를 실행·권고하고, 사람은 IC 승인과 예외 개입만 수행한다 (docs/design-system/design-guide.md, ADR-0074).\n",
+  );
   parts.push("**스테이지별 담당 에이전트(오케스트레이터가 Activities의 agent 필드를 실행)**\n");
   for (const st of spec.stages) {
     const agents = [...new Set(st.activities.map((a) => a.agent))];
-    parts.push("- " + st.id + " " + st.name + ": " + agents.map((a) => "`" + a + "`").join(", "));
+    parts.push(`- ${st.id} ${st.name}: ${agents.map((a) => `\`${a}\``).join(", ")}`);
   }
   parts.push("");
   parts.push("스킬·프로시저 대응은 각 스테이지의 Activities 표를, 전체 매핑 근거는 ADR-0074를 참고한다.\n");
   parts.push("## 스테이지 상세\n");
-  for (const s of spec.stages) parts.push(stageSection(s) + "\n");
+  for (const s of spec.stages) parts.push(`${stageSection(s)}\n`);
   parts.push(ADDENDUM);
   return parts.join("\n");
 }

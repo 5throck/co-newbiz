@@ -869,12 +869,17 @@ the pipeline when preconditions are met (pipeline.ts:276–290).
 
 Declared gaps, not hidden ones:
 
-- **LLM-backed executors** — all generation executors default to deterministic
+- **LLM-backed executors** — most generation executors default to deterministic
   behavior; LLM modes exist behind env seams and are opt-in:
   `CO_NEWBIZ_BUSINESS_CASE_AGENTS=llm` (S8, business-case-generator.ts:18,
   `setExecutorFactory` pattern), `CO_NEWBIZ_DD_TAILOR_AGENTS` (S9 WebSearch
-  tailoring), `CO_NEWBIZ_COMMITTEE_AGENTS` (committee deliberation), and the
+  tailoring), and the
   `CO_NEWBIZ_LLM_PROVIDER / _MODEL / _BASE_URL / _API_KEY` family.
+  Committee deliberation (owner decision 10, ADR-0196 amendment 2026-11-09)
+  has NO mode env var: meetings run only when the LLM provider is configured
+  (`CO_NEWBIZ_LLM_PROVIDER / _API_KEY / _MODEL`); without it, convening
+  refuses with `llm_required` (the CLI `--deterministic` flag or an
+  injected callAgent is the only deterministic path).
 - **Round-1-only functional-seat participation** — with 12 members,
   per-member `rounds: 1` for functional seats was considered and deferred;
   expressing it cleanly requires touching both the hybrid path in

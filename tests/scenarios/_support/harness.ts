@@ -197,7 +197,6 @@ export async function startApp(name: string, opts: StartOptions = {}): Promise<T
       CO_NEWBIZ_LLM_PROVIDER: "",
       CO_NEWBIZ_LLM_API_KEY: "",
       CO_NEWBIZ_LLM_MODEL: "",
-      CO_NEWBIZ_COMMITTEE_AGENTS: "",
       CO_NEWBIZ_BUSINESS_CASE_AGENTS: "",
       CO_NEWBIZ_DD_TAILOR_AGENTS: "",
       DART_API_KEY: "",

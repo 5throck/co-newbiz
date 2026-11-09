@@ -3244,6 +3244,7 @@
       "legacy_target": "Legacy (direct company) analyses cannot be re-analyzed — create a new analysis on a group/affiliate registry target.",
       "link_rejected": "The link proposal was rejected.",
       "link_required": "The link_id query parameter is required.",
+      "llm_required": "Committee convening stopped: no LLM provider is configured. Configure an LLM provider, convene a hybrid/human_only session for human-led review, or pass an explicit injected callAgent for a pilot run.",
       "market_required": "market_definition is required.",
       "matrix_incomplete": "The latest version matrix has no anchor/cell data.",
       "member_not_found": "Affiliate not found.",

@@ -26,10 +26,11 @@ const { readFileSync } = await import("node:fs");
 
 // ── Registry validation (procedures/_validate.ts committee pass) ────────────
 
-
 describe("_committees.yaml validation", () => {
   testReal("the shipped registry passes with both committees", () => {
-    const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), { schema: yaml.JSON_SCHEMA });
+    const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), {
+      schema: yaml.JSON_SCHEMA,
+    });
     const result = validateCommitteeRegistry(doc, new Set<string>());
     expect(result.committeeCount).toBe(2);
     expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
@@ -44,9 +45,7 @@ describe("_committees.yaml validation", () => {
             chair: "process-governance-manager",
             rounds: 2,
             decision_modes_allowed: ["agent_team"],
-            members: [
-              { type: "agent", key: "industry-lead" },
-            ],
+            members: [{ type: "agent", key: "industry-lead" }],
           },
         },
       },
@@ -108,9 +107,13 @@ describe("_committees.yaml functional-expert composition", () => {
   ];
 
   function loadCommittees(): Record<string, { members: Array<{ type: string; key: string; veto_dissent?: boolean }> }> {
-    return (yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), { schema: yaml.JSON_SCHEMA }) as {
-      committees: Record<string, { members: Array<{ type: string; key: string; veto_dissent?: boolean }> }>;
-    }).committees;
+    return (
+      yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), {
+        schema: yaml.JSON_SCHEMA,
+      }) as {
+        committees: Record<string, { members: Array<{ type: string; key: string; veto_dissent?: boolean }> }>;
+      }
+    ).committees;
   }
 
   test("both committees list the six standing functional seats over their core 5/4 skeleton", () => {
@@ -129,7 +132,7 @@ describe("_committees.yaml functional-expert composition", () => {
       const keys = members.map((m) => m.key);
       for (const seat of FUNCTIONAL_SEATS) {
         expect(keys).toContain(seat);
-        expect(members.find((m) => m.key === seat)!.type).toBe("agent");
+        expect(members.find((m) => m.key === seat)?.type).toBe("agent");
       }
     }
   });
@@ -143,15 +146,19 @@ describe("_committees.yaml functional-expert composition", () => {
   });
 
   testReal("the validator passes with the expanded membership (agent files exist)", () => {
-    const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), { schema: yaml.JSON_SCHEMA });
+    const doc = yaml.load(readFileSync(join(PROJECT_ROOT, "procedures/_committees.yaml"), "utf-8"), {
+      schema: yaml.JSON_SCHEMA,
+    });
     const result = validateCommitteeRegistry(doc, new Set<string>());
     expect(result.committeeCount).toBe(2);
     expect(result.issues.filter((i) => i.severity === "error")).toEqual([]);
   });
 
   test("the deterministic executor has a template for every member key (no default fallthrough)", async () => {
-    const { getCommitteeCallAgent } = await import("../../app/web-next/lib/committee-agents.ts");
-    const callAgent = getCommitteeCallAgent();
+    // Owner decision 10: the deterministic emitter is injection-only now —
+    // getCommitteeCallAgent() would throw llm_required without a provider.
+    const { deterministicCallAgent } = await import("../../app/web-next/lib/committee-agents.ts");
+    const callAgent = deterministicCallAgent();
     const committees = loadCommittees();
     const keys = new Set<string>();
     for (const committee of Object.values(committees)) {

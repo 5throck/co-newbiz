@@ -37,12 +37,16 @@ export async function register() {
   }
 
   // Executor seams (ADR-0097 §5 / ADR-0098 / ADR-0099): committee deliberation
-  // (above) plus the S8 business-case and S9 DD-tailor executors. Each is
-  // activated by its own CO_NEWBIZ_*_AGENTS=llm env var AND a configured LLM
-  // client; failures here never prevent boot — the deterministic executors
-  // remain the fallback and the regression-test surface.
+  // (above) plus the S8 business-case and S9 DD-tailor executors. The
+  // committee seam follows owner decision 10 (ADR-0196 amendment
+  // 2026-11-09): it registers whenever the provider is configured — there is
+  // no mode env var; meetings simply require a configured LLM. The other two
+  // remain activated by their own CO_NEWBIZ_*_AGENTS=llm env vars AND a
+  // configured LLM client; failures here never prevent boot — the
+  // deterministic executors remain the fallback and the regression-test
+  // surface.
   try {
-    if (process.env.CO_NEWBIZ_COMMITTEE_AGENTS === "llm") {
+    {
       const { isLlmConfigured } = await import("./lib/llm.ts");
       const { setCallAgentFactory } = await import("./lib/committee-agents.ts");
       const { makeLlmCommitteeAgent } = await import("./lib/committee-llm.ts");
@@ -50,7 +54,9 @@ export async function register() {
         setCallAgentFactory(() => makeLlmCommitteeAgent());
         console.log("[bootstrap] committee agents: LLM mode registered.");
       } else {
-        console.warn("[bootstrap] CO_NEWBIZ_COMMITTEE_AGENTS=llm but no LLM configured (CO_NEWBIZ_LLM_PROVIDER/API_KEY/MODEL) — staying deterministic.");
+        console.warn(
+          "[bootstrap] no LLM configured (CO_NEWBIZ_LLM_PROVIDER/API_KEY/MODEL) — committee deliberation will refuse (llm_required) until a provider is configured.",
+        );
       }
     }
     if (process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS === "llm") {
@@ -106,7 +112,9 @@ export async function register() {
     // log, not discovered through divergent data. PRAGMA failure never
     // blocks boot.
     try {
-      const main = (db.query("PRAGMA database_list").all() as Array<{ name: string; file: string }>).find((r) => r.name === "main");
+      const main = (db.query("PRAGMA database_list").all() as Array<{ name: string; file: string }>).find(
+        (r) => r.name === "main",
+      );
       console.log(`[bootstrap] database: ${main?.file || "(in-memory)"}`);
     } catch {
       console.warn("[bootstrap] database path could not be resolved (PRAGMA database_list failed).");
@@ -131,7 +139,9 @@ export async function register() {
       const { recoverQueuePass } = await import("./lib/market-sizing-pipeline.ts");
       const result = recoverQueuePass(db);
       if (result.healed.length > 0 || result.started.length > 0) {
-        console.log(`[bootstrap] market-sizing queue recovery — healed ${result.healed.length}, started ${result.started.length}.`);
+        console.log(
+          `[bootstrap] market-sizing queue recovery — healed ${result.healed.length}, started ${result.started.length}.`,
+        );
       }
     } catch (err) {
       console.warn("[bootstrap] market-sizing queue recovery skipped:", err instanceof Error ? err.message : err);

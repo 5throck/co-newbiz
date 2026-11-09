@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
 /**
  * committee-deliberation.ts — ad-hoc committee-style deliberation CLI
  * (ADR-0097 §7), the executable behind the committee-deliberation skill.
@@ -10,7 +10,7 @@
  * The transcript is written to memory/committee-YYYY-MM-DD-[slug].md.
  *
  * Usage:
- *   bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue]
+ *   bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue] [--deterministic]
  *
  *   --agents   comma-separated member keys (default: industry-lead,region-lead,
  *              market-intelligence-agent,risk-officer — the 5-seat skeleton
@@ -27,7 +27,12 @@ import { join } from "node:path";
 import { getDb, resetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { runDeliberationRounds, type CommitteeMember } from "../../app/web-next/lib/deliberation.ts";
-import { getCommitteeCallAgent } from "../../app/web-next/lib/committee-agents.ts";
+import {
+  COMMITTEE_LLM_GUIDANCE,
+  committeeLlmAvailable,
+  deterministicCallAgent,
+  getCommitteeCallAgent,
+} from "../../app/web-next/lib/committee-agents.ts";
 import {
   runChairAgenda,
   runChairMinutes,
@@ -53,6 +58,8 @@ interface MeetingArgs {
   agents: string[];
   rounds: number;
   dialogue: boolean;
+  /** Explicit pilot opt-in (owner decision 10): bypasses the LLM guard. */
+  deterministic: boolean;
 }
 
 function parseArgs(argv: string[]): MeetingArgs {
@@ -60,6 +67,7 @@ function parseArgs(argv: string[]): MeetingArgs {
   let agents = DEFAULT_AGENTS;
   let rounds = 2;
   let dialogue = false;
+  let deterministic = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--agents") {
@@ -72,6 +80,8 @@ function parseArgs(argv: string[]): MeetingArgs {
       rounds = Math.max(1, Number(argv[++i] ?? 2) || 2);
     } else if (a === "--dialogue") {
       dialogue = true;
+    } else if (a === "--deterministic") {
+      deterministic = true;
     } else {
       positional.push(a);
     }
@@ -79,15 +89,22 @@ function parseArgs(argv: string[]): MeetingArgs {
   const topic = positional.join(" ").trim();
   if (!topic) {
     console.error(
-      'Usage: bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue]',
+      'Usage: bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue] [--deterministic]',
     );
     process.exit(1);
   }
-  return { topic, agents, rounds, dialogue };
+  return { topic, agents, rounds, dialogue, deterministic };
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  // Owner decision 10 (ADR-0196 amendment 2026-11-09): without a configured
+  // LLM and without the explicit --deterministic pilot flag, refuse instead
+  // of printing template positions.
+  if (!committeeLlmAvailable() && !args.deterministic) {
+    console.error(`지금은 소집할 수 없습니다 — ${COMMITTEE_LLM_GUIDANCE}`);
+    process.exit(1);
+  }
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10);
 
@@ -114,7 +131,7 @@ async function main(): Promise<void> {
       agents: members,
       rounds: args.rounds,
       topic: args.topic,
-      callAgent: getCommitteeCallAgent(),
+      callAgent: args.deterministic ? deterministicCallAgent() : getCommitteeCallAgent(),
       actor: "meeting-cli",
       source: "cli",
       stage: "meeting",

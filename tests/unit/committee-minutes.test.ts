@@ -21,7 +21,6 @@ function setEnv(key: string, value: string): void {
   process.env[key] = value;
 }
 setEnv("CO_NEWBIZ_DB_PATH", TEST_DB_PATH);
-setEnv("CO_NEWBIZ_COMMITTEE_AGENTS", "deterministic");
 setEnv("CO_NEWBIZ_COMMITTEE_RESPONSIVE", "1");
 // Chair passes must stay deterministic in tests even on a machine with a
 // real provider in the root .env — force "no LLM" (the fallback contract).
@@ -34,6 +33,13 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
+
+// Owner decision 10 (ADR-0196 amendment 2026-11-09): the mode env var is
+// gone — REST convene requires the provider seam to be registered, so this
+// suite injects the deterministic agent AS the factory (the provider is
+// forced offline above, so the chair passes stay deterministic).
+const { setCallAgentFactory, deterministicCallAgent } = await import("../../app/web-next/lib/committee-agents.ts");
+setCallAgentFactory(() => deterministicCallAgent());
 
 // Snapshot of the pristine llm module (spread BEFORE any mock.module call).
 // bun's cross-file mock.module restore only works with this afterEach +

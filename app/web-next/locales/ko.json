@@ -3244,6 +3244,7 @@
       "legacy_target": "레거시(회사 직접 등록) 분석은 재분석할 수 없습니다 — 그룹/계열사 레지스트리 대상으로 새 분석을 생성하세요.",
       "link_rejected": "링크 제안이 기각되었습니다.",
       "link_required": "link_id 쿼리 파라미터가 필요합니다.",
+      "llm_required": "위원회 소집 중단: LLM 공급자가 구성되지 않았습니다. LLM 공급자를 구성하거나, hybrid/human_only 세션으로 사람 주도 심의를 진행하거나, 명시적 파일럿 실행에는 callAgent를 주입하세요.",
       "market_required": "market_definition은 필수입니다.",
       "matrix_incomplete": "최신 버전 매트릭스에 앵커·셀 데이터가 없습니다.",
       "member_not_found": "계열사를 찾을 수 없습니다.",
