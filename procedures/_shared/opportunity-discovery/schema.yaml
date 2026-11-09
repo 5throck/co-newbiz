@@ -4,6 +4,7 @@ title: "Opportunity Discovery (S2)"
 scope: shared
 level: entity
 version: "1.0.0"
+effective_from: "2026-09-08"
 status: active
 applicability: mandatory
 workflow_type: core

@@ -409,6 +409,45 @@ describe("GET gate-snapshot", () => {
     );
   });
 
+  test("ADR-0196: GO at entity_ic with no committee session convened is a HARD BLOCK, not an ack (2026-11-09 owner decision)", async () => {
+    setFlags("enforce", ...SNAP);
+    const { projectId } = S.seedIcReadyProject(db, ANALYST);
+    // Strip the seeded committee session: this test exercises the missing-session hard block itself.
+    db.run("DELETE FROM process_run WHERE entity_type = 'project' AND entity_id = ?", [projectId]);
+    // Neutralise unrelated kill bindings (Group IC overrides issued by someone else) so the
+    // committee session rule is the only reason the GO is refused.
+    clearSnapshotCache();
+    const pre = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
+    for (const t of pre.snapshot.kill.triggered.filter((x) => (x as { binding?: boolean }).binding)) {
+      const [procedure, criterion] = [t.key.slice(0, t.key.indexOf(":")), t.key.slice(t.key.indexOf(":") + 1)];
+      db.run(
+        "INSERT INTO kill_criteria_override (id, entity_type, entity_id, procedure_key, criterion_id, reason, issued_by, issued_at) VALUES (?,?,?,?,?,?,?,?)",
+        [ulid(), "project", projectId, procedure, criterion, "test exception", OTHER, S.NOW],
+      );
+    }
+    clearSnapshotCache();
+    const view = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
+    // the hard block names the project and is enforced; the old ACK is gone
+    expect(view.snapshot.hard_blocks.find((h) => h.code === "committee_session_missing")).toMatchObject({
+      keys: [projectId],
+      enforced: true,
+    });
+    expect(view.snapshot.required_acks.find((a) => a.key === "committee:session_missing")).toBeUndefined();
+    // a GO with every remaining ack satisfied is still refused by the hard block
+    const res = await postProject(projectId, {
+      gate: "entity_ic",
+      decision: "go",
+      rationale: S.IC_RATIONALE,
+      gap_rationale: S.IC_GAP,
+      snapshot_hash: view.snapshot_hash,
+      acknowledgements: ackAll(view.snapshot),
+    });
+    const err = await errOf(res);
+    expect(res.status).toBe(409);
+    expect(err.code).toBe("committee_session_missing");
+    expect(count("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ?", projectId)).toBe(2); // seeded fs + dd only
+  });
+
   test("visibility: a non-member gets 404, a viewer 403, no gate param 400; an unknown gate 400", async () => {
     const { projectId } = readyAtDd();
     expect((await getSnap(projectId, "dd", otherCookie)).status).toBe(404);
@@ -727,6 +766,9 @@ describe("POST gate-decisions - kill binding (HB) and the Group IC override", ()
       projectId,
       "dd_report",
     ]);
+    // ADR-0196: a convened (confirmed-minutes) committee session so the GO is not refused
+    // by the unrelated `committee_session_missing` hard block under test here.
+    S.seedCommitteeSession(db, projectId, ANALYST);
     const view = await dataOf<SnapData>(await getSnap(projectId, "entity_ic"));
     return { projectId, keys: view.snapshot.hard_blocks[0].keys as string[] };
   }

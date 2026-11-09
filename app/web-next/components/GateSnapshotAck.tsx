@@ -334,7 +334,7 @@ export function GateSnapshotSummary({
           <>
             <dt className="text-[color:var(--muted-fg)]">{ti("sumConditions")}</dt>
             <dd className="m-0">
-              <Chip tone="amber">{ti("conditionsOpen", { count: snapshot.conditions_open!.length })}</Chip>
+              <Chip tone="amber">{ti("conditionsOpen", { count: snapshot.conditions_open?.length ?? 0 })}</Chip>
             </dd>
           </>
         )}
@@ -557,7 +557,7 @@ export function GateAckBlock({
               <span aria-hidden="true">⛔</span> {blockText(b.code, "title")}
             </p>
             <p className="m-0 mt-1">{blockText(b.code, "body")}</p>
-            {b.code !== "kill_lineage_missing" && (
+            {b.code !== "kill_lineage_missing" && b.code !== "committee_session_missing" && (
               <ul className="sizing-note-list" aria-label={ti("hardBlock.listLabel")}>
                 {b.keys.map((k) => (
                   <li key={`${b.code}:${k}`}>{blockKeyTitle(b.code, k)}</li>

@@ -4,6 +4,7 @@ title: "JV Lifecycle Governance (post-formation, origin=joint)"
 scope: shared
 level: entity
 version: "1.2.0"
+effective_from: "2026-08-23"
 status: active
 # Design §C.1 open decision 1 — RESOLVED as a SIBLING procedure (ADR-0052):
 # entity-establishment-execution is formation-scoped with a clean completion

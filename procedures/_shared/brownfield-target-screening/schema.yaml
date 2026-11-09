@@ -4,6 +4,7 @@ title: "Brown Field Target Screening (Long List → Short List)"
 scope: shared
 level: entity
 version: "1.1.0"
+effective_from: "2026-09-01"
 status: active
 applicability: mandatory
 workflow_type: core

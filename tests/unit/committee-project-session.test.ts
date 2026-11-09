@@ -336,9 +336,10 @@ describe("project-scoped committee sessions (ADR-0196 Phase E)", () => {
       gate: "entity_ic",
     };
 
-    // No session convened yet → ACK with reason (first release: ACK, not a block).
+    // No session convened yet → no ACK: the 2026-11-09 owner decision hardened it to the
+    // `committee_session_missing` HARD BLOCK (asserted against the snapshot below).
     const missing = requiredAcks({ ...base, committee: null } as never);
-    expect(missing.find((a) => a.key === "committee:session_missing")?.kind).toBe("committee_session_missing");
+    expect(missing.find((a) => a.key === "committee:session_missing")).toBeUndefined();
 
     // A synthesized session with UNCONFIRMED minutes → ACK per session.
     const unconfirmed = requiredAcks({
@@ -408,6 +409,30 @@ describe("project-scoped committee sessions (ADR-0196 Phase E)", () => {
     expect(dd.find((a) => a.key.startsWith("committee:"))).toBeUndefined();
     const opp = requiredAcks({ ...base, entity: { type: "opportunity" as const, id: "o1" }, committee: null } as never);
     expect(opp.find((a) => a.key.startsWith("committee:"))).toBeUndefined();
+  });
+
+  test("missing session at entity_ic is an enforced HARD BLOCK on the snapshot, not an ack (2026-11-09 owner decision)", async () => {
+    // A project with no committee session convened at all.
+    const fresh = "proj-committee-e2";
+    db.run("INSERT INTO md_project (id, project_no, created_at) VALUES (?,?,?)", [fresh, "NP-PHASE-E2", NOW]);
+    db.run(
+      "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
+      [fresh, "alice", "lead", "root", NOW, "test"],
+    );
+    const res = await req(`/api/projects/${fresh}/gate-snapshot?gate=entity_ic`, {
+      headers: { cookie: analystCookie },
+    });
+    expect(res.status).toBe(200);
+    const { snapshot } = (
+      (await res.json()) as {
+        data: { snapshot: { hard_blocks: Array<Record<string, unknown>>; required_acks: Array<{ key: string }> } };
+      }
+    ).data;
+    expect(snapshot.hard_blocks.find((h) => h.code === "committee_session_missing")).toMatchObject({
+      keys: [fresh],
+      enforced: true,
+    });
+    expect(snapshot.required_acks.find((a) => a.key === "committee:session_missing")).toBeUndefined();
   });
 
   test("snapshot hash covers the minutes input_hash and confirmation state (changed minutes → stale)", async () => {

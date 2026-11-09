@@ -4,6 +4,7 @@ title: "Deal-Shape Selection Chain (Partner Track)"
 scope: shared
 level: entity
 version: "1.0.2"
+effective_from: "2026-08-23"
 status: active
 # Entry is a human funnel-entry decision (a named capability gap justifies an
 # external search), made BEFORE any case classification exists — the P3

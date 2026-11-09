@@ -4,6 +4,7 @@ title: "Company Profile Analysis (그룹/계열사 자사 프로파일)"
 scope: shared
 level: entity
 version: "1.1.0"
+effective_from: "2026-09-02"
 status: active
 applicability: mandatory
 workflow_type: core

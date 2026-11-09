@@ -4,6 +4,7 @@ title: "Brown Field Pre-Feasibility"
 scope: shared
 level: entity
 version: "1.6.0"
+effective_from: "2026-08-20"
 status: active
 applicability: mandatory
 workflow_type: core

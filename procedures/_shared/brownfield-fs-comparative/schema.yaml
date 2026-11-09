@@ -4,6 +4,7 @@ title: "Brown Field FS Comparative Selection"
 scope: shared
 level: entity
 version: "1.0.1"
+effective_from: "2026-09-22"
 status: active
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S8은 project 계층 stage이므로
 # project.case_type 라우팅 변수에 기계판독 가능한 predicate을 둔다 —
