@@ -206,7 +206,19 @@ function positionFor(agentKey: string, prompt: string): AgentCallResult {
 
 type CallAgentFactory = () => CallAgent;
 
-let factory: CallAgentFactory | null = null;
+/**
+ * The seam store lives on globalThis, not in module state: Next.js compiles
+ * the instrumentation bootstrap and each route handler as separate bundles
+ * (and dev HMR recompiles per edit), so a module-level variable registered at
+ * boot is invisible to the route's own module instance. Without this,
+ * route-side getCommitteeCallAgent() sees no factory even after a successful
+ * bootstrap registration (the post-845 dev "llm_required" incident).
+ */
+const CALL_AGENT_FACTORY_KEY = "__coNewbizCommitteeCallAgentFactory";
+
+function getCallAgentFactory(): CallAgentFactory | null {
+  return ((globalThis as Record<string, unknown>)[CALL_AGENT_FACTORY_KEY] as CallAgentFactory | undefined) ?? null;
+}
 
 /**
  * The seam: the LLM-backed implementation registers a factory here at server
@@ -215,7 +227,7 @@ let factory: CallAgentFactory | null = null;
  * agnostic to which strategy is active.
  */
 export function setCallAgentFactory(next: CallAgentFactory | null): void {
-  factory = next;
+  (globalThis as Record<string, unknown>)[CALL_AGENT_FACTORY_KEY] = next;
 }
 
 /**
@@ -224,7 +236,7 @@ export function setCallAgentFactory(next: CallAgentFactory | null): void {
  * factory, so chair passes stay deterministic there.
  */
 export function committeeSeatsUseLlm(): boolean {
-  return factory !== null;
+  return getCallAgentFactory() !== null;
 }
 
 /**
@@ -246,7 +258,7 @@ export class CommitteeLlmRequiredError extends Error {
 
 /** Whether an LLM-backed callAgent can actually be constructed right now. */
 export function committeeLlmAvailable(): boolean {
-  return factory !== null;
+  return getCallAgentFactory() !== null;
 }
 
 /**
@@ -260,6 +272,7 @@ export function deterministicCallAgent(): CallAgent {
 }
 
 export function getCommitteeCallAgent(): CallAgent {
-  if (factory !== null) return factory();
+  const f = getCallAgentFactory();
+  if (f !== null) return f();
   throw new CommitteeLlmRequiredError();
 }

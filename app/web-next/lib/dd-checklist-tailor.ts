@@ -34,7 +34,13 @@ import { runActivityChain, type ActivitySpec, type EntityRef } from "./agent-orc
 import { specAgentFor } from "./spec-activities.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
 import { evaluateValidatorCompleteness } from "../../../db/lib/validator-completeness.ts";
-import { DD_WORKSPACE_CHECKLISTS, SUB_TRACK_DD_CHECKLISTS, scopedSubTrackDdChecklists, getChecklistItems, type ChecklistItemDef } from "./library.ts";
+import {
+  DD_WORKSPACE_CHECKLISTS,
+  SUB_TRACK_DD_CHECKLISTS,
+  scopedSubTrackDdChecklists,
+  getChecklistItems,
+  type ChecklistItemDef,
+} from "./library.ts";
 import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
 import { KO_DATA } from "./ko-data-values.ts";
 import {
@@ -69,9 +75,7 @@ import { isWebResearchConfigured, tavilySearch, type WebSource } from "./web-res
 
 // ADR-0148 — DD workspace is 7 domains (financial/hr/market/financing added
 // alongside commercial/technical/legal).
-export const DD_DOMAINS = [
-  "commercial", "technical", "legal", "financial", "hr", "market", "financing",
-] as const;
+export const DD_DOMAINS = ["commercial", "technical", "legal", "financial", "hr", "market", "financing"] as const;
 export type DdDomain = (typeof DD_DOMAINS)[number];
 
 /**
@@ -161,25 +165,70 @@ export function industryLabelForProject(projectId: string): string {
 
 const TEMPLATES: Record<DdTailorDomain, Array<{ label: string; rationale: string }>> = {
   commercial: [
-    { label: "상위 3개 고객 매출 집중도를 경영진 설명이 아닌 계약서 기준으로 검증 ({industry})", rationale: "산업별 고객 집중도는 일반 항목이 놓치는 사각지대 — 지분을 계약서로 확인해야 합니다." },
-    { label: "{industry} 가격 결정력과 비용 전가력을 직전 불황기 벤치마크로 검증", rationale: "일반적인 가격력 질문은 산업 벤치마크 없이는 답할 수 없습니다." },
-    { label: "{industry} 유통 구조를 매핑하고 유통사 수익성·리베이트·채널 재고를 확인", rationale: "유통 의존 산업은 채널 재고에 수요 과대 계상이 숨습니다. 일반 항목은 이를 강제하지 않습니다." },
-    { label: "{industry} 수요 순환성을 S8 사업 케이스의 프록시 체인 수요 추정치와 대조 검증", rationale: "실사를 S8 수요 앵커에 연결해 시장 가정 오류가 발견사항으로 드러나게 합니다." },
-    { label: "발표된 {industry} 경쟁사 증설과 대상 지분 점유 위협을 검토", rationale: "용량 증설 발표는 재무제표에 반영되기 훨씬 전에 마진 압박을 예고합니다." },
+    {
+      label: "상위 3개 고객 매출 집중도를 경영진 설명이 아닌 계약서 기준으로 검증 ({industry})",
+      rationale: "산업별 고객 집중도는 일반 항목이 놓치는 사각지대 — 지분을 계약서로 확인해야 합니다.",
+    },
+    {
+      label: "{industry} 가격 결정력과 비용 전가력을 직전 불황기 벤치마크로 검증",
+      rationale: "일반적인 가격력 질문은 산업 벤치마크 없이는 답할 수 없습니다.",
+    },
+    {
+      label: "{industry} 유통 구조를 매핑하고 유통사 수익성·리베이트·채널 재고를 확인",
+      rationale: "유통 의존 산업은 채널 재고에 수요 과대 계상이 숨습니다. 일반 항목은 이를 강제하지 않습니다.",
+    },
+    {
+      label: "{industry} 수요 순환성을 S8 사업 케이스의 프록시 체인 수요 추정치와 대조 검증",
+      rationale: "실사를 S8 수요 앵커에 연결해 시장 가정 오류가 발견사항으로 드러나게 합니다.",
+    },
+    {
+      label: "발표된 {industry} 경쟁사 증설과 대상 지분 점유 위협을 검토",
+      rationale: "용량 증설 발표는 재무제표에 반영되기 훨씬 전에 마진 압박을 예고합니다.",
+    },
   ],
   technical: [
-    { label: "{industry} 공정 병목을 경영진 인터뷰가 아닌 현장 관찰로 검증", rationale: "일반 항목 tdd-04는 병목 식별만 요구 — 이 산업에서는 식별 방법 자체가 중요합니다." },
-    { label: "설비 연식과 유지보수 적체를 {industry} 재투자 관행과 대조 평가", rationale: "유지보수 지연 리스크의 규모와 리드타임은 산업별로 다릅니다." },
-    { label: "{industry} 특화 라인 인증·자격 현황과 갱신 상태를 확인", rationale: "규제 산업에서 인증 만기는 곧 판매 정지 — certification-agent에 연계하고 중복 생성하지 않습니다." },
-    { label: "부지 오염 이력과 운영 허가 조건을 포함한 {industry} EHS 부채를 검토", rationale: "일반 항목 tdd-06은 포괄적 — 어떤 EHS 노출이 중요한지는 산업이 정의합니다." },
-    { label: "자본 지출 계획을 {industry} 벤치마크 단위 원가와 설비 리드타임으로 검증", rationale: "자본 지출의 현실성은 산업 단위 원가와만 대조 가능합니다." },
+    {
+      label: "{industry} 공정 병목을 경영진 인터뷰가 아닌 현장 관찰로 검증",
+      rationale: "일반 항목 tdd-04는 병목 식별만 요구 — 이 산업에서는 식별 방법 자체가 중요합니다.",
+    },
+    {
+      label: "설비 연식과 유지보수 적체를 {industry} 재투자 관행과 대조 평가",
+      rationale: "유지보수 지연 리스크의 규모와 리드타임은 산업별로 다릅니다.",
+    },
+    {
+      label: "{industry} 특화 라인 인증·자격 현황과 갱신 상태를 확인",
+      rationale: "규제 산업에서 인증 만기는 곧 판매 정지 — certification-agent에 연계하고 중복 생성하지 않습니다.",
+    },
+    {
+      label: "부지 오염 이력과 운영 허가 조건을 포함한 {industry} EHS 부채를 검토",
+      rationale: "일반 항목 tdd-06은 포괄적 — 어떤 EHS 노출이 중요한지는 산업이 정의합니다.",
+    },
+    {
+      label: "자본 지출 계획을 {industry} 벤치마크 단위 원가와 설비 리드타임으로 검증",
+      rationale: "자본 지출의 현실성은 산업 단위 원가와만 대조 가능합니다.",
+    },
   ],
   legal: [
-    { label: "{industry} 사업 인허가 전수 분류 — 지위 변동 시 자동 승계 / 동의 필요 / 재발급 필요", rationale: "산업 인허가 이전 가능성이 가장 흔한 구조적 법률 리스크 — 일반 항목 ldd-15는 포괄적으로만 다룹니다." },
-    { label: "{industry} 특화 규제 조사와 대상·실소유주의 제재 노출 확인", rationale: "규제 산업은 일반 스캔이 놓치는 섹터 특화 조사 리스크를 가집니다." },
-    { label: "영업비밀 보호 관행을 포함한 {industry} IP 권리관계와 담보 설정을 검토", rationale: "보호 가능한 IP의 범위는 산업마다 크게 다릅니다." },
-    { label: "{industry} 노동 구조 — 노조 단체협약 승계 조항과 핵심 인력 의존도 평가", rationale: "노동 이전 법리와 단체협약 노출은 산업 구조의 영향을 받습니다." },
-    { label: "상위 {industry} 고객·공급사 계약의 지위 변동·양도 금지 조항 스캔", rationale: "이 산업에서 실제 중요한 거래처로 계약 검토를 우선순위화합니다." },
+    {
+      label: "{industry} 사업 인허가 전수 분류 — 지위 변동 시 자동 승계 / 동의 필요 / 재발급 필요",
+      rationale: "산업 인허가 이전 가능성이 가장 흔한 구조적 법률 리스크 — 일반 항목 ldd-15는 포괄적으로만 다룹니다.",
+    },
+    {
+      label: "{industry} 특화 규제 조사와 대상·실소유주의 제재 노출 확인",
+      rationale: "규제 산업은 일반 스캔이 놓치는 섹터 특화 조사 리스크를 가집니다.",
+    },
+    {
+      label: "영업비밀 보호 관행을 포함한 {industry} IP 권리관계와 담보 설정을 검토",
+      rationale: "보호 가능한 IP의 범위는 산업마다 크게 다릅니다.",
+    },
+    {
+      label: "{industry} 노동 구조 — 노조 단체협약 승계 조항과 핵심 인력 의존도 평가",
+      rationale: "노동 이전 법리와 단체협약 노출은 산업 구조의 영향을 받습니다.",
+    },
+    {
+      label: "상위 {industry} 고객·공급사 계약의 지위 변동·양도 금지 조항 스캔",
+      rationale: "이 산업에서 실제 중요한 거래처로 계약 검토를 우선순위화합니다.",
+    },
   ],
 };
 
@@ -205,11 +254,23 @@ export interface TailorItemDraft {
  * sourceUrl/sourceReliability only to null/'C' — no fabricated URLs or
  * grades. A WebSearch-backed factory returns real sources with real grades.
  */
-export type DdTailorExecutor = (domain: DdTailorDomain, ctx: { projectId: string; industry: string }) => Promise<TailorItemDraft[]>;
+export type DdTailorExecutor = (
+  domain: DdTailorDomain,
+  ctx: { projectId: string; industry: string },
+) => Promise<TailorItemDraft[]>;
 
 type DdExecutorFactory = () => DdTailorExecutor;
 
-let executorFactory: DdExecutorFactory | null = null;
+/**
+ * The seam store lives on globalThis, not module state — same multi-bundle
+ * rationale as committee-agents.ts (bootstrap registration was invisible to
+ * route-side consumers).
+ */
+const EXECUTOR_FACTORY_KEY = "__coNewbizDdTailorExecutorFactory";
+
+function getExecutorFactory(): DdExecutorFactory | null {
+  return ((globalThis as Record<string, unknown>)[EXECUTOR_FACTORY_KEY] as DdExecutorFactory | undefined) ?? null;
+}
 
 /**
  * The seam: a future WebSearch-backed implementation registers a factory here
@@ -217,10 +278,16 @@ let executorFactory: DdExecutorFactory | null = null;
  * default and any fallback is the local deterministic executor.
  */
 export function setDdTailorExecutorFactory(next: DdExecutorFactory | null): void {
-  executorFactory = next;
+  (globalThis as Record<string, unknown>)[EXECUTOR_FACTORY_KEY] = next;
 }
 
-function persistDrafts(projectId: string, domain: DdTailorDomain, agentKey: string, drafts: TailorItemDraft[], targetId: string | null): void {
+function persistDrafts(
+  projectId: string,
+  domain: DdTailorDomain,
+  agentKey: string,
+  drafts: TailorItemDraft[],
+  targetId: string | null,
+): void {
   const db = getDb();
   const now = nowIso();
   for (const d of drafts) {
@@ -229,19 +296,47 @@ function persistDrafts(projectId: string, domain: DdTailorDomain, agentKey: stri
       `INSERT INTO project_checklist_item_custom
          (id, project_id, domain, item_label, rationale, source_url, source_reliability, proposed_by_agent, status, created_at, target_id)
        VALUES (?,?,?,?,?,?,?,?, 'proposed', ?, ?)`,
-      [ulid(), projectId, domain, d.itemLabel.trim(), d.rationale?.trim() ?? null, d.sourceUrl ?? null, d.sourceReliability ?? null, agentKey, now, targetId],
+      [
+        ulid(),
+        projectId,
+        domain,
+        d.itemLabel.trim(),
+        d.rationale?.trim() ?? null,
+        d.sourceUrl ?? null,
+        d.sourceReliability ?? null,
+        agentKey,
+        now,
+        targetId,
+      ],
     );
   }
 }
-
 
 /** 출처 URL의 신뢰도 등급 — 정부·교육·통계·공시 A, 주요 글로벌 언론·컨설팅 B, 기타 C.
  * (S6 웹검색 후보 제안에서도 재사용 — ADR-0118 근거 표시 계약) */
 export function reliabilityForSource(url: string): "A" | "B" | "C" {
   try {
     const host = new URL(url).hostname.toLowerCase();
-    if (host.endsWith(".gov") || host.endsWith(".go.kr") || host.endsWith(".edu") || host.includes("kosis") || host.includes("dart.fss")) return "A";
-    if (host.includes("reuters") || host.includes("bloomberg") || host.includes("ft.com") || host.includes("mckinsey") || host.includes("bcg") || host.includes("pwc") || host.includes("deloitte") || host.includes("kpmg") || host.includes("ey.com")) return "B";
+    if (
+      host.endsWith(".gov") ||
+      host.endsWith(".go.kr") ||
+      host.endsWith(".edu") ||
+      host.includes("kosis") ||
+      host.includes("dart.fss")
+    )
+      return "A";
+    if (
+      host.includes("reuters") ||
+      host.includes("bloomberg") ||
+      host.includes("ft.com") ||
+      host.includes("mckinsey") ||
+      host.includes("bcg") ||
+      host.includes("pwc") ||
+      host.includes("deloitte") ||
+      host.includes("kpmg") ||
+      host.includes("ey.com")
+    )
+      return "B";
     return "C";
   } catch {
     return "C";
@@ -256,7 +351,9 @@ function pickSource(sources: WebSource[], index: number): WebSource | null {
 export function makeTavilyDdTailorExecutor(search: typeof tavilySearch = tavilySearch): DdTailorExecutor {
   return async (domain, ctx) => {
     const templates = renderTemplates(domain, ctx.industry);
-    const sources = await search(`${ctx.industry} ${domain} due diligence risks regulations market 2026`, { maxResults: 5 });
+    const sources = await search(`${ctx.industry} ${domain} due diligence risks regulations market 2026`, {
+      maxResults: 5,
+    });
     return templates.map((t, index) => {
       const source = pickSource(sources, index);
       return {
@@ -281,7 +378,8 @@ function defaultExecutor(): DdTailorExecutor {
 
 export function getDdTailorExecutor(): DdTailorExecutor {
   const mode = process.env.CO_NEWBIZ_DD_TAILOR_AGENTS ?? "deterministic";
-  if (mode === "llm" && executorFactory !== null) return executorFactory();
+  const f = mode === "llm" ? getExecutorFactory() : null;
+  if (f !== null) return f();
   if (mode === "tavily" && isWebResearchConfigured()) return makeTavilyDdTailorExecutor();
   return defaultExecutor();
 }
@@ -302,7 +400,12 @@ export interface TailorResult {
  */
 export async function tailorDdChecklist(
   projectId: string,
-  opts: { actor: string; domains?: DdTailorDomain[]; source?: string; /** ADR-0157: an opened comparison target; omitted = the selected/legacy scope. */ targetId?: string | null },
+  opts: {
+    actor: string;
+    domains?: DdTailorDomain[];
+    source?: string /** ADR-0157: an opened comparison target; omitted = the selected/legacy scope. */;
+    targetId?: string | null;
+  },
 ): Promise<TailorResult> {
   const targetId = opts.targetId ?? null;
   const domains = opts.domains?.length ? opts.domains : [...DD_TAILOR_DOMAINS];
@@ -342,7 +445,11 @@ export async function tailorDdChecklist(
 }
 
 function proposalCount(projectId: string): number {
-  return (getDb().query("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ?").get(projectId) as { c: number }).c;
+  return (
+    getDb().query("SELECT COUNT(*) c FROM project_checklist_item_custom WHERE project_id = ?").get(projectId) as {
+      c: number;
+    }
+  ).c;
 }
 
 /**
@@ -385,7 +492,15 @@ export function ddCustomItemProposer(projectId: string, itemId: string): string 
 
 export function createDdCustomItem(
   projectId: string,
-  input: { domain: DdDomain; itemLabel: string; rationale?: string | null; sourceUrl?: string | null; sourceReliability?: "A" | "B" | "C" | null; targetId?: string | null; actor?: string },
+  input: {
+    domain: DdDomain;
+    itemLabel: string;
+    rationale?: string | null;
+    sourceUrl?: string | null;
+    sourceReliability?: "A" | "B" | "C" | null;
+    targetId?: string | null;
+    actor?: string;
+  },
 ): { id: string; domain: DdDomain; status: "proposed" } {
   const id = ulid();
   const db = getDb();
@@ -395,16 +510,30 @@ export function createDdCustomItem(
       `INSERT INTO project_checklist_item_custom
          (id, project_id, domain, item_label, rationale, source_url, source_reliability, proposed_by_agent, status, created_at, target_id)
        VALUES (?,?,?,?,?,?,?, NULL, 'proposed', ?, ?)`,
-      [id, projectId, input.domain, input.itemLabel.trim(), input.rationale?.trim() || null, input.sourceUrl?.trim() || null, input.sourceReliability ?? null, now, input.targetId ?? null],
+      [
+        id,
+        projectId,
+        input.domain,
+        input.itemLabel.trim(),
+        input.rationale?.trim() || null,
+        input.sourceUrl?.trim() || null,
+        input.sourceReliability ?? null,
+        now,
+        input.targetId ?? null,
+      ],
     );
-    if (input.actor) appendAudit(db, { actor: input.actor, action: DD_CUSTOM_CREATE_ACTION, target: `${projectId}:${id}`, now });
+    if (input.actor)
+      appendAudit(db, { actor: input.actor, action: DD_CUSTOM_CREATE_ACTION, target: `${projectId}:${id}`, now });
   })();
   return { id, domain: input.domain, status: "proposed" };
 }
 
 /** The reviewer is the item's proposer — a second, distinct person must decide. */
 export class DdCustomReviewError extends Error {
-  constructor(public readonly code: "second_person_required", message: string) {
+  constructor(
+    public readonly code: "second_person_required",
+    message: string,
+  ) {
     super(message);
   }
 }
@@ -434,9 +563,12 @@ export function reviewDdCustomItem(
   const item = db
     .query("SELECT id, domain, status, target_id FROM project_checklist_item_custom WHERE id = ? AND project_id = ?")
     .get(itemId, projectId) as { id: string; domain: DdDomain; status: string; target_id: string | null } | undefined;
-  if (!item || item.status !== "proposed") return null;
+  if (item?.status !== "proposed") return null;
   if (ddCustomItemProposer(projectId, itemId) === userId) {
-    throw new DdCustomReviewError("second_person_required", "The proposer of a custom item cannot approve/reject it — another person must review it.");
+    throw new DdCustomReviewError(
+      "second_person_required",
+      "The proposer of a custom item cannot approve/reject it — another person must review it.",
+    );
   }
   const now = nowIso();
   const apply = db.transaction(() => {
@@ -453,14 +585,18 @@ export function reviewDdCustomItem(
         [ulid(), projectId, customChecklistId(item.domain), itemId, userId, now, item.target_id],
       );
     }
-    appendAudit(db, { actor: userId, action: DD_CUSTOM_REVIEW_ACTION, target: `${projectId}:${itemId}:${decision}`, now });
+    appendAudit(db, {
+      actor: userId,
+      action: DD_CUSTOM_REVIEW_ACTION,
+      target: `${projectId}:${itemId}:${decision}`,
+      now,
+    });
   });
   apply();
   return { id: itemId, domain: item.domain, status: decision };
 }
 
 // ── Judgment state write (the S9 workspace's ordinary write path) ──────────
-
 
 // ── bf-01 derived from the validator completeness engine (ADR-0186 D4, design 3.4) ────────────────────
 
@@ -489,9 +625,10 @@ export function derivedBf01(projectId: string, db: Database = getDb()): DerivedB
   const missing = [...v.halt.missing] as string[];
   return {
     status: missing.length === 0 ? "pass" : "fail",
-    note: missing.length === 0
-      ? `Derived from the validator engine: ${v.completed_count} of ${v.applicable_count} applicable core validators recorded.`
-      : `Derived from the validator engine: applicable core validator(s) missing - ${missing.join(", ")}.`,
+    note:
+      missing.length === 0
+        ? `Derived from the validator engine: ${v.completed_count} of ${v.applicable_count} applicable core validators recorded.`
+        : `Derived from the validator engine: applicable core validator(s) missing - ${missing.join(", ")}.`,
     applicable: v.applicable_count,
     completed: v.completed_count,
     missing,
@@ -500,10 +637,17 @@ export function derivedBf01(projectId: string, db: Database = getDb()): DerivedB
 }
 
 /** Replace the stored bf-01 row by the derived verdict (selected/legacy scope only). */
-function withDerivedBf01<T extends { checklist_id: string; item_id: string; status: string }>(projectId: string, rows: T[], make: (derived: DerivedBf01) => T): T[] {
+function withDerivedBf01<T extends { checklist_id: string; item_id: string; status: string }>(
+  projectId: string,
+  rows: T[],
+  make: (derived: DerivedBf01) => T,
+): T[] {
   const derived = derivedBf01(projectId);
   if (!derived) return rows;
-  return [...rows.filter((r) => !(r.checklist_id === BF_FEASIBILITY_CHECKLIST_ID && r.item_id === BF_VALIDATORS_ITEM_ID)), make(derived)];
+  return [
+    ...rows.filter((r) => !(r.checklist_id === BF_FEASIBILITY_CHECKLIST_ID && r.item_id === BF_VALIDATORS_ITEM_ID)),
+    make(derived),
+  ];
 }
 
 export const STATE_STATUSES = ["pending", "pass", "fail", "na", "waived"] as const;
@@ -522,16 +666,22 @@ export function upsertChecklistState(
   itemId: string,
   status: ChecklistStateStatus,
   userId: string,
-  opts: { note?: string; evidenceRef?: string; waiverId?: string; /** ADR-0157: resolved scope (see resolveDdScope); NULL = selected/legacy. */ targetId?: string | null } = {},
+  opts: {
+    note?: string;
+    evidenceRef?: string;
+    waiverId?: string /** ADR-0157: resolved scope (see resolveDdScope); NULL = selected/legacy. */;
+    targetId?: string | null;
+  } = {},
 ): { id: string } | null {
   const db = getDb();
   const targetId = opts.targetId ?? null;
   let known = false;
   if (checklistId.startsWith(CUSTOM_CHECKLIST_PREFIX)) {
-    known =
-      !!db
-        .query("SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved' AND target_id IS ?")
-        .get(itemId, projectId, targetId);
+    known = !!db
+      .query(
+        "SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved' AND target_id IS ?",
+      )
+      .get(itemId, projectId, targetId);
   } else {
     const items = getChecklistItems(checklistId);
     known = !!items?.some((i) => i.id === itemId);
@@ -544,7 +694,7 @@ export function upsertChecklistState(
   if (targetId === null) {
     const ws = workspaceScopeContext(projectId, db);
     const sc = ws?.items.get(`${checklistId}:${itemId}`);
-    if (sc && !sc.judgeable && !ws!.states.has(`${checklistId}:${itemId}`)) {
+    if (ws && sc && !sc.judgeable && !ws.states.has(`${checklistId}:${itemId}`)) {
       throw new DdTargetError(
         409,
         "dd_item_out_of_scope",
@@ -555,7 +705,7 @@ export function upsertChecklistState(
     // section-scoped extras). m_and_a / grandfathered projects have no context.
     const bf = ws ? null : brownfieldScopeContext(projectId, db);
     const bsc = bf?.items.get(`${checklistId}:${itemId}`);
-    if (bsc && !bsc.judgeable && !bf!.states.has(`${checklistId}:${itemId}`)) {
+    if (bf && bsc && !bsc.judgeable && !bf.states.has(`${checklistId}:${itemId}`)) {
       throw new DdTargetError(
         409,
         "dd_item_out_of_scope",
@@ -566,14 +716,22 @@ export function upsertChecklistState(
   if (status === "waived" && !opts.waiverId) return null;
   if (opts.waiverId) {
     // A waiver applies to exactly one DD scope (ADR-0157): matched on target_id equality.
-    const waiver = db.query("SELECT target_id FROM waiver WHERE id = ? AND project_id = ?").get(opts.waiverId, projectId) as { target_id: string | null } | undefined;
+    const waiver = db
+      .query("SELECT target_id FROM waiver WHERE id = ? AND project_id = ?")
+      .get(opts.waiverId, projectId) as { target_id: string | null } | undefined;
     if (waiver && waiver.target_id !== targetId) {
-      throw new DdTargetError(400, "waiver_target_mismatch", "This waiver belongs to another target's DD scope — only waivers of the same target can be linked.");
+      throw new DdTargetError(
+        400,
+        "waiver_target_mismatch",
+        "This waiver belongs to another target's DD scope — only waivers of the same target can be linked.",
+      );
     }
   }
   const now = nowIso();
   const existing = db
-    .query("SELECT id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ? AND checklist_id = ? AND item_id = ?")
+    .query(
+      "SELECT id FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ? AND checklist_id = ? AND item_id = ?",
+    )
     .get(projectId, targetId, checklistId, itemId) as { id: string } | undefined;
   if (existing) {
     db.run(
@@ -586,7 +744,19 @@ export function upsertChecklistState(
   db.run(
     `INSERT INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at, target_id)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, projectId, checklistId, itemId, status, opts.note ?? null, opts.evidenceRef ?? null, opts.waiverId ?? null, userId, now, targetId],
+    [
+      id,
+      projectId,
+      checklistId,
+      itemId,
+      status,
+      opts.note ?? null,
+      opts.evidenceRef ?? null,
+      opts.waiverId ?? null,
+      userId,
+      now,
+      targetId,
+    ],
   );
   return { id };
 }
@@ -624,6 +794,15 @@ export interface DdCompletionSummary {
   excluded?: number;
 }
 
+/** View paths require the scoped counts (judged/judgeable/workspace_judgeable/
+ *  excluded are optional on DdCompletionSummary because non-scoped summaries
+ *  omit them); a missing count there is a wiring bug, not data — fail loudly
+ *  instead of asserting non-null. */
+function scopedCount(v: number | undefined): number {
+  if (v === undefined) throw new Error("scoped completion summary count missing");
+  return v;
+}
+
 const STANDARD_MANDATORY_CACHE = new Map<string, Set<string>>();
 
 function mandatoryItemIds(checklistId: string): Set<string> | null {
@@ -647,10 +826,17 @@ export function isMandatoryChecklistItem(checklistId: string, itemId: string): b
 }
 
 /** Whether (checklist, item) is an applied item of this project in this DD scope (standard, or an approved custom item). */
-export function isKnownChecklistItem(projectId: string, checklistId: string, itemId: string, targetId: string | null): boolean {
+export function isKnownChecklistItem(
+  projectId: string,
+  checklistId: string,
+  itemId: string,
+  targetId: string | null,
+): boolean {
   if (checklistId.startsWith(CUSTOM_CHECKLIST_PREFIX)) {
     return !!getDb()
-      .query("SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved' AND target_id IS ?")
+      .query(
+        "SELECT id FROM project_checklist_item_custom WHERE id = ? AND project_id = ? AND status = 'approved' AND target_id IS ?",
+      )
       .get(itemId, projectId, targetId);
   }
   return !!getChecklistItems(checklistId)?.some((i) => i.id === itemId);
@@ -660,8 +846,18 @@ export function isKnownChecklistItem(projectId: string, checklistId: string, ite
  * ADR-0186 D5: under `enforce`, a mandatory `na` that no second person confirmed
  * counts as pending (the flag is read per call; shadow and off keep the old count).
  */
-function unconfirmedMandatoryNa(r: { checklist_id: string; item_id: string; status: string; na_confirmed_by: string | null }): boolean {
-  return r.status === "na" && !r.na_confirmed_by && gateIntegrityMode("waiver") === "enforce" && isMandatoryChecklistItem(r.checklist_id, r.item_id);
+function unconfirmedMandatoryNa(r: {
+  checklist_id: string;
+  item_id: string;
+  status: string;
+  na_confirmed_by: string | null;
+}): boolean {
+  return (
+    r.status === "na" &&
+    !r.na_confirmed_by &&
+    gateIntegrityMode("waiver") === "enforce" &&
+    isMandatoryChecklistItem(r.checklist_id, r.item_id)
+  );
 }
 
 /**
@@ -677,13 +873,15 @@ const DD_NEW_DOMAIN_CHECKLISTS: ReadonlySet<string> = new Set(
   (["financial", "hr", "market", "financing"] as const).map((d) => DD_WORKSPACE_CHECKLISTS[d]),
 );
 function isGrandfatheredDomain(domain: DdDomain): boolean {
-  return DD_NEW_DOMAIN_CHECKLISTS.has(DD_WORKSPACE_CHECKLISTS[domain]!);
+  const mapped = DD_WORKSPACE_CHECKLISTS[domain];
+  return mapped !== undefined && DD_NEW_DOMAIN_CHECKLISTS.has(mapped);
 }
 /**
  * Pre-2026-10-01 projects: the four newer domains are judged and kept for reference
  * (writes allowed) but never enter the completion count, so their gates do not move.
  */
-export const DD_NOT_COUNTED_REASON = "Recorded for reference; not counted in S9 completion for projects created before 2026-10-01";
+export const DD_NOT_COUNTED_REASON =
+  "Recorded for reference; not counted in S9 completion for projects created before 2026-10-01";
 
 export interface DdDomainAdoption {
   adopted: boolean;
@@ -698,9 +896,9 @@ export interface DdDomainAdoption {
  *  recorded (rationale mandatory + audited) instead of silent. Null = grandfathered
  *  reference-only (today's behavior). */
 export function ddDomainAdoption(projectId: string): DdDomainAdoption | null {
-  const row = getDb()
-    .query("SELECT dd_domain_adopt_json AS j FROM md_project WHERE id = ?")
-    .get(projectId) as { j: string | null } | undefined;
+  const row = getDb().query("SELECT dd_domain_adopt_json AS j FROM md_project WHERE id = ?").get(projectId) as
+    | { j: string | null }
+    | undefined;
   if (!row?.j) return null;
   try {
     const parsed = JSON.parse(row.j) as { adopted?: unknown; rationale?: unknown; by?: unknown; at?: unknown };
@@ -716,7 +914,9 @@ export function writeDdDomainAdoption(
   projectId: string,
   opts: { adopted: boolean; rationale: string; by: string; at: string },
 ): void {
-  const json = opts.adopted ? JSON.stringify({ adopted: true, rationale: opts.rationale, by: opts.by, at: opts.at }) : null;
+  const json = opts.adopted
+    ? JSON.stringify({ adopted: true, rationale: opts.rationale, by: opts.by, at: opts.at })
+    : null;
   db.run("UPDATE md_project SET dd_domain_adopt_json = ? WHERE id = ?", [json, projectId]);
 }
 
@@ -750,7 +950,9 @@ function uncountedRow(checklistId: string, countsNewDomains: boolean, gfInScope 
 }
 
 function countsUnassessedItems(projectId: string): boolean {
-  const row = getDb().query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as { created_at: string } | undefined;
+  const row = getDb().query("SELECT created_at FROM md_project WHERE id = ?").get(projectId) as
+    | { created_at: string }
+    | undefined;
   return !!row && row.created_at >= DD_UNASSESSED_COUNTED_FROM;
 }
 
@@ -763,9 +965,9 @@ function countsUnassessedItems(projectId: string): boolean {
  */
 export function subTrackChecklistIds(projectId: string): string[] {
   const db = getDb();
-  const proj = db
-    .query("SELECT created_at, source_opportunity_id FROM md_project WHERE id = ?")
-    .get(projectId) as { created_at: string | null; source_opportunity_id: string | null } | undefined;
+  const proj = db.query("SELECT created_at, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { created_at: string | null; source_opportunity_id: string | null }
+    | undefined;
   if (!proj?.source_opportunity_id) return [];
   const pin = db
     // The ADR-0162 opt-in pin never re-dates a project; it attaches extras explicitly below.
@@ -806,16 +1008,31 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
     const bf = brownfieldScopeContext(projectId, getDb());
     if (bf) return scopedCompletionSummary(projectId, bfScopedInput(bf));
   }
-  const rowsRaw = (getDb()
-    .query(
-      `SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?`,
-    )
-    .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null; na_confirmed_by: string | null }>)
+  const rowsRaw = (
+    getDb()
+      .query(
+        `SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?`,
+      )
+      .all(projectId, targetId) as Array<{
+      checklist_id: string;
+      item_id: string;
+      status: string;
+      waiver_id: string | null;
+      na_confirmed_by: string | null;
+    }>
+  )
     // Reference-only rows (newer domains of a pre-2026-10-01 project) never enter the count.
     .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId)));
-  const rows = targetId === null
-    ? withDerivedBf01(projectId, rowsRaw, (d) => ({ checklist_id: BF_FEASIBILITY_CHECKLIST_ID, item_id: BF_VALIDATORS_ITEM_ID, status: d.status, waiver_id: null, na_confirmed_by: null }))
-    : rowsRaw;
+  const rows =
+    targetId === null
+      ? withDerivedBf01(projectId, rowsRaw, (d) => ({
+          checklist_id: BF_FEASIBILITY_CHECKLIST_ID,
+          item_id: BF_VALIDATORS_ITEM_ID,
+          status: d.status,
+          waiver_id: null,
+          na_confirmed_by: null,
+        }))
+      : rowsRaw;
   const extraIds = subTrackChecklistIds(projectId);
   const extraSet = new Set(extraIds);
   let pending = 0;
@@ -844,12 +1061,11 @@ export function ddCompletionSummary(projectId: string, opts: { targetId?: string
   let unassessed = 0;
   if (newerDomainsCounted(projectId) || extraIds.length > 0) {
     const have = new Set(rows.map((r) => `${r.checklist_id}:${r.item_id}`));
-    const applicable = [
-      ...(newerDomainsCounted(projectId) ? Object.values(DD_WORKSPACE_CHECKLISTS) : []),
-      ...extraSet,
-    ];
+    const applicable = [...(newerDomainsCounted(projectId) ? Object.values(DD_WORKSPACE_CHECKLISTS) : []), ...extraSet];
     for (const checklistId of applicable) {
-      for (const item of (extraSet.has(checklistId) ? scopedChecklistItems(checklistId) : getChecklistItems(checklistId)) ?? []) {
+      for (const item of (extraSet.has(checklistId)
+        ? scopedChecklistItems(checklistId)
+        : getChecklistItems(checklistId)) ?? []) {
         if (have.has(`${checklistId}:${item.id}`)) continue;
         unassessed += 1;
       }
@@ -884,26 +1100,50 @@ interface ScopedInput {
   gfInScope?: boolean;
 }
 function gfScopedInput(ws: WorkspaceScopeContext): ScopedInput {
-  return { items: ws.items, extras: ws.sel.extra_checklists.map((c) => [c, scopedChecklistItems(c) ?? []] as [string, ChecklistItemDef[]]), gfInScope: true };
+  return {
+    items: ws.items,
+    extras: ws.sel.extra_checklists.map((c) => [c, scopedChecklistItems(c) ?? []] as [string, ChecklistItemDef[]]),
+    gfInScope: true,
+  };
 }
 function bfScopedInput(bf: BrownfieldScopeContext): ScopedInput {
-  return { items: bf.items, extras: bf.extra_checklists.map((c) => [c, brownfieldExtraItems(bf, c)] as [string, ChecklistItemDef[]]) };
+  return {
+    items: bf.items,
+    extras: bf.extra_checklists.map((c) => [c, brownfieldExtraItems(bf, c)] as [string, ChecklistItemDef[]]),
+  };
 }
 
 function scopedCompletionSummary(projectId: string, ws: ScopedInput): DdCompletionSummary {
-  const rowsRaw = (getDb()
-    .query("SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL")
-    .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string; waiver_id: string | null; na_confirmed_by: string | null }>)
-    .filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId), !!ws.gfInScope));
-  const rows = withDerivedBf01(projectId, rowsRaw, (d) => ({ checklist_id: BF_FEASIBILITY_CHECKLIST_ID, item_id: BF_VALIDATORS_ITEM_ID, status: d.status, waiver_id: null, na_confirmed_by: null }));
+  const rowsRaw = (
+    getDb()
+      .query(
+        "SELECT checklist_id, item_id, status, waiver_id, na_confirmed_by FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL",
+      )
+      .all(projectId) as Array<{
+      checklist_id: string;
+      item_id: string;
+      status: string;
+      waiver_id: string | null;
+      na_confirmed_by: string | null;
+    }>
+  ).filter((r) => !uncountedRow(r.checklist_id, newerDomainsCounted(projectId), !!ws.gfInScope));
+  const rows = withDerivedBf01(projectId, rowsRaw, (d) => ({
+    checklist_id: BF_FEASIBILITY_CHECKLIST_ID,
+    item_id: BF_VALIDATORS_ITEM_ID,
+    status: d.status,
+    waiver_id: null,
+    na_confirmed_by: null,
+  }));
   const counted = countedWorkspaceChecklists(projectId, !!ws.gfInScope);
-  const outOfScope = (r: { checklist_id: string; item_id: string }) => ws.items.get(`${r.checklist_id}:${r.item_id}`)?.judgeable === false;
+  const outOfScope = (r: { checklist_id: string; item_id: string }) =>
+    ws.items.get(`${r.checklist_id}:${r.item_id}`)?.judgeable === false;
   let pending = 0;
   let mandatoryUnmet = 0;
   for (const r of rows) {
     if ((r.status === "pending" || unconfirmedMandatoryNa(r)) && !outOfScope(r)) pending += 1;
     if (r.status === "fail" && !r.waiver_id) {
-      if (r.checklist_id.startsWith(CUSTOM_CHECKLIST_PREFIX) || mandatoryItemIds(r.checklist_id)?.has(r.item_id)) mandatoryUnmet += 1;
+      if (r.checklist_id.startsWith(CUSTOM_CHECKLIST_PREFIX) || mandatoryItemIds(r.checklist_id)?.has(r.item_id))
+        mandatoryUnmet += 1;
     }
   }
   for (const [checklistId, extraItems] of ws.extras) {
@@ -975,7 +1215,8 @@ export function workspaceScopeView(projectId: string, sel?: GreenfieldSelection 
   const db = getDb();
   const ws = workspaceScopeContext(projectId, db, sel);
   if (!ws) return null;
-  const ov = workspaceOverlay()!;
+  const ov = workspaceOverlay();
+  if (!ov) return null;
   const c = scopedCompletionSummary(projectId, gfScopedInput(ws));
   return {
     active: true,
@@ -987,7 +1228,13 @@ export function workspaceScopeView(projectId: string, sel?: GreenfieldSelection 
     step_tabs: stepTabMap(ws.sel, ws.states),
     plan_readiness: planReadinessRows(projectId, ws.sel, db),
     previous_scope: previousScopeEntries(ws.items, ws.states),
-    counts: { judged: c.judged!, judgeable: c.judgeable!, workspace_judgeable: c.workspace_judgeable!, excluded: c.excluded!, mandatory_unmet: c.mandatoryUnmet },
+    counts: {
+      judged: scopedCount(c.judged),
+      judgeable: scopedCount(c.judgeable),
+      workspace_judgeable: scopedCount(c.workspace_judgeable),
+      excluded: scopedCount(c.excluded),
+      mandatory_unmet: c.mandatoryUnmet,
+    },
   };
 }
 
@@ -998,7 +1245,15 @@ export interface WorkspaceOptInPreview {
   reason: string | null;
   overlay_version: string | null;
   before: { judged: number; judgeable: number; pending: number; unassessed: number; mandatory_unmet: number };
-  after: { judged: number; judgeable: number; workspace_judgeable: number; excluded: number; pending: number; unassessed: number; mandatory_unmet: number };
+  after: {
+    judged: number;
+    judgeable: number;
+    workspace_judgeable: number;
+    excluded: number;
+    pending: number;
+    unassessed: number;
+    mandatory_unmet: number;
+  };
   /** Existing judgements that move to "Judged under previous scope" (kept, never deleted). */
   moves_to_previous_scope: PreviousScopeEntry[];
   /** Recorded fails (no waiver) on items leaving scope — they stay unmet until a person re-judges them. */
@@ -1019,13 +1274,17 @@ export interface WorkspaceOptInPreview {
 function currentViewCounts(projectId: string): { judged: number; judgeable: number } {
   const db = getDb();
   const rows = db
-    .query("SELECT checklist_id, item_id, status FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL")
+    .query(
+      "SELECT checklist_id, item_id, status FROM project_checklist_item_state WHERE project_id = ? AND target_id IS NULL",
+    )
     .all(projectId) as Array<{ checklist_id: string; item_id: string; status: string }>;
   const byKey = new Map(rows.map((r) => [`${r.checklist_id}:${r.item_id}`, r]));
   let judged = 0;
   let judgeable = 0;
   const lists: Array<[string, ChecklistItemDef[]]> = [
-    ...countedWorkspaceChecklists(projectId).map((c) => [c, getChecklistItems(c) ?? []] as [string, ChecklistItemDef[]]),
+    ...countedWorkspaceChecklists(projectId).map(
+      (c) => [c, getChecklistItems(c) ?? []] as [string, ChecklistItemDef[]],
+    ),
     ...subTrackChecklistIds(projectId).map((c) => [c, scopedChecklistItems(c) ?? []] as [string, ChecklistItemDef[]]),
   ];
   for (const [c, items] of lists) {
@@ -1067,11 +1326,24 @@ export function workspaceOptInPreview(projectId: string): WorkspaceOptInPreview 
   const cur = currentViewCounts(projectId);
   const active = workspaceScopeContext(projectId, db, sel);
   const hyp = active ?? hypotheticalWorkspaceScope(projectId, db);
-  const before = { judged: current.judged ?? cur.judged, judgeable: current.judgeable ?? cur.judgeable, pending: current.pending, unassessed: current.unassessed, mandatory_unmet: current.mandatoryUnmet };
+  const before = {
+    judged: current.judged ?? cur.judged,
+    judgeable: current.judgeable ?? cur.judgeable,
+    pending: current.pending,
+    unassessed: current.unassessed,
+    mandatory_unmet: current.mandatoryUnmet,
+  };
   if (!hyp) {
     return {
-      project_id: projectId, eligible: false, reason: "작업 범위 오버레이를 읽을 수 없습니다.", overlay_version: null,
-      before, after: { ...before, workspace_judgeable: 0, excluded: 0 }, moves_to_previous_scope: [], fails_stay_unmet: [], records_subtrack_pin: false,
+      project_id: projectId,
+      eligible: false,
+      reason: "작업 범위 오버레이를 읽을 수 없습니다.",
+      overlay_version: null,
+      before,
+      after: { ...before, workspace_judgeable: 0, excluded: 0 },
+      moves_to_previous_scope: [],
+      fails_stay_unmet: [],
+      records_subtrack_pin: false,
     };
   }
   const after = scopedCompletionSummary(projectId, gfScopedInput(hyp));
@@ -1083,8 +1355,13 @@ export function workspaceOptInPreview(projectId: string): WorkspaceOptInPreview 
     overlay_version: hyp.overlay_version,
     before,
     after: {
-      judged: after.judged!, judgeable: after.judgeable!, workspace_judgeable: after.workspace_judgeable!, excluded: after.excluded!,
-      pending: after.pending, unassessed: after.unassessed, mandatory_unmet: after.mandatoryUnmet,
+      judged: scopedCount(after.judged),
+      judgeable: scopedCount(after.judgeable),
+      workspace_judgeable: scopedCount(after.workspace_judgeable),
+      excluded: scopedCount(after.excluded),
+      pending: after.pending,
+      unassessed: after.unassessed,
+      mandatory_unmet: after.mandatoryUnmet,
     },
     moves_to_previous_scope: moved,
     fails_stay_unmet: moved.filter((m) => m.stays_unmet),
@@ -1107,13 +1384,21 @@ export interface BrownfieldWorkspaceScopeView {
   /** Per item (workspace + attached extras): code, reading / reason, replacement pointers. Key `<checklist_id>:<item_id>`. */
   items: Record<string, WorkspaceItemScope>;
   previous_scope: PreviousScopeEntry[];
-  counts: { judged: number; judgeable: number; workspace_judgeable: number; excluded: number; extras_excluded: number; mandatory_unmet: number };
+  counts: {
+    judged: number;
+    judgeable: number;
+    workspace_judgeable: number;
+    excluded: number;
+    extras_excluded: number;
+    mandatory_unmet: number;
+  };
 }
 
 function brownfieldViewOf(projectId: string, ctx: BrownfieldScopeContext): BrownfieldWorkspaceScopeView {
   const c = scopedCompletionSummary(projectId, bfScopedInput(ctx));
   let extrasExcluded = 0;
-  for (const sc of ctx.items.values()) if (!sc.judgeable && ctx.extra_checklists.includes(sc.checklist_id)) extrasExcluded += 1;
+  for (const sc of ctx.items.values())
+    if (!sc.judgeable && ctx.extra_checklists.includes(sc.checklist_id)) extrasExcluded += 1;
   return {
     active: true,
     overlay_doc_id: BF_WS_POLICY_DOC_ID,
@@ -1124,8 +1409,12 @@ function brownfieldViewOf(projectId: string, ctx: BrownfieldScopeContext): Brown
     items: Object.fromEntries(ctx.items),
     previous_scope: brownfieldPreviousScope(ctx),
     counts: {
-      judged: c.judged!, judgeable: c.judgeable!, workspace_judgeable: c.workspace_judgeable!, excluded: c.excluded!,
-      extras_excluded: extrasExcluded, mandatory_unmet: c.mandatoryUnmet,
+      judged: scopedCount(c.judged),
+      judgeable: scopedCount(c.judgeable),
+      workspace_judgeable: scopedCount(c.workspace_judgeable),
+      excluded: scopedCount(c.excluded),
+      extras_excluded: extrasExcluded,
+      mandatory_unmet: c.mandatoryUnmet,
     },
   };
 }
@@ -1147,7 +1436,13 @@ export function brownfieldOptInPreview(projectId: string): WorkspaceOptInPreview
   if (!info) return null;
   const current = ddCompletionSummary(projectId);
   const cur = currentViewCounts(projectId);
-  const before = { judged: current.judged ?? cur.judged, judgeable: current.judgeable ?? cur.judgeable, pending: current.pending, unassessed: current.unassessed, mandatory_unmet: current.mandatoryUnmet };
+  const before = {
+    judged: current.judged ?? cur.judged,
+    judgeable: current.judgeable ?? cur.judgeable,
+    pending: current.pending,
+    unassessed: current.unassessed,
+    mandatory_unmet: current.mandatoryUnmet,
+  };
   const active = brownfieldScopeContext(projectId, db);
   const hyp = active ?? hypotheticalBrownfieldScope(projectId, db);
   if (!hyp) {
@@ -1158,7 +1453,11 @@ export function brownfieldOptInPreview(projectId: string): WorkspaceOptInPreview
         ? "작업 범위 오버레이를 읽을 수 없습니다."
         : "이 세부 유형(인수합병 기준 열 또는 세부 유형 없음)은 작업 범위가 바뀌지 않습니다.",
       overlay_version: null,
-      before, after: { ...before, workspace_judgeable: 0, excluded: 0 }, moves_to_previous_scope: [], fails_stay_unmet: [], records_subtrack_pin: false,
+      before,
+      after: { ...before, workspace_judgeable: 0, excluded: 0 },
+      moves_to_previous_scope: [],
+      fails_stay_unmet: [],
+      records_subtrack_pin: false,
     };
   }
   const after = scopedCompletionSummary(projectId, bfScopedInput(hyp));
@@ -1170,8 +1469,13 @@ export function brownfieldOptInPreview(projectId: string): WorkspaceOptInPreview
     overlay_version: hyp.overlay_version,
     before,
     after: {
-      judged: after.judged!, judgeable: after.judgeable!, workspace_judgeable: after.workspace_judgeable!, excluded: after.excluded!,
-      pending: after.pending, unassessed: after.unassessed, mandatory_unmet: after.mandatoryUnmet,
+      judged: scopedCount(after.judged),
+      judgeable: scopedCount(after.judgeable),
+      workspace_judgeable: scopedCount(after.workspace_judgeable),
+      excluded: scopedCount(after.excluded),
+      pending: after.pending,
+      unassessed: after.unassessed,
+      mandatory_unmet: after.mandatoryUnmet,
     },
     moves_to_previous_scope: moved,
     fails_stay_unmet: moved.filter((m) => m.stays_unmet),
@@ -1259,21 +1563,47 @@ export interface FindingRow {
 }
 
 /** Assemble the whole S9 surface: standard items + live state, custom items with provenance, findings, completion. */
-export function listDdWorkspace(projectId: string, opts: { targetId?: string | null; viewerId?: string | null } = {}): DdWorkspaceView {
+export function listDdWorkspace(
+  projectId: string,
+  opts: { targetId?: string | null; viewerId?: string | null } = {},
+): DdWorkspaceView {
   const db = getDb();
   const targetId = opts.targetId ?? null;
   const states = new Map<string, DdItemState>();
   for (const s of db
-    .query("SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?")
-    .all(projectId, targetId) as Array<{ checklist_id: string; item_id: string; status: ChecklistStateStatus; note: string | null; evidence_ref: string | null; waiver_id: string | null; assessed_by: string | null; assessed_at: string | null }>) {
-    states.set(`${s.checklist_id}:${s.item_id}`, { status: s.status, note: s.note, evidence_ref: s.evidence_ref, waiver_id: s.waiver_id, assessed_by: s.assessed_by, assessed_at: s.assessed_at });
+    .query(
+      "SELECT checklist_id, item_id, status, note, evidence_ref, waiver_id, assessed_by, assessed_at FROM project_checklist_item_state WHERE project_id = ? AND target_id IS ?",
+    )
+    .all(projectId, targetId) as Array<{
+    checklist_id: string;
+    item_id: string;
+    status: ChecklistStateStatus;
+    note: string | null;
+    evidence_ref: string | null;
+    waiver_id: string | null;
+    assessed_by: string | null;
+    assessed_at: string | null;
+  }>) {
+    states.set(`${s.checklist_id}:${s.item_id}`, {
+      status: s.status,
+      note: s.note,
+      evidence_ref: s.evidence_ref,
+      waiver_id: s.waiver_id,
+      assessed_by: s.assessed_by,
+      assessed_at: s.assessed_at,
+    });
   }
   // ADR-0186 D4: bf-01 is the validator engine's read-only verdict (gate scope only).
   const derivedValidators = targetId === null ? derivedBf01(projectId, db) : null;
   if (derivedValidators) {
     states.set(`${BF_FEASIBILITY_CHECKLIST_ID}:${BF_VALIDATORS_ITEM_ID}`, {
-      status: derivedValidators.status, note: derivedValidators.note, evidence_ref: null, waiver_id: null,
-      assessed_by: "validator-engine", assessed_at: derivedValidators.evaluated_at, derived: true,
+      status: derivedValidators.status,
+      note: derivedValidators.note,
+      evidence_ref: null,
+      waiver_id: null,
+      assessed_by: "validator-engine",
+      assessed_at: derivedValidators.evaluated_at,
+      derived: true,
     });
   }
 
@@ -1287,7 +1617,11 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
     const proposer = c.proposed_by_agent === null ? ddCustomItemProposer(projectId, c.id) : null;
     const human = proposer !== null && !AGENT_KEYS.has(proposer) ? proposer : null;
     const name = human
-      ? ((db.query("SELECT display_name FROM app_user WHERE user_id = ?").get(human) as { display_name: string | null } | null)?.display_name?.trim() || human)
+      ? (
+          db.query("SELECT display_name FROM app_user WHERE user_id = ?").get(human) as {
+            display_name: string | null;
+          } | null
+        )?.display_name?.trim() || human
       : null;
     const row: CustomItemRow = {
       ...c,
@@ -1310,8 +1644,13 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
   // §4 payload: the seven domains carry the Korean titles (UI tabs, payload and reports agree) —
   // constants live in ko-data-values.ts; display rendering resolves common.ddDomain.* instead.
   const domainLabels: Record<DdDomain, string> = {
-    commercial: KO_DATA.ddDomainCommercial, technical: KO_DATA.ddDomainTechnical, legal: KO_DATA.ddDomainLegal,
-    financial: KO_DATA.ddDomainFinancial, hr: KO_DATA.ddDomainHr, market: KO_DATA.ddDomainMarket, financing: KO_DATA.ddDomainFinancing,
+    commercial: KO_DATA.ddDomainCommercial,
+    technical: KO_DATA.ddDomainTechnical,
+    legal: KO_DATA.ddDomainLegal,
+    financial: KO_DATA.ddDomainFinancial,
+    hr: KO_DATA.ddDomainHr,
+    market: KO_DATA.ddDomainMarket,
+    financing: KO_DATA.ddDomainFinancing,
   };
   const countsNewDomains = newerDomainsCounted(projectId);
   const gfScope = greenfieldSelection(projectId, db);
@@ -1327,9 +1666,14 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
       const scope = itemScopes?.[`${checklistId}:${i.id}`];
       return { ...i, state: states.get(`${checklistId}:${i.id}`) ?? null, ...(scope ? { scope } : {}) };
     });
-    const counted = !(isGrandfatheredDomain(domain) && !countsNewDomains) || (!!wsView && GF_SCOPE_COUNTED_NEW_DOMAINS.has(domain));
+    const counted =
+      !(isGrandfatheredDomain(domain) && !countsNewDomains) || (!!wsView && GF_SCOPE_COUNTED_NEW_DOMAINS.has(domain));
     return {
-      domain, checklistId, title: domainLabels[domain], items, custom: customByDomain.get(domain) ?? [],
+      domain,
+      checklistId,
+      title: domainLabels[domain],
+      items,
+      custom: customByDomain.get(domain) ?? [],
       counted,
       ...(counted ? {} : { counted_reason: DD_NOT_COUNTED_REASON }),
     };
@@ -1356,7 +1700,10 @@ export function listDdWorkspace(projectId: string, opts: { targetId?: string | n
           const scope = bfView.items[`${checklistId}:${i.id}`];
           return { ...i, state: states.get(`${checklistId}:${i.id}`) ?? null, ...(scope ? { scope } : {}) };
         })
-      : (scopedChecklistItems(checklistId) ?? []).map((i) => ({ ...i, state: states.get(`${checklistId}:${i.id}`) ?? null })),
+      : (scopedChecklistItems(checklistId) ?? []).map((i) => ({
+          ...i,
+          state: states.get(`${checklistId}:${i.id}`) ?? null,
+        })),
     custom: [] as CustomItemRow[],
   }));
   return {
@@ -1383,7 +1730,7 @@ export function listDdTargetSummaries(projectId: string): DdTargetSummary[] {
   const project = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
     | { track: string | null; source_opportunity_id: string | null }
     | undefined;
-  if (!project || project.track !== "brownfield") return [];
+  if (project?.track !== "brownfield") return [];
   const selected = selectedTargetId(projectId, db);
   const targets = db
     .query(
@@ -1393,9 +1740,11 @@ export function listDdTargetSummaries(projectId: string): DdTargetSummary[] {
     )
     .all(project.source_opportunity_id ?? "") as Array<{ id: string; company_name: string }>;
   const opens = new Map(
-    (db.query("SELECT target_id, opened_at, opened_by, rationale FROM dd_target_open WHERE project_id = ?").all(projectId) as Array<{ target_id: string; opened_at: string; opened_by: string; rationale: string }>).map(
-      (o) => [o.target_id, o],
-    ),
+    (
+      db
+        .query("SELECT target_id, opened_at, opened_by, rationale FROM dd_target_open WHERE project_id = ?")
+        .all(projectId) as Array<{ target_id: string; opened_at: string; opened_by: string; rationale: string }>
+    ).map((o) => [o.target_id, o]),
   );
   const out: DdTargetSummary[] = [];
   for (const t of targets) {
@@ -1403,10 +1752,14 @@ export function listDdTargetSummaries(projectId: string): DdTargetSummary[] {
     const open = opens.get(t.id);
     const opened = isSelected || !!open;
     const scope = isSelected ? null : t.id;
-    const c = opened ? ddCompletionSummary(projectId, { targetId: scope }) : { total: 0, pending: 0, unassessed: 0, mandatoryUnmet: 0 };
+    const c = opened
+      ? ddCompletionSummary(projectId, { targetId: scope })
+      : { total: 0, pending: 0, unassessed: 0, mandatoryUnmet: 0 };
     const f = opened
       ? (db
-          .query("SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN value_impact IS NOT NULL THEN 1 ELSE 0 END), 0) AS v FROM dd_finding WHERE project_id = ? AND target_id IS ?")
+          .query(
+            "SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN value_impact IS NOT NULL THEN 1 ELSE 0 END), 0) AS v FROM dd_finding WHERE project_id = ? AND target_id IS ?",
+          )
           .get(projectId, scope) as { n: number; v: number })
       : { n: 0, v: 0 };
     out.push({

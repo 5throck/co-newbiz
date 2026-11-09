@@ -32,7 +32,12 @@ import type { TargetScope } from "./target-scope.ts";
 import { triangular } from "./investment-simulation.ts";
 import { anchorScopeNoteFragment, resolveLinkedAnchorScope } from "./anchor-scope.ts";
 import { entryMarketNoteFragment } from "./entry-market.ts";
-import { readEntryMarketRecord, readFx, readTargetScope, resolveDerivedEntryMarket } from "../../../db/repositories/entry-market.repository.ts";
+import {
+  readEntryMarketRecord,
+  readFx,
+  readTargetScope,
+  resolveDerivedEntryMarket,
+} from "../../../db/repositories/entry-market.repository.ts";
 import { buildSubjectMarketContext } from "./entry-market-context.ts";
 import { anchorCurrencyOfUnitBasis, resolveFxRateForCurrency, resolveLinkedDeclaredUnitBasis } from "./fx.ts";
 
@@ -40,7 +45,12 @@ import { Y1_INVESTMENT_RATIO_THRESHOLD, ratioGuardTripped, shareUnsourcedNoteFra
 import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
-import { resolveProjectWacc, resolveProjectWaccSubject, type WaccResolution, type WaccSubjectResolution } from "../../../db/lib/wacc.ts";
+import {
+  resolveProjectWacc,
+  resolveProjectWaccSubject,
+  type WaccResolution,
+  type WaccSubjectResolution,
+} from "../../../db/lib/wacc.ts";
 import { getCompanyFinancialFacts, factRowsToDartItems } from "./dart-financial-facts.ts";
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import { historicalGrowthStats } from "./financial-commentary.ts";
@@ -55,7 +65,12 @@ import { deriveUncertaintyScope, type S5RunUse } from "./uncertainty-scope.ts";
 import { aggregatePlanLines, applyStaffingLaborToPlan, pinPlanLinesOf } from "./s5-plan-pin.ts";
 import { fitPlanToHorizon, staffingPlanOf, staffingSummaryVector, type StaffingPlanEntry } from "./staffing-plan.ts";
 import { shiftAdvanceHalf, shiftDelayHalf, staffingAnnualVectorWithFactors } from "./investment-vectors.ts";
-import { getCurrentS5PlanPin, resolveActivePin, resolvePinnedS5SimConsumption, s5SourceOptedIn } from "./s5-plan-pin-s8.ts";
+import {
+  getCurrentS5PlanPin,
+  resolveActivePin,
+  resolvePinnedS5SimConsumption,
+  s5SourceOptedIn,
+} from "./s5-plan-pin-s8.ts";
 
 // Per-step S8 agent assignment reads from process/flow.spec.yaml (SSOT,
 // ADR-0074) — each execution step maps to the spec activity that owns its
@@ -126,7 +141,11 @@ const pct1 = (v: number): string => `${(v * 100).toFixed(1)}%`;
  *  historical revenue volatility and the WACC session's wacc.beta_vol_asset
  *  when both exist, else whichever exists, else the 2% floor. historical.*:
  *  DART revenue CAGR + YoY stdev; null when the series is too short. */
-export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: string, opts?: { companyId?: string | null }): GrowthModel {
+export function resolveGrowthModel(
+  db: ReturnType<typeof getDb>,
+  projectId: string,
+  opts?: { companyId?: string | null },
+): GrowthModel {
   const opp = db
     .query(
       "SELECT o.id AS opp_id, o.growth_rate, o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
@@ -138,9 +157,12 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
   // person's explicit override) keeps precedence over BOTH downstream.
   const entryCtx = opp?.opp_id ? buildSubjectMarketContext(db, opp.opp_id) : null;
   let marketGrowth = entryCtx?.growthRate ?? opp?.growth_rate ?? 0.05;
-  let marketGrowthSource = entryCtx?.growthRate != null
-    ? `진입시장 성장률 (S2 확정 — ${Math.round(entryCtx.growthRate * 1000) / 10}%)`
-    : opp?.growth_rate != null ? "시장 성장률 (opportunity)" : "기본값 5% (기회 미입력)";
+  let marketGrowthSource =
+    entryCtx?.growthRate != null
+      ? `진입시장 성장률 (S2 확정 — ${Math.round(entryCtx.growthRate * 1000) / 10}%)`
+      : opp?.growth_rate != null
+        ? "시장 성장률 (opportunity)"
+        : "기본값 5% (기회 미입력)";
   // 에스컬레이션 조정 CAGR — 사람이 기록한 결정이 기회 성장률보다 우선한다
   // (design 2026-09-20-escalation-downstream §3.2-1). 출처는 note 스탬프로 남긴다.
   const industryRow = opp?.market_scope
@@ -163,7 +185,9 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
   // so a linked company (financial-analysis tab / WACC subject) is not used here.
   const proj = opts
     ? undefined
-    : (db.query("SELECT company_id, track FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null; track: string | null } | undefined);
+    : (db.query("SELECT company_id, track FROM md_project WHERE id = ?").get(projectId) as
+        | { company_id: string | null; track: string | null }
+        | undefined);
   const p = opts
     ? opts.companyId
       ? { company_id: opts.companyId }
@@ -188,8 +212,9 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
       // the level; growth still needs the CAGR series above. NOTE:
       // deriveFinancialAnalysis normalizes DART 원 to 억원 (unit "KRW" → /1e8),
       // so the series point is 억원 — ×100 back to KRW millions.
-      const revPoints = (analysis.series.find((s) => s.key === "revenue")?.points ?? [])
-        .filter((pt): pt is { year: string; value: number } => pt.value !== null && pt.value > 0);
+      const revPoints = (analysis.series.find((s) => s.key === "revenue")?.points ?? []).filter(
+        (pt): pt is { year: string; value: number } => pt.value !== null && pt.value > 0,
+      );
       if (revPoints.length > 0) {
         const latest = revPoints.reduce((a, b) => (a.year > b.year ? a : b));
         companyRevenue = { krwM: latest.value * 100, year: latest.year };
@@ -208,13 +233,17 @@ export function resolveGrowthModel(db: ReturnType<typeof getDb>, projectId: stri
   let marketDisp: number;
   let marketDispSource: string;
   if (clampedHist !== null && betaVol !== null) {
-    marketDisp = clampDisp((clampedHist + betaVol) / 2)!;
+    const blended = clampDisp((clampedHist + betaVol) / 2);
+    if (blended === null) throw new Error("unreachable: blend of two clamped dispersions");
+    marketDisp = blended;
     marketDispSource = `블렌딩 (과거 ${pct1(clampedHist)} + 자산변동성 ${pct1(betaVol)})`;
   } else if (clampedHist !== null) {
     marketDisp = clampedHist;
     marketDispSource = "과거 매출 변동성 (DART)";
   } else if (betaVol !== null) {
-    marketDisp = clampDisp(betaVol)!;
+    const clampedBeta = clampDisp(betaVol);
+    if (clampedBeta === null) throw new Error("unreachable: betaVol is finite and positive");
+    marketDisp = clampedBeta;
     marketDispSource = "WACC 자산 변동성";
   } else {
     marketDisp = DISP_FLOOR;
@@ -330,7 +359,7 @@ export interface SimulationResult {
  *  `irr` applies the identical policy (D6; parity test tests/unit/irr-parity.test.ts). */
 export function irr(cashflows: number[]): number | null {
   // flows[0]은 year-0(현재 시점) — 미할인, 이후 연도만 할인한다.
-  const npv = (rate: number) => cashflows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + rate, i), 0);
+  const npv = (rate: number) => cashflows.reduce((acc, cf, i) => acc + cf / (1 + rate) ** i, 0);
   let lo = -0.9;
   let hi = 10;
   let fLo = npv(lo);
@@ -371,7 +400,7 @@ export function discountedPaybackYear(initialInvestment: number, flows: number[]
   if (cumulative > 0) return 0;
   let previous = cumulative;
   for (let year = 1; year <= flows.length; year++) {
-    cumulative += flows[year - 1] / Math.pow(1 + rate, year);
+    cumulative += flows[year - 1] / (1 + rate) ** year;
     if (cumulative >= 0) {
       const span = cumulative - previous;
       const fraction = span > 0 ? -previous / span : 0;
@@ -392,7 +421,11 @@ export function discountedPaybackYear(initialInvestment: number, flows: number[]
  * of (inputs, scenario): same seed in, same percentiles out — any persisted
  * figure is reproducible.
  */
-export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): SimulationResult {
+export function runSeededSimulation(
+  inputs: CaseInputs,
+  scenario: Scenario,
+  variant: CaseVariant = "market_forward",
+): SimulationResult {
   const seed = scenarioSeed(inputs.projectId, scenario, inputs.targetId);
   const rng = mulberry32(seed);
   const delta = SCENARIO_DELTA[scenario];
@@ -411,20 +444,18 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
   const s5 = s5PlanOf(inputs);
   const initialInvestment = initialInvestmentOf(inputs, year1Revenue).value;
   const exitMult = exitEvRevenueOf(inputs);
-  const discount = (v: number, year: number) => v / Math.pow(1 + inputs.wacc.value, year);
+  const discount = (v: number, year: number) => v / (1 + inputs.wacc.value) ** year;
   const ramp = rampUpOf(inputs);
   // ADR-0176 slice 3: per-draw pairing with the confirmed S5 run - iteration `it` uses S5 draw
   // `it % drawCount`. The factors are precomputed, so the revenue rng stream is untouched.
-  const sim5 = s5 && !s5.pnl ? inputs.s5Sim ?? null : null;
+  const sim5 = s5 && !s5.pnl ? (inputs.s5Sim ?? null) : null;
   // ADR-0181 slice 4 — the FX risk INDEX (환 리스크): a per-iteration CONSTANT
   // triangular draw around 1.0 (fx_basis=index-no-drift — growth stays
   // anchor-currency-observed, the index adds drift-free FX noise). Drawn at
   // the TOP of each iteration, AFTER nothing else in the revenue stream —
   // and when FX is INACTIVE the draw is never consumed, so fx-free cases
   // keep their exact legacy sample streams (bit-identity).
-  const fxBand = inputs.entryMarketFx
-    ? (inputs.entryMarketFxVolatility ?? 0.1)
-    : null;
+  const fxBand = inputs.entryMarketFx ? (inputs.entryMarketFxVolatility ?? 0.1) : null;
   const fxDist = fxBand != null ? { low: 1 - fxBand, mode: 1.0, high: 1 + fxBand } : null;
   for (let it = 0; it < iterationsOf(inputs); it++) {
     let revenue = year1Revenue;
@@ -435,9 +466,7 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
     // 2026-10-19 decider direction: the S5 investment simulation's OWN salary model moves
     // 인건비 per draw (급여·인상률·on-cost·램프 시프트) — the staffing slice is recomputed
     // exactly as S5's simulateInvestment does, instead of the generic manual ±20% factor.
-    const staffingDrawn = sim5 && s5?.plan.staffing
-      ? staffingDrawVector(s5.plan, di, sim5)
-      : null;
+    const staffingDrawn = sim5 && s5?.plan.staffing ? staffingDrawVector(s5.plan, di, sim5) : null;
     // year 0 carries ONLY pre-launch (start_year 0) spend — plan-year capex
     // stays in its own year (2026-10-19 plan-year alignment, same as the table).
     let npv = s5 ? -(s5.plan.preLaunchKrwM ?? 0) : -initialInvestment;
@@ -454,10 +483,10 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
         // 계획 기간 외 가동률 반영 매출 x capexRatio. s5Sim pairing은 slice 3까지 없음.
         const revUtil = revenue * utilization;
         const i = year - 1;
-        const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
-        const opex = covered
-          ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i]
-          : revUtil * opexRatio;
+        const covered =
+          (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) ||
+          (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+        const opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatio;
         const capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatio;
         flow = revUtil - opex - capex;
       } else if (s5) {
@@ -499,7 +528,9 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
     if (s5?.pnl) {
       const i = year - 1;
       const revUtil = detRevenue * utilization;
-      const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+      const covered =
+        (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) ||
+        (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
       const opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatio;
       const capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatio;
       detFlows.push(revUtil - opex - capex);
@@ -511,8 +542,19 @@ export function runSeededSimulation(inputs: CaseInputs, scenario: Scenario, vari
     }
   }
   if (exitMult > 0) detFlows[detFlows.length - 1] += detRevenue * exitMult;
-  const bepYear = s5?.pnl && detInitial === 0 ? null : discountedPaybackYear(detInitial, detFlows.slice(1), inputs.wacc.value);
-  return { seed, iterations: iterationsOf(inputs), p05: q(0.05), p50: q(0.5), p95: q(0.95), mean, std: Math.sqrt(variance), bepYear, bepVolume: null };
+  const bepYear =
+    s5?.pnl && detInitial === 0 ? null : discountedPaybackYear(detInitial, detFlows.slice(1), inputs.wacc.value);
+  return {
+    seed,
+    iterations: iterationsOf(inputs),
+    p05: q(0.05),
+    p50: q(0.5),
+    p95: q(0.95),
+    mean,
+    std: Math.sqrt(variance),
+    bepYear,
+    bepVolume: null,
+  };
 }
 // ── Case inputs (anchored to the promoting opportunity's market facts) ─────
 
@@ -583,7 +625,13 @@ export interface CaseInputs {
    *  pinned S1 link AND a validated derivation chain. Carries the computed
    *  value + provenance for the run-note fragment; null = legacy bare
    *  anchor, byte-identical notes. */
-  entryMarket?: { entry_market_krw_m: number; steps: number; hash: string; factor_product: number; scope_status: "exact" | "partial" | "none" | "unknown" } | null;
+  entryMarket?: {
+    entry_market_krw_m: number;
+    steps: number;
+    hash: string;
+    factor_product: number;
+    scope_status: "exact" | "partial" | "none" | "unknown";
+  } | null;
   /** ADR-0181 slice 3 — set only when the derived entry market carried a
    *  foreign-currency anchor WITH a known rate (person-set or the documented
    *  USD default); the KRW-converted anchor multiplies by this rate. */
@@ -639,7 +687,9 @@ export interface ConfirmedEvBand {
   runId: string;
 }
 
-type EvBandDb = { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } };
+type EvBandDb = {
+  query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] };
+};
 
 /** Latest run that carries BOTH band keys (kind='user'); a half-written run is
  *  ignored so a new min is never paired with an old max. */
@@ -652,9 +702,18 @@ export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): Confirm
        ORDER BY r.created_at DESC, r.id DESC, a.id DESC`,
     )
     .all(projectId, EV_BAND_MIN_KEY, EV_BAND_MAX_KEY, EV_BAND_DEFAULT_KEY) as Array<{
-    run_id: string; assumption_key: string; value: number; rationale: string | null; anchor_ref: string | null; created_by: string; created_at: string;
+    run_id: string;
+    assumption_key: string;
+    value: number;
+    rationale: string | null;
+    anchor_ref: string | null;
+    created_by: string;
+    created_at: string;
   }>;
-  const byRun = new Map<string, { min?: (typeof rows)[number]; max?: (typeof rows)[number]; def?: (typeof rows)[number] }>();
+  const byRun = new Map<
+    string,
+    { min?: (typeof rows)[number]; max?: (typeof rows)[number]; def?: (typeof rows)[number] }
+  >();
   for (const r of rows) {
     const e = byRun.get(r.run_id) ?? {};
     if (r.assumption_key === EV_BAND_MIN_KEY && !e.min) e.min = r;
@@ -664,7 +723,13 @@ export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): Confirm
   }
   for (const [runId, e] of byRun) {
     if (!e.min || !e.max) continue;
-    if (!Number.isFinite(e.min.value) || !Number.isFinite(e.max.value) || !(e.min.value > 0) || !(e.min.value < e.max.value)) continue;
+    if (
+      !Number.isFinite(e.min.value) ||
+      !Number.isFinite(e.max.value) ||
+      !(e.min.value > 0) ||
+      !(e.min.value < e.max.value)
+    )
+      continue;
     return {
       min: e.min.value,
       max: e.max.value,
@@ -680,7 +745,13 @@ export function resolveConfirmedEvBand(db: EvBandDb, projectId: string): Confirm
 }
 
 /** Validate a band confirmation (server-authoritative). Throws Error with a field-specific message. */
-export function validateEvBandInput(input: { min: unknown; max: unknown; default?: unknown; rationale: unknown; source: unknown }): { min: number; max: number; default?: number; rationale: string; source: string } {
+export function validateEvBandInput(input: {
+  min: unknown;
+  max: unknown;
+  default?: unknown;
+  rationale: unknown;
+  source: unknown;
+}): { min: number; max: number; default?: number; rationale: string; source: string } {
   const { min, max } = input;
   const bad = (m: string) => new EvBandValidationError(m);
   if (typeof min !== "number" || !Number.isFinite(min) || min <= 0) throw bad("min은 0보다 큰 유한한 숫자여야 합니다.");
@@ -691,7 +762,8 @@ export function validateEvBandInput(input: { min: unknown; max: unknown; default
   // a default outside the confirmed range would contradict the band itself.
   let def: number | undefined;
   if (input.default !== undefined && input.default !== null && input.default !== "") {
-    if (typeof input.default !== "number" || !Number.isFinite(input.default) || input.default <= 0) throw bad("default는 0보다 큰 유한한 숫자여야 합니다.");
+    if (typeof input.default !== "number" || !Number.isFinite(input.default) || input.default <= 0)
+      throw bad("default는 0보다 큰 유한한 숫자여야 합니다.");
     if (input.default < min || input.default > max) throw bad("default는 확정 밴드 [min, max] 안에 있어야 합니다.");
     def = input.default;
   }
@@ -707,17 +779,45 @@ export function validateEvBandInput(input: { min: unknown; max: unknown; default
 /** Human-only write: two kind='user' rows in ONE fresh run; overwrite-only. */
 export async function recordEvRevenueBand(
   db: { run: (sql: string, ...args: unknown[]) => void },
-  opts: { projectId: string; min: number; max: number; default?: number; rationale: string; source: string; actor: string; now?: string },
+  opts: {
+    projectId: string;
+    min: number;
+    max: number;
+    default?: number;
+    rationale: string;
+    source: string;
+    actor: string;
+    now?: string;
+  },
 ): Promise<{ run_id: string; written: string[] }> {
   const v = validateEvBandInput(opts);
   const { createRun } = await import("../../../db/lib/versioning.ts");
   const { recordAssumption } = await import("../../../db/lib/assumption.ts");
   const now = opts.now ?? new Date().toISOString();
-  const run = createRun(db as never, { projectId: opts.projectId, label: "EV/Revenue band confirmation", createdBy: opts.actor, overrides: {}, now });
-  const rows: Array<[string, number]> = [[EV_BAND_MIN_KEY, v.min], [EV_BAND_MAX_KEY, v.max]];
+  const run = createRun(db as never, {
+    projectId: opts.projectId,
+    label: "EV/Revenue band confirmation",
+    createdBy: opts.actor,
+    overrides: {},
+    now,
+  });
+  const rows: Array<[string, number]> = [
+    [EV_BAND_MIN_KEY, v.min],
+    [EV_BAND_MAX_KEY, v.max],
+  ];
   if (v.default !== undefined) rows.push([EV_BAND_DEFAULT_KEY, v.default]);
   for (const [key, value] of rows) {
-    recordAssumption(db as never, { runId: run.run_id, assumptionKey: key, kind: "user", value, asOf: now.slice(0, 10), rationale: v.rationale, anchorRef: v.source, actor: opts.actor, now });
+    recordAssumption(db as never, {
+      runId: run.run_id,
+      assumptionKey: key,
+      kind: "user",
+      value,
+      asOf: now.slice(0, 10),
+      rationale: v.rationale,
+      anchorRef: v.source,
+      actor: opts.actor,
+      now,
+    });
   }
   return { run_id: run.run_id, written: rows.map(([k]) => k) };
 }
@@ -742,7 +842,12 @@ export function evRevenueBandPayload(confirmed: ConfirmedEvBand | null, now: Dat
     stale: ageDays !== null && ageDays >= EV_BAND_STALE_DAYS,
     ageDays,
     confirmed,
-    reference: { min: ACQUISITION_EV_REVENUE_BAND.min, max: ACQUISITION_EV_REVENUE_BAND.max, label: "global robotics/automation M&A screening band", sourced: false },
+    reference: {
+      min: ACQUISITION_EV_REVENUE_BAND.min,
+      max: ACQUISITION_EV_REVENUE_BAND.max,
+      label: "global robotics/automation M&A screening band",
+      sourced: false,
+    },
     optimismFlag: confirmed !== null && confirmed.max > EV_BAND_OPTIMISM_FLAG_FACTOR * ACQUISITION_EV_REVENUE_BAND.max,
   };
 }
@@ -811,17 +916,24 @@ export interface BusinessCaseParams {
  *  documented deterministic values; user rows win by recency. Ramp-up years
  *  live under `bc.ramp_up.y1..yN` (the assumption table stores scalars, so
  *  the curve is one key per year). */
-export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): BusinessCaseParams {
-  const capture = db.query(
-    `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
+export function resolveBusinessCaseParams(
+  db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } },
+  projectId: string,
+): BusinessCaseParams {
+  const capture = db
+    .query(
+      `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
      WHERE r.project_id = ? AND a.assumption_key = 'bc.capture_rate' AND a.kind = 'user'
      ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC LIMIT 1`,
-  ).get(projectId) as { value: number } | undefined;
-  const rampRows = db.query(
-    `SELECT a.assumption_key, a.value FROM assumption a JOIN run r ON r.id = a.run_id
+    )
+    .get(projectId) as { value: number } | undefined;
+  const rampRows = db
+    .query(
+      `SELECT a.assumption_key, a.value FROM assumption a JOIN run r ON r.id = a.run_id
      WHERE r.project_id = ? AND a.assumption_key LIKE 'bc.ramp_up.y%' AND a.kind = 'user'
      ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC`,
-  ).all(projectId) as Array<{ assumption_key: string; value: number }>;
+    )
+    .all(projectId) as Array<{ assumption_key: string; value: number }>;
   const rampByYear = new Map<number, number>();
   for (const row of rampRows) {
     const year = Number.parseInt(row.assumption_key.slice("bc.ramp_up.y".length), 10);
@@ -831,11 +943,13 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   }
   const rampUp = DEFAULT_RAMP_UP.map((fallback, i) => rampByYear.get(i + 1) ?? fallback);
   const scalar = (key: string): number | null => {
-    const row = db.query(
-      `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
+    const row = db
+      .query(
+        `SELECT a.value FROM assumption a JOIN run r ON r.id = a.run_id
        WHERE r.project_id = ? AND a.assumption_key = ? AND a.kind = 'user'
        ORDER BY a.as_of DESC, r.created_at DESC, a.id DESC LIMIT 1`,
-    ).get(projectId, key) as { value: number } | undefined;
+      )
+      .get(projectId, key) as { value: number } | undefined;
     return row && Number.isFinite(row.value) ? row.value : null;
   };
   const ratio = (key: string, fallback: number): { value: number; source: string } => {
@@ -861,11 +975,13 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const iterations = ratio("bc.iterations", MC_ITERATIONS);
   const irrFlagT = ratio("bc.irr_flag_threshold", IRR_FLAG_THRESHOLD_DEFAULT);
   const irrCautionT = ratio("bc.irr_caution_threshold", IRR_CAUTION_THRESHOLD_DEFAULT);
-  const s5Model = db.query(
-    `SELECT horizon_years FROM business_case_model
+  const s5Model = db
+    .query(
+      `SELECT horizon_years FROM business_case_model
      WHERE project_id = ? AND kind = 'greenfield_cost' AND target_id IS NULL AND archived_at IS NULL
      ORDER BY created_at DESC, id DESC LIMIT 1`,
-  ).get(projectId) as { horizon_years: number } | undefined;
+    )
+    .get(projectId) as { horizon_years: number } | undefined;
   // ADR-0178 amendment: under the amended default, a current pin (unless a person reverted) is the
   // plan — its presence counts as plan presence and its horizon replaces the copy's.
   const activePin = resolveActivePin(db, projectId);
@@ -876,7 +992,8 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
   const s5OptedIn = s5SourceOptedIn(db, projectId);
   return {
     captureRate: capture && Number.isFinite(capture.value) && capture.value > 0 ? capture.value : CAPTURE_RATE,
-    captureSource: capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
+    captureSource:
+      capture && Number.isFinite(capture.value) && capture.value > 0 ? "사용자 확정 (bc.capture_rate)" : "기본값",
     rampUp,
     rampSource: rampByYear.size > 0 ? "사용자 확정 (bc.ramp_up.y*)" : "기본값",
     opexRatio: opex.value,
@@ -886,7 +1003,8 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     initialInvestmentRatio: initInv.value,
     initialInvestmentSource: initInv.source,
     investmentBasis: investmentBasisOfCode(basisCode),
-    investmentBasisSource: basisCode != null ? "사용자 확정 (bc.investment_basis)" : "기본값 (비율 추정, ADR-0174 OD-4)",
+    investmentBasisSource:
+      basisCode != null ? "사용자 확정 (bc.investment_basis)" : "기본값 (비율 추정, ADR-0174 OD-4)",
     acquisitionEvRevenue: acqBandDefault,
     acquisitionEvRevenueSource:
       acqBandDefault !== null
@@ -916,10 +1034,17 @@ export function resolveBusinessCaseParams(db: { query: (sql: string) => { get: (
     irrFlagThresholdSource: irrFlagT.source,
     irrCautionThreshold: irrCautionT.value,
     irrCautionThresholdSource: irrCautionT.source,
-    s5PlanHorizonYears: pinnedHorizon !== null ? Math.min(Math.max(Math.round(pinnedHorizon), 1), 50) : s5Model ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50) : null,
+    s5PlanHorizonYears:
+      pinnedHorizon !== null
+        ? Math.min(Math.max(Math.round(pinnedHorizon), 1), 50)
+        : s5Model
+          ? Math.min(Math.max(Math.round(s5Model.horizon_years), 1), 50)
+          : null,
     s5Source: activePin ? "pinned" : "copy",
     s5SourceSource: activePin
-      ? s5OptedIn ? "사용자 확정 (bc.s5_source)" : "기본 (S5와 연결됨, ADR-0178 개정)"
+      ? s5OptedIn
+        ? "사용자 확정 (bc.s5_source)"
+        : "기본 (S5와 연결됨, ADR-0178 개정)"
       : "기본값 (복사본, ADR-0178)",
     s5PinId: activePin ? activePin.pin.id : null,
   };
@@ -962,10 +1087,25 @@ export async function recordBusinessCaseParams(
   const { createRun } = await import("../../../db/lib/versioning.ts");
   const { recordAssumption } = await import("../../../db/lib/assumption.ts");
   const now = opts.now ?? new Date().toISOString();
-  const run = createRun(db as never, { projectId: opts.projectId, label: "Business case parameter session", createdBy: opts.actor, overrides: {}, now });
+  const run = createRun(db as never, {
+    projectId: opts.projectId,
+    label: "Business case parameter session",
+    createdBy: opts.actor,
+    overrides: {},
+    now,
+  });
   const written: string[] = [];
   const put = (key: string, value: number) => {
-    recordAssumption(db as never, { runId: run.run_id, assumptionKey: key, kind: "user", value, asOf: now.slice(0, 10), rationale: opts.rationale, actor: opts.actor, now });
+    recordAssumption(db as never, {
+      runId: run.run_id,
+      assumptionKey: key,
+      kind: "user",
+      value,
+      asOf: now.slice(0, 10),
+      rationale: opts.rationale,
+      actor: opts.actor,
+      now,
+    });
     written.push(key);
   };
   const p = opts.params;
@@ -977,7 +1117,9 @@ export async function recordBusinessCaseParams(
     if (!Array.isArray(p.ramp_up) || p.ramp_up.length === 0 || !p.ramp_up.every((v) => Number.isFinite(v) && v >= 0)) {
       throw new Error("ramp_up must be a non-empty array of non-negative numbers");
     }
-    p.ramp_up.forEach((v, i) => put(`bc.ramp_up.y${i + 1}`, v));
+    p.ramp_up.forEach((v, i) => {
+      put(`bc.ramp_up.y${i + 1}`, v);
+    });
   }
   if (p.investment_basis !== undefined) {
     put("bc.investment_basis", INVESTMENT_BASIS_CODES[p.investment_basis]);
@@ -1010,10 +1152,17 @@ export async function recordBusinessCaseParams(
   if (p.irr_flag_threshold !== undefined && (!Number.isFinite(p.irr_flag_threshold) || p.irr_flag_threshold <= 0)) {
     throw new Error("bc.irr_flag_threshold must be a positive number (ratio)");
   }
-  if (p.irr_caution_threshold !== undefined && (!Number.isFinite(p.irr_caution_threshold) || p.irr_caution_threshold < 0)) {
+  if (
+    p.irr_caution_threshold !== undefined &&
+    (!Number.isFinite(p.irr_caution_threshold) || p.irr_caution_threshold < 0)
+  ) {
     throw new Error("bc.irr_caution_threshold must be a non-negative number (ratio)");
   }
-  if (p.irr_flag_threshold !== undefined && p.irr_caution_threshold !== undefined && p.irr_flag_threshold <= p.irr_caution_threshold) {
+  if (
+    p.irr_flag_threshold !== undefined &&
+    p.irr_caution_threshold !== undefined &&
+    p.irr_flag_threshold <= p.irr_caution_threshold
+  ) {
     throw new Error("bc.irr_flag_threshold must be greater than bc.irr_caution_threshold");
   }
   if (p.irr_flag_threshold !== undefined) put("bc.irr_flag_threshold", p.irr_flag_threshold);
@@ -1153,7 +1302,7 @@ export function fadedExitDcf(
     flows.push(revenue * (1 - opexRatioOf(inputs, scenario) - capexRatioOf(inputs)) * utilization);
   }
   flows[flows.length - 1] += revenue * exitMult; // 처분가치는 마지막 연도 플로우와 함께 실현
-  const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + inputs.wacc.value, i), 0);
+  const npv = flows.reduce((acc, cf, i) => acc + cf / (1 + inputs.wacc.value) ** i, 0);
   return { horizon, terminalGrowth, npv, irr: irr(flows) };
 }
 
@@ -1185,7 +1334,12 @@ export type InvestmentBasis = "ratio" | "s5_plan" | "s5_plan_full" | "s5_pnl";
 /** assumption.value is REAL NOT NULL, so the basis rides as a numeric code:
  *  0 = 비율 추정 (default), 1 = S5 투자 계획, 2 = S5 투자 계획 (opex 포함),
  *  3 = S5 계획 손익 (ADR-0178 slice 2 — Green Field + pinned path only, settable by a person only). */
-export const INVESTMENT_BASIS_CODES: Record<InvestmentBasis, number> = { ratio: 0, s5_plan: 1, s5_plan_full: 2, s5_pnl: 3 };
+export const INVESTMENT_BASIS_CODES: Record<InvestmentBasis, number> = {
+  ratio: 0,
+  s5_plan: 1,
+  s5_plan_full: 2,
+  s5_pnl: 3,
+};
 
 export function investmentBasisOfCode(value: number | null | undefined): InvestmentBasis {
   if (value === INVESTMENT_BASIS_CODES.s5_plan) return "s5_plan";
@@ -1249,20 +1403,40 @@ export interface S5InvestmentPlan {
 /** The staffing plan stored on the source opportunity's S5 assessment, fitted to the plan
  *  horizon — the same derivation `loadInvestmentVectorsInput` uses. Null without a link or
  *  plan. The copy path reads it live (the pin path reads the snapshot's copy). */
-function staffingOfAssessment(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, srcOpp: string | null, horizon: number): StaffingPlanEntry | null {
+function staffingOfAssessment(
+  db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } },
+  srcOpp: string | null,
+  horizon: number,
+): StaffingPlanEntry | null {
   if (!srcOpp) return null;
-  const row = db.query("SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1").get(srcOpp) as { business_case_lines_json: string | null } | undefined;
+  const row = db
+    .query(
+      "SELECT business_case_lines_json FROM greenfield_assessment WHERE opportunity_id = ? ORDER BY updated_at DESC LIMIT 1",
+    )
+    .get(srcOpp) as { business_case_lines_json: string | null } | undefined;
   let lines: unknown = null;
-  try { lines = row?.business_case_lines_json ? JSON.parse(row.business_case_lines_json) : null; } catch { lines = null; }
+  try {
+    lines = row?.business_case_lines_json ? JSON.parse(row.business_case_lines_json) : null;
+  } catch {
+    lines = null;
+  }
   if (!Array.isArray(lines)) return null;
   const stored = staffingPlanOf(lines);
   const fitted = stored ? fitPlanToHorizon(stored, horizon) : null;
   return fitted && fitted.rows.length > 0 ? fitted : null;
 }
 
-export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } }, projectId: string): S5InvestmentPlan | null {
+export function resolveS5InvestmentPlan(
+  db: { query: (sql: string) => { get: (...args: unknown[]) => unknown; all: (...args: unknown[]) => unknown[] } },
+  projectId: string,
+): S5InvestmentPlan | null {
   // ADR-0181 seam — the person-set entry_market_fx rates convert foreign plan lines.
-  const srcOpp = (db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as { source_opportunity_id: string | null } | undefined)?.source_opportunity_id ?? null;
+  const srcOpp =
+    (
+      db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+        | { source_opportunity_id: string | null }
+        | undefined
+    )?.source_opportunity_id ?? null;
   const fxRates: Record<string, number> | undefined = srcOpp
     ? Object.fromEntries(readFx(getDb(), srcOpp).map((f) => [f.currency, f.rate]))
     : undefined;
@@ -1277,8 +1451,34 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     const pinStaffing = active.input.staffing ?? null;
     const agg = applyStaffingLaborToPlan(aggregatePlanLines(pinHorizon, pinLines, fxRates), pinStaffing);
     const modelId = `pin:${active.pin.id}`;
-    const lineHash = scenarioSeed(modelId, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
-    return { modelId, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, staffingLaborByYear: agg.staffingLaborByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), pinId: active.pin.id, planHash: active.pin.plan_hash, staffing: pinStaffing };
+    const lineHash = scenarioSeed(
+      modelId,
+      JSON.stringify({
+        c: agg.capexByYear,
+        o: agg.laborOpexByYear,
+        g: agg.govRndByYear,
+        ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}),
+      }),
+    ).toString(16);
+    return {
+      modelId,
+      horizonYears: agg.horizonYears,
+      capexByYear: agg.capexByYear,
+      laborByYear: agg.laborByYear,
+      opexByYear: agg.opexByYear,
+      laborOpexByYear: agg.laborOpexByYear,
+      govRndByYear: agg.govRndByYear,
+      opexCovered: agg.opexCovered,
+      skippedLines: agg.skippedLines,
+      lineHash,
+      capexCapabilityByYear: agg.capexCapabilityByYear,
+      laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear,
+      staffingLaborByYear: agg.staffingLaborByYear,
+      ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}),
+      pinId: active.pin.id,
+      planHash: active.pin.plan_hash,
+      staffing: pinStaffing,
+    };
   }
   const model = db
     .query(
@@ -1289,12 +1489,46 @@ export function resolveS5InvestmentPlan(db: { query: (sql: string) => { get: (..
     .get(projectId) as { id: string; horizon_years: number } | undefined;
   if (!model) return null;
   const lines = db
-    .query("SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?")
-    .all(model.id) as Array<{ category: string; annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null; note?: string | null }>;
+    .query(
+      "SELECT category, annual_amount_krw_m, start_year, end_year, growth_rate, unit, note FROM business_case_line WHERE model_id = ?",
+    )
+    .all(model.id) as Array<{
+    category: string;
+    annual_amount_krw_m: number;
+    start_year: number;
+    end_year: number | null;
+    growth_rate: number;
+    unit: string | null;
+    note?: string | null;
+  }>;
   const copyStaffing = staffingOfAssessment(getDb(), srcOpp, model.horizon_years);
   const agg = applyStaffingLaborToPlan(aggregatePlanLines(model.horizon_years, lines, fxRates), copyStaffing);
-  const lineHash = scenarioSeed(model.id, JSON.stringify({ c: agg.capexByYear, o: agg.laborOpexByYear, g: agg.govRndByYear, ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}) })).toString(16);
-  return { modelId: model.id, horizonYears: agg.horizonYears, capexByYear: agg.capexByYear, laborByYear: agg.laborByYear, opexByYear: agg.opexByYear, laborOpexByYear: agg.laborOpexByYear, govRndByYear: agg.govRndByYear, opexCovered: agg.opexCovered, skippedLines: agg.skippedLines, lineHash, capexCapabilityByYear: agg.capexCapabilityByYear, laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear, staffingLaborByYear: agg.staffingLaborByYear, ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}), staffing: copyStaffing };
+  const lineHash = scenarioSeed(
+    model.id,
+    JSON.stringify({
+      c: agg.capexByYear,
+      o: agg.laborOpexByYear,
+      g: agg.govRndByYear,
+      ...(agg.preLaunchLines ? { p: agg.preLaunchKrwM } : {}),
+    }),
+  ).toString(16);
+  return {
+    modelId: model.id,
+    horizonYears: agg.horizonYears,
+    capexByYear: agg.capexByYear,
+    laborByYear: agg.laborByYear,
+    opexByYear: agg.opexByYear,
+    laborOpexByYear: agg.laborOpexByYear,
+    govRndByYear: agg.govRndByYear,
+    opexCovered: agg.opexCovered,
+    skippedLines: agg.skippedLines,
+    lineHash,
+    capexCapabilityByYear: agg.capexCapabilityByYear,
+    laborOpexCapabilityByYear: agg.laborOpexCapabilityByYear,
+    staffingLaborByYear: agg.staffingLaborByYear,
+    ...(agg.preLaunchLines ? { preLaunchKrwM: agg.preLaunchKrwM, preLaunchLines: agg.preLaunchLines } : {}),
+    staffing: copyStaffing,
+  };
 }
 
 /** The plan in force for a case — only when a human chose an s5_plan basis
@@ -1319,7 +1553,17 @@ function drawnCapex(plan: S5InvestmentPlan, index: number, capF: number, manF: n
  *  formula `simulateInvestment` uses (salary factor, increase pp, on-cost pp, then the
  *  triangular half-year ramp shift; recruiting one-offs ride along). Null-safe parts:
  *  absent factors stay at their mode (1 / 0 / 0). */
-function staffingDrawVector(plan: S5InvestmentPlan, drawIndex: number, sim5: { salaryFactors: number[]; increaseFactorsPp: number[]; onCostFactorsPp: number[]; rampFactors: number[]; drawCount: number }): number[] | null {
+function staffingDrawVector(
+  plan: S5InvestmentPlan,
+  drawIndex: number,
+  sim5: {
+    salaryFactors: number[];
+    increaseFactorsPp: number[];
+    onCostFactorsPp: number[];
+    rampFactors: number[];
+    drawCount: number;
+  },
+): number[] | null {
   if (!plan.staffing) return null;
   const H = plan.horizonYears;
   const recruiting = staffingSummaryVector(plan.staffing, H).recruitingByYear;
@@ -1353,11 +1597,18 @@ function capexOfYear(inputs: CaseInputs, s5: { plan: S5InvestmentPlan } | null, 
 
 /** Opex for cashflow year `year` (1-based). Under `s5_plan_full` the explicit
  *  labor/opex lines replace the ratio only in years a line covers. */
-function opexOfYear(inputs: CaseInputs, s5: { plan: S5InvestmentPlan; full: boolean } | null, year: number, revenue: number): number {
+function opexOfYear(
+  inputs: CaseInputs,
+  s5: { plan: S5InvestmentPlan; full: boolean } | null,
+  year: number,
+  revenue: number,
+): number {
   if (!s5) return revenue * opexRatioOf(inputs);
   if (!s5.full) return revenue * opexRatioOf(inputs);
   const i = year - 1;
-  return i < s5.plan.opexCovered.length && s5.plan.opexCovered[i] ? s5.plan.laborOpexByYear[i] : revenue * opexRatioOf(inputs);
+  return i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]
+    ? s5.plan.laborOpexByYear[i]
+    : revenue * opexRatioOf(inputs);
 }
 
 /** ADR-0178 slice 2 (s5_pnl) - per-year P&L terms of the plan (design §5).
@@ -1388,9 +1639,13 @@ export function s5PnlYearPlan(
   for (let year = 1; year <= horizon; year++) {
     const i = year - 1;
     const revUtil = (revenueByYear[i] ?? 0) * (utilizationByYear[i] ?? 1);
-    const covered = (i < plan.opexCovered.length && plan.opexCovered[i]) || (i < plan.govRndByYear.length && plan.govRndByYear[i] > 0);
+    const covered =
+      (i < plan.opexCovered.length && plan.opexCovered[i]) ||
+      (i < plan.govRndByYear.length && plan.govRndByYear[i] > 0);
     const opexFallback = !covered;
-    const opexKrwM = opexFallback ? revUtil * opexRatio : plan.laborOpexByYear[i] + (i < plan.govRndByYear.length ? plan.govRndByYear[i] : 0);
+    const opexKrwM = opexFallback
+      ? revUtil * opexRatio
+      : plan.laborOpexByYear[i] + (i < plan.govRndByYear.length ? plan.govRndByYear[i] : 0);
     const withinPlan = i < plan.capexByYear.length;
     const capexKrwM = withinPlan ? plan.capexByYear[i] : revUtil * capexRatio;
     const capexFallback = !withinPlan;
@@ -1403,19 +1658,20 @@ export function s5PnlYearPlan(
 
 /** Note-provenance helper for the s5_pnl basis: fallback-year share over the
  *  bc horizon and the pre-launch amount (always recorded, warned when 0). */
-export function s5PnlNoteInfo(inputs: CaseInputs, plan: S5InvestmentPlan): { fallbackYears: number; horizon: number; preLaunchKrwM: number } {
+export function s5PnlNoteInfo(
+  inputs: CaseInputs,
+  plan: S5InvestmentPlan,
+): { fallbackYears: number; horizon: number; preLaunchKrwM: number } {
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
   const horizon = bc.horizonYears;
   let fallbackYears = 0;
   for (let i = 0; i < horizon; i++) {
-    const opexCovered = (i < plan.opexCovered.length && plan.opexCovered[i]) || (i < plan.govRndByYear.length && plan.govRndByYear[i] > 0);
+    const opexCovered =
+      (i < plan.opexCovered.length && plan.opexCovered[i]) ||
+      (i < plan.govRndByYear.length && plan.govRndByYear[i] > 0);
     if (!opexCovered || i >= plan.capexByYear.length) fallbackYears += 1;
   }
   return { fallbackYears, horizon, preLaunchKrwM: plan.preLaunchKrwM ?? 0 };
-}
-
-function initialInvestmentRatioOf(inputs: CaseInputs): number {
-  return inputs.bcParams?.initialInvestmentRatio ?? INITIAL_INVESTMENT_RATIO;
 }
 
 /** Opex cross-check under a non-full s5 basis (team-lead spec): the plan's
@@ -1456,7 +1712,9 @@ export function effGrowthDisp(
   const delta = SCENARIO_DELTA[scenario];
   const gm = inputs.growthModel;
   const base = gm
-    ? (variant === "historical" ? (gm.historical ?? gm.market) : gm.market)
+    ? variant === "historical"
+      ? (gm.historical ?? gm.market)
+      : gm.market
     : { growth: inputs.anchorGrowth, disp: 0.02, growthSource: "기본값", dispSource: "고정 2%" };
   // REQ-W6-2 resolution tail: a user override (bc.growth_override /
   // bc.sigma_override) beats the derived model; the scenario delta still
@@ -1466,8 +1724,9 @@ export function effGrowthDisp(
   return {
     growth: (growthOv ?? base.growth) * delta.growth,
     disp: (sigmaOv ?? base.disp) * delta.disp,
-    growthSource: growthOv !== null ? inputs.bcParams?.growthOverrideSource ?? "사용자 오버라이드" : base.growthSource,
-    dispSource: sigmaOv !== null ? inputs.bcParams?.sigmaOverrideSource ?? "사용자 오버라이드" : base.dispSource,
+    growthSource:
+      growthOv !== null ? (inputs.bcParams?.growthOverrideSource ?? "사용자 오버라이드") : base.growthSource,
+    dispSource: sigmaOv !== null ? (inputs.bcParams?.sigmaOverrideSource ?? "사용자 오버라이드") : base.dispSource,
   };
 }
 
@@ -1482,13 +1741,25 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
        FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id
        WHERE p.id = ?`,
     )
-    .get(projectId) as { market_size_krw_m: number | null; growth_rate: number | null; target_scope_json: string | null; sizing_version_id: string | null; source_opportunity_id: string | null } | undefined;
+    .get(projectId) as
+    | {
+        market_size_krw_m: number | null;
+        growth_rate: number | null;
+        target_scope_json: string | null;
+        sizing_version_id: string | null;
+        source_opportunity_id: string | null;
+      }
+    | undefined;
   // Deterministic fallbacks when the promoting opportunity carries no market
   // facts (brownfield promotion path): documented, never random. growth_rate
   // is stored as a RATIO (evidence_var unit 'ratio', migration 0017; seeds
   // store 0.06) and is used as-is — no percent conversion.
   const bcParams = resolveBusinessCaseParams(getDb(), projectId);
   const s5Plan = resolveS5InvestmentPlan(getDb(), projectId);
+  // ADR-0178 slice 0 — resolve the plan pin once; the s5Sim field below uses
+  // the pinned run only when the pin names a usable run (same guard the
+  // non-null assertion used to skip, now explicit and runtime-checked).
+  const pinnedS5Pin = s5Plan?.pinId ? getCurrentS5PlanPin(getDb(), projectId) : null;
   // ADR-0179 amendment slice B — the DERIVED entry-market value replaces the
   // raw opportunity anchor when BOTH the S1 link and the derivation chain
   // exist (design §12.2); resolved once here so marketSizeKrwM and the
@@ -1518,20 +1789,28 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
   // ADR-0181 follow-up: the unit resolves from the LINKED S1 declaration
   // ONLY (analysis unit_basis / $B convention) — the S2 scope no longer
   // carries it (decider: S1 declares, S2 needs no separate declaration).
-  const entryMarketUnitBasis = entryMarketDerived && row?.source_opportunity_id
-    ? resolveLinkedDeclaredUnitBasis(getDb(), row.source_opportunity_id)
-    : null;
+  const entryMarketUnitBasis =
+    entryMarketDerived && row?.source_opportunity_id
+      ? resolveLinkedDeclaredUnitBasis(getDb(), row.source_opportunity_id)
+      : null;
   const entryMarketAnchorUnit = entryMarketDerived ? anchorCurrencyOfUnitBasis(entryMarketUnitBasis) : null;
   const entryMarketAnchorCcy = entryMarketAnchorUnit?.currency ?? null;
-  const entryMarketFxRow = entryMarketDerived && entryMarketAnchorCcy && row?.source_opportunity_id
-    ? readFx(getDb(), row.source_opportunity_id).find((r) => r.currency === entryMarketAnchorCcy) ?? null
-    : null;
+  const entryMarketFxRow =
+    entryMarketDerived && entryMarketAnchorCcy && row?.source_opportunity_id
+      ? (readFx(getDb(), row.source_opportunity_id).find((r) => r.currency === entryMarketAnchorCcy) ?? null)
+      : null;
   const entryMarketFxResolved = entryMarketAnchorCcy
     ? resolveFxRateForCurrency(entryMarketAnchorCcy, entryMarketFxRow?.rate ?? null)
     : null;
-  const entryMarketFx = entryMarketDerived && entryMarketAnchorCcy && entryMarketFxResolved
-    ? { rate: entryMarketFxResolved.rate, source: entryMarketFxResolved.source, currency: entryMarketAnchorCcy, scale: entryMarketAnchorUnit!.scale }
-    : null;
+  const entryMarketFx =
+    entryMarketDerived && entryMarketAnchorCcy && entryMarketFxResolved
+      ? {
+          rate: entryMarketFxResolved.rate,
+          source: entryMarketFxResolved.source,
+          currency: entryMarketAnchorCcy,
+          scale: entryMarketAnchorUnit?.scale ?? 1,
+        }
+      : null;
   const entryMarketFxVolatility: number | null = entryMarketFxRow?.volatility ?? null;
   // FX needed but UNSET, or the unit UNDECLARED: honest degradation to the
   // legacy anchor (never a raw foreign/unknown-scale pass-through), surfaced
@@ -1552,9 +1831,10 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     // ADR-0181 slice 5 — the subject-market growth (S2 확정) replaces the
     // whole-market opportunity growth as the anchor growth; unset → legacy
     // fallback (bit-identical), provenance in the run-note growth_source.
-    anchorGrowth: (row?.source_opportunity_id
-      ? readEntryMarketRecord(getDb(), row.source_opportunity_id)?.growth_rate
-      : null) ?? row?.growth_rate ?? 0.05,
+    anchorGrowth:
+      (row?.source_opportunity_id ? readEntryMarketRecord(getDb(), row.source_opportunity_id)?.growth_rate : null) ??
+      row?.growth_rate ??
+      0.05,
     wacc: resolveProjectWacc(getDb(), projectId),
     waccScope: { scope: "project" },
     bcParams,
@@ -1566,9 +1846,12 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     // ADR-0176 slice 3: the latest CONFIRMED S5 simulation run, only under an s5_plan basis with a
     // plan. None -> today's single-point plan (note `s5_sim=none`); never blocking.
     // ADR-0178 slice 0: on the pinned path the run is the one the pin names, not "the latest confirmed".
-    s5Sim: bcParams.investmentBasis !== "ratio" && bcParams.investmentBasis !== "s5_pnl" && s5Plan
-      ? s5Plan.pinId ? resolvePinnedS5SimConsumption(getDb(), getCurrentS5PlanPin(getDb(), projectId)!) : resolveS5SimConsumption(getDb(), row?.source_opportunity_id)
-      : null,
+    s5Sim:
+      bcParams.investmentBasis !== "ratio" && bcParams.investmentBasis !== "s5_pnl" && s5Plan
+        ? pinnedS5Pin
+          ? resolvePinnedS5SimConsumption(getDb(), pinnedS5Pin)
+          : resolveS5SimConsumption(getDb(), row?.source_opportunity_id)
+        : null,
     // ADR-0179 slice 1 / ADR-0181 slice 1 — the person-set target scope is
     // read through the entry-market repository (0151 tables first, frozen
     // JSON fallback). A NULL scope never blocks generation (the caller sees
@@ -1580,9 +1863,7 @@ export function caseInputsBaseForProject(projectId: string): Omit<CaseInputs, "g
     // pinned version's scope decides ok / mismatch in the run-note fragment
     // and the read model. Tolerant: a deleted version row or unparsable
     // payload degrades to null, never a generation failure.
-    anchorScope: row?.sizing_version_id
-      ? resolveLinkedAnchorScope(getDb(), row.source_opportunity_id ?? "")
-      : null,
+    anchorScope: row?.sizing_version_id ? resolveLinkedAnchorScope(getDb(), row.source_opportunity_id ?? "") : null,
     // ADR-0179 amendment slice B — when the opportunity has BOTH a pinned S1
     // link AND a person-set derivation chain, the anchor becomes the DERIVED
     // entry-market value (design §12.2: derived(t) = S1_anchor(t) x Πf, so
@@ -1626,9 +1907,9 @@ function resolveTargetCaseWacc(
   projectWacc: WaccResolution,
 ): { wacc: WaccResolution; waccScope: CaseWaccScope } {
   if (!target.companyId) return { wacc: projectWacc, waccScope: { scope: "project" } };
-  const bound = getDb()
-    .query("SELECT company_id FROM md_project WHERE id = ?")
-    .get(projectId) as { company_id: string | null } | undefined;
+  const bound = getDb().query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as
+    | { company_id: string | null }
+    | undefined;
   if (!bound || bound.company_id === target.companyId) return { wacc: projectWacc, waccScope: { scope: "project" } };
   const scoped = resolveProjectWacc(getDb(), projectId, { subjectCompanyId: target.companyId });
   if (scoped.source === "default") return { wacc: projectWacc, waccScope: { scope: "project" } };
@@ -1648,7 +1929,10 @@ export function caseInputsForTarget(
   // 몇억). Falls back to the market-capture model when the company has no
   // revenue series; the fallback's provenance stays labeled.
   const revenueAnchor = growthModel.companyRevenue
-    ? { krwM: growthModel.companyRevenue.krwM, source: `대상 회사 최신 연매출 ${growthModel.companyRevenue.year} (DART)` }
+    ? {
+        krwM: growthModel.companyRevenue.krwM,
+        source: `대상 회사 최신 연매출 ${growthModel.companyRevenue.year} (DART)`,
+      }
     : undefined;
   // Acquisition pricing (benchmark design 2026-10-10): with a revenue anchor
   // the year-0 outflow becomes the acquisition EV — revenue × EV/Revenue
@@ -1679,7 +1963,10 @@ export function caseInputsForTarget(
 /** Shortlist subjects of a brownfield project's source opportunity — one
  *  analysis instance each (flow.spec S8 subjectScope: shortlist). Company
  *  resolution mirrors listTargets (dart_corp_code first, name_ko fallback). */
-export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityId: string): Array<{ id: string; name: string; companyId: string | null }> {
+export function listShortlistSubjects(
+  db: ReturnType<typeof getDb>,
+  opportunityId: string,
+): Array<{ id: string; name: string; companyId: string | null }> {
   const rows = db
     .query(
       `SELECT bt.id, bt.company_name, bt.dart_corp_code,
@@ -1688,13 +1975,20 @@ export function listShortlistSubjects(db: ReturnType<typeof getDb>, opportunityI
        WHERE bt.opportunity_id = ? AND bt.status = 'shortlisted'
        ORDER BY bt.rank IS NULL, bt.rank, bt.created_at`,
     )
-    .all(opportunityId) as Array<{ id: string; company_name: string; dart_corp_code: string | null; company_id: string | null }>;
+    .all(opportunityId) as Array<{
+    id: string;
+    company_name: string;
+    dart_corp_code: string | null;
+    company_id: string | null;
+  }>;
   return rows.map((row) => ({
     id: row.id,
     name: row.company_name,
-    companyId: row.company_id
-      ?? (row.company_name
-        ? ((db.query("SELECT id FROM md_company WHERE name_ko = ?").get(row.company_name) as { id: string } | undefined)?.id ?? null)
+    companyId:
+      row.company_id ??
+      (row.company_name
+        ? ((db.query("SELECT id FROM md_company WHERE name_ko = ?").get(row.company_name) as { id: string } | undefined)
+            ?.id ?? null)
         : null),
   }));
 }
@@ -1735,7 +2029,11 @@ export interface CaseYearTable {
   bepYear: number | null;
 }
 
-export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): CaseYearTable {
+export function deterministicCaseYearTable(
+  inputs: CaseInputs,
+  scenario: Scenario,
+  variant: CaseVariant = "market_forward",
+): CaseYearTable {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
   const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
@@ -1749,8 +2047,21 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
   let revenue = year1Revenue;
   const ramp = rampUpOf(inputs);
   const wacc = inputs.wacc.value;
-  const discount = (v: number, y: number) => v / Math.pow(1 + wacc, y);
-  const rows: CaseYearRow[] = [{ year: 0, revenue: 0, utilization: 1, opex: 0, labor: 0, capex: initialInvestment, fcf: initialInvestment === 0 ? 0 : -initialInvestment, discountedFcf: initialInvestment === 0 ? 0 : -initialInvestment, cumulativeDiscountedFcf: initialInvestment === 0 ? 0 : -initialInvestment, breakEvenRevenue: null }];
+  const discount = (v: number, y: number) => v / (1 + wacc) ** y;
+  const rows: CaseYearRow[] = [
+    {
+      year: 0,
+      revenue: 0,
+      utilization: 1,
+      opex: 0,
+      labor: 0,
+      capex: initialInvestment,
+      fcf: initialInvestment === 0 ? 0 : -initialInvestment,
+      discountedFcf: initialInvestment === 0 ? 0 : -initialInvestment,
+      cumulativeDiscountedFcf: initialInvestment === 0 ? 0 : -initialInvestment,
+      breakEvenRevenue: null,
+    },
+  ];
   const basis = s5?.pnl ? "s5_pnl" : s5 ? "s5_plan" : "ratio";
   // 처분가치 = 최종년 매출 × 처분 배수 — the loop's last revenue, matching
   // deterministicCashflows / the seeded sim / the design ("최종년 매출로 처분").
@@ -1766,14 +2077,16 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
     if (s5?.pnl) {
       const i = year - 1;
       const revUtil = revenue * utilization;
-      const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+      const covered =
+        (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) ||
+        (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
       opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatioD;
-      labor = covered ? s5.plan.laborByYear?.[i] ?? 0 : 0;
+      labor = covered ? (s5.plan.laborByYear?.[i] ?? 0) : 0;
       capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatioD;
       fcf = revUtil - opex - capex;
     } else if (s5) {
       opex = opexOfYear(inputs, s5, year, revenue);
-      labor = s5.full === true && s5.plan.opexCovered[year - 1] === true ? s5.plan.laborByYear?.[year - 1] ?? 0 : 0;
+      labor = s5.full === true && s5.plan.opexCovered[year - 1] === true ? (s5.plan.laborByYear?.[year - 1] ?? 0) : 0;
       capex = capexOfYear(inputs, s5, year, revenue);
       fcf = (revenue - opex) * utilization - capex;
     } else {
@@ -1787,11 +2100,22 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
     // branch solves ITS fcf structure: s5_pnl multiplies utilization into
     // revenue (rev·u = opex + capex); the s5_plan branch multiplies it into
     // the margin ((rev − opex)·u = capex → rev = opex + capex/u).
-    const opexFixed = (s5?.pnl ?? false) || (!!s5 && !s5.pnl && s5.full === true && s5.plan.opexCovered[year - 1] === true);
-    const breakEvenRevenue = opexFixed && utilization > 0
-      ? (s5?.pnl ? (opex + capex) / utilization : opex + capex / utilization)
-      : null;
-    rows.push({ year, revenue, utilization, opex, labor, capex, fcf, discountedFcf: discount(fcf, year), cumulativeDiscountedFcf: 0, breakEvenRevenue });
+    const opexFixed =
+      (s5?.pnl ?? false) || (!!s5 && !s5.pnl && s5.full === true && s5.plan.opexCovered[year - 1] === true);
+    const breakEvenRevenue =
+      opexFixed && utilization > 0 ? (s5?.pnl ? (opex + capex) / utilization : opex + capex / utilization) : null;
+    rows.push({
+      year,
+      revenue,
+      utilization,
+      opex,
+      labor,
+      capex,
+      fcf,
+      discountedFcf: discount(fcf, year),
+      cumulativeDiscountedFcf: 0,
+      breakEvenRevenue,
+    });
   }
   if (exitMult > 0) {
     exitValue = revenue * exitMult; // revenue = the FINAL year's after the loop
@@ -1806,12 +2130,23 @@ export function deterministicCaseYearTable(inputs: CaseInputs, scenario: Scenari
   }
   const flows = rows.map((r) => r.fcf);
   return {
-    basis, wacc, horizon: rows.length - 1, initialInvestment, exitValue,
-    rows, npv: Math.round(cum * 100) / 100, irrValue: irr(flows), bepYear: discountedPaybackYear(initialInvestment, flows.slice(1), wacc),
+    basis,
+    wacc,
+    horizon: rows.length - 1,
+    initialInvestment,
+    exitValue,
+    rows,
+    npv: Math.round(cum * 100) / 100,
+    irrValue: irr(flows),
+    bepYear: discountedPaybackYear(initialInvestment, flows.slice(1), wacc),
   };
 }
 
-export function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): number[] {
+export function deterministicCashflows(
+  inputs: CaseInputs,
+  scenario: Scenario,
+  variant: CaseVariant = "market_forward",
+): number[] {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
   const year1Revenue = year1RevenueOf(inputs, delta.growth).value;
@@ -1831,7 +2166,9 @@ export function deterministicCashflows(inputs: CaseInputs, scenario: Scenario, v
     if (s5?.pnl) {
       const i = year - 1;
       const revUtil = revenue * utilization;
-      const covered = (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) || (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
+      const covered =
+        (i < s5.plan.opexCovered.length && s5.plan.opexCovered[i]) ||
+        (i < s5.plan.govRndByYear.length && s5.plan.govRndByYear[i] > 0);
       const opex = covered ? s5.plan.laborOpexByYear[i] + s5.plan.govRndByYear[i] : revUtil * opexRatioD;
       const capex = i < s5.plan.capexByYear.length ? s5.plan.capexByYear[i] : revUtil * capexRatioD;
       flows.push(revUtil - opex - capex);
@@ -1868,7 +2205,11 @@ export interface EngineRunResult {
  * semantics — year-1 anchor, growth noise on years 2..H, FCF = revenue ×
  * (1 − opex − capex), year-0 initial investment (ADR-0106).
  */
-export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: CaseVariant = "market_forward"): Record<string, unknown> {
+export function buildS8JobSpec(
+  inputs: CaseInputs,
+  scenario: Scenario,
+  variant: CaseVariant = "market_forward",
+): Record<string, unknown> {
   const delta = SCENARIO_DELTA[scenario];
   const eff = effGrowthDisp(inputs, scenario, variant);
   const bc = inputs.bcParams ?? resolveBusinessCaseParamsDefaults();
@@ -1876,9 +2217,15 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   const y1 = year1RevenueOf(inputs, delta.growth);
   const s5 = s5PlanOf(inputs);
   const initInv = s5?.pnl
-    ? { value: s5.plan.preLaunchKrwM ?? 0, source: `S5 계획 출시 전 투자 합계 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (year-0 무할인, OD-3)${(s5.plan.preLaunchKrwM ?? 0) === 0 ? " (출시 전 투자 미지정)" : ""}` }
+    ? {
+        value: s5.plan.preLaunchKrwM ?? 0,
+        source: `S5 계획 출시 전 투자 합계 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (year-0 무할인, OD-3)${(s5.plan.preLaunchKrwM ?? 0) === 0 ? " (출시 전 투자 미지정)" : ""}`,
+      }
     : s5
-      ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+      ? {
+          value: s5.plan.capexByYear[0],
+          source: `S5 투자 계획 Y1 집행액 — ${s5.plan.pinId ? `S5 고정 참조 ${s5.plan.pinId}` : `greenfield_cost model ${s5.plan.modelId}`} (OD-3: 계획 1년차 지출을 year-0으로 반영)`,
+        }
       : initialInvestmentOf(inputs, y1.value);
   const exitMult = exitEvRevenueOf(inputs);
   // ADR-0143: brownfield per-target cases carry the target in the subject
@@ -1909,7 +2256,13 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
         drivers: {
           revenue_y1: { dist: "constant", value: y1.value, unit: "KRW_M", source: y1.source },
           ramp_up: { dist: "constant", value: bc.rampUp, source: bc.rampSource },
-          revenue_growth: { dist: "normal", mean: eff.growth, sigma: eff.disp, unit: "ratio", source: eff.growthSource },
+          revenue_growth: {
+            dist: "normal",
+            mean: eff.growth,
+            sigma: eff.disp,
+            unit: "ratio",
+            source: eff.growthSource,
+          },
           // ADR-0181 slice 4 — the FX risk INDEX: per-iteration constant
           // triangular around 1.0 (fx_basis=index-no-drift); the level rate
           // lives only in the deterministic KRW conversion (entryMarketFx),
@@ -1930,9 +2283,10 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
             dist: "constant",
             value: opexRatio,
             unit: "ratio",
-            source: inputs.targetCostWiring && scenario === "downside"
-              ? `${bc.opexSource} × 타겟코스팅 격차 반영 (+${Math.round((inputs.targetCostWiring.uplift - 1) * 100)}%, REQ-W2-3)`
-              : bc.opexSource,
+            source:
+              inputs.targetCostWiring && scenario === "downside"
+                ? `${bc.opexSource} × 타겟코스팅 격차 반영 (+${Math.round((inputs.targetCostWiring.uplift - 1) * 100)}%, REQ-W2-3)`
+                : bc.opexSource,
           },
           capex_ratio: {
             dist: "constant",
@@ -1946,7 +2300,14 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
           },
           initial_investment: { dist: "constant", value: initInv.value, unit: "KRW_M", source: initInv.source },
           ...(exitMult > 0
-            ? { exit_ev_revenue: { dist: "constant", value: exitMult, unit: "multiple", source: `회수 시점 처분 — 진입 배수와 동일 ${exitMult.toFixed(2)}× (멀티플 확대 없음)` } }
+            ? {
+                exit_ev_revenue: {
+                  dist: "constant",
+                  value: exitMult,
+                  unit: "multiple",
+                  source: `회수 시점 처분 — 진입 배수와 동일 ${exitMult.toFixed(2)}× (멀티플 확대 없음)`,
+                },
+              }
             : {}),
         },
       },
@@ -1954,23 +2315,39 @@ export function buildS8JobSpec(inputs: CaseInputs, scenario: Scenario, variant: 
   };
   // D7 (2026-10-28): record in the run snapshot WHICH drivers the band reflects and which are held
   // constant (outside the spec's `cases`, so seeds - a function of case_id + drivers - are untouched).
-  const s5Run: S5RunUse = !s5 ? (inputs.s5Plan ? "basis_not_paired" : "no_s5_plan") : s5.pnl ? "basis_not_paired" : inputs.s5Sim ? "applied" : "none_confirmed";
+  const s5Run: S5RunUse = !s5
+    ? inputs.s5Plan
+      ? "basis_not_paired"
+      : "no_s5_plan"
+    : s5.pnl
+      ? "basis_not_paired"
+      : inputs.s5Sim
+        ? "applied"
+        : "none_confirmed";
   return {
     ...spec,
     // Frozen deterministic CFADS basis (S10 covenant check reads this, never live inputs): per-year fcf of this
     // scenario's deterministic table; the last year includes the exit value, recorded separately.
     deterministic_flows: (() => {
       const t = deterministicCaseYearTable(inputs, scenario, variant);
-      return { version: 1, horizon: t.horizon, exit_value: t.exitValue, years: t.rows.filter((r) => r.year >= 1).map((r) => ({ year: r.year, fcf: Math.round(r.fcf * 1e6) / 1e6 })) };
+      return {
+        version: 1,
+        horizon: t.horizon,
+        exit_value: t.exitValue,
+        years: t.rows.filter((r) => r.year >= 1).map((r) => ({ year: r.year, fcf: Math.round(r.fcf * 1e6) / 1e6 })),
+      };
     })(),
-    uncertainty_scope: deriveUncertaintyScope(spec.cases[0].drivers as Record<string, { dist?: string }>, { run: s5Run, simHash: inputs.s5Sim?.inputHash ?? null }),
+    uncertainty_scope: deriveUncertaintyScope(spec.cases[0].drivers as Record<string, { dist?: string }>, {
+      run: s5Run,
+      simHash: inputs.s5Sim?.inputHash ?? null,
+    }),
   };
 }
 
 /** One engine attempt for an S8 case; null on any failure — the caller falls
  *  back to the legacy in-process simulator and the fallback is stamped in the
  *  note so every persisted figure names its origin (REQ-W5-1 transition). */
-async function runEngineSimulation(jobSpec: Record<string, unknown>, inputs: CaseInputs, scenario: Scenario, variant: CaseVariant): Promise<EngineRunResult | null> {
+async function runEngineSimulation(jobSpec: Record<string, unknown>): Promise<EngineRunResult | null> {
   const job = await runSimJob(jobSpec);
   const first = job?.cases[0];
   if (!job || !first || !Number.isFinite(first.npv?.p50)) return null;
@@ -1986,7 +2363,11 @@ async function runEngineSimulation(jobSpec: Record<string, unknown>, inputs: Cas
       bepYear: first.bep_year,
       bepVolume: first.bep_volume,
     },
-    meta: { engine: `python-sim-engine@${job.version}`, device: `${first.device.device}/${first.device.backend}`, precision: first.device.precision },
+    meta: {
+      engine: `python-sim-engine@${job.version}`,
+      device: `${first.device.device}/${first.device.backend}`,
+      precision: first.device.precision,
+    },
     bepYear: first.bep_year,
     bepVolume: first.bep_volume,
     paybackYears: first.payback_discounted_years,
@@ -2021,12 +2402,26 @@ const VARIANT_LABEL: Record<CaseVariant, string> = { market_forward: "시장 기
  * an LLM-backed factory would call its model and return richer prose — the
  * persistence contract stays here in the chain activities.
  */
-export type BusinessCaseStep = "growth_projection" | "valuation_model" | "distributional_valuation" | "scenario_risk_assessment";
+export type BusinessCaseStep =
+  | "growth_projection"
+  | "valuation_model"
+  | "distributional_valuation"
+  | "scenario_risk_assessment";
 export type BusinessCaseStepExecutor = (step: BusinessCaseStep, ctx: StepContext) => Promise<string>;
 
 type ExecutorFactory = () => BusinessCaseStepExecutor;
 
-let executorFactory: ExecutorFactory | null = null;
+/**
+ * The seam store lives on globalThis, not module state: Next.js compiles the
+ * instrumentation bootstrap and route handlers as separate bundles, so a
+ * module-level variable registered at boot is invisible to route-side
+ * consumers. See committee-agents.ts for the full rationale.
+ */
+const EXECUTOR_FACTORY_KEY = "__coNewbizBusinessCaseExecutorFactory";
+
+function getExecutorFactory(): ExecutorFactory | null {
+  return ((globalThis as Record<string, unknown>)[EXECUTOR_FACTORY_KEY] as ExecutorFactory | undefined) ?? null;
+}
 
 /**
  * The seam: a future LLM-backed implementation registers a factory here at
@@ -2034,7 +2429,7 @@ let executorFactory: ExecutorFactory | null = null;
  * the default and any fallback is the local deterministic executor.
  */
 export function setBusinessCaseExecutorFactory(next: ExecutorFactory | null): void {
-  executorFactory = next;
+  (globalThis as Record<string, unknown>)[EXECUTOR_FACTORY_KEY] = next;
 }
 
 /** Deterministic default — role-templated output, seeded computation, real rows.
@@ -2055,42 +2450,104 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         `성장 근거: ${eff.growthSource} ${(eff.growth * 100).toFixed(2)}%/년 (시나리오 계수 ×${delta.growth}),`,
         `변동성 근거: ${eff.dispSource} (sigma ${pct1(eff.disp)} ×${delta.disp}).`,
         ctx.inputs.revenueAnchor
-          ? `1차년도 매출은 ${(y1.value / 100).toFixed(1)} 억원 — ${y1.source} 기준, 인수 대상의 기존 매출 규모를 반영한다 (가동률 ${rampUpOf(ctx.inputs).map((v) => v.toFixed(1)).join(" → ")}).`
-          : `1차년도 매출은 시장 점유율 ${captureRateOf(ctx.inputs) * 100}% 가정으로 ${(y1.value / 100).toFixed(1)} 억원 (가동률 ${rampUpOf(ctx.inputs).map((v) => v.toFixed(1)).join(" → ")}).`,
+          ? `1차년도 매출은 ${(y1.value / 100).toFixed(1)} 억원 — ${y1.source} 기준, 인수 대상의 기존 매출 규모를 반영한다 (가동률 ${rampUpOf(
+              ctx.inputs,
+            )
+              .map((v) => v.toFixed(1))
+              .join(" → ")}).`
+          : `1차년도 매출은 시장 점유율 ${captureRateOf(ctx.inputs) * 100}% 가정으로 ${(y1.value / 100).toFixed(1)} 억원 (가동률 ${rampUpOf(
+              ctx.inputs,
+            )
+              .map((v) => v.toFixed(1))
+              .join(" → ")}).`,
         `베이스레이트 점검: 산업 성장률 대비 ±20% 밴드 내 (greenfield-fs step 1).`,
       ].join("\n");
     }
     if (step === "valuation_model") {
       const modelId = ulid();
       const flows = deterministicCashflows(ctx.inputs, ctx.scenario, variant);
-      const npv = flows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + ctx.inputs.wacc.value, i), 0); // flows[0]=year-0
+      const npv = flows.reduce((acc, cf, i) => acc + cf / (1 + ctx.inputs.wacc.value) ** i, 0); // flows[0]=year-0
       const subjectLabel = ctx.target ? `${ctx.target.name} — ` : "";
       db.run(
         `INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant, target_id) VALUES (?,?,?,?,?,?,?,?,?)`,
-        [modelId, ctx.inputs.projectId, "valuation", `S8 자동 생성 — ${subjectLabel}${ctx.scenario} — ${VARIANT_LABEL[variant]}`, horizonOf(ctx.inputs), "business-case-generator", nowIso(), variant, ctx.target?.id ?? null],
+        [
+          modelId,
+          ctx.inputs.projectId,
+          "valuation",
+          `S8 자동 생성 — ${subjectLabel}${ctx.scenario} — ${VARIANT_LABEL[variant]}`,
+          horizonOf(ctx.inputs),
+          "business-case-generator",
+          nowIso(),
+          variant,
+          ctx.target?.id ?? null,
+        ],
       );
       const y1 = year1RevenueOf(ctx.inputs, delta.growth);
       const s5 = s5PlanOf(ctx.inputs);
       const initInv = s5?.pnl
-        ? { value: s5.plan.preLaunchKrwM ?? 0, source: `S5 계획 출시 전 투자 합계 — model ${s5.plan.modelId} (year-0 무할인, OD-3)${(s5.plan.preLaunchKrwM ?? 0) === 0 ? " (출시 전 투자 미지정)" : ""}` }
+        ? {
+            value: s5.plan.preLaunchKrwM ?? 0,
+            source: `S5 계획 출시 전 투자 합계 — model ${s5.plan.modelId} (year-0 무할인, OD-3)${(s5.plan.preLaunchKrwM ?? 0) === 0 ? " (출시 전 투자 미지정)" : ""}`,
+          }
         : s5
-          ? { value: s5.plan.capexByYear[0], source: `S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)` }
+          ? {
+              value: s5.plan.capexByYear[0],
+              source: `S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId} (OD-3: 계획 1년차 지출을 year-0으로 반영)`,
+            }
           : initialInvestmentOf(ctx.inputs, y1.value);
       const lines: Array<[string, "revenue" | "opex" | "capex", string, number]> = [
-        ["revenue", "revenue", ctx.inputs.revenueAnchor ? `시나리오 매출 (대상 회사 연매출 앵커 — ${ctx.inputs.revenueAnchor.source})` : "시나리오 매출 (year-1 앵커)", y1.value],
-        ["opex", "opex", `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`, y1.value * opexRatioOf(ctx.inputs)],
+        [
+          "revenue",
+          "revenue",
+          ctx.inputs.revenueAnchor
+            ? `시나리오 매출 (대상 회사 연매출 앵커 — ${ctx.inputs.revenueAnchor.source})`
+            : "시나리오 매출 (year-1 앵커)",
+          y1.value,
+        ],
+        [
+          "opex",
+          "opex",
+          `운영비 (매출의 ${Math.round(opexRatioOf(ctx.inputs) * 100)}%)`,
+          y1.value * opexRatioOf(ctx.inputs),
+        ],
         s5?.pnl
-          ? ["capex", "capex", `설비 투자 (S5 계획 손익 — model ${s5.plan.modelId}; 계획 미포함 연도는 가동률 반영 매출 x 비율 대체)`, (s5.plan.capexByYear[0] ?? 0)]
+          ? [
+              "capex",
+              "capex",
+              `설비 투자 (S5 계획 손익 — model ${s5.plan.modelId}; 계획 미포함 연도는 가동률 반영 매출 x 비율 대체)`,
+              s5.plan.capexByYear[0] ?? 0,
+            ]
           : s5
-            ? ["capex", "capex", `설비 투자 (S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId})`, s5.plan.capexByYear[0]]
-          : ["capex", "capex", `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`, y1.value * capexRatioOf(ctx.inputs)],
+            ? [
+                "capex",
+                "capex",
+                `설비 투자 (S5 투자 계획 Y1 집행액 — model ${s5.plan.modelId})`,
+                s5.plan.capexByYear[0],
+              ]
+            : [
+                "capex",
+                "capex",
+                `설비 투자 (year-1, 매출의 ${Math.round(capexRatioOf(ctx.inputs) * 100)}%)`,
+                y1.value * capexRatioOf(ctx.inputs),
+              ],
       ];
       for (const [category, _kind, name, amount] of lines) {
         db.run(
           `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, start_year, growth_rate, note, created_by, created_at)
            VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-          [ulid(), modelId, category, name, amount, "KRW_M", 1, eff.growth,
-            `scenario=${ctx.scenario}; delta=${delta.growth}; ${provenance}`, "business-case-generator", nowIso()],
+          [
+            ulid(),
+            modelId,
+            category,
+            name,
+            amount,
+            "KRW_M",
+            1,
+            eff.growth,
+            `scenario=${ctx.scenario}; delta=${delta.growth}; ${provenance}`,
+            "business-case-generator",
+            nowIso(),
+          ],
         );
       }
       ctx.modelId = modelId;
@@ -2101,7 +2558,9 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.waccScope?.scope === "target" ? " · 대상별 세션" : ""}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         ...(exitEvRevenueOf(ctx.inputs) > 0 && ctx.inputs.revenueAnchor
-          ? [`인수 가격: 대상 매출 ${initInv.source.includes("사용자") ? "× 사용자 확정 배수" : "× 컴프 기본 배수"} = ${fmtNpvInteger(initInv.value / 100)} 억원 (${initInv.source}) — 회수 시점 동일 배수로 처분 가정.`]
+          ? [
+              `인수 가격: 대상 매출 ${initInv.source.includes("사용자") ? "× 사용자 확정 배수" : "× 컴프 기본 배수"} = ${fmtNpvInteger(initInv.value / 100)} 억원 (${initInv.source}) — 회수 시점 동일 배수로 처분 가정.`,
+            ]
           : []),
         `IRR ${((irr(flows) ?? 0) * 100).toFixed(1)}% (greenfield-fs step 3). 모델/라인 3건 영속화 (model ${modelId}).`,
       ].join("\n");
@@ -2120,7 +2579,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // (design §12 lists engine support as unverified/out of slice 2), so an
       // s5_plan case runs on the seeded TS fallback; the note stamps both the
       // basis and WHY the engine was bypassed.
-      const engineRun = s5Provenance ? null : await runEngineSimulation(jobSpec, ctx.inputs, ctx.scenario, variant);
+      const engineRun = s5Provenance ? null : await runEngineSimulation(jobSpec);
       const sim: SimulationResult = engineRun?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant);
       const engineMeta: SimEngineMeta = engineRun?.meta ?? { engine: "inline-ts", device: "cpu", precision: "float64" };
       ctx.sim = { result: sim, engine: engineMeta, bepYear: sim.bepYear };
@@ -2188,7 +2647,8 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       // Team-lead slice-2 spec fragment names: basis / s5_model / s5_line_hash /
       // s5_opex_variance (appended only under an s5 basis — ratio notes stay
       // byte-identical).
-      const s5OpexVariance = s5Provenance && !s5Provenance.full && !s5Provenance.pnl ? s5OpexCrossCheckVariance(ctx.inputs) : null;
+      const s5OpexVariance =
+        s5Provenance && !s5Provenance.full && !s5Provenance.pnl ? s5OpexCrossCheckVariance(ctx.inputs) : null;
       const basis = ctx.inputs.bcParams?.investmentBasis ?? "ratio";
       const pnlInfo = s5Provenance?.pnl ? s5PnlNoteInfo(ctx.inputs, s5Provenance.plan) : null;
       const basisFragment = s5Provenance
@@ -2206,7 +2666,21 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
         db.run(
           `INSERT INTO valuation_simulation (id, project_id, model_id, scenario, percentile, npv_krw_m, unit, irr, note, created_at, bep_year, bep_volume, payback_discounted_years)
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [ulid(), ctx.inputs.projectId, modelId, ctx.scenario, pct, sim[pct], "KRW_M", isP50 ? irrValue : null, note, nowIso(), isP50 ? sim.bepYear : null, isP50 ? sim.bepVolume : null, isP50 ? sim.bepYear : null],
+          [
+            ulid(),
+            ctx.inputs.projectId,
+            modelId,
+            ctx.scenario,
+            pct,
+            sim[pct],
+            "KRW_M",
+            isP50 ? irrValue : null,
+            note,
+            nowIso(),
+            isP50 ? sim.bepYear : null,
+            isP50 ? sim.bepVolume : null,
+            isP50 ? sim.bepYear : null,
+          ],
         );
       }
       return [
@@ -2230,7 +2704,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
     return [
       `### [정량 방법론] quant-methodologist — 시나리오 리스크 평가 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
       "",
-      `하락 스트레스: p05 NPV ${fmtNpvInteger(((ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05) / 100)} 억원 기준,`,
+      `하락 스트레스: p05 NPV ${fmtNpvInteger((ctx.sim?.result ?? runSeededSimulation(ctx.inputs, ctx.scenario, variant)).p05 / 100)} 억원 기준,`,
       ctx.scenario === "downside"
         ? "금리 충격 시 계약(커버넌트) 테스트 관점에서 p05가 0 이하로 내려가는 구간에 대한 완충 확인 필요."
         : "금리 충격 시 계약(커버넌트) 테스트 통과 여향 — 하락 시나리오의 p05 대비 완충 명시 권장.",
@@ -2241,7 +2715,8 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
 /** Active executor per the env seam; deterministic unless explicitly LLM-backed. */
 export function getBusinessCaseExecutor(): BusinessCaseStepExecutor {
   const mode = process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS ?? "deterministic";
-  if (mode === "llm" && executorFactory !== null) return executorFactory();
+  const f = mode === "llm" ? getExecutorFactory() : null;
+  if (f !== null) return f();
   return defaultExecutor();
 }
 
@@ -2273,9 +2748,9 @@ export async function generateBusinessCases(
   opts: { actor: string; source?: string; callAgent?: CallAgent },
 ): Promise<GenerationResult> {
   const db = getDb();
-  const project = db
-    .query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?")
-    .get(projectId) as { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
+  const project = db.query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null }
+    | undefined;
   if (!project) throw new Error(`project '${projectId}' not found`);
 
   // ADR-0178 Amendment 2026-10-16: the pinned reference + unified S5 basis are the DEFAULT for a
@@ -2292,7 +2767,9 @@ export async function generateBusinessCases(
   // Promotion requires ≥1 shortlisted target (ADR-0095 precondition), so an
   // empty brownfield shortlist here is a data-integrity event, not an empty run.
   if (project.track === "brownfield" && subjects.length === 0) {
-    throw new Error(`brownfield project '${projectId}' has no shortlisted target — S7 Short List required before S8 generation`);
+    throw new Error(
+      `brownfield project '${projectId}' has no shortlisted target — S7 Short List required before S8 generation`,
+    );
   }
 
   const executor = getBusinessCaseExecutor();
@@ -2300,20 +2777,32 @@ export async function generateBusinessCases(
   // target_id NULL, 브라운필드는 같은 대상)의 미채택·미참조 모델을 실행 시작
   // 시점에 아카이브한다 — 채택/게이트 기록이 가리키는 모델은 그대로 남겨
   // 이력 조회가 계속 풀리도록 한다 (business-case-cleanup 참조 보호 재사용).
-  archiveSupersededRound(projectId, opts.actor, {
-    targetIds: subjects.length === 0 ? [null] : subjects.map((s) => s.id),
-  }, db);
+  archiveSupersededRound(
+    projectId,
+    opts.actor,
+    {
+      targetIds: subjects.length === 0 ? [null] : subjects.map((s) => s.id),
+    },
+    db,
+  );
   const activities: ActivitySpec[] = [];
   const buildForSubject = (inputs: CaseInputs, target?: { id: string; name: string }) => {
     // ADR-0117: each scenario runs in TWO variants — market_forward (gate
     // primary) and, when the subject company's DART series supports it,
     // historical (comparison evidence). Missing historical data is not an
     // error: the variant is skipped and the page shows N/A instead.
-    const variants: CaseVariant[] = inputs.growthModel?.historical ? ["market_forward", "historical"] : ["market_forward"];
+    const variants: CaseVariant[] = inputs.growthModel?.historical
+      ? ["market_forward", "historical"]
+      : ["market_forward"];
     for (const scenario of SCENARIOS) {
       for (const variant of variants) {
         const ctx: StepContext = { scenario, variant, inputs, ...(target ? { target } : {}) };
-        for (const step of ["growth_projection", "valuation_model", "distributional_valuation", "scenario_risk_assessment"] as BusinessCaseStep[]) {
+        for (const step of [
+          "growth_projection",
+          "valuation_model",
+          "distributional_valuation",
+          "scenario_risk_assessment",
+        ] as BusinessCaseStep[]) {
           const agentKey = businessCaseAgentFor(step);
           const subjectPrefix = target ? `${target.id}/` : "";
           activities.push({
@@ -2413,13 +2902,19 @@ export function enginesMixedAcrossTargets(rows: TargetComparisonRow[]): boolean 
  *  market-capture fallback), so the read model surfaces the basis per target. */
 export function anchorMethodOfNote(note: string | null): "company_revenue" | "market_capture" | null {
   if (!note) return null;
-  return /(?:^|;\s*)revenue_anchor=/.test(note) ? "company_revenue" : /(?:^|;\s*)capture_rate=/.test(note) ? "market_capture" : null;
+  return /(?:^|;\s*)revenue_anchor=/.test(note)
+    ? "company_revenue"
+    : /(?:^|;\s*)capture_rate=/.test(note)
+      ? "market_capture"
+      : null;
 }
 
 /** True when the compared targets' cases come from DIFFERENT valuation bases
  *  (one anchored on company revenue, another on the market-capture fallback). */
 export function methodsMixedAcrossTargets(rows: TargetComparisonRow[]): boolean {
-  const seen = new Set(rows.map((r) => r.anchorMethod).filter((m): m is "company_revenue" | "market_capture" => m !== null));
+  const seen = new Set(
+    rows.map((r) => r.anchorMethod).filter((m): m is "company_revenue" | "market_capture" => m !== null),
+  );
   return seen.size > 1;
 }
 
@@ -2490,21 +2985,27 @@ export interface TargetComparisonRow {
  */
 export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[] {
   const db = getDb();
-  const project = db
-    .query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?")
-    .get(projectId) as { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
-  if (!project || project.track !== "brownfield" || !project.source_opportunity_id) return [];
+  const project = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null }
+    | undefined;
+  if (project?.track !== "brownfield" || !project.source_opportunity_id) return [];
   const targets = listShortlistSubjects(db, project.source_opportunity_id);
   if (targets.length === 0) return [];
   const ranks = new Map(
-    (db
-      .query("SELECT id, rank FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
-      .all(project.source_opportunity_id) as Array<{ id: string; rank: number | null }>).map((r) => [r.id, r.rank]),
+    (
+      db
+        .query("SELECT id, rank FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
+        .all(project.source_opportunity_id) as Array<{ id: string; rank: number | null }>
+    ).map((r) => [r.id, r.rank]),
   );
   const counts = new Map(
-    (db
-      .query("SELECT target_id, COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id IS NOT NULL AND archived_at IS NULL GROUP BY target_id")
-      .all(projectId) as Array<{ target_id: string; n: number }>).map((r) => [r.target_id, r.n]),
+    (
+      db
+        .query(
+          "SELECT target_id, COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id IS NOT NULL AND archived_at IS NULL GROUP BY target_id",
+        )
+        .all(projectId) as Array<{ target_id: string; n: number }>
+    ).map((r) => [r.target_id, r.n]),
   );
   // Latest gate-primary model per target that carries a BASE-scenario
   // simulation — the comparison judges base (created_at DESC — first wins).
@@ -2522,8 +3023,16 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
     if (!latest.has(m.target_id)) latest.set(m.target_id, m.id);
   }
   const simRows = db
-    .query("SELECT model_id, percentile, npv_krw_m, irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = 'base'")
-    .all(projectId) as Array<{ model_id: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }>;
+    .query(
+      "SELECT model_id, percentile, npv_krw_m, irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = 'base'",
+    )
+    .all(projectId) as Array<{
+    model_id: string;
+    percentile: string;
+    npv_krw_m: number;
+    irr: number | null;
+    note: string | null;
+  }>;
   const engineByModel = new Map<string, Array<"python-sim-engine" | "ts-fallback" | null>>();
   for (const r of simRows) {
     const list = engineByModel.get(r.model_id) ?? [];
@@ -2544,11 +3053,13 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
   // fragment) — surfaced per target so a mixed-basis comparison is visible.
   const anchorByModel = new Map<string, "company_revenue" | "market_capture" | null>();
   for (const r of simRows) {
-    if (r.percentile === "p50" && !anchorByModel.has(r.model_id)) anchorByModel.set(r.model_id, anchorMethodOfNote(r.note));
+    if (r.percentile === "p50" && !anchorByModel.has(r.model_id))
+      anchorByModel.set(r.model_id, anchorMethodOfNote(r.note));
   }
   const xcheckByModel = new Map<string, CrossCheckOfNote>();
   for (const r of simRows) {
-    if (r.percentile === "p50" && !xcheckByModel.has(r.model_id)) xcheckByModel.set(r.model_id, crossCheckOfNote(r.note));
+    if (r.percentile === "p50" && !xcheckByModel.has(r.model_id))
+      xcheckByModel.set(r.model_id, crossCheckOfNote(r.note));
   }
 
   const confirmedBand = resolveConfirmedEvBand(db, projectId);
@@ -2569,14 +3080,15 @@ export function recommendTargetsFromDb(projectId: string): TargetComparisonRow[]
         irr: sim?.irr ?? null,
         caseCount: counts.get(t.id) ?? 0,
         engine: modelId ? mergeEngines(engineByModel.get(modelId) ?? []) : null,
-        anchorMethod: modelId ? anchorByModel.get(modelId) ?? null : null,
+        anchorMethod: modelId ? (anchorByModel.get(modelId) ?? null) : null,
         recommended: false,
         xcheckFadeNpv: fadeNpv,
         xcheckFadeIrr: xc?.fadeIrr ?? null,
         xcheckDivergence: fadeNpv !== null && p50 !== null && p50 !== 0 ? (fadeNpv - p50) / Math.abs(p50) : null,
         structureMismatch: false,
         acqEvRevenue: acq,
-        acqEvRevenueInBand: acq === null || !confirmedBand ? null : acq >= confirmedBand.min && acq <= confirmedBand.max,
+        acqEvRevenueInBand:
+          acq === null || !confirmedBand ? null : acq >= confirmedBand.min && acq <= confirmedBand.max,
         acqEvBandSource: confirmedBand ? "confirmed" : "none",
       };
     }),
@@ -2589,21 +3101,25 @@ export function flagRecommendedTarget(rows: TargetComparisonRow[]): TargetCompar
   const analyzed = rows.filter((r) => r.baseP05 !== null);
   const positive = analyzed.filter((r) => (r.baseP05 ?? 0) > 0);
   const pool = positive.length > 0 ? positive : analyzed;
-  const best = pool.reduce<TargetComparisonRow | null>((acc, r) => (!acc || (r.baseP05 ?? 0) > (acc.baseP05 ?? 0) ? r : acc), null);
+  const best = pool.reduce<TargetComparisonRow | null>(
+    (acc, r) => (!acc || (r.baseP05 ?? 0) > (acc.baseP05 ?? 0) ? r : acc),
+    null,
+  );
   return [...rows]
     .map((r) =>
       r === best
         ? {
             ...r,
             recommended: true,
-            structureMismatch: r.xcheckDivergence != null && Math.abs(r.xcheckDivergence) > XCHECK_DIVERGENCE_WARN_RATIO,
+            structureMismatch:
+              r.xcheckDivergence != null && Math.abs(r.xcheckDivergence) > XCHECK_DIVERGENCE_WARN_RATIO,
           }
         : { ...r, structureMismatch: false },
     )
     .sort((a, b) => {
-    if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
-    const p05 = (b.baseP05 ?? -Infinity) - (a.baseP05 ?? -Infinity);
-    if (p05 !== 0) return p05;
-    return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
-  });
+      if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
+      const p05 = (b.baseP05 ?? -Infinity) - (a.baseP05 ?? -Infinity);
+      if (p05 !== 0) return p05;
+      return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+    });
 }
