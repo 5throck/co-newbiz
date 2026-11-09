@@ -19,7 +19,7 @@ import { createHash } from "node:crypto";
 import { parsePositionMeta, makeLlmChairAgenda, makeLlmChairMinutes } from "./committee-llm.ts";
 import { committeeSeatsUseLlm } from "./committee-agents.ts";
 import { getProviderConfig } from "./llm.ts";
-import { resolveMinutesDraft, type CommitteeMinutesJson } from "./committee-minutes-schema.ts";
+import { committeeMinutesSchema, resolveMinutesDraft, type CommitteeMinutesJson } from "./committee-minutes-schema.ts";
 import type { AgendaIssue } from "./deliberation.ts";
 import type { AgentCallResult } from "./agent-orchestrator.ts";
 
@@ -322,12 +322,23 @@ export async function runChairMinutes(opts: {
         }),
       ].join("\n");
       const text = await call(material);
-      json = resolveMinutesDraft(extractJson(text), {
+      const parsedDraft = extractJson(text);
+      json = resolveMinutesDraft(parsedDraft, {
         knownSeats: [...new Set(opts.seats)],
         positionIds: opts.rows.map((r) => r.id),
         agendaIds: opts.agenda.map((a) => a.id),
       });
       if (json) fallback = false;
+      else {
+        // Schema violations are silent by design in resolveMinutesDraft —
+        // surface them here so a systematically failing minutes pass is
+        // diagnosable from the server log.
+        const check = committeeMinutesSchema.safeParse(parsedDraft);
+        console.warn(
+          "[committee-chair] minutes draft rejected:",
+          check.success ? "refs did not resolve" : check.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+        );
+      }
     } catch (err) {
       // budget/rate-limit/outage or unparseable output → deterministic fallback.
       // Logged, never silent: a systematically failing minutes pass would

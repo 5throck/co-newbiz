@@ -148,7 +148,10 @@ export function makeLlmChairMinutes(): (material: string) => Promise<string> {
   return async (material) =>
     complete([systemMessage("committee.minutes"), { role: "user", content: material }], {
       temperature: 0.2,
-      maxTokens: 2500,
+      // A full-roster session (12 seats x 2 rounds, Korean summaries) needs
+      // room for every exchange; 2500 truncated mid-JSON, the parse returned
+      // null, and the minutes silently degraded to the empty skeleton.
+      maxTokens: 6000,
       agent: promptAgent("committee.minutes", { key: "process-governance-manager" }),
     });
 }
