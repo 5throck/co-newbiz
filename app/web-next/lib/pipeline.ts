@@ -180,7 +180,7 @@ interface Rule {
    * loop pauses instead of burning the iteration cap.
    */
   signature?(ctx: RuleCtx): string;
-  run?(ctx: RuleCtx): Promise<RuleOutcome | undefined>;
+  run?(ctx: RuleCtx): Promise<RuleOutcome | void>;
 }
 
 /** A promotion inside the loop re-points the run to a NEW project segment. */
@@ -303,6 +303,7 @@ const OPPORTUNITY_RULES: Rule[] = [
         }
         throw err;
       }
+      return undefined;
     },
   },
   {
