@@ -6,6 +6,7 @@ import { buildDecisionDetail } from "../../../lib/route-decision-history-view.ts
 import { resolveLabelTokens, SUB_TRACK_KEY } from "../../../lib/label-keys.ts";
 import { SectionToolbar } from "../../layout.tsx";
 import { ColGroup } from "../../ui.tsx";
+import { MinutesDialog } from "../../CommitteeMinutesView.tsx";
 import { DECISION_COL_PCT } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import { useTranslations } from "next-intl";
@@ -37,6 +38,7 @@ export function DecisionHistory({ ctx, opportunityId }: { ctx: HistoryCtx; oppor
     sessions,
   } = ctx;
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [minutesSessionId, setMinutesSessionId] = useState<string | null>(null);
   const years = [...new Set(decisions.map((d) => d.decided_at.slice(0, 4)))].sort().reverse();
   const months = historyYear
     ? [
@@ -272,20 +274,27 @@ export function DecisionHistory({ ctx, opportunityId }: { ctx: HistoryCtx; oppor
                     {s2.status}
                   </span>{" "}
                   {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
-                  <a
-                    className="text-[color:var(--accent)] underline"
-                    href={`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${s2.sessionId}/minutes`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    className="text-[color:var(--accent)] underline cursor-pointer bg-transparent border-0 p-0"
+                    onClick={() => setMinutesSessionId(s2.sessionId)}
                   >
                     {t("meetingMinutes")}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
           </>
         )}
       </div>
+      {minutesSessionId && (
+        <MinutesDialog
+          opportunityId={opportunityId}
+          sessionId={minutesSessionId}
+          committeeLabel={tc("committeeMinutes.title")}
+          onClose={() => setMinutesSessionId(null)}
+        />
+      )}
     </details>
   );
 }
