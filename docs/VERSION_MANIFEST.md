@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-09T22:53:34.390Z
+**Generated**: 2026-11-09T23:11:38.435Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -11,7 +11,7 @@
 - **Agents**: 42
 - **Skills**: 108
 - **Scripts**: 205 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
-- **Commands**: 8
+- **Commands**: 7
 
 ---
 
@@ -401,7 +401,6 @@
 | changelog | .claude/commands/changelog.md | all | N/A |
 | commit-push-pr | .claude/commands/commit-push-pr.md | all | N/A |
 | gateguard | .claude/commands/gateguard.md | all | N/A |
-| meeting | .claude/commands/meeting.md | all | N/A |
 | memlog | .claude/commands/memlog.md | all | N/A |
 | new-task | .claude/commands/new-task.md | all | N/A |
 | project-review | .claude/commands/project-review.md | all | N/A |
@@ -413,8 +412,8 @@
 
 **Checked**: Claude (.claude/), Gemini (.gemini/), Antigravity (.agents/), Codex (.codex/ prompts mapping)
 
-- **Commands with parity (gemini mirror)**: 8 / 8
-- **Commands with codex prompts mapping**: 8 / 8
+- **Commands with parity (gemini mirror)**: 7 / 7
+- **Commands with codex prompts mapping**: 7 / 7
 - **Skills in all four mirrors**: 0 / 108
 - **Skills in claude+gemini only (both)**: 0 / 108 (common-template skills are parity-exempt)
 
