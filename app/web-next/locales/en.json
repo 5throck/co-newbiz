@@ -1385,7 +1385,7 @@
       "contested": "Contested",
       "discussion": "Discussion by issue",
       "agreements": "Points of agreement",
-            "close": "Close",
+      "close": "Close",
       "downloadMd": "Download (.md)",
       "draft": "Draft",
       "fallbackDraft": "Deterministic fallback (no LLM)",
