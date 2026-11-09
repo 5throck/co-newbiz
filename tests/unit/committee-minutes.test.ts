@@ -102,14 +102,32 @@ async function createOpportunity(name = "Minutes test opportunity"): Promise<str
   return (await res.json()).data.id as string;
 }
 
+/**
+ * Async convene contract (202): the deliberation runs in the background of
+ * the SAME test process — wait until the session leaves the convening state
+ * before continuing with the route-level assertions.
+ */
+async function waitForSessionSettled(sessionId: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const row = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(sessionId) as { meta_json: string };
+    const meta = JSON.parse(row.meta_json) as { convening?: boolean };
+    if (!meta.convening) return;
+    await Bun.sleep(20);
+  }
+  throw new Error(`committee session ${sessionId} did not settle in time`);
+}
+
 async function conveneAgentTeam(oppId: string): Promise<string> {
   const res = await req(`/api/opportunities/${oppId}/committee-sessions`, {
     method: "POST",
     headers: { cookie: analystCookie },
     body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "agent_team" }),
   });
-  expect(res.status).toBe(201);
-  return (await res.json()).data.sessionId as string;
+  expect(res.status).toBe(202);
+  const sessionId = (await res.json()).data.sessionId as string;
+  await waitForSessionSettled(sessionId);
+  return sessionId;
 }
 
 describe("agent_team minutes (deterministic fallback, S2 storage)", () => {
@@ -326,7 +344,9 @@ describe("minutes at synthesis with human voices (hybrid)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({ committeeKey: "route-steering-committee", decisionMode: "hybrid" }),
     });
+    expect(res.status).toBe(202);
     const sessionId = (await res.json()).data.sessionId as string;
+    await waitForSessionSettled(sessionId);
     // Round 1: the human voice gates the agent round (hybrid rule).
     await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",

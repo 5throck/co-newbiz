@@ -287,7 +287,10 @@ export function MinutesDialog({
     )
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return (await res.json()) as CommitteeMinutesPayload;
+        // The minutes route answers in the standard { data, meta, error } envelope (ADR-0069);
+        // read the inner payload, tolerating a bare payload only for robustness.
+        const body = (await res.json()) as { data?: CommitteeMinutesPayload } | CommitteeMinutesPayload;
+        return "data" in body && body.data !== undefined ? body.data : (body as CommitteeMinutesPayload);
       })
       .then((json) => {
         if (alive) setPayload(json);
