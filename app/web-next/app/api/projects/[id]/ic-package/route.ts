@@ -54,19 +54,44 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   // ADR-0158: an archived legacy model that a human adopted still resolves here.
   const adoptedCase: BusinessCaseView | null = findAdoptedCase(list);
 
-  // Committee deliberation refs (ADR-0104) — sessions convened for this
-  // project give the IC the deliberation provenance (minutes are one GET away).
+  // Committee deliberation refs (ADR-0104, ADR-0196 Phase C M6) — sessions
+  // convened for this project give the IC the deliberation provenance. The
+  // minutes REST surface is opportunity-scoped only (committeeSessionForOpportunity
+  // requires entity_type='opportunity'), so minutesUrl is exposed ONLY for
+  // opportunity-scoped sessions; project-scoped rows expose the confirmation
+  // state without a link. Read-only — no minutes content is copied here, so
+  // dissent is never duplicated.
+  const sourceOpportunityId = (
+    db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(id) as
+      | { source_opportunity_id: string | null }
+      | undefined
+  )?.source_opportunity_id ?? null;
   const committeeSessions = db
     .query(
-      `SELECT pr.id AS sessionId, pr.stage, pr.status, pr.started_at,
+      `SELECT pr.id AS sessionId, pr.entity_type AS entityType, pr.entity_id AS entityId,
+              pr.stage, pr.status, pr.started_at,
               JSON_EXTRACT(pr.meta_json, '$.committee_key') AS committeeKey,
               JSON_EXTRACT(pr.meta_json, '$.decision_mode') AS decisionMode,
               JSON_EXTRACT(pr.meta_json, '$.minutes_confirmed_by') AS minutesConfirmedBy
        FROM process_run pr
-       WHERE pr.entity_type = 'project' AND pr.entity_id = ? AND pr.meta_json LIKE '%"committee_key"%'
+       WHERE (pr.entity_type = 'project' AND pr.entity_id = ?
+              OR pr.entity_type = 'opportunity' AND ? IS NOT NULL AND pr.entity_id = ?)
+         AND pr.meta_json LIKE '%"committee_key"%'
        ORDER BY pr.started_at DESC LIMIT 10`,
     )
-    .all(id) as Array<Record<string, unknown>>;
+    .all(id, sourceOpportunityId, sourceOpportunityId) as Array<
+    {
+      sessionId: string;
+      entityType: string;
+      entityId: string;
+      stage: string | null;
+      status: string;
+      started_at: string | null;
+      committeeKey: string | null;
+      decisionMode: string | null;
+      minutesConfirmedBy: string | null;
+    }
+  >;
 
   // DD summary — completion counts + top findings (IC needs the risk surface,
   // not the full checklist; the S9 workspace route is the full read).
@@ -222,6 +247,22 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
       })(),
       // ADR-0167 (D8): standing risk lines tied to the establishment mode; informational, never a gate.
       standing_risks: icStandingRisks(establishmentProgress(id).mode),
+      // ADR-0196 Phase C (M6) — committee session refs with minutes link +
+      // confirmation state. No minutes content is copied (dissent is never
+      // duplicated); the link is exposed only for opportunity-scoped sessions.
+      committee_sessions: committeeSessions.map((r) => ({
+        sessionId: r.sessionId,
+        stage: r.stage,
+        status: r.status,
+        startedAt: r.started_at,
+        committeeKey: r.committeeKey,
+        decisionMode: r.decisionMode,
+        minutesUrl:
+          r.entityType === "opportunity" && r.entityId
+            ? `/api/opportunities/${encodeURIComponent(r.entityId)}/committee-sessions/${encodeURIComponent(r.sessionId)}/minutes`
+            : null,
+        minutesConfirmed: r.minutesConfirmedBy != null,
+      })),
       establishment: (() => {
         const steps = listEstablishmentSteps(id);
         const progress = establishmentProgress(id);

@@ -65,6 +65,18 @@ interface IcPackage {
   };
   /** ADR-0167 — standing risk lines for the establishment mode (informational). */
   standing_risks?: Array<{ key: string; text: string }>;
+  /** ADR-0196 Phase C (M6) — committee session refs, read-only; minutesUrl is
+   * set only for opportunity-scoped sessions (the REST surface's scope). */
+  committee_sessions?: Array<{
+    sessionId: string;
+    stage: string | null;
+    status: string;
+    startedAt: string | null;
+    committeeKey: string | null;
+    decisionMode: string | null;
+    minutesUrl: string | null;
+    minutesConfirmed: boolean;
+  }>;
   establishment: {
     steps: Array<{ id: string; step_no: number; status: string; origin: string; owner: string; updated_at: string; note: string | null; evidence_url: string | null; keyed_by: string }>;
     done: number; total: number; complete: boolean; progress: string;
@@ -280,6 +292,30 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
                 {pkg!.standing_risks!.map((r) => (
                   <li key={r.key}>
                     <span className="status-chip status-amber"><span aria-hidden="true">◐</span> {t("caution")}</span> {r.text}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("informationalOnlyItDoesNot")}</p>
+            </>
+          )}
+          {(pkg?.committee_sessions?.length ?? 0) > 0 && (
+            <>
+              <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{tc("committeeMinutes.sessionRefs")}</h4>
+              <ul className="sizing-note-list" aria-label={tc("committeeMinutes.sessionRefs")}>
+                {(pkg?.committee_sessions ?? []).map((s) => (
+                  <li key={s.sessionId} className="text-[length:var(--fs-caption)]">
+                    <span className={`status-chip ${s.status === "done" ? "status-green" : "status-in-progress"}`}>{s.status}</span>{" "}
+                    {s.committeeKey ?? "—"} · {s.startedAt?.slice(0, 10) ?? "—"}{" "}
+                    {s.minutesUrl && (
+                      <a className="text-[color:var(--accent)] underline" href={s.minutesUrl} target="_blank" rel="noreferrer">
+                        {tc("committeeMinutes.title")}
+                      </a>
+                    )}{" "}
+                    {s.minutesConfirmed ? (
+                      <span className="status-chip status-green"><span aria-hidden="true">✓</span> {tc("committeeMinutes.confirmed")}</span>
+                    ) : (
+                      <span className="status-chip status-not-started">{tc("committeeMinutes.draft")}</span>
+                    )}
                   </li>
                 ))}
               </ul>

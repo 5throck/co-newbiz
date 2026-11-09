@@ -9,14 +9,13 @@
 // gate_evaluation_id provenance link — in agent_team mode the panel stops at
 // PROPOSED: the confirming click is always human (design boundary #2).
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness } from "../lib/project-write-access.ts";
-import { useModalFocus } from "../lib/use-modal-focus.ts";
 import { PrimaryAction } from "./ui.tsx";
 import { useTranslations } from "next-intl";
-import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY, STAGE_STATUS_KEY } from "../lib/label-keys.ts";
+import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY } from "../lib/label-keys.ts";
+import { MinutesDialog } from "./CommitteeMinutesView.tsx";
 
 interface SessionPosition {
   positionId: string;
@@ -511,93 +510,13 @@ export function CommitteePanel({
       {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)]">{notice}</p>}
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">{error}</p>}
       {minutesOpen && transcript && (
-        <MinutesModal committeeLabel={committeeLabel} transcript={transcript} dissents={dissents} onClose={() => setMinutesOpen(false)} />
+        <MinutesDialog
+          opportunityId={opportunityId}
+          sessionId={transcript.sessionId}
+          committeeLabel={committeeLabel}
+          onClose={() => setMinutesOpen(false)}
+        />
       )}
     </section>
-  );
-}
-
-/** 회의록 모달 — 이미 로드된 transcript를 그대로 포맷해서 보여준다(재조회·
-    마크다운 파싱 없음). 다운로드용 원문 markdown은 별도 링크로 남긴다. */
-function MinutesModal({
-  committeeLabel,
-  transcript,
-  dissents,
-  onClose,
-}: {
-  committeeLabel: string;
-  transcript: SessionTranscript;
-  dissents: DissentEntry[];
-  onClose: () => void;
-}) {
-  const tr = useTranslations();
-  const { panelRef, onKeyDown } = useModalFocus(onClose);
-  return createPortal(
-    <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
-      <div
-        ref={panelRef}
-        className="modal-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${committeeLabel} 회의록`}
-        style={{ maxWidth: "40rem", width: "100%", maxHeight: "85vh", overflowY: "auto" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head flex items-center justify-between">
-          <h2 style={{ fontSize: "0.95rem" }}>{committeeLabel} — 회의록</h2>
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose} aria-label="닫기">닫기</button>
-        </div>
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-3">
-          세션 {transcript.sessionId.slice(-6)} · 진행 {tr(GATE_LABEL_KEY[transcript.meta.gate] ?? transcript.meta.gate)} · 모드 {tr(DECISION_MODE_LABEL_KEY[transcript.meta.decision_mode] ?? transcript.meta.decision_mode)} · 상태 {tr(STAGE_STATUS_KEY[transcript.status] ?? transcript.status)}
-        </p>
-
-        {/* 좌석별 포지션 요약 표는 제거(사용자 리포트, 2026-09-16 — 큰 의미 없음).
-            입장 원문이 좌석·판정 근거를 그대로 담는다. */}
-
-        <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">입장 원문</h3>
-        {transcript.rounds.map((r) => (
-          <div key={r.round} className="mb-3">
-            {transcript.rounds.length > 1 && <p className="text-[length:var(--fs-caption)] font-semibold mb-1">라운드 {r.round}</p>}
-            {r.positions.map((p) => {
-              const meta = parsePositionMeta(p.positionMd);
-              const seat = meta.seat ?? (p.memberType === "human" ? (p.humanUserId ?? "—") : (p.agentKey ?? "—"));
-              return (
-                <div key={p.positionId} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
-                  <p className="text-[length:var(--fs-caption)] mb-1">
-                    <span className={`status-chip ${p.memberType === "human" ? "status-green" : "status-not-started"}`}>{p.memberType}</span>{" "}
-                    <span className="tabular-nums">{seat}</span>
-                    {p.confidence !== null && <span className="text-[color:var(--muted-fg)]"> · 신뢰도 {p.confidence}</span>}
-                  </p>
-                  <p className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0">{stripMeta(p.positionMd)}</p>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-
-        {transcript.evaluation && (
-          <>
-            <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">의장 종합 (제안)</h3>
-            <p className="text-[length:var(--fs-caption)] mb-2">
-              <span className={`status-chip ${transcript.evaluation.recommendation === "go" ? "status-green" : transcript.evaluation.recommendation === "hold" ? "status-amber" : "status-red"}`}>
-                {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation}
-              </span>{" "}
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">by {transcript.evaluation.evaluatedBy} · gate {transcript.evaluation.gate}</span>
-            </p>
-            {dissents.length > 0 && (
-              <>
-                <h3 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--red-fg)] mb-1">소수 의견 (원문 보존)</h3>
-                {dissents.map((d) => (
-                  <p key={d.member_key} className="whitespace-pre-wrap text-[length:var(--fs-caption)] mb-2 pl-2 border-l-2" style={{ borderColor: "var(--red-fg)" }}>
-                    &quot;{stripMeta(d.position_md)}&quot; — {d.member_key}
-                  </p>
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </div>,
-    document.body,
   );
 }
