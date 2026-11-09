@@ -463,9 +463,9 @@ function ragSection(db: Database, projectId: string): NonNullable<GateSnapshot["
     .query("SELECT run_id FROM rag_assessment WHERE project_id = ? ORDER BY assessed_at DESC, id DESC LIMIT 1")
     .get(projectId) as { run_id: string } | null;
   const dims = Object.entries(view.dimensions)
-    .map(([dimension, v]) => ({ dimension, grade: v!.grade }))
+    .map(([dimension, v]) => ({ dimension, grade: v?.grade }))
     .sort((a, b) => (a.dimension < b.dimension ? -1 : 1));
-  const confidence = view.dimensions["data_confidence"]?.grade ?? null;
+  const confidence = view.dimensions.data_confidence?.grade ?? null;
   const overall = view.overall?.grade ?? null;
   // The cap itself is applied inside the RAG engine (boundary 4); this only makes it visible beside the decision.
   const applied = confidence !== null && confidence !== "green" && overall !== null && overall === confidence;

@@ -9,6 +9,7 @@
 import { test, expect, beforeAll, afterAll, afterEach, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import type { CarrySource } from "../../app/web-next/lib/gate-kill-scope.ts";
 
 const PROJECT_ROOT = join(import.meta.dirname, "../..");
 const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-kill-criteria-carry.sqlite");
@@ -151,7 +152,13 @@ describe("1. S3 Screening: the five unmeasurable criteria are not_reached with t
   test("not_reached, carried_in and current_stage are inside the hash; computed_at stays outside", () => {
     const o = S.insertOpportunity(db, null, ANALYST);
     const { snapshot, hash } = preview("opportunity", o, "screening");
-    const tweak = (patch: (k: any) => void) => {
+    const tweak = (
+      patch: (k: {
+        not_reached: Array<{ key: string }>;
+        carried_in: Array<{ key: string }>;
+        current_stage: string;
+      }) => void,
+    ) => {
       const copy = JSON.parse(JSON.stringify(snapshot));
       patch(copy.kill);
       return snapshotHash(copy);
@@ -176,7 +183,8 @@ describe("2 + 13a. a triggered result is never hidden by stage scoping; early tr
       [ulid(), b, "T1", "excluded", S.NOW, S.NOW],
     );
     const { snapshot } = preview("opportunity", b, "screening");
-    const t = snapshot.kill.triggered.find((x) => x.key === NO_TARGET)!;
+    const t = snapshot.kill.triggered.find((x) => x.key === NO_TARGET);
+    if (!t) throw new Error("expected the no_viable_target criterion to be triggered");
     expect(t).toMatchObject({ binding: true, override_id: null, partial_input: true, action: "halt" });
     expect(keysOf(snapshot.kill.not_reached)).not.toContain(NO_TARGET);
     expect(snapshot.hard_blocks.find((h) => h.code === "kill_binding_unoverridden")?.keys).toContain(NO_TARGET);
@@ -321,7 +329,7 @@ describe("4 + 5 + 10. carries: closure by evaluation, overdue, carried halt (C-1
         },
       },
     ];
-    const open = (src: unknown[]) => deriveOpenCarries(src as any, () => null).map((c) => c.key);
+    const open = (src: CarrySource[]) => deriveOpenCarries(src, () => null).map((c) => c.key);
     expect(open(sources)).toEqual([ZERO_SITE]); // evaluated but still unassessed: stays open, an ack never closes it
     const closed = [
       ...sources,
@@ -416,7 +424,8 @@ describe("6. legacy (schema v1) decisions", () => {
       eval_run_id: null,
     };
     const id = addDecision("opportunity", oppId, "screening", "go", legacyKill, { version: 1 });
-    const stored = getGateSnapshot(id, db)!;
+    const stored = getGateSnapshot(id, db);
+    if (!stored) throw new Error("snapshot row missing");
     expect(stored.schema_version).toBe(1);
     expect(verifyStoredSnapshotHash(stored)).toEqual({ ok: true, reason: null });
     expect(verifyStoredSnapshotHash({ ...stored, snapshot_hash: "0".repeat(64) })).toEqual({
@@ -424,11 +433,14 @@ describe("6. legacy (schema v1) decisions", () => {
       reason: "hash_mismatch",
     });
     expect(verifyStoredSnapshotHash({ ...stored, schema_version: 99 }).ok).toBe(false);
-    const read = normalizeStoredSnapshot(stored.snapshot) as any;
+    const read = normalizeStoredSnapshot(stored.snapshot) as {
+      kill: { not_reached: unknown[]; carried_in: unknown[] };
+    };
     expect(read.kill.not_reached).toEqual([]);
     expect(read.kill.carried_in).toEqual([]);
     const { snapshot } = preview("project", projectId, "fs");
-    const ci = snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE)!;
+    const ci = snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE);
+    if (!ci) throw new Error("expected the implicit carry for the zero-site criterion");
     expect(ci).toMatchObject({ from_decision_id: id, implicit: true, outcome: "unassessed", closure: "open" });
     // a criterion that WAS evaluable at Screening (S3) is not an implicit carry: its ack stood
     expect(keysOf(snapshot.kill.carried_in)).not.toContain("greenfield-screening:strategic_fit_knock_out_failed");
@@ -538,7 +550,8 @@ describe("7. the contract rejects an acknowledgement for a not_reached key", () 
     });
     expect(clean.ok).toBe(true);
     if (clean.ok) {
-      const stored = getGateSnapshot(clean.id, db)!;
+      const stored = getGateSnapshot(clean.id, db);
+      if (!stored) throw new Error("snapshot row missing");
       expect(stored.schema_version).toBe(3);
       expect(verifyStoredSnapshotHash(stored).ok).toBe(true);
       // the GO is now a recorded carry source for later gates
@@ -551,7 +564,7 @@ describe("7. the contract rejects an acknowledgement for a not_reached key", () 
               decision: "go",
               decided_at: "2026-11-01T00:00:00Z",
               schema_version: 2,
-              snapshot: stored.snapshot as any,
+              snapshot: stored.snapshot as Record<string, unknown>,
             },
           ],
           () => null,
@@ -578,7 +591,8 @@ describe("8 + 12. track switch and HOLD carries (C-4)", () => {
     );
     const { snapshot } = preview("opportunity", o, "pre_fs");
     expect(snapshot.track).toBe("brownfield");
-    const ci = snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE)!;
+    const ci = snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE);
+    if (!ci) throw new Error("expected the out_of_track carry for the zero-site criterion");
     expect(ci).toMatchObject({
       from_decision_id: from,
       outcome: "out_of_track",
@@ -674,7 +688,7 @@ describe("8 + 12. track switch and HOLD carries (C-4)", () => {
         snapshot: { kill: { not_reached: [], carried_in: [] } },
       },
     ];
-    expect(deriveOpenCarries(sources as any, () => null).map((c) => c.key)).toEqual([HHI]);
+    expect(deriveOpenCarries(sources as CarrySource[], () => null).map((c) => c.key)).toEqual([HHI]);
   });
 });
 
@@ -847,7 +861,7 @@ describe("B. enforce guard: kill_binding=enforce is fail-closed while a carried 
     withoutDealShapeSource(() => {
       const view = preview("project", projectId, "fs");
       expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")).toMatchObject({ enforced: true });
-      expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")!.keys).toEqual([NO_SHAPE]);
+      expect(view.snapshot.hard_blocks.find((h) => h.code === "kill_enforce_unsafe")?.keys).toEqual([NO_SHAPE]);
       const go = recordProjectGo(projectId, view);
       expect(go.ok).toBe(false);
       if (!go.ok) expect(go.failure).toMatchObject({ status: 409, code: "kill_enforce_unsafe" });
@@ -903,16 +917,20 @@ describe("C. #5 caveat; D. scheduled items; E. IC package lists open carries by 
     db.run("UPDATE app_user SET must_change_password = 0 WHERE user_id = ?", [ANALYST]);
     const res = await nextRequest(`/api/projects/${projectId}/ic-package`, { headers: { cookie } });
     expect(res.status).toBe(200);
-    const data = ((await res.json()) as { data: any }).data;
+    const data = (
+      (await res.json()) as {
+        data: { kill_carries: { gate: string; open: Array<{ key: string; title: string } & Record<string, unknown>> } };
+      }
+    ).data;
     expect(data.kill_carries.gate).toBe("entity_ic");
-    const open = data.kill_carries.open.find((c: any) => c.key === INFRA_PLAN);
+    const open = data.kill_carries.open.find((c) => c.key === INFRA_PLAN);
     expect(open).toMatchObject({
       outcome: "unassessed",
       closure: "open",
       reevaluate_at: "pre_fs",
       action: "escalate_to_risk_officer",
     });
-    expect(open.title.length).toBeGreaterThan(0);
+    expect(open?.title.length).toBeGreaterThan(0);
   });
 });
 
@@ -1065,7 +1083,8 @@ describe("RESCOPE sources at the first project gate: the re-scoped carries are a
   test("#4: site_candidate with a complete four-flag assessment is read (no SQL error); one clearing site closes the carry false, none clearing triggers the halt", () => {
     const { projectId, oppId } = S.seedReadyProject(db, ANALYST);
     carriedAt(oppId, [[ZERO_SITE, "S5"]]);
-    const before = preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE)!;
+    const before = preview("project", projectId, "fs").snapshot.kill.carried_in.find((c) => c.key === ZERO_SITE);
+    if (!before) throw new Error("expected the zero-site carry to be open");
     expect(before).toMatchObject({ outcome: "unassessed", closure: "open" }); // no site assessed: never a silent pass
     db.run(
       "INSERT INTO site_candidate (id, project_id, name, wastewater_capacity_sufficient, power_capacity_sufficient, industrial_water_sufficient, logistics_access_sufficient) VALUES (?,?,?,?,?,?,?)",
@@ -1131,7 +1150,7 @@ describe("O-2 deal-shape-chain is evaluated at pre_fs, where its registry reeval
 function recordProjectDecision(
   projectId: string,
   decision: "go" | "hold" | "kill",
-  built: { snapshot_hash?: string } | any,
+  _built: unknown,
   acks: Array<{ key: string; kind?: string; reason: string }> = [],
 ) {
   const fresh = preview("project", projectId, "fs");
@@ -1158,7 +1177,7 @@ function recordProjectDecision(
 }
 function recordProjectGo(
   projectId: string,
-  built: any,
+  built: unknown,
   acks: Array<{ key: string; kind?: string; reason: string }> = [],
 ) {
   return recordProjectDecision(projectId, "go", built, acks);
@@ -1274,7 +1293,8 @@ describe("deal-shape-to-S7 (risk-officer R-1..R-3, 2026-11-08): #9 is brownfield
     });
     const { snapshot } = preview("project", projectId, "fs");
     expect(snapshot.track).toBe("greenfield");
-    const ci = snapshot.kill.carried_in.find((c) => c.key === NO_SHAPE)!;
+    const ci = snapshot.kill.carried_in.find((c) => c.key === NO_SHAPE);
+    if (!ci) throw new Error("expected the out_of_track carry for the no-shape criterion");
     expect(ci).toMatchObject({ from_decision_id: from, outcome: "out_of_track", closure: "out_of_track" });
     expect(ci.route_decision_id).not.toBeNull();
     expect(snapshot.hard_blocks.map((h) => h.code)).not.toContain("kill_carry_overdue");
