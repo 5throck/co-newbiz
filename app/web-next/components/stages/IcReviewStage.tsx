@@ -4,7 +4,7 @@
 // /deals/[id]/s11 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
+import { type TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { DD_DOMAIN_KEY, DECISION_LABEL_KEY, GATE_LABEL_KEY, RAG_DIMENSION_KEY } from "../../lib/label-keys.ts";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -21,7 +21,12 @@ import { useToast } from "../ui.tsx";
 import { useConfirm } from "../crud.tsx";
 import { modeBadgeText, type HistoryStepView } from "../../lib/establishment-mode-view.ts";
 import { EstablishmentPanel } from "./EstablishmentPanel.tsx";
-import { establishmentApplies, type EventView, type MemberView, type StepRowView } from "../../lib/establishment-view.ts";
+import {
+  establishmentApplies,
+  type EventView,
+  type MemberView,
+  type StepRowView,
+} from "../../lib/establishment-view.ts";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { ExecutionBaselinePanel } from "./ExecutionBaselinePanel.tsx";
 import { IcReviewStepsPanel } from "./IcReviewStepsPanel.tsx";
@@ -35,28 +40,87 @@ import { GateConditionsPanel, type ConditionView } from "../GateIntegrity.tsx";
 // 행위다. 이 화면은 패키지를 읽어오는 GET만 자동화하고, 쓰기는 명시적 P4
 // 확인(useConfirm)을 거친 analyst+ 행위다.
 
-interface SimRow { scenario: string; percentile: string; npv_krw_m: number; irr: number | null; note: string | null }
+interface SimRow {
+  scenario: string;
+  percentile: string;
+  npv_krw_m: number;
+  irr: number | null;
+  note: string | null;
+}
 // UI 표시용 라벨(식별자/enum 값은 그대로 유지)
-const SCENARIO_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { base: "common.defaultLabel", upside: "stages.s11.stage.upside", downside: "stages.s11.stage.downside" });
-const PCTL_UI = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { p05: "stages.s11.stage.bottom", p50: "stages.s11.stage.median", p95: "stages.s11.stage.top" });
-interface AdoptedCase { id: string; name: string; kind: string; scenario: string | null; archived_at?: string | null; simulations: SimRow[] }
+const SCENARIO_UI = (tr: TranslatorFn): Record<string, string> =>
+  resolveLabels(tr, {
+    base: "common.defaultLabel",
+    upside: "stages.s11.stage.upside",
+    downside: "stages.s11.stage.downside",
+  });
+const PCTL_UI = (tr: TranslatorFn): Record<string, string> =>
+  resolveLabels(tr, { p05: "stages.s11.stage.bottom", p50: "stages.s11.stage.median", p95: "stages.s11.stage.top" });
+interface AdoptedCase {
+  id: string;
+  name: string;
+  kind: string;
+  scenario: string | null;
+  archived_at?: string | null;
+  simulations: SimRow[];
+}
 interface IcPackage {
   wacc_status?: WaccStatusLike;
   /** ADR-0193: carried kill criteria still open at the IC gate; null = not computable (never "none"). */
   kill_carries?: KillCarriesView | null;
   project: { id: string; project_no: string };
-  business_case: { adopted: AdoptedCase | null; adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null; note?: string };
+  business_case: {
+    adopted: AdoptedCase | null;
+    adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
+    note?: string;
+  };
   dd: {
     completion: { total: number; pending: number; unassessed: number; mandatoryUnmet: number };
-    findings: Array<{ id: string; category: string; description: string; value_impact: number | null; evidence_ref: string | null }>;
+    findings: Array<{
+      id: string;
+      category: string;
+      description: string;
+      value_impact: number | null;
+      evidence_ref: string | null;
+    }>;
     finding_count: number;
     review_status?: { in_scope: number; draft_ai: number };
   };
-  rag: { status: "graded" | "not_graded"; grade: string | null; isProposal: true; rationale: string | null; assessed_at: string | null; missing_dimensions: string[]; confidence_cap: string | null; confidence_note: string | null };
-  pmi_kickoff: { applies: boolean; sub_track: string | null; record: { id: string; recordedBy: string; recordedAt: string; owner: string; planNote: string } | null };
+  rag: {
+    status: "graded" | "not_graded";
+    grade: string | null;
+    isProposal: true;
+    rationale: string | null;
+    assessed_at: string | null;
+    missing_dimensions: string[];
+    confidence_cap: string | null;
+    confidence_note: string | null;
+  };
+  pmi_kickoff: {
+    applies: boolean;
+    sub_track: string | null;
+    record: { id: string; recordedBy: string; recordedAt: string; owner: string; planNote: string } | null;
+  };
   gates: {
-    latest: Array<{ gate: string; decision: "go" | "hold" | "kill" | "pending" | null; recorded_decision?: "go" | "hold" | "kill" | null; awaiting_countersign?: boolean; countersign_state?: string | null; rationale: string | null; missing_artifacts: string[] | null; gap_override?: { items: string[]; rationale: string } | null }>;
-    history: Array<{ id: string; gate: string; decision: string; rationale: string; decided_by: string; decided_at: string; gap_override?: { items: string[]; rationale: string } | null }>;
+    latest: Array<{
+      gate: string;
+      decision: "go" | "hold" | "kill" | "pending" | null;
+      recorded_decision?: "go" | "hold" | "kill" | null;
+      awaiting_countersign?: boolean;
+      countersign_state?: string | null;
+      rationale: string | null;
+      missing_artifacts: string[] | null;
+      gap_override?: { items: string[]; rationale: string } | null;
+    }>;
+    history: Array<{
+      id: string;
+      gate: string;
+      decision: string;
+      rationale: string;
+      decided_by: string;
+      decided_at: string;
+      gap_override?: { items: string[]; rationale: string } | null;
+    }>;
     /** Artifacts an IC GO would be missing right now (empty = none). */
     go_gaps?: string[];
     /** ADR-0186: every condition of the IC decisions (open first). */
@@ -78,8 +142,21 @@ interface IcPackage {
     minutesConfirmed: boolean;
   }>;
   establishment: {
-    steps: Array<{ id: string; step_no: number; status: string; origin: string; owner: string; updated_at: string; note: string | null; evidence_url: string | null; keyed_by: string }>;
-    done: number; total: number; complete: boolean; progress: string;
+    steps: Array<{
+      id: string;
+      step_no: number;
+      status: string;
+      origin: string;
+      owner: string;
+      updated_at: string;
+      note: string | null;
+      evidence_url: string | null;
+      keyed_by: string;
+    }>;
+    done: number;
+    total: number;
+    complete: boolean;
+    progress: string;
     /** ADR-0167 — active mode; null = a Green Field project that has not chosen one. */
     mode?: string | null;
     reopened_after_gate?: boolean;
@@ -102,19 +179,28 @@ interface EstablishmentView {
   reopened_after_gate_detail?: { steps: number[]; count: number; since: string } | null;
 }
 
-const RAG_META = (tr: TranslatorFn): Record<string, { icon: string; cls: string }> => ({
+const RAG_META: Record<string, { icon: string; cls: string }> = {
   green: { icon: "●", cls: "status-green" },
   amber: { icon: "◐", cls: "status-amber" },
   red: { icon: "✕", cls: "status-red" },
-});
+};
 
 // 데이터 신뢰도 등급(green/amber/red)의 한글 라벨 — 원문 등급은 개발자 세부정보 성격으로 괄호에 병기한다.
-const CAP_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { green: "common.high", amber: "common.medium", red: "common.low" });
+const CAP_LABEL = (tr: TranslatorFn): Record<string, string> =>
+  resolveLabels(tr, { green: "common.high", amber: "common.medium", red: "common.low" });
 const capLabel = (cap: string, tr: TranslatorFn) => CAP_LABEL(tr)[cap] ?? cap;
 // 종합 등급 표시명 — 원문(green/amber/red)은 화면에 노출하지 않는다.
-const RAG_LABEL = (tr: TranslatorFn): Record<string, string> => resolveLabels(tr, { green: "stages.s11.stage.greenGood", amber: "stages.s11.stage.yellowCaution", red: "stages.s11.stage.redRisk" });
+const RAG_LABEL = (tr: TranslatorFn): Record<string, string> =>
+  resolveLabels(tr, {
+    green: "stages.s11.stage.greenGood",
+    amber: "stages.s11.stage.yellowCaution",
+    red: "stages.s11.stage.redRisk",
+  });
 
-export function IcReviewStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s11.stage"); const tc = useTranslations("common");
+export function IcReviewStage({ projectId }: { projectId: string }) {
+  const tr = useTranslations();
+  const t = useTranslations("stages.s11.stage");
+  const tc = useTranslations("common");
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -127,38 +213,49 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback((): Promise<unknown> => {
-    const pkgP = api.get<IcPackage>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`)
+    const pkgP = api
+      .get<IcPackage>(`/api/projects/${encodeURIComponent(projectId)}/ic-package`)
       .then((r) => setPkg(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheIc")));
-    const estP = api.get<EstablishmentView>(`/api/projects/${encodeURIComponent(projectId)}/establishment`)
+    const estP = api
+      .get<EstablishmentView>(`/api/projects/${encodeURIComponent(projectId)}/establishment`)
       .then((r) => setEst(r.data))
-      .catch(() => { /* the IC package already carries establishment progress */ });
+      .catch(() => {
+        /* the IC package already carries establishment progress */
+      });
     return Promise.all([pkgP, estP]);
-  }, [projectId]);
+  }, [projectId, t]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   function recordKickoff() {
-    confirm(t("recordPmiKickoff"), () => {
-      void (async () => {
-        setBusy(true); setError(null);
-        try {
-          await api.post(`/api/projects/${encodeURIComponent(projectId)}/pmi/kickoff`, pmiForm);
-          setNotice(t("pmiKickoffRecorded"));
-          toast(t("pmiKickoffRecorded2"));
-          setPmiForm({ owner: "", plan_note: "" });
-          load();
-        } catch (e) {
-          setError(e instanceof Error ? e.message : t("failedToRecordPmiKickoff"));
-        } finally {
-          setBusy(false);
-        }
-      })();
-    }, {
-      body: t("recordsTheIntegrationLeadAnd"),
-      confirmLabel: tc("record"),
-      tone: "neutral",
-    });
+    confirm(
+      t("recordPmiKickoff"),
+      () => {
+        void (async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await api.post(`/api/projects/${encodeURIComponent(projectId)}/pmi/kickoff`, pmiForm);
+            setNotice(t("pmiKickoffRecorded"));
+            toast(t("pmiKickoffRecorded2"));
+            setPmiForm({ owner: "", plan_note: "" });
+            load();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : t("failedToRecordPmiKickoff"));
+          } finally {
+            setBusy(false);
+          }
+        })();
+      },
+      {
+        body: t("recordsTheIntegrationLeadAnd"),
+        confirmLabel: tc("record"),
+        tone: "neutral",
+      },
+    );
   }
 
   // 2026-10-21 decider: S11 화면을 업무 절차 순서의 내부 탭으로 구분한다.
@@ -174,8 +271,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
   ];
   const [icView, setIcView] = useState<IcView>("dossier");
   const entityGo = pkg?.gates.latest.find((x) => x.gate === "entity_ic")?.decision === "go";
-  const bothGatesGo = ["entity_ic", "group_ic"].every((g) =>
-    pkg?.gates.latest.find((x) => x.gate === g)?.decision === "go",
+  const bothGatesGo = ["entity_ic", "group_ic"].every(
+    (g) => pkg?.gates.latest.find((x) => x.gate === g)?.decision === "go",
   );
   const awaitingGates = (pkg?.gates.latest ?? []).filter((x) => x.awaiting_countersign).map((x) => x.gate);
   const estComplete = pkg?.establishment.complete ?? false;
@@ -184,7 +281,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
   const estMode = est ? est.mode : pkg?.establishment.mode;
 
   return (
-<>
+    <>
       {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs는 레일 슬롯으로 — 머리 위치 일관성. */}
       <StageFrame
         stageId="S11"
@@ -195,24 +292,36 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
             열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
         <GateDecisionJump inline gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
         {/* One review block for both IC gates (the panels below do not repeat it). */}
-        <ReviewBuckets entityType="project" entityId={projectId} gates={["entity_ic", "group_ic"]} artifacts={stageArtifactTabs("S11")} />
+        <ReviewBuckets
+          entityType="project"
+          entityId={projectId}
+          gates={["entity_ic", "group_ic"]}
+          artifacts={stageArtifactTabs("S11")}
+        />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           {t("entityAndGroupInvestmentCommittee")}
-          <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">{t("viewTheProjectCharter")}</Link>
+          <Link href={`/projects/${projectId}/charter`} className="ml-2 underline">
+            {t("viewTheProjectCharter")}
+          </Link>
           {awaitingGates.length > 0 && (
-            <span className="status-chip status-amber ml-2" data-testid="ic-awaiting-countersign"><span aria-hidden="true">◐</span> {t("awaitingCountersign")}</span>
+            <span className="status-chip status-amber ml-2" data-testid="ic-awaiting-countersign">
+              <span aria-hidden="true">◐</span> {t("awaitingCountersign")}
+            </span>
           )}
           <span className={`status-chip ${bothGatesGo ? "status-green" : "status-amber"} ml-2`}>
             {bothGatesGo ? t("investmentCommittee22In") : t("notApprovedByTheInvestment")}
           </span>
           {estApplies && (
             <span className={`status-chip ${estComplete ? "status-green" : "status-amber"} ml-1`}>
-              {estComplete ? t("establishmentExecutionCompleteP1", { p1: pkg?.establishment.progress ?? "—" }) : t("establishmentExecutionP1", { p1: pkg?.establishment.progress ?? "—" })}
+              {estComplete
+                ? t("establishmentExecutionCompleteP1", { p1: pkg?.establishment.progress ?? "—" })
+                : t("establishmentExecutionP1", { p1: pkg?.establishment.progress ?? "—" })}
             </span>
           )}
           {estApplies && (
             <span className={`status-chip ${estMode ? "status-not-started" : "status-amber"} ml-1`}>
-              {estMode ? "" : "○ "}{modeBadgeText(estMode)}
+              {estMode ? "" : "○ "}
+              {modeBadgeText(estMode)}
             </span>
           )}
         </p>
@@ -234,13 +343,30 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
           ))}
         </div>
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
-        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
+        {error && (
+          <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">
+            ✕ {error}
+          </p>
+        )}
+        {notice && (
+          <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">
+            ✓ {notice}
+          </p>
+        )}
 
         {/* ── 투자심의 자료 요약 ─────────────────────────────────────────── */}
-        <section id="ic-panel-dossier" role="tabpanel" aria-labelledby="ic-tab-dossier" className="market-section sizing-step" hidden={icView !== "dossier"}>
+        <section
+          id="ic-panel-dossier"
+          role="tabpanel"
+          aria-labelledby="ic-tab-dossier"
+          className="market-section sizing-step"
+          hidden={icView !== "dossier"}
+        >
           <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-            <span className="sizing-step-badge" aria-hidden="true">📦</span> {t("icMaterialsBusinessCaseDd")}
+            <span className="sizing-step-badge" aria-hidden="true">
+              📦
+            </span>{" "}
+            {t("icMaterialsBusinessCaseDd")}
           </h3>
 
           <h4 className="text-[length:var(--fs-body)] mt-2 mb-1">{t("adoptedBusinessCaseS8")}</h4>
@@ -251,29 +377,42 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
                 {pkg.business_case.adopted.name}
                 <span className="status-chip status-green ml-2">{t("adopted")}</span>
                 {pkg.business_case.adopted.archived_at && (
-                  <span className="status-chip status-not-started ml-1" title={t("archivedP1", { p1: pkg.business_case.adopted.archived_at.slice(0, 10) })}>{t("archived")}</span>
+                  <span
+                    className="status-chip status-not-started ml-1"
+                    title={t("archivedP1", { p1: pkg.business_case.adopted.archived_at.slice(0, 10) })}
+                  >
+                    {t("archived")}
+                  </span>
                 )}
                 {pkg.business_case.adopted.scenario && (
-                  <span className="status-chip status-not-started ml-1">{t("scenario")} {pkg.business_case.adopted.scenario}</span>
+                  <span className="status-chip status-not-started ml-1">
+                    {t("scenario")} {pkg.business_case.adopted.scenario}
+                  </span>
                 )}
                 {pkg.business_case.adoption && (
                   <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                    {t("adoptedBy")} {pkg.business_case.adoption.adoptedBy} · {pkg.business_case.adoption.adoptedAt.slice(0, 10)}
+                    {t("adoptedBy")} {pkg.business_case.adoption.adoptedBy} ·{" "}
+                    {pkg.business_case.adoption.adoptedAt.slice(0, 10)}
                   </span>
                 )}
               </p>
               <table className="data-table" aria-label={t("valuationSimulation")}>
                 <caption className="sr-only">{t("simulationNpvQuantilesOfThe")}</caption>
                 <thead>
-                  <tr><th scope="col">{t("scenario2")}</th><th scope="col">{t("quantile")}</th><th scope="col">{t("npvMillionsOfKrw")}</th><th scope="col">IRR</th></tr>
+                  <tr>
+                    <th scope="col">{t("scenario2")}</th>
+                    <th scope="col">{t("quantile")}</th>
+                    <th scope="col">{t("npvMillionsOfKrw")}</th>
+                    <th scope="col">IRR</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {pkg.business_case.adopted.simulations.map((s, i) => (
-                    <tr key={`${s.scenario}-${s.percentile}-${i}`}>
+                  {pkg.business_case.adopted.simulations.map((s) => (
+                    <tr key={`${s.scenario}-${s.percentile}`}>
                       <td>{SCENARIO_UI(tr)[s.scenario] ?? s.scenario}</td>
                       <td className="tabular-nums">{PCTL_UI(tr)[s.percentile] ?? s.percentile}</td>
                       <td className="mono-num">{fmtNpvKrwM(s.npv_krw_m)}</td>
-                      <td className="mono-num">{s.irr != null ? (s.irr * 100).toFixed(1) + "%" : "—"}</td>
+                      <td className="mono-num">{s.irr != null ? `${(s.irr * 100).toFixed(1)}%` : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -285,17 +424,22 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
             </p>
           )}
 
-          {(pkg?.standing_risks?.length ?? 0) > 0 && (
+          {pkg?.standing_risks && pkg.standing_risks.length > 0 && (
             <>
               <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("standingRisk")}</h4>
               <ul className="sizing-note-list" aria-label={t("standingRisk2")}>
-                {pkg!.standing_risks!.map((r) => (
+                {pkg.standing_risks.map((r) => (
                   <li key={r.key}>
-                    <span className="status-chip status-amber"><span aria-hidden="true">◐</span> {t("caution")}</span> {r.text}
+                    <span className="status-chip status-amber">
+                      <span aria-hidden="true">◐</span> {t("caution")}
+                    </span>{" "}
+                    {r.text}
                   </li>
                 ))}
               </ul>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("informationalOnlyItDoesNot")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {t("informationalOnlyItDoesNot")}
+              </p>
             </>
           )}
           {(pkg?.committee_sessions?.length ?? 0) > 0 && (
@@ -304,43 +448,70 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
               <ul className="sizing-note-list" aria-label={tc("committeeMinutes.sessionRefs")}>
                 {(pkg?.committee_sessions ?? []).map((s) => (
                   <li key={s.sessionId} className="text-[length:var(--fs-caption)]">
-                    <span className={`status-chip ${s.status === "done" ? "status-green" : "status-in-progress"}`}>{s.status}</span>{" "}
+                    <span className={`status-chip ${s.status === "done" ? "status-green" : "status-in-progress"}`}>
+                      {s.status}
+                    </span>{" "}
                     {s.committeeKey ?? "—"} · {s.startedAt?.slice(0, 10) ?? "—"}{" "}
                     {s.minutesUrl && (
-                      <a className="text-[color:var(--accent)] underline" href={s.minutesUrl} target="_blank" rel="noreferrer">
+                      <a
+                        className="text-[color:var(--accent)] underline"
+                        href={s.minutesUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         {tc("committeeMinutes.title")}
                       </a>
                     )}{" "}
                     {s.minutesConfirmed ? (
-                      <span className="status-chip status-green"><span aria-hidden="true">✓</span> {tc("committeeMinutes.confirmed")}</span>
+                      <span className="status-chip status-green">
+                        <span aria-hidden="true">✓</span> {tc("committeeMinutes.confirmed")}
+                      </span>
                     ) : (
                       <span className="status-chip status-not-started">{tc("committeeMinutes.draft")}</span>
                     )}
                   </li>
                 ))}
               </ul>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("informationalOnlyItDoesNot")}</p>
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {t("informationalOnlyItDoesNot")}
+              </p>
             </>
           )}
           <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("ddSummaryS9")}</h4>
           <p className="text-[length:var(--fs-caption)]">
-            <span className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.unassessed === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}>
+            <span
+              className={`status-chip ${pkg && pkg.dd.completion.total > 0 && pkg.dd.completion.pending === 0 && pkg.dd.completion.unassessed === 0 && pkg.dd.completion.mandatoryUnmet === 0 ? "status-green" : "status-amber"}`}
+            >
               {pkg && pkg.dd.completion.total > 0
-                ? t("p1JudgementSPendingP2", { p1: pkg.dd.completion.total, p2: pkg.dd.completion.pending, p3: pkg.dd.completion.unassessed, p4: pkg.dd.completion.mandatoryUnmet })
+                ? t("p1JudgementSPendingP2", {
+                    p1: pkg.dd.completion.total,
+                    p2: pkg.dd.completion.pending,
+                    p3: pkg.dd.completion.unassessed,
+                    p4: pkg.dd.completion.mandatoryUnmet,
+                  })
                 : t("noJudgementRecord")}
             </span>
           </p>
           {pkg?.dd.review_status && (
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={t("aiDraftedStatuteOriginalsPartially")}>
-              {t("unconfirmedAreasChecklistItems")} {pkg.dd.review_status.in_scope}{t("of")} {pkg.dd.review_status.draft_ai}{t("itemSAreStillAnd")}
+            <p
+              className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+              title={t("aiDraftedStatuteOriginalsPartially")}
+            >
+              {t("unconfirmedAreasChecklistItems")} {pkg.dd.review_status.in_scope}
+              {t("of")} {pkg.dd.review_status.draft_ai}
+              {t("itemSAreStillAnd")}
             </p>
           )}
-          {(pkg?.dd.findings.length ?? 0) > 0 && (
+          {pkg?.dd.findings.length && pkg.dd.findings.length > 0 && (
             <ul className="sizing-note-list mt-1">
-              {pkg!.dd.findings.map((f) => (
+              {pkg.dd.findings.map((f) => (
                 <li key={f.id}>
                   <strong>{tr(DD_DOMAIN_KEY[f.category] ?? f.category)}</strong>: {f.description}
-                  {f.value_impact != null && <span className="ml-1 tabular-nums">{t("valueImpact")} {f.value_impact})</span>}
+                  {f.value_impact != null && (
+                    <span className="ml-1 tabular-nums">
+                      {t("valueImpact")} {f.value_impact})
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -351,8 +522,8 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
           <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("overallGrade")}</h4>
           {pkg?.rag.grade ? (
             <p className="text-[length:var(--fs-caption)]">
-              <span className={`status-chip ${RAG_META(tr)[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
-                {RAG_META(tr)[pkg.rag.grade]?.icon ?? "?"} {RAG_LABEL(tr)[pkg.rag.grade] ?? pkg.rag.grade}
+              <span className={`status-chip ${RAG_META[pkg.rag.grade]?.cls ?? "status-not-started"}`}>
+                {RAG_META[pkg.rag.grade]?.icon ?? "?"} {RAG_LABEL(tr)[pkg.rag.grade] ?? pkg.rag.grade}
               </span>
               <span className="status-chip status-amber ml-2" title={t("thisGradeIsAValue")}>
                 {t("aiRecommendationNotAnApproval")}
@@ -363,7 +534,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
                 </span>
               )}
               {pkg.rag.rationale && (
-                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{tc("evidenceColon")} {pkg.rag.rationale}</span>
+                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                  {tc("evidenceColon")} {pkg.rag.rationale}
+                </span>
               )}
             </p>
           ) : (
@@ -381,13 +554,20 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
               )}
               <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
                 {pkg?.rag.missing_dimensions?.length
-                  ? t("anOverallGradeCannotBe", { p1: [...new Set(pkg.rag.missing_dimensions)].map((k) => tr(RAG_DIMENSION_KEY[k] ?? k)).join(", ") })
+                  ? t("anOverallGradeCannotBe", {
+                      p1: [...new Set(pkg.rag.missing_dimensions)].map((k) => tr(RAG_DIMENSION_KEY[k] ?? k)).join(", "),
+                    })
                   : t("noOverallGradeEvaluationRecord")}
               </span>
             </p>
           )}
-          {(pkg?.gates.conditions?.length ?? 0) > 0 && (
-            <GateConditionsPanel projectId={projectId} conditions={pkg!.gates.conditions!} canAct={false} onChanged={load} />
+          {pkg?.gates.conditions && pkg.gates.conditions.length > 0 && (
+            <GateConditionsPanel
+              projectId={projectId}
+              conditions={pkg.gates.conditions}
+              canAct={false}
+              onChanged={load}
+            />
           )}
           {(() => {
             const overrides = (pkg?.gates.history ?? []).filter((h) => h.gap_override);
@@ -396,13 +576,23 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
               <>
                 <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{t("exceptionEvidenceWrittenWhenRecording")}</h4>
                 <ul className="sizing-note-list" aria-label={t("exceptionEvidence")}>
-                  {overrides.map((h) => (
-                    <li key={h.id}>
-                      <strong>{tr(GATE_LABEL_KEY[h.gate] ?? h.gate)} {tr(DECISION_LABEL_KEY[h.decision] ?? h.decision)}</strong> - {h.decided_by} · {h.decided_at.slice(0, 10)}
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("missing")} {h.gap_override!.items.join("; ")}</span>
-                      <span className="block text-[length:var(--fs-caption)]">{tc("evidenceColon")} {h.gap_override!.rationale}</span>
-                    </li>
-                  ))}
+                  {overrides.map((h) => {
+                    const override = h.gap_override;
+                    return override ? (
+                      <li key={h.id}>
+                        <strong>
+                          {tr(GATE_LABEL_KEY[h.gate] ?? h.gate)} {tr(DECISION_LABEL_KEY[h.decision] ?? h.decision)}
+                        </strong>{" "}
+                        - {h.decided_by} · {h.decided_at.slice(0, 10)}
+                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                          {t("missing")} {override.items.join("; ")}
+                        </span>
+                        <span className="block text-[length:var(--fs-caption)]">
+                          {tc("evidenceColon")} {override.rationale}
+                        </span>
+                      </li>
+                    ) : null;
+                  })}
                 </ul>
               </>
             );
@@ -415,7 +605,12 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
         </div>
 
         {/* ── 설립 실행 5단계 (ADR-0165) — 승인 후 실행 활동 ── */}
-        <div id="ic-panel-establishment" role="tabpanel" aria-labelledby="ic-tab-establishment" hidden={icView !== "establishment"}>
+        <div
+          id="ic-panel-establishment"
+          role="tabpanel"
+          aria-labelledby="ic-tab-establishment"
+          hidden={icView !== "establishment"}
+        >
           <EstablishmentPanel
             projectId={projectId}
             canAct={canAct}
@@ -436,57 +631,85 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
           // 품평회 2026-10-22 잔여 #2: PMI 섹션이 establishment 탭패널의 형제 div였으면
           // 탭의 aria-controls 매핑이 불완전했다 — 자체 패널 id를 부여하고 탭 쪽에서
           // 두 패널을 함께 가리킨다.
-          <div id="ic-panel-pmi" role="tabpanel" aria-labelledby="ic-tab-establishment" hidden={icView !== "establishment"}>
-          <section className="market-section sizing-step mt-3" aria-label={t("pmiKickoff")}>
-            <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-              <span className="sizing-step-badge" aria-hidden="true">🤝</span> {t("pmiKickoffBrownfieldIntegrationPlan")}
-            </h3>
-            {pkg.pmi_kickoff.record ? (
-              <p className="text-[length:var(--fs-caption)]">
-                <span className="status-chip status-green">{t("kickoffRecorded")}</span>
-                <span className="block text-[length:var(--fs-caption)] mt-1">{t("integrationLead")} {pkg.pmi_kickoff.record.owner} {t("recorder")} {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}</span>
-                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{pkg.pmi_kickoff.record.planNote}</span>
-              </p>
-            ) : (
-              <p className="text-[length:var(--fs-caption)]">
-                <span className="status-chip status-amber">{t("kickoffNotRecorded")}</span>
-                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">{t("s11CompletionRequiresAPmi")}</span>
-              </p>
-            )}
-            {canAct && !pkg.pmi_kickoff.record && (
-              <form className="sizing-new-form mt-2" aria-label={t("recordPmiKickoff2")} onSubmit={(e) => { e.preventDefault(); recordKickoff(); }}>
-                <div className="flex flex-wrap items-end gap-2">
-                  <label className="text-[length:var(--fs-caption)] min-w-[10rem]">
-                    <span className="block mb-1">{t("integrationLeadRequired")}</span>
-                    <input
-                      value={pmiForm.owner}
-                      onChange={(e) => setPmiForm({ ...pmiForm, owner: e.target.value })}
-                      className="sizing-new-input w-full"
-                      required
-                    />
-                  </label>
-                  <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
-                    <span className="block mb-1">{t("integrationPlanBaselineRequired20")}</span>
-                    <input
-                      value={pmiForm.plan_note}
-                      onChange={(e) => setPmiForm({ ...pmiForm, plan_note: e.target.value })}
-                      className="sizing-new-input w-full"
-                      required
-                      minLength={20}
-                    />
-                  </label>
-                </div>
-                <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
-                  {busy ? tc("recording") : t("recordKickoffConfirmationNeeded")}
-                </button>
-              </form>
-            )}
-          </section>
+          <div
+            id="ic-panel-pmi"
+            role="tabpanel"
+            aria-labelledby="ic-tab-establishment"
+            hidden={icView !== "establishment"}
+          >
+            <section className="market-section sizing-step mt-3" aria-label={t("pmiKickoff")}>
+              <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+                <span className="sizing-step-badge" aria-hidden="true">
+                  🤝
+                </span>{" "}
+                {t("pmiKickoffBrownfieldIntegrationPlan")}
+              </h3>
+              {pkg.pmi_kickoff.record ? (
+                <p className="text-[length:var(--fs-caption)]">
+                  <span className="status-chip status-green">{t("kickoffRecorded")}</span>
+                  <span className="block text-[length:var(--fs-caption)] mt-1">
+                    {t("integrationLead")} {pkg.pmi_kickoff.record.owner} {t("recorder")}{" "}
+                    {pkg.pmi_kickoff.record.recordedBy} · {pkg.pmi_kickoff.record.recordedAt.slice(0, 10)}
+                  </span>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                    {pkg.pmi_kickoff.record.planNote}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-[length:var(--fs-caption)]">
+                  <span className="status-chip status-amber">{t("kickoffNotRecorded")}</span>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
+                    {t("s11CompletionRequiresAPmi")}
+                  </span>
+                </p>
+              )}
+              {canAct && !pkg.pmi_kickoff.record && (
+                <form
+                  className="sizing-new-form mt-2"
+                  aria-label={t("recordPmiKickoff2")}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    recordKickoff();
+                  }}
+                >
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="text-[length:var(--fs-caption)] min-w-[10rem]">
+                      <span className="block mb-1">{t("integrationLeadRequired")}</span>
+                      <input
+                        value={pmiForm.owner}
+                        onChange={(e) => setPmiForm({ ...pmiForm, owner: e.target.value })}
+                        className="sizing-new-input w-full"
+                        required
+                      />
+                    </label>
+                    <label className="text-[length:var(--fs-caption)] flex-1 min-w-[16rem]">
+                      <span className="block mb-1">{t("integrationPlanBaselineRequired20")}</span>
+                      <input
+                        value={pmiForm.plan_note}
+                        onChange={(e) => setPmiForm({ ...pmiForm, plan_note: e.target.value })}
+                        className="sizing-new-input w-full"
+                        required
+                        minLength={20}
+                      />
+                    </label>
+                  </div>
+                  <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy}>
+                    {busy ? tc("recording") : t("recordKickoffConfirmationNeeded")}
+                  </button>
+                </form>
+              )}
+            </section>
           </div>
         )}
 
         {/* ── 의사결정: 법인 → 그룹 투자심의위원회 한 구역 (검토 블록은 상단에 한 번만) ── */}
-        <div id="ic-panel-decision" role="tabpanel" aria-labelledby="ic-tab-decision" className="mt-4" hidden={icView !== "decision"}>
+        <div
+          id="ic-panel-decision"
+          role="tabpanel"
+          aria-labelledby="ic-tab-decision"
+          className="mt-4"
+          hidden={icView !== "decision"}
+        >
           <GateDecisionPanel
             opportunityId={projectId}
             gates={["entity_ic", "group_ic"]}
@@ -498,10 +721,15 @@ export function IcReviewStage({ projectId }: { projectId: string }) {const tr = 
             onRecorded={() => void load()}
             nextStage={{ label: t("s12Management"), href: `/projects/${projectId}/portfolio` }}
           />
-          <GateConditionsPanel projectId={projectId} conditions={pkg?.gates.conditions ?? []} canAct={canAct} onChanged={load} />
+          <GateConditionsPanel
+            projectId={projectId}
+            conditions={pkg?.gates.conditions ?? []}
+            canAct={canAct}
+            onChanged={load}
+          />
         </div>
         {confirmDialog}
       </StageFrame>
-</>
+    </>
   );
 }

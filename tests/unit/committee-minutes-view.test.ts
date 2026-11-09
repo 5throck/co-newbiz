@@ -4,14 +4,24 @@
 // (제안 권고) with NO approval stamp, the AI-drafted label, the confirmed chip, and the
 // contested agenda marker. ko/en rendering both asserted.
 import { describe, expect, test } from "bun:test";
-import { renderToStaticMarkup } from "../../app/web-next/node_modules/react-dom/server.js";
-import { createElement } from "../../app/web-next/node_modules/react/index.js";
-import { NextIntlClientProvider } from "../../app/web-next/node_modules/next-intl";
-import ko from "../../app/web-next/locales/ko.json";
-import en from "../../app/web-next/locales/en.json";
-import { CommitteeMinutesView } from "../../app/web-next/components/CommitteeMinutesView.tsx";
 
-const render = (el, locale = "ko") =>
+const WEB = "../../app/web-next";
+const { renderToStaticMarkup } = (await import(`${WEB}/node_modules/react-dom/server.js`)) as {
+  renderToStaticMarkup: (el: unknown) => string;
+};
+const { createElement } = (await import(`${WEB}/node_modules/react/index.js`)) as {
+  createElement: (type: unknown, props: unknown, ...c: unknown[]) => unknown;
+};
+const { NextIntlClientProvider } = (await import(`${WEB}/node_modules/next-intl`)) as {
+  NextIntlClientProvider: unknown;
+};
+const ko = (await import(`${WEB}/locales/ko.json`)).default as Record<string, unknown>;
+const en = (await import(`${WEB}/locales/en.json`)).default as Record<string, unknown>;
+const { CommitteeMinutesView } = (await import(`${WEB}/components/CommitteeMinutesView.tsx`)) as {
+  CommitteeMinutesView: unknown;
+};
+
+const render = (el: unknown, locale: "ko" | "en" = "ko") =>
   renderToStaticMarkup(
     createElement(
       NextIntlClientProvider,
@@ -54,7 +64,8 @@ const FIXTURE_PAYLOAD = {
   dissentJson: JSON.stringify([{ member_key: "risk-officer", position_md: "기준치 미달로 GO 반대" }]),
 };
 
-const renderView = (locale) => render(createElement(CommitteeMinutesView, { payload: FIXTURE_PAYLOAD }), locale);
+const renderView = (locale: "ko" | "en" = "ko") =>
+  render(createElement(CommitteeMinutesView, { payload: FIXTURE_PAYLOAD }), locale);
 
 describe("CommitteeMinutesView (ADR-0196 Phase C)", () => {
   test("dissent renders VERBATIM from dissent_json — never summarized or reworded", () => {

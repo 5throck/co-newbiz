@@ -1381,7 +1381,7 @@
       "aiDraftedNote": "AI-drafted section — verify against the verbatim record in the appendix.",
       "aiDraftedShort": "AI-drafted",
       "confirmed": "Confirmed",
-      "confirmedBy": "Confirmed by {by} · {at}",
+      "confirmedBy": "Confirmed Status — by {by} · {at}",
       "contested": "Contested",
       "discussion": "Discussion by issue",
       "agreements": "Points of agreement",
