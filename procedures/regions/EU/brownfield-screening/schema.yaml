@@ -6,6 +6,8 @@ title: "EU Brown Field Screening"
 status: active
 applicability: mandatory
 workflow_type: core
+version: "1.4.0"   # mirrors shared-brownfield-screening 1.4.0 (base procedure version)
+effective_from: "2026-08-20"
 
 references:
   - shared: ../../../_shared/brownfield-screening

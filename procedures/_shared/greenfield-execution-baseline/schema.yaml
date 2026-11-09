@@ -4,6 +4,7 @@ title: "Greenfield Execution Baseline (post-approval, S11)"
 scope: shared
 level: entity
 version: "1.0.0"
+effective_from: "2026-10-12"
 status: active
 # ADR-0161 (Proposed; user decisions Q1-Q7 in chat 2026-10-12), design
 # docs/designs/2026-10-11-greenfield-investment-execution-and-post-management-design.md

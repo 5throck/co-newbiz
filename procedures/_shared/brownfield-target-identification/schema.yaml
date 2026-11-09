@@ -4,6 +4,7 @@ title: "Brown Field Target Identification (Universe → Long List)"
 scope: shared
 level: entity
 version: "1.0.0"
+effective_from: "2026-09-01"
 status: active
 applicability: mandatory
 workflow_type: core

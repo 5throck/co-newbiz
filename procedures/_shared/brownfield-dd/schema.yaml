@@ -4,6 +4,7 @@ title: "Brown Field Due Diligence"
 scope: shared
 level: entity
 version: "1.8.0"
+effective_from: "2026-08-20"
 status: active
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S9 brownfield DD에 procedure 계층
 # 기계판독 predicate을 둔다 — greenfield-execution-baseline·pmi-integration-

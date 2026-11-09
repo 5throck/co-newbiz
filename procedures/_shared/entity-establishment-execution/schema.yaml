@@ -4,6 +4,7 @@ title: "Entity Establishment Execution"
 scope: shared
 level: entity
 version: "1.2.0"
+effective_from: "2026-08-23"
 status: active
 applicability: conditional
 # origin in {internal, joint} (ADR-0047 origin axis) — post-approval execution

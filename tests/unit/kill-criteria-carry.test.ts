@@ -762,6 +762,8 @@ describe("13b. S12 criteria leave IC as open_monitoring carries, evaluated by da
     const o = S.insertOpportunity(db, "brownfield", ANALYST);
     const pid = S.insertProject(db, o, "brownfield");
     S.addMember(db, pid, ANALYST, "lead");
+    // ADR-0196: a convened session so the ack contract error under test is not masked by committee_session_missing.
+    S.seedCommitteeSession(db, pid, ANALYST);
     const view = preview("project", pid, "entity_ic");
     const res = recordGateDecisionRow(db, {
       entityType: "project",

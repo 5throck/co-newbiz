@@ -12,7 +12,9 @@ title: Greenfield S9 workspace scope by sub-track (plan verification)
 owner_agent: process-governance-manager
 maintainer: process-governance-manager
 version: 1.3.0
+effective_from: "2026-10-12"
 status: proposed
+enforceability: mandatory
 decision_record: DEC-20261012-01
 track: greenfield
 procedure_id: shared-greenfield-dd

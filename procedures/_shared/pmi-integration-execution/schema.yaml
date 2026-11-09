@@ -4,6 +4,7 @@ title: "PMI Integration Execution (post-approval, Brown Field)"
 scope: shared
 level: entity
 version: "1.1.0"
+effective_from: "2026-08-23"
 status: active
 # Design §B.1 frame: applies_when covers the CLASSIFICATION part only —
 # case_type = brownfield. "Approval granted at entity/group IC, activated at

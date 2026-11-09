@@ -19,8 +19,12 @@ resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
-const { applyGovernanceManifest, computeReviewDue, listGovernanceView } = await import("../../db/lib/governance-registry.ts");
-const { scanGovernanceDocs, buildManifest, serializeManifest, checkManifestDrift, MANIFEST_REL } = await import("../../scripts/co-newbiz/governance-sync.ts");
+const { applyGovernanceManifest, computeReviewDue, listGovernanceView } = await import(
+  "../../db/lib/governance-registry.ts"
+);
+const { scanGovernanceDocs, buildManifest, serializeManifest, checkManifestDrift, MANIFEST_REL } = await import(
+  "../../scripts/co-newbiz/governance-sync.ts"
+);
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 
@@ -29,18 +33,34 @@ const opts = { actor: "test", via: "cli" as const, now: NOW };
 
 function fixture(version = "1.0.0"): string {
   const root = mkdtempSync(join(tmpdir(), "gov-fixture-"));
-  for (const d of ["policies/group", "procedures/_shared/p-one", "procedures/_template", "checklists", "templates/deliverables"]) mkdirSync(join(root, d), { recursive: true });
+  for (const d of [
+    "policies/group",
+    "procedures/_shared/p-one",
+    "procedures/_template",
+    "checklists",
+    "templates/deliverables",
+  ])
+    mkdirSync(join(root, d), { recursive: true });
   writeFileSync(
     join(root, "policies/group/pol.md"),
     `---\ngovernance_doc_id: pol-x\ntitle: Pol X\nversion: "${version}"\nenforceability: mandatory\nowner_agent: pgm\neffective_from: "2026-01-31"\nreview_cycle_months: 12\n---\n# Pol X\n`,
   );
   writeFileSync(join(root, "policies/group/pol_ko.md"), `---\ngovernance_doc_id: pol-x\n---\n`);
-  writeFileSync(join(root, "procedures/_shared/p-one/schema.yaml"), `procedure_id: shared-p-one\ntitle: P One\nversion: "2.0.0"\napplicability: conditional\nowner_agent: pgm\n`);
+  writeFileSync(
+    join(root, "procedures/_shared/p-one/schema.yaml"),
+    `procedure_id: shared-p-one\ntitle: P One\nversion: "2.0.0"\napplicability: conditional\nowner_agent: pgm\n`,
+  );
   writeFileSync(join(root, "procedures/_template/schema.yaml"), `procedure_id: TODO\n`);
-  writeFileSync(join(root, "checklists/c.yaml"), `governance_doc_id: chk-c\ntitle: C\nversion: "1.0.0"\nenforceability: mixed\nowner_agent: pgm\neffective_from: 2026-02-01\n`);
+  writeFileSync(
+    join(root, "checklists/c.yaml"),
+    `governance_doc_id: chk-c\ntitle: C\nversion: "1.0.0"\nenforceability: mixed\nowner_agent: pgm\neffective_from: 2026-02-01\n`,
+  );
   // missing owner + enforceability -> error finding, not registered
   writeFileSync(join(root, "checklists/bad.yaml"), `governance_doc_id: chk-bad\ntitle: Bad\nversion: "1.0.0"\n`);
-  writeFileSync(join(root, "templates/deliverables/t.md"), `---\ngovernance_doc_id: tpl-t\ntitle: T\nversion: "1.0.0"\nenforceability: recommended\nowner_agent: docs-writer\n---\n`);
+  writeFileSync(
+    join(root, "templates/deliverables/t.md"),
+    `---\ngovernance_doc_id: tpl-t\ntitle: T\nversion: "1.0.0"\nenforceability: recommended\nowner_agent: docs-writer\n---\n`,
+  );
   return root;
 }
 
@@ -83,7 +103,9 @@ describe("sync", () => {
     const m2 = buildManifest(scanGovernanceDocs(fixture("1.1.0")));
     const r3 = applyGovernanceManifest(db, m2, opts);
     expect([r3.inserted, r3.superseded, r3.unchanged]).toEqual([0, 1, 3]);
-    const rows = db.query("SELECT id, version, superseded_by FROM governance_doc WHERE key = 'pol-x' ORDER BY version").all() as Array<{ id: string; version: string; superseded_by: string | null }>;
+    const rows = db
+      .query("SELECT id, version, superseded_by FROM governance_doc WHERE key = 'pol-x' ORDER BY version")
+      .all() as Array<{ id: string; version: string; superseded_by: string | null }>;
     expect(rows).toHaveLength(2);
     expect(rows[0].id).toBe("pol-x");
     expect(rows[0].superseded_by).toBe(rows[1].id);
@@ -98,7 +120,8 @@ describe("sync", () => {
   });
 
   test("every non-dry run is audited, dry run is not", () => {
-    const n = () => (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'governance_sync'").get() as { n: number }).n;
+    const n = () =>
+      (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'governance_sync'").get() as { n: number }).n;
     const before = n();
     applyGovernanceManifest(db, buildManifest({ docs: [], findings: [] }), { ...opts, dryRun: true });
     expect(n()).toBe(before);
@@ -114,7 +137,10 @@ describe("manifest drift", () => {
     expect(checkManifestDrift(root).drift).toBe(true); // missing
     writeFileSync(join(root, MANIFEST_REL), serializeManifest(buildManifest(scanGovernanceDocs(root))));
     expect(checkManifestDrift(root).drift).toBe(false);
-    writeFileSync(join(root, "templates/deliverables/t.md"), `---\ngovernance_doc_id: tpl-t\ntitle: T\nversion: "2.0.0"\nenforceability: recommended\nowner_agent: docs-writer\n---\n`);
+    writeFileSync(
+      join(root, "templates/deliverables/t.md"),
+      `---\ngovernance_doc_id: tpl-t\ntitle: T\nversion: "2.0.0"\nenforceability: recommended\nowner_agent: docs-writer\n---\n`,
+    );
     const r = checkManifestDrift(root);
     expect(r.drift).toBe(true);
     expect(r.message).toContain("template/tpl-t");
@@ -126,7 +152,8 @@ describe("manifest drift", () => {
 
 describe("review due", () => {
   test("next review = effective_from + cycle; overdue / due soon / ok / none", () => {
-    const d = (eff: string | null, cyc: number | null, sup: string | null = null) => computeReviewDue({ effective_from: eff, review_cycle_months: cyc, superseded_by: sup }, "2026-10-29");
+    const d = (eff: string | null, cyc: number | null, sup: string | null = null) =>
+      computeReviewDue({ effective_from: eff, review_cycle_months: cyc, superseded_by: sup }, "2026-10-29");
     expect(d("2025-10-01", 12)).toEqual({ next_review: "2026-10-01", status: "overdue", days_left: -28 });
     expect(d("2025-11-15", 12).status).toBe("due_soon");
     expect(d("2026-01-31", 12).status).toBe("ok");
@@ -148,14 +175,21 @@ describe("view and routes", () => {
     await createUser(db, { userId: "ganalyst", role: "analyst", password: "pw-analyst-12345", createdBy: "test", now });
     approveUser(db, { userId: "ganalyst", approvedBy: "test", now });
     db.run("UPDATE app_user SET must_change_password = 0");
-    const login = async (u: string, p: string) => ((await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId: u, password: p }) })).headers.getSetCookie()[0] ?? "").split(";")[0];
+    const login = async (u: string, p: string) =>
+      (
+        (
+          await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId: u, password: p }) })
+        ).headers.getSetCookie()[0] ?? ""
+      ).split(";")[0];
     adminCookie = await login("gadmin", "pw-admin-12345");
     analystCookie = await login("ganalyst", "pw-analyst-12345");
   });
 
   test("waiver concentration rolls up per document lineage", () => {
     db.run("PRAGMA foreign_keys = OFF");
-    const cur = (db.query("SELECT id FROM governance_doc WHERE key = 'pol-x' AND superseded_by IS NULL").get() as { id: string }).id;
+    const cur = (
+      db.query("SELECT id FROM governance_doc WHERE key = 'pol-x' AND superseded_by IS NULL").get() as { id: string }
+    ).id;
     const future = new Date(Date.now() + 30 * 86400_000).toISOString();
     for (let i = 0; i < 3; i++) {
       db.run(
@@ -164,34 +198,74 @@ describe("view and routes", () => {
       );
     }
     db.run("PRAGMA foreign_keys = ON");
-    const rows = listGovernanceView(db, { now: new Date().toISOString(), libraryIndex: new Map([["policies/group/pol.md", "lib-pol"]]) });
-    const current = rows.find((r) => r.id === cur)!;
+    const rows = listGovernanceView(db, {
+      now: new Date().toISOString(),
+      libraryIndex: new Map([["policies/group/pol.md", "lib-pol"]]),
+    });
+    const current = rows.find((r) => r.id === cur);
+    if (!current) throw new Error(`governance row ${cur} missing`);
     expect(current.active_waivers).toBe(3);
     expect(current.waiver_concentrated).toBe(true);
     expect(current.waiver_clauses[0]).toEqual({ clause_ref: "§2.1", count: 3 });
     expect(current.library_id).toBe("lib-pol");
-    expect(rows.find((r) => r.id === "pol-x")!.active_waivers).toBe(0); // superseded row carries none
+    const superseded = rows.find((r) => r.id === "pol-x");
+    if (!superseded) throw new Error("superseded pol-x row missing");
+    expect(superseded.active_waivers).toBe(0); // superseded row carries none
   });
 
   test("routes are admin-only", async () => {
     expect((await nextRequest("/api/admin/governance")).status).toBe(401);
     expect((await nextRequest("/api/admin/governance", { headers: { cookie: analystCookie } })).status).toBe(403);
-    expect((await nextRequest("/api/admin/governance/sync", { method: "POST", body: "{}", headers: { cookie: analystCookie } })).status).toBe(403);
+    expect(
+      (
+        await nextRequest("/api/admin/governance/sync", {
+          method: "POST",
+          body: "{}",
+          headers: { cookie: analystCookie },
+        })
+      ).status,
+    ).toBe(403);
     expect((await nextRequest("/api/admin/governance/sync", { method: "POST", body: "{}" })).status).toBe(401);
   });
 
   test("admin sync applies the committed manifest and is audited", async () => {
-    const before = (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'governance_sync' AND actor_user_id = 'gadmin'").get() as { n: number }).n;
-    const res = await nextRequest("/api/admin/governance/sync", { method: "POST", body: "{}", headers: { cookie: adminCookie } });
+    const before = (
+      db
+        .query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'governance_sync' AND actor_user_id = 'gadmin'")
+        .get() as { n: number }
+    ).n;
+    const res = await nextRequest("/api/admin/governance/sync", {
+      method: "POST",
+      body: "{}",
+      headers: { cookie: adminCookie },
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { inserted: number; unchanged: number; findings: unknown[] } };
     expect(body.data.inserted).toBeGreaterThan(40);
-    expect(body.data.findings.length).toBeGreaterThan(0);
-    const again = ((await (await nextRequest("/api/admin/governance/sync", { method: "POST", body: "{}", headers: { cookie: adminCookie } })).json()) as { data: { inserted: number } }).data;
+    // findings is advisory drift data, not a health signal: the 2026-11-09
+    // metadata cleanup (version/enforceability/effective_from) cleared the
+    // debt that used to keep this above zero, so a clean manifest may
+    // legitimately report none.
+    expect(Array.isArray(body.data.findings)).toBe(true);
+    const again = (
+      (await (
+        await nextRequest("/api/admin/governance/sync", {
+          method: "POST",
+          body: "{}",
+          headers: { cookie: adminCookie },
+        })
+      ).json()) as { data: { inserted: number } }
+    ).data;
     expect(again.inserted).toBe(0);
-    const after = (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'governance_sync' AND actor_user_id = 'gadmin'").get() as { n: number }).n;
+    const after = (
+      db
+        .query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'governance_sync' AND actor_user_id = 'gadmin'")
+        .get() as { n: number }
+    ).n;
     expect(after).toBe(before + 2);
-    const list = (await (await nextRequest("/api/admin/governance", { headers: { cookie: adminCookie } })).json()) as { data: Array<{ key: string; library_id: string | null }> };
+    const list = (await (await nextRequest("/api/admin/governance", { headers: { cookie: adminCookie } })).json()) as {
+      data: Array<{ key: string; library_id: string | null }>;
+    };
     expect(list.data.find((r) => r.key === "chk-hr-dd")?.library_id).toBe("chk-hr-dd-checklist");
   });
 });

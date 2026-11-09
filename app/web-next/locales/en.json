@@ -2967,6 +2967,10 @@
         "kill_enforce_unsafe": {
           "title": "GO is blocked: stop-condition enforcement is unsafe",
           "body": "Stop conditions are set to enforce, but the carried items below have no data source at their re-evaluation scope. That would block every such GO or leave only meaningless acknowledgements. An operator must lower the mode to shadow or off, or re-scope the re-evaluation gate (ADR-tracked)."
+        },
+        "committee_session_missing": {
+          "title": "GO is blocked: no committee session convened",
+          "body": "No committee session has been convened for this investment committee. A gate cannot pass on a committee that never sat. Convene the committee session and record its confirmed minutes, then record again."
         }
       },
       "priorAwaiting": "The previous gate has a GO that is still waiting for its second review.",

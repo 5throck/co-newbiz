@@ -647,25 +647,24 @@ export function requiredAcks(
   }
   for (const n of s.nonwaivable_open) acks.push({ key: n.key, kind: "nonwaivable_open" });
   // ADR-0196 Phase E (ADR-0186 amendment): unconfirmed IC minutes at GO are
-  // ACKed with a reason (silence is never read as pass); a missing session
-  // is ACKed in this first release (hardening to HARD BLOCK needs its own
-  // owner decision). The committee RECOMMENDATION itself is never an ack —
-  // it is display data, not a gate input.
+  // ACKed with a reason (silence is never read as pass). A MISSING session is
+  // no longer an acknowledgement: the 2026-11-09 owner decision hardened it
+  // to the `committee_session_missing` HARD BLOCK (see hardBlocks). The
+  // committee RECOMMENDATION itself is never an ack — it is display data,
+  // not a gate input.
   if (s.entity.type === "project" && (s.gate === "entity_ic" || s.gate === "group_ic")) {
-    const sessions = s.committee?.sessions ?? [];
-    if (sessions.length === 0) {
-      acks.push({ key: "committee:session_missing", kind: "committee_session_missing" });
-    } else {
-      for (const sess of sessions.filter((x) => !x.minutesConfirmed)) {
-        acks.push({ key: `committee:minutes_unconfirmed:${sess.sessionId}`, kind: "committee_minutes_unconfirmed" });
-      }
+    for (const sess of (s.committee?.sessions ?? []).filter((x) => !x.minutesConfirmed)) {
+      acks.push({ key: `committee:minutes_unconfirmed:${sess.sessionId}`, kind: "committee_minutes_unconfirmed" });
     }
   }
   return acks.sort(byKey);
 }
 
 function hardBlocks(
-  snap: Pick<GateSnapshot, "kill" | "validators" | "conditions_open" | "entity" | "gate" | "track" | "wacc">,
+  snap: Pick<
+    GateSnapshot,
+    "kill" | "validators" | "conditions_open" | "entity" | "gate" | "track" | "wacc" | "committee"
+  >,
   extra: { certificationKeys: string[]; enforceUnsafeKeys?: string[] },
 ): HardBlockInfo[] {
   const out: HardBlockInfo[] = [];
@@ -696,6 +695,15 @@ function hardBlocks(
   // C-3: lineage gap at the first project gate - never read as "no carries".
   if (snap.kill.lineage_missing)
     out.push({ code: "kill_lineage_missing", keys: [snap.entity.id], enforced: killEnforced });
+  // ADR-0196 (ADR-0186 amendment, 2026-11-09 owner decision): a GO at an IC gate with
+  // no project-scoped committee session convened is a HARD BLOCK — a gate cannot pass on
+  // a committee that never sat. Unconfirmed minutes remain an ACK with a reason.
+  if (
+    snap.entity.type === "project" &&
+    (snap.gate === "entity_ic" || snap.gate === "group_ic") &&
+    (snap.committee?.sessions ?? []).length === 0
+  )
+    out.push({ code: "committee_session_missing", keys: [snap.entity.id], enforced: true });
   // bf-01 (ADR-0186 D4): an applicable core validator is missing - brownfield dd GO, re-checked at entity_ic and group_ic.
   const validatorsMode = gateIntegrityMode("validators");
   if (validatorsMode !== "off") {

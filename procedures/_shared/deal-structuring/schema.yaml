@@ -4,6 +4,7 @@ title: "Deal Structuring (S10)"
 scope: shared
 level: entity
 version: "1.1.0"
+effective_from: "2026-09-05"
 status: active
 applicability: unconditional
 workflow_type: core
