@@ -5,7 +5,13 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { authenticate } from "../../../../lib/auth.ts";
 import { visibleProject } from "../../../../lib/project-visibility.ts";
-import { listGateAging, listProjectPipeline } from "../../../../lib/gate-aging.ts";
+import {
+  killEvalStates,
+  listGateAging,
+  listProjectPipeline,
+  type GateAgingRow,
+  type KillEvalState,
+} from "../../../../lib/gate-aging.ts";
 import { ok } from "../../../../lib/envelope.ts";
 
 export async function GET(request: Request) {
@@ -31,5 +37,19 @@ export async function GET(request: Request) {
   // HOLD badge for something decided today — same data, two contradictory
   // answers depending on which endpoint field you read.
   const currentHolds = listGateAging(db, { minAgeDays: 0 }).filter(visible);
-  return ok({ projects, currentHolds }, 200, { count: projects.length });
+  // D6 (B-3): one aggregate killEval field per project row, over the
+  // project-scoped kill_criteria_evaluation ledger. Opportunity-type rows are
+  // always null — the ledger is project-keyed. No ledger rows and MNPI
+  // non-insider suppression both render null: the board shows "—", a
+  // non-claim, never a pass (honesty rule, DEC-20261111-02). The aggregate
+  // deliberately does NOT write data_access rows — see killEvalStates' comment.
+  const killEval = killEvalStates(db, {
+    projectIds: projects.map((p) => p.projectId),
+    viewerId: auth.auth.userId,
+  });
+  const withKillEval: Array<GateAgingRow & { killEval: KillEvalState | null }> = currentHolds.map((r) => ({
+    ...r,
+    killEval: r.entityType === "project" ? (killEval.get(r.entityId) ?? null) : null,
+  }));
+  return ok({ projects, currentHolds: withKillEval }, 200, { count: projects.length });
 }

@@ -1,54 +1,39 @@
 "use client";
 
-// CarrierGate — flat S1~S7 route → deal-carrier redirect (route-cleanup
-// follow-up design §4.2, docs/designs/2026-10-02-route-cleanup-followup-design.md).
-// Reuses the pattern proven in /route-decision/page.tsx: redirect when a deal
-// carrier is known, show a picker when it is not. Resolution rule:
-//   1. Query-string carrier — ?opportunity=<id> (or ?deal=<id> alias)
-//      redirects straight to /deals/<id>/sN, preserving all other query params.
-//   2. Auto-resolution — otherwise fetch in-progress opportunities per track:
-//      /greenfield → greenfield-track only, /brownfield → brownfield-track
-//      only, /market /opportunities /synergy → any track (S1~S3 precede track
-//      branching). status=selected or later (includePromoted=1, promoted
-//      projects included), deleted_at null, newest first.
-//   3. Exactly one carrier → router.replace to /deals/<id>/sN.
-//   4. Zero or multiple → picker in the /route-decision style
-//      (deal-pick-grid rows, real links, keyboard focus on the first row).
+// CarrierGate (internally: CarrierGatePicker) — flat S1~S7 route picker
+// (route-cleanup follow-up design §4.2; split by D5/B-2, design
+// 2026-11-11-admin-security-and-board-fixes §7). The AUTO-REDIRECT rules moved
+// to the server shell pages (Rule 1 query carrier, Rule 3 single-carrier
+// auto-redirect — see lib/carrier-resolve.ts): the server redirects before any
+// HTML is served, so this component no longer flashes a client fetch on those
+// paths. What stays client-side on purpose:
+//   - the picker (Rule 4 keyboard focus on the first row),
+//   - the zero-carrier embedded renders for market (MarketAnalysisStage) and
+//     opportunities (OpportunityFunnelStage) — the dead-loop fixes from
+//     pilot-009,
+//   - the exemption paths (?new=1, ?known_target=1), which render the working
+//     forms directly,
+//   - the keep-mounted stage frame for a single discovered carrier.
+// When the server could not resolve (exemption hit or no valid session) it
+// passes initialRows=null and this component fetches via the APIs as before —
+// behavior parity with the pre-D5 component, including the 401 error state for
+// session-less visits.
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api } from "../lib/api.ts";
 import { PageState, PrimaryAction } from "./ui.tsx";
 import { MarketAnalysisStage } from "./stages/MarketAnalysisStage.tsx";
 import { OpportunityFunnelStage } from "./stages/OpportunityFunnelStage.tsx";
 import { Breadcrumb } from "./Breadcrumb.tsx";
 import { StageFrame } from "./StageFrame.tsx";
-import type { StageMetaId } from "../lib/stage-meta.ts";
-
-export type FlatRouteKey = "market" | "opportunities" | "synergy" | "greenfield" | "brownfield";
-
-/** Flat route → deal-carrier stage tab (design §4.2 table). */
-export const FLAT_ROUTE_STAGE: Record<FlatRouteKey, string> = {
-  market: "s1",
-  opportunities: "s2",
-  synergy: "s3",
-  greenfield: "s5",
-  brownfield: "s6",
-};
-
-const STAGE_IDS_BY_ROUTE: Record<FlatRouteKey, StageMetaId | StageMetaId[]> = {
-  market: "S1",
-  opportunities: "S2",
-  synergy: "S3",
-  greenfield: "S5",
-  brownfield: ["S6", "S7"],
-};
-
-/** Track filter per flat route — undefined means any track (S1~S3). */
-const TRACK_BY_ROUTE: Partial<Record<FlatRouteKey, "greenfield" | "brownfield">> = {
-  greenfield: "greenfield",
-  brownfield: "brownfield",
-};
+import {
+  FLAT_ROUTE_STAGE,
+  STAGE_IDS_BY_ROUTE,
+  TRACK_BY_ROUTE,
+  type CarrierRow,
+  type FlatRouteKey,
+} from "../lib/carrier-resolve.ts";
 
 const TITLE_BY_ROUTE: Record<FlatRouteKey, string> = {
   market: "S1 시장분석",
@@ -96,19 +81,8 @@ const CREATE_BY_ROUTE: Record<FlatRouteKey, { label: string; href: string; hint:
   },
 };
 
-interface CarrierRow {
-  id: string;
-  name: string;
-  deleted_at: string | null;
-  attractiveness_score?: number | null;
-  synergy_score?: number | null;
-  target_count?: number;
-  shortlist_count?: number;
-}
-
-function dealHref(id: string, stage: string, extra: URLSearchParams): string {
-  const qs = extra.toString();
-  return `/deals/${encodeURIComponent(id)}/${stage}${qs ? `?${qs}` : ""}`;
+function dealHref(id: string, stage: string): string {
+  return `/deals/${encodeURIComponent(id)}/${stage}`;
 }
 
 function trackFiltered(track: "greenfield" | "brownfield"): Promise<CarrierRow[]> {
@@ -125,8 +99,7 @@ function anyTrack(): Promise<CarrierRow[]> {
     .then((r) => r.data.filter((o) => !o.deleted_at));
 }
 
-function CarrierGateInner({ route }: { route: FlatRouteKey }) {
-  const router = useRouter();
+function CarrierGatePicker({ route, initialRows }: { route: FlatRouteKey; initialRows: CarrierRow[] | null }) {
   const searchParams = useSearchParams();
   const stage = FLAT_ROUTE_STAGE[route];
   const carrierId = searchParams.get("opportunity") ?? searchParams.get("deal");
@@ -136,44 +109,25 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   // R2-A item 1: "새 시장분석 시작" / "새 기회 등록" land on the working form directly,
   // never on the deal picker and never auto-redirected into an unrelated deal.
   const startsNew = !carrierId && searchParams.get("new") === "1" && (route === "market" || route === "opportunities");
-  const [rows, setRows] = useState<CarrierRow[] | null>(null);
+  // The server shell passes its resolution result here; null means the server
+  // did not resolve (exemption hit or no valid session) and this component
+  // fetches as before.
+  const [rows, setRows] = useState<CarrierRow[] | null>(initialRows);
   const [error, setError] = useState<string | null>(null);
   const firstRowRef = useRef<HTMLAnchorElement | null>(null);
 
-  const redirectTarget = useCallback(
-    (id: string, moved = false) => {
-      const extra = new URLSearchParams(searchParams.toString());
-      extra.delete("opportunity");
-      extra.delete("deal");
-      // R2-A item 8: an automatic redirect is announced on the destination (AppShell notice).
-      if (moved) extra.set("moved", route);
-      return dealHref(id, stage, extra);
-    },
-    [searchParams, stage, route],
-  );
-
-  // Rule 1 — query-string carrier: redirect straight through, other params preserved.
-  useEffect(() => {
-    if (carrierId) router.replace(redirectTarget(carrierId));
-  }, [carrierId, redirectTarget, router]);
-
-  // Rule 2 — auto-resolution: fetch in-progress carriers per track.
+  // Client-fetch fallback only — never run when the server already resolved.
   const loadRows = useCallback(() => {
+    if (initialRows !== null) return;
     const track = TRACK_BY_ROUTE[route];
     const p = track ? trackFiltered(track) : anyTrack();
     p.then(setRows).catch((e) => setError(e instanceof Error ? e.message : "불러오기 실패"));
-  }, [route]);
+  }, [route, initialRows]);
 
   useEffect(() => {
-    if (carrierId) return;
+    if (initialRows !== null) return;
     loadRows();
-  }, [carrierId, loadRows]);
-
-  // Rule 3 — exactly one carrier: redirect (client-side router.replace).
-  useEffect(() => {
-    if (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew)
-      router.replace(redirectTarget(rows[0].id, true));
-  }, [rows, redirectTarget, router, startsKnownTarget, startsNew]);
+  }, [loadRows, initialRows]);
 
   // Rule 4 — picker fallback: keyboard focus lands on the first row.
   useEffect(() => {
@@ -212,9 +166,11 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
     );
   }
 
-  if (carrierId || (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew)) {
-    // Keep the destination's stage head + input/output strip mounted while the redirect resolves,
-    // so the strip does not blink out between the flat route and /deals/{id}/sN.
+  if (rows !== null && rows.length === 1 && !startsKnownTarget && !startsNew) {
+    // Single carrier discovered on the client-fetch fallback path: keep the
+    // destination's stage head + input/output strip mounted while the redirect
+    // resolves (the redirect itself is the server's — the shell pages own
+    // Rules 1 and 3), so the strip does not blink out.
     return (
       <main>
         <StageFrame stageId={STAGE_IDS_BY_ROUTE[route]} track={TRACK_BY_ROUTE[route]} />
@@ -261,7 +217,7 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
               <Link
                 key={o.id}
                 ref={i === 0 ? firstRowRef : undefined}
-                href={dealHref(o.id, stage, new URLSearchParams())}
+                href={dealHref(o.id, stage)}
                 className="deal-pick-card"
               >
                 <span className="deal-pick-card-title">{o.name}</span>
@@ -282,11 +238,12 @@ function CarrierGateInner({ route }: { route: FlatRouteKey }) {
   );
 }
 
-/** Suspense wrapper — useSearchParams requires one (same as /route-decision). */
-export function CarrierGate({ route }: { route: FlatRouteKey }) {
+/** Suspense wrapper — useSearchParams requires one (same as /route-decision).
+    Exported name stays CarrierGate so the five pages' import surface is stable. */
+export function CarrierGate({ route, initialRows }: { route: FlatRouteKey; initialRows: CarrierRow[] | null }) {
   return (
     <Suspense fallback={null}>
-      <CarrierGateInner route={route} />
+      <CarrierGatePicker route={route} initialRows={initialRows} />
     </Suspense>
   );
 }

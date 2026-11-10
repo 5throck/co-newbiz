@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Account/session engine ??Wave 5.5, docs/security/security-model.md 짠4,
  * ADR-0009 (PBKDF2 reuse), design v1.0 짠4-9.
@@ -14,9 +14,12 @@
  * Lockout: 5 consecutive failures lock the account for 30 minutes
  * (security-model 짠4). `locked` status and `locked_until` move together.
  *
- * Authentication trail: lockout AND successful login are both audited
- * (`account_locked` / `login`), so repudiation resistance does not depend
- * on which way the attempt went (logout is audited by app/server/auth.ts).
+ * Authentication trail: EVERY failed attempt is audited as `login_failed`
+ * (including unknown-id attempts — `actor_user_id` is FK-free TEXT, so the
+ * attempted id is recorded even when no account matches it), in addition to
+ * the lockout marker (`account_locked`) and the successful login (`login`),
+ * so repudiation resistance does not depend on which way the attempt went
+ * (logout is audited by app/server/auth.ts).
  *
  * Agents have no accounts (FR-SEC-08): every userId here refers to a human.
  */
@@ -99,7 +102,18 @@ export async function createUser(db: Database, rawOpts: CreateUserOptions): Prom
     `INSERT INTO app_user (id, user_id, display_name, role, status, password_salt, password_hash,
                            password_iterations, must_change_password, wall_group, created_at)
      VALUES (?,?,?,?,?,?,?,?,1,?,?)`,
-    [ulid(), opts.userId, opts.displayName ?? null, opts.role, "pending", hashed.salt, hashed.hash, hashed.iterations, opts.wallGroup ?? null, opts.now],
+    [
+      ulid(),
+      opts.userId,
+      opts.displayName ?? null,
+      opts.role,
+      "pending",
+      hashed.salt,
+      hashed.hash,
+      hashed.iterations,
+      opts.wallGroup ?? null,
+      opts.now,
+    ],
   );
   appendAudit(db, { actor: opts.createdBy, action: "account_create", target: opts.userId, now: opts.now });
 }
@@ -132,12 +146,10 @@ export interface ApproveUserOptions {
 
 /** pending -> active. The approver is recorded on the row and in the audit log. */
 export function approveUser(db: Database, opts: ApproveUserOptions): void {
-  const res = db
-    .run("UPDATE app_user SET status = 'active', approved_by = ?, approved_at = ? WHERE user_id = ? AND status = 'pending'", [
-      opts.approvedBy,
-      opts.now,
-      opts.userId,
-    ]);
+  const res = db.run(
+    "UPDATE app_user SET status = 'active', approved_by = ?, approved_at = ? WHERE user_id = ? AND status = 'pending'",
+    [opts.approvedBy, opts.now, opts.userId],
+  );
   if (res.changes === 0) {
     throw new Error(`'${opts.userId}' is not a pending account.`);
   }
@@ -157,25 +169,44 @@ export interface AuthenticateOptions {
 /**
  * Verify credentials and issue a session. Failure accounting:
  *   - unknown user / wrong password -> identical `invalid_credentials`
- *     (existence is not leaked);
- *   - 5th consecutive failure locks for 30 minutes;
- *   - a successful login clears the counter.
+ *     (existence is not leaked), and EVERY failure is audited `login_failed`
+ *     with the attempted id as both actor and target (design
+ *     2026-11-11-admin-security-and-board-fixes §5 / SR2-min) — the
+ *     audit-trail row must exist even when no account row does, so password
+ *     sprays against non-existent ids leave a trace;
+ *   - 5th consecutive failure locks for 30 minutes (audited `account_locked`
+ *     IN ADDITION TO the `login_failed` row, never instead of);
+ *   - a successful login clears the counter (audited `login`).
  */
 export async function authenticate(db: Database, rawOpts: AuthenticateOptions): Promise<AuthenticateResult> {
   // Surrounding whitespace on the user id is a typing/paste artifact; the
   // password is never trimmed (spaces may be intentional). Ids stay
   // case-sensitive.
   const opts = { ...rawOpts, userId: rawOpts.userId.trim() };
-  const row = db
-    .query("SELECT * FROM app_user WHERE user_id = ?")
-    .get(opts.userId) as (StoredHash & {
-      user_id: string; status: string; must_change_password: number; failed_attempts: number; locked_until: string | null;
-    }) | null;
+  const row = db.query("SELECT * FROM app_user WHERE user_id = ?").get(opts.userId) as
+    | (StoredHash & {
+        user_id: string;
+        status: string;
+        must_change_password: number;
+        failed_attempts: number;
+        locked_until: string | null;
+      })
+    | null;
 
-  if (!row) return { ok: false, reason: "invalid_credentials" };
-  if (row.status === "disabled") return { ok: false, reason: "disabled" };
-  if (row.status === "pending") return { ok: false, reason: "pending_approval" };
+  if (!row) {
+    appendAudit(db, { actor: opts.userId, action: "login_failed", target: opts.userId, now: opts.now });
+    return { ok: false, reason: "invalid_credentials" };
+  }
+  if (row.status === "disabled") {
+    appendAudit(db, { actor: opts.userId, action: "login_failed", target: opts.userId, now: opts.now });
+    return { ok: false, reason: "disabled" };
+  }
+  if (row.status === "pending") {
+    appendAudit(db, { actor: opts.userId, action: "login_failed", target: opts.userId, now: opts.now });
+    return { ok: false, reason: "pending_approval" };
+  }
   if (row.locked_until && row.locked_until > opts.now) {
+    appendAudit(db, { actor: opts.userId, action: "login_failed", target: opts.userId, now: opts.now });
     return { ok: false, reason: "locked", lockedUntil: row.locked_until };
   }
 
@@ -184,16 +215,24 @@ export async function authenticate(db: Database, rawOpts: AuthenticateOptions): 
     const attempts = row.failed_attempts + 1;
     if (attempts >= MAX_FAILED_ATTEMPTS) {
       const until = lockoutDeadline(opts.now);
-      db.run("UPDATE app_user SET failed_attempts = ?, locked_until = ?, status = 'locked' WHERE user_id = ?", [attempts, until, opts.userId]);
+      db.run("UPDATE app_user SET failed_attempts = ?, locked_until = ?, status = 'locked' WHERE user_id = ?", [
+        attempts,
+        until,
+        opts.userId,
+      ]);
       appendAudit(db, { actor: opts.userId, action: "account_locked", target: opts.userId, now: opts.now });
+      appendAudit(db, { actor: opts.userId, action: "login_failed", target: opts.userId, now: opts.now });
       return { ok: false, reason: "locked", lockedUntil: until };
     }
     db.run("UPDATE app_user SET failed_attempts = ? WHERE user_id = ?", [attempts, opts.userId]);
+    appendAudit(db, { actor: opts.userId, action: "login_failed", target: opts.userId, now: opts.now });
     return { ok: false, reason: "invalid_credentials" };
   }
 
   // Success clears the failure slate (also unlocks an expired lockout).
-  db.run("UPDATE app_user SET failed_attempts = 0, locked_until = NULL, status = 'active' WHERE user_id = ?", [opts.userId]);
+  db.run("UPDATE app_user SET failed_attempts = 0, locked_until = NULL, status = 'active' WHERE user_id = ?", [
+    opts.userId,
+  ]);
   const session = issueSession(db, { userId: opts.userId, now: opts.now });
   appendAudit(db, { actor: opts.userId, action: "login", target: session.sessionId, now: opts.now });
   return { ok: true, mustChangePassword: row.must_change_password === 1, session };
@@ -210,10 +249,13 @@ export function issueSession(db: Database, opts: { userId: string; now: string }
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const expiresAt = sessionExpiry(opts.now);
   const sessionId = ulid();
-  db.run(
-    "INSERT INTO session (id, user_id, token_hash, created_at, expires_at) VALUES (?,?,?,?,?)",
-    [sessionId, opts.userId, tokenHash, opts.now, expiresAt],
-  );
+  db.run("INSERT INTO session (id, user_id, token_hash, created_at, expires_at) VALUES (?,?,?,?,?)", [
+    sessionId,
+    opts.userId,
+    tokenHash,
+    opts.now,
+    expiresAt,
+  ]);
   return { token, expiresAt, sessionId };
 }
 
@@ -233,23 +275,35 @@ export function validateSession(db: Database, token: string, now: string): Valid
        FROM session s JOIN app_user u ON u.user_id = s.user_id
        WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > ?`,
     )
-    .get(tokenHash, now) as { session_id: string; user_id: string; role: UserRole; must_change_password: number; status: string } | null;
-  if (!row || row.status !== "active") return null;
-  return { userId: row.user_id, role: row.role, mustChangePassword: row.must_change_password === 1, sessionId: row.session_id };
+    .get(tokenHash, now) as {
+    session_id: string;
+    user_id: string;
+    role: UserRole;
+    must_change_password: number;
+    status: string;
+  } | null;
+  if (row?.status !== "active") return null;
+  return {
+    userId: row.user_id,
+    role: row.role,
+    mustChangePassword: row.must_change_password === 1,
+    sessionId: row.session_id,
+  };
 }
 
 export function revokeSessions(db: Database, opts: { userId: string; exceptSessionId?: string; now: string }): number {
-  const res = db
-    .run("UPDATE session SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL AND id != ?", [
-      opts.now,
-      opts.userId,
-      opts.exceptSessionId ?? "",
-    ]);
+  const res = db.run("UPDATE session SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL AND id != ?", [
+    opts.now,
+    opts.userId,
+    opts.exceptSessionId ?? "",
+  ]);
   return res.changes;
 }
 
 async function isPasswordReused(db: Database, userId: string, candidate: string): Promise<boolean> {
-  const current = db.query("SELECT password_salt, password_hash, password_iterations FROM app_user WHERE user_id = ?").get(userId) as StoredHash | null;
+  const current = db
+    .query("SELECT password_salt, password_hash, password_iterations FROM app_user WHERE user_id = ?")
+    .get(userId) as StoredHash | null;
   if (current && (await verifyPasswordSafe(candidate, current))) return true;
   const history = db
     .query("SELECT password_salt, password_hash, password_iterations FROM password_history WHERE user_id = ?")
@@ -260,11 +314,17 @@ async function isPasswordReused(db: Database, userId: string, candidate: string)
   return false;
 }
 
-function persistNewPassword(db: Database, userId: string, hashed: { salt: string; hash: string; iterations: number }): void {
-  db.run(
-    "UPDATE app_user SET password_salt = ?, password_hash = ?, password_iterations = ? WHERE user_id = ?",
-    [hashed.salt, hashed.hash, hashed.iterations, userId],
-  );
+function persistNewPassword(
+  db: Database,
+  userId: string,
+  hashed: { salt: string; hash: string; iterations: number },
+): void {
+  db.run("UPDATE app_user SET password_salt = ?, password_hash = ?, password_iterations = ? WHERE user_id = ?", [
+    hashed.salt,
+    hashed.hash,
+    hashed.iterations,
+    userId,
+  ]);
 }
 
 function archiveCurrentPassword(db: Database, userId: string, current: StoredHash, now: string): void {
@@ -306,7 +366,9 @@ export async function changePassword(db: Database, opts: ChangePasswordOptions):
   const issued = db.transaction(() => {
     archiveCurrentPassword(db, opts.userId, row, opts.now);
     persistNewPassword(db, opts.userId, hashed);
-    db.run("UPDATE app_user SET must_change_password = 0, failed_attempts = 0, locked_until = NULL WHERE user_id = ?", [opts.userId]);
+    db.run("UPDATE app_user SET must_change_password = 0, failed_attempts = 0, locked_until = NULL WHERE user_id = ?", [
+      opts.userId,
+    ]);
     revokeSessions(db, { userId: opts.userId, now: opts.now });
     const session = issueSession(db, { userId: opts.userId, now: opts.now });
     appendAudit(db, { actor: opts.userId, action: "password_change", target: opts.userId, now: opts.now });
@@ -332,14 +394,18 @@ export interface ResetPasswordOptions {
 export async function resetPassword(db: Database, opts: ResetPasswordOptions): Promise<void> {
   const row = db.query("SELECT status FROM app_user WHERE user_id = ?").get(opts.userId) as { status: string } | null;
   if (!row) throw new Error(`User '${opts.userId}' does not exist.`);
-  if (row.status === "disabled") throw new Error("A disabled account cannot be reset ??re-enable it first (separate audited decision).");
+  if (row.status === "disabled")
+    throw new Error("A disabled account cannot be reset ??re-enable it first (separate audited decision).");
   if (opts.tempPassword.length < MIN_PASSWORD_LENGTH) {
     throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
   const hashed = await hashPassword(opts.tempPassword);
   db.transaction(() => {
     persistNewPassword(db, opts.userId, hashed);
-    db.run("UPDATE app_user SET must_change_password = 1, failed_attempts = 0, locked_until = NULL, status = 'active' WHERE user_id = ?", [opts.userId]);
+    db.run(
+      "UPDATE app_user SET must_change_password = 1, failed_attempts = 0, locked_until = NULL, status = 'active' WHERE user_id = ?",
+      [opts.userId],
+    );
     revokeSessions(db, { userId: opts.userId, now: opts.now });
     appendAudit(db, { actor: opts.resetBy, action: "password_reset", target: opts.userId, now: opts.now });
   })();
@@ -389,7 +455,11 @@ export function deleteUser(db: Database, opts: { userId: string; deletedBy: stri
     db.run("UPDATE api_token SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL", [now, userId]);
     db.run("DELETE FROM oauth_code WHERE user_id = ?", [userId]);
     db.run("UPDATE oauth_client SET registered_by_user_id = NULL WHERE registered_by_user_id = ?", [userId]);
-    db.run("UPDATE app_user_human_role SET revoked_at = ?, revoked_by = ? WHERE user_id = ? AND revoked_at IS NULL", [now, deletedBy, userId]);
+    db.run("UPDATE app_user_human_role SET revoked_at = ?, revoked_by = ? WHERE user_id = ? AND revoked_at IS NULL", [
+      now,
+      deletedBy,
+      userId,
+    ]);
     db.run("UPDATE share_link SET revoked_at = ? WHERE created_by = ? AND revoked_at IS NULL", [now, userId]);
 
     // Credentials and sessions of a deleted account have no audit value; the

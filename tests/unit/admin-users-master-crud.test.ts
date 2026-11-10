@@ -38,7 +38,11 @@ let analystCookie: string;
 let viewerCookie: string;
 
 beforeAll(async () => {
-  for (const [userId, role] of [["root", "admin"], ["alice", "analyst"], ["bob", "viewer"]] as const) {
+  for (const [userId, role] of [
+    ["root", "admin"],
+    ["alice", "analyst"],
+    ["bob", "viewer"],
+  ] as const) {
     await createUser(db, { userId, role, password: PASSWORDS[userId], createdBy: "test", now: NOW });
     approveUser(db, { userId, approvedBy: "test", now: NOW });
   }
@@ -61,16 +65,19 @@ afterAll(async () => {
 });
 
 async function errCode(res: Response): Promise<string | undefined> {
-  const body = (await res.clone().json().catch(() => null)) as { error?: { code?: string } } | null;
+  const body = (await res
+    .clone()
+    .json()
+    .catch(() => null)) as { error?: { code?: string } } | null;
   return body?.error?.code;
 }
 const get = (path: string, cookie: string) => req(path, { headers: { cookie } });
 
-
 const json = (cookie: string | null, method: string, path: string, payload: unknown) =>
   req(path, { method, headers: cookie ? { cookie } : {}, body: JSON.stringify(payload) });
 const auditCount = (action: string, target: string): number =>
-  (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = ? AND target = ?").get(action, target) as { n: number }).n;
+  (db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = ? AND target = ?").get(action, target) as { n: number })
+    .n;
 
 describe("PUT /api/admin/users/:userId set_display_name", () => {
   const path = "/api/admin/users/alice";
@@ -91,7 +98,10 @@ describe("PUT /api/admin/users/:userId set_display_name", () => {
     expect((await json(adminCookie, "PUT", path, { action: "set_display_name" })).status).toBe(400);
   });
   test("404 for an unknown user", async () => {
-    expect((await json(adminCookie, "PUT", "/api/admin/users/nobody", { action: "set_display_name", display_name: "X" })).status).toBe(404);
+    expect(
+      (await json(adminCookie, "PUT", "/api/admin/users/nobody", { action: "set_display_name", display_name: "X" }))
+        .status,
+    ).toBe(404);
   });
   test("200 updates the name and writes an audit row", async () => {
     const res = await json(adminCookie, "PUT", path, { action: "set_display_name", display_name: "  Alice K  " });
@@ -105,10 +115,14 @@ describe("PUT /api/admin/users/:userId set_display_name", () => {
 describe("master-data PUT / DELETE", () => {
   const MD = "/api/admin/master-data";
   test("setup: admin adds a currency code", async () => {
-    expect((await json(adminCookie, "POST", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "XTS" } })).status).toBe(201);
+    expect(
+      (await json(adminCookie, "POST", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "XTS" } })).status,
+    ).toBe(201);
   });
   test("401 without a session, 403 for non-admin", async () => {
-    expect((await json(null, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "USD" } })).status).toBe(401);
+    expect(
+      (await json(null, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "USD" } })).status,
+    ).toBe(401);
     for (const method of ["PUT", "DELETE"]) {
       for (const cookie of [analystCookie, viewerCookie]) {
         const res = await json(cookie, method, MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "USD" } });
@@ -119,17 +133,112 @@ describe("master-data PUT / DELETE", () => {
   });
   test("400 for unknown table, missing id, no editable fields, missing row", async () => {
     expect((await json(adminCookie, "PUT", MD, { table: "app_user", id: "x", fields: { a: 1 } })).status).toBe(400);
-    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", fields: { iso_code: "USD" } })).status).toBe(400);
-    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { bogus: "x" } })).status).toBe(400);
-    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", id: "NOPE", fields: { iso_code: "USD" } })).status).toBe(400);
+    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", fields: { iso_code: "USD" } })).status).toBe(
+      400,
+    );
+    expect(
+      (await json(adminCookie, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { bogus: "x" } })).status,
+    ).toBe(400);
+    expect(
+      (await json(adminCookie, "PUT", MD, { table: "md_currency", id: "NOPE", fields: { iso_code: "USD" } })).status,
+    ).toBe(400);
     expect((await json(adminCookie, "DELETE", MD, { table: "md_currency", id: "NOPE" })).status).toBe(400);
   });
   test("200 PUT updates the row and audits; DELETE removes it and audits", async () => {
-    expect((await json(adminCookie, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "XTU" } })).status).toBe(200);
-    expect((db.query("SELECT iso_code FROM md_currency WHERE id = 'CUR1'").get() as { iso_code: string }).iso_code).toBe("XTU");
+    expect(
+      (await json(adminCookie, "PUT", MD, { table: "md_currency", id: "CUR1", fields: { iso_code: "XTU" } })).status,
+    ).toBe(200);
+    expect(
+      (db.query("SELECT iso_code FROM md_currency WHERE id = 'CUR1'").get() as { iso_code: string }).iso_code,
+    ).toBe("XTU");
     expect(auditCount("master_data_update", "md_currency:CUR1")).toBe(1);
     expect((await json(adminCookie, "DELETE", MD, { table: "md_currency", id: "CUR1" })).status).toBe(200);
     expect(db.query("SELECT id FROM md_currency WHERE id = 'CUR1'").get()).toBeNull();
     expect(auditCount("master_data_delete", "md_currency:CUR1")).toBe(1);
+  });
+});
+
+describe("POST /api/admin/users — CSPRNG initial password (D1/C-1)", () => {
+  test("without a supplied password the initial_password is the CSPRNG shape and authenticates", async () => {
+    const res = await json(adminCookie, "POST", "/api/admin/users", { user_id: "csp1", role: "viewer" });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { data: { user_id: string; initial_password: string } };
+    expect(body.data.user_id).toBe("csp1");
+    expect(body.data.initial_password).toMatch(/^tmp-[a-z0-9]{8}!A$/);
+    // The generated credential must actually log the account in.
+    const login = await req("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ userId: "csp1", password: body.data.initial_password }),
+    });
+    expect(login.status).toBe(200);
+    expect(((await login.json()) as { data: { mustChangePassword: boolean } }).data.mustChangePassword).toBe(true);
+  });
+
+  test("an admin-supplied password (>= 8 chars) is honored verbatim (branch unchanged)", async () => {
+    const res = await json(adminCookie, "POST", "/api/admin/users", {
+      user_id: "csp2",
+      role: "viewer",
+      password: "admin-chosen-99",
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { data: { initial_password: string } };
+    expect(body.data.initial_password).toBe("admin-chosen-99");
+  });
+});
+
+describe("PUT reset_password — CSPRNG temporary password (D1/C-1)", () => {
+  test("without temporary_password the response carries the CSPRNG shape and authenticates", async () => {
+    const res = await json(adminCookie, "PUT", "/api/admin/users/csp1", { action: "reset_password" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { temporary_password: string; must_change_password: boolean } };
+    expect(body.data.must_change_password).toBe(true);
+    expect(body.data.temporary_password).toMatch(/^tmp-[a-z0-9]{8}!A$/);
+    const login = await req("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ userId: "csp1", password: body.data.temporary_password }),
+    });
+    expect(login.status).toBe(200);
+  });
+});
+
+describe("failed-login auditing via the login route (D3/SR2-min)", () => {
+  // Unique per-request xff addresses keep these deliberate failures out of
+  // the shared per-process throttle map's "direct" bucket.
+  let addr = 0;
+  const login = (userId: string, password: string) =>
+    req("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ userId, password }),
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": `10.98.${Math.floor(addr / 250)}.${(addr++ % 250) + 1}`,
+      },
+    });
+
+  test("three wrong-password attempts then a nonexistent-id attempt → four login_failed audit rows", async () => {
+    await createUser(db, {
+      userId: "crud-fail",
+      role: "viewer",
+      password: "pw-crud-12345",
+      createdBy: "test",
+      now: NOW,
+    });
+    approveUser(db, { userId: "crud-fail", approvedBy: "test", now: NOW });
+    for (let i = 0; i < 3; i++) expect((await login("crud-fail", `wrong-${i}`)).status).toBe(401);
+    const ghost = await login("crud-ghost", "whatever-123");
+    expect(ghost.status).toBe(401);
+    expect(((await ghost.json()) as { error: { code: string } }).error.code).toBe("invalid_credentials");
+
+    const res = await get("/api/admin/audit-log?action=login_failed", adminCookie);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { actor_user_id: string; action: string; target: string }[] };
+    const mine = body.data.filter((r) => r.target === "crud-fail" || r.target === "crud-ghost");
+    expect(mine).toHaveLength(4);
+    for (const row of mine) {
+      expect(row.action).toBe("login_failed");
+      expect(row.actor_user_id).toBe(row.target); // attempted id is both actor and target
+    }
+    // The nonexistent id left an audit trail without creating an account.
+    expect(db.query("SELECT 1 FROM app_user WHERE user_id = 'crud-ghost'").get()).toBeNull();
   });
 });

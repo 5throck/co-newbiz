@@ -17,8 +17,27 @@ import { gateHoldHref } from "../../lib/inbox.ts";
 import { buildCardChips } from "../../lib/deal-card-label.ts";
 
 // 진행 에이징 표 열 비율(2026-10-11-table-column-sizing-system batch 2) —
-// 안건명이 본문, 게이트·결정·날짜·경과 열은 좁게.
-const AGING_COL_PCT = [32, 16, 14, 20, 18] as const;
+// 안건명이 본문, 게이트·결정·KILL 평가·날짜·경과 열은 좁게. D6 (B-3)에서
+// KILL 평가 열이 결정과 결정일 사이에 추가되어 재배분했다.
+const AGING_COL_PCT = [28, 14, 12, 16, 14, 16] as const;
+
+type KillEvalState = "triggered" | "false" | "unassessed";
+
+// D6 (B-3) — kill-evaluation chip. Text-carried state (accessibility): the
+// label carries the meaning, the class only reuses the existing status tokens.
+// Honesty rule (DEC-mandated): "unassessed" is amber + explicit text, NEVER a
+// green/pass class; null (no ledger / MNPI non-insider suppression) renders
+// "—" — a non-claim, not a pass.
+const KILL_EVAL_CHIP_CLASS: Record<KillEvalState, string> = {
+  triggered: "status-red",
+  false: "status-not-started",
+  unassessed: "status-amber",
+};
+const KILL_EVAL_LABEL_KEY: Record<KillEvalState, string> = {
+  triggered: "pages.deals.killEval.triggered",
+  false: "pages.deals.killEval.evaluatedFalse",
+  unassessed: "pages.deals.killEval.unassessed",
+};
 
 interface PipelineProject {
   projectId: string;
@@ -38,6 +57,8 @@ interface AgingRow {
   decision: string;
   decidedAt: string;
   ageDays: number;
+  /** D6 (B-3): kill-criteria evaluation state (project rows only; null = no ledger row or MNPI-suppressed → "—"). */
+  killEval?: KillEvalState | null;
 }
 interface PipelineView {
   projects: PipelineProject[];
@@ -58,7 +79,26 @@ interface OpportunityRow {
 type Track = "greenfield" | "brownfield";
 // i18n: track chips resolve through common.track.* catalog keys at render
 // time (/projects keeps its own Korean TRACK_LABEL until its extraction batch).
-const TRACK_KEY: Record<Track, string> = { greenfield: "common.track.greenfield", brownfield: "common.track.brownfield" };
+const TRACK_KEY: Record<Track, string> = {
+  greenfield: "common.track.greenfield",
+  brownfield: "common.track.brownfield",
+};
+
+// Module scope so the board's cards useMemo can hold a stable reference
+// (component-scope closures would defeat the memo and trip
+// useExhaustiveDependencies). Pure — no state or translator captured.
+const stageOf = (o: OpportunityRow): string => {
+  if (o.status === "identified") return "S2";
+  if (o.status === "assessed") return "S3";
+  if (o.status === "selected") return "S4";
+  return "—";
+};
+const waitingKeyFor = (o: OpportunityRow): string =>
+  o.project_id
+    ? "pages.deals.waitingPromoted"
+    : o.route_decided
+      ? "pages.deals.waitingRouteDecided"
+      : "pages.deals.waitingS4";
 
 type CardTone = "gray" | "amber" | "green";
 type Card = {
@@ -101,14 +141,26 @@ function DealsBoard() {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch is keyed on the admin gate — t is only read in the error fallback; adding the translator would refetch on translator identity churn
   const load = useCallback(() => {
-    api.get<PipelineView>("/api/portfolio/pipeline").then((r) => setData(r.data)).catch((e) => setError(e instanceof Error ? e.message : t("pages.deals.loadFailed")));
+    api
+      .get<PipelineView>("/api/portfolio/pipeline")
+      .then((r) => setData(r.data))
+      .catch((e) => setError(e instanceof Error ? e.message : t("pages.deals.loadFailed")));
     // /api/opportunities is a business route (requireBusinessActor) that answers 403 for the
     // admin role (ADR-0091/0146); admin lands here via "/" but has no opportunity list to show.
-    if (isAdmin) { setOpps([]); return; }
-    api.get<OpportunityRow[]>("/api/opportunities").then((r) => setOpps(r.data)).catch(() => setOpps([]));
+    if (isAdmin) {
+      setOpps([]);
+      return;
+    }
+    api
+      .get<OpportunityRow[]>("/api/opportunities")
+      .then((r) => setOpps(r.data))
+      .catch(() => setOpps([]));
   }, [isAdmin]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Paused-pipeline banners (ADR-0102 deep links): fetched only for board-size
   // N once the list arrives. Keyed by the run's current carrier (entity_id) so
@@ -117,26 +169,24 @@ function DealsBoard() {
     if (!opps) return;
     const targets = opps.filter((o) => o.status !== "dropped");
     for (const o of targets) {
-      api.get<{ status: string; entity_id: string; paused_reason: string | null; deep_link: string | null }>(`/api/opportunities/${encodeURIComponent(o.id)}/pipeline/status`)
+      api
+        .get<{ status: string; entity_id: string; paused_reason: string | null; deep_link: string | null }>(
+          `/api/opportunities/${encodeURIComponent(o.id)}/pipeline/status`,
+        )
         .then((r) => {
           // status "none" = 아직 파이프라인 실행 없음(정상 상태) — 배너 없이 무시
           if (r.data.status === "none") return;
           if (r.data.status === "paused_for_human" && r.data.paused_reason) {
-            setPaused((prev) => ({ ...prev, [r.data.entity_id]: { reason: r.data.paused_reason as string, link: r.data.deep_link } }));
+            setPaused((prev) => ({
+              ...prev,
+              [r.data.entity_id]: { reason: r.data.paused_reason as string, link: r.data.deep_link },
+            }));
           }
         })
         .catch(() => undefined);
     }
   }, [opps]);
 
-  const stageOf = (o: OpportunityRow): string => {
-    if (o.status === "identified") return "S2";
-    if (o.status === "assessed") return "S3";
-    if (o.status === "selected") return "S4";
-    return "—";
-  };
-  const waitingKeyFor = (o: OpportunityRow): string =>
-    o.project_id ? "pages.deals.waitingPromoted" : o.route_decided ? "pages.deals.waitingRouteDecided" : "pages.deals.waitingS4";
   const stageNum = (s: string) => (s.startsWith("S") ? Number(s.slice(1)) : 99);
 
   // 검토/안건(기회) 단위 HOLD — /deals의 "HOLD" 필터와 같은 출처
@@ -169,14 +219,19 @@ function DealsBoard() {
         const hold = holdGates.length > 0;
         const chips = buildCardChips(stage, holdGates, o.status === "selected" ? t(waitingKeyFor(o)) : undefined);
         return {
-          kind: "opportunity", id: o.id, name: o.name, queryText: o.name, stage,
+          kind: "opportunity",
+          id: o.id,
+          name: o.name,
+          queryText: o.name,
+          stage,
           // "대기"(자연스러운 다음 단계 대기)와 "HOLD"(게이트에서 명시적으로
           // 내린 보류 결정)는 서로 다른 개념이다 — 둘 다 amber로 칠하면
           // 구분이 안 된다(2026-09-15 사용자 리포트). HOLD만 amber, 단순
           // 대기는 gray.
           ...chips,
           tone: "gray",
-          hold, track: null,
+          hold,
+          track: null,
           meta: t("pages.deals.metaScores", { p1: o.attractiveness_score ?? "—", p2: o.synergy_score ?? "—" }),
           href: opportunityStatusHref(o.id, o.status),
         };
@@ -185,32 +240,44 @@ function DealsBoard() {
     for (const o of opps ?? []) if (o.project_id) oppByProject.set(o.project_id, o.id);
     const projectCards: Card[] = (data?.projects ?? []).map((p): Card => {
       const stage = p.currentStage ?? "S8";
-      const holdGates = Object.entries(p.gates).filter(([, v]) => v === "hold").map(([g]) => g);
+      const holdGates = Object.entries(p.gates)
+        .filter(([, v]) => v === "hold")
+        .map(([g]) => g);
       const hold = holdGates.length > 0;
       const chips = buildCardChips(stage, holdGates);
       const track: Track | null = p.track === "greenfield" || p.track === "brownfield" ? p.track : null;
+      const sourceOppId = oppByProject.get(p.projectId);
       return {
-        kind: "project", id: p.projectId, name: p.projectName ?? p.projectNo, queryText: `${p.projectName ?? ""} ${p.projectNo}`, stage,
+        kind: "project",
+        id: p.projectId,
+        name: p.projectName ?? p.projectNo,
+        queryText: `${p.projectName ?? ""} ${p.projectNo}`,
+        stage,
         ...chips,
         tone: stage === "S12" ? "green" : "gray",
-        hold, track,
+        hold,
+        track,
         meta: p.projectNo,
         href: projectStageHref(p.projectId, stage),
-        sourceHref: oppByProject.has(p.projectId) ? `/deals/${encodeURIComponent(oppByProject.get(p.projectId)!)}/s4` : undefined,
+        sourceHref: sourceOppId ? `/deals/${encodeURIComponent(sourceOppId)}/s4` : undefined,
       };
     });
     return [...oppCards, ...projectCards];
-  }, [opps, data, opportunityHolds]);
+  }, [opps, data, opportunityHolds, t]);
 
   const pausedIds = useMemo(() => new Set(Object.keys(paused)), [paused]);
 
   const matches = useCallback(
     (c: Card, f: FilterKey) =>
-      f === "all" ? true
-        : f === "greenfield" ? c.track === "greenfield"
-        : f === "brownfield" ? c.track === "brownfield"
-        : f === "gate" ? c.hold
-        : pausedIds.has(c.id),
+      f === "all"
+        ? true
+        : f === "greenfield"
+          ? c.track === "greenfield"
+          : f === "brownfield"
+            ? c.track === "brownfield"
+            : f === "gate"
+              ? c.hold
+              : pausedIds.has(c.id),
     [pausedIds],
   );
 
@@ -232,7 +299,11 @@ function DealsBoard() {
     { titleKey: "pages.deals.colReviewPost", test: (n: number) => n >= 11 },
   ];
 
-  const stageTone: Record<CardTone, string> = { gray: "status-not-started", amber: "status-amber", green: "status-green" };
+  const stageTone: Record<CardTone, string> = {
+    gray: "status-not-started",
+    amber: "status-amber",
+    green: "status-green",
+  };
 
   return (
     <main>
@@ -240,7 +311,9 @@ function DealsBoard() {
         <h1>{t("pages.deals.h1")}</h1>
         <span className="ml-auto">
           <PrimaryAction inline href="/market?new=1" label={t("pages.deals.newDealCta")} />
-          <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">{t("pages.deals.knownTargetCta")}</Link>
+          <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">
+            {t("pages.deals.knownTargetCta")}
+          </Link>
         </span>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
@@ -250,12 +323,15 @@ function DealsBoard() {
       <nav aria-label={t("pages.deals.shortcutsNav")} className="flex flex-wrap items-center gap-1 mb-3">
         <span className="section-meta">{t("pages.deals.shortcutsLabel")}</span>
         {SHORTCUTS.map(([href, labelKey]) => (
-          <Link key={href} href={href} className="btn-ghost btn-sm">{t(labelKey)}</Link>
+          <Link key={href} href={href} className="btn-ghost btn-sm">
+            {t(labelKey)}
+          </Link>
         ))}
       </nav>
 
       <SectionToolbar
         filters={
+          // biome-ignore lint/a11y/useSemanticElements: filter chip group — a fieldset would change the toolbar DOM/styling shared across board sections
           <span role="group" aria-label={t("pages.deals.filterGroup")} className="flex flex-wrap items-center gap-1">
             <span className="section-meta">{t("pages.deals.filterLabel")}</span>
             {FILTERS.map(([k, labelKey]) => (
@@ -267,16 +343,40 @@ function DealsBoard() {
         }
         actions={
           <span className="flex items-center gap-1">
-            <input ref={searchRef} aria-label={t("pages.deals.searchAria")} placeholder={t("pages.deals.searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)}
-              className="sizing-new-input sizing-new-input-sm" style={{ width: 160 }} />
+            <input
+              ref={searchRef}
+              aria-label={t("pages.deals.searchAria")}
+              placeholder={t("pages.deals.searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="sizing-new-input sizing-new-input-sm"
+              style={{ width: 160 }}
+            />
             <button type="button" className="btn-ghost btn-sm" onClick={() => searchRef.current?.focus()}>
-              <svg className="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg> {t("pages.deals.searchCta")}
+              <svg
+                className="ic"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>{" "}
+              {t("pages.deals.searchCta")}
             </button>
           </span>
         }
       />
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)]">
+          {error}
+        </p>
+      )}
       {!data && !error && <PageState state="loading" rows={4} />}
 
       {data && (opps ?? []).filter((o) => o.status !== "dropped").length === 0 && data.projects.length === 0 && (
@@ -285,7 +385,11 @@ function DealsBoard() {
           <p className="text-[length:var(--fs-caption)]" style={{ margin: "0 0 var(--space-2)" }}>
             {t("pages.deals.emptyBody")}
           </p>
-          <Link href="/onboarding" className="btn-ghost btn-sm" style={{ textDecoration: "none", display: "inline-block" }}>
+          <Link
+            href="/onboarding"
+            className="btn-ghost btn-sm"
+            style={{ textDecoration: "none", display: "inline-block" }}
+          >
             {t("pages.deals.emptyCta")}
           </Link>
         </div>
@@ -299,36 +403,57 @@ function DealsBoard() {
               const colTitle = t(col.titleKey);
               return (
                 <section key={col.titleKey} className="funnel-col" aria-label={colTitle}>
-                  <h3>{colTitle} <span className="funnel-count tabular-nums">{colCards.length}</span></h3>
+                  <h3>
+                    {colTitle} <span className="funnel-count tabular-nums">{colCards.length}</span>
+                  </h3>
                   <div className="funnel-cards">
                     {colCards.map((c) => {
                       const p = paused[c.id];
                       return (
                         <div key={c.id}>
-                        <Link href={c.href} className="funnel-card" style={{ color: "inherit", textDecoration: "none" }}>
-                          <span className="funnel-card-name font-semibold">{c.name}</span>
-                          <span className="funnel-card-meta">
-                            <span className={`status-chip ${stageTone[c.tone]}`}>{c.stageLabel}</span>
-                            {c.holdLabelKeys && <span className="status-chip status-amber">{c.holdLabelKeys.map((k) => t(k)).join("·")} HOLD</span>}
-                            {c.track ? (
-                              <span className={`status-chip ${c.track === "greenfield" ? "status-green" : "status-amber"}`}>{t(TRACK_KEY[c.track])}</span>
-                            ) : c.kind === "project" ? (
-                              <span className="status-chip status-not-started">{t("pages.deals.trackUndecided")}</span>
-                            ) : null}
-                            <span>{c.meta}</span>
-                          </span>
-                          {p && (
-                            <span className="funnel-card-meta" style={{ color: "var(--amber-fg)" }}>
-                              {t("pages.deals.pausedWarning", { p1: p.reason })}
-                              {p.link && (
-                                <> · <span className="font-semibold">{t("pages.deals.resumeLink")}</span></>
+                          <Link
+                            href={c.href}
+                            className="funnel-card"
+                            style={{ color: "inherit", textDecoration: "none" }}
+                          >
+                            <span className="funnel-card-name font-semibold">{c.name}</span>
+                            <span className="funnel-card-meta">
+                              <span className={`status-chip ${stageTone[c.tone]}`}>{c.stageLabel}</span>
+                              {c.holdLabelKeys && (
+                                <span className="status-chip status-amber">
+                                  {c.holdLabelKeys.map((k) => t(k)).join("·")} HOLD
+                                </span>
                               )}
+                              {c.track ? (
+                                <span
+                                  className={`status-chip ${c.track === "greenfield" ? "status-green" : "status-amber"}`}
+                                >
+                                  {t(TRACK_KEY[c.track])}
+                                </span>
+                              ) : c.kind === "project" ? (
+                                <span className="status-chip status-not-started">
+                                  {t("pages.deals.trackUndecided")}
+                                </span>
+                              ) : null}
+                              <span>{c.meta}</span>
                             </span>
+                            {p && (
+                              <span className="funnel-card-meta" style={{ color: "var(--amber-fg)" }}>
+                                {t("pages.deals.pausedWarning", { p1: p.reason })}
+                                {p.link && (
+                                  <>
+                                    {" "}
+                                    · <span className="font-semibold">{t("pages.deals.resumeLink")}</span>
+                                  </>
+                                )}
+                              </span>
+                            )}
+                          </Link>
+                          {c.sourceHref && (
+                            <Link href={c.sourceHref} className="btn-ghost btn-sm">
+                              {t("pages.deals.viewOpportunity")}
+                            </Link>
                           )}
-                        </Link>
-                        {c.sourceHref && (
-                          <Link href={c.sourceHref} className="btn-ghost btn-sm">{t("pages.deals.viewOpportunity")}</Link>
-                        )}
                         </div>
                       );
                     })}
@@ -342,35 +467,77 @@ function DealsBoard() {
           <section className="market-section" aria-label={t("pages.deals.agingSection")}>
             <h3 className="sizing-step-title text-[length:var(--fs-body)] mb-1">{t("pages.deals.agingHeading")}</h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-              {t("pages.deals.agingNote", { p1: Object.values(GATE_LABEL_KEY).map((k) => t(k)).join("·") })}
+              {t("pages.deals.agingNote", {
+                p1: Object.values(GATE_LABEL_KEY)
+                  .map((k) => t(k))
+                  .join("·"),
+              })}
             </p>
             {data.currentHolds.length === 0 ? (
-              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("pages.deals.agingEmpty")}</p>
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                {t("pages.deals.agingEmpty")}
+              </p>
             ) : (
-              <div className="table-scroll" role="region" aria-label={t("pages.deals.tableScrollRegion")} tabIndex={0}>
+              <section
+                className="table-scroll"
+                aria-label={t("pages.deals.tableScrollRegion")}
+                // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard-scrollable table region (WCAG 2.1.1) — dropping tabIndex would strand keyboard users inside the scroll
+                tabIndex={0}
+              >
                 <table className="data-table table-fixed-pct tmin-48" aria-label={t("pages.deals.agingTableAria")}>
                   <caption className="sr-only">{t("pages.deals.agingTableCaption")}</caption>
                   <ColGroup widths={AGING_COL_PCT} />
                   <thead>
-                    <tr><th scope="col">{t("pages.deals.colDeal")}</th><th scope="col">{t("pages.deals.colGate")}</th><th scope="col">{t("pages.deals.colDecision")}</th><th scope="col">{t("pages.deals.colDecidedAt")}</th><th scope="col" className="col-num">{t("pages.deals.colAge")}</th></tr>
+                    <tr>
+                      <th scope="col">{t("pages.deals.colDeal")}</th>
+                      <th scope="col">{t("pages.deals.colGate")}</th>
+                      <th scope="col">{t("pages.deals.colDecision")}</th>
+                      <th scope="col">{t("pages.deals.colKillEval")}</th>
+                      <th scope="col">{t("pages.deals.colDecidedAt")}</th>
+                      <th scope="col" className="col-num">
+                        {t("pages.deals.colAge")}
+                      </th>
+                    </tr>
                   </thead>
                   <tbody>
-                    {[...data.currentHolds].sort((a, b) => b.ageDays - a.ageDays).map((r) => (
-                      <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
-                        <td className="cell-truncate text-[length:var(--fs-caption)]">
-                          <Link href={r.entityType === "project" ? `/projects/${r.entityId}/process` : gateHoldHref(r)}>
-                            {r.label}
-                          </Link>
-                        </td>
-                        <td className="tabular-nums text-[length:var(--fs-caption)]">{t(GATE_LABEL_KEY[r.gate] ?? r.gate)}</td>
-                        <td><span className={`status-chip ${r.decision === "kill" ? "status-red" : "status-amber"}`}>{r.decision.toUpperCase()}</span></td>
-                        <td className="text-[length:var(--fs-caption)] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
-                        <td className="col-num tabular-nums text-[length:var(--fs-caption)]">{t("pages.deals.ageDays", { p1: r.ageDays })}</td>
-                      </tr>
-                    ))}
+                    {[...data.currentHolds]
+                      .sort((a, b) => b.ageDays - a.ageDays)
+                      .map((r) => (
+                        <tr key={`${r.entityType}:${r.entityId}:${r.gate}`}>
+                          <td className="cell-truncate text-[length:var(--fs-caption)]">
+                            <Link
+                              href={r.entityType === "project" ? `/projects/${r.entityId}/process` : gateHoldHref(r)}
+                            >
+                              {r.label}
+                            </Link>
+                          </td>
+                          <td className="tabular-nums text-[length:var(--fs-caption)]">
+                            {t(GATE_LABEL_KEY[r.gate] ?? r.gate)}
+                          </td>
+                          <td>
+                            <span className={`status-chip ${r.decision === "kill" ? "status-red" : "status-amber"}`}>
+                              {r.decision.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="text-[length:var(--fs-caption)]">
+                            {/* D6 honesty rule: null is "—" (a non-claim, not a pass); unassessed is amber + text, never green. */}
+                            {r.killEval ? (
+                              <span className={`status-chip ${KILL_EVAL_CHIP_CLASS[r.killEval]}`}>
+                                {t(KILL_EVAL_LABEL_KEY[r.killEval])}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="text-[length:var(--fs-caption)] tabular-nums">{r.decidedAt.slice(0, 10)}</td>
+                          <td className="col-num tabular-nums text-[length:var(--fs-caption)]">
+                            {t("pages.deals.ageDays", { p1: r.ageDays })}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
-              </div>
+              </section>
             )}
           </section>
         </>
