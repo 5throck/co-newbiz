@@ -193,7 +193,8 @@ async function main(): Promise<void> {
           round: r.round,
           positionMd: r.position_md,
         }));
-        const pass = await runChairMinutes({ agenda: ctx.agenda, rows, seats: rows.map((r) => r.seat) });
+        // Design §8.4: the topic leads the minutes material, same as the agenda pass above.
+        const pass = await runChairMinutes({ topic: ctx.topic, agenda: ctx.agenda, rows, seats: rows.map((r) => r.seat) });
         return {
           json: pass.json,
           fallback: pass.fallback,

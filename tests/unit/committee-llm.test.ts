@@ -198,8 +198,9 @@ describe("makeLlmChairMinutes timeout budget", () => {
       const text = await minutes("심의 자료");
       expect(text).toBe("의사록 초안");
       // The minutes pass's signal rides the complete() options all the way to the fetch.
-      expect(captured?.signal).toBeInstanceOf(AbortSignal);
-      expect((captured?.signal as AbortSignal).aborted).toBe(false);
+      const minutesSignal = captured?.signal;
+      expect(minutesSignal).toBeInstanceOf(AbortSignal);
+      expect(minutesSignal?.aborted).toBe(false);
       // The only budget created on this path is the minutes one — the 60 s
       // transport default is bypassed by the forwarded signal.
       expect(delays).toContain(CHAIR_MINUTES_TIMEOUT_MS);
