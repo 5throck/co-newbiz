@@ -114,20 +114,30 @@ describe("resolveMinutesDraft — fabrication cannot survive", () => {
 
   test("an invalid schema (missing fields, bad act) returns null — caller falls back", () => {
     expect(resolveMinutesDraft({ agenda: "nope" }, CTX)).toBeNull();
-    expect(
-      resolveMinutesDraft(
-        {
-          ...VALID_DRAFT,
-          discussion: [
-            {
-              issue_id: "I1",
-              exchanges: [{ seat: "risk-officer", act: "shout", summary: "x", position_ref: "POS-1" }],
-              resolution: "agreed",
-            },
-          ],
-        },
-        CTX,
-      ),
-    ).toBeNull();
+  });
+
+  test("model shape drift is repaired, not fatal: a bad act normalizes to 'raised', a non-seat owner moves to owner_role, and a structurally garbage draft still returns null", () => {
+    const out = resolveMinutesDraft(
+      {
+        ...VALID_DRAFT,
+        discussion: [
+          {
+            issue_id: "I1",
+            exchanges: [{ seat: "risk-officer", act: "shout", summary: "x", position_ref: "POS-1" }],
+            resolution: "agreed",
+          },
+        ],
+        open_questions: [{ text: "q", owner_seat: "법무·규제 확인" }],
+        action_items: [{ text: "a", owner_seat: ["risk-officer", "ir-agent"] }],
+      },
+      CTX,
+    ) as NonNullable<ReturnType<typeof resolveMinutesDraft>>;
+    expect(out.discussion[0].exchanges[0]?.act).toBe("raised");
+    expect(out.open_questions[0]?.owner_seat).toBeUndefined();
+    expect(out.open_questions[0]?.owner_role).toBe("법무·규제 확인");
+    expect(out.action_items[0]?.owner_seat).toBeUndefined();
+    expect(out.action_items[0]?.owner_role).toBe("risk-officer, ir-agent");
+    // structurally garbage input (non-object agenda) is still rejected outright
+    expect(resolveMinutesDraft({ ...VALID_DRAFT, agenda: "nope" }, CTX)).toBeNull();
   });
 });

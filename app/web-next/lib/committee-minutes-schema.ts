@@ -67,11 +67,29 @@ export type CommitteeMinutesJson = z.infer<typeof committeeMinutesSchema>;
 
 /**
  * Tolerant pre-normalization for model output that deviates from the stored
- * shape in the two ways models actually deviate: a separate top-level
- * `resolutions` array instead of the per-item `resolution` field, and items
- * missing `resolution` altogether (defaulted to "unresolved"). Unknown keys
- * are dropped by zod; this only repairs shape, never content.
+ * shape in the ways models actually deviate: a separate top-level `resolutions`
+ * array instead of the per-item `resolution` field, items missing `resolution`
+ * altogether, owner fields that name a Korean role or a seat ARRAY instead of
+ * one seat key, and exchanges whose `act` drifts off the closed vocabulary.
+ * Shape is repaired, never content: ref-resolution below still drops every
+ * exchange whose seat/ref does not resolve to the session. Unknown keys are
+ * dropped by zod.
  */
+function isSeatKey(v: unknown): v is string {
+  return typeof v === "string" && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(v);
+}
+
+function sanitizeOwner(record: Record<string, unknown>, key = "owner_seat"): void {
+  const v = record[key];
+  if (v === undefined) return;
+  if (isSeatKey(v)) return;
+  // A non-seat owner (Korean role name, array of seats/roles) belongs in
+  // owner_role, which is free-text; owner_seat stays unset (optional).
+  delete record[key];
+  const label = Array.isArray(v) ? v.filter((x) => typeof x === "string").join(", ") : typeof v === "string" ? v : "";
+  if (label && record.owner_role === undefined) record.owner_role = label.slice(0, 64);
+}
+
 function normalizeMinutesDraft(raw: unknown): unknown {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const draft = { ...(raw as Record<string, unknown>) };
@@ -89,7 +107,20 @@ function normalizeMinutesDraft(raw: unknown): unknown {
       }
       if (d.resolution_note === undefined && byIssue.get(d.issue_id as string)?.note !== undefined)
         d.resolution_note = byIssue.get(d.issue_id as string)?.note;
+      if (Array.isArray(d.exchanges)) {
+        d.exchanges = (d.exchanges as Array<Record<string, unknown>>).filter((e) => isSeatKey(e.seat));
+        for (const e of d.exchanges as Array<Record<string, unknown>>)
+          if (e.act !== undefined && !MINUTES_ACTS.includes(e.act as (typeof MINUTES_ACTS)[number])) e.act = "raised";
+      }
       return d;
+    });
+  }
+  for (const listKey of ["agreements", "open_questions", "action_items"] as const) {
+    if (!Array.isArray(draft[listKey])) continue;
+    draft[listKey] = (draft[listKey] as Array<Record<string, unknown>>).map((item) => {
+      if (listKey === "agreements" && Array.isArray(item.seats)) item.seats = item.seats.filter((s) => isSeatKey(s));
+      else sanitizeOwner(item);
+      return item;
     });
   }
   return draft;
