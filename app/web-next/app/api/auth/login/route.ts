@@ -1,32 +1,16 @@
 // Port of app/server/auth.ts POST /api/auth/login — issues the session
-// cookie on success. Per-address failed-login throttle ported verbatim
-// (module-level Map, same defense-in-depth rationale as the Hono original:
-// stops an unauthenticated password-spray across accounts, which the
-// per-account lockout in db/lib/accounts.ts alone does not).
+// cookie on success. Per-address failed-login throttle (lib/login-throttle:
+// bounded module-level Map, keys on the rightmost X-Forwarded-For hop — the
+// proxy-authored entry; see that file's header for the restart-reset
+// acceptance and the register-route header divergence — same
+// defense-in-depth rationale as the Hono original: stops an unauthenticated
+// password-spray across accounts, which the per-account lockout in
+// db/lib/accounts.ts alone does not).
 import { getDb } from "../../../../../../db/client.ts";
 import { authenticate as authenticateAccount } from "../../../../../../db/lib/accounts.ts";
 import { badRequest, fail, ok } from "../../../../lib/envelope.ts";
 import { CSRF_COOKIE, SESSION_COOKIE, requestIsSecure, sessionCookieOpts } from "../../../../lib/auth.ts";
-
-const LOGIN_WINDOW_MS = 15 * 60_000;
-const LOGIN_MAX_FAILURES = 10;
-const failedLoginsByAddress = new Map<string, number[]>();
-
-function clientAddress(request: Request): string {
-  return (request.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "direct";
-}
-
-function loginThrottled(address: string): boolean {
-  const now = Date.now();
-  const recent = (failedLoginsByAddress.get(address) ?? []).filter((t) => now - t < LOGIN_WINDOW_MS);
-  failedLoginsByAddress.set(address, recent);
-  return recent.length >= LOGIN_MAX_FAILURES;
-}
-
-function recordLoginFailure(address: string): void {
-  if (!failedLoginsByAddress.has(address)) failedLoginsByAddress.set(address, []);
-  failedLoginsByAddress.get(address)!.push(Date.now());
-}
+import { loginThrottled, recordLoginFailure, trustedLoginAddress } from "../../../../lib/login-throttle.ts";
 
 function randomHex(bytes: number): string {
   const arr = new Uint8Array(bytes);
@@ -41,7 +25,7 @@ export async function POST(request: Request) {
   }
   const userId = body.userId.trim();
   if (!userId) return badRequest("invalid_request", "userId and password are required.");
-  const address = clientAddress(request);
+  const address = trustedLoginAddress(request);
   if (loginThrottled(address)) {
     return fail(429, "too_many_attempts", "Too many failed logins from this address — try again later.");
   }
@@ -54,8 +38,19 @@ export async function POST(request: Request) {
 
   const secure = requestIsSecure(request);
   const row = getDb().query("SELECT role FROM app_user WHERE user_id = ?").get(userId) as { role: string };
-  const response = ok({ userId, role: row.role, mustChangePassword: result.mustChangePassword, expiresAt: result.session.expiresAt });
+  const response = ok({
+    userId,
+    role: row.role,
+    mustChangePassword: result.mustChangePassword,
+    expiresAt: result.session.expiresAt,
+  });
   response.cookies.set(SESSION_COOKIE, result.session.token, sessionCookieOpts(secure));
-  response.cookies.set(CSRF_COOKIE, randomHex(32), { httpOnly: false, sameSite: "lax", path: "/", secure, maxAge: 12 * 3600 });
+  response.cookies.set(CSRF_COOKIE, randomHex(32), {
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    secure,
+    maxAge: 12 * 3600,
+  });
   return response;
 }

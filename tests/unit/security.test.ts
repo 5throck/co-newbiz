@@ -16,11 +16,7 @@ import { resetDb, getDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import type { Database } from "bun:sqlite";
 import * as projectRepo from "../../db/repositories/project.repository.ts";
-import {
-  grantProjectMembership,
-  revokeProjectMembership,
-  acknowledgeInsider,
-} from "../../db/lib/access-control.ts";
+import { grantProjectMembership, revokeProjectMembership, acknowledgeInsider } from "../../db/lib/access-control.ts";
 import {
   createUser,
   approveUser,
@@ -76,9 +72,30 @@ beforeAll(async () => {
     await approveUser(db, { userId, approvedBy: "root", now: NOW });
   }
 
-  grantProjectMembership(db, { projectId: "P1", userId: "alice", projectRole: "lead", grantedBy: "root", needToKnowBasis: "deal team lead", now: NOW });
-  grantProjectMembership(db, { projectId: "P2", userId: "alice", projectRole: "member", grantedBy: "root", needToKnowBasis: "valuation model owner", now: NOW });
-  grantProjectMembership(db, { projectId: "P3", userId: "walled", projectRole: "member", grantedBy: "root", needToKnowBasis: "ops review", now: NOW });
+  grantProjectMembership(db, {
+    projectId: "P1",
+    userId: "alice",
+    projectRole: "lead",
+    grantedBy: "root",
+    needToKnowBasis: "deal team lead",
+    now: NOW,
+  });
+  grantProjectMembership(db, {
+    projectId: "P2",
+    userId: "alice",
+    projectRole: "member",
+    grantedBy: "root",
+    needToKnowBasis: "valuation model owner",
+    now: NOW,
+  });
+  grantProjectMembership(db, {
+    projectId: "P3",
+    userId: "walled",
+    projectRole: "member",
+    grantedBy: "root",
+    needToKnowBasis: "ops review",
+    now: NOW,
+  });
 });
 
 afterAll(async () => {
@@ -146,14 +163,28 @@ describe("security-model §7 item 3 — single enforcement point, no bypass path
 
 describe("security-model §7 item 4 — MNPI handling (FR-SEC-06)", () => {
   test("membership grant on an MNPI project auto-populates insider_list with the basis as reason", () => {
-    const row = db.query("SELECT reason FROM insider_list WHERE project_id = 'P2' AND user_id = 'alice'").get() as { reason: string };
+    const row = db.query("SELECT reason FROM insider_list WHERE project_id = 'P2' AND user_id = 'alice'").get() as {
+      reason: string;
+    };
     expect(row.reason).toContain("valuation model owner");
   });
 
   test("every read of the MNPI project writes data_access_log", () => {
-    const before = (db.query("SELECT COUNT(*) c FROM data_access_log WHERE project_id = 'P2' AND action = 'read' AND user_id = 'alice'").get() as { c: number }).c;
+    const before = (
+      db
+        .query(
+          "SELECT COUNT(*) c FROM data_access_log WHERE project_id = 'P2' AND action = 'read' AND user_id = 'alice'",
+        )
+        .get() as { c: number }
+    ).c;
     projectRepo.getProjectIfVisible("alice", "P2");
-    const after = (db.query("SELECT COUNT(*) c FROM data_access_log WHERE project_id = 'P2' AND action = 'read' AND user_id = 'alice'").get() as { c: number }).c;
+    const after = (
+      db
+        .query(
+          "SELECT COUNT(*) c FROM data_access_log WHERE project_id = 'P2' AND action = 'read' AND user_id = 'alice'",
+        )
+        .get() as { c: number }
+    ).c;
     expect(after).toBe(before + 1);
   });
 
@@ -164,29 +195,50 @@ describe("security-model §7 item 4 — MNPI handling (FR-SEC-06)", () => {
   });
 
   test("the scoped-token override is itself audit-logged", () => {
-    const before = (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'mnpi_scope_override' AND target = 'P2'").get() as { c: number }).c;
+    const before = (
+      db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'mnpi_scope_override' AND target = 'P2'").get() as {
+        c: number;
+      }
+    ).c;
     expect(projectRepo.getProjectIfVisible("alice", "P2", { mnpiScopeOverrideBy: "scoped-token-7f" })).not.toBeNull();
-    const after = (db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'mnpi_scope_override' AND target = 'P2'").get() as { c: number }).c;
+    const after = (
+      db.query("SELECT COUNT(*) c FROM audit_log WHERE action = 'mnpi_scope_override' AND target = 'P2'").get() as {
+        c: number;
+      }
+    ).c;
     expect(after).toBe(before + 1);
   });
 
   test("insider acknowledgement is recorded and audited", () => {
     acknowledgeInsider(db, { projectId: "P2", userId: "alice", now: NOW });
-    const row = db.query("SELECT acknowledged_at FROM insider_list WHERE project_id = 'P2' AND user_id = 'alice'").get() as { acknowledged_at: string };
+    const row = db
+      .query("SELECT acknowledged_at FROM insider_list WHERE project_id = 'P2' AND user_id = 'alice'")
+      .get() as { acknowledged_at: string };
     expect(row.acknowledged_at).toBe(NOW);
   });
 
   test("membership revoke closes the insider_list entry", () => {
     revokeProjectMembership(db, { projectId: "P2", userId: "alice", revokedBy: "root", now: "2026-08-20T12:00:00Z" });
-    const row = db.query("SELECT removed_at FROM insider_list WHERE project_id = 'P2' AND user_id = 'alice'").get() as { removed_at: string };
+    const row = db.query("SELECT removed_at FROM insider_list WHERE project_id = 'P2' AND user_id = 'alice'").get() as {
+      removed_at: string;
+    };
     expect(row.removed_at).toBe("2026-08-20T12:00:00Z");
     expect(projectRepo.getProjectIfVisible("alice", "P2")).toBeNull();
     // restore for later describes
-    grantProjectMembership(db, { projectId: "P2", userId: "alice", projectRole: "member", grantedBy: "root", needToKnowBasis: "valuation model owner", now: "2026-08-20T12:05:00Z" });
+    grantProjectMembership(db, {
+      projectId: "P2",
+      userId: "alice",
+      projectRole: "member",
+      grantedBy: "root",
+      needToKnowBasis: "valuation model owner",
+      now: "2026-08-20T12:05:00Z",
+    });
   });
 
   test("acknowledgement by a non-insider is refused", () => {
-    expect(() => acknowledgeInsider(db, { projectId: "P2", userId: "bob", now: NOW })).toThrow(/not on the active insider list/);
+    expect(() => acknowledgeInsider(db, { projectId: "P2", userId: "bob", now: NOW })).toThrow(
+      /not on the active insider list/,
+    );
   });
 });
 
@@ -206,7 +258,9 @@ describe("security-model §7 item 5 — comp_benchmark aggregate floor (FR-SEC-0
 
   test("a k=5 aggregate row is accepted (floor raised 3 -> 5, migration 0143 / ADR-0174)", () => {
     insertComp("K5", 5);
-    expect((db.query("SELECT headcount FROM comp_benchmark WHERE id = 'K5'").get() as { headcount: number }).headcount).toBe(5);
+    expect(
+      (db.query("SELECT headcount FROM comp_benchmark WHERE id = 'K5'").get() as { headcount: number }).headcount,
+    ).toBe(5);
   });
 
   test("v_comp_anonymized exposes no payroll-median columns", () => {
@@ -238,7 +292,9 @@ describe("security-model §7 item 6 — executive_ref is a surrogate key, never 
       `INSERT INTO management_package (id, project_id, executive_ref, role_title, base_pay)
        VALUES ('M-OK','P1','TARGET-CEO-01','CEO',100000000)`,
     );
-    const row = db.query("SELECT executive_ref FROM management_package WHERE id = 'M-OK'").get() as { executive_ref: string };
+    const row = db.query("SELECT executive_ref FROM management_package WHERE id = 'M-OK'").get() as {
+      executive_ref: string;
+    };
     expect(row.executive_ref).toBe("TARGET-CEO-01");
   });
 });
@@ -253,7 +309,9 @@ describe("security-model §7 item 7 — audit_log is append-only (FR-SEC-07)", (
   });
 
   test("INSERT still works — append is the only write shape", () => {
-    db.run(`INSERT INTO audit_log (id, actor_user_id, action, target, created_at) VALUES ('A-OK','root','probe','t','${NOW}')`);
+    db.run(
+      `INSERT INTO audit_log (id, actor_user_id, action, target, created_at) VALUES ('A-OK','root','probe','t','${NOW}')`,
+    );
     expect((db.query("SELECT COUNT(*) c FROM audit_log WHERE id = 'A-OK'").get() as { c: number }).c).toBe(1);
   });
 });
@@ -266,11 +324,27 @@ describe("security-model §7 item 8 — password is not recoverable from the DB 
   });
 
   test("the stored hash verifies with the right password and rejects the wrong one", async () => {
-    const row = db.query("SELECT password_salt, password_hash, password_iterations FROM app_user WHERE user_id = 'alice'").get() as {
-      password_salt: string; password_hash: string; password_iterations: number;
+    const row = db
+      .query("SELECT password_salt, password_hash, password_iterations FROM app_user WHERE user_id = 'alice'")
+      .get() as {
+      password_salt: string;
+      password_hash: string;
+      password_iterations: number;
     };
-    expect(await verifyPassword("pw-alice-12345", { salt: row.password_salt, hash: row.password_hash, iterations: row.password_iterations })).toBe(true);
-    expect(await verifyPassword("wrong", { salt: row.password_salt, hash: row.password_hash, iterations: row.password_iterations })).toBe(false);
+    expect(
+      await verifyPassword("pw-alice-12345", {
+        salt: row.password_salt,
+        hash: row.password_hash,
+        iterations: row.password_iterations,
+      }),
+    ).toBe(true);
+    expect(
+      await verifyPassword("wrong", {
+        salt: row.password_salt,
+        hash: row.password_hash,
+        iterations: row.password_iterations,
+      }),
+    ).toBe(false);
   });
 
   test("session tokens are stored hashed — a session-table dump cannot be replayed", async () => {
@@ -289,7 +363,14 @@ describe("wall_group exclusion (FR-SEC-04)", () => {
   });
 
   test("the same user sees non-walled projects normally if made a member", () => {
-    grantProjectMembership(db, { projectId: "P1", userId: "walled", projectRole: "member", grantedBy: "root", needToKnowBasis: "ops review", now: NOW });
+    grantProjectMembership(db, {
+      projectId: "P1",
+      userId: "walled",
+      projectRole: "member",
+      grantedBy: "root",
+      needToKnowBasis: "ops review",
+      now: NOW,
+    });
     expect(projectRepo.getProjectIfVisible("walled", "P1")?.project_no).toBe("NP-2026-001");
   });
 });
@@ -297,13 +378,27 @@ describe("wall_group exclusion (FR-SEC-04)", () => {
 describe("membership grant guards (design §4-9-1(a) / FR-SEC-08)", () => {
   test("a grant without a need-to-know basis is refused", () => {
     expect(() =>
-      grantProjectMembership(db, { projectId: "P1", userId: "bob", projectRole: "member", grantedBy: "root", needToKnowBasis: "   ", now: NOW }),
+      grantProjectMembership(db, {
+        projectId: "P1",
+        userId: "bob",
+        projectRole: "member",
+        grantedBy: "root",
+        needToKnowBasis: "   ",
+        now: NOW,
+      }),
     ).toThrow(/need_to_know_basis/);
   });
 
   test("a grant to an account that does not exist is refused — no phantom or agent accounts", () => {
     expect(() =>
-      grantProjectMembership(db, { projectId: "P1", userId: "ghost", projectRole: "member", grantedBy: "root", needToKnowBasis: "x", now: NOW }),
+      grantProjectMembership(db, {
+        projectId: "P1",
+        userId: "ghost",
+        projectRole: "member",
+        grantedBy: "root",
+        needToKnowBasis: "x",
+        now: NOW,
+      }),
     ).toThrow(/FR-SEC-08/);
   });
 });
@@ -332,7 +427,10 @@ describe("account lifecycle and lockout (security-model §4)", () => {
   test("a successful login after lockout expiry unlocks and clears the counter", async () => {
     const res = await authenticate(db, { userId: "dave", password: "pw-dave-12345", now: "2026-08-20T10:31:00Z" });
     expect(res.ok).toBe(true);
-    const row = db.query("SELECT failed_attempts, locked_until FROM app_user WHERE user_id = 'dave'").get() as { failed_attempts: number; locked_until: string | null };
+    const row = db.query("SELECT failed_attempts, locked_until FROM app_user WHERE user_id = 'dave'").get() as {
+      failed_attempts: number;
+      locked_until: string | null;
+    };
     expect(row.failed_attempts).toBe(0);
     expect(row.locked_until).toBeNull();
   });
@@ -363,7 +461,12 @@ describe("session lifecycle", () => {
 
 describe("password change and reset (security-model §4)", () => {
   test("changing to a previously used password is refused via password_history", async () => {
-    const first = await changePassword(db, { userId: "bob", currentPassword: "pw-bob-12345", newPassword: "pw-bob-67890", now: NOW });
+    const first = await changePassword(db, {
+      userId: "bob",
+      currentPassword: "pw-bob-12345",
+      newPassword: "pw-bob-67890",
+      now: NOW,
+    });
     expect(first.token.length).toBe(64);
     await expect(
       changePassword(db, { userId: "bob", currentPassword: "pw-bob-67890", newPassword: "pw-bob-12345", now: NOW }),
@@ -379,7 +482,12 @@ describe("password change and reset (security-model §4)", () => {
   test("password change revokes prior sessions and issues a fresh one", async () => {
     const before = await authenticate(db, { userId: "bob", password: "pw-bob-67890", now: NOW });
     if (!before.ok) throw new Error("authenticate failed");
-    const changed = await changePassword(db, { userId: "bob", currentPassword: "pw-bob-67890", newPassword: "pw-bob-abcde", now: "2026-08-20T11:00:00Z" });
+    const changed = await changePassword(db, {
+      userId: "bob",
+      currentPassword: "pw-bob-67890",
+      newPassword: "pw-bob-abcde",
+      now: "2026-08-20T11:00:00Z",
+    });
     expect(validateSession(db, before.session.token, "2026-08-20T11:01:00Z")).toBeNull();
     expect(validateSession(db, changed.token, "2026-08-20T11:01:00Z")).toMatchObject({ userId: "bob" });
   });
@@ -387,9 +495,138 @@ describe("password change and reset (security-model §4)", () => {
   test("admin reset forces the change flow and revokes every session", async () => {
     const live = await authenticate(db, { userId: "bob", password: "pw-bob-abcde", now: "2026-08-20T12:00:00Z" });
     if (!live.ok) throw new Error("authenticate failed");
-    await resetPassword(db, { userId: "bob", tempPassword: "temp-bob-9999", resetBy: "root", now: "2026-08-20T12:30:00Z" });
+    await resetPassword(db, {
+      userId: "bob",
+      tempPassword: "temp-bob-9999",
+      resetBy: "root",
+      now: "2026-08-20T12:30:00Z",
+    });
     expect(validateSession(db, live.session.token, "2026-08-20T12:31:00Z")).toBeNull();
     const res = await authenticate(db, { userId: "bob", password: "temp-bob-9999", now: "2026-08-20T12:31:00Z" });
     expect(res).toMatchObject({ ok: true, mustChangePassword: true });
+  });
+});
+
+describe("failed-login auditing (design 2026-11-11-admin-security-and-board-fixes §5 / SR2-min)", () => {
+  // Self-contained fixtures: counts below assume no prior rows for these ids.
+  beforeAll(async () => {
+    await createUser(db, {
+      userId: "aud-plain",
+      role: "viewer",
+      password: "pw-aud-123456",
+      createdBy: "boot",
+      now: NOW,
+    });
+    await approveUser(db, { userId: "aud-plain", approvedBy: "root", now: NOW });
+    await createUser(db, {
+      userId: "aud-disabled",
+      role: "viewer",
+      password: "pw-aud-123456",
+      createdBy: "boot",
+      now: NOW,
+    });
+    db.run("UPDATE app_user SET status = 'disabled' WHERE user_id = 'aud-disabled'");
+    // 'aud-pending' is deliberately left unapproved (status stays 'pending').
+    await createUser(db, {
+      userId: "aud-pending",
+      role: "viewer",
+      password: "pw-aud-123456",
+      createdBy: "boot",
+      now: NOW,
+    });
+  });
+
+  const failedCount = (userId: string, action = "login_failed"): number =>
+    (
+      db
+        .query("SELECT COUNT(*) n FROM audit_log WHERE action = ? AND actor_user_id = ? AND target = ?")
+        .get(action, userId, userId) as { n: number }
+    ).n;
+
+  test("an unknown-id attempt leaves exactly one login_failed row with the attempted id — and no account row", async () => {
+    expect((db.query("SELECT COUNT(*) n FROM app_user WHERE user_id = 'aud-ghost'").get() as { n: number }).n).toBe(0);
+    const res = await authenticate(db, { userId: "aud-ghost", password: "whatever-123", now: NOW });
+    expect(res).toEqual({ ok: false, reason: "invalid_credentials" });
+    expect(failedCount("aud-ghost")).toBe(1);
+    expect((db.query("SELECT COUNT(*) n FROM app_user WHERE user_id = 'aud-ghost'").get() as { n: number }).n).toBe(0);
+  });
+
+  test("the attempted id is trimmed exactly like the lookup (paste artifact never shadows the trail)", async () => {
+    const res = await authenticate(db, { userId: "  aud-ghost  ", password: "whatever-123", now: NOW });
+    expect(res).toEqual({ ok: false, reason: "invalid_credentials" });
+    expect(failedCount("aud-ghost")).toBe(2); // trimmed id, same actor/target as the raw attempt above
+  });
+
+  test("a wrong password below the lockout threshold audits login_failed", async () => {
+    const res = await authenticate(db, { userId: "aud-plain", password: "not-the-password", now: NOW });
+    expect(res).toEqual({ ok: false, reason: "invalid_credentials" });
+    expect(failedCount("aud-plain")).toBe(1);
+    expect(failedCount("aud-plain", "account_locked")).toBe(0);
+  });
+
+  test("the lockout arm audits BOTH account_locked and login_failed — never one instead of the other", async () => {
+    // Fresh account so the failure counter starts at zero (audit rows are
+    // append-only, so counts below assume no prior rows for this id).
+    await createUser(db, {
+      userId: "aud-lock",
+      role: "viewer",
+      password: "pw-aud-123456",
+      createdBy: "boot",
+      now: NOW,
+    });
+    await approveUser(db, { userId: "aud-lock", approvedBy: "root", now: NOW });
+    let last: Awaited<ReturnType<typeof authenticate>> = { ok: false, reason: "invalid_credentials" };
+    for (let i = 0; i < MAX_FAILED_ATTEMPTS - 1; i++) {
+      last = await authenticate(db, { userId: "aud-lock", password: `wrong-${i}-aud`, now: NOW });
+      expect(last).toEqual({ ok: false, reason: "invalid_credentials" });
+    }
+    // 4 pre-lock failures already recorded; the 5th crosses the threshold.
+    last = await authenticate(db, { userId: "aud-lock", password: "wrong-final-aud", now: NOW });
+    expect(last).toMatchObject({ ok: false, reason: "locked" });
+    expect(failedCount("aud-lock", "account_locked")).toBe(1);
+    expect(failedCount("aud-lock")).toBe(MAX_FAILED_ATTEMPTS); // 4 pre-lock + 1 lockout arm
+  });
+
+  test("a locked account re-entering the window audits login_failed", async () => {
+    const res = await authenticate(db, { userId: "aud-lock", password: "pw-aud-123456", now: "2026-08-20T10:05:00Z" });
+    expect(res).toMatchObject({ ok: false, reason: "locked" });
+    expect(failedCount("aud-lock")).toBe(MAX_FAILED_ATTEMPTS + 1);
+  });
+
+  test("a disabled account audits login_failed", async () => {
+    const res = await authenticate(db, { userId: "aud-disabled", password: "pw-aud-123456", now: NOW });
+    expect(res).toEqual({ ok: false, reason: "disabled" });
+    expect(failedCount("aud-disabled")).toBe(1);
+  });
+
+  test("a pending-approval account audits login_failed", async () => {
+    const res = await authenticate(db, { userId: "aud-pending", password: "pw-aud-123456", now: NOW });
+    expect(res).toEqual({ ok: false, reason: "pending_approval" });
+    expect(failedCount("aud-pending")).toBe(1);
+  });
+
+  test("a successful login audits only `login` — no login_failed row", async () => {
+    const before = (
+      db.query("SELECT COUNT(*) n FROM audit_log WHERE action = 'login' AND actor_user_id = 'aud2-plain'").get() as {
+        n: number;
+      }
+    ).n;
+    await createUser(db, {
+      userId: "aud2-plain",
+      role: "viewer",
+      password: "pw-aud2-12345",
+      createdBy: "boot",
+      now: NOW,
+    });
+    await approveUser(db, { userId: "aud2-plain", approvedBy: "root", now: NOW });
+    const res = await authenticate(db, { userId: "aud2-plain", password: "pw-aud2-12345", now: NOW });
+    expect(res.ok).toBe(true);
+    const after = (
+      db.query("SELECT COUNT(*) n FROM audit_log WHERE action = 'login' AND actor_user_id = 'aud2-plain'").get() as {
+        n: number;
+      }
+    ).n;
+    expect(after).toBe(before + 1);
+    expect(failedCount("aud2-plain")).toBe(0);
   });
 });

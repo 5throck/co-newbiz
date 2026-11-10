@@ -17,12 +17,20 @@ function expectNoMatch(src: string, patterns: RegExp[], file: string) {
 describe("ui label sweep (design 2026-10-11)", () => {
   test("raw track/subTrack/status/category keys are not interpolated in the section 1.2 files", () => {
     expectNoMatch(read("app/projects/[id]/page.tsx"), [/\{process\.track\}/], "projects overview");
-    expectNoMatch(read("app/projects/[id]/process/page.tsx"), [/s\.requiredArtifacts\.join/, /\{g\}\s*$/], "process page");
+    expectNoMatch(
+      read("app/projects/[id]/process/page.tsx"),
+      [/s\.requiredArtifacts\.join/, /\{g\}\s*$/],
+      "process page",
+    );
     expectNoMatch(read("app/deals/[id]/page.tsx"), [/\{g\} \{v\.toUpperCase/], "deal overview");
     expectNoMatch(read("app/deals/[id]/[stage]/page.tsx"), [/\{stage\?\.status\}/], "deal stage page");
     expectNoMatch(read("app/glossary/page.tsx"), [/\{t\.category\}/, /\{detail\.category\}/], "glossary");
     expectNoMatch(read("components/stages/IcReviewStage.tsx"), [/missing_dimensions\.join/], "ic review");
-    expectNoMatch(read("components/stages/IcReviewStage.tsx"), [/<strong>\{f\.category\}<\/strong>/], "ic review findings");
+    expectNoMatch(
+      read("components/stages/IcReviewStage.tsx"),
+      [/<strong>\{f\.category\}<\/strong>/],
+      "ic review findings",
+    );
     expectNoMatch(read("components/stages/DdStage.tsx"), [/<strong>\{f\.category\}<\/strong>/], "dd findings");
     expectNoMatch(read("components/FinancialAnalysisPanel.tsx"), [/dart corp code/], "financial panel");
     expectNoMatch(read("app/companies/[companyId]/page.tsx"), [/dart corp code/], "companies page");
@@ -82,7 +90,11 @@ describe("ui label sweep (design 2026-10-11)", () => {
     ]) {
       const src = read(p);
       if (src.includes("table-scroll")) {
-        expect(src).toMatch(/className="table-scroll" role="region" aria-label=.*tabIndex=\{0\}/);
+        // Whitespace-tolerant (the biome formatter may wrap the attributes),
+        // and role="region" is optional: a named <section> carries the region
+        // role implicitly, which is what lint/a11y/noRedundantRoles enforces —
+        // the contract is a focusable, labelled, keyboard-scrollable region.
+        expect(src).toMatch(/className="table-scroll"(?:\s+role="region")?\s+aria-label=[^>]*tabIndex=\{0\}/);
       }
     }
   });

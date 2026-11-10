@@ -4,16 +4,10 @@ import { approveUser, deleteUser, resetPassword } from "../../../../../../../db/
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin } from "../../../../../lib/auth.ts";
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
+import { generateTemporaryPassword } from "../../../../../lib/temp-password.ts";
 
 const ACCOUNT_ROLES = new Set(["admin", "analyst", "viewer"]);
 const DISPLAY_NAME_MAX = 60;
-
-// CSPRNG-backed (the temporary password is a credential, not a display value).
-function randomBase36(length: number): string {
-  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
-}
 
 export async function PUT(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const auth = authenticate(request);
@@ -22,7 +16,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
   if (adminCheck) return adminCheck;
   const ctx = auth.auth;
   const { userId } = await params;
-  const body = (await request.json().catch(() => null)) as { action?: string; role?: string; temporary_password?: string; display_name?: string } | null;
+  const body = (await request.json().catch(() => null)) as {
+    action?: string;
+    role?: string;
+    temporary_password?: string;
+    display_name?: string;
+  } | null;
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -69,7 +68,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
   }
 
   if (body?.action === "enable") {
-    const res = db.run("UPDATE app_user SET status = 'active', locked_until = NULL, failed_attempts = 0 WHERE user_id = ?", [userId]);
+    const res = db.run(
+      "UPDATE app_user SET status = 'active', locked_until = NULL, failed_attempts = 0 WHERE user_id = ?",
+      [userId],
+    );
     if (res.changes === 0) return notFound();
     appendAudit(db, { actor: ctx.userId, action: "account_enable", target: userId, now });
     return ok({ ok: true, status: "active" });
@@ -79,7 +81,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     // Admin-initiated reset: temporary password, forces the change flow,
     // revokes sessions (accounts.resetPassword). The temp password is shown
     // once in this response — never stored in plaintext or audit.
-    const tempPassword = body.temporary_password && body.temporary_password.length >= 8 ? body.temporary_password : `tmp-${randomBase36(8)}!A`;
+    const tempPassword =
+      body.temporary_password && body.temporary_password.length >= 8
+        ? body.temporary_password
+        : generateTemporaryPassword();
     try {
       await resetPassword(db, { userId, tempPassword, resetBy: ctx.userId, now });
     } catch (err) {
@@ -94,15 +99,27 @@ export async function PUT(request: Request, { params }: { params: Promise<{ user
     }
     // Memberships, insider entries, tokens and grants are revoked in the same
     // transaction as the delete (accounts.deleteUser).
-    let result;
+    let result: Awaited<ReturnType<typeof deleteUser>>;
     try {
       result = deleteUser(db, { userId, deletedBy: ctx.userId, now });
     } catch (err) {
-      return fail(409, "user_has_history", `Account is referenced by recorded history and cannot be deleted; disable it instead. (${err instanceof Error ? err.message : "constraint"})`);
+      return fail(
+        409,
+        "user_has_history",
+        `Account is referenced by recorded history and cannot be deleted; disable it instead. (${err instanceof Error ? err.message : "constraint"})`,
+      );
     }
     if (!result.deleted) return notFound();
-    return ok({ ok: true, deleted: userId, memberships_revoked: result.membershipsRevoked, insider_entries_removed: result.insiderEntriesRemoved });
+    return ok({
+      ok: true,
+      deleted: userId,
+      memberships_revoked: result.membershipsRevoked,
+      insider_entries_removed: result.insiderEntriesRemoved,
+    });
   }
 
-  return badRequest("invalid_request", "action must be approve|set_role|set_display_name|disable|enable|reset_password|delete.");
+  return badRequest(
+    "invalid_request",
+    "action must be approve|set_role|set_display_name|disable|enable|reset_password|delete.",
+  );
 }

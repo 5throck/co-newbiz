@@ -38,15 +38,15 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
        ORDER BY g.decided_at DESC`,
     )
     .all() as Array<{
-      entity_type: "opportunity" | "project";
-      entity_id: string;
-      gate: string;
-      decision: string;
-      decided_at: string;
-      age_days: number;
-      label: string;
-      track: string | null;
-    }>;
+    entity_type: "opportunity" | "project";
+    entity_id: string;
+    gate: string;
+    decision: string;
+    decided_at: string;
+    age_days: number;
+    label: string;
+    track: string | null;
+  }>;
 
   // Latest verdict per (entity, gate) only — history rows would double-count.
   const seen = new Set<string>();
@@ -61,7 +61,10 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
     out.push({
       entityType: r.entity_type,
       entityId: r.entity_id,
-      label: r.entity_type === "project" ? `${projectName ?? projectNo ?? r.entity_id} (${projectNo ?? ""})`.trim() : r.label,
+      label:
+        r.entity_type === "project"
+          ? `${projectName ?? projectNo ?? r.entity_id} (${projectNo ?? ""})`.trim()
+          : r.label,
       gate: r.gate,
       decision: r.decision,
       decidedAt: r.decided_at,
@@ -70,6 +73,73 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
     });
   }
   return out.sort((a, b) => b.ageDays - a.ageDays);
+}
+
+/** D6 (B-3) — kill-evaluation three-state over the project-scoped kill ledger
+    (kill_criteria_evaluation, migration 0023; vocabulary enforced by
+    db/repositories/kill-criteria.repository.ts). */
+export type KillEvalState = "triggered" | "false" | "unassessed";
+
+/**
+ * Aggregate kill-evaluation state per project — ONE aggregate query per board
+ * view (not per row), plus one MNPI classification query. Dominance order:
+ * any `triggered` row → "triggered"; else any `unassessed` row → "unassessed";
+ * else rows exist and all are `false` → "false". Projects with NO ledger rows
+ * get no map entry — the caller renders null: absence of the ledger is "no
+ * evaluation exists", never "passed" (DEC honesty rule).
+ *
+ * MNPI guard (FR-SEC-06): for mnpi_flag=1 projects where the requesting actor
+ * is not on the ACTIVE insider_list, the state is suppressed (removed from the
+ * map → null) — a board-level aggregate must not leak triggered-criteria
+ * existence that the per-run read path (getRecordedEvaluation's member+insider
+ * guards, requireInsiderIfMnpi predicate family in db/lib/access-control.ts)
+ * would deny.
+ *
+ * No data_access logging here, by design (deviation from getRecordedEvaluation,
+ * explicit in DEC-20261111-02): this is a count summary over ALREADY-visible
+ * projects, not a kill_criteria_evaluation record read — the per-row logging
+ * discipline would turn one board view into an audit-noise multiplier without
+ * adding access beyond what visibleProject already granted.
+ */
+export function killEvalStates(
+  db: Database,
+  opts: { projectIds: string[]; viewerId: string },
+): Map<string, KillEvalState> {
+  const out = new Map<string, KillEvalState>();
+  const ids = [...new Set(opts.projectIds.filter((id) => typeof id === "string" && id.length > 0))];
+  if (ids.length === 0) return out;
+  const placeholders = ids.map(() => "?").join(",");
+  const rows = db
+    .query(
+      `SELECT project_id,
+              SUM(outcome = 'triggered') AS triggered,
+              SUM(outcome = 'unassessed') AS unassessed,
+              COUNT(*) AS total
+       FROM kill_criteria_evaluation
+       WHERE project_id IN (${placeholders})
+       GROUP BY project_id`,
+    )
+    .all(...ids) as Array<{ project_id: string; triggered: number; unassessed: number; total: number }>;
+  for (const r of rows) {
+    out.set(r.project_id, r.triggered > 0 ? "triggered" : (r.unassessed ?? 0) > 0 ? "unassessed" : "false");
+  }
+  // MNPI suppression — same live-list semantics as requireInsiderIfMnpi:
+  // insider status is read from the ACTIVE insider_list at read time.
+  const mnpiRows = db
+    .query(
+      `SELECT c.project_id,
+              EXISTS (
+                SELECT 1 FROM insider_list i
+                WHERE i.project_id = c.project_id AND i.user_id = ? AND i.removed_at IS NULL
+              ) AS insider
+       FROM project_classification c
+       WHERE c.mnpi_flag = 1 AND c.project_id IN (${placeholders})`,
+    )
+    .all(opts.viewerId, ...ids) as Array<{ project_id: string; insider: number }>;
+  for (const r of mnpiRows) {
+    if (!r.insider) out.delete(r.project_id);
+  }
+  return out;
 }
 
 /** D1 — S8~S12 funnel: per-project current stage + gate snapshot. */
@@ -86,7 +156,9 @@ export interface PipelineProject {
 
 export function listProjectPipeline(db: Database): PipelineProject[] {
   const projects = db
-    .query("SELECT id, project_no, COALESCE(project_name, project_no) AS pname, track FROM md_project WHERE status = 'open' AND deleted_at IS NULL ORDER BY created_at DESC")
+    .query(
+      "SELECT id, project_no, COALESCE(project_name, project_no) AS pname, track FROM md_project WHERE status = 'open' AND deleted_at IS NULL ORDER BY created_at DESC",
+    )
     .all() as Array<{ id: string; project_no: string; pname: string; track: string | null }>;
   // evaluateProcess lives in the app lib — imported above (no cycle: the
   // process engine never reads gate aging).
