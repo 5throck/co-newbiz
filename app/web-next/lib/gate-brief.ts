@@ -155,23 +155,76 @@ function s3GapSummary(db: Database, oppId: string): string {
     .join("\n");
 }
 
+/**
+ * The market_sizing_version row the opportunity's S1 figures are read from:
+ * the version identity plus the grade columns the table exposes
+ * (data_confidence_grade A|B|C|U per ADR-0187, chain_hops, confidence_basis;
+ * there is NO grade inside the payload) plus the payload itself, so one row
+ * serves both the manifest summary and the provenance line.
+ */
+interface SizingVersionRow {
+  id: string;
+  version_no: number;
+  payload: string;
+  data_confidence_grade: string | null;
+  chain_hops: number | null;
+  confidence_basis: string | null;
+}
+
+/**
+ * ADR-0180 slice 6 resolution order for the opportunity's S1 analysis
+ * (design §9.4, F4): the industry FK FIRST, the market_scope name-join only
+ * when the FK is unset. The name join silently missed every opportunity
+ * whose market_scope text drifted from the industry name (the reason
+ * track-advisory.ts moved to this order); ONE shared resolver here means the
+ * manifest S1 block, the §8.2 provenance line, and the track-advisory
+ * section all reference the SAME market_sizing_version. The two-query shape
+ * mirrors track-advisory.ts exactly: the FK subquery is NULL for an unset
+ * industry_id, and the fallback's own `industry_id IS NULL` subquery
+ * self-excludes rows with a set FK, so a drifted name never shadows the FK
+ * result.
+ */
+function resolveS1MarketRow(db: Database, opportunityId: string): SizingVersionRow | null {
+  const fkFirst = db
+    .query(
+      `SELECT v.id, v.version_no, v.payload, v.data_confidence_grade, v.chain_hops, v.confidence_basis
+       FROM market_sizing_analysis a
+       JOIN market_sizing_version v ON v.analysis_id = a.id
+       WHERE a.status = 'completed'
+         AND a.industry_id = (SELECT industry_id FROM opportunity WHERE id = ?)
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(opportunityId) as SizingVersionRow | undefined;
+  if (fkFirst) return fkFirst;
+  const nameFallback = db
+    .query(
+      `SELECT v.id, v.version_no, v.payload, v.data_confidence_grade, v.chain_hops, v.confidence_basis
+       FROM market_sizing_analysis a
+       JOIN md_industry i ON i.id = a.industry_id
+       JOIN market_sizing_version v ON v.analysis_id = a.id
+       WHERE a.status = 'completed'
+         AND i.name_ko = (SELECT market_scope FROM opportunity WHERE id = ? AND industry_id IS NULL)
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(opportunityId) as SizingVersionRow | undefined;
+  return nameFallback ?? null;
+}
+
 // S1 artifact — latest completed sizing for the opportunity's market.
-function s1Summary(db: Database, marketScope: string | null): string {
-  if (!marketScope) return "S1 시장분석: 없음 (market_scope 미지정)";
-  const ind = db.query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1").get(marketScope) as
-    | { id: string }
-    | undefined;
-  const version = ind
-    ? (db
-        .query(
-          `SELECT v.payload FROM market_sizing_version v
-         JOIN market_sizing_analysis a ON a.id = v.analysis_id
-         WHERE a.industry_id = ? AND a.status = 'completed'
-         ORDER BY v.version_no DESC LIMIT 1`,
-        )
-        .get(ind.id) as { payload: string } | undefined)
-    : undefined;
-  if (!version) return "S1 시장분석: 없음";
+function s1Summary(db: Database, opportunityId: string): string {
+  const version = resolveS1MarketRow(db, opportunityId);
+  if (!version) {
+    // Honest unset (§9.4): the parenthesized label covers an opportunity that
+    // names no market at all (no market_scope AND no industry FK — the
+    // FK-null-and-name-miss case at its barest); a named market whose
+    // analysis does not resolve keeps the plain label.
+    const opp = db.query("SELECT market_scope, industry_id FROM opportunity WHERE id = ?").get(opportunityId) as
+      | { market_scope: string | null; industry_id: string | null }
+      | undefined;
+    if (!opp || (opp.market_scope === null && opp.industry_id === null))
+      return "S1 시장분석: 없음 (market_scope 미지정)";
+    return "S1 시장분석: 없음";
+  }
   try {
     const m =
       (
@@ -225,6 +278,15 @@ function s3Summary(opp: OppRow): string {
   ].join("\n");
 }
 
+/**
+ * Cut at n characters, appending the ellipsis marker ONLY when the text was
+ * actually truncated (design §9.5, F5) — a text of exactly n characters stays
+ * marker-free. The 300-character budget itself is unchanged.
+ */
+function truncate(text: string, n: number): string {
+  return text.length > n ? `${text.slice(0, n)}…` : text;
+}
+
 function s4Summary(db: Database, oppId: string): string {
   // ADR-0135: 권위 행은 is_current=1로 읽는다 — getCurrentRouteDecision 재사용.
   const row = getCurrentRouteDecision(oppId, db);
@@ -232,7 +294,7 @@ function s4Summary(db: Database, oppId: string): string {
   return [
     `트랙: ${row.track}${row.sub_track ? ` / 라우트: ${row.sub_track}` : ""}${row.intent ? ` / 의도: ${row.intent}` : ""}`,
     row.total_score != null ? `5기준 합산: ${row.total_score}/3.0` : "",
-    row.rationale ? `결정 근거: ${row.rationale.slice(0, 300)}` : "",
+    row.rationale ? `결정 근거: ${truncate(row.rationale, 300)}` : "",
     row.staging_recommended ? `스테이징 권고: ${row.staging_recommended}` : "",
   ]
     .filter(Boolean)
@@ -520,7 +582,7 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
     if (gate === "screening") {
       return [
         base,
-        `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`,
+        `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.id)}`,
         `\n[S3 필요 역량 수준 요약]\n${s3GapSummary(db, entityId)}`,
         `\n[S2 기회 퍼널]\n${s2Factors(opp)}`,
         `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`,
@@ -532,7 +594,7 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
         : `\n[S5 역량 평가]\n${s5Summary(db, entityId)}`;
       return [
         base,
-        `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`,
+        `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.id)}`,
         `\n[S3 필요 역량 수준 요약]\n${s3GapSummary(db, entityId)}`,
         `\n[S3 적합성·시너지 초안]\n${s3Summary(opp)}`,
         `\n[S4 트랙 결정·라우트]\n${s4Summary(db, entityId)}`,
@@ -686,36 +748,12 @@ const PRE_FS_BRIEF_SCOPE_LINE = "재무 정량 근거는 S5/S8에서 산출 — 
 const S1_MARKET_UNSET_LABEL = "시장 근거 미산출";
 const ENTRY_MARKET_UNSET_LABEL = "진입시장 미확정";
 
-/** The market_sizing_version row a pre_fs S1 figure was read from — the
- * version identity plus the grade columns the table actually exposes
- * (data_confidence_grade A|B|C|U per ADR-0187, chain_hops, confidence_basis;
- * there is NO grade inside the payload). Resolved with the same
- * market_scope name join s1Summary uses, so the provenance line references
- * exactly the version whose figures the manifest section shows. */
-interface SizingVersionRow {
-  id: string;
-  version_no: number;
-  data_confidence_grade: string | null;
-  chain_hops: number | null;
-  confidence_basis: string | null;
-}
-
-function latestSizingVersion(db: Database, marketScope: string | null): SizingVersionRow | null {
-  if (!marketScope) return null;
-  const ind = db.query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1").get(marketScope) as
-    | { id: string }
-    | undefined;
-  if (!ind) return null;
-  const row = db
-    .query(
-      `SELECT v.id, v.version_no, v.data_confidence_grade, v.chain_hops, v.confidence_basis
-       FROM market_sizing_version v
-       JOIN market_sizing_analysis a ON a.id = v.analysis_id
-       WHERE a.industry_id = ? AND a.status = 'completed'
-       ORDER BY v.version_no DESC LIMIT 1`,
-    )
-    .get(ind.id) as SizingVersionRow | undefined;
-  return row ?? null;
+/** The market_sizing_version row a pre_fs S1 figure was read from —
+ * resolved through the SHARED ADR-0180-order resolver (design §9.4), so the
+ * provenance line references exactly the version whose figures the manifest
+ * section shows, and the same one the track-advisory section reads. */
+function latestSizingVersion(db: Database, opportunityId: string): SizingVersionRow | null {
+  return resolveS1MarketRow(db, opportunityId);
 }
 
 /** Which pre_fs manifest areas hold REAL artifacts (vs the honest-unset
@@ -724,7 +762,7 @@ function latestSizingVersion(db: Database, marketScope: string | null): SizingVe
  * sources are these same artifacts), so the brief would be all markers —
  * return undefined and let the session convene without one. */
 function preFsArtifactPresence(db: Database, opp: OppRow): boolean {
-  const s1 = latestSizingVersion(db, opp.market_scope) !== null;
+  const s1 = latestSizingVersion(db, opp.id) !== null;
   const entry = buildSubjectMarketContext(db, opp.id) !== null; // S2-confirmed entry market (ADR-0181)
   const s3Scores = opp.attractiveness_score !== null || opp.synergy_score !== null;
   const gapRow = db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opp.id) as
@@ -754,7 +792,7 @@ function preFsArtifactPresence(db: Database, opp: OppRow): boolean {
  * the absence of a grade is stated, never invented. */
 function preFsProvenanceLines(db: Database, opp: OppRow): string[] {
   const lines: string[] = [];
-  const v = latestSizingVersion(db, opp.market_scope);
+  const v = latestSizingVersion(db, opp.id);
   if (v) {
     const grade = v.data_confidence_grade ?? "미기록";
     const hops = v.chain_hops != null ? ` · 근거 사슬 홉 ${v.chain_hops}` : "";

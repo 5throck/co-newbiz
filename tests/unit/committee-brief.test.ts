@@ -346,3 +346,127 @@ describe("web path end-to-end — the POST route convenes WITH the default brief
     expect((meta.minutes_draft as { prompt_version: string } | undefined)?.prompt_version).toBe("committee.minutes@2");
   });
 });
+
+// ── Design §9.4 (F4) / §9.5 (F5) — follow-up batch, amendment 2026-11-11 ──
+
+/** The single seeded sizing version's identity (id + version_no) for an
+ * industry — read back instead of hardcoding seedSeq, which counts across
+ * the whole file. */
+function seededVersionOf(industryId: string): { id: string; version_no: number } {
+  return db
+    .query(
+      "SELECT id, version_no FROM market_sizing_version WHERE analysis_id IN (SELECT id FROM market_sizing_analysis WHERE industry_id = ?) ORDER BY version_no DESC LIMIT 1",
+    )
+    .get(industryId) as { id: string; version_no: number };
+}
+
+describe("S1 resolution aligned to the ADR-0180 industry-FK-first order (design §9.4)", () => {
+  test("(a) industry_id set + drifted market_scope → the manifest block and the provenance line cite the FK-resolved version, the same one the advisory reads", async () => {
+    const { buildPreFsCommitteeBrief } = await import("../../app/web-next/lib/gate-brief.ts");
+    const { computeTrackAdvisory } = await import("../../app/web-next/lib/track-advisory.ts");
+    const oppId = await createOpportunity("S1 FK drift");
+    seedArtifacts(oppId, { grade: "B" });
+    // The drift: the FK points at the industry while market_scope names
+    // something else entirely — the pre-amendment name-join resolved NOTHING
+    // here (a false 없음) while the advisory resolved the FK row. Two
+    // statements: the 0126 UPDATE trigger re-derives the FK from a changed
+    // market_scope (drifted name → NULL), so the explicit FK write lands
+    // only after the drift, in its own statement.
+    db.run("UPDATE opportunity SET market_scope = '드리프트된 시장명' WHERE id = ?", [oppId]);
+    db.run("UPDATE opportunity SET industry_id = ? WHERE id = ?", [INDUSTRY_ID, oppId]);
+    const version = seededVersionOf(INDUSTRY_ID);
+
+    const brief = buildPreFsCommitteeBrief(db, oppId) as string;
+    // The manifest S1 block shows the real figures (no false 없음).
+    expect(brief).toContain("[S1 시장 규모·성장]");
+    expect(brief).toContain("기준 규모: $12.50B");
+    expect(brief).toContain("CAGR: 18.2%");
+    // The provenance line cites the SAME version identity.
+    expect(brief).toContain(`market_sizing_version v${version.version_no}`);
+    expect(brief).toContain(`id ${version.id}`);
+    // And the advisory resolved the same analysis — its market signal exists
+    // with the payload's CAGR, so one version feeds both sections.
+    const marketSignal = computeTrackAdvisory(db, oppId).signals.find((s) => s.key === "market_growth");
+    expect(marketSignal).toBeDefined();
+    expect(marketSignal?.label).toContain("18%");
+  });
+
+  test("(a2) industry_id set + market_scope NULL also resolves through the FK", async () => {
+    const { buildPreFsCommitteeBrief } = await import("../../app/web-next/lib/gate-brief.ts");
+    const oppId = await createOpportunity("S1 FK null scope");
+    seedArtifacts(oppId);
+    // Same two-statement fixture rule as (a): nulling market_scope fires the
+    // 0126 trigger (FK re-derived to NULL), then the explicit FK write lands
+    // untouched — the §9.4 "market_scope null while the FK is set" state.
+    db.run("UPDATE opportunity SET market_scope = NULL WHERE id = ?", [oppId]);
+    db.run("UPDATE opportunity SET industry_id = ? WHERE id = ?", [INDUSTRY_ID, oppId]);
+    const version = seededVersionOf(INDUSTRY_ID);
+    const brief = buildPreFsCommitteeBrief(db, oppId) as string;
+    expect(brief).toContain("기준 규모: $12.50B");
+    expect(brief).toContain(`id ${version.id}`);
+    expect(brief).not.toContain("S1 시장분석: 없음");
+  });
+
+  test("(b) industry_id null + market_scope set → the name-join fallback resolves unchanged", async () => {
+    const { buildPreFsCommitteeBrief } = await import("../../app/web-next/lib/gate-brief.ts");
+    const oppId = await createOpportunity("S1 name fallback");
+    seedArtifacts(oppId); // market_scope = INDUSTRY_NAME, industry_id untouched (NULL)
+    const version = seededVersionOf(INDUSTRY_ID);
+    const brief = buildPreFsCommitteeBrief(db, oppId) as string;
+    expect(brief).toContain("기준 규모: $12.50B");
+    expect(brief).toContain(`market_sizing_version v${version.version_no}`);
+    expect(brief).toContain(`id ${version.id}`);
+  });
+
+  test("(c) neither market_scope nor industry_id → the honest unset labels", async () => {
+    const { buildPreFsCommitteeBrief } = await import("../../app/web-next/lib/gate-brief.ts");
+    const oppId = await createOpportunity("S1 both unset");
+    // One non-S1 artifact keeps the brief defined (otherwise §8.2 returns
+    // undefined and the labels would not render at all).
+    db.run("UPDATE opportunity SET attractiveness_score = 70 WHERE id = ?", [oppId]);
+    const brief = buildPreFsCommitteeBrief(db, oppId) as string;
+    expect(brief).toContain("S1 시장분석: 없음 (market_scope 미지정)");
+    expect(brief).toContain("- S1 시장 규모·성장·경쟁 구조: 시장 근거 미산출");
+  });
+
+  test("(c2) a named market whose analysis does not resolve keeps the plain 없음 label", async () => {
+    const { buildPreFsCommitteeBrief } = await import("../../app/web-next/lib/gate-brief.ts");
+    const oppId = await createOpportunity("S1 name miss");
+    db.run("UPDATE opportunity SET market_scope = '존재하지 않는 산업명', attractiveness_score = 70 WHERE id = ?", [
+      oppId,
+    ]);
+    const brief = buildPreFsCommitteeBrief(db, oppId) as string;
+    expect(brief).toContain("S1 시장분석: 없음");
+    expect(brief).not.toContain("market_scope 미지정");
+  });
+});
+
+describe("s4Summary rationale truncation marker (design §9.5)", () => {
+  async function contextWithRationale(oppId: string, rationale: string): Promise<string> {
+    const { buildGateContext } = await import("../../app/web-next/lib/gate-brief.ts");
+    db.run(
+      "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+      [`rd-${oppId.slice(-8)}`, oppId, "greenfield", "existing_business_rbd", rationale, "test", NOW],
+    );
+    return buildGateContext(db, "opportunity", oppId, "pre_fs");
+  }
+
+  function rationaleLine(ctx: string): string {
+    const line = ctx.split("\n").find((l) => l.startsWith("결정 근거: "));
+    expect(line).toBeDefined();
+    return line as string;
+  }
+
+  test("a >300-char rationale ends with … after the 300-char prefix", async () => {
+    const oppId = await createOpportunity("Truncate long");
+    const line = rationaleLine(await contextWithRationale(oppId, "가".repeat(450)));
+    expect(line).toBe(`결정 근거: ${"가".repeat(300)}…`);
+  });
+
+  test("exactly 300 chars → no … marker (the budget is unchanged)", async () => {
+    const oppId = await createOpportunity("Truncate exact");
+    const line = rationaleLine(await contextWithRationale(oppId, "나".repeat(300)));
+    expect(line).toBe(`결정 근거: ${"나".repeat(300)}`);
+    expect(line.endsWith("…")).toBe(false);
+  });
+});

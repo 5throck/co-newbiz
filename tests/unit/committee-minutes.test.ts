@@ -580,3 +580,150 @@ describe("minutes pass topic + degraded count (design §8.4/§8.6, amendment 202
     expect(out.degradedResolutions).toBe(1);
   });
 });
+
+// ── Design §9.1 (F1, amendment 2026-11-11) — canonical tail storage survival
+// and fallback restoration ─────────────────────────────────────────────────
+
+describe("F1 storage survival — the canonical tail rides position_md into agent_position", () => {
+  test("an LLM-shaped deliberation run re-parses recommendation/veto_dissent/criteria_scores from the stored rows", async () => {
+    const { runDeliberationRounds } = await import("../../app/web-next/lib/deliberation.ts");
+    const { makeLlmCommitteeAgent } = await import("../../app/web-next/lib/committee-llm.ts");
+    const { parsePositionMeta } = await import("../../app/web-next/lib/committee-session.ts");
+    // The provider seam reads env per call; a stub provider + stubbed fetch
+    // makes makeLlmCommitteeAgent's complete() deterministic here.
+    const savedEnv = ["CO_NEWBIZ_LLM_PROVIDER", "CO_NEWBIZ_LLM_API_KEY", "CO_NEWBIZ_LLM_MODEL"].map(
+      (k) => [k, process.env[k]] as const,
+    );
+    const origFetch = globalThis.fetch;
+    try {
+      process.env.CO_NEWBIZ_LLM_PROVIDER = "openai";
+      // Dummy key, assembled at runtime (pre-commit secret scanner pattern).
+      process.env.CO_NEWBIZ_LLM_API_KEY = ["test", "-key"].join("");
+      process.env.CO_NEWBIZ_LLM_MODEL = "test-model";
+      globalThis.fetch = (async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content:
+                    '### 리스크 관점\n\n하락 시나리오를 점검했다.\n\n<!--position-meta:{"recommendation":"kill","confidence":82,"veto_dissent":true,"criteria_scores":{"control_need":3,"capability_criticality":3,"market_uncertainty":2,"integration_capacity":1,"speed_to_capability":1}}-->',
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        )) as unknown as typeof fetch;
+
+      const oppId = await createOpportunity("Tail storage survival");
+      const result = await runDeliberationRounds(
+        { entityType: "opportunity", entityId: oppId },
+        {
+          committeeKey: "route-steering-committee",
+          agents: [{ agentKey: "risk-officer" }, { agentKey: "financial-analyst" }],
+          rounds: 1,
+          topic: "route_decision 심의 (진행 pre_fs)",
+          // The REAL F1 executor — the enrichment under test happens inside
+          // makeLlmCommitteeAgent, not in the engine.
+          callAgent: makeLlmCommitteeAgent(),
+          actor: "carol",
+        },
+      );
+      expect(result.status).toBe("done");
+
+      const rows = db
+        .query(
+          "SELECT agent_key AS agentKey, position_md AS positionMd FROM agent_position WHERE process_run_id = ? ORDER BY created_at",
+        )
+        .all(result.processRunId) as Array<{ agentKey: string; positionMd: string }>;
+      expect(rows.length).toBe(2);
+      for (const row of rows) {
+        // The stored text ends with a canonical tail whose seat is the
+        // called agentKey — the model reply carried NO seat field.
+        const m = row.positionMd.match(/<!--position-meta:(\{[\s\S]*\})-->$/);
+        if (!m) throw new Error(`stored position for ${row.agentKey} carries no canonical tail`);
+        const tail = JSON.parse(m[1]) as Record<string, unknown>;
+        expect(tail.seat).toBe(row.agentKey);
+        // The committee-session whitelist (the consumer the scorecard and
+        // the advance path use) re-parses the STORED text.
+        const meta = parsePositionMeta(row.positionMd);
+        expect(meta.recommendation).toBe("kill");
+        expect(meta.veto_dissent).toBe(true);
+        expect(meta.confidence).toBe(82);
+        expect(meta.criteria_scores).toEqual({
+          control_need: 3,
+          capability_criticality: 3,
+          market_uncertainty: 2,
+          integration_capacity: 1,
+          speed_to_capability: 1,
+        });
+      }
+    } finally {
+      globalThis.fetch = origFetch;
+      for (const [k, v] of savedEnv) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  });
+});
+
+describe("F1 fallback restoration — deterministic chair passes see canonical tails again", () => {
+  // Canonical-tail rows in the exact byte shape makeLlmCommitteeAgent now
+  // emits (compact JSON appended after a newline) — the §8.16 degradation
+  // scenario (0/20 tail-bearing LLM rows) reverses for these inputs.
+  const tailRow = (
+    id: string,
+    seat: string,
+    round: number,
+    fields: Record<string, unknown>,
+  ): import("../../app/web-next/lib/committee-chair.ts").ChairPositionRow => ({
+    id,
+    seat,
+    memberType: "agent",
+    round,
+    positionMd: `### ${seat}\n\n본문\n<!--position-meta:${JSON.stringify({ seat, ...fields })}-->`,
+  });
+
+  test("computeAgendaFallback produces criterion-spread issues from canonical-tail rows", async () => {
+    const { computeAgendaFallback } = await import("../../app/web-next/lib/committee-chair.ts");
+    const rows = [
+      tailRow("POS-A", "financial-analyst", 1, {
+        recommendation: "go",
+        confidence: 70,
+        criteria_scores: { control_need: 1, capability_criticality: 1, market_uncertainty: 1 },
+      }),
+      tailRow("POS-B", "risk-officer", 1, {
+        recommendation: "kill",
+        confidence: 80,
+        criteria_scores: { control_need: 3, capability_criticality: 3, market_uncertainty: 3 },
+      }),
+    ];
+    const agenda = computeAgendaFallback(rows);
+    expect(agenda.length).toBeGreaterThanOrEqual(1);
+    expect(agenda.some((i) => i.title.includes("통제 필요도") && i.contested)).toBe(true);
+  });
+
+  test("computeMinutesFallback builds responds_to exchanges from canonical-tail rows", async () => {
+    const { computeMinutesFallback } = await import("../../app/web-next/lib/committee-chair.ts");
+    const agenda = [{ id: "I1", title: "수요 전제 신뢰도" }];
+    const rows = [
+      tailRow("POS-A", "risk-officer", 2, {
+        recommendation: "kill",
+        confidence: 80,
+        responds_to: [{ seat: "financial-analyst", act: "rebut", issue: "I1" }],
+        issues: ["I1"],
+      }),
+      tailRow("POS-B", "financial-analyst", 2, {
+        recommendation: "go",
+        confidence: 70,
+        responds_to: [{ seat: "risk-officer", act: "agree", issue: "I1" }],
+        issues: ["I1"],
+      }),
+    ];
+    const minutes = computeMinutesFallback(agenda, rows);
+    const exchanges = minutes.discussion.flatMap((d) => d.exchanges);
+    expect(exchanges.length).toBe(2);
+    expect(exchanges.every((e) => e.position_ref === "POS-A" || e.position_ref === "POS-B")).toBe(true);
+  });
+});

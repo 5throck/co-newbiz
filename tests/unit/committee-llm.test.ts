@@ -158,6 +158,136 @@ describe("makeLlmCommitteeAgent degradation", () => {
   });
 });
 
+describe("makeLlmCommitteeAgent — canonical tail re-serialization (design §9.1, F1)", () => {
+  const origFetch = globalThis.fetch;
+  const ENV_KEYS = ["CO_NEWBIZ_LLM_PROVIDER", "CO_NEWBIZ_LLM_API_KEY", "CO_NEWBIZ_LLM_MODEL"] as const;
+  const savedEnv: Array<readonly [string, string | undefined]> = [];
+
+  beforeEach(() => {
+    globalThis.fetch = origFetch as typeof fetch;
+    for (const k of ENV_KEYS) savedEnv.push([k, process.env[k]] as const);
+    // The LLM client reads its provider from env; a stub provider for this
+    // suite only (explicit process.env overrides the root .env).
+    process.env.CO_NEWBIZ_LLM_PROVIDER = "openai";
+    // Dummy key for the stub provider. Assembled at runtime so the literal
+    // stays off one line — the pre-commit secret scanner blocks any
+    // *_KEY = "<8+ chars>" assignment in newly added diff lines.
+    process.env.CO_NEWBIZ_LLM_API_KEY = ["test", "-key"].join("");
+    process.env.CO_NEWBIZ_LLM_MODEL = "test-model";
+  });
+  afterEach(() => {
+    globalThis.fetch = origFetch as typeof fetch;
+    for (const [k, v] of savedEnv.splice(0).reverse()) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
+  function stubReply(content: string): void {
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ choices: [{ message: { content } }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })) as unknown as typeof fetch;
+  }
+
+  /** The canonical tail a stored positionMd must end with. */
+  function canonicalTailOf(positionMd: string): Record<string, unknown> {
+    const m = positionMd.match(/<!--position-meta:(\{[\s\S]*\})-->$/);
+    expect(m).not.toBeNull();
+    return JSON.parse(m![1]) as Record<string, unknown>;
+  }
+
+  test("a valid model tail → the returned positionMd ENDS with a canonical tail built from the PARSED fields", async () => {
+    stubReply(
+      [
+        "### 리스크 관점",
+        "",
+        "하락 시나리오를 점검했다.",
+        "",
+        '<!--position-meta:{"recommendation":"kill","confidence":80,"veto_dissent":true,"criteria_scores":{"control_need":3,"capability_criticality":2,"market_uncertainty":3,"integration_capacity":1,"speed_to_capability":1,"bogus":3},"responds_to":[{"seat":"valuation-agent","act":"rebut","issue":"I2"},{"seat":"ghost-seat","act":"approve"}],"stance_changed":true,"issues":["I1","I2"]}-->',
+      ].join("\n"),
+    );
+    const r = await makeLlmCommitteeAgent()("risk-officer", "안건: 진출 방식");
+    // Ends with EXACTLY ONE marker, compact JSON, byte-shape of the
+    // deterministic emitter.
+    expect(r?.positionMd.match(/<!--position-meta:/g)).toHaveLength(1);
+    const tail = canonicalTailOf(r!.positionMd);
+    // Whitelist order: recommendation, veto_dissent (only true), confidence,
+    // seat (always — the caller's agentKey), criteria_scores, responds_to,
+    // stance_changed, issues. Unknown/junk fields are gone.
+    expect(Object.keys(tail)).toEqual([
+      "recommendation",
+      "veto_dissent",
+      "confidence",
+      "seat",
+      "criteria_scores",
+      "responds_to",
+      "stance_changed",
+      "issues",
+    ]);
+    expect(tail.recommendation).toBe("kill");
+    expect(tail.veto_dissent).toBe(true);
+    expect(tail.confidence).toBe(80);
+    expect(tail.seat).toBe("risk-officer");
+    expect(tail.criteria_scores).toEqual({
+      control_need: 3,
+      capability_criticality: 2,
+      market_uncertainty: 3,
+      integration_capacity: 1,
+      speed_to_capability: 1,
+    });
+    expect(tail.responds_to).toEqual([{ seat: "valuation-agent", act: "rebut", issue: "I2" }]);
+    expect(tail.stance_changed).toBe(true);
+    expect(tail.issues).toEqual(["I1", "I2"]);
+    // The body survives verbatim above the tail.
+    expect(r?.positionMd.startsWith("### 리스크 관점")).toBe(true);
+    expect(r?.positionMd).toContain("하락 시나리오를 점검했다.");
+  });
+
+  test("round-trip through parsePositionMeta on the returned text reproduces the parsed fields", async () => {
+    stubReply(
+      '본문\n<!--position-meta:{"recommendation":"hold","confidence":60,"criteria_scores":{"control_need":2},"responds_to":[{"seat":"risk-officer","act":"ask"}],"stance_changed":false,"issues":["I1"]}-->',
+    );
+    const r = await makeLlmCommitteeAgent()("financial-analyst", "안건");
+    const rt = parsePositionMeta(r!.positionMd);
+    expect(rt).not.toBeNull();
+    expect(rt?.recommendation).toBe("hold");
+    expect(rt?.vetoDissent).toBeUndefined(); // not true → absent, never fabricated
+    expect(rt?.confidence).toBe(60);
+    expect(rt?.criteriaScores).toEqual({ control_need: 2 });
+    expect(rt?.respondsTo).toEqual([{ seat: "risk-officer", act: "ask" }]);
+    expect(rt?.stanceChanged).toBe(false);
+    expect(rt?.issues).toEqual(["I1"]);
+  });
+
+  test("a minimal tail yields only the fields the parse produced + seat", async () => {
+    stubReply('본문\n<!--position-meta:{"confidence":55}-->');
+    const r = await makeLlmCommitteeAgent()("industry-lead", "안건");
+    const tail = canonicalTailOf(r!.positionMd);
+    expect(tail).toEqual({ confidence: 55, seat: "industry-lead" });
+  });
+
+  test("tail omitted → no marker, no fields (unchanged passthrough)", async () => {
+    stubReply("본문만 있습니다.");
+    const r = await makeLlmCommitteeAgent()("valuation-agent", "안건");
+    expect(r?.positionMd).toBe("본문만 있습니다.");
+    expect(r?.positionMd).not.toContain("position-meta");
+    expect(r?.recommendation).toBeUndefined();
+    expect(r?.confidence).toBeUndefined();
+    expect(r?.criteriaScores).toBeUndefined();
+  });
+
+  test("malformed tail → raw passthrough, the inert marker rides along, nothing appended", async () => {
+    stubReply("본문\n<!--position-meta:{broken}-->");
+    const r = await makeLlmCommitteeAgent()("legal-counsel", "안건");
+    expect(r?.positionMd).toBe("본문\n<!--position-meta:{broken}-->");
+    expect(r?.positionMd.match(/<!--position-meta:/g)).toHaveLength(1); // no canonical tail appended
+    expect(parsePositionMeta(r!.positionMd)).toBeNull();
+    expect(r?.recommendation).toBeUndefined();
+  });
+});
+
 describe("makeLlmChairMinutes timeout budget", () => {
   const origFetch = globalThis.fetch;
   const origAbortTimeout = AbortSignal.timeout;
