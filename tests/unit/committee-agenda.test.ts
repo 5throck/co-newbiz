@@ -154,9 +154,14 @@ describe("computeAgendaFallback (deterministic)", () => {
     ];
     const agenda = computeAgendaFallback(rows);
     expect(agenda.map((i) => i.title)).toEqual([
-      expect.stringContaining("control_need"),
-      expect.stringContaining("market_uncertainty"),
+      expect.stringContaining("통제 필요도"),
+      expect.stringContaining("시장 불확실성"),
     ]);
+    // Design §8.9: fallback titles carry the Korean display label ONLY — the
+    // machine key stays in code/tests via the constant, never in the title.
+    expect(agenda[0].title).toBe("기준 쟁점: 통제 필요도 (의견 산포 2)");
+    expect(agenda[1].title).toBe("기준 쟁점: 시장 불확실성 (의견 산포 2)");
+    for (const issue of agenda) expect(issue.title).not.toMatch(/[a-z]+_[a-z]+/);
     expect(agenda[0].contested).toBe(true);
     expect(agenda[0].raisedBy).toContain("industry-lead");
     // Split recommendations add the overall issue — all 'go' here, so none.
@@ -236,6 +241,15 @@ describe("computeAgendaFallback (deterministic)", () => {
     const agenda = computeAgendaFallback(rows);
     expect(agenda.length).toBeLessThanOrEqual(5);
     expect(agenda.map((i) => i.id)).toEqual(agenda.map((_, idx) => `I${idx + 1}`));
+    // Design §8.9 table, pinned in full: every criterion carries its exact
+    // Korean label and no machine key (all five spread 2 in this fixture).
+    expect(agenda.map((i) => i.title)).toEqual([
+      "기준 쟁점: 통제 필요도 (의견 산포 2)",
+      "기준 쟁점: 역량 결정성 (의견 산포 2)",
+      "기준 쟁점: 시장 불확실성 (의견 산포 2)",
+      "기준 쟁점: 통합 역량 (의견 산포 2)",
+      "기준 쟁점: 역량확보 속도 (의견 산포 2)",
+    ]);
   });
 });
 

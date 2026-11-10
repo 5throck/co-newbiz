@@ -66,6 +66,10 @@ export interface CommitteeMinutesPayload {
   minutesConfirmed: { by: string; at: string } | null;
   recommendation: string | null;
   dissentJson: string | Array<{ member_key: string; position_md: string }> | null;
+  /** Design §8.6 (supplement G): count of silently-filled resolutions in the
+   * LLM draft (minutes_draft.degraded_resolutions). Null/absent for fallback
+   * drafts and pre-amendment sessions — the chip renders only when > 0. */
+  degradedResolutions?: number | null;
 }
 
 // dissent_json is stored as a raw JSON string in gate_evaluation; accept both
@@ -86,10 +90,28 @@ function parseDissent(
 
 const REC_LABEL: Record<string, string> = { go: "GO", hold: "HOLD", kill: "KILL" };
 
+// Design §8.7 (supplement G): the payload enum stays English (prompt language
+// rules); resolution display labels are locale content. An unknown payload
+// value falls back to the raw string — never crash, never blank.
+function resolutionLabel(resolution: string, t: (key: string) => string): string {
+  if (resolution === "agreed") return t("resolutionAgreed");
+  if (resolution === "narrowed") return t("resolutionNarrowed");
+  if (resolution === "unresolved") return t("resolutionUnresolved");
+  return resolution;
+}
+
+// In-page anchor target of the Open questions section (§8.7 open-questions
+// badge): an unresolved issue is never a dead end — the badge links there.
+const OPEN_QUESTIONS_ANCHOR = "committee-minutes-open-questions";
+
 export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPayload }) {
   const t = useTranslations("common.committeeMinutes");
   const draft = payload.minutesDraft;
   const dissents = parseDissent(payload.dissentJson);
+  // Design §8.7: session-level open-questions count — the open-questions badge
+  // on unresolved conclusion lines points at the section below (per-issue
+  // linkage needs an issue_id schema change and is out of scope).
+  const openQuestionCount = draft ? draft.json.open_questions.length : 0;
   const agendaTitle = (issueId: string): string =>
     payload.agenda?.find((a) => a.id === issueId)?.title ??
     draft?.json.agenda?.find((a) => a.id === issueId)?.title ??
@@ -107,6 +129,13 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
           <span className="status-chip status-not-started">{t("draft")}</span>
         )}
         {draft?.fallback && <span className="status-chip status-amber">◐ {t("fallbackDraft")}</span>}
+        {/* Design §8.6: the silently-repaired resolution count, visible —
+            rendered only when the payload carries a real count > 0. */}
+        {typeof payload.degradedResolutions === "number" && payload.degradedResolutions > 0 && (
+          <span className="status-chip status-amber">
+            {t("degradedResolutions", { count: payload.degradedResolutions })}
+          </span>
+        )}
       </p>
       {payload.minutesConfirmed && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
@@ -158,7 +187,15 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
                 </p>
               ))}
               <p className="text-[length:var(--fs-caption)] mb-1 m-0">
-                {t("resolution")}: <strong>{d.resolution}</strong>
+                {t("resolution")}: <strong>{resolutionLabel(d.resolution, t)}</strong>
+                {/* §8.7 open-questions badge: session-level count, only on
+                    unresolved issues and only when questions exist; links to
+                    the Open questions section below (text carries meaning). */}
+                {d.resolution === "unresolved" && openQuestionCount > 0 && (
+                  <a href={`#${OPEN_QUESTIONS_ANCHOR}`} className="status-chip status-amber ml-1">
+                    {t("openQuestionsBadge", { count: openQuestionCount })}
+                  </a>
+                )}
               </p>
             </div>
           ))}
@@ -205,7 +242,9 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       )}
 
       {/* Open questions and action items. */}
-      <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("openQuestions")}</h3>
+      <h3 id={OPEN_QUESTIONS_ANCHOR} className="text-[length:var(--fs-caption)] font-semibold mb-1">
+        {t("openQuestions")}
+      </h3>
       {draft && draft.json.open_questions.length > 0 ? (
         <ul className="mb-2 pl-4">
           {draft.json.open_questions.map((q) => (

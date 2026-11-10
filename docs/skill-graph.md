@@ -417,6 +417,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261104-05` | decision | `root/decision-record`, `root/design-foundation` | — | — |
 | `dec:DEC-20261104-06` | decision | `root/decision-record`, `root/design-foundation` | — | — |
 | `dec:DEC-20261104-07` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261110-01` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
@@ -604,7 +605,7 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 
 ## Skill Usage (E3)
 
-Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-10), window 90 days. Skill nodes with usage: 4.
+Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-11), window 90 days. Skill nodes with usage: 4.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (2): root/decision-record, root/sync
 - **unused** (0 sessions in 90 days) (104): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout, root/i18n-locale-config … and 64 more

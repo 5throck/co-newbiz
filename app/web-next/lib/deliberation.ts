@@ -142,6 +142,10 @@ export interface MinutesPassResult {
   promptVersion: string;
   inputHash: string;
   createdAt: string;
+  /** Design §8.6: silently-filled resolution count from the chair minutes
+   * pass (0 for fallback drafts). Persisted by the caller as the
+   * minutes_draft.degraded_resolutions sibling meta key. */
+  degradedResolutions?: number;
 }
 
 /** One chair-proposed discussion issue (ADR-0196 §2.2). */

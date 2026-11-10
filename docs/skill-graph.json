@@ -1826,6 +1826,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261110-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -3553,7 +3558,7 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 3,
+        "sessions": 2,
         "last_used": "2026-11-05"
       }
     },
@@ -6155,6 +6160,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261104-07",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261110-01",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

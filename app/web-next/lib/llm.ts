@@ -83,7 +83,12 @@ export interface LlmCaps {
 
 export function getLlmCaps(): LlmCaps {
   loadRootEnvPipelineKeys();
-  const set = new Set((process.env.CO_NEWBIZ_LLM_CAPS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+  const set = new Set(
+    (process.env.CO_NEWBIZ_LLM_CAPS ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
   return { structured: set.has("structured"), cache: set.has("cache"), stream: set.has("stream") };
 }
 
@@ -95,6 +100,8 @@ interface CallSpec {
   structured?: { name: string; jsonSchema: Record<string, unknown> };
   cacheSystem?: boolean;
   stream?: boolean;
+  /** Per-call abort deadline shared across retry attempts; absent keeps the existing 60 s transport timeout. */
+  signal?: AbortSignal;
 }
 
 interface ProviderReply {
@@ -130,7 +137,7 @@ async function runProvider(cfg: ProviderConfig, spec: CallSpec): Promise<Provide
         method: "POST",
         headers: buildHeaders(cfg),
         body: JSON.stringify(buildRequest(cfg, attemptSpec)),
-        signal: AbortSignal.timeout(60_000),
+        signal: spec.signal ?? AbortSignal.timeout(60_000),
       });
       if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const json = (await res.json()) as Record<string, unknown>;
@@ -158,7 +165,13 @@ export interface CompleteDetailed {
 /** Like complete() but also returns usage (provider-reported, or flagged estimate). */
 export async function completeDetailed(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
+  opts: {
+    temperature?: number;
+    maxTokens?: number;
+    agent: AgentCallMeta;
+    dryRun?: DryRunContext;
+    signal?: AbortSignal;
+  },
 ): Promise<CompleteDetailed> {
   requireAgentMeta(opts.agent);
   const cfg = getProviderConfig();
@@ -166,15 +179,37 @@ export async function completeDetailed(
   const started = Date.now();
   const model = cfg.model ?? "unknown";
   try {
-    const reply = await runProvider(cfg, { messages, temperature: opts.temperature, maxTokens: opts.maxTokens });
-    const usage = reply.usage ?? estimatedUsage(cfg.provider, model, messages.map((m) => m.content).join("\n"), reply.text);
+    const reply = await runProvider(cfg, {
+      messages,
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      signal: opts.signal,
+    });
+    const usage =
+      reply.usage ?? estimatedUsage(cfg.provider, model, messages.map((m) => m.content).join("\n"), reply.text);
     // 직접 호출 지점도 ADR-0128 런 장부에 남는다 — completeOrFallback 경로의 기록과 중복되지 않도록
     // 성공/실패 로그는 이곳(complete)에서만 담당한다.
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, true, null, Date.now() - started, usage, opts.dryRun);
+    logAgentCall(
+      opts.agent,
+      { source: "llm", provider: cfg.provider, model },
+      true,
+      null,
+      Date.now() - started,
+      usage,
+      opts.dryRun,
+    );
     return { text: reply.text, usage, finishReason: reply.finishReason };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, false, reason, Date.now() - started, null, opts.dryRun);
+    logAgentCall(
+      opts.agent,
+      { source: "llm", provider: cfg.provider, model },
+      false,
+      reason,
+      Date.now() - started,
+      null,
+      opts.dryRun,
+    );
     throw err instanceof Error ? err : new Error("LLM call failed.");
   }
 }
@@ -182,7 +217,13 @@ export async function completeDetailed(
 /** One shot: messages → text. Throws on provider errors after a single retry. */
 export async function complete(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
+  opts: {
+    temperature?: number;
+    maxTokens?: number;
+    agent: AgentCallMeta;
+    dryRun?: DryRunContext;
+    signal?: AbortSignal;
+  },
 ): Promise<string> {
   return (await completeDetailed(messages, opts)).text;
 }
@@ -231,7 +272,10 @@ function extractJsonValue(reply: ProviderReply): unknown {
 
 function describeIssues(err: z.ZodError | null): string {
   if (!err) return "reply was not parseable JSON";
-  return err.issues.slice(0, 12).map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ");
+  return err.issues
+    .slice(0, 12)
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("; ");
 }
 
 /**
@@ -240,7 +284,9 @@ function describeIssues(err: z.ZodError | null): string {
  * repair retry that names only the failing paths, then an explicit fallback
  * (source "synthesis", reason "validation_failed" | "llm_error" | "not_configured").
  */
-export async function completeStructured<T>(opts: StructuredOptions<T>): Promise<StructuredResult<T> | SynthesisResult> {
+export async function completeStructured<T>(
+  opts: StructuredOptions<T>,
+): Promise<StructuredResult<T> | SynthesisResult> {
   requireAgentMeta(opts.agent);
   const cfg = getProviderConfig();
   if (!cfg) {
@@ -272,7 +318,14 @@ export async function completeStructured<T>(opts: StructuredOptions<T>): Promise
   let usage: LlmUsage | null = null;
   const finish = (ok: boolean, error: string | null, value?: T): StructuredResult<T> | SynthesisResult => {
     const finalUsage = usage ?? estimatedUsage(cfg.provider, model, promptText, "");
-    logAgentCall(opts.agent, ok ? { source: "llm", provider: cfg.provider, model } : SYNTH, ok, error, Date.now() - started, usage ? finalUsage : null);
+    logAgentCall(
+      opts.agent,
+      ok ? { source: "llm", provider: cfg.provider, model } : SYNTH,
+      ok,
+      error,
+      Date.now() - started,
+      usage ? finalUsage : null,
+    );
     if (ok && value !== undefined) return { value, usage: finalUsage, source: "llm" };
     return { ...synthesis(), reason: error ?? "llm_error" };
   };
@@ -307,9 +360,7 @@ export async function completeStructured<T>(opts: StructuredOptions<T>): Promise
 
 // ── streaming (design §5.2 #4) ──────────────────────────────────────────────
 
-export type LlmStreamEvent =
-  | { type: "text"; delta: string }
-  | { type: "usage"; usage: LlmUsage };
+export type LlmStreamEvent = { type: "text"; delta: string } | { type: "usage"; usage: LlmUsage };
 
 function mergeMaxUsage(a: LlmUsage | null, b: LlmUsage): LlmUsage {
   if (!a) return b;
@@ -323,7 +374,11 @@ function mergeMaxUsage(a: LlmUsage | null, b: LlmUsage): LlmUsage {
 }
 
 /** Extract (text delta, usage) pieces from one parsed SSE data object. */
-function parseStreamChunk(provider: string, model: string, json: Record<string, unknown>): { delta: string; usage: LlmUsage | null } {
+function parseStreamChunk(
+  provider: string,
+  model: string,
+  json: Record<string, unknown>,
+): { delta: string; usage: LlmUsage | null } {
   if (provider === "gemini") {
     return { delta: extractText("gemini", json), usage: parseUsage("gemini", model, json) };
   }
@@ -368,10 +423,18 @@ export async function* stream(opts: {
     const res = await fetch(resolveUrl(cfg, true), {
       method: "POST",
       headers: buildHeaders(cfg),
-      body: JSON.stringify(buildRequest(cfg, { messages: opts.messages, temperature: opts.temperature, maxTokens: opts.maxTokens, stream: true })),
+      body: JSON.stringify(
+        buildRequest(cfg, {
+          messages: opts.messages,
+          temperature: opts.temperature,
+          maxTokens: opts.maxTokens,
+          stream: true,
+        }),
+      ),
       signal: opts.signal ?? AbortSignal.timeout(120_000),
     });
-    if (!res.ok || !res.body) throw new Error(`LLM HTTP ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
+    if (!res.ok || !res.body)
+      throw new Error(`LLM HTTP ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = "";
@@ -379,8 +442,9 @@ export async function* stream(opts: {
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
-      let nl: number;
-      while ((nl = buf.indexOf("\n")) >= 0) {
+      for (;;) {
+        const nl = buf.indexOf("\n");
+        if (nl < 0) break;
         const line = buf.slice(0, nl).trim();
         buf = buf.slice(nl + 1);
         if (!line.startsWith("data:")) continue;
@@ -401,11 +465,26 @@ export async function* stream(opts: {
         if (piece.usage) usage = mergeMaxUsage(usage, piece.usage);
       }
     }
-    const finalUsage = usage ?? estimatedUsage(cfg.provider, model, opts.messages.map((m) => m.content).join("\n"), text);
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, true, null, Date.now() - started, finalUsage);
+    const finalUsage =
+      usage ?? estimatedUsage(cfg.provider, model, opts.messages.map((m) => m.content).join("\n"), text);
+    logAgentCall(
+      opts.agent,
+      { source: "llm", provider: cfg.provider, model },
+      true,
+      null,
+      Date.now() - started,
+      finalUsage,
+    );
     yield { type: "usage", usage: finalUsage };
   } catch (err) {
-    logAgentCall(opts.agent, { source: "llm", provider: cfg.provider, model }, false, err instanceof Error ? err.message : String(err), Date.now() - started, null);
+    logAgentCall(
+      opts.agent,
+      { source: "llm", provider: cfg.provider, model },
+      false,
+      err instanceof Error ? err.message : String(err),
+      Date.now() - started,
+      null,
+    );
     throw err instanceof Error ? err : new Error("LLM stream failed.");
   }
 }
@@ -416,7 +495,10 @@ function buildRequest(cfg: ProviderConfig, spec: CallSpec) {
   const { messages, structured } = spec;
   const temperature = spec.temperature ?? 0.3;
   const maxTokens = spec.maxTokens ?? 1500;
-  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+  const system = messages
+    .filter((m) => m.role === "system")
+    .map((m) => m.content)
+    .join("\n");
   const turns = messages.filter((m) => m.role !== "system");
   if (cfg.provider === "anthropic") {
     return {
@@ -435,7 +517,13 @@ function buildRequest(cfg: ProviderConfig, spec: CallSpec) {
       messages: turns.map((m) => ({ role: m.role, content: m.content })),
       ...(structured
         ? {
-            tools: [{ name: structured.name, description: `Return the ${structured.name} result.`, input_schema: structured.jsonSchema }],
+            tools: [
+              {
+                name: structured.name,
+                description: `Return the ${structured.name} result.`,
+                input_schema: structured.jsonSchema,
+              },
+            ],
             tool_choice: { type: "tool", name: structured.name },
           }
         : {}),
@@ -460,7 +548,12 @@ function buildRequest(cfg: ProviderConfig, spec: CallSpec) {
     max_tokens: maxTokens,
     messages,
     ...(structured
-      ? { response_format: { type: "json_schema", json_schema: { name: structured.name, schema: structured.jsonSchema, strict: true } } }
+      ? {
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: structured.name, schema: structured.jsonSchema, strict: true },
+          },
+        }
       : {}),
     ...(spec.stream ? { stream: true, stream_options: { include_usage: true } } : {}),
   };
@@ -633,13 +726,32 @@ function logAgentCall(
                                  input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, usage_estimated, project_id, function_name, prompt_hash,
                                  is_dry_run, dry_run_group_id)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [ulid(), agent.key, agent.purpose, agent.contextType ?? null, agent.contextId ?? null,
-        outcome.source, outcome.provider, outcome.model, ok ? 1 : 0, error, latencyMs, "system", new Date().toISOString(),
-        usage ? usage.inputTokens : null, usage ? usage.outputTokens : null,
-        usage ? usage.cacheReadTokens : null, usage ? usage.cacheWriteTokens : null,
-        usage ? costUsd(usage) : null, usage?.estimated ? 1 : 0,
-        projectId ?? null, agent.functionName ?? null, agent.promptHash ?? null,
-        dryRun?.groupId ? 1 : 0, dryRun?.groupId ?? null],
+      [
+        ulid(),
+        agent.key,
+        agent.purpose,
+        agent.contextType ?? null,
+        agent.contextId ?? null,
+        outcome.source,
+        outcome.provider,
+        outcome.model,
+        ok ? 1 : 0,
+        error,
+        latencyMs,
+        "system",
+        new Date().toISOString(),
+        usage ? usage.inputTokens : null,
+        usage ? usage.outputTokens : null,
+        usage ? usage.cacheReadTokens : null,
+        usage ? usage.cacheWriteTokens : null,
+        usage ? costUsd(usage) : null,
+        usage?.estimated ? 1 : 0,
+        projectId ?? null,
+        agent.functionName ?? null,
+        agent.promptHash ?? null,
+        dryRun?.groupId ? 1 : 0,
+        dryRun?.groupId ?? null,
+      ],
     );
   } catch (err) {
     // 런 장부 기록 실패는 본 기능을 막지 않는다 — 관찰 가능성 손실만 남긴다.
@@ -672,7 +784,12 @@ export async function completeOrFallback(
   const started = Date.now();
   try {
     // llm 경로의 런 장부 기록은 complete() 내부에서 이루어진다.
-    const text = await complete(effectiveMessages, { temperature: opts.temperature, maxTokens: opts.maxTokens, agent, dryRun: dry });
+    const text = await complete(effectiveMessages, {
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      agent,
+      dryRun: dry,
+    });
     return { source: "llm", provider: cfg.provider, text };
   } catch (err) {
     // 관문 위반은 폴백으로 흡수되지 않는다 — 결정론 폴백은 호출 실패의 대응이지

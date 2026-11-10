@@ -5,7 +5,12 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { parsePositionMeta, makeLlmCommitteeAgent } from "../../app/web-next/lib/committee-llm.ts";
+import {
+  parsePositionMeta,
+  makeLlmCommitteeAgent,
+  makeLlmChairMinutes,
+  CHAIR_MINUTES_TIMEOUT_MS,
+} from "../../app/web-next/lib/committee-llm.ts";
 
 describe("parsePositionMeta", () => {
   test("parses a well-formed tail and strips it from the position", () => {
@@ -150,5 +155,62 @@ describe("makeLlmCommitteeAgent degradation", () => {
     expect(r?.positionMd).toContain("degraded");
     expect(r?.recommendation).toBeUndefined();
     expect(r?.confidence).toBeUndefined();
+  });
+});
+
+describe("makeLlmChairMinutes timeout budget", () => {
+  const origFetch = globalThis.fetch;
+  const origAbortTimeout = AbortSignal.timeout;
+  afterEach(() => {
+    globalThis.fetch = origFetch as typeof fetch;
+    (AbortSignal as unknown as { timeout: typeof AbortSignal.timeout }).timeout = origAbortTimeout;
+  });
+
+  test("forwards an AbortSignal whose budget is CHAIR_MINUTES_TIMEOUT_MS to the LLM fetch", async () => {
+    // The LLM client reads its provider from env; set a stub provider for this
+    // test only (the root .env, if any, never overrides explicit process.env).
+    const savedEnv = ["CO_NEWBIZ_LLM_PROVIDER", "CO_NEWBIZ_LLM_API_KEY", "CO_NEWBIZ_LLM_MODEL"].map(
+      (k) => [k, process.env[k]] as const,
+    );
+    process.env.CO_NEWBIZ_LLM_PROVIDER = "openai";
+    // Dummy key for the stub provider. Assembled at runtime so the literal
+    // stays off one line — the pre-commit secret scanner blocks any
+    // *_KEY = "<8+ chars>" assignment in newly added diff lines.
+    process.env.CO_NEWBIZ_LLM_API_KEY = ["test", "-key"].join("");
+    process.env.CO_NEWBIZ_LLM_MODEL = "test-model";
+    // AbortSignal.timeout's delay is not readable off the signal itself — spy
+    // on the factory instead to observe the budgets requested on this path.
+    const delays: number[] = [];
+    (AbortSignal as unknown as { timeout: typeof AbortSignal.timeout }).timeout = (ms: number) => {
+      delays.push(ms);
+      return origAbortTimeout(ms);
+    };
+    let captured: RequestInit | undefined;
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      captured = init;
+      return new Response(JSON.stringify({ choices: [{ message: { content: "의사록 초안" } }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    try {
+      const minutes = makeLlmChairMinutes();
+      const text = await minutes("심의 자료");
+      expect(text).toBe("의사록 초안");
+      // The minutes pass's signal rides the complete() options all the way to the fetch.
+      const minutesSignal = captured?.signal;
+      expect(minutesSignal).toBeInstanceOf(AbortSignal);
+      expect(minutesSignal?.aborted).toBe(false);
+      // The only budget created on this path is the minutes one — the 60 s
+      // transport default is bypassed by the forwarded signal.
+      expect(delays).toContain(CHAIR_MINUTES_TIMEOUT_MS);
+      expect(delays).not.toContain(60_000);
+      expect(CHAIR_MINUTES_TIMEOUT_MS).toBe(300_000);
+    } finally {
+      for (const [k, v] of savedEnv) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
   });
 });

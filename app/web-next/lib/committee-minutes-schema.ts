@@ -90,20 +90,36 @@ function sanitizeOwner(record: Record<string, unknown>, key = "owner_seat"): voi
   if (label && record.owner_role === undefined) record.owner_role = label.slice(0, 64);
 }
 
-function normalizeMinutesDraft(raw: unknown): unknown {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return raw;
+/** Internal normalization result: the repaired draft plus the INDEXES (within
+ * the discussion array) of items whose resolution was SILENTLY FILLED by the
+ * "unresolved" default (no per-item resolution AND no top-level resolutions
+ * entry carried one). The top-level resolutions-array mapping path is an
+ * authored-content repair and is never counted. Indexes — not a bare count —
+ * because the agenda filter below drops off-agenda items, and the visible
+ * count must match the stored draft. Design §8.6 (supplement F). */
+interface NormalizedDraft {
+  draft: unknown;
+  degradedIndexes: Set<number>;
+}
+
+function normalizeMinutesDraft(raw: unknown): NormalizedDraft {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return { draft: raw, degradedIndexes: new Set() };
   const draft = { ...(raw as Record<string, unknown>) };
+  const degradedIndexes = new Set<number>();
   const resolutions = Array.isArray(draft.resolutions) ? (draft.resolutions as Array<Record<string, unknown>>) : [];
   const byIssue = new Map(
     resolutions.filter((r) => typeof r.issue_id === "string").map((r) => [r.issue_id as string, r]),
   );
   delete draft.resolutions;
   if (Array.isArray(draft.discussion)) {
-    draft.discussion = (draft.discussion as Array<Record<string, unknown>>).map((d) => {
+    draft.discussion = (draft.discussion as Array<Record<string, unknown>>).map((d, idx) => {
       if (d.resolution === undefined) {
         const r = byIssue.get(d.issue_id as string);
         if (r?.resolution !== undefined) d.resolution = r.resolution;
-        else d.resolution = "unresolved";
+        else {
+          d.resolution = "unresolved";
+          degradedIndexes.add(idx);
+        }
       }
       if (d.resolution_note === undefined && byIssue.get(d.issue_id as string)?.note !== undefined)
         d.resolution_note = byIssue.get(d.issue_id as string)?.note;
@@ -123,28 +139,50 @@ function normalizeMinutesDraft(raw: unknown): unknown {
       return item;
     });
   }
-  return draft;
+  return { draft, degradedIndexes };
+}
+
+/** The result of resolving a minutes draft: the ref-checked draft (null when
+ * it does not validate at all — callers fall back to the deterministic
+ * minutes) plus the count of discussion items in the RESULTING draft whose
+ * resolution was silently filled by the "unresolved" default. The tolerant
+ * repair is kept (§8.12); the repair becomes visible through this count,
+ * persisted as the minutes_draft.degraded_resolutions sibling meta key. */
+export interface ResolvedMinutesDraft {
+  draft: CommitteeMinutesJson | null;
+  degraded: number;
 }
 
 /**
  * Resolve a parsed minutes draft against the session it claims to describe:
  * drops exchanges whose seat never spoke or whose position_ref does not
  * resolve to a session position id, and discussion entries whose issue is not
- * on the agenda. Returns null when the draft does not validate at all —
- * callers fall back to the deterministic minutes.
+ * on the agenda. Returns { draft: null, degraded: 0 } when the draft does not
+ * validate at all — callers fall back to the deterministic minutes.
  */
 export function resolveMinutesDraft(
   raw: unknown,
   ctx: { knownSeats: readonly string[]; positionIds: readonly string[]; agendaIds: readonly string[] },
-): CommitteeMinutesJson | null {
-  const parsed = committeeMinutesSchema.safeParse(normalizeMinutesDraft(raw));
-  if (!parsed.success) return null;
+): ResolvedMinutesDraft {
+  const normalized = normalizeMinutesDraft(raw);
+  const parsed = committeeMinutesSchema.safeParse(normalized.draft);
+  if (!parsed.success) return { draft: null, degraded: 0 };
   const draft = parsed.data;
   const seats = new Set(ctx.knownSeats);
   const positions = new Set(ctx.positionIds);
   const agenda = new Set(ctx.agendaIds);
+  const kept: number[] = [];
   const discussion = draft.discussion
-    .filter((d) => agenda.has(d.issue_id))
+    .filter((d, idx) => {
+      if (agenda.has(d.issue_id)) {
+        kept.push(idx);
+        return true;
+      }
+      return false;
+    })
     .map((d) => ({ ...d, exchanges: d.exchanges.filter((e) => seats.has(e.seat) && positions.has(e.position_ref)) }));
-  return { ...draft, discussion };
+  // Count only the fills that survive into the stored draft — a silently
+  // filled item dropped by the agenda filter must not inflate the chip.
+  const degraded = [...normalized.degradedIndexes].filter((idx) => kept.includes(idx)).length;
+  return { draft: { ...draft, discussion }, degraded };
 }
