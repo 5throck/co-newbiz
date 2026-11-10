@@ -30,21 +30,22 @@ interface MinutesExchange {
   position_ref?: string | number | null;
   seat: string;
   act: string;
-  summary_md: string;
+  summary: string;
 }
 
 interface DiscussionIssue {
-  issue: string;
+  issue_id: string;
   exchanges: MinutesExchange[];
   resolution: string;
+  resolution_note?: string;
 }
 
 interface MinutesDraftJson {
   agenda?: Array<{ id: string; title: string }>;
   discussion: DiscussionIssue[];
   agreements: Array<{ text: string; seats?: string[] }>;
-  open_questions: Array<{ question: string; owner_seat?: string | null }>;
-  action_items: Array<{ item: string; owner_seat?: string | null }>;
+  open_questions: Array<{ text: string; owner_seat?: string | null; owner_role?: string | null }>;
+  action_items: Array<{ text: string; owner_seat?: string | null; owner_role?: string | null }>;
 }
 
 export interface CommitteeMinutesPayload {
@@ -140,19 +141,19 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{t("noDiscussion")}</p>
           )}
           {draft.json.discussion.map((d) => (
-            <div key={d.issue} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
+            <div key={d.issue_id} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
               <p className="text-[length:var(--fs-caption)] font-semibold mb-1">
-                {d.issue}: {agendaTitle(d.issue)}
+                {d.issue_id}: {agendaTitle(d.issue_id)}
               </p>
               {d.exchanges.length === 0 && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">{t("noExchanges")}</p>
               )}
               {d.exchanges.map((e) => (
                 <p
-                  key={`${e.seat}:${String(e.position_ref ?? e.summary_md)}`}
+                  key={`${e.seat}:${String(e.position_ref ?? e.summary)}`}
                   className="text-[length:var(--fs-caption)] mb-1 m-0"
                 >
-                  <span className="tabular-nums">{e.seat}</span> ({e.act}): {e.summary_md}
+                  <span className="tabular-nums">{e.seat}</span> ({e.act}): {e.summary}
                   {e.position_ref != null && <span className="text-[color:var(--muted-fg)]"> → #{e.position_ref}</span>}
                 </p>
               ))}
@@ -170,8 +171,8 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("agreements")}</h3>
       {draft && draft.json.agreements.length > 0 ? (
         <ul className="mb-2 pl-4">
-          {draft.json.agreements.map((a) => (
-            <li key={a.text} className="text-[length:var(--fs-caption)] mb-1">
+          {draft.json.agreements.map((a, i) => (
+            <li key={`${i}:${a.text.slice(0, 24)}`} className="text-[length:var(--fs-caption)] mb-1">
               {a.text}
               {a.seats && a.seats.length > 0 && (
                 <span className="text-[color:var(--muted-fg)]"> ({a.seats.join(", ")})</span>
@@ -207,10 +208,12 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("openQuestions")}</h3>
       {draft && draft.json.open_questions.length > 0 ? (
         <ul className="mb-2 pl-4">
-          {draft.json.open_questions.map((q) => (
-            <li key={q.question} className="text-[length:var(--fs-caption)] mb-1">
-              {q.question}
-              {q.owner_seat && <span className="text-[color:var(--muted-fg)]"> — {q.owner_seat}</span>}
+          {draft.json.open_questions.map((q, i) => (
+            <li key={`${i}:${q.text.slice(0, 24)}`} className="text-[length:var(--fs-caption)] mb-1">
+              {q.text}
+              {(q.owner_seat || q.owner_role) && (
+                <span className="text-[color:var(--muted-fg)]"> — {q.owner_seat ?? q.owner_role}</span>
+              )}
             </li>
           ))}
         </ul>
@@ -220,10 +223,12 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("actionItems")}</h3>
       {draft && draft.json.action_items.length > 0 ? (
         <ul className="mb-2 pl-4">
-          {draft.json.action_items.map((a) => (
-            <li key={a.item} className="text-[length:var(--fs-caption)] mb-1">
-              {a.item}
-              {a.owner_seat && <span className="text-[color:var(--muted-fg)]"> — {a.owner_seat}</span>}
+          {draft.json.action_items.map((a, i) => (
+            <li key={`${i}:${a.text.slice(0, 24)}`} className="text-[length:var(--fs-caption)] mb-1">
+              {a.text}
+              {(a.owner_seat || a.owner_role) && (
+                <span className="text-[color:var(--muted-fg)]"> — {a.owner_seat ?? a.owner_role}</span>
+              )}
             </li>
           ))}
         </ul>
