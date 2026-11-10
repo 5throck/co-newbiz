@@ -122,8 +122,11 @@ describe("apply flow (scratch SQLite, migration 0119)", () => {
 
 describe("resolveEffectiveCagr (design 2026-09-20-escalation-downstream §3.1)", () => {
   function seedIndustry(): string {
+    // ksic_code is UNIQUE: derive it from the id's random suffix instead of an
+    // independent random number - two 3-digit draws collide ~1% of the time
+    // per pair, which flaked the coverage run.
     const id = `ind-${Math.random().toString(36).slice(2, 10)}`;
-    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [id, `99${Math.floor(Math.random() * 900 + 100)}`, "유효 CAGR 산업", "effective-cagr", NOW]);
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [id, `99${id.slice(4)}`, "유효 CAGR 산업", "effective-cagr", NOW]);
     return id;
   }
   test("escalation newer than the version returns the scaled value with provenance", () => {

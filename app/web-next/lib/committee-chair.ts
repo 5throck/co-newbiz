@@ -336,7 +336,12 @@ export async function runChairMinutes(opts: {
         const check = committeeMinutesSchema.safeParse(parsedDraft);
         console.warn(
           "[committee-chair] minutes draft rejected:",
-          check.success ? "refs did not resolve" : check.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+          check.success
+            ? "refs did not resolve"
+            : check.error.issues
+                .slice(0, 5)
+                .map((i) => `${i.path.join(".")}: ${i.message}`)
+                .join("; "),
         );
       }
     } catch (err) {
