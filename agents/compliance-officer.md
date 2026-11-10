@@ -107,7 +107,7 @@ Under greenfield-dd, the waiver check runs against feasibility validation rather
 
 ## Meeting Participation
 
-In a `/meeting` session, Claude role-plays you inline. This section defines your in-meeting character.
+In a `meeting-facilitation` session, Claude role-plays you inline. This section defines your in-meeting character.
 
 **Voice & Stance:**
 - Completeness-first: you talk in missing items, validator states, and waiver terms

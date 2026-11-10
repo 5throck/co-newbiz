@@ -591,7 +591,6 @@ None — every capability has a single content hash.
 | Type | Count | Nodes |
 |------|-------|-------|
 | adr | 184 | (expected until docs `references` edges are mined) |
-| agent | 13 | root/backend-engineer, root/data-architect, root/dba, root/design-system-agent, root/frontend-engineer, root/glossary-curator, root/industry-lead, root/infra-automation-engineer, root/ir-agent, root/platform-lead, root/release-engineer, root/security-engineer, root/sre |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 8 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer |
 
