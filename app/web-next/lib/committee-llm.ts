@@ -182,8 +182,36 @@ export function makeLlmCommitteeAgent(): (agentKey: string, prompt: string) => P
         agent: promptAgent("committee.position", { key: agentKey }),
       });
       const parsed = parsePositionMeta(text);
-      if (parsed) return parsed;
-      // Unparseable reply — honest degradation, no fabricated verdict.
+      if (parsed) {
+        // Design §9.1 (F1, amendment 2026-11-11): re-serialize a CANONICAL
+        // tail from the PARSED (whitelisted) fields and append it, so the
+        // returned positionMd — what runDeliberationRounds and the hybrid
+        // advance path store into agent_position.position_md — carries the
+        // same machine-readable tail the deterministic emitter
+        // (committee-agents.ts) and the human route (committee-session.ts)
+        // append inline. Design §2.5 (S2 storage) keeps the structured
+        // fields inside the position text; every consumer re-parses the
+        // STORED text, so a stripped tail reads as {} on the record. The
+        // whitelisted parse is the trust boundary (ADR-0196 §2.1/§2.3): the
+        // canonical tail carries exactly what the whitelists admit, in
+        // stable order — never the model's raw JSON — and no field is ever
+        // synthesized from data the model did not produce. Fields are
+        // included only when the parse produced them (veto_dissent only when
+        // true); `seat` is always included (the caller knows agentKey).
+        const tail: Record<string, unknown> = {};
+        if (parsed.recommendation) tail.recommendation = parsed.recommendation;
+        if (parsed.vetoDissent === true) tail.veto_dissent = true;
+        if (parsed.confidence !== undefined) tail.confidence = parsed.confidence;
+        tail.seat = agentKey;
+        if (parsed.criteriaScores) tail.criteria_scores = parsed.criteriaScores;
+        if (parsed.respondsTo !== undefined) tail.responds_to = parsed.respondsTo;
+        if (parsed.stanceChanged !== undefined) tail.stance_changed = parsed.stanceChanged;
+        if (parsed.issues !== undefined) tail.issues = parsed.issues;
+        return { ...parsed, positionMd: `${parsed.positionMd}\n<!--position-meta:${JSON.stringify(tail)}-->` };
+      }
+      // Unparseable reply — honest degradation, no fabricated verdict: the
+      // raw text is stored with NO marker and NO synthesized fields (an
+      // omitted or malformed model tail stays an inert per-seat signal).
       return { positionMd: text.trim() };
     } catch (err) {
       // LLM outage mid-deliberation must not kill the run; emit an explicit

@@ -20,8 +20,13 @@ import { parsePositionMeta, makeLlmChairAgenda, makeLlmChairMinutes } from "./co
 import { committeeSeatsUseLlm } from "./committee-agents.ts";
 import { getProviderConfig } from "./llm.ts";
 import { committeeMinutesSchema, resolveMinutesDraft, type CommitteeMinutesJson } from "./committee-minutes-schema.ts";
-import type { AgendaIssue } from "./deliberation.ts";
+// Design §9.2 (F2): the chair-pass result types' SSOT is deliberation.ts (the
+// lower-level engine, already upstream). This module re-exports them so the
+// existing import sites keep working; the local duplicates are gone.
+import type { AgendaIssue, AgendaPassResult, MinutesPassResult } from "./deliberation.ts";
 import type { AgentCallResult } from "./agent-orchestrator.ts";
+
+export type { AgendaPassResult, MinutesPassResult };
 
 export const AGENDA_PROMPT_VERSION = "committee.agenda@1";
 // @2 (2026-11-10, design §8.5): the committee.minutes prompt gained the
@@ -38,29 +43,6 @@ export interface ChairPositionRow {
   memberType: string;
   round: number;
   positionMd: string;
-}
-
-export interface AgendaPassResult {
-  agenda: AgendaIssue[];
-  source: "llm" | "fallback";
-  model?: string;
-  promptVersion: string;
-  inputHash: string;
-  createdAt: string;
-}
-
-export interface MinutesPassResult {
-  json: CommitteeMinutesJson;
-  fallback: boolean;
-  model?: string;
-  promptVersion: string;
-  inputHash: string;
-  createdAt: string;
-  /** Design §8.6 (supplement F): count of discussion items in the LLM draft
-   * whose resolution was silently filled by the "unresolved" default. Always
-   * 0 for fallback drafts — the fallback's fill is its own declared output,
-   * not a silent repair, and is never persisted as degraded. */
-  degradedResolutions: number;
 }
 
 /** Stored form of the agenda provenance in process_run.meta_json.agenda_meta. */
