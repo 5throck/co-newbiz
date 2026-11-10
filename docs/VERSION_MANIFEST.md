@@ -1,7 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-10T00:40:57.596Z
-**Generated**: 2026-11-10T02:17:54.170Z
+**Generated**: 2026-11-10T02:42:56.049Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -20,48 +19,48 @@
 
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
-| antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-10-27 |
-| backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-10-27 |
-| brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-10-27 |
-| certification-agent | agents/certification-agent.md | high | inherit | 2026-10-27 |
-| commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-10-27 |
-| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-10-27 |
-| customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-10-27 |
-| data-architect | agents/data-architect.md | high | inherit | 2026-10-27 |
-| dba | agents/dba.md | medium | inherit | 2026-10-27 |
-| design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-10-27 |
-| docs-writer | agents/docs-writer.md | medium | inherit | 2026-10-27 |
-| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-10-28 |
-| financing-agent | agents/financing-agent.md | medium | inherit | 2026-10-28 |
-| frontend-engineer | agents/frontend-engineer.md | medium | inherit | 2026-10-27 |
-| glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-10-27 |
-| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-10-27 |
-| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-10-27 |
-| hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-10-27 |
-| i18n-specialist | agents/i18n-specialist.md | medium | claude-sonnet-5-5 | 2026-11-08 |
-| incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-10-27 |
-| industry-lead | agents/industry-lead.md | high | inherit | 2026-10-27 |
-| infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-10-27 |
-| ip-agent | agents/ip-agent.md | medium | inherit | 2026-10-27 |
-| ir-agent | agents/ir-agent.md | medium | inherit | 2026-10-27 |
-| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-10-27 |
-| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-10-28 |
-| partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-10-27 |
-| platform-lead | agents/platform-lead.md | high | inherit | 2026-10-27 |
+| antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-11-10 |
+| backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-11-10 |
+| brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-11-10 |
+| certification-agent | agents/certification-agent.md | high | inherit | 2026-11-10 |
+| commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-11-10 |
+| compliance-officer | agents/compliance-officer.md | high | inherit | 2026-11-10 |
+| customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-11-10 |
+| data-architect | agents/data-architect.md | high | inherit | 2026-11-10 |
+| dba | agents/dba.md | medium | inherit | 2026-11-10 |
+| design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-11-10 |
+| docs-writer | agents/docs-writer.md | medium | inherit | 2026-11-10 |
+| financial-analyst | agents/financial-analyst.md | high | inherit | 2026-11-10 |
+| financing-agent | agents/financing-agent.md | medium | inherit | 2026-11-10 |
+| frontend-engineer | agents/frontend-engineer.md | medium | inherit | 2026-11-10 |
+| glossary-curator | agents/glossary-curator.md | medium | inherit | 2026-11-10 |
+| greenfield-agent | agents/greenfield-agent.md | high | inherit | 2026-11-10 |
+| group-review-agent | agents/group-review-agent.md | high | inherit | 2026-11-10 |
+| hr-integration-agent | agents/hr-integration-agent.md | high | inherit | 2026-11-10 |
+| i18n-specialist | agents/i18n-specialist.md | medium | claude-sonnet-5-5 | 2026-11-10 |
+| incentive-agent | agents/incentive-agent.md | medium | inherit | 2026-11-10 |
+| industry-lead | agents/industry-lead.md | high | inherit | 2026-11-10 |
+| infra-automation-engineer | agents/infra-automation-engineer.md | medium | inherit | 2026-11-10 |
+| ip-agent | agents/ip-agent.md | medium | inherit | 2026-11-10 |
+| ir-agent | agents/ir-agent.md | medium | inherit | 2026-11-10 |
+| legal-counsel | agents/legal-counsel.md | high | inherit | 2026-11-10 |
+| market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-11-10 |
+| partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-11-10 |
+| platform-lead | agents/platform-lead.md | high | inherit | 2026-11-10 |
 | pm | agents/pm.md | medium | inherit | 2026-10-28 |
-| pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-10-27 |
-| process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-10-27 |
-| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-10-27 |
+| pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-11-10 |
+| process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-11-10 |
+| quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-11-10 |
 | README_ko | agents/README_ko.md | N/A | — | 2026-10-26 |
-| region-lead | agents/region-lead.md | high | inherit | 2026-10-27 |
-| release-engineer | agents/release-engineer.md | medium | inherit | 2026-10-27 |
-| risk-officer | agents/risk-officer.md | high | inherit | 2026-10-28 |
-| security-engineer | agents/security-engineer.md | high | inherit | 2026-10-27 |
-| site-facility-agent | agents/site-facility-agent.md | medium | inherit | 2026-10-27 |
-| sre | agents/sre.md | medium | inherit | 2026-10-27 |
-| technical-dd-agent | agents/technical-dd-agent.md | medium | inherit | 2026-10-27 |
-| ux-designer-agent | agents/ux-designer-agent.md | medium | inherit | 2026-10-27 |
-| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-10-28 |
+| region-lead | agents/region-lead.md | high | inherit | 2026-11-10 |
+| release-engineer | agents/release-engineer.md | medium | inherit | 2026-11-10 |
+| risk-officer | agents/risk-officer.md | high | inherit | 2026-11-10 |
+| security-engineer | agents/security-engineer.md | high | inherit | 2026-11-10 |
+| site-facility-agent | agents/site-facility-agent.md | medium | inherit | 2026-11-10 |
+| sre | agents/sre.md | medium | inherit | 2026-11-10 |
+| technical-dd-agent | agents/technical-dd-agent.md | medium | inherit | 2026-11-10 |
+| ux-designer-agent | agents/ux-designer-agent.md | medium | inherit | 2026-11-10 |
+| valuation-agent | agents/valuation-agent.md | high | inherit | 2026-11-10 |
 
 ---
 

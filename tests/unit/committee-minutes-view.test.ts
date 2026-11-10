@@ -46,17 +46,17 @@ const FIXTURE_PAYLOAD = {
       agenda: [{ id: "I1", title: "시장성 쟁점" }],
       discussion: [
         {
-          issue: "I1",
+          issue_id: "I1",
           exchanges: [
-            { position_ref: 12, seat: "risk-officer", act: "raised", summary_md: "기준치 미달 우려 제기" },
-            { position_ref: 15, seat: "financial-analyst", act: "rebut", summary_md: "재무 관점 반박" },
+            { position_ref: 12, seat: "risk-officer", act: "raised", summary: "기준치 미달 우려 제기" },
+            { position_ref: 15, seat: "financial-analyst", act: "rebut", summary: "재무 관점 반박" },
           ],
           resolution: "narrowed",
         },
       ],
       agreements: [{ text: "재무 시나리오 범위 합의", seats: ["risk-officer", "financial-analyst"] }],
-      open_questions: [{ question: "인허가 일정 확인", owner_seat: "legal-counsel" }],
-      action_items: [{ item: "보완 자료 요청", owner_seat: "process-governance-manager" }],
+      open_questions: [{ text: "인허가 일정 확인", owner_seat: "legal-counsel" }],
+      action_items: [{ text: "보완 자료 요청", owner_seat: "process-governance-manager" }],
     },
   },
   minutesConfirmed: { by: "user-7", at: "2026-11-09T01:00:00.000Z" },
