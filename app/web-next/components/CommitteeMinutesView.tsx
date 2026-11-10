@@ -171,8 +171,8 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("agreements")}</h3>
       {draft && draft.json.agreements.length > 0 ? (
         <ul className="mb-2 pl-4">
-          {draft.json.agreements.map((a, i) => (
-            <li key={`${i}:${a.text.slice(0, 24)}`} className="text-[length:var(--fs-caption)] mb-1">
+          {draft.json.agreements.map((a) => (
+            <li key={`${a.text}|${(a.seats ?? []).join(",")}`} className="text-[length:var(--fs-caption)] mb-1">
               {a.text}
               {a.seats && a.seats.length > 0 && (
                 <span className="text-[color:var(--muted-fg)]"> ({a.seats.join(", ")})</span>
@@ -208,8 +208,8 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("openQuestions")}</h3>
       {draft && draft.json.open_questions.length > 0 ? (
         <ul className="mb-2 pl-4">
-          {draft.json.open_questions.map((q, i) => (
-            <li key={`${i}:${q.text.slice(0, 24)}`} className="text-[length:var(--fs-caption)] mb-1">
+          {draft.json.open_questions.map((q) => (
+            <li key={`${q.text}|${q.owner_seat ?? q.owner_role ?? ""}`} className="text-[length:var(--fs-caption)] mb-1">
               {q.text}
               {(q.owner_seat || q.owner_role) && (
                 <span className="text-[color:var(--muted-fg)]"> — {q.owner_seat ?? q.owner_role}</span>
@@ -223,8 +223,8 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
       <h3 className="text-[length:var(--fs-caption)] font-semibold mb-1">{t("actionItems")}</h3>
       {draft && draft.json.action_items.length > 0 ? (
         <ul className="mb-2 pl-4">
-          {draft.json.action_items.map((a, i) => (
-            <li key={`${i}:${a.text.slice(0, 24)}`} className="text-[length:var(--fs-caption)] mb-1">
+          {draft.json.action_items.map((a) => (
+            <li key={`${a.text}|${(a.seats ?? []).join(",")}`} className="text-[length:var(--fs-caption)] mb-1">
               {a.text}
               {(a.owner_seat || a.owner_role) && (
                 <span className="text-[color:var(--muted-fg)]"> — {a.owner_seat ?? a.owner_role}</span>

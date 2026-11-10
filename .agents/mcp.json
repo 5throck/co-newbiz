@@ -4,7 +4,8 @@
       "command": "graft",
       "args": [
         "mcp"
-      ]
+      ],
+      "enabled": false
     },
     "trail": {
       "command": "trail",
