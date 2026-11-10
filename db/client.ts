@@ -1,4 +1,6 @@
-// @version 1.0.0
+// @version 1.1.0 (2026-11-10: resolveDbPath marker-validates `here` against db/migrations
+// before trusting it — the Turbopack dev shim rebases import.meta identity to <repo>/app,
+// which once created a stray empty database at app/db/data/. Design 2026-11-10-db-path-resolver-marker.)
 /**
  * SQLite connection factory — bun:sqlite, WAL mode, foreign_keys enforced.
  * Per ADR-0001 (SQLite adoption) and ADR-0002 (portability constraints):
@@ -15,34 +17,61 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+/**
+ * Pure path resolution, injectable for tests (design 2026-11-10-db-path-resolver-marker):
+ * 1. CO_NEWBIZ_DB_PATH override wins (tests rely on it).
+ * 2. `here` (the module's own directory) is trusted ONLY when it really is the
+ *    repo db/ directory — validated by the layout marker `migrations/` next to
+ *    `data/`. Under Next/Turbopack the import.meta shim resolves module ids
+ *    against the bundler's ABSOLUTE_ROOT (observed: <repo>/app), so an
+ *    out-of-root module carries a REBASED dirname; trusting it once created a
+ *    second, divergent empty database at app/db/data/.
+ * 3. Otherwise walk up from `cwd` until the db/migrations marker appears.
+ * 4. No marker anywhere: cwd-relative fallback (operator runs from repo root).
+ */
+export function resolveDbPath(opts: {
+  envPath?: string;
+  cwd: string;
+  here?: string;
+  exists: (p: string) => boolean;
+}): string {
+  if (opts.envPath) return opts.envPath;
+  if (opts.here && opts.exists(join(opts.here, "migrations"))) return join(opts.here, "data", "co-newbiz.sqlite");
+  let dir = opts.cwd;
+  for (let i = 0; i < 8; i++) {
+    if (opts.exists(join(dir, "db", "migrations"))) return join(dir, "db", "data", "co-newbiz.sqlite");
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return join(opts.cwd, "db", "data", "co-newbiz.sqlite");
+}
+
 // Anchored to THIS file's directory (<repo>/db), NOT the process working
 // directory — previously the default was cwd-relative, so running the web
 // server from app/web-next silently created a second, divergent database at
 // app/web-next/db/data/. CO_NEWBIZ_DB_PATH still overrides (tests rely on it).
 function resolveDefaultDbPath(): string {
-  if (process.env.CO_NEWBIZ_DB_PATH) return process.env.CO_NEWBIZ_DB_PATH;
   // import.meta.dir/dirname are Bun-native; under Next's bundler only
   // import.meta.url may survive, and even that can be a non-file scheme.
   const meta = import.meta as { dir?: string; dirname?: string; url?: string };
   const url = meta.url;
-  const here = meta.dirname ?? meta.dir ?? (() => {
-    try {
-      return typeof url === "string" && url.startsWith("file:") ? dirname(fileURLToPath(url)) : undefined;
-    } catch {
-      return undefined;
-    }
-  })();
-  if (here) return join(here, "data", "co-newbiz.sqlite");
-  // Last resort (bundled with no file identity): walk up from the cwd until
-  // we find the repo layout marker db/migrations.
-  let dir = process.cwd();
-  for (let i = 0; i < 8; i++) {
-    if (existsSync(join(dir, "db", "migrations"))) return join(dir, "db", "data", "co-newbiz.sqlite");
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return join(process.cwd(), "db", "data", "co-newbiz.sqlite");
+  const here =
+    meta.dirname ??
+    meta.dir ??
+    (() => {
+      try {
+        return typeof url === "string" && url.startsWith("file:") ? dirname(fileURLToPath(url)) : undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+  return resolveDbPath({
+    envPath: process.env.CO_NEWBIZ_DB_PATH,
+    cwd: process.cwd(),
+    here,
+    exists: existsSync,
+  });
 }
 const DEFAULT_DB_PATH = resolveDefaultDbPath();
 /** <repo>/db — siblings: data/ (databases), migrations/ (SQL). */

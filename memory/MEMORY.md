@@ -4,14 +4,16 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-10](2026-11-10.md) | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
+| [2026-11-09](2026-11-09.md) | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
 | [2026-11-08](2026-11-08.md) | chore: workspace sync — session residue (Step 1 local-work) |
 | [2026-11-07](2026-11-07.md) | feat(review): localize AI review items via next-intl with legacy fallback |
 | [2026-11-06](2026-11-06.md) | docs(docs): workspace sync (10 files) |
 | [2026-11-05](2026-11-05.md) | docs(docs): workspace sync (spec 2026-10-09-ux-r2, 12 files) |
 | [2026-11-04](2026-11-04.md) | feat(web): cron day-of-week chips and dialog rhythm |
 | [2026-11-03](2026-11-03.md) | feat(scheduler): persist per-deal KRX stock series (owner decision option 1) |
-| [2026-11-02](2026-11-02.md) | fix(dart): parse streaming corp-code ZIPs via central directory |
-| [2026-11-01](2026-11-01.md) | feat(web): admin schedule management UI and token list restructure |
+| 2026-11-02 | fix(dart): parse streaming corp-code ZIPs via central directory |
+| 2026-11-01 | feat(web): admin schedule management UI and token list restructure |
 | 2026-10-31 | chore: workspace sync — session residue (Step 1 local-work) |
 | 2026-10-30 | feat(web): glossary register UX, agreed terms, connected-apps token screen |
 | 2026-10-29 | chore: workspace sync (0 files) |
@@ -190,3 +192,4 @@
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.
+- [Autonomous execution until done](autonomous-until-done.md) — 2026-11-08: user said 진행해줘 without per-step approvals; proceed through ADR-0196 phases A–E merging each PR, no approval requests until all done or blocked

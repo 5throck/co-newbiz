@@ -99,6 +99,11 @@ tests/.temp/
 app/web-next/db/data/**
 !app/web-next/db/data/_archived-duplicate/.gitkeep
 
+# stray bundler-rebased DB/cache directory (app/db/data/) — created once by the
+# dev server via the rebased import.meta path (2026-11-10-db-path-resolver-marker);
+# the *.sqlite patterns above miss the json cache, so ignore the directory whole.
+app/db/
+
 # render artifacts (report renderer output)
 render_out/
 .openchrome/
