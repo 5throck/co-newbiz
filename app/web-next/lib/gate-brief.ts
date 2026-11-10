@@ -280,7 +280,7 @@ function s5Summary(db: Database, oppId: string): string {
   const register = parseGapRegister(oppRow?.capability_gap_json ?? null);
   const gaps =
     register.rows.length > 0
-      ? `역량 격차 ${register.rows.length}건: ` + register.rows.slice(0, 6).map(capabilityBriefLine).join(", ")
+      ? `역량 격차 ${register.rows.length}건: ${register.rows.slice(0, 6).map(capabilityBriefLine).join(", ")}`
       : "";
   // ADR-0171: the pre_fs brief carries the S5 capability-check line (warning-only, never a gate condition).
   const largeGaps = register.rows
@@ -482,7 +482,7 @@ function ragSummary(db: Database, projectId: string): string {
       ? `- 종합: ${view.overall!.grade}`
       : `- 종합: 미산정 — 미평가 차원 ${view.missing_dimensions.join(", ")} (색상 없음)`,
   );
-  return lines.join("\n") + " (AI 제안 — 승인 아님)";
+  return `${lines.join("\n")} (AI 제안 — 승인 아님)`;
 }
 
 function priorGates(db: Database, projectId: string, gates: string[]): string {
@@ -528,8 +528,8 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
     }
     if (gate === "pre_fs") {
       const bf = opp.target_universe_json
-        ? "\n[S5/BF 쇼트리스트 상태]\n" + bfSummary(db, entityId)
-        : "\n[S5 역량 평가]\n" + s5Summary(db, entityId);
+        ? `\n[S5/BF 쇼트리스트 상태]\n${bfSummary(db, entityId)}`
+        : `\n[S5 역량 평가]\n${s5Summary(db, entityId)}`;
       return [
         base,
         `\n[S1 시장 규모·성장]\n${s1Summary(db, opp.market_scope)}`,
