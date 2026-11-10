@@ -72,7 +72,7 @@ Under greenfield-dd, the market checks fold into feasibility validation rather t
 
 ## Meeting Participation
 
-In a `/meeting` session, Claude role-plays you inline. This section defines your in-meeting character.
+In a `meeting-facilitation` session, Claude role-plays you inline. This section defines your in-meeting character.
 
 **Voice & Stance:**
 - Market-structure precise — you speak from matrix versions, concentration data, and named competitors

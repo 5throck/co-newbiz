@@ -989,7 +989,7 @@
       "name": "antitrust-agent",
       "scope": "root",
       "capability": "antitrust-agent",
-      "content_hash": "78cc0df778728cbe",
+      "content_hash": "706b7e797fb2c0cc",
       "version": "1.1.0",
       "mirrors": [
         "agents/antitrust-agent.md"
@@ -1002,7 +1002,7 @@
       "name": "backend-engineer",
       "scope": "root",
       "capability": "backend-engineer",
-      "content_hash": "04f7bb2ce994b3fc",
+      "content_hash": "5a51588d2a03510c",
       "version": "1.1.1",
       "mirrors": [
         "agents/backend-engineer.md"
@@ -1015,7 +1015,7 @@
       "name": "brownfield-agent",
       "scope": "root",
       "capability": "brownfield-agent",
-      "content_hash": "fec13f6f343eebf7",
+      "content_hash": "4030dd02bad79db0",
       "version": "1.2.0",
       "mirrors": [
         "agents/brownfield-agent.md"
@@ -1028,7 +1028,7 @@
       "name": "certification-agent",
       "scope": "root",
       "capability": "certification-agent",
-      "content_hash": "de510e39e8098c9d",
+      "content_hash": "e31cb80d69a61ce3",
       "version": "1.1.1",
       "mirrors": [
         "agents/certification-agent.md"
@@ -1041,7 +1041,7 @@
       "name": "commercial-dd-agent",
       "scope": "root",
       "capability": "commercial-dd-agent",
-      "content_hash": "2112b85ce79fb3fb",
+      "content_hash": "485d2232149771a2",
       "version": "1.1.1",
       "mirrors": [
         "agents/commercial-dd-agent.md"
@@ -1054,7 +1054,7 @@
       "name": "compliance-officer",
       "scope": "root",
       "capability": "compliance-officer",
-      "content_hash": "c48b1e925b7f234f",
+      "content_hash": "8048ab137e6a82a9",
       "version": "1.1.2",
       "mirrors": [
         "agents/compliance-officer.md"
@@ -1067,7 +1067,7 @@
       "name": "customer-retention-agent",
       "scope": "root",
       "capability": "customer-retention-agent",
-      "content_hash": "c2836acf58cb67f8",
+      "content_hash": "8b474d2ebc46a9a8",
       "version": "1.1.1",
       "mirrors": [
         "agents/customer-retention-agent.md"
@@ -1080,7 +1080,7 @@
       "name": "data-architect",
       "scope": "root",
       "capability": "data-architect",
-      "content_hash": "0d3faa773e04677b",
+      "content_hash": "16a35a02d032c033",
       "version": "1.1.1",
       "mirrors": [
         "agents/data-architect.md"
@@ -1093,7 +1093,7 @@
       "name": "dba",
       "scope": "root",
       "capability": "dba",
-      "content_hash": "1caae28d3ff96980",
+      "content_hash": "37f2162b5d2b8c87",
       "version": "1.1.1",
       "mirrors": [
         "agents/dba.md"
@@ -1106,7 +1106,7 @@
       "name": "design-system-agent",
       "scope": "root",
       "capability": "design-system-agent",
-      "content_hash": "43a0cdf778d69194",
+      "content_hash": "a3c77dd58569ff2b",
       "version": "1.1.1",
       "mirrors": [
         "agents/design-system-agent.md"
@@ -1119,7 +1119,7 @@
       "name": "docs-writer",
       "scope": "root",
       "capability": "docs-writer",
-      "content_hash": "11a467bf2eb829c7",
+      "content_hash": "fda8ffffa3594c3a",
       "version": "1.1.1",
       "mirrors": [
         "agents/docs-writer.md"
@@ -1132,7 +1132,7 @@
       "name": "financial-analyst",
       "scope": "root",
       "capability": "financial-analyst",
-      "content_hash": "5dc34e7ad2c6ff04",
+      "content_hash": "2f1bbfd410f7cb31",
       "version": "1.3.0",
       "mirrors": [
         "agents/financial-analyst.md"
@@ -1145,7 +1145,7 @@
       "name": "financing-agent",
       "scope": "root",
       "capability": "financing-agent",
-      "content_hash": "869a5bf1a5c02f4d",
+      "content_hash": "6d8eab3fac01c372",
       "version": "1.2.0",
       "mirrors": [
         "agents/financing-agent.md"
@@ -1158,7 +1158,7 @@
       "name": "frontend-engineer",
       "scope": "root",
       "capability": "frontend-engineer",
-      "content_hash": "67d7c5f150758250",
+      "content_hash": "bf0fac3a600bf54d",
       "version": "1.1.1",
       "mirrors": [
         "agents/frontend-engineer.md"
@@ -1171,7 +1171,7 @@
       "name": "glossary-curator",
       "scope": "root",
       "capability": "glossary-curator",
-      "content_hash": "d3ebad6eeb4347d7",
+      "content_hash": "64a892faf83e3c81",
       "version": "1.1.1",
       "mirrors": [
         "agents/glossary-curator.md"
@@ -1184,7 +1184,7 @@
       "name": "greenfield-agent",
       "scope": "root",
       "capability": "greenfield-agent",
-      "content_hash": "7f3d6eb3cd128698",
+      "content_hash": "7de2c53c096ef1db",
       "version": "1.2.0",
       "mirrors": [
         "agents/greenfield-agent.md"
@@ -1197,7 +1197,7 @@
       "name": "group-review-agent",
       "scope": "root",
       "capability": "group-review-agent",
-      "content_hash": "f8ee438970619dca",
+      "content_hash": "a92d59eacc18f25c",
       "version": "1.1.1",
       "mirrors": [
         "agents/group-review-agent.md"
@@ -1210,7 +1210,7 @@
       "name": "hr-integration-agent",
       "scope": "root",
       "capability": "hr-integration-agent",
-      "content_hash": "c52d89ea0ecff1cb",
+      "content_hash": "6dc64eb05a8ae508",
       "version": "1.1.1",
       "mirrors": [
         "agents/hr-integration-agent.md"
@@ -1223,7 +1223,7 @@
       "name": "i18n-specialist",
       "scope": "root",
       "capability": "i18n-specialist",
-      "content_hash": "46f0de842a30cf81",
+      "content_hash": "0f5322b28e623bc4",
       "version": "1.3.2",
       "mirrors": [
         "agents/i18n-specialist.md"
@@ -1236,7 +1236,7 @@
       "name": "incentive-agent",
       "scope": "root",
       "capability": "incentive-agent",
-      "content_hash": "0354abc3e8143f5a",
+      "content_hash": "e906182df601b5c8",
       "version": "1.1.1",
       "mirrors": [
         "agents/incentive-agent.md"
@@ -1249,7 +1249,7 @@
       "name": "industry-lead",
       "scope": "root",
       "capability": "industry-lead",
-      "content_hash": "07e68a89b084998a",
+      "content_hash": "6e3ddcb26e3a3ee5",
       "version": "1.1.1",
       "mirrors": [
         "agents/industry-lead.md"
@@ -1262,7 +1262,7 @@
       "name": "infra-automation-engineer",
       "scope": "root",
       "capability": "infra-automation-engineer",
-      "content_hash": "f27093ef1c9e3cfe",
+      "content_hash": "980d48c28576255e",
       "version": "1.1.1",
       "mirrors": [
         "agents/infra-automation-engineer.md"
@@ -1275,7 +1275,7 @@
       "name": "ip-agent",
       "scope": "root",
       "capability": "ip-agent",
-      "content_hash": "e8a1b99f400423a4",
+      "content_hash": "0c6c05ffdd48fbf4",
       "version": "1.1.2",
       "mirrors": [
         "agents/ip-agent.md"
@@ -1288,7 +1288,7 @@
       "name": "ir-agent",
       "scope": "root",
       "capability": "ir-agent",
-      "content_hash": "1f8a17562c12e565",
+      "content_hash": "c3db8ebf8f9e04b8",
       "version": "1.1.1",
       "mirrors": [
         "agents/ir-agent.md"
@@ -1301,7 +1301,7 @@
       "name": "legal-counsel",
       "scope": "root",
       "capability": "legal-counsel",
-      "content_hash": "69925d396580172d",
+      "content_hash": "d2d599a7d7107407",
       "version": "1.1.1",
       "mirrors": [
         "agents/legal-counsel.md"
@@ -1314,7 +1314,7 @@
       "name": "market-intelligence-agent",
       "scope": "root",
       "capability": "market-intelligence-agent",
-      "content_hash": "b74c465049f1eec9",
+      "content_hash": "80762405f02d4c3d",
       "version": "1.2.0",
       "mirrors": [
         "agents/market-intelligence-agent.md"
@@ -1327,7 +1327,7 @@
       "name": "partnership-agent",
       "scope": "root",
       "capability": "partnership-agent",
-      "content_hash": "93e519a88e604c9a",
+      "content_hash": "f363c0fe8145ef07",
       "version": "1.1.2",
       "mirrors": [
         "agents/partnership-agent.md"
@@ -1340,7 +1340,7 @@
       "name": "platform-lead",
       "scope": "root",
       "capability": "platform-lead",
-      "content_hash": "3d380e4e70ba4d41",
+      "content_hash": "d0bb83d3bb482b3b",
       "version": "1.1.1",
       "mirrors": [
         "agents/platform-lead.md"
@@ -1366,7 +1366,7 @@
       "name": "pmi-agent",
       "scope": "root",
       "capability": "pmi-agent",
-      "content_hash": "d262049b1925a431",
+      "content_hash": "b161087885c52bd2",
       "version": "1.1.1",
       "mirrors": [
         "agents/pmi-agent.md"
@@ -1379,7 +1379,7 @@
       "name": "process-governance-manager",
       "scope": "root",
       "capability": "process-governance-manager",
-      "content_hash": "05dfc2d69d6a3b4f",
+      "content_hash": "b0f9b34af0f1e4f0",
       "version": "1.1.4",
       "mirrors": [
         "agents/process-governance-manager.md"
@@ -1392,7 +1392,7 @@
       "name": "quant-methodologist",
       "scope": "root",
       "capability": "quant-methodologist",
-      "content_hash": "e5e56a972eb6e3cc",
+      "content_hash": "9376327fbe017574",
       "version": "1.1.2",
       "mirrors": [
         "agents/quant-methodologist.md"
@@ -1405,7 +1405,7 @@
       "name": "region-lead",
       "scope": "root",
       "capability": "region-lead",
-      "content_hash": "2759f170e15c739e",
+      "content_hash": "5999ebe57c7c0a1d",
       "version": "1.1.2",
       "mirrors": [
         "agents/region-lead.md"
@@ -1418,7 +1418,7 @@
       "name": "release-engineer",
       "scope": "root",
       "capability": "release-engineer",
-      "content_hash": "bdd5f6ae053f0a88",
+      "content_hash": "928d211d5d09d5bd",
       "version": "1.1.1",
       "mirrors": [
         "agents/release-engineer.md"
@@ -1431,7 +1431,7 @@
       "name": "risk-officer",
       "scope": "root",
       "capability": "risk-officer",
-      "content_hash": "4ce791060f293a2b",
+      "content_hash": "eea981269b8e230b",
       "version": "1.3.0",
       "mirrors": [
         "agents/risk-officer.md"
@@ -1444,7 +1444,7 @@
       "name": "security-engineer",
       "scope": "root",
       "capability": "security-engineer",
-      "content_hash": "9bbc99aaa042cc9e",
+      "content_hash": "f0fec648a677f986",
       "version": "1.1.1",
       "mirrors": [
         "agents/security-engineer.md"
@@ -1457,7 +1457,7 @@
       "name": "site-facility-agent",
       "scope": "root",
       "capability": "site-facility-agent",
-      "content_hash": "a74cfb217e2e19f7",
+      "content_hash": "a9822f30d19511fb",
       "version": "1.1.3",
       "mirrors": [
         "agents/site-facility-agent.md"
@@ -1470,7 +1470,7 @@
       "name": "sre",
       "scope": "root",
       "capability": "sre",
-      "content_hash": "659da7db88c7f287",
+      "content_hash": "b5a0abb04d581691",
       "version": "1.1.1",
       "mirrors": [
         "agents/sre.md"
@@ -1483,7 +1483,7 @@
       "name": "technical-dd-agent",
       "scope": "root",
       "capability": "technical-dd-agent",
-      "content_hash": "012b9a0ca81fcdef",
+      "content_hash": "9acd21f59bbbce01",
       "version": "1.1.1",
       "mirrors": [
         "agents/technical-dd-agent.md"
@@ -1496,7 +1496,7 @@
       "name": "ux-designer-agent",
       "scope": "root",
       "capability": "ux-designer-agent",
-      "content_hash": "687ecffb23bc9472",
+      "content_hash": "ac61a54471c1f51f",
       "version": "1.1.1",
       "mirrors": [
         "agents/ux-designer-agent.md"
@@ -1509,7 +1509,7 @@
       "name": "valuation-agent",
       "scope": "root",
       "capability": "valuation-agent",
-      "content_hash": "5bc8ca2091305ab0",
+      "content_hash": "824e8581fddff0db",
       "version": "1.2.0",
       "mirrors": [
         "agents/valuation-agent.md"
@@ -4985,7 +4985,19 @@
     {
       "type": "references",
       "from": "agent:root/antitrust-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/antitrust-agent",
       "to": "skill:root/regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/backend-engineer",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -4998,6 +5010,12 @@
       "type": "references",
       "from": "agent:root/brownfield-agent",
       "to": "skill:root/deal-execution-playbook",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/brownfield-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5015,13 +5033,31 @@
     {
       "type": "references",
       "from": "agent:root/certification-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/certification-agent",
       "to": "skill:root/permit-pathway-mapping",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/commercial-dd-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
       "type": "references",
       "from": "agent:root/compliance-officer",
       "to": "skill:root/k-law",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/compliance-officer",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5038,8 +5074,38 @@
     },
     {
       "type": "references",
+      "from": "agent:root/customer-retention-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/data-architect",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/dba",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/design-system-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/docs-writer",
       "to": "skill:root/executive-presentation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/docs-writer",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5069,6 +5135,12 @@
     {
       "type": "references",
       "from": "agent:root/financial-analyst",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/financial-analyst",
       "to": "skill:root/quality-of-earnings",
       "source": "prose"
     },
@@ -5080,8 +5152,32 @@
     },
     {
       "type": "references",
+      "from": "agent:root/financing-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/frontend-engineer",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/glossary-curator",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/greenfield-agent",
       "to": "skill:root/greenfield-feasibility",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/greenfield-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5123,6 +5219,12 @@
     {
       "type": "references",
       "from": "agent:root/group-review-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/group-review-agent",
       "to": "skill:root/portfolio-fit-assessment",
       "source": "prose"
     },
@@ -5130,6 +5232,12 @@
       "type": "references",
       "from": "agent:root/hr-integration-agent",
       "to": "skill:root/management-incentive-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/hr-integration-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5189,6 +5297,12 @@
     {
       "type": "references",
       "from": "agent:root/i18n-specialist",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/i18n-specialist",
       "to": "skill:root/translate",
       "source": "prose"
     },
@@ -5207,13 +5321,43 @@
     {
       "type": "references",
       "from": "agent:root/incentive-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/incentive-agent",
       "to": "skill:root/regional-incentive-sourcing",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/industry-lead",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/infra-automation-engineer",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
       "type": "references",
       "from": "agent:root/ip-agent",
       "to": "skill:root/ip-fto-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/ip-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/ir-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5226,6 +5370,12 @@
       "type": "references",
       "from": "agent:root/legal-counsel",
       "to": "skill:root/legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/legal-counsel",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5261,6 +5411,12 @@
     {
       "type": "references",
       "from": "agent:root/market-intelligence-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/market-intelligence-agent",
       "to": "skill:root/proxy-industry-chain",
       "source": "prose"
     },
@@ -5285,7 +5441,19 @@
     {
       "type": "references",
       "from": "agent:root/partnership-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/partnership-agent",
       "to": "skill:root/partner-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/platform-lead",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5304,6 +5472,12 @@
       "type": "references",
       "from": "agent:root/pm",
       "to": "skill:root/skill-lifecycle-manager",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/pmi-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5328,6 +5502,12 @@
       "type": "references",
       "from": "agent:root/process-governance-manager",
       "to": "skill:root/legal-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/process-governance-manager",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5363,6 +5543,12 @@
     {
       "type": "references",
       "from": "agent:root/quant-methodologist",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/quant-methodologist",
       "to": "skill:root/monte-carlo-simulation",
       "source": "prose"
     },
@@ -5393,6 +5579,12 @@
     {
       "type": "references",
       "from": "agent:root/region-lead",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/region-lead",
       "to": "skill:root/regional-incentive-sourcing",
       "source": "prose"
     },
@@ -5400,6 +5592,12 @@
       "type": "references",
       "from": "agent:root/region-lead",
       "to": "skill:root/regulatory-screening",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/release-engineer",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5416,8 +5614,26 @@
     },
     {
       "type": "references",
+      "from": "agent:root/risk-officer",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/security-engineer",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/site-facility-agent",
       "to": "skill:root/community-partnership-planning",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/site-facility-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5434,6 +5650,18 @@
     },
     {
       "type": "references",
+      "from": "agent:root/sre",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/technical-dd-agent",
+      "to": "skill:root/meeting-facilitation",
+      "source": "prose"
+    },
+    {
+      "type": "references",
       "from": "agent:root/technical-dd-agent",
       "to": "skill:root/site-visit-protocol",
       "source": "prose"
@@ -5442,6 +5670,12 @@
       "type": "references",
       "from": "agent:root/technical-dd-agent",
       "to": "skill:root/technical-due-diligence",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/ux-designer-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {
@@ -5460,6 +5694,12 @@
       "type": "references",
       "from": "agent:root/valuation-agent",
       "to": "skill:root/financing-plan-review",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/valuation-agent",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {

@@ -123,7 +123,7 @@ flow.spec v2.2.1 correction reassigned this lead's one former S1 activity to
 
 ## Meeting Participation
 
-In a `/meeting` session, Claude role-plays you inline. This section defines your in-meeting character.
+In a `meeting-facilitation` session, Claude role-plays you inline. This section defines your in-meeting character.
 
 **Voice & Stance:**
 - Structural and axis-first — value-chain tiers, cycle position, regulatory regime, from the profile
