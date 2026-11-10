@@ -35,6 +35,10 @@ import {
   type PositionResponse,
 } from "./agent-orchestrator.ts";
 import { isCommitteeResponsive } from "./committee-flags.ts";
+// Type-only import (design §9.2, F2): deliberation.ts is the SSOT for the
+// chair-pass result types, and committee-minutes-schema.ts imports only zod —
+// no cycle in either direction.
+import type { CommitteeMinutesJson } from "./committee-minutes-schema.ts";
 
 export interface DeliberationPosition {
   /** agent_key for agent members; registry key for human members. */
@@ -126,6 +130,12 @@ export interface RunDeliberationOpts extends RunOpts {
   }) => Promise<MinutesPassResult | null>;
 }
 
+// Single source of truth (design §9.2, F2): both chair-pass result types live
+// here — the lower-level engine, already upstream of committee-chair.ts
+// (which re-exports them; declaring them there too would let the two
+// declarations drift, as §8.16 recorded). The committee-chair implementation
+// always sets `degradedResolutions`, but the engine's injected-hook contract
+// is broader, so the field stays optional in the shared type.
 export interface AgendaPassResult {
   agenda: AgendaIssue[];
   source: "llm" | "fallback";
@@ -136,7 +146,7 @@ export interface AgendaPassResult {
 }
 
 export interface MinutesPassResult {
-  json: unknown;
+  json: CommitteeMinutesJson;
   fallback: boolean;
   model?: string;
   promptVersion: string;
@@ -144,7 +154,8 @@ export interface MinutesPassResult {
   createdAt: string;
   /** Design §8.6: silently-filled resolution count from the chair minutes
    * pass (0 for fallback drafts). Persisted by the caller as the
-   * minutes_draft.degraded_resolutions sibling meta key. */
+   * minutes_draft.degraded_resolutions sibling meta key. Optional in this
+   * shared engine-level type — the chair's own runChairMinutes always sets it. */
   degradedResolutions?: number;
 }
 

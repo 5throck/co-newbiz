@@ -450,3 +450,113 @@ Recorded from the QA review and the 2026-11-10 validation so they do not rot; ea
 - **`buildGateContext` s4Summary `rationale.slice(0, 300)`** hard cut without ellipsis (`gate-brief.ts:235`, pre-existing) — cosmetic.
 - **Seam/type drift without guards**: the resolution-label map is duplicated between the `committee-scorecard.ts` inline map and `ko.json` with no drift guard; `MinutesPassResult` is type-duplicated between `committee-chair.ts` and `deliberation.ts`; `s1Summary`'s `market_scope` name-join diverges from `track-advisory`'s industry_id-first join — align in a future row.
 - **Two pre-existing `locale-jargon-lint` findings on HEAD** (en.json killCriteria agent-key title; ko.json `review.dev.summary` "개발자") — separate ticket.
+
+## 9. Amendment (2026-11-11): follow-up batch (§8.16 items)
+
+> **Status of this section.** Approved follow-up batch closing ALL six §8.16 items as one batch. Row 0 only: this section is design + decision record + spec registration; code, tests, and locale edits land in later rows per the landing order in §9.9. Gate-moment ruling: `docs/decisions/DEC-20261111-01.md`. No `process/flow.spec.yaml` change, no schema migration, and no `prompts.json` edit are in scope (F1 relies on the existing `committee.position` contract, so no prompt-registry codegen is needed).
+>
+> Every item below was re-verified against main @ 256c9b9e (PR #859) before being designed; F1 was additionally re-verified against git history.
+
+### 9.1 F1 — position-meta tails restored for LLM-member seats (behavior change)
+
+**Verified code facts.**
+
+1. The model already emits the tail: the `committee.position` system prompt (`app/web-next/prompts/prompts.json`, `# Output contract`) requires "EXACTLY one final line in this machine-readable form" — `<!--position-meta:{"recommendation":…,"confidence":…,"veto_dissent":…,"criteria_scores":{…}}-->`, extended with `responds_to`/`stance_changed`/`issues` in response rounds. The tail is NOT missing from the model.
+2. The LLM call site strips it at storage time. `makeLlmCommitteeAgent` (`app/web-next/lib/committee-llm.ts:175-197`) parses the reply with `parsePositionMeta` and, on success, returns the parsed result whose `positionMd` is the marker-STRIPPED text (`committee-llm.ts:106`, `text.replace(META_RE, "").trim()`). That stripped text is what `runDeliberationRounds` (`deliberation.ts:371-384`) and the hybrid `advanceCommitteeSession` (`committee-session.ts:924-935`) write into `agent_position.position_md`; of the structured fields only `confidence` survives, in its own column (`deliberation.ts:327-349`, `committee-session.ts:381-398`).
+3. The other two emitters append the marker inline, so their tails survive storage: deterministic seats (`committee-agents.ts:184-196`) and the human-position route (`committee-session.ts:805-813`). The LLM path is the only emitter that strips — the asymmetry.
+4. Every consumer re-parses the STORED text and therefore reads `{}`/null for LLM-seat rows: the chair passes (`committee-chair.ts:119-121` `parseMeta`; agenda fallback's criterion-spread path `:153-158`; minutes fallback's `responds_to` grouping `:278-292`; the minutes material's per-row tail `:346-356`), the scorecard (`committee-scorecard.ts:61`) and the stance-change table (`committee-scorecard.ts:289`), and the advance path's storage reconstruction (`committee-session.ts:954`). `peerMetaLine`'s over-cap collapse even documents the violated invariant: "Positions replayed from storage keep their tail inside the text" (`deliberation.ts:199-201`).
+5. Why it surfaced after the 2026-11-09 executor registration fix: parse-and-strip has been in `makeLlmCommitteeAgent` since 60ac19f1 (2026-09-08) — the stripping never changed. What changed is which seats run. d6321197 (#845, 2026-11-09, ADR-0196 decision 10) made convening refuse without a configured LLM, and dde41253 (#849, merged 2026-11-10) moved the executor seam to `globalThis` so route bundles see the bootstrap-registered factory. Before that, the route-side factory lookup failed and convening silently fell back to deterministic seats, whose positions carry the inline marker — the "20/20 in the three earliest" sessions. After #849, real LLM seats run and every stored LLM position is marker-free — the "0/20 in the last 6". The registration fix removed the mask; the underlying contract violation is against this design's own §2.5 (S2 storage): "keep them inside the position text's `position-meta` tail, which is already stored verbatim in `position_md` and re-parsed on read."
+
+**Designed change — canonical tail re-serialization at the call site.** In `makeLlmCommitteeAgent`, after a successful `parsePositionMeta`, re-serialize a canonical tail from the PARSED (whitelisted) fields and append it to `parsed.positionMd` with a newline, returning the enriched result. Fields are included only when the parse produced them, in stable order: `recommendation`, `veto_dissent` (only when `true`), `confidence`, `seat` (always — the caller knows `agentKey`), `criteria_scores`, `responds_to`, `stance_changed`, `issues`. The format is byte-identical in shape to the deterministic emitter's: `<!--position-meta:${JSON.stringify({…})}-->` (compact JSON, no spaces), so all downstream parsers — `committee-llm.parsePositionMeta` (chair passes), `committee-session.parsePositionMeta` (scorecard, advance reconstruction), `peerMetaLine` — see one contract shared with the deterministic and human emitters.
+
+Why re-serialize rather than store the model's raw reply: the whitelisted parse is the trust boundary (ADR-0196 §2.1/§2.3 — "LLM JSON is never trusted raw"). Storing the raw tail would persist un-normalized field ordering and unknown fields, and would let the stored text drift from the parsed result the engine actually used for synthesis and prompts. The canonical tail is exactly what the whitelists admit, and it keeps the in-memory result and the stored record identical.
+
+**Failure modes (explicit).**
+
+- *Model omits the tail* → `parsePositionMeta` returns null → the raw text is stored with NO marker and NO fabricated fields — behavior unchanged from today, but now an honest per-seat signal instead of a systematic one. The deterministic minutes/agenda fallbacks then see that seat as tail-less (`(position-meta 없음)` branch, criterion-spread skip) and the run proceeds thinner for that seat; nothing fails.
+- *Malformed tail* (broken JSON, invalid enum) → parse returns null → raw text stored; the inert malformed marker text rides along in the verbatim record (every parser returns `{}` on parse failure). Accepted — never silently repaired.
+- *LLM call failure* → the explicit `[degraded]` position, unchanged; no tail.
+- No tail is ever synthesized from data the model did not produce (no fabricated verdicts, ADR-0096/0196 boundary).
+
+**Out of scope, recorded so it does not rot.** `committee-session.parsePositionMeta` (`committee-session.ts:359-379`) whitelists only the four legacy fields, and `groupByRound` (`:944-958`) spreads its snake_case result into `DeliberationPosition` without mapping `veto_dissent → vetoDissent` — a pre-existing gap on the hybrid advance path that predates this batch. It needs its own ruling; it is NOT changed here.
+
+**Files:** `app/web-next/lib/committee-llm.ts` (`makeLlmCommitteeAgent` only). No prompt change (the prompt already requires the tail), no storage/schema change (§2.5 S2 keeps the tail in `position_md`), no renderer change (`stripTail` already keeps the tail out of prose rendering).
+
+**Test plan.**
+
+- `tests/unit/committee-llm.test.ts` (fetch-stub pattern already in place): a stubbed `complete` reply carrying a valid tail → the agent's returned `positionMd` ENDS with a canonical `<!--position-meta:{…}-->`, and a round-trip through `parsePositionMeta` on the returned text reproduces `recommendation`/`vetoDissent`/`confidence`/`criteriaScores` (and the ADR-0196 fields when present); `seat` in the tail equals the called `agentKey`. Tail omitted → no marker, no fields (unchanged passthrough). Malformed tail → raw passthrough, inert. Degraded path unchanged (existing test).
+- Storage survival: a deliberation run with an injected `callAgent` returning tail-carrying positions → rows re-loaded from `agent_position` parse back `recommendation`/`veto_dissent`/`criteria_scores` (proves the tail survives the DB round-trip).
+- Fallback quality restored: `computeAgendaFallback` and `computeMinutesFallback` given LLM-shaped rows (canonical tail present) produce non-empty criterion-spread issues and `responds_to` exchanges — the §8.16 degradation scenario reverses.
+- Boundary unchanged: dissent rendering stays verbatim; the tail appears in `dissent_json` as a footnote exactly as the documented invariant states (`committee-session.ts:346-354`).
+
+### 9.2 F2 — `MinutesPassResult` / `AgendaPassResult` single source of truth
+
+**Verified.** `deliberation.ts:129-149` declares both types (`MinutesPassResult.json: unknown`, `degradedResolutions?` optional); `committee-chair.ts:43-64` re-declares them (`json: CommitteeMinutesJson`, `degradedResolutions` required). The import graph already points one way: `committee-chair.ts:23` imports `AgendaIssue` from `deliberation.ts`, and `committee-session.ts:27-34` imports both result types from `deliberation.ts`; `deliberation.ts` imports nothing from `committee-chair.ts`, and `committee-minutes-schema.ts` imports only `zod`.
+
+**Design.** `deliberation.ts` is the SSOT — it is the lower-level engine and already upstream; importing the types from `committee-chair.ts` instead would create a cycle. `deliberation.ts` adds `import type { CommitteeMinutesJson } from "./committee-minutes-schema.ts"` (type-only, no cycle) and sharpens `MinutesPassResult.json` to `CommitteeMinutesJson`; `committee-chair.ts` deletes its local declarations and re-exports the deliberation types so existing import sites keep working. `degradedResolutions` stays optional in the shared type — the engine's injected-hook contract is broader than the chair's implementation, which always sets it — while the chair's own guarantee (always present on `runChairMinutes` results) is unchanged in code. Net effect: the session-side persistence code gains the typing the chair had, and the two declarations can no longer drift.
+
+**Files:** `app/web-next/lib/deliberation.ts`, `app/web-next/lib/committee-chair.ts`. **Test plan:** type-level only — typecheck plus the existing suites (types erase at runtime; no new behavioral tests).
+
+### 9.3 F3 — resolution-label drift guard (test, no runtime coupling)
+
+**Verified.** `committee-scorecard.ts:116` inlines `RESOLUTION_LABELS = { agreed: "합의", narrowed: "일부 합의", unresolved: "미합의(보류)" }`, exported via `committeeResolutionLabel` (`:120-122`); the view reads `common.committeeMinutes.resolution{Agreed,Narrowed,Unresolved}` from the locale bundles (`CommitteeMinutesView.tsx:96-100`; the ko/en `committeeMinutes` blocks at `locales/*.json:1383` carry the same three values in each language). The server markdown has no next-intl path (file comment `:112-115`), so reusing the locale map at runtime would couple server-rendered markdown to the client i18n bundle.
+
+**Design.** Prefer the drift-guard test, per the batch ruling — no runtime coupling. A new unit test asserts, for each of the three enum values, `committeeResolutionLabel(value)` equals the ko.json `common.committeeMinutes.resolution*` value, plus an existence assertion for the en.json triple so key deletion fails the build. A future label edit must change both places, and the test pins the equality.
+
+**Files:** new `tests/unit/committee-resolution-labels.test.ts`. No lib file changes. **Test plan:** the guard itself; existing suites pass unchanged.
+
+### 9.4 F4 — S1 resolution aligned to the ADR-0180 industry_id-first order (semantic)
+
+**Verified.** `s1Summary` (`gate-brief.ts:159-201`) and `latestSizingVersion` (`:703-719` — deliberately the same join, per its comment `:692-694`, "so the provenance line references exactly the version whose figures the manifest section shows") resolve the S1 analysis ONLY through the `market_scope` name-join (`md_industry.name_ko = opportunity.market_scope`). `track-advisory.ts:43-62` (ADR-0180 slice 6; ADR-0180 line 25) resolves through the `industry_id` FK FIRST and keeps the name-join only as the FK-null fallback, because "the name join silently missed every opportunity whose market_scope text drifted from the industry name".
+
+**Design.** Extract one shared resolver in `gate-brief.ts` (e.g. `resolveS1MarketRow(db, opportunityId)`) implementing the ADR-0180 order — industry FK first, name-join only when `industry_id IS NULL` — and use it in `s1Summary` and `latestSizingVersion` (thereby covering `preFsArtifactPresence` and `preFsProvenanceLines`).
+
+**Observable consequence (accepted, documented).** When `market_scope` text drifts from the industry FK (or `market_scope` is null while the FK is set), the manifest S1 block, the §8.2 provenance line, and the track-advisory section now all reference the SAME `market_sizing_version` — previously the manifest block and provenance line could cite a different version, or none, while the advisory cited another. A deal whose S1 exists only under a drifted name now shows its real figures instead of a false "없음". Unset states stay honest: the `S1 시장분석: 없음 (market_scope 미지정)` label's meaning narrows to the FK-null-and-name-miss case, and `시장 근거 미산출` (§8.2) still renders when nothing resolves.
+
+**Files:** `app/web-next/lib/gate-brief.ts`. **Test plan** (`tests/unit/committee-brief.test.ts` fixtures): (a) `industry_id` set + drifted/null `market_scope` → the manifest block and the provenance line cite the FK-resolved `market_sizing_version`, identical to the advisory's market-signal source; (b) `industry_id` null + `market_scope` set → the name-join fallback resolves unchanged; (c) neither → the honest unset labels.
+
+### 9.5 F5 — rationale truncation gains an ellipsis marker
+
+**Verified.** `gate-brief.ts:235` renders `결정 근거: ${row.rationale.slice(0, 300)}` — a hard cut with no truncation marker. (The same slice pattern exists at `:303`/`:304` for the S5 summary; those are outside the §8.16 item and are noted, not changed, here.)
+
+**Design.** A tiny helper `truncate(text, n)` that appends `…` only when `text.length > n`, applied at `:235`. Cosmetic; the 300-character budget is unchanged.
+
+**Files:** `app/web-next/lib/gate-brief.ts`. **Test plan:** a fixture route decision with a >300-char rationale → the S4 block's `결정 근거` line ends with `…` and its text is the 300-char prefix; exactly 300 chars → no `…`.
+
+### 9.6 F6 — locale-jargon-lint findings reworded (meaning preserved)
+
+**Verified.** The lint (`scripts/co-newbiz/locale-jargon-lint.ts:57-70`) bans, among others, roster agent keys (hyphenated, word-bounded) and the developer wording `/개발자|슬라이스|\bslices?\b/i`; exemptions live in an allowlist that is currently EMPTY. The two live findings on HEAD: en.json `killCriteria.titles.growth_projection_outside_top_decile_without_risk_officer_signoff` = "Growth projection outside the top decile without risk-officer sign-off" (`[agent-key] "risk-officer"`) and ko.json `review.dev.summary` = "원문 기록 (개발자용)" (`[developer-wording] "개발자"`).
+
+**Design — reword, not allowlist** (an allowlist entry would cement internal jargon in user-facing copy, against the plain-language preference in docs/context.md and ADR-0098 §4):
+
+- **en kill-criteria title** → "Growth projection outside the top decile without risk officer sign-off" (unhyphenated plain-English role name). The responsible role is still named, per ADR-0186's kill-criteria ownership model — the KO twin already reads "리스크 책임자 승인 없음", so this follows the established plain-role pattern. The lint's agent-key rule matches only the hyphenated roster key (`agents/risk-officer.md`). The machine criterion ID (the JSON key) is unchanged; titles are display-only.
+- **ko `review.dev.summary`** → "원문 기록 (추적·대조용)". The section is the raw record (English originals, internal identifiers, hashes) whose sibling `note` states it is needed only for tracing results or comparing against the translation — the rewording describes that purpose in plain Korean instead of naming an internal audience, with no meaning change. The en twin "Raw record (for developers)" is NOT a finding ("developer" is not a banned token) and stays.
+- **Stale comment cleanup:** `tests/unit/review-status-message.test.ts:30` quotes the old ko string in a comment — update the comment in the same change-set (the assertion itself keys on the catalog key, not the string).
+
+**Files:** `app/web-next/locales/en.json`, `app/web-next/locales/ko.json`, `tests/unit/review-status-message.test.ts` (comment only). **Test plan:** `bun scripts/co-newbiz/locale-jargon-lint.ts` exits 0; existing locale suites pass; no test pins the en title.
+
+### 9.7 Alternatives considered
+
+1. **F1: store the model's raw reply (stop stripping) when the parse succeeds.** Rejected — the whitelisted parse is the trust boundary (ADR-0196 §2.1/§2.3); raw storage would persist un-normalized JSON and let the stored record drift from the parsed result the engine used. The canonical re-serialization keeps one shape shared with the deterministic emitter.
+2. **F1: a dedicated column for the structured fields.** Rejected — §2.5 chose S2 storage precisely to avoid a migration; the marker inside `position_md` IS the declared storage seam (`committee-session.ts:346-354`).
+3. **F1: prompt-only fix (ask the model harder).** Rejected — the prompt already requires the tail (`# Output contract`); the loss is at the call site, so the fix must be there.
+4. **F2: SSOT in `committee-chair.ts`.** Rejected — `committee-chair.ts` already imports from `deliberation.ts`; the reverse edge would be a cycle.
+5. **F3: export the map and have the view reuse it at runtime.** Rejected per the batch ruling — the server markdown has no next-intl path; a runtime import couples lib code to the client i18n bundle. The test pins equality without coupling.
+6. **F4: keep the name-join and document the divergence.** Rejected — ADR-0180 already ruled the resolution order (industry FK first) after finding the name join "silently missed every opportunity whose market_scope text drifted"; leaving `gate-brief.ts` on the losing join keeps two different S1 versions in one brief.
+7. **F6: allowlist the two strings.** Rejected — the allowlist is for jargon that is load-bearing; both strings carry the same meaning without the banned tokens, and allowlisting would normalize internal jargon in user-facing copy.
+
+### 9.8 Files to change (batch delta; Row 0 only — implementation in later rows)
+
+| File | Change | Item |
+|---|---|---|
+| `app/web-next/lib/committee-llm.ts` | `makeLlmCommitteeAgent` appends the canonical tail from the parsed fields (§9.1) | F1 |
+| `app/web-next/lib/deliberation.ts` + `app/web-next/lib/committee-chair.ts` | Shared `MinutesPassResult`/`AgendaPassResult` SSOT in deliberation.ts; chair re-exports (§9.2) | F2 |
+| `tests/unit/committee-resolution-labels.test.ts` (new) | Inline map == ko.json values; en keys exist (§9.3) | F3 |
+| `app/web-next/lib/gate-brief.ts` | Shared ADR-0180-order S1 resolver for `s1Summary`/`latestSizingVersion` (§9.4); `truncate` helper with `…` at :235 (§9.5) | F4, F5 |
+| `app/web-next/locales/en.json`, `app/web-next/locales/ko.json` | Two string rewordings (§9.6) | F6 |
+| `tests/unit/review-status-message.test.ts` | Stale comment only (§9.6) | F6 |
+| `tests/unit/committee-{llm,minutes,brief}.test.ts` | Extensions per §9.1/§9.4/§9.5 | F1, F4, F5 |
+
+### 9.9 Landing order and QA
+
+F6 + F5 + F3 (mechanical, smallest) → F2 (type refactor, typecheck-gated) → F4 (semantic join alignment with fixtures) → F1 (behavior change last, with its full test plan) → QA with the three-stage review (reviewer from a different domain than the author). No flow.spec change, no migration, no prompt-registry codegen in this batch.
