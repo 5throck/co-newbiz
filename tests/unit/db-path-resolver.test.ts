@@ -1,17 +1,22 @@
-// @version 1.0.0
+// @version 1.1.0 (2026-11-10: added the db/lib anchor resolvers — repo-root.ts,
+// kill-criteria.ts resolveRegistryDir — the PR #857 same-class follow-up,
+// design 2026-11-10-db-lib-rebased-path-fix.)
 /**
- * Unit tests for the DB/cache path resolvers (design 2026-11-10-db-path-resolver-marker).
+ * Unit tests for the DB/cache path resolvers (design 2026-11-10-db-path-resolver-marker)
+ * and the db/lib module-anchor resolvers (design 2026-11-10-db-lib-rebased-path-fix).
  *
  * Defect: under the Next/Turbopack dev bundler, import.meta identity is rebased
  * against the bundler's ABSOLUTE_ROOT (observed <repo>/app), and db/client.ts
  * trusted that `here` unconditionally — one server boot created a second,
  * divergent EMPTY database at app/db/data/. dart-client.ts's cacheFile() then
  * keyed its cwd walk-up on `db/data` EXISTENCE, so the stray directory shadowed
- * the canonical cache location too.
+ * the canonical cache location too. PR #857's survey left the SAME-CLASS db/lib
+ * anchors (kill-criteria registry dir, python engine script paths) as a
+ * follow-up — covered here now.
  *
  * Fix under test: every resolver keys on the repo-layout marker `db/migrations`
  * (which only exists in the canonical <repo>/db), `here` is marker-validated,
- * and CO_NEWBIZ_DB_PATH still overrides. Both resolvers are pure helpers with
+ * and CO_NEWBIZ_DB_PATH still overrides. All resolvers are pure helpers with
  * injected exists() so these tests build REAL decoy trees under the OS temp dir
  * without touching the repository layout. No database is opened here.
  */
@@ -23,6 +28,8 @@ import { join } from "node:path";
 
 import { resolveDbPath } from "../../db/client.ts";
 import { resolveCorpCachePath } from "../../app/web-next/lib/dart-client.ts";
+import { findRepoRootByMarker, resolveRepoRoot } from "../../db/lib/repo-root.ts";
+import { resolveRegistryDir } from "../../db/lib/kill-criteria.ts";
 
 const TEMP_ROOT = mkdtempSync(join(tmpdir(), "db-path-resolver-test-"));
 afterAll(() => rmSync(TEMP_ROOT, { recursive: true, force: true }));
@@ -108,5 +115,83 @@ describe("dart-client.ts resolveCorpCachePath (2026-11-10-db-path-resolver-marke
     mkdirSync(cwd, { recursive: true });
     const resolved = resolveCorpCachePath({ cwd, exists: () => false });
     expect(resolved).toBe(join(cwd, "db", "data", "dart-corpcode-cache.json"));
+  });
+});
+
+// The db/lib anchors (kill-criteria registry dir, python engine scripts) share
+// one resolution primitive — repo-root.ts (2026-11-10-db-lib-rebased-path-fix,
+// the PR #857 same-class follow-up). A rebased module dir (<repo>/app/db/lib)
+// must reach the REAL root by walking up, because the rebased bundler root is
+// a SUBDIRECTORY of the repo.
+describe("repo-root.ts resolveRepoRoot (2026-11-10-db-lib-rebased-path-fix)", () => {
+  test("(a) rebased `here` (<repo>/app/db/lib, the Turbopack shim shape) resolves the real repo root", () => {
+    const { repo } = makeIncidentTree(join(TEMP_ROOT, "root-a"));
+    const rebasedHere = join(repo, "app", "db", "lib"); // ABSOLUTE_ROOT=<repo>/app + db/lib/<mod>
+    mkdirSync(rebasedHere, { recursive: true });
+    expect(resolveRepoRoot({ cwd: join(repo, "app", "web-next"), here: rebasedHere, exists: existsSync })).toBe(repo);
+    expect(findRepoRootByMarker({ start: rebasedHere, exists: existsSync })).toBe(repo);
+  });
+
+  test("(b) normal Bun path is byte-identical to the legacy `here/../..` computation", () => {
+    const { repo } = makeIncidentTree(join(TEMP_ROOT, "root-b"));
+    const here = join(repo, "db", "lib");
+    mkdirSync(here, { recursive: true });
+    const root = resolveRepoRoot({ cwd: join(repo, "somewhere"), here, exists: existsSync });
+    expect(root).toBe(repo);
+    // The exact strings the three db/lib consumers derive on the normal path.
+    expect(join(root as string, "procedures", "_kill-criteria")).toBe(join(repo, "procedures", "_kill-criteria"));
+    expect(join(root as string, "python", "monte_carlo.py")).toBe(join(repo, "python", "monte_carlo.py"));
+    expect(join(root as string, "python", "structure_sim.py")).toBe(join(repo, "python", "structure_sim.py"));
+    expect(join(root as string, ".venv", "bin", "python3")).toBe(join(repo, ".venv", "bin", "python3"));
+  });
+
+  test("(c) `here` rebased OUTSIDE the repo tree falls back to the cwd walk-up", () => {
+    const { repo, cwd } = makeIncidentTree(join(TEMP_ROOT, "root-c"));
+    const foreign = join(TEMP_ROOT, "root-c", "dist", "db", "lib"); // no marker above
+    mkdirSync(foreign, { recursive: true });
+    expect(resolveRepoRoot({ cwd, here: foreign, exists: existsSync })).toBe(repo);
+  });
+
+  test("(d) no marker anywhere returns null — callers keep their pre-existing failure behavior", () => {
+    const lonely = join(TEMP_ROOT, "root-d", "lonely");
+    mkdirSync(lonely, { recursive: true });
+    expect(resolveRepoRoot({ cwd: lonely, here: lonely, exists: () => false })).toBeNull();
+  });
+});
+
+// Fail-closed contract of the kill-criteria registry resolution (ADR-0186,
+// design Decision 8): only path RESOLUTION is marker-validated — when no
+// marker can be found resolveRegistryDir returns the LEGACY join unchanged,
+// so loadRegistryEntries's untouched readdirSync throw fires with exactly the
+// same message and expected path as before the fix. The throw site itself is
+// intentionally NOT re-tested here (it is unchanged code); the existing
+// kill-criteria*.test.ts suites exercise the real registry through the new
+// resolution on every run.
+describe("kill-criteria.ts resolveRegistryDir (2026-11-10-db-lib-rebased-path-fix)", () => {
+  test("(a) rebased `here` resolves the CANONICAL registry dir, not the rebased <repo>/app one", () => {
+    const { repo } = makeIncidentTree(join(TEMP_ROOT, "kc-a"));
+    const rebasedHere = join(repo, "app", "db", "lib");
+    mkdirSync(rebasedHere, { recursive: true });
+    const resolved = resolveRegistryDir({ cwd: join(repo, "app", "web-next"), here: rebasedHere, exists: existsSync });
+    expect(resolved).toBe(join(repo, "procedures", "_kill-criteria"));
+    expect(resolved).not.toBe(join(repo, "app", "procedures", "_kill-criteria"));
+  });
+
+  test("(b) normal Bun path is byte-identical to the legacy join(<here>/../..)", () => {
+    const { repo } = makeIncidentTree(join(TEMP_ROOT, "kc-b"));
+    const here = join(repo, "db", "lib");
+    mkdirSync(here, { recursive: true });
+    const resolved = resolveRegistryDir({ cwd: join(repo, "nowhere"), here, exists: existsSync });
+    expect(resolved).toBe(join(here, "..", "..", "procedures", "_kill-criteria"));
+  });
+
+  test("(c) no marker anywhere → the LEGACY path is returned, preserving the fail-closed throw contract", () => {
+    const lonely = join(TEMP_ROOT, "kc-c", "lonely");
+    mkdirSync(lonely, { recursive: true });
+    const resolved = resolveRegistryDir({ cwd: lonely, here: lonely, exists: () => false });
+    // Exactly what the pre-fix computation produced, so the untouched throw
+    // (`registry directory unreadable — expected ${REGISTRY_DIR}`) reports the
+    // same path it always did when the registry is genuinely absent.
+    expect(resolved).toBe(join(lonely, "..", "..", "procedures", "_kill-criteria"));
   });
 });

@@ -1,4 +1,8 @@
-// @version 1.0.0
+// @version 1.1.0 (2026-11-10: the engine-script anchor is marker-validated
+// against the repo-layout marker db/migrations — the Turbopack dev shim
+// rebases import.meta identity to <repo>/app, which would anchor the script
+// to the nonexistent <repo>/app/python/structure_sim.py. Design
+// 2026-11-10-db-lib-rebased-path-fix. The normal-path value is byte-identical.)
 /**
  * Structure-simulation composition + persistence — ADR-0066 Phase C.
  *
@@ -16,15 +20,27 @@
  * persisted as fabricated zeros.
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Database } from "bun:sqlite";
 import { getDb } from "../client.ts";
+import { resolveRepoRoot } from "./repo-root.ts";
 import { ulid } from "./ulid.ts";
 
-const ENGINE_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "python", "structure_sim.py");
+// 1.1.0 (design 2026-11-10-db-lib-rebased-path-fix): the module-dir → repo
+// root hop is marker-validated (db/migrations) instead of trusting the raw
+// `here/../..` — under the Turbopack dev shim import.meta.url rebases to
+// <repo>/app/db/lib/..., which would anchor the engine script to the
+// nonexistent <repo>/app/python/structure_sim.py. On the normal Bun path the
+// marker hit is <repo>, so ENGINE_SCRIPT resolves byte-identically to the
+// legacy join (path.join normalizes the .. segments). When no marker exists
+// anywhere the legacy rebasable base is kept — a broken anchor fails exactly
+// as today, as a loud engine-spawn error.
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolveRepoRoot({ cwd: process.cwd(), here: MODULE_DIR, exists: existsSync });
+const ENGINE_SCRIPT = join(REPO_ROOT ?? join(MODULE_DIR, "..", ".."), "python", "structure_sim.py");
 const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
 const ENGINE_TIMEOUT_MS = 120_000;
 const SCENARIOS = ["downside", "base", "upside", "custom"] as const;
@@ -89,7 +105,10 @@ function spawnEngine(scenarioPath: string, timeoutMs: number): Promise<EngineOut
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     void proc.exited.then((code) => {
       clearTimeout(timer);
-      return Promise.all([new Response(proc.stdout as ReadableStream).text(), new Response(proc.stderr as ReadableStream).text()]).then(([stdout, stderr]) => {
+      return Promise.all([
+        new Response(proc.stdout as ReadableStream).text(),
+        new Response(proc.stderr as ReadableStream).text(),
+      ]).then(([stdout, stderr]) => {
         if (code !== 0 && stdout.trim() === "") {
           reject(new Error(`structure_sim.py exited with code ${code}: ${stderr}`));
           return;
@@ -106,7 +125,10 @@ function band(base: number): { mode: number; low: number; high: number } {
   return { mode: base, low: base - spread, high: base + spread };
 }
 
-export async function runStructureSimulation(opts: StructureSimulationOptions, db: Database = getDb()): Promise<StructureSimSummary> {
+export async function runStructureSimulation(
+  opts: StructureSimulationOptions,
+  db: Database = getDb(),
+): Promise<StructureSimSummary> {
   // Input validation BEFORE any spawn — bad parameters are 400s, never a
   // post-compute engine failure (the simulation.ts sibling validates too).
   if (opts.seed !== undefined && (!Number.isInteger(opts.seed) || opts.seed < 0)) {
@@ -124,7 +146,9 @@ export async function runStructureSimulation(opts: StructureSimulationOptions, d
   const run = db.query("SELECT project_id FROM run WHERE id = ?").get(opts.runId) as { project_id: string } | null;
   if (run === null) throw new Error(`structure-simulation: run '${opts.runId}' does not exist`);
   if (run.project_id !== opts.projectId) {
-    throw new Error(`structure-simulation: run '${opts.runId}' belongs to project '${run.project_id}', not '${opts.projectId}'`);
+    throw new Error(
+      `structure-simulation: run '${opts.runId}' belongs to project '${run.project_id}', not '${opts.projectId}'`,
+    );
   }
   // Re-run guard BEFORE the spawn: identical run+scenario already recorded is
   // a caller decision point (choose another label / another run), not a
@@ -161,7 +185,10 @@ export async function runStructureSimulation(opts: StructureSimulationOptions, d
     .query("SELECT industry_id, driver_id, sensitivity FROM chain_node_sensitivity WHERE project_id = ?")
     .all(opts.projectId) as Array<{ industry_id: string; driver_id: string; sensitivity: number }>;
   const driverCodeById = new Map(
-    (db.query("SELECT id, code FROM industry_driver").all() as Array<{ id: string; code: string }>).map((r) => [r.id, r.code]),
+    (db.query("SELECT id, code FROM industry_driver").all() as Array<{ id: string; code: string }>).map((r) => [
+      r.id,
+      r.code,
+    ]),
   );
   const sensByIndustry = new Map<string, Record<string, number>>();
   for (const s of sensitivities) {
@@ -174,7 +201,9 @@ export async function runStructureSimulation(opts: StructureSimulationOptions, d
   }
 
   const links = db
-    .query("SELECT from_industry_id AS `from`, to_industry_id AS `to`, elasticity, pass_through_rate FROM value_chain_link WHERE project_id = ? ORDER BY id")
+    .query(
+      "SELECT from_industry_id AS `from`, to_industry_id AS `to`, elasticity, pass_through_rate FROM value_chain_link WHERE project_id = ? ORDER BY id",
+    )
     .all(opts.projectId);
 
   // Nodes = union of sensitivity industries + link endpoint industries.
@@ -183,9 +212,11 @@ export async function runStructureSimulation(opts: StructureSimulationOptions, d
     nodeIds.add(l.from);
     nodeIds.add(l.to);
   }
-  const nodes = [...nodeIds].sort().map((industry_id) => ({ industry_id, sensitivities: sensByIndustry.get(industry_id) ?? {} }));
+  const nodes = [...nodeIds]
+    .sort()
+    .map((industry_id) => ({ industry_id, sensitivities: sensByIndustry.get(industry_id) ?? {} }));
 
-  const seed = opts.seed ?? (parseInt(opts.runId.slice(-8), 36) % 2_147_483_647);
+  const seed = opts.seed ?? parseInt(opts.runId.slice(-8), 36) % 2_147_483_647;
   const tempDir = mkdtempSync(join(tmpdir(), "co-newbiz-struct-"));
   let output: EngineOutput;
   try {

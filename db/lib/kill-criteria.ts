@@ -1,4 +1,7 @@
-// @version 1.1.1
+// @version 1.2.0 (2026-11-10: REGISTRY_DIR is marker-validated before being
+// trusted — the Turbopack dev shim rebases import.meta identity to <repo>/app,
+// which resolved the registry to the nonexistent <repo>/app/procedures/_kill-criteria.
+// Design 2026-11-10-db-lib-rebased-path-fix. The ADR-0186 fail-closed throw is untouched.)
 /**
  * Kill-criteria evaluator — ADR-0057. The runtime consumer the registry was
  * staged for: evaluates a procedure's ENABLED registry entries
@@ -37,9 +40,10 @@
  */
 
 import type { Database } from "bun:sqlite";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveRepoRoot } from "./repo-root.ts";
 import { fillSnapshot } from "./snapshot-filler.ts";
 import { evaluatePredicate, parsePredicate } from "./predicate.ts";
 import {
@@ -56,9 +60,26 @@ export { KILL_ACTIONS, validateRegistryEntry, type RegistryEntry };
  * procedures/_kill-criteria/ — db/lib/../.. is the project root. 1.1.1 (ADR-0186 P2): the gate-decision
  * routes now call this evaluator from the Next server bundle, where Bun's import.meta.dir is undefined, so
  * the directory falls back to this module's URL (the lib/ic-review-steps.ts pattern).
+ *
+ * 1.2.0 (design 2026-11-10-db-lib-rebased-path-fix): under the Turbopack dev shim import.meta.url
+ * resolves against the bundler's ABSOLUTE_ROOT (observed <repo>/app), so the raw join produced the
+ * NONEXISTENT <repo>/app/procedures/_kill-criteria. HERE is therefore marker-validated: walk up from
+ * HERE and then cwd to the repo-layout marker db/migrations, and join the registry onto the found
+ * root. On the normal Bun path the marker hit is <repo>, so the result equals the legacy join
+ * byte-for-byte. When NO marker can be found the LEGACY join is returned unchanged, so a genuinely
+ * missing registry still fails exactly as before — loadRegistryEntries's readdirSync throws
+ * `kill_criteria_rejected: registry directory unreadable — expected <path>` (ADR-0186 fail-closed,
+ * design Decision 8). Only path RESOLUTION changed; the error path and its semantics are untouched.
  */
+export function resolveRegistryDir(opts: { cwd: string; here: string; exists: (p: string) => boolean }): string {
+  const root = resolveRepoRoot(opts);
+  return root !== null
+    ? join(root, "procedures", "_kill-criteria")
+    : join(opts.here, "..", "..", "procedures", "_kill-criteria");
+}
+
 const HERE = typeof import.meta.dir === "string" ? import.meta.dir : dirname(fileURLToPath(import.meta.url));
-const REGISTRY_DIR = join(HERE, "..", "..", "procedures", "_kill-criteria");
+const REGISTRY_DIR = resolveRegistryDir({ cwd: process.cwd(), here: HERE, exists: existsSync });
 
 export interface TriggeredCriterion {
   criterion_id: string;
@@ -106,7 +127,9 @@ function loadRegistryEntries(procedure: string): RegistryEntry[] {
   try {
     files = readdirSync(REGISTRY_DIR).filter((f) => f.startsWith(`${procedure}__`) && f.endsWith(".json"));
   } catch {
-    throw new Error(`kill_criteria_rejected: registry directory unreadable — expected ${REGISTRY_DIR} (design Decision 8).`);
+    throw new Error(
+      `kill_criteria_rejected: registry directory unreadable — expected ${REGISTRY_DIR} (design Decision 8).`,
+    );
   }
   const entries: RegistryEntry[] = [];
   for (const f of files) {
@@ -131,15 +154,29 @@ function loadRegistryEntries(procedure: string): RegistryEntry[] {
 export function evaluateKillCriteria(db: Database, opts: KillCriteriaOptions): KillCriteriaResult {
   // Fill only when this run has no snapshot yet (composability with
   // assessRulesForRun — the run is filled exactly once, by whichever runs first).
-  const filled = (db.query("SELECT COUNT(*) AS n FROM project_variable_snapshot WHERE run_id = ?").get(opts.runId) as { n: number }).n;
+  const filled = (
+    db.query("SELECT COUNT(*) AS n FROM project_variable_snapshot WHERE run_id = ?").get(opts.runId) as { n: number }
+  ).n;
   if (filled === 0) {
-    fillSnapshot({ runId: opts.runId, projectId: opts.projectId, industryIds: opts.industryIds, now: new Date(opts.now ?? new Date().toISOString()) }, db);
+    fillSnapshot(
+      {
+        runId: opts.runId,
+        projectId: opts.projectId,
+        industryIds: opts.industryIds,
+        now: new Date(opts.now ?? new Date().toISOString()),
+      },
+      db,
+    );
   }
 
   const entries = loadRegistryEntries(opts.procedure);
   for (const entry of entries) validateRegistryEntry(entry);
 
-  const lookup = buildLookup(db.query("SELECT var_key, value_num, value_text, status FROM project_variable_snapshot WHERE run_id = ?").all(opts.runId) as unknown as SnapshotVarRow[]);
+  const lookup = buildLookup(
+    db
+      .query("SELECT var_key, value_num, value_text, status FROM project_variable_snapshot WHERE run_id = ?")
+      .all(opts.runId) as unknown as SnapshotVarRow[],
+  );
 
   const result: KillCriteriaResult = {
     runId: opts.runId,
@@ -170,7 +207,12 @@ export function evaluateKillCriteria(db: Database, opts: KillCriteriaOptions): K
       thresholds_source: entry.thresholds_source as string,
     });
     if (outcome === "true") {
-      result.triggered.push({ criterion_id: entry.criterion_id, title: entry.title, action: entry.action, predicate: entry.predicate });
+      result.triggered.push({
+        criterion_id: entry.criterion_id,
+        title: entry.title,
+        action: entry.action,
+        predicate: entry.predicate,
+      });
     } else if (outcome === "unassessed") {
       result.unassessed.push(entry.criterion_id);
     }

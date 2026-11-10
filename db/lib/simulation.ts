@@ -1,4 +1,8 @@
-// @version 1.2.0
+// @version 1.3.0 (2026-11-10: the python engine anchors are marker-validated
+// against the repo-layout marker db/migrations — the Turbopack dev shim rebases
+// import.meta identity to <repo>/app, which would anchor the venv/engine paths
+// to the nonexistent <repo>/app/.venv and <repo>/app/python. Design
+// 2026-11-10-db-lib-rebased-path-fix. Normal-path values are byte-identical.)
 /**
  * Simulation orchestrator — the REST-side bridge to python/monte_carlo.py
  * (ADR-0026, design v1.0 §4-6/§4-8, FR-MA-08). The CLI (`newbiz.ts simulate
@@ -50,6 +54,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Database } from "bun:sqlite";
+import { resolveRepoRoot } from "./repo-root.ts";
 import { ulid } from "./ulid.ts";
 import { resolveRunWacc } from "./wacc.ts";
 
@@ -114,15 +119,28 @@ const MAX_ITERATIONS = 100_000;
 // Same venv-first discipline as fin-pipeline.ts/calibrate.ts: prefer the
 // repo-root `.venv` (built from python/requirements.txt) so the numpy-backed
 // engine spawns with its dependencies; fall back to the system interpreter.
+//
+// 1.3.0 (design 2026-11-10-db-lib-rebased-path-fix): the module-dir → repo
+// root hop is marker-validated (db/migrations) instead of trusting the raw
+// `here/../..` — under the Turbopack dev shim import.meta.url rebases to
+// <repo>/app/db/lib/..., which anchored the venv and engine paths to the
+// nonexistent <repo>/app/.venv and <repo>/app/python. On the normal Bun path
+// the marker hit is <repo>, so PYTHON_BIN and ENGINE_SCRIPT resolve
+// byte-identically to the legacy computation. When no marker exists anywhere
+// the legacy rebasable base is kept, so a broken anchor fails exactly as
+// today — a loud engine-spawn error, never silent misbehavior.
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolveRepoRoot({ cwd: process.cwd(), here: MODULE_DIR, exists: existsSync });
+const ANCHOR_ROOT = REPO_ROOT ?? join(MODULE_DIR, "..", "..");
 function resolvePythonBin(): string {
   if (process.platform !== "win32") {
-    const venvBin = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", ".venv", "bin", "python3");
+    const venvBin = resolve(ANCHOR_ROOT, ".venv", "bin", "python3");
     if (existsSync(venvBin)) return venvBin;
   }
   return process.platform === "win32" ? "python" : "python3";
 }
 const PYTHON_BIN = resolvePythonBin();
-const ENGINE_SCRIPT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "python", "monte_carlo.py");
+const ENGINE_SCRIPT = resolve(ANCHOR_ROOT, "python", "monte_carlo.py");
 
 function requireFinite(output: EngineOutput, field: keyof EngineOutput): number {
   const value = output[field];
@@ -166,7 +184,11 @@ function runEngine(scenarioPath: string, timeoutMs: number): Promise<EngineOutpu
       try {
         resolveFn(JSON.parse(stdout) as EngineOutput);
       } catch (err) {
-        reject(new Error(`Monte Carlo engine stdout was not valid JSON: ${err instanceof Error ? err.message : String(err)}`));
+        reject(
+          new Error(
+            `Monte Carlo engine stdout was not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
       }
     });
   });
@@ -174,26 +196,27 @@ function runEngine(scenarioPath: string, timeoutMs: number): Promise<EngineOutpu
 
 export async function runSimulationForRun(db: Database, opts: RunSimulationOptions): Promise<SimulationRunResult> {
   const runId = opts.runId.trim();
-  const run = db.query("SELECT id, project_id, input_hash FROM run WHERE id = ?").get(runId) as
-    | { id: string; project_id: string; input_hash: string }
-    | null;
+  const run = db.query("SELECT id, project_id, input_hash FROM run WHERE id = ?").get(runId) as {
+    id: string;
+    project_id: string;
+    input_hash: string;
+  } | null;
   if (!run) throw new SimulationInputError(`Run '${runId}' not found.`);
 
   const iterations = opts.iterations ?? 10_000;
   if (!Number.isInteger(iterations) || iterations < 1 || iterations > MAX_ITERATIONS) {
     throw new SimulationInputError(`iterations must be an integer between 1 and ${MAX_ITERATIONS}.`);
   }
-  const seed =
-    opts.seed ??
-    (parseInt(run.input_hash.slice(0, 8), 16) % 2_147_483_647); // deterministic per input set — see module doc
+  const seed = opts.seed ?? parseInt(run.input_hash.slice(0, 8), 16) % 2_147_483_647; // deterministic per input set — see module doc
   if (!Number.isInteger(seed) || seed < 0 || seed > 2_147_483_647) {
     throw new SimulationInputError("seed must be an integer between 0 and 2147483647.");
   }
 
   const inputs = new Map<string, number>();
-  for (const row of db
-    .query("SELECT assumption_key, value FROM run_input WHERE run_id = ?")
-    .all(runId) as { assumption_key: string; value: number }[]) {
+  for (const row of db.query("SELECT assumption_key, value FROM run_input WHERE run_id = ?").all(runId) as {
+    assumption_key: string;
+    value: number;
+  }[]) {
     inputs.set(row.assumption_key, row.value);
   }
   const runWacc = resolveRunWacc(db, runId);
@@ -273,9 +296,10 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     // A5 extension: deterministic IRR/payback of the base cash flows. Optional
     // — older engine outputs (and pinned fixtures) without them stay valid.
     irr: typeof output.irr === "number" && Number.isFinite(output.irr) ? output.irr : undefined,
-    payback_year: typeof output.payback_year === "number" && Number.isInteger(output.payback_year)
-      ? output.payback_year
-      : undefined,
+    payback_year:
+      typeof output.payback_year === "number" && Number.isInteger(output.payback_year)
+        ? output.payback_year
+        : undefined,
   };
 
   const simulationId = ulid();
@@ -293,14 +317,23 @@ export async function runSimulationForRun(db: Database, opts: RunSimulationOptio
     );
   }
   db.transaction(() => {
-    db.run(
-      "INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)",
-      [simulationId, runId, seed, iterations, discountRate, now],
-    );
-    db.run(
-      "INSERT INTO simulation_result (simulation_id, metric, p05, p50, p95, mean, std) VALUES (?,?,?,?,?,?,?)",
-      [simulationId, "npv", summary.p05, summary.p50, summary.p95, summary.mean, summary.std],
-    );
+    db.run("INSERT INTO simulation (id, run_id, seed, iterations, discount_rate, created_at) VALUES (?,?,?,?,?,?)", [
+      simulationId,
+      runId,
+      seed,
+      iterations,
+      discountRate,
+      now,
+    ]);
+    db.run("INSERT INTO simulation_result (simulation_id, metric, p05, p50, p95, mean, std) VALUES (?,?,?,?,?,?,?)", [
+      simulationId,
+      "npv",
+      summary.p05,
+      summary.p50,
+      summary.p95,
+      summary.mean,
+      summary.std,
+    ]);
     const insertDraw = db.query(
       "INSERT INTO simulation_draw (simulation_id, iteration_no, metric, value) VALUES (?,?, 'npv', ?)",
     );
