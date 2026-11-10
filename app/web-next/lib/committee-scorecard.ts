@@ -109,6 +109,18 @@ function stripTail(positionMd: string): string {
   return positionMd.replace(/<!--position-meta:[\s\S]*?-->/g, "").trim();
 }
 
+// Design §8.7 (supplement G): the minutes payload enum stays English (prompt
+// language rules) — this server-rendered markdown prints the Korean display
+// label, produced inline like every other Korean string in this file
+// (ADR-0090 W1b display content; no client i18n path for server markdown).
+const RESOLUTION_LABELS: Record<string, string> = { agreed: "합의", narrowed: "일부 합의", unresolved: "미합의(보류)" };
+
+/** Korean display label for a minutes resolution enum value; unknown values
+ * fall back to the raw string — never blank (§8.7). */
+export function committeeResolutionLabel(resolution: string): string {
+  return RESOLUTION_LABELS[resolution] ?? resolution;
+}
+
 interface StoredMeta {
   minutes_draft?: MinutesDraft | null;
   minutes_confirmed_by?: string;
@@ -148,6 +160,14 @@ export function buildCommitteeMinutesJson(db: Database, sessionId: string) {
       : null,
     recommendation: t.evaluation?.recommendation ?? null,
     dissentJson: t.evaluation?.dissentJson ?? null,
+    // Design §8.6 (supplement F/G): the silently-filled resolution count from
+    // minutes_draft.degraded_resolutions — null when absent (a fallback draft
+    // or a pre-amendment session), so the UI chip renders only for a real
+    // degraded LLM draft. Payload only; chip rendering lands in the UI row.
+    degradedResolutions:
+      t.minutesDraft && !t.minutesDraft.fallback && typeof t.minutesDraft.degraded_resolutions === "number"
+        ? t.minutesDraft.degraded_resolutions
+        : null,
     scorecard: buildCommitteeScorecard(t),
   };
 }
@@ -226,7 +246,9 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
       for (const e of d.exchanges) {
         lines.push(`- **${e.seat}** (${e.act}): ${e.summary} → #pos-${e.position_ref}`);
       }
-      lines.push(`- 결론: **${d.resolution}**${d.resolution_note ? ` — ${d.resolution_note}` : ""}`);
+      lines.push(
+        `- 결론: **${committeeResolutionLabel(d.resolution)}**${d.resolution_note ? ` — ${d.resolution_note}` : ""}`,
+      );
       lines.push("");
     }
   } else {

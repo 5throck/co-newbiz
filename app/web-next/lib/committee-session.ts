@@ -44,6 +44,7 @@ import type { CallAgent, EntityRef, Recommendation } from "./agent-orchestrator.
 import { COMMITTEE_LLM_GUIDANCE, committeeLlmAvailable, getCommitteeCallAgent } from "./committee-agents.ts";
 import { COMMITTEE_REGISTRY } from "./committee-registry.generated.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
+import { buildPreFsCommitteeBrief } from "./gate-brief.ts";
 
 // ── Registry (procedures/_committees.yaml — governance data, ADR-0097 §3) ──
 
@@ -74,8 +75,10 @@ export interface SessionMeta {
   /** Track the session was convened under — resolves conditional seats (8). */
   track?: string;
   /** Extra judgement-basis text appended to every member's topic prompt
-   * (e.g. S6/S7's t-01~t-09 screening verdicts) — persisted so round 2+
-   * (advance()) rebuilds the same enriched topic, not just convene-time. */
+   * (e.g. S6/S7's t-01~t-09 screening verdicts, or the §8.3 default pre_fs
+   * committee brief injected at createCommitteeSession) — persisted so
+   * round 2+ (advance()) rebuilds the same enriched topic, not just
+   * convene-time. */
   brief_md?: string;
   synthesized?: boolean;
   evaluation_id?: string;
@@ -271,6 +274,7 @@ function toMinutesDraft(r: {
   promptVersion: string;
   inputHash: string;
   createdAt: string;
+  degradedResolutions?: number;
 }): MinutesDraft {
   return {
     json: r.json as MinutesDraft["json"],
@@ -279,6 +283,13 @@ function toMinutesDraft(r: {
     prompt_version: r.promptVersion,
     input_hash: r.inputHash,
     created_at: r.createdAt,
+    // Design §8.6: the silently-filled resolution count is a SIBLING key of
+    // the minutes_draft meta object (never inside the zod JSON), stored on
+    // every LLM-pass draft as an integer >= 0 (0 included). ABSENT on
+    // fallback drafts — their "unresolved" fill is the fallback's own
+    // declared output, not a silent repair, and absence of the key means
+    // "fallback draft or pre-amendment session".
+    ...(r.fallback ? {} : { degraded_resolutions: r.degradedResolutions ?? 0 }),
   };
 }
 
@@ -305,9 +316,11 @@ async function runAgendaPassForRun(runId: string, topic: string, maxRound: numbe
   return runChairAgenda({ topic, rows: loadChairRows(runId, maxRound) });
 }
 
-async function runMinutesPassForRun(runId: string, _topic: string, agenda: AgendaIssue[]): Promise<MinutesPassResult> {
+async function runMinutesPassForRun(runId: string, topic: string, agenda: AgendaIssue[]): Promise<MinutesPassResult> {
   const rows = loadChairRows(runId);
-  return runChairMinutes({ agenda, rows, seats: rows.map((r) => r.seat) });
+  // Design §8.4: the topic flows into the minutes material (## 심의 안건) and
+  // the input hash — the pass knows what meeting it is minuting.
+  return runChairMinutes({ topic, agenda, rows, seats: rows.map((r) => r.seat) });
 }
 
 interface SessionRow {
@@ -495,13 +508,36 @@ export function createCommitteeSession(entity: EntityRef, opts: ConveneOpts): Cr
   // S7 committee (applies_to brownfield_target) convenes the target_screening
   // gate — the same key the human GateDecisionPanel below records (0111).
   const gate = opts.gate ?? (committee.applies_to === "brownfield_target" ? "target_screening" : "pre_fs");
+  // Design §8.3 (amendment 2026-11-10): default pre_fs brief for OPPORTUNITY
+  // sessions. This is the single convening choke point — both the web POST
+  // route and the pipeline automation funnel through createCommitteeSession,
+  // so one guard covers both paths. Client-supplied briefMd always wins (the
+  // S6/S7 committees keep their caller-built briefs untouched; injection
+  // never overrides an explicit brief); project-entity sessions are excluded
+  // by the entity-type guard and never receive an opportunity brief.
+  let briefMd = opts.briefMd;
+  if (entity.entityType === "opportunity" && gate === "pre_fs" && briefMd === undefined) {
+    try {
+      // May itself return undefined (no artifacts) — then no brief, convening
+      // proceeds with the plain one-liner topic (no fabrication, §8.2).
+      briefMd = buildPreFsCommitteeBrief(getDb(), entity.entityId);
+    } catch (err) {
+      // A brief-builder failure never blocks convening — log and proceed
+      // without a brief (the brief is a declared-input grounding, not a gate
+      // condition; §8.12 alternative 2).
+      console.warn(
+        `[committee-session] pre_fs committee brief build failed for ${entity.entityId} — convening without a brief:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
   const meta: SessionMeta = {
     committee_key: opts.committeeKey,
     decision_mode: opts.decisionMode,
     gate,
     ...(opts.targetRef ? { target_ref: opts.targetRef } : {}),
     ...(opts.track ? { track: opts.track } : {}),
-    ...(opts.briefMd ? { brief_md: opts.briefMd } : {}),
+    ...(briefMd ? { brief_md: briefMd } : {}),
   };
   // agent_team needs agent members — validated at create time so a bad
   // request never reaches the async half.
@@ -1131,27 +1167,26 @@ export async function regenerateCommitteeMinutes(sessionId: string): Promise<Min
   }
   const rows = loadChairRows(sessionId);
   const agenda = meta.agenda ?? [];
-  const currentHash = minutesInputHashFor(agenda, rows);
+  // Design §8.4: the topic joins the input-hash parts, so the recomputed hash
+  // never matches a pre-amendment stored hash — every UNCONFIRMED session is
+  // regeneration-eligible; CONFIRMED sessions never reach this line (the
+  // minutes_already_confirmed refusal above precedes the comparison).
+  const topic = sessionTopic(getCommittee(meta.committee_key) as CommitteeDef, {
+    committeeKey: meta.committee_key,
+    decisionMode: meta.decision_mode,
+    gate: meta.gate as ConveneOpts["gate"],
+    targetRef: meta.target_ref,
+    briefMd: meta.brief_md,
+    actor: "chair",
+  });
+  const currentHash = minutesInputHashFor(topic, agenda, rows);
   if (meta.minutes_draft && !meta.minutes_draft.fallback && meta.minutes_draft.input_hash === currentHash) {
     throw new CommitteeError(
       "regenerate_not_needed",
       "the stored minutes match the current input — regeneration is not applicable",
     );
   }
-  const draft = toMinutesDraft(
-    await runMinutesPassForRun(
-      sessionId,
-      sessionTopic(getCommittee(meta.committee_key) as CommitteeDef, {
-        committeeKey: meta.committee_key,
-        decisionMode: meta.decision_mode,
-        gate: meta.gate as ConveneOpts["gate"],
-        targetRef: meta.target_ref,
-        briefMd: meta.brief_md,
-        actor: "chair",
-      }),
-      agenda,
-    ),
-  );
+  const draft = toMinutesDraft(await runMinutesPassForRun(sessionId, topic, agenda));
   meta.minutes_draft = draft;
   writeMeta(sessionId, meta);
   return draft;

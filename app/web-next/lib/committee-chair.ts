@@ -24,7 +24,11 @@ import type { AgendaIssue } from "./deliberation.ts";
 import type { AgentCallResult } from "./agent-orchestrator.ts";
 
 export const AGENDA_PROMPT_VERSION = "committee.agenda@1";
-export const MINUTES_PROMPT_VERSION = "committee.minutes@1";
+// @2 (2026-11-10, design §8.5): the committee.minutes prompt gained the
+// resolution decision rule (agreed/narrowed/unresolved + dissent-orthogonality)
+// inside the existing 5-section skeleton; stored drafts are distinguishable
+// by this version string.
+export const MINUTES_PROMPT_VERSION = "committee.minutes@2";
 
 /** One position as the chair passes see it: an agent_position row whose
  * position-meta tail is parsed by the chair passes when needed. */
@@ -52,6 +56,11 @@ export interface MinutesPassResult {
   promptVersion: string;
   inputHash: string;
   createdAt: string;
+  /** Design §8.6 (supplement F): count of discussion items in the LLM draft
+   * whose resolution was silently filled by the "unresolved" default. Always
+   * 0 for fallback drafts — the fallback's fill is its own declared output,
+   * not a silent repair, and is never persisted as degraded. */
+  degradedResolutions: number;
 }
 
 /** Stored form of the agenda provenance in process_run.meta_json.agenda_meta. */
@@ -71,6 +80,11 @@ export interface MinutesDraft {
   prompt_version: string;
   input_hash: string;
   created_at: string;
+  /** Design §8.6: a SIBLING of `json` — never inside the zod-validated JSON,
+   * so the stored shape stays stable. Present (integer >= 0, 0 included) on
+   * every LLM-pass draft; ABSENT on fallback drafts and pre-amendment
+   * sessions. */
+  degraded_resolutions?: number;
 }
 
 function stableJson(value: unknown): string {
@@ -116,6 +130,17 @@ const CRITERIA_KEYS = [
   "speed_to_capability",
 ] as const;
 
+// Design §8.9: Korean display labels for the five criteria. Titles are
+// display content — the Korean label ONLY; the machine key stays in code and
+// tests via CRITERIA_KEYS, never in the rendered title.
+const CRITERIA_LABELS: Record<(typeof CRITERIA_KEYS)[number], string> = {
+  control_need: "통제 필요도",
+  capability_criticality: "역량 결정성",
+  market_uncertainty: "시장 불확실성",
+  integration_capacity: "통합 역량",
+  speed_to_capability: "역량확보 속도",
+};
+
 /**
  * Deterministic agenda fallback: one issue per criterion whose score spread
  * across round-1 seats is 2 or more, plus "Overall recommendation" when the
@@ -137,7 +162,7 @@ export function computeAgendaFallback(rows: ChairPositionRow[]): AgendaIssue[] {
     if (spread < 2) continue;
     issues.push({
       id: `I${issues.length + 1}`,
-      title: `기준 쟁점: ${criterion} (의견 산포 ${spread})`,
+      title: `기준 쟁점: ${CRITERIA_LABELS[criterion]} (의견 산포 ${spread})`,
       raisedBy: votes
         .filter((x) => x.v <= min + 1)
         .map((x) => x.seat)
@@ -286,13 +311,15 @@ export function computeMinutesFallback(agenda: AgendaIssue[], rows: ChairPositio
 }
 
 /**
- * The chair minutes pass. Input: all rounds, the agenda, the responds_to
- * tails — never the recommendation as an authority and never the dissent.
- * Output: the zod-validated minutes JSON with fabricated refs and
+ * The chair minutes pass. Input: the session topic (design §8.4 — the pass
+ * knows what meeting it is minuting), all rounds, the agenda, the
+ * responds_to tails — never the recommendation as an authority and never the
+ * dissent. Output: the zod-validated minutes JSON with fabricated refs and
  * non-session seats dropped. Any LLM failure degrades to the deterministic
  * fallback with `fallback: true`.
  */
 export async function runChairMinutes(opts: {
+  topic: string;
   agenda: AgendaIssue[];
   rows: ChairPositionRow[];
   seats: readonly string[];
@@ -301,10 +328,17 @@ export async function runChairMinutes(opts: {
   const model = llmModel();
   let json: CommitteeMinutesJson | null = null;
   let fallback = true;
+  let degraded = 0;
   if (model) {
     try {
       const call = makeLlmChairMinutes();
       const material = [
+        // Design §8.4: the topic leads the material — the chair minutes pass
+        // must know what meeting it is minuting (the topic includes the brief
+        // via sessionTopic).
+        "## 심의 안건",
+        opts.topic,
+        "",
         "## 안건 쟁점 (의장 제안)",
         ...opts.agenda.map((i) => `- ${i.id}: ${i.title}`),
         "",
@@ -323,13 +357,16 @@ export async function runChairMinutes(opts: {
       ].join("\n");
       const text = await call(material);
       const parsedDraft = extractJson(text);
-      json = resolveMinutesDraft(parsedDraft, {
+      const resolved = resolveMinutesDraft(parsedDraft, {
         knownSeats: [...new Set(opts.seats)],
         positionIds: opts.rows.map((r) => r.id),
         agendaIds: opts.agenda.map((a) => a.id),
       });
-      if (json) fallback = false;
-      else {
+      if (resolved.draft) {
+        json = resolved.draft;
+        degraded = resolved.degraded;
+        fallback = false;
+      } else {
         // Schema violations are silent by design in resolveMinutesDraft —
         // surface them here so a systematically failing minutes pass is
         // diagnosable from the server log.
@@ -361,13 +398,20 @@ export async function runChairMinutes(opts: {
     fallback,
     ...(fallback || !model ? {} : { model }),
     promptVersion: MINUTES_PROMPT_VERSION,
+    // Design §8.4: the topic joins the hash — a topic change makes the stored
+    // draft regeneration-eligible (the documented blast radius: every
+    // UNCONFIRMED stored session becomes regeneration-eligible; CONFIRMED
+    // sessions stay frozen because the confirm refusal precedes the hash
+    // comparison).
     inputHash: chairInputHash([
       opts.rows.map((r) => [r.id, r.positionMd]),
       opts.agenda,
+      opts.topic,
       MINUTES_PROMPT_VERSION,
       model ?? null,
     ]),
     createdAt,
+    degradedResolutions: fallback ? 0 : degraded,
   };
 }
 
@@ -375,8 +419,16 @@ export async function runChairMinutes(opts: {
  * The minutes input hash recomputed WITHOUT running the pass — the
  * regeneration eligibility key: regeneration is allowed only while
  * unconfirmed and when this differs from the stored draft's hash or the
- * stored draft is a fallback (ADR-0196 decision 4).
+ * stored draft is a fallback (ADR-0196 decision 4). Parts are [rows, agenda,
+ * topic, MINUTES_PROMPT_VERSION, model] — the same formula runChairMinutes
+ * hashes with (design §8.4).
  */
-export function minutesInputHashFor(agenda: AgendaIssue[], rows: ChairPositionRow[]): string {
-  return chairInputHash([rows.map((r) => [r.id, r.positionMd]), agenda, MINUTES_PROMPT_VERSION, llmModel() ?? null]);
+export function minutesInputHashFor(topic: string, agenda: AgendaIssue[], rows: ChairPositionRow[]): string {
+  return chairInputHash([
+    rows.map((r) => [r.id, r.positionMd]),
+    agenda,
+    topic,
+    MINUTES_PROMPT_VERSION,
+    llmModel() ?? null,
+  ]);
 }

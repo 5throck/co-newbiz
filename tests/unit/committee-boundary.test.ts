@@ -128,6 +128,24 @@ describe("committee deliberation boundary (ADR-0097 §8)", () => {
     const evaluationId = meta.evaluation_id as string;
     expect(evaluationId).toBeTruthy();
 
+    // Amendment 2026-11-10 boundary (design §8.5/§8.6): the AI-drafted
+    // minutes JSON still has NO recommendation field and NO dissent field,
+    // and a BARE-opportunity convene (no S1/S3 artifacts) receives NO
+    // default brief — convening proceeds with the plain one-liner topic.
+    const minutesDraft = meta.minutes_draft as { json: Record<string, unknown>; fallback: boolean } | undefined;
+    expect(minutesDraft).toBeDefined();
+    expect(minutesDraft?.json).not.toHaveProperty("recommendation");
+    expect(minutesDraft?.json).not.toHaveProperty("dissent");
+    expect(minutesDraft?.json).not.toHaveProperty("dissent_json");
+    expect(Object.keys(minutesDraft?.json ?? {}).sort()).toEqual([
+      "action_items",
+      "agenda",
+      "agreements",
+      "discussion",
+      "open_questions",
+    ]);
+    expect(meta.brief_md).toBeUndefined();
+
     // BOUNDARY #2: no confirming record may exist from the session.
     expect(confirmingRowCounts(oppId)).toEqual({ gate: 0, route: 0, target: 0 });
 

@@ -158,8 +158,11 @@ describe("agent_team minutes (deterministic fallback, S2 storage)", () => {
       input_hash: string;
     };
     expect(draft.fallback).toBe(true);
-    expect(draft.prompt_version).toBe("committee.minutes@1");
+    expect(draft.prompt_version).toBe("committee.minutes@2");
     expect(draft.input_hash).toMatch(/^[0-9a-f]{64}$/);
+    // Design §8.6: the degraded_resolutions sibling key is ABSENT on a
+    // fallback draft (its "unresolved" fill is its own declared output).
+    expect(draft).not.toHaveProperty("degraded_resolutions");
   });
 
   test("the minutes draft has NO recommendation field and NO dissent field", () => {
@@ -228,6 +231,9 @@ describe("agent_team minutes (deterministic fallback, S2 storage)", () => {
     expect(data.minutesDraft.json.discussion).toBeInstanceOf(Array);
     expect(data.recommendation).toBeTruthy();
     expect(data.scorecard.rows.length).toBeGreaterThan(0);
+    // Design §8.6: null when absent (fallback draft) — the UI chip renders
+    // only for a real degraded LLM draft.
+    expect(data.degradedResolutions).toBeNull();
   });
 
   test("a GET never calls the LLM — complete() is never invoked while rendering", async () => {
@@ -333,6 +339,32 @@ describe("minutes regeneration rules (decision 4)", () => {
     });
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe("invalid_request");
+  });
+
+  test("a stored pre-amendment draft (old-formula input hash) is regeneration-eligible — the topic joined the hash parts (design §8.4)", async () => {
+    // Documented blast radius: minutesInputHashFor now hashes
+    // [rows, agenda, topic, MINUTES_PROMPT_VERSION, model], so it NEVER
+    // matches a hash computed under the old formula — every UNCONFIRMED
+    // stored session becomes regeneration-eligible instead of tripping
+    // regenerate_not_needed.
+    const opp2 = await createOpportunity("Minutes legacy hash");
+    const sid = await conveneAgentTeam(opp2);
+    // Simulate a stored PRE-amendment LLM draft (non-fallback, old hash).
+    const metaRow = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(sid) as { meta_json: string };
+    const meta = JSON.parse(metaRow.meta_json) as Record<string, unknown>;
+    const draft = meta.minutes_draft as Record<string, unknown>;
+    meta.minutes_draft = { ...draft, fallback: false, input_hash: "pre-amendment-old-formula-hash" };
+    db.run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(meta), sid]);
+
+    const res = await req(`/api/opportunities/${opp2}/committee-sessions/${sid}/minutes`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ regenerate: true }),
+    });
+    expect(res.status).toBe(200); // NOT 409 regenerate_not_needed — the hash formula changed
+    const { data } = await res.json();
+    expect(data.inputHash).not.toBe("pre-amendment-old-formula-hash");
+    expect(data.inputHash).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 
@@ -449,5 +481,102 @@ describe("computeMinutesFallback (deterministic minutes)", () => {
     expect(json.discussion).toHaveLength(0);
     expect(json.agreements).toHaveLength(0);
     expect(json.action_items).toHaveLength(0);
+  });
+});
+
+describe("minutes pass topic + degraded count (design §8.4/§8.6, amendment 2026-11-10)", () => {
+  const AGENDA = [
+    { id: "I1", title: "수요 전제 신뢰도" },
+    { id: "I2", title: "인증 이전 가능성" },
+  ];
+  const ROWS = [
+    {
+      id: "POS-1",
+      seat: "risk-officer",
+      memberType: "agent",
+      round: 2,
+      positionMd:
+        '### risk-officer\n\n반박\n\n<!--position-meta:{"recommendation":"kill","confidence":80,"responds_to":[{"seat":"industry-lead","act":"rebut","issue":"I1"}],"stance_changed":false,"issues":["I1"]}-->',
+    },
+    {
+      id: "POS-2",
+      seat: "industry-lead",
+      memberType: "agent",
+      round: 2,
+      positionMd:
+        '### industry-lead\n\n동의\n\n<!--position-meta:{"recommendation":"go","confidence":72,"responds_to":[{"seat":"risk-officer","act":"agree","issue":"I1"}],"stance_changed":false,"issues":["I1"]}-->',
+    },
+  ];
+  const SEATS = ["risk-officer", "industry-lead"];
+
+  test("the topic joins the input hash — a different topic yields a different hash (deterministic path included)", async () => {
+    const { runChairMinutes, minutesInputHashFor } = await import("../../app/web-next/lib/committee-chair.ts");
+    const a = await runChairMinutes({
+      topic: "route_decision 심의 (진행 pre_fs)",
+      agenda: AGENDA,
+      rows: ROWS,
+      seats: SEATS,
+    });
+    const b = await runChairMinutes({
+      topic: "route_decision 심의 (진행 pre_fs)\n\n## 판정 근거\n다른 브리프",
+      agenda: AGENDA,
+      rows: ROWS,
+      seats: SEATS,
+    });
+    expect(b.inputHash).not.toBe(a.inputHash);
+    // The recomputed (no-pass) hash formula matches the pass's formula.
+    expect(minutesInputHashFor("route_decision 심의 (진행 pre_fs)", AGENDA, ROWS)).toBe(a.inputHash);
+    expect(minutesInputHashFor("다른 토픽", AGENDA, ROWS)).not.toBe(a.inputHash);
+    // Fallback drafts report degraded 0 (their fill is declared, not silent).
+    expect(a.degradedResolutions).toBe(0);
+  });
+
+  test("the LLM material LEADS with ## 심의 안건 + topic, and the degraded count survives the pass", async () => {
+    let lastMaterial = "";
+    // Mock the LLM seam (complete + getProviderConfig through the same module)
+    // so the chair pass takes the LLM path deterministically.
+    llmResets.push(() => mock.restore());
+    llmResets.push(() => mock.module("../../app/web-next/lib/llm.ts", () => ({ ...PRISTINE_LLM })));
+    mock.module("../../app/web-next/lib/llm.ts", () => ({
+      ...PRISTINE_LLM,
+      getProviderConfig: () => ({ provider: "test", apiKey: "k", model: "test-model" }),
+      complete: async (messages: Array<{ role: string; content: string }>) => {
+        const user = messages.find((m) => m.role === "user");
+        lastMaterial = user?.content ?? "";
+        // I1: authored convergence despite a rebut (kept — dissent ≠ unresolved);
+        // I2: resolution missing (silently filled → degraded 1).
+        return JSON.stringify({
+          agenda: AGENDA,
+          discussion: [
+            {
+              issue_id: "I1",
+              exchanges: [
+                { seat: "risk-officer", act: "rebut", summary: "반박 후 조건부 수렴", position_ref: "POS-1" },
+                { seat: "industry-lead", act: "agree", summary: "동의", position_ref: "POS-2" },
+              ],
+              resolution: "agreed",
+              resolution_note: "근거: 발언 기록의 CAGR 수치 합치",
+            },
+            { issue_id: "I2", exchanges: [] },
+          ],
+          agreements: [],
+          open_questions: [{ text: "2-hop 근거 확보", owner_seat: "industry-lead" }],
+          action_items: [],
+        });
+      },
+    }));
+    const { runChairMinutes } = await import("../../app/web-next/lib/committee-chair.ts");
+    const topic = "route_decision 심의 (진행 pre_fs)";
+    const out = await runChairMinutes({ topic, agenda: AGENDA, rows: ROWS, seats: SEATS });
+    expect(lastMaterial.startsWith(`## 심의 안건\n${topic}\n\n## 안건 쟁점 (의장 제안)`)).toBe(true);
+    expect(lastMaterial.indexOf("## 심의 안건")).toBeLessThan(lastMaterial.indexOf("## 안건 쟁점"));
+    expect(out.fallback).toBe(false);
+    expect(out.model).toBe("test-model");
+    expect(out.promptVersion).toBe("committee.minutes@2");
+    // Authored 'agreed' with a rebut exchange is kept — the schema layer only
+    // fills when MISSING; the missing I2 resolution is the degraded count.
+    expect(out.json.discussion.find((d) => d.issue_id === "I1")?.resolution).toBe("agreed");
+    expect(out.json.discussion.find((d) => d.issue_id === "I2")?.resolution).toBe("unresolved");
+    expect(out.degradedResolutions).toBe(1);
   });
 });

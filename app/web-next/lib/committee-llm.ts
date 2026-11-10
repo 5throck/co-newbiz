@@ -140,8 +140,20 @@ export function makeLlmChairAgenda(): (material: string) => Promise<string> {
 }
 
 /**
+ * Timeout budget for the chair minutes LLM pass. The single call generates up
+ * to 6000 output tokens of structured Korean JSON, which at realistic
+ * throughput can exceed the LLM client's default timeout whenever the output
+ * is large (5 of the last 9 real sessions fell back this way). The pass runs
+ * on the async background convene path — the POST route already returned 202 —
+ * so a longer budget costs no request latency, and the deterministic fallback
+ * it used to degrade into is exactly the all-"unresolved" empty skeleton this
+ * budget exists to eliminate.
+ */
+export const CHAIR_MINUTES_TIMEOUT_MS = 300_000;
+
+/**
  * Chair minutes pass caller (ADR-0196 §2.3): committee.minutes system
- * prompt, temperature 0.2, ~2500 output tokens. Same raw-text contract as
+ * prompt, temperature 0.2, 6000 output tokens. Same raw-text contract as
  * makeLlmChairAgenda.
  */
 export function makeLlmChairMinutes(): (material: string) => Promise<string> {
@@ -153,6 +165,10 @@ export function makeLlmChairMinutes(): (material: string) => Promise<string> {
       // null, and the minutes silently degraded to the empty skeleton.
       maxTokens: 6000,
       agent: promptAgent("committee.minutes", { key: "process-governance-manager" }),
+      // The default transport timeout is sized for small completions and cut
+      // off large minutes drafts mid-JSON; CHAIR_MINUTES_TIMEOUT_MS gives the
+      // pass its own budget (see the constant's rationale above).
+      signal: AbortSignal.timeout(CHAIR_MINUTES_TIMEOUT_MS),
     });
 }
 

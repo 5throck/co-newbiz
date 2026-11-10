@@ -95,6 +95,8 @@ interface CallSpec {
   structured?: { name: string; jsonSchema: Record<string, unknown> };
   cacheSystem?: boolean;
   stream?: boolean;
+  /** Per-call abort deadline shared across retry attempts; absent keeps the existing 60 s transport timeout. */
+  signal?: AbortSignal;
 }
 
 interface ProviderReply {
@@ -130,7 +132,7 @@ async function runProvider(cfg: ProviderConfig, spec: CallSpec): Promise<Provide
         method: "POST",
         headers: buildHeaders(cfg),
         body: JSON.stringify(buildRequest(cfg, attemptSpec)),
-        signal: AbortSignal.timeout(60_000),
+        signal: spec.signal ?? AbortSignal.timeout(60_000),
       });
       if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
       const json = (await res.json()) as Record<string, unknown>;
@@ -158,7 +160,7 @@ export interface CompleteDetailed {
 /** Like complete() but also returns usage (provider-reported, or flagged estimate). */
 export async function completeDetailed(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
+  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext; signal?: AbortSignal },
 ): Promise<CompleteDetailed> {
   requireAgentMeta(opts.agent);
   const cfg = getProviderConfig();
@@ -166,7 +168,12 @@ export async function completeDetailed(
   const started = Date.now();
   const model = cfg.model ?? "unknown";
   try {
-    const reply = await runProvider(cfg, { messages, temperature: opts.temperature, maxTokens: opts.maxTokens });
+    const reply = await runProvider(cfg, {
+      messages,
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      signal: opts.signal,
+    });
     const usage = reply.usage ?? estimatedUsage(cfg.provider, model, messages.map((m) => m.content).join("\n"), reply.text);
     // 직접 호출 지점도 ADR-0128 런 장부에 남는다 — completeOrFallback 경로의 기록과 중복되지 않도록
     // 성공/실패 로그는 이곳(complete)에서만 담당한다.
@@ -182,7 +189,7 @@ export async function completeDetailed(
 /** One shot: messages → text. Throws on provider errors after a single retry. */
 export async function complete(
   messages: LlmMessage[],
-  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext },
+  opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta; dryRun?: DryRunContext; signal?: AbortSignal },
 ): Promise<string> {
   return (await completeDetailed(messages, opts)).text;
 }
