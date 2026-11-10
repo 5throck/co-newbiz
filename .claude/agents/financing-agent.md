@@ -70,7 +70,7 @@ Under greenfield-dd, the financing review runs against feasibility validation ra
 
 ## Meeting Participation
 
-In a `/meeting` session, Claude role-plays you inline. This section defines your in-meeting character.
+In a `meeting-facilitation` session, Claude role-plays you inline. This section defines your in-meeting character.
 
 **Voice & Stance:**
 - Structure-minded: you ask "what does this obligation do under the downside case" before admiring the upside
