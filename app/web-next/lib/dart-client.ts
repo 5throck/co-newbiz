@@ -1,3 +1,8 @@
+// @version 1.4.0 (2026-11-10: cacheFile's walk-up keys on the repo-layout marker db/migrations,
+// same anchor as db/client.ts — the old db/data-existence walk let a stray app/db/data/ shadow
+// the canonical cache location. resolveCorpCachePath exported pure for tests. Design
+// 2026-11-10-db-path-resolver-marker. fetchFinancials also drops a redundant non-null
+// assertion — the yearly aggregate array is hoisted to a local, behavior identical.)
 // @version 1.3.0 (2026-11-04: fetchFinancials falls back per YEAR, not per window —
 // CFS is tried first for each year and BFS is retried only for that same year on a miss
 // (status != 000 or a 000 with zero WANTED_ACCOUNTS matches). One statement basis per
@@ -144,20 +149,31 @@ function between(s: string, a: string, b: string): string {
   return i1 === -1 ? "" : s.slice(i0 + a.length, i1);
 }
 
-function cacheFile(): string {
+/**
+ * Pure cache-path walk, injectable for tests (design 2026-11-10-db-path-resolver-marker):
+ * walk up from `cwd` looking for the repo-layout marker `db/migrations` — the
+ * SAME anchor db/client.ts uses — never for `db/data` existence (a stray empty
+ * database at app/db/data/ once shadowed the canonical cache location). A hit
+ * returns <marker root>/db/data/dart-corpcode-cache.json; no marker anywhere
+ * falls back to cwd-relative (operator runs from the repo root).
+ */
+export function resolveCorpCachePath(opts: { cwd: string; exists: (p: string) => boolean }): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
   const { dirname, join } = require("node:path") as typeof import("node:path");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
-  const { existsSync } = require("node:fs") as typeof import("node:fs");
-  let dir = /*turbopackIgnore: true*/ process.cwd();
-  for (let i = 0; i < 5; i++) {
-    const candidate = join(dir, "db", "data");
-    if (existsSync(candidate)) return join(candidate, "dart-corpcode-cache.json");
+  let dir = opts.cwd;
+  for (let i = 0; i < 8; i++) {
+    if (opts.exists(join(dir, "db", "migrations"))) return join(dir, "db", "data", "dart-corpcode-cache.json");
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;
   }
-  return join(/*turbopackIgnore: true*/ process.cwd(), "db", "data", "dart-corpcode-cache.json");
+  return join(opts.cwd, "db", "data", "dart-corpcode-cache.json");
+}
+
+function cacheFile(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- node built-ins only
+  const { existsSync } = require("node:fs") as typeof import("node:fs");
+  return resolveCorpCachePath({ cwd: /*turbopackIgnore: true*/ process.cwd(), exists: existsSync });
 }
 
 /** P5-11: 캐시 무결성 — 행 수·형식 검증 후 유효한 캐시만 반환. */
@@ -494,7 +510,8 @@ export function checkSummation(items: Array<{ name: string; value: number }>): b
  *  문자열을 갖지 않도록). out.error는 전 연도 무실과일 때만 설정된다(기존 규율 유지). */
 export async function fetchFinancials(corpCode: string, opts: { years?: number } = {}): Promise<DartFinancials> {
   const key = apiKey();
-  const out: DartFinancials = { corpCode, found: false, items: [], yearly: [] };
+  const yearlyAgg: Array<{ year: string; fsDiv?: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string }> }> = [];
+  const out: DartFinancials = { corpCode, found: false, items: [], yearly: yearlyAgg };
   if (!key) { out.error = "DART_API_KEY 미구성"; return out; }
   const latest = new Date().getFullYear() - 1; // latest complete business year
   const yearsToFetch = Math.min(Math.max(opts.years ?? 1, 1), 5);
@@ -564,7 +581,7 @@ export async function fetchFinancials(corpCode: string, opts: { years?: number }
     const stamped = chosen.items.map((i) => ({ ...i, fsDiv: basis }));
     anyFound = true;
     perYearBases.push(basis);
-    out.yearly!.push({ year: String(year), fsDiv: basis, items: stamped });
+    yearlyAgg.push({ year: String(year), fsDiv: basis, items: stamped });
     out.items.push(...stamped);
     if (!out.year) out.year = String(year);
     out.reportUrl = `https://dart.fss.or.kr/dsab007/main.do?option=corp&corp_code=${corpCode}`;
