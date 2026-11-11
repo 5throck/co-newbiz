@@ -422,6 +422,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261111-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261111-02` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261111-03` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261111-04` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261111-05` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261111-06` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
