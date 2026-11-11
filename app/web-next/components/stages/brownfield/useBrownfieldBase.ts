@@ -78,12 +78,14 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   const [uniReco, setUniReco] = useState<UniRecoResponse | null>(null);
   const [uniRecoApplied, setUniRecoApplied] = useState(false);
   const [uniBusy, setUniBusy] = useState(false);
-  // S7 재무·기술 평가 (ADR-0139) — targetId → 카탈로그+판정 목록.
-  const [evalItems, setEvalItems] = useState<Record<string, EvalItem[]>>({});
+  // S7 재무·기술 평가 (ADR-0139) — targetId → 카탈로그+판정 목록. Only the
+  // setters cross the hook boundary (consumers read rows from the server);
+  // the value slots stay write-only here.
+  const [, setEvalItems] = useState<Record<string, EvalItem[]>>({});
   // targetId → 카테고리별 100점 가중 점수(서버 계산, computeEvalScore).
-  const [evalScores, setEvalScores] = useState<Record<string, Record<EvalItem["category"], EvalCategoryScore>>>({});
+  const [, setEvalScores] = useState<Record<string, Record<EvalItem["category"], EvalCategoryScore>>>({});
   // DART 재무 참고 패널 — company_id(후보 전체 목록 등록 시점부터 존재) 기준.
-  const [financials, setFinancials] = useState<Record<string, FinancialsResp | null>>({});
+  const [, setFinancials] = useState<Record<string, FinancialsResp | null>>({});
 
   const loadProposals = useCallback(() => {
     if (!opportunityId) {
@@ -143,6 +145,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setSelected/setError are stable setState identities and t is read only in the error fallback — listing the translator would recreate loadDetail (and refetch via the [opportunityId, loadDetail] effect) on translator identity churn (house pattern, deals board load)
   const loadDetail = useCallback((oppId: string) => {
     api
       .get<OppDetail>(`/api/brownfield/${encodeURIComponent(oppId)}/targets`)

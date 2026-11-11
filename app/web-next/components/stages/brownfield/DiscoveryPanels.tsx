@@ -23,13 +23,16 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
   return (
     <>
       {selected && discoveryPanel === "web" && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: modal-backdrop pattern shared with crud.tsx (Esc/Tab handled by useModalFocus)
         <div
           className="modal-backdrop"
+          role="presentation"
           onClick={() => {
             if (!webBusy) setDiscoveryPanel(null);
           }}
           onKeyDown={webModalFocus.onKeyDown}
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: click only stops propagation to the backdrop; keyboard handled on the backdrop */}
           <div
             ref={webModalFocus.panelRef}
             className="modal-panel"
@@ -190,13 +193,16 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
   return (
     <>
       {editingUniverse && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: modal-backdrop pattern shared with crud.tsx (Esc/Tab handled by useModalFocus)
         <div
           className="modal-backdrop"
+          role="presentation"
           onClick={() => {
             if (!savingUniverse) closeUniverseEditor();
           }}
           onKeyDown={universeModalFocus.onKeyDown}
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: click only stops propagation to the backdrop; keyboard handled on the backdrop */}
           <div
             ref={universeModalFocus.panelRef}
             className="modal-panel"
@@ -241,6 +247,9 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
                 </button>
               ) : uniReco.criteria ? (
                 (() => {
+                  // Non-null narrowed by the ternary above — bound to a const
+                  // so the apply handler needs no non-null assertion.
+                  const criteria = uniReco.criteria;
                   const rationaleAlreadySaved =
                     !!uniReco.criteria.rationale &&
                     uniReco.criteria.rationale.trim() === universeDraft.definition.trim();
@@ -297,7 +306,7 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
                           type="button"
                           className="btn-ghost btn-sm"
                           disabled={rationaleAlreadySaved}
-                          onClick={() => applyUniReco(uniReco.criteria!)}
+                          onClick={() => applyUniReco(criteria)}
                         >
                           {rationaleAlreadySaved
                             ? t("alreadyReflected")

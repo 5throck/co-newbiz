@@ -174,7 +174,8 @@ function buildKnowledgePrompt(
 export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existingNames: string[]): Suggestion[] {
   if (llmRes.source !== "llm") return [];
   const parsed = parseJson(llmRes.text);
-  const raw = Array.isArray(parsed?.candidates) ? (parsed!.candidates as Array<Record<string, unknown>>) : [];
+  const candidates = parsed?.candidates;
+  const raw = Array.isArray(candidates) ? (candidates as Array<Record<string, unknown>>) : [];
   const out: Suggestion[] = [];
   const seen = [...existingNames];
   for (const c of raw) {
@@ -379,7 +380,8 @@ export function normalizeLlmSuggestions(
 ): Suggestion[] {
   if (llmRes.source !== "llm") return [];
   const parsed = parseJson(llmRes.text);
-  const raw = Array.isArray(parsed?.candidates) ? (parsed!.candidates as Array<Record<string, unknown>>) : [];
+  const candidates = parsed?.candidates;
+  const raw = Array.isArray(candidates) ? (candidates as Array<Record<string, unknown>>) : [];
   const out: Suggestion[] = [];
   const seen = [...existingNames];
   for (const c of raw) {
