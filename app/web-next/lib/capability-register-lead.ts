@@ -6,13 +6,18 @@
 // bound to greenfield-agent / S3.capability-register-greenfield (the catalog
 // default) and the call is attributed to brownfield-agent once the recorded route
 // is brownfield. A route decided later never rewrites past runs.
+// Design 2026-11-11-route-decision-current-authority-design §9: the lead reads
+// the ADR-0135 authority row (is_current=1) via the shared latestRouteDecision
+// reader — a newer ADR-0124 draft (status='draft', never is_current=1) must not
+// flip the attribution away from the flagged final.
 import type { Database } from "bun:sqlite";
+import { latestRouteDecision } from "./process-flow.ts";
 
 export type CapabilityRegisterLead = "greenfield-agent" | "brownfield-agent";
 
-export function capabilityRegisterLead(db: Database, opportunityId: string): CapabilityRegisterLead {
-  const row = db
-    .query("SELECT track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-    .get(opportunityId) as { track: string } | undefined;
+// `db` stays in the signature for call-site stability; the shared reader owns
+// its own getDb() handle (the same singleton).
+export function capabilityRegisterLead(_db: Database, opportunityId: string): CapabilityRegisterLead {
+  const row = latestRouteDecision(opportunityId);
   return row?.track === "brownfield" ? "brownfield-agent" : "greenfield-agent";
 }
