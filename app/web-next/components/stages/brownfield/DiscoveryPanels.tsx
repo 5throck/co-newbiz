@@ -97,11 +97,21 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
                     <div key={s.company_name} className="sizing-grade-card mb-0">
                       <div className="flex items-start justify-between gap-2">
                         <strong className="text-[length:var(--fs-body)]">{s.company_name}</strong>
-                        <span
-                          className="status-chip status-not-started"
-                          title={t("sourceDomainConfidenceGovernmentAnd")}
-                        >
-                          {t("confidence")} {s.reliability}
+                        {/* design 2026-11-11 §7.2 (D7) — 고유번호 미확인 칩:
+                            exact-unique 부착 규칙이 코드를 못 붙였음을
+                            침묵 대신 눈에 보이게 만든다. */}
+                        <span className="flex items-center gap-1">
+                          {!s.dart_corp_code && (
+                            <span className="status-chip status-not-started" title={t("corpCodeUnverifiedTooltip")}>
+                              {t("corpCodeUnverifiedChip")}
+                            </span>
+                          )}
+                          <span
+                            className="status-chip status-not-started"
+                            title={t("sourceDomainConfidenceGovernmentAnd")}
+                          >
+                            {t("confidence")} {s.reliability}
+                          </span>
                         </span>
                       </div>
                       <p className="mb-1 text-[length:var(--fs-caption)]">{s.rationale}</p>

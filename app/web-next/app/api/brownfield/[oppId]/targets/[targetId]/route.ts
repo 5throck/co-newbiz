@@ -2,55 +2,74 @@
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
-import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
-import { screeningSummary, insertTargetEvidence, type TargetRow } from "../../../../../../lib/brownfield-targets.ts";
+import { badRequest, fail, notFound, ok } from "../../../../../../lib/envelope.ts";
+import {
+  findPatchCollision,
+  screeningSummary,
+  insertTargetEvidence,
+  updateTargetFields,
+  type TargetRow,
+} from "../../../../../../lib/brownfield-targets.ts";
 
 const now = () => new Date().toISOString();
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Candidate updates require the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Candidate updates require the analyst role or higher.",
+  });
   if (denied) return denied;
   const { oppId, targetId } = await params;
-  const body = (await request.json().catch(() => null)) as
-    | { company_name?: string; dart_corp_code?: string | null; universe_note?: string | null }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    company_name?: string;
+    dart_corp_code?: string | null;
+    universe_note?: string | null;
+  } | null;
   const db = getDb();
   const existing = db
     .query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
     .get(targetId, oppId) as { id: string } | undefined;
   if (!existing) return notFound();
-  db.run(
-    `UPDATE brownfield_target SET
-       company_name = COALESCE(?, company_name),
-       dart_corp_code = COALESCE(?, dart_corp_code),
-       universe_note = COALESCE(?, universe_note),
-       updated_at = ? WHERE id = ?`,
-    [body?.company_name?.trim() || null, body?.dart_corp_code?.trim() || null, body?.universe_note?.trim() || null, now(), targetId],
-  );
-  appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.update", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
-  return ok(db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId), 200);
+  // design 2026-11-11 §5.1 — a PATCH that would collide the target onto a
+  // different non-excluded sibling (same code or same canonical name) is a
+  // 409 with existing_target_id; merging targets stays a human action.
+  const collision = findPatchCollision(db, targetId, body ?? {});
+  if (collision) {
+    return fail(
+      409,
+      "duplicate_target",
+      `'${collision.company_name}' is already on the Long List — merging targets is a manual step.`,
+      {
+        existing_target_id: collision.id,
+      },
+    );
+  }
+  // D4 — one unified update path (canonicalize → update → always re-link
+  // md_company → one audit shape); explicit null clears a code.
+  const updated = updateTargetFields(db, targetId, body ?? {}, { actorUserId: auth.auth.userId });
+  return ok(updated, 200);
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Screening judgements require the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Screening judgements require the analyst role or higher.",
+  });
   if (denied) return denied;
   const { oppId, targetId } = await params;
-  const body = (await request.json().catch(() => null)) as
-    | {
-        states?: Record<string, string>;
-        gate_evaluation_id?: string;
-        // 위원회 추천 검토가 수집한 항목별 근거 — 사람이 저장으로 확정할 때
-        // 함께 보내면 screening_evidence_json(0108)에 보존된다(사용자 결정,
-        // 2026-09-16: 수집 정보를 후보 상세에서 나중에 참고할 수 있게).
-        evidence?: Record<string, { rationale?: string; source_url?: string | null; kind?: string }>;
-      }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    states?: Record<string, string>;
+    gate_evaluation_id?: string;
+    // 위원회 추천 검토가 수집한 항목별 근거 — 사람이 저장으로 확정할 때
+    // 함께 보내면 screening_evidence_json(0108)에 보존된다(사용자 결정,
+    // 2026-09-16: 수집 정보를 후보 상세에서 나중에 참고할 수 있게).
+    evidence?: Record<string, { rationale?: string; source_url?: string | null; kind?: string }>;
+  } | null;
   const states = body?.states;
-  if (!states || typeof states !== "object") return badRequest("invalid_request", "states (checklist judgements) is required.");
+  if (!states || typeof states !== "object")
+    return badRequest("invalid_request", "states (checklist judgements) is required.");
   // 판정 척도(사용자 결정, 2026-09-16) — 5단 세분화 + 미판정. 구버전 값
   // (pass/fail/na/waived)은 허용하지 않는다 — 화면이 항상 새 척도로 보낸다.
   const valid = new Set(["confirmed", "probable", "partial", "unfulfilled", "insufficient", "pending"]);
@@ -68,7 +87,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   let evidenceJson = existing.screening_evidence_json ?? null;
   const incomingEvidence = body?.evidence;
   if (incomingEvidence && typeof incomingEvidence === "object") {
-    const prior = existing.screening_evidence_json ? (JSON.parse(existing.screening_evidence_json) as Record<string, unknown>) : {};
+    const prior = existing.screening_evidence_json
+      ? (JSON.parse(existing.screening_evidence_json) as Record<string, unknown>)
+      : {};
     for (const [itemId, meta] of Object.entries(incomingEvidence)) {
       if (states[itemId] === "pending" || !(itemId in states)) continue;
       prior[itemId] = {
@@ -84,19 +105,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // deliberation behind this screening judgment (0066 nullable column).
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
+    return badRequest(
+      "invalid_request",
+      "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.",
+    );
   }
   db.run(
     "UPDATE brownfield_target SET screening_json = ?, screening_evidence_json = COALESCE(?, screening_evidence_json), gate_evaluation_id = COALESCE(?, gate_evaluation_id), updated_at = ? WHERE id = ?",
     [JSON.stringify(merged), evidenceJson, gateEvaluationId, now(), targetId],
   );
-  appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.screening", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "brownfield_target.screening",
+    target: `${oppId}:${targetId}`,
+    now: new Date().toISOString(),
+  });
   // 근거 타임라인 — 사람이 확정한 판정 기록(0109).
   insertTargetEvidence(db, {
     targetId,
     kind: "screening",
     title: `사전 검토 판정 확정 — ${Object.keys(states).length}건`,
-    detail: Object.entries(states).map(([itemId, v]) => `${itemId} ${v}`).join(" · ") || null,
+    detail:
+      Object.entries(states)
+        .map(([itemId, v]) => `${itemId} ${v}`)
+        .join(" · ") || null,
     sourceKind: "manual",
     createdBy: auth.auth.userId,
   });

@@ -13,6 +13,8 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
+import { canonicalCompanyName } from "../../../../../../lib/company-name.ts";
+import { searchCorpCodes } from "../../../../../../lib/dart-client.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../lib/llm.ts";
 import {
   isWebResearchConfigured,
@@ -37,6 +39,14 @@ interface UniverseShape {
 
 interface Suggestion {
   company_name: string;
+  /** design 2026-11-11 §4.1 — OPTIONAL model-supplied DART-registered name
+   *  (never the 8-digit code: names are cache-verifiable, codes are not).
+   *  Passed through by normalize when present as a string, dropped otherwise. */
+  dart_corp_name?: string;
+  /** design 2026-11-11 §4.2 — attached SERVER-SIDE by enrichSuggestions on an
+   *  exact-unique cache hit; never model-supplied (synthesisFallback rows carry
+   *  it from md_company directly). */
+  dart_corp_code?: string | null;
   rationale: string;
   sources: Array<{ title: string; url: string; snippet: string }>;
   reliability: "A" | "B" | "C";
@@ -303,7 +313,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     },
   );
 
-  const suggestions = normalizeLlmSuggestions(llmRes, sources, existingNames);
+  const suggestions = await enrichSuggestions(normalizeLlmSuggestions(llmRes, sources, existingNames));
   appendAudit(db, {
     actor: auth.auth.userId,
     action: "target_proposal.web_search",
@@ -343,7 +353,9 @@ export function buildQueries(
   return q.slice(0, 5);
 }
 
-function buildPrompt(
+/** 테스트 가능성을 위해 export — 프롬프트 출력 계약(순수 함수).
+ * dart_corp_name은 선택 필드로만 요구한다(§4.1 — 코드는 절대 요구하지 않는다). */
+export function buildPrompt(
   opp: { name: string; market_scope: string | null },
   universe: UniverseShape,
   requiredCapabilities: string[],
@@ -363,7 +375,9 @@ function buildPrompt(
     requiredCapabilities.length
       ? "아래 번호 매기기된 검색 근거만 사용해, 위 검토/안건과 목표 시장에 해당하면서 특히 필요 역량(S3)을 실제로 보유했다고 확인되는 대상 후보 기업을 3~5개 제안하세요. 근거에 역량 보유 여부가 나타나지 않는 후보는 rationale에 그 한계를 명시하세요."
       : "아래 번호 매기기된 검색 근거만 사용해, 이 산업·목표 시장에 해당하는 대상 후보 기업을 3~5개 제안하세요.",
-    'JSON만 반환: {"candidates":[{"company_name":"회사명(한글, 간결)","rationale":"근거 요약 2~3문장 — 어떤 검색 근거에서 확인했는지 인용","source_indices":[근거 번호 배열]}]}',
+    // design 2026-11-11 §4.1 — dart_corp_name은 선택 필드(코드는 절대 요구하지
+    // 않는다 — 환각 위험; 이름만 결정론 캐시로 검증한다).
+    'JSON만 반환: {"candidates":[{"company_name":"회사명(한글, 간결)","dart_corp_name":"DART 공시에 등록된 정확한 법인명(확실할 때만, 모르면 생략)","rationale":"근거 요약 2~3문장 — 어떤 검색 근거에서 확인했는지 인용","source_indices":[근거 번호 배열]}]}',
     "",
     ...sources.map((s, i) => `[${i + 1}] ${s.title}\nURL: ${s.url}\n${s.snippet.slice(0, 300)}`),
   ];
@@ -372,7 +386,8 @@ function buildPrompt(
 
 /** 테스트 가능성을 위해 export — LLM 응답 화이트리스트 정규화(순수 함수).
  * 근거 인용(source_indices) 없는 후보는 폐기하고, 기존 후보와 유사한 이름도
- * 제거하며, 최대 5건으로 제한한다. */
+ * 제거하며, 최대 5건으로 제한한다. dart_corp_name(§4.1, 선택)은 문자열일 때만
+ * 통과시키고 그 외 타입은 폐기한다 — 모델이 줄 수 있는 것은 이름뿐이다. */
 export function normalizeLlmSuggestions(
   llmRes: LlmOrFallback,
   sources: WebSource[],
@@ -396,9 +411,48 @@ export function normalizeLlmSuggestions(
     // 근거 인용 없는 후보는 폐기 — 근거 없는 이름은 날조로 간주한다(ADR-0118).
     if (idx.length === 0) continue;
     const cited = idx.map((i) => ({ title: sources[i].title, url: sources[i].url, snippet: sources[i].snippet }));
-    out.push({ company_name: name, rationale, sources: cited, reliability: reliabilityForSource(cited[0].url) });
+    const dartCorpName =
+      typeof c.dart_corp_name === "string" ? c.dart_corp_name.trim().slice(0, 120) || undefined : undefined;
+    out.push({
+      ...(dartCorpName ? { dart_corp_name: dartCorpName } : {}),
+      company_name: name,
+      rationale,
+      sources: cited,
+      reliability: reliabilityForSource(cited[0].url),
+    });
     seen.push(name);
     if (out.length >= 5) break;
+  }
+  return out;
+}
+
+/** D2 부착 규칙(design 2026-11-11 §4.2) — 캐시 검색 결과에 corp_name === q 인
+ *  행이 정확히 하나일 때만 dart_corp_code를 붙인다. 0건·다수(예: `태웅` 5건)·
+ *  오류 어느 쪽이든 아무것도 붙이지 않는다. company_name으로 못 찾고 모델이
+ *  dart_corp_name을 줬으면 같은 규칙을 그 정규화된 이름으로 1회 반복한다.
+ *  부착 코드는 항상 결정론 캐시의 exact-unique 결과 — 모델 출력도 퍼지 히트도
+ *  아니다. search는 주입 가능(테스트 시임); 실패해도 응답은 절대 실패하지
+ *  않는다(best-effort 계약). */
+export async function enrichSuggestions(
+  suggestions: Suggestion[],
+  search: (q: string, limit?: number) => Promise<Array<{ corp_name: string; corp_code: string }>> = searchCorpCodes,
+): Promise<Suggestion[]> {
+  const attach = async (q: string): Promise<string | null> => {
+    try {
+      const rows = await search(q, 8);
+      const exact = rows.filter((r) => r.corp_name === q);
+      return exact.length === 1 ? exact[0].corp_code : null;
+    } catch {
+      return null; // enrichment failure NEVER fails the response
+    }
+  };
+  const out: Suggestion[] = [];
+  for (const s of suggestions) {
+    let code = await attach(canonicalCompanyName(s.company_name));
+    if (!code && s.dart_corp_name) {
+      code = await attach(canonicalCompanyName(s.dart_corp_name));
+    }
+    out.push(code ? { ...s, dart_corp_code: code } : s);
   }
   return out;
 }

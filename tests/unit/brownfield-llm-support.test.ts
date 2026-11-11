@@ -17,9 +17,13 @@ const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
 const { setPlaywrightSearchOverrideForTests } = await import("../../app/web-next/lib/playwright-search.ts");
-// 순수 로직 — route 파일에서 export된 정규화 함수(네트워크·DB 없음)
-const { normalizeLlmSuggestions } = await import("../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts");
-const { parseScreeningDrafts } = await import("../../app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts");
+// 순수 로직 — route 파일에서 export된 정규화·부착 함수(네트워크·DB 없음)
+const { normalizeLlmSuggestions, buildPrompt, enrichSuggestions } = await import(
+  "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+);
+const { parseScreeningDrafts } = await import(
+  "../../app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts"
+);
 
 type Db = ReturnType<typeof GetDb>;
 let db: Db;
@@ -83,14 +87,16 @@ beforeAll(async () => {
 describe("B — 웹검색 후보 제안 (route boundary)", () => {
   test("viewer는 403", async () => {
     const res = await req(`/api/brownfield/${oppId}/target-proposals/web-search`, {
-      method: "POST", headers: { cookie: viewerCookie },
+      method: "POST",
+      headers: { cookie: viewerCookie },
     });
     expect(res.status).toBe(403);
   });
 
   test("미확정 기회는 404", async () => {
     const res = await req(`/api/brownfield/${ulid()}/target-proposals/web-search`, {
-      method: "POST", headers: { cookie: analystCookie },
+      method: "POST",
+      headers: { cookie: analystCookie },
     });
     expect(res.status).toBe(404);
   });
@@ -98,14 +104,23 @@ describe("B — 웹검색 후보 제안 (route boundary)", () => {
   test("검색 미설정 → LLM 자체 지식 폴백(미검증), 실패 시 synthesis로 재폴백 + 감사 기록", async () => {
     // llm_knowledge 경로는 별도 액션명(target_proposal.web_search_llm_knowledge)으로
     // 감사 기록을 남긴다 — synthesis 재폴백 시에는 기존 target_proposal.web_search.
-    const before = (db.query(
-      "SELECT COUNT(*) c FROM audit_log WHERE action IN ('target_proposal.web_search', 'target_proposal.web_search_llm_knowledge')",
-    ).get() as { c: number }).c;
+    const before = (
+      db
+        .query(
+          "SELECT COUNT(*) c FROM audit_log WHERE action IN ('target_proposal.web_search', 'target_proposal.web_search_llm_knowledge')",
+        )
+        .get() as { c: number }
+    ).c;
     const res = await req(`/api/brownfield/${oppId}/target-proposals/web-search`, {
-      method: "POST", headers: { cookie: analystCookie },
+      method: "POST",
+      headers: { cookie: analystCookie },
     });
     expect(res.status).toBe(200);
-    const data = (await res.json()).data as { source: string; note: string | null; suggestions: Array<{ sources: unknown[]; rationale: string }> };
+    const data = (await res.json()).data as {
+      source: string;
+      note: string | null;
+      suggestions: Array<{ sources: unknown[]; rationale: string }>;
+    };
     // TAVILY_API_KEY 미설정이면 llmKnowledgeFallback으로 간다 — 그 LLM 호출이
     // (테스트 환경의 실제 프로바이더 설정에 따라) 실패하면 synthesis로 재폴백한다.
     // 어느 쪽이든 "실시간 웹 검색이 설정되지 않았습니다" 사유가 note에 남는다.
@@ -119,9 +134,13 @@ describe("B — 웹검색 후보 제안 (route boundary)", () => {
       // llm_knowledge 제안은 항상 미검증 라벨을 rationale에 명시한다.
       for (const s of data.suggestions) expect(s.rationale).toContain("미검증");
     }
-    const after = (db.query(
-      "SELECT COUNT(*) c FROM audit_log WHERE action IN ('target_proposal.web_search', 'target_proposal.web_search_llm_knowledge')",
-    ).get() as { c: number }).c;
+    const after = (
+      db
+        .query(
+          "SELECT COUNT(*) c FROM audit_log WHERE action IN ('target_proposal.web_search', 'target_proposal.web_search_llm_knowledge')",
+        )
+        .get() as { c: number }
+    ).c;
     expect(after).toBe(before + 1);
   }, 20000);
 });
@@ -155,8 +174,119 @@ describe("B — normalizeLlmSuggestions (화이트리스트 정규화, 순수)",
   });
 
   test("synthesis 응답은 아무것도 만들지 않는다", () => {
-    const out = normalizeLlmSuggestions({ source: "synthesis", provider: "deterministic", text: '{"candidates":[1]}' }, sources, []);
+    const out = normalizeLlmSuggestions(
+      { source: "synthesis", provider: "deterministic", text: '{"candidates":[1]}' },
+      sources,
+      [],
+    );
     expect(out.length).toBe(0);
+  });
+});
+
+// ── design 2026-11-11-target-identity-resolution §4 (D2): 서버 사이드 부착 ──
+describe("D2 — dart_corp_name 통과·프롬프트 계약·enrichSuggestions", () => {
+  const sources = [
+    { title: "t1", url: "https://dart.fss.or.kr/a", snippet: "s1" },
+    { title: "t2", url: "https://reuters.com/b", snippet: "s2" },
+  ];
+  const llm = (text: string) => ({ source: "llm" as const, provider: "test", text });
+
+  test("normalizeLlmSuggestions은 dart_corp_name(문자열)을 통과시키고 다른 타입은 폐기한다", () => {
+    const out = normalizeLlmSuggestions(
+      llm(
+        '{"candidates":[' +
+          '{"company_name":"이름만","rationale":"r","source_indices":[1]},' +
+          '{"company_name":"이름과코드명","dart_corp_name":"정확한법인명","rationale":"r","source_indices":[1]},' +
+          '{"company_name":"코드오답","dart_corp_code":"00159218","rationale":"r","source_indices":[1]},' +
+          '{"company_name":"숫자오답","dart_corp_name":12345,"rationale":"r","source_indices":[1]}' +
+          "]}",
+      ),
+      sources,
+      [],
+    );
+    expect(out.length).toBe(4);
+    const withName = out.find((s) => s.company_name === "이름과코드명");
+    expect(withName?.dart_corp_name).toBe("정확한법인명");
+    // 모델이 코드 필드를 몰래 싣거나 숫자를 줘도 이름 외에는 아무것도 남지 않는다.
+    for (const s of out) {
+      expect(s.dart_corp_code).toBeUndefined();
+      if (s.company_name !== "이름과코드명") expect(s.dart_corp_name).toBeUndefined();
+    }
+    expect(out.find((s) => s.company_name === "숫자오답")?.dart_corp_name).toBeUndefined();
+  });
+
+  test("buildPrompt 출력 계약은 dart_corp_name을 '선택'으로 요구하고 8자리 코드는 절대 요구하지 않는다", () => {
+    const prompt = buildPrompt(
+      { name: "기회", market_scope: null },
+      {},
+      [],
+      [],
+      [{ title: "t", url: "https://example.com/a", snippet: "s" }],
+    );
+    expect(prompt).toContain('"dart_corp_name":"DART 공시에 등록된 정확한 법인명(확실할 때만, 모르면 생략)"');
+    expect(prompt).not.toContain("dart_corp_code");
+  });
+
+  test("enrichSuggestions — exact-unique 히트에만 코드를 붙인다", async () => {
+    const cache = [
+      { corp_name: "비에이치아이", corp_code: "00409788" },
+      { corp_name: "파워로직스", corp_code: "00269612" },
+    ];
+    const out = await enrichSuggestions(
+      [
+        { company_name: "비에이치아이(BHI)", rationale: "r", sources: [], reliability: "A" },
+        { company_name: "파워(Power)", rationale: "r", sources: [], reliability: "B" }, // zero hit on canonical 파워
+      ],
+      async (q) => cache.filter((r) => r.corp_name.includes(q)),
+    );
+    expect(out[0].dart_corp_code).toBe("00409788"); // canonical 비에이치아이 — unique exact hit
+    expect(out[1].dart_corp_code).toBeUndefined(); // 파워 exact hit 없음 → 미부착
+  });
+
+  test("enrichSuggestions — 다수 exact 히트(태웅 5건)에는 아무것도 붙이지 않는다", async () => {
+    const cache = ["00216267", "01494631", "01411203", "01697593", "00186799"].map((corp_code) => ({
+      corp_name: "태웅",
+      corp_code,
+    }));
+    const out = await enrichSuggestions(
+      [{ company_name: "태웅(Taeung)", rationale: "r", sources: [], reliability: "C" }],
+      async () => cache,
+    );
+    expect(out[0].dart_corp_code).toBeUndefined();
+  });
+
+  test("enrichSuggestions — 검색이 던져도 제안은 온전하고 응답은 실패하지 않는다 (best-effort)", async () => {
+    const out = await enrichSuggestions(
+      [{ company_name: "어딘가회사", rationale: "r", sources: [], reliability: "C" }],
+      async () => {
+        throw new Error("cache read failed");
+      },
+    );
+    expect(out.length).toBe(1);
+    expect(out[0].company_name).toBe("어딘가회사");
+    expect(out[0].dart_corp_code).toBeUndefined();
+  });
+
+  test("enrichSuggestions — company_name 미적중 시 dart_corp_name으로 같은 규칙을 1회 반복한다", async () => {
+    const cache = [{ corp_name: "파워로직스", corp_code: "00269612" }];
+    const searched: string[] = [];
+    const out = await enrichSuggestions(
+      [
+        {
+          company_name: "파워(Power)",
+          dart_corp_name: "파워로직스(주)",
+          rationale: "r",
+          sources: [],
+          reliability: "A",
+        },
+      ],
+      async (q) => {
+        searched.push(q);
+        return cache.filter((r) => r.corp_name.includes(q));
+      },
+    );
+    expect(searched).toEqual(["파워", "파워로직스"]); // 1회 반복 — 무한 재검색 없음
+    expect(out[0].dart_corp_code).toBe("00269612"); // dart_corp_name의 canonical 형태로 exact-unique 적중
   });
 });
 
@@ -167,7 +297,11 @@ describe("E — parseScreeningDrafts (판정 초안 정규화, 순수)", () => {
 
   test("근거 있는 항목만 초안 생성, verdict enum 화이트리스트(5단 척도)", () => {
     const out = parseScreeningDrafts(
-      { source: "llm", provider: "test", text: '{"drafts":{"t-01":{"verdict":"confirmed","rationale":"근거 확인","source_index":1},"t-02":{"verdict":"만들어낸값","rationale":"r","source_index":1}}}' },
+      {
+        source: "llm",
+        provider: "test",
+        text: '{"drafts":{"t-01":{"verdict":"confirmed","rationale":"근거 확인","source_index":1},"t-02":{"verdict":"만들어낸값","rationale":"r","source_index":1}}}',
+      },
       evidence,
       open,
     );
@@ -186,12 +320,29 @@ describe("E — parseScreeningDrafts (판정 초안 정규화, 순수)", () => {
 // ── D: 유니버스 기준 초안 (route boundary) ──
 describe("D — 유니버스 선정 기준 초안 (route boundary)", () => {
   test("viewer는 403, 미확정 기회는 404", async () => {
-    expect((await req(`/api/brownfield/${oppId}/universe-criteria-draft`, { method: "POST", headers: { cookie: viewerCookie } })).status).toBe(403);
-    expect((await req(`/api/brownfield/${ulid()}/universe-criteria-draft`, { method: "POST", headers: { cookie: analystCookie } })).status).toBe(404);
+    expect(
+      (
+        await req(`/api/brownfield/${oppId}/universe-criteria-draft`, {
+          method: "POST",
+          headers: { cookie: viewerCookie },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await req(`/api/brownfield/${ulid()}/universe-criteria-draft`, {
+          method: "POST",
+          headers: { cookie: analystCookie },
+        })
+      ).status,
+    ).toBe(404);
   });
 
   test("S1·S3 근거가 없으면 LLM을 부르지 않고 제안 보류 (날조 방지)", async () => {
-    const res = await req(`/api/brownfield/${oppId}/universe-criteria-draft`, { method: "POST", headers: { cookie: analystCookie } });
+    const res = await req(`/api/brownfield/${oppId}/universe-criteria-draft`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+    });
     expect(res.status).toBe(200);
     const data = (await res.json()).data as { source: string; criteria: unknown; note: string };
     expect(data.criteria).toBeNull();

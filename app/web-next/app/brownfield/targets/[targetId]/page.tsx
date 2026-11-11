@@ -14,9 +14,17 @@ import { ListBackButton } from "../../../../components/ListBackButton.tsx";
 import { SectionToolbar } from "../../../../components/layout.tsx";
 import { useTargetDetail } from "../../../../components/brownfield-target/useTargetDetail.ts";
 import { useTargetActions } from "../../../../components/brownfield-target/useTargetActions.ts";
-import { TargetOverviewEditTab, TargetOverviewTab } from "../../../../components/brownfield-target/TargetOverviewTabs.tsx";
+import {
+  TargetOverviewEditTab,
+  TargetOverviewTab,
+  TargetSyncBanner,
+} from "../../../../components/brownfield-target/TargetOverviewTabs.tsx";
 import { TargetAiProfileTab } from "../../../../components/brownfield-target/TargetAiProfileTab.tsx";
-import { TargetFinancialsTab, TargetDisclosuresTab, TargetSourcesTab } from "../../../../components/brownfield-target/TargetDataTabs.tsx";
+import {
+  TargetFinancialsTab,
+  TargetDisclosuresTab,
+  TargetSourcesTab,
+} from "../../../../components/brownfield-target/TargetDataTabs.tsx";
 import { TargetPrecheckTab } from "../../../../components/brownfield-target/TargetPrecheckTab.tsx";
 import { TargetEvalTab } from "../../../../components/brownfield-target/TargetEvalTab.tsx";
 import { STATUS_KEY, PROFILE_TABS } from "../../../../components/brownfield-target/constants.ts";
@@ -37,18 +45,42 @@ export function TargetDetailView() {
   const h0 = useTargetDetail();
   const h1 = useTargetActions({ ...h0 });
   const ctx = { ...h0, ...h1 };
-  const { error, canAct, busy, excludeReason, setExcludeReason, profileTab, setProfileTab, analyzing, companyProfile, companyId, runCompanyAnalysis, setEditing, confirm, confirmDialog, shortlist, exclude, deleteTarget, detail, evalDraft } = ctx;
-
+  const {
+    error,
+    canAct,
+    busy,
+    excludeReason,
+    setExcludeReason,
+    profileTab,
+    setProfileTab,
+    analyzing,
+    companyProfile,
+    companyId,
+    runCompanyAnalysis,
+    setEditing,
+    confirm,
+    confirmDialog,
+    shortlist,
+    exclude,
+    deleteTarget,
+    detail,
+    evalDraft,
+  } = ctx;
 
   if (!detail) {
     return (
       <main>
         <StageFrame stageId={["S6", "S7"]} track="brownfield" subtitle={tr("detailHeading")} />
-        {error ? <p role="alert" className="text-[color:var(--red-fg)]">{error}</p> : <p className="text-[color:var(--muted-fg)]">{tc("loading")}</p>}
+        {error ? (
+          <p role="alert" className="text-[color:var(--red-fg)]">
+            {error}
+          </p>
+        ) : (
+          <p className="text-[color:var(--muted-fg)]">{tc("loading")}</p>
+        )}
       </main>
     );
   }
-
 
   const { target: t, opportunity, evalItems, scores, checklist, screening_summary, evidence } = detail;
 
@@ -63,11 +95,17 @@ export function TargetDetailView() {
 
   // 재무 자동 초안 대상 — 재무 빌트인 + data_ref 있는 항목 중 미판정만.
   const pendingFinancial = evalItems.filter(
-    (it) => it.category === "financial" && it.source === "builtin" && isFinancialDataRef(it.data_ref) && (it.state?.status ?? "pending") === "pending",
+    (it) =>
+      it.category === "financial" &&
+      it.source === "builtin" &&
+      isFinancialDataRef(it.data_ref) &&
+      (it.state?.status ?? "pending") === "pending",
   );
 
   // 기술 자동 초안 대상 — 기술 항목(시딩·커스텀 무관) 중 미판정만.
-  const pendingTechnical = evalItems.filter((it) => it.category === "technical" && (it.state?.status ?? "pending") === "pending");
+  const pendingTechnical = evalItems.filter(
+    (it) => it.category === "technical" && (it.state?.status ?? "pending") === "pending",
+  );
 
   const proposedCount = evalDraft ? Object.values(evalDraft).filter((d) => d.status != null).length : 0;
 
@@ -82,10 +120,22 @@ export function TargetDetailView() {
     <main>
       <StageFrame stageId={["S6", "S7"]} track="brownfield" subtitle={tr("detailHeading")}>
         {opportunity.name} · {t.company_name}
-        {t.dart_corp_code ? <> · DART <code className="dd-item-id">{t.dart_corp_code}</code></> : null}
+        {t.dart_corp_code ? (
+          <>
+            {" "}
+            · DART <code className="dd-item-id">{t.dart_corp_code}</code>
+          </>
+        ) : null}
       </StageFrame>
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)] mb-2">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)] mb-2">
+          {error}
+        </p>
+      )}
+
+      {/* design 2026-11-11 §7.1 — DART 동기화 실패·코드 미등록·불일치 경고 배너 */}
+      <TargetSyncBanner ctx={ctx} />
 
       {/* ── 헤더 카드 — 상태·점수 요약 + 목록 복귀 ── */}
       <section aria-label={tr("summarySectionAria")} className="market-section">
@@ -93,19 +143,34 @@ export function TargetDetailView() {
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
               <h2 className="text-[1rem] mb-0">{t.company_name}</h2>
-              <span className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}>
-                {tk(STATUS_KEY[t.status])}{t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
+              <span
+                className={`status-chip ${t.status === "shortlisted" ? "status-green" : t.status === "excluded" ? "status-red" : "status-not-started"}`}
+              >
+                {tk(STATUS_KEY[t.status])}
+                {t.status === "shortlisted" && t.rank ? ` #${t.rank}` : ""}
               </span>
             </div>
-            <ListBackButton href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`} label={tr("backToListLabel")} />
+            <ListBackButton
+              href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`}
+              label={tr("backToListLabel")}
+            />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`status-chip ${scoreChip(scores.financial.score)}`} title={tr("financialScoreTitle")}>{tr("financialScore", { p1: scores.financial.score ?? "—" })}</span>
-            <span className={`status-chip ${scoreChip(scores.technical.score)}`} title={tr("technicalScoreTitle")}>{tr("technicalScore", { p1: scores.technical.score ?? "—" })}</span>
-            <span className={`status-chip ${scoreChip(scores.combined)}`} title={tr("combinedScoreTitle")}>
-              {tr("combinedPrefix")} {scores.combined != null ? tr("scoreOf100", { p1: scores.combined }) : tr("scorePending")}
+            <span className={`status-chip ${scoreChip(scores.financial.score)}`} title={tr("financialScoreTitle")}>
+              {tr("financialScore", { p1: scores.financial.score ?? "—" })}
             </span>
-            {t.exclusion_reason && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tr("exclusionReason", { p1: t.exclusion_reason })}</span>}
+            <span className={`status-chip ${scoreChip(scores.technical.score)}`} title={tr("technicalScoreTitle")}>
+              {tr("technicalScore", { p1: scores.technical.score ?? "—" })}
+            </span>
+            <span className={`status-chip ${scoreChip(scores.combined)}`} title={tr("combinedScoreTitle")}>
+              {tr("combinedPrefix")}{" "}
+              {scores.combined != null ? tr("scoreOf100", { p1: scores.combined }) : tr("scorePending")}
+            </span>
+            {t.exclusion_reason && (
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {tr("exclusionReason", { p1: t.exclusion_reason })}
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {canAct && t.status !== "shortlisted" && (
@@ -129,10 +194,21 @@ export function TargetDetailView() {
                   className="sizing-new-input sizing-new-input-sm"
                   style={{ flex: "1 1 12rem" }}
                 />
-                <button type="button" className="btn-ghost btn-sm whitespace-nowrap" disabled={busy || !excludeReason.trim()} onClick={() => void exclude()}>{tr("excludeButton")}</button>
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm whitespace-nowrap"
+                  disabled={busy || !excludeReason.trim()}
+                  onClick={() => void exclude()}
+                >
+                  {tr("excludeButton")}
+                </button>
               </span>
             )}
-            {t.status === "shortlisted" && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tr("shortlistedNote")}</span>}
+            {t.status === "shortlisted" && (
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {tr("shortlistedNote")}
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -144,7 +220,14 @@ export function TargetDetailView() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="library-tabs" role="tablist" aria-label={tr("profileTabsAria")}>
             {PROFILE_TABS.filter(([key]) => key !== "precheck" || hasPrecheckData).map(([key, label]) => (
-              <button key={key} type="button" role="tab" aria-selected={profileTab === key} className={`library-tab ${profileTab === key ? "library-tab-active" : ""}`} onClick={() => setProfileTab(key)}>
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={profileTab === key}
+                className={`library-tab ${profileTab === key ? "library-tab-active" : ""}`}
+                onClick={() => setProfileTab(key)}
+              >
                 {tk(label)}
               </button>
             ))}
@@ -152,29 +235,47 @@ export function TargetDetailView() {
           {/* 핵심 액션 — 탭 목록과 같은 줄 오른쪽에 배치. 정보 수정·후보 삭제·
               재분석은 활성 탭과 무관하게 항상 노출한다(사용자 요청, 2026-09-16).
               수정 폼은 개요 탭에 있으므로 정보 수정 클릭 시 개요 탭으로 전환한다. */}
-          {canAct && (<span className="flex items-center gap-1">
-            <button
-              type="button"
-              className="btn-ghost btn-sm"
-              disabled={analyzing || companyProfile === undefined || companyProfile?.status === "in_progress" || !companyId}
-              title={companyId ? undefined : tr("analyzeNeedsCompanyTitle")}
-              onClick={() => void runCompanyAnalysis()}
-            >
-              {companyProfile?.status === "in_progress" ? tr("analyzing") : companyProfile?.profile ? tr("reanalyze") : tr("runAnalysis")}
-            </button>
-            <button type="button" className="btn-ghost btn-sm" onClick={() => { setProfileTab("overview"); setEditing(true); }}>{tr("editInfoButton")}</button>
-            <button
-              type="button"
-              className="btn-ghost btn-sm"
-              onClick={() => confirm(
-                tr("deleteConfirmTitle", { p1: t.company_name }),
-                () => void deleteTarget(),
-                { body: tr("deleteConfirmBody"), confirmLabel: tc("delete") },
-              )}
-            >
-              {tr("deleteButton")}
-            </button>
-          </span>)}
+          {canAct && (
+            <span className="flex items-center gap-1">
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                disabled={
+                  analyzing || companyProfile === undefined || companyProfile?.status === "in_progress" || !companyId
+                }
+                title={companyId ? undefined : tr("analyzeNeedsCompanyTitle")}
+                onClick={() => void runCompanyAnalysis()}
+              >
+                {companyProfile?.status === "in_progress"
+                  ? tr("analyzing")
+                  : companyProfile?.profile
+                    ? tr("reanalyze")
+                    : tr("runAnalysis")}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                onClick={() => {
+                  setProfileTab("overview");
+                  setEditing(true);
+                }}
+              >
+                {tr("editInfoButton")}
+              </button>
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                onClick={() =>
+                  confirm(tr("deleteConfirmTitle", { p1: t.company_name }), () => void deleteTarget(), {
+                    body: tr("deleteConfirmBody"),
+                    confirmLabel: tc("delete"),
+                  })
+                }
+              >
+                {tr("deleteButton")}
+              </button>
+            </span>
+          )}
         </div>
 
         {/* 후보 정보(소속 기회·상태·DART·평가 점수)는 위 요약 카드에 이미
@@ -197,9 +298,24 @@ export function TargetDetailView() {
             기록은 /brownfield 최종 후보 목록 "사전 검토" 섹션에서 하고, 여기서는
             확정된 판정·항목별 근거·수집 타임라인을 나중에 참고할 수 있게
             보여준다. 수집된 근거가 없으면 탭 자체가 숨는다. ── */}
-        <TargetPrecheckTab ctx={ctx} screening_summary={screening_summary} savedVerdicts={savedVerdicts} checklist={checklist} itemEvidence={itemEvidence} evidence={evidence} />
+        <TargetPrecheckTab
+          ctx={ctx}
+          screening_summary={screening_summary}
+          savedVerdicts={savedVerdicts}
+          checklist={checklist}
+          itemEvidence={itemEvidence}
+          evidence={evidence}
+        />
 
-        <TargetEvalTab ctx={ctx} evalItems={evalItems} scores={scores} scoreChip={scoreChip} pendingFinancial={pendingFinancial} proposedCount={proposedCount} pendingTechnical={pendingTechnical} />
+        <TargetEvalTab
+          ctx={ctx}
+          evalItems={evalItems}
+          scores={scores}
+          scoreChip={scoreChip}
+          pendingFinancial={pendingFinancial}
+          proposedCount={proposedCount}
+          pendingTechnical={pendingTechnical}
+        />
 
         <TargetSourcesTab ctx={ctx} />
       </section>

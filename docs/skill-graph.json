@@ -1856,6 +1856,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261111-06",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -2293,7 +2298,7 @@
         ".hermes/skills/decision-record/SKILL.md"
       ],
       "usage": {
-        "sessions": 2,
+        "sessions": 1,
         "last_used": "2026-11-05"
       }
     },
@@ -2819,7 +2824,7 @@
         ".hermes/skills/k-dart/SKILL.md"
       ],
       "usage": {
-        "sessions": 2,
+        "sessions": 1,
         "last_used": "2026-11-05"
       }
     },
@@ -3235,11 +3240,7 @@
         ".agents/skills/project-review/SKILL.md",
         ".codex/skills/project-review/SKILL.md",
         ".hermes/skills/project-review/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-04"
-      }
+      ]
     },
     {
       "id": "skill:root/proxy-industry-chain",
@@ -3583,7 +3584,7 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 2,
+        "sessions": 1,
         "last_used": "2026-11-05"
       }
     },
@@ -6215,6 +6216,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261111-05",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261111-06",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

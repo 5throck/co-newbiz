@@ -8,8 +8,17 @@ import { useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { useConfirm } from "../crud.tsx";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
-import { api } from "../../lib/api.ts";
+import { api, ApiError } from "../../lib/api.ts";
 import type { DetailResponse, CompanyProfileResp, EvalDraftItem, FinancialsResp, DisclosuresResp } from "./types.ts";
+
+/** design 2026-11-11 §7.1 (D6) — a DART financial-sync failure surfaces as
+ *  banner state instead of being swallowed. `corp_code_unregistered` is the
+ *  client-derived state for a target with no code (no request is sent); any
+ *  other code comes from the sync route's error envelope. */
+export interface FinancialSyncError {
+  code: string;
+  message: string;
+}
 
 export function useTargetDetail() {
   const t = useTranslations("components.brownfieldTarget.useTargetDetail");
@@ -25,7 +34,9 @@ export function useTargetDetail() {
   // 프로파일 탭 — 그룹/계열사 프로파일과 유사한 구조(library-tabs 패턴).
   // "사전 검토 근거"는 읽기 전용 참고 탭 — 수집된 근거가 있을 때만 탭 목록에
   // 나타난다. 판정 기록은 /brownfield 최종 후보 목록 "사전 검토" 섹션에서 한다.
-  const [profileTab, setProfileTab] = useState<"overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources">("overview");
+  const [profileTab, setProfileTab] = useState<
+    "overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources"
+  >("overview");
   // AI 분석 — 그룹/계열사 화면과 동일한 LLM 프로파일 파이프라인 재사용(일반화, 2026-09-15).
   const [companyProfile, setCompanyProfile] = useState<CompanyProfileResp | null | undefined>(undefined);
   const [analyzing, setAnalyzing] = useState(false);
@@ -49,26 +60,41 @@ export function useTargetDetail() {
   const [financials, setFinancials] = useState<FinancialsResp | null | undefined>(undefined); // undefined=로딩
   const [discPreset, setDiscPreset] = useState("business");
   const [disclosures, setDisclosures] = useState<DisclosuresResp | null | undefined>(undefined);
+  // design 2026-11-11 §7.1 (D6) — 자동 동기화 실패를 삼키지 않고 배너 상태로
+  // 노출한다(재시도 버튼은 retrySync). 코드가 없는 대상은 요청 없이 클라이언트
+  // 유도 상태(corp_code_unregistered)로 같은 배너 형태를 갖는다. 성공 시 동기화
+  // 응답의 warnings(D5 corp_code_name_mismatch)를 그대로 노출한다.
+  const [syncError, setSyncError] = useState<FinancialSyncError | null>(null);
+  const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
 
   const oppId = detail?.opportunity.id ?? "";
   const companyId = detail?.target.company_id ?? null;
   // ADR-0142 — 확정 경쟁사 레지스트리 (사람의 수용·등록으로만 생긴 목록)
-  const [confirmedCompetitors, setConfirmedCompetitors] = useState<Array<{ id: string; name: string; note: string | null }> | null>(null);
+  const [confirmedCompetitors, setConfirmedCompetitors] = useState<Array<{
+    id: string;
+    name: string;
+    note: string | null;
+  }> | null>(null);
 
   useEffect(() => {
     if (!companyId) {
       setConfirmedCompetitors(null);
       return;
     }
-    api.get<{ competitors: Array<{ id: string; name: string; note: string | null; status: string }> }>(`/api/companies/${encodeURIComponent(companyId)}/competitors`)
+    api
+      .get<{ competitors: Array<{ id: string; name: string; note: string | null; status: string }> }>(
+        `/api/companies/${encodeURIComponent(companyId)}/competitors`,
+      )
       .then((r) => setConfirmedCompetitors((r.data.competitors ?? []).filter((c) => c.status === "confirmed")))
       .catch(() => setConfirmedCompetitors([]));
   }, [companyId]);
   const dartCode = detail?.target.dart_corp_code ?? null;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setError is a stable setState identity and t is read only in the error fallback — listing the translator would recreate loadDetail (and refetch via the [loadDetail] effect) on translator identity churn (house pattern, deals board load)
   const loadDetail = useCallback(() => {
     if (!targetId) return;
-    api.get<DetailResponse>(`/api/brownfield/targets/${encodeURIComponent(targetId)}`)
+    api
+      .get<DetailResponse>(`/api/brownfield/targets/${encodeURIComponent(targetId)}`)
       .then((r) => {
         setDetail(r.data);
         setError(null);
@@ -80,22 +106,52 @@ export function useTargetDetail() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : t("loadFailed")));
   }, [targetId]);
-  useEffect(() => { loadDetail(); }, [loadDetail]);
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
 
   const loadFinancials = useCallback(() => {
     if (!companyId) return;
     setFinancials(undefined);
-    api.get<FinancialsResp>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
+    api
+      .get<FinancialsResp>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
       .then((r) => setFinancials(r.data))
       .catch(() => setFinancials(null));
   }, [companyId]);
-  useEffect(() => { loadFinancials(); }, [loadFinancials]);
+  useEffect(() => {
+    loadFinancials();
+  }, [loadFinancials]);
+
+  // design 2026-11-11 §7.1 (D6) — 코드가 없는 대상은 배너 한 형태를 유지하기
+  // 위해 클라이언트 유도 상태로 노출한다(요청은 보내지 않는다). 코드가
+  // 생기면(PATCH로 등록) 유도 상태를 해제한다.
+  useEffect(() => {
+    if (!detail) return;
+    if (!dartCode) {
+      setSyncError((prev) =>
+        prev && prev.code === "corp_code_unregistered" ? prev : { code: "corp_code_unregistered", message: "" },
+      );
+    } else {
+      setSyncError((prev) => (prev?.code === "corp_code_unregistered" ? null : prev));
+    }
+  }, [detail, dartCode]);
+
+  const applySyncFailure = useCallback(
+    (err: unknown) => {
+      if (err instanceof ApiError) {
+        setSyncError({ code: err.code, message: err.message });
+      } else {
+        setSyncError({ code: "unknown_error", message: err instanceof Error ? err.message : t("syncFailed") });
+      }
+    },
+    [t],
+  );
 
   // DART 연결 회사인데 로컬에 재무 facts가 아직 없으면 자동으로 1회 동기화한다.
   // 재무 facts 카드는 제거됐지만(사용자 요청, 2026-09-16) fact_financial는 평가
   // 탭의 "재무 판정 초안"(ADR-0140)이 읽는 데이터 원천이므로 화면 진입 시
   // 자동 동기화는 유지한다. companyId당 1회만 시도(autoSyncedFor로 추적)해
-  // 무한 재시도를 막는다.
+  // 무한 재시도를 막는다. 실패는 삼키지 않는다 — 배너 상태로 노출(§7.1).
   const [autoSyncedFor, setAutoSyncedFor] = useState<string | null>(null);
   useEffect(() => {
     if (!canAct) return; // 쓰기 권한이 없으면 자동 동기화(POST)를 보내지 않는다 — 서버가 403으로 거부한다
@@ -104,16 +160,43 @@ export function useTargetDetail() {
     if (financials !== null && financials.analysis.years.length > 0) return; // 이미 있음
     if (autoSyncedFor === companyId) return; // 이미 자동 시도함(재동기화 없음 → 재요청 안 함)
     setAutoSyncedFor(companyId);
-    api.post(`/api/companies/${encodeURIComponent(companyId)}/sync`, {}).then(loadFinancials).catch(() => {});
-  }, [canAct, companyId, dartCode, financials, autoSyncedFor, loadFinancials]);
+    api
+      .post<{ sync?: { warnings?: string[] } }>(`/api/companies/${encodeURIComponent(companyId)}/sync`, {})
+      .then((r) => {
+        setSyncError(null);
+        setSyncWarnings(r.data.sync?.warnings ?? []);
+        loadFinancials();
+      })
+      .catch(applySyncFailure);
+  }, [canAct, companyId, dartCode, financials, autoSyncedFor, loadFinancials, applySyncFailure]);
+
+  // 배너의 재시도 — 같은 POST를 다시 보내고, 성공 시 배너 상태를 지운다.
+  // autoSyncedFor 가드는 자동 시도의 1회 제한일 뿐, 수동 재시도는 막지 않는다.
+  const retrySync = useCallback(async () => {
+    if (!companyId || !dartCode) return;
+    setSyncError(null);
+    try {
+      const r = await api.post<{ sync?: { warnings?: string[] } }>(
+        `/api/companies/${encodeURIComponent(companyId)}/sync`,
+        {},
+      );
+      setSyncWarnings(r.data.sync?.warnings ?? []);
+      loadFinancials();
+    } catch (err) {
+      applySyncFailure(err);
+    }
+  }, [companyId, dartCode, loadFinancials, applySyncFailure]);
 
   const loadCompanyProfile = useCallback(() => {
     if (!companyId) return;
-    api.get<CompanyProfileResp>(`/api/companies/${encodeURIComponent(companyId)}/profile`)
+    api
+      .get<CompanyProfileResp>(`/api/companies/${encodeURIComponent(companyId)}/profile`)
       .then((r) => setCompanyProfile(r.data))
       .catch(() => setCompanyProfile(null));
   }, [companyId]);
-  useEffect(() => { loadCompanyProfile(); }, [loadCompanyProfile]);
+  useEffect(() => {
+    loadCompanyProfile();
+  }, [loadCompanyProfile]);
   // 분석이 in_progress면 짧은 간격으로 폴링해 완료·실패를 반영한다.
   useEffect(() => {
     if (companyProfile?.status !== "in_progress") return;
@@ -137,10 +220,63 @@ export function useTargetDetail() {
   const loadDisclosures = useCallback(() => {
     if (!companyId) return;
     setDisclosures(undefined);
-    api.get<DisclosuresResp>(`/api/companies/${encodeURIComponent(companyId)}/disclosures?preset=${encodeURIComponent(discPreset)}`)
+    api
+      .get<DisclosuresResp>(
+        `/api/companies/${encodeURIComponent(companyId)}/disclosures?preset=${encodeURIComponent(discPreset)}`,
+      )
       .then((r) => setDisclosures(r.data))
       .catch(() => setDisclosures(null));
   }, [companyId, discPreset]);
-  useEffect(() => { loadDisclosures(); }, [loadDisclosures]);
-  return { oppId, setEvalBusy, targetId, loadDetail, setError, draftBusy, setDraftBusy, setDraftNote, setDraftCategory, setEvalDraft, evalDraft, busy, setBusy, setRubricBusy, newCriterionLabel, setNewCriterionLabel, excludeReason, editDraft, setEditing, error, canAct, setExcludeReason, profileTab, setProfileTab, analyzing, companyProfile, companyId, runCompanyAnalysis, confirm, confirmDialog, detail, editing, setEditDraft, ct, dartCode, discPreset, setDiscPreset, disclosures, draftCategory, rubricOpen, setRubricOpen, draftNote, evalBusy, rubricBusy };
+  useEffect(() => {
+    loadDisclosures();
+  }, [loadDisclosures]);
+  return {
+    oppId,
+    setEvalBusy,
+    targetId,
+    loadDetail,
+    setError,
+    draftBusy,
+    setDraftBusy,
+    setDraftNote,
+    setDraftCategory,
+    setEvalDraft,
+    evalDraft,
+    busy,
+    setBusy,
+    setRubricBusy,
+    newCriterionLabel,
+    setNewCriterionLabel,
+    excludeReason,
+    editDraft,
+    setEditing,
+    error,
+    canAct,
+    setExcludeReason,
+    profileTab,
+    setProfileTab,
+    analyzing,
+    companyProfile,
+    companyId,
+    runCompanyAnalysis,
+    confirm,
+    confirmDialog,
+    detail,
+    editing,
+    setEditDraft,
+    ct,
+    dartCode,
+    discPreset,
+    setDiscPreset,
+    disclosures,
+    draftCategory,
+    rubricOpen,
+    setRubricOpen,
+    draftNote,
+    evalBusy,
+    rubricBusy,
+    syncError,
+    syncWarnings,
+    retrySync,
+  };
 }
