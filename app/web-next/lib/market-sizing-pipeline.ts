@@ -956,8 +956,13 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   let llmCagrFrac: number | null = null;
   let llmSourceLabel: string | null = null;
   let webConsensus: { cagrPct: number; sourceLabel: string; sourceUrl?: string } | null = null;
-  if (!externalReference) {
-    // R4 (v1.3.0) — 기록 참조가 없을 때만: 공개 성장률 컨센서스를 웹 검색(2순위)
+  // C3 (amendment 2026-11-12) — CAGR 없는(size-only, external_cagr_pct = 0) 자동
+  // 저장 참조는 컨센서스가 아니다(resolveTopDownConsensus의 >0 가드가 기각).
+  // 참조 "존재"만으로 이 폴백을 건너뛰면 그런 산업의 컨센서스가 영구 미입력에
+  // 갇히므로, CAGR-bearing 참조일 때만 웹/LLM 폴백을 건너뛴다. 보정 제약의 가드
+  // 의미론은 그대로(buildCalibrationConstraints는 참조 존재 기준 유지).
+  if (!externalReference || externalReference.external_cagr_pct <= 0) {
+    // R4 (v1.3.0) — CAGR-bearing 기록 참조가 없을 때만: 공개 성장률 컨센서스를 웹 검색(2순위)
     // 하고, 발췌가 있을 때 추출 호출 1회를 실행한다. 검색 공백에서는 추출 호출을
     // 아예 발사하지 않는다(발췌에 없는 값의 날조 금지 — R1/R2).
     const cagrExcerpts = await quantitativeExcerpts([

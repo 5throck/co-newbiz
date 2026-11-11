@@ -7,7 +7,7 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-18-s1-growth-gap-calibration`
 - Date: 2026-09-18
-- Status: implemented
+- Status: implemented — amendment 2026-11-12 implemented (staleness surface, CTA decoupling, CAGR-gated fallback)
 
 ## Problem
 
@@ -159,3 +159,104 @@ bumps to v1.2.0).
 - `app/web-next/lib/market-sizing-pipeline.ts` — step 5 산출 경로와
   `consistency.tolerance` 노트 문구만. 이 문서는 설계 기록이며 코드 변경은
   별도 실행 태스크로 진행한다.
+
+---
+
+## Amendment 2026-11-12 — external references surface and flow into top-down consensus
+
+- Spec ID: `2026-09-18-s1-growth-gap-calibration` (this amendment)
+- Date: 2026-11-12
+- Status: implemented 2026-11-12 (staleness surface C1, rerun CTA decoupling C2, CAGR-gated fallback C3; non-goals C4 kept)
+- Owner of the consensus priority ladder: `docs/designs/2026-11-06-s1-quantitative-web-grounding-design.md`
+  (recorded reference > web-search extraction > LLM prior > unset). This amendment narrows
+  "recorded reference" to CAGR-bearing references for CONSENSUS purposes only — see C3.
+
+### Problem (verified against origin/main @ b32023b4; all file:line below are that tree)
+
+- Contract today: a recorded external reference becomes the top-down consensus only at the
+  NEXT re-analysis. The pipeline loads the reference at startup
+  (`app/web-next/lib/market-sizing-pipeline.ts:568` → `resolveExternalReference`,
+  `app/web-next/lib/market-calibration.ts:57-65`) and resolves the consensus in
+  `resolveTopDownConsensus` (`market-sizing-pipeline.ts:362-406`), with the
+  `external_cagr_pct > 0` guard at `:368`; the result persists as
+  `matrix.consistency.topDownCagr` (`market-sizing-pipeline.ts:1379-1384`).
+- Reported deal `01M6ZPEZ39R78DW612ECEXY5W4` (industry 원전 운영·정비(MRO)) has 2 user
+  references (4.7% CAGR; recorded 2026-11-09 08:46 and 2026-11-11 13:37) but its analysis
+  versions v1/v2 were produced 2026-11-09 08:10/08:18 — a stale pre-reference payload with
+  `topDownCagr 0` and no `externalForecast`. The growth tab shows no re-analysis CTA
+  (`SizingGrowthTabs.tsx:82-113` gates the rerun button on `matrix.externalForecast &&
+  |gap| >= 20`) and no staleness warning anywhere. CalibrationPanel live-GETs the reference
+  (`CalibrationPanel.tsx:38-39`, displayed at `:99-107`) — hence "recorded reference" and
+  "미입력" appear side by side with no bridge between them.
+- Latent dead-end (code-verified): the pipeline auto-saves size-only references with
+  `external_cagr_pct = 0` (`market-sizing-pipeline.ts:1053-1062` for `web_research`,
+  `:1078-1086` for `llm_prior` when no CAGR was extracted). At `:959` the pipeline skips
+  the web/LLM consensus fallback whenever a reference EXISTS — regardless of CAGR — while
+  the `:368` guard rejects CAGR 0. Result: for industries whose latest reference is
+  size-only, the consensus stays "미입력" permanently, even after re-analysis.
+
+### Changes
+
+- C1 — Staleness surface. Compute `referenceNewerThanVersion`: latest
+  `market_external_reference.created_at` vs the latest displayed version's `created_at`
+  (`detail.versions[0].created_at` — already client-side, `components/stages/market/types.ts:34`
+  and `:61`). Payload plumbing (smallest change wins): `SizingGrowthTab` performs its own
+  live GET of `/api/market-overview/industry/{industryId}/external-reference` — the same
+  endpoint CalibrationPanel uses (`CalibrationPanel.tsx:38-39`); the route returns the raw
+  row (`SELECT *`, `market-calibration.ts:57-65`), so `created_at` is already in the
+  payload — add `created_at: string` to the local `RefRow` type. No prop drilling, no
+  change to CalibrationPanel or to `SizingScenarioCharts.tsx` (ConsistencyChart stays
+  mounted by `SizingGrowthTabs.tsx:75`; the banner lives in `SizingGrowthTab`). When
+  `referenceNewerThanVersion` is true, render a status banner:
+  "기록된 외부 참조가 최신 분석보다 최신 — 재분석 시 컨센서스로 반영됩니다".
+  Locale key naming convention (english key, korean value): add one key under
+  `stages.s1.sizingGrowthTabs` in `locales/en.json` (english value) and `locales/ko.json`
+  (korean value).
+- C2 — Re-analysis CTA decoupling. The growth tab's rerun button must also appear when
+  `referenceNewerThanVersion` is true, independent of `externalForecast && |gap| >= 20`.
+  Keep the existing gap-gated CTA unchanged otherwise. The rerun route needs NO change —
+  verified: `POST /api/market-overview/analyses/[id]/rerun`
+  (`app/web-next/app/api/market-overview/analyses/[id]/rerun/route.ts`) re-invokes
+  `runSizingPipeline`, which re-reads `resolveExternalReference` at startup
+  (`market-sizing-pipeline.ts:568`), so the next version already picks up the reference.
+- C3 — Fallback fix. `market-sizing-pipeline.ts:959` — change
+  `if (!externalReference)` to
+  `if (!externalReference || externalReference.external_cagr_pct <= 0)` so a size-only
+  auto-saved reference no longer suppresses the web/LLM consensus fallback. The `:368`
+  guard stays. Cross-reference: `2026-11-06-s1-quantitative-web-grounding-design.md` owns
+  the priority ladder; this amendment narrows "기록 참조" to CAGR-bearing references for
+  CONSENSUS purposes only — calibration constraints keep their own guard semantics.
+- C4 — Non-goals. No auto-triggered re-analysis (the proposal is LLM/UX; the action is the
+  person's — doctrine). No change to `resolveEffectiveCagr` / the ×0.85 escalation path.
+  No schema change (`created_at` already exists on `market_external_reference`,
+  migration 0113).
+
+### Design note
+
+- The C1 banner wording ("반영됩니다") is literally accurate for CAGR-bearing references.
+  For auto-saved size-only references (CAGR 0), the CTA is still valid (re-analysis
+  refreshes the whole report and, after C3, the consensus falls through to web/LLM), but
+  the consensus will not equal the reference's CAGR. Banner renders for any newer
+  reference; reviewers may scope the wording variant later — recorded here as a judgement
+  call, not a blocker.
+
+### Test plan
+
+- Unit tests (new `tests/unit/market-growth-staleness.test.ts`, lib-level against scratch
+  SQLite):
+  - staleness comparator — reference newer / older / equal timestamps;
+  - CTA visibility conditions — gap-gated only, staleness-gated only, both, neither;
+  - pipeline fallback with a size-only reference — web/LLM fallback runs, consensus is
+    not permanently zero;
+  - CAGR-bearing reference path unchanged (consensus still equals the reference).
+- Full regression of the market suites: `tests/unit/market-calibration.test.ts`,
+  `tests/unit/market-sizing-web-grounding.test.ts`, and the market route suites under
+  `tests/unit/`; plus the standard gates (`bun run test:unit`, design-lint).
+
+### Touched files
+
+- `app/web-next/lib/market-sizing-pipeline.ts` — fallback gate at `:959` only (C3).
+- `app/web-next/components/stages/market/SizingGrowthTabs.tsx` — reference live GET,
+  `referenceNewerThanVersion` comparator, staleness banner, CTA decoupling (C1, C2).
+- `app/web-next/locales/en.json`, `app/web-next/locales/ko.json` — one banner key (C1).
+- `tests/unit/market-growth-staleness.test.ts` — new (test plan above).
