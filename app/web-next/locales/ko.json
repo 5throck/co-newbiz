@@ -6180,7 +6180,7 @@
         "failedToLoadTheFinancial": "재무·기술 평가 불러오기 실패",
         "failedToSaveTheTarget": "목표 시장 정의 저장 실패",
         "financialCriteriaHint": "선택 입력 — 근거 없는 수치는 쓰지 않고 `검증 필요` + 필요 데이터(예: 가치사슬 단계별 재무)로 적습니다.",
-        "financialCriteriaLabel": "재무 기준 (S7 t-08 비교 기준)",
+        "financialCriteriaLabel": "재무 기준 (선정 기준 — S7 스크리닝에서 각 후보와 비교)",
         "financialCriteriaPlaceholder": "예: 부품 세그먼트 이익풀·마진 구조·가격결정력 조건 — 근거 없으면 `검증 필요` + 필요 데이터 명시",
         "itemSPartiallyMet": "건 · 부분충족",
         "minimumCandidateCount": "최소 후보 수",

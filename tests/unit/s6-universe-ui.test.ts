@@ -173,7 +173,7 @@ describe("catalog — the four new keys in ko and en (§5.2)", () => {
         expect(typeof ns[key]).toBe("string");
         expect((ns[key] ?? "").length).toBeGreaterThan(0);
       }
-      expect(ns.financialCriteriaLabel).toContain("S7 t-08");
+      expect(ns.financialCriteriaLabel).toContain("S7");
     }
   });
   test("discoveryPanels carries viability + needsVerification in both locales, non-empty", () => {
