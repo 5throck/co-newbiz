@@ -61,3 +61,88 @@ describe("summarizeGap (unaffected by the new fields)", () => {
     expect(summary.coveragePct).toBe(50);
   });
 });
+
+// ── readLiveCapabilityCoverage (design 2026-10-18-synergy-4element-design,
+//    Amendment 2026-11-12) — blend-parity with the pre-extraction
+//    synergy-rescore.ts values (the rescore suite's existing expectations must
+//    not move) and the null rule. The helper takes a Database; a :memory:
+//    stub of the one column it reads keeps these tests pure-fast.
+import { Database } from "bun:sqlite";
+import { readLiveCapabilityCoverage } from "../../app/web-next/lib/capability-gap.ts";
+
+describe("readLiveCapabilityCoverage (live blend + null rule)", () => {
+  function stubDb(gapJson: string | null): Database {
+    const d = new Database(":memory:");
+    d.run("CREATE TABLE opportunity (id TEXT PRIMARY KEY, capability_gap_json TEXT)");
+    d.run("INSERT INTO opportunity (id, capability_gap_json) VALUES (?, ?)", ["opp-1", gapJson]);
+    return d;
+  }
+
+  const JUDGED = JSON.stringify({
+    rows: [
+      {
+        id: "gap-1",
+        capability: "정밀 감속기 설계",
+        source: "manual",
+        necessity: "essential",
+        held: { status: "leading", holders: ["계열사 A"], evidence: "프로필" },
+      },
+      {
+        id: "gap-2",
+        capability: "해외 유통망",
+        source: "manual",
+        necessity: "optional",
+        held: { status: "partial", holders: ["계열사 B"], evidence: "프로필" },
+      },
+    ],
+  });
+
+  test("blend math parity with the pre-extraction synergy-rescore.ts expression", () => {
+    const d = stubDb(JUDGED);
+    // The pre-extraction expression (synergy-rescore.ts:140, unchanged):
+    const s = summarizeGap(parseGapRegister(JUDGED).rows);
+    const essential = s.essentialCoveragePct;
+    const expected =
+      essential !== null && s.coveragePct !== null ? Math.round(s.coveragePct * 0.5 + essential * 0.5) : s.coveragePct;
+    expect(expected).toBe(88); // 75% 보유율 / 100% 필수 충족율 → round(37.5 + 50)
+    const live = readLiveCapabilityCoverage(d, "opp-1");
+    expect(live.value).toBe(expected);
+    // Note-string parity with the pre-extraction strings (:141).
+    expect(live.note).toBe(
+      `필요 역량 ${s.total}건 중 판정 ${s.evaluated}건 — 보유율 ${s.coveragePct !== null ? `${s.coveragePct}%` : "—"}, 필수 충족율 ${essential !== null ? `${essential}%` : "—"}`,
+    );
+    d.close();
+  });
+
+  test("empty register → { value: null, note: null } (pipeline producer's null rule)", () => {
+    const d = stubDb(null);
+    expect(readLiveCapabilityCoverage(d, "opp-1")).toEqual({ value: null, note: null });
+    d.close();
+  });
+
+  test("all-unjudged register → null value with the 모두 미판정 note", () => {
+    const d = stubDb(
+      JSON.stringify({
+        rows: [
+          {
+            id: "gap-1",
+            capability: "A",
+            source: "manual",
+            necessity: "essential",
+            held: { status: "unevaluated", holders: [], evidence: "" },
+          },
+        ],
+      }),
+    );
+    const live = readLiveCapabilityCoverage(d, "opp-1");
+    expect(live.value).toBeNull();
+    expect(live.note).toBe("필요 역량 1건 모두 미판정 — 충족도 팩터 미반영");
+    d.close();
+  });
+
+  test("unknown opportunity id → { value: null, note: null }", () => {
+    const d = stubDb(JUDGED);
+    expect(readLiveCapabilityCoverage(d, "no-such-opp")).toEqual({ value: null, note: null });
+    d.close();
+  });
+});
