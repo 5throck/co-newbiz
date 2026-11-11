@@ -450,6 +450,7 @@
       "tokenLabelPlaceholder": "토큰 라벨 (예: mcp-cli)",
       "writeScopeCheckbox": "write 스코프 포함",
       "issueToken": "토큰 발급",
+      "noIssueAdmin": "관리자 계정은 사용자 대신 API 토큰을 발급할 수 없습니다 — 기존 토큰은 만료까지 유효합니다.",
       "noTokens": "발급된 토큰이 없습니다.",
       "userTokensAria": "{p1} API 토큰",
       "userTokensCaption": "{p1} API 토큰",
@@ -9050,6 +9051,14 @@
       "h1": "검토/안건 보드",
       "newDealCta": "＋ 새 검토 시작 (시장분석부터)",
       "knownTargetCta": "알려진 대상으로 시작",
+      "intakeModal": {
+        "title": "검토 요청 기록",
+        "requester": "요청자 (외부 의뢰인/후원자, 선택)",
+        "note": "메모 (선택)",
+        "submit": "요청 기록하고 시작",
+        "cancel": "취소",
+        "failed": "검토 요청 기록에 실패했습니다."
+      },
       "intro": "모든 검토/안건을 단계별 현황 한 장으로 봅니다 — 기회(S1~S7)와 프로젝트(S8~S12), 진행 경과 기간까지.",
       "shortcutsNav": "관련 화면 바로가기",
       "shortcutsLabel": "바로가기:",
@@ -9130,6 +9139,7 @@
       "issueButton": "토큰 발급",
       "writeNoteViewer": "보기(viewer) 계정은 읽기 전용 토큰만 발급할 수 있어 읽기·쓰기 옵션을 쓸 수 없습니다.",
       "writeNoteAdmin": "관리자(admin) 계정은 읽기 전용 토큰만 발급할 수 있습니다(시스템 관리 권한에는 사업 데이터 쓰기가 포함되지 않음). 읽기·쓰기 옵션을 쓸 수 없습니다.",
+      "noIssueAdmin": "관리자 계정은 새 API 토큰을 발급할 수 없습니다 — 기존 토큰은 만료까지 유효합니다.",
       "noSessionRoleNote": "이 계정 역할로는 이 화면에서 토큰을 발급할 수 없습니다. 목록 확인과 해지는 가능합니다.",
       "slotsRemaining": "사용 중인 토큰 한도 {p2}개 중 {p1}개를 더 발급할 수 있습니다.",
       "slotsFull": "활성 토큰 {p1}개를 모두 사용 중입니다. 하나를 해지한 뒤 다시 발급하세요.",
@@ -9209,6 +9219,11 @@
     },
     "opportunityDetail": {
       "aiFailKeepFactors": "AI 호출 실패 — 이전 요인을 유지합니다.",
+      "intakeOrigin": {
+        "caption": "검토 기원: {source} — 요청자 {requester}, {date} {by} 기록",
+        "sourceBoardNewDeal": "딜 보드 — 새 검토",
+        "sourceBoardKnownTarget": "딜 보드 — 알려진 대상"
+      },
       "factorsDeriveFailed": "요인 자동 도출 실패",
       "errFactorTextRequired": "요인 내용을 입력하세요.",
       "factorAddFailed": "요인 등록 실패",

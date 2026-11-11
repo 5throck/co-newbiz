@@ -13,7 +13,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
-import { api } from "../../lib/api.ts";
+import { api, ApiError } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteBusiness } from "../../lib/project-write-access.ts";
 import { useConfirm } from "../crud.tsx";
@@ -168,6 +168,10 @@ export function OpportunityFunnelStage({
   const [showCreateForm, setShowCreateForm] = useState(false);
   // Known-target entry (?known_target=1) moves the form to the top; any other open focuses the name field.
   const [knownTargetMode, setKnownTargetMode] = useState(startRegister === "known_target");
+  // ADR-0197 — the board intake modal's carrier (&intake=<id>) rides the
+  // query carrier; the register POST attaches it so the intake links to the
+  // opportunity at the single creation seam.
+  const [intakeId, setIntakeId] = useState<string | null>(null);
   const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirm();
 
@@ -212,6 +216,8 @@ export function OpportunityFunnelStage({
     if (initial && ["identified", "assessed", "selected", "dropped"].includes(initial)) {
       setStatusFilter(initial as OpportunityRow["status"]);
     }
+    const intake = params.get("intake");
+    if (intake) setIntakeId(intake);
   }, []);
 
   useEffect(load, [load]);
@@ -260,6 +266,7 @@ export function OpportunityFunnelStage({
         attractiveness_score: form.attractiveness_score ? Number(form.attractiveness_score) : undefined,
         industry_id: form.industry_id || undefined,
         known_target: form.known_target.trim() ? { company_name: form.known_target.trim() } : undefined,
+        intake_id: intakeId ?? undefined,
       });
       setForm({
         name: "",
@@ -277,6 +284,15 @@ export function OpportunityFunnelStage({
       }
       load();
     } catch (err) {
+      // ADR-0197: a refused intake carrier never blocks the deal — the server
+      // created the opportunity anyway (409 carries its id in details), so
+      // ride through to the detail screen instead of showing a dead error.
+      const intakeRefusal =
+        err instanceof ApiError && err.code === "intake_not_linkable" && typeof err.details.opportunity_id === "string";
+      if (intakeRefusal) {
+        window.location.assign(`/opportunities/${encodeURIComponent(err.details.opportunity_id as string)}`);
+        return;
+      }
       setError(err instanceof Error ? err.message : tc("errors.createFailed"));
     } finally {
       setBusy(false);

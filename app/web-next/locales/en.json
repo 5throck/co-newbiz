@@ -450,6 +450,7 @@
       "tokenLabelPlaceholder": "Token label (e.g. mcp-cli)",
       "writeScopeCheckbox": "Include write scope",
       "issueToken": "Issue token",
+      "noIssueAdmin": "Administrators cannot issue API tokens on behalf of users — existing tokens stay valid until expiry.",
       "noTokens": "No tokens issued.",
       "userTokensAria": "{p1} API tokens",
       "userTokensCaption": "{p1} API tokens",
@@ -9050,6 +9051,14 @@
       "h1": "Deal board",
       "newDealCta": "＋ Start a new deal (from market analysis)",
       "knownTargetCta": "Start from a known target",
+      "intakeModal": {
+        "title": "Record the deal request",
+        "requester": "Requester (external client/sponsor, optional)",
+        "note": "Note (optional)",
+        "submit": "Record and start",
+        "cancel": "Cancel",
+        "failed": "Recording the deal request failed."
+      },
       "intro": "Every deal on one funnel page — opportunities (S1–S7) and projects (S8–S12), plus gate aging.",
       "shortcutsNav": "Related screens",
       "shortcutsLabel": "Shortcuts:",
@@ -9130,6 +9139,7 @@
       "issueButton": "Issue token",
       "writeNoteViewer": "Viewer accounts can issue read-only tokens only; the read·write option is unavailable.",
       "writeNoteAdmin": "Admin accounts can issue read-only tokens only (system administration does not include business-data write); the read·write option is unavailable.",
+      "noIssueAdmin": "Administrator accounts cannot issue new API tokens — existing tokens stay valid until expiry.",
       "noSessionRoleNote": "Your account role cannot issue tokens here. Viewing the list and revoking remain available.",
       "slotsRemaining": "{p1} of {p2} active token slots remaining.",
       "slotsFull": "All {p1} active token slots are in use. Revoke one to issue another.",
@@ -9209,6 +9219,11 @@
     },
     "opportunityDetail": {
       "aiFailKeepFactors": "AI call failed — previous factors kept.",
+      "intakeOrigin": {
+        "caption": "Origin: {source} — requester {requester}, recorded {date} by {by}",
+        "sourceBoardNewDeal": "Deal board — new deal",
+        "sourceBoardKnownTarget": "Deal board — known target"
+      },
       "factorsDeriveFailed": "Factor auto-derivation failed",
       "errFactorTextRequired": "Enter the factor text.",
       "factorAddFailed": "Failed to add factor",

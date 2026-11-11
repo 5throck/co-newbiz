@@ -40,7 +40,11 @@ let analystCookie: string;
 let viewerCookie: string;
 
 beforeAll(async () => {
-  for (const [userId, role] of [["root", "admin"], ["alice", "analyst"], ["bob", "viewer"]] as const) {
+  for (const [userId, role] of [
+    ["root", "admin"],
+    ["alice", "analyst"],
+    ["bob", "viewer"],
+  ] as const) {
     await createUser(db, { userId, role, password: PASSWORDS[userId], createdBy: "test", now: NOW });
     approveUser(db, { userId, approvedBy: "test", now: NOW });
   }
@@ -63,7 +67,10 @@ afterAll(async () => {
 });
 
 async function errCode(res: Response): Promise<string | undefined> {
-  const body = (await res.clone().json().catch(() => null)) as { error?: { code?: string } } | null;
+  const body = (await res
+    .clone()
+    .json()
+    .catch(() => null)) as { error?: { code?: string } } | null;
   return body?.error?.code;
 }
 
@@ -87,7 +94,11 @@ describe("ADR-0146 admin business write guard", () => {
       expect(await errCode(res)).toBe("role_forbidden");
     });
     test(`${r.group}: analyst is not rejected by the role guard`, async () => {
-      const res = await req(r.path, { method: "POST", headers: { cookie: analystCookie }, body: JSON.stringify(r.body) });
+      const res = await req(r.path, {
+        method: "POST",
+        headers: { cookie: analystCookie },
+        body: JSON.stringify(r.body),
+      });
       expect(await errCode(res)).not.toBe("role_forbidden");
       expect(await errCode(res)).not.toBe("role_required");
     });
@@ -121,8 +132,12 @@ describe("ADR-0146 token issuance", () => {
     expect(res.status).toBe(403);
     expect(await errCode(res)).toBe("role_forbidden");
   });
-  test("admin + read scope -> 201", async () => {
-    expect((await issue(adminCookie, ["read"])).status).toBe(201);
+  // E2 (design 2026-11-11-owner-decisions-intake-batch §4.2): the refusal is
+  // scope-independent — admins cannot issue NEW tokens at all, read included.
+  test("admin + read scope -> 403 role_forbidden (E2: issuance withdrawn for admins)", async () => {
+    const res = await issue(adminCookie, ["read"]);
+    expect(res.status).toBe(403);
+    expect(await errCode(res)).toBe("role_forbidden");
   });
   test("bare write scope -> 400 invalid_request (vocabulary: write implies read)", async () => {
     const res = await issue(analystCookie, ["write"]);

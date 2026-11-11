@@ -89,6 +89,7 @@ export async function register() {
     const { getMigrationStatus, runMigrations } = await import("../../db/migrate.ts");
     const { getDb } = await import("../../db/client.ts");
     const { createUser, approveUser, listUsers } = await import("../../db/lib/accounts.ts");
+    const { bootstrapPasswordFilePath, writeBootstrapPasswordFile } = await import("./lib/bootstrap-password-file.ts");
 
     const migrationMode = process.env.CO_NEWBIZ_BOOTSTRAP_MIGRATIONS ?? "auto";
     if (!["auto", "require-current", "off"].includes(migrationMode)) {
@@ -153,11 +154,34 @@ export async function register() {
     }
 
     // First boot (or a wiped DB): create the initial admin. The password is
-    // random and printed exactly once — it is never stored in plaintext, and
-    // the account is flagged must_change_password so the first login forces a
-    // real password. Bootstrap self-approves: no other admin exists yet.
-    // createUser is async (PBKDF2) — it MUST be awaited before approveUser.
+    // random and is written ONCE to a 0600 file next to the resolved DB file
+    // (E3, design 2026-11-11-owner-decisions-intake-batch §5) — never to the
+    // container log, which the old plaintext banner leaked to every log
+    // driver and collector. The account is flagged must_change_password so
+    // the first login forces a real password. Bootstrap self-approves: no
+    // other admin exists yet. createUser is async (PBKDF2) — it MUST be
+    // awaited before approveUser.
+    //
+    // Fail-closed ordering: the file is written BEFORE createUser, so a write
+    // failure aborts bootstrap with no admin created — the fresh DB self-heals
+    // on the next boot (listUsers is still 0 above).
     const password = randomPassword();
+    let passwordFilePath: string | undefined;
+    try {
+      const mainDbFile = (db.query("PRAGMA database_list").all() as Array<{ name: string; file: string }>).find(
+        (r) => r.name === "main",
+      )?.file;
+      passwordFilePath = bootstrapPasswordFilePath(mainDbFile ?? "");
+      writeBootstrapPasswordFile(passwordFilePath, { userId: "admin", password, now: new Date().toISOString() });
+    } catch (err) {
+      // Never log the password — the path and the failure reason only.
+      console.error(
+        "[bootstrap] could not write the initial-admin password file:",
+        passwordFilePath ?? "(path unresolved)",
+        err instanceof Error ? err.message : err,
+      );
+      return;
+    }
     await createUser(db, {
       userId: "admin",
       role: "admin",
@@ -169,13 +193,7 @@ export async function register() {
     approveUser(db, { userId: "admin", approvedBy: "bootstrap", now: new Date().toISOString() });
 
     console.log(
-      "\n" +
-        "============================================================\n" +
-        "  FIRST-BOOT BOOTSTRAP — initial admin account created\n" +
-        "  user id:  admin\n" +
-        `  password: ${password}\n` +
-        "  (printed once; change it at first login)\n" +
-        "============================================================\n",
+      `[bootstrap] initial admin created — password written once to ${passwordFilePath} (0600); change it at first login.`,
     );
   } catch (err) {
     console.error("[bootstrap] database bootstrap failed:", err instanceof Error ? err.message : err);

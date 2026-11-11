@@ -8,10 +8,18 @@ import { autoLinkSizing } from "../../../lib/sizing-auto-link.ts";
 
 import { ulid } from "../../../../../db/lib/ulid.ts";
 import { authenticate, requireBusinessActor } from "../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../lib/envelope.ts";
+import { badRequest, fail, ok } from "../../../lib/envelope.ts";
 import { createTarget, KNOWN_TARGET_NOTE_PREFIX } from "../../../lib/brownfield-targets.ts";
+import { getIntakeById, linkDealIntakeToOpportunity } from "../../../../../db/repositories/deal-intake.repository.ts";
 
 const STATUSES = new Set(["identified", "assessed", "selected", "dropped"]);
+
+// Intake backfill window (ADR-0197 / DEC-20261111-03 ruling 1, PM default —
+// revisit-on-owner-input): an intake whose deal never materialized within 30
+// days must not be silently annexed by an unrelated later creation. Changing
+// it is a constant tweak, not a migration.
+const INTAKE_LINK_WINDOW_DAYS = 30;
+const INTAKE_LINK_WINDOW_MS = INTAKE_LINK_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
 export async function GET(request: Request) {
   const auth = authenticate(request);
@@ -71,6 +79,9 @@ export async function POST(request: Request) {
     industry_id?: string | null;
     // Wave C-3 (D-5): start from a named target. Pre-fills S6; S1–S4 still apply.
     known_target?: { company_name?: string; dart_corp_code?: string | null; note?: string | null } | null;
+    // ADR-0197: the board intake modal's carrier — created by POST
+    // /api/deal-intake at CTA time and linked to THIS opportunity on creation.
+    intake_id?: string;
   } | null;
   if (!body?.name?.trim()) return badRequest("invalid_request", "name is required.");
   if (body.status === "dropped") {
@@ -159,6 +170,36 @@ export async function POST(request: Request) {
       id,
     ]);
     appendAudit(db, { actor: ctx.userId, action: "known_target.start", target: `${id}:${knownTargetName}`, now });
+  }
+  // ADR-0197 intake backfill — the intake carrier is optional and orthogonal
+  // to the known-target pre-fill. The opportunity creation itself is NEVER
+  // blocked by the link: a stale/already-linked intake is an audited refusal
+  // (intake_link_refused, reason in target) while the deal proceeds.
+  const intakeId = body.intake_id?.trim() || null;
+  if (intakeId) {
+    const intake = getIntakeById(db, intakeId);
+    const createdAtMs = intake ? Date.parse(intake.created_at) : Number.NaN;
+    const reason = !intake
+      ? "not_found"
+      : intake.opportunity_id !== null
+        ? "already_linked"
+        : Number.isNaN(createdAtMs) || Date.now() - createdAtMs > INTAKE_LINK_WINDOW_MS
+          ? "stale"
+          : null;
+    if (reason) {
+      appendAudit(db, { actor: ctx.userId, action: "intake_link_refused", target: reason, now });
+      return fail(
+        409,
+        "intake_not_linkable",
+        `The intake record could not be linked (${reason}); the opportunity itself was created.`,
+        {
+          opportunity_id: id,
+          reason,
+        },
+      );
+    }
+    linkDealIntakeToOpportunity(db, { intakeId, opportunityId: id });
+    appendAudit(db, { actor: ctx.userId, action: "intake_linked", target: `${intakeId} -> ${id}`, now });
   }
   return ok({ id, name: body.name.trim(), status, known_target_id: knownTargetId }, 201);
 }

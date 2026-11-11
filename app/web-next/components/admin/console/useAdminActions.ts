@@ -57,9 +57,6 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
       }>
     >
   >({});
-  const [tokenLabel, setTokenLabel] = useState("");
-  const [tokenWrite, setTokenWrite] = useState(false);
-  const [tokenBusy, setTokenBusy] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   // 발급된 비밀 정보(토큰·임시 비밀번호) 1회 확인 모달 — 닫으면 영구 소멸
   const [resettingUser, setResettingUser] = useState<string | null>(null);
@@ -87,30 +84,9 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
     if (next) loadUserTokens(next);
   }
 
-  async function issueUserToken(userId: string) {
-    if (!tokenLabel.trim() || tokenBusy) return;
-    setTokenBusy(true);
-    setError(null);
-    try {
-      const scopes = tokenWrite ? ["read", "write"] : ["read"];
-      const res = await api.post<{ token: string; label: string }>(
-        `/api/admin/users/${encodeURIComponent(userId)}/tokens`,
-        { label: tokenLabel.trim(), scopes },
-      );
-      setIssuedSecret({
-        kind: t("issuedKindToken", { p1: userId, p2: res.data.label }),
-        value: res.data.token,
-        detail: t("issuedTokenDetail"),
-      });
-      setTokenLabel("");
-      setTokenWrite(false);
-      loadUserTokens(userId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("tokenIssueFailed"));
-    } finally {
-      setTokenBusy(false);
-    }
-  }
+  // On-behalf token issuance was removed with the route's POST seam (E2,
+  // design 2026-11-11-owner-decisions-intake-batch §4.2): admins keep list +
+  // revoke, lose minting.
 
   function revokeUserToken(userId: string, tokenId: string) {
     confirm(
@@ -340,12 +316,6 @@ export function useAdminActions(prev: ReturnType<typeof useAdminData>) {
     userAction,
     toggleTokenPanel,
     tokenPanelUser,
-    tokenLabel,
-    setTokenLabel,
-    tokenWrite,
-    setTokenWrite,
-    tokenBusy,
-    issueUserToken,
     userTokens,
     revokeUserToken,
     toggleJob,

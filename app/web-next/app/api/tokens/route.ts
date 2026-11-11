@@ -25,7 +25,16 @@ const MAX_ISSUES_PER_HOUR = 10;
 const KEY = Symbol.for("co-newbiz.apiTokenIssueHits");
 type Holder = { [KEY]?: Map<string, number[]> };
 const holder = globalThis as Holder;
-const issueHits = holder[KEY] ?? (holder[KEY] = new Map<string, number[]>());
+const existingHits = holder[KEY];
+const issueHits = existingHits ?? existingHitsFallback(holder);
+
+// noAssignInExpressions: the assign moved out of the ?? expression (fresh
+// biome); behavior is identical — one lazily-created shared map per process.
+function existingHitsFallback(h: Holder): Map<string, number[]> {
+  const created = new Map<string, number[]>();
+  h[KEY] = created;
+  return created;
+}
 
 // Human web session only (same contract as /api/oauth/authorize): a bearer
 // token — including the in-process OAuth-delegated principal — cannot mint
@@ -70,9 +79,11 @@ export async function POST(request: Request) {
   const db = getDb();
   const now = new Date().toISOString();
 
-  const body = (await request.json().catch(() => null)) as
-    | { label?: string; scopes?: string[]; expiresInDays?: number }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    label?: string;
+    scopes?: string[];
+    expiresInDays?: number;
+  } | null;
   if (!body?.label?.trim()) return badRequest("invalid_request", "label is required.");
 
   const rawScopes = body.scopes && body.scopes.length > 0 ? body.scopes : ["read"];
@@ -82,14 +93,21 @@ export async function POST(request: Request) {
   }
   const scopes = normalized;
 
-  // Viewer and admin cannot hold write-scoped tokens (ADR-0146).
+  // E2 (design 2026-11-11-owner-decisions-intake-batch §4.2 / DEC-20261111-03
+  // ruling 2): admins can no longer issue NEW API tokens — read scope
+  // included, not just write. Listing and revocation stay; an existing admin
+  // token stays valid until expiry/revocation (validateApiToken is untouched).
+  if (auth.role === "admin") {
+    denyIssue(db, auth.userId, now, "role:admin");
+    return forbidden("role_forbidden", "Administrator accounts cannot issue personal API tokens.");
+  }
+
+  // Viewer cannot hold write-scoped tokens (ADR-0146); admin never reaches
+  // this line any more. Read-scoped viewer self-issue stays allowed — the
+  // ruling names admins only.
   if (scopes.includes("write") && auth.role === "viewer") {
     denyIssue(db, auth.userId, now, "role:viewer");
     return forbidden("role_required", "Personal tokens with the 'write' scope require an analyst account.");
-  }
-  if (scopes.includes("write") && auth.role === "admin") {
-    denyIssue(db, auth.userId, now, "role:admin");
-    return forbidden("role_forbidden", "Personal tokens with the 'write' scope require an analyst account.");
   }
 
   const ttl = body.expiresInDays ?? DEFAULT_TTL_DAYS;
@@ -109,7 +127,11 @@ export async function POST(request: Request) {
 
   if (countActivePersonalTokens(db, auth.userId, now) >= MAX_ACTIVE_TOKENS) {
     denyIssue(db, auth.userId, now, "token_limit");
-    return fail(409, "token_limit_reached", "You already have the maximum number of active personal tokens. Revoke one first.");
+    return fail(
+      409,
+      "token_limit_reached",
+      "You already have the maximum number of active personal tokens. Revoke one first.",
+    );
   }
 
   try {

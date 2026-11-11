@@ -365,8 +365,10 @@ paths:
       summary: Issue a personal Bearer API token — human web session only; plaintext returned exactly once.
       description: >-
         Session-only issuance (403 session_required for any Bearer credential).
-        Scopes are ["read"] or ["read","write"]; viewer and admin accounts are
-        read-only (ADR-0146). Expiry defaults to 30 days; allowed values are
+        Scopes are ["read"] or ["read","write"]; viewer accounts are read-only
+        (ADR-0146), and admin accounts cannot issue at all — any scope, audited
+        role:admin (E2, DEC-20261111-03 ruling 2; existing tokens stay valid
+        until expiry). Expiry defaults to 30 days; allowed values are
         7, 30, 90, or 180. At most 5 active personal tokens per user
         (409 token_limit_reached) and 10 issues per user per hour
         (429 rate_limited). New tokens carry the cnb_pat_ prefix. The 201
@@ -1120,22 +1122,23 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: adminIssueUserToken
-      summary: Issue an API token on a user's behalf (label + scopes). Admin role; audited; token value returned once.
+      summary: "Forbidden (E2, DEC-20261111-03 ruling 2): admins cannot issue API tokens on behalf of users — audited api_token_admin_issue_denied, 403 role_forbidden."
+      description: >-
+        The former minting handler issued tokens for any user from RAW request
+        scopes with no scope validation; the handler is removed with that hole
+        (design 2026-11-11-owner-decisions-intake-batch §4.2). Listing (GET)
+        and revocation (DELETE) remain — admins keep visibility and the kill
+        switch, lose minting. Existing tokens stay valid until expiry
+        (validateApiToken is unchanged).
       tags:
         - Tokens
       parameters:
         - $ref: '#/components/parameters/MemberUserId'
       responses:
-        '201':
-          $ref: '#/components/responses/Created'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
     delete:
       operationId: adminRevokeUserToken
       summary: Revoke one of a user's API tokens. Admin role; audited.
@@ -2016,6 +2019,46 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/deal-intake:
+    post:
+      operationId: createDealIntake
+      summary: Record a client-request intake from a deal-board entry (ADR-0197). Analyst+; audited intake_created.
+      description: >-
+        One record of WHO asked for a deal review (requested_by, free text —
+        the external requester is not an account) and through which board entry
+        (source, closed vocabulary board_new_deal | board_known_target). Created
+        unlinked, before the opportunity exists; POST /api/opportunities links
+        it via the optional intake_id field (30-day stale guard; refusals are
+        audited intake_link_refused and never block the deal).
+      tags:
+        - Deal Review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source
+              properties:
+                source:
+                  type: string
+                  enum: [board_new_deal, board_known_target]
+                requested_by:
+                  type: string
+                  maxLength: 120
+                note:
+                  type: string
+                  maxLength: 2000
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
