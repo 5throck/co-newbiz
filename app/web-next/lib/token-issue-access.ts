@@ -1,13 +1,17 @@
 // UI mirror of POST /api/tokens role rules (server stays authoritative):
-// every signed-in human-session role may issue read tokens; only analyst may
-// add the write scope (viewer/admin lose 'write' at issue and at validation).
-// Constants mirror db/lib/api-tokens.ts (that module pulls node:crypto, so it
-// is not importable from a client bundle); a unit test pins the parity.
+// admins can no longer issue NEW tokens at all (E2, design
+// 2026-11-11-owner-decisions-intake-batch §4.2 — read scope included);
+// analyst and viewer may still issue read tokens, and only analyst may add
+// the write scope (viewer loses 'write' at issue and at validation; an
+// EXISTING admin token stays valid until expiry — validateApiToken is
+// untouched). Constants mirror db/lib/api-tokens.ts (that module pulls
+// node:crypto, so it is not importable from a client bundle); a unit test
+// pins the parity.
 
 export type TokenIssueRole = "analyst" | "viewer" | "admin";
 
 export function canIssueToken(role: string | null | undefined): boolean {
-  return role === "analyst" || role === "viewer" || role === "admin";
+  return role === "analyst" || role === "viewer";
 }
 
 export function canIssueWriteToken(role: string | null | undefined): boolean {
@@ -15,9 +19,8 @@ export function canIssueWriteToken(role: string | null | undefined): boolean {
 }
 
 /** Catalog key (pages.connectedApps.*) for the role-correct write-scope explanation, or null. */
-export function writeScopeNoteKey(role: string | null | undefined): "writeNoteViewer" | "writeNoteAdmin" | null {
+export function writeScopeNoteKey(role: string | null | undefined): "writeNoteViewer" | null {
   if (role === "viewer") return "writeNoteViewer";
-  if (role === "admin") return "writeNoteAdmin";
   return null;
 }
 
@@ -46,10 +49,7 @@ export function daysRemaining(expiresAt: string | null | undefined, nowMs: numbe
   return Math.ceil((t - nowMs) / DAY_MS);
 }
 
-export type ExpiryLabel =
-  | { kind: "none" }
-  | { kind: "expired" }
-  | { kind: "days"; days: number };
+export type ExpiryLabel = { kind: "none" } | { kind: "expired" } | { kind: "days"; days: number };
 
 /** What the "D-n" badge shows for a token. Revoked tokens show nothing. */
 export function expiryLabel(status: TokenStatus, expiresAt: string | null | undefined, nowMs: number): ExpiryLabel {

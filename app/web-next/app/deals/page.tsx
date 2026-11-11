@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { ColGroup, FilterChip, PageState, PrimaryAction } from "../../components/ui.tsx";
+import { DealIntakeModal, type DealIntakeSource } from "../../components/DealIntakeModal.tsx";
 import { STAGE_TAB_GROUPS } from "../../lib/stage-tabs.ts";
 import { SectionToolbar } from "../../components/layout.tsx";
 import { GATE_LABEL_KEY } from "../../lib/label-keys.ts";
@@ -140,6 +141,10 @@ function DealsBoard() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  // ADR-0197 — both board CTAs record the client-request intake first (a
+  // small modal, source derived from the CTA clicked); the modal then rides
+  // the original destination's query-carrier exemption as &intake=<id>.
+  const [intakeSource, setIntakeSource] = useState<DealIntakeSource | null>(null);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch is keyed on the admin gate — t is only read in the error fallback; adding the translator would refetch on translator identity churn
   const load = useCallback(() => {
@@ -307,13 +312,14 @@ function DealsBoard() {
 
   return (
     <main>
+      {intakeSource && <DealIntakeModal source={intakeSource} onClose={() => setIntakeSource(null)} />}
       <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 8 }}>
         <h1>{t("pages.deals.h1")}</h1>
         <span className="ml-auto">
-          <PrimaryAction inline href="/market?new=1" label={t("pages.deals.newDealCta")} />
-          <Link href="/opportunities?known_target=1" className="btn-ghost ml-2">
+          <PrimaryAction inline onClick={() => setIntakeSource("board_new_deal")} label={t("pages.deals.newDealCta")} />
+          <button type="button" className="btn-ghost ml-2" onClick={() => setIntakeSource("board_known_target")}>
             {t("pages.deals.knownTargetCta")}
-          </Link>
+          </button>
         </span>
       </div>
       <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">

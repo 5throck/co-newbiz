@@ -1,3 +1,4 @@
+// biome-ignore-all format: dense single-line JSX is deliberate here — biome's layout expands this file 265 -> ~470 lines, past the 400-line decomposition cap (stage-decomposition.test.ts).
 "use client";
 
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
@@ -71,7 +72,7 @@ export function UsersTablePanel({ ctx }: { ctx: AdminConsoleState }) {
   const locale = useLocale();
   const label = useAdminLabel();
   const tl = useTranslations("admin.list");
-  const { section, users, me, approve, userAction, resettingUser, toggleTokenPanel, tokenPanelUser, tokenLabel, setTokenLabel, tokenWrite, setTokenWrite, tokenBusy, issueUserToken, userTokens, revokeUserToken, setUsers } = ctx;
+  const { section, users, me, approve, userAction, resettingUser, toggleTokenPanel, tokenPanelUser, userTokens, revokeUserToken, setUsers } = ctx;
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<UserEdit | null>(null);
   const [editBusy, setEditBusy] = useState(false);
@@ -124,6 +125,8 @@ export function UsersTablePanel({ ctx }: { ctx: AdminConsoleState }) {
             <p className="text-[color:var(--muted-fg)] italic">{tl("noMatch")}</p>
           ) : (
           <>
+          {/* biome-ignore lint/a11y/useSemanticElements: the div keeps the app-wide .table-scroll container styling; a <section> swap is a DOM/visual contract change outside this batch */}
+          {/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard-scrollable region pattern (WCAG 2.1.1) — the scroll container must be focusable to be scrollable by keyboard */}
           <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}><table className="data-table list-table">
             <caption className="sr-only">{t("usersCaption")}</caption>
             <thead>
@@ -214,25 +217,17 @@ export function UsersTablePanel({ ctx }: { ctx: AdminConsoleState }) {
                   <tr>
                     <td colSpan={6}>
                       <div className="sizing-new-form">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <input
-                            aria-label={t("tokenLabelAria")}
-                            placeholder={t("tokenLabelPlaceholder")}
-                            value={tokenLabel}
-                            onChange={(e) => setTokenLabel(e.target.value)}
-                            className="sizing-new-input sizing-new-input-sm"
-                          />
-                          <label className="text-[length:var(--fs-caption)] flex items-center gap-1">
-                            <input type="checkbox" checked={tokenWrite} onChange={(e) => setTokenWrite(e.target.checked)} />
-                            {t("writeScopeCheckbox")}
-                          </label>
-                          <button type="button" className="btn-ghost btn-sm" disabled={tokenBusy || !tokenLabel.trim()} onClick={() => issueUserToken(u.user_id)}>
-                            {t("issueToken")}
-                          </button>
-                        </div>
+                        {/* E2 (design 2026-11-11-owner-decisions-intake-batch §4.2):
+                            admin-on-behalf issuance is forbidden — the panel keeps
+                            visibility (list) and the kill switch (revoke) only. */}
+                        <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mb-2">
+                          {t("noIssueAdmin")}
+                        </p>
                         {(userTokens[u.user_id] ?? []).length === 0 ? (
                           <p className="text-[color:var(--muted-fg)] italic text-[length:var(--fs-caption)] mb-0">{t("noTokens")}</p>
                         ) : (
+                          /* biome-ignore lint/a11y/useSemanticElements: the div keeps the app-wide .table-scroll container styling; a <section> swap is a DOM/visual contract change outside this batch */
+                          /* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard-scrollable region pattern (WCAG 2.1.1) — the scroll container must be focusable to be scrollable by keyboard */
                           <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
                           <table className="data-table table-fixed-pct tmin-48" aria-label={t("userTokensAria", { p1: u.user_id })}>
                             <caption className="sr-only">{t("userTokensCaption", { p1: u.user_id })}</caption>

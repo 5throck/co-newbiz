@@ -1,10 +1,20 @@
 // R2-A wayfinding (spec 2026-10-09-ux-r2-design): the board's "new review" reaches a
-// working market-analysis form in at most 3 clicks, every deal/stage/opportunity page
-// offers a breadcrumb back, the S8+ rail links resolve to the promoted project, picker
-// pages obey the page contract, and redirects of retired routes are announced.
+// working market-analysis form in a bounded click path (4 clicks since ADR-0197 added
+// the mandatory client-request intake modal — the record IS the ruling, DEC-20261111-03),
+// every deal/stage/opportunity page offers a breadcrumb back, the S8+ rail links resolve
+// to the promoted project, picker pages obey the page contract, and redirects of retired
+// routes are announced.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
-import { axeScan, formatAxe, launchBrowser, loginThroughUi, visit, type AxeResult, type Session } from "./_support/browser.ts";
+import {
+  axeScan,
+  formatAxe,
+  launchBrowser,
+  loginThroughUi,
+  visit,
+  type AxeResult,
+  type Session,
+} from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal } from "./_support/deals.ts";
 import { getDb } from "../../db/client.ts";
 import { see } from "./_support/ui.ts";
@@ -26,33 +36,58 @@ beforeAll(async () => {
       const now = new Date().toISOString();
       // Bootstrap fixtures only: a brand-new (identified, unpromoted) opportunity and a second
       // selected one so the flat routes render their picker instead of redirecting.
-      db.run("INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?, '신규 로봇 기회', 'identified', ?, ?)", [FRESH, analystId, now]);
-      db.run("INSERT INTO opportunity (id, name, status, attractiveness_score, synergy_score, created_by, created_at) VALUES (?, '두 번째 선별 기회', 'selected', 70, 66, ?, ?)", [SECOND, analystId, now]);
+      db.run(
+        "INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?, '신규 로봇 기회', 'identified', ?, ?)",
+        [FRESH, analystId, now],
+      );
+      db.run(
+        "INSERT INTO opportunity (id, name, status, attractiveness_score, synergy_score, created_by, created_at) VALUES (?, '두 번째 선별 기회', 'selected', 70, 66, ?, ?)",
+        [SECOND, analystId, now],
+      );
     },
   });
   browser = await launchBrowser();
   s = await loginThroughUi(browser, app);
 }, 120_000);
-afterAll(async () => { await browser?.close(); await app?.stop(); });
+afterAll(async () => {
+  await browser?.close();
+  await app?.stop();
+});
 
 describe("R2-A wayfinding", () => {
-  test("a new market analysis starts from the board in at most 3 clicks", async () => {
+  test("a new market analysis starts from the board in at most 4 clicks", async () => {
     await visit(s.page, app, "/deals");
     let clicks = 0;
-    await s.page.getByRole("link", { name: /새 검토 시작/ }).click(); clicks++;
+    // ADR-0197: the board CTA is a BUTTON that opens the client-request intake
+    // modal (source derives from which CTA was clicked; requester/note are
+    // optional). Submitting records the intake row, then the original
+    // destination rides its new=1 exemption as &intake=<id>.
+    await s.page.getByRole("button", { name: /새 검토 시작/ }).click();
+    clicks++;
+    const intake = s.page.getByRole("dialog", { name: "검토 요청 기록" });
+    await intake.waitFor({ state: "visible", timeout: 30_000 });
+    await intake.getByRole("button", { name: "요청 기록하고 시작" }).click();
+    clicks++;
     // Lands on the working form, focused, not on a deal picker.
     await s.page.waitForURL(/\/market\?new=1/);
     const input = s.page.locator("#market-new-name");
     await input.waitFor({ state: "visible", timeout: 30_000 });
     expect(await s.page.evaluate(() => document.activeElement?.id)).toBe("market-new-name");
     await input.fill("E2E 신규 로봇 산업");
-    await s.page.getByRole("button", { name: /분석 범위 선택/ }).click(); clicks++;
-    await s.page.getByRole("button", { name: "이 산업만 분석" }).click(); clicks++;
-    expect(clicks).toBeLessThanOrEqual(3);
+    await s.page.getByRole("button", { name: /분석 범위 선택/ }).click();
+    clicks++;
+    await s.page.getByRole("button", { name: "이 산업만 분석" }).click();
+    clicks++;
+    // The intake-recording step (ADR-0197) adds one mandatory click to the board→form path.
+    expect(clicks).toBeLessThanOrEqual(4);
     const deadline = Date.now() + 30_000;
     let found = 0;
     while (Date.now() < deadline && found === 0) {
-      found = (app.readDb((d) => d.query("SELECT COUNT(*) c FROM md_industry WHERE name_ko='E2E 신규 로봇 산업'").get()) as { c: number }).c;
+      found = (
+        app.readDb((d) => d.query("SELECT COUNT(*) c FROM md_industry WHERE name_ko='E2E 신규 로봇 산업'").get()) as {
+          c: number;
+        }
+      ).c;
       if (found === 0) await new Promise((r) => setTimeout(r, 500));
     }
     expect(found).toBe(1);
@@ -110,7 +145,7 @@ describe("R2-A wayfinding", () => {
     await s.page.getByRole("button", { name: "매력도 평가", exact: true }).click();
     await s.page.getByRole("link", { name: /S3 탭으로 이동/ }).click();
     await s.page.waitForURL(new RegExp(`/deals/${FRESH}/s3`), { timeout: 30_000 });
-    expect(await s.page.getByText("\"회사 등록\"").count()).toBe(0);
+    expect(await s.page.getByText('"회사 등록"').count()).toBe(0);
   }, 90_000);
 
   test("picker pages have an h1, a breadcrumb, a create action, an active sidebar item and a back control", async () => {
@@ -138,10 +173,14 @@ describe("R2-A wayfinding", () => {
     await s.page.locator("#opp-new-name").waitFor({ state: "visible", timeout: 30_000 });
     expect(await s.page.evaluate(() => document.activeElement?.id)).toBe("opp-new-name");
     // The form is in the viewport on landing (not below the fold behind the funnel).
-    expect(await s.page.evaluate(() => {
-      const r = document.getElementById("opp-new-name")!.getBoundingClientRect();
-      return r.top >= 0 && r.bottom <= window.innerHeight;
-    })).toBe(true);
+    expect(
+      await s.page.evaluate(() => {
+        const el = document.getElementById("opp-new-name");
+        if (!el) throw new Error("#opp-new-name not rendered");
+        const r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= window.innerHeight;
+      }),
+    ).toBe(true);
     await s.page.locator("#opp-new-name").fill("E2E 알려진 대상 검토");
     await s.page.locator("#opp-known-target").fill("이베이코리아");
     await s.page.getByRole("button", { name: "등록", exact: true }).click();
@@ -167,7 +206,8 @@ describe("R2-A wayfinding", () => {
     const shortcuts = s.page.getByRole("navigation", { name: "관련 화면 바로가기" });
     await shortcuts.waitFor({ state: "visible", timeout: 30_000 });
     const hrefs = await shortcuts.locator("a").evaluateAll((els) => els.map((e) => e.getAttribute("href")));
-    for (const h of ["/projects", "/portfolio-view", "/our-company", "/companies", "/agents", "/onboarding"]) expect(hrefs).toContain(h);
+    for (const h of ["/projects", "/portfolio-view", "/our-company", "/companies", "/agents", "/onboarding"])
+      expect(hrefs).toContain(h);
   }, 60_000);
 
   test("the new wayfinding surfaces pass axe (WCAG 2.1 AA) with zero serious or critical violations", async () => {

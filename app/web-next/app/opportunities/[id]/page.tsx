@@ -40,6 +40,15 @@ interface OpportunityRow {
   rationale: string | null;
   created_by: string;
   created_at: string;
+  /** ADR-0197 — the client-request intake linked at the creation seam (null when none). */
+  intake?: {
+    id: string;
+    source: string;
+    requested_by: string | null;
+    note: string | null;
+    created_by: string;
+    created_at: string;
+  } | null;
 }
 interface OppFactors {
   opportunity: string[];
@@ -71,6 +80,13 @@ const STATUS_KEY: Record<OpportunityRow["status"], string> = {
   assessed: "statusAssessed",
   selected: "statusSelected",
   dropped: "statusDropped",
+};
+
+// ADR-0197 origin line — intake source labels resolve through the catalog
+// (pages.opportunityDetail.intakeOrigin.*; no raw literals, i18n sweep rule).
+const INTAKE_SOURCE_KEY: Record<string, string> = {
+  board_new_deal: "intakeOrigin.sourceBoardNewDeal",
+  board_known_target: "intakeOrigin.sourceBoardKnownTarget",
 };
 
 export function OpportunityDetail() {
@@ -304,6 +320,21 @@ export function OpportunityDetail() {
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
+        </p>
+      )}
+      {/* ADR-0197 — 검토 기원(origin) 표시: 링크된 딜 인테이크가 있을 때만 렌더링한다.
+          히스토리 검토는 아무것도 만들어내지 않는다(없는 사실을 표시하지 않는다). */}
+      {opp.intake && (
+        <p
+          className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2"
+          data-testid="deal-intake-origin"
+        >
+          {t("intakeOrigin.caption", {
+            source: INTAKE_SOURCE_KEY[opp.intake.source] ? t(INTAKE_SOURCE_KEY[opp.intake.source]) : opp.intake.source,
+            requester: opp.intake.requested_by || "—",
+            date: opp.intake.created_at.slice(0, 10),
+            by: opp.intake.created_by,
+          })}
         </p>
       )}
       <KnownTargetGuide opportunityId={id} />

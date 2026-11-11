@@ -1,8 +1,12 @@
-// 관리자 — 사용자별 API 토큰 관리 (발급/목록/폐기).
-// db/lib/api-tokens.ts 엔진 재사용: 평문은 발급 시 1회만 반환되고 해시만 저장된다
-// (FR-SEC-09). 스코프는 read/write (middleware에서 강제). admin 전용.
+// 관리자 — 사용자별 API 토큰 관리 (목록/폐기). 발급은 금지된다.
+// E2 (design 2026-11-11-owner-decisions-intake-batch §4.2 / DEC-20261111-03
+// ruling 2): admins keep visibility (list) and the kill switch (revoke) but
+// LOSE minting — the former on-behalf POST minted tokens for any user with
+// RAW body.scopes and no scope validation, and the whole handler is removed
+// with that hole (no separate scope validation needed). db/lib/api-tokens.ts
+// validation is untouched, so existing tokens stay valid until expiry.
 import { getDb } from "../../../../../../../../db/client.ts";
-import { issueApiToken, listApiTokens, revokeApiToken } from "../../../../../../../../db/lib/api-tokens.ts";
+import { listApiTokens, revokeApiToken } from "../../../../../../../../db/lib/api-tokens.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireAdmin as authRequireAdmin } from "../../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
@@ -25,32 +29,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
   const { userId } = await params;
   const db = getDb();
   if (!assertUserExists(db, decodeURIComponent(userId))) return notFound();
-  return ok(listApiTokens(db, decodeURIComponent(userId)), 200, { count: listApiTokens(db, decodeURIComponent(userId)).length });
+  return ok(listApiTokens(db, decodeURIComponent(userId)), 200, {
+    count: listApiTokens(db, decodeURIComponent(userId)).length,
+  });
 }
 
+// Token issuance on behalf of users is forbidden at the only seam that had it
+// (design §4.2 item 2): one audited refusal, audited BEFORE the 403 so even a
+// response-reading client cannot race the evidence away. The audit target is
+// the requested user id (the refusal reason is the action name itself).
 export async function POST(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const guard = requireAdmin(request);
   if (!guard.ok) return guard.response;
   const { userId } = await params;
   const targetUser = decodeURIComponent(userId);
-  const body = (await request.json().catch(() => null)) as { label?: string; scopes?: string[] } | null;
-  if (!body?.label?.trim()) return badRequest("invalid_request", "label is required.");
   const db = getDb();
-  if (!assertUserExists(db, targetUser)) return notFound();
-  try {
-    const issued = issueApiToken(db, {
-      userId: targetUser,
-      label: body.label.trim(),
-      scopes: body.scopes && body.scopes.length > 0 ? body.scopes : ["read"],
-      now: new Date().toISOString(),
-    });
-    appendAudit(db, { actor: guard.ctx.userId, action: "api_token_admin_issue", target: issued.id, now: new Date().toISOString() });
-    // 평문은 이 응답 1회만 반환된다 (저장 규칙: SHA-256 해시만 보관).
-    return ok({ token: issued.token, id: issued.id, label: body.label.trim(), user_id: targetUser }, 201,
-      { note: "Store this token now — it is never shown again." });
-  } catch (err) {
-    return badRequest("token_issue_failed", err instanceof Error ? err.message : "Token issue failed.");
-  }
+  const now = new Date().toISOString();
+  appendAudit(db, { actor: guard.ctx.userId, action: "api_token_admin_issue_denied", target: targetUser, now });
+  return forbidden("role_forbidden", "Administrators cannot issue API tokens on behalf of users.");
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ userId: string }> }) {

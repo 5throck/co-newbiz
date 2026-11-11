@@ -61,6 +61,7 @@ let viewerCookie: string;
 let adminCookie: string;
 let capCookie: string; // analyst, cap scenario
 let rateCookie: string; // analyst, rate-limit scenario
+let patobCookie: string; // analyst, admin-on-behalf route scenarios (own cap headroom)
 let bearerToken: string;
 
 beforeAll(async () => {
@@ -70,6 +71,7 @@ beforeAll(async () => {
     ["patadmin", "admin", "pw-patadm-12345", "adminCookie"],
     ["patcap", "analyst", "pw-patcap-12345", "capCookie"],
     ["patrate", "analyst", "pw-patrate-1234", "rateCookie"],
+    ["patob", "analyst", "pw-patob-12345", "patobCookie"],
   ];
   for (const [userId, role, password] of seed) {
     await createUser(db, { userId, role, password, createdBy: "test", now: NOW });
@@ -81,6 +83,7 @@ beforeAll(async () => {
   adminCookie = await loginCookie("patadmin", "pw-patadm-12345");
   capCookie = await loginCookie("patcap", "pw-patcap-12345");
   rateCookie = await loginCookie("patrate", "pw-patrate-1234");
+  patobCookie = await loginCookie("patob", "pw-patob-12345");
 });
 
 afterAll(async () => {
@@ -119,7 +122,10 @@ describe("session-only issuance and revocation", () => {
     const listed = await req("/api/tokens", { headers: { authorization: `Bearer ${bearerToken}` } });
     expect(listed.status).toBe(200); // GET stays available to any authenticated caller
     const tokenId = ((await listed.json()).data as { id: string }[])[0].id;
-    const res = await req(`/api/tokens/${tokenId}`, { method: "DELETE", headers: { authorization: `Bearer ${bearerToken}` } });
+    const res = await req(`/api/tokens/${tokenId}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${bearerToken}` },
+    });
     expect(res.status).toBe(403);
     expect((await res.json()).error.code).toBe("session_required");
   });
@@ -137,7 +143,9 @@ describe("expiry", () => {
   test("default expiry is 30 days", async () => {
     const res = await issueViaRoute(patCookie, { label: "default-ttl" });
     expect(res.status).toBe(201);
-    const row = db.query("SELECT expires_at FROM api_token WHERE label = 'default-ttl'").get() as { expires_at: string };
+    const row = db.query("SELECT expires_at FROM api_token WHERE label = 'default-ttl'").get() as {
+      expires_at: string;
+    };
     const days = (Date.parse(row.expires_at) - Date.now()) / 86400000;
     expect(days).toBeGreaterThan(29.9);
     expect(days).toBeLessThanOrEqual(30);
@@ -167,43 +175,128 @@ describe("expiry", () => {
     insertLegacyToken("pat", legacy);
     const first = tokens.validateApiToken(db, legacy);
     expect(first).not.toBeNull();
-    const row1 = db.query("SELECT expires_at FROM api_token WHERE token_hash = ?").get(sha256(legacy)) as { expires_at: string | null };
+    const row1 = db.query("SELECT expires_at FROM api_token WHERE token_hash = ?").get(sha256(legacy)) as {
+      expires_at: string | null;
+    };
     expect(row1.expires_at).not.toBeNull();
     const days = (Date.parse(row1.expires_at as string) - Date.now()) / 86400000;
     expect(days).toBeGreaterThan(29.9);
     expect(days).toBeLessThanOrEqual(30);
     // Written once: a second validation does not extend it.
     tokens.validateApiToken(db, legacy);
-    const row2 = db.query("SELECT expires_at FROM api_token WHERE token_hash = ?").get(sha256(legacy)) as { expires_at: string | null };
+    const row2 = db.query("SELECT expires_at FROM api_token WHERE token_hash = ?").get(sha256(legacy)) as {
+      expires_at: string | null;
+    };
     expect(row2.expires_at).toBe(row1.expires_at);
   });
 });
 
 describe("role re-check at validation", () => {
   test("a write token held by a viewer validates read-only", async () => {
-    const res = await tokens.issueApiToken(db, { userId: "patv", label: "demoted", scopes: ["read", "write"], now: NOW });
+    const res = await tokens.issueApiToken(db, {
+      userId: "patv",
+      label: "demoted",
+      scopes: ["read", "write"],
+      now: NOW,
+    });
     const valid = tokens.validateApiToken(db, res.token);
     expect(valid).not.toBeNull();
     expect(valid?.scopes).toEqual(["read"]);
   });
 
   test("an analyst write token keeps write", async () => {
-    const res = await tokens.issueApiToken(db, { userId: "pat", label: "analyst-write", scopes: ["read", "write"], now: NOW });
+    const res = await tokens.issueApiToken(db, {
+      userId: "pat",
+      label: "analyst-write",
+      scopes: ["read", "write"],
+      now: NOW,
+    });
     const valid = tokens.validateApiToken(db, res.token);
     expect(valid?.scopes).toEqual(["read", "write"]);
   });
 
-  test("viewer cannot request write at issue; admin cannot either (audited)", async () => {
+  test("viewer cannot request write at issue; admin cannot issue at all (audited)", async () => {
     const v = await issueViaRoute(viewerCookie, { label: "v", scopes: ["read", "write"] });
     expect(v.status).toBe(403);
     expect((await v.json()).error.code).toBe("role_required");
     const a = await issueViaRoute(adminCookie, { label: "a", scopes: ["read", "write"] });
     expect(a.status).toBe(403);
     expect((await a.json()).error.code).toBe("role_forbidden");
+    // E2 (design 2026-11-11-owner-decisions-intake-batch §4.2): the refusal is
+    // scope-INDEPENDENT — a read-scoped admin self-issue is refused too.
+    const aRead = await issueViaRoute(adminCookie, { label: "a-read", scopes: ["read"] });
+    expect(aRead.status).toBe(403);
+    expect((await aRead.json()).error.code).toBe("role_forbidden");
+    // Read-scoped viewer self-issue stays allowed — the ruling names admins only.
+    const vRead = await issueViaRoute(viewerCookie, { label: "v-read", scopes: ["read"] });
+    expect(vRead.status).toBe(201);
     const denied = db
-      .query("SELECT target FROM audit_log WHERE action = 'api_token_issue_denied' AND actor_user_id IN ('patv','patadmin')")
+      .query(
+        "SELECT target FROM audit_log WHERE action = 'api_token_issue_denied' AND actor_user_id IN ('patv','patadmin')",
+      )
       .all() as { target: string }[];
-    expect(denied.map((d) => d.target).sort()).toEqual(["role:admin", "role:viewer"]);
+    expect(denied.map((d) => d.target).sort()).toEqual(["role:admin", "role:admin", "role:viewer"]);
+  });
+});
+
+describe("admin-on-behalf token route (E2: issuance removed, list + revoke stay)", () => {
+  // First-ever coverage of /api/admin/users/[userId]/tokens — the route's
+  // former POST minted tokens for ANY user from RAW body.scopes with no
+  // scope validation; the handler is removed with that hole (design §4.2).
+  test("POST issuance on behalf of a user is forbidden and audited", async () => {
+    const res = await req("/api/admin/users/pat/tokens", {
+      method: "POST",
+      headers: { cookie: adminCookie },
+      body: JSON.stringify({ label: "minted", scopes: ["read", "write"] }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe("role_forbidden");
+    const denied = db
+      .query(
+        "SELECT target FROM audit_log WHERE action = 'api_token_admin_issue_denied' AND actor_user_id = 'patadmin'",
+      )
+      .all() as { target: string }[];
+    expect(denied.map((d) => d.target)).toEqual(["pat"]);
+    // No token was minted despite the raw write scope in the body.
+    const minted = db.query("SELECT id FROM api_token WHERE label = 'minted'").get();
+    expect(minted).toBeNull();
+    // A non-admin session never reaches the handler either (requireAdmin gate).
+    const nonAdmin = await req("/api/admin/users/pat/tokens", {
+      method: "POST",
+      headers: { cookie: patCookie },
+      body: JSON.stringify({ label: "x", scopes: ["read"] }),
+    });
+    expect(nonAdmin.status).toBe(403);
+  });
+
+  test("GET list on behalf of a user still succeeds for an admin", async () => {
+    // Seed one real token for patob via the (still-open) analyst self-service seam.
+    const mint = await issueViaRoute(patobCookie, { label: "for-admin-list", scopes: ["read"] });
+    expect(mint.status).toBe(201);
+    const res = await req("/api/admin/users/patob/tokens", { headers: { cookie: adminCookie } });
+    expect(res.status).toBe(200);
+    const rows = (await res.json()).data as { id: string; label: string }[];
+    expect(rows.some((r) => r.label === "for-admin-list")).toBe(true);
+    // Unknown user → 404, unchanged.
+    const missing = await req("/api/admin/users/nobody/tokens", { headers: { cookie: adminCookie } });
+    expect(missing.status).toBe(404);
+  });
+
+  test("DELETE revoke on behalf of a user still succeeds for an admin", async () => {
+    const mint = await issueViaRoute(patobCookie, { label: "for-admin-revoke", scopes: ["read"] });
+    expect(mint.status).toBe(201);
+    const listed = await req("/api/tokens", { headers: { cookie: patobCookie } });
+    const rows = (await listed.json()).data as { id: string; label: string }[];
+    const victim = rows.find((r) => r.label === "for-admin-revoke")?.id ?? "";
+    expect(victim).not.toBe(""); // the seeded token must be on patob's list
+    const res = await req(`/api/admin/users/patob/tokens?tokenId=${encodeURIComponent(victim)}`, {
+      method: "DELETE",
+      headers: { cookie: adminCookie },
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.revoked).toBe(true);
+    const row = db.query("SELECT revoked_at FROM api_token WHERE id = ?").get(victim) as { revoked_at: string | null };
+    expect(row.revoked_at).not.toBeNull();
   });
 });
 
@@ -219,7 +312,10 @@ describe("caps", () => {
   });
 
   test("revoking frees cap headroom", async () => {
-    const listed = (await (await req("/api/tokens", { headers: { cookie: capCookie } })).json()).data as { id: string; revoked_at: string | null }[];
+    const listed = (await (await req("/api/tokens", { headers: { cookie: capCookie } })).json()).data as {
+      id: string;
+      revoked_at: string | null;
+    }[];
     const victim = listed[0].id;
     await req(`/api/tokens/${victim}`, { method: "DELETE", headers: { cookie: capCookie } });
     const res = await issueViaRoute(capCookie, { label: "cap-after-revoke", scopes: ["read"] });
@@ -236,7 +332,9 @@ describe("caps", () => {
     expect(res.status).toBe(429);
     expect((await res.json()).error.code).toBe("rate_limited");
     const denied = db
-      .query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'api_token_issue_denied' AND actor_user_id = 'patrate' AND target = 'rate_limited'")
+      .query(
+        "SELECT COUNT(*) AS n FROM audit_log WHERE action = 'api_token_issue_denied' AND actor_user_id = 'patrate' AND target = 'rate_limited'",
+      )
       .get() as { n: number };
     expect(denied.n).toBe(1);
   });
@@ -255,14 +353,22 @@ describe("prefix and legacy compatibility", () => {
 
 describe("audit and hygiene", () => {
   test("issue, revoke, denied and throttled use are audited; no token or hash in the log", async () => {
-    const actions = db
-      .query("SELECT DISTINCT action FROM audit_log WHERE action LIKE 'api_token%'")
-      .all()
-      .map((r: any) => r.action)
+    const actions = (
+      db.query("SELECT DISTINCT action FROM audit_log WHERE action LIKE 'api_token%'").all() as { action: string }[]
+    )
+      .map((r) => r.action)
       .sort();
-    expect(actions).toEqual(["api_token_issue", "api_token_issue_denied", "api_token_revoke", "api_token_use"]);
+    expect(actions).toEqual([
+      "api_token_admin_issue_denied", // E2: the on-behalf POST's audited refusal
+      "api_token_issue",
+      "api_token_issue_denied",
+      "api_token_revoke",
+      "api_token_use",
+    ]);
 
-    const rows = db.query("SELECT actor_user_id, action, target FROM audit_log WHERE action LIKE 'api_token%'").all() as {
+    const rows = db
+      .query("SELECT actor_user_id, action, target FROM audit_log WHERE action LIKE 'api_token%'")
+      .all() as {
       actor_user_id: string;
       action: string;
       target: string;
@@ -277,7 +383,12 @@ describe("audit and hygiene", () => {
 
   test("list returns display_id and status, never the hash", async () => {
     const res = await req("/api/tokens", { headers: { cookie: patCookie } });
-    const data = (await res.json()).data as { id: string; display_id: string; status: string; expires_at: string | null }[];
+    const data = (await res.json()).data as {
+      id: string;
+      display_id: string;
+      status: string;
+      expires_at: string | null;
+    }[];
     expect(data.length).toBeGreaterThan(0);
     for (const t of data) {
       expect(t.display_id).toBe(t.id.slice(-6));

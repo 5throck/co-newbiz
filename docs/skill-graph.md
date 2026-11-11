@@ -355,6 +355,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0194` | adr | — | — | — |
 | `adr:0195` | adr | — | — | — |
 | `adr:0196` | adr | — | — | — |
+| `adr:0197` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -420,6 +421,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261110-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261111-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261111-02` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261111-03` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
@@ -593,7 +595,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 184 | (expected until docs `references` edges are mined) |
+| adr | 185 | (expected until docs `references` edges are mined) |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 8 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/gateguard, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer |
 

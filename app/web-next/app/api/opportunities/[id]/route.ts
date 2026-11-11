@@ -26,8 +26,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
   const { id } = await params;
   const db = getDb();
-  const row = db.query("SELECT * FROM opportunity WHERE id = ?").get(id) as Record<string, unknown> | undefined;
-  if (!row) return notFound();
+  // ADR-0197 — the client-request intake rides the same round-trip via one
+  // LEFT JOIN on deal_intake.opportunity_id (no new route, no extra fetch from
+  // the detail page). At most one intake can link per creation seam, so the
+  // join yields one row; the aliased intake_* columns fold into a nullable
+  // `intake` object for the origin line.
+  const joined = db
+    .query(
+      `SELECT o.*,
+              i.id AS intake_id, i.source AS intake_source, i.requested_by AS intake_requested_by,
+              i.note AS intake_note, i.created_by AS intake_created_by, i.created_at AS intake_created_at
+       FROM opportunity o LEFT JOIN deal_intake i ON i.opportunity_id = o.id
+       WHERE o.id = ?`,
+    )
+    .get(id) as Record<string, unknown> | undefined;
+  if (!joined) return notFound();
+  const { intake_id, intake_source, intake_requested_by, intake_note, intake_created_by, intake_created_at, ...row } =
+    joined;
+  const intake = intake_id
+    ? {
+        id: intake_id as string,
+        source: intake_source as string,
+        requested_by: (intake_requested_by as string | null) ?? null,
+        note: (intake_note as string | null) ?? null,
+        created_by: intake_created_by as string,
+        created_at: intake_created_at as string,
+      }
+    : null;
   // ADR-0181 slice 1 — additive normalized entry-market fields. The frozen
   // JSON storage columns still ride the row for legacy rows, but the
   // normalized source of truth is the 0151 tables via the repository.
@@ -42,6 +67,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       ).c,
       target_scope: readTargetScope(db, id),
       entry_market_meta: readEntryMarketRecord(db, id),
+      intake,
     },
     200,
   );

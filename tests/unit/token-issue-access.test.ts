@@ -1,20 +1,43 @@
 import { test, expect } from "bun:test";
 import {
-  canIssueToken, canIssueWriteToken, writeScopeNoteKey, remainingTokenSlots,
-  TOKEN_EXPIRY_DAYS, TOKEN_DEFAULT_EXPIRY_DAYS, TOKEN_ACTIVE_CAP,
-  daysRemaining, expiryLabel, isExpiringSoon, relativeParts, filterTokensByStatus, countByStatus, EXPIRING_SOON_DAYS,
+  canIssueToken,
+  canIssueWriteToken,
+  writeScopeNoteKey,
+  remainingTokenSlots,
+  TOKEN_EXPIRY_DAYS,
+  TOKEN_DEFAULT_EXPIRY_DAYS,
+  TOKEN_ACTIVE_CAP,
+  daysRemaining,
+  expiryLabel,
+  isExpiringSoon,
+  relativeParts,
+  filterTokensByStatus,
+  countByStatus,
+  EXPIRING_SOON_DAYS,
 } from "../../app/web-next/lib/token-issue-access.ts";
-import { TOKEN_TTL_DAYS, DEFAULT_TTL_DAYS, MAX_TTL_DAYS, MAX_ACTIVE_TOKENS, isAllowedTtl } from "../../db/lib/api-tokens.ts";
+import {
+  TOKEN_TTL_DAYS,
+  DEFAULT_TTL_DAYS,
+  MAX_TTL_DAYS,
+  MAX_ACTIVE_TOKENS,
+  isAllowedTtl,
+} from "../../db/lib/api-tokens.ts";
 
-test("every human-session role may issue; only analyst may write scope", () => {
-  for (const r of ["analyst", "viewer", "admin"]) expect(canIssueToken(r)).toBe(true);
-  for (const r of [null, undefined, "x"]) expect(canIssueToken(r)).toBe(false);
+test("analyst and viewer may issue; admin cannot issue at all (E2); only analyst may write scope", () => {
+  // E2 (design 2026-11-11-owner-decisions-intake-batch §4.2): admins can no
+  // longer issue NEW tokens — read scope included. The server stays
+  // authoritative (POST /api/tokens refuses with role_forbidden); this mirror
+  // pins the UI gate parity only.
+  for (const r of ["analyst", "viewer"]) expect(canIssueToken(r)).toBe(true);
+  for (const r of ["admin", null, undefined, "x"]) expect(canIssueToken(r)).toBe(false);
   expect(canIssueWriteToken("analyst")).toBe(true);
   for (const r of ["viewer", "admin", null]) expect(canIssueWriteToken(r)).toBe(false);
 });
 test("write notes are role-specific", () => {
   expect(writeScopeNoteKey("viewer")).toBe("writeNoteViewer");
-  expect(writeScopeNoteKey("admin")).toBe("writeNoteAdmin");
+  // The admin branch is dead copy after the E2 form gate — the mirror returns
+  // null and the connected-apps page shows the noIssueAdmin note instead.
+  expect(writeScopeNoteKey("admin")).toBeNull();
   expect(writeScopeNoteKey("analyst")).toBeNull();
 });
 test("client constants mirror the server", () => {
@@ -72,7 +95,12 @@ test("relativeParts picks minute/hour/day and null under a minute", () => {
 });
 
 test("status filter and counts", () => {
-  const rows = [{ status: "active" as const }, { status: "expired" as const }, { status: "revoked" as const }, { status: "active" as const }];
+  const rows = [
+    { status: "active" as const },
+    { status: "expired" as const },
+    { status: "revoked" as const },
+    { status: "active" as const },
+  ];
   expect(filterTokensByStatus(rows, "all")).toHaveLength(4);
   const dated = [
     { status: "active" as const, expires_at: inDays(3) },

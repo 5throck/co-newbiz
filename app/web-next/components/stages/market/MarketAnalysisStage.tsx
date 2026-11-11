@@ -36,22 +36,55 @@ import { useTranslations } from "next-intl";
  * breadcrumb and the "next: S2" link). `startNew` — land with the new-industry
  * form open and focused (board "새 검토 시작", /market?new=1).
  */
-export function MarketAnalysisStage(props0: { industryId?: string; embedded?: boolean; dealId?: string; startNew?: boolean }) {const t = useTranslations("stages.s1.marketAnalysisStage"); const tc = useTranslations("common");
+export function MarketAnalysisStage(props0: {
+  industryId?: string;
+  embedded?: boolean;
+  dealId?: string;
+  startNew?: boolean;
+}) {
+  const t = useTranslations("stages.s1.marketAnalysisStage");
+  const tc = useTranslations("common");
   const { dealId, startNew } = props0;
   const h0 = useMarketData(props0);
   const h1 = useMarketLinking({ ...h0 });
   const h3 = useDealIndustryLink(dealId);
   const h2 = useMarketList({ ...h0, ...h1, ...h3 });
   const ctx = { ...h0, ...h1, ...h3, ...h2 };
-  const { confirmDialog, linkNotice, chainGraph, setChainGraphOpen, error, chainGraphOpen, detail, selectedIndustry, overview, openLinkModal, canCurate, showNewForm, backToList } = ctx;
+  const {
+    confirmDialog,
+    linkNotice,
+    chainGraph,
+    setChainGraphOpen,
+    error,
+    chainGraphOpen,
+    detail,
+    selectedIndustry,
+    overview,
+    openLinkModal,
+    canCurate,
+    showNewForm,
+    backToList,
+  } = ctx;
   const { linkedIds, projectId: linkProjectId, loading: linkLoading, reload: reloadLink } = ctx;
   // "이 안건에 연결" CTA modal state (detail view, unlinked industries only).
   const [linkToDeal, setLinkToDeal] = useState<LinkToDealModalState>({ open: false, industry: null });
   const openLinkToDeal = (s: LinkToDealModalState) => setLinkToDeal(s);
 
+  // ADR-0197 — the board intake modal lands here with &intake=<id> on the
+  // market exemption path; the carrier must survive the S1→S2 hop, so the
+  // non-deal "다음: S2" hand-off appends it for the S2 funnel to attach to
+  // its register POST. Parsed once on mount (client-only, same pattern as
+  // OpportunityFunnelStage's deep-link parse).
+  const [intakeId, setIntakeId] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("intake");
+    if (id) setIntakeId(id);
+  }, []);
+
   // Known entry (R2-A item 7): scroll the open new-analysis form into view and
   // focus its first field, once, as soon as it is rendered.
   const focusedRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one-shot focus pass — extra overview-identity re-runs are harmless (focusedRef + early returns guard them); dropping the dep changes when the scroll/focus pass may fire.
   useEffect(() => {
     if (!startNew || focusedRef.current || !canCurate || !showNewForm || detail) return;
     const el = document.getElementById("market-new-name");
@@ -60,7 +93,6 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
     el.scrollIntoView({ block: "center" });
     el.focus();
   }, [startNew, canCurate, showNewForm, detail, overview]);
-
 
   // ── Detail view ──
   // Deal-context breadcrumb decision (2026-10-16 결정자 승인): an industry
@@ -75,27 +107,45 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
     const analysisDate = row?.analysis ? (row.analysis.completed_at ?? row.analysis.created_at).slice(0, 10) : null;
     const isLinkedInDeal = dealId ? (linkLoading ? true : (linkedIds?.has(detail.industry.id) ?? true)) : true;
     const inDealContext = !!dealId && isLinkedInDeal;
-    const nextHref = inDealContext ? `/deals/${encodeURIComponent(dealId!)}/s2` : "/opportunities";
+    // biome-ignore lint/style/noNonNullAssertion: inDealContext guards this branch — dealId is a string here
+    const dealPath = `/deals/${encodeURIComponent(dealId!)}/s2`;
+    const nextHref = inDealContext
+      ? dealPath
+      : intakeId
+        ? `/opportunities?intake=${encodeURIComponent(intakeId)}`
+        : "/opportunities";
     return (
       <>
         {inDealContext ? (
+          // biome-ignore lint/style/noNonNullAssertion: same inDealContext guard
           <DealBreadcrumb dealId={dealId!} stageId="S1" tail={[{ label: detail.industry.name_ko }]} />
         ) : (
-          <Breadcrumb items={dealId
-            ? [{ label: t("marketAnalysis"), href: "/market" }, { label: detail.industry.name_ko }]
-            : [{ label: t("reviewDealBoard"), href: "/deals" }, { label: t("s1MarketAnalysis"), href: "/market" }, { label: detail.industry.name_ko }]}
+          <Breadcrumb
+            items={
+              dealId
+                ? [{ label: t("marketAnalysis"), href: "/market" }, { label: detail.industry.name_ko }]
+                : [
+                    { label: t("reviewDealBoard"), href: "/deals" },
+                    { label: t("s1MarketAnalysis"), href: "/market" },
+                    { label: detail.industry.name_ko },
+                  ]
+            }
           />
         )}
         <StageRail current={["S1"]} />
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <ListBackButton onClick={backToList} label={t("toTheIndustryList")} />
           <div className="flex flex-wrap items-center gap-2">
-            {inDealContext && <PrimaryAction readOnly inline href={nextHref} label={t("nextS2OpportunityDiscovery")} />}
+            {(inDealContext || (!dealId && intakeId)) && (
+              <PrimaryAction readOnly inline href={nextHref} label={t("nextS2OpportunityDiscovery")} />
+            )}
             {!inDealContext && dealId && canCurate && (
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => openLinkToDeal({ open: true, industry: { id: detail.industry.id, name_ko: detail.industry.name_ko } })}
+                onClick={() =>
+                  openLinkToDeal({ open: true, industry: { id: detail.industry.id, name_ko: detail.industry.name_ko } })
+                }
                 title={t("linksThisIndustryAnalysisAs")}
               >
                 {tc("linkToThisDeal")}
@@ -113,7 +163,9 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
           state={linkToDeal}
           projectId={linkProjectId}
           onClose={() => setLinkToDeal({ open: false, industry: null })}
-          onLinked={() => { reloadLink(); }}
+          onLinked={() => {
+            reloadLink();
+          }}
         />
       </>
     );
@@ -121,7 +173,11 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
   return (
     <>
       {confirmDialog}
-      {linkNotice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">{linkNotice}</p>}
+      {linkNotice && (
+        <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-body)] mb-2">
+          {linkNotice}
+        </p>
+      )}
       {dealId && <DealBreadcrumb dealId={dealId} stageId="S1" />}
       <StageFrame stageId="S1">
         <span className="flex flex-wrap items-center justify-between gap-2">
@@ -130,14 +186,24 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
               차지해 버튼 + 모달로 뺐다. 큐레이션된 수요 산업 연계가 하나도
               없으면(신규 워크스페이스) 버튼 자체를 숨긴다. */}
           {chainGraph && chainGraph.nodes.length > 0 && (
-            <button type="button" className="btn-ghost btn-sm whitespace-nowrap" onClick={() => setChainGraphOpen(true)}>
-              <span aria-hidden="true">🔗</span> {t("viewTheValueChainMap")}{chainGraph.nodes.length}{t("industries")}
+            <button
+              type="button"
+              className="btn-ghost btn-sm whitespace-nowrap"
+              onClick={() => setChainGraphOpen(true)}
+            >
+              <span aria-hidden="true">🔗</span> {t("viewTheValueChainMap")}
+              {chainGraph.nodes.length}
+              {t("industries")}
             </button>
           )}
         </span>
       </StageFrame>
 
-      {error && <p role="alert" className="text-[color:var(--red-fg)]">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)]">
+          {error}
+        </p>
+      )}
 
       {/* ── 분석 대상 산업 (테이블) ── */}
       <IndustryListSection ctx={ctx} />
@@ -147,7 +213,10 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
 
       {/* ── 산업 간 가치사슬 관계도 모달 ── */}
       {chainGraphOpen && chainGraph && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: modal-backdrop pattern shared with crud.tsx
+        // biome-ignore lint/a11y/useKeyWithClickEvents: click only closes; the panel is informational
         <div className="modal-backdrop" onClick={() => setChainGraphOpen(false)}>
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: click only stops propagation to the backdrop */}
           <div
             className="modal-panel"
             role="dialog"
@@ -162,7 +231,9 @@ export function MarketAnalysisStage(props0: { industryId?: string; embedded?: bo
             </p>
             <IndustryChainGraph nodes={chainGraph.nodes} edges={chainGraph.edges} />
             <div className="flex justify-end mt-3">
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setChainGraphOpen(false)}>{tc("close")}</button>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => setChainGraphOpen(false)}>
+                {tc("close")}
+              </button>
             </div>
           </div>
         </div>

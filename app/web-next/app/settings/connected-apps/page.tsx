@@ -1,3 +1,4 @@
+// biome-ignore-all format: static-source pins (connected-apps-page.test.ts) read exact source shapes — biome's layout would reflow them; hand-placed suppressions above each diagnostic keep the file reviewable.
 "use client";
 
 // 연결된 앱 — ADR-0154 §2 (Revocation UI) + 개인 API 토큰 자가발급
@@ -156,6 +157,7 @@ function TokenRevealModal({
           : t("revealSnippetCopyFail");
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: modal-backdrop pattern shared with crud.tsx (mousedown outside the panel closes; the panel is the interactive surface)
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={panelRef}
@@ -266,6 +268,7 @@ function PersonalTokensSection() {
     return e instanceof ApiError ? t("errListWithCode", { p1: e.code }) : t("errList");
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: t is only read in the error fallback (listErrorText) — adding it would refetch on translator identity churn (house pattern, deals board load)
   const load = useCallback(() => {
     setListError(null);
     api
@@ -444,6 +447,11 @@ function PersonalTokensSection() {
                 </div>
               </div>
             </form>
+          ) : me?.role === "admin" ? (
+            // E2 (design 2026-11-11-owner-decisions-intake-batch §4.2): the issue
+            // form hides for admins behind a muted catalog note — existing tokens
+            // stay valid until expiry.
+            <p className="pat-help">{t("noIssueAdmin")}</p>
           ) : (
             <p className="objective">{t("noSessionRoleNote")}</p>
           )}
@@ -462,6 +470,7 @@ function PersonalTokensSection() {
           ) : (
             <>
               <div className="pat-filter-row">
+                {/* biome-ignore lint/a11y/useSemanticElements: a fieldset would drag in UA form styling that alters the filter-chip visual contract; the group role + aria-label is the deliberate a11y shape */}
                 <div role="group" aria-label={t("filterAria")} className="pat-filter-chips">
                   {(
                     [
@@ -530,12 +539,14 @@ function PersonalTokensSection() {
                               <span className="pat-expiry">
                                 <span>{fmtShort(tok.expires_at, locale)}</span>
                                 {exp.kind === "days" && (
+                                  // biome-ignore lint/a11y/useAriaPropsSupportedByRole: the aria-label enriches the badge's announcement where a role supports it; giving the bare span a live/interactive role would change what AT announces (behavior change, not this batch)
                                   <span className="pat-dn" aria-label={t("expiryDaysLeftAria", { p1: exp.days })}>
                                     {t("expiryDaysLeft", { p1: exp.days })}
                                   </span>
                                 )}
                                 {exp.kind === "expired" && <span className="pat-dn">{t("expiryExpiredBadge")}</span>}
                                 {soon && (
+                                  // biome-ignore lint/a11y/useAriaPropsSupportedByRole: same as the D-n badge above — the label duplicates visible text; adding a role would change the announced output
                                   <span className="status-chip status-amber" aria-label={t("expiringSoonAria")}>
                                     <span aria-hidden="true">⚠</span> {t("expiringSoon")}
                                   </span>
@@ -583,6 +594,7 @@ export default function ConnectedAppsPage() {
   const { toast } = useToast();
   const { confirm, confirmDialog } = useConfirm();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: t is only read in the error fallback — adding it would refetch on translator identity churn (house pattern, deals board load)
   const load = useCallback(() => {
     setError(null);
     api
