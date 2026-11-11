@@ -71,13 +71,13 @@ beforeAll(async () => {
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [ulid(), opportunityId, "직접 진출", "M&A 대안", "test", ANALYST, NOW, NOW],
+    [ulid(), opportunityId, "직접 진출", "M&A 대안", "test", ANALYST, NOW, NOW],
   );
   // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), opportunityId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }),
+    opportunityId,
+  ]);
   for (const gate of ["screening", "pre_fs"]) {
     db.run(
       "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -93,7 +93,20 @@ beforeAll(async () => {
     `INSERT INTO opportunity (id, name, market_scope, value_chain_node, market_size_krw_m, growth_rate,
        attractiveness_score, synergy_score, rationale, status, created_by, created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [brownfieldOppId, "Wave0 브라운필드 기회", "로봇 산업", "시스템 통합", 5000, 8.0, 80, 70, "근거", "selected", ANALYST, NOW],
+    [
+      brownfieldOppId,
+      "Wave0 브라운필드 기회",
+      "로봇 산업",
+      "시스템 통합",
+      5000,
+      8.0,
+      80,
+      70,
+      "근거",
+      "selected",
+      ANALYST,
+      NOW,
+    ],
   );
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
@@ -115,26 +128,35 @@ function req(path: string, init?: RequestInit) {
 describe("Wave 0 — antitrust / incentives / sites / permits / debt", () => {
   test("antitrust: POST creates (analyst), viewer 403, GET lists", async () => {
     const res = await req(`/api/projects/${projectId}/antitrust`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ market_definition: "로봇용 정밀 감속기", hhi_before: 1420, hhi_after: 1610 }),
     });
     expect(res.status).toBe(201);
     const viewer = await req(`/api/projects/${projectId}/antitrust`, {
-      method: "POST", headers: { cookie: viewerCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: viewerCookie, "content-type": "application/json" },
       body: JSON.stringify({ market_definition: "x" }),
     });
     expect(viewer.status).toBe(403);
     const list = await req(`/api/projects/${projectId}/antitrust`, { headers: { cookie: analystCookie } });
     expect(list.status).toBe(200);
     expect(((await list.json()).data.screenings as unknown[]).length).toBe(1);
-    expect((await req(`/api/projects/${projectId}/antitrust`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" }, body: "{}",
-    })).status).toBe(400);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/antitrust`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: "{}",
+        })
+      ).status,
+    ).toBe(400);
   });
 
   test("incentives: POST matches legacy NOT NULL columns; GET lists", async () => {
     const res = await req(`/api/projects/${projectId}/incentives`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ program_name: "지방 이전 지원금", npv_value: 38, direction: "prospective" }),
     });
     expect(res.status).toBe(201);
@@ -144,7 +166,8 @@ describe("Wave 0 — antitrust / incentives / sites / permits / debt", () => {
 
   test("sites: POST + ranked GET", async () => {
     const res = await req(`/api/projects/${projectId}/sites`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ name: "A지구 산업단지", infra_score: 88, rank: 1 }),
     });
     expect(res.status).toBe(201);
@@ -153,18 +176,33 @@ describe("Wave 0 — antitrust / incentives / sites / permits / debt", () => {
   });
 
   test("permits: kind required; permit and certification land in separate lists", async () => {
-    expect((await req(`/api/projects/${projectId}/permits`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ name: "x" }),
-    })).status).toBe(400);
-    expect((await req(`/api/projects/${projectId}/permits`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ kind: "permit", name: "산업단지 입주 승인", statutory_days: 30 }),
-    })).status).toBe(201);
-    expect((await req(`/api/projects/${projectId}/permits`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ kind: "certification", name: "ISO 9001" }),
-    })).status).toBe(201);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/permits`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: JSON.stringify({ name: "x" }),
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/permits`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: JSON.stringify({ kind: "permit", name: "산업단지 입주 승인", statutory_days: 30 }),
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/permits`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: JSON.stringify({ kind: "certification", name: "ISO 9001" }),
+        })
+      ).status,
+    ).toBe(201);
     const list = await req(`/api/projects/${projectId}/permits`, { headers: { cookie: analystCookie } });
     const data = (await list.json()).data as { permits: unknown[]; certifications: unknown[] };
     expect(data.permits.length).toBe(1);
@@ -173,7 +211,8 @@ describe("Wave 0 — antitrust / incentives / sites / permits / debt", () => {
 
   test("debt: POST matches legacy schema (no audit-timestamp columns); GET lists instruments", async () => {
     const res = await req(`/api/projects/${projectId}/debt`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ principal: 450, rate: 5.1, rate_type: "floating" }),
     });
     expect(res.status).toBe(201);
@@ -184,13 +223,24 @@ describe("Wave 0 — antitrust / incentives / sites / permits / debt", () => {
 
 describe("Wave 0 — interviews / customer-coc / comp-parity", () => {
   test("interviews: evidence_ref mandatory; roundtrip", async () => {
-    expect((await req(`/api/projects/${projectId}/interviews`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ interviewee: "PM", topic: "t", response_summary: "r" }),
-    })).status).toBe(400);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/interviews`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: JSON.stringify({ interviewee: "PM", topic: "t", response_summary: "r" }),
+        })
+      ).status,
+    ).toBe(400);
     const res = await req(`/api/projects/${projectId}/interviews`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ interviewee: "SI 업계 PM", topic: "수주 파이프라인", response_summary: "상승", evidence_ref: "interview-log#1" }),
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        interviewee: "SI 업계 PM",
+        topic: "수주 파이프라인",
+        response_summary: "상승",
+        evidence_ref: "interview-log#1",
+      }),
     });
     expect(res.status).toBe(201);
     const list = await req(`/api/projects/${projectId}/interviews`, { headers: { cookie: analystCookie } });
@@ -198,13 +248,24 @@ describe("Wave 0 — interviews / customer-coc / comp-parity", () => {
   });
 
   test("customer-coc: direction validated; >=30% flagged", async () => {
-    expect((await req(`/api/projects/${projectId}/customer-coc`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ counterparty: "K", direction: "partner" }),
-    })).status).toBe(400);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/customer-coc`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: JSON.stringify({ counterparty: "K", direction: "partner" }),
+        })
+      ).status,
+    ).toBe(400);
     await req(`/api/projects/${projectId}/customer-coc`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ counterparty: "대형 유통 K", direction: "customer", coc_clause_present: true, concentration_pct: 34 }),
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        counterparty: "대형 유통 K",
+        direction: "customer",
+        coc_clause_present: true,
+        concentration_pct: 34,
+      }),
     });
     const list = await req(`/api/projects/${projectId}/customer-coc`, { headers: { cookie: analystCookie } });
     const row = ((await list.json()).data.contracts as Array<{ flagged: number }>)[0];
@@ -221,19 +282,28 @@ describe("Wave 0 — interviews / customer-coc / comp-parity", () => {
 describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", () => {
   test("POST accepts with discovery_source; row carries provenance", async () => {
     const res = await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "테스트중공업", discovery_source: "master_proposal" }),
     });
     expect(res.status).toBe(201);
-    const row = db.query(
-      "SELECT discovery_source, proposal_accepted_at FROM brownfield_target WHERE id = ?",
-    ).get(((await res.json()).data as { id: string }).id) as { discovery_source: string; proposal_accepted_at: string };
+    const row = db
+      .query("SELECT discovery_source, proposal_accepted_at FROM brownfield_target WHERE id = ?")
+      .get(((await res.json()).data as { id: string }).id) as {
+      discovery_source: string;
+      proposal_accepted_at: string;
+    };
     expect(row.discovery_source).toBe("master_proposal");
     expect(row.proposal_accepted_at).not.toBeNull();
-    expect((await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ company_name: "x", discovery_source: "gpt_said_so" }),
-    })).status).toBe(400);
+    expect(
+      (
+        await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
+          method: "POST",
+          headers: { cookie: analystCookie, "content-type": "application/json" },
+          body: JSON.stringify({ company_name: "x", discovery_source: "gpt_said_so" }),
+        })
+      ).status,
+    ).toBe(400);
   });
 
   // Regression (2라운드 회의): accept-proposal POST used to do its own inline
@@ -242,19 +312,27 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
   // this path even though it's the one the Universe-tab "확정" button uses.
   test("accept-proposal path also resolves md_company + seeds eval criteria (createTarget consolidation)", async () => {
     const res = await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "웹검색확정테스트", discovery_source: "web_proposal" }),
     });
     expect(res.status).toBe(201);
-    const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get("웹검색확정테스트") as { id: string } | undefined;
+    const mc = db.query("SELECT id FROM md_company WHERE name_ko = ?").get("웹검색확정테스트") as
+      | { id: string }
+      | undefined;
     expect(mc).toBeTruthy();
-    const criteria = db.query("SELECT COUNT(*) c FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'financial' AND source = 'builtin'").get(brownfieldOppId) as { c: number };
+    const criteria = db
+      .query(
+        "SELECT COUNT(*) c FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = 'financial' AND source = 'builtin'",
+      )
+      .get(brownfieldOppId) as { c: number };
     expect(criteria.c).toBe(4);
   });
 
   test("viewer POST is 403 (analyst+ floor)", async () => {
     const res = await req(`/api/brownfield/${brownfieldOppId}/target-proposals`, {
-      method: "POST", headers: { cookie: viewerCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: viewerCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "뷰어시도", discovery_source: "manual" }),
     });
     expect(res.status).toBe(403);
@@ -280,19 +358,36 @@ describe("Wave 0 — target proposals (provenance A1/A2, opportunity-keyed)", ()
     const list = await req(`/api/brownfield/${preId}/target-proposals`, { headers: { cookie: analystCookie } });
     expect(list.status).toBe(200);
     const post = await req(`/api/brownfield/${preId}/target-proposals`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "사전검증로봇", discovery_source: "web_proposal" }),
     });
     expect(post.status).toBe(201);
-    const row = db.query("SELECT discovery_source FROM brownfield_target WHERE opportunity_id = ? AND company_name = ?")
+    const row = db
+      .query("SELECT discovery_source FROM brownfield_target WHERE opportunity_id = ? AND company_name = ?")
       .get(preId, "사전검증로봇") as { discovery_source: string };
     expect(row.discovery_source).toBe("web_proposal");
     // duplicate registration is rejected (same company, not excluded)
     const dup = await req(`/api/brownfield/${preId}/target-proposals`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ company_name: "사전검증로봇", discovery_source: "manual" }),
     });
-    expect(dup.status).toBe(400);
+    // design 2026-11-11-target-identity-resolution §5.1 (D3): registration is
+    // "ensure present" — a duplicate acceptance returns 200 with the EXISTING
+    // row + meta deduped:true, and no second row is created.
+    expect(dup.status).toBe(200);
+    const dupBody = (await dup.json()) as { data: { id: string }; meta: { deduped?: boolean } };
+    expect(dupBody.meta.deduped).toBe(true);
+    const first = ((await post.json()) as { data: { id: string } }).data;
+    expect(dupBody.data.id).toBe(first.id);
+    expect(
+      (
+        db
+          .query("SELECT COUNT(*) AS c FROM brownfield_target WHERE opportunity_id = ? AND company_name = ?")
+          .get(preId, "사전검증로봇") as { c: number }
+      ).c,
+    ).toBe(1);
   });
 });
 
@@ -313,16 +408,27 @@ describe("Wave 0 — safe-share flow (public access + log + revoke)", () => {
 
   test("POST creates a link (analyst); viewer 403", async () => {
     const res = await req(`/api/projects/${projectId}/share-links`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ title: "IC 요약", recipient: "재무 자문사 A", payload: { summary: "…" }, expires_in_days: 5 }),
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "IC 요약",
+        recipient: "재무 자문사 A",
+        payload: { summary: "…" },
+        expires_in_days: 5,
+      }),
     });
     expect(res.status).toBe(201);
     token = ((await res.json()).data as { token: string }).token;
     expect(token).not.toBe("");
-    expect((await req(`/api/projects/${projectId}/share-links`, {
-      method: "POST", headers: { cookie: viewerCookie, "content-type": "application/json" },
-      body: JSON.stringify({ title: "x", recipient: "y", payload: {} }),
-    })).status).toBe(403);
+    expect(
+      (
+        await req(`/api/projects/${projectId}/share-links`, {
+          method: "POST",
+          headers: { cookie: viewerCookie, "content-type": "application/json" },
+          body: JSON.stringify({ title: "x", recipient: "y", payload: {} }),
+        })
+      ).status,
+    ).toBe(403);
   });
 
   test("public access grants + logs; revoke makes it indistinguishably dead", async () => {
@@ -331,9 +437,13 @@ describe("Wave 0 — safe-share flow (public access + log + revoke)", () => {
     expect(((await pub.json()).data as { found: boolean }).found).toBe(true);
     expect(count("SELECT COUNT(*) c FROM share_access")).toBe(1);
 
-    await req(`/api/projects/${projectId}/share-links?link_id=${(db.query("SELECT id FROM share_link WHERE token = ?").get(token) as { id: string }).id}`, {
-      method: "DELETE", headers: { cookie: analystCookie },
-    });
+    await req(
+      `/api/projects/${projectId}/share-links?link_id=${(db.query("SELECT id FROM share_link WHERE token = ?").get(token) as { id: string }).id}`,
+      {
+        method: "DELETE",
+        headers: { cookie: analystCookie },
+      },
+    );
     const dead = await req(`/api/share/${token}`);
     expect(((await dead.json()).data as { found: boolean }).found).toBe(false);
   });
@@ -351,8 +461,12 @@ describe("Wave 0 — backtest (honest degradation) + comments", () => {
       [ulid(), projectId, "bc-wave0", "base", "p50", 5000, 0.14, "seed=42", NOW],
     );
     await req(`/api/projects/${projectId}/business-case/adopt`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
-      body: JSON.stringify({ model_id: "bc-wave0", goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" } }),
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        model_id: "bc-wave0",
+        goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" },
+      }),
     });
     const res = await req(`/api/portfolio/backtest`, { headers: { cookie: analystCookie } });
     expect(res.status).toBe(200);
@@ -364,11 +478,14 @@ describe("Wave 0 — backtest (honest degradation) + comments", () => {
 
   test("comments: project entity membership-gated; roundtrip", async () => {
     const post = await req(`/api/comments`, {
-      method: "POST", headers: { cookie: analystCookie, "content-type": "application/json" },
+      method: "POST",
+      headers: { cookie: analystCookie, "content-type": "application/json" },
       body: JSON.stringify({ entity_type: "project", entity_id: projectId, body: "Group IC 보완 근거 확인 요청" }),
     });
     expect(post.status).toBe(201);
-    const list = await req(`/api/comments?entity_type=project&entity_id=${projectId}`, { headers: { cookie: analystCookie } });
+    const list = await req(`/api/comments?entity_type=project&entity_id=${projectId}`, {
+      headers: { cookie: analystCookie },
+    });
     expect(((await list.json()).data.comments as unknown[]).length).toBe(1);
   });
 });

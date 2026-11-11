@@ -11,7 +11,9 @@ import { DartSyncError, syncCompanyFinancialFacts } from "../../../../../lib/dar
 export async function POST(request: Request, { params }: { params: Promise<{ companyId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "DART sync requires the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "DART sync requires the analyst role or higher.",
+  });
   if (denied) return denied;
   const { companyId } = await params;
   const db = getDb();
@@ -28,6 +30,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ com
     return ok({ sync: result }, 200, { inserted: result.inserted, unchanged: result.unchanged });
   } catch (err) {
     if (err instanceof DartSyncError) {
+      // design 2026-11-11 §7.1 (D6) — failures are audited, not silent. Honest
+      // limitation (DEC-20261111-05 precedent): audit_log has no metadata
+      // column, so the DartSyncError code travels in the response envelope
+      // (fail below), not in the audit row — the audit proves THAT a sync
+      // failed for which company and actor.
+      appendAudit(db, {
+        actor: auth.auth.userId,
+        action: "company_financial_sync_failed",
+        target: companyId,
+        now: new Date().toISOString(),
+      });
       if (err.code === "dart_not_configured") {
         return fail(503, err.code, `${err.message} (root .env: DART_API_KEY=...)`);
       }

@@ -21,7 +21,11 @@ import { deriveFinancialAnalysis } from "../../../../../../../lib/company-financ
 import { targetEvalStates } from "../../../../../../../lib/brownfield-eval-criteria.ts";
 import { draftFinancialVerdict, isFinancialDataRef } from "../../../../../../../lib/brownfield-financial-rubric.ts";
 import {
-  disclosureEvidenceBlock, parseTechnicalDrafts, profileEvidenceBlock, technicalDraftUserContent, webEvidenceBlock,
+  disclosureEvidenceBlock,
+  parseTechnicalDrafts,
+  profileEvidenceBlock,
+  technicalDraftUserContent,
+  webEvidenceBlock,
   type TechnicalCriterionInput,
 } from "../../../../../../../lib/brownfield-technical-draft.ts";
 import { loadLatestProfile } from "../../../../../../../lib/company-profile-pipeline.ts";
@@ -43,22 +47,39 @@ interface DraftItem {
 
 const VERDICT_KO: Record<"pass" | "partial" | "fail", string> = { pass: "충족", partial: "부분충족", fail: "미충족" };
 
-/** 회사 마스터 연결 규칙(상세 GET과 동일) — DART 코드 우선, 회사명 폴백. */
-function resolveTargetCompanyId(db: ReturnType<typeof getDb>, targetId: string, oppId: string): { id: string; company_name: string; company_id: string | null } | null {
-  return (db.query(
-    `SELECT bt.id, bt.company_name,
+/** 회사 마스터 연결 규칙(상세 GET과 동일) — DART 코드 우선, 회사명 폴백.
+ * dart_corp_code도 함께 내려준다 — design 2026-11-11 §7.1의 초안 note가
+ * 대상의 코드 보유 여부에 따라 조건 분기하기 때문(별도 쿼리 없이 같은 행). */
+function resolveTargetCompanyId(
+  db: ReturnType<typeof getDb>,
+  targetId: string,
+  oppId: string,
+): { id: string; company_name: string; dart_corp_code: string | null; company_id: string | null } | null {
+  return (
+    (db
+      .query(
+        `SELECT bt.id, bt.company_name, bt.dart_corp_code,
        COALESCE(
          (SELECT mc.id FROM md_company mc WHERE bt.dart_corp_code IS NOT NULL AND mc.dart_corp_code = bt.dart_corp_code),
          (SELECT mc.id FROM md_company mc WHERE mc.name_ko = bt.company_name)
        ) AS company_id
      FROM brownfield_target bt WHERE bt.id = ? AND bt.opportunity_id = ?`,
-  ).get(targetId, oppId) as { id: string; company_name: string; company_id: string | null } | null) ?? null;
+      )
+      .get(targetId, oppId) as {
+      id: string;
+      company_name: string;
+      dart_corp_code: string | null;
+      company_id: string | null;
+    } | null) ?? null
+  );
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Evaluation-draft generation requires the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Evaluation-draft generation requires the analyst role or higher.",
+  });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { category?: string } | null;
@@ -85,7 +106,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   // ── financial: 결정론적 루브릭 (ADR-0140) ──
   if (category === "financial") {
-    let facts;
+    let facts: ReturnType<typeof getCompanyFinancialFacts>;
     try {
       facts = getCompanyFinancialFacts(db, target.company_id);
     } catch {
@@ -105,27 +126,56 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       if ((it.state?.status ?? "pending") !== "pending") continue; // 사람 판정은 존중한다
       pendingCount++;
       const d = draftFinancialVerdict(it.data_ref, analysis, it.rubric_json);
-      drafts.push({ criterion_id: it.id, label: it.label, data_ref: d.dataRef, status: d.status, reason: d.reason, metrics: d.metrics, note: d.note });
+      drafts.push({
+        criterion_id: it.id,
+        label: it.label,
+        data_ref: d.dataRef,
+        status: d.status,
+        reason: d.reason,
+        metrics: d.metrics,
+        note: d.note,
+      });
     }
 
-    appendAudit(db, { actor: auth.auth.userId, action: "target_eval.financial_draft", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
+    appendAudit(db, {
+      actor: auth.auth.userId,
+      action: "target_eval.financial_draft",
+      target: `${oppId}:${targetId}`,
+      now: new Date().toISOString(),
+    });
 
     const proposed = drafts.filter((d) => d.status != null).length;
-    const yearRange = analysis.years.length > 0 ? `${analysis.years[0]}–${analysis.years[analysis.years.length - 1]}` : null;
+    const yearRange =
+      analysis.years.length > 0 ? `${analysis.years[0]}–${analysis.years[analysis.years.length - 1]}` : null;
+    // design 2026-11-11 §7.1 — empty-facts 안내는 대상의 코드 보유 여부로
+    // 분기한다. "잠시 후 다시 시도" 조언은 코드가 없거나 동기화가 실패한
+    // (empty facts의 두 원인) 경우엔 틀린 조언이었다.
     const note =
       pendingCount === 0
         ? "재무 평가의 미판정 항목이 없습니다 — 이미 사람이 판정한 항목은 초안으로 바꾸지 않습니다."
         : !analysis.available
-          ? "동기화된 DART 재무 facts가 없습니다 — 재무 facts는 후보 상세 진입 시 자동 동기화되니 잠시 후 다시 시도하세요."
+          ? target.dart_corp_code
+            ? "동기화된 DART 재무 facts가 없습니다 — DART 재무 동기화가 아직 성공하지 못했습니다. 후보 상세의 재무 동기화를 다시 실행하세요."
+            : "동기화된 DART 재무 facts가 없습니다 — DART 고유번호가 없어 자동 동기화가 시도되지 않았습니다. 후보 수정에서 고유번호를 등록한 뒤 다시 시도하세요."
           : `${yearRange} DART facts 기준으로 ${proposed}/${pendingCount}개 미판정 항목에 제안을 만들었습니다${proposed < pendingCount ? " — 나머지는 데이터 부족으로 제안 없음(항목별 사유 표시)" : ""}. 확인·수정 후 저장하세요 — 판정 확정은 항상 사람이 합니다.`;
-    return ok({ source: "deterministic", years: analysis.years, latest_sync_at: facts.latest_sync_at, drafts, note }, 200, { drafted: proposed, pending: pendingCount });
+    return ok(
+      { source: "deterministic", years: analysis.years, latest_sync_at: facts.latest_sync_at, drafts, note },
+      200,
+      { drafted: proposed, pending: pendingCount },
+    );
   }
 
   // ── technical: 공시·프로파일·웹 근거 LLM 초안 (ADR-0141) ──
-  const techItems = evalItems.filter((it) => it.category === "technical" && (it.state?.status ?? "pending") === "pending");
+  const techItems = evalItems.filter(
+    (it) => it.category === "technical" && (it.state?.status ?? "pending") === "pending",
+  );
   if (techItems.length === 0) {
     return ok(
-      { source: "llm", drafts: [], note: "기술 평가의 미판정 항목이 없습니다 — S3 역량 정의가 비어 있으면 먼저 S3에서 정의하세요." },
+      {
+        source: "llm",
+        drafts: [],
+        note: "기술 평가의 미판정 항목이 없습니다 — S3 역량 정의가 비어 있으면 먼저 S3에서 정의하세요.",
+      },
       200,
       { pending: 0 },
     );
@@ -164,7 +214,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     }
   }
 
-  const criteria: TechnicalCriterionInput[] = techItems.map((it) => ({ id: it.id, label: it.label, description: it.description }));
+  const criteria: TechnicalCriterionInput[] = techItems.map((it) => ({
+    id: it.id,
+    label: it.label,
+    description: it.description,
+  }));
   const llmRes = await completeOrFallback(
     [
       systemMessage("s7.screening_draft"),
@@ -190,7 +244,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   );
   const parsed = parseTechnicalDrafts(llmRes, webByCriterion, criteria);
 
-  appendAudit(db, { actor: auth.auth.userId, action: "target_eval.technical_draft", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "target_eval.technical_draft",
+    target: `${oppId}:${targetId}`,
+    now: new Date().toISOString(),
+  });
 
   // 조립 — 근거로 확인 안 된 항목은 "확인 안됨"을 명확히(사용자 요청,
   // 2026-09-16). 노트에도 확인 안됨 사유를 심어 사람 판정 기록에 남게 한다.
@@ -213,14 +272,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
           : `근거 부족(웹 ${webCount}건) — LLM이 판정 보류`
         : d.rationale || "근거 부족";
       return {
-        criterion_id: it.id, label: it.label, data_ref: "technical", status: null,
-        reason: `확인 안됨 — ${why}`, metrics,
+        criterion_id: it.id,
+        label: it.label,
+        data_ref: "technical",
+        status: null,
+        reason: `확인 안됨 — ${why}`,
+        metrics,
         note: `확인 안됨(자동 진단, ${evidenceSummary}) — ${why}. 판정은 사람이 직접 기록.`,
       };
     }
     return {
-      criterion_id: it.id, label: it.label, data_ref: "technical", status: d.verdict,
-      reason: null, metrics,
+      criterion_id: it.id,
+      label: it.label,
+      data_ref: "technical",
+      status: d.verdict,
+      reason: null,
+      metrics,
       note: `자동초안(공시·프로파일·웹 근거, 수정 가능) — ${d.rationale} → ${VERDICT_KO[d.verdict]} 제안`,
     };
   });
@@ -228,5 +295,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const proposed = drafts.filter((d) => d.status != null).length;
   const unverified = drafts.length - proposed;
   const note = `${evidenceSummary} 기준 — 제안 ${proposed}건, 확인 안됨 ${unverified}건. 확인·수정 후 저장하세요 — 판정 확정은 항상 사람이 합니다.`;
-  return ok({ source: llmRes.source, provider: llmRes.provider, drafts, note }, 200, { drafted: proposed, unverified, pending: techItems.length });
+  return ok({ source: llmRes.source, provider: llmRes.provider, drafts, note }, 200, {
+    drafted: proposed,
+    unverified,
+    pending: techItems.length,
+  });
 }

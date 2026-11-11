@@ -2613,7 +2613,8 @@
       },
       "useTargetDetail": {
         "loadFailed": "Failed to load target detail",
-        "analyzeFailed": "Failed to run AI analysis"
+        "analyzeFailed": "Failed to run AI analysis",
+        "syncFailed": "Financial sync failed"
       },
       "useTargetActions": {
         "verdictSaveFailed": "Failed to save verdict",
@@ -2764,7 +2765,12 @@
         "allSourcesPre": "See all {p1} on the",
         "sourcesTabLink": "Sources tab",
         "allSourcesPost": ".",
-        "citationTitlePrefix": "External research source —"
+        "citationTitlePrefix": "External research source —",
+        "syncNoCodeChip": "No corp code",
+        "syncNoCodeBanner": "No DART Corporation Code is registered, so financial auto-sync was not attempted — enter the code via Edit info, then sync.",
+        "syncRetry": "Retry",
+        "syncMismatchChip": "Corp code / name mismatch",
+        "syncMismatchBanner": "Synced using the entered corp code — DART's registered name differs from ours. Review below and correct the code if needed."
       },
       "precheckTab": {
         "precheckHeading": "Precheck — target precheck checklist (9 items)",
@@ -6027,7 +6033,9 @@
         "webSearchAndProposalGeneration": "Web search and proposal generation in progress...",
         "webSearchCandidateProposal": "Web search candidate proposal",
         "webSearchCandidateProposal2": "Web search candidate proposal",
-        "webSearchProposalP1Source": "Web search proposal — {p1} (source: {p2})"
+        "webSearchProposalP1Source": "Web search proposal — {p1} (source: {p2})",
+        "corpCodeUnverifiedChip": "Corp code unverified",
+        "corpCodeUnverifiedTooltip": "No DART Corporation Code could be confirmed for this proposal — after registering, enter the code in the candidate edit form or financial auto-sync will not run."
       },
       "evalBrief": {
         "candidateP1JudgementCompositeScore": "| Candidate | {p1} | Judgement | Composite score |",

@@ -2613,7 +2613,8 @@
       },
       "useTargetDetail": {
         "loadFailed": "후보 상세 불러오기 실패",
-        "analyzeFailed": "AI 분석 실행 실패"
+        "analyzeFailed": "AI 분석 실행 실패",
+        "syncFailed": "재무 동기화 실행 실패"
       },
       "useTargetActions": {
         "verdictSaveFailed": "평가 판정 저장 실패",
@@ -2764,7 +2765,12 @@
         "allSourcesPre": "전체 {p1}건은",
         "sourcesTabLink": "출처 탭",
         "allSourcesPost": "에서 확인하세요.",
-        "citationTitlePrefix": "외부 리서치 출처 —"
+        "citationTitlePrefix": "외부 리서치 출처 —",
+        "syncNoCodeChip": "고유번호 미등록",
+        "syncNoCodeBanner": "DART 고유번호가 등록되지 않아 재무 자동 동기화가 시도되지 않았습니다 — 정보 수정에서 고유번호를 입력한 뒤 동기화하세요.",
+        "syncRetry": "재시도",
+        "syncMismatchChip": "고유번호·회사명 불일치",
+        "syncMismatchBanner": "입력된 고유번호를 기준으로 동기화했습니다 — DART 등록 법인명과 회사명이 다릅니다. 아래 내용을 확인하고 고유번호를 수정하세요."
       },
       "precheckTab": {
         "precheckHeading": "사전 검토 — 대상 사전 검토 체크리스트(9개 항목)",
@@ -6027,7 +6033,9 @@
         "webSearchAndProposalGeneration": "웹 검색·제안 생성 중...",
         "webSearchCandidateProposal": "웹검색 후보 제안",
         "webSearchCandidateProposal2": "웹검색 후보 제안",
-        "webSearchProposalP1Source": "웹 검색 제안 — {p1} (출처: {p2})"
+        "webSearchProposalP1Source": "웹 검색 제안 — {p1} (출처: {p2})",
+        "corpCodeUnverifiedChip": "고유번호 미확인",
+        "corpCodeUnverifiedTooltip": "DART 고유번호가 확인되지 않은 제안입니다 — 등록 후 후보 수정에서 고유번호를 입력해야 재무 자동 동기화가 동작합니다."
       },
       "evalBrief": {
         "candidateP1JudgementCompositeScore": "| 후보 | {p1} | 판정 | 종합 점수 |",

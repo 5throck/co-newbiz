@@ -2,8 +2,10 @@
 // chk-target-screening 체크리스트 판정, Short List 승격/제외.
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../../db/client.ts";
+import { appendAudit } from "../../../db/lib/access-control.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { getChecklistItems } from "./library.ts";
+import { canonicalCompanyName } from "./company-name.ts";
 import { listOrSeedCriteria } from "./brownfield-eval-criteria.ts";
 import { normalizeVerdict } from "./brownfield-precheck.ts";
 
@@ -75,7 +77,13 @@ export function screeningSummary(target: TargetRow): {
     if (item.mandatory && st === "unfulfilled") anyKnockOutFail = true;
     if (item.mandatory && st === "pending") mandatoryOpen.push(item.id);
   }
-  return { assessed, total: items.length, knockOutsPassed: !anyKnockOutFail && mandatoryOpen.length === 0, anyKnockOutFail, mandatoryOpen };
+  return {
+    assessed,
+    total: items.length,
+    knockOutsPassed: !anyKnockOutFail && mandatoryOpen.length === 0,
+    anyKnockOutFail,
+    mandatoryOpen,
+  };
 }
 
 /**
@@ -90,7 +98,10 @@ export function screeningSummary(target: TargetRow): {
  *    registration, so a candidate registered without any note is flagged).
  * Returns the missing parts ([] = qualified).
  */
-export function longListCandidateGaps(t: TargetRow & { company_id: string | null }, db: Database = getDb()): Array<"attributes" | "source"> {
+export function longListCandidateGaps(
+  t: TargetRow & { company_id: string | null },
+  db: Database = getDb(),
+): Array<"attributes" | "source"> {
   const gaps: Array<"attributes" | "source"> = [];
   const hasIdentity = Boolean((t.dart_corp_code ?? "").trim() || t.company_id);
   if (!t.company_name.trim() || !hasIdentity || !(t.universe_note ?? "").trim()) gaps.push("attributes");
@@ -114,22 +125,49 @@ export function longListCandidateGaps(t: TargetRow & { company_id: string | null
 export function hasScreeningEvidence(t: TargetRow, db: Database = getDb()): boolean {
   const json = (t.screening_evidence_json ?? "").trim();
   if (json && json !== "{}" && json !== "[]" && json !== "null") return true;
-  return Boolean(db.query("SELECT 1 FROM brownfield_target_evidence WHERE target_id = ? AND kind = 'screening' LIMIT 1").get(t.id));
+  return Boolean(
+    db.query("SELECT 1 FROM brownfield_target_evidence WHERE target_id = ? AND kind = 'screening' LIMIT 1").get(t.id),
+  );
 }
 
 /** 회사명(우선 dart_corp_code, 없으면 name_ko)으로 md_company를 찾거나
- * 만든다 — Long List 등록·Short List 승격 양쪽에서 재사용하는 멱등 함수. */
+ * 만든다 — Long List 등록·Short List 승격 양쪽에서 재사용하는 멱등 함수.
+ *
+ * design 2026-11-11-target-identity-resolution §3.3 — 이름 매칭은 3단:
+ * ① 코드 일치(유니크 인덱스 존중, 변경 없음) → ② 정규화된 이름 일치 →
+ * ③ 원문 이름 일치(레거시 비정규 행). ③이 적중하고 정규화 결과가 다르면
+ * 그 행의 name_ko를 정규형으로 1회 갱신한다(멱등 — 쌍둥이 행 생성 대신
+ * 제자리 정규화). 감사 커버리지는 호출부의 brownfield_target.update 행이
+ * 담당한다(이 함수는 actor 파라미터를 갖지 않는다). INSERT는 항상 정규형. */
 export function resolveOrCreateCompany(db: Database, companyName: string, dartCorpCode: string | null): string {
+  const canonical = canonicalCompanyName(companyName);
   const byCode = dartCorpCode
     ? (db.query("SELECT id FROM md_company WHERE dart_corp_code = ?").get(dartCorpCode) as { id: string } | undefined)
     : undefined;
-  const mc = byCode ?? (db.query("SELECT id FROM md_company WHERE name_ko = ?").get(companyName) as { id: string } | undefined);
+  let mc =
+    byCode ?? (db.query("SELECT id FROM md_company WHERE name_ko = ?").get(canonical) as { id: string } | undefined);
+  if (!mc) {
+    // 원문(레거시 비정규) 이름 2차 패스 — 적중 시 제자리 정규화.
+    const raw = db.query("SELECT id, name_ko FROM md_company WHERE name_ko = ?").get(companyName) as
+      | { id: string; name_ko: string }
+      | undefined;
+    if (raw) {
+      if (canonical !== raw.name_ko) db.run("UPDATE md_company SET name_ko = ? WHERE id = ?", [canonical, raw.id]);
+      mc = { id: raw.id };
+    }
+  }
   if (mc) {
-    if (dartCorpCode) db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ? AND dart_corp_code IS NULL", [dartCorpCode, mc.id]);
+    if (dartCorpCode)
+      db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ? AND dart_corp_code IS NULL", [dartCorpCode, mc.id]);
     return mc.id;
   }
   const id = ulid();
-  db.run("INSERT INTO md_company (id, dart_corp_code, name_ko, created_at) VALUES (?,?,?,?)", [id, dartCorpCode, companyName, new Date().toISOString()]);
+  db.run("INSERT INTO md_company (id, dart_corp_code, name_ko, created_at) VALUES (?,?,?,?)", [
+    id,
+    dartCorpCode,
+    canonical,
+    new Date().toISOString(),
+  ]);
   return id;
 }
 
@@ -144,17 +182,38 @@ export interface CreateTargetOptions {
  * 직후부터 재무·기술 평가가 가능한 상태로 만든다(경계 #2: 시딩만 하고
  * 판정은 항상 사람이 함). 세 단계는 하나의 트랜잭션으로 묶어 도중 실패
  * 시 등록되다 만 타겟이 남지 않게 한다. */
-export function createTarget(opportunityId: string, companyName: string, dartCorpCode: string | null, universeNote: string | null, opts: CreateTargetOptions): TargetRow {
+export function createTarget(
+  opportunityId: string,
+  companyName: string,
+  dartCorpCode: string | null,
+  universeNote: string | null,
+  opts: CreateTargetOptions,
+): TargetRow {
   const db = getDb();
   const id = ulid();
   const now = new Date().toISOString();
+  // design 2026-11-11 §3.2 — both brownfield_target.company_name and
+  // md_company.name_ko hold the canonical form; the raw glossed string stays
+  // on the proposal card / evidence trail only.
+  const canonical = canonicalCompanyName(companyName);
   db.transaction(() => {
     db.run(
       `INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, universe_note, discovery_source, proposal_accepted_at, status, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [id, opportunityId, companyName, dartCorpCode, universeNote, opts.discoverySource ?? "manual", opts.proposalAcceptedAt ?? null, "pending", now, now],
+      [
+        id,
+        opportunityId,
+        canonical,
+        dartCorpCode,
+        universeNote,
+        opts.discoverySource ?? "manual",
+        opts.proposalAcceptedAt ?? null,
+        "pending",
+        now,
+        now,
+      ],
     );
-    resolveOrCreateCompany(db, companyName, dartCorpCode);
+    resolveOrCreateCompany(db, canonical, dartCorpCode);
     listOrSeedCriteria(opportunityId, opts.actorUserId, db);
     // 등록 시점 근거 — 발굴 경로·제안 사유·출처를 타임라인에 적립한다
     // (사용자 결정, 2026-09-16: 수집 정보를 후보 상세에서 나중에 참고).
@@ -175,13 +234,31 @@ export function createTarget(opportunityId: string, companyName: string, dartCor
  * 실패해도 본 작업을 막지 않는다 — 근거 적립은 부가 기록이다. */
 export function insertTargetEvidence(
   db: Database,
-  row: { targetId: string; kind: "discovery" | "analysis" | "screening"; title: string; detail?: string | null; sourceUrl?: string | null; sourceKind?: string | null; createdBy?: string | null },
+  row: {
+    targetId: string;
+    kind: "discovery" | "analysis" | "screening";
+    title: string;
+    detail?: string | null;
+    sourceUrl?: string | null;
+    sourceKind?: string | null;
+    createdBy?: string | null;
+  },
 ): void {
   try {
     db.run(
       `INSERT INTO brownfield_target_evidence (id, target_id, kind, title, detail, source_url, source_kind, created_by, created_at)
        VALUES (?,?,?,?,?,?,?,?,?)`,
-      [ulid(), row.targetId, row.kind, row.title, row.detail ?? null, row.sourceUrl ?? null, row.sourceKind ?? null, row.createdBy ?? null, new Date().toISOString()],
+      [
+        ulid(),
+        row.targetId,
+        row.kind,
+        row.title,
+        row.detail ?? null,
+        row.sourceUrl ?? null,
+        row.sourceKind ?? null,
+        row.createdBy ?? null,
+        new Date().toISOString(),
+      ],
     );
   } catch {
     // 근거 적립 실패는 본 작업(등록·분석·판정 저장)을 막지 않는다.
@@ -220,4 +297,102 @@ export const KNOWN_TARGET_NOTE_PREFIX = "[알려진 대상]";
 
 export function isKnownTargetNote(note: string | null | undefined): boolean {
   return (note ?? "").startsWith(KNOWN_TARGET_NOTE_PREFIX);
+}
+
+// ── design 2026-11-11-target-identity-resolution: D3 code-aware duplicates,
+//    D4 one unified PATCH path ──
+
+/** D3 (design §5.1) — code-or-canonical duplicate match over an opportunity's
+ *  non-excluded targets. Rows are fetched and compared in JS (long lists are
+ *  tens of rows, not thousands): a duplicate is an existing target with the
+ *  same non-null dart_corp_code, or the same CANONICAL company name (a
+ *  glossed re-proposal of a clean row dedupes; the bare-name equality this
+ *  replaces could not see through the gloss). Registration is "ensure
+ *  present" — callers turn a hit into 200 + meta deduped:true, not a 400. */
+export function findDuplicateTarget(
+  db: Database,
+  opportunityId: string,
+  companyName: string,
+  dartCorpCode: string | null,
+): TargetRow | null {
+  const rows = db
+    .query("SELECT * FROM brownfield_target WHERE opportunity_id = ? AND status != 'excluded'")
+    .all(opportunityId) as unknown as TargetRow[];
+  const canonical = canonicalCompanyName(companyName);
+  const code = dartCorpCode?.trim() || null;
+  for (const r of rows) {
+    if (code && r.dart_corp_code === code) return r;
+    if (canonicalCompanyName(r.company_name) === canonical) return r;
+  }
+  return null;
+}
+
+/** D3 PATCH collision (design §5.1) — would this PATCH move the target's
+ *  canonical name or code onto a DIFFERENT non-excluded sibling in the same
+ *  opportunity? Absent patch keys mean "unchanged" (the row's current values
+ *  participate); explicit null clears a code. Returns the colliding sibling
+ *  row (surfaces as 409 duplicate_target + existing_target_id; merging
+ *  targets is destructive and stays a human action — no auto-merge). */
+export function findPatchCollision(
+  db: Database,
+  targetId: string,
+  patch: { company_name?: string; dart_corp_code?: string | null },
+): TargetRow | null {
+  const row = db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId) as TargetRow | undefined;
+  if (!row) return null;
+  const nextName =
+    patch.company_name !== undefined ? canonicalCompanyName(patch.company_name) || row.company_name : row.company_name;
+  const nextCode = patch.dart_corp_code !== undefined ? patch.dart_corp_code?.trim() || null : row.dart_corp_code;
+  const siblings = db
+    .query("SELECT * FROM brownfield_target WHERE opportunity_id = ? AND id != ? AND status != 'excluded'")
+    .all(row.opportunity_id, targetId) as unknown as TargetRow[];
+  for (const s of siblings) {
+    if (nextCode && s.dart_corp_code === nextCode) return s;
+    if (canonicalCompanyName(s.company_name) === canonicalCompanyName(nextName)) return s;
+  }
+  return null;
+}
+
+export interface UpdateTargetFieldsPatch {
+  company_name?: string;
+  /** Absent key = unchanged; explicit null = clear (fixes the opp-keyed
+   *  PATCH route's COALESCE inability to clear a code). */
+  dart_corp_code?: string | null;
+  universe_note?: string | null;
+}
+
+/** D4 (design §5.2) — THE single target-update path. Canonicalizes the name,
+ *  updates the row (absent key = unchanged, explicit null = clear), then
+ *  ALWAYS re-links the company master via resolveOrCreateCompany — ending the
+ *  split-brain where the opportunity-keyed PATCH route never touched
+ *  md_company — and audits one brownfield_target.update shape (composite
+ *  `${opportunity_id}:${targetId}`) for both PATCH routes. */
+export function updateTargetFields(
+  db: Database,
+  targetId: string,
+  patch: UpdateTargetFieldsPatch,
+  opts: { actorUserId: string },
+): TargetRow {
+  const row = db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId) as TargetRow | undefined;
+  if (!row) throw new Error(`brownfield_target ${targetId} not found`); // both routes pre-check existence
+  // Blank company_name keeps the stored name (the detail route's blank-name
+  // guard rejects it earlier; COALESCE parity for the opp-keyed route).
+  const canonicalName =
+    patch.company_name !== undefined ? canonicalCompanyName(patch.company_name) || row.company_name : row.company_name;
+  const code = patch.dart_corp_code !== undefined ? patch.dart_corp_code?.trim() || null : row.dart_corp_code;
+  const note = patch.universe_note !== undefined ? patch.universe_note?.trim() || null : row.universe_note;
+  db.run(
+    "UPDATE brownfield_target SET company_name = ?, dart_corp_code = ?, universe_note = ?, updated_at = ? WHERE id = ?",
+    [canonicalName, code, note, new Date().toISOString(), targetId],
+  );
+  // Every write path re-links the company master (idempotent; by-code pass
+  // first respects the unique md_company.dart_corp_code index).
+  resolveOrCreateCompany(db, canonicalName, code);
+  appendAudit(db, {
+    actor: opts.actorUserId,
+    action: "brownfield_target.update",
+    target: `${row.opportunity_id}:${targetId}`,
+    now: new Date().toISOString(),
+  });
+  return db.query("SELECT * FROM brownfield_target WHERE id = ?").get(targetId) as unknown as TargetRow;
 }

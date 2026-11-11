@@ -4,7 +4,13 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
-import { createTarget, listTargets, screeningItems, screeningSummary } from "../../../../../lib/brownfield-targets.ts";
+import {
+  createTarget,
+  findDuplicateTarget,
+  listTargets,
+  screeningItems,
+  screeningSummary,
+} from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
@@ -153,11 +159,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     "이 기회는 이미 프로젝트로 승격되었습니다 — Short List 변경은 승격 전에, 승격 후에는 ADR-0157 대상별 DD 경로로 수행합니다.",
   );
   if (promoted) return promoted;
-  const dup = db
-    .query("SELECT id FROM brownfield_target WHERE opportunity_id = ? AND company_name = ? AND status != 'excluded'")
-    .get(oppId, name) as { id: string } | undefined;
-  if (dup) return badRequest("duplicate_target", `'${name}' is already on the Long List.`);
-  const target = createTarget(oppId, name, body?.dart_corp_code?.trim() || null, body?.universe_note?.trim() || null, {
+  // design 2026-11-11 §5.1 (D3) — code-or-canonical duplicate match replaces
+  // the bare-name 400 guard: registration is "ensure present" (idempotent).
+  // A hit returns 200 with the EXISTING row + meta deduped:true and audited
+  // brownfield_target.dedupe; the client treats 2xx as success and dismisses
+  // the card ("already registered" degrades gracefully).
+  const incomingCode = body?.dart_corp_code?.trim() || null;
+  const dup = findDuplicateTarget(db, oppId, name, incomingCode);
+  if (dup) {
+    appendAudit(db, {
+      actor: auth.auth.userId,
+      action: "brownfield_target.dedupe",
+      target: `${oppId}:${dup.id}`,
+      now: new Date().toISOString(),
+    });
+    return ok(dup, 200, { deduped: true });
+  }
+  const target = createTarget(oppId, name, incomingCode, body?.universe_note?.trim() || null, {
     actorUserId: auth.auth.userId,
   });
   return ok(target, 201);

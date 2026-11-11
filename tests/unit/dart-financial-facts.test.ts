@@ -256,3 +256,114 @@ describe("getCompanyFinancialFacts + display reuse", () => {
     expect(debtRatioRow.debtRatio).toBeCloseTo(253 / 215, 4);
   });
 });
+
+// ── design 2026-11-11-target-identity-resolution §6 (D5): corp-code authority ──
+// The entered/stored code is authoritative; a name mismatch is RECORDED as a
+// warning (never nulled, never downgraded to a name search), and the no-code
+// path resolves only on an exact VERIFIED hit. The validator is the test seam
+// (opts.validator), mirroring opts.fetcher.
+describe("D5 — corp-code authority (validate → proceed-with-warning, no name-search downgrade)", () => {
+  interface ValidatorCall {
+    corpCode: string;
+    expectName?: string;
+  }
+  type StubValidator = (
+    corpCode: string,
+    expectName?: string,
+  ) => Promise<{ validated: boolean | null; corpName?: string }>;
+
+  function stubValidator(
+    result: { validated: boolean | null; corpName?: string },
+    log: ValidatorCall[] = [],
+  ): StubValidator {
+    return (corpCode: string, expectName?: string) => {
+      log.push({ corpCode, expectName });
+      return Promise.resolve(result);
+    };
+  }
+
+  /** fetcher spy that records WHICH corp code it was called with — proves the
+   *  stored code was used (and that no name-search downgrade happened). */
+  function codeRecordingFetcher(items: FakeItem[]): { fetcher: FinancialsFetcherSpy; codes: string[] } {
+    const codes: string[] = [];
+    const fetcher = Object.assign(
+      (corpCode: string, _opts?: { years?: number }): Promise<DartFinancials> => {
+        codes.push(corpCode);
+        const yearlyMap = new Map<string, FakeItem[]>();
+        for (const it of items) {
+          const list = yearlyMap.get(it.year) ?? [];
+          list.push(it);
+          yearlyMap.set(it.year, list);
+        }
+        return Promise.resolve({
+          corpCode,
+          found: true,
+          items,
+          yearly: [...yearlyMap.entries()].map(([year, its]) => ({ year, items: its })),
+          integrity: "ok",
+        });
+      },
+      { calls: () => codes.length },
+    ) as FinancialsFetcherSpy;
+    return { fetcher, codes };
+  }
+
+  test("entered-code authority wins over a failed containment check — proceeds with the stored code and records the mismatch", async () => {
+    // The 한전KPS incident shape: our name is 한전KPS but DART says the code is 한국전력공사.
+    const companyId = insertCompany("㈜한전케이피에스", "00159193");
+    const log: ValidatorCall[] = [];
+    const validator = stubValidator({ validated: false, corpName: "한국전력공사" }, log);
+    const { fetcher, codes } = codeRecordingFetcher(YEAR_2025);
+
+    const result = await syncCompanyFinancialFacts(db, companyId, { fetcher, validator });
+
+    expect(result.corp_code).toBe("00159193"); // stored code kept — NOT nulled, NOT swapped
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain("corp_code_name_mismatch");
+    expect(result.warnings[0]).toContain("한국전력공사"); // DART's registered name surfaced
+    expect(result.inserted).toBe(4); // the sync PROCEEDED — facts were written
+    expect(codes).toEqual(["00159193"]); // fetcher reached with the stored code (no name-search path)
+    const stored = db.query("SELECT dart_corp_code FROM md_company WHERE id = ?").get(companyId) as {
+      dart_corp_code: string;
+    };
+    expect(stored.dart_corp_code).toBe("00159193"); // no silent re-branding persisted
+    expect(log[0].expectName).toBe("㈜한전케이피에스"); // ㈜ circled mark is not a paren gloss — canonicalization leaves it
+  });
+
+  test("the validateCorpCode expect-name is canonicalized first (paren gloss removed)", async () => {
+    const companyId = insertCompany("한전KPS(KEPCO KPS)", "00159218");
+    const log: ValidatorCall[] = [];
+    const validator = stubValidator({ validated: true, corpName: "한전KPS" }, log);
+    const { fetcher } = codeRecordingFetcher(YEAR_2025);
+
+    await syncCompanyFinancialFacts(db, companyId, { fetcher, validator });
+    expect(log[0].expectName).toBe("한전KPS"); // canonical — the gloss never reaches containment
+    expect(log[0].corpCode).toBe("00159218");
+  });
+
+  test("explicit opts.corpCode short-circuits validation (validator never called)", async () => {
+    const companyId = insertCompany("㈜단락확인", "09777777");
+    const validator: StubValidator = () => {
+      throw new Error("validator must not be called when opts.corpCode is given");
+    };
+    const { fetcher } = codeRecordingFetcher(YEAR_2025);
+    const result = await syncCompanyFinancialFacts(db, companyId, { fetcher, validator, corpCode: "01234567" });
+    expect(result.corp_code).toBe("01234567");
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  test("no-code path requires an exact VERIFIED resolution — otherwise corp_code_unresolved and nothing persists", async () => {
+    // A name the real corp-code cache cannot resolve exactly → resolveCorpCode
+    // returns validated !== true → throw (no first-partial-hit persistence).
+    const companyId = insertCompany("㈜존재하지않는회사XYZQ", null);
+    const { fetcher, codes } = codeRecordingFetcher(YEAR_2025);
+    const err = (await syncCompanyFinancialFacts(db, companyId, { fetcher }).catch((e: unknown) => e)) as unknown;
+    expect(err).toBeInstanceOf(DartSyncError);
+    expect((err as DartSyncError).code).toBe("corp_code_unresolved");
+    expect(codes).toEqual([]); // fetcher never reached
+    const stored = db.query("SELECT dart_corp_code FROM md_company WHERE id = ?").get(companyId) as {
+      dart_corp_code: string | null;
+    };
+    expect(stored.dart_corp_code).toBeNull(); // nothing was persisted
+  }, 30000);
+});
