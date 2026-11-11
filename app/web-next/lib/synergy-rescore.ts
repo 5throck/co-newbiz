@@ -14,16 +14,16 @@ import type { Database } from "bun:sqlite";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { completeOrFallback, isLlmConfigured } from "./llm.ts";
 import { systemMessage, promptAgent, type PromptKey } from "./prompts.ts";
-import { parseGapRegister, summarizeGap } from "./capability-gap.ts";
+import { readLiveCapabilityCoverage } from "./capability-gap.ts";
 import { computeSynergyScore, toCagrFraction } from "./synergy-score.ts";
 import { recordSynergyRecommendation, type SynergyPayload } from "./synergy-pipeline.ts";
 
 async function askJson(promptKey: PromptKey, user: string, maxTokens = 800): Promise<Record<string, unknown> | null> {
-  const res = await completeOrFallback(
-    [systemMessage(promptKey), { role: "user", content: user }],
-    () => "NOT_JSON",
-    { temperature: 0.2, maxTokens, agent: promptAgent(promptKey) },
-  );
+  const res = await completeOrFallback([systemMessage(promptKey), { role: "user", content: user }], () => "NOT_JSON", {
+    temperature: 0.2,
+    maxTokens,
+    agent: promptAgent(promptKey),
+  });
   if (res.source !== "llm") return null;
   const text = res.text.replace(/```json|```/g, "");
   const start = text.indexOf("{");
@@ -57,7 +57,15 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
        WHERE sa.id = ?`,
     )
     .get(analysisId) as
-    | { id: string; opportunity_id: string | null; member_id: string | null; group_id: string | null; target_type: "affiliate" | "group" | null; member_name: string | null; legacy_name: string | null }
+    | {
+        id: string;
+        opportunity_id: string | null;
+        member_id: string | null;
+        group_id: string | null;
+        target_type: "affiliate" | "group" | null;
+        member_name: string | null;
+        legacy_name: string | null;
+      }
     | undefined;
   if (!row) throw new Error("ANALYSIS_NOT_FOUND");
   if (!row.opportunity_id) throw new Error("NO_OPPORTUNITY");
@@ -72,7 +80,11 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
     throw new Error("NO_LATEST_VERSION");
   }
 
-  const oppRow = db.query("SELECT id, name, market_scope FROM opportunity WHERE id = ?").get(row.opportunity_id) as { id: string; name: string; market_scope: string | null };
+  const oppRow = db.query("SELECT id, name, market_scope FROM opportunity WHERE id = ?").get(row.opportunity_id) as {
+    id: string;
+    name: string;
+    market_scope: string | null;
+  };
 
   // ── S1 completed markets — the same read the pipeline scores from ──
   const completedMarkets = db
@@ -85,15 +97,25 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
        ORDER BY a.completed_at DESC LIMIT 6`,
     )
     .all() as Array<{ name_ko: string; payload: string }>;
-  type EfShape = { cagr?: number; gapPct?: number; newDrivers?: string[]; targetYear?: number } | null;
   const markets = completedMarkets.map((m) => {
     let cagrPct: number | null = null;
     let relatedIndustries: string[] = [];
     try {
-      const matrix = (JSON.parse(m.payload) as { matrix?: { consistency?: { bottomUpCagr?: number }; chainDirection?: { relatedIndustries?: Array<{ name?: string }> } } }).matrix;
+      const matrix = (
+        JSON.parse(m.payload) as {
+          matrix?: {
+            consistency?: { bottomUpCagr?: number };
+            chainDirection?: { relatedIndustries?: Array<{ name?: string }> };
+          };
+        }
+      ).matrix;
       cagrPct = matrix?.consistency?.bottomUpCagr ?? null;
-      relatedIndustries = (matrix?.chainDirection?.relatedIndustries ?? []).map((r) => String(r?.name ?? "")).filter(Boolean);
-    } catch { /* skip malformed */ }
+      relatedIndustries = (matrix?.chainDirection?.relatedIndustries ?? [])
+        .map((r) => String(r?.name ?? ""))
+        .filter(Boolean);
+    } catch {
+      /* skip malformed */
+    }
     return { industry: m.name_ko, cagr: toCagrFraction(cagrPct), relatedIndustries };
   });
 
@@ -102,7 +124,11 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
   // the same roll-up the pipeline uses). Legacy rows score without a profile,
   // exactly as the pipeline's legacy path does. Strengths stay from the STORED
   // payload so the recomputed score keeps the stored analysis's narrative.
-  type ScoreProfile = { industryExposure: string[]; strengths: string[]; ratios: Array<{ year: string; debtRatio?: number | null; roe?: number | null; operatingMargin?: number | null }> } | null;
+  type ScoreProfile = {
+    industryExposure: string[];
+    strengths: string[];
+    ratios: Array<{ year: string; debtRatio?: number | null; roe?: number | null; operatingMargin?: number | null }>;
+  } | null;
   let profile: ScoreProfile = null;
   let company = row.legacy_name ?? "";
   if (row.target_type === "affiliate" && row.member_id) {
@@ -110,39 +136,44 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
     const prof = loadLatestProfile(db, { kind: "member", id: row.member_id });
     company = row.member_name ?? row.legacy_name ?? "";
     if (prof) {
-      profile = { industryExposure: prof.industryExposure ?? [], strengths: p.financialStrengths ?? [], ratios: prof.financialAnalysis?.ratios ?? [] };
+      profile = {
+        industryExposure: prof.industryExposure ?? [],
+        strengths: p.financialStrengths ?? [],
+        ratios: prof.financialAnalysis?.ratios ?? [],
+      };
     }
   } else if (row.target_type === "group" && row.group_id) {
     const { loadLatestProfile } = await import("./company-profile-pipeline.ts");
-    const members = db.query("SELECT id FROM company_group_member WHERE group_id = ?").all(row.group_id) as Array<{ id: string }>;
+    const members = db.query("SELECT id FROM company_group_member WHERE group_id = ?").all(row.group_id) as Array<{
+      id: string;
+    }>;
     const exposures = new Set<string>();
     let best: ReturnType<typeof loadLatestProfile> = null;
     for (const m of members) {
       const prof = loadLatestProfile(db, { kind: "member", id: m.id });
       if (!prof) continue;
-      (prof.industryExposure ?? []).forEach((x) => exposures.add(x));
+      (prof.industryExposure ?? []).forEach((x) => {
+        exposures.add(x);
+      });
       if (!best || (prof.dartFinancials?.items?.length ?? 0) > (best.dartFinancials?.items?.length ?? 0)) best = prof;
     }
     if (best) {
-      profile = { industryExposure: [...exposures], strengths: p.financialStrengths ?? [], ratios: best.financialAnalysis?.ratios ?? [] };
+      profile = {
+        industryExposure: [...exposures],
+        strengths: p.financialStrengths ?? [],
+        ratios: best.financialAnalysis?.ratios ?? [],
+      };
     }
   }
 
   // ── Capability coverage — the same register read/blend the pipeline scores from ──
-  let capabilityCoverage: number | null = null;
-  let capabilityCoverageNote: string | null = null;
-  const storedGapJson = (db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(oppRow.id) as { capability_gap_json: string | null } | undefined)?.capability_gap_json ?? null;
-  const reg = parseGapRegister(storedGapJson);
-  if (reg.rows.length > 0) {
-    const s = summarizeGap(reg.rows);
-    const essential = s.essentialCoveragePct;
-    if (s.evaluated > 0) {
-      capabilityCoverage = essential !== null && s.coveragePct !== null ? Math.round(s.coveragePct * 0.5 + essential * 0.5) : s.coveragePct;
-      capabilityCoverageNote = `필요 역량 ${s.total}건 중 판정 ${s.evaluated}건 — 보유율 ${s.coveragePct !== null ? s.coveragePct + "%" : "—"}, 필수 충족율 ${essential !== null ? essential + "%" : "—"}`;
-    } else {
-      capabilityCoverageNote = `필요 역량 ${s.total}건 모두 미판정 — 충족도 팩터 미반영`;
-    }
-  }
+  // Design 2026-10-18-synergy-4element-design, Amendment 2026-11-12: the fresh
+  // read-and-blend lives in the shared readLiveCapabilityCoverage helper (the
+  // calibration route consumes the same one). Behavior-neutral here — the
+  // rescore path already read live; extraction pinned by the blend-parity test.
+  const liveCoverage = readLiveCapabilityCoverage(db, oppRow.id);
+  const capabilityCoverage = liveCoverage.value;
+  const capabilityCoverageNote = liveCoverage.note;
 
   const rule = computeSynergyScore({
     opportunity: { market_scope: oppRow.market_scope, value_chain_node: null, name: oppRow.name },
@@ -154,9 +185,10 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
   let score = rule.score;
   let method: "rule-based" | "hybrid" = "rule-based";
   const considered = rule.factors.filter((f) => f.value !== null).map((f) => f.label);
-  let rationale: string | null = rule.score !== null
-    ? `규칙 기반 종합 판단 — 반영 요소: ${considered.join(", ") || "—"}.${rule.missing.length ? ` 미반영: ${rule.missing.join("; ")}.` : ""} (현재 5팩터 체계로 재계산)`
-    : null;
+  let rationale: string | null =
+    rule.score !== null
+      ? `규칙 기반 종합 판단 — 반영 요소: ${considered.join(", ") || "—"}.${rule.missing.length ? ` 미반영: ${rule.missing.join("; ")}.` : ""} (현재 5팩터 체계로 재계산)`
+      : null;
   let adjustmentDelta = 0;
   let adjustmentReason = "";
   if (oppRow && isLlmConfigured() && rule.score !== null) {
@@ -181,21 +213,41 @@ export async function rescoreLatestVersion(db: Database, analysisId: string, use
 
   const newPayload: SynergyPayload = {
     ...p,
-    synergyScore: oppRow ? score : p.synergyScore ?? null,
+    synergyScore: oppRow ? score : (p.synergyScore ?? null),
     synergyRationale: rationale ?? p.synergyRationale ?? null,
     synergyScoreFactors: rule.factors,
-    scoreAdjustment: adjustmentDelta !== 0 || adjustmentReason ? { delta: adjustmentDelta, reason: adjustmentReason } : null,
+    scoreAdjustment:
+      adjustmentDelta !== 0 || adjustmentReason ? { delta: adjustmentDelta, reason: adjustmentReason } : null,
     capabilityCoverage,
     capabilityCoverageNote,
   };
-  const versionNo = ((db.query("SELECT MAX(version_no) m FROM synergy_version WHERE analysis_id = ?").get(analysisId) as { m: number | null }).m ?? 0) + 1;
+  const versionNo =
+    ((
+      db.query("SELECT MAX(version_no) m FROM synergy_version WHERE analysis_id = ?").get(analysisId) as {
+        m: number | null;
+      }
+    ).m ?? 0) + 1;
   db.run(
     `INSERT INTO synergy_version (id, analysis_id, version_no, payload, changelog, created_by, created_at)
      VALUES (?,?,?,?,?,?,?)`,
-    [ulid(), analysisId, versionNo, JSON.stringify(newPayload), `현재 5팩터 체계로 재계산 (구 저장분 전환) — 규칙 ${rule.score ?? "불가"}${adjustmentDelta !== 0 ? ` · LLM 보정 ${adjustmentDelta > 0 ? "+" : ""}${adjustmentDelta}` : ""}`, userId, new Date().toISOString()],
+    [
+      ulid(),
+      analysisId,
+      versionNo,
+      JSON.stringify(newPayload),
+      `현재 5팩터 체계로 재계산 (구 저장분 전환) — 규칙 ${rule.score ?? "불가"}${adjustmentDelta !== 0 ? ` · LLM 보정 ${adjustmentDelta > 0 ? "+" : ""}${adjustmentDelta}` : ""}`,
+      userId,
+      new Date().toISOString(),
+    ],
   );
   if (score !== null && score !== undefined) {
     recordSynergyRecommendation(db, oppRow.id, Math.max(0, Math.min(100, Math.round(score))), rationale);
   }
-  return { versionNo, score, method, capabilityCoverage, factorKeys: rule.factors.filter((f) => f.value !== null).map((f) => f.key) };
+  return {
+    versionNo,
+    score,
+    method,
+    capabilityCoverage,
+    factorKeys: rule.factors.filter((f) => f.value !== null).map((f) => f.key),
+  };
 }
