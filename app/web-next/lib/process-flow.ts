@@ -383,6 +383,13 @@ export function latestGateDecisions(
 // gate-decisions API so the tie-breaking rule cannot drift between surfaces.
 // A decision marked stale (ADR-0157: the S8 selection changed after the dd
 // decision) is kept in history but no longer counts — the gate must be re-judged.
+// ADR-0135: 프로세스 엔진이 읽는 "현재 진출방식 결정"은 is_current=1 권위 행이다 —
+// decided_at 최신순이 아니다. ADR-0124 초안(draft)은 결정이 아니므로 초안 행의
+// decided_at이 final보다 새더라도 이 함수의 결과가 되지 않는다(초안 행은 0101의
+// 부분 유니크 인덱스 아래 is_current=1을 가질 수 없다). S5 저장 가드
+// (greenfield/[oppId] — 409 not_applicable_track)와 resolveTrack
+// (project-track.ts)이 읽는 행과 동일해야 TrackGate(렌더 게이트)와 저장 가드가
+// 같은 결정을 본다 — 초안 트랙 오염으로 인한 트랙 불일치 409 재발 방지.
 
 export function latestRouteDecision(
   opportunityId: string,
@@ -391,7 +398,7 @@ export function latestRouteDecision(
   | undefined {
   return getDb()
     .query(
-      "SELECT id, track, sub_track, alternatives_considered FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1",
+      "SELECT id, track, sub_track, alternatives_considered FROM route_decision WHERE opportunity_id = ? AND is_current = 1 LIMIT 1",
     )
     .get(opportunityId) as
     | {
