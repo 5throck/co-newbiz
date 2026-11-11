@@ -17,7 +17,7 @@
  */
 
 import { test, expect, afterAll, describe } from "bun:test";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 
 const TEST_DB_PATH = "db/data/test-route-decision-current-authority.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -31,6 +31,8 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 const { latestRouteDecision } = await import("../../app/web-next/lib/process-flow.ts");
 const { finalizeRouteDecisionCurrency } = await import("../../db/repositories/route-decision.repository.ts");
+const { capabilityRegisterLead } = await import("../../app/web-next/lib/capability-register-lead.ts");
+const { listGateAging } = await import("../../app/web-next/lib/gate-aging.ts");
 
 const U1 = "user-route-authority";
 let seq = 0;
@@ -136,5 +138,84 @@ describe("latestRouteDecision reads the ADR-0135 authority row (is_current=1)", 
 
     // Same no-row semantics as above (see the draft-only case).
     expect(latestRouteDecision(oppId)).toBeFalsy();
+  });
+});
+
+// ── §9 convention-query sweep (design §9, approved 2026-11-12) ───────────────
+// The three §9.1 migrate-verdict sites now read the ADR-0135 authority row.
+// Shared invariant asserted at EVERY migrated site (§9.4): a draft with a
+// newer decided_at must not win — seed the flagged final, then a draft with a
+// later decided_at and a different track, and assert the site reads the
+// final's track.
+describe("§9 convention-query sweep — migrated sites read the authority row", () => {
+  // The poisoning fixture behind the whole defect class (§9.2).
+  function seedPoisoning(): string {
+    const oppId = seedOpportunity();
+    const finalId = insertFinal(oppId, "brownfield", "m_and_a", "2026-11-11T09:00:00Z");
+    finalizeRouteDecisionCurrency(oppId, finalId);
+    insertDraft(oppId, "greenfield", "2026-11-11T10:00:00Z");
+    return oppId;
+  }
+
+  function seedGateHold(oppId: string, decidedAt: string): void {
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [`gd-${oppId}`, "opportunity", oppId, "pre_fs", "hold", "aging fixture", U1, decidedAt],
+    );
+  }
+
+  test("S3 capability register lead: draft-newer-than-final does not flip the attribution (§9.4 case 2)", () => {
+    const oppId = seedPoisoning();
+    // The newer greenfield draft must not demote the brownfield lead.
+    expect(capabilityRegisterLead(db, oppId)).toBe("brownfield-agent");
+  });
+
+  test("capability register lead: draft-only opportunity stays on the greenfield default", () => {
+    const oppId = seedOpportunity();
+    insertDraft(oppId, "brownfield", "2026-11-11T10:00:00Z");
+    // A draft is not a decision — the pre-S4 catalog default holds.
+    expect(capabilityRegisterLead(db, oppId)).toBe("greenfield-agent");
+  });
+
+  test("gate aging: the opportunity track label reads the final, not the draft (§9.4 case 3)", () => {
+    const oppId = seedPoisoning();
+    seedGateHold(oppId, "2026-11-10T00:00:00Z");
+    const row = listGateAging(db).find((r) => r.entityType === "opportunity" && r.entityId === oppId);
+    expect(row).toBeDefined();
+    expect(row?.track).toBe("brownfield");
+  });
+
+  test("gate aging: draft-only opportunity has no track label (no authority row)", () => {
+    const oppId = seedOpportunity();
+    insertDraft(oppId, "greenfield", "2026-11-11T10:00:00Z");
+    seedGateHold(oppId, "2026-11-10T00:00:00Z");
+    const row = listGateAging(db).find((r) => r.entityType === "opportunity" && r.entityId === oppId);
+    expect(row).toBeDefined();
+    expect(row?.track).toBeNull();
+  });
+
+  test("promotion: the charter-track input is the final's track, so the hint guard evaluates brownfield (§9.4 case 1)", () => {
+    const oppId = seedPoisoning();
+    // After the §9.2 migration the promote route's charter track is exactly
+    // this expression — the authority row's track (draft excluded), which
+    // buildProjectCharter receives and md_project.track snapshots at
+    // promotion. The newer greenfield draft must not reach either.
+    const charterTrack = latestRouteDecision(oppId)?.track ?? null;
+    expect(charterTrack).toBe("brownfield");
+    // The hint guard consumes the same value (`route?.track !== "greenfield"`
+    // → badRequest mode_not_allowed): a greenfield-establishment hint on this
+    // deal is still refused, as it would be for the flagged final.
+    expect(charterTrack !== "greenfield").toBe(true);
+  });
+
+  test("tripwire: the promote route consumes the shared authority reader — no residual route_decision convention query", () => {
+    // Static tripwire per the repo's source-read test convention
+    // (admin-require-admin-tripwire.test.ts precedent): pins that the route
+    // keeps importing latestRouteDecision and its raw convention query stays
+    // gone (the §9.1 migrate-verdict must not silently regress).
+    const src = readFileSync("app/web-next/app/api/opportunities/[id]/promote/route.ts", "utf-8");
+    expect(src).toContain("latestRouteDecision");
+    expect(src).not.toContain("ORDER BY decided_at DESC, id DESC LIMIT 1");
+    expect(src).not.toContain("FROM route_decision");
   });
 });

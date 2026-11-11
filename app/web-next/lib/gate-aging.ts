@@ -12,12 +12,18 @@ export interface GateAgingRow {
   decision: string;
   decidedAt: string;
   ageDays: number;
-  /** Carrier track (md_project.track / latest route_decision.track) — lets the inbox deep link to the track-appropriate decision surface. */
+  /** Carrier track (md_project.track / the route_decision authority row, is_current=1) — lets the inbox deep link to the track-appropriate decision surface. */
   track: string | null;
 }
 
 export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}): GateAgingRow[] {
   const minAge = opts.minAgeDays ?? 1;
+  // Design 2026-11-11-route-decision-current-authority-design §9.3 — documented
+  // structural exception: the opportunity track subquery cannot call a
+  // TypeScript reader from inside a SQL correlated subquery, so it keeps its
+  // raw shape and filters the ADR-0135 authority row with `AND is_current = 1`
+  // (an ADR-0124 draft can never carry the flag; semantics still "the current
+  // decision").
   const rows = db
     .query(
       `SELECT g.entity_type, g.entity_id, g.gate, g.decision, g.decided_at,
@@ -29,7 +35,7 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
               ) AS label,
               COALESCE(
                 CASE WHEN g.entity_type = 'project' THEN (SELECT track FROM md_project WHERE id = g.entity_id) END,
-                CASE WHEN g.entity_type = 'opportunity' THEN (SELECT track FROM route_decision WHERE opportunity_id = g.entity_id ORDER BY decided_at DESC, id DESC LIMIT 1) END
+                CASE WHEN g.entity_type = 'opportunity' THEN (SELECT track FROM route_decision WHERE opportunity_id = g.entity_id AND is_current = 1 ORDER BY decided_at DESC, id DESC LIMIT 1) END
               ) AS track
        FROM gate_decision g
        LEFT JOIN md_project p ON p.id = g.entity_id AND g.entity_type = 'project'
