@@ -75,7 +75,7 @@ function ctx(over: Record<string, unknown> = {}): Record<string, unknown> {
     universeModalFocus: { onKeyDown: noop, panelRef: { current: null } },
     generateUniReco: () => Promise.resolve(),
     applyUniReco: noop,
-    UniverseForm: () => createElement("div", { "data-testid": "universe-form-stub" }),
+    universeForm: () => createElement("div", { "data-testid": "universe-form-stub" }),
     ...over,
   };
 }

@@ -188,7 +188,7 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
     universeModalFocus,
     generateUniReco,
     applyUniReco,
-    UniverseForm,
+    universeForm,
   } = ctx;
   return (
     <>
@@ -353,7 +353,7 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
               )}
             </div>
 
-            <UniverseForm />
+            {universeForm()}
           </div>
         </div>
       )}

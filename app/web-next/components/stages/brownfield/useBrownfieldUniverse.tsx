@@ -6,19 +6,11 @@ import { api } from "../../../lib/api.ts";
 import { type CapabilityGapRow, summarizeGap } from "../../../lib/capability-gap.ts";
 import { useEffect } from "react";
 import type { useBrownfieldBase } from "./useBrownfieldBase.ts";
-import type {
-  WebProposalResponse,
-  UniRecoResponse,
-  UniCriteria,
-  EvalItem,
-  EvalCategoryScore,
-  FinancialsResp,
-} from "./types.ts";
+import type { WebProposalResponse, UniRecoResponse, UniCriteria } from "./types.ts";
 import { useTranslations } from "next-intl";
 
 export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>) {
   const t = useTranslations("stages.s67.useBrownfieldUniverse");
-  const tc = useTranslations("common");
   const {
     savingUniverse,
     selected,
@@ -41,9 +33,6 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     setWebSource,
     uniBusy,
     setUniBusy,
-    setEvalItems,
-    setEvalScores,
-    setFinancials,
   } = prev;
 
   const universeModalFocus = useModalFocus(() => {
@@ -52,7 +41,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
 
   // 후보 전체 목록 테이블의 재무·기술 평가 배지·잠정 순위는 서버가 계산해 target
   // row에 붙여주는 eval_summary를 그대로 쓴다(targets GET, ADR-0139) — 항목별
-  // 편집 UI(evalItems)만 행을 펼칠 때 lazy 로드한다(loadEvalItems).
+  // 평가 편집은 brownfield-target/useTargetDetail의 eval-state 경로가 담당한다.
 
   async function saveUniverse() {
     if (!selected || savingUniverse || !universeDraft.definition.trim()) return;
@@ -117,10 +106,28 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     setEditingUniverse(false);
   }
 
-  // 목표 시장 정의 수정 폼 — 수정 모달 안에서만 쓰인다.
-  function UniverseForm() {
-    const t = useTranslations("stages.s67.useBrownfieldUniverse");
-    const tc = useTranslations("common");
+  // 목표 시장 정의 수정 폼 — 수정 모달 안에서만 쓰인다. 렌더 헬퍼로 두어
+  // 훅 상태(universeDraft·saveUniverse·closeUniverseEditor·gapHint)에 그대로
+  // 닫혀 있고, 모달은 ctx를 통해 {universeForm()}으로 인라인 렌더한다.
+  // use*는 중첩 함수 안에서 부를 수 없으므로 번역 문자열은 훅 본문(렌더
+  // 시점)에서 한 번 만들어 닫는다 — 로콘이 바뀌면 훅이 다시 렌더되어 갱신된다.
+  const tc = useTranslations("common");
+  const formLabels = {
+    definition: t("definitionTheCandidatePoolS"),
+    definitionPlaceholder: t("eGAllListedDomestic"),
+    financialCriteriaLabel: t("financialCriteriaLabel"),
+    financialCriteriaPlaceholder: t("financialCriteriaPlaceholder"),
+    financialCriteriaHint: t("financialCriteriaHint"),
+    minimumCandidateCount: t("minimumCandidateCount"),
+    referenceNotAForcedFormula: t("referenceNotAForcedFormula"),
+    itemSPartiallyMet: t("itemSPartiallyMet"),
+    saveTargetMarket: t("saveTargetMarket"),
+    formAriaLabel: tc("editTargetMarketDefinition"),
+    countUnit: tc("countUnit"),
+    cancel: tc("cancel"),
+    saving: tc("saving"),
+  };
+  function universeForm() {
     return (
       <form
         className="sizing-new-form mb-0"
@@ -128,14 +135,14 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
           e.preventDefault();
           void saveUniverse();
         }}
-        aria-label={tc("editTargetMarketDefinition")}
+        aria-label={formLabels.formAriaLabel}
       >
         <label className="text-[length:var(--fs-caption)] block mb-3">
-          <span className="block mb-1">{t("definitionTheCandidatePoolS")}</span>
+          <span className="block mb-1">{formLabels.definition}</span>
           <textarea
             value={universeDraft.definition}
             onChange={(e) => setUniverseDraft({ ...universeDraft, definition: e.target.value })}
-            placeholder={t("eGAllListedDomestic")}
+            placeholder={formLabels.definitionPlaceholder}
             required
             rows={3}
             className="sizing-new-input w-full"
@@ -144,18 +151,18 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
         {/* 재무 기준 (DEC-20261111-05) — S7 t-08이 후보 재무를 비교하는
             기록값. 선택 입력이며 근거 없는 수치는 쓰지 않는다. */}
         <label className="text-[length:var(--fs-caption)] block mb-3">
-          <span className="block mb-1">{t("financialCriteriaLabel")}</span>
+          <span className="block mb-1">{formLabels.financialCriteriaLabel}</span>
           <textarea
             value={universeDraft.financial_criteria}
             onChange={(e) => setUniverseDraft({ ...universeDraft, financial_criteria: e.target.value })}
-            placeholder={t("financialCriteriaPlaceholder")}
+            placeholder={formLabels.financialCriteriaPlaceholder}
             rows={2}
             className="sizing-new-input w-full"
           />
-          <span className="block mt-1 text-[color:var(--muted-fg)]">{t("financialCriteriaHint")}</span>
+          <span className="block mt-1 text-[color:var(--muted-fg)]">{formLabels.financialCriteriaHint}</span>
         </label>
         <label className="text-[length:var(--fs-caption)] w-32 shrink-0 block mb-3">
-          <span className="block mb-1">{t("minimumCandidateCount")}</span>
+          <span className="block mb-1">{formLabels.minimumCandidateCount}</span>
           <input
             type="number"
             min={1}
@@ -166,21 +173,21 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
         </label>
         {gapHint && (
           <p className="mb-3 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            {t("referenceNotAForcedFormula")} {gapHint.unmet}
-            {t("itemSPartiallyMet")} {gapHint.partial}
-            {tc("countUnit")}
+            {formLabels.referenceNotAForcedFormula} {gapHint.unmet}
+            {formLabels.itemSPartiallyMet} {gapHint.partial}
+            {formLabels.countUnit}
           </p>
         )}
         <div className="flex items-center justify-end gap-2">
           <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse}>
-            {tc("cancel")}
+            {formLabels.cancel}
           </button>
           <button
             type="submit"
             className="btn-ghost btn-sm"
             disabled={savingUniverse || !universeDraft.definition.trim()}
           >
-            {savingUniverse ? tc("saving") : t("saveTargetMarket")}
+            {savingUniverse ? formLabels.saving : formLabels.saveTargetMarket}
           </button>
         </div>
       </form>
@@ -193,15 +200,15 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
       return;
     }
     loadDetail(opportunityId);
-  }, [opportunityId, loadDetail]);
+  }, [opportunityId, loadDetail, setSelected]);
 
   // 기회를 바꾸면 진행 중이던 수정을 닫는다 — 다른 기회의 미저장 입력이 새
   // 기회 폼에 남지 않도록.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset is deliberately keyed on the opportunity id without reading it (re-run on every opportunity switch) — the setters are stable useState identities
   useEffect(() => {
     setEditingUniverse(false);
     setUniReco(null);
     setUniRecoApplied(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.opportunity.id]);
 
   // ── B: 후보 전체 목록 웹검색 후보 제안 생성 (on-demand, ADR-0118) ──
@@ -261,28 +268,6 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     }));
     setUniRecoApplied(true);
   }
-
-  // S7 재무·기술 평가 (ADR-0139) — 후보 행을 펼칠 때 불러온다(최초 호출 시
-  // 서버가 재무 빌트인·기술 시딩을 lazy하게 채운다).
-  function loadEvalItems(targetId: string) {
-    if (!selected) return;
-    api
-      .get<{ items: EvalItem[]; scores: Record<EvalItem["category"], EvalCategoryScore> }>(
-        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/eval-state`,
-      )
-      .then((r) => {
-        setEvalItems((prev) => ({ ...prev, [targetId]: r.data.items }));
-        setEvalScores((prev) => ({ ...prev, [targetId]: r.data.scores }));
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheFinancial")));
-  }
-
-  function loadFinancials(companyId: string) {
-    api
-      .get<FinancialsResp>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
-      .then((r) => setFinancials((prev) => ({ ...prev, [companyId]: r.data })))
-      .catch(() => setFinancials((prev) => ({ ...prev, [companyId]: null })));
-  }
   return {
     openUniverseEditor,
     generateWebProposals,
@@ -290,6 +275,6 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     universeModalFocus,
     generateUniReco,
     applyUniReco,
-    UniverseForm,
+    universeForm,
   };
 }

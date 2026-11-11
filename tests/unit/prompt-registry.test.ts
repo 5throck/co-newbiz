@@ -37,9 +37,9 @@ describe("prompt registry", () => {
 
   test("promptAgent rejects runtime-agent entries without an override key", () => {
     const dyn = SSOT.prompts.find((p) => p.agent === null);
-    expect(dyn).toBeDefined();
-    expect(() => promptAgent(dyn!.key as PromptKey)).toThrow();
-    expect(promptAgent(dyn!.key as PromptKey, { key: "risk-officer" }).key).toBe("risk-officer");
+    if (!dyn) throw new Error("the SSOT has no runtime-agent prompt entry");
+    expect(() => promptAgent(dyn.key as PromptKey)).toThrow();
+    expect(promptAgent(dyn.key as PromptKey, { key: "risk-officer" }).key).toBe("risk-officer");
   });
 
   test("promptAgent keeps the SSOT purpose and allows purpose override", () => {
