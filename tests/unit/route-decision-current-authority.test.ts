@@ -37,10 +37,13 @@ let seq = 0;
 
 function seedOpportunity(): string {
   const id = `opp-${Math.random().toString(36).slice(2, 10)}`;
-  db.run(
-    "INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)",
-    [id, `route-authority-${++seq}`, "selected", U1, "2026-11-11T09:00:00Z"],
-  );
+  db.run("INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)", [
+    id,
+    `route-authority-${++seq}`,
+    "selected",
+    U1,
+    "2026-11-11T09:00:00Z",
+  ]);
   return id;
 }
 

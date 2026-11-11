@@ -906,7 +906,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
           const sel = db
             .query("SELECT status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
             .get(selectedTargetId, project.source_opportunity_id ?? "") as { status: string } | undefined;
-          if (!sel || sel.status !== "shortlisted") {
+          if (sel?.status !== "shortlisted") {
             blockers.push("선정된 대상이 Short List에서 제외되었습니다 — 대상을 재선정하세요");
             missing.push(blocker("s8.target_selection_record"));
           }
@@ -1257,7 +1257,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
 // ADR-0186 D8 (family `wacc` = enforce): S8 is not complete until the WACC application subject is set (bf-13 for
 // brownfield: the target) and the WACC and the hurdle IRR are user-confirmed (neb-policy 2.2, bf-02). Wraps the stage
 // predicate above so its own artifact checks stay untouched; off and shadow leave S8 exactly as before.
-const s8ArtifactCompletion = PROJECT_STAGE_COMPLETION.S8!;
+const s8ArtifactCompletion = PROJECT_STAGE_COMPLETION.S8 as (args: ProjectStageArgs) => StageEvaluation;
 const WACC_MISSING_TEXT: Record<WaccMissingItem, string> = {
   wacc_subject: "the WACC application subject (wacc_subject; the target for brownfield, bf-13)",
   wacc: "the WACC (kind=user)",
