@@ -215,7 +215,7 @@
   "app/web-next/lib/llm-json.ts": 2,
   "app/web-next/lib/llm.ts": 21,
   "app/web-next/lib/market-calibration.ts": 6,
-  "app/web-next/lib/market-sizing-pipeline.ts": 148,
+  "app/web-next/lib/market-sizing-pipeline.ts": 160,
   "app/web-next/lib/market-sizing.ts": 20,
   "app/web-next/lib/npv-format.ts": 1,
   "app/web-next/lib/opportunity-factors.ts": 14,

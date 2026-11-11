@@ -65,7 +65,7 @@ const { appendExternalReference } = await import("../../app/web-next/lib/market-
 const { runSizingPipeline } = await import("../../app/web-next/lib/market-sizing-pipeline.ts");
 const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
 const { referenceNewerThanVersion, rerunCtaMode } = await import(
-  "../../app/web-next/components/stages/market/SizingGrowthTabs.tsx"
+  "../../app/web-next/lib/market-reference-staleness.ts"
 );
 const { ulid } = await import("../../db/lib/ulid.ts");
 

@@ -15,32 +15,9 @@ import {
 } from "./SizingScenarioCharts.tsx";
 import { CalibrationPanel } from "./CalibrationPanel.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
+import { referenceNewerThanVersion, rerunCtaMode } from "../../../lib/market-reference-staleness.ts";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-
-// C1 (design 2026-09-18-s1-growth-gap-calibration, amendment 2026-11-12) — 기록된
-// 외부 참조가 표시 중인 최신 분석 버전보다 나중에 기록됐는지(컨센서스 stale 여부).
-// 순수 타임스탬프 비교이며, 한쪽이라도 없거나 파싱 불가면 stale 아님으로 판정한다.
-export function referenceNewerThanVersion(
-  referenceCreatedAt: string | null | undefined,
-  versionCreatedAt: string | null | undefined,
-): boolean {
-  if (!referenceCreatedAt || !versionCreatedAt) return false;
-  const ref = Date.parse(referenceCreatedAt);
-  const ver = Date.parse(versionCreatedAt);
-  if (Number.isNaN(ref) || Number.isNaN(ver)) return false;
-  return ref > ver;
-}
-
-// C2 (amendment 2026-11-12) — 어디서 재분석 CTA가 보이는지 결정한다. "gap"은 기존
-// 격차 게이트(externalForecast && |gap| >= 20) 블록, "staleness"는 참조 최신 스테일
-// 배너 카드, "none"은 CTA 없음. 격차 게이트가 이미 CTA를 보여 주면 그쪽이 이긴다
-// (중복 버튼 방지 — 기존 격차 CTA 동작 불변).
-export function rerunCtaMode(gapPct: number | undefined, referenceNewer: boolean): "gap" | "staleness" | "none" {
-  const gapVisible = gapPct !== undefined && Math.abs(gapPct) >= 20;
-  if (gapVisible) return "gap";
-  return referenceNewer ? "staleness" : "none";
-}
 
 export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
   const t = useTranslations("stages.s1.sizingGrowthTabs");
