@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-target-identification
 title: "Brown Field Target Identification (Universe → Long List)"
 scope: shared
 level: entity
-version: "1.0.0"
+version: "1.1.0"
 effective_from: "2026-09-01"
 status: active
 applicability: mandatory
@@ -35,8 +35,16 @@ steps:
       that could serve the Opportunity under the selected Brownfield route
       (M&A/JV/strategic investment/minority/partnership/R&BD/CVC). Record the
       selection criteria (industry segment, value-chain node, geography, size
-      band, route-specific constraints) and the minimum coverage the longlist
-      must achieve before screening may start.
+      band, business viability, route-specific constraints) and the minimum
+      coverage the longlist must achieve before screening may start. Business
+      viability is the profitability/sustainability condition of the value-chain
+      stage the candidates sit in (segment profit pools, margin structure,
+      pricing power), recorded with its evidence grade — or recorded as an
+      honest gap (검증 필요 + the named data needed, e.g. value-chain stage
+      financials per ADR-0066) when no profitability evidence exists.
+      Technical-capability conditions are NOT universe criteria — they are
+      screened per candidate at target screening (t-05 capability fit, t-07
+      capability complementarity).
   - id: 2
     gate: Pre-FS
     agent_key: market-intelligence-agent
@@ -64,6 +72,7 @@ kill_criteria:
 legal_basis:
   - "flow.spec.yaml v2.0.0 S6 (대상 후보 발굴) — Brownfield Long List is a distinct process stage, not a screening byproduct"
   - "Design v1.0 §6.3 (procedure/skill authority split)"
+  - "DEC-20261111-05 and docs/designs/2026-11-11-s6-universe-viability-criteria-design.md (owner complaint 2026-11-11: S6 draft framed technically instead of by business viability; S7 t-08 compares against the recorded financial criteria)"
 
 owner_agent: brownfield-agent
-last_reviewed: "2026-08-31"
+last_reviewed: "2026-11-11"

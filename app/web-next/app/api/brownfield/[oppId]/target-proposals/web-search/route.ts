@@ -14,7 +14,11 @@ import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../lib/llm.ts";
-import { isWebResearchConfigured, researchSourcesDetailed, type WebSource } from "../../../../../../lib/web-research.ts";
+import {
+  isWebResearchConfigured,
+  researchSourcesDetailed,
+  type WebSource,
+} from "../../../../../../lib/web-research.ts";
 import { playwrightSearch } from "../../../../../../lib/playwright-search.ts";
 import { isSimilar } from "../../../../../../lib/name-similarity.ts";
 import { reliabilityForSource } from "../../../../../../lib/dd-checklist-tailor.ts";
@@ -25,6 +29,9 @@ interface UniverseShape {
   definition?: string;
   criteria?: string[];
   scope?: string | null;
+  /** DEC-20261111-05 (design §5.1) — additive, type completeness only; the
+   * seeding logic consumes definition context, not this field. */
+  financial_criteria?: string;
   min_long_list?: number;
 }
 
@@ -56,9 +63,11 @@ function synthesisFallback(
 ) {
   const root = opp.market_scope ? opp.market_scope.replace(/ 제조| 업| 서비스| 산업| 시장/g, "").slice(0, 2) : null;
   const rows = root
-    ? (db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE name_ko LIKE ? ORDER BY name_ko LIMIT 20")
-        .all(`%${root}%`) as Array<{ id: string; name_ko: string; dart_corp_code: string | null }>)
-        .filter((c) => !existingNames.includes(c.name_ko))
+    ? (
+        db
+          .query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE name_ko LIKE ? ORDER BY name_ko LIMIT 20")
+          .all(`%${root}%`) as Array<{ id: string; name_ko: string; dart_corp_code: string | null }>
+      ).filter((c) => !existingNames.includes(c.name_ko))
     : [];
   const suggestions = rows.map((s) => ({
     company_name: s.name_ko,
@@ -68,11 +77,9 @@ function synthesisFallback(
     reliability: "C" as const,
   }));
   appendAudit(db, { actor, action: "target_proposal.web_search", target: opp.id, now: new Date().toISOString() });
-  return ok(
-    { source: "synthesis", provider: "deterministic", note, query_count: 0, suggestions },
-    200,
-    { proposals: suggestions.length },
-  );
+  return ok({ source: "synthesis", provider: "deterministic", note, query_count: 0, suggestions }, 200, {
+    proposals: suggestions.length,
+  });
 }
 
 /** 폴백 — 실검색을 쓸 수 없을 때(TAVILY_API_KEY 미설정, 또는 Tavily 쿼터 초과
@@ -108,12 +115,20 @@ async function llmKnowledgeFallback(
   );
   if (llmRes.source !== "llm") {
     return synthesisFallback(
-      db, actor, opp, existingNames,
+      db,
+      actor,
+      opp,
+      existingNames,
       `${reason} — LLM 호출도 실패해 기업 마스터 기반 결정론 제안으로 대체합니다.`,
     );
   }
   const suggestions = normalizeLlmKnowledgeSuggestions(llmRes, existingNames);
-  appendAudit(db, { actor, action: "target_proposal.web_search_llm_knowledge", target: opp.id, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor,
+    action: "target_proposal.web_search_llm_knowledge",
+    target: opp.id,
+    now: new Date().toISOString(),
+  });
   return ok(
     {
       source: "llm_knowledge",
@@ -159,7 +174,8 @@ function buildKnowledgePrompt(
 export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existingNames: string[]): Suggestion[] {
   if (llmRes.source !== "llm") return [];
   const parsed = parseJson(llmRes.text);
-  const raw = Array.isArray(parsed?.candidates) ? (parsed!.candidates as Array<Record<string, unknown>>) : [];
+  const candidates = parsed?.candidates;
+  const raw = Array.isArray(candidates) ? (candidates as Array<Record<string, unknown>>) : [];
   const out: Suggestion[] = [];
   const seen = [...existingNames];
   for (const c of raw) {
@@ -177,15 +193,23 @@ export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existing
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Web-search proposal generation requires the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Web-search proposal generation requires the analyst role or higher.",
+  });
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
   const opp = db
     .query("SELECT id, name, market_scope, target_universe_json, capability_gap_json FROM opportunity WHERE id = ?")
-    .get(oppId) as {
-      id: string; name: string; market_scope: string | null; target_universe_json: string | null; capability_gap_json: string | null;
-    } | undefined;
+    .get(oppId) as
+    | {
+        id: string;
+        name: string;
+        market_scope: string | null;
+        target_universe_json: string | null;
+        capability_gap_json: string | null;
+      }
+    | undefined;
   if (!opp) return notFound();
 
   let universe: UniverseShape = {};
@@ -196,11 +220,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   }
   // S3 필요 역량(capability_gap_json) — 미보유/부분 충족 역량을 우선 반영해
   // "결정된 기회가 실제로 필요로 하는 역량"을 갖춘 후보를 찾도록 한다.
-  const requiredCapabilities = parseGapRegister(opp.capability_gap_json).rows
-    .filter((r) => r.held.status !== "leading" && r.held.status !== "average")
+  const requiredCapabilities = parseGapRegister(opp.capability_gap_json)
+    .rows.filter((r) => r.held.status !== "leading" && r.held.status !== "average")
     .map((r) => r.capability);
   const existingNames = (
-    db.query("SELECT company_name FROM brownfield_target WHERE opportunity_id = ?").all(oppId) as Array<{ company_name: string }>
+    db.query("SELECT company_name FROM brownfield_target WHERE opportunity_id = ?").all(oppId) as Array<{
+      company_name: string;
+    }>
   ).map((e) => e.company_name);
 
   // 1) 실검색 근거 확보 — 검색 미설정이면 Playwright headless 폴백, 그래도
@@ -219,7 +245,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       const headless = await playwrightSearch(queries, 10);
       if (headless.length > 0) {
         sources = headless;
-        searchNote = "웹 검색 쿼터가 초과되어 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.";
+        searchNote =
+          "웹 검색 쿼터가 초과되어 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.";
       } else {
         environmentFailure = true;
       }
@@ -228,7 +255,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     // TAVILY_API_KEY 미설정 — Playwright headless 검색을 1차 수단으로 쓴다.
     sources = await playwrightSearch(queries, 10);
     if (sources.length > 0) {
-      searchNote = "웹 검색 API가 설정되지 않아 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.";
+      searchNote =
+        "웹 검색 API가 설정되지 않아 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.";
     } else {
       environmentFailure = true;
     }
@@ -238,11 +266,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     // 지식 폴백(미검증 라벨), 단순 0건이면 ADR-0118 원칙대로 결정론 폴백을 유지한다.
     if (environmentFailure) {
       return llmKnowledgeFallback(
-        db, auth.auth.userId, opp, universe, requiredCapabilities, existingNames, oppId,
+        db,
+        auth.auth.userId,
+        opp,
+        universe,
+        requiredCapabilities,
+        existingNames,
+        oppId,
         isWebResearchConfigured() ? "웹 검색 쿼터가 초과되었습니다" : "실시간 웹 검색이 설정되지 않았습니다",
       );
     }
-    return synthesisFallback(db, auth.auth.userId, opp, existingNames, "웹 검색에서 근거를 찾지 못했습니다 — 기업 마스터 기반 결정론 제안으로 대체합니다.");
+    return synthesisFallback(
+      db,
+      auth.auth.userId,
+      opp,
+      existingNames,
+      "웹 검색에서 근거를 찾지 못했습니다 — 기업 마스터 기반 결정론 제안으로 대체합니다.",
+    );
   }
 
   // 2) LLM이 검색 근거에 등장하는 회사만 제안하게 한다.
@@ -333,10 +373,15 @@ function buildPrompt(
 /** 테스트 가능성을 위해 export — LLM 응답 화이트리스트 정규화(순수 함수).
  * 근거 인용(source_indices) 없는 후보는 폐기하고, 기존 후보와 유사한 이름도
  * 제거하며, 최대 5건으로 제한한다. */
-export function normalizeLlmSuggestions(llmRes: LlmOrFallback, sources: WebSource[], existingNames: string[]): Suggestion[] {
+export function normalizeLlmSuggestions(
+  llmRes: LlmOrFallback,
+  sources: WebSource[],
+  existingNames: string[],
+): Suggestion[] {
   if (llmRes.source !== "llm") return [];
   const parsed = parseJson(llmRes.text);
-  const raw = Array.isArray(parsed?.candidates) ? (parsed!.candidates as Array<Record<string, unknown>>) : [];
+  const candidates = parsed?.candidates;
+  const raw = Array.isArray(candidates) ? (candidates as Array<Record<string, unknown>>) : [];
   const out: Suggestion[] = [];
   const seen = [...existingNames];
   for (const c of raw) {
@@ -344,7 +389,9 @@ export function normalizeLlmSuggestions(llmRes: LlmOrFallback, sources: WebSourc
     if (!name || isSimilar(name, seen)) continue;
     const rationale = typeof c.rationale === "string" ? c.rationale.trim().slice(0, 600) : "";
     const idx = Array.isArray(c.source_indices)
-      ? (c.source_indices as unknown[]).map((v) => (typeof v === "number" ? Math.floor(v) - 1 : -1)).filter((v) => v >= 0 && v < sources.length)
+      ? (c.source_indices as unknown[])
+          .map((v) => (typeof v === "number" ? Math.floor(v) - 1 : -1))
+          .filter((v) => v >= 0 && v < sources.length)
       : [];
     // 근거 인용 없는 후보는 폐기 — 근거 없는 이름은 날조로 간주한다(ADR-0118).
     if (idx.length === 0) continue;
