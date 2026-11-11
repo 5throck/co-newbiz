@@ -1,6 +1,7 @@
 // S3 역량 갭 분석 공용 로직 — 시장 요구사항(필요 역량)을 그룹/계열사 보유
 // 역량과 대조한 갭 레지스터의 타입·정규화·요약. 레지스터 본체는
 // opportunity.capability_gap_json(마이그레이션 0098)에 저장된다.
+import type { Database } from "bun:sqlite";
 //
 // 보유 판정의 근거는 그룹/계열사 프로필(company_profile_version strengths·
 // industryExposure)뿐이다 — 내부(자사 단독) 역량 평가는 후속 보강 사항이며,
@@ -142,7 +143,11 @@ export interface RemovedCapability {
 export const HISTORY_CAP = 5;
 export const REMOVED_CAP = 30;
 
-export const ATTAINABILITY_GRADE_LABEL: Record<AttainabilityGrade, string> = { high: "높음", medium: "중간", low: "낮음" };
+export const ATTAINABILITY_GRADE_LABEL: Record<AttainabilityGrade, string> = {
+  high: "높음",
+  medium: "중간",
+  low: "낮음",
+};
 export const ATTAINABILITY_UNJUDGED_LABEL = "미판정";
 const GRADES: AttainabilityGrade[] = ["high", "medium", "low"];
 
@@ -171,7 +176,12 @@ const NECESSITIES: Array<Exclude<GapNecessity, "">> = ["essential", "partial_ess
 
 /** Canonical display order for the S3-owned columns (ADR-0172). */
 export const CAPABILITY_COLUMN_ORDER = [
-  "capability", "necessity", "requiredLevel", "heldStatus", "currentLevel", "evidence",
+  "capability",
+  "necessity",
+  "requiredLevel",
+  "heldStatus",
+  "currentLevel",
+  "evidence",
 ] as const;
 
 /**
@@ -187,7 +197,10 @@ export function preserveStoredOwnedFields(rawRows: unknown[], storedRows: Capabi
     const prev = typeof row.id === "string" ? byId.get(row.id) : undefined;
     if (!prev) return row;
     if (!("resolution" in row)) row.resolution = prev.resolution;
-    const held = row.held && typeof row.held === "object" && !Array.isArray(row.held) ? { ...(row.held as Record<string, unknown>) } : {};
+    const held =
+      row.held && typeof row.held === "object" && !Array.isArray(row.held)
+        ? { ...(row.held as Record<string, unknown>) }
+        : {};
     if (!("holders" in held)) held.holders = prev.held.holders;
     row.held = held;
     return row;
@@ -197,11 +210,18 @@ export function preserveStoredOwnedFields(rawRows: unknown[], storedRows: Capabi
 /** Legacy stored key -> current key. Anything unknown reads as unevaluated. */
 export function mapLegacyHeldStatus(raw: unknown): { status: GapHeldStatus; legacy: LegacyHeldStatus | null } {
   switch (raw) {
-    case "leading": case "average": case "partial": case "none": case "unevaluated":
+    case "leading":
+    case "average":
+    case "partial":
+    case "none":
+    case "unevaluated":
       return { status: raw, legacy: null };
-    case "met": return { status: "average", legacy: "met" };
-    case "unmet": return { status: "none", legacy: "unmet" };
-    default: return { status: "unevaluated", legacy: null };
+    case "met":
+      return { status: "average", legacy: "met" };
+    case "unmet":
+      return { status: "none", legacy: "unmet" };
+    default:
+      return { status: "unevaluated", legacy: null };
   }
 }
 
@@ -234,10 +254,14 @@ const RESOLUTIONS: GapResolution[] = ["build", "partner", "hire", "invest"];
 /** Origin line for a register row. Inside the S3 screen the label never names S3 itself. */
 export function gapSourceLabel(source: string, inS3: boolean): string {
   switch (source) {
-    case "s2_sketch": return "S2 스케치에서 도출";
-    case "s1_factors": return "S1 요인에서 도출";
-    case "synergy_area": return inS3 ? "시너지 영역에서 도출" : "S3 시너지 영역에서 도출";
-    default: return "직접 입력";
+    case "s2_sketch":
+      return "S2 스케치에서 도출";
+    case "s1_factors":
+      return "S1 요인에서 도출";
+    case "synergy_area":
+      return inS3 ? "시너지 영역에서 도출" : "S3 시너지 영역에서 도출";
+    default:
+      return "직접 입력";
   }
 }
 
@@ -245,7 +269,12 @@ const SOURCES: GapSource[] = ["s2_sketch", "s1_factors", "synergy_area", "manual
 
 const str = (v: unknown, cap: number): string => (typeof v === "string" ? v.trim().slice(0, cap) : "");
 const strArr = (v: unknown, max: number, cap: number): string[] =>
-  Array.isArray(v) ? v.map((x) => str(x, cap)).filter(Boolean).slice(0, max) : [];
+  Array.isArray(v)
+    ? v
+        .map((x) => str(x, cap))
+        .filter(Boolean)
+        .slice(0, max)
+    : [];
 
 /** LLM·클라이언트 양쪽에서 오는 raw 배열을 정규화한다 — 상한(cap 30행) 강제. */
 export function normalizeGapRows(raw: unknown): CapabilityGapRow[] {
@@ -260,11 +289,21 @@ export function normalizeGapRows(raw: unknown): CapabilityGapRow[] {
     const mapped = mapLegacyHeldStatus(heldRaw.status);
     const status = mapped.status;
     // A client may round-trip the legacy marker untouched; keep it only while the key still matches it.
-    const carriedLegacy = heldRaw.legacyStatus === "met" && status === "average" ? "met" : heldRaw.legacyStatus === "unmet" && status === "none" ? "unmet" : null;
+    const carriedLegacy =
+      heldRaw.legacyStatus === "met" && status === "average"
+        ? "met"
+        : heldRaw.legacyStatus === "unmet" && status === "none"
+          ? "unmet"
+          : null;
     const legacy = mapped.legacy ?? carriedLegacy;
-    const necessity = NECESSITIES.includes(item.necessity as Exclude<GapNecessity, "">) ? (item.necessity as GapNecessity) : "";
-    const scopeNote = necessity === "partial_essential" ? str(item.necessityScopeNote ?? item.necessityNote, NECESSITY_NOTE_CAP) : "";
-    const resolution = RESOLUTIONS.includes(item.resolution as GapResolution) ? (item.resolution as GapResolution) : null;
+    const necessity = NECESSITIES.includes(item.necessity as Exclude<GapNecessity, "">)
+      ? (item.necessity as GapNecessity)
+      : "";
+    const scopeNote =
+      necessity === "partial_essential" ? str(item.necessityScopeNote ?? item.necessityNote, NECESSITY_NOTE_CAP) : "";
+    const resolution = RESOLUTIONS.includes(item.resolution as GapResolution)
+      ? (item.resolution as GapResolution)
+      : null;
     const attainability = normalizeAttainability(item.attainability);
     rows.push({
       id: str(item.id, 40) || `gap-${rows.length + 1}-${Date.now().toString(36)}`,
@@ -293,7 +332,11 @@ export function normalizeGapRows(raw: unknown): CapabilityGapRow[] {
 const finiteNonNeg = (v: unknown, max: number): number | null =>
   typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.min(v, max) : null;
 
-export interface HeldDraft { status: GapHeldStatus; evidence: string; currentLevel: string }
+export interface HeldDraft {
+  status: GapHeldStatus;
+  evidence: string;
+  currentLevel: string;
+}
 
 /**
  * AI draft normalizer (ADR-0172): proposes 보유 판정 on the new scale + 보유 수준 narrative +
@@ -327,13 +370,20 @@ export function normalizeAttainability(raw: unknown): CapabilityAttainability | 
   const basisHash = str(a.basisHash, 40);
   const staleSince = str(a.staleSince, 40);
   const expectedLevel = str(a.expectedLevel, NARRATIVE_CAP);
-  const category = JUDGEMENT_CATEGORIES.includes(a.category as JudgementCategory) ? (a.category as JudgementCategory) : undefined;
+  const category = JUDGEMENT_CATEGORIES.includes(a.category as JudgementCategory)
+    ? (a.category as JudgementCategory)
+    : undefined;
   const SPEND_PERIODS = ["monthly", "quarterly", "yearly", "lumpsum"];
-  const spendPeriod = SPEND_PERIODS.includes(a.spendPeriod as string) ? (a.spendPeriod as "monthly" | "quarterly" | "yearly" | "lumpsum") : undefined;
+  const spendPeriod = SPEND_PERIODS.includes(a.spendPeriod as string)
+    ? (a.spendPeriod as "monthly" | "quarterly" | "yearly" | "lumpsum")
+    : undefined;
   const s3Snapshot = normalizeS3Snapshot(a.s3Snapshot);
   const milestoneCandidate = normalizeMilestoneCandidate(a.milestoneCandidate);
   const history = Array.isArray(a.history)
-    ? (a.history as unknown[]).map(normalizeHistoryEntry).filter((x): x is AttainabilityHistoryEntry => x !== null).slice(-HISTORY_CAP)
+    ? (a.history as unknown[])
+        .map(normalizeHistoryEntry)
+        .filter((x): x is AttainabilityHistoryEntry => x !== null)
+        .slice(-HISTORY_CAP)
     : [];
   return {
     closingCostKrwM: finiteNonNeg(a.closingCostKrwM, 1e9),
@@ -363,7 +413,10 @@ function normalizeMilestoneCandidate(raw: unknown): MilestoneCandidate | undefin
   const name = str(m.name, 200);
   const rowId = str(m.rowId, 40);
   if (!months || !name || !rowId) return undefined;
-  const resolution = m.resolution === "build" || m.resolution === "partner" || m.resolution === "hire" || m.resolution === "invest" ? m.resolution : null;
+  const resolution =
+    m.resolution === "build" || m.resolution === "partner" || m.resolution === "hire" || m.resolution === "invest"
+      ? m.resolution
+      : null;
   return { name, months, resolution, rowId, derivedFromHash: str(m.derivedFromHash, 40) };
 }
 
@@ -376,7 +429,9 @@ function normalizeS3Snapshot(raw: unknown): S3Snapshot | undefined {
     heldStatus: mapLegacyHeldStatus(s.heldStatus).status,
     requiredLevel: str(s.requiredLevel, NARRATIVE_CAP),
     currentLevel: str(s.currentLevel, NARRATIVE_CAP),
-    ...(NECESSITIES.includes(s.necessity as Exclude<GapNecessity, "">) ? { necessity: s.necessity as GapNecessity } : {}),
+    ...(NECESSITIES.includes(s.necessity as Exclude<GapNecessity, "">)
+      ? { necessity: s.necessity as GapNecessity }
+      : {}),
   };
 }
 
@@ -395,7 +450,9 @@ function normalizeHistoryEntry(raw: unknown): AttainabilityHistoryEntry | null {
     evidence: strArr(h.evidence, 8, 300),
     resolution: RESOLUTIONS.includes(h.resolution as GapResolution) ? (h.resolution as GapResolution) : null,
     ...(str(h.expectedLevel, NARRATIVE_CAP) ? { expectedLevel: str(h.expectedLevel, NARRATIVE_CAP) } : {}),
-    ...(JUDGEMENT_CATEGORIES.includes(h.category as JudgementCategory) ? { category: h.category as JudgementCategory } : {}),
+    ...(JUDGEMENT_CATEGORIES.includes(h.category as JudgementCategory)
+      ? { category: h.category as JudgementCategory }
+      : {}),
     confirmedBy: confirmedBy && confirmedAt ? confirmedBy : null,
     confirmedAt: confirmedBy && confirmedAt ? confirmedAt : null,
     basisHash: str(h.basisHash, 40),
@@ -442,7 +499,10 @@ export function normalizeRemovedCapabilities(raw: unknown): RemovedCapability[] 
  * S3·S5 저장 경로가 클라이언트가 보낸 확정자/확정일을 신뢰하지 않게 하는 장치이며
  * (확정은 사람 전용 경로로만), 클라이언트가 필드를 빠뜨려도 판정이 지워지지 않는다.
  */
-export function carryOverAttainability(rows: CapabilityGapRow[], storedJson: string | null | undefined): CapabilityGapRow[] {
+export function carryOverAttainability(
+  rows: CapabilityGapRow[],
+  storedJson: string | null | undefined,
+): CapabilityGapRow[] {
   const stored = new Map(parseGapRegister(storedJson).rows.map((r) => [r.id, r.attainability]));
   return rows.map((r) => {
     const { attainability: _drop, ...rest } = r;
@@ -475,7 +535,13 @@ export interface GapSummary {
   essentialCoveragePct: number | null;
 }
 
-const COVERAGE_WEIGHT: Record<GapHeldStatus, number> = { leading: 1, average: 1, partial: 0.5, none: 0, unevaluated: 0 };
+const COVERAGE_WEIGHT: Record<GapHeldStatus, number> = {
+  leading: 1,
+  average: 1,
+  partial: 0.5,
+  none: 0,
+  unevaluated: 0,
+};
 
 function coverageOf(rows: CapabilityGapRow[]): number | null {
   const judged = rows.filter((r) => r.held.status !== "unevaluated");
@@ -499,17 +565,60 @@ export function summarizeGap(rows: CapabilityGapRow[]): GapSummary {
   };
 }
 
+// ── Live capability coverage read (design 2026-10-18-synergy-4element-design,
+//    Amendment 2026-11-12) ────────────────────────────────────────────────────
+// The FRESH read-and-blend of opportunity.capability_gap_json at request time —
+// the register as the human has judged it NOW, not the pipeline's stored
+// pre-judgement snapshot (synergy_version.payload.capabilityCoverage). Both
+// consumers — the rescore path (synergy-rescore.ts) and the AI calibration
+// route (/api/synergy/ai-score-adjustment) — read through this helper so the
+// blend math exists exactly once. The blend is the unchanged 50/50:
+// round(coveragePct * 0.5 + essentialCoveragePct * 0.5); the null rule matches
+// the pipeline's producer (synergy-pipeline.ts:426-428): rows empty → null,
+// all-unjudged (evaluated === 0) → null.
+export function readLiveCapabilityCoverage(
+  db: Database,
+  opportunityId: string,
+): { value: number | null; note: string | null } {
+  const storedGapJson =
+    (
+      db.query("SELECT capability_gap_json FROM opportunity WHERE id = ?").get(opportunityId) as
+        | { capability_gap_json: string | null }
+        | undefined
+    )?.capability_gap_json ?? null;
+  const reg = parseGapRegister(storedGapJson);
+  if (reg.rows.length === 0) return { value: null, note: null };
+  const s = summarizeGap(reg.rows);
+  if (s.evaluated > 0) {
+    const essential = s.essentialCoveragePct;
+    return {
+      value:
+        essential !== null && s.coveragePct !== null
+          ? Math.round(s.coveragePct * 0.5 + essential * 0.5)
+          : s.coveragePct,
+      note: `필요 역량 ${s.total}건 중 판정 ${s.evaluated}건 — 보유율 ${s.coveragePct !== null ? `${s.coveragePct}%` : "—"}, 필수 충족율 ${essential !== null ? `${essential}%` : "—"}`,
+    };
+  }
+  return { value: null, note: `필요 역량 ${s.total}건 모두 미판정 — 충족도 팩터 미반영` };
+}
+
 // ── Decision-support cautions (ADR-0172 §6) — never block, never cap a grade ──
 
 export type CautionTone = "red" | "amber" | "neutral";
-export interface GapCaution { key: string; label: string; tone: CautionTone }
+export interface GapCaution {
+  key: string;
+  label: string;
+  tone: CautionTone;
+}
 
 /** 필요도 x 보유 판정 matrix. Null = no caution. */
 export function necessityFlag(necessity: GapNecessity, status: GapHeldStatus): GapCaution | null {
   if (status === "unevaluated") return { key: "unevaluated", label: "미판정", tone: "neutral" };
   switch (necessity) {
     case "essential":
-      return status === "partial" || status === "none" ? { key: "large_gap", label: "큰 격차 주의", tone: "red" } : null;
+      return status === "partial" || status === "none"
+        ? { key: "large_gap", label: "큰 격차 주의", tone: "red" }
+        : null;
     case "partial_essential":
       if (status === "none") return { key: "gap", label: "격차", tone: "amber" };
       if (status === "partial") return { key: "check", label: "확인 필요", tone: "amber" };
@@ -522,13 +631,17 @@ export function necessityFlag(necessity: GapNecessity, status: GapHeldStatus): G
 }
 
 /** All cautions for a row: the matrix flag plus empty-narrative notes on 필수 rows. */
-export function gapCautions(row: Pick<CapabilityGapRow, "necessity" | "requiredLevel" | "currentLevel" | "held">): GapCaution[] {
+export function gapCautions(
+  row: Pick<CapabilityGapRow, "necessity" | "requiredLevel" | "currentLevel" | "held">,
+): GapCaution[] {
   const out: GapCaution[] = [];
   const flag = necessityFlag(row.necessity, row.held.status);
   if (flag) out.push(flag);
   if (row.necessity === "essential") {
-    if (!row.requiredLevel.trim()) out.push({ key: "required_level_missing", label: "필요 수준 미기술", tone: "amber" });
-    if (row.held.status !== "unevaluated" && !row.currentLevel.trim()) out.push({ key: "current_level_missing", label: "보유 수준 미기술", tone: "amber" });
+    if (!row.requiredLevel.trim())
+      out.push({ key: "required_level_missing", label: "필요 수준 미기술", tone: "amber" });
+    if (row.held.status !== "unevaluated" && !row.currentLevel.trim())
+      out.push({ key: "current_level_missing", label: "보유 수준 미기술", tone: "amber" });
   }
   return out;
 }
@@ -545,7 +658,12 @@ export function countSourcedCapabilityRows(json: string | null | undefined): num
     const raw = JSON.parse(json) as { rows?: unknown };
     if (!Array.isArray(raw.rows)) return 0;
     return (raw.rows as Array<Record<string, unknown>>).filter(
-      (r) => r && typeof r === "object" && typeof r.capability === "string" && r.capability.trim() !== "" && SOURCES.includes(r.source as GapSource),
+      (r) =>
+        r &&
+        typeof r === "object" &&
+        typeof r.capability === "string" &&
+        r.capability.trim() !== "" &&
+        SOURCES.includes(r.source as GapSource),
     ).length;
   } catch {
     return 0;

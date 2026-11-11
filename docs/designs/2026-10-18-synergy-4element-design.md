@@ -1,6 +1,6 @@
 ---
 title: "Synergy 4-element relationship diagram, tab reorder, AI suggestions, capability coverage factor, and review confirmation"
-status: implemented
+status: implemented (Amendment 2026-11-12 — implemented-pending-review per this doc's convention: the 2026-11-04 amendment precedent; body sections above are unchanged)
 date: 2026-10-18
 owner: platform-lead
 lang: ko
@@ -294,3 +294,101 @@ Remediation of the existing degenerate stored analysis (user-run S1
 re-run, documented in the sibling design §5); broader numeric-quality
 validation of sizing matrices; the upstream unit-heuristic fix itself
 (sibling design item B).
+
+## Amendment 2026-11-12 — AI calibration draft reads the live capability register
+
+Recorded in English per the docs/context.md language policy (the 2026-11-04 amendment
+precedent). This amendment extends this spec's scope to one seam of the AI calibration draft
+surface it introduced (POST /api/synergy/ai-score-adjustment); the existing body above is
+unchanged.
+
+### Root cause (investigation-verified, 2026-11-12)
+
+POST /api/synergy/ai-score-adjustment
+(`app/web-next/app/api/synergy/ai-score-adjustment/route.ts`) builds its LLM prompt from the
+**STORED** `synergy_version.payload.capabilityCoverage` snapshot (`route.ts:80` — the
+`- 필요 역량 충족도:` prompt line reads `p.capabilityCoverage` from the parsed payload). The
+pipeline snapshots coverage **before** the human 보유 판정 and then seeds unjudged rows
+(`synergy-pipeline.ts:418-433` computes the payload value mid-pipeline and stores it at
+:441-442; `synergy-pipeline.ts:569-590` seeds the derived capability rows as
+`unevaluated` afterwards), so the stored value is commonly `null` (rendered "미입력") or stale.
+The advertised input is therefore missing from the prompt: `ko.json:5246`
+(`requestsACalibrationDraftWithin`) promises calibration from
+"저장된 근거(규칙 팩터·주요 검토 영역·**필요 역량 충족도**)", but the capability-coverage input the
+user sees on screen (judged live in the register) is not what the prompt carries. The fresh
+read-and-blend this amendment needs already exists — `synergy-rescore.ts:132-145` reads
+`opportunity.capability_gap_json` at request time and blends
+`Math.round(coveragePct * 0.5 + essentialCoveragePct * 0.5)` (:140) with the same note strings
+(:141, :143).
+
+### Change
+
+1. **Shared helper.** The exact blend logic of `synergy-rescore.ts:132-145` is extracted into a
+   shared helper **`readLiveCapabilityCoverage(db, opportunityId)`** in
+   `app/web-next/lib/capability-gap.ts` (the module that already owns `parseGapRegister` /
+   `summarizeGap` — no new import cycle). Signature: `(db: Database, opportunityId: string) =>
+   { value: number | null; note: string | null }`. **Both call sites consume it** — the rescore
+   path (`synergy-rescore.ts`) and the calibration route — no duplicated blend math remains at
+   either. The helper performs the fresh read of `opportunity.capability_gap_json` at request
+   time; it is not a cached or payload-derived value.
+2. **Route recomputes FRESH.** The calibration route calls
+   `readLiveCapabilityCoverage(db, row.opportunity_id)` at request time and feeds the returned
+   `{ value, note }` into the `필요 역량 충족도` prompt line instead of
+   `p.capabilityCoverage` / `p.capabilityCoverageNote`. The blend is the unchanged
+   `round(coveragePct * 0.5 + essentialCoveragePct * 0.5)`; the note strings are the unchanged
+   shared ones (`필요 역량 N건 중 판정 M건 — 보유율 X%, 필수 충족율 Y%` /
+   `필요 역량 N건 모두 미판정 — 충족도 팩터 미반영`).
+3. **Fallback semantics.** The fresh live value is used **always**; the stored payload value is
+   no longer consulted for this prompt. Why: the stored snapshot is pre-judgement **by design**
+   — the pipeline seeds unjudged rows after scoring, so `payload.capabilityCoverage` cannot
+   reflect the 보유 판정 the user has since recorded; feeding it to the calibration LLM
+   guarantees the advertised input is missing exactly when the user has done the work that makes
+   it available. The "미입력" wording is kept ONLY when the live register is empty or
+   all-unjudged — the same null rule as `synergy-pipeline.ts:426-428` (rows empty → null;
+   `s.evaluated === 0` → null with the 모두 미판정 note); the route renders "미입력" from a null
+   helper value exactly as it does today (:80's null branch is unchanged, only its source
+   moves).
+4. **Bounds and form unchanged.** The ±10 clamp stays at `route.ts:97`
+   (`Math.max(-10, Math.min(10, Math.round(parsed.adjustment)))`); the response shape
+   (`{ proposal: { adjustment, rationale }, note }`) and the confirm-editor prefill are
+   unchanged. WRITES NOTHING still holds — boundary #2, 확정 저장 remains the human's act.
+
+### Out of scope (recorded follow-ups)
+
+- **(a) Raw-coverage vs blended-value display mismatch** — the capability tab shows
+  `summarizeGap`'s raw `coveragePct` while the score factor (and now the calibration prompt)
+  carries the 50/50 blend; the two numbers can legitimately differ. Surfaced to the user as a
+  separate known wrinkle, NOT fixed here.
+- **(b) The rescore button's legacyScheme gating** — the `🤖 현재 체계로 재계산 (AI)` button
+  renders only for pre-5-factor (no `capability_coverage` factor) payloads
+  (as-built slice 6), which hides the snapshot-refresh path for 5-factor payloads whose stored
+  coverage is stale. A follow-up design decision, not folded into this amendment.
+- The pipeline's own inline coverage block (`synergy-pipeline.ts:418-433`) is left as is: it is
+  the snapshot PRODUCER and must read the register at its own execution moment; converging it
+  onto the helper is a possible later consolidation, not this change.
+
+### Test plan
+
+Unit tests for the route (assert the PROMPT-CONSTRUCTION INPUT, not the LLM output — the LLM is
+mocked/not configured per the project's route-suite convention
+`process.env.CO_NEWBIZ_LLM_PROVIDER = "none"`):
+
+1. Register with judged rows → the prompt handed to the LLM contains the blended value
+   (`round(coveragePct * 0.5 + essentialCoveragePct * 0.5)`), not the stored payload value and
+   not "미입력" — seed a stored payload whose `capabilityCoverage` deliberately disagrees with
+   the live blend to pin the fresh-read rule.
+2. Empty register (no rows) → "미입력" in the prompt.
+3. Register with rows but all `unevaluated` → "미입력" in the prompt (null rule).
+4. Draft still clamped ±10 — an LLM response proposing +25 or a non-integer yields a clamped
+   `adjustment` in `[-10, 10]` (`route.ts:97` unchanged).
+5. Helper unit tests in `capability-gap` suite: blend math parity with the pre-extraction
+   `synergy-rescore.ts` values (the rescore suite's existing expectations must not move).
+
+### Consequences
+
+- Behavior change (intended): the calibration prompt now carries the judged, live 충족도 whenever
+  the register has judged rows — the advertised input stops being systematically "미입력" right
+  after the human completes 보유 판정. Stored payloads are NOT rewritten (append-only
+  discipline); only the prompt input changes.
+- The rescore path's numbers are unchanged — it already read live; extraction is behavior-neutral
+  for it (pinned by test 5).
