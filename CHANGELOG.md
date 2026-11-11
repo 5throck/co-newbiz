@@ -6,6 +6,7 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-12]**: fix(i18n): **the S6 financial-criteria field label reworded — "S7 t-08 comparison basis" read as if the criteria were an S7 artifact referenced backward, when S6 owns it as a selection criterion and S7 t-08 consumes it (the checklist wording "compare against the universe definition's financial criteria" predates the feature; the flow is S6 produces -> S7 compares)** — ko label now "selection criterion — compared against each candidate at S7"; en mirrored; the UI test pin relaxed accordingly. Trivial wording fix (E3).
 
 - **[2026-11-12]**: fix(i18n): **double-translation in the S6/S7 longlist status filter — the already-translated status label was re-fed into the root translator as a key, logging MISSING_MESSAGE console errors on every S6/S7 render (screen output was accidentally correct via the same-string fallback)** — LonglistSection.tsx:56 now direct-renders the resolved label like line 133 already did; the file's four pre-existing biome diagnostics (a11y semantic elements, table-scroll tabindex, format) were cleared in the same pass (house precedents). Trivial fix (E3); unit suite green; shape-pinning suites (s6-universe-ui, stage-screen-dom-contract, ui-label-sweep, table-sizing) 40 pass.
 

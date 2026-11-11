@@ -6180,7 +6180,7 @@
         "failedToLoadTheFinancial": "Failed to load the financial and technology evaluation",
         "failedToSaveTheTarget": "Failed to save the target market definition",
         "financialCriteriaHint": "Optional — do not write unevidenced figures; use the verification-needed marker plus the named data required (e.g. value-chain stage financials).",
-        "financialCriteriaLabel": "Financial criteria (S7 t-08 comparison basis)",
+        "financialCriteriaLabel": "Financial criteria (a selection criterion, compared against each candidate at S7)",
         "financialCriteriaPlaceholder": "e.g. segment profit pool, margin structure, and pricing-power conditions — when unevidenced, state the verification-needed marker plus the data required",
         "itemSPartiallyMet": "item(s) · partially met",
         "minimumCandidateCount": "Minimum candidate count",
