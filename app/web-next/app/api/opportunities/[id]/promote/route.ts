@@ -9,18 +9,23 @@ import { promoteOpportunity, PromotionError } from "../../../../../../../db/repo
 import { authenticate } from "../../../../../lib/auth.ts";
 import { ESTABLISHMENT_MODES, storeSuggestedMode, type EstablishmentMode } from "../../../../../lib/establishment.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { latestRouteDecision } from "../../../../../lib/process-flow.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Promoting to a project requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Promoting to a project requires the analyst role or higher.");
   if (ctx.role === "admin") {
     // ADR-0091 역할-화면 분리: admin은 시스템 운영자로 검토/안건 콘텐츠에 접근하지
     // 않는다(visibleProject도 admin을 차단). admin이 승격하면 본인이 lead가
     // 되면서 모든 검토/안건 라우트에서 404로 막히는 모순이 생기므로 진입 단계에서
     // 차단하고 analyst 계정으로 수행하도록 안내한다.
-    return forbidden("role_forbidden", "Admin accounts are segregated from review/case content (ADR-0091) — promote to an analyst account instead.");
+    return forbidden(
+      "role_forbidden",
+      "Admin accounts are segregated from review/case content (ADR-0091) — promote to an analyst account instead.",
+    );
   }
 
   const { id } = await params;
@@ -37,14 +42,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     members?: Array<{ userId?: string; projectRole?: string }>;
   } | null;
   const basis = body?.needToKnowBasis?.trim();
-  if (!basis) return badRequest("invalid_request", "needToKnowBasis is required — promotion is blocked until the promoter's membership basis is recorded.");
+  if (!basis)
+    return badRequest(
+      "invalid_request",
+      "needToKnowBasis is required — promotion is blocked until the promoter's membership basis is recorded.",
+    );
   const origin = body?.origin;
   if (origin && !["internal", "external", "hybrid", "joint"].includes(origin)) {
     return badRequest("invalid_request", "origin must be one of: internal | external | hybrid | joint (ADR-0013).");
   }
   const hint = body?.establishment_mode_suggested;
   if (hint != null && !(ESTABLISHMENT_MODES as readonly string[]).includes(hint)) {
-    return badRequest("invalid_request", `establishment_mode_suggested must be one of: ${ESTABLISHMENT_MODES.join(" | ")} (ADR-0167).`);
+    return badRequest(
+      "invalid_request",
+      `establishment_mode_suggested must be one of: ${ESTABLISHMENT_MODES.join(" | ")} (ADR-0167).`,
+    );
   }
   const members: Array<{ userId: string; projectRole: "lead" | "member" }> = [];
   for (const m of body?.members ?? []) {
@@ -62,10 +74,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   // ADR-0104 — build the charter from the S1~S7 artifacts before promoting.
   const { buildProjectCharter } = await import("../../../../../lib/project-charter.ts");
-  const dbCharter = getDb();
-  const route = dbCharter
-    .query("SELECT track FROM route_decision WHERE opportunity_id = ? ORDER BY decided_at DESC, id DESC LIMIT 1")
-    .get(id) as { track: "greenfield" | "brownfield" } | undefined;
+  // Design 2026-11-11-route-decision-current-authority-design §9.2: the charter
+  // track comes from the ADR-0135 authority row (is_current=1) via the shared
+  // latestRouteDecision reader — an ADR-0124 draft with a fresher decided_at
+  // must not stamp its track into the charter (or the promotion-time
+  // md_project.track display snapshot) over the flagged final.
+  const route = latestRouteDecision(id);
   const built = buildProjectCharter(db, {
     opportunityId: id,
     track: route?.track ?? null,
@@ -77,8 +91,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (hint) {
     // A hint only makes sense for a Green Field project; business_unit additionally needs origin internal (D2).
     const effectiveOrigin = origin ?? (route?.track === "greenfield" ? "internal" : undefined);
-    if (route?.track !== "greenfield" || (hint === "business_unit" && effectiveOrigin !== "internal") || (hint === "new_entity" && effectiveOrigin !== "internal" && effectiveOrigin !== "joint")) {
-      return badRequest("mode_not_allowed", "Establishment-mode proposals apply only to greenfield projects; new business-unit pursuit requires origin=internal (ADR-0167).");
+    if (
+      route?.track !== "greenfield" ||
+      (hint === "business_unit" && effectiveOrigin !== "internal") ||
+      (hint === "new_entity" && effectiveOrigin !== "internal" && effectiveOrigin !== "joint")
+    ) {
+      return badRequest(
+        "mode_not_allowed",
+        "Establishment-mode proposals apply only to greenfield projects; new business-unit pursuit requires origin=internal (ADR-0167).",
+      );
     }
   }
 
