@@ -6,10 +6,20 @@ import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useState, useCallback, useEffect } from "react";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { api } from "../../../lib/api.ts";
-import type { OppDetail, PrecheckDraftItem, Suggestion, WebSuggestion, UniRecoResponse, EvalItem, EvalCategoryScore, FinancialsResp } from "./types.ts";
+import type {
+  OppDetail,
+  PrecheckDraftItem,
+  Suggestion,
+  WebSuggestion,
+  UniRecoResponse,
+  EvalItem,
+  EvalCategoryScore,
+  FinancialsResp,
+} from "./types.ts";
 import { useTranslations } from "next-intl";
 
-export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {const t = useTranslations("stages.s67.useBrownfieldBase");
+export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
+  const t = useTranslations("stages.s67.useBrownfieldBase");
 
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
@@ -32,7 +42,8 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   // S6 목표 시장 정의 — 완료기준(definition + 최소 후보 전체 목록 커버리지).
   // 보기/수정 분리: 평소엔 저장된 값을 읽기 전용 카드로 보여주고, "수정" 클릭
   // 시 모달에서 편집한다 — 모달을 취소하면 어떤 값도 반영되지 않는다.
-  const [universeDraft, setUniverseDraft] = useState({ definition: "", min_long_list: "5" });
+  // financial_criteria(DEC-20261111-05): S7 t-08이 비교하는 재무 기준 입력.
+  const [universeDraft, setUniverseDraft] = useState({ definition: "", financial_criteria: "", min_long_list: "5" });
   const [savingUniverse, setSavingUniverse] = useState(false);
   const [editingUniverse, setEditingUniverse] = useState(false);
   // 최소 후보 수 근거 입력 시 참고용으로만 보여주는 S3
@@ -45,11 +56,18 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   // 화면과 동일 원천). 검색 결과를 클릭하면 등록 폼(newTarget)의 회사명·고유번호를
   // 채운다 — 별도 폼이 아니라 등록 폼의 보조 기능이다(사용자 요청, 2026-09-15).
   const [dartBusy, setDartBusy] = useState(false);
-  const [dartResults, setDartResults] = useState<Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }> | null>(null);
+  const [dartResults, setDartResults] = useState<Array<{
+    corp_code: string;
+    corp_name: string;
+    source?: string;
+    validated?: boolean | null;
+  }> | null>(null);
   const [dartError, setDartError] = useState<string | null>(null);
   // 모달 포커스 관리(ADR-0082 동반) — 웹검색 결과·목표 시장 정의 양쪽 모달에
   // 동일하게 적용한다(초기 포커스·Tab 트랩·ESC 닫기·포커스 복원).
-  const webModalFocus = useModalFocus(() => { if (!webBusy) setDiscoveryPanel(null); });
+  const webModalFocus = useModalFocus(() => {
+    if (!webBusy) setDiscoveryPanel(null);
+  });
   const [proposals, setProposals] = useState<Suggestion[] | null>(null);
   // B — 후보 전체 목록 웹검색 후보 제안 (ADR-0118: 제안만, 등록은 사람 클릭)
   const [webProposals, setWebProposals] = useState<WebSuggestion[] | null>(null);
@@ -68,21 +86,32 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   const [financials, setFinancials] = useState<Record<string, FinancialsResp | null>>({});
 
   const loadProposals = useCallback(() => {
-    if (!opportunityId) { setProposals(null); return; }
+    if (!opportunityId) {
+      setProposals(null);
+      return;
+    }
     // opportunity-keyed 라우트 — 승격 전(S6 진행 중)에도 동작한다(구
     // /api/projects/[id] 키잉은 md_project가 없어 항상 404였던 버그).
-    api.get<{ suggestions: Suggestion[] }>(`/api/brownfield/${encodeURIComponent(opportunityId)}/target-proposals`)
+    api
+      .get<{ suggestions: Suggestion[] }>(`/api/brownfield/${encodeURIComponent(opportunityId)}/target-proposals`)
       .then((r) => setProposals(r.data.suggestions))
       .catch(() => setProposals([]));
   }, [opportunityId]);
-  useEffect(() => { loadProposals(); }, [loadProposals]);
+  useEffect(() => {
+    loadProposals();
+  }, [loadProposals]);
 
   async function searchDartCompanies(query: string) {
     const q = query.trim();
     if (!q || dartBusy) return;
-    setDartBusy(true); setDartError(null);
+    setDartBusy(true);
+    setDartError(null);
     try {
-      const r = await api.get<{ configured: boolean; results: Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>; error?: string }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
+      const r = await api.get<{
+        configured: boolean;
+        results: Array<{ corp_code: string; corp_name: string; source?: string; validated?: boolean | null }>;
+        error?: string;
+      }>(`/api/synergy/dart-search?q=${encodeURIComponent(q)}`);
       setDartResults(r.data.results);
       if (r.data.error) setDartError(r.data.error);
     } catch (err) {
@@ -92,23 +121,96 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
     }
   }
 
-  async function acceptProposal(companyName: string, dartCorpCode: string | null, source: "master_proposal" | "web_proposal" = "master_proposal", universeNote?: string) {
+  async function acceptProposal(
+    companyName: string,
+    dartCorpCode: string | null,
+    source: "master_proposal" | "web_proposal" = "master_proposal",
+    universeNote?: string,
+  ) {
     try {
       await api.post(`/api/brownfield/${encodeURIComponent(opportunityId)}/target-proposals`, {
-        company_name: companyName, dart_corp_code: dartCorpCode || undefined, discovery_source: source,
+        company_name: companyName,
+        dart_corp_code: dartCorpCode || undefined,
+        discovery_source: source,
         universe_note: universeNote,
       });
       setProposals((prev) => (prev ?? []).filter((c) => c.name_ko !== companyName));
       setWebProposals((prev) => (prev ?? []).filter((c) => c.company_name !== companyName));
       loadDetail(opportunityId);
       onSaved?.();
-    } catch (err) { setError(err instanceof Error ? err.message : t("failedToAccept")); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("failedToAccept"));
+    }
   }
 
   const loadDetail = useCallback((oppId: string) => {
-    api.get<OppDetail>(`/api/brownfield/${encodeURIComponent(oppId)}/targets`)
-      .then((r) => { setSelected(r.data); setError(null); })
+    api
+      .get<OppDetail>(`/api/brownfield/${encodeURIComponent(oppId)}/targets`)
+      .then((r) => {
+        setSelected(r.data);
+        setError(null);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheCandidate")));
   }, []);
-  return { savingUniverse, selected, universeDraft, setSavingUniverse, setError, loadDetail, setEditingUniverse, setUniReco, setUniRecoApplied, setUniverseDraft, setGapHint, gapHint, opportunityId, setSelected, webBusy, setWebBusy, setWebProposals, setWebNote, setWebSource, uniBusy, setUniBusy, setEvalItems, setEvalScores, setFinancials, newTarget, busy, setBusy, setNewTarget, onSaved, precheckBusy, precheckDraft, setPrecheckBusy, setPrecheckDraft, setPrecheckDraftNote, recoBusy, setRecoBusy, setRecoProgress, error, canAct, discoveryPanel, setDiscoveryPanel, proposals, webProposals, setDartResults, dartBusy, searchDartCompanies, dartError, dartResults, acceptProposal, webModalFocus, webNote, webSource, editingUniverse, uniReco, uniRecoApplied, precheckOpen, setPrecheckOpen, recoProgress, precheckDraftNote };
+  return {
+    savingUniverse,
+    selected,
+    universeDraft,
+    setSavingUniverse,
+    setError,
+    loadDetail,
+    setEditingUniverse,
+    setUniReco,
+    setUniRecoApplied,
+    setUniverseDraft,
+    setGapHint,
+    gapHint,
+    opportunityId,
+    setSelected,
+    webBusy,
+    setWebBusy,
+    setWebProposals,
+    setWebNote,
+    setWebSource,
+    uniBusy,
+    setUniBusy,
+    setEvalItems,
+    setEvalScores,
+    setFinancials,
+    newTarget,
+    busy,
+    setBusy,
+    setNewTarget,
+    onSaved,
+    precheckBusy,
+    precheckDraft,
+    setPrecheckBusy,
+    setPrecheckDraft,
+    setPrecheckDraftNote,
+    recoBusy,
+    setRecoBusy,
+    setRecoProgress,
+    error,
+    canAct,
+    discoveryPanel,
+    setDiscoveryPanel,
+    proposals,
+    webProposals,
+    setDartResults,
+    dartBusy,
+    searchDartCompanies,
+    dartError,
+    dartResults,
+    acceptProposal,
+    webModalFocus,
+    webNote,
+    webSource,
+    editingUniverse,
+    uniReco,
+    uniRecoApplied,
+    precheckOpen,
+    setPrecheckOpen,
+    recoProgress,
+    precheckDraftNote,
+  };
 }

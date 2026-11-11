@@ -6,13 +6,49 @@ import { api } from "../../../lib/api.ts";
 import { type CapabilityGapRow, summarizeGap } from "../../../lib/capability-gap.ts";
 import { useEffect } from "react";
 import type { useBrownfieldBase } from "./useBrownfieldBase.ts";
-import type { WebProposalResponse, UniRecoResponse, UniCriteria, EvalItem, EvalCategoryScore, FinancialsResp } from "./types.ts";
+import type {
+  WebProposalResponse,
+  UniRecoResponse,
+  UniCriteria,
+  EvalItem,
+  EvalCategoryScore,
+  FinancialsResp,
+} from "./types.ts";
 import { useTranslations } from "next-intl";
 
-export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>) {const t = useTranslations("stages.s67.useBrownfieldUniverse"); const tc = useTranslations("common");
-  const { savingUniverse, selected, universeDraft, setSavingUniverse, setError, loadDetail, setEditingUniverse, setUniReco, setUniRecoApplied, setUniverseDraft, setGapHint, gapHint, opportunityId, setSelected, webBusy, setWebBusy, setWebProposals, setWebNote, setWebSource, uniBusy, setUniBusy, setEvalItems, setEvalScores, setFinancials } = prev;
+export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>) {
+  const t = useTranslations("stages.s67.useBrownfieldUniverse");
+  const tc = useTranslations("common");
+  const {
+    savingUniverse,
+    selected,
+    universeDraft,
+    setSavingUniverse,
+    setError,
+    loadDetail,
+    setEditingUniverse,
+    setUniReco,
+    setUniRecoApplied,
+    setUniverseDraft,
+    setGapHint,
+    gapHint,
+    opportunityId,
+    setSelected,
+    webBusy,
+    setWebBusy,
+    setWebProposals,
+    setWebNote,
+    setWebSource,
+    uniBusy,
+    setUniBusy,
+    setEvalItems,
+    setEvalScores,
+    setFinancials,
+  } = prev;
 
-  const universeModalFocus = useModalFocus(() => { if (!savingUniverse) closeUniverseEditor(); });
+  const universeModalFocus = useModalFocus(() => {
+    if (!savingUniverse) closeUniverseEditor();
+  });
 
   // 후보 전체 목록 테이블의 재무·기술 평가 배지·잠정 순위는 서버가 계산해 target
   // row에 붙여주는 eval_summary를 그대로 쓴다(targets GET, ADR-0139) — 항목별
@@ -20,12 +56,16 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
 
   async function saveUniverse() {
     if (!selected || savingUniverse || !universeDraft.definition.trim()) return;
-    setSavingUniverse(true); setError(null);
+    setSavingUniverse(true);
+    setError(null);
     try {
       await api.put(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets`, {
         definition: universeDraft.definition.trim(),
         // criteria는 더 이상 이 화면에서 입력받지 않는다 — 서버가 기존 값을
         // 그대로 보존한다(생략 시 덮어쓰지 않음).
+        // financial_criteria는 이 화면의 새 입력(DEC-20261111-05) — 항상
+        // 보내 서버가 trim·600자 절단 후 저장하게 한다(빈 값은 null).
+        financial_criteria: universeDraft.financial_criteria.trim(),
         min_long_list: Number(universeDraft.min_long_list) || 5,
       });
       loadDetail(selected.opportunity.id);
@@ -43,6 +83,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     const u = selected?.universe;
     return {
       definition: u?.definition ?? "",
+      financial_criteria: u?.financial_criteria ?? "",
       min_long_list: String(u?.min_long_list ?? 5),
     };
   }
@@ -55,7 +96,10 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     setUniRecoApplied(false);
     setEditingUniverse(true);
     if (selected) {
-      api.get<{ rows: CapabilityGapRow[] }>(`/api/opportunities/${encodeURIComponent(selected.opportunity.id)}/capability-gap`)
+      api
+        .get<{ rows: CapabilityGapRow[] }>(
+          `/api/opportunities/${encodeURIComponent(selected.opportunity.id)}/capability-gap`,
+        )
         .then((r) => {
           const s = summarizeGap(r.data.rows);
           setGapHint({ unmet: s.none, partial: s.partial });
@@ -74,11 +118,16 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   }
 
   // 목표 시장 정의 수정 폼 — 수정 모달 안에서만 쓰인다.
-  function UniverseForm() {const t = useTranslations("stages.s67.useBrownfieldUniverse"); const tc = useTranslations("common");
+  function UniverseForm() {
+    const t = useTranslations("stages.s67.useBrownfieldUniverse");
+    const tc = useTranslations("common");
     return (
       <form
         className="sizing-new-form mb-0"
-        onSubmit={(e) => { e.preventDefault(); void saveUniverse(); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void saveUniverse();
+        }}
         aria-label={tc("editTargetMarketDefinition")}
       >
         <label className="text-[length:var(--fs-caption)] block mb-3">
@@ -92,18 +141,45 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
             className="sizing-new-input w-full"
           />
         </label>
+        {/* 재무 기준 (DEC-20261111-05) — S7 t-08이 후보 재무를 비교하는
+            기록값. 선택 입력이며 근거 없는 수치는 쓰지 않는다. */}
+        <label className="text-[length:var(--fs-caption)] block mb-3">
+          <span className="block mb-1">{t("financialCriteriaLabel")}</span>
+          <textarea
+            value={universeDraft.financial_criteria}
+            onChange={(e) => setUniverseDraft({ ...universeDraft, financial_criteria: e.target.value })}
+            placeholder={t("financialCriteriaPlaceholder")}
+            rows={2}
+            className="sizing-new-input w-full"
+          />
+          <span className="block mt-1 text-[color:var(--muted-fg)]">{t("financialCriteriaHint")}</span>
+        </label>
         <label className="text-[length:var(--fs-caption)] w-32 shrink-0 block mb-3">
           <span className="block mb-1">{t("minimumCandidateCount")}</span>
-          <input type="number" min={1} value={universeDraft.min_long_list} onChange={(e) => setUniverseDraft({ ...universeDraft, min_long_list: e.target.value })} className="sizing-new-input sizing-new-input-sm w-full" />
+          <input
+            type="number"
+            min={1}
+            value={universeDraft.min_long_list}
+            onChange={(e) => setUniverseDraft({ ...universeDraft, min_long_list: e.target.value })}
+            className="sizing-new-input sizing-new-input-sm w-full"
+          />
         </label>
         {gapHint && (
           <p className="mb-3 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-            {t("referenceNotAForcedFormula")} {gapHint.unmet}{t("itemSPartiallyMet")} {gapHint.partial}{tc("countUnit")}
+            {t("referenceNotAForcedFormula")} {gapHint.unmet}
+            {t("itemSPartiallyMet")} {gapHint.partial}
+            {tc("countUnit")}
           </p>
         )}
         <div className="flex items-center justify-end gap-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse}>{tc("cancel")}</button>
-          <button type="submit" className="btn-ghost btn-sm" disabled={savingUniverse || !universeDraft.definition.trim()}>
+          <button type="button" className="btn-ghost btn-sm" onClick={closeUniverseEditor} disabled={savingUniverse}>
+            {tc("cancel")}
+          </button>
+          <button
+            type="submit"
+            className="btn-ghost btn-sm"
+            disabled={savingUniverse || !universeDraft.definition.trim()}
+          >
             {savingUniverse ? tc("saving") : t("saveTargetMarket")}
           </button>
         </div>
@@ -112,7 +188,10 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   }
 
   useEffect(() => {
-    if (!opportunityId) { setSelected(null); return; }
+    if (!opportunityId) {
+      setSelected(null);
+      return;
+    }
     loadDetail(opportunityId);
   }, [opportunityId, loadDetail]);
 
@@ -128,9 +207,13 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // ── B: 후보 전체 목록 웹검색 후보 제안 생성 (on-demand, ADR-0118) ──
   async function generateWebProposals() {
     if (!selected || webBusy) return;
-    setWebBusy(true); setError(null);
+    setWebBusy(true);
+    setError(null);
     try {
-      const res = await api.post<WebProposalResponse>(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/target-proposals/web-search`, {});
+      const res = await api.post<WebProposalResponse>(
+        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/target-proposals/web-search`,
+        {},
+      );
       setWebProposals(res.data.suggestions);
       setWebNote(res.data.note);
       setWebSource(res.data.source);
@@ -144,9 +227,13 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // ── D: 유니버스 선정 기준 초안 생성 ──
   async function generateUniReco() {
     if (!selected || uniBusy) return;
-    setUniBusy(true); setError(null);
+    setUniBusy(true);
+    setError(null);
     try {
-      const res = await api.post<UniRecoResponse>(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/universe-criteria-draft`, {});
+      const res = await api.post<UniRecoResponse>(
+        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/universe-criteria-draft`,
+        {},
+      );
       setUniReco(res.data);
       setUniRecoApplied(false);
     } catch (err) {
@@ -160,10 +247,18 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // 시장 저장" 클릭). 산업/지역/규모 요약은 참고용일 뿐 자동으로 선정 기준·
   // 최소 후보 수 입력에 밀어넣지 않는다 — 그 두 값은 사람이 이미 정한 값을
   // 그대로 유지한다.
+  // DEC-20261111-05: 초안의 viability(수익성 조건)는 definition에 붙여 넣지
+  // 않고 별도 "재무 기준" 입력에 매핑한다 — 빈 viability는 필드를 그대로
+  // 둔다(honest unset). rationale(버전·등급 인용)을 definition에 채우는
+  // 기존 UX 계약은 유지된다.
   function applyUniReco(c: UniCriteria) {
     const content = c.rationale || [c.industry, c.region, c.size].filter(Boolean).join(" · ");
     if (!content) return;
-    setUniverseDraft((prev) => ({ ...prev, definition: content }));
+    setUniverseDraft((prev) => ({
+      ...prev,
+      definition: content,
+      ...(c.viability ? { financial_criteria: c.viability } : {}),
+    }));
     setUniRecoApplied(true);
   }
 
@@ -171,7 +266,10 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // 서버가 재무 빌트인·기술 시딩을 lazy하게 채운다).
   function loadEvalItems(targetId: string) {
     if (!selected) return;
-    api.get<{ items: EvalItem[]; scores: Record<EvalItem["category"], EvalCategoryScore> }>(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/eval-state`)
+    api
+      .get<{ items: EvalItem[]; scores: Record<EvalItem["category"], EvalCategoryScore> }>(
+        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/eval-state`,
+      )
       .then((r) => {
         setEvalItems((prev) => ({ ...prev, [targetId]: r.data.items }));
         setEvalScores((prev) => ({ ...prev, [targetId]: r.data.scores }));
@@ -180,9 +278,18 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   }
 
   function loadFinancials(companyId: string) {
-    api.get<FinancialsResp>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
+    api
+      .get<FinancialsResp>(`/api/companies/${encodeURIComponent(companyId)}/financials`)
       .then((r) => setFinancials((prev) => ({ ...prev, [companyId]: r.data })))
       .catch(() => setFinancials((prev) => ({ ...prev, [companyId]: null })));
   }
-  return { openUniverseEditor, generateWebProposals, closeUniverseEditor, universeModalFocus, generateUniReco, applyUniReco, UniverseForm };
+  return {
+    openUniverseEditor,
+    generateWebProposals,
+    closeUniverseEditor,
+    universeModalFocus,
+    generateUniReco,
+    applyUniReco,
+    UniverseForm,
+  };
 }

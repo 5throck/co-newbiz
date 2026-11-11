@@ -18,7 +18,12 @@ import { createHash } from "node:crypto";
 import { ulid } from "../../db/lib/ulid.ts";
 
 const TEST_DB_PATH = "db/data/test-rsc-session.sqlite";
-const NOW = "2026-11-11T00:00:00Z";
+// Clock-safe NOW: the "valid token" case issues a session at NOW and
+// sessionFromCookieStore validates it against the REAL clock (SESSION_HOURS
+// = 12, db/lib/accounts.ts), so a pinned date expires the fixture 12h after
+// that day's midnight UTC — the suite started failing at 2026-11-11T12:00Z.
+// Derive NOW from the wall clock (minute precision) instead.
+const NOW = new Date(Math.floor(Date.now() / 60_000) * 60_000).toISOString();
 // CO_NEWBIZ_DB_PATH must be set BEFORE the db client module loads.
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 const { resetDb, getDb } = await import("../../db/client.ts");
