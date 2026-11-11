@@ -1,7 +1,9 @@
 // R2-A wayfinding (spec 2026-10-09-ux-r2-design): the board's "new review" reaches a
-// working market-analysis form in at most 3 clicks, every deal/stage/opportunity page
-// offers a breadcrumb back, the S8+ rail links resolve to the promoted project, picker
-// pages obey the page contract, and redirects of retired routes are announced.
+// working market-analysis form in a bounded click path (4 clicks since ADR-0197 added
+// the mandatory client-request intake modal — the record IS the ruling, DEC-20261111-03),
+// every deal/stage/opportunity page offers a breadcrumb back, the S8+ rail links resolve
+// to the promoted project, picker pages obey the page contract, and redirects of retired
+// routes are announced.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
 import { axeScan, formatAxe, launchBrowser, loginThroughUi, visit, type AxeResult, type Session } from "./_support/browser.ts";
@@ -36,10 +38,17 @@ beforeAll(async () => {
 afterAll(async () => { await browser?.close(); await app?.stop(); });
 
 describe("R2-A wayfinding", () => {
-  test("a new market analysis starts from the board in at most 3 clicks", async () => {
+  test("a new market analysis starts from the board in at most 4 clicks", async () => {
     await visit(s.page, app, "/deals");
     let clicks = 0;
-    await s.page.getByRole("link", { name: /새 검토 시작/ }).click(); clicks++;
+    // ADR-0197: the board CTA is a BUTTON that opens the client-request intake
+    // modal (source derives from which CTA was clicked; requester/note are
+    // optional). Submitting records the intake row, then the original
+    // destination rides its new=1 exemption as &intake=<id>.
+    await s.page.getByRole("button", { name: /새 검토 시작/ }).click(); clicks++;
+    const intake = s.page.getByRole("dialog", { name: "검토 요청 기록" });
+    await intake.waitFor({ state: "visible", timeout: 30_000 });
+    await intake.getByRole("button", { name: "요청 기록하고 시작" }).click(); clicks++;
     // Lands on the working form, focused, not on a deal picker.
     await s.page.waitForURL(/\/market\?new=1/);
     const input = s.page.locator("#market-new-name");
@@ -48,7 +57,8 @@ describe("R2-A wayfinding", () => {
     await input.fill("E2E 신규 로봇 산업");
     await s.page.getByRole("button", { name: /분석 범위 선택/ }).click(); clicks++;
     await s.page.getByRole("button", { name: "이 산업만 분석" }).click(); clicks++;
-    expect(clicks).toBeLessThanOrEqual(3);
+    // The intake-recording step (ADR-0197) adds one mandatory click to the board→form path.
+    expect(clicks).toBeLessThanOrEqual(4);
     const deadline = Date.now() + 30_000;
     let found = 0;
     while (Date.now() < deadline && found === 0) {
