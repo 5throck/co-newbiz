@@ -7,7 +7,10 @@
 // C1 — true when the recorded external reference was created after the latest
 // displayed analysis version, i.e. the version's consensus is stale. Pure
 // timestamp comparison; missing or unparseable inputs fail closed to not-stale.
-export function referenceNewerThanVersion(referenceCreatedAt: string | null | undefined, versionCreatedAt: string | null | undefined): boolean {
+export function referenceNewerThanVersion(
+  referenceCreatedAt: string | null | undefined,
+  versionCreatedAt: string | null | undefined,
+): boolean {
   if (!referenceCreatedAt || !versionCreatedAt) return false;
   const ref = Date.parse(referenceCreatedAt);
   const ver = Date.parse(versionCreatedAt);
