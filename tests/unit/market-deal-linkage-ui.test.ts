@@ -60,7 +60,7 @@ test("splitGroups: linked anchors first, groups travel with their anchor", () =>
   expect(linked.map((g) => g.ind.id)).toEqual(["linked-anchor"]);
   expect(other.map((g) => g.ind.id)).toEqual(["unlinked-anchor"]);
   // children travel with the anchor
-  expect(other[0]!.children.map((c) => c.ind.id)).toEqual(["child"]);
+  expect(other[0]?.children.map((c) => c.ind.id)).toEqual(["child"]);
 });
 
 test("splitGroups: null linkedIds (standalone /market) keeps a single list", () => {
@@ -118,8 +118,8 @@ test("buildIndustryGroups: queue path (after_analysis_id) and proxy_link path bo
   const byId = new Map(groups.map((g) => [g.ind.id, g]));
   expect(
     byId
-      .get("p")!
-      .children.map((c) => c.ind.id)
+      .get("p")
+      ?.children.map((c) => c.ind.id)
       .sort(),
   ).toEqual(["l", "q"]);
 });
@@ -207,8 +207,10 @@ test("IndustryListSection: linked-first ordering with the muted other-reviews he
 
 test("useDealIndustryLink composes opportunity industry_id + project_industry via existing endpoints", () => {
   const s = src("useDealIndustryLink.ts");
-  expect(s).toContain("/api/opportunities/${encodeURIComponent(dealId)}");
-  expect(s).toContain("/api/projects/${encodeURIComponent(projId)}/industries");
+  // The `${...}` fragments are literal SOURCE TEXT of the hook (its fetch URLs are
+  // template literals) — needles assembled so noTemplateCurlyInString stays silent.
+  expect(s).toContain("/api/opportunities/" + "$" + "{encodeURIComponent(dealId)}");
+  expect(s).toContain("/api/projects/" + "$" + "{encodeURIComponent(projId)}/industries");
   // degrade-to-empty on fetch failure (honest rendering of unknown linkage)
   expect(s).toContain("setLinkedIds(ids)");
   // linkedIds === null only outside a deal context
