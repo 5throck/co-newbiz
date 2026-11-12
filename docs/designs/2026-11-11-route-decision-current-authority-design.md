@@ -375,6 +375,20 @@ list route suites already covered by §5's regression watch (they are already-sa
 guards against fixture drift). No test seeds an un-flagged draft-only expectation for these three
 sites today; if the rerun surfaces one, the fixture is wrong, not the migration.
 
+- **Completion (2026-11-12)**: case 1 is pinned at the route level by
+  `tests/unit/promotion-charter-track-e2e.test.ts` — the real
+  `POST /api/opportunities/[id]/promote` handler dispatched end-to-end
+  (next-route-dispatch with an analyst login, entry-market-derivation dispatch
+  pattern; the sweep's existing case-1 assertion was expression-level): with a
+  greenfield `is_current=1` final plus a newer brownfield ADR-0124 draft, the
+  response track, the `md_project.track` snapshot, and the charter-track input
+  inside `charter_json` all read the final; a greenfield-only establishment
+  hint is accepted on that authority (positive control) and the same hint
+  still 400s `mode_not_allowed` when the authority is brownfield even with a
+  newer greenfield draft (3 pass). Cases 2–3 remain the lib-level assertions in
+  `route-decision-current-authority.test.ts`; the route-level dispatch lives in
+  its own file because it needs the login/CSRF machinery.
+
 ### 9.5 Non-goals
 
 - **No schema change** — `is_current` exists (0101) and is maintained by
