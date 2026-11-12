@@ -26,6 +26,7 @@ import {
   splitGroups,
 } from "../../app/web-next/components/stages/market/grouping.ts";
 import type { IndustryRow, IndustryLink } from "../../app/web-next/components/stages/market/types.ts";
+import { resolveBindingProbe } from "../../app/web-next/components/stages/market/useDealIndustryLink.ts";
 
 const MARKET = join(import.meta.dirname, "../../app/web-next/components/stages/market");
 
@@ -205,16 +206,36 @@ test("IndustryListSection: linked-first ordering with the muted other-reviews he
   expect(s).toContain("text-[color:var(--muted-fg)] uppercase tracking-wide");
 });
 
+test("resolveBindingProbe: project_id-null skips the binding probe, project_id-set and promoted-route probe", () => {
+  // Unpromoted opportunity WITHOUT a project row: no probe — probing the deal id
+  // would guaranteed-404 on the binding route's visibleProject check.
+  expect(resolveBindingProbe({ industry_id: "ind-1", project_id: null }, "deal-1")).toEqual({
+    probe: false,
+    projId: null,
+  });
+  // Unpromoted opportunity WITH a project row: probe the REAL project id.
+  expect(resolveBindingProbe({ industry_id: null, project_id: "proj-9" }, "deal-1")).toEqual({
+    probe: true,
+    projId: "proj-9",
+  });
+  // Promoted project route (opportunity GET 404s): the route id IS a project.
+  expect(resolveBindingProbe(null, "deal-1")).toEqual({ probe: true, projId: "deal-1" });
+});
+
 test("useDealIndustryLink composes opportunity industry_id + project_industry via existing endpoints", () => {
   const s = src("useDealIndustryLink.ts");
   // The `${...}` fragments are literal SOURCE TEXT of the hook (its fetch URLs are
   // template literals) — needles assembled so noTemplateCurlyInString stays silent.
   expect(s).toContain("/api/opportunities/" + "$" + "{encodeURIComponent(dealId)}");
   expect(s).toContain("/api/projects/" + "$" + "{encodeURIComponent(projId)}/industries");
-  // degrade-to-empty on fetch failure (honest rendering of unknown linkage)
+  // the probe decision goes through the pure helper, guarded on both fields
+  expect(s).toContain("resolveBindingProbe(oppData, dealId)");
+  expect(s).toContain("if (probe && projId) {");
+  // no-probe path degrades exactly like an unreadable binding
   expect(s).toContain("setLinkedIds(ids)");
+  expect(s).toContain("setProjectId(null);");
   // linkedIds === null only outside a deal context
-  expect(s).toContain("if (!dealId) { setLinkedIds(null)");
+  expect(s).toContain("if (!dealId) {");
 });
 
 test("LinkToDealModal writes through the governed binding API with a mandatory rationale", () => {

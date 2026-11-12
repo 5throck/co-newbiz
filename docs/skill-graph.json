@@ -2301,11 +2301,7 @@
         ".agents/skills/decision-record/SKILL.md",
         ".codex/skills/decision-record/SKILL.md",
         ".hermes/skills/decision-record/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-05"
-      }
+      ]
     },
     {
       "id": "skill:root/delegate-to-hub",
@@ -2827,11 +2823,7 @@
         ".agents/skills/k-dart/SKILL.md",
         ".codex/skills/k-dart/SKILL.md",
         ".hermes/skills/k-dart/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-05"
-      }
+      ]
     },
     {
       "id": "skill:root/k-ecos",
@@ -3590,7 +3582,7 @@
       ],
       "usage": {
         "sessions": 1,
-        "last_used": "2026-11-05"
+        "last_used": "2026-11-13"
       }
     },
     {
