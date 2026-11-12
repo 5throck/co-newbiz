@@ -148,8 +148,10 @@ describe("§9.4 case 1 route-level — POST /promote sees the authority track, n
     };
     expect(body.error).toBeNull();
     // The route response's track is the promotion-time snapshot — the FINAL's.
-    expect(body.data?.track).toBe("greenfield");
-    expect(body.data?.source_opportunity_id).toBe(oppId);
+    expect(body.data).not.toBeNull();
+    const promoted = body.data as { project_id: string; track: string | null; source_opportunity_id: string };
+    expect(promoted.track).toBe("greenfield");
+    expect(promoted.source_opportunity_id).toBe(oppId);
     // md_project.track (the §9.2 display snapshot) and the charter-track input
     // (buildProjectCharter's track argument, persisted inside charter_json)
     // must both carry the authority row's track; the draft's brownfield must
@@ -161,7 +163,7 @@ describe("§9.4 case 1 route-level — POST /promote sees the authority track, n
     expect(charter.versions[0]?.track).not.toBe("brownfield");
     // The opportunity carrier is consumed by THIS promotion.
     const opp = db.query("SELECT project_id FROM opportunity WHERE id = ?").get(oppId) as { project_id: string };
-    expect(opp.project_id).toBe(body.data?.project_id);
+    expect(opp.project_id).toBe(promoted.project_id);
   });
 
   test("same authority-greenfield fixture: a greenfield-only establishment hint is accepted (positive control for the hint guard)", async () => {
