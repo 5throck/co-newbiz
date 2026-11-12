@@ -260,3 +260,31 @@ bumps to v1.2.0).
   `referenceNewerThanVersion` comparator, staleness banner, CTA decoupling (C1, C2).
 - `app/web-next/locales/en.json`, `app/web-next/locales/ko.json` — one banner key (C1).
 - `tests/unit/market-growth-staleness.test.ts` — new (test plan above).
+
+## Addendum 2026-11-12b — banner follow-ups A1–A3
+
+Closes the review advisories on the Amendment 2026-11-12 banner (landed in #874).
+
+- A1 — same-mount refresh: the banner's reference live-GET in `SizingGrowthTab`
+  ran once per mount, so a reference saved in `CalibrationPanel` during the same
+  mount did not raise it. `CalibrationPanel` gains an optional
+  `onReferenceSaved` callback fired only on a successful save PUT; the parent
+  bumps a `referenceRefresh` counter into the live-GET deps. The comparator and
+  its inputs are unchanged (`referenceNewerThanVersion(reference.created_at,
+  version.created_at)`), so a refresh re-runs the same GET and the banner cannot
+  false-positive.
+- A2 — wording: the banner no longer promises the consensus outcome. ko
+  "재분석 시 컨센서스로 반영됩니다" → "재분석 시 이 참조가 반영됩니다"; en aligned
+  to "it will be applied on re-analysis" (the amendment's Design note already
+  flagged the wording judgement call — this resolves it).
+- A3 — rendering seam pinned: `RerunAction` / `GrowthStalenessCard` are exported
+  pure views (`GrowthBannerViews.tsx`, imported by `SizingGrowthTabs.tsx`; the
+  split keeps every `components/stages/market` file under the 400-line
+  decomposition cap), rendered under `NextIntlClientProvider` in
+  `tests/unit/market-growth-banner-render.test.ts` (house
+  renderToStaticMarkup pattern); the mount-level facts (refresh deps, save
+  signal wiring, unchanged comparator) are pinned by source assertion. The full
+  `SizingGrowthTab` mount (api client, charts) remains unpinned — documented in
+  the test header. Cap-driven moves in the same pass: the calibration row
+  interfaces moved to `market/types.ts` and the escalation section to
+  `CalibrationEscalation.tsx` (markup and locale keys unchanged).

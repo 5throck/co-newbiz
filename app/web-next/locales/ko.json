@@ -3897,7 +3897,7 @@
         "ourEstimateGrowthExtrapolation": "우리 추정 (성장률 연장)",
         "qualitativeAnalysisOpportunityAndRisk": "정성 분석 — 기회·위험 요인",
         "qualitativeAnalysisOpportunityAndRisk2": "정성 분석 — 기회 요인과 위험 요인",
-        "recordedExternalReferenceNewerThanTheLatestAnalysis": "기록된 외부 참조가 최신 분석보다 최신 — 재분석 시 컨센서스로 반영됩니다.",
+        "recordedExternalReferenceNewerThanTheLatestAnalysis": "기록된 외부 참조가 최신 분석보다 최신 — 재분석 시 이 참조가 반영됩니다.",
         "replacedWithAWiderBand": "넓은 밴드로 대체합니다.",
         "reviewNeeded": "검토 필요",
         "riskFactor": "위험 요인",
