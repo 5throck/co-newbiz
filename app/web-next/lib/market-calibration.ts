@@ -2,7 +2,7 @@
 // 2026-09-18-s1-growth-gap-calibration). 외부 참조 해석 순위, 20% 트리거
 // 판정, 재분석 제약 문자열 조립, 제안 수용/기각을 담당한다. 판정·수용은
 // 사람의 행위이며 이 파일은 계산과 저장만 한다(경계 #2).
-import { getDb } from "../../../db/client.ts";
+import type { getDb } from "../../../db/client.ts";
 
 type Db = ReturnType<typeof getDb>;
 import { appendAudit } from "../../../db/lib/access-control.ts";
@@ -10,6 +10,13 @@ import { ulid } from "../../../db/lib/ulid.ts";
 
 /** 보정 트리거 임계값 — 우리 CAGR과 외부 참조 CAGR의 상대 격차(%, 소수 아님). */
 export const CALIBRATION_TRIGGER_PCT = 20;
+
+/** 앵커 인용 일치 임계값 (design 2026-11-06-s1-quantitative-web-grounding,
+ * amendment 2026-11-12) — 외부 참조 규모가 우리 기준선 외삽치(참조 target_year
+ * 기준)와 이 상대 격차(%) 안에 들어오면 참조를 앵커 인용으로 기록한다.
+ * CALIBRATION_TRIGGER_PCT와 의도적으로 같은 값: 격차가 트리거를 넘으면 보정
+ * 루프가, 넘지 않으면(=일치) 인용이 붙는다 — 한 격차, 두 방향의 기록. */
+export const ANCHOR_CITATION_TOLERANCE_PCT = 20;
 
 export interface ExternalReferenceRow {
   id: string;
@@ -23,6 +30,10 @@ export interface ExternalReferenceRow {
   captured_from: "user" | "web_research" | "llm_prior";
   created_by: string;
   created_at: string;
+  /** 참조 폐기 시각 (migration 0191, amendment 2026-11-12c) — NULL이면 유효. */
+  superseded_at: string | null;
+  /** 폐기 시 후속 참조 id (평문 폐기는 NULL — 행은 지워지지 않는다). */
+  superseded_by: string | null;
 }
 
 export interface CalibrationDriverRow {
@@ -53,15 +64,43 @@ export function isCalibrationTriggered(ourCagrPct: number, externalCagrPct: numb
   return gap !== null && gap >= CALIBRATION_TRIGGER_PCT;
 }
 
-/** 최신 외부 참조 — version_no 내림차순 1건. 없으면 null. */
+/** 최신 외부 참조 — version_no 내림차순 1건. 폐기된 행은 제외한다
+ * (amendment 2026-11-12c: 폐기는 다음 재분석 기준선만 바꾸고, 완료된 분석은
+ * 당시 참조를 유지한다). 없으면 null. */
 export function resolveExternalReference(db: Db, industryId: string): ExternalReferenceRow | null {
   return (
     (db
       .query(
-        "SELECT * FROM market_external_reference WHERE industry_id = ? ORDER BY version_no DESC, created_at DESC LIMIT 1",
+        "SELECT * FROM market_external_reference WHERE industry_id = ? AND superseded_at IS NULL ORDER BY version_no DESC, created_at DESC LIMIT 1",
       )
       .get(industryId) as ExternalReferenceRow | undefined) ?? null
   );
+}
+
+/** 참조 폐기 (amendment 2026-11-12c) — 사람이 기록 참조를 은퇴시킨다. 행은
+ * 지워지지 않는다(추가 전용 보존): superseded_at만 남기고 superseded_by는
+ * NULL(평문 폐기 — 후속 참조 없음). 완료된 분석은 당시 참조를 그대로 유지하고,
+ * 다음 재분석부터 웹 검색·LLM 선험 폴백이 다시 동작한다.
+ *
+ * 계약: 행이 없거나 industry_id가 다르면 null(루트에서 404 처리). 이미 폐기된
+ * 행에 대한 재호출은 **멱등 no-op**이다 — 재기록·재감사 없이 본 행을 그대로
+ * 돌려준다(409가 아니라 조용한 재확인: DELETE는 멱등 연산이다 — 루트·설계문서
+ * 개정판에 문서화됨). 감사는 첫 폐기에만 남는다. */
+export function supersedeExternalReference(
+  db: Db,
+  industryId: string,
+  id: string,
+  actor: string,
+): ExternalReferenceRow | null {
+  const row = db.query("SELECT * FROM market_external_reference WHERE id = ?").get(id) as
+    | ExternalReferenceRow
+    | undefined;
+  if (!row || row.industry_id !== industryId) return null;
+  if (row.superseded_at !== null) return row;
+  const now = new Date().toISOString();
+  db.run("UPDATE market_external_reference SET superseded_at = ?, superseded_by = NULL WHERE id = ?", [now, id]);
+  appendAudit(db, { actor, action: "market_external_reference.supersede", target: industryId, now });
+  return db.query("SELECT * FROM market_external_reference WHERE id = ?").get(id) as ExternalReferenceRow;
 }
 
 export function appendExternalReference(
@@ -84,10 +123,27 @@ export function appendExternalReference(
   db.run(
     `INSERT INTO market_external_reference (id, industry_id, version_no, source_label, source_url, target_year, external_cagr_pct, external_size_b, captured_from, created_by, created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, input.industry_id, versionNo, input.source_label, input.source_url ?? null, input.target_year, input.external_cagr_pct, input.external_size_b ?? null, input.captured_from, input.created_by, now],
+    [
+      id,
+      input.industry_id,
+      versionNo,
+      input.source_label,
+      input.source_url ?? null,
+      input.target_year,
+      input.external_cagr_pct,
+      input.external_size_b ?? null,
+      input.captured_from,
+      input.created_by,
+      now,
+    ],
   );
   if (input.captured_from === "user") {
-    appendAudit(db, { actor: input.created_by, action: "market_external_reference.set", target: input.industry_id, now });
+    appendAudit(db, {
+      actor: input.created_by,
+      action: "market_external_reference.set",
+      target: input.industry_id,
+      now,
+    });
   }
   return resolveExternalReference(db, input.industry_id)!;
 }
@@ -137,7 +193,9 @@ export function decideCalibrationDriver(
   action: "accept" | "dismiss",
   userId: string,
 ): CalibrationDriverRow | null {
-  const row = db.query("SELECT * FROM industry_driver_calibration WHERE id = ?").get(rowId) as CalibrationDriverRow | undefined;
+  const row = db.query("SELECT * FROM industry_driver_calibration WHERE id = ?").get(rowId) as
+    | CalibrationDriverRow
+    | undefined;
   if (!row) return null;
   const now = new Date().toISOString();
   db.run("UPDATE industry_driver_calibration SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?", [
@@ -171,15 +229,25 @@ export function computeDeterministicScaling(externalCagrPct: number): Determinis
 }
 
 export interface CalibrationEscalationRow {
-  id: string; industry_id: string; version_id: string; method: string;
-  base_our_cagr_pct: number; external_cagr_pct: number; scaled_cagr_pct: number;
-  residual_gap_pct: number; rationale: string; decided_by: string; created_at: string;
+  id: string;
+  industry_id: string;
+  version_id: string;
+  method: string;
+  base_our_cagr_pct: number;
+  external_cagr_pct: number;
+  scaled_cagr_pct: number;
+  residual_gap_pct: number;
+  rationale: string;
+  decided_by: string;
+  created_at: string;
 }
 
 export function latestCalibrationEscalation(db: Db, industryId: string): CalibrationEscalationRow | null {
-  return (db
-    .query("SELECT * FROM calibration_escalation WHERE industry_id = ? ORDER BY created_at DESC LIMIT 1")
-    .get(industryId) as CalibrationEscalationRow | undefined) ?? null;
+  return (
+    (db
+      .query("SELECT * FROM calibration_escalation WHERE industry_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(industryId) as CalibrationEscalationRow | undefined) ?? null
+  );
 }
 
 /** 최근 완료 버전의 calibration 블록을 읽어 에스컬레이션을 기록한다. 격차가
@@ -210,10 +278,16 @@ export function applyCalibrationEscalation(
   const external = calib?.externalCagrPct;
   const gap = calib?.gapPct;
   if (typeof our !== "number" || typeof external !== "number" || typeof gap !== "number") {
-    throw new EscalationError("no_calibration_block", "The latest version has no calibration block — re-analysis is required first.");
+    throw new EscalationError(
+      "no_calibration_block",
+      "The latest version has no calibration block — re-analysis is required first.",
+    );
   }
   if (gap <= CONVERGENCE_TARGET_PCT) {
-    throw new EscalationError("already_converged", `The gap ${gap}% is already within the convergence target (${CONVERGENCE_TARGET_PCT}%).`);
+    throw new EscalationError(
+      "already_converged",
+      `The gap ${gap}% is already within the convergence target (${CONVERGENCE_TARGET_PCT}%).`,
+    );
   }
   const { scaledCagrPct, residualGapPct } = computeDeterministicScaling(external);
   const id = ulid();
@@ -221,10 +295,24 @@ export function applyCalibrationEscalation(
     `INSERT INTO calibration_escalation
      (id, industry_id, version_id, method, base_our_cagr_pct, external_cagr_pct, scaled_cagr_pct, residual_gap_pct, rationale, decided_by, created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, industryId, version.id, "deterministic_scaling", our, external, scaledCagrPct, residualGapPct, rationale, decidedBy, now],
+    [
+      id,
+      industryId,
+      version.id,
+      "deterministic_scaling",
+      our,
+      external,
+      scaledCagrPct,
+      residualGapPct,
+      rationale,
+      decidedBy,
+      now,
+    ],
   );
   appendAudit(db, { actor: decidedBy, action: "market_calibration.escalate", target: industryId, now });
-  return { escalation: db.query("SELECT * FROM calibration_escalation WHERE id = ?").get(id) as CalibrationEscalationRow };
+  return {
+    escalation: db.query("SELECT * FROM calibration_escalation WHERE id = ?").get(id) as CalibrationEscalationRow,
+  };
 }
 
 /** 유효 CAGR 해석기 (design 2026-09-20-escalation-downstream §3.1) — 최근 완료
@@ -250,23 +338,44 @@ export function resolveEffectiveCagr(db: Db, industryId: string): EffectiveCagr 
   if (!version) return null;
   let bottomUp: number | null = null;
   try {
-    const payload = JSON.parse(version.payload) as { matrix?: { calibration?: { ourCagrPct?: number | null }; consistency?: { bottomUpCagr?: number | null } } };
+    const payload = JSON.parse(version.payload) as {
+      matrix?: { calibration?: { ourCagrPct?: number | null }; consistency?: { bottomUpCagr?: number | null } };
+    };
     const cal = payload?.matrix?.calibration;
-    bottomUp = typeof cal?.ourCagrPct === "number" ? cal.ourCagrPct : typeof payload?.matrix?.consistency?.bottomUpCagr === "number" ? payload.matrix.consistency.bottomUpCagr : null;
+    bottomUp =
+      typeof cal?.ourCagrPct === "number"
+        ? cal.ourCagrPct
+        : typeof payload?.matrix?.consistency?.bottomUpCagr === "number"
+          ? payload.matrix.consistency.bottomUpCagr
+          : null;
   } catch {
     bottomUp = null;
   }
   const esc = latestCalibrationEscalation(db, industryId);
   if (esc && esc.created_at >= version.created_at) {
-    return { cagrPct: esc.scaled_cagr_pct, source: "escalated", escalationId: esc.id, baseCagrPct: esc.base_our_cagr_pct };
+    return {
+      cagrPct: esc.scaled_cagr_pct,
+      source: "escalated",
+      escalationId: esc.id,
+      baseCagrPct: esc.base_our_cagr_pct,
+    };
   }
   if (bottomUp !== null) return { cagrPct: bottomUp, source: "bottom_up" };
-  if (esc) return { cagrPct: esc.scaled_cagr_pct, source: "escalated", escalationId: esc.id, baseCagrPct: esc.base_our_cagr_pct };
+  if (esc)
+    return {
+      cagrPct: esc.scaled_cagr_pct,
+      source: "escalated",
+      escalationId: esc.id,
+      baseCagrPct: esc.base_our_cagr_pct,
+    };
   return null;
 }
 
 export class EscalationError extends Error {
-  constructor(public code: string, message: string) {
+  constructor(
+    public code: string,
+    message: string,
+  ) {
     super(message);
   }
 }

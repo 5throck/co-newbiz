@@ -28,6 +28,8 @@ import {
   relativeCagrGapPct,
   resolveExternalReference,
   CALIBRATION_TRIGGER_PCT,
+  ANCHOR_CITATION_TOLERANCE_PCT,
+  type ExternalReferenceRow,
 } from "./market-calibration.ts";
 import { GENERIC_SEGMENTS, type AnchorSource, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
@@ -1063,18 +1065,14 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     // ── Step 5: consistency check (computed, not asked) ──
     advance(5);
     const bottomUpCagr =
-      Math.pow(
-        REGIONS.reduce(
-          (a, r) =>
-            a +
-            segs.reduce(
-              (b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], 4),
-              0,
-            ),
-          0,
-        ) / anchorTotal,
-        1 / 4,
-      ) - 1;
+      (REGIONS.reduce(
+        (a, r) =>
+          a + segs.reduce((b, seg) => b + baseline2026[r.code][seg.code] * (1 + cagrBase[r.code][seg.code]) ** 4, 0),
+        0,
+      ) /
+        anchorTotal) **
+        (1 / 4) -
+      1;
     // 탑다운 컨센서스 CAGR — 우선순위는 기록 참조 > LLM 선험 > 0(미입력)이며
     // 절대 날조하지 않는다. 보정 루프(v1.2.0)에서 사람이 기록한 외부 참조가 있으면
     // 그 external_cagr_pct(%)를 그대로 컨센서스로 쓰고 LLM 선험 질의를 아예
@@ -1140,6 +1138,11 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     // 분석한다. 입수되지 않으면 externalForecast 없이 기존 방식(CAGR 외삽)을
     // 그대로 사용한다.
     let externalForecast: SizingMatrix["externalForecast"] | undefined;
+    // 앵커 인용 (amendment 2026-11-12) — 규모 일치 외부 참조의 매트릭스 기록.
+    // 인용 대상은 로드된 참조이거나, 이번 실행에서 web_research/llm_prior로
+    // 저장한 참조다(별도 인용 저장소 없음 — R3/R9와 같은 페이로드 인용).
+    let anchorExternalReferenceMatch: SizingMatrix["anchor"]["externalReferenceMatch"] | undefined;
+    let citationRef: ExternalReferenceRow | null = externalReference;
     // 보정 루프 (v1.2.0) — 외부 참조는 "사람이 출처를 확인한 기록치"를 최우선으로
     // 쓰고, 없을 때만 LLM 선험에 묻는다. 선험으로 입수된 전망은 llm_prior 참조로
     // 한 번만 저장해 이후 재분석이 같은 값을 재사용하게 한다(재등록 재주입 방지 —
@@ -1183,7 +1186,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         // R9 — 웹 접지 전망을 web_research 참조로 1회 저장한다(기존 llm_prior 저장과
         // 같은 안정화 이유 — 재분석 시 재검색 노이즈를 멈춘다). 이후 실행은 기록
         // 참조 우선(R1 1순위)으로 이 값을 그대로 재사용한다.
-        appendExternalReference(db, {
+        citationRef = appendExternalReference(db, {
           industry_id: analysis.industry_id,
           source_label: sourceLabel,
           source_url: fc.url,
@@ -1208,7 +1211,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
           externalNote = str(efJson.note, "LLM이 제시한 공개 전망 — 출처 확인 필요");
           // llm_prior 참조 저장 — 이 값이 다음 재분석의 고정 참조가 된다.
           if (sourceLabel && targetYear > 2026 && (externalSize > 0 || externalCagrFrac)) {
-            appendExternalReference(db, {
+            citationRef = appendExternalReference(db, {
               industry_id: analysis.industry_id,
               source_label: sourceLabel,
               target_year: targetYear,
@@ -1221,7 +1224,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         }
       }
     }
-    let pendingDriverProposals: Array<{
+    const pendingDriverProposals: Array<{
       driver: string;
       direction: "upside" | "downside";
       impact_pct: number;
@@ -1234,7 +1237,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         (a, r) =>
           a +
           segs.reduce(
-            (b, seg) => b + baseline2026[r.code][seg.code] * Math.pow(1 + cagrBase[r.code][seg.code], yearIndex),
+            (b, seg) => b + baseline2026[r.code][seg.code] * (1 + cagrBase[r.code][seg.code]) ** yearIndex,
             0,
           ),
         0,
@@ -1245,6 +1248,31 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       const sizeGapPct = externalSize > 0 ? Math.round((externalSize / ourSize - 1) * 1000) / 10 : undefined;
       const gapPct = sizeGapPct ?? cagrGap ?? undefined;
       const cagrBasis = sizeGapPct === undefined;
+      // ── 앵커 인용 (design 2026-11-06-s1-quantitative-web-grounding,
+      // amendment 2026-11-12) — 외부 규모가 우리 외삽치(targetYear 기준)와
+      // ±ANCHOR_CITATION_TOLERANCE_PCT 안에 들어오면 참조를 앵커 인용으로
+      // 기록한다: 매트릭스 페이로드의 anchor.externalReferenceMatch와
+      // anchor.sources의 synthetic 항목(R3/R9의 기존 인용 패턴 — 새 저장소
+      // 없음). 외부 규모가 없는 CAGR-only 참조는 인용 없이 조용히 통과한다.
+      // 격차가 트리거(≥20%)를 넘으면 보정 루프가, 넘지 않으면(일치) 인용이
+      // 붙는다 — 한 격차, 두 방향의 기록.
+      if (citationRef && sizeGapPct !== undefined && Math.abs(sizeGapPct) <= ANCHOR_CITATION_TOLERANCE_PCT) {
+        anchorExternalReferenceMatch = {
+          referenceId: citationRef.id,
+          sizeB: externalSize,
+          deviationPct: sizeGapPct,
+          sourceUrl: citationRef.source_url ?? null,
+        };
+        anchorSources.push({
+          label: citationRef.source_label,
+          estimate: externalSize,
+          status: "consensus",
+          methodology: `external_reference — 기록 참조 ${citationRef.target_year}년 규모 (격차 ${sizeGapPct >= 0 ? "+" : ""}${sizeGapPct}%)`,
+          sourceUrl: citationRef.source_url ?? undefined,
+          asOf: citationRef.created_at.slice(0, 10),
+          note: `기록된 외부 참조와 규모 일치 — external_reference 기원 (웹 발췌 아님, 원문 확인 전)`,
+        });
+      }
       const triggered = externalCagrPct != null && isCalibrationTriggered(ourCagrPct, externalCagrPct);
       const gapJson = await askJsonTracked(
         industry,
@@ -1550,7 +1578,11 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       industryLabel: industry,
       provenance: "llm-estimate",
       synthesized: synthesized || undefined,
-      anchor: { sources: anchorSources, total: anchorTotal },
+      anchor: {
+        sources: anchorSources,
+        total: anchorTotal,
+        ...(anchorExternalReferenceMatch ? { externalReferenceMatch: anchorExternalReferenceMatch } : {}),
+      },
       segments: segs,
       regions,
       baseline2026,

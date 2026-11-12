@@ -7,7 +7,7 @@ lang_reason: source-material
 
 - Spec ID: `2026-11-06-s1-quantitative-web-grounding`
 - Date: 2026-11-06
-- Status: implemented
+- Status: implemented — amendment 2026-11-12 implemented-pending-review (anchor-like size citation; body sections above unchanged)
 - 관련 설계: `2026-09-18-s1-growth-gap-calibration-design.md` (보정 루프 v1.2.0,
   추가endum 2026-11-06 step-5 컨센서스 연동)
 
@@ -189,3 +189,69 @@ R7의 열화 보장이다.
 
 - 웹 스니펫 출처의 사람 원문 확인 → 등급 상향 절차.
 - 검색 실패 시 재시도 백오프(서킷브레이커 존중, 재시도 추가 안 함).
+
+## Amendment 2026-11-12 — anchor-like size citation
+
+- Spec ID: `2026-11-06-s1-quantitative-web-grounding` (this amendment)
+- Date: 2026-11-12
+- Status: implemented-pending-review (three-stage review pending at PR time)
+
+### Problem
+
+The step 2 anchor triangulates from LLM estimates plus web-search extracts
+(R3). When a recorded external reference (the calibration loop's R1 priority)
+whose SIZE corroborates our baseline is in play, that agreement is recorded
+nowhere: the size gap only surfaces as `externalForecast.gapPct`, and only
+when it breaches the 20% trigger does anything visible happen (the
+calibration loop). Agreement — the complement of the trigger — is a
+corroboration signal and should be cited on the anchor like any other
+URL-bearing evidence.
+
+### Changes
+
+- Predicate: at the existing `sizeGapPct` computation in
+  `market-sizing-pipeline.ts` (step 5-B; `ourSize` is the baseline compounded
+  to the reference's `target_year`), when `externalSize > 0 &&
+  |sizeGapPct| <= ANCHOR_CITATION_TOLERANCE_PCT` the reference is cited as an
+  anchor match. `ANCHOR_CITATION_TOLERANCE_PCT = 20` lives in
+  `market-calibration.ts` next to `CALIBRATION_TRIGGER_PCT` — one gap, two
+  records: at/above the trigger the calibration loop fires, within the
+  tolerance the citation lands.
+- Persistence — no new citation store, per this design's captured_from /
+  consistency.source decision (~line 141): the citation rides the matrix
+  payload exactly like the R3/R9 citations. `matrix.anchor.
+  externalReferenceMatch = { referenceId, sizeB: externalSize, deviationPct:
+  sizeGapPct, sourceUrl: reference.source_url ?? null }` (new optional field
+  on the `SizingMatrix["anchor"]` contract in `market-sizing.ts`), plus a
+  synthetic entry appended to `matrix.anchor.sources` following the
+  established `AnchorSource` pattern of the URL-bearing R3 web-grounded
+  entries (label = the reference's `source_label`, `sourceUrl`,
+  `methodology`/`note` carrying an `external_reference` origin marker so it
+  is distinguishable from web extractions). `anchor.total`, the consensus
+  ladder, and the calibration behavior are untouched — the citation is a
+  record, not a computation input.
+- Null/zero rule: a CAGR-only reference (`external_size_b` null or ≤ 0) has
+  no size gap to compare — no match, no citation, silently.
+- UI: a small status chip on the anchor display (`AnchorChart`,
+  `SizingCharts.tsx`) — ko "외부 참조 일치 ±N%" with the reference's source
+  label and URL in the tooltip title; locale keys added to en+ko.
+
+### Test plan
+
+- Three new pipeline cases in `tests/unit/market-sizing-web-grounding.test.ts`:
+  a reference whose size matches within 20% records
+  `externalReferenceMatch` and the synthetic `external_reference` source;
+  a ~27% deviation records neither; a null-size CAGR-only reference records
+  neither.
+- Blend parity: every existing suite stays green unchanged — the
+  consensus/ladder behavior is byte-identical when no match (R1's reference
+  carries no size; R9's web forecast is far outside tolerance).
+
+### Touched files
+
+- `app/web-next/lib/market-calibration.ts` — `ANCHOR_CITATION_TOLERANCE_PCT`.
+- `app/web-next/lib/market-sizing-pipeline.ts` — predicate + payload
+  persistence + synthetic source.
+- `app/web-next/lib/market-sizing.ts` — `ExternalReferenceMatch` contract.
+- `app/web-next/components/stages/market/SizingCharts.tsx` — anchor match
+  chip; `locales/ko.json`, `locales/en.json` — chip copy keys.

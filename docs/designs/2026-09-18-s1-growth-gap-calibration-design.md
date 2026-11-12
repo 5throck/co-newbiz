@@ -7,7 +7,7 @@ lang_reason: source-material
 
 - Spec ID: `2026-09-18-s1-growth-gap-calibration`
 - Date: 2026-09-18
-- Status: implemented — amendment 2026-11-12 implemented (staleness surface, CTA decoupling, CAGR-gated fallback)
+- Status: implemented — amendment 2026-11-12 implemented (staleness surface, CTA decoupling, CAGR-gated fallback); amendment 2026-11-12c implemented-pending-review (external reference supersede)
 
 ## Problem
 
@@ -288,3 +288,79 @@ Closes the review advisories on the Amendment 2026-11-12 banner (landed in #874)
   the test header. Cap-driven moves in the same pass: the calibration row
   interfaces moved to `market/types.ts` and the escalation section to
   `CalibrationEscalation.tsx` (markup and locale keys unchanged).
+
+## Amendment 2026-11-12c — external reference supersede
+
+- Spec ID: `2026-09-18-s1-growth-gap-calibration` (this amendment)
+- Date: 2026-11-12
+- Status: implemented-pending-review (soft, record-preserving supersede; three-stage review pending at PR time)
+
+### Problem
+
+A recorded external reference pins every future re-analysis baseline forever.
+The resolver takes the newest non-retired row (`resolveExternalReference`),
+`PUT` only appends a new version, and there is no way to retire a wrong or
+stale reference: the web-search / LLM-prior fallback ladder (amendment
+2026-11-12, CAGR-gated) never resumes because the retired row still wins the
+resolution order. A person needs a retirement action that does NOT rewrite
+history — completed analyses must keep the reference they were run with.
+
+### Changes
+
+- S1 — Migration `db/migrations/0191_external_reference_supersede.sql`
+  (`@reversible`, purely additive): `market_external_reference` gains nullable
+  `superseded_at TEXT` and `superseded_by TEXT REFERENCES
+  market_external_reference(id)`. No existing rows are touched.
+- S2 — Resolver filter: `resolveExternalReference` gains
+  `AND superseded_at IS NULL`. Superseding never rewrites completed analyses —
+  only the NEXT re-analysis baseline changes: with no live reference the
+  fallback ladder resumes (web-search extraction > LLM prior > unset, per the
+  priority ladder owned by `2026-11-06-s1-quantitative-web-grounding`).
+- S3 — `supersedeExternalReference(db, industryId, id, actor)` in
+  `market-calibration.ts`: the row must exist and match `industry_id`
+  (otherwise null → route-level 404, 404-not-403); an already-superseded row
+  is an **idempotent no-op** (returns the row, no re-write, no second audit —
+  chosen over 409 and documented: repeat DELETE converges to the same state);
+  first supersede stamps `superseded_at = now` and keeps `superseded_by NULL`
+  (plain supersede — no successor recorded) and writes one
+  `market_external_reference.supersede` audit row. The row itself is never
+  deleted (append-only preservation, ADR-0012 family).
+- S4 — Route: `DELETE` export added to the existing
+  `app/api/market-overview/industry/[industryId]/external-reference/route.ts`,
+  mirroring the PUT's structure exactly (authenticate →
+  `requireBusinessActor(auth.auth, "write", { viewerMessage })` → body
+  `{ id }` → `md_industry` existence check). Registered in
+  `docs/architecture/openapi.yaml` as `supersedeMarketExternalReference`
+  (drift gate).
+- S5 — UI: `CalibrationPanel` gains a supersede button next to `edit` under
+  the same `canCurate` gate, with the house destructive-action confirm
+  (`useConfirm` + `ConfirmDialog`). The confirm copy states the consequence
+  explicitly: completed analyses keep their recorded baseline; from the NEXT
+  re-analysis the reference stops pinning the baseline and web-search /
+  LLM-prior fallbacks resume. After success the panel refetches and naturally
+  shows the no-reference state.
+
+### Test plan
+
+- `tests/unit/external-reference-supersede.test.ts` (new, route-level through
+  the next-route-dispatch helper): superseding the latest makes the resolver
+  return the previous row; wrong industry → 404; already-superseded →
+  idempotent no-op with no second audit; unknown id → 404; viewer → 403
+  role_required and unauthenticated → 401; audit row written exactly once.
+- Pipeline case in `tests/unit/market-sizing-web-grounding.test.ts`: a
+  superseded CAGR-bearing reference no longer becomes the consensus on
+  re-analysis — the ladder resumes at web extraction and the retired row stays
+  preserved.
+- Full market-suite regression + standard gates (`bun run test:unit`,
+  `typecheck:web`, `biome ci --changed`, `lint:i18n`).
+
+### Touched files
+
+- `db/migrations/0191_external_reference_supersede.sql` — new (S1).
+- `app/web-next/lib/market-calibration.ts` — row type, resolver filter,
+  `supersedeExternalReference` (S2, S3).
+- `app/web-next/app/api/market-overview/industry/[industryId]/external-reference/route.ts`
+  — DELETE export (S4). `docs/architecture/openapi.yaml` — delete operation.
+- `app/web-next/components/stages/market/CalibrationPanel.tsx` — supersede
+  button + confirm + refetch (S5); `locales/ko.json`, `locales/en.json` —
+  supersede copy keys.
