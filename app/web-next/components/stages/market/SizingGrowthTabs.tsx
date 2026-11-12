@@ -16,6 +16,7 @@ import {
 import { CalibrationPanel } from "./CalibrationPanel.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
 import { referenceNewerThanVersion, rerunCtaMode } from "../../../lib/market-reference-staleness.ts";
+import { GrowthStalenessCard, RerunAction } from "./GrowthBannerViews.tsx";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -36,6 +37,13 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
     created_at: string;
   }
   const [reference, setReference] = useState<RefRow | null>(null);
+  // A1 (addendum 2026-11-12b) — a reference saved in CalibrationPanel during the
+  // same mount must raise the banner without a remount. CalibrationPanel calls
+  // onReferenceSaved after a successful save; bumping the counter re-runs this
+  // GET. The comparator and its inputs stay the same, so the banner cannot
+  // false-positive: it still requires reference.created_at > version.created_at.
+  const [referenceRefresh, setReferenceRefresh] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: referenceRefresh is an intentional trigger (A1, addendum 2026-11-12b) — the effect reads no state from it
   useEffect(() => {
     api
       .get<{ reference: RefRow | null }>(
@@ -43,35 +51,23 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
       )
       .then((r) => setReference(r.data.reference))
       .catch(() => {});
-  }, [detail.industry.id]);
+  }, [detail.industry.id, referenceRefresh]);
   const referenceNewer = referenceNewerThanVersion(reference?.created_at, detail.versions[0]?.created_at);
   // C2 — 재분석 CTA를 격차 게이트(externalForecast && |gap| >= 20)와 분리한다.
   // 참조가 표시 버전보다 최신이면 격차와 무관하게 재분석이 유효하다.
   const ctaMode = rerunCtaMode(matrix.externalForecast?.gapPct, referenceNewer);
-  const rerunCta = rerunStarted ? (
-    <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)] mt-1 mb-0">
-      {t("startedTheListAnalysisDate")}
-    </p>
-  ) : canCurate ? (
-    <button
-      type="button"
-      className="btn-ghost btn-sm mt-1"
-      onClick={async () => {
-        if (!analysisId) {
-          setRerunError(t("analysisIdNotFoundFrom"));
-          return;
-        }
-        try {
-          await api.post(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}/rerun`);
-          setRerunStarted(true);
-        } catch (e) {
-          setRerunError(e instanceof Error ? e.message : tc("reanalyzeStartFailed"));
-        }
-      }}
-    >
-      {t("nowReflectingTheLatestExternal")}
-    </button>
-  ) : null;
+  const rerunHandler = async () => {
+    if (!analysisId) {
+      setRerunError(t("analysisIdNotFoundFrom"));
+      return;
+    }
+    try {
+      await api.post(`/api/market-overview/analyses/${encodeURIComponent(analysisId)}/rerun`);
+      setRerunStarted(true);
+    } catch (e) {
+      setRerunError(e instanceof Error ? e.message : tc("reanalyzeStartFailed"));
+    }
+  };
   return (
     <>
       {tab === "growth" && (
@@ -158,17 +154,13 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
               {matrix.consistency.tolerance}
             </p>
             {referenceNewer && (
-              <div className="sizing-grade-card mt-4" role="status">
-                <p className="m-0 text-[length:var(--fs-caption)]">
-                  {t("recordedExternalReferenceNewerThanTheLatestAnalysis")}
-                </p>
-                {ctaMode === "staleness" && rerunCta}
-                {ctaMode === "staleness" && rerunError && (
-                  <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-1 mb-0">
-                    {rerunError}
-                  </p>
-                )}
-              </div>
+              <GrowthStalenessCard
+                showCta={ctaMode === "staleness"}
+                rerunStarted={rerunStarted}
+                canCurate={canCurate}
+                onRerun={rerunHandler}
+                rerunError={rerunError}
+              />
             )}
             {matrix.externalForecast ? (
               <div className="chart-half sizing-grade-card mt-4">
@@ -187,7 +179,7 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
                           {t("theGapBetweenOurEstimate")} <strong>{Math.abs(gap).toFixed(1)}%</strong>
                           {t("deviatesByMoreThanThe")}
                         </p>
-                        {rerunCta}
+                        <RerunAction rerunStarted={rerunStarted} canCurate={canCurate} onRerun={rerunHandler} />
                         {rerunError && (
                           <p
                             role="alert"
@@ -270,7 +262,11 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
                 {t("noExternalFutureOutlookObtained")}
               </p>
             )}
-            <CalibrationPanel industryId={detail.industry.id} matrix={matrix} />
+            <CalibrationPanel
+              industryId={detail.industry.id}
+              matrix={matrix}
+              onReferenceSaved={() => setReferenceRefresh((n) => n + 1)}
+            />
           </StepSection>
         </>
       )}
