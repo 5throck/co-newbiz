@@ -5677,6 +5677,16 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   /api/market-overview/industry/{industryId}/external-reference:
+    delete:
+      operationId: supersedeMarketExternalReference
+      summary: Supersede (retire, record-preserving) a recorded external reference by id in the body. Analyst+. Completed analyses keep their baseline; the next re-analysis resumes the fallback ladder. Idempotent on an already-superseded row.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     get:
       operationId: getMarketExternalReference
       summary: Newest recorded external growth reference for the industry (ADR-0142 calibration loop).

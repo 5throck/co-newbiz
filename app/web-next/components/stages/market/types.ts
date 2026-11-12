@@ -183,6 +183,9 @@ export interface CalibrationTrendRow {
   triggered: boolean;
 }
 export interface CalibrationReferenceRow {
+  id: string;
+  superseded_at: string | null;
+  superseded_by: string | null;
   source_label: string;
   source_url: string | null;
   target_year: number;

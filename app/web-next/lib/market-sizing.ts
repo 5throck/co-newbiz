@@ -95,7 +95,11 @@ export interface CrossValidationClaim {
   status: "confirmed" | "directional" | "impossible";
   evidence: string;
 }
-export interface ChainGrade { grade: string; statisticalHops: number; note: string }
+export interface ChainGrade {
+  grade: string;
+  statisticalHops: number;
+  note: string;
+}
 
 /**
  * 산업 사슬 방향 분석 — 산업이 가치사슬에서 어디에 위치하는지에 따라 분석
@@ -170,12 +174,27 @@ export interface ExternalForecastGap {
   sourceUrl?: string;
 }
 
+/**
+ * 외부 참조 규모 일치 인용 (design 2026-11-06-s1-quantitative-web-grounding,
+ * amendment 2026-11-12) — 기록된 외부 참조의 규모가 우리 기준선 외삽치(참조
+ * target_year 기준)와 ±ANCHOR_CITATION_TOLERANCE_PCT 안에 들어오면 그 참조를
+ * 앵커의 근거로 인용한다. 새 인용 저장소 없음 — 매트릭스 페이로드에만 실린다
+ * (2026-11-06 설계의 R3/R9 인용 패턴과 동일한 원칙).
+ */
+export interface ExternalReferenceMatch {
+  referenceId: string;
+  sizeB: number;
+  deviationPct: number;
+  sourceUrl?: string | null;
+}
+
 export interface SizingMatrix {
   industryLabel: string;
   provenance: "frozen-research" | "llm-estimate";
   /** Wave C-3 (D-2): true when any pipeline step was filled by deterministic synthesis (LLM off/failed). Caps data confidence at C. */
   synthesized?: boolean;
-  anchor: { sources: AnchorSource[]; total: number };
+  /** 외부 참조 규모 일치 (선택) — 위 ExternalReferenceMatch 계약. */
+  anchor: { sources: AnchorSource[]; total: number; externalReferenceMatch?: ExternalReferenceMatch };
   regions: MatrixRegion[];
   baseline2026: Record<string, Record<string, number>>; // $B
   cagrBase: Record<string, Record<string, number>>; // fraction
@@ -238,15 +257,28 @@ export function isCompleteSizingMatrix(matrix: unknown): matrix is SizingMatrix 
   const m = matrix;
   if (!Array.isArray(m.regions) || m.regions.length === 0) return false;
   if (!m.regions.every((r) => isRec(r) && typeof r.code === "string" && isRec(r.mix))) return false;
-  if (m.segments !== undefined && !(Array.isArray(m.segments) && m.segments.every((s) => isRec(s) && typeof s.code === "string"))) return false;
+  if (
+    m.segments !== undefined &&
+    !(Array.isArray(m.segments) && m.segments.every((s) => isRec(s) && typeof s.code === "string"))
+  )
+    return false;
   if (!isRec(m.baseline2026) || !isRec(m.cagrBase)) return false;
   if (!isRec(m.anchor) || !Array.isArray(m.anchor.sources)) return false;
   if (!isRec(m.chainGrade)) return false;
   if (!isRec(m.chainDirection) || !Array.isArray(m.chainDirection.relatedIndustries)) return false;
-  if (!isRec(m.qualitative) || !Array.isArray(m.qualitative.opportunityFactors) || !Array.isArray(m.qualitative.riskFactors)) return false;
+  if (
+    !isRec(m.qualitative) ||
+    !Array.isArray(m.qualitative.opportunityFactors) ||
+    !Array.isArray(m.qualitative.riskFactors)
+  )
+    return false;
   if (!isRec(m.consistency)) return false;
   if (!Array.isArray(m.crossValidation) || !Array.isArray(m.limitations)) return false;
-  if (m.competitive !== undefined && !(isRec(m.competitive) && typeof m.competitive.structure === "string" && Array.isArray(m.competitive.players))) return false;
+  if (
+    m.competitive !== undefined &&
+    !(isRec(m.competitive) && typeof m.competitive.structure === "string" && Array.isArray(m.competitive.players))
+  )
+    return false;
   return true;
 }
 
@@ -263,10 +295,15 @@ export function segmentsOf(m: Pick<SizingMatrix, "segments">): ReadonlyArray<{ c
 }
 
 /** Region total in year `yearIndex` (0 = baseline 2026), compounding per-cell CAGRs. */
-export function regionTotal(m: SizingMatrix, code: string, yearIndex: number, scenario: "down" | "base" | "up" = "base"): number {
+export function regionTotal(
+  m: SizingMatrix,
+  code: string,
+  yearIndex: number,
+  scenario: "down" | "base" | "up" = "base",
+): number {
   return segmentsOf(m).reduce((sum, seg) => {
     const cagr = bandFor(m, code, seg.code)[scenario];
-    return sum + (m.baseline2026[code]?.[seg.code] ?? 0) * Math.pow(1 + cagr, yearIndex);
+    return sum + (m.baseline2026[code]?.[seg.code] ?? 0) * (1 + cagr) ** yearIndex;
   }, 0);
 }
 
@@ -289,7 +326,8 @@ export function projection2030(m: SizingMatrix): Record<string, Record<string, n
   for (const r of m.regions) {
     out[r.code] = {};
     for (const seg of segmentsOf(m)) {
-      out[r.code][seg.code] = (m.baseline2026[r.code]?.[seg.code] ?? 0) * Math.pow(1 + (m.cagrBase[r.code]?.[seg.code] ?? 0), 4);
+      out[r.code][seg.code] =
+        (m.baseline2026[r.code]?.[seg.code] ?? 0) * (1 + (m.cagrBase[r.code]?.[seg.code] ?? 0)) ** 4;
     }
   }
   return out;
@@ -311,7 +349,6 @@ export const STEPS = [
   { id: "step-7", title: "분석 한계 목록", short: "한계" },
   { id: "step-8", title: "가정 레지스트리 등록", short: "등록" },
 ];
-
 
 /* ── Step-2 anchor notes for the frozen analysis (rendered as a list) ── */
 export const REGISTRY = {

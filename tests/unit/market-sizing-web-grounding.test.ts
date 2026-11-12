@@ -29,7 +29,12 @@ const realLlmSnapshot = { ...realLlm };
 const realIsLlmConfigured = realLlmSnapshot.isLlmConfigured;
 const realCompleteOrFallback = realLlmSnapshot.completeOrFallback;
 const EXTRACTION_MARKER = "웹 발췌 정량 추출";
-const llmStub: { armed: boolean; json: Record<string, unknown>; extractJson: Record<string, unknown>; prompts: string[] } = {
+const llmStub: {
+  armed: boolean;
+  json: Record<string, unknown>;
+  extractJson: Record<string, unknown>;
+  prompts: string[];
+} = {
   armed: false,
   json: {},
   extractJson: { items: [] },
@@ -40,7 +45,11 @@ mock.module("../../app/web-next/lib/llm.ts", () => ({
   isLlmConfigured: () => (llmStub.armed ? true : realIsLlmConfigured()),
   completeOrFallback: (messages: unknown, fallback: unknown, opts?: { maxTokens?: number }) => {
     if (!llmStub.armed) {
-      return realCompleteOrFallback(messages as Parameters<typeof realCompleteOrFallback>[0], fallback as Parameters<typeof realCompleteOrFallback>[1], opts as Parameters<typeof realCompleteOrFallback>[2]);
+      return realCompleteOrFallback(
+        messages as Parameters<typeof realCompleteOrFallback>[0],
+        fallback as Parameters<typeof realCompleteOrFallback>[1],
+        opts as Parameters<typeof realCompleteOrFallback>[2],
+      );
     }
     const text = JSON.stringify(messages);
     llmStub.prompts.push(text);
@@ -59,7 +68,9 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
-const { appendExternalReference } = await import("../../app/web-next/lib/market-calibration.ts");
+const { appendExternalReference, resolveExternalReference, supersedeExternalReference } = await import(
+  "../../app/web-next/lib/market-calibration.ts"
+);
 const {
   EXCERPT_VALUE_BOUNDS,
   extractFromExcerpts,
@@ -177,7 +188,12 @@ describe("validateExcerptItems — 항목 단위 검증 규칙 (R2)", () => {
 
 // ── R4/R9: 컨센서스 우선순위 해석 (순수 경로) ──
 describe("resolveTopDownConsensus — 우선순위(기록 참조 > 웹 추출 > LLM 선험 > 미입력)", () => {
-  const ref = { source_label: "Gartner 전망", source_url: "https://example.com/gartner", captured_from: "user", external_cagr_pct: 8.74 };
+  const ref = {
+    source_label: "Gartner 전망",
+    source_url: "https://example.com/gartner",
+    captured_from: "user",
+    external_cagr_pct: 8.74,
+  };
 
   test("기록 참조가 웹 추출·LLM 선험보다 우선하고 origin user(원문 URL 포함)를 표기한다", () => {
     const td = resolveTopDownConsensus({
@@ -204,10 +220,16 @@ describe("resolveTopDownConsensus — 우선순위(기록 참조 > 웹 추출 > 
   });
 
   test("웹 추출이 없으면 기존 LLM 선험 경로(문구 불변) — origin llm_prior", () => {
-    const td = resolveTopDownConsensus({ externalReference: null, llmCagrFrac: 0.08, llmSourceLabel: "글로벌 기관 전망 평균" });
+    const td = resolveTopDownConsensus({
+      externalReference: null,
+      llmCagrFrac: 0.08,
+      llmSourceLabel: "글로벌 기관 전망 평균",
+    });
     expect(td.topDownCagr).toBe(8);
     expect(td.summaryLabel).toBe("8.0%");
-    expect(td.toleranceNote).toBe("탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님).");
+    expect(td.toleranceNote).toBe(
+      "탑다운 컨센서스는 LLM 지식 기반 추정 — 원문 출처 확인 전. 내부 정합성 확인으로만 사용(독립 검증 아님).",
+    );
     expect(td.source).toEqual({ label: "글로벌 기관 전망 평균", origin: "llm_prior" });
   });
 
@@ -241,7 +263,10 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
     position: "midstream",
     note: "스텁 — 가치사슬 위치 고정",
     relatedIndustries: [],
-    segments: [{ code: "seg_a", label: "세그먼트A" }, { code: "seg_b", label: "세그먼트B" }],
+    segments: [
+      { code: "seg_a", label: "세그먼트A" },
+      { code: "seg_b", label: "세그먼트B" },
+    ],
     sources: [{ label: "스텁 소스", estimate: 12, status: "consensus", methodology: "테스트 고정 앵커" }],
     regions: [{ code: "china", weight: 100, mix: { seg_a: 50, seg_b: 50 }, adjustment: "스텁 배분" }],
     ...(baseline === undefined ? {} : { baseline }),
@@ -253,17 +278,27 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
     const indId = ulid();
     db.run("INSERT INTO md_industry (id, name_ko, name_en, created_at) VALUES (?,?,?,?)", [indId, nameKo, nameKo, NOW]);
     const aid = ulid();
-    db.run("INSERT INTO market_sizing_analysis (id, industry_id, status, created_by, created_at) VALUES (?,?,?,?,?)", [aid, indId, "in_progress", "test", NOW]);
+    db.run("INSERT INTO market_sizing_analysis (id, industry_id, status, created_by, created_at) VALUES (?,?,?,?,?)", [
+      aid,
+      indId,
+      "in_progress",
+      "test",
+      NOW,
+    ]);
     return { aid, industryId: indId };
   };
 
   const matrixOf = (aid: string): Record<string, any> => {
-    const stored = db.query("SELECT payload FROM market_sizing_version WHERE analysis_id = ? ORDER BY version_no DESC LIMIT 1").get(aid) as { payload: string };
+    const stored = db
+      .query("SELECT payload FROM market_sizing_version WHERE analysis_id = ? ORDER BY version_no DESC LIMIT 1")
+      .get(aid) as { payload: string };
     return (JSON.parse(stored.payload) as { matrix: Record<string, any> }).matrix;
   };
 
   const referenceRows = (industryId: string): Array<Record<string, any>> =>
-    db.query("SELECT * FROM market_external_reference WHERE industry_id = ? ORDER BY version_no DESC").all(industryId) as Array<Record<string, any>>;
+    db
+      .query("SELECT * FROM market_external_reference WHERE industry_id = ? ORDER BY version_no DESC")
+      .all(industryId) as Array<Record<string, any>>;
 
   const extractionPrompts = (): string[] => llmStub.prompts.filter((p) => p.includes(EXTRACTION_MARKER));
 
@@ -283,7 +318,11 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
     await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
     const matrix = matrixOf(aid);
     expect(matrix.consistency.topDownCagr).toBe(8.7);
-    expect(matrix.consistency.source).toEqual({ label: "분석가 기록 전망", url: "https://example.com/recorded", origin: "user" });
+    expect(matrix.consistency.source).toEqual({
+      label: "분석가 기록 전망",
+      url: "https://example.com/recorded",
+      origin: "user",
+    });
     // 컨센서스 추출(cagr 스키마)·전망 추출(target_year 스키마)·LLM 선험 질의 전부 없음.
     const ext = extractionPrompts();
     expect(ext.some((p) => p.includes("cagr"))).toBe(false);
@@ -299,12 +338,18 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
   test("R4 — 기록 참조가 없고 검색이 성공하면 웹 발췌 추출 CAGR이 컨센서스가 되고 출처 {label, url, origin}을 실는다", async () => {
     llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
     setWebResearchOverrideForTests({ configured: true, sources: SOURCES });
-    llmStub.extractJson = { items: [{ source_label: "글로벌 리서치 전망 리포트", url: SOURCES[0].url, excerpt_index: 0, cagr: 0.08 }] };
+    llmStub.extractJson = {
+      items: [{ source_label: "글로벌 리서치 전망 리포트", url: SOURCES[0].url, excerpt_index: 0, cagr: 0.08 }],
+    };
     const { aid, industryId } = insertAnalysis("웹 컨센서스 접지 스텁 산업");
     await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
     const matrix = matrixOf(aid);
     expect(matrix.consistency.topDownCagr).toBe(8.0);
-    expect(matrix.consistency.source).toEqual({ label: "글로벌 리서치 전망 리포트", url: SOURCES[0].url, origin: "web_research" });
+    expect(matrix.consistency.source).toEqual({
+      label: "글로벌 리서치 전망 리포트",
+      url: SOURCES[0].url,
+      origin: "web_research",
+    });
     expect(matrix.consistency.tolerance).toContain("원문 확인 전");
     // 웹 추출이 성공했으므로 LLM 선험 컨센서스 질의는 발사되지 않는다.
     expect(llmStub.prompts.join("\n")).not.toContain("공개된 시장 성장률 컨센서스");
@@ -328,7 +373,9 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
     expect(matrix.consistency.topDownCagr).toBe(0);
     expect(matrix.consistency.source).toBeUndefined();
     // 폴백 등급 유지 (R8).
-    const anchor = (matrix.sectionConfidence ?? []).find((s: { section: string }) => s.section === "기준 시장규모 (앵커)");
+    const anchor = (matrix.sectionConfidence ?? []).find(
+      (s: { section: string }) => s.section === "기준 시장규모 (앵커)",
+    );
     const cagr = (matrix.sectionConfidence ?? []).find((s: { section: string }) => s.section === "셀별 CAGR");
     expect(anchor.grade).toBe("C");
     expect(anchor.note).toBe("LLM 추정 다중 소스 — 벤더 리포트 원문 대조 전");
@@ -354,7 +401,17 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
   test("R9 — step 5-B 웹 추출 전망은 captured_from='web_research'로 1회 저장되고 sourceUrl을 실는다", async () => {
     llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
     setWebResearchOverrideForTests({ configured: true, sources: SOURCES });
-    llmStub.extractJson = { items: [{ source_label: "글로벌 리서치 전망 리포트", url: SOURCES[0].url, excerpt_index: 0, target_year: 2030, size_b: 42.5 }] };
+    llmStub.extractJson = {
+      items: [
+        {
+          source_label: "글로벌 리서치 전망 리포트",
+          url: SOURCES[0].url,
+          excerpt_index: 0,
+          target_year: 2030,
+          size_b: 42.5,
+        },
+      ],
+    };
     const { aid, industryId } = insertAnalysis("웹 전망 저장 스텁 산업");
     await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
     const matrix = matrixOf(aid);
@@ -381,18 +438,28 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
       items: [
         { source_label: "글로벌 리서치 전망 리포트", url: SOURCES[0].url, excerpt_index: 0, size_b: 12.8, year: 2026 },
         { source_label: "범위 밖", url: SOURCES[1].url, excerpt_index: 7, size_b: 3.0, year: 2026 },
-        { source_label: "URL 불일치", url: "https://fabricated.example.com/x", excerpt_index: 1, size_b: 4.0, year: 2026 },
+        {
+          source_label: "URL 불일치",
+          url: "https://fabricated.example.com/x",
+          excerpt_index: 1,
+          size_b: 4.0,
+          year: 2026,
+        },
       ],
     };
     const { aid } = insertAnalysis("앵커 접지 등급 스텁 산업");
     await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
     const matrix = matrixOf(aid);
-    const withUrl = (matrix.anchor.sources as Array<{ sourceUrl?: string; label: string; note: string }>).filter((s) => s.sourceUrl);
+    const withUrl = (matrix.anchor.sources as Array<{ sourceUrl?: string; label: string; note: string }>).filter(
+      (s) => s.sourceUrl,
+    );
     expect(withUrl).toHaveLength(1);
     expect(withUrl[0].sourceUrl).toBe(SOURCES[0].url);
     expect(withUrl[0].label).toBe("글로벌 리서치 전망 리포트");
     expect(withUrl[0].note).toContain("원문 확인 전");
-    const anchor = (matrix.sectionConfidence ?? []).find((s: { section: string }) => s.section === "기준 시장규모 (앵커)");
+    const anchor = (matrix.sectionConfidence ?? []).find(
+      (s: { section: string }) => s.section === "기준 시장규모 (앵커)",
+    );
     expect(anchor.grade).toBe("B-");
     expect(anchor.note).toBe("웹 검색 1건 기반 — 원문 확인 전");
     // R6 — 성장 전망 발췌(2건)가 맥락으로 주입된 단계: 셀별 CAGR은 C-→C 한 계단.
@@ -413,5 +480,128 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
     expect(getQuantSearchQueryCountForTests()).toBe(10);
     // 추출 호출은 단계당 1회 상한 — 4단계 중 추출이 발사되는 step 2/5/5-B의 3회.
     expect(extractionPrompts()).toHaveLength(3);
+  });
+
+  test("Amendment 2026-11-12c — 폐기된 CAGR 참조는 컨센서스에 고정되지 않는다(폴백 사다리 재개)", async () => {
+    llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
+    setWebResearchOverrideForTests({ configured: true, sources: SOURCES });
+    llmStub.extractJson = {
+      items: [{ source_label: "글로벌 리서치 전망 리포트", url: SOURCES[0].url, excerpt_index: 0, cagr: 0.08 }],
+    };
+    const { aid, industryId } = insertAnalysis("폐기 참조 폴백 스텁 산업");
+    appendExternalReference(db, {
+      industry_id: industryId,
+      source_label: "폐기 예정 사용자 전망",
+      source_url: "https://example.com/recorded",
+      target_year: 2030,
+      external_cagr_pct: 8.7,
+      captured_from: "user",
+      created_by: "test",
+    });
+    const retiredId = resolveExternalReference(db, industryId)!.id;
+    expect(supersedeExternalReference(db, industryId, retiredId, "test")!.superseded_at).toBeTruthy();
+    expect(resolveExternalReference(db, industryId)).toBeNull(); // resolver skips superseded rows
+    await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
+    const matrix = matrixOf(aid);
+    // 컨센서스가 폐기 참조(8.7%)에 고정되지 않고 웹 발췌 추출(8.0%)에서 재개한다.
+    expect(matrix.consistency.topDownCagr).toBe(8.0);
+    expect(matrix.consistency.source).toEqual({
+      label: "글로벌 리서치 전망 리포트",
+      url: SOURCES[0].url,
+      origin: "web_research",
+    });
+    // 폐기 행은 그대로 보존되며 이번 실행이 새 참조를 덧붙이지 않는다(컨센서스는 저장하지 않음).
+    expect(referenceRows(industryId)).toHaveLength(1);
+    expect(
+      (
+        db.query("SELECT superseded_at FROM market_external_reference WHERE id = ?").get(retiredId) as {
+          superseded_at: string;
+        }
+      ).superseded_at,
+    ).toBeTruthy();
+  });
+
+  test("앵커 인용 (amendment 2026-11-12) — 참조 규모가 ±20% 안에 들어오면 match 기록 + synthetic 소스", async () => {
+    llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
+    setWebResearchOverrideForTests({ configured: false, sources: [] });
+    const { aid, industryId } = insertAnalysis("앵커 인용 일치 스텁 산업");
+    appendExternalReference(db, {
+      industry_id: industryId,
+      source_label: "기록 전망 보고서",
+      source_url: "https://example.com/recorded",
+      target_year: 2030,
+      external_cagr_pct: 6,
+      external_size_b: 14.0, // ourSize(≈14.59B)와 약 −4% — 허용 편차 내
+      captured_from: "user",
+      created_by: "test",
+    });
+    await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
+    const matrix = matrixOf(aid);
+    const match = matrix.anchor.externalReferenceMatch;
+    expect(match).toBeTruthy();
+    expect(match.referenceId).toBe(resolveExternalReference(db, industryId)!.id);
+    expect(match.sizeB).toBeCloseTo(14.0, 5);
+    expect(match.deviationPct).toBeCloseTo(matrix.externalForecast.gapPct, 5);
+    expect(Math.abs(match.deviationPct)).toBeLessThanOrEqual(20);
+    expect(match.sourceUrl).toBe("https://example.com/recorded");
+    const synthetic = (matrix.anchor.sources as Array<{ methodology?: string; label: string; estimate: number }>).at(
+      -1,
+    )!;
+    expect(synthetic.methodology!.startsWith("external_reference")).toBe(true);
+    expect(synthetic.label).toBe("기록 전망 보고서");
+    expect(synthetic.estimate).toBeCloseTo(14.0, 5);
+    // 앵커 합계·사다리 행위는 그대로 — 인용은 기록일 뿐 산출을 바꾸지 않는다.
+    expect(matrix.anchor.total).toBeCloseTo(12, 5);
+    expect(matrix.consistency.topDownCagr).toBe(6);
+    // 크기 격차가 트리거 안이어도 보정 트리거는 CAGR 격차 기준 — 미동작.
+    expect(matrix.calibration.triggered).toBe(false);
+  });
+
+  test("앵커 인용 — 격차 ±20% 밖(≈+27%)이면 match·synthetic 소스 모두 없다", async () => {
+    llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
+    setWebResearchOverrideForTests({ configured: false, sources: [] });
+    const { aid, industryId } = insertAnalysis("앵커 인용 벗어남 스텁 산업");
+    appendExternalReference(db, {
+      industry_id: industryId,
+      source_label: "크게 벗어난 전망",
+      target_year: 2030,
+      external_cagr_pct: 6,
+      external_size_b: 18.5, // ourSize 대비 약 +27% — 밖
+      captured_from: "user",
+      created_by: "test",
+    });
+    await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
+    const matrix = matrixOf(aid);
+    expect(matrix.anchor.externalReferenceMatch).toBeUndefined();
+    expect(
+      (matrix.anchor.sources as Array<{ methodology?: string }>).some((s) =>
+        s.methodology?.startsWith("external_reference"),
+      ),
+    ).toBe(false);
+    expect(matrix.externalForecast.gapPct).toBeGreaterThan(20);
+  });
+
+  test("앵커 인용 — 규모 없는 CAGR-only 참조는 match 없이 조용히 통과한다", async () => {
+    llmStub.json = stubCompletion(Object.fromEntries(REGION_CODES.map((r) => [r, { seg_a: 1.0, seg_b: 1.0 }])));
+    setWebResearchOverrideForTests({ configured: false, sources: [] });
+    const { aid, industryId } = insertAnalysis("앵커 인용 CAGR전용 스텁 산업");
+    appendExternalReference(db, {
+      industry_id: industryId,
+      source_label: "CAGR 전용 참조",
+      target_year: 2030,
+      external_cagr_pct: 6,
+      external_size_b: null,
+      captured_from: "user",
+      created_by: "test",
+    });
+    await expect(runSizingPipeline(db, aid)).resolves.toBeUndefined();
+    const matrix = matrixOf(aid);
+    expect(matrix.anchor.externalReferenceMatch).toBeUndefined();
+    expect(
+      (matrix.anchor.sources as Array<{ methodology?: string }>).some((s) =>
+        s.methodology?.startsWith("external_reference"),
+      ),
+    ).toBe(false);
+    expect(matrix.externalForecast.cagrBasis).toBe(true); // 크기 격차 없음 — CAGR 기준 격차만
   });
 });

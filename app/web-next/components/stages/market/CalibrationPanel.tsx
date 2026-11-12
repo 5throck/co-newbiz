@@ -7,6 +7,7 @@ import { canWriteBusiness } from "../../../lib/project-write-access.ts";
 import { useState, useCallback, useEffect } from "react";
 import { api } from "../../../lib/api.ts";
 import { useTranslations } from "next-intl";
+import { SupersedeReferenceButton } from "./SupersedeReferenceButton.tsx";
 import { EscalationSection } from "./CalibrationEscalation.tsx";
 import type {
   CalibrationAcceptedRow,
@@ -117,6 +118,22 @@ export function CalibrationPanel({
     }
   }
 
+  // 폐기(amendment 2026-11-12c) — 기록 보존 은퇴(물리 삭제 아님). 성공 후
+  // load() 재조회 시 패널이 자연히 "기록된 외부 참조가 없습니다" 상태가 된다.
+  async function supersedeReference(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.delete(`/api/market-overview/industry/${encodeURIComponent(industryId)}/external-reference`, { id });
+      load();
+      onReferenceSaved?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("supersedeFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function applyEscalation() {
     setBusy(true);
     setError(null);
@@ -184,6 +201,13 @@ export function CalibrationPanel({
               >
                 {tc("edit")}
               </button>
+            )}
+            {canCurate && (
+              <SupersedeReferenceButton
+                id={reference.id}
+                busy={busy}
+                onSupersede={() => void supersedeReference(reference.id)}
+              />
             )}
           </p>
         ) : (
