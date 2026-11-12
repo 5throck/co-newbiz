@@ -3897,6 +3897,7 @@
         "ourEstimateGrowthExtrapolation": "Our estimate (growth extrapolation)",
         "qualitativeAnalysisOpportunityAndRisk": "Qualitative analysis — opportunity and risk factors",
         "qualitativeAnalysisOpportunityAndRisk2": "Qualitative analysis — opportunity and risk factors",
+        "recordedExternalReferenceNewerThanTheLatestAnalysis": "A recorded external reference is newer than the latest analysis — re-analysis will apply it as the top-down consensus.",
         "replacedWithAWiderBand": "Replaced with a wider band.",
         "reviewNeeded": "Review needed",
         "riskFactor": "Risk factor",
