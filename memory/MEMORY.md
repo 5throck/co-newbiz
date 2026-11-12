@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-13](2026-11-13.md) | fix(s1): probe project-industry bindings only when a project row exists |
 | [2026-11-12](2026-11-12.md) | fix(brownfield): target identity resolution - canonical names, code-aware dedupe, unified PATCH, DART code authority, sync failure visibility |
 | [2026-11-11](2026-11-11.md) | fix(committee): pre-fs brief injection, minutes topic, convergence decision rule, degraded visibility, minutes timeout |
 | [2026-11-10](2026-11-10.md) | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
@@ -11,7 +12,7 @@
 | [2026-11-08](2026-11-08.md) | chore: workspace sync — session residue (Step 1 local-work) |
 | [2026-11-07](2026-11-07.md) | feat(review): localize AI review items via next-intl with legacy fallback |
 | [2026-11-06](2026-11-06.md) | docs(docs): workspace sync (10 files) |
-| [2026-11-05](2026-11-05.md) | docs(docs): workspace sync (spec 2026-10-09-ux-r2, 12 files) |
+| 2026-11-05 | docs(docs): workspace sync (spec 2026-10-09-ux-r2, 12 files) |
 | 2026-11-04 | feat(web): cron day-of-week chips and dialog rhythm |
 | 2026-11-03 | feat(scheduler): persist per-deal KRX stock series (owner decision option 1) |
 | 2026-11-02 | fix(dart): parse streaming corp-code ZIPs via central directory |
