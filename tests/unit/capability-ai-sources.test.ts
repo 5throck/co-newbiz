@@ -682,10 +682,27 @@ describe("B5. profile generated without search evidence is flagged degraded", ()
       "외부 검색 근거 없음 (Tavily 쿼터 초과(432), DuckDuckGo 봇 차단) — 정성 항목은 AI 추정이며 검증되지 않았습니다",
     );
     expect(pd.noResearchDegradedReason([], false)).toContain("(웹 검색 미구성)");
-    expect(pd.isNoResearchDegraded(r)).toBe(true);
+    // D-B dart-aware variants (design 2026-11-13-profile-headless-fallback §5): the load-bearing
+    // prefix is preserved, the tail states the DART success, found:false keeps the exact old string.
+    const dr = pd.noResearchDegradedReason(["Tavily 쿼터 초과(432)"], true, {
+      found: true,
+      years: "2019 / 2023",
+      accounts: 40,
+    });
+    expect(dr).toStartWith("외부 검색 근거 없음 (Tavily 쿼터 초과(432))");
+    expect(dr).toContain("DART 재무는 정상 입수(2019 / 2023, 40계정)");
+    expect(dr).toEndWith("정성 항목(강점·약점·SWOT·경쟁)만 AI 추정이며 검증되지 않았습니다");
+    expect(pd.isNoResearchDegraded(dr)).toBe(true);
+    expect(pd.noResearchDegradedReason([], true, { found: false, years: "", accounts: 0 })).toBe(
+      "외부 검색 근거 없음 — 정성 항목은 AI 추정이며 검증되지 않았습니다",
+    );
+    expect(pd.degradedChip(dr, true).label).toContain("재무는 공시 기반");
+    expect(pd.degradedChip(dr, true).hint).toContain("검색이 복구되면 재분석");
+    expect(pd.degradedChip(dr).label).toBe("검색 근거 없음 — 정성 항목 미검증(AI 추정)"); // legacy 1-arg call
     expect(pd.isNoResearchDegraded("LLM 응답 파싱 실패")).toBe(false);
     expect(pd.degradedChip(r).hint).toContain("검색이 복구되면 재분석");
     expect(pd.degradedChip("LLM 응답 파싱 실패").label).toBe("부분 분석(폴백)");
+    expect(pd.degradedChip("LLM 응답 파싱 실패", true).label).toBe("부분 분석(폴백)");
   });
   test("pipeline sets degraded when no sources came back, keeps the LLM-failure guard separate, and reports provider diagnostics", () => {
     const src = readFileSync(join(ROOT, "app/web-next/lib/company-profile-pipeline.ts"), "utf8");
@@ -695,6 +712,13 @@ describe("B5. profile generated without search evidence is flagged degraded", ()
       "noResearchDegradedReason",
       "degraded = degraded ?? noResearchReason",
       "priorDegraded === null && llmDegraded",
+      // D-A chain-integrated fallback wiring + provenance (design §4)
+      "playwright: true",
+      "PROFILE_SEARCH_DEADLINE_MS",
+      "PROFILE_PLAYWRIGHT_QUERIES",
+      "webResearchPlaywright",
+      // D-B dart-grounded split call shape
+      "found: dart.found",
     ])
       expect(src).toContain(k);
     expect(src).toContain(`출처 0건 — \${noResearchReason}`);
@@ -703,12 +727,14 @@ describe("B5. profile generated without search evidence is flagged degraded", ()
     const chips = readFileSync(join(ROOT, "app/web-next/components/stages/our-company/ProfileChips.tsx"), "utf8");
     expect(chips).toContain("export function DegradedChip");
     expect(chips).toContain('aria-hidden="true">!</span>');
+    expect(chips).toContain("dartGrounded"); // split-label prop threaded through
     for (const f of [
       "components/stages/our-company/ProfileReport.tsx",
       "components/brownfield-target/TargetAiProfileTab.tsx",
       "components/stages/our-company/ProfileChips.tsx",
     ]) {
       expect(readFileSync(join(ROOT, "app/web-next", f), "utf8")).toContain("<DegradedChip");
+      expect(readFileSync(join(ROOT, "app/web-next", f), "utf8")).toContain("headlessSearchChip");
     }
   });
 });

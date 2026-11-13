@@ -76,7 +76,7 @@ export interface CompanyProfile {
   industryExposure: string[];
   degraded?: string | null;
   researchSources: Array<{ title: string; url: string; snippet?: string }>;
-  dataSources: { dart: boolean; dartYear: string | null; webResearchCount: number };
+  dataSources: { dart: boolean; dartYear: string | null; webResearchCount: number; webResearchPlaywright?: boolean };
   swot?: { opportunities: string[]; threats: string[] };
   competitive?: { competitors: Array<{ name: string; note: string }>; positioning: string; degraded?: string | null };
   ragCapRecommendation?: { grade: "green" | "amber" | "red"; rationale: string };

@@ -181,6 +181,19 @@ function citedLabel(profile: CompanyProfilePayload, cite: unknown): string | nul
   return labelOf(src);
 }
 
+/**
+ * Per-item basis reset for an analyst edit (design 2026-11-13-profile-headless-fallback §6.7): a
+ * human-rewritten item is no longer machine-grounded, so every index whose text changed at that
+ * position becomes "estimate" (a shift caused by insertion/deletion is honestly re-grounded too).
+ * Old payloads without itemBasis render unchanged. The edit is already flagged by analystEdited.
+ */
+function resetItemBasis(profile: CompanyProfilePayload, field: "strengths" | "weaknesses", prev: string[], next: string[]): void {
+  const basis = profile.itemBasis;
+  const cur = basis?.[field];
+  if (!basis || !cur) return;
+  basis[field] = next.map((x, i) => (prev[i] === x ? (cur[i] ?? "estimate") : "estimate"));
+}
+
 export function applyFieldOverrides(db: Db, subject: Subject, userId: string, input: FieldOverrideInput): { versionNo: number; fields: string[] } {
   const reason = cleanText(input.reason, "사유", MAX_REASON_CHARS, true);
   const profile = clone(requireLatest(db, subject));
@@ -212,6 +225,7 @@ export function applyFieldOverrides(db: Db, subject: Subject, userId: string, in
     }
     edited[field] = [...edited[field].filter((x) => next.includes(x)), ...next.filter((x) => !prev.includes(x))];
     profile[field] = next;
+    if (field !== "industryExposure") resetItemBasis(profile, field, prev, next);
     changed.push(field);
   }
   if (input.businessAssessment !== undefined) {

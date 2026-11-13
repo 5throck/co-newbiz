@@ -12,9 +12,19 @@ export function showDegradedChip(profile: Profile): boolean {
   return Boolean(profile.degraded) && !(isNoResearchDegraded(profile.degraded) && hasAnalystEvidence(profile));
 }
 
-/** Warning chip (icon + text) for a degraded profile; `showHint` adds the regenerate hint as visible text. */
-export function DegradedChip({ degraded, showHint = false }: { degraded: string; showHint?: boolean }) {
-  const c = degradedChip(degraded);
+/** Warning chip (icon + text) for a degraded profile; `showHint` adds the regenerate hint as visible text.
+ * `dartGrounded` switches to the split label (financial analysis is disclosure-based, only qualitative
+ * items unverified) — the full reason stays the title tooltip. */
+export function DegradedChip({
+  degraded,
+  dartGrounded = false,
+  showHint = false,
+}: {
+  degraded: string;
+  dartGrounded?: boolean;
+  showHint?: boolean;
+}) {
+  const c = degradedChip(degraded, dartGrounded);
   return (
     <>
       <span className="status-chip status-amber" title={`${degraded} — ${c.hint}`}><span aria-hidden="true">!</span> {c.label}</span>
@@ -30,8 +40,11 @@ export function ProfileChips({ profile }: { profile: Profile | "loading" | undef
     <span className="flex items-center gap-1">
       {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
       {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">{tc("externalResearch")} {profile.dataSources!.webResearchCount}{tc("countUnit")}</span>}
+      {profile.dataSources?.webResearchPlaywright && <span className="status-chip status-in-progress">{tc("headlessSearchChip")}</span>}
       {hasAnalystEvidence(profile) && <AnalystEvidenceChip />}
-      {showDegradedChip(profile) && <DegradedChip degraded={profile.degraded!} />}
+      {showDegradedChip(profile) && (
+        <DegradedChip degraded={profile.degraded!} dartGrounded={profile.dataSources?.dart === true} />
+      )}
     </span>
   );
 }
