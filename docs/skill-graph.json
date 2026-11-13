@@ -1886,6 +1886,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261113-06",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -6270,6 +6275,18 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261113-04",
       "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261113-06",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261113-06",
+      "to": "skill:root/rag-scoring-framework",
       "source": "skills_used"
     },
     {

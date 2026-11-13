@@ -23,8 +23,9 @@ export function ProfileReport({ ctx, openMember }: { ctx: OurCompanyStageState; 
               <h2 className=" !mb-0">{profile.companyName} {t("profile")}</h2>
               {profile.dataSources?.dart && <span className="status-chip status-green">DART {profile.dataSources.dartYear ?? ""}</span>}
               {(profile.dataSources?.webResearchCount ?? 0) > 0 && <span className="status-chip status-in-progress">{tc("externalResearch")} {profile.dataSources!.webResearchCount}{tc("countUnit")}</span>}
+              {profile.dataSources?.webResearchPlaywright && <span className="status-chip status-in-progress">{tc("headlessSearchChip")}</span>}
               {hasAnalystEvidence(profile) && <AnalystEvidenceChip />}
-              {showDegradedChip(profile) && <DegradedChip degraded={profile.degraded!} showHint />}
+              {showDegradedChip(profile) && <DegradedChip degraded={profile.degraded!} dartGrounded={profile.dataSources?.dart === true} showHint />}
             </div>
             <div className="library-tabs" role="tablist" aria-label={t("profileSections")}>
               {PROFILE_TABS.map(([key, label]) => (

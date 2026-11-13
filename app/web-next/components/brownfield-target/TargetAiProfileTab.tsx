@@ -31,7 +31,8 @@ export function TargetAiProfileTab({ ctx, t }: { ctx: TargetDetailViewState; t: 
                   {(companyProfile.profile?.dataSources?.webResearchCount ?? 0) > 0 && (
                     <span className="status-chip status-in-progress">{tr("externalResearchCount", { p1: companyProfile.profile!.dataSources.webResearchCount })}</span>
                   )}
-                  {companyProfile.profile?.degraded && <DegradedChip degraded={companyProfile.profile.degraded} showHint />}
+                  {companyProfile.profile?.dataSources?.webResearchPlaywright && <span className="status-chip status-in-progress">{tc("headlessSearchChip")}</span>}
+                  {companyProfile.profile?.degraded && <DegradedChip degraded={companyProfile.profile.degraded} dartGrounded={companyProfile.profile.dataSources?.dart === true} showHint />}
                 </div>
 
                 {companyProfile.status === "in_progress" ? (

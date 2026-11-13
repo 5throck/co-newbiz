@@ -23,6 +23,15 @@ export function AnalystEditedChip() {const t = useTranslations("components.ourCo
   return <span className="status-chip status-in-progress ml-1" title={t("anAnalystEditedThisItem")}>{tc("analystRevision")}</span>;
 }
 
+/** Per-item grounding chip (design 2026-11-13-profile-headless-fallback §6.5): shown only when the LLM
+ * tagged the item "financial" AND DART data was actually available for the run. Text label keeps the
+ * state readable without color (same inline precedent as AnalystEditedChip). */
+export function FinancialGroundedChip({ profile, field, index }: { profile: Profile; field: keyof NonNullable<Profile["itemBasis"]>; index: number }) {
+  const t = useTranslations("components.ourCompany.profileBasicTabs");
+  if (profile.itemBasis?.[field]?.[index] !== "financial" || !profile.dartFinancials?.available) return null;
+  return <span className="status-chip status-green">{t("financialGroundedChip")}</span>;
+}
+
 /** Inputs for (re)generation: note + URL list, prefilled from the last stored version, plus the last per-URL fetch status. */
 export function ProfileEvidencePanel({ ctx, memberId, profile }: { ctx: OurCompanyStageState; memberId: string; profile: Profile | "loading" | undefined }) {const tr = useTranslations(); const t = useTranslations("components.ourCompany.profileEvidence");
   const { evidenceDrafts, setEvidenceDraft } = ctx;

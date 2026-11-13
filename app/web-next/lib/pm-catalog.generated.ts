@@ -51,7 +51,7 @@ export const CATALOG_VERSION = "1.0.0";
 export const SPEC_VERSION = "2.21.0";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "f2d3448714acdf18",
+  "promptsJson": "9ee816111fa499a5",
   "flowSpecYaml": "6f422e41baf5c01b",
   "agentRoster": "4f4cf81169a7e46f"
 };

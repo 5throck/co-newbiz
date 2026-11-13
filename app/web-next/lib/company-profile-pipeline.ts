@@ -25,7 +25,7 @@ import {
   type WebSource,
 } from "./web-research.ts";
 import { noResearchDegradedReason } from "./profile-degraded.ts";
-import { deriveFinancialAnalysis } from "./company-financials.ts";
+import { deriveFinancialAnalysis, type FinancialAnalysis } from "./company-financials.ts";
 import {
   crossCheckCompetitive,
   deriveCompetitiveSectionGrade,
@@ -80,6 +80,9 @@ export interface CompanyProfilePayload {
     userSources?: UserSourceRecord[];
     /** True when an analyst note was supplied. */
     analystNote?: boolean;
+    /** True when the chain-integrated Playwright headless provider rescued a fully-blocked search
+     * (design 2026-11-13-profile-headless-fallback §4) — provenance for the same webResearchCount. */
+    webResearchPlaywright?: boolean;
   };
   /** The analyst's free-text company note, stored with the version so a regeneration can prefill it. */
   userNote?: string;
@@ -98,6 +101,15 @@ export interface CompanyProfilePayload {
   financialAnalysis?: import("./company-financials.ts").FinancialAnalysis;
   /** SWOT 기회/위협 — strengths/weaknesses는 기존 대표 필드 유지 */
   swot?: { opportunities: string[]; threats: string[] };
+  /** 항목별 근거 태그 (design 2026-11-13-profile-headless-fallback §6, additive — schemaVersion 3 호환).
+   *  item 배열과 인덱스 정렬: "financial" = DART 공시 수치에서 직접 도출, "estimate" = 그 외(리서치·
+   *  분석가 근거·LLM 지식). LLM이 단계 3에서 태깅하고 정규화기가 화이트리스트한다. */
+  itemBasis?: {
+    strengths?: Array<"financial" | "estimate">;
+    weaknesses?: Array<"financial" | "estimate">;
+    opportunities?: Array<"financial" | "estimate">;
+    threats?: Array<"financial" | "estimate">;
+  };
   /** 경쟁 포지셔닝 (LLM, 단계 4) + 공시·리서치 원문 대조 (단계 5, schemaVersion 3) */
   competitive?: {
     competitors: Array<{ name: string; note: string }>;
@@ -269,6 +281,100 @@ function userCitationEvidence(text: string, ev: UserEvidence): string | null {
   return [...new Set(urls), ...(noteCited ? ["분석가 소개 메모"] : [])].join(", ");
 }
 
+/** Headless-Chrome fallback budget (design 2026-11-13-profile-headless-fallback §4): one overall
+ * search deadline and at most two Playwright queries per run — constants, adjustable later. */
+const PROFILE_SEARCH_DEADLINE_MS = 30_000;
+const PROFILE_PLAYWRIGHT_QUERIES = 2;
+
+/** Per-item grounding tag of a SWOT/strength/weakness item (design §6): "financial" only when the
+ * LLM derived the item directly from the DART block figures, "estimate" otherwise. */
+export type ItemBasis = "financial" | "estimate";
+
+/** SWOT item as the step-3 LLM returns it: object {t, b} or a legacy bare string. */
+export interface NormalizedSwotItems {
+  items: string[];
+  basis: ItemBasis[];
+}
+
+/**
+ * Basis normalization for one item array (pure, exported for tests — design §6.4 / test plan case 4):
+ * objects with a non-empty t string are accepted (t kept verbatim, b whitelisted — anything but
+ * "financial" becomes "estimate"); bare legacy strings pass through as today with "estimate";
+ * empty/absent text is dropped. Index alignment between items and basis is preserved, and the
+ * 5-item cap matches the existing arr() truncation.
+ */
+export function normalizeSwotItems(v: unknown, cap = 5): NormalizedSwotItems {
+  const items: string[] = [];
+  const basis: ItemBasis[] = [];
+  if (Array.isArray(v)) {
+    for (const x of v) {
+      if (typeof x === "string") {
+        if (x.trim().length === 0) continue;
+        items.push(x);
+        basis.push("estimate");
+      } else if (x && typeof x === "object") {
+        const t = typeof (x as { t?: unknown }).t === "string" ? (x as { t: string }).t : "";
+        if (t.trim().length === 0) continue;
+        items.push(t);
+        basis.push((x as { b?: unknown }).b === "financial" ? "financial" : "estimate");
+      }
+    }
+  }
+  return { items: items.slice(0, cap), basis: basis.slice(0, cap) };
+}
+
+/**
+ * Compact deterministic DART block for the step-3 user prompt (design §6.2, only when dart.found):
+ * per-year revenue / operating profit / net profit plus the derived ratios, bounded to a fixed set
+ * of accounts so the prompt cannot grow with the account list. Empty when there is nothing to show.
+ */
+function dartFinancialBlock(dart: DartFinancials, fa: FinancialAnalysis): string {
+  if (!dart.found) return "";
+  const num = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+  const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${(v * 100).toFixed(1)}%`);
+  const parts: string[] = [];
+  for (const key of ["revenue", "operatingProfit", "netIncome"] as const) {
+    const s = fa.series.find((x) => x.key === key);
+    if (!s) continue;
+    const pts = s.points.filter((p): p is { year: string; value: number } => p.value !== null);
+    if (pts.length > 0) parts.push(`${s.label}(억원): ${pts.map((p) => `${p.year} ${num(p.value)}`).join(", ")}`);
+  }
+  const ratios = fa.ratios.filter(
+    (r) => r.revenueGrowth != null || r.operatingMargin != null || r.roe != null || r.debtRatio != null,
+  );
+  if (ratios.length > 0) {
+    parts.push(
+      `비율: ${ratios
+        .map(
+          (r) =>
+            `${r.year} 매출성장 ${pct(r.revenueGrowth)}·영업이익률 ${pct(r.operatingMargin)}·ROE ${pct(r.roe)}·부채비율 ${pct(r.debtRatio)}`,
+        )
+        .join(", ")}`,
+    );
+  }
+  if (fa.notes.length > 0) parts.push(`참고: ${fa.notes.join(" ")}`);
+  if (parts.length === 0) return "";
+  return `DART 공시 재무(검증된 원데이터 — 이 블록의 수치는 인용 가능):\n${parts.map((p) => `- ${p}`).join("\n")}`;
+}
+
+/**
+ * Ledger entry for one strength/weakness item (design §6.6): a valid analyst citation stays
+ * confirmed; a financial-grounded item keeps needs_judgement but names the grounding — an LLM
+ * inference FROM verified disclosure data is not a confirmed disclosure fact (non-negotiable #4);
+ * anything else keeps the plain estimate wording.
+ */
+function basisLedgerEntry(item: string, cite: string | null, basis: ItemBasis | undefined, years: string[]) {
+  if (cite) return { item, status: "confirmed" as const, evidence: cite };
+  return {
+    item,
+    status: "needs_judgement" as const,
+    evidence:
+      basis === "financial"
+        ? `재무 기반 — ${years.join("/")} DART 재무에서 도출(LLM 추론)`
+        : "LLM 추정 — 분석가 확인 필요",
+  };
+}
+
 /** Deterministic S1-matrix linkage of the exposed industries (also reused after an analyst edit of 산업 노출). */
 export function deriveIndustryLinkage(
   db: Db,
@@ -401,6 +507,14 @@ export async function runCompanyProfilePipeline(
   // ── Step 2: 외부 리서치 (애널리스트 리포트·산업 동향·경쟁사) ──
   let research: WebSource[] = [];
   let researchProviders: ProviderDiag[] = [];
+  // Headless-Chrome fallback (design 2026-11-13-profile-headless-fallback §4, DEC-20261113-06 D-A):
+  // the chain-integrated Playwright provider engages ONLY when every configured provider returned
+  // nothing (web-research.ts runs it last, after zero merged sources), deadline-bounded, and
+  // respects the WEB_SEARCH_PLAYWRIGHT_ENABLED opt-out. Headless sources flow through the SAME
+  // research array — citations, researchSources, webResearchCount and the holding-check
+  // "researched" classification all work unchanged. The search-UNCONFIGURED branch stays out
+  // of v1 (isWebResearchConfigured() === false still skips research entirely).
+  let playwrightRescued = false;
   if (isWebResearchConfigured()) {
     const detailed = await researchSourcesDetailed(
       [
@@ -411,9 +525,18 @@ export async function runCompanyProfilePipeline(
         `${company} 경쟁사 비교 주요 경쟁자`,
       ],
       12,
+      {
+        playwright: true,
+        deadlineAt: Date.now() + PROFILE_SEARCH_DEADLINE_MS,
+        playwrightQueries: PROFILE_PLAYWRIGHT_QUERIES,
+      },
     );
     research = detailed.sources;
     researchProviders = detailed.providers;
+    // Provenance (brownfield searchNote wording, adapted): a successful headless rescue is stated
+    // in the step summary, flagged in dataSources, and rendered as a header chip.
+    playwrightRescued =
+      research.length > 0 && researchProviders.some((p) => p.name === "playwright" && p.status === "ok");
   }
   // 분석가 제공 근거(URL·메모) — 외부 검색이 막히거나 틀릴 때의 보강. 본문은 저장·로그하지 않는다.
   const givenUrls = (options.sourceUrls ?? []).slice(0, MAX_USER_URLS);
@@ -435,9 +558,15 @@ export async function runCompanyProfilePipeline(
   }
   // 검색 근거 0건 — 정성 항목(강점·약점·평가·SWOT·경쟁사)은 LLM 추정이다. 아래 degraded로 표시하고 검색 제공자 진단을 남긴다.
   // 분석가 제공 근거(메모 또는 본문을 읽은 출처)가 하나라도 쓰였으면 근거 없음이 아니다.
+  // DART가 성공한 회차는 그 사실을 사유 안에 명시한다(D-B — 태웅 케이스: DART와 리서치가
+  // 함께 실패한 것처럼 읽히지 않도록). 접두사는 하위 소비자가 의존하므로 유지된다.
   const noResearchReason =
     research.length === 0 && !evidence.usable
-      ? noResearchDegradedReason(providerFailureCauses(researchProviders), isWebResearchConfigured())
+      ? noResearchDegradedReason(providerFailureCauses(researchProviders), isWebResearchConfigured(), {
+          found: dart.found,
+          years: yearsFound.join(" / "),
+          accounts: dart.items.length,
+        })
       : null;
   const researchContext = research.length
     ? research.map((s, i) => `[${i + 1}] ${s.title} (${s.url})\n${s.snippet}`).join("\n\n")
@@ -446,6 +575,9 @@ export async function runCompanyProfilePipeline(
     userSources.length > 0 || evidence.note
       ? ` 분석가 제공 근거: 출처 ${userSources.filter((x) => x.status === "ok").length}/${userSources.length}건 수집${userSources.some((x) => x.status === "thin") ? `, 본문 부족 ${userSources.filter((x) => x.status === "thin").length}건` : ""}${userSources.some((x) => x.status === "failed") ? `, 실패 ${userSources.filter((x) => x.status === "failed").length}건` : ""}${evidence.note ? ", 소개 메모 있음" : ""}.`
       : "";
+  const playwrightNote = playwrightRescued
+    ? ` 웹 검색 제공자 실패(${providerFailureCauses(researchProviders).join(", ")}) 후 Playwright headless 검색으로 근거를 확보했습니다 — 출처 URL을 반드시 확인하세요.`
+    : "";
   await summarize(
     2,
     "외부 리서치 입수",
@@ -453,16 +585,23 @@ export async function runCompanyProfilePipeline(
       ? `출처 ${research.length}건 (애널리스트 리포트·산업 동향·실적).`
       : noResearchReason
         ? `출처 0건 — ${noResearchReason}.`
-        : "검색 출처 0건.") + userSummary,
+        : "검색 출처 0건.") +
+      playwrightNote +
+      userSummary,
   );
 
   // ── Step 3: LLM 강점/약점/기회/위협(SWOT)/사업 평가 ──
+  // D-C (design 2026-11-13-profile-headless-fallback §6.2): the LLM can only tag an item "financial"
+  // when it actually sees the figures — the deterministic analysis is computed early (reused at its
+  // step-6 site) and a compact bounded block is appended to the prompt when DART succeeded.
+  const financialAnalysis = deriveFinancialAnalysis(dart);
+  const dartBlock = dartFinancialBlock(dart, financialAnalysis);
   const qualJson = await complete(
     [
       systemMessage("company_profile.qualitative"),
       {
         role: "user" as const,
-        content: `${company}${subject.groupName ? `(${subject.groupName} 그룹 계열사)` : ""}의 프로파일을 작성하세요. JSON: {"strengths":["강점 2~4개"],"weaknesses":["약점 2~4개"],"opportunities":["기회 요인 2~3개(시장·산업·기술 관점)"],"threats":["위협 요인 2~3개(경쟁·규제·대체재 관점)"],"businessAssessment":"사업 평가 2~3문장","industryExposure":["노출 산업/부문", "..."]}. 기회/위협은 이 회사에 특정한 것으로 쓰고 일반론을 나열하지 말 것. 각 항목은 발췌 근거가 있으면 출처 번호([n])를 문장 끝에 붙이세요.${evidence.block ? ' JSON에 "dartConflict":"분석가 근거가 DART 공시와 충돌하면 한 문장으로, 아니면 빈 문자열"도 포함하세요.' : ""}\n\nDART 재무: ${dart.found ? `${dart.year}년 재무 ${dart.items.length}개 계정` : "미입수"}\n\n리서치 발췌:\n${researchContext}${evidence.block ? `\n\n분석가 제공 근거:\n${evidence.block}` : ""}`,
+        content: `${company}${subject.groupName ? `(${subject.groupName} 그룹 계열사)` : ""}의 프로파일을 작성하세요. JSON: {"strengths":[{"t":"강점","b":"financial"}],"weaknesses":[{"t":"약점","b":"estimate"}],"opportunities":[{"t":"기회 요인(시장·산업·기술 관점)","b":"estimate"}],"threats":[{"t":"위협 요인(경쟁·규제·대체재 관점)","b":"estimate"}],"businessAssessment":"사업 평가 2~3문장","industryExposure":["노출 산업/부문", "..."]}. 각 SWOT 항목은 {"t":텍스트,"b":근거} 객체다. b는 아래 DART 공시 재무 블록의 수치에서 직접 도출했으면 "financial", 리서치 발췌·분석가 근거·일반 지식에서 나왔으면 "estimate"다. 강점 2~4개, 약점 2~4개, 기회/위협 2~3개씩. 기회/위협은 이 회사에 특정한 것으로 쓰고 일반론을 나열하지 말 것. 각 항목은 발췌 근거가 있으면 t 문장 끝에 출처 번호([n])를 붙이세요.${evidence.block ? ' JSON에 "dartConflict":"분석가 근거가 DART 공시와 충돌하면 한 문장으로, 아니면 빈 문자열"도 포함하세요.' : ""}\n\nDART 재무: ${dart.found ? `${dart.year}년 재무 ${dart.items.length}개 계정` : "미입수"}${dartBlock ? `\n\n${dartBlock}` : ""}\n\n리서치 발췌:\n${researchContext}${evidence.block ? `\n\n분석가 제공 근거:\n${evidence.block}` : ""}`,
       },
     ],
     () =>
@@ -480,6 +619,10 @@ export async function runCompanyProfilePipeline(
   let weaknesses: string[] = [];
   let opportunities: string[] = [];
   let threats: string[] = [];
+  let strengthsBasis: ItemBasis[] = [];
+  let weaknessesBasis: ItemBasis[] = [];
+  let opportunitiesBasis: ItemBasis[] = [];
+  let threatsBasis: ItemBasis[] = [];
   let businessAssessment = "";
   let industryExposure: string[] = [];
   let dartConflict = "";
@@ -490,16 +633,34 @@ export async function runCompanyProfilePipeline(
     ) as Record<string, unknown>;
     const arr = (v: unknown) =>
       Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 5) : [];
-    strengths = arr(parsed.strengths);
-    weaknesses = arr(parsed.weaknesses);
-    opportunities = arr(parsed.opportunities);
-    threats = arr(parsed.threats);
+    const swotS = normalizeSwotItems(parsed.strengths);
+    strengths = swotS.items;
+    strengthsBasis = swotS.basis;
+    const swotW = normalizeSwotItems(parsed.weaknesses);
+    weaknesses = swotW.items;
+    weaknessesBasis = swotW.basis;
+    const swotO = normalizeSwotItems(parsed.opportunities);
+    opportunities = swotO.items;
+    opportunitiesBasis = swotO.basis;
+    const swotT = normalizeSwotItems(parsed.threats);
+    threats = swotT.items;
+    threatsBasis = swotT.basis;
     industryExposure = arr(parsed.industryExposure);
     if (typeof parsed.businessAssessment === "string") businessAssessment = parsed.businessAssessment;
     if (typeof parsed.dartConflict === "string")
       dartConflict = sanitizeUntrusted(parsed.dartConflict).trim().slice(0, 300);
   } catch (err) {
     degraded = `LLM 응답 파싱 실패 (${err instanceof Error ? err.message.slice(0, 60) : "알 수 없는 오류"})`;
+  }
+  // 근거 태그 정직화 (QA 2026-11-14): DART 블록이 프롬프트에 들어간 적이 없으면(미입수)
+  // "financial" 태그는 근거 없는 주장이다 — 전부 estimate로 하향한다. 그래야
+  // basisLedgerEntry가 빈 연도의 재무 근거 문구("재무 기반 — DART 재무에서 도출")를
+  // 만들 수 없다. DART 성공 회차에서만 financial 태그가 생존한다.
+  if (!dart.found) {
+    strengthsBasis = strengthsBasis.map(() => "estimate");
+    weaknessesBasis = weaknessesBasis.map(() => "estimate");
+    opportunitiesBasis = opportunitiesBasis.map(() => "estimate");
+    threatsBasis = threatsBasis.map(() => "estimate");
   }
   // 정적 폴백 문구가 저장된 경우 — 실제 상황을 반영해 정직하게 표기
   if (strengths.length === 1 && strengths[0]?.includes("미구성")) {
@@ -514,6 +675,18 @@ export async function runCompanyProfilePipeline(
   // LLM 실패(llmDegraded)와 검색 근거 없음(noResearchReason)은 구분한다: 이전 정상 버전 보호(ADR-0132)·RAG 문구는 LLM 실패만 따른다.
   const llmDegraded = degraded;
   degraded = degraded ?? noResearchReason;
+  // 항목별 근거 태그 페이로드 (D-C §6.4, additive — schemaVersion 3 호환): item 배열과 인덱스 정렬.
+  // 태그 가능한 항목이 하나도 없으면(폴백·파싱 실패·구 LLM 응답) 필드 자체를 생략한다 —
+  // 구 페이로드와 동일한 렌더링 경로를 유지한다.
+  const itemBasis: CompanyProfilePayload["itemBasis"] =
+    strengthsBasis.length + weaknessesBasis.length + opportunitiesBasis.length + threatsBasis.length > 0
+      ? {
+          ...(strengthsBasis.length > 0 ? { strengths: strengthsBasis } : {}),
+          ...(weaknessesBasis.length > 0 ? { weaknesses: weaknessesBasis } : {}),
+          ...(opportunitiesBasis.length > 0 ? { opportunities: opportunitiesBasis } : {}),
+          ...(threatsBasis.length > 0 ? { threats: threatsBasis } : {}),
+        }
+      : undefined;
   await summarize(
     3,
     "강점/약점·기회/위협(SWOT)·사업 평가",
@@ -587,7 +760,6 @@ export async function runCompanyProfilePipeline(
   );
 
   // ── Step 6: 결정론 합성 (LLM 없음) — 재무 분석·산업 연계·신뢰도·검증 원장·RAG 상한 ──
-  const financialAnalysis = deriveFinancialAnalysis(dart);
   if (coverageNote) financialAnalysis.notes.push(coverageNote.trim());
 
   const industryLinkage = deriveIndustryLinkage(db, industryExposure);
@@ -684,26 +856,30 @@ export async function runCompanyProfilePipeline(
           },
         ]
       : []),
-    ...strengths
-      .filter((s) => !s.includes("평가 실패"))
-      .map((s) => {
-        const cite = userCitationEvidence(s, evidence);
-        return {
-          item: `강점: ${s.slice(0, 60)}`,
-          status: cite ? ("confirmed" as const) : ("needs_judgement" as const),
-          evidence: cite ?? "LLM 추정 — 분석가 확인 필요",
-        };
-      }),
-    ...weaknesses
-      .filter((s) => !s.includes("재분석"))
-      .map((s) => {
-        const cite = userCitationEvidence(s, evidence);
-        return {
-          item: `약점: ${s.slice(0, 60)}`,
-          status: cite ? ("confirmed" as const) : ("needs_judgement" as const),
-          evidence: cite ?? "LLM 추정 — 분석가 확인 필요",
-        };
-      }),
+    ...strengths.flatMap((s, i) =>
+      s.includes("평가 실패")
+        ? []
+        : [
+            basisLedgerEntry(
+              `강점: ${s.slice(0, 60)}`,
+              userCitationEvidence(s, evidence),
+              strengthsBasis[i],
+              yearsFound,
+            ),
+          ],
+    ),
+    ...weaknesses.flatMap((s, i) =>
+      s.includes("재분석")
+        ? []
+        : [
+            basisLedgerEntry(
+              `약점: ${s.slice(0, 60)}`,
+              userCitationEvidence(s, evidence),
+              weaknessesBasis[i],
+              yearsFound,
+            ),
+          ],
+    ),
     ...industryLinkage
       .filter((l) => l.matrixFound)
       .map((l) => ({
@@ -789,12 +965,14 @@ export async function runCompanyProfilePipeline(
       userSourceCount: userSources.length,
       userSources: userSources.map(toRecord),
       analystNote: Boolean(evidence.note),
+      ...(playwrightRescued ? { webResearchPlaywright: true } : {}),
     },
     ...(evidence.note ? { userNote: evidence.note } : {}),
     stepSummaries,
     // ADR-0093 확장 (schemaVersion 2) + 경쟁 대조 (schemaVersion 3)
     financialAnalysis,
     swot: { opportunities, threats },
+    ...(itemBasis ? { itemBasis } : {}),
     competitive,
     industryLinkage,
     sectionConfidence,

@@ -54,6 +54,9 @@ export interface Profile {
       removed?: boolean;
     }>;
     analystNote?: boolean;
+    /** True when the chain-integrated Playwright headless provider rescued a fully-blocked search
+     * (design 2026-11-13-profile-headless-fallback) — provenance for the same webResearchCount. */
+    webResearchPlaywright?: boolean;
   };
   /** Analyst's free-text company note stored with the version (ADR-0172 amendment 4). */
   userNote?: string;
@@ -81,6 +84,14 @@ export interface Profile {
     notes: string[];
   };
   swot?: { opportunities: string[]; threats: string[] };
+  /** Per-item grounding tag (schemaVersion 3, additive) — index-aligned with the item arrays;
+   * "financial" items render a financial-grounded chip when DART data was available. */
+  itemBasis?: {
+    strengths?: Array<"financial" | "estimate">;
+    weaknesses?: Array<"financial" | "estimate">;
+    opportunities?: Array<"financial" | "estimate">;
+    threats?: Array<"financial" | "estimate">;
+  };
   // schemaVersion 3 — 공시·리서치 원문 대조 (ADR-0113)
   competitive?: {
     competitors: Array<{ name: string; note: string }>;
