@@ -5,6 +5,7 @@
 import { getDb } from "../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
+import { acceptedCalibrationDrivers } from "../../../../lib/market-calibration.ts";
 import { isSyntheticSizing } from "../../../../lib/synthetic-value.ts";
 
 export async function GET(request: Request) {
@@ -69,6 +70,16 @@ export async function GET(request: Request) {
         previousGapPct?: number | null;
         appliedDrivers?: string[];
       };
+      acceptedDrivers?: Array<{
+        id: string;
+        driver: string;
+        direction: "upside" | "downside";
+        impact_pct: number;
+        rationale: string;
+        decided_by: string | null;
+        decided_at: string | null;
+        version_no: number | null;
+      }>;
     };
     let matrix: MatrixShape | null = null;
     let synthetic = false;
@@ -114,6 +125,26 @@ export async function GET(request: Request) {
             gap_pct: matrix.calibration.gapPct ?? null,
             previous_gap_pct: matrix.calibration.previousGapPct ?? null,
             applied_drivers: matrix.calibration.appliedDrivers ?? [],
+            // 사람이 수용한 보정 드라이버(행 ID 포함, design
+            // 2026-11-13-s2-driver-linkage D-A) — 보정 GET이 쓰는 동일 리졸버.
+            // payload 스냅샷인 applied_drivers(이름)와 라이브 수용 세트는 원래
+            // 달라질 수 있으며 각자 기존 의미 그대로 유지된다. calibration이
+            // 없는 산업은 null 유지(형태 변화 없음), 있으면 수용 행이 없어도 [].
+            accepted_drivers: acceptedCalibrationDrivers(db, r.industry_id).map((d) => ({
+              id: d.id,
+              driver: d.driver,
+              direction: d.direction,
+              impact_pct: d.impact_pct,
+              rationale: d.rationale,
+              decided_by: d.decided_by,
+              decided_at: d.decided_at,
+              version_no:
+                (
+                  db.query("SELECT version_no FROM market_sizing_version WHERE id = ?").get(d.version_id) as
+                    | { version_no: number | null }
+                    | undefined
+                )?.version_no ?? null,
+            })),
           }
         : null,
     };

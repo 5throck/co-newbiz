@@ -21,12 +21,16 @@ import { PromotionPanel } from "../../../components/PromotionPanel.tsx";
 import { KnownTargetGuide } from "../../../components/KnownTargetGuide.tsx";
 import { EntryMarketFlow } from "../../../components/EntryMarketFlow.tsx";
 import { AttractivenessReEvaluate } from "../../../components/AttractivenessReEvaluate.tsx";
+import { DriverLinksPanel, type AcceptedDriverOption } from "../../../components/DriverLinksPanel.tsx";
+import type { DriverLinkRecord } from "../../../lib/opportunity-driver-links.ts";
 
 interface OpportunityRow {
   id: string;
   project_id: string | null;
   name: string;
   market_scope: string | null;
+  /** S1 산업 연결 (migration 0126) — 드라이버 연결의 범위 판정에 쓴다. */
+  industry_id: string | null;
   value_chain_node: string | null;
   market_size_krw_m: number | null;
   growth_rate: number | null;
@@ -107,6 +111,15 @@ export function OpportunityDetail() {
     text: "",
   });
   const [sketchView, setSketchView] = useState<SketchView | null>(null);
+  // S1 검증 성장 드라이버 (spec 2026-11-13-s2-driver-linkage) — 연결 기록은
+  // driver-links GET, 연결 후보는 insights의 calibration.accepted_drivers.
+  // row_status(수용/변경/소실)는 GET이 노출하지만 v1에서 배너 UI는 보류
+  // (design: deferred) — 화면에는 연결 기록만 렌더한다.
+  const [driverLinks, setDriverLinks] = useState<DriverLinkRecord[]>([]);
+  const [driverBusy, setDriverBusy] = useState(false);
+  const [insightsDrivers, setInsightsDrivers] = useState<
+    Array<{ industry_id: string; accepted_drivers: AcceptedDriverOption[] }>
+  >([]);
   const sketchVersions = sketchView?.versions ?? [];
   const [sketchBusy, setSketchBusy] = useState(false);
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
@@ -145,6 +158,25 @@ export function OpportunityDetail() {
       .get<SketchView>(`/api/opportunities/${encodeURIComponent(id)}/sketch`)
       .then((r) => setSketchView(r.data))
       .catch(() => setSketchView(null));
+    api
+      .get<{ links: DriverLinkRecord[]; row_status: Record<string, string> }>(
+        `/api/opportunities/${encodeURIComponent(id)}/driver-links`,
+      )
+      .then((r) => setDriverLinks(r.data.links))
+      .catch(() => setDriverLinks([]));
+    api
+      .get<{
+        insights: Array<{ industry_id: string; calibration: { accepted_drivers?: AcceptedDriverOption[] } | null }>;
+      }>("/api/market-overview/insights")
+      .then((r) =>
+        setInsightsDrivers(
+          r.data.insights.map((s) => ({
+            industry_id: s.industry_id,
+            accepted_drivers: s.calibration?.accepted_drivers ?? [],
+          })),
+        ),
+      )
+      .catch(() => setInsightsDrivers([]));
   }, [id]);
 
   async function autoDeriveFactors() {
@@ -197,6 +229,45 @@ export function OpportunityDetail() {
         }
       },
       { body: text.length > 60 ? `${text.slice(0, 60)}…` : text },
+    );
+  }
+
+  // S1 검증 성장 드라이버 연결/해제 (spec 2026-11-13-s2-driver-linkage) —
+  // 사람의 승격 행위일 뿐이고 점수·상태·요인을 바꾸지 않는다(경계 D-E).
+  async function attachDriver(driverRowId: string) {
+    setDriverBusy(true);
+    setError(null);
+    try {
+      const res = await api.put<{ links: DriverLinkRecord[]; row_status: Record<string, string> }>(
+        `/api/opportunities/${encodeURIComponent(id)}/driver-links`,
+        { driver_row_id: driverRowId },
+      );
+      setDriverLinks(res.data.links);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("driverAttachFailed"));
+    } finally {
+      setDriverBusy(false);
+    }
+  }
+  function removeDriverLink(driverRowId: string, driverText: string) {
+    confirm(
+      t("driverRemoveConfirmTitle"),
+      async () => {
+        setDriverBusy(true);
+        setError(null);
+        try {
+          const res = await api.delete<{ links: DriverLinkRecord[]; row_status: Record<string, string> }>(
+            `/api/opportunities/${encodeURIComponent(id)}/driver-links`,
+            { driver_row_id: driverRowId },
+          );
+          setDriverLinks(res.data.links);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : t("driverRemoveFailed"));
+        } finally {
+          setDriverBusy(false);
+        }
+      },
+      { body: driverText.length > 60 ? `${driverText.slice(0, 60)}…` : driverText },
     );
   }
 
@@ -546,6 +617,25 @@ export function OpportunityDetail() {
               </button>
             </div>
           )}
+          {/* S1 검증 성장 드라이버 — 연결 기록(증거) 블록. 연결 후보는 이 기회에
+            연결된 S1 산업의 수용 드라이버만(산업 경계, 400으로 서버도 강제). */}
+          <DriverLinksPanel
+            opportunityName={opp?.name ?? ""}
+            industryId={opp?.industry_id ?? null}
+            acceptedDrivers={
+              opp?.industry_id
+                ? (insightsDrivers.find((s) => s.industry_id === opp.industry_id)?.accepted_drivers ?? [])
+                : []
+            }
+            links={driverLinks}
+            canAct={canAct}
+            busy={driverBusy}
+            onAttach={(driverRowId) => void attachDriver(driverRowId)}
+            onRemove={(driverRowId) => {
+              const link = driverLinks.find((l) => l.driver_row_id === driverRowId);
+              removeDriverLink(driverRowId, link?.driver ?? "");
+            }}
+          />
           {/* 시나리오 전제(낙관/기본/비관) — 비즈니스 모델 검토(sketch)에서 산출되는
             데이터지만, 요인과 함께 보는 편이 자연스러워 이 탭에 배치한다.
             위 요인 등록 폼과 바로 붙어 보여 여백을 둔다. 재생성은 비즈니스 모델

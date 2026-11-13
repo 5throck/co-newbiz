@@ -2790,6 +2790,23 @@
         "sourceLink": "Source"
       }
     },
+    "driverLinks": {
+      "heading": "S1-verified growth drivers",
+      "boundaryNote": "An LLM-estimated signal accepted by a person in the S1 calibration — linking never changes the opportunity evaluation scores or status.",
+      "directionUpside": "upside",
+      "directionDownside": "downside",
+      "provenanceLabel": "S1-accepted · LLM-estimated · confidence C",
+      "noteLabel": "note",
+      "rationaleLabel": "Show rationale",
+      "removeAria": "Remove driver link — {p1}",
+      "removeButton": "Remove",
+      "empty": "No linked drivers.",
+      "attachSelectAria": "Select an S1 driver to link to opportunity {p1}",
+      "attachSelectPlaceholder": "Select a driver",
+      "attachButton": "Link driver",
+      "noIndustryReason": "No linked S1 industry — link an analysed S1 industry first; only that industry's accepted drivers can be linked.",
+      "noDriversReason": "This industry has no accepted S1 drivers."
+    },
     "gateSnapshot": {
       "ackAllDone": "Every item is confirmed",
       "ackRemaining": "{count} to confirm",
@@ -4903,6 +4920,8 @@
         "goesToTheBusinessModel": "Goes to the business model review tab of the detail screen",
         "industryFilter": "Industry filter",
         "insightDetailsOpportunityAndRisk": "Insight details (opportunity and risk factors, gap analysis)",
+        "s1VerifiedDrivers": "S1-verified growth drivers",
+        "s1DriverAttachHint": "To attach a driver to an opportunity, open that opportunity's detail factors tab.",
         "knownTargetCompaniesAreAs": "Known target companies are pre-registered as S6 candidates — S1 through S4 are not skipped and must be completed in order.",
         "knownTargetCompaniesOptional": "Known target companies (optional)",
         "linkP1ToS1Analyzed": "Link {p1} to S1 analyzed industries",
@@ -9303,6 +9322,9 @@
       "factorTypeRisk": "Risk",
       "factorTextAria": "Factor text",
       "factorTextPlaceholder": "Add factor",
+      "driverAttachFailed": "Driver link attach failed.",
+      "driverRemoveConfirmTitle": "Remove this driver link?",
+      "driverRemoveFailed": "Driver link removal failed.",
       "regenerating": "Regenerating...",
       "regenerateScenariosButton": "Regenerate scenarios",
       "creating": "Creating...",
