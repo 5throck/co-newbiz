@@ -10,15 +10,16 @@
 //  - 상관: v1은 개연성 필터로 근사 — 합산 impact가 필요 상향의 2배를 초과하는
 //    조합은 개연성 밖으로 제외한다. 상관행렬은 후속 버전.
 //  - 결정론: seed 고정 시 동일 입력 → 동일 분위수(테스트 요구).
-import { getDb } from "../../../db/client.ts";
+import type { getDb } from "../../../db/client.ts";
 
 type Db = ReturnType<typeof getDb>;
 import { appendAudit } from "../../../db/lib/access-control.ts";
+import { CONVERGENCE_GOAL_PCT } from "./market-reference-staleness.ts";
 
-/** 스윕 종료 판정선 — 격차 ≤15%면 수렴으로 판정한다(사용자 조정 2026-09-19).
- *  트리거(CALIBRATION_TRIGGER_PCT 20%)와 의도적으로 다른 값이다: 15~20%는
- *  "발동됐으나 미수렴" 밴드로, 경계 진동을 막는 이력현상 설계다. */
-export const CONVERGENCE_TARGET_PCT = 15;
+/** 스윕 판정선 — 수렴 목표선 한 줄로 통일되었다(design
+ * 2026-11-13-calibration-loop-convergence §3.1·§3.2): 격차 < 목표선이면 수렴.
+ * feasible_ratio는 "수용 드라이버 조합이 목표선 이내로 도달 가능한가"의
+ * 확률이다 — 스윕은 루프의 계획 도구이지 산출치를 바꾸지 않는다. */
 
 /** mulberry32 — 작고 빠른 시드 기반 PRNG. 결정론 요구사항용(암호학적 아님). */
 export function mulberry32(seed: number): () => number {
@@ -134,7 +135,7 @@ export function sweepCombinations(input: {
   const p50 = quantile(gapsAsc, 0.5);
   const p90 = quantile(gapsAsc, 0.9);
   const feasibleRatio = gapsAsc.length
-    ? Math.round((gapsAsc.filter((g) => g <= CONVERGENCE_TARGET_PCT).length / gapsAsc.length) * 1000) / 1000
+    ? Math.round((gapsAsc.filter((g) => g <= CONVERGENCE_GOAL_PCT).length / gapsAsc.length) * 1000) / 1000
     : 0;
 
   return {
@@ -150,6 +151,57 @@ export function sweepCombinations(input: {
     seed,
     combos: gapsAsc.map((g) => ({ totalImpact: 0, gapPct: g })),
   };
+}
+
+/** leave-one-out 제외 후보 순위 (amendment 2026-11-13b) — 수용 드라이버를 하나
+ *  씩 빼고 sweepCombinations를 다시 돌려(순수 함수, LLM 호출 없음) feasible_
+ *  ratio가 얼마나 개선되는지 재비교한다. 개선(%)이 큰 드라이버일수록 "격차
+ *  악화의 원인"일 가능성이 높다. 동일 seed로 전체·제외 실행을 짝지어 비교하므
+ *  로 같은 입력 → 같은 순위(결정론). 파이프라인은 최상위 후보만 제외 제안으로
+ *  만들고, 실제 제외는 사람의 기각 확정으로 적용된다(경계 #2). */
+export interface ExclusionCandidate {
+  driver: string;
+  direction: "upside" | "downside";
+  impact_pct: number;
+  /** 이 드라이버를 뺐을 때의 feasible_ratio (0..1). */
+  feasibleRatioWithout: number;
+  /** 개선폭(%p) = (제외 시 feasible_ratio − 전체 feasible_ratio) × 100. */
+  improvementPct: number;
+}
+
+export function rankExclusionCandidates(input: {
+  ourCagrPct: number;
+  externalCagrPct: number;
+  drivers: SweepDriverInput[];
+  sampleCount?: number;
+  seed?: number;
+}): { baselineFeasibleRatio: number; sampleCount: number; ranked: ExclusionCandidate[] } {
+  const base = sweepCombinations({
+    ourCagrPct: input.ourCagrPct,
+    externalCagrPct: input.externalCagrPct,
+    drivers: input.drivers,
+    sampleCount: input.sampleCount,
+    seed: input.seed,
+  });
+  const ranked = input.drivers
+    .map((d) => {
+      const without = sweepCombinations({
+        ourCagrPct: input.ourCagrPct,
+        externalCagrPct: input.externalCagrPct,
+        drivers: input.drivers.filter((x) => x !== d),
+        sampleCount: input.sampleCount,
+        seed: input.seed,
+      });
+      return {
+        driver: d.driver,
+        direction: d.direction,
+        impact_pct: d.impact_pct,
+        feasibleRatioWithout: without.feasible_ratio,
+        improvementPct: Math.round((without.feasible_ratio - base.feasible_ratio) * 1000) / 10,
+      };
+    })
+    .sort((a, b) => b.improvementPct - a.improvementPct);
+  return { baselineFeasibleRatio: base.feasible_ratio, sampleCount: base.sample_count, ranked };
 }
 
 export interface BandMonteCarloResult {
@@ -176,8 +228,11 @@ export function bandMonteCarlo(input: {
     let total = 0;
     for (const cell of input.cells) {
       const u = rng();
-      const cagr = u < 0.5 ? cell.downCagr + (cell.baseCagr - cell.downCagr) * (u * 2) : cell.baseCagr + (cell.upCagr - cell.baseCagr) * ((u - 0.5) * 2);
-      total += cell.base2026 * Math.pow(1 + cagr, years);
+      const cagr =
+        u < 0.5
+          ? cell.downCagr + (cell.baseCagr - cell.downCagr) * (u * 2)
+          : cell.baseCagr + (cell.upCagr - cell.baseCagr) * ((u - 0.5) * 2);
+      total += cell.base2026 * (1 + cagr) ** years;
     }
     totals.push(total);
   }
@@ -216,13 +271,36 @@ export function runCalibrationSweep(
     sampleCount: input.sampleCount,
     seed: input.seed,
   });
-  const versionNo = (db.query("SELECT MAX(version_no) m FROM market_sizing_version v JOIN market_sizing_analysis a ON a.id = v.analysis_id WHERE a.industry_id = ?").get(input.industryId) as { m: number | null })?.m ?? 0;
+  const versionNo =
+    (
+      db
+        .query(
+          "SELECT MAX(version_no) m FROM market_sizing_version v JOIN market_sizing_analysis a ON a.id = v.analysis_id WHERE a.industry_id = ?",
+        )
+        .get(input.industryId) as { m: number | null }
+    )?.m ?? 0;
   const id = `csr-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
   const now = new Date().toISOString();
   db.run(
     `INSERT INTO calibration_sweep_result (id, industry_id, version_no, needed_uplift_pct, sample_count, plausible_ratio, p10_gap_pct, p50_gap_pct, p90_gap_pct, feasible_ratio, per_driver_quantiles_json, device, seed, created_by, created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, input.industryId, versionNo, summary.needed_uplift_pct, summary.sample_count, summary.plausible_ratio, summary.p10_gap_pct, summary.p50_gap_pct, summary.p90_gap_pct, summary.feasible_ratio, JSON.stringify(summary.per_driver_quantiles), summary.device, summary.seed, input.createdBy, now],
+    [
+      id,
+      input.industryId,
+      versionNo,
+      summary.needed_uplift_pct,
+      summary.sample_count,
+      summary.plausible_ratio,
+      summary.p10_gap_pct,
+      summary.p50_gap_pct,
+      summary.p90_gap_pct,
+      summary.feasible_ratio,
+      JSON.stringify(summary.per_driver_quantiles),
+      summary.device,
+      summary.seed,
+      input.createdBy,
+      now,
+    ],
   );
   appendAudit(db, { actor: input.createdBy, action: "market_calibration.sweep", target: input.industryId, now });
   const verdict: "feasible" | "infeasible" = summary.feasible_ratio >= 0.05 ? "feasible" : "infeasible";
@@ -231,16 +309,16 @@ export function runCalibrationSweep(
     verdict,
     message:
       verdict === "feasible"
-        ? `수용 드라이버 조합 중 ${Math.round(summary.feasible_ratio * 100)}%가 판정선(${CONVERGENCE_TARGET_PCT}%) 이내로 수렴합니다 — 다음 재분석 제약으로 반영할 조합을 검토하세요.`
-        : `수용 드라이버 조합만으로는 판정선 도달이 어렵습니다 — 제안 추가·참조 재검토 또는 에스컬레이션을 검토하세요.`,
+        ? `수용 드라이버 조합 중 ${Math.round(summary.feasible_ratio * 100)}%가 목표선(${CONVERGENCE_GOAL_PCT}%) 이내로 수렴 가능합니다 — 다음 재분석 제약으로 반영할 조합을 검토하세요.`
+        : `수용 드라이버 조합만으로는 목표선 도달이 어렵습니다 — 제안 추가·참조 재검토를 검토하세요.`,
     our_cagr_pct: input.ourCagrPct,
     external_cagr_pct: input.externalCagrPct,
     external_source: input.externalSourceLabel,
-    convergence_target_pct: CONVERGENCE_TARGET_PCT,
+    convergence_target_pct: CONVERGENCE_GOAL_PCT,
   };
 }
 
-export function latestSweep(db: Db, industryId: string): SweepResultView & { id: string } | null {
+export function latestSweep(db: Db, industryId: string): (SweepResultView & { id: string }) | null {
   return (
     (db
       .query("SELECT * FROM calibration_sweep_result WHERE industry_id = ? ORDER BY created_at DESC LIMIT 1")

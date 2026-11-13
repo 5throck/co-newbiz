@@ -3,7 +3,6 @@
 // Read-only, any authenticated role. 외부 전망이 없는 분석은 gap 없이
 // CAGR만 노출한다.
 import { getDb } from "../../../../../../db/client.ts";
-import { resolveEffectiveCagr } from "../../../../lib/market-calibration.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
 import { ok } from "../../../../lib/envelope.ts";
 import { isSyntheticSizing } from "../../../../lib/synthetic-value.ts";
@@ -91,10 +90,8 @@ export async function GET(request: Request) {
       version_no: r.version_no,
       bottom_up_cagr_pct: bottomUp,
       synthetic,
-      escalated_cagr_pct: (() => {
-        const eff = resolveEffectiveCagr(db, r.industry_id);
-        return eff?.source === "escalated" ? eff.cagrPct : null;
-      })(),
+      // escalated_cagr_pct 필드는 제거되었다 (design 2026-11-13-calibration-
+      // loop-convergence §3.2) — 에스컬레이션 삭제로 항상 null이던 필드다.
       external_forecast: ef
         ? {
             source_label: ef.sourceLabel,

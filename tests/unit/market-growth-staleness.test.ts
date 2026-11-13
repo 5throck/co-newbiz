@@ -64,9 +64,8 @@ const db = getDb(TEST_DB_PATH);
 const { appendExternalReference } = await import("../../app/web-next/lib/market-calibration.ts");
 const { runSizingPipeline } = await import("../../app/web-next/lib/market-sizing-pipeline.ts");
 const { setWebResearchOverrideForTests } = await import("../../app/web-next/lib/web-research.ts");
-const { referenceNewerThanVersion, rerunCtaMode } = await import(
-  "../../app/web-next/lib/market-reference-staleness.ts"
-);
+const { CONVERGENCE_GOAL_PCT, consensusCitesSupersededReference, referenceNewerThanVersion, rerunCtaMode } =
+  await import("../../app/web-next/lib/market-reference-staleness.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 
 const NOW = new Date().toISOString();
@@ -115,16 +114,49 @@ describe("referenceNewerThanVersion — 참조 기록 시각 vs 표시 버전 �
   });
 });
 
-// ── C2: rerun CTA visibility modes ──
-describe("rerunCtaMode — 격차 게이트·staleness 조합별 CTA 표시", () => {
-  test("gap-gated only — the existing gap block owns the CTA", () => {
+// ── C1b: superseded-reference comparator (design 2026-11-13 §3.3b) ──
+describe("consensusCitesSupersededReference — 표시 버전 vs 폐기 시각", () => {
+  test("version created BEFORE the supersede cites the retired row (the drone v4 case)", () => {
+    // Verified real case: drone v4 created 2026-11-13 01:20, reference
+    // superseded 2026-11-13 01:22 — v4's consensus still shows the old top-down.
+    expect(consensusCitesSupersededReference("2026-11-13T01:22:00.000Z", "2026-11-13T01:20:00.000Z")).toBe(true);
+  });
+
+  test("version created AFTER the supersede does not cite the retired row (ladder resumed)", () => {
+    expect(consensusCitesSupersededReference("2026-11-13T01:22:00.000Z", "2026-11-13T01:30:00.000Z")).toBe(false);
+  });
+
+  test("equal timestamps are not stale (fail-closed)", () => {
+    const ts = "2026-11-13T01:22:00.000Z";
+    expect(consensusCitesSupersededReference(ts, ts)).toBe(false);
+  });
+
+  test("missing or unparseable inputs fail closed to not-stale", () => {
+    expect(consensusCitesSupersededReference(null, NOW)).toBe(false);
+    expect(consensusCitesSupersededReference(NOW, undefined)).toBe(false);
+    expect(consensusCitesSupersededReference("", "")).toBe(false);
+    expect(consensusCitesSupersededReference("not-a-date", NOW)).toBe(false);
+    expect(consensusCitesSupersededReference(NOW, "not-a-date")).toBe(false);
+  });
+});
+
+// ── C2: rerun CTA visibility modes (goal line = 15) ──
+describe("rerunCtaMode — 목표선 격차 게이트·staleness 조합별 CTA 표시", () => {
+  test("goal line is the unified 15", () => {
+    expect(CONVERGENCE_GOAL_PCT).toBe(15);
+  });
+
+  test("gap-gated only — the gap block owns the CTA at or above the goal line", () => {
     expect(rerunCtaMode(25, false)).toBe("gap");
+    // boundary: gap 15.0 is unconverged → gap CTA
+    expect(rerunCtaMode(15, false)).toBe("gap");
   });
 
   test("staleness-gated only — CTA appears without externalForecast/gap", () => {
     expect(rerunCtaMode(undefined, true)).toBe("staleness");
-    // small gap below the 20% gate — still staleness-driven
+    // small gap below the 15% goal line — still staleness-driven
     expect(rerunCtaMode(5, true)).toBe("staleness");
+    expect(rerunCtaMode(14.9, true)).toBe("staleness");
   });
 
   test("both — gap block keeps its CTA (no duplicate button)", () => {
@@ -133,7 +165,7 @@ describe("rerunCtaMode — 격차 게이트·staleness 조합별 CTA 표시", ()
 
   test("neither — no CTA", () => {
     expect(rerunCtaMode(undefined, false)).toBe("none");
-    expect(rerunCtaMode(19.9, false)).toBe("none");
+    expect(rerunCtaMode(14.9, false)).toBe("none");
   });
 });
 

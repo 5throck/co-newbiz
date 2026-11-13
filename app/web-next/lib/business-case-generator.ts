@@ -42,7 +42,6 @@ import { buildSubjectMarketContext } from "./entry-market-context.ts";
 import { anchorCurrencyOfUnitBasis, resolveFxRateForCurrency, resolveLinkedDeclaredUnitBasis } from "./fx.ts";
 
 import { Y1_INVESTMENT_RATIO_THRESHOLD, ratioGuardTripped, shareUnsourcedNoteFragment } from "./share-guard.ts";
-import { resolveEffectiveCagr } from "./market-calibration.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import {
@@ -156,23 +155,18 @@ export function resolveGrowthModel(
   // opportunity growth_rate stays the fallback. bc.growth_override (a
   // person's explicit override) keeps precedence over BOTH downstream.
   const entryCtx = opp?.opp_id ? buildSubjectMarketContext(db, opp.opp_id) : null;
-  let marketGrowth = entryCtx?.growthRate ?? opp?.growth_rate ?? 0.05;
-  let marketGrowthSource =
+  // 에스컬레이션 조정 CAGR 대체 블록이 제거된 이후로 두 값은 재할당되지 않는다
+  // (design 2026-11-13-calibration-loop-convergence §3.2).
+  const marketGrowth = entryCtx?.growthRate ?? opp?.growth_rate ?? 0.05;
+  const marketGrowthSource =
     entryCtx?.growthRate != null
       ? `진입시장 성장률 (S2 확정 — ${Math.round(entryCtx.growthRate * 1000) / 10}%)`
       : opp?.growth_rate != null
         ? "시장 성장률 (opportunity)"
         : "기본값 5% (기회 미입력)";
-  // 에스컬레이션 조정 CAGR — 사람이 기록한 결정이 기회 성장률보다 우선한다
-  // (design 2026-09-20-escalation-downstream §3.2-1). 출처는 note 스탬프로 남긴다.
-  const industryRow = opp?.market_scope
-    ? (db.query("SELECT id FROM md_industry WHERE name_ko = ?").get(opp.market_scope) as { id: string } | undefined)
-    : undefined;
-  const effCagr = industryRow ? resolveEffectiveCagr(db, industryRow.id) : null;
-  if (effCagr?.source === "escalated") {
-    marketGrowth = effCagr.cagrPct / 100;
-    marketGrowthSource = `에스컬레이션 조정 CAGR ${effCagr.cagrPct.toFixed(1)}% (외부 참조 × 0.85 — 바텀업 ${effCagr.baseCagrPct?.toFixed(1)}% 대체)`;
-  }
+  // 에스컬레이션 조정 CAGR 대체 블록은 제거되었다 (design 2026-11-13-calibration-
+  // loop-convergence §3.2) — ×0.85 스케일링 에스컬레이션 삭제로 우선 적용할
+  // 조정치가 존재하지 않는다. 시장 성장률은 진입시장·기회 값을 그대로 쓴다.
 
   let histCagr: number | null = null;
   let histVol: number | null = null;

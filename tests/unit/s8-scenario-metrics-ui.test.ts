@@ -24,13 +24,15 @@ const PARAMS = read("components/business-case/ParamsPanel.tsx");
 
 describe("IRR no-flow chip (scenario comparison)", () => {
   test("chip condition: irr null + s5 basis (s5_plan* or s5_pnl) + payload says plan capex zero", () => {
-    expect(STAGE).toContain(
-      'const irrNoFlowChip = irrV == null && (nb.startsWith("s5_plan") || nb === "s5_pnl") && data?.s5_plan_capex_zero === true;',
+    // Whitespace-tolerant: biome format wraps the long const across lines; the
+    // pin asserts the CONDITION, not the layout.
+    expect(STAGE).toMatch(
+      /const irrNoFlowChip =\s*irrV == null &&\s*\(nb\.startsWith\("s5_plan"\) \|\| nb === "s5_pnl"\) &&\s*data\?\.s5_plan_capex_zero === true;/,
     );
     expect(STAGE).toContain('const nb = note.basis ?? "";');
   });
   test("s5_pnl basis is covered (ADR-0178 slice 2) alongside s5_plan*", () => {
-    const cond = STAGE.indexOf("irrNoFlowChip = irrV == null");
+    const cond = STAGE.indexOf("irrNoFlowChip =");
     const line = STAGE.slice(cond, STAGE.indexOf(";", cond));
     expect(line).toContain('nb === "s5_pnl"');
     expect(line).toContain('nb.startsWith("s5_plan")');
@@ -72,11 +74,13 @@ describe("greenfield column hygiene (scenario comparison)", () => {
     expect(STAGE).toContain("<ColGroup widths={greenfield ? SCENARIO_CASE_COL_PCT_GF : SCENARIO_CASE_COL_PCT} />");
   });
   test("both brownfield-only headers are hidden for greenfield", () => {
-    expect(STAGE).toContain('{!greenfield && <th scope="col" className="num">');
-    expect(STAGE.match(/\{!greenfield && <th scope="col"/g)?.length).toBe(2);
+    // Whitespace-tolerant: biome format moves the <th> to its own line inside the
+    // conditional; the pin asserts the two guarded headers, not the layout.
+    expect(STAGE.match(/\{!greenfield && \(\s*<th scope="col" className="num"/g)?.length).toBe(2);
+    expect(STAGE.match(/\{!greenfield && \(\s*<th scope="col"/g)?.length).toBe(2);
   });
   test("both brownfield-only cells are hidden for greenfield", () => {
-    expect(STAGE.match(/\{!greenfield && <td className="num/g)?.length).toBe(2);
+    expect(STAGE.match(/\{!greenfield && \(\s*<td className="num/g)?.length).toBe(2);
   });
   test("brownfield keeps the full 10-column footer and greenfield uses 8", () => {
     expect(STAGE).toContain("colSpan={10}");

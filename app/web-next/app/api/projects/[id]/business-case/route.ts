@@ -8,14 +8,13 @@
 // excluded by role separation. Writes are analyst+.
 import { waccStatusView } from "../../../../../lib/wacc-status.ts";
 import { getDb } from "../../../../../../../db/client.ts";
-import { resolveEffectiveCagr } from "../../../../../lib/market-calibration.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { listLegacyModels } from "../../../../../lib/business-case-cleanup.ts";
 import { listBusinessCases } from "../../../../../lib/business-case.ts";
-import { evaluateTargetsForCase, resolveProjectTargets } from "../../../../../lib/business-targets.ts";
+import { resolveProjectTargets, type evaluateTargetsForCase } from "../../../../../lib/business-targets.ts";
 import { pinnedPlanCapexTotal } from "../../../../../lib/s5-plan-capex.ts";
 import { loadInvestmentVectorsInput } from "../../../../../lib/investment-simulation-input.ts";
 import { planS5Import } from "../../../../../../../db/repositories/s5-cost-import.ts";
@@ -43,24 +42,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  const { cases, archived, recommendedScenario, adoption, targetSelection, targets, enginesMixed, methodsMixed } = listBusinessCases(id);
+  const { cases, archived, recommendedScenario, adoption, targetSelection, targets, enginesMixed, methodsMixed } =
+    listBusinessCases(id);
   const db = getDb();
-  // 에스컬레이션 조정 CAGR (design 2026-09-20-escalation-downstream §4-Q2) —
-  // 과거 기반 관점과의 괴리 경고용. 프로젝트 → 원 기회의 산업에서 resolver 조회.
-  const opp = db
-    .query(
-      "SELECT o.market_scope FROM md_project p LEFT JOIN opportunity o ON o.id = p.source_opportunity_id WHERE p.id = ?",
-    )
-    .get(id) as { market_scope: string | null } | undefined;
-  const ind = opp?.market_scope
-    ? (db.query("SELECT id FROM md_industry WHERE name_ko = ?").get(opp.market_scope) as { id: string } | undefined)
-    : undefined;
-  const eff = ind ? resolveEffectiveCagr(db, ind.id) : null;
+  // 에스컬레이션 조정 CAGR 필드는 제거되었다 (design 2026-11-13-calibration-
+  // loop-convergence §3.2) — 결정론 스케일링 에스컬레이션 자체가 삭제되어
+  // escalated_cagr_pct는 더 이상 산출되지 않는다. 성장률은 각 케이스의
+  // bottom-up 값을 그대로 사용한다.
   // ADR-0159: per-case goal attainment so the scenario comparison can show it for
   // EVERY case (lib functions only; reference evidence, never a gate block).
   // A failed goals lookup must never take the S8 page down (additive field only).
   let goalsResolved: ReturnType<typeof resolveProjectTargets>["resolved"] = [];
-  try { goalsResolved = resolveProjectTargets(id).resolved; } catch { /* goals unavailable: attainment omitted */ }
+  try {
+    goalsResolved = resolveProjectTargets(id).resolved;
+  } catch {
+    /* goals unavailable: attainment omitted */
+  }
   const goalAttainment: Record<string, ReturnType<typeof evaluateTargetsForCase>> = {};
   // 2026-10-16 (ADR-0178 follow-up): does the plan S8 actually uses (the active pin) carry
   // any capex? Additive display-only flag — drives the IRR no-flow chip in the scenario
@@ -73,15 +70,40 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   // field (live truth; the generator note records what a run used). Never
   // blocks generation, a gate or a grade.
   let anchorScope = null;
-  try { anchorScope = resolveAnchorScopeFlag(getDb(), id); } catch { /* omit on read failure */ }
+  try {
+    anchorScope = resolveAnchorScopeFlag(getDb(), id);
+  } catch {
+    /* omit on read failure */
+  }
   // ADR-0179 slice 3: Y1 revenue vs plan-investment ratio guard — additive
   // display field recomputed live from the latest valuation model's stored
   // snapshot. Display/evidence only; never blocks generation, a gate or a
   // grade.
   let plausibility: ReturnType<typeof resolveRatioGuardFlag> = null;
-  try { plausibility = resolveRatioGuardFlag(getDb(), id); } catch { /* omit on read failure */ }
+  try {
+    plausibility = resolveRatioGuardFlag(getDb(), id);
+  } catch {
+    /* omit on read failure */
+  }
   return ok(
-    { cases, archived, goal_attainment: goalAttainment, goal_count: goalsResolved.length, legacy_models: listLegacyModels(id), recommended_scenario: recommendedScenario, adoption, target_selection: targetSelection, targets, engines_mixed: enginesMixed, methods_mixed: methodsMixed, escalated_cagr_pct: eff?.source === "escalated" ? eff.cagrPct : null, s5_plan_capex_zero: s5PlanCapexZero, source_opportunity_id: trackRow?.source_opportunity_id ?? null, anchor_scope: anchorScope, plausibility, wacc_status: waccStatusView(id, db) },
+    {
+      cases,
+      archived,
+      goal_attainment: goalAttainment,
+      goal_count: goalsResolved.length,
+      legacy_models: listLegacyModels(id),
+      recommended_scenario: recommendedScenario,
+      adoption,
+      target_selection: targetSelection,
+      targets,
+      engines_mixed: enginesMixed,
+      methods_mixed: methodsMixed,
+      s5_plan_capex_zero: s5PlanCapexZero,
+      source_opportunity_id: trackRow?.source_opportunity_id ?? null,
+      anchor_scope: anchorScope,
+      plausibility,
+      wacc_status: waccStatusView(id, db),
+    },
     200,
     { count: cases.length },
   );
@@ -91,7 +113,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Registering a Business Case requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Registering a Business Case requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -128,7 +151,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   db.transaction(() => {
     db.run(
       "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, target_id) VALUES (?,?,?,?,?,?,?,?)",
-      [modelId, id, kind, name, body.horizon_years && body.horizon_years > 0 ? Math.floor(body.horizon_years) : 5, ctx.userId, now, targetId],
+      [
+        modelId,
+        id,
+        kind,
+        name,
+        body.horizon_years && body.horizon_years > 0 ? Math.floor(body.horizon_years) : 5,
+        ctx.userId,
+        now,
+        targetId,
+      ],
     );
     insertLines(db, modelId, body.lines ?? [], ctx.userId, now);
   })();
@@ -139,7 +171,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Updating a Business Case requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Updating a Business Case requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -200,7 +233,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     db.run("UPDATE business_case_model SET name = ? WHERE id = ?", [body.name.trim(), body.model_id]);
   }
   if (typeof body.horizon_years === "number" && body.horizon_years > 0) {
-    db.run("UPDATE business_case_model SET horizon_years = ? WHERE id = ?", [Math.floor(body.horizon_years), body.model_id]);
+    db.run("UPDATE business_case_model SET horizon_years = ? WHERE id = ?", [
+      Math.floor(body.horizon_years),
+      body.model_id,
+    ]);
   }
   if (Array.isArray(body.lines)) {
     const lineError = validateLines(body.lines);
@@ -221,7 +257,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Deleting a Business Case requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Deleting a Business Case requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const modelId = new URL(request.url).searchParams.get("model_id");
@@ -235,7 +272,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   db.run("DELETE FROM valuation_simulation WHERE model_id = ?", [modelId]);
   db.run("DELETE FROM business_case_line WHERE model_id = ?", [modelId]);
   db.run("DELETE FROM business_case_model WHERE id = ?", [modelId]);
-  appendAudit(db, { actor: auth.auth.userId, action: "business_case.delete", target: `${id}:${modelId}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "business_case.delete",
+    target: `${id}:${modelId}`,
+    now: new Date().toISOString(),
+  });
   return ok({ id: modelId }, 200);
 }
 
@@ -255,7 +297,10 @@ function validateLines(lines: LineInput[]): string | null {
     if (hasVolume !== hasPrice) {
       return "sales_volume과 unit_price_krw는 함께 입력해야 합니다.";
     }
-    for (const [key, value] of [["sales_volume", line.sales_volume], ["unit_price_krw", line.unit_price_krw]] as const) {
+    for (const [key, value] of [
+      ["sales_volume", line.sales_volume],
+      ["unit_price_krw", line.unit_price_krw],
+    ] as const) {
       if (value !== undefined && value !== null && (typeof value !== "number" || Number.isNaN(value) || value < 0)) {
         return `line ${key}는 0 이상의 숫자여야 합니다.`;
       }
@@ -265,7 +310,13 @@ function validateLines(lines: LineInput[]): string | null {
 }
 
 /** Insert pre-validated lines. Call inside a transaction. */
-function insertLines(db: ReturnType<typeof getDb>, modelId: string, lines: LineInput[], userId: string, now: string): void {
+function insertLines(
+  db: ReturnType<typeof getDb>,
+  modelId: string,
+  lines: LineInput[],
+  userId: string,
+  now: string,
+): void {
   for (const line of lines) {
     db.run(
       `INSERT INTO business_case_line (id, model_id, category, name, annual_amount_krw_m, unit, sales_volume, unit_price_krw, start_year, growth_rate, note, created_by, created_at)

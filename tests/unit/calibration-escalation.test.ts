@@ -1,12 +1,18 @@
 /**
- * Unit tests for the deterministic CAGR scaling escalation (design
- * 2026-09-20-calibration-escalation): scaling math (exact 15% residual), the
- * apply flow against a real scratch SQLite (migration 0119), and the guard
- * rails — already-converged rejection, mandatory calibration block.
+ * Removal regression suite for the deterministic CAGR scaling escalation
+ * (design 2026-09-20-calibration-escalation — SUPERSEDED and REMOVED by
+ * design 2026-11-13-calibration-loop-convergence §3.2). The filename is kept
+ * deliberately: this suite now pins that escalation is INERT —
+ *  - the escalation write path and ×0.85 math no longer exist;
+ *  - resolveEffectiveCagr is bottom-up-only: a preserved calibration_escalation
+ *    row in the DB does NOT change its output (no destructive migration — the
+ *    table and its rows survive as read-only history);
+ *  - the calibration GET still surfaces the preserved record for the panel's
+ *    read-only history card.
  */
 
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 
 const TEST_DB_PATH = "db/data/test-calibration-escalation.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -18,14 +24,9 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
-const {
-  applyCalibrationEscalation,
-  computeDeterministicScaling,
-  latestCalibrationEscalation,
-  resolveEffectiveCagr,
-  CONVERGENCE_TARGET_PCT,
-  EscalationError,
-} = await import("../../app/web-next/lib/market-calibration.ts");
+const { resolveEffectiveCagr, latestCalibrationEscalation } = await import(
+  "../../app/web-next/lib/market-calibration.ts"
+);
 
 const NOW = new Date().toISOString();
 let industryId: string;
@@ -35,8 +36,8 @@ beforeAll(() => {
   db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
     industryId,
     "99002",
-    "에스컬레이션 테스트 산업",
-    "escalation-test",
+    "에스컬레이션 이력 테스트 산업",
+    "escalation-history-test",
     NOW,
   ]);
 });
@@ -84,114 +85,144 @@ function seedVersionWithCalibration(
   return versionId;
 }
 
-describe("deterministic scaling math (pure)", () => {
-  test("scaled CAGR is external × 0.85 with exactly the 15% residual gap", () => {
-    const { scaledCagrPct, residualGapPct } = computeDeterministicScaling(47.1);
-    expect(scaledCagrPct).toBe(40.0);
-    expect(residualGapPct).toBe(15);
-    expect(CONVERGENCE_TARGET_PCT).toBe(15);
+/** The preserved historical row, inserted the way the removed apply path used
+ * to (direct SQL — the write path no longer exists to call). */
+function seedHistoricalEscalation(ind: string, versionId: string, createdAt: string): string {
+  const id = `esc-${Math.random().toString(36).slice(2, 10)}`;
+  db.run(
+    `INSERT INTO calibration_escalation
+     (id, industry_id, version_id, method, base_our_cagr_pct, external_cagr_pct, scaled_cagr_pct, residual_gap_pct, rationale, decided_by, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      id,
+      ind,
+      versionId,
+      "deterministic_scaling",
+      18.3,
+      47.1,
+      40.0,
+      15,
+      "3사이클 미수렴 — 외부 참조 채택 (역사 기록)",
+      "qa-tester",
+      createdAt,
+    ],
+  );
+  return id;
+}
+
+describe("escalation write path is gone (design 2026-11-13 §3.2)", () => {
+  const LIB_PATH = "../../app/web-next/lib/market-calibration.ts";
+  test("the ×0.85 write path exports no longer exist", async () => {
+    const lib = (await import(LIB_PATH)) as Record<string, unknown>;
+    expect(lib.applyCalibrationEscalation).toBeUndefined();
+    expect(lib.computeDeterministicScaling).toBeUndefined();
+    expect(lib.EscalationError).toBeUndefined();
+    expect(lib.DeterministicScaling).toBeUndefined();
+    // the escalation-local goal constant is unified into CONVERGENCE_GOAL_PCT
+    expect(lib.CONVERGENCE_TARGET_PCT).toBeUndefined();
+    expect(lib.CALIBRATION_TRIGGER_PCT).toBeUndefined();
+    expect(lib.CONVERGENCE_GOAL_PCT).toBe(15);
   });
-  test("invalid external reference is rejected, never repaired", () => {
-    expect(() => computeDeterministicScaling(0)).toThrow();
-    expect(() => computeDeterministicScaling(-3)).toThrow();
-    expect(() => computeDeterministicScaling(Number.NaN)).toThrow();
+  test("the escalate route file and its openapi entry are gone", () => {
+    expect(existsSync("app/web-next/app/api/market-overview/industry/[industryId]/calibration/escalate/route.ts")).toBe(
+      false,
+    );
+    const openapi = readFileSync("docs/architecture/openapi.yaml", "utf8");
+    expect(openapi).not.toContain("calibration/escalate");
+    expect(openapi).not.toContain("applyCalibrationEscalation");
   });
 });
 
-describe("apply flow (scratch SQLite, migration 0119)", () => {
-  test("applies against the LATEST completed version and records the decision", () => {
-    seedVersionWithCalibration(industryId, 1, 18.3, 47.1, 61.1, "2026-09-20T00:00:00.000Z");
-    const { escalation } = applyCalibrationEscalation(
-      db,
-      industryId,
-      "qa-tester",
-      "3사이클 미수렴 — 외부 참조 채택",
-      "2026-09-20T01:00:00.000Z",
-    );
-    expect(escalation.base_our_cagr_pct).toBe(18.3);
-    expect(escalation.external_cagr_pct).toBe(47.1);
-    expect(escalation.scaled_cagr_pct).toBe(40.0);
-    expect(escalation.residual_gap_pct).toBe(15);
-    expect(escalation.decided_by).toBe("qa-tester");
-    expect(latestCalibrationEscalation(db, industryId)?.id).toBe(escalation.id);
-  });
-  test("a later version moves the base and allows a fresh escalation (append-only)", () => {
-    seedVersionWithCalibration(industryId, 2, 22.0, 47.1, 53.3, "2026-09-20T02:00:00.000Z");
-    const { escalation } = applyCalibrationEscalation(
-      db,
-      industryId,
-      "qa-tester",
-      "재분석 후에도 미수렴 — 재적용",
-      "2026-09-20T03:00:00.000Z",
-    );
-    expect(escalation.base_our_cagr_pct).toBe(22.0);
-    expect(escalation.version_id).toBe(`${industryId}-msv-2`);
-  });
-  test("already-converged gap is rejected", () => {
-    seedVersionWithCalibration(industryId, 3, 40.2, 47.1, 14.6, "2026-09-20T04:00:00.000Z");
-    expect(() => applyCalibrationEscalation(db, industryId, "qa-tester", "근거", NOW)).toThrow(EscalationError);
-    try {
-      applyCalibrationEscalation(db, industryId, "qa-tester", "근거", NOW);
-    } catch (err) {
-      expect((err as EscalationError).code).toBe("already_converged");
-    }
-  });
-  test("missing calibration block is rejected", () => {
-    const other = `ind-${Math.random().toString(36).slice(2, 10)}`;
+describe("resolveEffectiveCagr is bottom-up-only", () => {
+  test("a preserved escalation row does NOT change the resolver output (inert history)", () => {
+    const ind = `ind-${Math.random().toString(36).slice(2, 10)}`;
     db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
-      other,
-      "99003",
-      "빈 산업",
-      "empty",
+      ind,
+      `99${ind.slice(4)}`,
+      "바텀업 전용 산업",
+      "bottom-up-only",
+      NOW,
+    ]);
+    const versionId = seedVersionWithCalibration(ind, 1, 18.3, 47.1, 61.1, "2026-09-20T01:00:00.000Z");
+    seedHistoricalEscalation(ind, versionId, "2026-09-20T02:00:00.000Z");
+    // The old resolver would return the scaled 40.0 with source "escalated"
+    // (decision newer than the version). Now the raw bottom-up wins.
+    const eff = resolveEffectiveCagr(db, ind);
+    expect(eff).toEqual({ cagrPct: 18.3, source: "bottom_up" });
+    expect(Object.keys(eff ?? {}).sort()).toEqual(["cagrPct", "source"]);
+  });
+  test("an escalation-only industry (payload without numbers) resolves null, not the scaled value", () => {
+    const ind = `ind-${Math.random().toString(36).slice(2, 10)}`;
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
+      ind,
+      `99${ind.slice(4)}`,
+      "빈 페이로드 산업",
+      "empty-payload",
       NOW,
     ]);
     db.run(
       "INSERT OR IGNORE INTO market_sizing_analysis (id, industry_id, status, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?)",
-      ["msa-esc-empty", other, "completed", "test", NOW, NOW],
+      [`${ind}-msa-1`, ind, "completed", "test", NOW, NOW],
     );
     db.run(
       "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at) VALUES (?,?,?,?,?,?)",
-      ["msv-esc-empty", "msa-esc-empty", 1, "{}", "test", NOW],
+      [`${ind}-msv-1`, `${ind}-msa-1`, 1, "{}", "test", NOW],
     );
-    expect(() => applyCalibrationEscalation(db, other, "qa-tester", "근거", NOW)).toThrow(EscalationError);
-  });
-});
-
-describe("resolveEffectiveCagr (design 2026-09-20-escalation-downstream §3.1)", () => {
-  function seedIndustry(): string {
-    // ksic_code is UNIQUE: derive it from the id's random suffix instead of an
-    // independent random number - two 3-digit draws collide ~1% of the time
-    // per pair, which flaked the coverage run.
-    const id = `ind-${Math.random().toString(36).slice(2, 10)}`;
-    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
-      id,
-      `99${id.slice(4)}`,
-      "유효 CAGR 산업",
-      "effective-cagr",
-      NOW,
-    ]);
-    return id;
-  }
-  test("escalation newer than the version returns the scaled value with provenance", () => {
-    const ind = seedIndustry();
-    seedVersionWithCalibration(ind, 1, 18.3, 47.1, 61.1, "2026-09-20T01:00:00.000Z");
-    applyCalibrationEscalation(db, ind, "qa-tester", "외부 참조 채택", "2026-09-20T02:00:00.000Z");
-    const eff = resolveEffectiveCagr(db, ind);
-    expect(eff?.source).toBe("escalated");
-    expect(eff?.cagrPct).toBe(40.0);
-    expect(eff?.baseCagrPct).toBe(18.3);
-    expect(eff?.escalationId).toBeTruthy();
-  });
-  test("a rerun NEWER than the decision falls back to bottom_up (recency rule)", () => {
-    const ind = seedIndustry();
-    seedVersionWithCalibration(ind, 1, 18.3, 47.1, 61.1, "2026-09-20T01:00:00.000Z");
-    applyCalibrationEscalation(db, ind, "qa-tester", "외부 참조 채택", "2026-09-20T02:00:00.000Z");
-    seedVersionWithCalibration(ind, 2, 19.5, 47.1, 58.6, "2026-09-20T03:00:00.000Z");
-    const eff = resolveEffectiveCagr(db, ind);
-    expect(eff?.source).toBe("bottom_up");
-    expect(eff?.cagrPct).toBe(19.5);
+    seedHistoricalEscalation(ind, `${ind}-msv-1`, NOW);
+    // The old fallback branch (:364-370) returned the scaled value here.
+    expect(resolveEffectiveCagr(db, ind)).toBeNull();
   });
   test("industry without any version returns null", () => {
     expect(resolveEffectiveCagr(db, "ind-nonexistent")).toBeNull();
+  });
+  test("consistency.bottomUpCagr fallback still applies when the calibration block is absent", () => {
+    const ind = `ind-${Math.random().toString(36).slice(2, 10)}`;
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
+      ind,
+      `99${ind.slice(4)}`,
+      "컨시스턴시 폴백 산업",
+      "consistency-fallback",
+      NOW,
+    ]);
+    db.run(
+      "INSERT OR IGNORE INTO market_sizing_analysis (id, industry_id, status, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?)",
+      [`${ind}-msa-1`, ind, "completed", "test", NOW, NOW],
+    );
+    db.run(
+      "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [
+        `${ind}-msv-1`,
+        `${ind}-msa-1`,
+        1,
+        JSON.stringify({ matrix: { consistency: { bottomUpCagr: 7.7 } } }),
+        "test",
+        NOW,
+      ],
+    );
+    expect(resolveEffectiveCagr(db, ind)).toEqual({ cagrPct: 7.7, source: "bottom_up" });
+  });
+});
+
+describe("preserved history stays readable for the panel's read-only card", () => {
+  test("latestCalibrationEscalation still returns the preserved row (calibration GET escalation field)", () => {
+    const ind = `ind-${Math.random().toString(36).slice(2, 10)}`;
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
+      ind,
+      `99${ind.slice(4)}`,
+      "이력 보존 산업",
+      "history-preserved",
+      NOW,
+    ]);
+    const versionId = seedVersionWithCalibration(ind, 1, 18.3, 47.1, 61.1, NOW);
+    const escId = seedHistoricalEscalation(ind, versionId, NOW);
+    const esc = latestCalibrationEscalation(db, ind);
+    expect(esc?.id).toBe(escId);
+    expect(esc?.scaled_cagr_pct).toBe(40.0);
+    expect(esc?.residual_gap_pct).toBe(15);
+    expect(esc?.decided_by).toBe("qa-tester");
+    expect(esc?.method).toBe("deterministic_scaling");
+  });
+  test("industry without escalation history resolves null", () => {
+    expect(latestCalibrationEscalation(db, "ind-nonexistent")).toBeNull();
   });
 });

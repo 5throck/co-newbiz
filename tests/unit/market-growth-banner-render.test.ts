@@ -103,6 +103,24 @@ describe("GrowthStalenessCard — banner rendering (A3)", () => {
   });
 });
 
+describe("GrowthStalenessCard — superseded-reference variant (design 2026-11-13 §3.3b)", () => {
+  test("variant superseded renders the retired-reference banner text, ko and en", () => {
+    const html = render(createElement(GrowthStalenessCard, card({ variant: "superseded" })));
+    expect(html).toContain('data-testid="growth-staleness-card"');
+    expect(html).toContain('role="status"');
+    expect(html).toContain("표시 버전의 컨센서스는 폐기된 참조를 인용합니다 — 재분석 시 컨센서스가 다시 산출됩니다.");
+    const enHtml = render(createElement(GrowthStalenessCard, card({ variant: "superseded" })), "en");
+    // the apostrophe renders HTML-escaped (renderToStaticMarkup) — assert on
+    // the apostrophe-free tail
+    expect(enHtml).toContain("cites a superseded reference — re-analysis will recompute the consensus.");
+  });
+  test("the default variant still renders the C1 banner (mutually exclusive messages)", () => {
+    const html = render(createElement(GrowthStalenessCard, card()));
+    expect(html).not.toContain("폐기된 참조");
+    expect(html).toContain("재분석 시 이 참조가 반영됩니다");
+  });
+});
+
 describe("RerunAction — CTA tri-state (A3)", () => {
   test("curator: the rerun button", () => {
     const html = render(createElement(RerunAction, action()));
@@ -174,5 +192,38 @@ describe("mount seams — same-mount refresh without a false positive (A1)", () 
     expect(fireAt).toBeGreaterThan(putAt);
     // unique to saveReference — the other load() callers are followed by catch
     expect(panel).toContain("load();onReferenceSaved?.()");
+  });
+});
+
+describe("mount seams — superseded banner + reference chip (design 2026-11-13 §3.3)", () => {
+  const src = normSrc(
+    readFileSync(new URL(`${WEB}/components/stages/market/SizingGrowthTabs.tsx`, import.meta.url), "utf8"),
+  );
+  const panel = normSrc(
+    readFileSync(new URL(`${WEB}/components/stages/market/CalibrationPanel.tsx`, import.meta.url), "utf8"),
+  );
+  test("the tab wires the additive latest row and the superseded comparator", () => {
+    expect(src).toContain("consensusCitesSupersededReference(");
+    expect(src).toContain("setLatest(r.data.latest)");
+    expect(src).toContain('variant="superseded"');
+    expect(src).toContain('variant="newer"');
+  });
+  test("the superseded banner requires: no active reference, a superseded latest row, and a version predating the supersede", () => {
+    expect(src).toContain(
+      "reference === null && latest?.superseded_at != null && consensusCitesSupersededReference(latest.superseded_at,detail.versions[0]?.created_at)",
+    );
+  });
+  test("the reference chip renders from the live GET when an active reference exists", () => {
+    expect(src).toContain("<ReferenceChip");
+    expect(src).toContain("reference.source_url");
+  });
+  test("the gap card gate uses the unified goal line, not a hardcoded 20", () => {
+    expect(src).toContain("Math.abs(gap)<CONVERGENCE_GOAL_PCT");
+    expect(src).not.toContain("Math.abs(gap)<20");
+  });
+  test("the escalation apply path is gone from the panel (read-only history only)", () => {
+    expect(panel).toContain("<EscalationSection escalation={escalation}/>");
+    expect(panel).not.toContain("calibration/escalate");
+    expect(panel).not.toContain("applyEscalation");
   });
 });

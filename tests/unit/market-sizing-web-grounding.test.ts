@@ -1,3 +1,6 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: test-only payload reads — the
+// assertions pin exact field values deep inside the stored matrix, so a typed
+// envelope would restate every literal twice; the anys never cross a trust boundary.
 /**
  * Quantitative web grounding for the S1 sizing pipeline (design
  * 2026-11-06-s1-quantitative-web-grounding): item-level extraction validation
@@ -9,7 +12,7 @@
  * against scratch SQLite, driven by the same stubbed LLM seam and the
  * network-free web-research override as sizing-matrix-guard.test.ts.
  */
-import { test, expect, describe, beforeAll, afterAll, beforeEach, mock } from "bun:test";
+import { test, expect, describe, afterAll, beforeEach, mock } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 
 const TEST_DB_PATH = "db/data/test-sizing-web-grounding.sqlite";
@@ -202,8 +205,35 @@ describe("resolveTopDownConsensus — 우선순위(기록 참조 > 웹 추출 > 
       webExtraction: { cagrPct: 7.2, sourceLabel: "웹 출처", sourceUrl: "https://example.com/w" },
     });
     expect(td.topDownCagr).toBe(8.7);
-    expect(td.toleranceNote).toContain("사람이 기록한 외부 참조(Gartner 전망, user)");
+    // design 2026-11-13 §3.3c — the note leads with the per-captured_from
+    // phrase (no raw captured_from interpolation); origin follows captured_from.
+    expect(td.toleranceNote).toContain("사람이 기록한 외부 참조(Gartner 전망)");
+    expect(td.toleranceNote).toContain("원문 출처 확인됨");
     expect(td.source).toEqual({ label: "Gartner 전망", url: "https://example.com/gartner", origin: "user" });
+  });
+
+  test("llm_prior 기록 참조는 '파이프라인이 저장한 LLM 선험 참조(검증 필요)'로 표기되고 origin이 captured_from을 따른다 (design 2026-11-13 §3.3c)", () => {
+    const td = resolveTopDownConsensus({
+      externalReference: { ...ref, captured_from: "llm_prior" as const },
+      llmCagrFrac: null,
+    });
+    expect(td.topDownCagr).toBe(8.7);
+    expect(td.toleranceNote).toContain("파이프라인이 저장한 LLM 선험 참조(검증 필요)(Gartner 전망)");
+    expect(td.toleranceNote).toContain("원문 출처 미확인");
+    expect(td.toleranceNote).toContain("내부 정합성 확인으로만 사용(독립 검증 아님)");
+    expect(td.toleranceNote).not.toContain("사람이 기록한");
+    expect(td.summaryLabel).toBe("8.7% (기록된 외부 참조)");
+    expect(td.source).toEqual({ label: "Gartner 전망", url: "https://example.com/gartner", origin: "llm_prior" });
+  });
+
+  test("web_research 기록 참조는 '웹 검색으로 입수한 참조'로 표기된다 (design 2026-11-13 §3.3c)", () => {
+    const td = resolveTopDownConsensus({
+      externalReference: { ...ref, captured_from: "web_research" as const, source_url: null },
+      llmCagrFrac: null,
+    });
+    expect(td.toleranceNote).toContain("웹 검색으로 입수한 참조(Gartner 전망)");
+    expect(td.toleranceNote).toContain("원문 출처 확인됨");
+    expect(td.source).toEqual({ label: "Gartner 전망", origin: "web_research" });
   });
 
   test("웹 추출 성공분이 LLM 선험보다 우선하고 origin web_research + 출처 {label, url}을 표기한다", () => {
@@ -530,7 +560,7 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
       source_label: "기록 전망 보고서",
       source_url: "https://example.com/recorded",
       target_year: 2030,
-      external_cagr_pct: 6,
+      external_cagr_pct: 5.8, // 바텀업 ≈5.0 → CAGR 격차 ≈13.8% < 목표선 15% — 미수렴 아님
       external_size_b: 14.0, // ourSize(≈14.59B)와 약 −4% — 허용 편차 내
       captured_from: "user",
       created_by: "test",
@@ -539,21 +569,22 @@ describe("runSizingPipeline — 웹 접지 단계별 흐름", () => {
     const matrix = matrixOf(aid);
     const match = matrix.anchor.externalReferenceMatch;
     expect(match).toBeTruthy();
-    expect(match.referenceId).toBe(resolveExternalReference(db, industryId)!.id);
+    expect(match.referenceId).toBe(resolveExternalReference(db, industryId)?.id);
     expect(match.sizeB).toBeCloseTo(14.0, 5);
     expect(match.deviationPct).toBeCloseTo(matrix.externalForecast.gapPct, 5);
     expect(Math.abs(match.deviationPct)).toBeLessThanOrEqual(20);
     expect(match.sourceUrl).toBe("https://example.com/recorded");
     const synthetic = (matrix.anchor.sources as Array<{ methodology?: string; label: string; estimate: number }>).at(
       -1,
-    )!;
-    expect(synthetic.methodology!.startsWith("external_reference")).toBe(true);
+    ) as { methodology?: string; label: string; estimate: number };
+    expect(synthetic.methodology?.startsWith("external_reference")).toBe(true);
     expect(synthetic.label).toBe("기록 전망 보고서");
     expect(synthetic.estimate).toBeCloseTo(14.0, 5);
     // 앵커 합계·사다리 행위는 그대로 — 인용은 기록일 뿐 산출을 바꾸지 않는다.
     expect(matrix.anchor.total).toBeCloseTo(12, 5);
-    expect(matrix.consistency.topDownCagr).toBe(6);
-    // 크기 격차가 트리거 안이어도 보정 트리거는 CAGR 격차 기준 — 미동작.
+    expect(matrix.consistency.topDownCagr).toBe(5.8);
+    // 수렴 목표선 통일(design 2026-11-13 §3.1) — CAGR 격차(≈13.8%)가 목표선
+    // 미만이면 루프는 수렴으로 끝난다(트리거 = 미수렴).
     expect(matrix.calibration.triggered).toBe(false);
   });
 

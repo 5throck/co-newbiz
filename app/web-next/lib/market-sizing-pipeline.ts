@@ -24,13 +24,17 @@ import {
   appendExternalReference,
   acceptedCalibrationDrivers,
   buildCalibrationConstraints,
+  insertExclusionProposal,
   isCalibrationTriggered,
   relativeCagrGapPct,
   resolveExternalReference,
-  CALIBRATION_TRIGGER_PCT,
+  EXCLUSION_NOISE_BAND_PCT,
   ANCHOR_CITATION_TOLERANCE_PCT,
+  type CalibrationSweepInject,
   type ExternalReferenceRow,
 } from "./market-calibration.ts";
+import { CONVERGENCE_GOAL_PCT } from "./market-reference-staleness.ts";
+import { runCalibrationSweep, rankExclusionCandidates } from "./calibration-sweep.ts";
 import { GENERIC_SEGMENTS, type AnchorSource, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
@@ -212,13 +216,6 @@ export interface StepSummary {
   pendingInputs: string[];
 }
 
-interface StepResult {
-  summary: string;
-  source: "llm" | "synthesis";
-  pendingInputs: string[];
-  json: Record<string, unknown> | null;
-}
-
 /** Ask the LLM for a JSON object; returns null when it cannot produce parseable JSON. */
 async function askJson(
   industry: string,
@@ -367,7 +364,9 @@ export interface TopDownConsensusSource {
   source_label: string;
   /** 기록 참조의 원문 URL (선택) — consistency.source.url 기원 표기용(R9). */
   source_url?: string | null;
-  captured_from: string;
+  /** 기록 계열 — toleranceNote 문구와 R9 origin 표기가 이 값별로 갈린다
+   *  (design 2026-11-13 §3.3c: llm_prior가 "user"로 오표기되던 결함 수정). */
+  captured_from: "user" | "web_research" | "llm_prior";
   external_cagr_pct: number;
 }
 
@@ -390,13 +389,28 @@ export function resolveTopDownConsensus(input: {
   const ref = input.externalReference && input.externalReference.external_cagr_pct > 0 ? input.externalReference : null;
   if (ref) {
     // 기록 참조 경로 — external_cagr_pct는 이미 % 단위(LLM 경로의 분수 × 100과 동일 값).
+    // captured_from별 출처 문구 (design 2026-11-13-calibration-loop-convergence
+    // §3.3c): 파이프라인 자동 저장분(llm_prior)까지 "사람이 기록한 외부 참조"로
+    // 오표기하던 결함을 고친다. llm_prior는 출처 검증 전이므로 provenance 절도
+    // "미확인"으로 갈린다. 공통 접미사는 모든 경로에서 동일하게 유지한다.
     const topDownCagr = Math.round(ref.external_cagr_pct * 10) / 10;
+    const lead =
+      ref.captured_from === "user"
+        ? "사람이 기록한 외부 참조"
+        : ref.captured_from === "web_research"
+          ? "웹 검색으로 입수한 참조"
+          : "파이프라인이 저장한 LLM 선험 참조(검증 필요)";
+    const provenance = ref.captured_from === "llm_prior" ? "원문 출처 미확인" : "원문 출처 확인됨";
     return {
       topDownCagr,
       summaryLabel: `${topDownCagr.toFixed(1)}% (기록된 외부 참조)`,
-      toleranceNote: `탑다운 컨센서스는 사람이 기록한 외부 참조(${ref.source_label}, ${ref.captured_from}) — 원문 출처 확인됨. 내부 정합성 확인으로만 사용(독립 검증 아님).`,
+      toleranceNote: `탑다운 컨센서스는 ${lead}(${ref.source_label}) — ${provenance}. 내부 정합성 확인으로만 사용(독립 검증 아님).`,
       pendingInputs: ["컨센서스 원문 출처 주기적 재확인"],
-      source: { label: ref.source_label, ...(ref.source_url ? { url: ref.source_url } : {}), origin: "user" },
+      source: {
+        label: ref.source_label,
+        ...(ref.source_url ? { url: ref.source_url } : {}),
+        origin: ref.captured_from,
+      },
     };
   }
   // 웹 검색 추출 경로 (R4, v1.3.0) — 기록 참조 다음, LLM 선험 앞(2순위). 발췌
@@ -565,17 +579,26 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     .get(analysisId) as { version_no: number; payload: string } | null;
   let previousChain: Array<{ relation: string; name: string; note?: string }> = [];
   let previousGapPct: number | null = null;
+  let previousOurCagrPct: number | null = null;
   if (prev) {
     try {
       const parsed = JSON.parse(prev.payload) as {
         matrix?: {
           chainDirection?: { relatedIndustries?: Array<{ relation: string; name: string; note?: string }> };
-          calibration?: { gapPct?: number | null };
+          calibration?: { gapPct?: number | null; ourCagrPct?: number | null };
+          consistency?: { bottomUpCagr?: number | null };
         };
       };
       previousChain = parsed.matrix?.chainDirection?.relatedIndustries ?? [];
       // 보정 루프 — 이전 버전의 CAGR 기준 격차(없으면 null)를 다음 제약에 쓴다.
       previousGapPct = parsed.matrix?.calibration?.gapPct ?? null;
+      // amendment 2026-11-13a — 스윕 주입의 기저값: 이전 버전의 바텀업 CAGR.
+      previousOurCagrPct =
+        typeof parsed.matrix?.calibration?.ourCagrPct === "number"
+          ? parsed.matrix.calibration.ourCagrPct
+          : typeof parsed.matrix?.consistency?.bottomUpCagr === "number"
+            ? parsed.matrix.consistency.bottomUpCagr
+            : null;
     } catch {
       /* 파싱 실패 — 앵커 없이 진행 */
     }
@@ -603,11 +626,56 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
   // 주입되므로 재분석이 "단순 반복"이 아니라 수렴 방향으로 움직인다.
   const externalReference = resolveExternalReference(db, analysis.industry_id);
   const acceptedDrivers = acceptedCalibrationDrivers(db, analysis.industry_id);
+  // amendment 2026-11-13a — 미수렴 상태에서 재분석이 도는 경우 파이프라인이
+  // 결정론 스윕을 직접 실행해 그 결과를 다음 제약에 주입한다("몬테카를로로
+  // 보정"). 소프트 제약일 뿐 — 셀 값을 편집하지 않고, 재분석도 자동 트리거되지
+  // 않는다(경계 #2). 스윕 뷰는 파이프라인 시스템 액터로 저장되어 패널의 스윕
+  // 읽기 값이 이번 재분석이 소비한 것과 일치하게 된다(원시 표본은 미저장).
+  let sweepInject: CalibrationSweepInject | null = null;
+  const sweepGap =
+    previousGapPct ??
+    (previousOurCagrPct !== null && externalReference
+      ? relativeCagrGapPct(previousOurCagrPct, externalReference.external_cagr_pct)
+      : null);
+  if (
+    sweepGap !== null &&
+    sweepGap >= CONVERGENCE_GOAL_PCT &&
+    acceptedDrivers.length > 0 &&
+    externalReference &&
+    externalReference.external_cagr_pct > 0 &&
+    previousOurCagrPct !== null
+  ) {
+    const sweepView = runCalibrationSweep(db, {
+      industryId: analysis.industry_id,
+      ourCagrPct: previousOurCagrPct,
+      externalCagrPct: externalReference.external_cagr_pct,
+      externalSourceLabel: externalReference.source_label,
+      drivers: acceptedDrivers.map((d) => ({
+        driver: d.driver,
+        direction: d.direction,
+        impact_pct: d.impact_pct,
+        spread_pct: null,
+      })),
+      createdBy: "market-sizing-pipeline",
+    });
+    sweepInject = {
+      feasibleRatio: sweepView.feasible_ratio,
+      goalPct: CONVERGENCE_GOAL_PCT,
+      p50GapPct: sweepView.p50_gap_pct,
+      p90GapPct: sweepView.p90_gap_pct,
+      sampleCount: sweepView.sample_count,
+      topDrivers: [...sweepView.per_driver_quantiles]
+        .sort((a, b) => b.p50 - a.p50)
+        .slice(0, 3)
+        .map((d) => ({ driver: d.driver, p50: d.p50 })),
+    };
+  }
   const calibrationConstraints = buildCalibrationConstraints({
     industry,
     externalCagrPct: externalReference ? externalReference.external_cagr_pct : null,
     previousGapPct,
     acceptedDrivers: acceptedDrivers,
+    sweepView: sweepInject,
   });
 
   // ADR-0129 — 큐레이션된(사람이 승인/등록한) 수요산업 엣지를 proxy_link에서
@@ -1254,8 +1322,9 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       // 기록한다: 매트릭스 페이로드의 anchor.externalReferenceMatch와
       // anchor.sources의 synthetic 항목(R3/R9의 기존 인용 패턴 — 새 저장소
       // 없음). 외부 규모가 없는 CAGR-only 참조는 인용 없이 조용히 통과한다.
-      // 격차가 트리거(≥20%)를 넘으면 보정 루프가, 넘지 않으면(일치) 인용이
-      // 붙는다 — 한 격차, 두 방향의 기록.
+      // 수렴 목표선 통일(design 2026-11-13 §3.1) 이후로는 15~20% 구간에서
+      // 인용과 미수렴 루프가 함께 발동될 수 있다 — 충돌이 아니라 역할이
+      // 다른 기록이다(인용=±20% 규모 일치의 provenance, 루프=다음 행동).
       if (citationRef && sizeGapPct !== undefined && Math.abs(sizeGapPct) <= ANCHOR_CITATION_TOLERANCE_PCT) {
         anchorExternalReferenceMatch = {
           referenceId: citationRef.id,
@@ -1335,7 +1404,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       5,
       "외부 전망 대비 격차 분석",
       externalForecast
-        ? `외부 참조 입수(${externalForecast.sourceLabel}${externalForecast.cagrBasis ? ", CAGR 기준" : `, ${externalForecast.targetYear}년 ${externalForecast.marketSize.toFixed(2)}B`}) — 격차 ${externalForecast.cagrGapPct != null ? `${externalForecast.cagrGapPct}%` : `${externalForecast.gapPct}%`}${calibration?.triggered ? ` — 보정 트리거(≥${CALIBRATION_TRIGGER_PCT}%) 가동` : ""}`
+        ? `외부 참조 입수(${externalForecast.sourceLabel}${externalForecast.cagrBasis ? ", CAGR 기준" : `, ${externalForecast.targetYear}년 ${externalForecast.marketSize.toFixed(2)}B`}) — 격차 ${externalForecast.cagrGapPct != null ? `${externalForecast.cagrGapPct}%` : `${externalForecast.gapPct}%`}${calibration?.triggered ? ` — 미수렴(목표선 ${CONVERGENCE_GOAL_PCT}% 미달)` : ""}`
         : "입수된 외부 미래 전망이 없어 기존 방식(CAGR 외삽)을 유지합니다.",
     );
     stepSummaries.push({ step: 5, ...s5b, pendingInputs: externalForecast ? ["외부 전망 출처의 원문 확인"] : [] });
@@ -1345,7 +1414,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         industry,
         5,
         "격차 드라이버 귀인 제안",
-        `격차가 보정 트리거(≥${CALIBRATION_TRIGGER_PCT}%) 이상 — 드라이버 귀인 제안 ${pendingDriverProposals.length}건 생성. 수용은 사람(경계 #2).`,
+        `격차가 수렴 목표선(≥${CONVERGENCE_GOAL_PCT}%) 이상 — 미수렴 상태로 드라이버 귀인 제안 ${pendingDriverProposals.length}건 생성. 수용은 사람(경계 #2).`,
       );
       stepSummaries.push({
         step: 5,
@@ -1633,6 +1702,65 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       return;
     }
 
+    // amendment 2026-11-13b — 드라이버 제외 제안(제안일 뿐, 실제 제외는 사람의
+    // 기각 확정 — 경계 #2). 새 CAGR 격차가 이전 격차보다 소음 밴드를 초과해
+    // 악화되었고(동일 입력 흔들림 ≈0.3pp 근거의 EXCLUSION_NOISE_BAND_PCT),
+    // 수용 드라이버와 CAGR-bearing 참조가 있으면, leave-one-out 스윕(순수 함수,
+    // LLM 호출 없음)으로 "빼면 수렴 가능 조합이 늘어나는" 드라이버를 순위매겨
+    // 최상위 후보 하나만 제안한다. 개선이 전혀 없으면 제안하지 않는다 — 제거로
+    // 나아질 게 없는데 제외를 권하는 것은 근거 없는 권고다.
+    const newGapPct = calibration?.gapPct ?? null;
+    let exclusionProposal: {
+      driver: string;
+      direction: "upside" | "downside";
+      impact_pct: number;
+      rationale: string;
+    } | null = null;
+    if (
+      previousGapPct !== null &&
+      newGapPct !== null &&
+      newGapPct - previousGapPct > EXCLUSION_NOISE_BAND_PCT &&
+      externalReference &&
+      externalReference.external_cagr_pct > 0 &&
+      acceptedDrivers.length > 0 &&
+      typeof calibration?.ourCagrPct === "number"
+    ) {
+      const { baselineFeasibleRatio, sampleCount, ranked } = rankExclusionCandidates({
+        ourCagrPct: calibration.ourCagrPct,
+        externalCagrPct: externalReference.external_cagr_pct,
+        drivers: acceptedDrivers.map((d) => ({
+          driver: d.driver,
+          direction: d.direction,
+          impact_pct: d.impact_pct,
+          spread_pct: null,
+        })),
+      });
+      const top = ranked[0];
+      if (top && top.improvementPct > 0) {
+        const table = ranked
+          .map(
+            (c, i) =>
+              `${i + 1}. ${c.driver} 제외 시 ${(c.feasibleRatioWithout * 100).toFixed(1)}% (${c.improvementPct >= 0 ? "+" : ""}${c.improvementPct.toFixed(1)}%p)`,
+          )
+          .join("\n");
+        const qualityWarning =
+          externalReference.captured_from !== "user"
+            ? `\n참조 품질 주의: 기준 참조는 파이프라인이 입수한 것입니다(${externalReference.captured_from}) — 사람이 기록한 참조가 아니므로 제외 결정 전 참조 자체를 먼저 재검토하세요.`
+            : "";
+        exclusionProposal = {
+          driver: top.driver,
+          direction: top.direction,
+          impact_pct: top.impact_pct,
+          rationale: [
+            `제외 검토 근거 — 격차 악화: 이전 버전 ${previousGapPct}% → 이번 버전 ${newGapPct}% (허용 편차 ±${EXCLUSION_NOISE_BAND_PCT}%p 초과).`,
+            `leave-one-out (몬테카를로, seed 고정, ${sampleCount}표본) — 전체 조합의 목표선(${CONVERGENCE_GOAL_PCT}%선) 이내 도달 비율 ${(baselineFeasibleRatio * 100).toFixed(1)}% 기준:`,
+            table,
+            `권고: ${top.driver}을(를) 수용 드라이버에서 제외하면 수렴 가능 조합 비율이 가장 크게 개선됩니다. 제외는 사람의 결정으로만 적용됩니다.${qualityWarning}`,
+          ].join("\n"),
+        };
+      }
+    }
+
     // ADR-0179 slice 4 / ADR-0181 follow-up — every NEW pipeline version
     // SELF-DECLARES its scope so downstream surfaces (target-scope editor,
     // anchor-scope verdict, entry-market unit resolution) read the declaration
@@ -1710,6 +1838,19 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
             ],
           );
         }
+      }
+      // amendment 2026-11-13b — 제외 제안은 버전 행과 같은 트랜잭션으로 적재된다
+      // (version_id = 새 버전 — GET의 version JOIN이 패널 노출 조건). 교체 주기는
+      // insertExclusionProposal 내부에서 처리한다(미결 제외 제안 선삭제).
+      if (exclusionProposal) {
+        insertExclusionProposal(db, {
+          industryId: analysis.industry_id,
+          versionId: newVersionId,
+          driver: exclusionProposal.driver,
+          direction: exclusionProposal.direction,
+          impact_pct: exclusionProposal.impact_pct,
+          rationale: exclusionProposal.rationale,
+        });
       }
     })();
     // ADR-0179 amendment slice B (auto-link addition): a newly completed

@@ -9,6 +9,7 @@ import { api } from "../../../lib/api.ts";
 import { useTranslations } from "next-intl";
 import { SupersedeReferenceButton } from "./SupersedeReferenceButton.tsx";
 import { EscalationSection } from "./CalibrationEscalation.tsx";
+import { CalibrationProposals } from "./CalibrationProposals.tsx";
 import type {
   CalibrationAcceptedRow,
   CalibrationEscalationRow,
@@ -17,9 +18,11 @@ import type {
   CalibrationTrendRow,
 } from "./types.ts";
 
-// ── 성장율 격차 보정 루프 패널 (v1.2.0, design 2026-09-18-s1-growth-gap-calibration)
-// 20% 트리거 배지 · 외부 참조 편집 · 드라이버 제안 수용/기각 · 버전 간 격차 추이.
-// 수용은 사람의 행위(경계 #2) — 수용된 드라이버는 다음 재분석의 제약으로 주입된다.
+// ── 성장율 격차 보정 루프 패널 (v1.2.0, design 2026-09-18-s1-growth-gap-calibration;
+// 수렴 목표선 통일 design 2026-11-13-calibration-loop-convergence)
+// 미수렴(격차 ≥ 목표선 15%) 배지 · 외부 참조 편집 · 드라이버 제안 수용/기각 ·
+// 버전 간 격차 추이 · 에스컬레이션 이력(읽기 전용). 수용은 사람의 행위(경계 #2)
+// — 수용된 드라이버는 다음 재분석의 제약으로 주입된다.
 export function CalibrationPanel({
   industryId,
   matrix,
@@ -37,9 +40,10 @@ export function CalibrationPanel({
   const [accepted, setAccepted] = useState<CalibrationAcceptedRow[]>([]);
   const [gapTrend, setGapTrend] = useState<CalibrationTrendRow[]>([]);
   const [reference, setReference] = useState<CalibrationReferenceRow | null>(null);
+  // 에스컬레이션 이력 (design 2026-11-13 §3.2) — 읽기 전용 카드용. 적용 경로는
+  // 삭제되었다(×0.85 결정론 스케일링 제거); GET의 escalation 필드는 보존된
+  // 결정 기록을 보여주기 위해 남는다.
   const [escalation, setEscalation] = useState<CalibrationEscalationRow | null>(null);
-  const [showEscalate, setShowEscalate] = useState(false);
-  const [escalateRationale, setEscalateRationale] = useState("");
   const [showRefForm, setShowRefForm] = useState(false);
   const [refForm, setRefForm] = useState({
     source_label: "",
@@ -134,24 +138,10 @@ export function CalibrationPanel({
     }
   }
 
-  async function applyEscalation() {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/api/market-overview/industry/${encodeURIComponent(industryId)}/calibration/escalate`, {
-        rationale: escalateRationale,
-      });
-      setShowEscalate(false);
-      setEscalateRationale("");
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("failedToApplyEscalation"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const cal = matrix.calibration;
+  // 트리거 = 미수렴 (사용자 결정 2026-11-13, design §3.1): 격차 ≥ 목표선이면
+  // 미수렴 배지 + 제안, 미만이면 수렴 — 루프 종료, 추이는 계속 표시된다.
+  // 결정론 스케일링 에스컬레이션 적용 경로는 삭제되었다 (design §3.2).
   const triggered = cal?.triggered === true;
   return (
     // biome-ignore lint/a11y/useAriaPropsSupportedByRole: label-only card (pre-existing) — adding a role would change what AT announces on the calibration card (behavior change, not this batch)
@@ -274,66 +264,14 @@ export function CalibrationPanel({
         )}
       </div>
 
-      {/* 에스컬레이션 — 결정론 스케일링 (사람 결정, 경계 #2). LLM 재분석이
-          수렴선에 도달하지 못할 때 외부 참조 × (1−15%)를 조정 CAGR로 채택. */}
-      <EscalationSection
-        escalation={escalation}
-        offer={triggered && (cal?.gapPct ?? 0) > 15}
-        externalCagrPct={cal?.externalCagrPct ?? "?"}
-        canCurate={canCurate}
-        busy={busy}
-        showForm={showEscalate}
-        rationale={escalateRationale}
-        onRationale={setEscalateRationale}
-        onShowForm={() => setShowEscalate(true)}
-        onCancel={() => setShowEscalate(false)}
-        onApply={() => void applyEscalation()}
-      />
+      {/* 에스컬레이션 이력 — 읽기 전용 (design 2026-11-13 §3.2). ×0.85 결정론
+          스케일링 적용 경로는 삭제되었고 보존된 결정 기록만 표시된다. */}
+      <EscalationSection escalation={escalation} />
 
-      {/* 드라이버 귀인 제안 */}
+      {/* 드라이버 귀인 제안 + 제외 제안 (amendment 2026-11-13b) — 400행 분해
+          한도로 CalibrationProposals.tsx로 추출(마크업·키 불변). */}
       {proposals.length > 0 && (
-        <div className="mb-2">
-          <p className="text-[length:var(--fs-caption)] font-semibold mb-1">
-            {t("driverAttributionProposal")} {proposals.length}
-            {t("itemSAnalysisOfThe")}
-          </p>
-          <div className="grid gap-1">
-            {proposals.map((d) => (
-              <div key={d.id} className="sizing-grade-card mb-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-[length:var(--fs-caption)]">{d.driver}</strong>
-                  <span className={`status-chip ${d.direction === "upside" ? "status-in-progress" : "status-amber"}`}>
-                    {d.direction === "upside" ? t("upsideFactor") : t("downsideFactor")}
-                  </span>
-                  <span className="status-chip status-not-started tabular-nums">CAGR ±{d.impact_pct.toFixed(1)}%p</span>
-                </div>
-                <p className="mb-1 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{d.rationale}</p>
-                <div className="flex gap-2">
-                  {canCurate && (
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      disabled={busy}
-                      onClick={() => void decide(d.id, "accept")}
-                    >
-                      {tc("accept")}
-                    </button>
-                  )}
-                  {canCurate && (
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      disabled={busy}
-                      onClick={() => void decide(d.id, "dismiss")}
-                    >
-                      {tc("dismiss")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CalibrationProposals proposals={proposals} canCurate={canCurate} busy={busy} onDecide={decide} />
       )}
 
       {/* 수용된 보정 드라이버 */}
