@@ -127,3 +127,92 @@ describe("market-overview insights per-industry dedupe", () => {
     expect((await getInsights({})).status).toBe(401);
   });
 });
+
+describe("insights calibration.accepted_drivers (design 2026-11-13-s2-driver-linkage D-A)", () => {
+  function seedCalibrationVersion(id: string, industryId: string, calibration: Record<string, unknown>) {
+    db.run(
+      "INSERT INTO market_sizing_analysis (id, industry_id, status, created_by, created_at, completed_at) VALUES (?,?,?,?,?,?)",
+      [id, industryId, "completed", ANALYST, NOW, NOW],
+    );
+    db.run(
+      "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at) VALUES (?,?,?,?,?,?)",
+      [`ver-${id}`, id, 1, json({ matrix: { calibration } }), ANALYST, NOW],
+    );
+  }
+  function seedDriverRow(
+    industryId: string,
+    versionId: string,
+    driver: string,
+    status: "accepted" | "proposed" | "dismissed",
+  ) {
+    const id = `idc-${ulid().slice(-10)}`;
+    db.run(
+      "INSERT INTO industry_driver_calibration (id, industry_id, version_id, driver, direction, impact_pct, rationale, status, proposed_by, decided_by, decided_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      [
+        id,
+        industryId,
+        versionId,
+        driver,
+        "upside",
+        1.8,
+        "격차 근거",
+        status,
+        "market-sizing-pipeline",
+        status === "accepted" ? ANALYST : null,
+        status === "accepted" ? NOW : null,
+        NOW,
+      ],
+    );
+    return id;
+  }
+
+  test("an industry with accepted rows returns them with row IDs inside calibration.accepted_drivers", async () => {
+    const ind = `ind-cal-${ulid().slice(-8)}`;
+    seedIndustry(ind, "보정 산업");
+    const ana = `ana-cal-${ulid().slice(-8)}`;
+    seedCalibrationVersion(ana, ind, {
+      triggered: true,
+      ourCagrPct: 8.2,
+      externalCagrPct: 5.1,
+      gapPct: 60.8,
+      appliedDrivers: ["이름만 있는 스냅샷"],
+    });
+    const acceptedId = seedDriverRow(ind, `ver-${ana}`, "수용된 드라이버", "accepted");
+    seedDriverRow(ind, `ver-${ana}`, "미수용 제안", "proposed");
+    seedDriverRow(ind, `ver-${ana}`, "기각된 제안", "dismissed");
+
+    const body = await (await getInsights()).json();
+    const row = body.data.insights.find((s: { industry_id: string }) => s.industry_id === ind);
+    expect(row.calibration).not.toBeNull();
+    expect(row.calibration.triggered).toBe(true);
+    expect(row.calibration.applied_drivers).toEqual(["이름만 있는 스냅샷"]);
+    expect(row.calibration.accepted_drivers).toHaveLength(1);
+    expect(row.calibration.accepted_drivers[0].id).toBe(acceptedId);
+    expect(row.calibration.accepted_drivers[0].driver).toBe("수용된 드라이버");
+    expect(row.calibration.accepted_drivers[0].direction).toBe("upside");
+    expect(row.calibration.accepted_drivers[0].impact_pct).toBe(1.8);
+    expect(row.calibration.accepted_drivers[0].version_no).toBe(1);
+  });
+
+  test("calibration present but no accepted rows -> accepted_drivers is []", async () => {
+    const ind = `ind-empty-${ulid().slice(-8)}`;
+    seedIndustry(ind, "빈 보정 산업");
+    const ana = `ana-empty-${ulid().slice(-8)}`;
+    seedCalibrationVersion(ana, ind, { triggered: false });
+
+    const body = await (await getInsights()).json();
+    const row = body.data.insights.find((s: { industry_id: string }) => s.industry_id === ind);
+    expect(row.calibration).not.toBeNull();
+    expect(row.calibration.accepted_drivers).toEqual([]);
+  });
+
+  test("an industry without a calibration payload keeps calibration: null (no shape change)", async () => {
+    const ind = `ind-null-${ulid().slice(-8)}`;
+    seedIndustry(ind, "보정 없는 산업");
+    seedAnalysis(`ana-null-${ulid().slice(-8)}`, ind, "completed", NOW);
+
+    const body = await (await getInsights()).json();
+    const row = body.data.insights.find((s: { industry_id: string }) => s.industry_id === ind);
+    expect(row.calibration).toBeNull();
+  });
+});

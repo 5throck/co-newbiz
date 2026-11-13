@@ -80,6 +80,27 @@ interface SizingInsight {
   } | null;
   opportunity_factors: string[];
   risk_factors: string[];
+  /** 사람이 수용한 S1 보정 드라이버 (design 2026-11-13-s2-driver-linkage D-A) —
+   *  행 ID 포함. 이 퍼널 인사이트 패널에서는 읽기 전용 노출이고, 연결(승격)은
+   *  기회 상세 화면의 요인 탭에서 한다. */
+  calibration: {
+    triggered: boolean;
+    our_cagr_pct: number | null;
+    external_cagr_pct: number | null;
+    gap_pct: number | null;
+    previous_gap_pct: number | null;
+    applied_drivers: string[];
+    accepted_drivers: Array<{
+      id: string;
+      driver: string;
+      direction: "upside" | "downside";
+      impact_pct: number;
+      rationale: string;
+      decided_by: string | null;
+      decided_at: string | null;
+      version_no: number | null;
+    }>;
+  } | null;
 }
 
 /**
@@ -616,6 +637,37 @@ export function OpportunityFunnelStage({
                   )}
                 </div>
               </div>
+              {/* S1 검증 성장 드라이버 (design 2026-11-13-s2-driver-linkage D-A) —
+                  수용 행이 있을 때만 세 번째 블록을 그린다(없는 사실은 보여주지
+                  않는다). 여기서는 읽기 전용이고, 연결(승격)은 기회 상세 화면의
+                  요인 탭에서 한다(ADR-0127: 행 액션은 평가 링크, 편집기가 아님). */}
+              {(selectedInsight.calibration?.accepted_drivers.length ?? 0) > 0 && (
+                <div className="sizing-grade-card mt-2" data-testid="s1-verified-drivers">
+                  <h4 className="text-[length:var(--fs-body)] mb-1">{t("s1VerifiedDrivers")}</h4>
+                  <ul className="sizing-note-list">
+                    {(selectedInsight.calibration?.accepted_drivers ?? []).map((d) => (
+                      <li key={d.id}>
+                        <span className="mono-num">
+                          {d.direction === "upside" ? "▲" : "▼"}{" "}
+                          {d.direction === "upside"
+                            ? tr("components.driverLinks.directionUpside")
+                            : tr("components.driverLinks.directionDownside")}{" "}
+                          {d.direction === "upside" ? "+" : "-"}
+                          {d.impact_pct}%p
+                        </span>{" "}
+                        {d.driver}
+                        <span className="status-chip ml-1">{tr("components.driverLinks.provenanceLabel")}</span>
+                        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] whitespace-pre-line mb-0 mt-1">
+                          {d.rationale}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1 mb-0">
+                    {t("s1DriverAttachHint")}
+                  </p>
+                </div>
+              )}
             </details>
           </div>
         )}

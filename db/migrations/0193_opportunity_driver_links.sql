@@ -1,0 +1,23 @@
+-- 0193_opportunity_driver_links.sql
+-- @reversible: true (purely additive: one nullable payload column on opportunity;
+-- no existing column or row is touched. Rollback: the ROLLBACK-SQL block below,
+-- run after the pre-migration backup per ADR-0014. Links recorded after this
+-- migration are lost with the column on rollback.)
+-- ROLLBACK-SQL-BEGIN
+--   (no executable statement — the column participates in its own CHECK, so
+--   SQLite cannot DROP it without a table rebuild: recreate the opportunity
+--   table without driver_links_json from the pre-migration backup, or a
+--   CREATE-table + copy + rename rebuild. The migration-0150 house path.)
+-- ROLLBACK-SQL-END
+--
+-- ADR-0198 (spec 2026-11-13-s2-driver-linkage, DEC-20261113-05): the S1→S2
+-- driver-linkage payload document on the opportunity — analyst-promoted S1
+-- calibration drivers as captured-provenance evidence records (design D-B).
+-- Same pattern as opportunity.entry_market_derivation_json (migration 0150):
+-- a lineage payload in a nullable column, no separate table, NULL = no links,
+-- every existing behavior byte-identical. NEVER backfilled; a person (analyst+)
+-- writes links only through the audited driver-links route (PUT/DELETE/GET
+-- /api/opportunities/{id}/driver-links) — nothing auto-generates and no score
+-- or verdict column is ever touched by the write path.
+
+ALTER TABLE opportunity ADD COLUMN driver_links_json TEXT CHECK (driver_links_json IS NULL OR json_valid(driver_links_json) = 1);

@@ -988,6 +988,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0198",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -1882,6 +1887,11 @@
     },
     {
       "id": "dec:DEC-20261113-04",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261113-05",
       "type": "decision",
       "layer": "L3"
     },
@@ -6275,6 +6285,24 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261113-04",
       "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261113-05",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261113-05",
+      "to": "skill:root/evidence-ledger",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261113-05",
+      "to": "skill:root/rag-scoring-framework",
       "source": "skills_used"
     },
     {

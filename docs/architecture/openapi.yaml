@@ -4124,6 +4124,92 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/opportunities/{id}/driver-links:
+    get:
+      operationId: listOpportunityDriverLinks
+      summary: "S1-verified driver links on the opportunity (spec 2026-11-13-s2-driver-linkage D-B, ADR-0198). Returns {links, row_status} - links are the captured-provenance evidence records (driver_row_id, captured driver text/direction/impact/rationale/decided_by/at/version_no, server-stamped confidence C, attached_by/at, optional note), row_status maps each driver_row_id to accepted|changed|missing against the live industry_driver_calibration row (staleness surfacing only, no banner in v1). Tolerant read: an invalid stored payload degrades to links: [], never a throw. Readable by anyone who can see the opportunity."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: putOpportunityDriverLink
+      summary: "Analyst+ only: attach an ACCEPTED S1 calibration driver of the opportunity's OWN linked industry as a captured-provenance link. Body {driver_row_id, note?} - strict key whitelist, a client-supplied confidence (or any provenance field) is a 400 because the server captures provenance from the live driver row and stamps confidence C (never upgraded by human acceptance). Unknown opportunity or driver row -> 404 (404-not-403); viewer -> 403 with the role message; proposed/dismissed row -> 400 not_accepted; cross-industry row -> 400 industry_mismatch; duplicate link -> 409 already_linked; cap 10 -> 400. Nothing is auto-generated and the write path never touches attractiveness_score, synergy_score, status, factors_json or any gate value (row-equality test). Audit opportunity.driver_links.update, target '<id>:add:<driver_row_id>'."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [driver_row_id]
+              properties:
+                driver_row_id:
+                  type: string
+                note:
+                  type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "already_linked - this driver row is already linked to the opportunity"
+    delete:
+      operationId: deleteOpportunityDriverLink
+      summary: "Analyst+ only: remove one link record from the payload (content edit - the audit_log row persists, ADR-0012). Body {driver_row_id}. Removing a non-existent link -> 404. Audit opportunity.driver_links.update, target '<id>:remove:<driver_row_id>'."
+      tags:
+        - Reference
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [driver_row_id]
+              properties:
+                driver_row_id:
+                  type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/opportunities/{id}/entry-market-derivation:
     get:
       operationId: getOpportunityEntryMarketDerivation
