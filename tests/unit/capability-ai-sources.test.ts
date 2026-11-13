@@ -237,16 +237,21 @@ describe("B1. web-research chain: Playwright last, opt-in, diagnosed, breaker-aw
     expect(res.rowsNotSearched).toBe(1);
     expect(res.failureNote).toContain("Playwright");
   });
-  test("playwright-search exports the detailed form; CHROME_PATH and the dynamic import stay; env names are documented", () => {
+  test("playwright-search exports the detailed form; CHROME_PATH and the dynamic import stay; env names are documented in the root sample only (SSOT)", () => {
     const src = readFileSync(join(ROOT, "app/web-next/lib/playwright-search.ts"), "utf8");
     expect(src).toContain("playwrightSearchDetailed");
     expect(src).toContain("CHROME_PATH");
     expect(src).toContain("dynamicImport");
-    for (const f of [".env.sample", "app/web-next/.env.sample"]) {
-      const sample = readFileSync(join(ROOT, f), "utf8");
-      expect(sample).toContain("WEB_SEARCH_PLAYWRIGHT_ENABLED");
-      expect(sample).toContain("CHROME_PATH");
-    }
+    // DEC-20261113-01 (root .env SSOT): runtime config is documented in the repo-root
+    // .env.sample ONLY — app/web-next/.env.sample is the Prisma-remnant file and must
+    // not grow runtime keys again (the Next auto-load there would shadow the root value).
+    const rootSample = readFileSync(join(ROOT, ".env.sample"), "utf8");
+    expect(rootSample).toContain("WEB_SEARCH_PLAYWRIGHT_ENABLED");
+    expect(rootSample).toContain("CHROME_PATH");
+    const appSample = readFileSync(join(ROOT, "app/web-next/.env.sample"), "utf8");
+    expect(appSample).not.toContain("WEB_SEARCH_PLAYWRIGHT_ENABLED");
+    expect(appSample).not.toContain("CHROME_PATH");
+    expect(appSample).toContain("DATABASE_URL");
   });
 });
 

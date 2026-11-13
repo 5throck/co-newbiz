@@ -4,7 +4,14 @@
 //   - Tavily 키 부재 + DDG 스위치 off → 검색 미설정으로 남는가
 //   - parseDdgResults: uddg 리다이렉트 디코딩·태그 제거·엔티티 디코딩
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { isDdgEnabled, isWebResearchConfigured, parseDdgResults, researchSourcesDetailed, setWebResearchOverrideForTests } from "../../app/web-next/lib/web-research.ts";
+import {
+  isDdgEnabled,
+  isWebResearchConfigured,
+  parseDdgResults,
+  researchSourcesDetailed,
+  setWebResearchOverrideForTests,
+} from "../../app/web-next/lib/web-research.ts";
+import { loadRootEnvPipelineKeys } from "../../app/web-next/lib/root-env.ts";
 
 const DDG_FIXTURE = `
 <div class="result results_links">
@@ -23,7 +30,19 @@ const DDG_FIXTURE = `
 `;
 
 const ORIGINAL_FETCH = globalThis.fetch;
-const ORIGINAL_ENV = { tavily: process.env.TAVILY_API_KEY, ddg: process.env.WEB_SEARCH_DDG_ENABLED };
+const ORIGINAL_ENV = {
+  tavily: process.env.TAVILY_API_KEY,
+  ddg: process.env.WEB_SEARCH_DDG_ENABLED,
+  brave: process.env.BRAVE_SEARCH_API_KEY,
+  serper: process.env.SERPER_API_KEY,
+};
+// 밀폐(hermetic): 루트 .env가 BRAVE/SERPER 검색 키를 정의해도 이 파일의
+// isWebResearchConfigured 단정이 그 값에 좌우되지 않게 한다. loadRootEnvPipelineKeys는
+// 프로세스당 한 번만 걷고(메모이즈), 빈 슬롯만 채우므로 — 키를 지운 상태로 로더를 먼저
+// 실행시켜 메모이즈하면, 이후 어떤 호출도 루트 .env에서 키를 되살리지 않는다.
+delete process.env.BRAVE_SEARCH_API_KEY;
+delete process.env.SERPER_API_KEY;
+loadRootEnvPipelineKeys();
 
 beforeEach(() => {
   // 다른 테스트 파일(brownfield-llm-support 등)이 모듈 수준에서 켜는 전역
@@ -33,6 +52,9 @@ beforeEach(() => {
   // 값은 더미(8자 미만 — pre-commit 시크릿 정규식 회피). 실제로 전송되지 않는다.
   process.env.TAVILY_API_KEY = "test";
   process.env.WEB_SEARCH_DDG_ENABLED = "";
+  // 같은 프로세스의 다른 테스트 파일이 검색 키를 세팅했을 수 있다 — 미설정 상태를 고정.
+  delete process.env.BRAVE_SEARCH_API_KEY;
+  delete process.env.SERPER_API_KEY;
 });
 afterEach(() => {
   globalThis.fetch = ORIGINAL_FETCH;
@@ -40,6 +62,10 @@ afterEach(() => {
   else process.env.TAVILY_API_KEY = ORIGINAL_ENV.tavily;
   if (ORIGINAL_ENV.ddg === undefined) delete process.env.WEB_SEARCH_DDG_ENABLED;
   else process.env.WEB_SEARCH_DDG_ENABLED = ORIGINAL_ENV.ddg;
+  if (ORIGINAL_ENV.brave === undefined) delete process.env.BRAVE_SEARCH_API_KEY;
+  else process.env.BRAVE_SEARCH_API_KEY = ORIGINAL_ENV.brave;
+  if (ORIGINAL_ENV.serper === undefined) delete process.env.SERPER_API_KEY;
+  else process.env.SERPER_API_KEY = ORIGINAL_ENV.serper;
 });
 
 describe("parseDdgResults", () => {

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-12T22:59:18.347Z
+**Generated**: 2026-11-13T01:11:20.171Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -251,7 +251,7 @@
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
 | driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | N/A |
 | ecos.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/ecos.ts | N/A |
-| env-check.ts | 1.1.1 | scripts/co-newbiz/env-check.ts | N/A |
+| env-check.ts | 1.2.0 | scripts/co-newbiz/env-check.ts | N/A |
 | evidence-backport-scan.ts | 1.3.0 | scripts/evidence-backport-scan.ts | N/A |
 | external-deps.ts | 1.0.0 | scripts/external-deps.ts | N/A |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |

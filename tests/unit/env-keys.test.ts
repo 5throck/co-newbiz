@@ -18,6 +18,12 @@ const TOUCHED = [
   "CO_NEWBIZ_LLM_K2E",
   "FOO_2_API_KEY",
   "NOTIFY_WEBHOOK_URL_OPS_2",
+  "CO_NEWBIZ_BUSINESS_CASE_AGENTS",
+  "CO_NEWBIZ_DD_TAILOR_AGENTS",
+  "CO_NEWBIZ_DB_PATH",
+  "WEB_SEARCH_DDG_ENABLED",
+  "BRAVE_SEARCH_API_KEY",
+  "DATABASE_URL",
 ];
 let tmp: string;
 let originalCwd: string;
@@ -99,12 +105,41 @@ describe("digit-bearing key charset (DEC-20261104-04)", () => {
     expect(process.env.FOO_2_API_KEY).toBeUndefined();
   });
 
-  // Passes before and after — boundary pin, not a fails-before case. NOTIFY_*
-  // is a root-env.ts-only family; this CLI loader never allowlisted it (no
-  // NOTIFY consumers under scripts/), so a digit-suffixed NOTIFY key stays
-  // unloaded here regardless of charset.
-  test("lifts no NOTIFY_* key (family is root-env-only)", () => {
+  // Changed 2026-11-13 (design 2026-11-13-env-single-source §3.2/§3.4C): the
+  // CLI twin no longer keeps its own hardcoded key list — admission derives
+  // from the shared SSOT inventory in app/web-next/lib/root-env.ts, so the
+  // NOTIFY family (previously root-env-only) is lifted here too. Passes-before
+  // boundary replaced by the shared-inventory cases below.
+  test("lifts a NOTIFY_* key through the shared SSOT inventory", () => {
     loadWith("NOTIFY_WEBHOOK_URL_OPS_2=https://example.invalid/hook");
-    expect(process.env.NOTIFY_WEBHOOK_URL_OPS_2).toBeUndefined();
+    expect(process.env.NOTIFY_WEBHOOK_URL_OPS_2).toBe("https://example.invalid/hook");
+  });
+
+  test("lifts executor agent modes and the migrated SSOT keys through the shared inventory", () => {
+    writeFileSync(
+      join(tmp, ".env"),
+      `${[
+        "CO_NEWBIZ_BUSINESS_CASE_AGENTS=llm",
+        "CO_NEWBIZ_DD_TAILOR_AGENTS=llm",
+        "CO_NEWBIZ_DB_PATH=/tmp/db.sqlite",
+        "WEB_SEARCH_DDG_ENABLED=true",
+        "BRAVE_SEARCH_API_KEY=brave-key",
+      ].join("\n")}\n`,
+    );
+    resetPipelineKeysForTests();
+    loadPipelineKeys();
+    expect(process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS).toBe("llm");
+    expect(process.env.CO_NEWBIZ_DD_TAILOR_AGENTS).toBe("llm");
+    expect(process.env.CO_NEWBIZ_DB_PATH).toBe("/tmp/db.sqlite");
+    expect(process.env.WEB_SEARCH_DDG_ENABLED).toBe("true");
+    expect(process.env.BRAVE_SEARCH_API_KEY).toBe("brave-key");
+  });
+
+  // Passes before and after — boundary pin, not a fails-before case.
+  // DATABASE_URL is the deliberate app-file remnant (Prisma CLI tooling), not
+  // part of the SSOT inventory; the CLI loader must not lift it.
+  test("still does not lift a non-SSOT key (DATABASE_URL stays app-file-only)", () => {
+    loadWith("DATABASE_URL=file:/tmp/should-not-load.db");
+    expect(process.env.DATABASE_URL).toBeUndefined();
   });
 });

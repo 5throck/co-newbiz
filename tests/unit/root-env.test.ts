@@ -8,6 +8,7 @@ import {
   isPipelineEnvKey,
   loadRootEnvPipelineKeys,
   resetRootEnvForTests,
+  ssotEnvKeys,
 } from "../../app/web-next/lib/root-env.ts";
 
 const TOUCHED = [
@@ -16,11 +17,21 @@ const TOUCHED = [
   "DATA_GO_KR_API_KEY",
   "DART_API_KEY",
   "SERPER_API_KEY",
+  "BRAVE_SEARCH_API_KEY",
   "CO_NEWBIZ_LLM_PROVIDER",
   "CO_NEWBIZ_LLM_MODEL_V2",
+  "CO_NEWBIZ_LLM_MODEL",
   "NOTIFY_WEBHOOK_URL_OPS_2",
   "FOO_2_API_KEY",
   "UNRELATED_SECRET",
+  "CO_NEWBIZ_BUSINESS_CASE_AGENTS",
+  "CO_NEWBIZ_DD_TAILOR_AGENTS",
+  "CO_NEWBIZ_DB_PATH",
+  "WEB_SEARCH_DDG_ENABLED",
+  "WEB_SEARCH_PLAYWRIGHT_ENABLED",
+  "CHROME_PATH",
+  "CO_NEWBIZ_BOOTSTRAP_MIGRATIONS",
+  "CO_NEWBIZ_ALLOW_REGISTER",
 ];
 let tmp: string;
 let saved: Record<string, string | undefined>;
@@ -146,5 +157,140 @@ describe("digit-bearing key charset (DEC-20261104-04)", () => {
     expect(isPipelineEnvKey("FOO_2_API_KEY")).toBe(false);
     loadWith("FOO_2_API_KEY=abc");
     expect(process.env.FOO_2_API_KEY).toBeUndefined();
+  });
+});
+
+describe("SSOT inventory widening (design 2026-11-13-env-single-source §3.2)", () => {
+  function loadWith(envText: string): void {
+    writeFileSync(join(tmp, ".env"), envText);
+    resetRootEnvForTests(tmp);
+    loadRootEnvPipelineKeys();
+  }
+
+  test("ssotEnvKeys() contains every migrated exact key and excludes tooling keys", () => {
+    const inventory = ssotEnvKeys();
+    for (const k of [
+      "CO_NEWBIZ_DB_PATH",
+      "WEB_SEARCH_DDG_ENABLED",
+      "WEB_SEARCH_PLAYWRIGHT_ENABLED",
+      "CHROME_PATH",
+      "CO_NEWBIZ_BOOTSTRAP_MIGRATIONS",
+      "CO_NEWBIZ_ALLOW_REGISTER",
+    ]) {
+      expect(inventory.has(k)).toBe(true);
+    }
+    // Explicitly NOT admitted (design §3.2 "Explicitly NOT added"): DATABASE_URL
+    // is the Prisma-CLI app-file remnant; DIST_DIR is read before
+    // instrumentation; the MCP client contract keys are not server process.env.
+    expect(inventory.has("DATABASE_URL")).toBe(false);
+  });
+
+  test("admits the agent-mode family and every migrated exact key, rejects the reserved keys", () => {
+    expect(isPipelineEnvKey("CO_NEWBIZ_BUSINESS_CASE_AGENTS")).toBe(true);
+    expect(isPipelineEnvKey("CO_NEWBIZ_DD_TAILOR_AGENTS")).toBe(true);
+    // Family style per DEC-20261104-04: a future executor seam needs no loader edit.
+    expect(isPipelineEnvKey("CO_NEWBIZ_NEW_SEAM_2_AGENTS")).toBe(true);
+    for (const k of [
+      "CO_NEWBIZ_DB_PATH",
+      "WEB_SEARCH_DDG_ENABLED",
+      "WEB_SEARCH_PLAYWRIGHT_ENABLED",
+      "CHROME_PATH",
+      "CO_NEWBIZ_BOOTSTRAP_MIGRATIONS",
+      "CO_NEWBIZ_ALLOW_REGISTER",
+    ]) {
+      expect(isPipelineEnvKey(k)).toBe(true);
+    }
+    expect(isPipelineEnvKey("CO_NEWBIZ_DIST_DIR")).toBe(false);
+    expect(isPipelineEnvKey("CO_NEWBIZ_ALLOWED_DEV_ORIGINS")).toBe(false);
+    expect(isPipelineEnvKey("CO_NEWBIZ_API_TOKEN")).toBe(false);
+    expect(isPipelineEnvKey("CO_NEWBIZ_API_BASE_URL")).toBe(false);
+    expect(isPipelineEnvKey("DATABASE_URL")).toBe(false);
+  });
+
+  test("imports the migrated keys from the root .env walk", () => {
+    loadWith(
+      `${[
+        "CO_NEWBIZ_BUSINESS_CASE_AGENTS=llm",
+        "CO_NEWBIZ_DD_TAILOR_AGENTS=llm",
+        "CO_NEWBIZ_DB_PATH=/tmp/db.sqlite",
+        "WEB_SEARCH_DDG_ENABLED=true",
+        "WEB_SEARCH_PLAYWRIGHT_ENABLED=true",
+        "BRAVE_SEARCH_API_KEY=brave-key",
+        "CHROME_PATH=/usr/bin/chrome",
+        "# CO_NEWBIZ_BOOTSTRAP_MIGRATIONS=auto",
+        "CO_NEWBIZ_ALLOW_REGISTER=1",
+      ].join("\n")}\n`,
+    );
+    expect(process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS).toBe("llm");
+    expect(process.env.CO_NEWBIZ_DD_TAILOR_AGENTS).toBe("llm");
+    expect(process.env.CO_NEWBIZ_DB_PATH).toBe("/tmp/db.sqlite");
+    expect(process.env.WEB_SEARCH_DDG_ENABLED).toBe("true");
+    expect(process.env.WEB_SEARCH_PLAYWRIGHT_ENABLED).toBe("true");
+    expect(process.env.BRAVE_SEARCH_API_KEY).toBe("brave-key");
+    expect(process.env.CHROME_PATH).toBe("/usr/bin/chrome");
+    expect(envKeySource("CO_NEWBIZ_DB_PATH")).toBe("root_env");
+    // A commented line is invisible to the walk: the key stays unset so the
+    // code default ("auto") governs.
+    expect(process.env.CO_NEWBIZ_BOOTSTRAP_MIGRATIONS).toBeUndefined();
+    expect(process.env.CO_NEWBIZ_ALLOW_REGISTER).toBe("1");
+  });
+
+  test("never overrides an existing value for the migrated keys", () => {
+    writeFileSync(
+      join(tmp, ".env"),
+      "CO_NEWBIZ_DB_PATH=/from/file.sqlite\nCO_NEWBIZ_BUSINESS_CASE_AGENTS=deterministic\n",
+    );
+    process.env.CO_NEWBIZ_DB_PATH = "preset";
+    process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS = "llm";
+    resetRootEnvForTests(tmp);
+    loadRootEnvPipelineKeys();
+    expect(process.env.CO_NEWBIZ_DB_PATH).toBe("preset");
+    expect(process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS).toBe("llm");
+    expect(envKeySource("CO_NEWBIZ_DB_PATH")).toBe("process_env");
+  });
+});
+
+describe("boot shadow warning (design 2026-11-13-env-single-source §3.4B)", () => {
+  function loadCapturingWarnings(envText: string): string[] {
+    writeFileSync(join(tmp, ".env"), envText);
+    const warnings: string[] = [];
+    const realWarn = console.warn;
+    console.warn = (msg?: unknown) => {
+      warnings.push(String(msg));
+    };
+    try {
+      resetRootEnvForTests(tmp);
+      loadRootEnvPipelineKeys();
+    } finally {
+      console.warn = realWarn;
+    }
+    return warnings;
+  }
+
+  test("warns once, naming the key, when a divergent shadow exists — and never overrides", () => {
+    process.env.CO_NEWBIZ_DB_PATH = "/from/app-auto-load.sqlite";
+    const warnings = loadCapturingWarnings("CO_NEWBIZ_DB_PATH=/from/root-file.sqlite\n");
+    expect(warnings.length).toBe(1);
+    expect(warnings[0]).toContain("[root-env] CO_NEWBIZ_DB_PATH:");
+    expect(warnings[0]).toContain("root .env is the SSOT");
+    // Values are never printed.
+    expect(warnings[0]).not.toContain("/from/");
+    // The no-override rule is untouched: the shadowing value stays in effect.
+    expect(process.env.CO_NEWBIZ_DB_PATH).toBe("/from/app-auto-load.sqlite");
+  });
+
+  test("stays silent on an equal-value shadow (whitespace-normalized)", () => {
+    // The exact migration shape: a trailing space on disk that no reader ever
+    // propagated — normalized equal, so no warning and no override.
+    process.env.CO_NEWBIZ_LLM_MODEL = "gpt-6.1-terra";
+    const warnings = loadCapturingWarnings("CO_NEWBIZ_LLM_MODEL=gpt-6.1-terra \n");
+    expect(warnings.length).toBe(0);
+    expect(process.env.CO_NEWBIZ_LLM_MODEL).toBe("gpt-6.1-terra");
+  });
+
+  test("stays silent when the key is root-only (no shadow at all)", () => {
+    const warnings = loadCapturingWarnings("CO_NEWBIZ_DB_PATH=/from/root-file.sqlite\n");
+    expect(warnings.length).toBe(0);
+    expect(process.env.CO_NEWBIZ_DB_PATH).toBe("/from/root-file.sqlite");
   });
 });
