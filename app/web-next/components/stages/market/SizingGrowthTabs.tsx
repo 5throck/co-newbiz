@@ -15,8 +15,13 @@ import {
 } from "./SizingScenarioCharts.tsx";
 import { CalibrationPanel } from "./CalibrationPanel.tsx";
 import type { SizingReportState } from "./useSizingReport.ts";
-import { referenceNewerThanVersion, rerunCtaMode } from "../../../lib/market-reference-staleness.ts";
-import { GrowthStalenessCard, RerunAction } from "./GrowthBannerViews.tsx";
+import {
+  CONVERGENCE_GOAL_PCT,
+  consensusCitesSupersededReference,
+  referenceNewerThanVersion,
+  rerunCtaMode,
+} from "../../../lib/market-reference-staleness.ts";
+import { GrowthStalenessCard, ReferenceChip, RerunAction } from "./GrowthBannerViews.tsx";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -24,9 +29,10 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
   const t = useTranslations("stages.s1.sizingGrowthTabs");
   const tc = useTranslations("common");
   const { tab, matrix, rerunStarted, canCurate, analysisId, setRerunError, setRerunStarted, rerunError, detail } = ctx;
-  // C1 — CalibrationPanel과 같은 외부 참조 엔드포인트를 이 탭에서도 live GET한다.
-  // 버전 페이로드가 참조 기록 이전에 만들어졌어도 staleness가 보이도록 하는 것이
-  // 목적이며, 라우트가 행을 그대로(SELECT *) 돌려주므로 created_at이 실려 온다.
+  // C1 — CalibrationPanel과 같은 외부 참조 엔드포인트를 live GET한다(행 원문이므로
+  // created_at 포함). GET 페이로드는 additive { reference, latest }(design
+  // 2026-11-13 §3.3b): reference는 유효 참조(기존 계약), latest는 폐기 무관 최신
+  // 행 — 표시 버전이 폐기된 참조를 인용하는 배너 판정에 쓴다.
   interface RefRow {
     source_label: string;
     source_url: string | null;
@@ -35,8 +41,10 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
     external_size_b: number | null;
     captured_from: string;
     created_at: string;
+    superseded_at: string | null;
   }
   const [reference, setReference] = useState<RefRow | null>(null);
+  const [latest, setLatest] = useState<RefRow | null>(null);
   // A1 (addendum 2026-11-12b) — a reference saved in CalibrationPanel during the
   // same mount must raise the banner without a remount. CalibrationPanel calls
   // onReferenceSaved after a successful save; bumping the counter re-runs this
@@ -46,15 +54,25 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: referenceRefresh is an intentional trigger (A1, addendum 2026-11-12b) — the effect reads no state from it
   useEffect(() => {
     api
-      .get<{ reference: RefRow | null }>(
+      .get<{ reference: RefRow | null; latest: RefRow | null }>(
         `/api/market-overview/industry/${encodeURIComponent(detail.industry.id)}/external-reference`,
       )
-      .then((r) => setReference(r.data.reference))
+      .then((r) => {
+        setReference(r.data.reference);
+        setLatest(r.data.latest);
+      })
       .catch(() => {});
   }, [detail.industry.id, referenceRefresh]);
   const referenceNewer = referenceNewerThanVersion(reference?.created_at, detail.versions[0]?.created_at);
-  // C2 — 재분석 CTA를 격차 게이트(externalForecast && |gap| >= 20)와 분리한다.
-  // 참조가 표시 버전보다 최신이면 격차와 무관하게 재분석이 유효하다.
+  // C1b (design 2026-11-13 §3.3b) — 표시 버전이 폐기된 참조를 인용: 유효 참조
+  // 없음(폐기로 reference=null) + 최신 행 폐기 + 표시 버전이 폐기 시각 이전
+  // (폐기 이후 버전은 폴백 사다리로 재산출되므로 제외).
+  const citesSuperseded =
+    reference === null &&
+    latest?.superseded_at != null &&
+    consensusCitesSupersededReference(latest.superseded_at, detail.versions[0]?.created_at);
+  // C2 — 재분석 CTA를 격차 게이트와 분리: 참조가 표시 버전보다 최신이면
+  // 격차와 무관하게 재분석이 유효하다.
   const ctaMode = rerunCtaMode(matrix.externalForecast?.gapPct, referenceNewer);
   const rerunHandler = async () => {
     if (!analysisId) {
@@ -153,9 +171,35 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
             <p className="sizing-note-list mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               {matrix.consistency.tolerance}
             </p>
+            {/* 3a (design 2026-11-13 §3.3a) — 컨센서스 참조 칩: 표시 topDownCagr의
+                출처를 노출한다. 데이터는 위 live GET(reference)에 이미 있다. */}
+            {reference && (
+              <ReferenceChip
+                sourceLabel={reference.source_label}
+                sourceUrl={reference.source_url}
+                targetYear={reference.target_year}
+                externalCagrPct={reference.external_cagr_pct}
+                capturedFrom={reference.captured_from}
+                createdAt={reference.created_at}
+              />
+            )}
             {referenceNewer && (
               <GrowthStalenessCard
+                variant="newer"
                 showCta={ctaMode === "staleness"}
+                rerunStarted={rerunStarted}
+                canCurate={canCurate}
+                onRerun={rerunHandler}
+                rerunError={rerunError}
+              />
+            )}
+            {/* 3b (design 2026-11-13 §3.3b) — 폐기 참조 인용 배너: C1 배너(유효
+                참조 존재)와 조건이 상호 배타적이다. 격차 카드가 이미 CTA를
+                소유하지 않는 한 재분석 CTA를 함께 보여준다. */}
+            {citesSuperseded && (
+              <GrowthStalenessCard
+                variant="superseded"
+                showCta={ctaMode !== "gap"}
                 rerunStarted={rerunStarted}
                 canCurate={canCurate}
                 onRerun={rerunHandler}
@@ -171,7 +215,7 @@ export function SizingGrowthTab({ ctx }: { ctx: SizingReportState }) {
 
                   {(() => {
                     const gap = matrix.externalForecast.gapPct;
-                    if (gap === undefined || Math.abs(gap) < 20) return null;
+                    if (gap === undefined || Math.abs(gap) < CONVERGENCE_GOAL_PCT) return null;
                     return (
                       <div className="sizing-grade-card mt-2" role="note">
                         <p className="m-0 text-[length:var(--fs-caption)]">

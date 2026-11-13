@@ -69,7 +69,6 @@ interface SizingInsight {
   completed_at: string | null;
   bottom_up_cagr_pct: number | null;
   synthetic?: boolean;
-  escalated_cagr_pct: number | null;
   external_forecast: {
     source_label: string;
     target_year: number;
@@ -542,12 +541,6 @@ export function OpportunityFunnelStage({
                 <span className="sizing-chip-meta">
                   CAGR {isDegeneratePct(s.bottom_up_cagr_pct) ? NOT_COMPUTABLE_TEXT : `${s.bottom_up_cagr_pct}%`}
                   {s.synthetic && <span className="status-chip status-amber ml-1">{SYNTHETIC_BADGE_TEXT}</span>}
-                  {s.escalated_cagr_pct !== null && (
-                    <span title={t("cagrExternalReference085")}>
-                      {" "}
-                      {t("escalation")} {s.escalated_cagr_pct}%
-                    </span>
-                  )}
                   {s.external_forecast?.gap_pct != null
                     ? t("gapP1P2", { p1: s.external_forecast.gap_pct > 0 ? "+" : "", p2: s.external_forecast.gap_pct })
                     : ""}

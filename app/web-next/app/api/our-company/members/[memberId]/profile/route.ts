@@ -3,7 +3,6 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../lib/envelope.ts";
 import { loadLatestProfile, getProfileJobStatus } from "../../../../../../lib/company-profile-pipeline.ts";
-import { resolveEffectiveCagr } from "../../../../../../lib/market-calibration.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ memberId: string }> }) {
   const auth = authenticate(request);
@@ -23,15 +22,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ memb
     )
     .all(memberId) as Array<{ version_no: number; source_ref: string | null; created_by: string; created_at: string }>;
   const profile = loadLatestProfile(db, { kind: "member", id: memberId });
-  // 에스컬레이션 표기 (design 2026-09-20-escalation-downstream §4-Q3) — 저장
-  // 페이로드는 재작성하지 않고 읽기 시점에 resolver로 보강한다.
-  if (profile?.industryLinkage) {
-    for (const l of profile.industryLinkage) {
-      if (!l.industryId) continue;
-      const eff = resolveEffectiveCagr(db, l.industryId);
-      if (eff?.source === "escalated") (l as { escalatedCagrPct?: number }).escalatedCagrPct = eff.cagrPct;
-    }
-  }
+  // escalatedCagrPct 읽기 시점 보강은 제거되었다 (design 2026-11-13-calibration-
+  // loop-convergence §3.2) — 결정론 스케일링 에스컬레이션 삭제로 보강할 값이
+  // 없다. 저장 페이로드의 bottom-up CAGR을 그대로 노출한다.
 
   // version 유무만으로는 "실행 중"과 "실패"를 구분할 수 없다 — in-process 작업 상태를 반영한다.
   const job = getProfileJobStatus({ kind: "member", id: memberId });
