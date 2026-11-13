@@ -5766,18 +5766,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/market-overview/industry/{industryId}/calibration/escalate:
-    post:
-      operationId: applyCalibrationEscalation
-      summary: Apply the deterministic CAGR scaling escalation (external x (1-15%) adopted as the adjusted CAGR; person's decision, rationale mandatory). Analyst+. 409 when the latest gap already <= 15%.
-      tags:
-        - Analysis
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/brownfield/{oppId}/targets/{targetId}/eval-draft:
     post:
       operationId: draftTargetEvaluation

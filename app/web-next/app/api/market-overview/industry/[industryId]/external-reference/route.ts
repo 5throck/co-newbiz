@@ -6,6 +6,7 @@ import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import {
   appendExternalReference,
+  latestExternalReferenceRow,
   resolveExternalReference,
   supersedeExternalReference,
 } from "../../../../../../lib/market-calibration.ts";
@@ -18,7 +19,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ indu
   const { industryId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM md_industry WHERE id = ?").get(industryId)) return notFound();
-  return ok({ reference: resolveExternalReference(db, industryId) });
+  // { reference, latest } — additive shape (design 2026-11-13 §3.3b). reference
+  // is the active row (superseded excluded, unchanged contract that both UI
+  // consumers read); latest is the newest row REGARDLESS of supersession so
+  // the growth tab can detect that the displayed version cites a since-
+  // superseded reference (the banner case). Existing consumers reading only
+  // .reference are unaffected.
+  return ok({
+    reference: resolveExternalReference(db, industryId),
+    latest: latestExternalReferenceRow(db, industryId),
+  });
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ industryId: string }> }) {

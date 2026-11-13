@@ -101,14 +101,20 @@ afterAll(async () => {
   }
 });
 
-async function bodyOf(
-  res: Response,
-): Promise<{ data?: { reference?: Record<string, unknown> | null }; error?: { code?: string } }> {
+async function bodyOf(res: Response): Promise<{
+  data?: { reference?: Record<string, unknown> | null; latest?: Record<string, unknown> | null };
+  error?: { code?: string };
+}> {
   return (await res
     .clone()
     .json()
     .catch(() => ({}))) as never;
 }
+
+const getRef = (industryId: string) =>
+  nextRequest(`/api/market-overview/industry/${encodeURIComponent(industryId)}/external-reference`, {
+    headers: { cookie: analystCookie },
+  });
 
 const supersedeAudits = () =>
   (
@@ -203,5 +209,44 @@ describe("DELETE external-reference — supersede semantics", () => {
 
   test("lib-level: supersedeExternalReference returns null for a missing id (404 shape upstream)", async () => {
     expect(supersedeExternalReference(db, industryA, "mer-never-existed", "ana")).toBeNull();
+  });
+});
+
+describe("GET external-reference — additive { reference, latest } shape (design 2026-11-13 §3.3b)", () => {
+  test("before any supersede, latest is the same row as reference", async () => {
+    const put = await bodyOf(await putRef(industryB, "유효 참조", 9.9));
+    const activeId = put.data!.reference!.id as string;
+    const out = await bodyOf(await getRef(industryB));
+    expect(out.data!.reference!.id).toBe(activeId);
+    expect(out.data!.latest!.id).toBe(activeId);
+    expect(out.data!.latest!.superseded_at).toBeNull();
+  });
+
+  test("after superseding the only reference: reference null, latest still the retired row", async () => {
+    const before = await bodyOf(await getRef(industryB));
+    const activeId = before.data!.reference!.id as string;
+    const del = await deleteRef(industryB, activeId);
+    expect(del.status).toBe(200);
+    const out = await bodyOf(await getRef(industryB));
+    // the active reference is gone …
+    expect(out.data!.reference).toBeNull();
+    // … but the retired row stays reachable for the staleness banner (the
+    // displayed version may still cite it).
+    expect(out.data!.latest!.id).toBe(activeId);
+    expect(out.data!.latest!.superseded_at).toBeTruthy();
+  });
+
+  test("industry with no reference at all: both null", async () => {
+    const fresh = `ind-supersede-c-${Math.random().toString(36).slice(2, 8)}`;
+    db.run("INSERT INTO md_industry (id, ksic_code, name_ko, name_en, created_at) VALUES (?,?,?,?,?)", [
+      fresh,
+      "99103",
+      "빈 참조 산업C",
+      "supersede-test-c",
+      NOW,
+    ]);
+    const out = await bodyOf(await getRef(fresh));
+    expect(out.data!.reference).toBeNull();
+    expect(out.data!.latest).toBeNull();
   });
 });

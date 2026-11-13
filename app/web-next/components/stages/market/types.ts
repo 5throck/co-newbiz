@@ -167,6 +167,10 @@ export interface CalibrationProposalRow {
   direction: "upside" | "downside";
   impact_pct: number;
   rationale: string;
+  /** GET 라우트가 proposed_by 마커를 번역해 내려보내는 행 종류 플래그 —
+   *  true면 드라이버 제외 제안(기각 확정 = 제외 확정, 수용 버튼 없음,
+   *  amendment 2026-11-13b). */
+  is_exclusion?: boolean;
 }
 export interface CalibrationAcceptedRow {
   id: string;

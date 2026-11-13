@@ -1,22 +1,41 @@
 // market-calibration.ts — S1 성장율 격차 보정 루프의 순수 로직(design
-// 2026-09-18-s1-growth-gap-calibration). 외부 참조 해석 순위, 20% 트리거
+// 2026-09-18-s1-growth-gap-calibration). 외부 참조 해석 순위, 수렴 목표선
 // 판정, 재분석 제약 문자열 조립, 제안 수용/기각을 담당한다. 판정·수용은
 // 사람의 행위이며 이 파일은 계산과 저장만 한다(경계 #2).
 import type { getDb } from "../../../db/client.ts";
 
 type Db = ReturnType<typeof getDb>;
 import { appendAudit } from "../../../db/lib/access-control.ts";
-import { ulid } from "../../../db/lib/ulid.ts";
+import { CONVERGENCE_GOAL_PCT } from "./market-reference-staleness.ts";
 
-/** 보정 트리거 임계값 — 우리 CAGR과 외부 참조 CAGR의 상대 격차(%, 소수 아님). */
-export const CALIBRATION_TRIGGER_PCT = 20;
+/** 수렴 목표선 — 상수 본체는 클라이언트에서도 쓰는
+ * market-reference-staleness.ts에 있다(design
+ * 2026-11-13-calibration-loop-convergence §3.1: 이 파일은 appendAudit 경유로
+ * db 그래프를 끌어와 클라이언트 번들에 들어갈 수 없다). */
+export { CONVERGENCE_GOAL_PCT };
 
 /** 앵커 인용 일치 임계값 (design 2026-11-06-s1-quantitative-web-grounding,
  * amendment 2026-11-12) — 외부 참조 규모가 우리 기준선 외삽치(참조 target_year
  * 기준)와 이 상대 격차(%) 안에 들어오면 참조를 앵커 인용으로 기록한다.
- * CALIBRATION_TRIGGER_PCT와 의도적으로 같은 값: 격차가 트리거를 넘으면 보정
- * 루프가, 넘지 않으면(=일치) 인용이 붙는다 — 한 격차, 두 방향의 기록. */
+ * 수렴 목표선(15%)과는 다른 값으로 유지한다(design 2026-11-13 §6): 인용은
+ * ±20% 규모 일치의 출처 기록이고 목표선은 다음 행동 신호다. 트리거가 15%로
+ * 내려온 뒤로는 15~20% 구간에서 인용과 루프가 함께 발동될 수 있으나 서로
+ * 충돌하지 않는다(인용=provenance, 루프=다음 행동). */
 export const ANCHOR_CITATION_TOLERANCE_PCT = 20;
+
+/** 드라이버 제외 제안의 격차 악화 판정 밴드(%p) — 새 격차가 이전 격차보다 이
+ *  밴드를 초과해 악화되었을 때만 leave-one-out 제외 검토를 제안한다. 근거:
+ *  동일 입력 재분석에서 관측된 스윕 격차 자체 흔들림이 10.6→10.3(≈0.3pp) 수준
+ *  이므로, 그 소음 대역 이내의 악화는 제외 근거로 삼지 않는다(amendment
+ *  2026-11-13b). 제안은 어디까지나 제안이다 — 실제 제외는 사람의 기각 확정으로
+ *  만 적용된다(경계 #2). */
+export const EXCLUSION_NOISE_BAND_PCT = 3.0;
+
+/** 제외 제안 행의 proposed_by 마커 — industry_driver_calibration 테이블을
+ *  드라이버 귀인 제안과 공유하므로(스키마 변경 없는 최소 표현), 이 문자열로만
+ *  두 행 종류를 구별한다. GET 라우트가 is_exclusion 불리언으로 번역해 UI에
+ *  내려보내고, UI는 이 값을 직접 모른다(서버 전용). */
+export const EXCLUSION_PROPOSAL_BY = "market-sizing-pipeline:exclusion";
 
 export interface ExternalReferenceRow {
   id: string;
@@ -58,10 +77,12 @@ export function relativeCagrGapPct(ourCagrPct: number, externalCagrPct: number):
   return Math.round((Math.abs(ourCagrPct - externalCagrPct) / externalCagrPct) * 1000) / 10;
 }
 
-/** 트리거 판정 — 격차가 산출되고 임계값 이상이면 보정 루프를 태운다. */
+/** 수렴 판정 — 격차가 산출되고 목표선 이상이면 미수렴(보정 루프 가동: 드라이버
+ * 제안·미수렴 배지·재분석 CTA). 목표선 미만이면 수렴으로 루프를 끝낸다(사용자
+ * 결정 2026-11-13: 트리거 = 미수렴, 한 격차 하나의 선). */
 export function isCalibrationTriggered(ourCagrPct: number, externalCagrPct: number): boolean {
   const gap = relativeCagrGapPct(ourCagrPct, externalCagrPct);
-  return gap !== null && gap >= CALIBRATION_TRIGGER_PCT;
+  return gap !== null && gap >= CONVERGENCE_GOAL_PCT;
 }
 
 /** 최신 외부 참조 — version_no 내림차순 1건. 폐기된 행은 제외한다
@@ -72,6 +93,19 @@ export function resolveExternalReference(db: Db, industryId: string): ExternalRe
     (db
       .query(
         "SELECT * FROM market_external_reference WHERE industry_id = ? AND superseded_at IS NULL ORDER BY version_no DESC, created_at DESC LIMIT 1",
+      )
+      .get(industryId) as ExternalReferenceRow | undefined) ?? null
+  );
+}
+
+/** 폐기 여부와 무관한 최신 참조 행 (design 2026-11-13 §3.3b) — 표시 버전이
+ * 폐기된 참조를 인용하는지 판정하는 UI용. active 참조가 없어도 마지막 행을
+ * 돌려주므로, GET이 { reference, latest }로 함께 실어 보낸다. */
+export function latestExternalReferenceRow(db: Db, industryId: string): ExternalReferenceRow | null {
+  return (
+    (db
+      .query(
+        "SELECT * FROM market_external_reference WHERE industry_id = ? ORDER BY version_no DESC, created_at DESC LIMIT 1",
       )
       .get(industryId) as ExternalReferenceRow | undefined) ?? null
   );
@@ -148,21 +182,90 @@ export function appendExternalReference(
   return resolveExternalReference(db, input.industry_id)!;
 }
 
+/** 수용된 보정 드라이버 — 사람이 수용(status='accepted')한 행. 사람이 제외를
+ *  확정한 드라이버(제외 제안 행이 status='dismissed'로 기각 확정된 것,
+ *  amendment 2026-11-13b)는 이 목록에서 뺀다 — 파이프라인은 절대 스스로 제외
+ *  하지 않고(경계 #2), 확정된 사람의 결정만 다음 재분석 제약·스윕에서
+ *  반영하지 않는다. 일반 귀인 제안의 기각(proposed_by 마커 없음)은 수용 행에
+ *  영향을 주지 않는다. */
 export function acceptedCalibrationDrivers(db: Db, industryId: string): CalibrationDriverRow[] {
   return db
     .query(
-      "SELECT * FROM industry_driver_calibration WHERE industry_id = ? AND status = 'accepted' ORDER BY decided_at DESC",
+      `SELECT * FROM industry_driver_calibration
+       WHERE industry_id = ? AND status = 'accepted'
+         AND driver NOT IN (
+           SELECT driver FROM industry_driver_calibration
+           WHERE industry_id = ? AND proposed_by = ? AND status = 'dismissed' AND decided_by IS NOT NULL
+         )
+       ORDER BY decided_at DESC`,
     )
-    .all(industryId) as CalibrationDriverRow[];
+    .all(industryId, industryId, EXCLUSION_PROPOSAL_BY) as CalibrationDriverRow[];
+}
+
+/** 드라이버 제외 제안 삽입 (amendment 2026-11-13b) — 파이프라인이 재분석 종료
+ *  시점에 격차 악화 + leave-one-out 근거를 이유로 삽입한다. 교체 주기는 드라이버
+ *  귀인 제안과 같다: 새 제안 삽입 전 이 산업의 미결(status='proposed') 제외 제안
+ *  행을 지운다 — 패널에는 항상 최신 재분석의 근거만 남는다. 감사는 삽입이
+ *  아니라 사람의 decide에서 기록된다(귀인 제안과 동일). */
+export function insertExclusionProposal(
+  db: Db,
+  input: {
+    industryId: string;
+    versionId: string;
+    driver: string;
+    direction: "upside" | "downside";
+    impact_pct: number;
+    rationale: string;
+  },
+): CalibrationDriverRow {
+  db.run("DELETE FROM industry_driver_calibration WHERE industry_id = ? AND status = 'proposed' AND proposed_by = ?", [
+    input.industryId,
+    EXCLUSION_PROPOSAL_BY,
+  ]);
+  db.run(
+    `INSERT INTO industry_driver_calibration (id, industry_id, version_id, driver, direction, impact_pct, rationale, status, proposed_by, created_at)
+     VALUES (?,?,?,?,?,?,?,'proposed',?,?)`,
+    [
+      `idc-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`,
+      input.industryId,
+      input.versionId,
+      input.driver,
+      input.direction,
+      input.impact_pct,
+      input.rationale,
+      EXCLUSION_PROPOSAL_BY,
+      new Date().toISOString(),
+    ],
+  );
+  return db
+    .query(
+      "SELECT * FROM industry_driver_calibration WHERE industry_id = ? AND proposed_by = ? AND status = 'proposed' ORDER BY created_at DESC LIMIT 1",
+    )
+    .get(input.industryId, EXCLUSION_PROPOSAL_BY) as CalibrationDriverRow;
+}
+
+/** 몬테카를로 스윕 주입 블록의 입력 (amendment 2026-11-13a) — 파이프라인이
+ *  실행한 결정론 스윕의 요약. 소프트 제약일 뿐이며 셀 값을 바꾸지 않는다. */
+export interface CalibrationSweepInject {
+  feasibleRatio: number; // 0..1
+  goalPct: number;
+  p50GapPct: number;
+  p90GapPct: number;
+  sampleCount: number;
+  /** 기여 상위 드라이버 (p50 내림차순 상위 3개). */
+  topDrivers: Array<{ driver: string; p50: number }>;
 }
 
 /** 재분석 프롬프트 제약 문자열 — 외부 참조·이전 격차·수용된 보정 드라이버가
- *  모일 때만 문장을 돌려준다(빈 문자열 = 주입할 것 없음). */
+ *  모일 때만 문장을 돌려준다(빈 문자열 = 주입할 것 없음). sweepView가 있으면
+ *  (amendment 2026-11-13a) 몬테카를로 스윕 블록을 덧붙인다 — 프롬프트 수준의
+ *  소프트 제약이며 매트릭스 셀을 결정론적으로 수정하지 않는다(경계 #2). */
 export function buildCalibrationConstraints(input: {
   industry: string;
   externalCagrPct: number | null;
   previousGapPct: number | null;
   acceptedDrivers: Array<{ driver: string; direction: string; impact_pct: number; rationale: string }>;
+  sweepView?: CalibrationSweepInject | null;
 }): string {
   const parts: string[] = [];
   if (input.externalCagrPct !== null && input.externalCagrPct > 0) {
@@ -177,6 +280,18 @@ export function buildCalibrationConstraints(input: {
       .join(", ");
     parts.push(`사람이 수용한 보정 드라이버: ${drivers}`);
   }
+  if (input.sweepView) {
+    const s = input.sweepView;
+    parts.push(
+      `최신 몬테카를로 스윕 (seed 고정, ${s.sampleCount}표본): 수용 드라이버 조합의 ${(s.feasibleRatio * 100).toFixed(1)}%가 ${s.goalPct}%선 이내 수렴 가능 — 격차 P50 ${s.p50GapPct}% / P90 ${s.p90GapPct}%`,
+    );
+    if (s.topDrivers.length > 0) {
+      parts.push(
+        `상위 기여 드라이버: ${s.topDrivers.map((d) => `${d.driver} 기여 P50 ±${d.p50.toFixed(1)}%p`).join(", ")}`,
+      );
+    }
+    parts.push("이 조합의 상한 기여를 셀별 CAGR 산출에 우선 반영하고, 잔여 격차의 근거를 제시하세요");
+  }
   if (parts.length === 0) return "";
   return [
     "",
@@ -186,7 +301,11 @@ export function buildCalibrationConstraints(input: {
   ].join("\n");
 }
 
-/** 제안 수용/기각 — 사람의 결정을 기록한다. decided_by는 항상 사용자다. */
+/** 제안 수용/기각 — 사람의 결정을 기록한다. decided_by는 항상 사용자다.
+ *  제외 제안(amendment 2026-11-13b, proposed_by 마커 행)은 기각(dismiss)만
+ *  허용된다 — 기각 확정이 곧 "그 드라이버를 수용 목록에서 뺀다"는 사람의
+ *  결정이고, 수용(accept)으로 마커 행을 수용 목록에 넣는 것은 행 종류의
+ *  의미를 뒤집으므로 금지한다(경계 #2). */
 export function decideCalibrationDriver(
   db: Db,
   rowId: string,
@@ -197,6 +316,9 @@ export function decideCalibrationDriver(
     | CalibrationDriverRow
     | undefined;
   if (!row) return null;
+  if (action === "accept" && row.proposed_by === EXCLUSION_PROPOSAL_BY) {
+    throw new Error("exclusion proposals are dismiss-only — accepting one is a contract violation (경계 #2)");
+  }
   const now = new Date().toISOString();
   db.run("UPDATE industry_driver_calibration SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?", [
     action === "accept" ? "accepted" : "dismissed",
@@ -208,26 +330,49 @@ export function decideCalibrationDriver(
   return db.query("SELECT * FROM industry_driver_calibration WHERE id = ?").get(rowId) as CalibrationDriverRow;
 }
 
-// ── 결정론 CAGR 스케일링 에스컬레이션 (design 2026-09-20-calibration-escalation)
-// LLM 재분석이 수렴선에 도달하지 못하는 산업에 대해, 사람이 결정론 산술로
-// 조정 CAGR을 채택한다: 외부 참조 × (1 − 수렴선) — 외부 참조를 보수성
-// 헤어컷(잔여 격차 = 수렴선)과 함께 채택하는 것과 같다. 순수 함수 — 금액을
-// 지어내지 않고, 결정은 사람이 기록한다(경계 #2).
-export const CONVERGENCE_TARGET_PCT = 15;
-
-export interface DeterministicScaling {
-  scaledCagrPct: number;
-  residualGapPct: number;
+/** 유효 CAGR 해석기 — 최근 완료 버전의 바텀업 CAGR을 그대로 돌려준다. 결정론
+ * 스케일링 에스컬레이션(×0.85)은 design 2026-11-13-calibration-loop-
+ * convergence §3.2에서 완전히 제거되었다: 에스컬레이션 결정은 이제 resolver에
+ * 영향을 주지 않으며 calibration_escalation은 읽기 전용 이력으로만 남는다.
+ * payload에 수치가 없으면 null — 절대 날조하지 않는다. 모든 소비자는 source를
+ * 표기해야 한다(무표기 치환 금지). */
+export interface EffectiveCagr {
+  cagrPct: number;
+  source: "bottom_up";
 }
 
-export function computeDeterministicScaling(externalCagrPct: number): DeterministicScaling {
-  if (!Number.isFinite(externalCagrPct) || externalCagrPct <= 0) {
-    throw new Error("externalCagrPct must be a positive finite number.");
+export function resolveEffectiveCagr(db: Db, industryId: string): EffectiveCagr | null {
+  const version = db
+    .query(
+      `SELECT v.payload FROM market_sizing_version v
+       JOIN market_sizing_analysis a ON a.id = v.analysis_id
+       WHERE a.industry_id = ? AND a.status = 'completed'
+       ORDER BY v.version_no DESC LIMIT 1`,
+    )
+    .get(industryId) as { payload: string } | undefined;
+  if (!version) return null;
+  let bottomUp: number | null = null;
+  try {
+    const payload = JSON.parse(version.payload) as {
+      matrix?: { calibration?: { ourCagrPct?: number | null }; consistency?: { bottomUpCagr?: number | null } };
+    };
+    const cal = payload?.matrix?.calibration;
+    bottomUp =
+      typeof cal?.ourCagrPct === "number"
+        ? cal.ourCagrPct
+        : typeof payload?.matrix?.consistency?.bottomUpCagr === "number"
+          ? payload.matrix.consistency.bottomUpCagr
+          : null;
+  } catch {
+    bottomUp = null;
   }
-  const scaled = Math.round(externalCagrPct * (1 - CONVERGENCE_TARGET_PCT / 100) * 10) / 10;
-  return { scaledCagrPct: scaled, residualGapPct: CONVERGENCE_TARGET_PCT };
+  return bottomUp !== null ? { cagrPct: bottomUp, source: "bottom_up" } : null;
 }
 
+// ── 에스컬레이션 이력 (읽기 전용) — 결정론 스케일링 에스컬레이션은 제거되었다
+// (design 2026-11-13 §3.2)만 calibration_escalation 테이블과 기록 행은 보존된다
+// (파괴 이행 없음, ADR-0012 계열). 이 조회는 보정 GET의 escalation 필드와
+// 패널의 읽기 전용 이력 카드를 위해만 남는다. 쓰기 경로는 존재하지 않는다.
 export interface CalibrationEscalationRow {
   id: string;
   industry_id: string;
@@ -248,134 +393,4 @@ export function latestCalibrationEscalation(db: Db, industryId: string): Calibra
       .query("SELECT * FROM calibration_escalation WHERE industry_id = ? ORDER BY created_at DESC LIMIT 1")
       .get(industryId) as CalibrationEscalationRow | undefined) ?? null
   );
-}
-
-/** 최근 완료 버전의 calibration 블록을 읽어 에스컬레이션을 기록한다. 격차가
- * 이미 수렴선 이하면 409 충돌로 거부한다(에스컬레이션할 것이 없다). */
-export function applyCalibrationEscalation(
-  db: Db,
-  industryId: string,
-  decidedBy: string,
-  rationale: string,
-  now: string,
-): { escalation: CalibrationEscalationRow } {
-  const version = db
-    .query(
-      `SELECT v.id, v.payload FROM market_sizing_version v
-       JOIN market_sizing_analysis a ON a.id = v.analysis_id
-       WHERE a.industry_id = ? AND a.status = 'completed'
-       ORDER BY v.version_no DESC LIMIT 1`,
-    )
-    .get(industryId) as { id: string; payload: string } | undefined;
-  if (!version) throw new EscalationError("no_completed_version", "No completed market-analysis version.");
-  let calib: { gapPct?: number | null; ourCagrPct?: number | null; externalCagrPct?: number | null } | undefined;
-  try {
-    calib = (JSON.parse(version.payload) as { matrix?: { calibration?: typeof calib } }).matrix?.calibration;
-  } catch {
-    calib = undefined;
-  }
-  const our = calib?.ourCagrPct;
-  const external = calib?.externalCagrPct;
-  const gap = calib?.gapPct;
-  if (typeof our !== "number" || typeof external !== "number" || typeof gap !== "number") {
-    throw new EscalationError(
-      "no_calibration_block",
-      "The latest version has no calibration block — re-analysis is required first.",
-    );
-  }
-  if (gap <= CONVERGENCE_TARGET_PCT) {
-    throw new EscalationError(
-      "already_converged",
-      `The gap ${gap}% is already within the convergence target (${CONVERGENCE_TARGET_PCT}%).`,
-    );
-  }
-  const { scaledCagrPct, residualGapPct } = computeDeterministicScaling(external);
-  const id = ulid();
-  db.run(
-    `INSERT INTO calibration_escalation
-     (id, industry_id, version_id, method, base_our_cagr_pct, external_cagr_pct, scaled_cagr_pct, residual_gap_pct, rationale, decided_by, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [
-      id,
-      industryId,
-      version.id,
-      "deterministic_scaling",
-      our,
-      external,
-      scaledCagrPct,
-      residualGapPct,
-      rationale,
-      decidedBy,
-      now,
-    ],
-  );
-  appendAudit(db, { actor: decidedBy, action: "market_calibration.escalate", target: industryId, now });
-  return {
-    escalation: db.query("SELECT * FROM calibration_escalation WHERE id = ?").get(id) as CalibrationEscalationRow,
-  };
-}
-
-/** 유효 CAGR 해석기 (design 2026-09-20-escalation-downstream §3.1) — 최근 완료
- * 버전의 바텀업 CAGR을 기본으로 하되, 사람이 기록한 에스컬레이션 결정이
- * 재분석보다 최신이면 조정치를 반환한다(재분석이 결정을 덮지 않는다). 모든
- * 소비자는 source를 표기해야 한다(무표기 치환 금지). */
-export interface EffectiveCagr {
-  cagrPct: number;
-  source: "bottom_up" | "escalated";
-  escalationId?: string;
-  baseCagrPct?: number;
-}
-
-export function resolveEffectiveCagr(db: Db, industryId: string): EffectiveCagr | null {
-  const version = db
-    .query(
-      `SELECT v.created_at, v.payload FROM market_sizing_version v
-       JOIN market_sizing_analysis a ON a.id = v.analysis_id
-       WHERE a.industry_id = ? AND a.status = 'completed'
-       ORDER BY v.version_no DESC LIMIT 1`,
-    )
-    .get(industryId) as { created_at: string; payload: string } | undefined;
-  if (!version) return null;
-  let bottomUp: number | null = null;
-  try {
-    const payload = JSON.parse(version.payload) as {
-      matrix?: { calibration?: { ourCagrPct?: number | null }; consistency?: { bottomUpCagr?: number | null } };
-    };
-    const cal = payload?.matrix?.calibration;
-    bottomUp =
-      typeof cal?.ourCagrPct === "number"
-        ? cal.ourCagrPct
-        : typeof payload?.matrix?.consistency?.bottomUpCagr === "number"
-          ? payload.matrix.consistency.bottomUpCagr
-          : null;
-  } catch {
-    bottomUp = null;
-  }
-  const esc = latestCalibrationEscalation(db, industryId);
-  if (esc && esc.created_at >= version.created_at) {
-    return {
-      cagrPct: esc.scaled_cagr_pct,
-      source: "escalated",
-      escalationId: esc.id,
-      baseCagrPct: esc.base_our_cagr_pct,
-    };
-  }
-  if (bottomUp !== null) return { cagrPct: bottomUp, source: "bottom_up" };
-  if (esc)
-    return {
-      cagrPct: esc.scaled_cagr_pct,
-      source: "escalated",
-      escalationId: esc.id,
-      baseCagrPct: esc.base_our_cagr_pct,
-    };
-  return null;
-}
-
-export class EscalationError extends Error {
-  constructor(
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-  }
 }

@@ -102,7 +102,9 @@ describe("attainment mapping", () => {
 describe("source-reading checks", () => {
   test("BusinessCaseStage wires goals tab, attainment, ack dialog", () => {
     const src = read("components/stages/BusinessCaseStage.tsx");
-    expect(src).toContain('tab === "goals" && <GoalsPanel');
+    // Whitespace-tolerant: biome format wraps the GoalsPanel render to its own
+    // line inside the conditional; the pin asserts the wiring, not the layout.
+    expect(src).toMatch(/tab === "goals" && \(\s*<GoalsPanel/);
     // IA 2026-10-14: goal setting/status lives only in the goals tab -- no banner on any other tab.
     expect(src).not.toContain("<GoalsBanner");
     expect(src).not.toContain("S8GoalsBannerLoader");
@@ -166,11 +168,13 @@ describe("S8 scenario row actions (RowMenu)", () => {
   const src = readFileSync(join(import.meta.dir, "../../app/web-next/components/stages/BusinessCaseStage.tsx"), "utf8");
   test("keeps adopt as a visible button and moves lines/delete into RowMenu", () => {
     expect(src).toContain("<RowMenu");
-    expect(src).toMatch(/key: "delete", label: tc\("delete"\), danger: true[^}]*onSelect: \(\) => remove\(c\)/);
+    // Whitespace-tolerant: biome format puts each menu-item property on its own
+    // line; the pins assert the actions, not the layout.
+    expect(src).toMatch(/key: "delete",\s*label: tc\("delete"\),\s*danger: true,[^}]*onSelect: \(\) => remove\(c\)/);
     expect(koOf("common.delete")).toBe("삭제");
     // ADR-0178 (2026-10-16): the lines action is conditional — Green Field opens the
     // read-only view, Brown Field keeps the editor.
-    expect(src).toMatch(/key: "lines", label: greenfield \? t\("viewLines"\) : t\("editLine"\)[^}]*startView\(c\) : startEdit\(c\)/);
+    expect(src).toMatch(/key: "lines",\s*label: greenfield \? t\("viewLines"\) : t\("editLine"\),[^}]*startView\(c\) : startEdit\(c\)/);
     expect(koOf("stages.s8.stage.viewLines")).toBe("라인 보기");
     expect(koOf("stages.s8.stage.editLine")).toBe("라인 편집");
     expect(src).toMatch(/aria-label=\{t\("p1Adopt", \{ p1: rowCtx \}\)\}[^>]*onClick=\{\(\) => adopt\(/);
@@ -272,7 +276,7 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
     expect(src).not.toContain("<CapabilityAttainabilityPanel");
     expect(src).toContain('t("theCapabilityAttainabilityJudgement")');
     expect(koOf("stages.s8.stage.theCapabilityAttainabilityJudgement")).toBe("필요 역량 달성 가능성 판정은");
-    expect(src).toMatch(/onClick=\{\(\) => setTab\("technical"\)\}>\{t\("technicalFeasibilityTab"\)\}<\/button>/);
+    expect(src).toMatch(/onClick=\{\(\) => setTab\("technical"\)\}\s*>\s*\{t\("technicalFeasibilityTab"\)\}\s*<\/button>/);
     expect(koOf("stages.s8.stage.technicalFeasibilityTab")).toBe("기술적 타당성 탭 →");
   });
 });
