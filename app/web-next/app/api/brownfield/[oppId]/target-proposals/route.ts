@@ -4,6 +4,8 @@ import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import { createTarget, findDuplicateTarget } from "../../../../../lib/brownfield-targets.ts";
 import { trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
+import { companyKey } from "../../../../../lib/name-similarity.ts";
+import { suppressedProposalKeys } from "../../../../../lib/brownfield-proposal-ignore.ts";
 
 // GET/POST /api/brownfield/[oppId]/target-proposals — S6 candidate discovery.
 // Keyed by OPPORTUNITY id: the /brownfield screen works pre-promotion (a
@@ -50,14 +52,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
   const existing = db.query("SELECT company_name FROM brownfield_target WHERE opportunity_id = ?").all(oppId) as Array<{
     company_name: string;
   }>;
-  const names = new Set(existing.map((e) => e.company_name));
+  // design 2026-11-13-proposal-ignore-suppression §3.4/§3.6 — the bare
+  // name_ko Set.has check could not see through legal-form variants
+  // (주식회사 한양 registered, 한양(주) re-proposed), and a candidate the
+  // user has ignored twice must not resurface here either. One pass, two
+  // exact-key sets — no fuzzy matching on either.
+  const existingKeys = new Set(existing.map((e) => companyKey(e.company_name)));
+  const suppressed = suppressedProposalKeys(db, oppId);
   const root = bound ? bound.name_ko.replace(/ 제조| 업| 서비스/g, "").slice(0, 2) : null;
   const suggestions = root
     ? (
         db
           .query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE name_ko LIKE ? ORDER BY name_ko LIMIT 20")
           .all(`%${root}%`) as Array<{ id: string; name_ko: string; dart_corp_code: string | null }>
-      ).filter((c) => !names.has(c.name_ko))
+      ).filter((c) => !existingKeys.has(companyKey(c.name_ko)) && !suppressed.has(companyKey(c.name_ko)))
     : [];
   return ok({ industry: bound ?? null, suggestions, registered: existing.length }, 200, {
     suggestions: suggestions.length,

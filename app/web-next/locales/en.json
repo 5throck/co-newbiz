@@ -6011,6 +6011,7 @@
         "evidenceSameAsTheDefinition": "Evidence: same as the definition input below.",
         "generateDefinitionDraft": "Generate definition draft",
         "generateDefinitionDraft2": "Generate definition draft",
+        "ignoredCountChip": "Ignored {count} time(s)",
         "generatingDraft": "Generating draft...",
         "industry": "Industry:",
         "inputsOnlyTheCandidateEligibility": "inputs only — the candidate eligibility criteria and minimum candidate count are preserved, and the actual save is confirmed via the \"save target market\" button (a person clicks).",
@@ -6165,6 +6166,7 @@
       },
       "useBrownfieldBase": {
         "failedToAccept": "Failed to accept",
+        "failedToIgnore": "Failed to ignore",
         "failedToLoadTheCandidate": "Failed to load the candidate list",
         "filingSearchFailed": "Filing search failed"
       },

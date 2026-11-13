@@ -7983,6 +7983,24 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/brownfield/{oppId}/target-proposals/ignore:
+    post:
+      operationId: ignoreBrownfieldTargetProposal
+      summary: Persist an ignore event for a proposed candidate (analyst+; count-based suppression at 2, audited target_proposal.ignore).
+      tags:
+        - Analysis
+      responses:
+        '201':
+          $ref: '#/components/responses/Created'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/brownfield/{oppId}/universe-criteria-draft:
     post:
       operationId: draftUniverseCriteria

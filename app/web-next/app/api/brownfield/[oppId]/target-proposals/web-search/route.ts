@@ -22,10 +22,15 @@ import {
   type WebSource,
 } from "../../../../../../lib/web-research.ts";
 import { playwrightSearch } from "../../../../../../lib/playwright-search.ts";
-import { isSimilar } from "../../../../../../lib/name-similarity.ts";
+import { companyKey, isSimilar } from "../../../../../../lib/name-similarity.ts";
 import { reliabilityForSource } from "../../../../../../lib/dd-checklist-tailor.ts";
 import { systemMessage } from "../../../../../../lib/prompts.ts";
 import { parseGapRegister } from "../../../../../../lib/capability-gap.ts";
+import {
+  ignoredProposalRawNames,
+  proposalIgnoreCounts,
+  suppressedProposalKeys,
+} from "../../../../../../lib/brownfield-proposal-ignore.ts";
 
 interface UniverseShape {
   definition?: string;
@@ -50,6 +55,12 @@ interface Suggestion {
   rationale: string;
   sources: Array<{ title: string; url: string; snippet: string }>;
   reliability: "A" | "B" | "C";
+  /** design 2026-11-13-proposal-ignore-suppression §3.4 — count chip payload,
+   *  additive optional. 1 when the suggestion's company key has exactly one
+   *  ignore event (keys with >=2 never reach the response — the suppression
+   *  filter dropped them); absent at 0. The chip makes the second ignore
+   *  deliberate. */
+  ignore_count?: number;
 }
 
 function parseJson(text: string): Record<string, unknown> | null {
@@ -63,29 +74,48 @@ function parseJson(text: string): Record<string, unknown> | null {
   }
 }
 
-/** 폴백 — 기업 마스터 산업명 매칭(결정론). 근거 없는 이름을 만들지 않는다. */
+/** 무시 1회 칩 페이로드 — 키별 무시 횟수가 정확히 1인 제안에만 ignore_count: 1을
+ *  붙인다(0이면 필드 없음, 2 이상은 억제 필터가 이미 걸러 응답에 도달하지 않는다).
+ *  추가 쿼리 없음 — 억제 로딩과 같은 스캔에서 온 counts 맵을 재사용한다. */
+function withIgnoreCounts<T extends Suggestion>(suggestions: T[], counts: Map<string, number>): T[] {
+  return suggestions.map((s) => {
+    const n = counts.get(companyKey(s.company_name));
+    return n === 1 ? { ...s, ignore_count: 1 } : s;
+  });
+}
+
+/** 폴백 — 기업 마스터 산업명 매칭(결정론). 근거 없는 이름을 만들지 않는다.
+ *  design 2026-11-13 §3.4/§3.6 — 기존 등록분 필터는 정확 문자열 includes에서
+ *  companyKey 집합 비교로 굳혀진다(법인형 변주가 더 이상 필터를 못 뚫는다), 그리고
+ *  임계값 이상 무시된 키는 여기서도 제안되지 않는다. */
 function synthesisFallback(
   db: ReturnType<typeof getDb>,
   actor: string,
   opp: { id: string; market_scope: string | null },
   existingNames: string[],
   note: string,
+  suppressed: Set<string> = new Set(),
+  ignoreCounts: Map<string, number> = new Map(),
 ) {
+  const existingKeys = new Set(existingNames.map(companyKey));
   const root = opp.market_scope ? opp.market_scope.replace(/ 제조| 업| 서비스| 산업| 시장/g, "").slice(0, 2) : null;
   const rows = root
     ? (
         db
           .query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE name_ko LIKE ? ORDER BY name_ko LIMIT 20")
           .all(`%${root}%`) as Array<{ id: string; name_ko: string; dart_corp_code: string | null }>
-      ).filter((c) => !existingNames.includes(c.name_ko))
+      ).filter((c) => !existingKeys.has(companyKey(c.name_ko)) && !suppressed.has(companyKey(c.name_ko)))
     : [];
-  const suggestions = rows.map((s) => ({
-    company_name: s.name_ko,
-    dart_corp_code: s.dart_corp_code,
-    rationale: "기업 마스터(md_company) 산업명 매칭 — 결정론 제안",
-    sources: [] as Suggestion["sources"],
-    reliability: "C" as const,
-  }));
+  const suggestions = withIgnoreCounts(
+    rows.map((s) => ({
+      company_name: s.name_ko,
+      dart_corp_code: s.dart_corp_code,
+      rationale: "기업 마스터(md_company) 산업명 매칭 — 결정론 제안",
+      sources: [] as Suggestion["sources"],
+      reliability: "C" as const,
+    })),
+    ignoreCounts,
+  );
   appendAudit(db, { actor, action: "target_proposal.web_search", target: opp.id, now: new Date().toISOString() });
   return ok({ source: "synthesis", provider: "deterministic", note, query_count: 0, suggestions }, 200, {
     proposals: suggestions.length,
@@ -96,7 +126,9 @@ function synthesisFallback(
  * HTTP 432) 공용으로 쓴다. 실검색 근거가 없으므로 ADR-0118의 "근거 인용 필수"
  * 원칙은 적용할 수 없다 — 대신 LLM 자체 지식으로 제안하되 source_indices 없이
  * "미검증" 라벨을 강제로 붙여 결정론 폴백과 구분한다. 사람이 Long List 등록
- * 전 반드시 별도 검증해야 함을 note로 명시한다. */
+ * 전 반드시 별도 검증해야 함을 note로 명시한다. suppressed/ignoredNames는
+ * design 2026-11-13 §3.4 — 무시된 후보는 프롬프트 힌트(어드바이저리)와 추출 후
+ * 하드 필터(규범) 양쪽에서 걸린다. */
 async function llmKnowledgeFallback(
   db: ReturnType<typeof getDb>,
   actor: string,
@@ -106,11 +138,17 @@ async function llmKnowledgeFallback(
   existingNames: string[],
   oppId: string,
   reason: string,
+  suppressed: Set<string> = new Set(),
+  ignoredNames: string[] = [],
+  ignoreCounts: Map<string, number> = new Map(),
 ) {
   const llmRes: LlmOrFallback = await completeOrFallback(
     [
       systemMessage("s6.target_proposal_web_search"),
-      { role: "user" as const, content: buildKnowledgePrompt(opp, universe, requiredCapabilities, existingNames) },
+      {
+        role: "user" as const,
+        content: buildKnowledgePrompt(opp, universe, requiredCapabilities, existingNames, ignoredNames),
+      },
     ],
     () => "",
     {
@@ -130,9 +168,14 @@ async function llmKnowledgeFallback(
       opp,
       existingNames,
       `${reason} — LLM 호출도 실패해 기업 마스터 기반 결정론 제안으로 대체합니다.`,
+      suppressed,
+      ignoreCounts,
     );
   }
-  const suggestions = normalizeLlmKnowledgeSuggestions(llmRes, existingNames);
+  const suggestions = withIgnoreCounts(
+    normalizeLlmKnowledgeSuggestions(llmRes, existingNames, suppressed),
+    ignoreCounts,
+  );
   appendAudit(db, {
     actor,
     action: "target_proposal.web_search_llm_knowledge",
@@ -152,11 +195,14 @@ async function llmKnowledgeFallback(
   );
 }
 
-function buildKnowledgePrompt(
+/** 테스트 가능성을 위해 export — 프롬프트 출력 계약(순수 함수). buildPrompt와
+ * 같은 무시 이력 블록 계약(§3.4)을 공유한다. */
+export function buildKnowledgePrompt(
   opp: { name: string; market_scope: string | null },
   universe: UniverseShape,
   requiredCapabilities: string[],
   existingNames: string[],
+  ignoredNames: string[] = [],
 ): string {
   const lines = [
     `검토/안건(Brownfield로 결정된 기회): ${opp.name}`,
@@ -167,6 +213,11 @@ function buildKnowledgePrompt(
     "",
     "이미 Long List에 등록된 후보(중복 제안 금지):",
     existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(없음)",
+    // design 2026-11-13 §3.4 — 무시 이력 힌트(어드바이저리). 규칙의 보증은
+    // 추출 후 하드 필터가 담당하므로, 이력이 없으면 블록 자체가 없다.
+    ignoredNames.length
+      ? `이전 제안에서 무시된 후보(재제안 금지):\n${ignoredNames.map((n) => `- ${n}`).join("\n")}`
+      : "",
     "",
     "실시간 웹 검색을 쓸 수 없습니다 — 당신의 사전 학습 지식만으로, 위 검토/안건·목표 시장" +
       (requiredCapabilities.length ? "·필요 역량" : "") +
@@ -180,8 +231,13 @@ function buildKnowledgePrompt(
 
 /** 테스트 가능성을 위해 export — llmKnowledgeFallback의 LLM 응답 정규화(순수 함수).
  * 실검색 근거가 없으므로 sources는 항상 빈 배열, reliability는 항상 "C"(미검증) —
- * normalizeLlmSuggestions와 달리 source_indices를 요구하지 않는다. */
-export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existingNames: string[]): Suggestion[] {
+ * normalizeLlmSuggestions와 달리 source_indices를 요구하지 않는다. suppressed에는
+ * 임계값 이상 무시된 회사 키가 담긴다 — 정확 키 일치로 폐기한다(design §3.4). */
+export function normalizeLlmKnowledgeSuggestions(
+  llmRes: LlmOrFallback,
+  existingNames: string[],
+  suppressed: Set<string> = new Set(),
+): Suggestion[] {
   if (llmRes.source !== "llm") return [];
   const parsed = parseJson(llmRes.text);
   const candidates = parsed?.candidates;
@@ -190,7 +246,7 @@ export function normalizeLlmKnowledgeSuggestions(llmRes: LlmOrFallback, existing
   const seen = [...existingNames];
   for (const c of raw) {
     const name = typeof c.company_name === "string" ? c.company_name.trim().slice(0, 120) : "";
-    if (!name || isSimilar(name, seen)) continue;
+    if (!name || suppressed.has(companyKey(name)) || isSimilar(name, seen)) continue;
     const rationaleRaw = typeof c.rationale === "string" ? c.rationale.trim().slice(0, 560) : "";
     const rationale = `[미검증 — LLM 자체 지식, 실시간 검색 근거 없음] ${rationaleRaw}`.slice(0, 600);
     out.push({ company_name: name, rationale, sources: [], reliability: "C" });
@@ -238,6 +294,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       company_name: string;
     }>
   ).map((e) => e.company_name);
+  // design 2026-11-13-proposal-ignore-suppression §3.4 — 억제 집합(임계값 이상
+  // 무시된 키), 칩 페이로드용 키별 횟수, 프롬프트 힌트용 무시된 원문 이름. 세
+  // 로더 모두 같은 opportunity 스코프 — opportunity B의 무시는 여기에 못 들어온다.
+  const suppressed = suppressedProposalKeys(db, oppId);
+  const ignoreCounts = proposalIgnoreCounts(db, oppId);
+  const ignoredNames = ignoredProposalRawNames(db, oppId);
 
   // 1) 실검색 근거 확보 — 검색 미설정이면 Playwright headless 폴백, 그래도
   // 안 되면 LLM 자체 지식 폴백(미검증 라벨).
@@ -284,6 +346,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
         existingNames,
         oppId,
         isWebResearchConfigured() ? "웹 검색 쿼터가 초과되었습니다" : "실시간 웹 검색이 설정되지 않았습니다",
+        suppressed,
+        ignoredNames,
+        ignoreCounts,
       );
     }
     return synthesisFallback(
@@ -292,6 +357,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       opp,
       existingNames,
       "웹 검색에서 근거를 찾지 못했습니다 — 기업 마스터 기반 결정론 제안으로 대체합니다.",
+      suppressed,
+      ignoreCounts,
     );
   }
 
@@ -299,7 +366,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const llmRes: LlmOrFallback = await completeOrFallback(
     [
       systemMessage("s6.target_proposal_web_search"),
-      { role: "user" as const, content: buildPrompt(opp, universe, requiredCapabilities, existingNames, sources) },
+      {
+        role: "user" as const,
+        content: buildPrompt(opp, universe, requiredCapabilities, existingNames, sources, ignoredNames),
+      },
     ],
     () => "",
     {
@@ -313,7 +383,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     },
   );
 
-  const suggestions = await enrichSuggestions(normalizeLlmSuggestions(llmRes, sources, existingNames));
+  const suggestions = await enrichSuggestions(
+    withIgnoreCounts(normalizeLlmSuggestions(llmRes, sources, existingNames, suppressed), ignoreCounts),
+  );
   appendAudit(db, {
     actor: auth.auth.userId,
     action: "target_proposal.web_search",
@@ -354,13 +426,16 @@ export function buildQueries(
 }
 
 /** 테스트 가능성을 위해 export — 프롬프트 출력 계약(순수 함수).
- * dart_corp_name은 선택 필드로만 요구한다(§4.1 — 코드는 절대 요구하지 않는다). */
+ * dart_corp_name은 선택 필드로만 요구한다(§4.1 — 코드는 절대 요구하지 않는다).
+ * ignoredNames(design 2026-11-13 §3.4)는 무시 이력 블록(재제안 금지)을 추가하는
+ * 어드바이저리 힌트다 — 이력이 없으면 블록 자체가 없다. */
 export function buildPrompt(
   opp: { name: string; market_scope: string | null },
   universe: UniverseShape,
   requiredCapabilities: string[],
   existingNames: string[],
   sources: WebSource[],
+  ignoredNames: string[] = [],
 ): string {
   const lines = [
     `검토/안건(Brownfield로 결정된 기회): ${opp.name}`,
@@ -371,6 +446,9 @@ export function buildPrompt(
     "",
     "이미 Long List에 등록된 후보(중복 제안 금지):",
     existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(없음)",
+    ignoredNames.length
+      ? `이전 제안에서 무시된 후보(재제안 금지):\n${ignoredNames.map((n) => `- ${n}`).join("\n")}`
+      : "",
     "",
     requiredCapabilities.length
       ? "아래 번호 매기기된 검색 근거만 사용해, 위 검토/안건과 목표 시장에 해당하면서 특히 필요 역량(S3)을 실제로 보유했다고 확인되는 대상 후보 기업을 3~5개 제안하세요. 근거에 역량 보유 여부가 나타나지 않는 후보는 rationale에 그 한계를 명시하세요."
@@ -387,11 +465,14 @@ export function buildPrompt(
 /** 테스트 가능성을 위해 export — LLM 응답 화이트리스트 정규화(순수 함수).
  * 근거 인용(source_indices) 없는 후보는 폐기하고, 기존 후보와 유사한 이름도
  * 제거하며, 최대 5건으로 제한한다. dart_corp_name(§4.1, 선택)은 문자열일 때만
- * 통과시키고 그 외 타입은 폐기한다 — 모델이 줄 수 있는 것은 이름뿐이다. */
+ * 통과시키고 그 외 타입은 폐기한다 — 모델이 줄 수 있는 것은 이름뿐이다.
+ * suppressed(design 2026-11-13 §3.4)에는 임계값 이상 무시된 회사 키가 담긴다 —
+ * 정확 키 일치로 폐기한다(퍼지 없음; 프롬프트 힌트가 놓친 이름의 최후 방어선). */
 export function normalizeLlmSuggestions(
   llmRes: LlmOrFallback,
   sources: WebSource[],
   existingNames: string[],
+  suppressed: Set<string> = new Set(),
 ): Suggestion[] {
   if (llmRes.source !== "llm") return [];
   const parsed = parseJson(llmRes.text);
@@ -401,7 +482,7 @@ export function normalizeLlmSuggestions(
   const seen = [...existingNames];
   for (const c of raw) {
     const name = typeof c.company_name === "string" ? c.company_name.trim().slice(0, 120) : "";
-    if (!name || isSimilar(name, seen)) continue;
+    if (!name || suppressed.has(companyKey(name)) || isSimilar(name, seen)) continue;
     const rationale = typeof c.rationale === "string" ? c.rationale.trim().slice(0, 600) : "";
     const idx = Array.isArray(c.source_indices)
       ? (c.source_indices as unknown[])

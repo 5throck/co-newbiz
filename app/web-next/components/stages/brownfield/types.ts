@@ -78,6 +78,10 @@ export interface WebSuggestion {
   rationale: string;
   sources: Array<{ title: string; url: string; snippet: string }>;
   reliability: "A" | "B" | "C";
+  // design 2026-11-13-proposal-ignore-suppression §3.5 — 무시 1회 칩 페이로드.
+  // 키별 무시 이벤트가 정확히 1건일 때만 1로 온다(0은 필드 없음, 2 이상은
+  // 서버가 억제해 응답에 도달하지 않는다). Additive — 구버전 응답도 그대로 소비.
+  ignore_count?: number;
 }
 export interface WebProposalResponse {
   source: "llm" | "llm_knowledge" | "synthesis";

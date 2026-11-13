@@ -17,7 +17,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
     webNote,
     webSource,
     acceptProposal,
-    setWebProposals,
+    ignoreProposal,
     generateWebProposals,
   } = ctx;
   return (
@@ -106,6 +106,15 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
                               {t("corpCodeUnverifiedChip")}
                             </span>
                           )}
+                          {/* design 2026-11-13-proposal-ignore-suppression §3.5 —
+                              무시 1회 칩: 1회 무시된 재제안 카드. 상태는 색이 아니라
+                              텍스트로 전달되고, 두 번째 무시가 실수가 아님을 보게
+                              한다(2회째부터는 서버가 억제해 카드 자체가 없다). */}
+                          {s.ignore_count != null && s.ignore_count >= 1 && (
+                            <span className="status-chip status-not-started">
+                              {t("ignoredCountChip", { count: s.ignore_count })}
+                            </span>
+                          )}
                           <span
                             className="status-chip status-not-started"
                             title={t("sourceDomainConfidenceGovernmentAnd")}
@@ -150,9 +159,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
                           type="button"
                           className="btn-ghost btn-sm"
                           title={t("clearsThisProposalFromThe")}
-                          onClick={() =>
-                            setWebProposals((prev) => (prev ?? []).filter((p) => p.company_name !== s.company_name))
-                          }
+                          onClick={() => void ignoreProposal(s.company_name)}
                         >
                           {tc("ignore")}
                         </button>
