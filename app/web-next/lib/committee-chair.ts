@@ -5,7 +5,9 @@
 // to the recommendation — the minutes schema has no field for either, and
 // dissent is rendered verbatim from dissent_json.
 //
-// LLM first (committee.agenda / committee.minutes prompts, temperature 0.2),
+// LLM first (committee.agenda / committee.minutes prompts, temperature 0.2 —
+// carried on anthropic/gemini request bodies only; the openai-compatible/custom
+// branch omits temperature per design 2026-11-13-llm-max-completion-tokens §8.3),
 // deterministic fallback always available: the agenda fallback reads the
 // round-1 criteria scorecards (spread >= 2) plus a split-recommendation
 // issue; the minutes fallback builds a thinner discussion from the

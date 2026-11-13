@@ -94,6 +94,7 @@ export function getLlmCaps(): LlmCaps {
 
 interface CallSpec {
   messages: LlmMessage[];
+  /** Sampling temperature — carried on anthropic/gemini bodies; silently ignored on openai-compatible/custom (omitted, user decision 2026-11-13). */
   temperature?: number;
   maxTokens?: number;
   /** Provider-native structured output (only set when the structured cap is on). */
@@ -125,31 +126,133 @@ const addUsage = (a: LlmUsage | null, b: LlmUsage | null): LlmUsage | null => {
   };
 };
 
-/** Transport with the existing single retry (4x token budget for reasoning models that return nothing). */
+// ── token-cap parameter resolution (design 2026-11-13-llm-max-completion-tokens) ──
+// OpenAI reasoning models reject `max_tokens` and demand `max_completion_tokens`,
+// while most third-party OpenAI-compatible servers only honor the older name.
+// The parameter NAME is resolved per request: explicit env knob → exact-host
+// heuristic → compatibility default, with an in-band 400-signature probe as the
+// last resort, memoized per provider|baseUrl|model for the process lifetime.
+// Sibling decision (same design, §8.3, user decision 2026-11-13): `temperature`
+// is never sent on the openai-compatible/custom branch — reasoning models
+// reject non-default sampling values, and omission is universally accepted.
+
+export type TokenCapParam = "max_tokens" | "max_completion_tokens";
+
+// 6000 = the previous empty-response retry ceiling (1500 x 4): a first-attempt
+// default aligned with today's last-resort ceiling, sized for reasoning models
+// whose reasoning tokens count against the cap (user decision, 2026-11-13,
+// amending DEC-20261113-02 point 5). Anthropic/Gemini branches are untouched.
+const DEFAULT_MAX_TOKENS_BY_PROVIDER: Record<string, number> = {
+  anthropic: 1500,
+  gemini: 1500,
+  openai: 6000,
+  "openai-compatible": 6000,
+  custom: 6000,
+};
+
+/** Provider-aware default output budget (user decision 2026-11-13): openai-compatible/custom 6000, anthropic/gemini 1500. */
+export function defaultMaxTokens(provider: string): number {
+  return DEFAULT_MAX_TOKENS_BY_PROVIDER[provider] ?? 6000;
+}
+
+const tokenParamMemo = new Map<string, TokenCapParam>();
+// \x27 (apostrophe) is escaped so the i18n-lint's string-state scanner (which has no
+// regex-literal state) never sees a bare quote inside this regex literal.
+const TOKEN_PARAM_REJECTION_SIGNATURE = /max_tokens[\x27 ]+is not supported with this model/i;
+let knobWarned = false;
+
+const memoKey = (cfg: ProviderConfig): string =>
+  `${cfg.provider}|${cfg.baseUrl ?? "(default)"}|${cfg.model ?? "(default)"}`;
+
+const hostOf = (baseUrl?: string): string | undefined => {
+  if (!baseUrl) return undefined;
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * Resolve the output-cap parameter name for one request (design §3.1):
+ * 1. explicit knob CO_NEWBIZ_LLM_MAX_TOKENS_PARAM (max_tokens | max_completion_tokens | auto)
+ * 2. auto + baseUrl host == api.openai.com → max_completion_tokens (exact host match, never a substring)
+ * 3. auto + any other host → memoized probe result, else max_tokens
+ */
+export function resolveTokenCapParam(cfg: ProviderConfig): TokenCapParam {
+  const knob = process.env.CO_NEWBIZ_LLM_MAX_TOKENS_PARAM?.trim().toLowerCase();
+  if (knob === "max_tokens" || knob === "max_completion_tokens") return knob;
+  if (knob && knob !== "auto" && !knobWarned) {
+    knobWarned = true;
+    console.warn(
+      `llm.ts: unrecognized CO_NEWBIZ_LLM_MAX_TOKENS_PARAM value '${knob}' (valid: max_tokens, max_completion_tokens, auto) — behaving as auto.`,
+    );
+  }
+  if (hostOf(cfg.baseUrl) === "api.openai.com") return "max_completion_tokens";
+  return tokenParamMemo.get(memoKey(cfg)) ?? "max_tokens";
+}
+
+/**
+ * In-band probe (design §3.2): when the provider itself states the unsupported-parameter
+ * error, flip the memo so the next buildRequest sends max_completion_tokens at the same budget.
+ */
+function noteParamRejection(cfg: ProviderConfig, status: number, bodyText: string): boolean {
+  if (status !== 400 || !TOKEN_PARAM_REJECTION_SIGNATURE.test(bodyText)) return false;
+  tokenParamMemo.set(memoKey(cfg), "max_completion_tokens");
+  return true;
+}
+
+/** Test-only: clear memoized token-parameter decisions and the one-shot knob warning between tests. */
+export function __resetTokenParamStateForTests(): void {
+  tokenParamMemo.clear();
+  knobWarned = false;
+}
+
+/** Empty content after the provider consumed the budget — the only failure class the x4 retry serves. */
+class EmptyResponseError extends Error {}
+
+/** Transport with the existing single retry (4x token budget bound to empty responses only — design §3.3). */
 async function runProvider(cfg: ProviderConfig, spec: CallSpec): Promise<ProviderReply> {
   const url = resolveUrl(cfg);
+  const baseBudget = spec.maxTokens ?? defaultMaxTokens(cfg.provider);
   let lastError: unknown = null;
+  // undefined keeps the spec as-is (original budget); set only after an empty response.
+  let retryBudget: number | undefined;
   let usage: LlmUsage | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const attemptSpec = attempt === 0 ? spec : { ...spec, maxTokens: (spec.maxTokens ?? 1500) * 4 };
+      const attemptSpec = retryBudget === undefined ? spec : { ...spec, maxTokens: retryBudget };
       const res = await fetch(url, {
         method: "POST",
         headers: buildHeaders(cfg),
         body: JSON.stringify(buildRequest(cfg, attemptSpec)),
         signal: spec.signal ?? AbortSignal.timeout(60_000),
       });
-      if (!res.ok) throw new Error(`LLM HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      if (!res.ok) {
+        const bodyText = await res.text();
+        if (noteParamRejection(cfg, res.status, bodyText)) {
+          throw new Error(
+            `LLM HTTP 400: endpoint rejected 'max_tokens'; retrying with 'max_completion_tokens'. ${bodyText.slice(0, 200)}`,
+          );
+        }
+        throw new Error(`LLM HTTP ${res.status}: ${bodyText.slice(0, 200)}`);
+      }
       const json = (await res.json()) as Record<string, unknown>;
       usage = addUsage(usage, parseUsage(cfg.provider, cfg.model ?? "unknown", json));
       const text = extractText(cfg.provider, json);
       const toolInput = extractToolInput(json);
       if (!text.trim() && toolInput === undefined) {
-        throw new Error("LLM returned an empty response (reasoning tokens may have exhausted max_tokens).");
+        throw new EmptyResponseError(
+          "LLM returned an empty response (reasoning tokens may have exhausted the output-token cap).",
+        );
       }
       return { text, toolInput, usage, finishReason: extractFinishReason(json) };
     } catch (err) {
       lastError = err;
+      // The x4 exists to give reasoning models a bigger ceiling after they burned
+      // the first one on reasoning with no text — a parameter-format 400 is a
+      // request-construction error and resends at the original budget instead.
+      retryBudget = err instanceof EmptyResponseError ? baseBudget * 4 : undefined;
     }
   }
   throw lastError instanceof Error ? lastError : new Error("LLM call failed.");
@@ -310,7 +413,7 @@ export async function completeStructured<T>(
       ];
   const base = {
     temperature: opts.temperature ?? 0,
-    maxTokens: opts.maxTokens ?? 1500,
+    maxTokens: opts.maxTokens ?? defaultMaxTokens(cfg.provider),
     structured: native,
     cacheSystem: caps.cache && opts.cache?.system === true,
   };
@@ -433,8 +536,17 @@ export async function* stream(opts: {
       ),
       signal: opts.signal ?? AbortSignal.timeout(120_000),
     });
-    if (!res.ok || !res.body)
-      throw new Error(`LLM HTTP ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
+    if (!res.ok || !res.body) {
+      const bodyText = await res.text().catch(() => "");
+      // No mid-generator resend here (design §3.2): the memo write is the whole
+      // job — the caller-level retry loop re-enters with the corrected body.
+      if (noteParamRejection(cfg, res.status, bodyText)) {
+        throw new Error(
+          `LLM HTTP 400: endpoint rejected 'max_tokens'; retrying with 'max_completion_tokens'. ${bodyText.slice(0, 200)}`,
+        );
+      }
+      throw new Error(`LLM HTTP ${res.status}: ${bodyText.slice(0, 200)}`);
+    }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = "";
@@ -494,7 +606,7 @@ export async function* stream(opts: {
 function buildRequest(cfg: ProviderConfig, spec: CallSpec) {
   const { messages, structured } = spec;
   const temperature = spec.temperature ?? 0.3;
-  const maxTokens = spec.maxTokens ?? 1500;
+  const maxTokens = spec.maxTokens ?? defaultMaxTokens(cfg.provider);
   const system = messages
     .filter((m) => m.role === "system")
     .map((m) => m.content)
@@ -541,11 +653,22 @@ function buildRequest(cfg: ProviderConfig, spec: CallSpec) {
       },
     };
   }
-  // openai-compatible / custom
+  // openai-compatible / custom — the output-cap parameter NAME is resolved per
+  // request (knob → api.openai.com heuristic → memoized probe default, see
+  // resolveTokenCapParam above); the budget itself is unchanged by the resolver.
+  // `temperature` is OMITTED entirely (user decision, 2026-11-13): OpenAI
+  // reasoning models reject any non-default sampling value ("'temperature'
+  // does not support 0.3 with this model. Only the default (1) value is
+  // supported."), and omission is universally accepted by third-party
+  // OpenAI-compatible servers because the parameter is optional in the
+  // Chat Completions contract — strictly safer than a probe or sending the
+  // default explicitly. Accepted cost: no per-call sampling tuning on this
+  // branch; a spec.temperature set by callers is silently ignored here (the
+  // anthropic and gemini branches below still carry it).
+  const tokenCapParam = resolveTokenCapParam(cfg);
   return {
     model: cfg.model,
-    temperature,
-    max_tokens: maxTokens,
+    [tokenCapParam]: maxTokens,
     messages,
     ...(structured
       ? {

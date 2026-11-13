@@ -1,21 +1,26 @@
-// @version 1.0.4
+// @version 1.1.0
 /**
  * env-keys.ts — credential loading for the CLI side of the pipeline.
  *
  * Walks up from cwd looking for a `.env` and imports only whitelisted
  * pipeline keys that are not already in the environment (never overriding
- * explicitly-set values). Same discipline as app/web-next/lib/llm.ts's
+ * explicitly-set values). Same discipline as app/web-next/lib/root-env.ts's
  * loadRootEnvPipelineKeys, generalized: the k-* source adapters'
  * credentials (DART_API_KEY / KOSIS_API_KEY / LAW_API_OC /
  * DATA_GO_KR_API_KEY) join the LLM/Tavily keys on one whitelist. Scripts that need a key call
  * loadPipelineKeys() first, then read process.env directly — this module
  * never returns secret values, it only populates process.env.
+ *
+ * The whitelist is NOT a second copy: admission is derived from the shared
+ * SSOT inventory in app/web-next/lib/root-env.ts (isSsotEnvKey — design
+ * 2026-11-13-env-single-source §3.2: one inventory, two consumers; the CLI
+ * twin keeps its own walk). The import is cycle-safe: source-adapters.ts
+ * imports this module and root-env.ts imports source-adapters.ts, but every
+ * cross-module call happens inside functions, never at module evaluation.
  */
 
+import { isSsotEnvKey } from "../../app/web-next/lib/root-env.ts";
 import { parseEnvValue } from "./env-value.ts";
-
-const PIPELINE_ENV_KEYS =
-  /^(DART_API_KEY|ECOS_API_KEY|KRX_API_KEY|KOSIS_API_KEY|DATA_GO_KR_API_KEY|LAW_API_OC|TAVILY_API_KEY|CO_NEWBIZ_LLM_[A-Z_0-9]+)$/;
 
 let loaded = false;
 
@@ -31,7 +36,7 @@ export function loadPipelineKeys(): void {
       if (existsSync(envPath)) {
         for (const line of readFileSync(envPath, "utf-8").split(/\r?\n/)) {
           const m = line.match(/^([A-Z_0-9]+)=(.*)$/);
-          if (m && PIPELINE_ENV_KEYS.test(m[1]) && process.env[m[1]] === undefined) {
+          if (m && isSsotEnvKey(m[1]) && process.env[m[1]] === undefined) {
             process.env[m[1]] = parseEnvValue(m[2], m[1]);
           }
         }
