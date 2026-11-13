@@ -6011,6 +6011,7 @@
         "evidenceSameAsTheDefinition": "근거: 아래 정의 입력과 동일합니다.",
         "generateDefinitionDraft": "정의 초안 생성",
         "generateDefinitionDraft2": "정의 초안 생성",
+        "ignoredCountChip": "무시 {count}회",
         "generatingDraft": "초안 생성 중...",
         "industry": "산업:",
         "inputsOnlyTheCandidateEligibility": "입력만 채웁니다 — 후보 자격 기준·최소 후보 수는 그대로 유지되며, 실제 저장은 \"목표 시장 저장\" 버튼(사람 클릭)으로 확정됩니다.",
@@ -6165,6 +6166,7 @@
       },
       "useBrownfieldBase": {
         "failedToAccept": "수용 실패",
+        "failedToIgnore": "무시 실패",
         "failedToLoadTheCandidate": "후보 목록 불러오기 실패",
         "filingSearchFailed": "전자공시 검색 실패"
       },

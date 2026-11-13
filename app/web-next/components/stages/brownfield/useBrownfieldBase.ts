@@ -145,6 +145,21 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
     }
   }
 
+  // 무시 제스처의 영속화 (design 2026-11-13-proposal-ignore-suppression §3.5) —
+  // 먼저 서버에 무시 이벤트를 기록하고, 성공했을 때만 카드를 목록에서 지운다.
+  // 실패 시 카드는 그대로 남는다(실패한 저장이 사용자의 무시를 조용히 유실하면
+  // 안 된다) — 오류는 기존 setError 텍스트 경로로 표면화된다.
+  async function ignoreProposal(companyName: string) {
+    try {
+      await api.post(`/api/brownfield/${encodeURIComponent(opportunityId)}/target-proposals/ignore`, {
+        company_name: companyName,
+      });
+      setWebProposals((prev) => (prev ?? []).filter((c) => c.company_name !== companyName));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("failedToIgnore"));
+    }
+  }
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: setSelected/setError are stable setState identities and t is read only in the error fallback — listing the translator would recreate loadDetail (and refetch via the [opportunityId, loadDetail] effect) on translator identity churn (house pattern, deals board load)
   const loadDetail = useCallback((oppId: string) => {
     api
@@ -205,6 +220,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
     dartError,
     dartResults,
     acceptProposal,
+    ignoreProposal,
     webModalFocus,
     webNote,
     webSource,

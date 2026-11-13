@@ -164,7 +164,7 @@ describe("B — normalizeLlmSuggestions (화이트리스트 정규화, 순수)",
 
   test("출처 복원·신뢰도 등급·기존 후보 중복 제거·5건 상한", () => {
     const many = Array.from({ length: 7 }, (_, i) => `새회사${i}`)
-      .map((name, i) => `{"company_name":"${name}","rationale":"r","source_indices":[1]}`)
+      .map((name) => `{"company_name":"${name}","rationale":"r","source_indices":[1]}`)
       .join(",");
     const out = normalizeLlmSuggestions(llm(`{"candidates":[${many}]}`), sources, ["새회사2"]);
     expect(out.length).toBe(5);
@@ -347,5 +347,97 @@ describe("D — 유니버스 선정 기준 초안 (route boundary)", () => {
     const data = (await res.json()).data as { source: string; criteria: unknown; note: string };
     expect(data.criteria).toBeNull();
     expect(data.note).toContain("S1");
+  });
+});
+
+// ── design 2026-11-13-proposal-ignore-suppression (DEC-20261113-04): 추출기
+//    억제 핀 + 프롬프트 무시 이력 블록(§5.4, §5.5). 억제는 완전 키 일치뿐 —
+//    isSimilar(퍼지)는 기존 이름 중복 제거에만 남는다(§4.3). ──
+describe("억제 — normalizeLlmSuggestions / normalizeLlmKnowledgeSuggestions (순수, §5.4)", () => {
+  const sources = [
+    { title: "t1", url: "https://dart.fss.or.kr/a", snippet: "s1" },
+    { title: "t2", url: "https://reuters.com/b", snippet: "s2" },
+  ];
+  const llm = (text: string) => ({ source: "llm" as const, provider: "test", text });
+
+  test("억제 집합의 키 변주는 전부 폐기 — 한양·(주)한양 모두 억제 키 한양에 걸린다", async () => {
+    const { normalizeLlmSuggestions } = await import(
+      "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+    );
+    const { companyKey } = await import("../../app/web-next/lib/name-similarity.ts");
+    const suppressed = new Set([companyKey("주식회사 한양")]);
+    const out = normalizeLlmSuggestions(
+      llm(
+        '{"candidates":[' +
+          '{"company_name":"한양","rationale":"r","source_indices":[1]},' +
+          '{"company_name":"(주)한양","rationale":"r","source_indices":[1]},' +
+          '{"company_name":"한양전자","rationale":"r","source_indices":[1]}' +
+          "]}",
+      ),
+      sources,
+      [],
+      suppressed,
+    );
+    expect(out.map((s) => s.company_name)).toEqual(["한양전자"]); // exact-key만 억제 — 퍼지 없음
+  });
+
+  test("억제 집합이 비어 있으면(무시 1회) 통과 — 라우트가 ignore_count 칩을 붙인다", async () => {
+    const { normalizeLlmKnowledgeSuggestions } = await import(
+      "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+    );
+    const out = normalizeLlmKnowledgeSuggestions(
+      llm('{"candidates":[{"company_name":"한양","rationale":"미검증 근거"}]}'),
+      [],
+      new Set(), // 1회 무시 — 임계값 미달, 억제 집합에 없다
+    );
+    expect(out.map((s) => s.company_name)).toEqual(["한양"]);
+    expect(out[0].reliability).toBe("C"); // 미검증 라벨 계약은 그대로
+  });
+
+  test("llm_knowledge 경로도 같은 억제 집합을 적용한다", async () => {
+    const { normalizeLlmKnowledgeSuggestions } = await import(
+      "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+    );
+    const { companyKey } = await import("../../app/web-next/lib/name-similarity.ts");
+    const out = normalizeLlmKnowledgeSuggestions(
+      llm(
+        '{"candidates":[{"company_name":"주식회사 한양","rationale":"r"},{"company_name":"다른회사","rationale":"r"}]}',
+      ),
+      [],
+      new Set([companyKey("한양(주)")]),
+    );
+    expect(out.map((s) => s.company_name)).toEqual(["다른회사"]);
+  });
+});
+
+describe("프롬프트 무시 이력 블록 — 재제안 금지 힌트(어드바이저리, §5.5)", () => {
+  const sources = [{ title: "t", url: "https://example.com/a", snippet: "s" }];
+
+  test("무시 이력이 있으면 buildPrompt에 재제안 금지 블록과 원문 이름이 들어간다", async () => {
+    const { buildPrompt } = await import(
+      "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+    );
+    const prompt = buildPrompt({ name: "기회", market_scope: null }, {}, [], [], sources, ["(주)한양"]);
+    expect(prompt).toContain("이전 제안에서 무시된 후보(재제안 금지):");
+    expect(prompt).toContain("- (주)한양");
+  });
+
+  test("무시 이력이 없으면 블록 자체가 없다", async () => {
+    const { buildPrompt } = await import(
+      "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+    );
+    const prompt = buildPrompt({ name: "기회", market_scope: null }, {}, [], [], sources);
+    expect(prompt).not.toContain("재제안 금지");
+  });
+
+  test("buildKnowledgePrompt도 같은 블록 계약을 공유한다", async () => {
+    const { buildKnowledgePrompt } = await import(
+      "../../app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts"
+    );
+    const withHint = buildKnowledgePrompt({ name: "기회", market_scope: null }, {}, [], [], ["주식회사 한양"]);
+    expect(withHint).toContain("이전 제안에서 무시된 후보(재제안 금지):");
+    expect(withHint).toContain("- 주식회사 한양");
+    const without = buildKnowledgePrompt({ name: "기회", market_scope: null }, {}, [], []);
+    expect(without).not.toContain("재제안 금지");
   });
 });
