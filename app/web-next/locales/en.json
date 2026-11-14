@@ -3544,6 +3544,7 @@
     "s1": {
       "calibrationPanel": {
         "acceptedCalibrationDrivers": "Accepted calibration drivers:",
+        "acceptedDriverSumExceedsPlausibilityCap": "Accepted driver sum +{p1}%p exceeds the plausibility cap ({p3}%p) over the anchor's needed uplift ({p2}%p) — consider dismissing duplicate proposals.",
         "aPersonAcceptsProposalsOn": "A person accepts proposals — on acceptance they become constraints in the next re-analysis",
         "belowTrigger": "Converged (goal met)",
         "cagrRelativeGapDriverAttribution": "CAGR relative gap at or above the 15% convergence goal line — not converged (gap {p1}%)",

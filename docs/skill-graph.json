@@ -1906,6 +1906,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261114-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -6331,6 +6336,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261114-01",
+      "to": "skill:root/systematic-market-sizing",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261114-02",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261114-02",
       "to": "skill:root/systematic-market-sizing",
       "source": "skills_used"
     },

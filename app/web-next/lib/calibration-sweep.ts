@@ -21,6 +21,13 @@ import { CONVERGENCE_GOAL_PCT } from "./market-reference-staleness.ts";
  * feasible_ratio는 "수용 드라이버 조합이 목표선 이내로 도달 가능한가"의
  * 확률이다 — 스윕은 루프의 계획 도구이지 산출치를 바꾸지 않는다. */
 
+/** 개연성 상한 배수 — v1 상관 근사: 합산 impact가 필요 상향의 이 배수를 초과하는
+ *  조합은 개연성 밖(sweepCombinations v1 규칙, design 2026-09-19-sim-engine-
+ *  runtime-separation §2). 과잉 신호(buildOvershootSignal, design
+ *  2026-11-14-driver-proposal-dedupe-overshoot D-C)가 같은 상수를 쓴다 — 두
+ *  곳에서 2×가 갈라지면 신호가 스윕과 어긋난다. */
+export const PLAUSIBILITY_CAP_MULTIPLE = 2;
+
 /** mulberry32 — 작고 빠른 시드 기반 PRNG. 결정론 요구사항용(암호학적 아님). */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -102,7 +109,7 @@ export function sweepCombinations(input: {
   const ext = input.externalCagrPct;
   const dirSign = input.ourCagrPct <= ext ? 1 : -1; // 우리가 낮으면 드라이버는 상승 방향
   const needed = Math.abs(ext - input.ourCagrPct);
-  const plausibilityCap = needed * 2;
+  const plausibilityCap = needed * PLAUSIBILITY_CAP_MULTIPLE;
 
   const gaps: number[] = [];
   const perDriverSamples = input.drivers.map(() => [] as number[]);
@@ -202,6 +209,60 @@ export function rankExclusionCandidates(input: {
     })
     .sort((a, b) => b.improvementPct - a.improvementPct);
   return { baselineFeasibleRatio: base.feasible_ratio, sampleCount: base.sample_count, ranked };
+}
+
+/** 정직한 과잉 신호 (design 2026-11-14-driver-proposal-dedupe-overshoot D-C) —
+ *  수용 드라이버 impact 합이 앵커 필요 상향의 개연성 상한(PLAUSIBILITY_CAP_
+ *  MULTIPLE 배)을 넘으면 스윕의 feasible_ratio가 0으로 붕괴해 루프가 답을 내지
+ *  못한다. 신호는 매트릭스에만 실리고 제외 결정은 사람이 한다(경계 #2 — 자동
+ *  제거 없음). CAGR 참조가 없으면 null — 규모 기준 격차에는 CAGR 과잉이 정의되지
+ *  않는다. feasibleRatio는 실행 시작 스윕(runCalibrationSweep)의 값 — 스윕이 안
+ *  돌았으면 null(날조하지 않는다). */
+export interface OvershootSignal {
+  acceptedImpactSumPct: number;
+  neededUpliftPct: number;
+  plausibleCapPct: number;
+  feasibleRatio: number | null;
+  overshoot: boolean;
+}
+
+export function buildOvershootSignal(input: {
+  ourCagrPct: number;
+  externalCagrPct: number;
+  acceptedImpacts: number[];
+  runStartFeasibleRatio?: number | null;
+}): OvershootSignal | null {
+  if (!(input.externalCagrPct > 0)) return null;
+  const acceptedImpactSumPct = Math.round(input.acceptedImpacts.reduce((a, v) => a + v, 0) * 10) / 10;
+  const neededUpliftPct = Math.round(Math.abs(input.externalCagrPct - input.ourCagrPct) * 10) / 10;
+  const plausibleCapPct = Math.round(neededUpliftPct * PLAUSIBILITY_CAP_MULTIPLE * 10) / 10;
+  return {
+    acceptedImpactSumPct,
+    neededUpliftPct,
+    plausibleCapPct,
+    feasibleRatio: input.runStartFeasibleRatio ?? null,
+    overshoot: acceptedImpactSumPct > plausibleCapPct,
+  };
+}
+
+/** 제외 트리거 분기 (design 2026-11-14-driver-proposal-dedupe-overshoot D-D) —
+ *  두 팔: (1) 기존 악화 팔(amendment 2026-11-13b) — 격차가 소음 밴드를 초과해
+ *  악화; (2) 신규 과잉 팔 — 수용 집합이 과잉(overshoot)이고 실행 시작 스윕의
+ *  feasible_ratio가 0이며, 최상위 제거 후보가 유의미한 개선(> 0)을 보이는
+ *  단일 원인 cases만 제안한다. 모든 제거 후에도 0이면(다중 원인) 제안 없음 —
+ *  그 빈 구멍은 과잉 신호(matrix.calibration.overshoot)가 메운다. 악화 팔이
+ *  우선한다(기존 동작 불변 — 개선 > 0 조건은 호출점이 그대로 유지한다). */
+export type ExclusionArm = "worsening" | "overshoot";
+
+export function selectExclusionArm(input: {
+  worsening: boolean;
+  overshoot: boolean;
+  baselineFeasibleRatio: number;
+  topImprovementPct: number | null;
+}): ExclusionArm | null {
+  if (!input.worsening && !input.overshoot) return null;
+  if (input.worsening) return "worsening";
+  return input.baselineFeasibleRatio === 0 && (input.topImprovementPct ?? 0) > 0 ? "overshoot" : null;
 }
 
 export interface BandMonteCarloResult {

@@ -239,6 +239,20 @@ export interface SizingMatrix {
     gapPct: number | null;
     previousGapPct: number | null;
     appliedDrivers: string[];
+    /** 정직한 과잉 신호 (design 2026-11-14-driver-proposal-dedupe-overshoot
+     *  D-C) — 수용 드라이버 impact 합이 앵커 필요 상향의 개연성 상한(2×)을
+     *  초과했는지. 초과 시 실행 시작 스윕의 feasible_ratio가 0으로 붕괴한다.
+     *  자동 제거 없음 — 표시와 사람의 제외 결정만 있다(경계 #2). CAGR 참조가
+     *  있을 때만 존재하고 레거시 페이로드에는 없는 선택 필드다. 형상은
+     *  calibration-sweep.ts의 OvershootSignal(규범형)과 구조적으로 동일 —
+     *  이 스키마 모듈은 import 없이 유지된다. */
+    overshoot?: {
+      acceptedImpactSumPct: number;
+      neededUpliftPct: number;
+      plausibleCapPct: number;
+      feasibleRatio: number | null;
+      overshoot: boolean;
+    };
   };
 }
 

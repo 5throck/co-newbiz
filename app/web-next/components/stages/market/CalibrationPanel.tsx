@@ -163,6 +163,20 @@ export function CalibrationPanel({
         </span>
       </div>
 
+      {/* 정직한 과잉 신호 (design 2026-11-14-driver-proposal-dedupe-overshoot
+          D-C) — 수용 드라이버 합이 앵커 필요 상향의 개연성 상한(2×)을 넘으면
+          스윕 feasible_ratio가 0으로 붕괴한다. 읽기 전용 한 줄 — 자동 제거는
+          없고 기각은 아래 제안 행에서 사람이 한다(경계 #2). */}
+      {cal?.overshoot?.overshoot === true && (
+        <p role="status" className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+          {t("acceptedDriverSumExceedsPlausibilityCap", {
+            p1: cal.overshoot.acceptedImpactSumPct.toFixed(1),
+            p2: cal.overshoot.neededUpliftPct.toFixed(1),
+            p3: cal.overshoot.plausibleCapPct.toFixed(1),
+          })}
+        </p>
+      )}
+
       {/* 외부 참조 — 출처와 함께 기록. 기록된 참조는 재분석 때 우선 사용된다 */}
       <div className="mb-2">
         {reference ? (
