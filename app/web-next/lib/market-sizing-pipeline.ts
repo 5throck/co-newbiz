@@ -34,11 +34,23 @@ import {
   type ExternalReferenceRow,
 } from "./market-calibration.ts";
 import { CONVERGENCE_GOAL_PCT } from "./market-reference-staleness.ts";
-import { runCalibrationSweep, rankExclusionCandidates } from "./calibration-sweep.ts";
+import {
+  runCalibrationSweep,
+  rankExclusionCandidates,
+  buildOvershootSignal,
+  selectExclusionArm,
+} from "./calibration-sweep.ts";
+import { filterDuplicateDriverProposals } from "./name-similarity.ts";
 import { GENERIC_SEGMENTS, type AnchorSource, type SizingMatrix } from "./market-sizing.ts";
 import { searchKsic } from "./ksic.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
 import { refreshAutoSizingLinks } from "./sizing-auto-link.ts";
+
+// D-A — 프롬프트 힌트에 실어 보낼 수용 드라이버명 상한(design
+// 2026-11-14-driver-proposal-dedupe-overshoot §4) — brownfield-proposal-ignore의
+// IGNORED_NAMES_PROMPT_CAP(20)과 같은 근거: 어드바이저리 블록일 뿐이고 규칙의
+// 보증은 생성 후 하드 필터(D-B, name-similarity.ts)가 담당한다.
+const ACCEPTED_DRIVERS_PROMPT_CAP = 20;
 
 // ---------------------------------------------------------------------------
 // Serial linked-analysis queue (design 2026-09-13, meeting panel-reviewed).
@@ -1339,6 +1351,9 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       impact_pct: number;
       rationale: string;
     }> = [];
+    // D-B — 수용 드라이버와 중복으로 판정되어 insert 전에 걸러진 후보 건수.
+    // 요약에 정직히 쓰인다("N dropped as duplicates of accepted drivers").
+    let droppedDuplicateDrivers = 0;
     let calibration: SizingMatrix["calibration"] | undefined;
     if (sourceLabel && (externalSize > 0 || externalCagrFrac)) {
       const yearIndex = Math.max(1, (targetYear || 2030) - 2026);
@@ -1413,16 +1428,48 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         gapPct: cagrGap ?? null,
         previousGapPct,
         appliedDrivers: acceptedDrivers.map((d) => d.driver),
+        // D-C — 정직한 과잉 신호(design 2026-11-14-driver-proposal-dedupe-
+        // overshoot): 수용 합 > 개연성 상한(2×필요 상향)이면 실행 시작 스윕의
+        // feasible_ratio가 0으로 붕괴한다. 신호만 매트릭스에 실리고 제외 결정은
+        // 사람(경계 #2). CAGR 참조가 없으면 buildOvershootSignal이 null을
+        // 돌려 필드가 생략된다. feasibleRatio는 실행 시작 스윕의 값 — 스윕이
+        // 안 돌았으면 null(날조하지 않는다).
+        overshoot:
+          buildOvershootSignal({
+            ourCagrPct,
+            externalCagrPct: externalCagrPct ?? 0,
+            acceptedImpacts: acceptedDrivers.map((d) => d.impact_pct),
+            runStartFeasibleRatio: sweepInject ? sweepInject.feasibleRatio : null,
+          }) ?? undefined,
       };
       // ── Step 5-C: 드라이버 귀인 제안 (트리거 시에만) — LLM 제안, 수용은 사람.
       if (triggered) {
         const dir = externalCagrPct != null && externalCagrPct > ourCagrPct ? "upside" : "downside";
+        // D-A — 수용 드라이버 재제안 금지(어드바이저리 블록, design
+        // 2026-11-14-driver-proposal-dedupe-overshoot §4). 같은 메커니즘의 의역
+        // 재제안이 수용되면 수용 집합이 앵커 필요 상향을 초과해 스윕이 붕괴한다
+        // (라이브 관찰 2026-11-14). 상한은 brownfield-proposal-ignore의
+        // IGNORED_NAMES_PROMPT_CAP(20)과 같은 근거이고, 규칙의 보증은 아래 D-B
+        // 하드 필터가 담당한다.
+        const acceptedNames = acceptedDrivers
+          .map((d) => d.driver)
+          .filter((n) => n.trim().length > 0)
+          .slice(0, ACCEPTED_DRIVERS_PROMPT_CAP);
+        const doNotRepropose = acceptedNames.length
+          ? `\n이미 수용된 드라이버: ${acceptedNames.join(" / ")} — 이 목록에 있는 드라이버와 같거나 이름만 다른 유사 표현(의역)을 다시 제안하지 마세요. 목록에 없는 새로운 메커니즘만 제안하세요.`
+          : "";
         const attrJson = await askJsonTracked(
           industry,
-          `성장률 격차(우리 ${ourCagrPct.toFixed(1)}% vs 외부 참조 ${externalCagrPct?.toFixed(1)}%)를 설명하는 주요 드라이버 2~5개를 수치로 귀인하세요. 격차 방향은 "${dir === "upside" ? "외부 참조가 높음(상승 여력)" : "외부 참조가 낮음(하강 리스크)"}". JSON: {"drivers":[{"driver":"드라이버명","direction":"${dir}","impact_pct":2.5,"rationale":"이 드라이버가 CAGR을 몇 %p 움직이는지 근거와 함께"}]}. impact_pct는 해당 드라이버의 CAGR 기여 추정치(%p, 격차의 총합이 격차를 넘지 않게), rationale은 이번 분석의 리서치 근거나 상식에 근거해 1-2문장.`,
+          `성장률 격차(우리 ${ourCagrPct.toFixed(1)}% vs 외부 참조 ${externalCagrPct?.toFixed(1)}%)를 설명하는 주요 드라이버 2~5개를 수치로 귀인하세요. 격차 방향은 "${dir === "upside" ? "외부 참조가 높음(상승 여력)" : "외부 참조가 낮음(하강 리스크)"}". JSON: {"drivers":[{"driver":"드라이버명","direction":"${dir}","impact_pct":2.5,"rationale":"이 드라이버가 CAGR을 몇 %p 움직이는지 근거와 함께"}]}. impact_pct는 해당 드라이버의 CAGR 기여 추정치(%p, 격차의 총합이 격차를 넘지 않게), rationale은 이번 분석의 리서치 근거나 상식에 근거해 1-2문장.${doNotRepropose}`,
         );
         const attrs = Array.isArray(attrJson?.drivers) ? (attrJson!.drivers as Array<Record<string, unknown>>) : [];
         const seenDrivers = new Set<string>();
+        const validCandidates: Array<{
+          driver: string;
+          direction: "upside" | "downside";
+          impact_pct: number;
+          rationale: string;
+        }> = [];
         for (const a of attrs) {
           const driver = str(a.driver);
           const impact = num(a.impact_pct, 0);
@@ -1430,14 +1477,24 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
           const d = String(a.direction) === "downside" ? "downside" : String(a.direction) === "upside" ? "upside" : dir;
           if (!driver || !rationale || impact <= 0 || seenDrivers.has(driver)) continue;
           seenDrivers.add(driver);
-          pendingDriverProposals.push({
+          validCandidates.push({
             driver,
             direction: d as "upside" | "downside",
             impact_pct: Math.round(impact * 10) / 10,
             rationale,
           });
-          if (pendingDriverProposals.length >= 5) break;
         }
+        // D-B — 삽입 전 중복 하드 필터(design 2026-11-14-driver-proposal-
+        // dedupe-overshoot §5): 수용 드라이버와 같은 이름(정규화 일치·포함·
+        // 토큰 Jaccard ≥ 0.25)인 후보는 여기서 버려진다. 프롬프트 블록(D-A)은
+        // 어드바이저리일 뿐이고 이 필터가 보증이다. 드롭 건수는 요약에 정직히
+        // 기록한다.
+        const { survivors, dropped } = filterDuplicateDriverProposals(
+          validCandidates,
+          acceptedDrivers.map((d) => d.driver),
+        );
+        droppedDuplicateDrivers += dropped.length;
+        pendingDriverProposals.push(...survivors.slice(0, 5));
       }
     }
     const s5b = await summarize(
@@ -1451,11 +1508,15 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     stepSummaries.push({ step: 5, ...s5b, pendingInputs: externalForecast ? ["외부 전망 출처의 원문 확인"] : [] });
 
     if (pendingDriverProposals.length > 0) {
+      // D-B — 중복 제외 건수를 정직히 요약에 기록한다(design
+      // 2026-11-14-driver-proposal-dedupe-overshoot §5). 0이면 문구를 붙이지
+      // 않는다 — 기존 문구와 동일.
+      const dedupeNote = droppedDuplicateDrivers > 0 ? ` (수용 드라이버와 중복 ${droppedDuplicateDrivers}건 제외)` : "";
       const s5c = await summarize(
         industry,
         5,
         "격차 드라이버 귀인 제안",
-        `격차가 수렴 목표선(≥${CONVERGENCE_GOAL_PCT}%) 이상 — 미수렴 상태로 드라이버 귀인 제안 ${pendingDriverProposals.length}건 생성. 수용은 사람(경계 #2).`,
+        `격차가 수렴 목표선(≥${CONVERGENCE_GOAL_PCT}%) 이상 — 미수렴 상태로 드라이버 귀인 제안 ${pendingDriverProposals.length}건 생성${dedupeNote}. 수용은 사람(경계 #2).`,
       );
       stepSummaries.push({
         step: 5,
@@ -1750,7 +1811,21 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
     // LLM 호출 없음)으로 "빼면 수렴 가능 조합이 늘어나는" 드라이버를 순위매겨
     // 최상위 후보 하나만 제안한다. 개선이 전혀 없으면 제안하지 않는다 — 제거로
     // 나아질 게 없는데 제외를 권하는 것은 근거 없는 권고다.
+    // D-D (design 2026-11-14-driver-proposal-dedupe-overshoot §7) — 두 번째
+    // 트리거 팔: 수용 집합이 과잉(overshoot)이고 실행 시작 스윕의 feasible_
+    // ratio가 0인 경우에도 진입한다. 팔 선택은 selectExclusionArm(순수 함수)이
+    // 하고, 과잉 팔은 "하나를 빼면 목표선 도달 조합이 다시 생기는" 단일 원인
+    // cases에만 제안한다. 다중 원인(모든 제거 후에도 0)은 여전히 무제안 — 그
+    // 빈 구멍은 과잉 신호(matrix.calibration.overshoot)가 메운다. 악화 팔의
+    // 동작은 바이트 단위로 동일하다(악화가 겹치면 악화 팔이 우선한다).
     const newGapPct = calibration?.gapPct ?? null;
+    const worseningExclusion =
+      previousGapPct !== null && newGapPct !== null && newGapPct - previousGapPct > EXCLUSION_NOISE_BAND_PCT;
+    // 과잉 팔은 미수렴에서만 진입한다 — 수렴(design 2026-11-13 §3.1: 격차 <
+    // 목표선)이 루프의 끝이므로, 목표선 안에 들어온 상태에서 제외를 권하지
+    // 않는다(AC-15 arm 1 계약 유지). 라이브 사례(격차 26.2%)는 미수렴이므로
+    // 그대로 발화한다.
+    const overshootExclusion = calibration?.overshoot?.overshoot === true && calibration.triggered === true;
     let exclusionProposal: {
       driver: string;
       direction: "upside" | "downside";
@@ -1758,9 +1833,7 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       rationale: string;
     } | null = null;
     if (
-      previousGapPct !== null &&
-      newGapPct !== null &&
-      newGapPct - previousGapPct > EXCLUSION_NOISE_BAND_PCT &&
+      (worseningExclusion || overshootExclusion) &&
       externalReference &&
       externalReference.external_cagr_pct > 0 &&
       acceptedDrivers.length > 0 &&
@@ -1777,7 +1850,13 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         })),
       });
       const top = ranked[0];
-      if (top && top.improvementPct > 0) {
+      const arm = selectExclusionArm({
+        worsening: worseningExclusion,
+        overshoot: overshootExclusion,
+        baselineFeasibleRatio,
+        topImprovementPct: top ? top.improvementPct : null,
+      });
+      if (arm && top && top.improvementPct > 0) {
         const table = ranked
           .map(
             (c, i) =>
@@ -1788,15 +1867,23 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
           externalReference.captured_from !== "user"
             ? `\n참조 품질 주의: 기준 참조는 파이프라인이 입수한 것입니다(${externalReference.captured_from}) — 사람이 기록한 참조가 아니므로 제외 결정 전 참조 자체를 먼저 재검토하세요.`
             : "";
+        const rationaleHead =
+          arm === "worsening"
+            ? `제외 검토 근거 — 격차 악화: 이전 버전 ${previousGapPct}% → 이번 버전 ${newGapPct}% (허용 편차 ±${EXCLUSION_NOISE_BAND_PCT}%p 초과).`
+            : `제외 검토 근거 — 수용 집합 과잉: 수용 드라이버 impact 합계 +${calibration?.overshoot?.acceptedImpactSumPct}%p가 필요 상향 ${calibration?.overshoot?.neededUpliftPct}%p의 개연성 상한(${calibration?.overshoot?.plausibleCapPct}%p)을 넘어 목표선 도달 비율이 ${(baselineFeasibleRatio * 100).toFixed(1)}%로 붕괴했습니다.`;
+        const recommendation =
+          arm === "worsening"
+            ? `권고: ${top.driver}을(를) 수용 드라이버에서 제외하면 수렴 가능 조합 비율이 가장 크게 개선됩니다. 제외는 사람의 결정으로만 적용됩니다.`
+            : `권고: 수용 집합이 과잉이며 이 드라이버 하나를 빼면 목표선 도달 조합이 다시 생깁니다. 제외는 사람의 결정으로만 적용됩니다.`;
         exclusionProposal = {
           driver: top.driver,
           direction: top.direction,
           impact_pct: top.impact_pct,
           rationale: [
-            `제외 검토 근거 — 격차 악화: 이전 버전 ${previousGapPct}% → 이번 버전 ${newGapPct}% (허용 편차 ±${EXCLUSION_NOISE_BAND_PCT}%p 초과).`,
+            rationaleHead,
             `leave-one-out (몬테카를로, seed 고정, ${sampleCount}표본) — 전체 조합의 목표선(${CONVERGENCE_GOAL_PCT}%선) 이내 도달 비율 ${(baselineFeasibleRatio * 100).toFixed(1)}% 기준:`,
             table,
-            `권고: ${top.driver}을(를) 수용 드라이버에서 제외하면 수렴 가능 조합 비율이 가장 크게 개선됩니다. 제외는 사람의 결정으로만 적용됩니다.${qualityWarning}`,
+            `${recommendation}${qualityWarning}`,
           ].join("\n"),
         };
       }

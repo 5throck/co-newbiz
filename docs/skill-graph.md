@@ -433,6 +433,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261113-05` | decision | `root/decision-record`, `root/evidence-ledger`, `root/rag-scoring-framework` | — | — |
 | `dec:DEC-20261113-06` | decision | `root/decision-record`, `root/rag-scoring-framework` | — | — |
 | `dec:DEC-20261114-01` | decision | `root/decision-record`, `root/systematic-market-sizing` | — | — |
+| `dec:DEC-20261114-02` | decision | `root/decision-record`, `root/systematic-market-sizing` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
