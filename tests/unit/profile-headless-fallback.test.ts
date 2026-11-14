@@ -126,6 +126,12 @@ describe("case 1: noResearchDegradedReason / degradedChip dart variants", () => 
 // ── case 2: chain integration ──
 describe("case 2: chain-integrated Playwright fallback", () => {
   beforeEach(() => {
+    // Per-test setup, not cross-file assumptions: sibling suites run in flight
+    // in the same process and two of them set the web-research override at
+    // import time without clearing it — testOverride short-circuits
+    // researchSourcesDetailed BEFORE the provider chain, so clear it here
+    // before installing this suite's own fakes.
+    wr.setWebResearchOverrideForTests(null);
     wr.resetWebResearchStateForTests();
     ps.setPlaywrightSearchOverrideForTests(null);
     delete process.env.WEB_SEARCH_PLAYWRIGHT_ENABLED;
