@@ -14,6 +14,8 @@
  */
 import { test, expect, describe, afterAll, beforeEach, mock } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
+// type-only fixture annotation (below) — import type is erased at runtime
+import type { TopDownConsensusSource } from "../../app/web-next/lib/market-sizing-pipeline.ts";
 
 const TEST_DB_PATH = "db/data/test-sizing-web-grounding.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -191,7 +193,9 @@ describe("validateExcerptItems — 항목 단위 검증 규칙 (R2)", () => {
 
 // ── R4/R9: 컨센서스 우선순위 해석 (순수 경로) ──
 describe("resolveTopDownConsensus — 우선순위(기록 참조 > 웹 추출 > LLM 선험 > 미입력)", () => {
-  const ref = {
+  // Type-only fix: without the annotation the fixture's captured_from widens to
+  // string and fails TopDownConsensusSource assignability (runtime unchanged).
+  const ref: TopDownConsensusSource = {
     source_label: "Gartner 전망",
     source_url: "https://example.com/gartner",
     captured_from: "user",

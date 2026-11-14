@@ -116,7 +116,7 @@ describe("unchanged branches", () => {
     mockReplies([{ status: 200, body: { candidates: [{ content: { parts: [{ text: "ok" }] } }] } }]);
     await completeDetailed([{ role: "user", content: "hi" }], { agent });
     const body = calls[0].body as {
-      generationConfig: { maxOutputTokens: number };
+      generationConfig: { temperature: number; maxOutputTokens: number };
       max_tokens?: unknown;
       max_completion_tokens?: unknown;
     };

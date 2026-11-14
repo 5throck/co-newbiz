@@ -448,8 +448,11 @@ export function resolveTopDownConsensus(input: {
 // v1.3.0) ── R1 우선순위: 사람 기록 참조 > 웹 검색 추출 > LLM 선험 > 미입력.
 // R2: 발췌에 없는 값을 만들어내지 않는다 — 추출 출력은 항목 단위로 검증(값 존재
 // + 상식 경계 + 발췌 인덱스 범위 + URL 일치)하고 통과분만 provenance와 함께
-// 반영한다. R7: 검색 미설정·실패·쿼터 초과·결과 공백은 모두 빈 발췌로 귀결되어
-// 호출 단계가 기존 동작(LLM 선험)으로 정확히 열화한다 — 새 고장 경로 없음.
+// 반영한다. R7 (amendment 2026-11-14, design 2026-11-14-s1-quota-rescue §4):
+// 검색 미설정·실패·결과 공백은 모두 빈 발췌로 귀결되어 호출 단계가 기존 동작
+// (LLM 선험)으로 정확히 열화한다 — 새 고장 경로 없음. 쿼터 초과는 비용·열화
+// 신호일 뿐 공백 신호가 아니므로, 폴백 제공자(DDG·헤드리스)가 찾아온 발췌는
+// 그대로 소비한다(체인이 실제로 비었을 때만 []).
 
 /** 정량 단계별 검색 질의 상한 — 단계당 2~3개, 4단계(step 2/4/5/5-B)로 런당 최대
  *  ~10회(R7). limit은 기존 정성 섹션(researchSources)과 동일한 상한. */
@@ -538,16 +541,45 @@ export async function extractFromExcerpts(opts: {
   return validateExcerptItems(json.items, opts.excerpts, opts.numericFields, opts.bounds ?? EXCERPT_VALUE_BOUNDS);
 }
 
-/** R7 — 정량 단계 공통 검색 구간. 미설정·실패·쿼터 초과(기존 서킷브레이커·쿼터
- *  처리 재사용)·결과 공백은 모두 빈 배열 — 호출 단계는 검색 구간을 건너뛰고
- *  기존 동작(LLM 선험)으로 정확히 열화한다. */
-async function quantitativeExcerpts(queries: string[]): Promise<WebSource[]> {
+/** R7 소비 규칙 (수정 2026-11-14, design 2026-11-14-s1-quota-rescue §4) —
+ *  quotaExceeded는 비용·열화 신호이지 공백 신호가 아니다. 체인이 찾아온 소스
+ *  (폴백 제공자 DDG·헤드리스 포함)는 그대로 돌려주고, 체인이 실제로 비었을 때만
+ *  [] — 검색 실패가 파이프라인을 깨지 않는다는 기존 R7 보장은 그대로 유지된다.
+ *  순수 함수(테스트 핀 대상) — 소비 계약 자체를 여기서 고정한다. */
+export function excerptsFromChainResult(r: { sources: WebSource[]; quotaExceeded: boolean }): WebSource[] {
+  return r.sources.length > 0 ? r.sources : [];
+}
+
+/** 헤드리스 구조 예산 상수 — company-profile-pipeline의 PROFILE_SEARCH_DEADLINE_MS
+ *  (30_000)·PROFILE_PLAYWRIGHT_QUERIES(2)와 같은 값·같은 근거(백그라운드 작업,
+ *  브라우저 세션 1회분). deadline은 runSteps가 실행(런)당 한 번 계산해 R4·R5-B
+ *  두 호출에 같은 값을 넘긴다(런 전체 헤드리스 예산이 이 한도로 묶인다). */
+const SIZING_SEARCH_DEADLINE_MS = 30_000;
+const SIZING_PLAYWRIGHT_QUERIES = 2;
+
+/** R7 — 정량 단계 공통 검색 구간. 미설정·실패·결과 공백은 모두 빈 배열 — 호출
+ *  단계는 검색 구간을 건너뛰고 기존 동작(LLM 선험)으로 정확히 열화한다. 쿼터
+ *  초과는 위 R7 소비 규칙(amendment 2026-11-14)대로 소비를 막지 않는다. opts.
+ *  deadlineAt이 주어지면 체인에 헤드리스 구조 옵션을 전달한다(design
+ *  2026-11-13-profile-headless-fallback §4의 S1 확장) — 미주입 시 오늘과 같은
+ *  체인(헤드리스 없음). */
+/** export는 계약 테스트 전용 시임(getQuantSearchQueryCountForTests 계열과 같은
+ *  취지) — 프로덕션 호출은 이 파일 안의 4개 단계뿐이다. */
+export async function quantitativeExcerpts(
+  queries: string[],
+  opts: { deadlineAt?: number } = {},
+): Promise<WebSource[]> {
   quantSearchQueryCount += queries.length; // R7 비용 상한 관측 시임(아래 헬퍼 참고)
   if (!isWebResearchConfigured()) return [];
   try {
-    const r = await researchSourcesDetailed(queries, EXCERPT_LIMIT);
-    if (r.quotaExceeded) return []; // 쿼터 초과도 검색 구간 생략 — R7 열화 보장
-    return r.sources;
+    const r = await researchSourcesDetailed(
+      queries,
+      EXCERPT_LIMIT,
+      opts.deadlineAt !== undefined
+        ? { playwright: true, deadlineAt: opts.deadlineAt, playwrightQueries: SIZING_PLAYWRIGHT_QUERIES }
+        : undefined,
+    );
+    return excerptsFromChainResult(r);
   } catch {
     return []; // 검색 실패 — 새 고장 경로 없음(R7)
   }
@@ -1141,6 +1173,12 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
         anchorTotal) **
         (1 / 4) -
       1;
+    // 헤드리스 구조 deadline (design 2026-11-14-s1-quota-rescue §5) — 실행(런)당
+    // 한 번 계산해 아래 R4(컨센서스)·R5-B(전망) 두 검색에 같은 deadline을 넘긴다.
+    // 두 호출이 같은 창을 소진하므로 런 전체의 헤드리스 예산이 이 한도(30초)로
+    // 묶이고, researchSourcesDetailed 내부의 PLAYWRIGHT_MIN_REMAINING_MS(8초)
+    // 가드가 잔여 시간이 부족한 늦은 호출은 브라우저를 건너뛴다.
+    const webGroundingDeadline = Date.now() + SIZING_SEARCH_DEADLINE_MS;
     // 탑다운 컨센서스 CAGR — 우선순위는 기록 참조 > LLM 선험 > 0(미입력)이며
     // 절대 날조하지 않는다. 보정 루프(v1.2.0)에서 사람이 기록한 외부 참조가 있으면
     // 그 external_cagr_pct(%)를 그대로 컨센서스로 쓰고 LLM 선험 질의를 아예
@@ -1159,10 +1197,10 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       // R4 (v1.3.0) — CAGR-bearing 기록 참조가 없을 때만: 공개 성장률 컨센서스를 웹 검색(2순위)
       // 하고, 발췌가 있을 때 추출 호출 1회를 실행한다. 검색 공백에서는 추출 호출을
       // 아예 발사하지 않는다(발췌에 없는 값의 날조 금지 — R1/R2).
-      const cagrExcerpts = await quantitativeExcerpts([
-        `${industry} market CAGR forecast consensus`,
-        `${industry} 성장률 전망 컨센서스`,
-      ]);
+      const cagrExcerpts = await quantitativeExcerpts(
+        [`${industry} market CAGR forecast consensus`, `${industry} 성장률 전망 컨센서스`],
+        { deadlineAt: webGroundingDeadline }, // 헤드리스 구조 — 런 단위 예산 공유(design §5)
+      );
       if (cagrExcerpts.length > 0) {
         const cagrItems = await extractFromExcerpts({
           ask: askJsonTracked,
@@ -1228,11 +1266,14 @@ export async function runSizingPipeline(db: Database, analysisId: string): Promi
       // R5 (v1.3.0) — 웹 검색 우선(2순위): 공표된 시장규모 전망(연도+규모)을
       // 검색·추출하고, 검증 통과분을 전망으로 사용한다. 발췌가 없으면 추출 호출을
       // 발사하지 않고 기존 LLM 선험 경로로 폴백한다(R1/R2/R7).
-      const forecastExcerpts = await quantitativeExcerpts([
-        `${industry} market size 2030 forecast $B`,
-        `${industry} market forecast 2030 billion USD`,
-        `${industry} 시장 전망 2030년 규모`,
-      ]);
+      const forecastExcerpts = await quantitativeExcerpts(
+        [
+          `${industry} market size 2030 forecast $B`,
+          `${industry} market forecast 2030 billion USD`,
+          `${industry} 시장 전망 2030년 규모`,
+        ],
+        { deadlineAt: webGroundingDeadline }, // 헤드리스 구조 — 런 단위 예산 공유(design §5)
+      );
       const forecastItems = (
         await extractFromExcerpts({
           ask: askJsonTracked,
