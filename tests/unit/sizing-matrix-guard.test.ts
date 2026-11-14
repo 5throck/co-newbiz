@@ -4,6 +4,8 @@
  *  stubbed LLM seam (mocked llm module — degenerate completion, no network). */
 import { test, expect, describe, afterAll, beforeEach, mock } from "bun:test";
 import { existsSync, readFileSync, rmSync } from "node:fs";
+// type-only fixture annotation (below) — import type is erased at runtime
+import type { TopDownConsensusSource } from "../../app/web-next/lib/market-sizing-pipeline.ts";
 
 const TEST_DB_PATH = "db/data/test-sizing-matrix-guard.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -553,7 +555,9 @@ describe("runSizingPipeline — MC sweep injection + exclusion proposal (amendme
 // including the LLM-prior-success path the pipeline stub cannot reach (its
 // shared `cagr` key is the step-4 matrix object).
 describe("resolveTopDownConsensus — step 5 우선순위(기록 참조 > LLM 선험 > 0)", () => {
-  const ref = { source_label: "Gartner 전망", captured_from: "user", external_cagr_pct: 8.74 };
+  // Type-only fix: without the annotation captured_from widens to string and
+  // fails TopDownConsensusSource assignability (runtime unchanged).
+  const ref: TopDownConsensusSource = { source_label: "Gartner 전망", captured_from: "user", external_cagr_pct: 8.74 };
 
   test("기록 참조가 있으면 external_cagr_pct(%)를 소수 1자리로 쓰고 출처 확인 노트를 돌려준다", () => {
     const td = resolveTopDownConsensus({ externalReference: ref, llmCagrFrac: null });

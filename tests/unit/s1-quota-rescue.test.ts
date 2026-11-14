@@ -188,6 +188,15 @@ describe("excerptsFromChainResult — R7 소비 규칙 (amendment 2026-11-14)", 
 
 // ── case 2: the live-diagnosis chain state (the trigger of the defect) ──
 describe("researchSourcesDetailed — quota state still carries fallback sources (2026-11-14 live diagnosis)", () => {
+  beforeEach(() => {
+    // Cross-file safety (one-process full-suite runs): another suite may have
+    // left the web-research module seams set — testOverride short-circuits
+    // BEFORE the provider chain, so clear every seam before installing ours.
+    wr.setWebResearchOverrideForTests(null);
+    wr.setWebProvidersForTests(null);
+    ps.setPlaywrightSearchOverrideForTests(null);
+    wr.resetWebResearchStateForTests();
+  });
   afterEach(() => {
     wr.setWebProvidersForTests(null);
     wr.resetWebResearchStateForTests();
@@ -220,6 +229,9 @@ describe("researchSourcesDetailed — quota state still carries fallback sources
 // ── cases 3-4: quantitativeExcerpts plumbing (option forwarding) ──
 describe("quantitativeExcerpts — playwright option plumbing", () => {
   beforeEach(() => {
+    // Cross-file safety: testOverride short-circuits BEFORE providerOverride —
+    // clear it before installing this suite's fakes.
+    wr.setWebResearchOverrideForTests(null);
     wr.resetWebResearchStateForTests();
     // Tavily quota-exhausted for every query → the base chain stays empty, so
     // the playwright provider is the only way any source can come back.
@@ -269,6 +281,9 @@ describe("runSizingPipeline — quota-rescue end-to-end", () => {
     llmStub.prompts.length = 0;
     llmStub.json = {};
     llmStub.extractJson = { items: [] };
+    // Cross-file safety: testOverride short-circuits BEFORE providerOverride —
+    // clear it before resetting the breaker/provider state.
+    wr.setWebResearchOverrideForTests(null);
     wr.resetWebResearchStateForTests();
     pipeline.resetQuantSearchQueryCountForTests();
   });
