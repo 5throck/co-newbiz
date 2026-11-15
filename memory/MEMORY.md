@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-15](2026-11-15.md) | chore: workspace sync (1 file) |
 | [2026-11-14](2026-11-14.md) | s7 ignore suppression |
 | [2026-11-13](2026-11-13.md) | fix(s1): probe project-industry bindings only when a project row exists |
 | [2026-11-12](2026-11-12.md) | fix(brownfield): target identity resolution - canonical names, code-aware dedupe, unified PATCH, DART code authority, sync failure visibility |
@@ -11,7 +12,7 @@
 | [2026-11-10](2026-11-10.md) | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
 | [2026-11-09](2026-11-09.md) | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
 | [2026-11-08](2026-11-08.md) | chore: workspace sync — session residue (Step 1 local-work) |
-| [2026-11-07](2026-11-07.md) | feat(review): localize AI review items via next-intl with legacy fallback |
+| 2026-11-07 | feat(review): localize AI review items via next-intl with legacy fallback |
 | 2026-11-06 | docs(docs): workspace sync (10 files) |
 | 2026-11-05 | docs(docs): workspace sync (spec 2026-10-09-ux-r2, 12 files) |
 | 2026-11-04 | feat(web): cron day-of-week chips and dialog rhythm |
