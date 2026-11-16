@@ -95,7 +95,9 @@ function toYyyymmdd(isoDate: string): string {
 export function disclosureQueryStart(state: DartCorpSyncStateRow | null, now: string | Date): string {
   const through = state?.disclosures_complete_through;
   if (through && YYYYMMDD.test(through)) {
-    const d = new Date(Date.UTC(Number(through.slice(0, 4)), Number(through.slice(4, 6)) - 1, Number(through.slice(6, 8))) - DAY_MS);
+    const d = new Date(
+      Date.UTC(Number(through.slice(0, 4)), Number(through.slice(4, 6)) - 1, Number(through.slice(6, 8))) - DAY_MS,
+    );
     return toYyyymmdd(d.toISOString().slice(0, 10));
   }
   const today = seoulToday(now);
@@ -190,7 +192,8 @@ export class DartCacheError extends Error {
   }
 }
 
-const SYNC_COLUMNS = "corp_code, corp_code_checked_at, financial_checked_at, disclosures_checked_at, disclosures_complete_through, updated_at";
+const SYNC_COLUMNS =
+  "corp_code, corp_code_checked_at, financial_checked_at, disclosures_checked_at, disclosures_complete_through, updated_at";
 const DISCLOSURE_COLUMNS = "rcept_no, corp_code, corp_name, report_nm, rcept_dt, flr_nm, rm, pblntf_ty, fetched_at";
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -209,7 +212,17 @@ export function insertDisclosures(db: Database, rows: readonly DartDisclosureInp
   return db.transaction(() => {
     let inserted = 0;
     for (const r of rows) {
-      inserted += stmt.run(r.rcept_no, r.corp_code, r.corp_name, r.report_nm, r.rcept_dt, r.flr_nm ?? null, r.rm ?? null, r.pblntf_ty ?? null, now).changes;
+      inserted += stmt.run(
+        r.rcept_no,
+        r.corp_code,
+        r.corp_name,
+        r.report_nm,
+        r.rcept_dt,
+        r.flr_nm ?? null,
+        r.rm ?? null,
+        r.pblntf_ty ?? null,
+        now,
+      ).changes;
     }
     return inserted;
   })();
@@ -233,7 +246,11 @@ export function listCachedDisclosures(
  * The closed-year correction set R (§6.2 step 3): fiscal years of `사업보고서` correction filings for the corp first
  * seen after `financialCheckedAt` (all such filings when the financial check never succeeded).
  */
-export function correctedBusinessReportYears(db: Database, corpCode: string, financialCheckedAt: string | null): number[] {
+export function correctedBusinessReportYears(
+  db: Database,
+  corpCode: string,
+  financialCheckedAt: string | null,
+): number[] {
   const rows = db
     .query(
       `SELECT report_nm FROM dart_disclosure
@@ -253,10 +270,19 @@ export function correctedBusinessReportYears(db: Database, corpCode: string, fin
 // ---------------------------------------------------------------------------------------------------------------
 
 export function getCorpSyncState(db: Database, corpCode: string): DartCorpSyncStateRow | null {
-  return (db.query(`SELECT ${SYNC_COLUMNS} FROM dart_corp_sync_state WHERE corp_code = ?`).get(corpCode) as DartCorpSyncStateRow | null) ?? null;
+  return (
+    (db
+      .query(`SELECT ${SYNC_COLUMNS} FROM dart_corp_sync_state WHERE corp_code = ?`)
+      .get(corpCode) as DartCorpSyncStateRow | null) ?? null
+  );
 }
 
-function advance(db: Database, corpCode: string, set: Partial<Omit<DartCorpSyncStateRow, "corp_code" | "updated_at">>, now: string): void {
+function advance(
+  db: Database,
+  corpCode: string,
+  set: Partial<Omit<DartCorpSyncStateRow, "corp_code" | "updated_at">>,
+  now: string,
+): void {
   const cols = Object.keys(set) as Array<keyof typeof set>;
   db.run(
     `INSERT INTO dart_corp_sync_state (corp_code, ${cols.join(", ")}, updated_at) VALUES (?, ${cols.map(() => "?").join(", ")}, ?)
@@ -278,7 +304,12 @@ export type FinancialYearOutcome = { year: number; outcome: "found" | "not_filed
  * Advance financial_checked_at only if every requested year returned `found` or `not_filed` (§6.2 step 8). An empty
  * outcome list (nothing was requested) does not advance it. Rows already written for other years are untouched.
  */
-export function markFinancialChecked(db: Database, corpCode: string, yearOutcomes: readonly FinancialYearOutcome[], now: string): boolean {
+export function markFinancialChecked(
+  db: Database,
+  corpCode: string,
+  yearOutcomes: readonly FinancialYearOutcome[],
+  now: string,
+): boolean {
   if (yearOutcomes.length === 0 || yearOutcomes.some((o) => o.outcome === "error")) return false;
   advance(db, corpCode, { financial_checked_at: now }, now);
   return true;
@@ -294,7 +325,11 @@ export function markDisclosuresComplete(db: Database, corpCode: string, complete
 // Business-report extracts.
 // ---------------------------------------------------------------------------------------------------------------
 
-export function getBusinessReportExtract(db: Database, rceptNo: string, extractorVersion: string): BusinessReportExtractRow | null {
+export function getBusinessReportExtract(
+  db: Database,
+  rceptNo: string,
+  extractorVersion: string,
+): BusinessReportExtractRow | null {
   return (
     (db
       .query(
@@ -326,26 +361,35 @@ export interface InsertBusinessReportExtractInput {
  * Cache a complete extraction or a deterministic negative. Idempotent per (rcept_no, extractor_version): an existing
  * row is kept. The disclosure row must already be cached (FK). Section texts over the cap are rejected, not truncated.
  */
-export function insertBusinessReportExtract(db: Database, input: InsertBusinessReportExtractInput): BusinessReportExtractRow {
+export function insertBusinessReportExtract(
+  db: Database,
+  input: InsertBusinessReportExtractInput,
+): BusinessReportExtractRow {
   if (!input.extractorVersion) throw new DartCacheError("extractorVersion is required.");
-  if (!Number.isInteger(input.sourceChars) || input.sourceChars < 0) throw new DartCacheError("sourceChars must be a non-negative integer.");
+  if (!Number.isInteger(input.sourceChars) || input.sourceChars < 0)
+    throw new DartCacheError("sourceChars must be a non-negative integer.");
   let sectionsJson: string | null = null;
   if (input.status === "extracted") {
     const sections = input.sections ?? {};
     const keys = Object.keys(sections);
-    if (keys.length === 0) throw new DartCacheError("An 'extracted' row needs at least one section; use 'no_sections' otherwise.");
+    if (keys.length === 0)
+      throw new DartCacheError("An 'extracted' row needs at least one section; use 'no_sections' otherwise.");
     for (const k of keys) {
-      if (!(BUSINESS_REPORT_SECTION_KEYS as readonly string[]).includes(k)) throw new DartCacheError(`Unknown section key '${k}'.`);
+      if (!(BUSINESS_REPORT_SECTION_KEYS as readonly string[]).includes(k))
+        throw new DartCacheError(`Unknown section key '${k}'.`);
       const s = sections[k as BusinessReportSectionKey] as BusinessReportSection;
       if (s.text.length > BUSINESS_REPORT_SECTION_MAX_CHARS) {
-        throw new DartCacheError(`Section '${k}' exceeds ${BUSINESS_REPORT_SECTION_MAX_CHARS} characters; the extractor must cap it.`);
+        throw new DartCacheError(
+          `Section '${k}' exceeds ${BUSINESS_REPORT_SECTION_MAX_CHARS} characters; the extractor must cap it.`,
+        );
       }
     }
     const ordered: Record<string, BusinessReportSection> = {};
     for (const k of BUSINESS_REPORT_SECTION_KEYS) if (sections[k]) ordered[k] = sections[k] as BusinessReportSection;
     sectionsJson = JSON.stringify(ordered);
   } else if (input.status === "no_sections" || input.status === "not_zip") {
-    if (input.sections && Object.keys(input.sections).length > 0) throw new DartCacheError(`A '${input.status}' row carries no sections.`);
+    if (input.sections && Object.keys(input.sections).length > 0)
+      throw new DartCacheError(`A '${input.status}' row carries no sections.`);
   } else {
     throw new DartCacheError("status must be extracted | no_sections | not_zip (transient failures are never cached).");
   }

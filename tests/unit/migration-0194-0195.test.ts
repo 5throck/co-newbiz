@@ -13,7 +13,7 @@
  *   - 0195 is independent of 0194 (applies first, rolls back alone).
  */
 import { test, expect, describe } from "bun:test";
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,7 +47,9 @@ function chainThen(name: string, order: string[]): Database {
   const path = join(TMP, `${name}.sqlite`);
   resetDb();
   const db = getDb(path);
-  db.run("CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)");
+  db.run(
+    "CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)",
+  );
   // Pre-mark 0194+ as applied so the runner stops after 0193.
   for (const f of files.filter((x) => x >= F194)) db.run("INSERT INTO schema_migrations VALUES (?, ?, ?)", [f, f, NOW]);
   runMigrations(path);
@@ -67,14 +69,24 @@ function rollbackStatements(sql: string): string[] {
     .filter((l) => /^DROP (TABLE|TRIGGER) /.test(l));
 }
 
-const cols = (db: Database, table: string) => (db.query(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name);
+const cols = (db: Database, table: string) =>
+  (db.query(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name);
 const objects = (db: Database, type: string) =>
   (db.query("SELECT name FROM sqlite_master WHERE type = ?").all(type) as Array<{ name: string }>).map((r) => r.name);
 
 function seed(db: Database) {
-  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES ('opp1','o','s','identified','u',?)", [NOW]);
-  db.run("INSERT INTO brownfield_target (id, opportunity_id, company_name, created_at, updated_at) VALUES ('t1','opp1','c1',?,?)", [NOW, NOW]);
-  db.run("INSERT INTO brownfield_target (id, opportunity_id, company_name, created_at, updated_at) VALUES ('t2','opp1','c2',?,?)", [NOW, NOW]);
+  db.run(
+    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES ('opp1','o','s','identified','u',?)",
+    [NOW],
+  );
+  db.run(
+    "INSERT INTO brownfield_target (id, opportunity_id, company_name, created_at, updated_at) VALUES ('t1','opp1','c1',?,?)",
+    [NOW, NOW],
+  );
+  db.run(
+    "INSERT INTO brownfield_target (id, opportunity_id, company_name, created_at, updated_at) VALUES ('t2','opp1','c2',?,?)",
+    [NOW, NOW],
+  );
 }
 const insertRun = (db: Database, id: string, status: string) =>
   db.run(
@@ -107,17 +119,41 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
   test("0194 tables, column, indexes, and triggers exist; health checks clean", () => {
     const db = fullChain("shape194");
     expect(cols(db, "brownfield_eval_draft_run")).toEqual([
-      "id", "opportunity_id", "categories", "web_evidence", "force_refresh", "status", "total_targets", "started_by",
-      "started_via", "resumed_by", "started_at", "heartbeat_at", "finished_at", "pause_reason", "error_message",
+      "id",
+      "opportunity_id",
+      "categories",
+      "web_evidence",
+      "force_refresh",
+      "status",
+      "total_targets",
+      "started_by",
+      "started_via",
+      "resumed_by",
+      "started_at",
+      "heartbeat_at",
+      "finished_at",
+      "pause_reason",
+      "error_message",
     ]);
     expect(cols(db, "brownfield_eval_draft_run_item")).toContain("dart_calls");
     expect(cols(db, "brownfield_eval_draft_version")).toContain("input_hash");
     const evalCols = cols(db, "brownfield_target_eval_state");
     expect(evalCols[evalCols.length - 1]).toBe("confirmed_from_version_id");
-    const fks = db.query("PRAGMA foreign_key_list(brownfield_target_eval_state)").all() as Array<{ table: string; from: string }>;
-    expect(fks.some((f) => f.table === "brownfield_eval_draft_version" && f.from === "confirmed_from_version_id")).toBe(true);
+    const fks = db.query("PRAGMA foreign_key_list(brownfield_target_eval_state)").all() as Array<{
+      table: string;
+      from: string;
+    }>;
+    expect(fks.some((f) => f.table === "brownfield_eval_draft_version" && f.from === "confirmed_from_version_id")).toBe(
+      true,
+    );
     const idx = objects(db, "index");
-    for (const n of ["ux_bedr_active", "idx_bedr_opp_started", "idx_bedri_run_state", "idx_bedv_run", "idx_bf_target_eval_state_from_version"]) {
+    for (const n of [
+      "ux_bedr_active",
+      "idx_bedr_opp_started",
+      "idx_bedri_run_state",
+      "idx_bedv_run",
+      "idx_bf_target_eval_state_from_version",
+    ]) {
       expect(idx).toContain(n);
     }
     const trg = objects(db, "trigger");
@@ -131,11 +167,16 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
     const db = fullChain("checks194");
     seed(db);
     insertRun(db, "r1", "running");
-    const run = db.query("SELECT web_evidence, force_refresh FROM brownfield_eval_draft_run WHERE id='r1'").get() as Record<string, number>;
+    const run = db
+      .query("SELECT web_evidence, force_refresh FROM brownfield_eval_draft_run WHERE id='r1'")
+      .get() as Record<string, number>;
     expect(run).toEqual({ web_evidence: 0, force_refresh: 0 });
     expect(() => insertRun(db, "rX", "paused")).toThrow();
     expect(() =>
-      db.run("INSERT INTO brownfield_eval_draft_run_item (id, run_id, brownfield_target_id, seq, state, updated_at) VALUES ('i','r1','t1',0,'bogus',?)", [NOW]),
+      db.run(
+        "INSERT INTO brownfield_eval_draft_run_item (id, run_id, brownfield_target_id, seq, state, updated_at) VALUES ('i','r1','t1',0,'bogus',?)",
+        [NOW],
+      ),
     ).toThrow();
     expect(() =>
       db.run(
@@ -175,8 +216,12 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
       "INSERT INTO brownfield_eval_draft_run_item (id, run_id, brownfield_target_id, seq, state, financial_outcome, financial_version_id, updated_at) VALUES ('i1','r1','t1',0,'done','versioned','v2',?)",
       [NOW],
     );
-    expect(() => db.run("UPDATE brownfield_eval_draft_version SET payload = '{\"x\":1}' WHERE id = 'v1'")).toThrow(/immutable/);
-    expect(() => db.run("DELETE FROM brownfield_eval_draft_version WHERE id = 'v1'")).toThrow(/only with their candidate/);
+    expect(() => db.run("UPDATE brownfield_eval_draft_version SET payload = '{\"x\":1}' WHERE id = 'v1'")).toThrow(
+      /immutable/,
+    );
+    expect(() => db.run("DELETE FROM brownfield_eval_draft_version WHERE id = 'v1'")).toThrow(
+      /only with their candidate/,
+    );
     expect(() => insertVersion(db, "dup", "t1", 2)).toThrow(); // UNIQUE (target, category, version_no)
 
     db.run("DELETE FROM brownfield_target WHERE id = 't1'");
@@ -213,7 +258,8 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
   test("0195 tables: immutable disclosures, DART code-system CHECKs, cache isolation (T19/T25 schema parts)", () => {
     const db = fullChain("shape195");
     for (const t of ["dart_disclosure", "dart_business_report_extract", "dart_corp_sync_state"]) {
-      for (const c of cols(db, t)) expect(c).not.toMatch(/opportunity|user|target|candidate|verdict|assessed|created_by|status_by/);
+      for (const c of cols(db, t))
+        expect(c).not.toMatch(/opportunity|user|target|candidate|verdict|assessed|created_by|status_by/);
     }
     db.run(
       "INSERT INTO dart_disclosure (rcept_no, corp_code, corp_name, report_nm, rcept_dt, fetched_at) VALUES ('20250314000123','00123456','회사','사업보고서 (2024.12)','20250314',?)",
@@ -221,11 +267,12 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
     );
     expect(() => db.run("UPDATE dart_disclosure SET report_nm = 'x'")).toThrow(/immutable/);
     expect(() =>
-      db.run("INSERT INTO dart_disclosure (rcept_no, corp_code, corp_name, report_nm, rcept_dt, fetched_at) VALUES ('123','00123456','c','r','20250314',?)", [NOW]),
+      db.run(
+        "INSERT INTO dart_disclosure (rcept_no, corp_code, corp_name, report_nm, rcept_dt, fetched_at) VALUES ('123','00123456','c','r','20250314',?)",
+        [NOW],
+      ),
     ).toThrow();
-    expect(() =>
-      db.run("INSERT INTO dart_corp_sync_state (corp_code, updated_at) VALUES ('123', ?)", [NOW]),
-    ).toThrow();
+    expect(() => db.run("INSERT INTO dart_corp_sync_state (corp_code, updated_at) VALUES ('123', ?)", [NOW])).toThrow();
     expect(() =>
       db.run(
         "INSERT INTO dart_business_report_extract (rcept_no, extractor_version, status, source_chars, fetched_at) VALUES ('20250314000123','v1','http_error',0,?)",
@@ -255,7 +302,8 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
       for (const s of stmts) db.run(s);
     })();
     const tables = objects(db, "table");
-    for (const t of ["dart_disclosure", "dart_business_report_extract", "dart_corp_sync_state"]) expect(tables).not.toContain(t);
+    for (const t of ["dart_disclosure", "dart_business_report_extract", "dart_corp_sync_state"])
+      expect(tables).not.toContain(t);
     expect(tables).toContain("brownfield_eval_draft_version");
     expect(db.query("PRAGMA foreign_key_check").all()).toHaveLength(0);
   });

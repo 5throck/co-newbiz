@@ -136,7 +136,9 @@ export const evalDraftPayloadSchema = z.object({
     })
     .nullable(),
   evidence: z.object({
-    disclosures: z.array(z.object({ rcept_no: z.string().length(14), rcept_dt: z.string().length(8), report_nm: z.string() })),
+    disclosures: z.array(
+      z.object({ rcept_no: z.string().length(14), rcept_dt: z.string().length(8), report_nm: z.string() }),
+    ),
     business_report: z
       .object({
         rcept_no: z.string().length(14).nullable(),
@@ -279,7 +281,10 @@ export interface CreateRunInput {
 }
 
 export function getRun(db: Database, runId: string): DraftRunRow | null {
-  return (db.query(`SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE id = ?`).get(runId) as DraftRunRow | null) ?? null;
+  return (
+    (db.query(`SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE id = ?`).get(runId) as DraftRunRow | null) ??
+    null
+  );
 }
 
 export function getActiveRun(db: Database, opportunityId: string): DraftRunRow | null {
@@ -295,7 +300,9 @@ export function getActiveRun(db: Database, opportunityId: string): DraftRunRow |
 export function getLatestRun(db: Database, opportunityId: string): DraftRunRow | null {
   return (
     (db
-      .query(`SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE opportunity_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`)
+      .query(
+        `SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE opportunity_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`,
+      )
       .get(opportunityId) as DraftRunRow | null) ?? null
   );
 }
@@ -308,7 +315,8 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
   if (!(RUN_CATEGORY_SELECTIONS as readonly string[]).includes(input.categories)) {
     throw new EvalDraftError("invalid", `categories must be one of: ${RUN_CATEGORY_SELECTIONS.join(" | ")}.`);
   }
-  if (!input.startedBy || !input.startedVia) throw new EvalDraftError("invalid", "startedBy and startedVia are required.");
+  if (!input.startedBy || !input.startedVia)
+    throw new EvalDraftError("invalid", "startedBy and startedVia are required.");
   const ids = [...input.targetIds];
   if (new Set(ids).size !== ids.length) throw new EvalDraftError("invalid", "targetIds must not repeat.");
 
@@ -317,9 +325,12 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
     if (active) return { run: active, reused: true };
     if (ids.length > 0) {
       const found = db
-        .query(`SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ? AND id IN (${placeholders(ids.length)})`)
+        .query(
+          `SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ? AND id IN (${placeholders(ids.length)})`,
+        )
         .get(input.opportunityId, ...ids) as { n: number };
-      if (found.n !== ids.length) throw new EvalDraftError("not_found", "Every target must be a candidate of this opportunity.");
+      if (found.n !== ids.length)
+        throw new EvalDraftError("not_found", "Every target must be a candidate of this opportunity.");
     }
     const runId = ulid();
     db.run(
@@ -341,7 +352,7 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
     const insertItem = db.prepare(
       `INSERT INTO brownfield_eval_draft_run_item (id, run_id, brownfield_target_id, seq, state, updated_at) VALUES (?, ?, ?, ?, 'pending', ?)`,
     );
-    ids.forEach((targetId, seq) => insertItem.run(ulid(), runId, targetId, seq, input.now));
+    for (const [seq, targetId] of ids.entries()) insertItem.run(ulid(), runId, targetId, seq, input.now);
     return { run: getRun(db, runId) as DraftRunRow, reused: false };
   })();
 }
@@ -357,7 +368,7 @@ export function touchRunHeartbeat(db: Database, runId: string, now: string): voi
  */
 export function markStaleRunInterrupted(db: Database, opportunityId: string, now: string): number {
   const run = getActiveRun(db, opportunityId);
-  if (!run || run.status !== "running" || !isHeartbeatStale(run.heartbeat_at, now)) return 0;
+  if (run?.status !== "running" || !isHeartbeatStale(run.heartbeat_at, now)) return 0;
   const res = db.run(
     "UPDATE brownfield_eval_draft_run SET status = 'interrupted', pause_reason = 'heartbeat_stale' WHERE id = ? AND status = 'running' AND heartbeat_at = ?",
     [run.id, run.heartbeat_at],
@@ -373,7 +384,11 @@ export function pauseRun(db: Database, runId: string, pauseReason: string, now: 
 /** `paused_budget` | `interrupted` → `running`, recording who resumed (A3). Options (web_evidence/force_refresh) are kept. */
 export function resumeRun(db: Database, runId: string, resumedBy: string, now: string): DraftRunRow {
   if (!resumedBy) throw new EvalDraftError("invalid", "resumedBy is required.");
-  return transition(db, runId, ["paused_budget", "interrupted"], "running", { resumed_by: resumedBy, pause_reason: null, heartbeat_at: now });
+  return transition(db, runId, ["paused_budget", "interrupted"], "running", {
+    resumed_by: resumedBy,
+    pause_reason: null,
+    heartbeat_at: now,
+  });
 }
 
 /** Any active status → a terminal status. Already-written versions stay (§7). */
@@ -384,7 +399,11 @@ export function finishRun(
   now: string,
   errorMessage: string | null = null,
 ): DraftRunRow {
-  return transition(db, runId, ACTIVE_RUN_STATUSES, status, { finished_at: now, heartbeat_at: now, error_message: errorMessage });
+  return transition(db, runId, ACTIVE_RUN_STATUSES, status, {
+    finished_at: now,
+    heartbeat_at: now,
+    error_message: errorMessage,
+  });
 }
 
 function transition(
@@ -396,7 +415,8 @@ function transition(
 ): DraftRunRow {
   const run = getRun(db, runId);
   if (!run) throw new EvalDraftError("not_found", `Run '${runId}' not found.`);
-  if (!from.includes(run.status)) throw new EvalDraftError("conflict", `Run '${runId}' is '${run.status}'; cannot move to '${to}'.`);
+  if (!from.includes(run.status))
+    throw new EvalDraftError("conflict", `Run '${runId}' is '${run.status}'; cannot move to '${to}'.`);
   const cols = Object.keys(set) as Array<keyof typeof set>;
   db.run(
     `UPDATE brownfield_eval_draft_run SET status = ?${cols.map((c) => `, ${c} = ?`).join("")} WHERE id = ? AND status = ?`,
@@ -410,11 +430,17 @@ function transition(
 // ---------------------------------------------------------------------------------------------------------------
 
 export function listRunItems(db: Database, runId: string): DraftRunItemRow[] {
-  return db.query(`SELECT ${ITEM_COLUMNS} FROM brownfield_eval_draft_run_item WHERE run_id = ? ORDER BY seq`).all(runId) as DraftRunItemRow[];
+  return db
+    .query(`SELECT ${ITEM_COLUMNS} FROM brownfield_eval_draft_run_item WHERE run_id = ? ORDER BY seq`)
+    .all(runId) as DraftRunItemRow[];
 }
 
 export function getRunItem(db: Database, itemId: string): DraftRunItemRow | null {
-  return (db.query(`SELECT ${ITEM_COLUMNS} FROM brownfield_eval_draft_run_item WHERE id = ?`).get(itemId) as DraftRunItemRow | null) ?? null;
+  return (
+    (db
+      .query(`SELECT ${ITEM_COLUMNS} FROM brownfield_eval_draft_run_item WHERE id = ?`)
+      .get(itemId) as DraftRunItemRow | null) ?? null
+  );
 }
 
 /** The resume point: the first item of the run whose state is not terminal, in `seq` order (§6.4). */
@@ -455,7 +481,8 @@ export function updateRunItem(db: Database, itemId: string, patch: RunItemPatch,
   if (patch.technicalVersionId !== undefined) put("technical_version_id", patch.technicalVersionId);
   if (patch.errorMessage !== undefined) put("error_message", patch.errorMessage);
   if (patch.addDartCalls !== undefined) {
-    if (!Number.isInteger(patch.addDartCalls) || patch.addDartCalls < 0) throw new EvalDraftError("invalid", "addDartCalls must be a non-negative integer.");
+    if (!Number.isInteger(patch.addDartCalls) || patch.addDartCalls < 0)
+      throw new EvalDraftError("invalid", "addDartCalls must be a non-negative integer.");
     sets.push("dart_calls = dart_calls + ?");
     args.push(patch.addDartCalls);
   }
@@ -471,8 +498,9 @@ export function updateRunItem(db: Database, itemId: string, patch: RunItemPatch,
 
 export function getVersion(db: Database, versionId: string): DraftVersionRow | null {
   return (
-    (db.query(`SELECT ${VERSION_SUMMARY_COLUMNS}, payload FROM brownfield_eval_draft_version WHERE id = ?`).get(versionId) as DraftVersionRow | null) ??
-    null
+    (db
+      .query(`SELECT ${VERSION_SUMMARY_COLUMNS}, payload FROM brownfield_eval_draft_version WHERE id = ?`)
+      .get(versionId) as DraftVersionRow | null) ?? null
   );
 }
 
@@ -496,9 +524,12 @@ export function listVersions(
   const cols = opts.includePayload ? `${VERSION_SUMMARY_COLUMNS}, payload` : VERSION_SUMMARY_COLUMNS;
   const where = opts.category ? "brownfield_target_id = ? AND category = ?" : "brownfield_target_id = ?";
   const args: Array<string | number> = opts.category ? [targetId, opts.category] : [targetId];
-  const limit = opts.limit !== undefined && Number.isInteger(opts.limit) && opts.limit > 0 ? ` LIMIT ${opts.limit}` : "";
+  const limit =
+    opts.limit !== undefined && Number.isInteger(opts.limit) && opts.limit > 0 ? ` LIMIT ${opts.limit}` : "";
   return db
-    .query(`SELECT ${cols} FROM brownfield_eval_draft_version WHERE ${where} ORDER BY category, version_no DESC${limit}`)
+    .query(
+      `SELECT ${cols} FROM brownfield_eval_draft_version WHERE ${where} ORDER BY category, version_no DESC${limit}`,
+    )
     .all(...args) as Array<DraftVersionSummaryRow | DraftVersionRow>;
 }
 
@@ -560,12 +591,19 @@ export interface InsertDraftVersionInput extends DraftVersionContent {
 export function serializeDraftPayload(payload: unknown, category: EvalDraftCategory): string {
   const parsed = evalDraftPayloadSchema.safeParse(payload);
   if (!parsed.success) {
-    throw new EvalDraftError("invalid", `Draft payload does not match schema v1: ${parsed.error.issues[0]?.message ?? "invalid"}`);
+    throw new EvalDraftError(
+      "invalid",
+      `Draft payload does not match schema v1: ${parsed.error.issues[0]?.message ?? "invalid"}`,
+    );
   }
-  if (parsed.data.category !== category) throw new EvalDraftError("invalid", "Payload category does not match the version category.");
+  if (parsed.data.category !== category)
+    throw new EvalDraftError("invalid", "Payload category does not match the version category.");
   const text = JSON.stringify(parsed.data);
   if (Buffer.byteLength(text, "utf8") > DRAFT_PAYLOAD_MAX_BYTES) {
-    throw new EvalDraftError("payload_too_large", `Draft payload exceeds ${DRAFT_PAYLOAD_MAX_BYTES} bytes; the item fails (never truncated).`);
+    throw new EvalDraftError(
+      "payload_too_large",
+      `Draft payload exceeds ${DRAFT_PAYLOAD_MAX_BYTES} bytes; the item fails (never truncated).`,
+    );
   }
   return text;
 }
@@ -575,14 +613,18 @@ export function serializeDraftPayload(payload: unknown, category: EvalDraftCateg
  * transaction when there is one (bun:sqlite nests via savepoints). Throws before writing anything on invalid input.
  */
 export function insertDraftVersion(db: Database, input: InsertDraftVersionInput): DraftVersionRow {
-  if (!isCategory(input.category)) throw new EvalDraftError("invalid", `category must be one of: ${EVAL_DRAFT_CATEGORIES.join(" | ")}.`);
-  if (!(EVIDENCE_GRADES as readonly string[]).includes(input.evidenceGrade)) throw new EvalDraftError("invalid", "Unknown evidence grade.");
+  if (!isCategory(input.category))
+    throw new EvalDraftError("invalid", `category must be one of: ${EVAL_DRAFT_CATEGORIES.join(" | ")}.`);
+  if (!(EVIDENCE_GRADES as readonly string[]).includes(input.evidenceGrade))
+    throw new EvalDraftError("invalid", "Unknown evidence grade.");
   if (!input.inputHash) throw new EvalDraftError("invalid", "inputHash is required.");
   if (!input.createdBy) throw new EvalDraftError("invalid", "createdBy is required.");
   const payloadText = serializeDraftPayload(input.payload, input.category);
   return db.transaction(() => {
     const next = db
-      .query("SELECT COALESCE(MAX(version_no), 0) + 1 AS n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ? AND category = ?")
+      .query(
+        "SELECT COALESCE(MAX(version_no), 0) + 1 AS n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ? AND category = ?",
+      )
       .get(input.targetId, input.category) as { n: number };
     const id = ulid();
     db.run(
@@ -633,10 +675,14 @@ export type CommitCategoryDraftResult =
  *   - otherwise the producer runs; on success the version insert and the item update commit together;
  *   - a throwing producer leaves the version table and the run item untouched (replace-on-success).
  */
-export async function commitCategoryDraft(db: Database, input: CommitCategoryDraftInput): Promise<CommitCategoryDraftResult> {
+export async function commitCategoryDraft(
+  db: Database,
+  input: CommitCategoryDraftInput,
+): Promise<CommitCategoryDraftResult> {
   const item = getRunItem(db, input.itemId);
   if (!item) throw new EvalDraftError("not_found", `Run item '${input.itemId}' not found.`);
-  if (!isCategory(input.category)) throw new EvalDraftError("invalid", `category must be one of: ${EVAL_DRAFT_CATEGORIES.join(" | ")}.`);
+  if (!isCategory(input.category))
+    throw new EvalDraftError("invalid", `category must be one of: ${EVAL_DRAFT_CATEGORIES.join(" | ")}.`);
   const outcomeKey = input.category === "financial" ? "financialOutcome" : "technicalOutcome";
   const versionKey = input.category === "financial" ? "financialVersionId" : "technicalVersionId";
 

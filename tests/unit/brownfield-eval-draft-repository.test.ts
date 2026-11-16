@@ -34,15 +34,15 @@ function seedOpp(): void {
   opp = `opp${n}`;
   t1 = `t${n}a`;
   t2 = `t${n}b`;
-  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?, 'o', 's', 'identified', 'u', ?)", [opp, T0]);
+  db.run(
+    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?, 'o', 's', 'identified', 'u', ?)",
+    [opp, T0],
+  );
   for (const t of [t1, t2]) {
-    db.run("INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, created_at, updated_at) VALUES (?, ?, ?, '00123456', ?, ?)", [
-      t,
-      opp,
-      `회사 ${t}`,
-      T0,
-      T0,
-    ]);
+    db.run(
+      "INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, created_at, updated_at) VALUES (?, ?, ?, '00123456', ?, ?)",
+      [t, opp, `회사 ${t}`, T0, T0],
+    );
   }
 }
 
@@ -50,7 +50,16 @@ function payload(category: "financial" | "technical", score: number | null = 70)
   return {
     schema: 1 as const,
     category,
-    criteria_snapshot: [{ criterion_id: "c1", label: "매출 성장", data_ref: "revenue_5y", weight: 10, source: "builtin" as const, rubric: { cagrPass: 5 } }],
+    criteria_snapshot: [
+      {
+        criterion_id: "c1",
+        label: "매출 성장",
+        data_ref: "revenue_5y",
+        weight: 10,
+        source: "builtin" as const,
+        rubric: { cagrPass: 5 },
+      },
+    ],
     items: [
       {
         criterion_id: "c1",
@@ -92,7 +101,12 @@ function startRun(targets = [t1, t2]) {
   });
 }
 
-const versionCount = (target: string) => (db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(target) as { n: number }).n;
+const versionCount = (target: string) =>
+  (
+    db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(target) as {
+      n: number;
+    }
+  ).n;
 
 beforeEach(seedOpp);
 
@@ -102,7 +116,9 @@ describe("pure helpers", () => {
     const b = repo.computeDraftInputHash({ rubric: { b: 2, a: 1 }, web_evidence: false, facts: [{ v: 1, y: 2024 }] });
     expect(a).toBe(b);
     expect(a).toMatch(/^[0-9a-f]{64}$/);
-    expect(repo.computeDraftInputHash({ facts: [{ y: 2024, v: 1 }], web_evidence: true, rubric: { a: 1, b: 2 } })).not.toBe(a);
+    expect(
+      repo.computeDraftInputHash({ facts: [{ y: 2024, v: 1 }], web_evidence: true, rubric: { a: 1, b: 2 } }),
+    ).not.toBe(a);
   });
 
   test("heartbeat staleness threshold is 10 minutes", () => {
@@ -117,7 +133,11 @@ describe("pure helpers", () => {
     longQuote.items[0].citations[0].quote = "x".repeat(repo.CITATION_QUOTE_MAX_CHARS + 1);
     expect(() => repo.serializeDraftPayload(longQuote, "technical")).toThrow(repo.EvalDraftError);
     const huge = payload("technical");
-    huge.items = Array.from({ length: 400 }, (_, i) => ({ ...huge.items[0], criterion_id: `c${i}`, note: "가".repeat(200) }));
+    huge.items = Array.from({ length: 400 }, (_, i) => ({
+      ...huge.items[0],
+      criterion_id: `c${i}`,
+      note: "가".repeat(200),
+    }));
     expect(() => repo.serializeDraftPayload(huge, "technical")).toThrow(/exceeds/);
   });
 });
@@ -126,7 +146,14 @@ describe("runs and items", () => {
   test("createRun stores options and one pending item per candidate in seq order", () => {
     const { run, reused } = startRun();
     expect(reused).toBe(false);
-    expect(run).toMatchObject({ status: "running", total_targets: 2, web_evidence: 0, force_refresh: 1, started_by: "u1", started_via: "web" });
+    expect(run).toMatchObject({
+      status: "running",
+      total_targets: 2,
+      web_evidence: 0,
+      force_refresh: 1,
+      started_by: "u1",
+      started_via: "web",
+    });
     const items = repo.listRunItems(db, run.id);
     expect(items.map((i) => [i.brownfield_target_id, i.seq, i.state])).toEqual([
       [t1, 0, "pending"],
@@ -139,7 +166,13 @@ describe("runs and items", () => {
     const second = startRun([t2]);
     expect(second.reused).toBe(true);
     expect(second.run.id).toBe(first.run.id);
-    expect((db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_run WHERE opportunity_id = ?").get(opp) as { n: number }).n).toBe(1);
+    expect(
+      (
+        db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_run WHERE opportunity_id = ?").get(opp) as {
+          n: number;
+        }
+      ).n,
+    ).toBe(1);
   });
 
   test("createRun rejects foreign or repeated targets", () => {
@@ -154,13 +187,22 @@ describe("runs and items", () => {
     expect(repo.getRun(db, run.id)?.status).toBe("interrupted");
     expect(repo.getActiveRun(db, opp)?.id).toBe(run.id); // still blocks a parallel start
     const resumed = repo.resumeRun(db, run.id, "u2", "2026-11-16T02:00:00.000Z");
-    expect(resumed).toMatchObject({ status: "running", resumed_by: "u2", force_refresh: 1, web_evidence: 0, pause_reason: null });
+    expect(resumed).toMatchObject({
+      status: "running",
+      resumed_by: "u2",
+      force_refresh: 1,
+      web_evidence: 0,
+      pause_reason: null,
+    });
     expect(() => repo.resumeRun(db, run.id, "u2", T0)).toThrow(/cannot move/);
   });
 
   test("pause → resume → finish; terminal runs no longer block a new start", () => {
     const { run } = startRun();
-    expect(repo.pauseRun(db, run.id, "dart_budget_reserve", T0)).toMatchObject({ status: "paused_budget", pause_reason: "dart_budget_reserve" });
+    expect(repo.pauseRun(db, run.id, "dart_budget_reserve", T0)).toMatchObject({
+      status: "paused_budget",
+      pause_reason: "dart_budget_reserve",
+    });
     repo.resumeRun(db, run.id, "u1", T0);
     const done = repo.finishRun(db, run.id, "completed", "2026-11-16T03:00:00.000Z");
     expect(done).toMatchObject({ status: "completed", finished_at: "2026-11-16T03:00:00.000Z" });
@@ -186,10 +228,34 @@ describe("runs and items", () => {
 describe("versions: numbering, replace-on-success, unchanged inputs", () => {
   test("version numbers are 1, 2, 3 per (candidate, category), independent across categories", () => {
     const base = { runId: null, createdBy: "u1", now: T0 };
-    const v1 = repo.insertDraftVersion(db, { ...content(), ...base, targetId: t1, category: "financial", inputHash: "h1" });
-    const v2 = repo.insertDraftVersion(db, { ...content(), ...base, targetId: t1, category: "financial", inputHash: "h2" });
-    const tv = repo.insertDraftVersion(db, { ...content("technical"), ...base, targetId: t1, category: "technical", inputHash: "h3" });
-    const o1 = repo.insertDraftVersion(db, { ...content(), ...base, targetId: t2, category: "financial", inputHash: "h1" });
+    const v1 = repo.insertDraftVersion(db, {
+      ...content(),
+      ...base,
+      targetId: t1,
+      category: "financial",
+      inputHash: "h1",
+    });
+    const v2 = repo.insertDraftVersion(db, {
+      ...content(),
+      ...base,
+      targetId: t1,
+      category: "financial",
+      inputHash: "h2",
+    });
+    const tv = repo.insertDraftVersion(db, {
+      ...content("technical"),
+      ...base,
+      targetId: t1,
+      category: "technical",
+      inputHash: "h3",
+    });
+    const o1 = repo.insertDraftVersion(db, {
+      ...content(),
+      ...base,
+      targetId: t2,
+      category: "financial",
+      inputHash: "h1",
+    });
     expect([v1.version_no, v2.version_no, tv.version_no, o1.version_no]).toEqual([1, 2, 1, 1]);
     expect(repo.getLatestVersion(db, t1, "financial")?.id).toBe(v2.id);
     const list = repo.listVersions(db, t1, { category: "financial" });
@@ -201,7 +267,14 @@ describe("versions: numbering, replace-on-success, unchanged inputs", () => {
   test("T3: a failing producer writes nothing; the next success is v2 with no gap", async () => {
     const { run } = startRun([t1]);
     const [item] = repo.listRunItems(db, run.id);
-    const ok1 = await repo.commitCategoryDraft(db, { itemId: item.id, category: "technical", inputHash: "e1", createdBy: "u1", now: T0, produce: () => content("technical", 50) });
+    const ok1 = await repo.commitCategoryDraft(db, {
+      itemId: item.id,
+      category: "technical",
+      inputHash: "e1",
+      createdBy: "u1",
+      now: T0,
+      produce: () => content("technical", 50),
+    });
     expect(ok1.outcome).toBe("versioned");
     expect(ok1.version.version_no).toBe(1);
     const before = repo.getRunItem(db, item.id);
@@ -227,24 +300,57 @@ describe("versions: numbering, replace-on-success, unchanged inputs", () => {
 
     // An invalid payload also fails before any write.
     await expect(
-      repo.commitCategoryDraft(db, { itemId: item.id, category: "technical", inputHash: "e2", createdBy: "u1", now: T0, produce: () => content("financial") }),
+      repo.commitCategoryDraft(db, {
+        itemId: item.id,
+        category: "technical",
+        inputHash: "e2",
+        createdBy: "u1",
+        now: T0,
+        produce: () => content("financial"),
+      }),
     ).rejects.toThrow(repo.EvalDraftError);
     expect(versionCount(t1)).toBe(1);
 
-    const ok2 = await repo.commitCategoryDraft(db, { itemId: item.id, category: "technical", inputHash: "e3", createdBy: "u1", now: T0, produce: () => content("technical", 60) });
+    const ok2 = await repo.commitCategoryDraft(db, {
+      itemId: item.id,
+      category: "technical",
+      inputHash: "e3",
+      createdBy: "u1",
+      now: T0,
+      produce: () => content("technical", 60),
+    });
     expect(ok2.version.version_no).toBe(2);
-    expect(repo.getRunItem(db, item.id)).toMatchObject({ technical_outcome: "versioned", technical_version_id: ok2.version.id });
+    expect(repo.getRunItem(db, item.id)).toMatchObject({
+      technical_outcome: "versioned",
+      technical_version_id: ok2.version.id,
+    });
   });
 
   test("T23: identical input hash → no version, no producer call, outcome unchanged, checked_at advances", async () => {
     const r1 = startRun([t1]);
     const [i1] = repo.listRunItems(db, r1.run.id);
-    const v1 = await repo.commitCategoryDraft(db, { itemId: i1.id, category: "financial", inputHash: "same", createdBy: "u1", now: T0, produce: () => content() });
+    const v1 = await repo.commitCategoryDraft(db, {
+      itemId: i1.id,
+      category: "financial",
+      inputHash: "same",
+      createdBy: "u1",
+      now: T0,
+      produce: () => content(),
+    });
     repo.finishRun(db, r1.run.id, "completed", T0);
     expect(repo.getLatestVersionWithCheckedAt(db, t1, "financial")?.checked_at).toBe(T0);
 
     const later = "2026-11-30T05:00:00.000Z";
-    const r2 = repo.createRun(db, { opportunityId: opp, categories: "financial", targetIds: [t1], webEvidence: false, forceRefresh: false, startedBy: "u2", startedVia: "mcp", now: later });
+    const r2 = repo.createRun(db, {
+      opportunityId: opp,
+      categories: "financial",
+      targetIds: [t1],
+      webEvidence: false,
+      forceRefresh: false,
+      startedBy: "u2",
+      startedVia: "mcp",
+      now: later,
+    });
     const [i2] = repo.listRunItems(db, r2.run.id);
     let called = 0;
     const res = await repo.commitCategoryDraft(db, {
@@ -262,20 +368,38 @@ describe("versions: numbering, replace-on-success, unchanged inputs", () => {
     expect(res.version.id).toBe(v1.version.id);
     expect(called).toBe(0);
     expect(versionCount(t1)).toBe(1);
-    expect(repo.getRunItem(db, i2.id)).toMatchObject({ financial_outcome: "unchanged", financial_version_id: v1.version.id });
+    expect(repo.getRunItem(db, i2.id)).toMatchObject({
+      financial_outcome: "unchanged",
+      financial_version_id: v1.version.id,
+    });
     const chip = repo.getLatestVersionWithCheckedAt(db, t1, "financial");
     expect(chip?.version_no).toBe(1);
     expect(chip?.created_at).toBe(T0);
     expect(chip?.checked_at).toBe(later);
 
     // Any change in inputs mints a new version.
-    const r2b = await repo.commitCategoryDraft(db, { itemId: i2.id, category: "financial", inputHash: "changed", createdBy: "u2", now: later, produce: () => content() });
+    const r2b = await repo.commitCategoryDraft(db, {
+      itemId: i2.id,
+      category: "financial",
+      inputHash: "changed",
+      createdBy: "u2",
+      now: later,
+      produce: () => content(),
+    });
     expect(r2b.outcome).toBe("versioned");
     expect(r2b.version.version_no).toBe(2);
   });
 
   test("confirmed_count counts verdicts citing a version", () => {
-    const v = repo.insertDraftVersion(db, { ...content(), runId: null, createdBy: "u1", now: T0, targetId: t1, category: "financial", inputHash: "h" });
+    const v = repo.insertDraftVersion(db, {
+      ...content(),
+      runId: null,
+      createdBy: "u1",
+      now: T0,
+      targetId: t1,
+      category: "financial",
+      inputHash: "h",
+    });
     db.run(
       "INSERT INTO brownfield_eval_criterion (id, opportunity_id, category, label, source, created_by, created_at) VALUES (?, ?, 'financial', 'x', 'custom', 'u', ?)",
       [`crit-${opp}`, opp, T0],
@@ -292,8 +416,17 @@ describe("versions: numbering, replace-on-success, unchanged inputs", () => {
   test("T2: versions cannot be updated; a candidate delete cascades versions and run items", async () => {
     const { run } = startRun([t1, t2]);
     const [i1] = repo.listRunItems(db, run.id);
-    const v = await repo.commitCategoryDraft(db, { itemId: i1.id, category: "financial", inputHash: "x", createdBy: "u1", now: T0, produce: () => content() });
-    expect(() => db.run("UPDATE brownfield_eval_draft_version SET provisional_score = 1 WHERE id = ?", [v.version.id])).toThrow(/immutable/);
+    const v = await repo.commitCategoryDraft(db, {
+      itemId: i1.id,
+      category: "financial",
+      inputHash: "x",
+      createdBy: "u1",
+      now: T0,
+      produce: () => content(),
+    });
+    expect(() =>
+      db.run("UPDATE brownfield_eval_draft_version SET provisional_score = 1 WHERE id = ?", [v.version.id]),
+    ).toThrow(/immutable/);
     db.run("DELETE FROM brownfield_target WHERE id = ?", [t1]);
     expect(versionCount(t1)).toBe(0);
     expect(repo.listRunItems(db, run.id).map((i) => i.brownfield_target_id)).toEqual([t2]);
