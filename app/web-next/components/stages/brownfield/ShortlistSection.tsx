@@ -356,15 +356,18 @@ export function ShortlistSection({
           {/* flow.spec target_screening killCriteria: knock-out 통과 후보가 0건이다. 2026-10-20 decider:
               the old proxy ("evaluation complete = every item judged") fired the kill language whenever
               later-seeded criteria stayed pending — evaluation completeness is informational, not a kill. */}
-          <GateDecisionPanel
-            opportunityId={selected.opportunity.id}
-            gates={["target_screening"]}
-            killHint={
-              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
-                ? t("zeroCandidatesPassedTheScreening")
-                : null
-            }
-          />
+          {/* The target_screening approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
+          {dealShapePanel && (
+            <GateDecisionPanel
+              opportunityId={selected.opportunity.id}
+              gates={["target_screening"]}
+              killHint={
+                selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
+                  ? t("zeroCandidatesPassedTheScreening")
+                  : null
+              }
+            />
+          )}
           {(() => {
             const incomplete = selected.targets.filter(
               (t) => t.status !== "excluded" && t.eval_summary && !t.eval_summary.complete,
