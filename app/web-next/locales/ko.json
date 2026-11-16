@@ -6089,6 +6089,9 @@
         "theFinancialAndTechnologyEvaluation": "위 재무·기술 평가 종합 점수(financial·technical 평균) — 후보 전체 목록 잠정 순위(최종 후보 목록 rank와 별개)"
       },
       "shortlistSection": {
+        "s7TabsLabel": "대상 선정 하위 탭",
+        "s7TabDealShape": "진출 형태 평가",
+        "s7TabApproval": "의사결정 — 승인 기록",
         "acquisitionFeasibilityConcern": "인수 가능성 우려",
         "andCommitteeRecommendation": "사전 검토 · 위원회 추천",
         "andCommitteeRecommendation2": "사전 검토 · 위원회 추천",

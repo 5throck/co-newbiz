@@ -12,11 +12,12 @@ import {
 import { CommitteePanel } from "../../CommitteePanel.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
-import { ColGroup } from "../../ui.tsx";
+import { ColGroup, Tabs } from "../../ui.tsx";
 import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
 import { DealShapePanel } from "../DealShapePanel.tsx";
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 export function ShortlistSection({
@@ -29,6 +30,7 @@ export function ShortlistSection({
   const tr = useTranslations();
   const t = useTranslations("stages.s67.shortlistSection");
   const tc = useTranslations("common");
+  const [s7Tab, setS7Tab] = useState<"dealShape" | "approval">("dealShape");
   const {
     selected,
     precheckOpen,
@@ -352,12 +354,25 @@ export function ShortlistSection({
               />
             </section>
           )}
-          {dealShapePanel && <DealShapePanel opportunityId={selected.opportunity.id} canAct={canAct} />}
+          {dealShapePanel && (
+            <Tabs
+              label={t("s7TabsLabel")}
+              active={s7Tab}
+              onSelect={(k) => setS7Tab(k === "approval" ? "approval" : "dealShape")}
+              tabs={[
+                { key: "dealShape", label: t("s7TabDealShape") },
+                { key: "approval", label: t("s7TabApproval") },
+              ]}
+            />
+          )}
+          {dealShapePanel && s7Tab === "dealShape" && (
+            <DealShapePanel opportunityId={selected.opportunity.id} canAct={canAct} />
+          )}
           {/* flow.spec target_screening killCriteria: knock-out 통과 후보가 0건이다. 2026-10-20 decider:
               the old proxy ("evaluation complete = every item judged") fired the kill language whenever
               later-seeded criteria stayed pending — evaluation completeness is informational, not a kill. */}
           {/* The target_screening approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
-          {dealShapePanel && (
+          {dealShapePanel && s7Tab === "approval" && (
             <GateDecisionPanel
               opportunityId={selected.opportunity.id}
               gates={["target_screening"]}

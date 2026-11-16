@@ -6089,6 +6089,9 @@
         "theFinancialAndTechnologyEvaluation": "The financial and technology evaluation composite score above (average) — provisional full-candidate-list ranking (separate from the shortlist rank)"
       },
       "shortlistSection": {
+        "s7TabsLabel": "Target selection sub-tabs",
+        "s7TabDealShape": "Deal-shape evaluation",
+        "s7TabApproval": "Decision — approval record",
         "acquisitionFeasibilityConcern": "Acquisition feasibility concern",
         "andCommitteeRecommendation": "Pre-review and committee recommendation",
         "andCommitteeRecommendation2": "Pre-review and committee recommendation",
