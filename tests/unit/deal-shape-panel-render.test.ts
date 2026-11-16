@@ -16,7 +16,8 @@ const { NextIntlClientProvider } = (await import(`${WEB}/node_modules/next-intl`
 };
 const ko = (await import(`${WEB}/locales/ko.json`)).default as Record<string, unknown>;
 const en = (await import(`${WEB}/locales/en.json`)).default as Record<string, unknown>;
-const { DealShapePanelView } = (await import(`${WEB}/components/stages/DealShapePanel.tsx`)) as {
+const P = await import(`${WEB}/components/stages/DealShapePanel.tsx`);
+const { DealShapePanelView } = P as {
   DealShapePanelView: unknown;
 };
 const { GateAckBlock } = (await import(`${WEB}/components/GateSnapshotAck.tsx`)) as { GateAckBlock: unknown };
@@ -72,17 +73,13 @@ const view = (d: unknown, over: Record<string, unknown> = {}, locale: "ko" | "en
       data: d,
       loadError: null,
       canAct: true,
-      form: V.EMPTY_DEAL_SHAPE_FORM,
+      forms: {},
       onForm: () => {},
       onSubmit: () => {},
-      onEdit: () => {},
-      onStart: () => {},
-      onCancel: () => {},
       busy: false,
-      problem: null,
+      problems: {},
       serverError: null,
       notice: null,
-      loadedFromRow: false,
       ...over,
     }),
     locale,
@@ -221,10 +218,11 @@ describe("shape rows", () => {
 
 describe("human-only recording", () => {
   test("states that no AI suggestion is pre-filled, and the form starts empty with required fields marked", () => {
-    const html = view(data([]), { form: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" } });
+    const html = view(data([]), { forms: { spv: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv", viable: true } } });
     expect(html).toContain("AI 제안을 미리 채우지 않습니다");
     const form = (html.match(/<form[\s\S]*?<\/form>/) ?? [""])[0];
-    expect(form).not.toContain("checked");
+    // nothing is pre-decided: only the 미정 radio is checked for the shapes left alone
+    expect(form.match(/checked=""/g)?.length).toBe(8);
     expect(form).toContain('aria-required="true"');
     expect((form.match(/<textarea[^>]*>[^<]*<\/textarea>/) ?? [""])[0]).toMatch(/><\/textarea>$/);
     expect(form).toContain("근거 (필수, 2000자 이내)");
@@ -239,21 +237,31 @@ describe("human-only recording", () => {
     expect(html).not.toContain("<form");
     expect(html).not.toContain("수정");
   });
-  test("an editor sees 수정 on recorded shapes and 기록 on the others; no standalone form until a row is opened", () => {
-    const html = view(data([row("spv", true)]));
-    expect(html.match(/수정</g)?.length).toBe(1);
-    expect(html.match(/>기록</g)?.length).toBe(8); // 7 row buttons + the column header
-    expect(html).not.toContain("<form");
+  test("one form lists every shape as undecided; the intent and rationale fields appear only for decided shapes", () => {
+    const undecided = view(data([]));
+    expect(undecided.match(/<form/g)?.length).toBe(1);
+    expect(undecided.match(/data-shape-form=/g)?.length).toBe(8);
+    expect(undecided).not.toContain("<textarea");
+    const decided = view(data([]), { forms: { spv: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv", viable: false } } });
+    expect(decided.match(/<textarea/g)?.length).toBe(1);
   });
-  test("the editor opens inline under the chosen shape only", () => {
-    const html = view(data([]), { form: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" } });
-    expect(html.match(/<form/g)?.length).toBe(1);
-    expect(html).toContain('data-shape-editor="spv"');
+  test("a recorded shape cannot go back to undecided; the others can", () => {
+    const html = view(data([row("spv", true)]), { forms: { spv: V.formFromRow(row("spv", true)) } });
+    expect(html).toContain("disabled");
+    expect(html.match(/<textarea/g)?.length).toBe(1);
+  });
+  test("isShapeChanged: undecided is never saved; a new or edited decision is", () => {
+    const r = row("spv", true);
+    const f = V.formFromRow(r);
+    expect(P.isShapeChanged({ ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" }, undefined)).toBe(false);
+    expect(P.isShapeChanged(f, r)).toBe(false);
+    expect(P.isShapeChanged({ ...f, rationale: "other" }, r)).toBe(true);
+    expect(P.isShapeChanged(f, undefined)).toBe(true);
   });
   test("problem and server error render as alerts with an icon", () => {
     const html = view(data([]), {
-      form: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" },
-      problem: "rationale",
+      forms: { spv: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv", viable: true } },
+      problems: { spv: "rationale" },
       serverError: "boom",
     });
     expect(html).toContain("근거를 적어야 기록할 수 있습니다.");
