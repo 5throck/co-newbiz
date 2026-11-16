@@ -5,7 +5,7 @@ lang_reason: Row 0 design dispatched in English; docs/context.md English-only zo
 
 # ADR-0199: S6 bulk AI evaluation with immutable draft versions, confirm-from-version attribution, and incremental DART collection
 
-**Status**: Accepted (2026-11-16, user approval of spec `2026-11-16-s6-bulk-ai-eval-versioning`; implementation pending)
+**Status**: Accepted (2026-11-16, user approval of spec `2026-11-16-s6-bulk-ai-eval-versioning`; implementation pending). Amended by [ADR-0200](0200-s6-direct-ai-verdicts-with-origin.md) (Accepted 2026-11-17): decision 6 (provisional-only drafts, confirm route A6) and the bulk-run concurrency rule.
 **Date**: 2026-11-16
 **Deciders**: User (scope approval 2026-11-16); PM dispatch (Row 0 non-exempt); schema designed by data-architect, to be landed by backend-engineer with a dba operational review
 **Related**: ADR-0139 (S7 eval layer, migrations 0103/0104), ADR-0140 (financial rubric draft), ADR-0141 (technical evidence draft; this ADR lifts its "no disclosure body parsing" alternative for the business report only), ADR-0171 (criteria reconcile, judgement invalidation), ADR-0131 (rerun keeps the prior completed version), ADR-0005 (run versioning and attribution), ADR-0004 / FR-DATA-05 (freshness and revision-preserving ingest; `fact_financial` revision writer unchanged), ADR-0014 (reversible migrations), ADR-0012 (append-only audit, trigger precedent), ADR-0061 (money convention), ADR-0184 (next-intl ko/en), ADR-0187 D1 (data-confidence grades), ADR-0198 (no grade uplift on human acceptance), design `2026-11-16-s6-bulk-ai-eval-versioning-design`
