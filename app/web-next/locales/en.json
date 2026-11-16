@@ -6386,7 +6386,7 @@
         "loading": "Loading…",
         "noVersions": "No AI evaluation history yet.",
         "compare": "Compare versions",
-        "compareToggle": "Toggle the AI evaluation version history of {company}",
+        "compareToggle": "Compare versions: toggle the AI evaluation version history of {company}",
         "rowTargetRunning": "AI evaluation for this candidate is already running",
         "rowCapReached": "The limit of {max} concurrent AI evaluations is reached. Start again once one finishes",
         "bulkBlocked": "Start the full evaluation after the running AI evaluations finish",

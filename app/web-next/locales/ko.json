@@ -6386,7 +6386,7 @@
         "loading": "불러오는 중…",
         "noVersions": "아직 AI 평가 이력이 없습니다.",
         "compare": "버전 비교",
-        "compareToggle": "{company} AI 평가 버전 이력 펼치기·접기",
+        "compareToggle": "버전 비교: {company} AI 평가 버전 이력 펼치기·접기",
         "rowTargetRunning": "이 후보의 AI 평가가 진행 중입니다",
         "rowCapReached": "동시에 실행할 수 있는 AI 평가 {max}건에 도달했습니다. 하나가 끝난 뒤 시작하세요",
         "bulkBlocked": "진행 중인 AI 평가가 끝난 뒤에 전체 평가를 시작할 수 있습니다",
