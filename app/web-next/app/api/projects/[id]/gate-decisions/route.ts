@@ -170,7 +170,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (waccDenied) return waccDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
-      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
+      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`, { gaps });
     }
   }
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;

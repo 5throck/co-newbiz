@@ -119,7 +119,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (ladderDenied) return ladderDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "opportunity", id }, body.gate as GateId);
     if (gaps.length > 0) {
-      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
+      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`, { gaps });
     }
     // ADR-0186 D2 (family `rationale`): GO only - HOLD and KILL are never blocked by the integrity families.
     const rationaleDenied = goRationaleCheck({ entityType: "opportunity", entityId: id, gate: body.gate, actor: ctx.userId }, rationale);
