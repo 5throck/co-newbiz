@@ -338,7 +338,7 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
                     <span aria-hidden="true">ⓘ</span> {t("editLoadedNote")}
                   </p>
                 )}
-                <div className="grid gap-2">
+                <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
                   <label className="text-[length:var(--fs-caption)]" htmlFor={`${uid}-shape`}>
                     <span className="block mb-1 font-medium">
                       {t("fieldShape")}{" "}
@@ -361,36 +361,34 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
                       ))}
                     </select>
                   </label>
-                </div>
-                <fieldset className="border-0 p-0 m-0 mt-2">
-                  <legend className="text-[length:var(--fs-caption)] font-medium mb-1">
-                    {t("fieldViable")}{" "}
-                    <span aria-hidden="true" className="text-[color:var(--red-fg)]">
-                      *
-                    </span>
-                  </legend>
-                  <div className="flex flex-wrap gap-4 text-[length:var(--fs-caption)]">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`${uid}-viable`}
-                        checked={form.viable === true}
-                        onChange={() => p.onForm({ ...form, viable: true })}
-                      />
-                      <span>{t("verdictViable")}</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`${uid}-viable`}
-                        checked={form.viable === false}
-                        onChange={() => p.onForm({ ...form, viable: false })}
-                      />
-                      <span>{t("verdictNotViable")}</span>
-                    </label>
-                  </div>
-                </fieldset>
-                <div className="grid gap-2 mt-2">
+                  <fieldset className="border-0 p-0 m-0">
+                    <legend className="text-[length:var(--fs-caption)] font-medium mb-1">
+                      {t("fieldViable")}{" "}
+                      <span aria-hidden="true" className="text-[color:var(--red-fg)]">
+                        *
+                      </span>
+                    </legend>
+                    <div className="flex flex-wrap gap-4 text-[length:var(--fs-caption)]">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`${uid}-viable`}
+                          checked={form.viable === true}
+                          onChange={() => p.onForm({ ...form, viable: true })}
+                        />
+                        <span>{t("verdictViable")}</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`${uid}-viable`}
+                          checked={form.viable === false}
+                          onChange={() => p.onForm({ ...form, viable: false })}
+                        />
+                        <span>{t("verdictNotViable")}</span>
+                      </label>
+                    </div>
+                  </fieldset>
                   <label className="text-[length:var(--fs-caption)]" htmlFor={`${uid}-intent`}>
                     <span className="block mb-1 font-medium">
                       {t("fieldIntent")}{" "}
