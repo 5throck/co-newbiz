@@ -369,6 +369,8 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/opportunities/:id/synergy-confirm" },
   { method: "DELETE", pattern: "/api/opportunities/:id/synergy-confirm" },
   { method: "POST", pattern: "/api/brownfield/:oppId/targets/:targetId/rerank" },
+  // ADR-0199 A6: confirming a draft version's proposals writes human verdicts; drafting is a proposal, confirming is a person's act.
+  { method: "POST", pattern: "/api/brownfield/:oppId/targets/:targetId/eval-draft-versions/:versionId/confirm" },
   { method: "PATCH", pattern: "/api/projects/:id/waivers/:waiverId" },
   { method: "PUT", pattern: "/api/projects/:id/dd-checklist/tailor/:itemId/review" },
   { method: "POST", pattern: "/api/opportunities/:id/promote" },

@@ -1,3 +1,6 @@
+// @version 1.5.0 (2026-11-16: ADR-0199 incremental collection seams — fetchFinancials gains an
+// opt-in `fiscalYears` list and an additive `yearOutcomes` result; new listDisclosuresSince (paged,
+// no type filter) and selectEvidenceBusinessReport. Callers that pass neither option are unchanged.)
 // @version 1.4.0 (2026-11-10: cacheFile's walk-up keys on the repo-layout marker db/migrations,
 // same anchor as db/client.ts — the old db/data-existence walk let a stray app/db/data/ shadow
 // the canonical cache location. resolveCorpCachePath exported pure for tests. Design
@@ -44,6 +47,9 @@ export interface DartFinancials {
   reportUrl?: string;
   raw?: unknown;
   error?: string;
+  /** ADR-0199 §6.2 — per requested business year: found | not_filed (DART answered, no data) | error (thrown/HTTP/parse;
+   *  `detail` carries the reason). Additive; always present on a call made with a key. */
+  yearOutcomes?: Array<{ year: number; outcome: "found" | "not_filed" | "error"; detail?: string }>;
 }
 
 const BASE = "https://opendart.fss.or.kr/api";
@@ -508,13 +514,22 @@ export function checkSummation(items: Array<{ name: string; value: number }>): b
  *  BFS는 폐기되므로 같은 계정+연도의 CFS/BFS 혼입은 구조적으로 불가능하다.
  *  lastError는 두 기준 모두 무실과인 연도에서만 기록한다(부분 성공 회차가 에러
  *  문자열을 갖지 않도록). out.error는 전 연도 무실과일 때만 설정된다(기존 규율 유지). */
-export async function fetchFinancials(corpCode: string, opts: { years?: number } = {}): Promise<DartFinancials> {
+export async function fetchFinancials(
+  corpCode: string,
+  opts: { years?: number; /** ADR-0199: exact business years to fetch (same CFS-then-BFS rule per year); overrides `years`. */ fiscalYears?: number[] } = {},
+): Promise<DartFinancials> {
   const key = apiKey();
   const yearlyAgg: Array<{ year: string; fsDiv?: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string }> }> = [];
   const out: DartFinancials = { corpCode, found: false, items: [], yearly: yearlyAgg };
   if (!key) { out.error = "DART_API_KEY 미구성"; return out; }
   const latest = new Date().getFullYear() - 1; // latest complete business year
   const yearsToFetch = Math.min(Math.max(opts.years ?? 1, 1), 5);
+  const yearList: number[] =
+    opts.fiscalYears && opts.fiscalYears.length > 0
+      ? [...new Set(opts.fiscalYears.filter((y) => Number.isInteger(y)))].sort((a, b) => b - a)
+      : Array.from({ length: yearsToFetch }, (_, y) => latest - y);
+  const yearOutcomes: NonNullable<DartFinancials["yearOutcomes"]> = [];
+  out.yearOutcomes = yearOutcomes;
   let anyFound = false;
   let lastError: string | undefined;
   const integrityNotes: string[] = [];
@@ -559,8 +574,7 @@ export async function fetchFinancials(corpCode: string, opts: { years?: number }
     }
   };
 
-  for (let y = 0; y < yearsToFetch; y++) {
-    const year = latest - y;
+  for (const year of yearList) {
     // 연결(CFS) 우선 — 미스인 같은 연도에만 개별(BFS)로 폴백한다(연도별 단일 기준).
     const cfs = await fetchBlock(year, "CFS");
     let chosen: { fsDiv: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string; year: string }> } | null =
@@ -575,8 +589,14 @@ export async function fetchFinancials(corpCode: string, opts: { years?: number }
       // lastError 규율(v1.3.0): 두 기준 모두 무실과인 연도에서만 기록 — 부분 성공
       // 회차가 에러처럼 보이는 문자열을 갖지 않도록 한다.
       lastError = `DART CFS ${cfs.status}/BFS ${bfsStatus} — ${year}년 사업보고서 미제출 또는 코드 오류`;
+      // ADR-0199: DART answered with "no data" (013, or 000 without wanted accounts) on both bases = not filed;
+      // anything else (thrown, HTTP, parse, key/limit statuses) is an error that must not advance freshness.
+      const answered = (st: string | null) => st === "013" || st === "000";
+      if (answered(cfs.status) && answered(bfsStatus)) yearOutcomes.push({ year, outcome: "not_filed" });
+      else yearOutcomes.push({ year, outcome: "error", detail: `CFS ${cfs.status}/BFS ${bfsStatus}` });
       continue;
     }
+    yearOutcomes.push({ year, outcome: "found" });
     const basis = chosen.fsDiv;
     const stamped = chosen.items.map((i) => ({ ...i, fsDiv: basis }));
     anyFound = true;
@@ -680,6 +700,84 @@ export function selectBusinessReport(disclosures: DisclosureRow[]): DisclosureRo
   const clean = reports.filter((d) => !d.report_nm.includes("정정"));
   const pool = clean.length > 0 ? clean : reports;
   return [...pool].sort((a, b) => (a.rcept_dt < b.rcept_dt ? 1 : a.rcept_dt > b.rcept_dt ? -1 : 0))[0] ?? null;
+}
+
+/**
+ * Evidence selector (ADR-0199 §6.2): the newest business report by rcept_dt INCLUDING corrections — a correction
+ * supersedes the facts it corrects. `selectBusinessReport` (prefers non-corrected reports) is deliberately unchanged.
+ */
+export function selectEvidenceBusinessReport<T extends { rcept_no: string; report_nm: string; rcept_dt: string }>(
+  disclosures: readonly T[],
+): T | null {
+  const reports = disclosures.filter((d) => d.rcept_no && d.report_nm.includes("사업보고서"));
+  if (reports.length === 0) return null;
+  return (
+    [...reports].sort((a, b) =>
+      a.rcept_dt !== b.rcept_dt ? (a.rcept_dt < b.rcept_dt ? 1 : -1) : a.rcept_no < b.rcept_no ? 1 : a.rcept_no > b.rcept_no ? -1 : 0,
+    )[0] ?? null
+  );
+}
+
+export interface DartListRow {
+  rcept_no: string;
+  corp_code: string;
+  corp_name: string;
+  report_nm: string;
+  rcept_dt: string;
+  flr_nm: string | null;
+  rm: string | null;
+}
+
+const LIST_PAGE_CAP = 30; // 3,000 rows — far above any 36-month filing count; hitting it is reported as incomplete
+
+/**
+ * Persistable disclosure list (ADR-0199 §6.2): pages through list.json with NO type filter, 100 rows per page, until
+ * the last page. `rows` holds every row of the pages that succeeded even when a later page failed (those rows are true,
+ * immutable facts); `complete` is true only after the LAST page succeeded — the caller advances its cursor on that alone.
+ * Status 013 (no filings in range) is a complete, empty answer. Never throws.
+ */
+export async function listDisclosuresSince(
+  corpCode: string,
+  bgnDe: string,
+  endDe: string,
+): Promise<{ complete: boolean; rows: DartListRow[]; error?: string }> {
+  const key = apiKey();
+  if (!key) return { complete: false, rows: [], error: "DART_API_KEY 미구성" };
+  const rows: DartListRow[] = [];
+  try {
+    for (let pageNo = 1; pageNo <= LIST_PAGE_CAP; pageNo++) {
+      const json = await dartJson<{
+        status?: string;
+        total_page?: number;
+        list?: Array<{ rcept_no?: string; corp_code?: string; corp_name?: string; report_nm?: string; rcept_dt?: string; flr_nm?: string; rm?: string }>;
+      }>(
+        `${BASE}/list.json?crtfc_key=${encodeURIComponent(key)}&corp_code=${encodeURIComponent(corpCode)}&bgn_de=${bgnDe}&end_de=${endDe}&page_no=${pageNo}&page_count=100`,
+      );
+      if (json.status === "013") return { complete: true, rows };
+      if (json.status !== "000" || !Array.isArray(json.list)) {
+        return { complete: false, rows, error: `DART list status ${json.status ?? "ERR"}` };
+      }
+      for (const r of json.list) {
+        const rcept = (r.rcept_no ?? "").trim();
+        const dt = (r.rcept_dt ?? "").trim();
+        if (rcept.length !== 14 || dt.length !== 8) continue; // identity/date shape pinned by the cache CHECKs
+        const code = (r.corp_code ?? "").trim();
+        rows.push({
+          rcept_no: rcept,
+          corp_code: code.length === 8 ? code : corpCode,
+          corp_name: (r.corp_name ?? "").trim(),
+          report_nm: (r.report_nm ?? "").trim(),
+          rcept_dt: dt,
+          flr_nm: r.flr_nm?.trim() || null,
+          rm: r.rm?.trim() || null,
+        });
+      }
+      if (pageNo >= (json.total_page ?? 1)) return { complete: true, rows };
+    }
+    return { complete: false, rows, error: "DART list page cap reached" };
+  } catch (err) {
+    return { complete: false, rows, error: err instanceof Error ? err.message : "공시 목록 조회 실패" };
+  }
 }
 
 /* ── P3-8: 지분 안정성 시그널 — 대량보유 상황보고 요약 (S7 스코어카드 입력) ── */
