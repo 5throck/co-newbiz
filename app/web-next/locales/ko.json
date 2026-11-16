@@ -5228,6 +5228,7 @@
         "areaName": "영역명 *",
         "confirmationEvidenceWrittenDirectlyHuman": "확정 근거 — 직접 작성 (사람의 판단)",
         "confirmSynergyScoreEditThe": "시너지 점수 확정 — 점수를 직접 수정하고 기록합니다",
+        "capabilityFilledAfterAnalysis": "필요 역량이 분석 이후에 판정되어 충족도 팩터가 반영되지 않았습니다. 지금 판정된 필요 역량으로 재산정하면 새 버전이 추가됩니다.",
         "convertsSavedRecordsToThe": "구 4팩터 저장분을 충족도 포함 현재 체계로 전환합니다 — 점수가 바뀌면 기존 확정은 무효화됩니다.",
         "currentRecord": "현재 기록:",
         "currentRecord2": "현재 기록:",

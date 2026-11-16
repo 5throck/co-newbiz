@@ -5228,6 +5228,7 @@
         "areaName": "Area name *",
         "confirmationEvidenceWrittenDirectlyHuman": "Confirmation evidence — written directly (human judgement)",
         "confirmSynergyScoreEditThe": "Confirm synergy score — edit the score directly and record",
+        "capabilityFilledAfterAnalysis": "The required capabilities were judged after this analysis, so the capability-coverage factor is not counted. Recomputing adds a new version using the capabilities judged now.",
         "convertsSavedRecordsToThe": "Converts saved four-factor records to the current scheme including fulfillment — existing confirmations are invalidated if the score changes.",
         "currentRecord": "Current record:",
         "currentRecord2": "Current record:",

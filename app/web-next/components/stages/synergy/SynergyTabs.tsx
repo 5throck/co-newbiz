@@ -53,8 +53,15 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
   const { confirm, confirmDialog } = useConfirm();
   const [rescoreBusy, setRescoreBusy] = useState(false);
   const [rescoreNote, setRescoreNote] = useState<string | null>(null);
-  const storedFactors = Array.isArray(p.synergyScoreFactors) ? (p.synergyScoreFactors as Array<{ key?: unknown }>) : [];
+  const storedFactors = Array.isArray(p.synergyScoreFactors)
+    ? (p.synergyScoreFactors as Array<{ key?: unknown; value?: unknown }>)
+    : [];
   const legacyScheme = storedFactors.length > 0 && !storedFactors.some((f) => f?.key === "capability_coverage");
+  // The analysis ran before the capability register had judged rows: its 필요 역량 충족도 factor was excluded, while the
+  // register now has judged rows — the stored breakdown is stale until it is recomputed (deterministic, append-only).
+  const capabilityStale =
+    storedFactors.some((f) => f?.key === "capability_coverage" && typeof f.value !== "number") &&
+    (ctx.gapSummary?.evaluated ?? 0) > 0;
   function requestRescore() {
     if (rescoreBusy || !ctx.analysis?.id) return;
     confirm(t("recomputeSavedRecordsFromThe"), () => void rescoreCurrentScheme(), {
@@ -183,7 +190,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
           {/* ADR-0182 Phase 2 — 시너지 점수 산정 근거. 2026-10-18 디시더 피드백:
               규칙 가중합 → 보정 → 권고 → 사람 확정의 등식이 화면에서 닫히도록
               권고(payload)와 확정(synState)을 분리해 넘긴다. */}
-          {legacyScheme && canCurate && opportunityId && (
+          {(legacyScheme || capabilityStale) && canCurate && opportunityId && (
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <button
                 type="button"
@@ -195,7 +202,7 @@ export function SynergyScoreEvaluationTab({ ctx, p }: { ctx: SynergyResultState;
                 {rescoreBusy ? t("recalculating") : <><span aria-hidden="true">🤖</span> {t("recomputeUnderTheCurrentScheme")}</>}
               </button>
               <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {t("convertsSavedRecordsToThe")}
+                {legacyScheme ? t("convertsSavedRecordsToThe") : t("capabilityFilledAfterAnalysis")}
               </span>
             </div>
           )}
