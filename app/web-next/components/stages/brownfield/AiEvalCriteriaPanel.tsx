@@ -1,9 +1,9 @@
 "use client";
 
-// Collapsible "evaluation criteria" panel above the S6 longlist table (ADR-0199): every criterion with its weight,
-// live financial thresholds vs code defaults, plain-language rules, and threshold editing through the EXISTING
-// PATCH /eval-criteria/{id} path (analyst+ only). A change applies from the next evaluation; old versions keep the
-// thresholds they were drafted with.
+// "Evaluation criteria" dialog for the S6 longlist (ADR-0199): the toolbar button opens a modal with every criterion
+// and its weight, live financial thresholds vs code defaults, plain-language rules, and threshold editing through the
+// EXISTING PATCH /eval-criteria/{id} path (analyst+ only). A change applies from the next evaluation; old versions
+// keep the thresholds they were drafted with. Content is identical to the former inline collapsible panel.
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useState } from "react";
 import { api } from "../../../lib/api.ts";
@@ -13,6 +13,7 @@ import {
   rubricDefaults,
   rubricFields,
 } from "../../../lib/brownfield-financial-rubric.ts";
+import { AiEvalModal } from "./AiEvalDialogs.tsx";
 import { ScoreExplanation, TechnicalRules } from "./AiEvalCriteriaRules.tsx";
 import { type CriterionRow, isDefaultRubric, ruleSentence } from "./aiEvalRules.ts";
 
@@ -157,9 +158,53 @@ export function CriteriaList({
   );
 }
 
-export function AiEvalCriteriaPanel({ oppId, canAct }: { oppId: string; canAct: boolean }) {
+/** Modal body (rendered under test): score explanation, load/save errors, notice and the criteria list. */
+export function CriteriaPanelBody({
+  criteria,
+  error,
+  notice,
+  canAct,
+  savingId,
+  onSave,
+}: {
+  criteria: CriterionRow[] | null;
+  error: string | null;
+  notice: string | null;
+  canAct: boolean;
+  savingId: string | null;
+  onSave: (id: string, rubric: Record<string, number>) => void;
+}) {
   const t = useTranslations("stages.s67.aiEval.criteriaPanel");
-  const bodyId = useId();
+  return (
+    <div className="flex flex-col gap-3 mt-2">
+      <ScoreExplanation />
+      {error && (
+        <p role="alert" className="m-0 text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
+          {error}
+        </p>
+      )}
+      {criteria ? (
+        <>
+          <p className="m-0 text-[length:var(--fs-caption)]">{t("notice")}</p>
+          {notice && (
+            <p role="status" className="m-0 text-[length:var(--fs-caption)]">
+              {notice}
+            </p>
+          )}
+          <CriteriaList criteria={criteria} canAct={canAct} savingId={savingId} onSave={onSave} />
+        </>
+      ) : (
+        !error && <p className="m-0 text-[color:var(--muted-fg)]">{t("loading")}</p>
+      )}
+    </div>
+  );
+}
+
+/** Toolbar button + modal. Open state drives aria-expanded on the button; Escape / backdrop click close via the
+ * shared focus hook; the dialog is labelled by its heading (aria-labelledby). */
+export function AiEvalCriteriaDialog({ oppId, canAct }: { oppId: string; canAct: boolean }) {
+  const t = useTranslations("stages.s67.aiEval.criteriaPanel");
+  const titleId = useId();
   const [open, setOpen] = useState(false);
   const [criteria, setCriteria] = useState<CriterionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -195,45 +240,22 @@ export function AiEvalCriteriaPanel({ oppId, canAct }: { oppId: string; canAct: 
   }
 
   return (
-    <section aria-label={t("title")} className="market-section mb-2">
-      <button
-        type="button"
-        className="btn-ghost btn-sm"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={() => setOpen(!open)}
-      >
-        <span aria-hidden="true">{open ? "▾" : "▸"} </span>
+    <>
+      <button type="button" className="btn-ghost btn-sm" aria-expanded={open} onClick={() => setOpen(true)}>
         {t("title")}
       </button>
       {open && (
-        <div id={bodyId} className="flex flex-col gap-3 mt-2">
-          <ScoreExplanation />
-          {error && (
-            <p role="alert" className="m-0 text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
-              {error}
-            </p>
-          )}
-          {criteria ? (
-            <>
-              <p className="m-0 text-[length:var(--fs-caption)]">{t("notice")}</p>
-              {notice && (
-                <p role="status" className="m-0 text-[length:var(--fs-caption)]">
-                  {notice}
-                </p>
-              )}
-              <CriteriaList
-                criteria={criteria}
-                canAct={canAct}
-                savingId={savingId}
-                onSave={(id, r) => void save(id, r)}
-              />
-            </>
-          ) : (
-            !error && <p className="m-0 text-[color:var(--muted-fg)]">{t("loading")}</p>
-          )}
-        </div>
+        <AiEvalModal title={t("title")} titleId={titleId} showClose onClose={() => setOpen(false)}>
+          <CriteriaPanelBody
+            criteria={criteria}
+            error={error}
+            notice={notice}
+            canAct={canAct}
+            savingId={savingId}
+            onSave={(id, r) => void save(id, r)}
+          />
+        </AiEvalModal>
       )}
-    </section>
+    </>
   );
 }

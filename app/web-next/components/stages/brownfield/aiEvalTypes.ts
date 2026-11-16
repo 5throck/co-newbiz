@@ -46,6 +46,8 @@ export interface RunProgressView {
     error_message: string | null;
     web_evidence: 0 | 1;
     force_refresh: 0 | 1;
+    /** UTC start of the run (run header column); drives the elapsed-time line. */
+    started_at?: string;
   } | null;
   items: RunItemView[];
   progress: { done: number; total: number };
@@ -93,6 +95,8 @@ export const KNOWN_ITEM_CODES = [
 export const KNOWN_PAUSE_REASONS = ["dart_budget_reserve", "dart_budget_exhausted", "dart_status_020"] as const;
 export const KNOWN_CALL_ERRORS = [
   "engine_active",
+  "engine_active_bulk_block",
+  "engine_active_concurrency_cap",
   "already_promoted",
   "start_cooldown",
   "budget_reserve",

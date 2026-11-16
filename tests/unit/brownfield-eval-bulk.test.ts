@@ -146,7 +146,7 @@ const c = {
 let clock = NOW;
 let gate: Promise<void> | null = null;
 let llmMode: "ok" | "fail" | "disclosure_only" | "insufficient" = "ok";
-let webConfigured = true;
+const webConfigured = true;
 let onFetch: (() => void) | null = null;
 let dartConfigured = true;
 let llmConfigured = true;
@@ -312,12 +312,15 @@ describe("A1 start + engine happy path (T7, T13, T4, T11, T12)", () => {
     const again = await data(await startRoute({}));
     expect(again.data.run_id).toBe(run1);
     expect(again.meta.reused).toBe(true);
-    expect(() =>
-      db.run(
-        "INSERT INTO brownfield_eval_draft_run (id, opportunity_id, categories, status, total_targets, started_by, started_via, started_at, heartbeat_at) VALUES (?,?,?,?,?,?,?,?,?)",
-        [ulid(), OPP, "both", "running", 1, "x", "ui", NOW, NOW],
-      ),
-    ).toThrow(); // partial unique index: one active run per opportunity
+    // 0196 dropped 0194's one-active-run partial unique index; the cap is enforced in code now, so a raw second
+    // active run row is insertable (the fixture candidate set matches no active run, hence reused=false below).
+    db.run(
+      "INSERT INTO brownfield_eval_draft_run (id, opportunity_id, categories, status, total_targets, started_by, started_via, started_at, heartbeat_at) VALUES (?,?,?,?,?,?,?,?,?)",
+      [ulid(), OPP, "both", "running", 1, "x", "ui", NOW, NOW],
+    );
+    db.run("UPDATE brownfield_eval_draft_run SET status = 'completed' WHERE opportunity_id = ? AND started_by = 'x'", [
+      OPP,
+    ]);
     // T4: mid-candidate the progress route shows the step and the longlist shows no (previous) version yet
     const prog = (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/latest`))).data;
     expect(prog.run.id).toBe(run1);
@@ -962,8 +965,16 @@ describe("security review fixes", () => {
     const body = await data(again);
     expect(body.error.code).toBe("engine_active");
     expect(body.error.details.run_id).toBe(runId);
+    expect(body.error.details.reason).toBe("bulk_block");
+    // A single-candidate start is allowed beside the cancelled engine still finishing (it counts toward the cap,
+    // but the cap is 3): a fresh single-candidate run starts while the cancelled engine finishes its item.
+    const solo = await startRoute({ categories: "technical", target_ids: [T.A] });
+    expect(solo.status).toBe(202);
+    const soloBody = await data(solo);
+    expect(soloBody.meta.reused).toBe(false);
     release();
     gate = null;
+    await settle(soloBody.data.run_id as string);
     await settle(runId);
     bulk.setStartCooldownForTests(60_000);
     bulk.noteRunStart(ANALYST);
@@ -997,5 +1008,186 @@ describe("security review fixes", () => {
       expect(e).toMatch(
         /^(technical|financial): (dart_error|llm_error|parse_error|db_error|unknown)|^(dart_not_configured|excluded|llm_unconfigured)$|^.*(dart_error|llm_error)/,
       );
+  });
+});
+
+describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follow-up)", () => {
+  const TC: Record<"C" | "D" | "E", string> = { C: ulid(), D: ulid(), E: ulid() };
+  let runC = "";
+  beforeAll(() => {
+    bulk.setStartCooldownForTests(0);
+    // md_company.dart_corp_code is UNIQUE — share the fixture companies (A/B corps) and key runs by target id.
+    const mk = (id: string, name: string, corp: string | null) => {
+      db.run(
+        "INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+        [id, OPP, name, corp, NOW, NOW],
+      );
+    };
+    mk(TC.C, "가나다씨", CORP_A);
+    mk(TC.D, "가나다디", CORP_B);
+    mk(TC.E, "가나다이", CORP_A);
+  });
+
+  const engineCount = () => bulk.activeEngineRunsForOpportunity(OPP).length;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  async function waitForEngines(n: number): Promise<void> {
+    for (let i = 0; i < 500; i++) {
+      if (engineCount() >= n) return;
+      await sleep(10);
+    }
+    throw new Error(`expected ${n} active engines, saw ${engineCount()}`);
+  }
+  const startSingle = (id: string) => startRoute({ categories: "technical", target_ids: [id] });
+
+  test("single-candidate starts run beside each other up to the cap; bulk always needs a quiet engine table", async () => {
+    let release: () => void = () => {};
+    gate = new Promise<void>((r) => (release = r));
+    llmMode = "ok";
+    const ids: string[] = [];
+    for (const key of ["C", "D", "E"] as const) {
+      const res = await startSingle(TC[key]);
+      expect(res.status).toBe(202);
+      const body = await data(res);
+      ids.push(body.data.run_id as string);
+      expect(body.meta.reused).toBe(false);
+    }
+    runC = ids[0];
+    await waitForEngines(3);
+    // the 4th engine is refused at the cap, with the machine-readable reason
+    const capped = await startSingle(T.A);
+    expect(capped.status).toBe(409);
+    const capBody = await data(capped);
+    expect(capBody.error.code).toBe("engine_active");
+    expect(capBody.error.details.reason).toBe("concurrency_cap");
+    // bulk (no target_ids) and multi-id starts refuse on ANY active engine
+    for (const body of [{}, { target_ids: [T.A, TC.D] }]) {
+      const res = await startRoute(body);
+      expect(res.status).toBe(409);
+      expect((await data(res)).error.details.reason).toBe("bulk_block");
+    }
+    // reuse still works per candidate set: the same single start reuses its own active run
+    const again = await startSingle(TC.C);
+    expect(again.status).toBe(202);
+    const againBody = await data(again);
+    expect(againBody.meta.reused).toBe(true);
+    expect(againBody.data.run_id).toBe(ids[0]);
+    release();
+    gate = null;
+    for (const id of ids) await settle(id);
+    expect(engineCount()).toBe(0);
+    // candidates C/D/E each got exactly their own technical version, and versions stay uniquely numbered
+    for (const key of ["C", "D", "E"] as const) {
+      expect(repo.getLatestVersion(db, TC[key], "technical")?.version_no).toBe(1);
+    }
+    const dupes = db
+      .query(
+        "SELECT brownfield_target_id, category, version_no, COUNT(*) n FROM brownfield_eval_draft_version GROUP BY brownfield_target_id, category, version_no HAVING n > 1",
+      )
+      .all();
+    expect(dupes).toEqual([]);
+  });
+
+  test("two concurrent category commits cannot produce duplicate version_no (MAX+1 inside the insert transaction)", async () => {
+    const runId = await startAndSettle({ categories: "technical", target_ids: [TC.C] });
+    runC = runId; // the candidate's own latest run is now this one (used by the latest?target_id test)
+    const item = repo.listRunItems(db, runId).find((i) => i.brownfield_target_id === TC.C)!;
+    type Payload = import("../../db/repositories/brownfield-eval-draft.repository.ts").EvalDraftPayload;
+    const payload = (gen: string): Payload =>
+      ({
+        schema: 1,
+        category: "technical",
+        criteria_snapshot: [{ criterion_id: "c1", label: "L", weight: 1, source: "custom", rubric: null }],
+        items: [{ criterion_id: "c1", proposed_status: null, reason: null, metrics: [], note: null, citations: [] }],
+        human_items: [],
+        provisional_score: { score: null, scored_weight: 0, total_weight: 1 },
+        dart: null,
+        evidence: { disclosures: [], business_report: null, profile: { present: false, version_no: null }, web: [] },
+        llm: null,
+        runner: { user_id: ANALYST, via: "ui" },
+        generated_at: gen,
+      }) as Payload;
+    const mk = (hash: string) =>
+      repo.commitCategoryDraft(db, {
+        itemId: item.id,
+        category: "technical",
+        inputHash: hash,
+        createdBy: ANALYST,
+        now: NOW,
+        produce: async () => ({
+          payload: payload(hash),
+          provisionalScore: null,
+          proposedCount: 0,
+          unverifiedCount: 1,
+          evidenceGrade: "U" as const,
+        }),
+      });
+    const before = repo.getLatestVersion(db, TC.C, "technical")!.version_no;
+    const [r1, r2] = await Promise.all([mk("hash-a"), mk("hash-b")]);
+    expect(r1.outcome).toBe("versioned");
+    expect(r2.outcome).toBe("versioned");
+    const nos = [r1.version.version_no, r2.version.version_no].sort((a, b) => a - b);
+    expect(nos).toEqual([before + 1, before + 2]);
+    expect(r1.version.id).not.toBe(r2.version.id);
+  });
+
+  test("latest?target_id returns the candidate's own latest run, not the global latest", async () => {
+    const runE = await startAndSettle({ categories: "technical", target_ids: [TC.E] });
+    // the global latest is the E run just created; candidate C's own latest is its earlier single run
+    const viaC = (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/latest?target_id=${TC.C}`))).data;
+    expect(viaC.run.id).toBe(runC);
+    const viaE = (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/latest?target_id=${TC.E}`))).data;
+    expect(viaE.run.id).toBe(runE);
+    const viaNone = (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/latest?target_id=${ulid()}`))).data;
+    expect(viaNone.run).toBeNull();
+    expect(viaE.items.length).toBe(1);
+  });
+
+  test("cooldown: a different single candidate is never delayed; the same candidate and bulk starts are rate-limited", async () => {
+    bulk.setStartCooldownForTests(60_000);
+    try {
+      bulk.noteRunStart(ANALYST, TC.C);
+      expect(bulk.startCooldownRemaining(ANALYST, TC.C)).toBeGreaterThan(0);
+      expect(bulk.startCooldownRemaining(ANALYST, TC.D)).toBe(0);
+      expect(bulk.startCooldownRemaining(ANALYST)).toBe(0); // bulk key is separate
+      expect((await startSingle(TC.C)).status).toBe(429); // same candidate within the window
+      bulk.noteRunStart(ANALYST); // bulk start noted
+      expect((await startRoute({})).status).toBe(429);
+      const other = await startSingle(TC.D); // different single candidate: not delayed
+      expect(other.status).toBe(202);
+      await settle((await data(other)).data.run_id as string);
+    } finally {
+      bulk.setStartCooldownForTests(0);
+    }
+  });
+
+  test("GET eval-draft-runs/active lists runs with an active engine, oldest first ({ runs: [] } when none)", async () => {
+    const active = async () =>
+      (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/active`))).data.runs as any[];
+    expect((await get(`/api/brownfield/${ulid()}/eval-draft-runs/active`)).status).toBe(404);
+    expect((await get(`/api/brownfield/${OPP}/eval-draft-runs/active`, "")).status).toBe(401);
+    expect(await active()).toEqual([]); // 0 concurrent runs
+    addCustomCriterion(OPP, "technical", "병렬 실행 항목", null, ANALYST); // new input hash, so each engine reaches the gated LLM step
+    let release: () => void = () => {};
+    gate = new Promise<void>((r) => (release = r));
+    const ids: string[] = [];
+    const first = await startSingle(TC.C);
+    ids.push((await data(first)).data.run_id as string);
+    await waitForEngines(1);
+    const one = await active(); // 1 concurrent run
+    expect(one.map((v) => v.run.id)).toEqual([ids[0]]);
+    expect(one[0]).toHaveProperty("items");
+    expect(one[0]).toHaveProperty("progress");
+    expect(one[0]).toHaveProperty("budget");
+    for (const key of ["D", "E"] as const) {
+      await sleep(5); // distinct started_at ordering
+      ids.push((await data(await startSingle(TC[key]))).data.run_id as string);
+    }
+    await waitForEngines(3);
+    const three = await active(); // 3 concurrent runs
+    expect(three.map((v) => v.run.id)).toEqual(ids);
+    release();
+    gate = null;
+    for (const id of ids) await settle(id);
+    expect(await active()).toEqual([]);
   });
 });

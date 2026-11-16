@@ -161,18 +161,21 @@ describe("runs and items", () => {
     ]);
   });
 
-  test("T13: a second start while active returns the same run (reused) and inserts nothing", () => {
+  test("T13: a second start for the SAME candidate set reuses the active run; a different set creates its own run", () => {
     const first = startRun();
-    const second = startRun([t2]);
-    expect(second.reused).toBe(true);
-    expect(second.run.id).toBe(first.run.id);
+    const sameSet = startRun([t2, t1]); // order-insensitive reuse
+    expect(sameSet.reused).toBe(true);
+    expect(sameSet.run.id).toBe(first.run.id);
+    const otherSet = startRun([t2]);
+    expect(otherSet.reused).toBe(false);
+    expect(otherSet.run.id).not.toBe(first.run.id); // per-candidate engines (0196): parallel active runs
     expect(
       (
         db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_run WHERE opportunity_id = ?").get(opp) as {
           n: number;
         }
       ).n,
-    ).toBe(1);
+    ).toBe(2);
   });
 
   test("createRun rejects foreign or repeated targets", () => {
@@ -185,7 +188,7 @@ describe("runs and items", () => {
     expect(repo.markStaleRunInterrupted(db, opp, "2026-11-16T01:05:00.000Z")).toBe(0);
     expect(repo.markStaleRunInterrupted(db, opp, "2026-11-16T01:11:00.000Z")).toBe(1);
     expect(repo.getRun(db, run.id)?.status).toBe("interrupted");
-    expect(repo.getActiveRun(db, opp)?.id).toBe(run.id); // still blocks a parallel start
+    expect(repo.getActiveRun(db, opp)?.id).toBe(run.id);
     const resumed = repo.resumeRun(db, run.id, "u2", "2026-11-16T02:00:00.000Z");
     expect(resumed).toMatchObject({
       status: "running",

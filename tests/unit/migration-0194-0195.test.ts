@@ -6,7 +6,8 @@
  *   - the six tables, the confirmed_from_version_id FK, indexes, and CHECK vocabularies exist as designed;
  *   - T2: UPDATE on a version aborts, a direct DELETE aborts while the candidate exists, a candidate delete cascades
  *     its versions and run items in one statement (foreign_key_check clean afterwards);
- *   - T13 (DB part): the partial unique index allows one active run per opportunity;
+ *   - T13 (DB part): multiple active runs per opportunity are allowed since migration 0196
+ *     (per-candidate engines, cap enforced in code); terminal runs are unaffected;
  *   - T19 (trigger part): UPDATE on dart_disclosure aborts; length CHECKs pin DART's code system;
  *   - T25 (schema part): the 0195 tables carry no opportunity/user/candidate/verdict column, and a candidate delete
  *     leaves cache rows intact;
@@ -148,7 +149,6 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
     );
     const idx = objects(db, "index");
     for (const n of [
-      "ux_bedr_active",
       "idx_bedr_opp_started",
       "idx_bedri_run_state",
       "idx_bedv_run",
@@ -194,15 +194,14 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
     ).toThrow();
   });
 
-  test("T13: at most one active run per opportunity; terminal runs do not block", () => {
+  test("T13: parallel active runs are allowed (0196 dropped the one-active-run index); terminal runs unaffected", () => {
     const db = fullChain("active194");
     seed(db);
     insertRun(db, "r1", "running");
-    expect(() => insertRun(db, "r2", "paused_budget")).toThrow();
-    db.run("UPDATE brownfield_eval_draft_run SET status = 'completed' WHERE id = 'r1'");
-    insertRun(db, "r2", "interrupted");
-    insertRun(db, "r3", "cancelled");
-    expect((db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_run").get() as { n: number }).n).toBe(3);
+    insertRun(db, "r2", "paused_budget");
+    insertRun(db, "r3", "interrupted");
+    insertRun(db, "r4", "completed");
+    expect((db.query("SELECT COUNT(*) AS n FROM brownfield_eval_draft_run").get() as { n: number }).n).toBe(4);
   });
 
   test("T2: versions are immutable, deletable only through the candidate cascade", () => {

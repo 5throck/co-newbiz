@@ -9,7 +9,7 @@ import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import {
   createRun,
-  getActiveRun,
+  getActiveRunForTargets,
   EvalDraftError,
   RUN_CATEGORY_SELECTIONS,
   type RunCategorySelection,
@@ -18,10 +18,11 @@ import { authenticate, callPathOf, requireBusinessActor } from "../../../../../l
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
 import { listTargets } from "../../../../../lib/brownfield-targets.ts";
 import {
-  activeEngineRunForOpportunity,
+  activeEngineRunsForOpportunity,
   launchBulkEval,
   noteRunStart,
   startCooldownRemaining,
+  MAX_CONCURRENT_EVAL_ENGINES,
 } from "../../../../../lib/brownfield-eval-bulk.ts";
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
@@ -76,14 +77,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   }
   if (ids.length === 0) return badRequest("no_candidates", "There are no candidates to evaluate.");
 
-  // An engine still finishing (e.g. a cancelled run's current item) blocks a new start; an active DB run is reused below.
-  const activeRun = getActiveRun(db, oppId);
-  const engineRun = activeEngineRunForOpportunity(oppId);
-  if (!activeRun && engineRun) {
-    return fail(409, "engine_active", "A previous run is still finishing its current step.", { run_id: engineRun });
-  }
+  // Reuse (T13) matches an active run whose candidate set is exactly the requested one, so a parallel engine over
+  // OTHER candidates cannot swallow the start; re-issuing a start for a running run just returns it.
+  const single = ids.length === 1;
+  const activeRun = getActiveRunForTargets(db, oppId, ids);
   if (!activeRun) {
-    const wait = startCooldownRemaining(ctx.userId);
+    // Concurrency rule (§5, MAX_CONCURRENT_EVAL_ENGINES): a BULK start (no target_ids, or more than one id) refuses
+    // while ANY engine for the opportunity is active — including a cancelled engine finishing its current item. A
+    // SINGLE-candidate start may run beside other engines up to the cap; at the cap it refuses with a machine-readable
+    // reason (bulk_block vs concurrency_cap) so the UI can localize both. Cooldown (429) is unchanged.
+    const engineRuns = activeEngineRunsForOpportunity(oppId);
+    if (!single && engineRuns.length > 0) {
+      return fail(409, "engine_active", "A run is still finishing its current step.", {
+        run_id: engineRuns[0],
+        reason: "bulk_block",
+      });
+    }
+    if (engineRuns.length >= MAX_CONCURRENT_EVAL_ENGINES) {
+      return fail(409, "engine_active", "Too many evaluations are running for this opportunity.", {
+        run_id: engineRuns[0],
+        reason: "concurrency_cap",
+      });
+    }
+    const wait = startCooldownRemaining(ctx.userId, single ? ids[0] : undefined);
     if (wait > 0) return fail(429, "start_cooldown", `Wait ${Math.ceil(wait / 1000)}s before starting another run.`);
   }
   const now = new Date().toISOString();
@@ -110,7 +126,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     throw e;
   }
   if (!created.reused) {
-    noteRunStart(ctx.userId);
+    noteRunStart(ctx.userId, single ? ids[0] : undefined);
     appendAudit(db, {
       actor: ctx.userId,
       action: "target_eval.bulk_run.start",

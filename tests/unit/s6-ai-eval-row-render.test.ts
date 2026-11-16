@@ -27,7 +27,7 @@ const btn = (over: Record<string, unknown> = {}, locale: "ko" | "en" = "ko") =>
       targetId: "t1",
       excluded: false,
       hasDart: true,
-      running: false,
+      block: null,
       busy: false,
       onStart: async () => true,
       ...over,
@@ -44,8 +44,10 @@ describe("row button", () => {
   });
   test("disabled with a visible reason: running, excluded, non-DART", () => {
     const a = ko.stages.s67.aiEval;
-    expect(btn({ running: true })).toContain(`disabled="" aria-label`);
-    expect(btn({ running: true })).toContain(a.rowRunning);
+    expect(btn({ block: "bulk" })).toContain(`disabled="" aria-label`);
+    expect(btn({ block: "bulk" })).toContain(a.rowRunning);
+    expect(btn({ block: "target" })).toContain(a.rowTargetRunning);
+    expect(btn({ block: "cap" })).toContain("동시에 실행할 수 있는 AI 평가 3건에 도달");
     expect(btn({ excluded: true })).toContain(a.rowExcluded);
     expect(btn({ hasDart: false })).toContain(a.rowNoDart);
   });
@@ -98,7 +100,7 @@ describe("longlist table fits the pane (no horizontal scroll at about 730px)", (
 
 test("ko/en parity for row keys", () => {
   const keys = Object.keys(ko.stages.s67.aiEval).filter((k) => k.startsWith("row"));
-  expect(keys.length).toBe(17);
+  expect(keys.length).toBe(20); // + rowTargetRunning, rowCapReached (parallel runs), rowSeg (progress phrases)
   for (const k of keys) expect(en.stages.s67.aiEval[k]).toBeTruthy();
 });
 

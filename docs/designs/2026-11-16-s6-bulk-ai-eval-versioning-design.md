@@ -448,7 +448,7 @@ with `started_via` = `callPathOf(ctx)` (boundary #1).
 
 | # | Method + path | Role | Human-only | Purpose |
 |---|---|---|---|---|
-| A1 | `POST /api/brownfield/[oppId]/eval-draft-runs` | analyst+ (write) | No — drafting is a proposal | Start a bulk run. Body `{ categories?: "both"\|"financial"\|"technical", target_ids?: string[], web_evidence?: boolean, force_refresh?: boolean }`. Default: every non-excluded candidate. `web_evidence` (resolved Q1) and `force_refresh` (§6.2) both default to `false` and are stored in the run header, so resume keeps them. If a run is already active, returns it with `meta.reused: true` (the S1 `alreadyRunning` precedent). Returns 202 `{ run_id }`. |
+| A1 | `POST /api/brownfield/[oppId]/eval-draft-runs` | analyst+ (write) | No — drafting is a proposal | Start a bulk run. Body `{ categories?: "both"\|"financial"\|"technical", target_ids?: string[], web_evidence?: boolean, force_refresh?: boolean }`. Default: every non-excluded candidate. `web_evidence` (resolved Q1) and `force_refresh` (§6.2) both default to `false` and are stored in the run header, so resume keeps them. Concurrency (follow-up): a **bulk** start (no `target_ids`, or more than one id) refuses with `409 engine_active` `reason: "bulk_block"` while ANY engine for the opportunity is active; a **single-candidate** start (`target_ids` with exactly 1 id) may run beside other engines up to `MAX_CONCURRENT_EVAL_ENGINES = 3` and refuses with `reason: "concurrency_cap"` at the cap (a cancelled engine finishing its current item counts toward the cap). Start-reuse (`meta.reused: true`, the S1 precedent) only matches an active run whose candidate set is exactly the requested one. A2 addendum: `GET .../eval-draft-runs/latest?target_id=` returns the candidate's own latest run. Returns 202 `{ run_id }`. |
 | A2 | `GET /api/brownfield/[oppId]/eval-draft-runs/latest` (and `/[runId]`) | read | No | Run header plus items (`seq`, candidate, `state`, outcomes, error) and budget snapshot `{ calls, budget, reserve }`. Lazily marks a `running` run with `heartbeat_at` older than 10 minutes as `interrupted`. |
 | A3 | `POST /api/brownfield/[oppId]/eval-draft-runs/[runId]/resume` | analyst+ | No | Resumes a `paused_budget` or `interrupted` run from the first non-terminal item. Refused with 409 `budget_reserve` while the reserve is still unmet. Sets `resumed_by`. |
 | A4 | `POST /api/brownfield/[oppId]/eval-draft-runs/[runId]/cancel` | analyst+ | No | Stops after the current step. Completed versions stay. |
@@ -496,9 +496,20 @@ A1–A2. A6 stays human-only at the in-process port.
 - Implementation home: `lib/brownfield-eval-bulk.ts` (engine) and
   `db/repositories/brownfield-eval-draft.repository.ts` (all SQL for the three 0194
   tables; version insert computes `MAX(version_no)+1` inside the insert transaction —
-  SQLite's single writer serializes it). `db/repositories/dart-evidence-cache.repository.ts`
+  SQLite's single writer serializes it, so concurrent engines cannot mint duplicate
+  version numbers). `db/repositories/dart-evidence-cache.repository.ts`
   holds all SQL for the three 0195 tables (insert-or-ignore by `rcept_no`, cursor and
   freshness reads, state advance).
+- Concurrency (follow-up amendment): per-candidate engines may run in parallel, bounded by
+  `MAX_CONCURRENT_EVAL_ENGINES = 3` active engines per opportunity (`lib/brownfield-eval-bulk.ts`).
+  A bulk start still requires zero active engines (409 `engine_active` `reason: "bulk_block"`);
+  a single-candidate start is refused only at the cap (409 `reason: "concurrency_cap"`); a
+  cancelled engine finishing its current item counts toward the cap. Migration 0196 drops
+  0194's one-active-run partial unique index (`ux_bedr_active`) — the cap lives in code —
+  and start-reuse matches only an active run with the exact same candidate set. The
+  process-global DART budget counter (`dart-client.ts` `callCount`) is shared across
+  engines, so the §6.3 reserve check remains global, not per-run; the per-user start
+  start cooldown (429, 30 s) applies only to bulk starts (keyed per user) and to restarting the SAME single candidate (keyed per user + candidate), so starting a different single candidate is never delayed. `GET .../eval-draft-runs/active` returns `{ runs: [...] }` — every run with an engine active in this process, oldest first, each shaped like the `latest` response — so the UI can render parallel runs.
 - Execution: A1 inserts the run and the run items (`seq` = longlist order). Then it
   launches the engine fire-and-forget (`void runBulkEval(db, runId).catch(...)`), the same
   pattern as the S1 rerun route (`market-overview/analyses/[id]/rerun/route.ts`). The engine
@@ -870,7 +881,7 @@ in this design, Korean labels appear only as quoted code spans.
 | T10 | Attribution | A confirmed row has `assessed_by` = the caller, `confirmed_from_version_id` = the version, and `evidence_ref` = the version id. A later plain PUT clears the link. `invalidateTargetJudgements` runs for seeded criteria. |
 | T11 | Provisional isolation | Before and after a run, `eval_summary`, `evalRank`, and `complete` are byte-equal. Gate snapshot and RAG inputs are unchanged. |
 | T12 | Business-report evidence | Section extraction finds the four sections on fixture XML. A non-ZIP (HWP) body → `available: false` with the reason. An LLM verdict citing a missing section is downgraded to unverified. |
-| T13 | One active run | A second A1 during an active run returns the same `run_id` (`reused`). The partial unique index rejects a second active row. |
+| T13 | One active run per candidate set | A second A1 for the same candidate set during its active run returns the same `run_id` (`reused`); a start over a different set creates its own run (follow-up concurrency rule, §5). Migration 0196 dropped 0194's partial unique index; the cap is enforced in code. |
 | T14 | Audit | Every action in §4 is appended with the documented target shape. |
 | T15 | MNPI | A run started without `web_evidence` (the default) makes no web call, including after resume. With `web_evidence: true`, queries contain only company name and criterion label. |
 | T16 | UI | `lint:design` 0 violations; chips carry text labels (`AI 잠정`, `갱신 권장`); keyboard expansion; i18n parity. |
