@@ -51,6 +51,7 @@ export function AiEvalStartForm({
   busy,
   onSubmit,
   onCancel,
+  summary,
 }: {
   value: StartOptions;
   onChange: (v: StartOptions) => void;
@@ -58,6 +59,8 @@ export function AiEvalStartForm({
   busy: boolean;
   onSubmit: () => void;
   onCancel: () => void;
+  /** Overrides the bulk summary line (the per-candidate dialog names the candidate). */
+  summary?: string;
 }) {
   const t = useTranslations("stages.s67.aiEval");
   const tc = useTranslations("common");
@@ -70,7 +73,8 @@ export function AiEvalStartForm({
       className="flex flex-col gap-3 mt-2"
     >
       <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-        {t("startSummary", { candidates: stats.candidates, dart: stats.dartEligible, calls: stats.estimatedCalls })}
+        {summary ??
+          t("startSummary", { candidates: stats.candidates, dart: stats.dartEligible, calls: stats.estimatedCalls })}
       </p>
       <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("humanConfirms")}</p>
       <fieldset className="m-0 p-0 border-0">

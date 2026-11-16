@@ -16,6 +16,8 @@ export interface VersionChip {
   created_at: string;
   checked_at: string;
   provisional_score: number | null;
+  proposed_count: number;
+  unverified_count: number;
   stale: boolean;
   evidence_grade: EvidenceGrade;
 }
@@ -36,6 +38,8 @@ export function evalDraftView(db: Database, targetId: string, now: Date = new Da
       created_at: v.created_at,
       checked_at: v.checked_at,
       provisional_score: v.provisional_score,
+      proposed_count: v.proposed_count,
+      unverified_count: v.unverified_count,
       stale: now.getTime() - new Date(v.checked_at).getTime() > DRAFT_STALE_DAYS * 86_400_000,
       evidence_grade: v.evidence_grade,
     };

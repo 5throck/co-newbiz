@@ -492,9 +492,9 @@ describe("T19 — rcept_no immutability and extractor_version", () => {
     expect(n).toBe(1);
     await br.ensureBusinessReportExtract(db, rcept, fetcher as any, T0);
     expect(n).toBe(1);
-    await br.ensureBusinessReportExtract(db, rcept, fetcher as any, T0, "br-2");
+    await br.ensureBusinessReportExtract(db, rcept, fetcher as any, T0, "br-bump-test");
     expect(n).toBe(2);
-    expect(cache.getBusinessReportExtract(db, rcept, "br-1")).not.toBeNull(); // the old version row stays
+    expect(cache.getBusinessReportExtract(db, rcept, br.BUSINESS_REPORT_EXTRACTOR_VERSION)).not.toBeNull(); // the old version row stays
   });
 });
 

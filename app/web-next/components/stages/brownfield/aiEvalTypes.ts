@@ -10,6 +10,9 @@ export interface VersionChip {
   created_at: string;
   checked_at: string;
   provisional_score: number | null;
+  /** Optional: absent on responses from before the counts were exposed. */
+  proposed_count?: number;
+  unverified_count?: number;
   stale: boolean;
   evidence_grade: string;
 }
@@ -53,9 +56,10 @@ export interface DraftPayloadItem {
   criterion_id: string;
   proposed_status: ProposedStatus;
   note?: string | null;
+  reason_detail?: string | null;
 }
 export interface DraftPayload {
-  criteria_snapshot: Array<{ criterion_id: string; label: string }>;
+  criteria_snapshot: Array<{ criterion_id: string; label: string; rubric?: Record<string, unknown> | null }>;
   items: DraftPayloadItem[];
   human_items: Array<{ criterion_id: string; status: string }>;
 }
@@ -108,6 +112,8 @@ export interface CompareCell {
   kind: CellKind;
   status: string | null;
   changed: boolean;
+  /** Fixed reason code of an unverified technical item (payload reason_detail), when recorded. */
+  reasonDetail?: string | null;
 }
 export interface CompareRow {
   criterion_id: string;
@@ -128,7 +134,7 @@ function cellOf(v: VersionRow, criterionId: string): Omit<CompareCell, "changed"
   const item = p.items.find((i) => i.criterion_id === criterionId);
   if (!item) return { kind: "absent", status: null };
   return item.proposed_status === null
-    ? { kind: "unverified", status: null }
+    ? { kind: "unverified", status: null, reasonDetail: item.reason_detail ?? null }
     : { kind: "proposal", status: item.proposed_status };
 }
 

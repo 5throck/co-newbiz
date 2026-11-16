@@ -85,13 +85,27 @@ describe("provisional chips", () => {
     render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, activeRunId: active }));
   test("chip carries the literal AI 잠정 text, an icon with a text label, and the dashed-outline class", () => {
     const html = view({ financial: chip(), technical: chip({ provisional_score: 55, version_no: 2 }) });
-    expect(html).toContain("AI 잠정 v3");
-    expect(html).toContain("AI 잠정 v2");
+    expect(html).toContain("AI 잠정 재무 72 · v3");
+    expect(html).toContain("AI 잠정 기술 55 · v2");
+    // Compact: the long explanation and date live in the tooltip, not in the visible chip text.
+    expect(html).toContain('title="AI 잠정 초안 (사람 판정 전) · ');
+    expect(html).not.toContain("AI 잠정 v3 ·");
     expect(html).toContain("ai-draft-chip");
     expect(html).toContain("AI 잠정 초안 (사람 판정 전)");
     expect(html).toContain("재무");
     expect(html).toContain("72");
     expect(html).toContain('aria-hidden="true">✎');
+  });
+  test("score-less draft shows unverified counts, never a bare dash", () => {
+    const draft = { technical: chip({ provisional_score: null, proposed_count: 0, unverified_count: 10 }) };
+    const html = view(draft);
+    expect(html).toContain("AI 잠정 기술 · 확인 안됨 10/10 · v3");
+    expect(html).not.toContain("기술 —");
+    const en_ = render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: "1" }), "en");
+    expect(en_).toContain("unverified 10/10");
+  });
+  test("chips sit on one wrapping line (no stacked column)", () => {
+    expect(view({ financial: chip(), technical: chip() })).toContain("flex flex-wrap gap-1 mt-1");
   });
   test("a confirmed score chip is not produced by the provisional chips (separate row)", () => {
     expect(view({ financial: chip() })).not.toContain("status-green");
@@ -109,7 +123,7 @@ describe("provisional chips", () => {
     const html = view({ financial: chip(), run_item: { run_id: "r1", state: "failed", error: "dart_error" } });
     expect(html).toContain("v3 유지");
     expect(html).toContain("DART 조회 오류");
-    expect(html).toContain("AI 잠정 v3");
+    expect(html).toContain("AI 잠정 재무 72 · v3");
     const nov = view({ run_item: { run_id: "r1", state: "failed", error: "llm_error" } });
     expect(nov).toContain("AI 응답 오류");
   });
@@ -117,6 +131,92 @@ describe("provisional chips", () => {
     const item = { run_id: "r1", state: "financial_sync", error: null };
     expect(view({ run_item: item }, "00123456", "r1")).toContain("진행 중");
     expect(view({ run_item: item }, "00123456", null)).not.toContain("진행 중");
+  });
+});
+
+describe("row run progress chips (S1-style, live run item)", () => {
+  const liveView = (draft: unknown, item: unknown, runActive: boolean, dart = "00123456") =>
+    render(
+      createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, live: { runActive, item } }),
+    );
+  test("in-flight item shows 평가 진행 중 with per-category marks and 이전 버전 유지", () => {
+    const html = liveView(
+      { financial: chip(), technical: chip() },
+      { run_id: "r1", state: "financial_sync", financial_outcome: null, technical_outcome: null, error_message: null },
+      true,
+    );
+    expect(html).toContain("평가 진행 중");
+    expect(html).toContain("재무");
+    expect(html).toContain("기술");
+    expect(html).toContain("대기");
+    expect(html).toContain("이전 버전 유지");
+    const mid = liveView(
+      { financial: chip(), technical: chip() },
+      {
+        run_id: "r1",
+        state: "technical_draft",
+        financial_outcome: "versioned",
+        technical_outcome: null,
+        error_message: null,
+      },
+      true,
+    );
+    expect(mid).toContain('재무 <span aria-hidden="true">✓</span>');
+    expect(mid).toContain('기술 <span aria-hidden="true">…</span>');
+  });
+  test("unchanged outcomes show 재평가 · 변경 없음 (v{n} 유지) per category, not silence", () => {
+    const html = liveView(
+      { financial: chip(), technical: chip({ version_no: 4 }) },
+      { run_id: "r1", state: "done", financial_outcome: "unchanged", technical_outcome: "unchanged", error_message: null },
+      false,
+    );
+    expect(html).toContain("재평가 · 변경 없음 (v3 유지)");
+    expect(html).toContain("재평가 · 변경 없음 (v4 유지)");
+    const en_ = render(
+      createElement(chips.ProvisionalChips, {
+        draft: { financial: chip(), technical: chip() },
+        dartCorpCode: "1",
+        live: { runActive: false, item: { state: "done", financial_outcome: "unchanged", technical_outcome: null } },
+      }),
+      "en",
+    );
+    expect(en_).toContain("no change (v3 kept)");
+  });
+  test("failed live item names the error and keeps the previous version", () => {
+    const html = liveView(
+      { financial: chip() },
+      { run_id: "r1", state: "failed", financial_outcome: null, technical_outcome: null, error_message: "dart_error" },
+      false,
+    );
+    expect(html).toContain("DART 조회 오류");
+    expect(html).toContain("v3 유지");
+  });
+  test("categoryMarks helper", () => {
+    expect(chips.categoryMarks("financial_sync", null, null)).toEqual({ financial: "waiting", technical: "waiting" });
+    expect(chips.categoryMarks("technical_draft", "versioned", null)).toEqual({ financial: "done", technical: "waiting" });
+    expect(chips.categoryMarks("done", "unchanged", "unchanged")).toEqual({ financial: "done", technical: "done" });
+  });
+});
+
+describe("progress panel budget line", () => {
+  const prog = (budget: { calls: number; budget: number; reserve: number } | null) =>
+    render(
+      createElement(chips.AiEvalProgress, {
+        view: {
+          run: { id: "r1", status: "running", total_targets: 2, pause_reason: null, error_message: null, web_evidence: 0, force_refresh: 0 },
+          items: [],
+          progress: { done: 1, total: 2 },
+          budget,
+        } as never,
+        canAct: true,
+        busy: false,
+        onResume: () => {},
+        onCancel: () => {},
+      }),
+    );
+  test("shows DART 조회 {used}/{est} when the payload carries budget data; absent when not", () => {
+    expect(prog({ calls: 12, budget: 40, reserve: 5 })).toContain("DART 조회 12/40");
+    expect(prog(null)).not.toContain("DART 조회");
   });
 });
 

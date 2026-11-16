@@ -12,16 +12,33 @@ import { formatNumber, type Locale } from "./format.ts";
 
 export type FinancialDataRef = "revenue_5y" | "operating_profit_5y" | "net_income_5y" | "debt_5y";
 
-export const FINANCIAL_DATA_REFS: readonly FinancialDataRef[] = ["revenue_5y", "operating_profit_5y", "net_income_5y", "debt_5y"] as const;
+export const FINANCIAL_DATA_REFS: readonly FinancialDataRef[] = [
+  "revenue_5y",
+  "operating_profit_5y",
+  "net_income_5y",
+  "debt_5y",
+] as const;
 
 export function isFinancialDataRef(v: string | null | undefined): v is FinancialDataRef {
   return !!v && (FINANCIAL_DATA_REFS as readonly string[]).includes(v);
 }
 
 /** 항목별 루브릭 임계값 — 단위: 성장률·마진·부채비율은 %, 상승 폭은 p.p. */
-export interface RevenueRubric { minYears: number; cagrPass: number; cagrPartial: number }
-export interface ProfitRubric { minYears: number; marginPass: number }
-export interface DebtRubric { minYears: number; ratioPass: number; ratioPartial: number; maxRisePp: number }
+export interface RevenueRubric {
+  minYears: number;
+  cagrPass: number;
+  cagrPartial: number;
+}
+export interface ProfitRubric {
+  minYears: number;
+  marginPass: number;
+}
+export interface DebtRubric {
+  minYears: number;
+  ratioPass: number;
+  ratioPartial: number;
+  maxRisePp: number;
+}
 export type FinancialRubric = RevenueRubric | ProfitRubric | DebtRubric;
 
 // 기본 임계값(ADR-0140) — 항목별로 PATCH(임계값 편집)로 조정 가능하며,
@@ -45,25 +62,32 @@ export interface RubricFieldSpec {
 
 /** 임계값 편집 UI·입력 검증이 공유하는 필드 정의 — 루브릭 모양은 data_ref별로 정해진다. */
 export function rubricFields(ref: FinancialDataRef): RubricFieldSpec[] {
+  // biome-ignore format: keep each spec on one line — i18n-lint counts Korean lines
   const minYears: RubricFieldSpec = { key: "minYears", label: "최소 데이터 연수", unit: "개년", min: 2, max: 5, step: 1, hint: "이 값 미만이면 자동 초안을 만들지 않습니다" };
   switch (ref) {
     case "revenue_5y":
       return [
         minYears,
+        // biome-ignore format: keep each spec on one line — i18n-lint counts Korean lines
         { key: "cagrPass", label: "충족 CAGR", unit: "%", min: -50, max: 100, step: 0.5, hint: "기간 연복리성장률이 이 값 이상 + 최근 연도 감소 없음이면 충족 제안" },
+        // biome-ignore format: keep each spec on one line — i18n-lint counts Korean lines
         { key: "cagrPartial", label: "부분충족 CAGR", unit: "%", min: -50, max: 100, step: 0.5, hint: "이 값 미만이면 미충족 제안" },
       ];
     case "operating_profit_5y":
     case "net_income_5y":
       return [
         minYears,
+        // biome-ignore format: keep each spec on one line — i18n-lint counts Korean lines
         { key: "marginPass", label: "충족 마진(최근 연도)", unit: "%", min: 0, max: 50, step: 0.5, hint: "전 기간 흑자 + 최근 마진이 이 값 이상이어야 충족 제안" },
       ];
     case "debt_5y":
       return [
         minYears,
+        // biome-ignore format: keep each spec on one line — i18n-lint counts Korean lines
         { key: "ratioPass", label: "충족 부채비율 상한", unit: "%", min: 50, max: 500, step: 10, hint: "최근 부채비율이 이 값 이하 + 기간 상승 폭이 허용치 이내면 충족 제안" },
+        // biome-ignore format: keep each spec on one line — i18n-lint counts Korean lines
         { key: "ratioPartial", label: "부분충족 부채비율 상한", unit: "%", min: 50, max: 800, step: 10, hint: "이 값 초과면 미충족 제안" },
+        // biome-ignore format: keep each spec on one line — i18n-lint comments above each spec
         { key: "maxRisePp", label: "허용 상승 폭(기간)", unit: "p.p.", min: 0, max: 300, step: 10, hint: "기간 첫해 대비 최근 부채비율 상승 폭 허용치" },
       ];
   }
@@ -103,7 +127,10 @@ export function sanitizeRubricInput(ref: FinancialDataRef, input: unknown): Reco
 
 // ── 초안 엔진 ──
 
-export interface DraftMetric { label: string; value: string }
+export interface DraftMetric {
+  label: string;
+  value: string;
+}
 export interface FinancialDraft {
   dataRef: FinancialDataRef;
   /** pass/partial/fail 제안. null = 데이터 부족 등으로 제안 불가(이유는 reason). */
@@ -116,16 +143,23 @@ export interface FinancialDraft {
 
 const VERDICT_KO: Record<"pass" | "partial" | "fail", string> = { pass: "충족", partial: "부분충족", fail: "미충족" };
 
-const fmtEok = (v: number, locale: Locale | string = "ko"): string => formatNumber(v, locale, { maximumFractionDigits: 0 });
+const fmtEok = (v: number, locale: Locale | string = "ko"): string =>
+  formatNumber(v, locale, { maximumFractionDigits: 0 });
 const fmtPct = (ratio: number, digits = 1): string => `${(ratio * 100).toFixed(digits)}%`;
 const fmtSignedPct = (ratio: number, digits = 1): string => `${ratio >= 0 ? "+" : ""}${(ratio * 100).toFixed(digits)}%`;
 
-function seriesPoints(analysis: FinancialAnalysis, key: FinancialSeries["key"]): Array<{ year: string; value: number }> {
+function seriesPoints(
+  analysis: FinancialAnalysis,
+  key: FinancialSeries["key"],
+): Array<{ year: string; value: number }> {
   const s = analysis.series.find((x) => x.key === key);
   return (s?.points ?? []).filter((p): p is { year: string; value: number } => p.value !== null);
 }
 
-function ratioPoints(analysis: FinancialAnalysis, key: "operatingMargin" | "netMargin" | "debtRatio"): Array<{ year: string; value: number }> {
+function ratioPoints(
+  analysis: FinancialAnalysis,
+  key: "operatingMargin" | "netMargin" | "debtRatio",
+): Array<{ year: string; value: number }> {
   const out: Array<{ year: string; value: number }> = [];
   for (const r of analysis.ratios) {
     const v = r[key];
@@ -139,14 +173,19 @@ function insufficient(dataRef: FinancialDataRef, reason: string, metrics: DraftM
 }
 
 /** 재무 빌트인 항목 1건의 판정 초안 — 결정론적. facts·임계값이 같으면 같은 결과. */
-export function draftFinancialVerdict(ref: FinancialDataRef, analysis: FinancialAnalysis, rubricJson: string | null): FinancialDraft {
+export function draftFinancialVerdict(
+  ref: FinancialDataRef,
+  analysis: FinancialAnalysis,
+  rubricJson: string | null,
+): FinancialDraft {
   const r = parseRubric(ref, rubricJson);
   if (!analysis.available) return insufficient(ref, "동기화된 DART 재무 facts가 없습니다 — 재무 탭에서 동기화하세요.");
 
   if (ref === "revenue_5y") {
     const pts = seriesPoints(analysis, "revenue");
     if (pts.length === 0) return insufficient(ref, "매출액 facts가 없습니다.");
-    if (pts.length < r.minYears) return insufficient(ref, `매출 데이터 ${pts.length}개년 — 최소 ${r.minYears}개년 필요`);
+    if (pts.length < r.minYears)
+      return insufficient(ref, `매출 데이터 ${pts.length}개년 — 최소 ${r.minYears}개년 필요`);
     const first = pts[0].value;
     const last = pts[pts.length - 1].value;
     const prev = pts.length >= 2 ? pts[pts.length - 2].value : null;
@@ -157,7 +196,12 @@ export function draftFinancialVerdict(ref: FinancialDataRef, analysis: Financial
     let status: "pass" | "partial" | "fail";
     let basis: string;
     if (cagr != null) {
-      status = cagr * 100 >= r.cagrPass && (yoy == null || yoy >= 0) ? "pass" : cagr * 100 >= r.cagrPartial ? "partial" : "fail";
+      status =
+        cagr * 100 >= r.cagrPass && (yoy == null || yoy >= 0)
+          ? "pass"
+          : cagr * 100 >= r.cagrPartial
+            ? "partial"
+            : "fail";
       basis = `${pts.length}개년 CAGR ${fmtSignedPct(cagr)}(충족 ≥+${r.cagrPass}%), 최근 YoY ${yoy != null ? fmtSignedPct(yoy) : "—"}`;
     } else {
       status = last > first ? "partial" : "fail";
@@ -181,7 +225,8 @@ export function draftFinancialVerdict(ref: FinancialDataRef, analysis: Financial
     const label = isOp ? "영업이익" : "당기순이익";
     const pts = seriesPoints(analysis, isOp ? "operatingProfit" : "netIncome");
     if (pts.length === 0) return insufficient(ref, `${label} facts가 없습니다.`);
-    if (pts.length < r.minYears) return insufficient(ref, `${label} 데이터 ${pts.length}개년 — 최소 ${r.minYears}개년 필요`);
+    if (pts.length < r.minYears)
+      return insufficient(ref, `${label} 데이터 ${pts.length}개년 — 최소 ${r.minYears}개년 필요`);
     const last = pts[pts.length - 1].value;
     const blacks = pts.filter((p) => p.value > 0).length;
     const marginArr = ratioPoints(analysis, isOp ? "operatingMargin" : "netMargin");
@@ -189,7 +234,11 @@ export function draftFinancialVerdict(ref: FinancialDataRef, analysis: Financial
     // 최근 연도 적자면 미충족; 전 기간 흑자 + 최근 마진 기충족만 충족; 그 외(과거
     // 일부 적자·마진 미달)는 부분충족 — 사람이 상황 판단으로 조정한다.
     const status: "pass" | "partial" | "fail" =
-      last <= 0 ? "fail" : blacks === pts.length && margin != null && margin.value * 100 >= r.marginPass ? "pass" : "partial";
+      last <= 0
+        ? "fail"
+        : blacks === pts.length && margin != null && margin.value * 100 >= r.marginPass
+          ? "pass"
+          : "partial";
     return {
       dataRef: ref,
       status,
@@ -206,7 +255,8 @@ export function draftFinancialVerdict(ref: FinancialDataRef, analysis: Financial
   // debt_5y — 부채비율(부채총계/자본총계) 수준과 기간 상승 폭으로 판정.
   const pts = ratioPoints(analysis, "debtRatio");
   if (pts.length === 0) return insufficient(ref, "부채비율 산출 불가 — 부채총계·자본총계 facts가 부족합니다.");
-  if (pts.length < r.minYears) return insufficient(ref, `부채비율 데이터 ${pts.length}개년 — 최소 ${r.minYears}개년 필요`);
+  if (pts.length < r.minYears)
+    return insufficient(ref, `부채비율 데이터 ${pts.length}개년 — 최소 ${r.minYears}개년 필요`);
   const latest = pts[pts.length - 1];
   const first = pts[0];
   const latestPct = latest.value * 100;
@@ -233,8 +283,15 @@ export function draftFinancialVerdict(ref: FinancialDataRef, analysis: Financial
     reason: null,
     metrics: [
       { label: `최근 부채비율(${latest.year})`, value: dispLatest },
-      ...(!insolvent ? [{ label: `기간 변화(${first.year}→)`, value: `${risePp >= 0 ? "+" : ""}${risePp.toFixed(0)}p.p.` }] : []),
+      ...(!insolvent
+        ? [{ label: `기간 변화(${first.year}→)`, value: `${risePp >= 0 ? "+" : ""}${risePp.toFixed(0)}p.p.` }]
+        : []),
     ],
     note: `DART 자동초안(수정 가능) — 최근 부채비율 ${dispLatest}(충족 ≤${r.ratioPass}%), 기간 상승 ${insolvent ? "—" : `${risePp >= 0 ? "+" : ""}${risePp.toFixed(0)}p.p.`}(허용 ≤${r.maxRisePp}p.p.)${extra ? `, ${extra}` : ""} → ${VERDICT_KO[status]} 제안`,
   };
+}
+
+/** Code default thresholds for one data_ref (copy) — lets the UI mark a rubric as default vs adjusted. */
+export function rubricDefaults(ref: FinancialDataRef): Record<string, number> {
+  return { ...DEFAULTS[ref] };
 }

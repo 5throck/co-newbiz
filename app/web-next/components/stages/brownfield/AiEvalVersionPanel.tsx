@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, api } from "../../../lib/api.ts";
 import { AiEvalConfirmBody, AiEvalModal } from "./AiEvalDialogs.tsx";
+import { rubricChanged, rubricLine } from "./aiEvalRules.ts";
 import {
   KNOWN_CALL_ERRORS,
   buildComparison,
@@ -30,6 +31,11 @@ function Cell({ cell }: { cell: CompareCell }) {
   return (
     <span>
       {text}
+      {cell.kind === "unverified" && cell.reasonDetail && (
+        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+          {t(`reasonDetail.${cell.reasonDetail}`)}
+        </span>
+      )}
       {cell.changed && (
         <span className="ai-changed-mark" title={t("changedHint")}>
           {" "}
@@ -81,11 +87,32 @@ export function VersionTable({ category, versions }: { category: DraftCategory; 
         {rows.map((r) => (
           <tr key={r.criterion_id}>
             <th scope="row">{r.label}</th>
-            {r.cells.map((c, i) => (
-              <td key={columns[i].id}>
-                <Cell cell={c} />
-              </td>
-            ))}
+            {r.cells.map((c, i) => {
+              const snap = (v: VersionRow | undefined) =>
+                v?.payload?.criteria_snapshot.find((s) => s.criterion_id === r.criterion_id)?.rubric ?? null;
+              const line = rubricLine(snap(columns[i]));
+              const older = columns[i + 1];
+              const ruleChanged = !!line && !!older?.payload && rubricChanged(snap(columns[i]), snap(older));
+              return (
+                <td key={columns[i].id}>
+                  <Cell cell={c} />
+                  {line && (
+                    <span
+                      className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                      title={t("thresholdsUsed")}
+                    >
+                      {line}
+                      {ruleChanged && (
+                        <span className="ai-changed-mark">
+                          {" "}
+                          <span aria-hidden="true">△</span> {t("rubricChanged")}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>

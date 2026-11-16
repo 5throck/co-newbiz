@@ -74,8 +74,8 @@ const BODY = [
   "II. 사업의 내용 1. 사업의 개요 당사는 정밀 부품 제조사입니다.",
   "2. 주요 제품 및 서비스 가. 주요 제품 현황 당사의 주요 제품은 선박용 크랭크샤프트입니다. 매출의 70%를 차지합니다.",
   "3. 생산설비 가. 생산능력 연간 12,000톤 규모의 단조 설비를 보유합니다.",
-  "4. 연구개발활동 나. 연구개발 비용 당기 연구개발비용은 매출액 대비 3.2%인 45억원입니다.",
-  "5. 지적재산권 당사는 국내 특허 42건을 보유하고 있습니다.",
+  "4. 연구개발활동 나. 연구개발 비용 당기 연구개발비용은 매출액 대비 3.2%인 45억원입니다. 당사는 핵심 단조 공정 개선을 위해 기술연구소를 운영하며 신규 공정 개발 과제를 지속적으로 수행하고 있습니다.",
+  "5. 지적재산권 당사는 국내 특허 42건을 보유하고 있으며 핵심 단조 공정에 관한 특허 포트폴리오를 지속적으로 확대하고 있습니다. 해외 출원도 진행 중입니다.",
   "III. 재무에 관한 사항 요약 재무정보 표시",
 ].join(" ");
 const QUOTE = "연구개발비용은 매출액 대비 3.2%인 45억원";
@@ -145,7 +145,7 @@ const c = {
 };
 let clock = NOW;
 let gate: Promise<void> | null = null;
-let llmMode: "ok" | "fail" | "disclosure_only" = "ok";
+let llmMode: "ok" | "fail" | "disclosure_only" | "insufficient" = "ok";
 let webConfigured = true;
 let onFetch: (() => void) | null = null;
 let dartConfigured = true;
@@ -230,22 +230,20 @@ function deps(): Partial<import("../../app/web-next/lib/brownfield-eval-bulk.ts"
           };
         return { source: "llm", provider: "fake", text: JSON.stringify({ drafts: dd }) };
       }
+      if (llmMode === "insufficient") {
+        const dd: Record<string, unknown> = {};
+        for (const id of ids) dd[id] = { verdict: "insufficient", rationale: "근거 부족" };
+        return { source: "llm", provider: "fake", text: JSON.stringify({ drafts: dd }) };
+      }
       const drafts: Record<string, unknown> = {};
       ids.forEach((id, i) => {
+        // The model only names an evidence number: the first item the first window listed for it, the rest a number
+        // that matches nothing (and one "insufficient" answer).
+        const first = user.match(new RegExp(`^${id}:\\n\\s+\\[(\\d+)\\]`, "m"));
         drafts[id] =
-          i === 0
-            ? {
-                verdict: "pass",
-                rationale: "R&D 비용 확인",
-                citations: [{ kind: "business_report", ref: `${rcept}:rnd`, quote: QUOTE }],
-              }
-            : {
-                verdict: "pass",
-                rationale: "근거 없는 주장",
-                citations: [
-                  { kind: "business_report", ref: `${rcept}:ip`, quote: "지어낸 특허 문장입니다 아주 길게 이어집니다" },
-                ],
-              };
+          i === 0 && first
+            ? { verdict: "pass", rationale: "R&D 근거 확인", source_index: Number(first[1]) }
+            : { verdict: "pass", rationale: "근거 없는 주장", source_index: 99 };
       });
       return { source: "llm", provider: "fake", text: JSON.stringify({ drafts }) };
     }) as any,
@@ -350,6 +348,11 @@ describe("A1 start + engine happy path (T7, T13, T4, T11, T12)", () => {
     expect(chips.find((t) => t.id === T.N).eval_draft.run_item.state).toBe("skipped_not_dart");
     expect(chips.find((t) => t.id === T.A).eval_draft.financial.version_no).toBe(1);
     expect(chips.find((t) => t.id === T.A).eval_draft.technical.evidence_grade).toBe("C");
+    // Per-category counts are exposed additively so a score-less draft can show "unverified n/total".
+    const tech = chips.find((t) => t.id === T.A).eval_draft.technical;
+    const techV = latest("A", "technical")!;
+    expect(tech.proposed_count).toBe(techV.proposed_count);
+    expect(tech.unverified_count).toBe(techV.unverified_count);
   });
 
   test("T12: a verdict whose citation is not in the held evidence is downgraded to unverified; valid quotes stay", () => {
@@ -357,9 +360,14 @@ describe("A1 start + engine happy path (T7, T13, T4, T11, T12)", () => {
     const p = JSON.parse(v.payload);
     const [first, second] = p.items;
     expect(first.proposed_status).toBe("pass");
-    expect(first.citations[0]).toEqual({ kind: "business_report", ref: `${REPORT_A}:rnd`, quote: QUOTE });
+    expect(first.citations[0].kind).toBe("business_report");
+    expect(first.citations[0].ref.startsWith(`${REPORT_A}:`)).toBe(true);
+    expect(first.citations[0].quote.length).toBeGreaterThan(20);
+    expect(BODY).toContain(first.citations[0].quote); // engine-derived: a verbatim part of the filing text
     expect(second.proposed_status).toBeNull();
     expect(second.reason).toContain("확인 안됨");
+    expect(second.reason_detail).toBe("ref_unknown"); // an evidence number that points at no window lifts nothing
+    expect(p.evidence.llm_drafts_returned).toBeGreaterThan(0);
     expect(p.evidence.business_report).toMatchObject({ rcept_no: REPORT_A, available: true });
     expect(p.evidence.business_report.sections_found).toContain("rnd");
     expect(p.llm).toMatchObject({ prompt_key: "s7.screening_draft" });
@@ -438,6 +446,23 @@ describe("T23 + T21 — unchanged evidence, warm cache, force_refresh", () => {
     const chip = (await targetsList()).find((t) => t.id === T.A).eval_draft.financial;
     expect(chip.checked_at > chip.created_at).toBe(true);
     expect(chip.stale).toBe(false);
+  });
+
+  test("evidence_key participates in the technical input hash (bump forces a new version)", () => {
+    const base = {
+      v: 1,
+      category: "technical",
+      evidence_key: bulk.TECHNICAL_EVIDENCE_KEY,
+      disclosures: ["2026-0001"],
+      business_report: { rcept_no: "2026-0001", extract: ["extracted", "h"] },
+      profile: "p",
+      web_evidence: false,
+      prompt_key: bulk.TECHNICAL_PROMPT_KEY,
+    };
+    const h = repo.computeDraftInputHash;
+    expect(h(base)).toBe(h({ ...base }));
+    expect(h(base)).not.toBe(h({ ...base, evidence_key: "windows-v2" }));
+    expect(h({ ...base, evidence_key: "windows-v2" })).toBe(h({ ...base, evidence_key: "windows-v2" }));
   });
 
   test("force_refresh: validates, re-fetches all 5 years and re-lists, but never re-fetches an existing rcept_no; the flag is stored on the run", async () => {
@@ -877,7 +902,7 @@ describe("security review fixes", () => {
   });
 
   test("2: a verdict backed only by a disclosure title or the profile stays unverified", async () => {
-    addCustomCriterion(OPP, "technical", "인용 게이트 항목", null, ANALYST);
+    addCustomCriterion(OPP, "technical", "핵심 인용 게이트 항목", null, ANALYST);
     llmMode = "disclosure_only";
     const id = await startAndSettle({ categories: "technical" });
     llmMode = "ok";
@@ -885,6 +910,22 @@ describe("security review fixes", () => {
     expect(
       (JSON.parse(latest("A", "technical")!.payload).items as any[]).every((i) => i.proposed_status === null),
     ).toBe(true);
+    const pl = JSON.parse(latest("A", "technical")!.payload);
+    const codes = new Set((pl.items as any[]).map((i) => i.reason_detail));
+    expect(codes.has("no_citation")).toBe(true); // disclosure/profile quotes carry no evidence number
+    expect([...codes].every((c) => c === "no_citation" || c === "evidence_unavailable")).toBe(true);
+    expect(pl.evidence.llm_drafts_returned).toBeGreaterThan(0);
+    expect(pl.evidence.citations_rejected).toBe(0); // no evidence number was named, so nothing was rejected
+  });
+
+  test('2b: a verdict of "insufficient" stays unverified without a proposal', async () => {
+    addCustomCriterion(OPP, "technical", "핵심 불충분 응답 항목", null, ANALYST);
+    llmMode = "insufficient";
+    const id = await startAndSettle({ categories: "technical" });
+    llmMode = "ok";
+    expect(itemOf(id, "A").technical_outcome).toBe("versioned");
+    const items = JSON.parse(latest("A", "technical")!.payload).items as any[];
+    expect(items.every((i) => i.proposed_status === null)).toBe(true);
   });
 
   test("3: a promoted opportunity refuses start, resume and confirm with 409 already_promoted", async () => {
