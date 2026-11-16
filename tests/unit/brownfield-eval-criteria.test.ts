@@ -214,7 +214,7 @@ describe("computeEvalScore", () => {
 });
 
 // ADR-0200 §5.1 fields; combinedEvalScore reads only `score`.
-const NO_SPLIT = { byWeight: { human: 0, auto_rule: 0, ai_draft: 0 }, unreviewed: 0 };
+const NO_SPLIT = { byWeight: { human: 0, auto_rule: 0, ai_draft: 0 }, unreviewed: 0, judgedCount: 0, totalCount: 0 };
 
 describe("combinedEvalScore", () => {
   test("averages financial and technical when both scored", () => {

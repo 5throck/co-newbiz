@@ -42,12 +42,12 @@ describe("B. promotion: warn with counts, never block", () => {
     ]) {
       const html = btn(u);
       expect(html).not.toContain("disabled");
-      expect(html).toContain('aria-label="Acme 심사 확정 (최종 후보 목록 등록)"');
+      expect(html).toContain('aria-label="Acme 심사 종료 (최종 후보 목록 등록)"');
     }
   });
   test("the dialog text carries the warning, the per-category counts, a 항목 검토 link and a promote-anyway action", () => {
     expect(ko.stages.s67.aiEval.promoteUnreviewed.replace("{n}", "4")).toBe(
-      "미검토 AI 판정 4건 포함 · 항목 검토 후 심사 확정을 권장합니다",
+      "미검토 AI 판정 4건 포함 · 항목 검토 후 심사 종료를 권장합니다",
     );
     expect(en.stages.s67.aiEval.promoteUnreviewed).toContain("{n} unreviewed AI verdicts");
     const src = read("components/stages/brownfield/AiEvalPromote.tsx");

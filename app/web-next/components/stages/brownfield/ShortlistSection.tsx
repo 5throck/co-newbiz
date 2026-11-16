@@ -10,14 +10,12 @@ import {
   SCREENING_VERDICT_KO,
 } from "../../../lib/brownfield-precheck.ts";
 import { CommitteePanel } from "../../CommitteePanel.tsx";
-import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
 import { ColGroup } from "../../ui.tsx";
 import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
-import { DealShapePanel } from "../DealShapePanel.tsx";
+import { S7DecisionTabs } from "./S7DecisionTabs.tsx";
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 export function ShortlistSection({
@@ -30,7 +28,6 @@ export function ShortlistSection({
   const tr = useTranslations();
   const t = useTranslations("stages.s67.shortlistSection");
   const tc = useTranslations("common");
-  const [s7Tab, setS7Tab] = useState<"dealShape" | "approval">("dealShape");
   const {
     selected,
     precheckOpen,
@@ -354,47 +351,18 @@ export function ShortlistSection({
               />
             </section>
           )}
-          {dealShapePanel && (
-            <div className="library-tabs mb-3" role="tablist" aria-label={t("s7TabsLabel")}>
-              {(
-                [
-                  ["dealShape", t("s7TabDealShape")],
-                  ["approval", t("s7TabApproval")],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={s7Tab === key}
-                  className={`library-tab ${s7Tab === key ? "library-tab-active" : ""}`}
-                  onClick={() => setS7Tab(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-          {dealShapePanel && s7Tab === "dealShape" && (
-            <DealShapePanel opportunityId={selected.opportunity.id} canAct={canAct} />
-          )}
           {/* flow.spec target_screening killCriteria: knock-out 통과 후보가 0건이다. 2026-10-20 decider:
               the old proxy ("evaluation complete = every item judged") fired the kill language whenever
-              later-seeded criteria stayed pending — evaluation completeness is informational, not a kill. */}
-          {/* The target_screening approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
-          {dealShapePanel && s7Tab === "approval" && (
-            // the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies
-            <div className="[&>section]:!mt-0">
-              <GateDecisionPanel
-                opportunityId={selected.opportunity.id}
-                gates={["target_screening"]}
-                killHint={
-                  selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
-                    ? t("zeroCandidatesPassedTheScreening")
-                    : null
-                }
-              />
-            </div>
+              later-seeded criteria stayed pending — evaluation completeness is informational, not a kill.
+              The approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
+          {dealShapePanel && (
+            <S7DecisionTabs
+              opportunityId={selected.opportunity.id}
+              canAct={canAct}
+              zeroCandidatesPassed={
+                selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
+              }
+            />
           )}
           {(() => {
             const incomplete = selected.targets.filter(

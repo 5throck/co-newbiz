@@ -375,10 +375,12 @@ describe("mount points (source pins)", () => {
   });
   test("S7 mounts it in the shortlist section before the gate decision, only when asked (S7 tab, not S6)", () => {
     const section = src("components/stages/brownfield/ShortlistSection.tsx");
-    const at = section.indexOf("<DealShapePanel");
-    expect(at).toBeGreaterThan(-1);
-    expect(at).toBeLessThan(section.indexOf("<GateDecisionPanel"));
+    expect(section).toContain("<S7DecisionTabs");
     expect(section).toContain("dealShapePanel &&");
+    const tabs = src("components/stages/brownfield/S7DecisionTabs.tsx");
+    const at = tabs.indexOf("<DealShapePanel");
+    expect(at).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(tabs.indexOf("<GateDecisionPanel"));
     expect(src("app/deals/[id]/[stage]/page.tsx")).toContain('dealShapePanel={stageId === "S7"}');
     expect(src("components/stages/brownfield/BrownfieldStage.tsx")).toContain(
       "dealShapePanel={props0.dealShapePanel === true}",
