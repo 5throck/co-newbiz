@@ -116,17 +116,30 @@ export function TargetEvalTab({
                     </span>
                   </span>
                 </div>
-                {canAct && ruleItems.length > 0 && (
-                  <div className="mb-2">
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      data-testid={`eval-accept-rule-${cat}`}
-                      disabled={evalBusy !== null || savingCat !== null}
-                      onClick={() => setAcceptCat(cat)}
-                    >
-                      {ta("acceptAllRule", { n: ruleItems.length })}
-                    </button>
+                {canAct && (cat === "financial" || ruleItems.length > 0) && (
+                  <div className="flex flex-wrap items-center gap-1 mb-2">
+                    {cat === "financial" && (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        aria-expanded={rubricOpen}
+                        title={t("rubricTitle")}
+                        onClick={() => setRubricOpen(!rubricOpen)}
+                      >
+                        {rubricOpen ? t("thresholdClose") : t("thresholdEdit")}
+                      </button>
+                    )}
+                    {ruleItems.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        data-testid={`eval-accept-rule-${cat}`}
+                        disabled={evalBusy !== null || savingCat !== null}
+                        onClick={() => setAcceptCat(cat)}
+                      >
+                        {ta("acceptAllRule", { n: ruleItems.length })}
+                      </button>
+                    )}
                   </div>
                 )}
                 {catScore.totalWeight > catScore.scoredWeight && (
@@ -136,19 +149,6 @@ export function TargetEvalTab({
                       p2: catScore.totalWeight,
                     })}
                   </p>
-                )}
-                {canAct && cat === "financial" && (
-                  <div className="flex flex-wrap items-center gap-1 mb-2">
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm"
-                      aria-expanded={rubricOpen}
-                      title={t("rubricTitle")}
-                      onClick={() => setRubricOpen(!rubricOpen)}
-                    >
-                      {rubricOpen ? t("thresholdClose") : t("thresholdEdit")}
-                    </button>
-                  </div>
                 )}
                 {items.length === 0 ? (
                   <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
