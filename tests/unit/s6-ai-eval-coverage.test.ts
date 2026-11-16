@@ -113,10 +113,12 @@ describe("a. one chip per category with judged coverage (no provisional chip lay
   });
   const chipsHtml = (s: unknown, locale: "ko" | "en" = "ko") =>
     render(createElement(cov.ScoreChips, { summary: s }), locale);
-  test("exactly two chips: 재무 80 · 6/6항목 평가 and 기술 50 · 3/8항목 평가", () => {
+  test("exactly two chips: 재무 80 and 기술 50, counts only in the tooltip", () => {
     const html = chipsHtml(sum());
-    expect(html).toContain("재무 80 · 6/6항목 평가");
-    expect(html).toContain("기술 50 · 3/8항목 평가");
+    expect(html).toContain("재무 80</span>");
+    expect(html).toContain("6/6항목 평가"); // tooltip
+    expect(html).toContain("기술 50</span>");
+    expect(html).toContain("3/8항목 평가");
     expect(html.match(/status-chip/g)?.length).toBe(2);
     expect(html).not.toContain("AI 잠정");
     expect(html).not.toContain("일부 항목 미평가"); // markers are a separate single line

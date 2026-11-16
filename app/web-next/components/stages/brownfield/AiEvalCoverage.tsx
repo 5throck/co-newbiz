@@ -28,9 +28,12 @@ export function ScoreChips({ summary }: { summary: Summary | undefined }) {
         const cs = summary?.[c.key];
         const cov = cs?.totalCount ? { scored: cs.judgedCount ?? 0, total: cs.totalCount } : null;
         return (
-          <span key={c.key} className={`status-chip ${scoreClass(summary?.[c.key].score)}`} title={c.title}>
+          <span
+            key={c.key}
+            className={`status-chip ${scoreClass(summary?.[c.key].score)}`}
+            title={cov ? `${c.title} · ${ta("coverageWeight", { scored: cov.scored, total: cov.total })}` : c.title}
+          >
             {c.label} {summary?.[c.key].score ?? "—"}
-            {cov && ` · ${ta("coverageWeight", { scored: cov.scored, total: cov.total })}`}
           </span>
         );
       })}
