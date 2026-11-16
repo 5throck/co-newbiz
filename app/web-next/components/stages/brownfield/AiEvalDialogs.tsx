@@ -1,0 +1,197 @@
+"use client";
+
+// S6 bulk AI evaluation dialogs (ADR-0199): the start dialog and the per-candidate confirm-from-version dialog.
+// Bodies are plain components (no portal) so they render under test; AiEvalModal adds the portal + shared focus trap.
+import { useTranslations } from "next-intl";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useModalFocus } from "../../../lib/use-modal-focus.ts";
+import type { ConfirmPlan } from "./aiEvalTypes.ts";
+import type { StartOptions } from "./useAiEval.ts";
+
+/** Dialog shell on the shared `.modal-backdrop` pattern: focus moves in, Tab cycles, Escape closes, focus returns. */
+export function AiEvalModal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const { panelRef, onKeyDown } = useModalFocus(onClose);
+  if (!mounted) return null;
+  return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: shared .modal-backdrop pattern (crud.tsx ConfirmDialog); Escape and Tab are handled by useModalFocus
+    <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click only stops propagation to the backdrop; the dialog panel is not a click target */}
+      <div
+        ref={panelRef}
+        className="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        style={{ maxWidth: "32rem", width: "100%" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <h2 style={{ fontSize: "0.95rem" }}>{title}</h2>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+export interface StartStats {
+  candidates: number;
+  dartEligible: number;
+  estimatedCalls: number;
+}
+
+export function AiEvalStartForm({
+  value,
+  onChange,
+  stats,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  value: StartOptions;
+  onChange: (v: StartOptions) => void;
+  stats: StartStats;
+  busy: boolean;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("stages.s67.aiEval");
+  const tc = useTranslations("common");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+      className="flex flex-col gap-3 mt-2"
+    >
+      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+        {t("startSummary", { candidates: stats.candidates, dart: stats.dartEligible, calls: stats.estimatedCalls })}
+      </p>
+      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("humanConfirms")}</p>
+      <fieldset className="m-0 p-0 border-0">
+        <legend className="text-[length:var(--fs-caption)] font-semibold">{t("categories")}</legend>
+        <div className="flex gap-3 flex-wrap mt-1">
+          {(["both", "financial", "technical"] as const).map((c) => (
+            <label key={c} className="flex items-center gap-1 text-[length:var(--fs-body)]">
+              <input
+                type="radio"
+                name="ai-eval-categories"
+                checked={value.categories === c}
+                onChange={() => onChange({ ...value, categories: c })}
+              />
+              {t(`category.${c}`)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <div>
+        <label className="flex items-center gap-1 text-[length:var(--fs-body)]">
+          <input
+            type="checkbox"
+            checked={value.web_evidence}
+            onChange={(e) => onChange({ ...value, web_evidence: e.target.checked })}
+          />
+          {t("webEvidence")}
+        </label>
+        {value.web_evidence && (
+          <p role="note" className="m-0 mt-1 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]">
+            <span aria-hidden="true">⚠ </span>
+            {t("webEvidenceWarning")}
+          </p>
+        )}
+      </div>
+      <div>
+        <label className="flex items-center gap-1 text-[length:var(--fs-body)]">
+          <input
+            type="checkbox"
+            checked={value.force_refresh}
+            onChange={(e) => onChange({ ...value, force_refresh: e.target.checked })}
+          />
+          {t("forceRefresh")}
+        </label>
+        <p className="m-0 mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("forceRefreshHint")}</p>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
+          {tc("cancel")}
+        </button>
+        <button type="submit" className="btn-premium btn-sm" disabled={busy || stats.candidates === 0}>
+          {t("startRun")}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ItemList({
+  heading,
+  items,
+}: {
+  heading: string;
+  items: Array<{ criterion_id: string; label: string; suffix?: string }>;
+}) {
+  return (
+    <div>
+      <h3 className="m-0 text-[length:var(--fs-body)]">
+        {heading} ({items.length})
+      </h3>
+      {items.length > 0 && (
+        <ul className="m-0 mt-1 pl-5 text-[length:var(--fs-caption)]">
+          {items.map((i) => (
+            <li key={i.criterion_id}>
+              {i.label}
+              {i.suffix ? ` — ${i.suffix}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function AiEvalConfirmBody({
+  versionNo,
+  plan,
+  statusLabel,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  versionNo: number;
+  plan: ConfirmPlan;
+  statusLabel: (status: string) => string;
+  busy: boolean;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("stages.s67.aiEval");
+  const tc = useTranslations("common");
+  return (
+    <div className="flex flex-col gap-3 mt-2">
+      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+        {t("confirmIntro", { n: versionNo })} {t("humanConfirms")}
+      </p>
+      <ItemList heading={t("willWrite")} items={plan.write.map((w) => ({ ...w, suffix: statusLabel(w.status) }))} />
+      <ItemList heading={t("skippedHuman")} items={plan.skippedHuman} />
+      <ItemList heading={t("skippedUnverified")} items={plan.skippedUnverified} />
+      <div className="flex justify-end gap-2">
+        <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
+          {tc("cancel")}
+        </button>
+        <button
+          type="button"
+          className="btn-premium btn-sm"
+          disabled={busy || plan.write.length === 0}
+          onClick={onSubmit}
+        >
+          {t("confirmSubmit", { n: plan.write.length })}
+        </button>
+      </div>
+    </div>
+  );
+}
