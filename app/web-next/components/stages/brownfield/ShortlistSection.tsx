@@ -383,15 +383,18 @@ export function ShortlistSection({
               later-seeded criteria stayed pending — evaluation completeness is informational, not a kill. */}
           {/* The target_screening approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
           {dealShapePanel && s7Tab === "approval" && (
-            <GateDecisionPanel
-              opportunityId={selected.opportunity.id}
-              gates={["target_screening"]}
-              killHint={
-                selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
-                  ? t("zeroCandidatesPassedTheScreening")
-                  : null
-              }
-            />
+            // the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies
+            <div className="[&>section]:!mt-0">
+              <GateDecisionPanel
+                opportunityId={selected.opportunity.id}
+                gates={["target_screening"]}
+                killHint={
+                  selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
+                    ? t("zeroCandidatesPassedTheScreening")
+                    : null
+                }
+              />
+            </div>
           )}
           {(() => {
             const incomplete = selected.targets.filter(
