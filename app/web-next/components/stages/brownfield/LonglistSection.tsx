@@ -6,6 +6,7 @@ import { Fragment, useState } from "react";
 import { SECTION_IDS, STATUS_LABEL } from "./constants.ts";
 import { filterTargetsByStatus, TARGET_STATUS_FILTERS, type TargetStatusFilter } from "./longlist-filter.ts";
 import { ColGroup } from "../../ui.tsx";
+import { isRunActive } from "./aiEvalTypes.ts";
 
 // 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유·작업 7열.
 // 작업 열(승격·순위 조정)은 list-table 표준에 따라 마지막 sizing-actions-cell로
@@ -13,6 +14,10 @@ import { ColGroup } from "../../ui.tsx";
 const LONG_LIST_COL_PCT = [21, 10, 17, 13, 13, 16, 10] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
+import { AiEvalProgress, ProvisionalChips } from "./AiEvalChips.tsx";
+import { AiEvalStartButton } from "./AiEvalStart.tsx";
+import { AiEvalVersionPanel } from "./AiEvalVersionPanel.tsx";
+import { useAiEval } from "./useAiEval.ts";
 
 export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
   const tr = useTranslations();
@@ -35,6 +40,12 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
   const [statusFilter, setStatusFilter] = useState<TargetStatusFilter>("all");
   // 품평회 2026-10-22 잔여 #2 — 제외 사유 전문 펼침 상태(행 1개만 펼친다).
   const [expandedReasonId, setExpandedReasonId] = useState<string | null>(null);
+  // ADR-0199 — 일괄 AI 평가: 임시(잠정) 초안만 만든다. 확정·순위·승격에는 관여하지 않는다.
+  const ai = useAiEval({ oppId: selected?.opportunity.id ?? null, loadDetail: ctx.loadDetail });
+  const ta = useTranslations("stages.s67.aiEval");
+  const [compareId, setCompareId] = useState<string | null>(null);
+  const activeRunId = ai.view?.run && isRunActive(ai.view.run.status) ? ai.view.run.id : null;
+  const evalCandidates = targets.filter((x) => x.status !== "excluded");
   const visibleTargets = filterTargetsByStatus(displayedTargets, statusFilter);
   const statusLabels = STATUS_LABEL(tr);
   return (
@@ -58,7 +69,26 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                   {t("fullCandidateList")} {targets.length} {t("shortlist")} {shortlistedTargets.length}
                 </span>
               }
+              actions={
+                canAct ? (
+                  <AiEvalStartButton
+                    candidates={evalCandidates.length}
+                    dartEligible={evalCandidates.filter((x) => !!x.dart_corp_code).length}
+                    disabled={activeRunId !== null}
+                    busy={ai.busy}
+                    onStart={ai.start}
+                  />
+                ) : undefined
+              }
             />
+            {ai.message && (
+              <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-0 mb-2">
+                {ai.message}
+              </p>
+            )}
+            {ai.view && (
+              <AiEvalProgress view={ai.view} canAct={canAct} busy={ai.busy} onResume={ai.resume} onCancel={ai.cancel} />
+            )}
             <div className="sizing-grade-card">
               {targets.length > 0 && (
                 // 품평회 2026-10-22 잔여 #1 — 상태 필터 행. 초기화 버튼은 필터가 걸려
@@ -164,6 +194,11 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                     {t("technology")} {es?.technical.score ?? "—"}
                                   </span>
                                 </span>
+                                <ProvisionalChips
+                                  draft={tgt.eval_draft}
+                                  dartCorpCode={tgt.dart_corp_code}
+                                  activeRunId={activeRunId}
+                                />
                               </td>
                               <td className="col-num tabular-nums" title={t("provisionalRankingByTheFinancial")}>
                                 {tgt.status === "excluded" ? (
@@ -217,6 +252,18 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                               </td>
                               <td className="sizing-actions-cell">
                                 <span className="actions-row">
+                                  <button
+                                    type="button"
+                                    className="btn-ghost btn-sm"
+                                    aria-expanded={compareId === tgt.id}
+                                    aria-controls={`ai-versions-${tgt.id}`}
+                                    aria-label={ta("compareToggle", { company: tgt.company_name })}
+                                    title={ta("compareToggle", { company: tgt.company_name })}
+                                    onClick={() => setCompareId(compareId === tgt.id ? null : tgt.id)}
+                                  >
+                                    <span aria-hidden="true">{compareId === tgt.id ? "▾" : "▸"} </span>
+                                    {ta("compare")}
+                                  </button>
                                   {canAct && canPromote && (
                                     <button
                                       type="button"
@@ -259,6 +306,19 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                 </span>
                               </td>
                             </tr>
+                            {compareId === tgt.id && selected && (
+                              <tr>
+                                <td colSpan={7} id={`ai-versions-${tgt.id}`}>
+                                  <AiEvalVersionPanel
+                                    oppId={selected.opportunity.id}
+                                    targetId={tgt.id}
+                                    companyName={tgt.company_name}
+                                    canAct={canAct}
+                                    onConfirmed={() => ctx.loadDetail(selected.opportunity.id)}
+                                  />
+                                </td>
+                              </tr>
+                            )}
                           </Fragment>
                         );
                       })}

@@ -42,6 +42,8 @@ export interface TargetRow {
     combined: number | null;
     complete?: boolean;
   };
+  // ADR-0199 A8 — provisional AI draft state; never part of eval_summary / ranking / promotion.
+  eval_draft?: import("./aiEvalTypes.ts").EvalDraftView;
 }
 // 재무 참고 패널 — GET /api/companies/[companyId]/financials 응답의 필요한 부분만.
 export interface FinancialsResp {

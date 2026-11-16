@@ -4477,3 +4477,8 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .completion-compact { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 .completion-compact .completion-steps { margin: 0; }
 .completion-compact-title { margin: 0; font-size: var(--fs-body); font-weight: 600; }
+
+/* S6 bulk AI evaluation (ADR-0199): provisional chip is text + icon + dashed outline, never color alone. */
+.ai-draft-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 var(--space-2); border: 1px dashed var(--border); border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-caption); white-space: nowrap; }
+.ai-changed-mark { font-weight: 600; white-space: nowrap; }
+.ai-eval-progress progress { height: 0.5rem; }
