@@ -6331,7 +6331,8 @@
             "grades": "근거 등급 A = DART 사실로 결정론적으로 계산, C = LLM 초안(사람 검토 필요).",
             "dartReuse": "DART 조회는 {days}일 동안 재사용하며 공시 집중 기간(3월 1일~5월 31일, 한국 시간)에는 {season}일입니다.",
             "forceRefresh": "‘DART 최신 재조회’를 켜면 재사용 기간을 무시하고 다시 조회합니다.",
-            "webEvidence": "웹 검색 근거는 선택 사항이며 기본값은 꺼짐입니다."
+            "webEvidence": "웹 검색 근거는 선택 사항이며 기본값은 꺼짐입니다.",
+            "coverage": "점수는 판정된 항목만으로 계산합니다. 확인 안됨·미판정 항목은 충족으로도 미충족으로도 세지 않으므로, 판정된 범위가 작을수록 점수의 신뢰도가 낮습니다."
           },
           "technicalRulesTitle": "기술 항목 규칙",
           "technicalRule1": "기술 판정은 사업보고서에서 검증된 근거 구간이 있을 때만(웹 근거를 켠 경우 웹 출처 포함) 제안하며, 그렇지 않으면 ‘확인 안됨’으로 남습니다.",
@@ -6372,8 +6373,6 @@
         "keptShort": "이전 버전 유지",
         "rowEvaluating": "평가 진행 중",
         "rowEvaluatingTitle": "AI 평가 실행 중 — 지금 보이는 잠정 칩은 이전 버전입니다",
-        "markDone": "완료",
-        "markWaiting": "대기",
         "unchangedKept": "재평가 · 변경 없음 (v{n} 유지)",
         "unchangedHint": "다시 평가했지만 입력이 바뀌지 않아 기존 버전을 그대로 사용합니다",
         "dartCalls": "DART 조회 {used}/{est}",
@@ -6391,13 +6390,6 @@
           "unknown": "알 수 없는 오류"
         },
         "progressRegion": "AI 평가 진행 상황",
-        "progress": "AI 평가 진행 중 {done}/{total} · {company} · {step}",
-        "step": {
-          "financial_sync": "DART 재무 수집",
-          "financial_draft": "재무 초안",
-          "technical_draft": "기술 초안",
-          "waiting": "대기"
-        },
         "pauseReason": {
           "dart_budget_reserve": "DART 일일 한도 보호로 일시 정지 — {done}/{total} 완료",
           "dart_budget_exhausted": "DART 일일 호출 한도에 도달해 일시 정지 — {done}/{total} 완료",
@@ -6417,7 +6409,9 @@
           "no_candidates": "평가할 후보가 없습니다.",
           "stale_version": "더 새로운 버전이 있어 이 버전은 확정할 수 없습니다. 최신 버전을 확인하세요.",
           "human_only": "판정 확정은 사람만 할 수 있습니다.",
-          "unknown": "요청을 처리하지 못했습니다."
+          "unknown": "요청을 처리하지 못했습니다.",
+          "engine_active_bulk_block": "전체 후보 일괄 평가는 다른 AI 평가와 함께 실행할 수 없습니다. 진행 중인 평가가 끝난 뒤 다시 시도하세요.",
+          "engine_active_concurrency_cap": "동시에 실행할 수 있는 AI 평가 3건에 도달했습니다. 하나가 끝난 뒤 다시 시도하세요."
         },
         "unverified": "확인 안됨",
         "reasonDetail": {
@@ -6445,7 +6439,35 @@
         "loading": "불러오는 중…",
         "noVersions": "아직 AI 초안이 없습니다.",
         "compare": "버전 비교",
-        "compareToggle": "{company} AI 초안 버전 비교 펼치기·접기"
+        "compareToggle": "{company} AI 초안 버전 비교 펼치기·접기",
+        "rowTargetRunning": "이 후보의 AI 평가가 진행 중입니다",
+        "rowCapReached": "동시에 실행할 수 있는 AI 평가 {max}건에 도달했습니다. 하나가 끝난 뒤 시작하세요",
+        "bulkBlocked": "진행 중인 AI 평가가 끝난 뒤에 전체 평가를 시작할 수 있습니다",
+        "cancelRun": "{company} 평가 중단",
+        "rowSeg": {
+          "pending": "평가 대기 중 — 곧 시작합니다",
+          "syncing": "DART 재무 동기화 중",
+          "finDraft": "재무 초안 작성 중",
+          "finDone": "재무 초안 완료",
+          "techWait": "기술 초안 대기 중",
+          "techDraft": "기술 초안 작성 중(LLM 분석)",
+          "versioning": "버전 기록 중",
+          "done": "완료"
+        },
+        "runNames": "{first} 외 {n}곳",
+        "runCount": "진행 {done}/{total}",
+        "elapsed": "경과 {time}",
+        "elapsedUnit": {
+          "s": "{s}초",
+          "ms": "{m}분 {s}초",
+          "hm": "{h}시간 {m}분"
+        },
+        "chipScoreCoverage": "AI 잠정 {category} {score} · 판정 {judged}/{total} 항목 · v{n}",
+        "coverageWeight": "평가 {scored}/{total}",
+        "coveragePartial": "{category} 일부 항목 미평가",
+        "coveragePartialHint": "점수는 판정된 항목만으로 계산합니다. 평가 숫자는 가중치 기준으로 판정된 범위(판정된 가중치/전체 가중치)입니다.",
+        "coverageRankPartial": "일부 항목 미평가 · 잠정",
+        "versionCoverage": "판정 {judged}/{total} · 미평가 {k}"
       }
     },
     "s8": {

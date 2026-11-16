@@ -6,16 +6,18 @@ import { Fragment, useState } from "react";
 import { SECTION_IDS, STATUS_LABEL } from "./constants.ts";
 import { filterTargetsByStatus, TARGET_STATUS_FILTERS, type TargetStatusFilter } from "./longlist-filter.ts";
 import { ColGroup } from "../../ui.tsx";
-import { isRunActive } from "./aiEvalTypes.ts";
 
 // 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유·작업 7열.
 // 작업 열(승격·순위 조정)은 list-table 표준에 따라 마지막 sizing-actions-cell로
 // 분리되고 상태 열에는 칩만 남는다 (2026-10 행 인터랙션 리뷰 — IndustryTable 참조 구현).
-const LONG_LIST_COL_PCT = [20, 8, 24, 9, 9, 30] as const;
+// 2026-11-16: 상태 열을 9→12%로 넓혀 "심사 중" 같은 짧은 라벨이 두 줄로 깨지지 않게 하고, 점수 열(커버리지 문구)을 늘렸다.
+const LONG_LIST_COL_PCT = [18, 8, 26, 9, 12, 27] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
-import { AiEvalProgress, ProvisionalChips } from "./AiEvalChips.tsx";
-import { AiEvalCriteriaPanel } from "./AiEvalCriteriaPanel.tsx";
+import { AiEvalRunsPanel, ProvisionalChips } from "./AiEvalChips.tsx";
+import { ConfirmedScoreChips, RankPartialMarker } from "./AiEvalCoverage.tsx";
+import { activeItemFor, liveFor, rowBlock } from "./aiEvalActive.ts";
+import { AiEvalCriteriaDialog } from "./AiEvalCriteriaPanel.tsx";
 import { AiEvalRowButton } from "./AiEvalRowButton.tsx";
 import { AiEvalRowConfirm } from "./AiEvalRowConfirm.tsx";
 import { AiEvalStartButton } from "./AiEvalStart.tsx";
@@ -47,7 +49,8 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
   const ai = useAiEval({ oppId: selected?.opportunity.id ?? null, loadDetail: ctx.loadDetail });
   const ta = useTranslations("stages.s67.aiEval");
   const [compareId, setCompareId] = useState<string | null>(null);
-  const activeRunId = ai.view?.run && isRunActive(ai.view.run.status) ? ai.view.run.id : null;
+  const activeRunIds = ai.activeRuns.flatMap((v) => (v.run ? [v.run.id] : []));
+  const anyRunActive = activeRunIds.length > 0;
   const evalCandidates = targets.filter((x) => x.status !== "excluded");
   const visibleTargets = filterTargetsByStatus(displayedTargets, statusFilter);
   const statusLabels = STATUS_LABEL(tr);
@@ -73,15 +76,20 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                 </span>
               }
               actions={
-                canAct ? (
-                  <AiEvalStartButton
-                    candidates={evalCandidates.length}
-                    dartEligible={evalCandidates.filter((x) => !!x.dart_corp_code).length}
-                    disabled={activeRunId !== null}
-                    busy={ai.busy}
-                    onStart={ai.start}
-                  />
-                ) : undefined
+                <>
+                  {canAct && (
+                    <AiEvalStartButton
+                      candidates={evalCandidates.length}
+                      dartEligible={evalCandidates.filter((x) => !!x.dart_corp_code).length}
+                      disabled={anyRunActive}
+                      busy={ai.busy}
+                      onStart={ai.start}
+                    />
+                  )}
+                  {/* ADR-0199 — 평가 기준은 툴바의 모달로 연다(기존 인라인 접기 패널 대체).
+                    뷰어도 기준·문구를 읽을 수 있어야 하므로 canAct와 무관하게 항상 렌더한다. */}
+                  <AiEvalCriteriaDialog oppId={selected.opportunity.id} canAct={canAct} />
+                </>
               }
             />
             {ai.message && (
@@ -89,10 +97,14 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                 {ai.message}
               </p>
             )}
-            {ai.view && (
-              <AiEvalProgress view={ai.view} canAct={canAct} busy={ai.busy} onResume={ai.resume} onCancel={ai.cancel} />
-            )}
-            <AiEvalCriteriaPanel oppId={selected.opportunity.id} canAct={canAct} />
+            <AiEvalRunsPanel
+              activeRuns={ai.activeRuns}
+              latest={ai.view}
+              canAct={canAct}
+              busy={ai.busy}
+              onResume={ai.resume}
+              onCancel={ai.cancel}
+            />
             <div className="sizing-grade-card">
               {targets.length > 0 && (
                 // 품평회 2026-10-22 잔여 #1 — 상태 필터 행. 초기화 버튼은 필터가 걸려
@@ -198,28 +210,12 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                 <code className="dd-item-id">{tgt.dart_corp_code ?? "—"}</code>
                               </td>
                               <td>
-                                <span className="flex items-center gap-1">
-                                  <span
-                                    className={`status-chip ${es?.financial.score == null ? "status-not-started" : es.financial.score >= 70 ? "status-green" : es.financial.score >= 40 ? "status-amber" : "status-red"}`}
-                                    title={t("financialEvaluationWeightedScoreOut")}
-                                  >
-                                    {tc("finance")} {es?.financial.score ?? "—"}
-                                  </span>
-                                  <span
-                                    className={`status-chip ${es?.technical.score == null ? "status-not-started" : es.technical.score >= 70 ? "status-green" : es.technical.score >= 40 ? "status-amber" : "status-red"}`}
-                                    title={t("technologyEvaluationWeightedScoreOut")}
-                                  >
-                                    {t("technology")} {es?.technical.score ?? "—"}
-                                  </span>
-                                </span>
+                                <ConfirmedScoreChips summary={es} />
                                 <ProvisionalChips
                                   draft={tgt.eval_draft}
                                   dartCorpCode={tgt.dart_corp_code}
-                                  activeRunId={activeRunId}
-                                  live={(() => {
-                                    const li = ai.view?.items.find((i) => i.brownfield_target_id === tgt.id);
-                                    return li ? { runActive: activeRunId !== null, item: li } : null;
-                                  })()}
+                                  activeRunIds={activeRunIds}
+                                  live={liveFor(ai.activeRuns, ai.view, tgt.id)}
                                 />
                               </td>
                               <td className="col-num tabular-nums" title={t("provisionalRankingByTheFinancial")}>
@@ -246,6 +242,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                 ) : (
                                   <span className="text-[color:var(--muted-fg)]">{t("evaluationNeeded")}</span>
                                 )}
+                                {tgt.status !== "excluded" && <RankPartialMarker summary={es} />}
                               </td>
                               <td>
                                 <span
@@ -265,7 +262,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                         targetId={tgt.id}
                                         excluded={tgt.status === "excluded"}
                                         hasDart={!!tgt.dart_corp_code}
-                                        running={activeRunId !== null}
+                                        block={rowBlock(ai.activeRuns, tgt.id)}
                                         busy={ai.busy}
                                         onStart={ai.start}
                                       />
@@ -277,7 +274,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                         companyName={tgt.company_name}
                                         excluded={tgt.status === "excluded"}
                                         hasDart={!!tgt.dart_corp_code}
-                                        running={activeRunId !== null}
+                                        running={activeItemFor(ai.activeRuns, tgt.id) !== null}
                                         draft={tgt.eval_draft}
                                         onConfirmed={() => ctx.loadDetail(selected.opportunity.id)}
                                       />

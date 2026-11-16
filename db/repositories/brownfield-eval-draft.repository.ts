@@ -302,23 +302,58 @@ export function getRun(db: Database, runId: string): DraftRunRow | null {
   );
 }
 
-export function getActiveRun(db: Database, opportunityId: string): DraftRunRow | null {
-  return (
-    (db
-      .query(
-        `SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE opportunity_id = ? AND status IN (${placeholders(ACTIVE_RUN_STATUSES.length)})`,
-      )
-      .get(opportunityId, ...ACTIVE_RUN_STATUSES) as DraftRunRow | null) ?? null
-  );
+export function getActiveRunsForOpportunity(db: Database, opportunityId: string): DraftRunRow[] {
+  return db
+    .query(
+      `SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE opportunity_id = ? AND status IN (${placeholders(ACTIVE_RUN_STATUSES.length)}) ORDER BY started_at DESC, id DESC`,
+    )
+    .all(opportunityId, ...ACTIVE_RUN_STATUSES) as DraftRunRow[];
 }
 
-export function getLatestRun(db: Database, opportunityId: string): DraftRunRow | null {
+/** The newest active run, if any (legacy single-active-run reads). */
+export function getActiveRun(db: Database, opportunityId: string): DraftRunRow | null {
+  return getActiveRunsForOpportunity(db, opportunityId)[0] ?? null;
+}
+
+/**
+ * The newest active run whose run items cover EXACTLY the given candidate set (start-reuse, A1): with per-candidate
+ * engines in parallel, an active run over different candidates must not swallow a new start.
+ */
+export function getActiveRunForTargets(
+  db: Database,
+  opportunityId: string,
+  targetIds: readonly string[],
+): DraftRunRow | null {
+  const want = [...targetIds].sort().join("\n");
+  for (const run of getActiveRunsForOpportunity(db, opportunityId)) {
+    const have = listRunItems(db, run.id)
+      .map((i) => i.brownfield_target_id)
+      .sort()
+      .join("\n");
+    if (have === want) return run;
+  }
+  return null;
+}
+
+export function getLatestRun(db: Database, opportunityId: string, targetId?: string): DraftRunRow | null {
+  if (targetId === undefined) {
+    return (
+      (db
+        .query(
+          `SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE opportunity_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`,
+        )
+        .get(opportunityId) as DraftRunRow | null) ?? null
+    );
+  }
+  // Latest run that has a run item for this candidate (A2 additive `target_id` query).
   return (
     (db
       .query(
-        `SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run WHERE opportunity_id = ? ORDER BY started_at DESC, id DESC LIMIT 1`,
+        `SELECT ${RUN_COLUMNS} FROM brownfield_eval_draft_run
+          WHERE opportunity_id = ? AND id IN (SELECT run_id FROM brownfield_eval_draft_run_item WHERE brownfield_target_id = ?)
+          ORDER BY started_at DESC, id DESC LIMIT 1`,
       )
-      .get(opportunityId) as DraftRunRow | null) ?? null
+      .get(opportunityId, targetId) as DraftRunRow | null) ?? null
   );
 }
 
@@ -336,7 +371,7 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
   if (new Set(ids).size !== ids.length) throw new EvalDraftError("invalid", "targetIds must not repeat.");
 
   return db.transaction(() => {
-    const active = getActiveRun(db, input.opportunityId);
+    const active = getActiveRunForTargets(db, input.opportunityId, ids);
     if (active) return { run: active, reused: true };
     if (ids.length > 0) {
       const found = db

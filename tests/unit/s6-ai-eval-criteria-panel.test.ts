@@ -1,7 +1,10 @@
-// @version 1.0.0
-/** S6 evaluation-criteria panel (ADR-0199): defaults vs adjusted badge, live rule sentences, score explanation,
- * viewer-disabled editing, the PATCH body, the technical rule block, version-panel threshold marker, ko/en parity. */
+// @version 1.1.0
+/** S6 evaluation-criteria dialog (ADR-0199): defaults vs adjusted badge, live rule sentences, score explanation,
+ * viewer-disabled editing, the PATCH body, the technical rule block, version-panel threshold marker, ko/en parity.
+ * 2026-11-16: the former inline collapsible panel above the longlist table is now a toolbar modal — tests cover the
+ * closed button state, the modal body content, and the source-level wiring (shared modal shell, focus hook). */
 import { describe, expect, mock, test } from "bun:test";
+import { readFileSync } from "node:fs";
 
 // biome-ignore lint/suspicious/noExplicitAny: test reads untyped module namespaces and JSON catalogs
 type Loose = any;
@@ -135,4 +138,58 @@ test("ko/en key parity for criteriaPanel", () => {
     Object.entries(o).flatMap(([k, v]) => (typeof v === "object" ? flat(v, `${p}${k}.`) : [`${p}${k}`]));
   expect(flat(en.stages.s67.aiEval.criteriaPanel).sort()).toEqual(flat(ko.stages.s67.aiEval.criteriaPanel).sort());
   expect(en.stages.s67.aiEval.rubricChanged).toBeTruthy();
+});
+
+describe("criteria dialog shell", () => {
+  const src = readFileSync(
+    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/AiEvalCriteriaPanel.tsx`,
+    "utf8",
+  );
+  const longlist = readFileSync(
+    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistSection.tsx`,
+    "utf8",
+  );
+  test("closed state renders the toolbar button only, expanded state false, no modal", () => {
+    const html = render(createElement(panel.AiEvalCriteriaDialog, { oppId: "o 1", canAct: true }));
+    expect(html).toContain(ko.stages.s67.aiEval.criteriaPanel.title);
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain('role="dialog"');
+  });
+  test("modal body carries the score explanation, notice and the criteria list", () => {
+    const html = render(
+      createElement(panel.CriteriaPanelBody, {
+        criteria: [row({})],
+        error: null,
+        notice: null,
+        canAct: true,
+        savingId: null,
+        onSave: () => {},
+      }),
+    );
+    expect(html).toContain("충족 1, 부분충족 0.5, 미충족 0"); // ScoreExplanation
+    expect(html).toContain(ko.stages.s67.aiEval.criteriaPanel.notice);
+    expect(html).toContain("CAGR ≥ +5%"); // CriteriaList rule sentence
+    expect(html).toContain("<form"); // threshold editor reachable in the modal
+  });
+  test("open wiring: AiEvalModal shell with aria-labelledby heading, Escape/backdrop close via the shared hook", () => {
+    expect(src).toContain("AiEvalModal");
+    expect(src).toContain("titleId={titleId}");
+    expect(src).toContain("aria-expanded={open}");
+    expect(src).toContain("setOpen(true)");
+    const dialogs = readFileSync(
+      `${import.meta.dir}/../../app/web-next/components/stages/brownfield/AiEvalDialogs.tsx`,
+      "utf8",
+    );
+    expect(dialogs).toContain("aria-labelledby={titleId}");
+    expect(dialogs).toMatch(/useModalFocus\(onClose\)/);
+  });
+  test("the button lives in the longlist toolbar next to AI 평가; the inline panel is gone from the page flow", () => {
+    expect(longlist).toContain("<AiEvalCriteriaDialog");
+    expect(longlist).not.toMatch(/<AiEvalCriteriaPanel\b/);
+    const actionsIdx = longlist.indexOf("actions={");
+    const dialogIdx = longlist.indexOf("<AiEvalCriteriaDialog");
+    const startIdx = longlist.indexOf("<AiEvalStartButton");
+    expect(dialogIdx).toBeGreaterThan(actionsIdx);
+    expect(dialogIdx).toBeGreaterThan(startIdx);
+  });
 });

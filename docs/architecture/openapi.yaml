@@ -5867,7 +5867,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs:
     post:
       operationId: startBrownfieldEvalDraftRun
-      summary: "Start an S6 bulk AI evaluation run over the non-excluded candidates (ADR-0199 A1). Drafting is a proposal: every result is an immutable draft version and only the human-only confirm route writes verdicts. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). An active run is reused (meta.reused true). 202 returns run_id; the engine works in the background. Analyst+."
+      summary: "Start an S6 bulk AI evaluation run over the non-excluded candidates (ADR-0199 A1). Drafting is a proposal: every result is an immutable draft version and only the human-only confirm route writes verdicts. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). Concurrency: a bulk start (no target_ids, or more than one id) refuses with 409 engine_active reason=bulk_block while any engine is active; a single-candidate start may run beside other engines up to MAX_CONCURRENT_EVAL_ENGINES=3 and refuses with reason=concurrency_cap at the cap. The 30 s start cooldown (429) applies to bulk starts per user and to restarting the same single candidate per user+candidate; starting a different single candidate is never delayed. An active run over exactly the requested candidates is reused (meta.reused true). 202 returns run_id; the engine works in the background. Analyst+."
       tags:
         - Brownfield
       parameters:
@@ -5885,7 +5885,31 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs/latest:
     get:
       operationId: getLatestBrownfieldEvalDraftRun
-      summary: "Latest S6 bulk evaluation run of the opportunity with items and the DART budget snapshot { calls, budget, reserve } (ADR-0199 A2); run is null when none exists. A running run with a stale heartbeat is lazily marked interrupted."
+      summary: "Latest S6 bulk evaluation run of the opportunity with items and the DART budget snapshot { calls, budget, reserve } (ADR-0199 A2); run is null when none exists. Additive query parameter target_id: when present, returns the latest run that has a run item for that candidate (else the global latest). A running run with a stale heartbeat is lazily marked interrupted."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: target_id
+          in: query
+          required: false
+          description: "When present, return the latest run of the opportunity that has a run item for this candidate instead of the global latest run."
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-draft-runs/active:
+    get:
+      operationId: listActiveBrownfieldEvalDraftRuns
+      summary: "Every S6 evaluation run of the opportunity whose engine is active in this process (running, including a cancelled engine still finishing its item), oldest first, as { runs: [{ run, items, progress, budget }] } (each element has the same shape as the latest response); empty array when none (ADR-0199 follow-up, parallel per-candidate runs)."
       tags:
         - Brownfield
       parameters:

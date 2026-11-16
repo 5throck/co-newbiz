@@ -37,8 +37,9 @@ export interface TargetRow {
   // 재무·기술 평가(ADR-0139) 기반 랭킹 점수 — 서버가 계산해 붙여준다.
   // 위원회 심의(9개 항목)와 역할을 분리한다(사용자 요청, 2026-09-15).
   eval_summary?: {
-    financial: { score: number | null };
-    technical: { score: number | null };
+    // Weights are already in the targets payload (computeEvalScore spread); they drive the coverage markers.
+    financial: { score: number | null; scoredWeight?: number; totalWeight?: number; excludedWeight?: number };
+    technical: { score: number | null; scoredWeight?: number; totalWeight?: number; excludedWeight?: number };
     combined: number | null;
     complete?: boolean;
   };

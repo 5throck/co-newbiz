@@ -6331,7 +6331,8 @@
             "grades": "Evidence grade A = deterministic calculation from DART facts; C = LLM draft (needs human review).",
             "dartReuse": "DART lookups are reused for {days} days, and for {season} days in the filing season (March 1 to May 31, KST).",
             "forceRefresh": "Turning on “Re-query latest DART data” ignores the reuse window.",
-            "webEvidence": "Web search evidence is opt-in and OFF by default."
+            "webEvidence": "Web search evidence is opt-in and OFF by default.",
+            "coverage": "A score covers only the judged items. Unverified or not-yet-judged items count neither as passes nor as failures, so a score with low coverage is less reliable."
           },
           "technicalRulesTitle": "Technical item rules",
           "technicalRule1": "A technical verdict is proposed only with a validated evidence window from the business report (or a web source when web evidence is on); otherwise it stays “unverified”.",
@@ -6372,8 +6373,6 @@
         "keptShort": "previous version kept",
         "rowEvaluating": "Evaluation in progress",
         "rowEvaluatingTitle": "AI evaluation running — the provisional chips shown are the previous version",
-        "markDone": "done",
-        "markWaiting": "waiting",
         "unchangedKept": "Re-evaluated · no change (v{n} kept)",
         "unchangedHint": "Re-evaluated with unchanged inputs; the existing version is reused",
         "dartCalls": "DART calls {used}/{est}",
@@ -6391,13 +6390,6 @@
           "unknown": "Unknown error"
         },
         "progressRegion": "AI evaluation progress",
-        "progress": "AI evaluation in progress {done}/{total} · {company} · {step}",
-        "step": {
-          "financial_sync": "Collecting DART financials",
-          "financial_draft": "Financial draft",
-          "technical_draft": "Technical draft",
-          "waiting": "Waiting"
-        },
         "pauseReason": {
           "dart_budget_reserve": "Paused to protect the DART daily limit — {done}/{total} done",
           "dart_budget_exhausted": "Paused: the DART daily call limit was reached — {done}/{total} done",
@@ -6417,7 +6409,9 @@
           "no_candidates": "There are no candidates to evaluate.",
           "stale_version": "A newer version exists, so this one cannot be confirmed. Review the latest version.",
           "human_only": "Only a person can confirm verdicts.",
-          "unknown": "The request could not be processed."
+          "unknown": "The request could not be processed.",
+          "engine_active_bulk_block": "A full-list evaluation cannot run alongside other AI evaluations. Try again once the running ones finish.",
+          "engine_active_concurrency_cap": "The limit of 3 concurrent AI evaluations is reached. Try again once one finishes."
         },
         "unverified": "Unverified",
         "reasonDetail": {
@@ -6445,7 +6439,35 @@
         "loading": "Loading…",
         "noVersions": "No AI draft yet.",
         "compare": "Compare versions",
-        "compareToggle": "Toggle AI draft version comparison for {company}"
+        "compareToggle": "Toggle AI draft version comparison for {company}",
+        "rowTargetRunning": "AI evaluation for this candidate is already running",
+        "rowCapReached": "The limit of {max} concurrent AI evaluations is reached. Start again once one finishes",
+        "bulkBlocked": "Start the full evaluation after the running AI evaluations finish",
+        "cancelRun": "Stop evaluation for {company}",
+        "rowSeg": {
+          "pending": "Waiting to start — begins shortly",
+          "syncing": "Syncing DART financials",
+          "finDraft": "Drafting financials",
+          "finDone": "Financial draft done",
+          "techWait": "technical draft waiting",
+          "techDraft": "drafting technical (LLM analysis)",
+          "versioning": "Recording the version",
+          "done": "Done"
+        },
+        "runNames": "{first} and {n} more",
+        "runCount": "Progress {done}/{total}",
+        "elapsed": "Elapsed {time}",
+        "elapsedUnit": {
+          "s": "{s}s",
+          "ms": "{m}m {s}s",
+          "hm": "{h}h {m}m"
+        },
+        "chipScoreCoverage": "AI draft {category} {score} · judged {judged}/{total} items · v{n}",
+        "coverageWeight": "Judged {scored}/{total}",
+        "coveragePartial": "{category}: some items not evaluated",
+        "coveragePartialHint": "The score covers only judged items. The numbers are judged weight over total weight.",
+        "coverageRankPartial": "Some items not evaluated · provisional",
+        "versionCoverage": "Judged {judged}/{total} · not evaluated {k}"
       }
     },
     "s8": {

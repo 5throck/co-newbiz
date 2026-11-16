@@ -164,28 +164,45 @@ export function currentBudget(): { calls: number; budget: number } {
 
 const activeEngines = new Map<string, string>(); // runId -> opportunityId
 
-/** The run id of an engine still executing for this opportunity in THIS process (even a cancelled one finishing its item). */
-export function activeEngineRunForOpportunity(oppId: string): string | null {
-  for (const [runId, opp] of activeEngines) if (opp === oppId) return runId;
-  return null;
+/** Max simultaneously ACTIVE engines for one opportunity (bulk start still requires zero; §5 concurrency rule). */
+export const MAX_CONCURRENT_EVAL_ENGINES = 3;
+
+/**
+ * Every run id with an engine still executing for this opportunity in THIS process (even a cancelled one finishing
+ * its item) — the concurrency-cap population.
+ */
+export function activeEngineRunsForOpportunity(oppId: string): string[] {
+  const out: string[] = [];
+  for (const [runId, opp] of activeEngines) if (opp === oppId) out.push(runId);
+  return out;
 }
 
-/** Per-user cooldown between run starts (stops a start-cancel-start loop from hammering DART/LLM/web). */
+/** The run id of an engine still executing for this opportunity in THIS process (even a cancelled one finishing its item). */
+export function activeEngineRunForOpportunity(oppId: string): string | null {
+  return activeEngineRunsForOpportunity(oppId)[0] ?? null;
+}
+
+/**
+ * Cooldown between run starts (stops a start-cancel-start loop from hammering DART/LLM/web). Keyed per user for BULK
+ * starts and per user + candidate for single-candidate starts, so starting a DIFFERENT single candidate is never
+ * delayed while repeated clicks on one candidate stay rate-limited.
+ */
 export const START_COOLDOWN_MS = 30_000;
 let startCooldownMs = START_COOLDOWN_MS;
-const lastStartByUser = new Map<string, number>();
-/** Milliseconds the user must still wait before starting another run (0 = may start). */
-export function startCooldownRemaining(userId: string, nowMs: number = Date.now()): number {
-  const last = lastStartByUser.get(userId);
+const lastStartByKey = new Map<string, number>();
+const cooldownKey = (userId: string, targetId?: string): string => (targetId ? `${userId}\u0000${targetId}` : userId);
+/** Milliseconds the user must still wait before starting another run (0 = may start). `targetId` for a single-candidate start. */
+export function startCooldownRemaining(userId: string, targetId?: string, nowMs: number = Date.now()): number {
+  const last = lastStartByKey.get(cooldownKey(userId, targetId));
   return last === undefined ? 0 : Math.max(0, last + startCooldownMs - nowMs);
 }
-export function noteRunStart(userId: string, nowMs: number = Date.now()): void {
-  lastStartByUser.set(userId, nowMs);
+export function noteRunStart(userId: string, targetId?: string, nowMs: number = Date.now()): void {
+  lastStartByKey.set(cooldownKey(userId, targetId), nowMs);
 }
 /** Test seam: 0 disables the cooldown; the map is cleared. */
 export function setStartCooldownForTests(ms: number): void {
   startCooldownMs = ms;
-  lastStartByUser.clear();
+  lastStartByKey.clear();
 }
 /** True while an engine for the run is executing in THIS process (guards lazy interruption and double resume). */
 export function isEngineActive(runId: string): boolean {

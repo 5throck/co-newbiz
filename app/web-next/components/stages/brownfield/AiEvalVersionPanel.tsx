@@ -81,6 +81,15 @@ export function VersionTable({ category, versions }: { category: DraftCategory; 
                   {s.delta})
                 </span>
               )}
+              {(() => {
+                const v = columns.find((c) => c.version_no === s.version_no);
+                const total = v ? v.proposed_count + v.unverified_count : 0;
+                return v && total > 0 ? (
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                    {t("versionCoverage", { judged: v.proposed_count, total, k: v.unverified_count })}
+                  </span>
+                ) : null;
+              })()}
             </td>
           ))}
         </tr>

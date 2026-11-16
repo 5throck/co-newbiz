@@ -28,6 +28,7 @@ const chips = (await import(`${WEB}/components/stages/brownfield/AiEvalChips.tsx
 const dialogs = (await import(`${WEB}/components/stages/brownfield/AiEvalDialogs.tsx`)) as Record<string, Loose>;
 const panel = (await import(`${WEB}/components/stages/brownfield/AiEvalVersionPanel.tsx`)) as Record<string, Loose>;
 const types = (await import(`${WEB}/components/stages/brownfield/aiEvalTypes.ts`)) as Record<string, Loose>;
+const active = (await import(`${WEB}/components/stages/brownfield/aiEvalActive.ts`)) as Record<string, Loose>;
 
 const render = (el: unknown, locale: "ko" | "en" = "ko") =>
   renderToStaticMarkup(
@@ -82,7 +83,7 @@ describe("start dialog", () => {
 
 describe("provisional chips", () => {
   const view = (draft: unknown, dart: string | null = "00123456", active: string | null = null) =>
-    render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, activeRunId: active }));
+    render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, activeRunIds: active ? [active] : [] }));
   test("chip carries the literal AI 잠정 text, an icon with a text label, and the dashed-outline class", () => {
     const html = view({ financial: chip(), technical: chip({ provisional_score: 55, version_no: 2 }) });
     expect(html).toContain("AI 잠정 재무 72 · v3");
@@ -137,30 +138,36 @@ describe("provisional chips", () => {
 describe("row run progress chips (S1-style, live run item)", () => {
   const liveView = (draft: unknown, item: unknown, runActive: boolean, dart = "00123456") =>
     render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, live: { runActive, item } }));
-  test("in-flight item shows 평가 진행 중 with per-category marks and 이전 버전 유지", () => {
-    const html = liveView(
-      { financial: chip(), technical: chip() },
-      { run_id: "r1", state: "financial_sync", financial_outcome: null, technical_outcome: null, error_message: null },
-      true,
-    );
-    expect(html).toContain("평가 진행 중");
-    expect(html).toContain("재무");
-    expect(html).toContain("기술");
-    expect(html).toContain("대기");
-    expect(html).toContain("이전 버전 유지");
-    const mid = liveView(
-      { financial: chip(), technical: chip() },
-      {
-        run_id: "r1",
-        state: "technical_draft",
-        financial_outcome: "versioned",
-        technical_outcome: null,
-        error_message: null,
-      },
-      true,
-    );
-    expect(mid).toContain('재무 <span aria-hidden="true">✓</span>');
-    expect(mid).toContain('기술 <span aria-hidden="true">…</span>');
+  test("in-flight item shows 평가 진행 중 as a full phrase per state, with glyph + text marks and 이전 버전 유지", () => {
+    const at = (state: string, over: Record<string, unknown> = {}) =>
+      liveView(
+        { financial: chip(), technical: chip() },
+        { run_id: "r1", state, financial_outcome: null, technical_outcome: null, error_message: null, ...over },
+        true,
+      );
+    const sync = at("financial_sync");
+    expect(sync).toContain("평가 진행 중");
+    expect(sync).toContain("DART 재무 동기화 중");
+    expect(sync).toContain("이전 버전 유지");
+    expect(at("financial_draft")).toContain("재무 초안 작성 중");
+    expect(at("financial_draft")).toContain("기술 초안 대기 중");
+    const mid = at("technical_draft", { financial_outcome: "versioned" });
+    expect(mid).toContain('<span aria-hidden="true">✓ </span>재무 초안 완료');
+    expect(mid).toContain('<span aria-hidden="true">⋯ </span>기술 초안 작성 중(LLM 분석)');
+    expect(at("versioning")).toContain("버전 기록 중");
+    // The words are in the DOM text (not only a tooltip) and the chip is not truncated by an inline style.
+    expect(mid).not.toContain("text-overflow");
+    expect(mid).not.toContain("truncate");
+  });
+  test("phaseSegments: one full phrase per state, glyph + key", () => {
+    const seg = (st: string) => active.phaseSegments(st).map((x: Loose) => `${x.glyph}${x.key}`);
+    expect(seg("pending")).toEqual(["⋯pending"]);
+    expect(seg("financial_sync")).toEqual(["⋯syncing"]);
+    expect(seg("financial_draft")).toEqual(["⋯finDraft", "○techWait"]);
+    expect(seg("technical_draft")).toEqual(["✓finDone", "⋯techDraft"]);
+    expect(seg("versioning")).toEqual(["⋯versioning"]);
+    expect(seg("done")).toEqual(["✓done"]);
+    expect(seg("something_else")).toEqual(["⋯pending"]);
   });
   test("unchanged outcomes show 재평가 · 변경 없음 (v{n} 유지) per category, not silence", () => {
     const html = liveView(
@@ -194,14 +201,6 @@ describe("row run progress chips (S1-style, live run item)", () => {
     );
     expect(html).toContain("DART 조회 오류");
     expect(html).toContain("v3 유지");
-  });
-  test("categoryMarks helper", () => {
-    expect(chips.categoryMarks("financial_sync", null, null)).toEqual({ financial: "waiting", technical: "waiting" });
-    expect(chips.categoryMarks("technical_draft", "versioned", null)).toEqual({
-      financial: "done",
-      technical: "waiting",
-    });
-    expect(chips.categoryMarks("done", "unchanged", "unchanged")).toEqual({ financial: "done", technical: "done" });
   });
 });
 

@@ -9,13 +9,29 @@ import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import type { ConfirmPlan } from "./aiEvalTypes.ts";
 import type { StartOptions } from "./useAiEval.ts";
 
-/** Dialog shell on the shared `.modal-backdrop` pattern: focus moves in, Tab cycles, Escape closes, focus returns. */
-export function AiEvalModal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+/** Dialog panel on the shared `.modal-backdrop` pattern: focus moves in, Tab cycles, Escape closes, focus returns.
+ * The focus hook lives HERE, not in AiEvalModal: this component only mounts after the shell's `mounted` gate, so
+ * useModalFocus' initial-focus effect runs with panelRef already attached (calling the hook in the gated shell ran it
+ * while the ref was still null and never re-ran: focus stayed on BODY and Escape never reached the backdrop).
+ * Exported without the portal so it renders under test. */
+export function AiEvalModalPanel({
+  title,
+  onClose,
+  children,
+  titleId,
+  showClose = false,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  /** When set, the dialog is labelled by its heading (aria-labelledby) instead of the raw title string. */
+  titleId?: string;
+  /** Adds a visible text + icon close button to the head (read-only dialogs without their own cancel button). */
+  showClose?: boolean;
+}) {
+  const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
-  if (!mounted) return null;
-  return createPortal(
+  return (
     // biome-ignore lint/a11y/noStaticElementInteractions: shared .modal-backdrop pattern (crud.tsx ConfirmDialog); Escape and Tab are handled by useModalFocus
     <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: the click only stops propagation to the backdrop; the dialog panel is not a click target */}
@@ -24,18 +40,40 @@ export function AiEvalModal({ title, onClose, children }: { title: string; onClo
         className="modal-panel"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
+        aria-label={titleId ? undefined : title}
         style={{ maxWidth: "32rem", width: "100%" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
-          <h2 style={{ fontSize: "0.95rem" }}>{title}</h2>
+          <h2 id={titleId} style={{ fontSize: "0.95rem" }}>
+            {title}
+          </h2>
+          {showClose && (
+            <button type="button" className="btn-ghost btn-sm" aria-label={tc("close")} onClick={onClose}>
+              <span aria-hidden="true">✕ </span>
+              {tc("close")}
+            </button>
+          )}
         </div>
         {children}
       </div>
-    </div>,
-    document.body,
+    </div>
   );
+}
+
+/** Portal shell: renders the panel into document.body after mount (SSR-safe). */
+export function AiEvalModal(props: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  titleId?: string;
+  showClose?: boolean;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(<AiEvalModalPanel {...props} />, document.body);
 }
 
 export interface StartStats {

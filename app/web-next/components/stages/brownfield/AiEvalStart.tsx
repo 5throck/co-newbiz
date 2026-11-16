@@ -37,7 +37,7 @@ export function AiEvalStartButton({
         type="button"
         className="btn-ghost btn-sm"
         disabled={disabled || busy || candidates === 0}
-        title={candidates === 0 ? t("noCandidates") : t("actionHint")}
+        title={candidates === 0 ? t("noCandidates") : disabled ? t("bulkBlocked") : t("actionHint")}
         onClick={() => setOpen(true)}
       >
         {t("action")}

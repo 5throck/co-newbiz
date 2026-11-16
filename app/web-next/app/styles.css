@@ -4479,7 +4479,7 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .completion-compact-title { margin: 0; font-size: var(--fs-body); font-weight: 600; }
 
 /* S6 bulk AI evaluation (ADR-0199): provisional chip is text + icon + dashed outline, never color alone. */
-.ai-draft-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 var(--space-2); border: 1px dashed var(--border); border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-caption); white-space: nowrap; }
+.ai-draft-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 var(--space-2); border: 1px dashed var(--border); border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-caption); white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .ai-changed-mark { font-weight: 600; white-space: nowrap; }
 .ai-eval-progress progress { height: 0.5rem; }
 
@@ -4490,5 +4490,10 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .longlist-table .sizing-actions-cell { white-space: normal; }
 .longlist-table td { min-width: 0; }
 .longlist-table .ai-draft-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+/* Progress / coverage wording must never be cut (2026-11-16 user report): chips wrap fully even under the <=640px
+   nowrap rule for table chips, and the run progress panel has no fixed height or ellipsis. */
+.table-scroll .longlist-table .status-chip, .table-scroll .longlist-table .ai-draft-chip { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
+.ai-eval-progress { overflow: visible; }
+.ai-eval-progress div, .ai-eval-progress p, .ai-eval-progress strong { white-space: normal; overflow-wrap: anywhere; }
 .longlist-table .ai-row-actions { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: var(--space-1, 0.25rem); }
 .longlist-table .ai-row-actions > .btn-ghost { white-space: nowrap; padding-inline: var(--space-2, 0.5rem); }
