@@ -6221,6 +6221,8 @@
         "verdictUnevaluated": "Not evaluated",
         "noRecordYet": "No record yet",
         "evidenceRef": "Evidence: {ref}",
+        "startRecord": "Record",
+        "startAria": "Start recording the {shape} evaluation",
         "recordedBy": "{who} · {when}",
         "edit": "Edit",
         "editAria": "Edit the {shape} evaluation",

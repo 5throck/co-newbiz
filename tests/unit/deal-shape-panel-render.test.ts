@@ -76,6 +76,8 @@ const view = (d: unknown, over: Record<string, unknown> = {}, locale: "ko" | "en
       onForm: () => {},
       onSubmit: () => {},
       onEdit: () => {},
+      onStart: () => {},
+      onCancel: () => {},
       busy: false,
       problem: null,
       serverError: null,
@@ -219,7 +221,7 @@ describe("shape rows", () => {
 
 describe("human-only recording", () => {
   test("states that no AI suggestion is pre-filled, and the form starts empty with required fields marked", () => {
-    const html = view(data([]));
+    const html = view(data([]), { form: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" } });
     expect(html).toContain("AI 제안을 미리 채우지 않습니다");
     const form = (html.match(/<form[\s\S]*?<\/form>/) ?? [""])[0];
     expect(form).not.toContain("checked");
@@ -237,12 +239,23 @@ describe("human-only recording", () => {
     expect(html).not.toContain("<form");
     expect(html).not.toContain("수정");
   });
-  test("an editor sees an edit button per recorded shape only", () => {
+  test("an editor sees 수정 on recorded shapes and 기록 on the others; no standalone form until a row is opened", () => {
     const html = view(data([row("spv", true)]));
     expect(html.match(/수정</g)?.length).toBe(1);
+    expect(html.match(/>기록</g)?.length).toBe(8); // 7 row buttons + the column header
+    expect(html).not.toContain("<form");
+  });
+  test("the editor opens inline under the chosen shape only", () => {
+    const html = view(data([]), { form: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" } });
+    expect(html.match(/<form/g)?.length).toBe(1);
+    expect(html).toContain('data-shape-editor="spv"');
   });
   test("problem and server error render as alerts with an icon", () => {
-    const html = view(data([]), { problem: "rationale", serverError: "boom" });
+    const html = view(data([]), {
+      form: { ...V.EMPTY_DEAL_SHAPE_FORM, shape: "spv" },
+      problem: "rationale",
+      serverError: "boom",
+    });
     expect(html).toContain("근거를 적어야 기록할 수 있습니다.");
     expect(html).toContain('data-testid="deal-shape-server-error"');
   });

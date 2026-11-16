@@ -6221,6 +6221,8 @@
         "verdictUnevaluated": "평가 전",
         "noRecordYet": "아직 기록 없음",
         "evidenceRef": "근거 자료: {ref}",
+        "startRecord": "기록",
+        "startAria": "{shape} 평가 기록 시작",
         "recordedBy": "{who} · {when}",
         "edit": "수정",
         "editAria": "{shape} 평가 수정",
