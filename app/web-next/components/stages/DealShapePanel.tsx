@@ -60,8 +60,8 @@ export function useDealShapeLabels() {
   return { shape, intent };
 }
 
-const COL_PCT_EDIT = [14, 10, 10, 34, 20, 12] as const;
-const COL_PCT_READ = [14, 10, 12, 40, 24] as const;
+const COL_PCT_EDIT = [20, 9, 9, 30, 19, 13] as const;
+const COL_PCT_READ = [20, 10, 12, 36, 22] as const;
 
 function Verdict({ state }: { state: "viable" | "not_viable" | "unevaluated" }) {
   const t = useTranslations("stages.s67.dealShapePanel");
@@ -201,7 +201,9 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
               <tbody>
                 {verdicts.map((v) => (
                   <tr key={v.shape} data-shape={v.shape} data-state={v.state}>
-                    <th scope="row">{labels.shape(v.shape)}</th>
+                    <th scope="row" className="whitespace-nowrap">
+                      {labels.shape(v.shape)}
+                    </th>
                     <td>
                       <Verdict state={v.state} />
                     </td>
