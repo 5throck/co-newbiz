@@ -1091,19 +1091,21 @@ describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follo
     const runId = await startAndSettle({ categories: "technical", target_ids: [TC.C] });
     runC = runId; // the candidate's own latest run is now this one (used by the latest?target_id test)
     const item = repo.listRunItems(db, runId).find((i) => i.brownfield_target_id === TC.C)!;
-    const payload = (gen: string) => ({
-      schema: 1,
-      category: "technical",
-      criteria_snapshot: [{ criterion_id: "c1", label: "L", weight: 1, source: "custom", rubric: null }],
-      items: [{ criterion_id: "c1", proposed_status: null, reason: null, metrics: [], note: null, citations: [] }],
-      human_items: [],
-      provisional_score: { score: null, scored_weight: 0, total_weight: 1 },
-      dart: null,
-      evidence: { disclosures: [], business_report: null, profile: { present: false, version_no: null }, web: [] },
-      llm: null,
-      runner: { user_id: ANALYST, via: "ui" },
-      generated_at: gen,
-    });
+    type Payload = import("../../db/repositories/brownfield-eval-draft.repository.ts").EvalDraftPayload;
+    const payload = (gen: string): Payload =>
+      ({
+        schema: 1,
+        category: "technical",
+        criteria_snapshot: [{ criterion_id: "c1", label: "L", weight: 1, source: "custom", rubric: null }],
+        items: [{ criterion_id: "c1", proposed_status: null, reason: null, metrics: [], note: null, citations: [] }],
+        human_items: [],
+        provisional_score: { score: null, scored_weight: 0, total_weight: 1 },
+        dart: null,
+        evidence: { disclosures: [], business_report: null, profile: { present: false, version_no: null }, web: [] },
+        llm: null,
+        runner: { user_id: ANALYST, via: "ui" },
+        generated_at: gen,
+      }) as Payload;
     const mk = (hash: string) =>
       repo.commitCategoryDraft(db, {
         itemId: item.id,
