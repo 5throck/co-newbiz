@@ -799,12 +799,6 @@ export function OpportunityFunnelStage({
                         >
                           {o.name}
                         </Link>
-                        {/* deals 탭에서 진입한 경우 — 이 검토/안건의 캐리어 기회를 표시 */}
-                        {o.id === opportunityId && (
-                          <span className="status-chip status-amber ml-1" title={t("thisIsTheCarrierOpportunity")}>
-                            {t("thisDeal")}
-                          </span>
-                        )}
                         <span className="block text-[length:var(--fs-caption)]">
                           {o.market_scope && <span className="status-chip status-amber mr-1">{o.market_scope}</span>}
                           {o.value_chain_node && (

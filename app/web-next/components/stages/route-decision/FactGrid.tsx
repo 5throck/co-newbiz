@@ -3,6 +3,7 @@
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import type { OpportunityRow } from "./types.ts";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 export function FactGrid({ ctx, selected }: { ctx: RouteDecisionStageState; selected: OpportunityRow }) {const t = useTranslations("stages.s4.factGrid"); const tc = useTranslations("common");
@@ -69,7 +70,10 @@ export function FactGrid({ ctx, selected }: { ctx: RouteDecisionStageState; sele
               {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
               {canAct && selected.status !== "selected" && (
                 <p role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0" data-testid="reco-needs-selected">
-                  <span aria-hidden="true">ⓘ</span> {t("needsSelectedOpportunity")}
+                  <span aria-hidden="true">ⓘ</span> {t("needsSelectedOpportunity")}{" "}
+                  <Link href={`/deals/${encodeURIComponent(selected.id)}/s3`} className="underline">
+                    {t("goToS3Select")}
+                  </Link>
                 </p>
               )}
               {canAct && selected.status === "selected" && !reco && !recoLoading && !recoError && (

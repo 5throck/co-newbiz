@@ -5450,7 +5450,8 @@
         "withoutAnIntentSelectedThe": "Without an intent selected, the scoring and evidence below are not saved (the server does not store scoring without intent)."
       },
       "factGrid": {
-        "needsSelectedOpportunity": "This opportunity is not in the “selected” status yet, so the AI recommendation and the route decision are unavailable. Select the opportunity first, then try again.",
+        "needsSelectedOpportunity": "This opportunity is not in the “selected” status yet, so the AI recommendation and the route decision are unavailable. Confirm the synergy score in the S3 decision tab and press “Select this opportunity” (the opportunity must first be in the “assessed” status from S2).",
+        "goToS3Select": "Go to the S3 decision tab",
         "aiNarrativeDraft": "AI narrative draft",
         "alternativesReviewDraft": "Alternatives review draft:",
         "andAfterApplyingToThe": ", and after applying to the decision tab below you can edit freely.",
