@@ -145,9 +145,9 @@ describe("validateCitations", () => {
       ],
       ctx,
     );
-    const lines = warn.mock.calls.map((a) => String(a[0]));
-    expect(lines.some((l) => l.includes("reason=mismatch"))).toBe(true);
-    expect(lines.some((l) => l.includes("reason=unknown_ref"))).toBe(true);
+    const lines: string[] = warn.mock.calls.map((a: unknown[]) => String(a[0]));
+    expect(lines.some((l: string) => l.includes("reason=mismatch"))).toBe(true);
+    expect(lines.some((l: string) => l.includes("reason=unknown_ref"))).toBe(true);
     expect(lines.join("\n")).not.toContain("세계 최대");
   });
 });

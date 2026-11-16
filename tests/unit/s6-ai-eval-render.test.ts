@@ -136,9 +136,7 @@ describe("provisional chips", () => {
 
 describe("row run progress chips (S1-style, live run item)", () => {
   const liveView = (draft: unknown, item: unknown, runActive: boolean, dart = "00123456") =>
-    render(
-      createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, live: { runActive, item } }),
-    );
+    render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, live: { runActive, item } }));
   test("in-flight item shows 평가 진행 중 with per-category marks and 이전 버전 유지", () => {
     const html = liveView(
       { financial: chip(), technical: chip() },
@@ -167,7 +165,13 @@ describe("row run progress chips (S1-style, live run item)", () => {
   test("unchanged outcomes show 재평가 · 변경 없음 (v{n} 유지) per category, not silence", () => {
     const html = liveView(
       { financial: chip(), technical: chip({ version_no: 4 }) },
-      { run_id: "r1", state: "done", financial_outcome: "unchanged", technical_outcome: "unchanged", error_message: null },
+      {
+        run_id: "r1",
+        state: "done",
+        financial_outcome: "unchanged",
+        technical_outcome: "unchanged",
+        error_message: null,
+      },
       false,
     );
     expect(html).toContain("재평가 · 변경 없음 (v3 유지)");
@@ -193,7 +197,10 @@ describe("row run progress chips (S1-style, live run item)", () => {
   });
   test("categoryMarks helper", () => {
     expect(chips.categoryMarks("financial_sync", null, null)).toEqual({ financial: "waiting", technical: "waiting" });
-    expect(chips.categoryMarks("technical_draft", "versioned", null)).toEqual({ financial: "done", technical: "waiting" });
+    expect(chips.categoryMarks("technical_draft", "versioned", null)).toEqual({
+      financial: "done",
+      technical: "waiting",
+    });
     expect(chips.categoryMarks("done", "unchanged", "unchanged")).toEqual({ financial: "done", technical: "done" });
   });
 });
@@ -203,7 +210,15 @@ describe("progress panel budget line", () => {
     render(
       createElement(chips.AiEvalProgress, {
         view: {
-          run: { id: "r1", status: "running", total_targets: 2, pause_reason: null, error_message: null, web_evidence: 0, force_refresh: 0 },
+          run: {
+            id: "r1",
+            status: "running",
+            total_targets: 2,
+            pause_reason: null,
+            error_message: null,
+            web_evidence: 0,
+            force_refresh: 0,
+          },
           items: [],
           progress: { done: 1, total: 2 },
           budget,
