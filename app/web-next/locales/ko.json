@@ -6416,7 +6416,7 @@
         "partialMarker": "일부 항목 미평가",
         "unreviewed": "AI 판정 {n}건 미검토",
         "unreviewedSplit": "재무 {fin}건 · 기술 {tech}건 미검토",
-        "rankIncludesAi": "AI 판정 포함 잠정",
+        "rankProvisional": "잠정",
         "reviewItems": "항목 검토",
         "reviewItemsLabel": "{company} 항목 검토",
         "reviewItemsHint": "후보 상세 화면의 평가 탭에서 항목별로 검토합니다",

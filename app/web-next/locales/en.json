@@ -6416,7 +6416,7 @@
         "partialMarker": "Some items not evaluated",
         "unreviewed": "{n} AI verdicts not reviewed",
         "unreviewedSplit": "Financial {fin} · Technical {tech} not reviewed",
-        "rankIncludesAi": "Includes AI verdicts · provisional",
+        "rankProvisional": "Provisional",
         "reviewItems": "Review items",
         "reviewItemsLabel": "Review items for {company}",
         "reviewItemsHint": "Review item by item on the evaluation tab of the candidate detail screen",

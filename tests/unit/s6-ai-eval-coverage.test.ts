@@ -181,16 +181,13 @@ describe("c. rank cell carries the same markers", () => {
     ...over,
   });
   const m = (s: unknown, locale: "ko" | "en" = "ko") => render(createElement(cov.RankMarkers, { summary: s }), locale);
-  test("partial → ⚠ 일부 항목 미평가; with unreviewed → … · AI 판정 포함 잠정", () => {
-    expect(m(sum())).toContain("일부 항목 미평가");
-    expect(m(sum())).not.toContain("AI 판정 포함 잠정");
+  test("partial or unreviewed → short 잠정 tag only (reason lives in the row marker)", () => {
+    expect(m(sum())).toContain("잠정");
+    expect(m(sum())).not.toContain("일부 항목 미평가");
     expect(
       m(sum({ unreviewed_total: 2, financial: { score: 80, scoredWeight: 60, totalWeight: 60, unreviewed: 2 } })),
-    ).toContain("일부 항목 미평가 · AI 판정 포함 잠정");
-    expect(
-      m(sum({ unreviewed_total: 2, technical: { score: 9, scoredWeight: 100, totalWeight: 100, unreviewed: 2 } })),
-    ).toContain("AI 판정 포함 잠정");
-    expect(m(sum(), "en")).toContain("Some items not evaluated");
+    ).not.toContain("AI 판정");
+    expect(m(sum(), "en")).toContain("Provisional");
   });
   test("complete and reviewed → no marker; no combined score → no marker", () => {
     const done = sum({ technical: { score: 90, scoredWeight: 100, totalWeight: 100, unreviewed: 0 }, complete: true });
@@ -352,7 +349,7 @@ test("ko/en parity for the coverage and progress keys", () => {
     "partialMarker",
     "unreviewed",
     "unreviewedSplit",
-    "rankIncludesAi",
+    "rankProvisional",
     "coverageWeight",
     "versionCoverage",
     "runCount",

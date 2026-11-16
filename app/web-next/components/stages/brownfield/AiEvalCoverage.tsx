@@ -1,8 +1,8 @@
 "use client";
 
 // Score and marker surfaces for the S6 longlist (ADR-0199, ADR-0200 §7.1): ONE chip per category showing the live
-// score with judged coverage; ONE marker line per row (⚠ 일부 항목 미평가, AI 판정 n건 미검토, 갱신 권장); the same
-// markers on the rank cell. Text and icon, never color alone; nothing here changes ranking.
+// score with judged coverage; ONE marker line per row (⚠ 일부 항목 미평가, AI 판정 n건 미검토, 갱신 권장); a short
+// 잠정 tag on the rank cell (the row marker already says why). Text and icon, never color alone; nothing here changes ranking.
 import { useTranslations } from "next-intl";
 import { draftIsStale, summaryMarkers, weightCoverage } from "./aiEvalActive.ts";
 import type { EvalDraftView } from "./aiEvalTypes.ts";
@@ -78,9 +78,7 @@ export function RankMarkers({ summary }: { summary: Summary | undefined }) {
   return (
     <span className="block text-[length:var(--fs-caption)] text-[color:var(--amber-fg)] font-normal">
       <span aria-hidden="true">⚠ </span>
-      {[m.partial ? ta("partialMarker") : null, m.unreviewed > 0 ? ta("rankIncludesAi") : null]
-        .filter(Boolean)
-        .join(" · ")}
+      {ta("rankProvisional")}
     </span>
   );
 }
