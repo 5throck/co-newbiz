@@ -77,7 +77,10 @@ describe("S7 surfaces", () => {
   test("S7 gate: kill hint = no knock-out survivor (flow.spec), evaluation completeness is a note; readiness notice/route retired", () => {
     const src = read("app/web-next/components/stages/brownfield/ShortlistSection.tsx");
     expect(src).toContain('!selected.targets.some((t) => t.status !== "excluded")');
-    expect(src).toContain('t("zeroCandidatesPassedTheScreening")'); // i18n: stages.s67.shortlistSection.*
+    // the hint text lives in the S7 sub-tabs component (i18n: stages.s67.shortlistSection.*)
+    expect(read("app/web-next/components/stages/brownfield/S7DecisionTabs.tsx")).toContain(
+      't("zeroCandidatesPassedTheScreening")',
+    );
     expect(src).not.toContain("재무·기술 평가가 완료된 후보가 0건입니다");
     expect(src).toContain('data-testid="eval-incomplete-note"');
     expect(src).not.toContain("CapabilityReadinessNotice");

@@ -60,14 +60,19 @@ export function FactGrid({ ctx, selected }: { ctx: RouteDecisionStageState; sele
                     {reco.source === "llm" ? t("proposalAiP1", { p1: reco.provider ? ` · ${reco.provider}` : "" }) : t("proposalDeterministicFallback")}
                   </span>
                 )}
-                {canAct && reco && (
+                {canAct && reco && selected.status === "selected" && (
                   <button type="button" className="btn-ghost btn-sm ml-auto" disabled={recoLoading} onClick={() => void generateRecommendation()}>
                     {tc("regenerate")}
                   </button>
                 )}
               </h4>
               {recoError && <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mb-2">{recoError}</p>}
-              {canAct && !reco && !recoLoading && !recoError && (
+              {canAct && selected.status !== "selected" && (
+                <p role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-0" data-testid="reco-needs-selected">
+                  <span aria-hidden="true">ⓘ</span> {t("needsSelectedOpportunity")}
+                </p>
+              )}
+              {canAct && selected.status === "selected" && !reco && !recoLoading && !recoError && (
                 <div className="flex flex-wrap items-center gap-2 mb-0">
                   <button type="button" className="btn-ghost" onClick={() => void generateRecommendation()}>
                     {t("generateAiRecommendation")}

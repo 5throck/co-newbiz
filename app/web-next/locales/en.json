@@ -5449,6 +5449,7 @@
         "withoutAnIntentSelectedThe": "Without an intent selected, the scoring and evidence below are not saved (the server does not store scoring without intent)."
       },
       "factGrid": {
+        "needsSelectedOpportunity": "This opportunity is not in the “selected” status yet, so the AI recommendation and the route decision are unavailable. Select the opportunity first, then try again.",
         "aiNarrativeDraft": "AI narrative draft",
         "alternativesReviewDraft": "Alternatives review draft:",
         "andAfterApplyingToThe": ", and after applying to the decision tab below you can edit freely.",
