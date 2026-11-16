@@ -161,6 +161,11 @@ export function TargetEvalTab({
                       const reviewable = canAct && src !== "human" && (it.state?.status ?? "pending") !== "pending";
                       return (
                         <li key={it.id} className="flex flex-wrap items-start gap-2">
+                          <span className="shrink-0" style={{ minWidth: "5.5rem" }}>
+                            {(it.state?.status ?? "pending") !== "pending" && (
+                              <OriginBadge source={src} assessedBy={it.state?.assessed_by ?? null} />
+                            )}
+                          </span>
                           <span className="flex-1 min-w-[14rem]">
                             {it.label}
                             {it.description && (
@@ -238,9 +243,6 @@ export function TargetEvalTab({
                             >
                               ✕
                             </button>
-                          )}
-                          {(it.state?.status ?? "pending") !== "pending" && (
-                            <OriginBadge source={src} assessedBy={it.state?.assessed_by ?? null} />
                           )}
                           {reviewable && (
                             <button
