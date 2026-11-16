@@ -11,7 +11,7 @@ import { ColGroup } from "../../ui.tsx";
 // 작업 열(승격·순위 조정)은 list-table 표준에 따라 마지막 sizing-actions-cell로
 // 분리되고 상태 열에는 칩만 남는다 (2026-10 행 인터랙션 리뷰 — IndustryTable 참조 구현).
 // 2026-11-16: 상태 열을 9→12%로 넓혀 "심사 중" 같은 짧은 라벨이 두 줄로 깨지지 않게 하고, 점수 열(커버리지 문구)을 늘렸다.
-const LONG_LIST_COL_PCT = [18, 8, 26, 9, 12, 27] as const;
+const LONG_LIST_COL_PCT = [16, 7, 24, 8, 11, 34] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
 import { AiEvalRunsPanel, RunStateChips } from "./AiEvalChips.tsx";

@@ -4496,4 +4496,7 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .ai-eval-progress { overflow: visible; }
 .ai-eval-progress div, .ai-eval-progress p, .ai-eval-progress strong { white-space: normal; overflow-wrap: anywhere; }
 .longlist-table .ai-row-actions { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: var(--space-1, 0.25rem); }
+/* The 심사 확정 button stays on the row-action line, set apart from the three evaluation buttons (2026-11-17 user report). */
+.longlist-table .sizing-actions-cell > .actions-row { flex-wrap: nowrap; }
+.longlist-table .ai-row-actions + * { margin-inline-start: var(--space-3, 0.75rem); }
 .longlist-table .ai-row-actions > .btn-ghost { white-space: nowrap; padding-inline: var(--space-2, 0.5rem); }
