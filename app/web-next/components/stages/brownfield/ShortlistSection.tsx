@@ -12,7 +12,7 @@ import {
 import { CommitteePanel } from "../../CommitteePanel.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
-import { ColGroup, Tabs } from "../../ui.tsx";
+import { ColGroup } from "../../ui.tsx";
 import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
 import { DealShapePanel } from "../DealShapePanel.tsx";
@@ -355,15 +355,25 @@ export function ShortlistSection({
             </section>
           )}
           {dealShapePanel && (
-            <Tabs
-              label={t("s7TabsLabel")}
-              active={s7Tab}
-              onSelect={(k) => setS7Tab(k === "approval" ? "approval" : "dealShape")}
-              tabs={[
-                { key: "dealShape", label: t("s7TabDealShape") },
-                { key: "approval", label: t("s7TabApproval") },
-              ]}
-            />
+            <div className="library-tabs mb-3" role="tablist" aria-label={t("s7TabsLabel")}>
+              {(
+                [
+                  ["dealShape", t("s7TabDealShape")],
+                  ["approval", t("s7TabApproval")],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={s7Tab === key}
+                  className={`library-tab ${s7Tab === key ? "library-tab-active" : ""}`}
+                  onClick={() => setS7Tab(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
           {dealShapePanel && s7Tab === "dealShape" && (
             <DealShapePanel opportunityId={selected.opportunity.id} canAct={canAct} />
