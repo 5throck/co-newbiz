@@ -4482,3 +4482,13 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .ai-draft-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0 var(--space-2); border: 1px dashed var(--border); border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-caption); white-space: nowrap; }
 .ai-changed-mark { font-weight: 600; white-space: nowrap; }
 .ai-eval-progress progress { height: 0.5rem; }
+
+/* S6 longlist at pane width (~730px): no horizontal scroll; cells and actions wrap (ADR-0199). */
+.longlist-table th, .longlist-table td { padding-inline: var(--space-2); }
+.longlist-table .cell-primary { white-space: normal; overflow-wrap: anywhere; }
+.longlist-table .cell-reason-toggle { max-width: 100%; }
+.longlist-table .sizing-actions-cell { white-space: normal; }
+.longlist-table td { min-width: 0; }
+.longlist-table .ai-draft-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.longlist-table .ai-row-actions { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: var(--space-1, 0.25rem); }
+.longlist-table .ai-row-actions > .btn-ghost { white-space: nowrap; padding-inline: var(--space-2, 0.5rem); }

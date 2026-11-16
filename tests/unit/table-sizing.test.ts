@@ -395,8 +395,8 @@ describe("table column sizing guard", () => {
       {
         file: "components/stages/brownfield/LonglistSection.tsx",
         label: "fullCandidateList2",
-        tmin: "tmin-56",
-        expect: ["cell-truncate"],
+        tmin: "tmin-32",
+        expect: [],
       },
       { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-64", tmin: "tmin-64", expect: [] },
       { file: "app/projects/[id]/proxy-chain/page.tsx", label: "tmin-56", tmin: "tmin-56", expect: [] },

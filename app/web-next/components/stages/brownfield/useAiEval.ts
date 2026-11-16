@@ -15,6 +15,11 @@ export interface StartOptions {
   force_refresh: boolean;
 }
 
+/** Start-route body: `target_ids` is sent only for a scoped (per-candidate) run. */
+export function buildStartBody(o: StartOptions, targetIds?: string[]) {
+  return targetIds ? { ...o, target_ids: targetIds } : o;
+}
+
 export function useAiEval({ oppId, loadDetail }: { oppId: string | null; loadDetail: (oppId: string) => void }) {
   const t = useTranslations("stages.s67.aiEval");
   const [view, setView] = useState<RunProgressView | null>(null);
@@ -90,7 +95,7 @@ export function useAiEval({ oppId, loadDetail }: { oppId: string | null; loadDet
     view,
     busy,
     message,
-    start: (o: StartOptions) => call(() => api.post(base, o)),
+    start: (o: StartOptions, targetIds?: string[]) => call(() => api.post(base, buildStartBody(o, targetIds))),
     resume: (runId: string) => call(() => api.post(`${base}/${encodeURIComponent(runId)}/resume`, {})),
     cancel: (runId: string) => call(() => api.post(`${base}/${encodeURIComponent(runId)}/cancel`, {})),
   };

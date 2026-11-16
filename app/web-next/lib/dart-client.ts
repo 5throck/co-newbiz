@@ -845,7 +845,12 @@ export async function fetchDisclosureText(rceptNo: string): Promise<DisclosureTe
     // 디코딩 성공 항목)을 그대로 유지한다. 이 함수는 fail-soft 계약이라 헬퍼가 던지는
     // 잘림/손상 오류도 아래 catch가 error 문자열로 바꾼다 — 던지기 없음.
     let xml = "";
-    for (const entry of readZipEntries(buf, "disclosure")) {
+    // DART names the main document `<rcept_no>.xml`; attachments (e.g. the audit report, `<rcept_no>_00760.xml`) may
+    // precede it in the central directory. Try the main document first, then the previous in-order rule.
+    const mainName = `${rceptNo}.xml`.toLowerCase();
+    const ordered = readZipEntries(buf, "disclosure");
+    ordered.sort((a, b) => Number(b.fileName.toLowerCase().endsWith(mainName)) - Number(a.fileName.toLowerCase().endsWith(mainName)));
+    for (const entry of ordered) {
       if (entry.compressedSize <= 0 || entry.compressedSize > MAX_DOCUMENT) continue; // 비정상 항목 — 다음 중앙 디렉터리 항목
       try {
         const decoded = entry.compressionMethod === 8

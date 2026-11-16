@@ -10,11 +10,27 @@ import {
   knownCode,
   type DraftCategory,
   type EvalDraftView,
+  type RunItemView,
   type RunProgressView,
   type VersionChip,
 } from "./aiEvalTypes.ts";
 
 const STEP_KEYS = ["financial_sync", "financial_draft", "technical_draft"] as const;
+
+/** States in which a run item is still working (S1-style row progress, 2026-11-16 user report). */
+const PROGRESS_STATES = ["pending", "financial_sync", "financial_draft", "technical_draft", "versioning"] as const;
+
+/** Per-category progress mark for an in-flight run item: done when the category step has produced an outcome. */
+export function categoryMarks(
+  state: string,
+  financialOutcome: string | null,
+  technicalOutcome: string | null,
+): { financial: "done" | "waiting"; technical: "done" | "waiting" } {
+  const financial =
+    financialOutcome !== null || ["technical_draft", "versioning", "done"].includes(state) ? "done" : "waiting";
+  const technical = technicalOutcome !== null || state === "done" ? "done" : "waiting";
+  return { financial, technical };
+}
 
 /** Chip for one category: `AI 잠정 v3 · 11-16 · 재무 72` plus optional state chips (stale / kept / in progress). */
 function CategoryChip({
@@ -34,18 +50,31 @@ function CategoryChip({
   const checked = f.dateTime(new Date(chip.checked_at), { month: "2-digit", day: "2-digit" });
   const unchanged = chip.checked_at !== chip.created_at;
   const tip = [
+    t("draftIconLabel"),
+    t("draftTipDate", { date }),
     t("evidenceGrade", { grade: chip.evidence_grade }),
     unchanged ? t("checkedUnchanged", { date: checked }) : null,
   ]
     .filter(Boolean)
     .join(" · ");
+  const categoryLabel = t(`category.${category}`);
+  const unverified = chip.unverified_count;
+  // No score (nothing could be proposed): show the counts so it never reads as "not evaluated".
+  const label =
+    chip.provisional_score !== null || unverified === undefined
+      ? t("chipScore", { category: categoryLabel, score: chip.provisional_score ?? "—", n: chip.version_no })
+      : t("chipUnverified", {
+          category: categoryLabel,
+          unverified,
+          total: (chip.proposed_count ?? 0) + unverified,
+          n: chip.version_no,
+        });
   return (
     <span className="flex flex-wrap items-center gap-1">
       <span className="ai-draft-chip" title={tip} data-category={category}>
         <span aria-hidden="true">✎</span>
         <span className="sr-only">{t("draftIconLabel")}</span>
-        {t("provisionalChip", { n: chip.version_no, date })} · {t(`category.${category}`)}{" "}
-        {chip.provisional_score ?? "—"}
+        {label}
       </span>
       {chip.stale && (
         <span className="status-chip status-amber" title={t("staleHint")}>
@@ -74,29 +103,60 @@ export function ProvisionalChips({
   draft,
   dartCorpCode,
   activeRunId = null,
+  live = null,
 }: {
   draft: EvalDraftView | undefined;
   dartCorpCode: string | null;
   /** Id of the currently active run; a pending item of any other (cancelled/finished) run is not "in progress". */
   activeRunId?: string | null;
+  /** Latest run's item for this candidate (from the run view) — drives the S1-style row progress / unchanged feedback. */
+  live?: { runActive: boolean; item: RunItemView } | null;
 }) {
   const t = useTranslations("stages.s67.aiEval");
   const item = draft?.run_item;
-  const failed = item?.state === "failed";
+  const liveEval = !!live && live.runActive && (PROGRESS_STATES as readonly string[]).includes(live.item.state);
+  const failed = item?.state === "failed" || (!!live && !live.runActive && live.item.state === "failed");
   const inProgress =
-    !!item &&
-    item.run_id === activeRunId &&
-    ["pending", "financial_sync", "financial_draft", "technical_draft"].includes(item.state);
+    liveEval || (!!item && item.run_id === activeRunId && (PROGRESS_STATES as readonly string[]).includes(item.state));
+  const marks = live ? categoryMarks(live.item.state, live.item.financial_outcome, live.item.technical_outcome) : null;
+  // "변경 없음" 피드백 — outcome이 unchanged인데 무표시였던 침묵 버그(2026-11-16 사용자 리포트)를 막는다.
+  const finUnchanged = !!live && !liveEval && live.item.financial_outcome === "unchanged";
+  const techUnchanged = !!live && !liveEval && live.item.technical_outcome === "unchanged";
   const notDart = !dartCorpCode || item?.state === "skipped_not_dart" || item?.state === "skipped_no_company";
-  if (!draft?.financial && !draft?.technical && !notDart && !failed && !inProgress) return null;
-  const code = knownCode(item?.error, KNOWN_ITEM_CODES, "unknown");
+  if (!draft?.financial && !draft?.technical && !notDart && !failed && !inProgress && !finUnchanged && !techUnchanged)
+    return null;
+  const code = knownCode(item?.error ?? live?.item.error_message, KNOWN_ITEM_CODES, "unknown");
+  const keptShort = draft?.financial || draft?.technical ? t("keptShort") : null;
   return (
-    <span className="flex flex-col gap-1 mt-1">
+    <span className="flex flex-wrap gap-1 mt-1">
+      {liveEval && marks && (
+        <span className="status-chip status-not-started" title={t("rowEvaluatingTitle")}>
+          <span aria-hidden="true">⋯ </span>
+          {t("rowEvaluating")} · {t("category.financial")}{" "}
+          <span aria-hidden="true">{marks.financial === "done" ? "✓" : "…"}</span>
+          <span className="sr-only">{marks.financial === "done" ? t("markDone") : t("markWaiting")}</span> ·{" "}
+          {t("category.technical")} <span aria-hidden="true">{marks.technical === "done" ? "✓" : "…"}</span>
+          <span className="sr-only">{marks.technical === "done" ? t("markDone") : t("markWaiting")}</span>
+          {keptShort && <span className="sr-only">{keptShort}</span>}
+        </span>
+      )}
       {draft?.financial && (
-        <CategoryChip category="financial" chip={draft.financial} kept={failed} inProgress={inProgress} />
+        <CategoryChip category="financial" chip={draft.financial} kept={failed} inProgress={inProgress && !liveEval} />
       )}
       {draft?.technical && (
-        <CategoryChip category="technical" chip={draft.technical} kept={failed} inProgress={inProgress} />
+        <CategoryChip category="technical" chip={draft.technical} kept={failed} inProgress={inProgress && !liveEval} />
+      )}
+      {finUnchanged && draft?.financial && (
+        <span className="status-chip status-not-started" title={t("unchangedHint")}>
+          <span aria-hidden="true">= </span>
+          {t("unchangedKept", { n: draft.financial.version_no })}
+        </span>
+      )}
+      {techUnchanged && draft?.technical && (
+        <span className="status-chip status-not-started" title={t("unchangedHint")}>
+          <span aria-hidden="true">= </span>
+          {t("unchangedKept", { n: draft.technical.version_no })}
+        </span>
       )}
       {notDart && (
         <span className="status-chip status-not-started" title={t("notDartHint")}>
@@ -105,7 +165,7 @@ export function ProvisionalChips({
         </span>
       )}
       {failed && (
-        <span className="status-chip status-red" title={item?.error ?? undefined}>
+        <span className="status-chip status-red" title={item?.error ?? live?.item.error_message ?? undefined}>
           <span aria-hidden="true">✕ </span>
           {draft?.financial || draft?.technical
             ? t(`itemErrors.${code}`)
@@ -164,6 +224,12 @@ export function AiEvalProgress({
         )}
       </div>
       <progress className="w-full" max={total || 1} value={done} aria-label={t("progressBar", { pct })} />
+      {/* 예산 소모는 이미 A2 페이로드에 있다 — 데이터가 있을 때만 노출(API 변경 없음). */}
+      {view.budget && view.budget.budget > 0 && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">
+          {t("dartCalls", { used: view.budget.calls, est: view.budget.budget })}
+        </p>
+      )}{" "}
       {canAct && (
         <div className="actions-row mt-1">
           {(paused || interrupted) && (

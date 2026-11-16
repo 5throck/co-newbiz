@@ -78,6 +78,16 @@ export const DRAFT_PAYLOAD_MAX_BYTES = 64 * 1024;
 /** Per-citation quote cap and per-item citation cap (§3.3). The payload builder truncates; the schema enforces. */
 export const CITATION_QUOTE_MAX_CHARS = 300;
 export const CITATIONS_PER_ITEM_MAX = 3;
+/** Fixed unverified-reason codes recorded per technical item (payload schema v1, additive). */
+export const REASON_DETAIL_CODES = [
+  "llm_omitted",
+  "citation_unmatched",
+  "citation_too_short",
+  "ref_unknown",
+  "no_citation",
+  "evidence_unavailable",
+] as const;
+export type ReasonDetailCode = (typeof REASON_DETAIL_CODES)[number];
 
 // ---------------------------------------------------------------------------------------------------------------
 // Payload document, schema version 1 (§3.3).
@@ -112,6 +122,8 @@ export const evalDraftPayloadSchema = z.object({
       metrics: z.array(z.object({ label: z.string(), value: z.string() })),
       note: z.string().nullable(),
       citations: z.array(citationSchema).max(CITATIONS_PER_ITEM_MAX),
+      /** Why an item stayed unverified (additive, optional): a fixed code, never free text. */
+      reason_detail: z.enum(REASON_DETAIL_CODES).optional(),
     }),
   ),
   human_items: z.array(
@@ -151,6 +163,9 @@ export const evalDraftPayloadSchema = z.object({
       .nullable(),
     profile: z.object({ present: z.boolean(), version_no: z.number().int().nullable() }),
     web: z.array(z.object({ criterion_id: z.string(), url: z.string(), host: z.string() })),
+    /** Technical drafts only (additive, optional): how many criteria the LLM answered / citations the engine rejected. */
+    llm_drafts_returned: z.number().int().nonnegative().optional(),
+    citations_rejected: z.number().int().nonnegative().optional(),
   }),
   llm: z.object({ source: z.string(), provider: z.string(), prompt_key: z.string() }).nullable(),
   runner: z.object({ user_id: z.string().min(1), via: z.string().min(1) }),

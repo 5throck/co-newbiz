@@ -35,6 +35,7 @@ import {
   type EvalDraftCategory,
   type EvalDraftPayload,
   type EvidenceGrade,
+  type ReasonDetailCode,
   EvalDraftError,
 } from "../../../db/repositories/brownfield-eval-draft.repository.ts";
 import {
@@ -82,10 +83,13 @@ import {
 } from "./brownfield-technical-draft.ts";
 import {
   BUSINESS_REPORT_EXTRACTOR_VERSION,
-  businessReportEvidenceBlock,
+  businessReportWindowsBlock,
+  selectPromptWindows,
+  windowCitation,
+  type EvidenceWindow,
   ensureBusinessReportExtract,
   parseExtractSections,
-  validateCitations,
+  validateCitationsDetailed,
   webCitation,
   type ValidCitation,
 } from "./brownfield-business-report.ts";
@@ -103,6 +107,13 @@ import { isWebResearchConfigured, researchSources, type WebSource } from "./web-
 export const PER_CANDIDATE_RESERVE = 40;
 export const INTERACTIVE_FLOOR_RATIO = 0.1;
 export const TECHNICAL_PROMPT_KEY = "s7.screening_draft";
+/**
+ * Identity of how technical evidence is constructed for the prompt. Bump this
+ * whenever window selection, the prompt user-content block, or the excerpt
+ * strategy changes — otherwise the unchanged-input hash hides a new draft
+ * behind an "unchanged" outcome.
+ */
+export const TECHNICAL_EVIDENCE_KEY = "windows-v1";
 
 export function dartReserve(budget: number): number {
   return Math.max(PER_CANDIDATE_RESERVE, Math.ceil(budget * INTERACTIVE_FLOOR_RATIO));
@@ -763,6 +774,7 @@ async function technicalDraft(
     profile: computeDraftInputHash(profileText),
     web_evidence: c.webEvidence,
     prompt_key: TECHNICAL_PROMPT_KEY,
+    evidence_key: TECHNICAL_EVIDENCE_KEY,
   });
 
   const evidenceSummary = () => {
@@ -787,6 +799,8 @@ async function technicalDraft(
           }
         }
       }
+      const windows = selectPromptWindows(sections, criteria);
+      const webCounts = new Map([...webByCriterion].map(([id, ws]) => [id, ws.length] as const));
       const llmRes = await deps.complete(
         [
           systemMessage(TECHNICAL_PROMPT_KEY),
@@ -796,7 +810,7 @@ async function technicalDraft(
               profile: profileText,
               disclosures: disclosureEvidenceBlock(evidenceDisclosures),
               web: webEvidenceBlock(webByCriterion, criteria),
-              businessReport: businessReportEvidenceBlock(report?.rcept_no ?? null, sections),
+              businessReport: businessReportWindowsBlock(report?.rcept_no ?? null, windows, webCounts),
             }),
           },
         ],
@@ -822,11 +836,13 @@ async function technicalDraft(
         disclosures: evidenceDisclosures,
         profileText: profile ? profileText : null,
       };
+      let citationsRejected = 0;
       const items: EvalDraftPayload["items"] = pending.map((it) => {
         const d = parsed[it.id];
         const metrics = [{ label: "근거", value: evidenceSummary() }];
         const web = webByCriterion.get(it.id) ?? [];
-        const unverified = (why: string) => ({
+        const unverified = (why: string, code?: ReasonDetailCode) => ({
+          ...(code ? { reason_detail: code } : {}),
           criterion_id: it.id,
           proposed_status: null,
           reason: `확인 안됨 — ${why}`,
@@ -834,18 +850,39 @@ async function technicalDraft(
           note: `확인 안됨(자동 진단, ${evidenceSummary()}) — ${why}. 판정은 사람이 직접 기록.`,
           citations: [] as ValidCitation[],
         });
-        if (!d) return unverified("LLM이 이 항목에 응답하지 않아 판정 보류");
+        if (!d)
+          return unverified(
+            "LLM이 이 항목에 응답하지 않아 판정 보류",
+            !reportAvailable && web.length === 0 ? "evidence_unavailable" : "llm_omitted",
+          );
         if (d.verdict === "unverified") return unverified(d.rationale || "근거 부족");
         // Verdicts need at least one citation that exists in the evidence we hold; anything else stays unverified.
-        const citations = validateCitations(d.citations, citeCtx);
+        // Provenance by construction: the model only names an evidence number; the engine copies the quote out of
+        // the numbered window (or derives the web citation). An index that matches nothing lifts nothing.
+        const wins: EvidenceWindow[] = windows.get(it.id) ?? [];
+        const rawIdx = d.source_index ?? null;
+        const win = rawIdx !== null && rawIdx > web.length ? wins[rawIdx - web.length - 1] : undefined;
+        const citations: ValidCitation[] = [];
+        if (win && report) {
+          // Belt and braces: the derived quote must still be a verbatim part of the extracted section.
+          const checked = validateCitationsDetailed([windowCitation(report.rcept_no, win)], citeCtx);
+          citations.push(...checked.valid);
+          citationsRejected += checked.rejected.length;
+        }
         if (d.source_url) {
           const src = web.find((s) => s.url === d.source_url);
-          if (src && citations.length < 3) citations.push(webCitation(src));
+          if (src) citations.push(webCitation(src));
         }
-        // A verdict needs a validated business-report or web citation; a disclosure title or the internal profile
-        // alone never promotes a verdict.
-        if (!citations.some((x) => x.kind === "business_report" || x.kind === "web"))
-          return unverified("근거 인용이 확인되지 않아(원문과 불일치) 판정 보류");
+        if (!citations.some((x) => x.kind === "business_report" || x.kind === "web")) {
+          const code: ReasonDetailCode =
+            wins.length === 0 && web.length === 0
+              ? "evidence_unavailable"
+              : rawIdx === null
+                ? "no_citation"
+                : "ref_unknown";
+          if (rawIdx !== null) citationsRejected++;
+          return unverified("근거 번호가 없거나 가리키는 근거를 확인할 수 없어 판정 보류", code);
+        }
         if (d.source_url) {
           try {
             metrics.push({ label: "출처", value: new URL(d.source_url).hostname });
@@ -879,6 +916,8 @@ async function technicalDraft(
           sync_warnings: [],
         },
         evidence: {
+          llm_drafts_returned: Object.keys(parsed).length,
+          citations_rejected: citationsRejected,
           disclosures: evidenceDisclosures.map((d) => ({
             rcept_no: d.rcept_no,
             rcept_dt: d.rcept_dt,

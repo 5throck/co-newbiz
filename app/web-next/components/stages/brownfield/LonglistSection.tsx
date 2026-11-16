@@ -11,10 +11,13 @@ import { isRunActive } from "./aiEvalTypes.ts";
 // 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유·작업 7열.
 // 작업 열(승격·순위 조정)은 list-table 표준에 따라 마지막 sizing-actions-cell로
 // 분리되고 상태 열에는 칩만 남는다 (2026-10 행 인터랙션 리뷰 — IndustryTable 참조 구현).
-const LONG_LIST_COL_PCT = [21, 10, 17, 13, 13, 16, 10] as const;
+const LONG_LIST_COL_PCT = [20, 8, 24, 9, 9, 30] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
 import { AiEvalProgress, ProvisionalChips } from "./AiEvalChips.tsx";
+import { AiEvalCriteriaPanel } from "./AiEvalCriteriaPanel.tsx";
+import { AiEvalRowButton } from "./AiEvalRowButton.tsx";
+import { AiEvalRowConfirm } from "./AiEvalRowConfirm.tsx";
 import { AiEvalStartButton } from "./AiEvalStart.tsx";
 import { AiEvalVersionPanel } from "./AiEvalVersionPanel.tsx";
 import { useAiEval } from "./useAiEval.ts";
@@ -89,6 +92,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
             {ai.view && (
               <AiEvalProgress view={ai.view} canAct={canAct} busy={ai.busy} onResume={ai.resume} onCancel={ai.cancel} />
             )}
+            <AiEvalCriteriaPanel oppId={selected.opportunity.id} canAct={canAct} />
             <div className="sizing-grade-card">
               {targets.length > 0 && (
                 // 품평회 2026-10-22 잔여 #1 — 상태 필터 행. 초기화 버튼은 필터가 걸려
@@ -136,7 +140,10 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                   // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard-scrollable table region (WCAG 2.1.1) — dropping tabIndex would strand keyboard users inside the scroll
                   tabIndex={0}
                 >
-                  <table className="data-table list-table table-fixed-pct tmin-56" aria-label={t("fullCandidateList2")}>
+                  <table
+                    className="data-table list-table table-fixed-pct tmin-32 longlist-table"
+                    aria-label={t("fullCandidateList2")}
+                  >
                     <caption className="sr-only">{t("fullCandidateListCandidatesEvaluation")}</caption>
                     <ColGroup widths={LONG_LIST_COL_PCT} />
                     <thead>
@@ -150,7 +157,6 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                           {t("provisionalRanking")}
                         </th>
                         <th scope="col">{tc("status")}</th>
-                        <th scope="col">{t("exclusionReason")}</th>
                         <th scope="col">
                           <span className="sr-only">{tc("actions")}</span>
                         </th>
@@ -164,7 +170,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                         return (
                           <Fragment key={tgt.id}>
                             <tr>
-                              <td className="cell-primary cell-truncate">
+                              <td className="cell-primary">
                                 <a
                                   href={`/brownfield/targets/${encodeURIComponent(tgt.id)}`}
                                   className="font-semibold text-[color:var(--fg)] underline-offset-2 hover:underline"
@@ -172,9 +178,21 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                 >
                                   {tgt.company_name}
                                 </a>
-                                {/* 발굴 근거(universe_note — 웹검색 제안 문구 등)는 테이블
-                              가독성을 해치므로 표시하지 않는다(사용자 요청, 2026-09-15).
-                              제외 사유만 별도 컬럼으로 남는다. */}
+                                {/* 제외 사유는 좁은 폭(≈730px)에서 가로 스크롤이 생기지 않도록 별도 컬럼 대신
+                              후보명 아래 줄에 둔다(발굴 근거 universe_note는 계속 표시하지 않는다). */}
+                                {tgt.exclusion_reason && (
+                                  <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                    <span className="sr-only">{t("exclusionReason")}: </span>
+                                    <button
+                                      type="button"
+                                      className="cell-reason-toggle"
+                                      aria-expanded={expandedReasonId === tgt.id}
+                                      onClick={() => setExpandedReasonId(expandedReasonId === tgt.id ? null : tgt.id)}
+                                    >
+                                      {tgt.exclusion_reason}
+                                    </button>
+                                  </div>
+                                )}
                               </td>
                               <td>
                                 <code className="dd-item-id">{tgt.dart_corp_code ?? "—"}</code>
@@ -198,6 +216,10 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                   draft={tgt.eval_draft}
                                   dartCorpCode={tgt.dart_corp_code}
                                   activeRunId={activeRunId}
+                                  live={(() => {
+                                    const li = ai.view?.items.find((i) => i.brownfield_target_id === tgt.id);
+                                    return li ? { runActive: activeRunId !== null, item: li } : null;
+                                  })()}
                                 />
                               </td>
                               <td className="col-num tabular-nums" title={t("provisionalRankingByTheFinancial")}>
@@ -233,37 +255,46 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                   {tgt.status === "shortlisted" && tgt.rank ? ` #${tgt.rank}` : ""}
                                 </span>
                               </td>
-                              <td className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                                {tgt.exclusion_reason ? (
-                                  /* 품평회 2026-10-22 잔여 #2 — 잘린 제외 사유 전문을 title(hover)
-                                한정이 아니라 포커스·클릭으로 펼쳐 본다(키보드·터치 접근성).
-                                버튼이므로 탭으로 도달 가능하고 aria-expanded가 상태를 알린다. */
-                                  <button
-                                    type="button"
-                                    className="cell-reason-toggle"
-                                    aria-expanded={expandedReasonId === tgt.id}
-                                    onClick={() => setExpandedReasonId(expandedReasonId === tgt.id ? null : tgt.id)}
-                                  >
-                                    {tgt.exclusion_reason}
-                                  </button>
-                                ) : (
-                                  "—"
-                                )}
-                              </td>
                               <td className="sizing-actions-cell">
                                 <span className="actions-row">
-                                  <button
-                                    type="button"
-                                    className="btn-ghost btn-sm"
-                                    aria-expanded={compareId === tgt.id}
-                                    aria-controls={`ai-versions-${tgt.id}`}
-                                    aria-label={ta("compareToggle", { company: tgt.company_name })}
-                                    title={ta("compareToggle", { company: tgt.company_name })}
-                                    onClick={() => setCompareId(compareId === tgt.id ? null : tgt.id)}
-                                  >
-                                    <span aria-hidden="true">{compareId === tgt.id ? "▾" : "▸"} </span>
-                                    {ta("compare")}
-                                  </button>
+                                  {/* One line, fixed order: AI 평가 · 확정 · 버전 비교 */}
+                                  <span className="ai-row-actions">
+                                    {canAct && (
+                                      <AiEvalRowButton
+                                        companyName={tgt.company_name}
+                                        targetId={tgt.id}
+                                        excluded={tgt.status === "excluded"}
+                                        hasDart={!!tgt.dart_corp_code}
+                                        running={activeRunId !== null}
+                                        busy={ai.busy}
+                                        onStart={ai.start}
+                                      />
+                                    )}
+                                    {canAct && selected && (
+                                      <AiEvalRowConfirm
+                                        oppId={selected.opportunity.id}
+                                        targetId={tgt.id}
+                                        companyName={tgt.company_name}
+                                        excluded={tgt.status === "excluded"}
+                                        hasDart={!!tgt.dart_corp_code}
+                                        running={activeRunId !== null}
+                                        draft={tgt.eval_draft}
+                                        onConfirmed={() => ctx.loadDetail(selected.opportunity.id)}
+                                      />
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="btn-ghost btn-sm"
+                                      aria-expanded={compareId === tgt.id}
+                                      aria-controls={`ai-versions-${tgt.id}`}
+                                      aria-label={ta("compareToggle", { company: tgt.company_name })}
+                                      title={ta("compareToggle", { company: tgt.company_name })}
+                                      onClick={() => setCompareId(compareId === tgt.id ? null : tgt.id)}
+                                    >
+                                      <span aria-hidden="true">{compareId === tgt.id ? "▾" : "▸"} </span>
+                                      {ta("compare")}
+                                    </button>
+                                  </span>
                                   {canAct && canPromote && (
                                     <button
                                       type="button"
@@ -308,7 +339,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                             </tr>
                             {compareId === tgt.id && selected && (
                               <tr>
-                                <td colSpan={7} id={`ai-versions-${tgt.id}`}>
+                                <td colSpan={6} id={`ai-versions-${tgt.id}`}>
                                   <AiEvalVersionPanel
                                     oppId={selected.opportunity.id}
                                     targetId={tgt.id}
