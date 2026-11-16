@@ -337,6 +337,9 @@ export interface EvalCategoryScore {
   totalWeight: number;
   /** 예외(해당없음·예외)로 처리되어 점수 계산에서 빠진 항목의 가중치 합. */
   excludedWeight: number;
+  /** Item counts for display: judged items over all non-excluded items (the weight sums above drive the score). */
+  judgedCount: number;
+  totalCount: number;
   /** ADR-0200 §5.1: judged weight split by verdict origin; the three values sum to scoredWeight. */
   byWeight: Record<VerdictSource, number>;
   /** ADR-0200 §5.1: non-pending, non-human verdicts (unreviewed AI / rule verdicts) in this category. */
@@ -363,6 +366,8 @@ export function computeEvalScore(items: EvalScoreItem[]): Record<EvalCategory, E
     scoredWeight: 0,
     totalWeight: 0,
     excludedWeight: 0,
+    judgedCount: 0,
+    totalCount: 0,
     byWeight: { human: 0, auto_rule: 0, ai_draft: 0 },
     unreviewed: 0,
   });
@@ -382,7 +387,9 @@ export function computeEvalScore(items: EvalScoreItem[]): Record<EvalCategory, E
       continue;
     }
     bucket.totalWeight += item.weight;
+    bucket.totalCount++;
     if (status === "pending") continue;
+    bucket.judgedCount++;
     const value = status === "pass" ? 1 : status === "partial" ? 0.5 : 0; // fail = 0
     acc[item.category].num += item.weight * value;
     acc[item.category].den += item.weight;

@@ -22,6 +22,9 @@ export interface EvalSummaryCategory {
   scoredWeight?: number;
   totalWeight?: number;
   excludedWeight?: number;
+  /** Judged items over all non-excluded items (shown as n/m). */
+  judgedCount?: number;
+  totalCount?: number;
   /** Judged weight by verdict origin (sums to scoredWeight). */
   judged_by_source?: { human: number; auto_rule: number; ai_draft: number };
   /** Non-pending, non-human verdicts in this category. */

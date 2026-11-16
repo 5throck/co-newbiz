@@ -88,8 +88,24 @@ describe("coverage helpers", () => {
 
 describe("a. one chip per category with judged coverage (no provisional chip layer)", () => {
   const sum = (over: Record<string, unknown> = {}) => ({
-    financial: { score: 80, scoredWeight: 60, totalWeight: 60, excludedWeight: 0, unreviewed: 0 },
-    technical: { score: 50, scoredWeight: 30, totalWeight: 100, excludedWeight: 0, unreviewed: 0 },
+    financial: {
+      score: 80,
+      scoredWeight: 60,
+      totalWeight: 60,
+      judgedCount: 6,
+      totalCount: 6,
+      excludedWeight: 0,
+      unreviewed: 0,
+    },
+    technical: {
+      score: 50,
+      scoredWeight: 30,
+      totalWeight: 100,
+      judgedCount: 3,
+      totalCount: 8,
+      excludedWeight: 0,
+      unreviewed: 0,
+    },
     combined: 65,
     complete: false,
     unreviewed_total: 0,
@@ -97,19 +113,19 @@ describe("a. one chip per category with judged coverage (no provisional chip lay
   });
   const chipsHtml = (s: unknown, locale: "ko" | "en" = "ko") =>
     render(createElement(cov.ScoreChips, { summary: s }), locale);
-  test("exactly two chips: 재무 80 · 평가 60/60 and 기술 50 · 평가 30/100", () => {
+  test("exactly two chips: 재무 80 · 6/6항목 평가 and 기술 50 · 3/8항목 평가", () => {
     const html = chipsHtml(sum());
-    expect(html).toContain("재무 80 · 평가 60/60");
-    expect(html).toContain("기술 50 · 평가 30/100");
+    expect(html).toContain("재무 80 · 6/6항목 평가");
+    expect(html).toContain("기술 50 · 3/8항목 평가");
     expect(html.match(/status-chip/g)?.length).toBe(2);
     expect(html).not.toContain("AI 잠정");
     expect(html).not.toContain("일부 항목 미평가"); // markers are a separate single line
-    expect(chipsHtml(sum(), "en")).toContain("Judged 30/100");
+    expect(chipsHtml(sum(), "en")).toContain("3/8 items judged");
   });
   test("no weights (older payload): score only, no crash", () => {
     const old = chipsHtml({ financial: { score: 70 }, technical: { score: null }, combined: 70 });
     expect(old).toContain("재무 70");
-    expect(old).not.toMatch(/평가 \d+\/\d+/);
+    expect(old).not.toMatch(/항목 평가/);
     expect(chipsHtml(undefined)).toContain("재무 —");
   });
   test("the chip row wraps (no clipped chips at the 730 px pane)", () => {

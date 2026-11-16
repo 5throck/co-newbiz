@@ -4,7 +4,7 @@
 // score with judged coverage; ONE marker line per row (⚠ 일부 항목 미평가, AI 판정 n건 미검토, 갱신 권장); a short
 // 잠정 tag on the rank cell (the row marker already says why). Text and icon, never color alone; nothing here changes ranking.
 import { useTranslations } from "next-intl";
-import { draftIsStale, summaryMarkers, weightCoverage } from "./aiEvalActive.ts";
+import { draftIsStale, summaryMarkers } from "./aiEvalActive.ts";
 import type { EvalDraftView } from "./aiEvalTypes.ts";
 import type { TargetRow } from "./types.ts";
 
@@ -25,7 +25,8 @@ export function ScoreChips({ summary }: { summary: Summary | undefined }) {
   return (
     <span className="flex flex-wrap items-center gap-1">
       {cats.map((c) => {
-        const cov = weightCoverage(summary?.[c.key]);
+        const cs = summary?.[c.key];
+        const cov = cs?.totalCount ? { scored: cs.judgedCount ?? 0, total: cs.totalCount } : null;
         return (
           <span key={c.key} className={`status-chip ${scoreClass(summary?.[c.key].score)}`} title={c.title}>
             {c.label} {summary?.[c.key].score ?? "—"}

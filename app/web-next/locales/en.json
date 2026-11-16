@@ -6409,8 +6409,8 @@
           "ms": "{m}m {s}s",
           "hm": "{h}h {m}m"
         },
-        "coverageWeight": "Judged {scored}/{total}",
-        "coveragePartialHint": "The score covers only judged items. The numbers are judged weight over total weight.",
+        "coverageWeight": "{scored}/{total} items judged",
+        "coveragePartialHint": "The score covers only judged items. n/m items judged is judged items over all items (not-applicable and waived excluded).",
         "versionCoverage": "Judged {judged}/{total} · not evaluated {k}",
         "appliesDirectly": "AI results are applied directly to the item verdicts, and a person reviews them item by item",
         "partialMarker": "Some items not evaluated",

@@ -6409,8 +6409,8 @@
           "ms": "{m}분 {s}초",
           "hm": "{h}시간 {m}분"
         },
-        "coverageWeight": "평가 {scored}/{total}",
-        "coveragePartialHint": "점수는 판정된 항목만으로 계산합니다. 평가 숫자는 가중치 기준으로 판정된 범위(판정된 가중치/전체 가중치)입니다.",
+        "coverageWeight": "{scored}/{total}항목 평가",
+        "coveragePartialHint": "점수는 판정된 항목만으로 계산합니다. ‘n/m항목 평가’는 판정된 항목 수 / 전체 항목 수(해당없음·예외 제외)입니다.",
         "versionCoverage": "판정 {judged}/{total} · 미평가 {k}",
         "appliesDirectly": "AI 결과는 바로 판정에 반영되며, 사람이 항목별로 검토합니다",
         "partialMarker": "일부 항목 미평가",

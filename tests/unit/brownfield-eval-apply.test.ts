@@ -544,6 +544,8 @@ describe("score source split and read helpers (TA11, TA18, §5.2, §8 A5)", () =
       scoredWeight: 30,
       totalWeight: 40,
       excludedWeight: 0,
+      judgedCount: 3,
+      totalCount: 4,
       byWeight: { human: 10, auto_rule: 10, ai_draft: 10 },
       unreviewed: 2,
     });
