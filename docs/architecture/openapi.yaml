@@ -4841,6 +4841,22 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/opportunities/{id}/deal-shapes/recommend:
+    post:
+      operationId: recommendOpportunityDealShapes
+      summary: AI recommendation of per-shape viability for the S7 deal-shape evaluation (analyst+, brownfield, S7 reached). A PROPOSAL only (ADR-0118, boundary 2) - it writes nothing; recording stays the person's POST on /deal-shapes. Returns {recommendations[{shape, viable|null, intent, rationale}], note (no_shortlist | llm_unavailable | parse_failed | null), manifest, prompt_version}. No shortlisted target means no LLM call. Refused with 409 `deal_shape_not_open` like the record route.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/projects/{id}/dimension-inputs:
     get:
       operationId: getProjectDimensionInputs
