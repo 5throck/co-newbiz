@@ -188,6 +188,10 @@ exclusions:
     kind: route
     route: "POST /api/brownfield/{}/targets/{}/rerank"
     reason: Short List rank order is confirmed by a person, separate from the computed scores.
+  - id: eval-draft-version-confirm
+    kind: route
+    route: "POST /api/brownfield/{}/targets/{}/eval-draft-versions/{}/confirm"
+    reason: Confirming an AI draft version's proposals writes human S7 verdicts (ADR-0199 A6, boundary #2); agents may start drafting runs but only a person confirms.
   - id: waiver-decision
     kind: route
     route: "PATCH /api/projects/{}/waivers/{}"

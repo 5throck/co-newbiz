@@ -443,6 +443,17 @@ export function getRunItem(db: Database, itemId: string): DraftRunItemRow | null
   );
 }
 
+/** The most recent run item of a candidate across all runs (A8 `run_item`: `진행 중` / failed reason chip). */
+export function getLatestRunItemForTarget(db: Database, targetId: string): DraftRunItemRow | null {
+  return (
+    (db
+      .query(
+        `SELECT ${ITEM_COLUMNS} FROM brownfield_eval_draft_run_item WHERE brownfield_target_id = ? ORDER BY updated_at DESC, id DESC LIMIT 1`,
+      )
+      .get(targetId) as DraftRunItemRow | null) ?? null
+  );
+}
+
 /** The resume point: the first item of the run whose state is not terminal, in `seq` order (§6.4). */
 export function nextResumableItem(db: Database, runId: string): DraftRunItemRow | null {
   return (

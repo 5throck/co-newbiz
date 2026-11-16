@@ -18,6 +18,14 @@ import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured } 
 import { canonicalCompanyName } from "./company-name.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
+import {
+  correctedBusinessReportYears,
+  getCorpSyncState,
+  isCheckFresh,
+  markCorpCodeChecked,
+  markFinancialChecked,
+  type FinancialYearOutcome,
+} from "../../../db/repositories/dart-evidence-cache.repository.ts";
 
 export interface FactRow {
   id: string;
@@ -43,6 +51,10 @@ export interface SyncResult {
    *  surfaced (sync response + detail banner with DART's registered name),
    *  never silently substituted by a name-search downgrade. */
   warnings: string[];
+  /** ADR-0199 (incremental mode only): the business years actually requested from DART this call. */
+  fetched_years?: number[];
+  /** ADR-0199 (incremental mode only): per-year error details (thrown/HTTP/parse), e.g. rate-limit or budget text. */
+  fetch_errors?: string[];
 }
 
 export interface CompanyFinancialFacts {
@@ -107,7 +119,18 @@ type CorpCodeValidator = typeof validateCorpCode;
 export async function syncCompanyFinancialFacts(
   db: ReturnType<typeof getDb>,
   companyId: string,
-  opts: { years?: number; fetcher?: FinancialsFetcher; corpCode?: string; validator?: CorpCodeValidator } = {},
+  opts: {
+    years?: number;
+    fetcher?: FinancialsFetcher;
+    corpCode?: string;
+    validator?: CorpCodeValidator;
+    /** ADR-0199 §6.2: skip closed fiscal years already stored and reuse a fresh cached check. Default false = today's behavior. */
+    incremental?: boolean;
+    /** ADR-0199 §6.2: ignore the freshness window (incremental mode only). */
+    forceRefresh?: boolean;
+    /** Evaluation instant (ISO) for the freshness window and the timestamps this call writes; tests inject it. */
+    now?: string;
+  } = {},
 ): Promise<SyncResult> {
   if (!isDartConfigured()) {
     throw new DartSyncError(
@@ -122,8 +145,17 @@ export async function syncCompanyFinancialFacts(
 
   let corpCode = opts.corpCode ?? company.dart_corp_code ?? null;
   const warnings: string[] = [];
+  const incremental = opts.incremental === true;
+  const nowIso = opts.now ?? new Date().toISOString();
   if (!opts.corpCode && corpCode) {
-    const check = await (opts.validator ?? validateCorpCode)(corpCode, canonicalCompanyName(company.name_ko));
+    // ADR-0199 §6.2 step 5: a corp-code check inside the freshness window is reused (no DART call).
+    const reuseCheck =
+      incremental &&
+      isCheckFresh(getCorpSyncState(db, corpCode)?.corp_code_checked_at, nowIso, opts.forceRefresh === true);
+    const check = reuseCheck
+      ? { validated: true as boolean | null, corpName: undefined as string | undefined }
+      : await (opts.validator ?? validateCorpCode)(corpCode, canonicalCompanyName(company.name_ko));
+    if (incremental && !reuseCheck) markCorpCodeChecked(db, corpCode, check.validated, nowIso);
     if (check.validated === false) {
       // DART responded and KNOWS this code, but its registered name differs
       // from ours. Code authority: proceed with the entered/stored code,
@@ -146,59 +178,146 @@ export async function syncCompanyFinancialFacts(
     db.run("UPDATE md_company SET dart_corp_code = ? WHERE id = ?", [corpCode, company.id]);
   }
 
-  const fin = await (opts.fetcher ?? fetchFinancials)(corpCode, { years: opts.years ?? 5 });
-  if (!fin.found || (fin.yearly?.length ?? 0) === 0) {
-    throw new DartSyncError(
-      `DART retrieval failed — ${fin.error ?? "Financial statements not found"}`,
-      "dart_retrieval_failed",
-    );
-  }
-
-  const sourceId = ensureMdSourceDart(db);
   const years: number[] = [];
   let inserted = 0;
   let unchanged = 0;
-  for (const yearBlock of fin.yearly ?? []) {
-    const fiscalYear = Number(yearBlock.year);
-    if (!Number.isFinite(fiscalYear)) continue;
-    years.push(fiscalYear);
-    const periodId = ensureYearPeriod(db, fiscalYear);
-    for (const item of yearBlock.items) {
-      const accountId = resolveAccountId(db, item.name);
-      const latest = db
-        .query(
-          "SELECT value, revision_no FROM fact_financial WHERE company_id = ? AND period_id = ? AND account_id = ? ORDER BY revision_no DESC LIMIT 1",
-        )
-        .get(companyId, periodId, accountId) as { value: number; revision_no: number } | undefined;
-      if (latest && latest.value === item.value) {
-        unchanged++;
-        continue;
+  const writeYears = (yearly: NonNullable<Awaited<ReturnType<FinancialsFetcher>>["yearly"]>): void => {
+    const sourceId = ensureMdSourceDart(db); // lazy: a failed retrieval creates nothing (unchanged behavior)
+    for (const yearBlock of yearly) {
+      const fiscalYear = Number(yearBlock.year);
+      if (!Number.isFinite(fiscalYear)) continue;
+      years.push(fiscalYear);
+      const periodId = ensureYearPeriod(db, fiscalYear);
+      for (const item of yearBlock.items) {
+        const accountId = resolveAccountId(db, item.name);
+        const latest = db
+          .query(
+            "SELECT value, revision_no FROM fact_financial WHERE company_id = ? AND period_id = ? AND account_id = ? ORDER BY revision_no DESC LIMIT 1",
+          )
+          .get(companyId, periodId, accountId) as { value: number; revision_no: number } | undefined;
+        if (latest && latest.value === item.value) {
+          unchanged++;
+          continue;
+        }
+        db.run(
+          "INSERT INTO fact_financial (id, company_id, period_id, account_id, value, revision_no, source_id, created_at) VALUES (?,?,?,?,?,?,?,?)",
+          [
+            ulid(),
+            companyId,
+            periodId,
+            accountId,
+            item.value,
+            latest ? latest.revision_no + 1 : 1,
+            sourceId,
+            new Date().toISOString(),
+          ],
+        );
+        inserted++;
       }
-      db.run(
-        "INSERT INTO fact_financial (id, company_id, period_id, account_id, value, revision_no, source_id, created_at) VALUES (?,?,?,?,?,?,?,?)",
-        [
-          ulid(),
-          companyId,
-          periodId,
-          accountId,
-          item.value,
-          latest ? latest.revision_no + 1 : 1,
-          sourceId,
-          new Date().toISOString(),
-        ],
-      );
-      inserted++;
     }
+  };
+
+  if (!incremental) {
+    const fin = await (opts.fetcher ?? fetchFinancials)(corpCode, { years: opts.years ?? 5 });
+    if (!fin.found || (fin.yearly?.length ?? 0) === 0) {
+      throw new DartSyncError(
+        `DART retrieval failed — ${fin.error ?? "Financial statements not found"}`,
+        "dart_retrieval_failed",
+      );
+    }
+    writeYears(fin.yearly ?? []);
+    return {
+      company_id: companyId,
+      corp_code: corpCode,
+      years: years.sort((a, b) => a - b),
+      inserted,
+      unchanged,
+      integrity: fin.integrity ?? null,
+      integrity_notes: fin.integrityNotes ?? [],
+      warnings,
+    };
+  }
+
+  // ── ADR-0199 §6.2 incremental mode ──
+  const latestYear = new Date(nowIso).getFullYear() - 1; // same anchor as fetchFinancials (latest complete business year)
+  const target: number[] = Array.from({ length: 5 }, (_, i) => latestYear - 4 + i);
+  const stored = new Set(
+    (
+      db
+        .query(
+          `SELECT DISTINCT per.fiscal_year AS y FROM fact_financial f
+             JOIN md_period per ON per.id = f.period_id
+             JOIN md_source s ON s.id = f.source_id
+            WHERE f.company_id = ? AND s.code = 'dart'`,
+        )
+        .all(companyId) as Array<{ y: number }>
+    ).map((r) => r.y),
+  );
+  const state = getCorpSyncState(db, corpCode);
+  const force = opts.forceRefresh === true;
+  const fresh = isCheckFresh(state?.financial_checked_at, nowIso, force) && stored.size > 0;
+  let fetchSet: number[];
+  if (force) {
+    fetchSet = target;
+  } else if (fresh) {
+    fetchSet = [];
+  } else {
+    // Missing years, the latest year (its figures can still change), and closed years re-flagged by a corrected report.
+    const corrected = correctedBusinessReportYears(db, corpCode, state?.financial_checked_at ?? null).filter((y) =>
+      target.includes(y),
+    );
+    fetchSet = [...new Set([...target.filter((y) => !stored.has(y)), latestYear, ...corrected])];
+  }
+  fetchSet.sort((a, b) => a - b);
+
+  let integrity: string | null = null;
+  let integrityNotes: string[] = [];
+  const fetchErrors: string[] = [];
+  if (fetchSet.length > 0) {
+    const fin = await (opts.fetcher ?? fetchFinancials)(corpCode, { fiscalYears: fetchSet });
+    writeYears(fin.yearly ?? []);
+    integrity = fin.integrity ?? null;
+    integrityNotes = fin.integrityNotes ?? [];
+    const foundYears = new Set((fin.yearly ?? []).map((y) => Number(y.year)));
+    // A fetcher that reports no per-year outcome is treated conservatively: unreported missing years count as errors,
+    // so freshness never advances on an unverified answer.
+    const outcomes: Array<FinancialYearOutcome & { detail?: string }> =
+      fin.yearOutcomes ??
+      fetchSet.map((y) => ({
+        year: y,
+        outcome: foundYears.has(y) ? ("found" as const) : ("error" as const),
+        detail: "no_outcome",
+      }));
+    markFinancialChecked(db, corpCode, outcomes, nowIso);
+    for (const o of outcomes) {
+      if (o.outcome === "not_filed") warnings.push(`year_not_filed: ${o.year}`);
+      if (o.outcome === "error") {
+        warnings.push(`year_error: ${o.year} ${o.detail ?? ""}`.trim());
+        fetchErrors.push(`${o.year}: ${o.detail ?? fin.error ?? "error"}`);
+      }
+    }
+    if (stored.size === 0 && years.length === 0) {
+      throw new DartSyncError(
+        `DART retrieval failed — ${fin.error ?? fetchErrors[0] ?? "Financial statements not found"}`,
+        "dart_retrieval_failed",
+      );
+    }
+  }
+  const allYears = new Set<number>([...stored, ...years]);
+  if (allYears.size === 0) {
+    throw new DartSyncError("DART retrieval failed — Financial statements not found", "dart_retrieval_failed");
   }
   return {
     company_id: companyId,
     corp_code: corpCode,
-    years: years.sort((a, b) => a - b),
+    years: [...allYears].sort((a, b) => a - b),
     inserted,
     unchanged,
-    integrity: fin.integrity ?? null,
-    integrity_notes: fin.integrityNotes ?? [],
+    integrity,
+    integrity_notes: integrityNotes,
     warnings,
+    fetched_years: fetchSet,
+    fetch_errors: fetchErrors,
   };
 }
 

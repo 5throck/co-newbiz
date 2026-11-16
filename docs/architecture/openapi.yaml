@@ -5637,7 +5637,7 @@ paths:
   /api/brownfield/{oppId}/targets:
     get:
       operationId: listBrownfieldTargets
-      summary: Long List + checklist definition + screening summaries.
+      summary: Long List + checklist definition + screening summaries. Each target also carries an additive eval_draft field (ADR-0199 A8) with provisional AI draft chips per category (version_no, created_at, checked_at, provisional_score, stale, evidence_grade) and the latest run item; it never changes eval_summary.
       tags:
         - Analysis
       responses:
@@ -5864,6 +5864,162 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/brownfield/{oppId}/eval-draft-runs:
+    post:
+      operationId: startBrownfieldEvalDraftRun
+      summary: "Start an S6 bulk AI evaluation run over the non-excluded candidates (ADR-0199 A1). Drafting is a proposal: every result is an immutable draft version and only the human-only confirm route writes verdicts. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). An active run is reused (meta.reused true). 202 returns run_id; the engine works in the background. Analyst+."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-draft-runs/latest:
+    get:
+      operationId: getLatestBrownfieldEvalDraftRun
+      summary: "Latest S6 bulk evaluation run of the opportunity with items and the DART budget snapshot { calls, budget, reserve } (ADR-0199 A2); run is null when none exists. A running run with a stale heartbeat is lazily marked interrupted."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-draft-runs/{runId}:
+    get:
+      operationId: getBrownfieldEvalDraftRun
+      summary: "One S6 bulk evaluation run with items and the DART budget snapshot (ADR-0199 A2). A run of another opportunity is 404."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-draft-runs/{runId}/resume:
+    post:
+      operationId: resumeBrownfieldEvalDraftRun
+      summary: "Resume a paused_budget or interrupted run from its first non-terminal item (ADR-0199 A3). Manual only: the scheduler never resumes a run. 409 budget_reserve while the DART reserve is unmet, 409 not_resumable otherwise. Sets resumed_by. Analyst+."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-draft-runs/{runId}/cancel:
+    post:
+      operationId: cancelBrownfieldEvalDraftRun
+      summary: "Cancel an active run after its current step (ADR-0199 A4). Versions already written stay. Analyst+."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-draft-versions:
+    get:
+      operationId: listBrownfieldEvalDraftVersions
+      summary: "Draft versions of one candidate, newest first, each with confirmed_count (ADR-0199 A5). Query category (financial|technical), limit (1..100, default 20), include=payload for the full payloads."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-draft-versions/{versionId}/confirm:
+    post:
+      operationId: confirmBrownfieldEvalDraftVersion
+      summary: "HUMAN-ONLY (cookie session of a non-agent account; bearer, MCP and agent callers get 403 human_only). Bulk-confirm the proposals of the LATEST draft version of a candidate (ADR-0199 A6): pending criteria only, unverified items skipped, a person's verdict never overwritten, assessed_by is the caller, confirmed_from_version_id and evidence_ref record the version. Body criterion_ids (optional). 409 stale_version when the version is not the latest. Analyst+."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: targetId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/brownfield/{oppId}/targets/{targetId}/exclude:
     post:
       operationId: excludeTarget
@@ -6069,7 +6225,7 @@ paths:
   /api/brownfield/{oppId}/targets/{targetId}/eval-state/{criterionId}:
     put:
       operationId: upsertBrownfieldTargetEvalState
-      summary: Upsert one target's verdict for one evaluation criterion (pass/fail/na/waived) — verdict is always human-entered, DART figures are reference-only.
+      summary: Upsert one target's verdict for one evaluation criterion (pass/fail/na/waived) — verdict is always human-entered, DART figures are reference-only. Optional confirmed_from_version_id records the AI draft version the person's verdict rested on (ADR-0199 A7); a save without it clears the link.
       tags:
         - Analysis
       responses:

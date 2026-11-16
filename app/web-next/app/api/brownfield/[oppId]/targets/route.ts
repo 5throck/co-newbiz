@@ -13,6 +13,7 @@ import {
 } from "../../../../../lib/brownfield-targets.ts";
 import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
+import { evalDraftView } from "../../../../../lib/brownfield-eval-draft-view.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
@@ -56,6 +57,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
           ...t,
           screening_summary: screeningSummary(t),
           eval_summary: { ...evalScores, combined: combinedEvalScore(evalScores), complete },
+          // ADR-0199 A8 — provisional AI draft chips; additive and never part of eval_summary / ranking / promotion.
+          eval_draft: evalDraftView(db, t.id),
         };
       }),
     },

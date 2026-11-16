@@ -1,0 +1,960 @@
+// @version 1.0.0
+/**
+ * ADR-0199 / spec 2026-11-16-s6-bulk-ai-eval-versioning Row 2c — the S6 bulk AI evaluation engine and routes A1-A8.
+ * Scratch SQLite; the DART client, the LLM and the web-search provider are replaced by the engine's injected seams, so
+ * nothing leaves the process.
+ *
+ * Covers T1, T3-T11, T13-T15, T21, T23, T25 (route-table scan) and the A5/A7/A8 additions.
+ */
+import { test, expect, describe, beforeAll, afterAll } from "bun:test";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const ROOT = join(import.meta.dirname, "../..");
+const TMP = mkdtempSync(join(tmpdir(), "bf-bulk-"));
+const DB_PATH = join(TMP, "t.sqlite");
+process.env.CO_NEWBIZ_DB_PATH = DB_PATH;
+process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+const savedKey = process.env.DART_API_KEY;
+process.env.DART_API_KEY = ["dart", "bulk", "key"].join("-");
+
+const { resetDb, getDb } = await import("../../db/client.ts");
+const { runMigrations } = await import("../../db/migrate.ts");
+resetDb();
+runMigrations(DB_PATH);
+const db = getDb(DB_PATH);
+
+const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
+const { ulid } = await import("../../db/lib/ulid.ts");
+const repo = await import("../../db/repositories/brownfield-eval-draft.repository.ts");
+const cache = await import("../../db/repositories/dart-evidence-cache.repository.ts");
+const bulk = await import("../../app/web-next/lib/brownfield-eval-bulk.ts");
+const { listOrSeedCriteria, addCustomCriterion, updateCriterionRubric } = await import(
+  "../../app/web-next/lib/brownfield-eval-criteria.ts"
+);
+const { InProcessRestPort, isHumanOnly, HUMAN_ONLY_ROUTES } = await import(
+  "../../app/web-next/lib/mcp/in-process-port.ts"
+);
+
+afterAll(() => {
+  bulk.setBulkEvalDepsForTests(null);
+  resetDb();
+  rmSync(TMP, { recursive: true, force: true });
+  if (savedKey === undefined) delete process.env.DART_API_KEY;
+  else process.env.DART_API_KEY = savedKey;
+});
+
+const NOW = "2026-11-16T03:00:00.000Z";
+const ANALYST = "bulk-analyst";
+const VIEWER = "bulk-viewer";
+let analystCookie = "";
+let viewerCookie = "";
+const req = (path: string, init?: RequestInit) => nextRequest(path, init);
+async function login(userId: string): Promise<string> {
+  const res = await req("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ userId, password: `pw-${userId}-12345` }),
+  });
+  return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
+}
+const post = (path: string, body: unknown, cookie = analystCookie) =>
+  req(path, { method: "POST", headers: { cookie }, body: JSON.stringify(body) });
+const get = (path: string, cookie = analystCookie) => req(path, { headers: { cookie } });
+const data = async (res: Response) => (await res.json()) as { data: any; meta: any; error: any };
+
+// ── fixtures ─────────────────────────────────────────────────────────────────────────────────────────────────────
+const OPP = ulid();
+const CORP_A = "00000001";
+const CORP_B = "00000002";
+const REPORT_A = "20260301000101";
+const REPORT_B = "20260301000102";
+const BODY = [
+  "II. 사업의 내용 1. 사업의 개요 당사는 정밀 부품 제조사입니다.",
+  "2. 주요 제품 및 서비스 가. 주요 제품 현황 당사의 주요 제품은 선박용 크랭크샤프트입니다. 매출의 70%를 차지합니다.",
+  "3. 생산설비 가. 생산능력 연간 12,000톤 규모의 단조 설비를 보유합니다.",
+  "4. 연구개발활동 나. 연구개발 비용 당기 연구개발비용은 매출액 대비 3.2%인 45억원입니다.",
+  "5. 지적재산권 당사는 국내 특허 42건을 보유하고 있습니다.",
+  "III. 재무에 관한 사항 요약 재무정보 표시",
+].join(" ");
+const QUOTE = "연구개발비용은 매출액 대비 3.2%인 45억원";
+
+const T: Record<"A" | "B" | "N", string> = { A: ulid(), B: ulid(), N: ulid() };
+const NAME: Record<"A" | "B" | "N", string> = { A: "가나다에이", B: "가나다비", N: "비상장엔" };
+
+beforeAll(async () => {
+  for (const [id, role] of [
+    [ANALYST, "analyst"],
+    [VIEWER, "viewer"],
+  ] as const) {
+    await createUser(db, { userId: id, role, password: `pw-${id}-12345`, createdBy: "test", now: NOW });
+    approveUser(db, { userId: id, approvedBy: "test", now: NOW });
+  }
+  db.run("UPDATE app_user SET must_change_password = 0");
+  analystCookie = await login(ANALYST);
+  viewerCookie = await login(VIEWER);
+
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    OPP,
+    "비밀프로젝트오퍼",
+    "선박 부품",
+    "selected",
+    ANALYST,
+    NOW,
+  ]);
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({
+      rows: [
+        { id: "g1", capability: "정밀 단조 역량", resolution: "partner" },
+        { id: "g2", capability: "특허 포트폴리오", resolution: "partner" },
+      ],
+      updatedAt: NOW,
+    }),
+    OPP,
+  ]);
+  const mk = (id: string, name: string, corp: string | null) => {
+    db.run("INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)", [
+      ulid(),
+      name,
+      corp,
+      NOW,
+    ]);
+    db.run(
+      "INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+      [id, OPP, name, corp, NOW, NOW],
+    );
+  };
+  mk(T.A, NAME.A, CORP_A);
+  mk(T.B, NAME.B, CORP_B);
+  mk(T.N, NAME.N, null);
+  listOrSeedCriteria(OPP, ANALYST, db); // 4 builtin financial + 2 seeded technical
+});
+
+// ── injected seams ───────────────────────────────────────────────────────────────────────────────────────────────
+const c = {
+  fetch: 0,
+  fetchYears: [] as number[][],
+  list: 0,
+  text: 0,
+  validate: 0,
+  llm: 0,
+  llmCompanies: [] as string[],
+  web: [] as string[],
+  used: 0,
+};
+let clock = NOW;
+let gate: Promise<void> | null = null;
+let llmMode: "ok" | "fail" | "disclosure_only" = "ok";
+let webConfigured = true;
+let onFetch: (() => void) | null = null;
+let dartConfigured = true;
+let llmConfigured = true;
+
+const reportFor = (corp: string) => (corp === CORP_A ? REPORT_A : REPORT_B);
+
+function deps(): Partial<import("../../app/web-next/lib/brownfield-eval-bulk.ts").BulkEvalDeps> {
+  return {
+    now: () => clock,
+    isDartConfigured: () => dartConfigured,
+    isLlmConfigured: () => llmConfigured,
+    budget: () => ({ calls: c.used, budget: 15_000 }),
+    validator: (async () => {
+      c.validate++;
+      return { validated: true };
+    }) as any,
+    fetcher: (async (corp: string, opts: { fiscalYears?: number[]; years?: number } = {}) => {
+      c.fetch++;
+      onFetch?.();
+      const years = opts.fiscalYears ?? [2021, 2022, 2023, 2024, 2025];
+      c.fetchYears.push(years);
+      const yearly = years.map((y) => ({
+        year: String(y),
+        items: [
+          { name: "매출액", value: 1_000_000_000 * (1 + 0.12 * (y - 2020)), unit: "KRW" },
+          { name: "영업이익", value: 100_000_000 * (1 + 0.12 * (y - 2020)), unit: "KRW" },
+          { name: "당기순이익", value: 60_000_000 * (1 + 0.12 * (y - 2020)), unit: "KRW" },
+          { name: "자산총계", value: 2_000_000_000, unit: "KRW" },
+          { name: "부채총계", value: 800_000_000, unit: "KRW" },
+          { name: "자본총계", value: 1_200_000_000, unit: "KRW" },
+        ],
+      }));
+      return {
+        corpCode: corp,
+        found: true,
+        items: [],
+        yearly,
+        yearOutcomes: years.map((year) => ({ year, outcome: "found" as const })),
+        integrity: "ok",
+      };
+    }) as any,
+    listDisclosuresSince: (async (corp: string) => {
+      c.list++;
+      return {
+        complete: true,
+        rows: [
+          {
+            rcept_no: reportFor(corp),
+            corp_code: corp,
+            corp_name: "x",
+            report_nm: "사업보고서 (2025.12)",
+            rcept_dt: "20260301",
+            flr_nm: null,
+            rm: null,
+          },
+        ],
+      };
+    }) as any,
+    fetchDisclosureText: (async (rcept: string) => {
+      c.text++;
+      return { available: true, rcept_no: rcept, text: BODY };
+    }) as any,
+    complete: (async (messages: Array<{ content: string }>) => {
+      c.llm++;
+      const user = messages[messages.length - 1].content;
+      c.llmCompanies.push(user.split("\n")[0] ?? "");
+      if (gate) await gate;
+      if (llmMode === "fail") return { source: "synthesis", provider: "deterministic", text: "" };
+      const ids = [...user.matchAll(/^- (\S+) — /gm)].map((m) => m[1]);
+      const rcept = user.includes(REPORT_A) ? REPORT_A : REPORT_B;
+      if (llmMode === "disclosure_only") {
+        const dd: Record<string, unknown> = {};
+        for (const id of ids)
+          dd[id] = {
+            verdict: "pass",
+            rationale: "공시 제목만",
+            citations: [
+              { kind: "disclosure", ref: rcept, quote: "사업보고서 (2025.12)" },
+              { kind: "profile", ref: "profile", quote: "강점" },
+            ],
+          };
+        return { source: "llm", provider: "fake", text: JSON.stringify({ drafts: dd }) };
+      }
+      const drafts: Record<string, unknown> = {};
+      ids.forEach((id, i) => {
+        drafts[id] =
+          i === 0
+            ? {
+                verdict: "pass",
+                rationale: "R&D 비용 확인",
+                citations: [{ kind: "business_report", ref: `${rcept}:rnd`, quote: QUOTE }],
+              }
+            : {
+                verdict: "pass",
+                rationale: "근거 없는 주장",
+                citations: [
+                  { kind: "business_report", ref: `${rcept}:ip`, quote: "지어낸 특허 문장입니다 아주 길게 이어집니다" },
+                ],
+              };
+      });
+      return { source: "llm", provider: "fake", text: JSON.stringify({ drafts }) };
+    }) as any,
+    isWebConfigured: () => webConfigured,
+    webSearch: async (q: string) => {
+      c.web.push(q);
+      return [{ title: "기사", url: "https://news.example.com/a", snippet: "정밀 단조 관련 보도" }];
+    },
+  };
+}
+
+async function settle(runId: string): Promise<void> {
+  for (let i = 0; i < 500; i++) {
+    if (!bulk.isEngineActive(runId)) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  throw new Error("engine did not settle");
+}
+const runOf = (id: string) => repo.getRun(db, id)!;
+const itemOf = (runId: string, key: "A" | "B" | "N") =>
+  repo.listRunItems(db, runId).find((i) => i.brownfield_target_id === T[key])!;
+const auditActions = () =>
+  db
+    .query("SELECT action, target, actor_user_id FROM audit_log WHERE action LIKE 'target_eval.%' ORDER BY rowid")
+    .all() as Array<{ action: string; target: string; actor_user_id: string }>;
+const evalStateCount = () => (db.query("SELECT COUNT(*) n FROM brownfield_target_eval_state").get() as { n: number }).n;
+const startRoute = (body: Record<string, unknown> = {}) => post(`/api/brownfield/${OPP}/eval-draft-runs`, body);
+const targetsList = async () => (await data(await get(`/api/brownfield/${OPP}/targets`))).data.targets as any[];
+const critIds = (cat: "financial" | "technical") =>
+  db
+    .query(
+      "SELECT id, label FROM brownfield_eval_criterion WHERE opportunity_id = ? AND category = ? AND deleted_at IS NULL AND retired_at IS NULL ORDER BY created_at",
+    )
+    .all(OPP, cat) as Array<{ id: string; label: string }>;
+const latest = (key: "A" | "B", cat: "financial" | "technical") => repo.getLatestVersion(db, T[key], cat);
+
+let run1 = "";
+let summaryBefore: unknown;
+
+describe("A1 start + engine happy path (T7, T13, T4, T11, T12)", () => {
+  test("auth: a viewer cannot start a run (403); drafting is a proposal, so no human-only gate on A1", async () => {
+    expect((await post(`/api/brownfield/${OPP}/eval-draft-runs`, {}, viewerCookie)).status).toBe(403);
+    expect(isHumanOnly("POST", `/api/brownfield/${OPP}/eval-draft-runs`, {})).toBe(false);
+  });
+
+  test("bad bodies are 400; an unknown opportunity is 404", async () => {
+    expect((await startRoute({ categories: "all" })).status).toBe(400);
+    expect((await startRoute({ web_evidence: "yes" })).status).toBe(400);
+    expect((await startRoute({ target_ids: ["nope"] })).status).toBe(400);
+    expect((await post(`/api/brownfield/${ulid()}/eval-draft-runs`, {})).status).toBe(404);
+  });
+
+  test("start returns 202, reuses the active run (T13), skips the non-DART candidate (T7), and a version only lands on success", async () => {
+    summaryBefore = (await targetsList()).map((t) => t.eval_summary);
+    bulk.setStartCooldownForTests(0);
+    bulk.setBulkEvalDepsForTests(deps());
+    let release: () => void = () => {};
+    gate = new Promise<void>((r) => (release = r));
+    const res = await startRoute({});
+    expect(res.status).toBe(202);
+    const body = await data(res);
+    run1 = body.data.run_id;
+    expect(body.meta.reused).toBe(false);
+    // while the engine is blocked inside the LLM step: the second start reuses the same run (T13)
+    for (let i = 0; i < 200 && c.llm === 0; i++) await new Promise((r) => setTimeout(r, 10));
+    const again = await data(await startRoute({}));
+    expect(again.data.run_id).toBe(run1);
+    expect(again.meta.reused).toBe(true);
+    expect(() =>
+      db.run(
+        "INSERT INTO brownfield_eval_draft_run (id, opportunity_id, categories, status, total_targets, started_by, started_via, started_at, heartbeat_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        [ulid(), OPP, "both", "running", 1, "x", "ui", NOW, NOW],
+      ),
+    ).toThrow(); // partial unique index: one active run per opportunity
+    // T4: mid-candidate the progress route shows the step and the longlist shows no (previous) version yet
+    const prog = (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/latest`))).data;
+    expect(prog.run.id).toBe(run1);
+    expect(prog.items.find((i: any) => i.brownfield_target_id === T.A).state).toBe("technical_draft");
+    expect(prog.budget.reserve).toBe(1500);
+    release();
+    gate = null;
+    await settle(run1);
+    expect(runOf(run1).status).toBe("completed");
+  });
+
+  test("outcomes: financial + technical versions for DART candidates, skipped_not_dart without any LLM/web call", async () => {
+    for (const k of ["A", "B"] as const) {
+      const it = itemOf(run1, k);
+      expect(it.state).toBe("done");
+      expect(it.financial_outcome).toBe("versioned");
+      expect(it.technical_outcome).toBe("versioned");
+      expect(latest(k, "financial")?.version_no).toBe(1);
+      expect(latest(k, "financial")?.evidence_grade).toBe("A");
+      expect(latest(k, "technical")?.evidence_grade).toBe("C");
+    }
+    const n = itemOf(run1, "N");
+    expect(n.state).toBe("skipped_not_dart");
+    expect(repo.getLatestVersion(db, T.N, "financial")).toBeNull();
+    expect(c.llmCompanies.some((x) => x.includes(NAME.N))).toBe(false);
+    expect(c.web).toEqual([]); // T15: no web call by default
+    const chips = await targetsList();
+    expect(chips.find((t) => t.id === T.N).eval_draft.run_item.state).toBe("skipped_not_dart");
+    expect(chips.find((t) => t.id === T.A).eval_draft.financial.version_no).toBe(1);
+    expect(chips.find((t) => t.id === T.A).eval_draft.technical.evidence_grade).toBe("C");
+  });
+
+  test("T12: a verdict whose citation is not in the held evidence is downgraded to unverified; valid quotes stay", () => {
+    const v = latest("A", "technical")!;
+    const p = JSON.parse(v.payload);
+    const [first, second] = p.items;
+    expect(first.proposed_status).toBe("pass");
+    expect(first.citations[0]).toEqual({ kind: "business_report", ref: `${REPORT_A}:rnd`, quote: QUOTE });
+    expect(second.proposed_status).toBeNull();
+    expect(second.reason).toContain("확인 안됨");
+    expect(p.evidence.business_report).toMatchObject({ rcept_no: REPORT_A, available: true });
+    expect(p.evidence.business_report.sections_found).toContain("rnd");
+    expect(p.llm).toMatchObject({ prompt_key: "s7.screening_draft" });
+    expect(JSON.stringify(p)).not.toContain("강점"); // the AI profile text is never copied into the payload
+    expect(v.unverified_count).toBe(1);
+    expect(v.proposed_count).toBe(1);
+  });
+
+  test("T1: identical facts and criteria yield identical proposals, score and input hash for two candidates", () => {
+    const a = latest("A", "financial")!;
+    const b = latest("B", "financial")!;
+    expect(a.input_hash).toBe(b.input_hash);
+    expect(a.provisional_score).toBe(b.provisional_score);
+    const strip = (v: typeof a) => {
+      const p = JSON.parse(v.payload);
+      return JSON.stringify([p.items, p.provisional_score, p.criteria_snapshot]);
+    };
+    expect(strip(a)).toBe(strip(b));
+  });
+
+  test("T11: provisional drafts never touch eval state, eval_summary or completion", async () => {
+    expect(evalStateCount()).toBe(0);
+    expect((await targetsList()).map((t) => t.eval_summary)).toEqual(summaryBefore as any);
+  });
+
+  test("T14: audit events carry the documented target shapes, attributed to the caller", () => {
+    const a = auditActions();
+    expect(a.find((x) => x.action === "target_eval.bulk_run.start")?.target).toBe(
+      `${OPP}:run:${run1}:targets=3:categories=both`,
+    );
+    expect(a.find((x) => x.action === "target_eval.bulk_run.complete")?.target).toBe(`${OPP}:run:${run1}`);
+    expect(a.find((x) => x.action === "target_eval.draft_version.create")?.target).toMatch(
+      new RegExp(`^${OPP}:${T.A}:financial:v1:run=${run1}$`),
+    );
+    expect(a.every((x) => x.actor_user_id === ANALYST)).toBe(true);
+  });
+
+  test("DART calls are recorded per item (telemetry) and the start is attributed to the analyst", () => {
+    expect(runOf(run1).started_by).toBe(ANALYST);
+    expect(runOf(run1).started_via).toBe("ui");
+    expect(runOf(run1).web_evidence).toBe(0);
+    expect(runOf(run1).force_refresh).toBe(0);
+  });
+});
+
+async function startAndSettle(body: Record<string, unknown> = {}): Promise<string> {
+  const res = await startRoute(body);
+  expect(res.status).toBe(202);
+  const id = (await data(res)).data.run_id as string;
+  await settle(id);
+  return id;
+}
+
+describe("T23 + T21 — unchanged evidence, warm cache, force_refresh", () => {
+  let run2 = "";
+  test("second run inside the window: 0 DART calls, 0 LLM calls, outcome `unchanged` pointing at the existing versions", async () => {
+    clock = "2026-11-17T03:00:00.000Z";
+    const before = { ...c, fetchYears: undefined, llmCompanies: undefined, web: undefined };
+    run2 = await startAndSettle({});
+    expect(c.fetch).toBe(before.fetch);
+    expect(c.list).toBe(before.list);
+    expect(c.validate).toBe(before.validate);
+    expect(c.text).toBe(before.text);
+    expect(c.llm).toBe(before.llm);
+    for (const k of ["A", "B"] as const) {
+      const it = itemOf(run2, k);
+      expect(it.financial_outcome).toBe("unchanged");
+      expect(it.technical_outcome).toBe("unchanged");
+      expect(it.financial_version_id).toBe(latest(k, "financial")!.id);
+      expect(latest(k, "technical")!.version_no).toBe(1); // no new version
+    }
+    const actions = auditActions().filter((x) => x.action === "target_eval.draft_version.unchanged");
+    expect(actions.length).toBe(4);
+    expect(actions[0].target).toBe(`${OPP}:${T.A}:financial:v1:run=${run2}`);
+    // checked_at advanced without mutating the immutable version
+    const chip = (await targetsList()).find((t) => t.id === T.A).eval_draft.financial;
+    expect(chip.checked_at > chip.created_at).toBe(true);
+    expect(chip.stale).toBe(false);
+  });
+
+  test("force_refresh: validates, re-fetches all 5 years and re-lists, but never re-fetches an existing rcept_no; the flag is stored on the run", async () => {
+    clock = "2026-11-18T03:00:00.000Z";
+    const b = { fetch: c.fetch, list: c.list, validate: c.validate, text: c.text, years: c.fetchYears.length };
+    const run3 = await startAndSettle({ force_refresh: true });
+    expect(runOf(run3).force_refresh).toBe(1);
+    expect(c.validate - b.validate).toBe(2);
+    expect(c.fetch - b.fetch).toBe(2);
+    expect(c.list - b.list).toBe(2);
+    expect(c.text - b.text).toBe(0);
+    expect(c.fetchYears.slice(b.years).every((y) => y.length === 5)).toBe(true);
+    expect(itemOf(run3, "A").financial_outcome).toBe("unchanged"); // same values: no new version
+  });
+
+  test("any change in criteria, human-judged set or web_evidence produces a new version (technical)", async () => {
+    clock = "2026-11-19T03:00:00.000Z";
+    addCustomCriterion(OPP, "technical", "추가 기술 항목", "custom", ANALYST);
+    const run4 = await startAndSettle({ categories: "technical" });
+    expect(itemOf(run4, "A").technical_outcome).toBe("versioned");
+    expect(latest("A", "technical")!.version_no).toBe(2);
+    // web_evidence flips the hash too (T15: queries carry only company + criterion label)
+    c.web.length = 0;
+    const run5 = await startAndSettle({ categories: "technical", web_evidence: true });
+    expect(runOf(run5).web_evidence).toBe(1);
+    expect(latest("A", "technical")!.version_no).toBe(3);
+    expect(c.web.length).toBeGreaterThan(0);
+    for (const q of c.web) {
+      expect(q).not.toContain("비밀프로젝트오퍼"); // opportunity name never leaves the process
+      expect(q.startsWith(NAME.A) || q.startsWith(NAME.B)).toBe(true);
+    }
+    const p = JSON.parse(latest("A", "technical")!.payload);
+    expect(p.evidence.web.length).toBeGreaterThan(0);
+    expect(p.evidence.web[0]).toMatchObject({ host: "news.example.com" });
+  });
+});
+
+describe("T3 — replace-on-success", () => {
+  test("an LLM failure writes no version and keeps the previous one; the next success numbers v{n+1} without a gap", async () => {
+    // change the human-judged set so the hash differs and the LLM is consulted
+    const [tech1] = critIds("technical");
+    const put = await req(`/api/brownfield/${OPP}/targets/${T.A}/eval-state/${tech1.id}`, {
+      method: "PUT",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ status: "na", note: "해당 없음" }),
+    });
+    expect(put.status).toBe(200);
+    const before = latest("A", "technical")!;
+    llmMode = "fail";
+    const failedRun = await startAndSettle({ categories: "technical" });
+    llmMode = "ok";
+    const it = itemOf(failedRun, "A");
+    expect(it.technical_outcome).toBe("failed");
+    expect(it.state).toBe("failed");
+    expect(it.error_message).toContain("llm_error");
+    expect(latest("A", "technical")!.id).toBe(before.id); // still the previous version
+    const chip = (await targetsList()).find((t) => t.id === T.A).eval_draft;
+    expect(chip.technical.version_no).toBe(before.version_no);
+    expect(chip.run_item.error).toContain("llm_error");
+    const okRun = await startAndSettle({ categories: "technical" });
+    expect(itemOf(okRun, "A").technical_outcome).toBe("versioned");
+    expect(latest("A", "technical")!.version_no).toBe(before.version_no + 1);
+    // the human-judged item is read-only context in the new version, not an item
+    const p = JSON.parse(latest("A", "technical")!.payload);
+    expect(p.human_items.map((h: any) => h.criterion_id)).toContain(tech1.id);
+    expect(p.items.map((i: any) => i.criterion_id)).not.toContain(tech1.id);
+    // an unconfigured LLM skips the technical step instead of writing an all-unverified version
+    llmConfigured = false;
+    addCustomCriterion(OPP, "technical", "또 다른 항목", null, ANALYST);
+    const skipRun = await startAndSettle({ categories: "technical" });
+    llmConfigured = true;
+    expect(itemOf(skipRun, "A").state).toBe("skipped_llm_unconfigured");
+    expect(itemOf(skipRun, "A").technical_outcome).toBe("skipped");
+    expect(latest("A", "technical")!.version_no).toBe(before.version_no + 1);
+  });
+});
+
+describe("A5 versions list and A7 PUT link", () => {
+  test("lists versions newest first with confirmed_count; include=payload returns payloads; bad params are 400", async () => {
+    const res = await data(await get(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions?category=technical`));
+    const vs = res.data.versions as any[];
+    expect(vs.length).toBeGreaterThanOrEqual(3);
+    expect(vs[0].version_no).toBeGreaterThan(vs[1].version_no);
+    expect(vs[0]).toHaveProperty("confirmed_count", 0);
+    expect(vs[0]).not.toHaveProperty("payload");
+    const full = await data(
+      await get(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions?category=technical&limit=1&include=payload`),
+    );
+    expect(full.data.versions[0].payload.schema).toBe(1);
+    expect((await get(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions?category=x`)).status).toBe(400);
+    expect((await get(`/api/brownfield/${OPP}/targets/${ulid()}/eval-draft-versions`)).status).toBe(404);
+  });
+});
+
+describe("A6 confirm — human-only, never overwrites, attribution (T8, T9, T10)", () => {
+  const confirm = (targetKey: "A" | "B", versionId: string, body: unknown = {}, cookie = analystCookie) =>
+    post(`/api/brownfield/${OPP}/targets/${T[targetKey]}/eval-draft-versions/${versionId}/confirm`, body, cookie);
+
+  test("T8: bearer-like/agent callers are refused at the in-process port and the route is registered human-only", async () => {
+    const v = latest("A", "technical")!;
+    const url = `/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions/${v.id}/confirm`;
+    expect(isHumanOnly("POST", url, {})).toBe(true);
+    expect(
+      HUMAN_ONLY_ROUTES.some(
+        (r) => r.pattern === "/api/brownfield/:oppId/targets/:targetId/eval-draft-versions/:versionId/confirm",
+      ),
+    ).toBe(true);
+    const port = new InProcessRestPort({
+      userId: ANALYST,
+      role: "analyst",
+      scopes: ["read", "write", "propose"],
+      mustChangePassword: false,
+      tokenId: "t",
+      clientId: "c",
+    });
+    const refused = await port.post(url, {});
+    expect(refused.error?.code).toBe("human_only");
+    const before = evalStateCount();
+    expect(evalStateCount()).toBe(before);
+    // a bearer-token request (no cookie session) gets 403 human_only as well
+    const bearer = await req(url, { method: "POST", headers: { authorization: "Bearer nope" }, body: "{}" });
+    expect([401, 403]).toContain(bearer.status);
+    expect((await confirm("A", v.id, {}, viewerCookie)).status).toBe(403);
+  });
+
+  test("T9/T10: only pending proposed items are written, with attribution; unverified and human-judged items are skipped", async () => {
+    const v = latest("B", "financial")!;
+    const p = JSON.parse(v.payload);
+    const proposedIds = p.items.filter((i: any) => i.proposed_status).map((i: any) => i.criterion_id);
+    expect(proposedIds.length).toBeGreaterThanOrEqual(2);
+    const humanId = proposedIds[0];
+    // a person judges one criterion between the snapshot and the confirm
+    const put = await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${humanId}`, {
+      method: "PUT",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ status: "fail", note: "사람 판단" }),
+    });
+    expect(put.status).toBe(200);
+    const res = await data(await confirm("B", v.id));
+    expect(res.data.confirmed).toBe(proposedIds.length - 1);
+    expect(res.data.skipped).toContainEqual({ criterion_id: humanId, reason: "already_judged" });
+    const human = db
+      .query(
+        "SELECT status, note, confirmed_from_version_id f FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
+      )
+      .get(T.B, humanId) as any;
+    expect(human).toMatchObject({ status: "fail", note: "사람 판단", f: null }); // never overwritten
+    const other = proposedIds[1];
+    const row = db
+      .query(
+        "SELECT status, assessed_by, evidence_ref, confirmed_from_version_id f, note FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
+      )
+      .get(T.B, other) as any;
+    expect(row).toMatchObject({ assessed_by: ANALYST, evidence_ref: v.id, f: v.id });
+    expect(row.status).toBe(p.items.find((i: any) => i.criterion_id === other).proposed_status);
+    expect(row.note).toContain("DART");
+    expect(res.data.scores.financial).toBeDefined();
+    const counts = await data(
+      await get(`/api/brownfield/${OPP}/targets/${T.B}/eval-draft-versions?category=financial`),
+    );
+    expect(counts.data.versions[0].confirmed_count).toBe(proposedIds.length - 1);
+    expect(auditActions().find((x) => x.action === "target_eval.confirm_from_version")?.target).toBe(
+      `${OPP}:${T.B}:financial:v1:confirmed=${proposedIds.length - 1}:via=ui`,
+    );
+    // T10: a later plain PUT (no draft cited) clears the link — the verdict no longer rests on the draft
+    const plain = await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${other}`, {
+      method: "PUT",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ status: "partial" }),
+    });
+    expect(plain.status).toBe(200);
+    expect(
+      (
+        db
+          .query(
+            "SELECT confirmed_from_version_id f FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
+          )
+          .get(T.B, other) as any
+      ).f,
+    ).toBeNull();
+    // A7: saving an edited draft with the basis keeps the link even though the status differs from the proposal
+    const withBasis = await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${other}`, {
+      method: "PUT",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ status: "fail", confirmed_from_version_id: v.id }),
+    });
+    expect(withBasis.status).toBe(200);
+    expect(
+      (
+        db
+          .query(
+            "SELECT confirmed_from_version_id f FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
+          )
+          .get(T.B, other) as any
+      ).f,
+    ).toBe(v.id);
+    expect(
+      (
+        await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${other}`, {
+          method: "PUT",
+          headers: { cookie: analystCookie },
+          body: JSON.stringify({ status: "pass", confirmed_from_version_id: "nope" }),
+        })
+      ).status,
+    ).toBe(400);
+  });
+
+  test("T9: unverified items are never written; a non-latest version is 409 stale_version; a changed rubric is skipped", async () => {
+    const tv = latest("A", "technical")!;
+    const items = JSON.parse(tv.payload).items as any[];
+    const unverified = items.find((i) => i.proposed_status === null);
+    expect(unverified).toBeDefined();
+    const res = await data(await confirm("A", tv.id));
+    expect(res.data.skipped).toContainEqual({ criterion_id: unverified.criterion_id, reason: "unverified" });
+    expect(
+      db
+        .query("SELECT 1 FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?")
+        .get(T.A, unverified.criterion_id),
+    ).toBeNull();
+    const old = repo.listVersions(db, T.A, { category: "technical" }).at(-1)!;
+    const stale = await confirm("A", old.id);
+    expect(stale.status).toBe(409);
+    expect((await data(stale)).error.code).toBe("stale_version");
+    // changed rubric on a financial criterion after the snapshot
+    const fv = latest("A", "financial")!;
+    const fitems = JSON.parse(fv.payload).items as any[];
+    const target = fitems.find((i) => i.proposed_status);
+    updateCriterionRubric(target.criterion_id, { minYears: 2 });
+    const res2 = await data(await confirm("A", fv.id, { criterion_ids: [target.criterion_id, "ghost"] }));
+    expect(res2.data.skipped).toContainEqual({ criterion_id: target.criterion_id, reason: "criterion_changed" });
+    expect(res2.data.skipped).toContainEqual({ criterion_id: "ghost", reason: "not_in_version" });
+    expect(res2.data.confirmed).toBe(0);
+    expect((await confirm("A", ulid())).status).toBe(404);
+  });
+});
+
+describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
+  test("T5: the reserve rule pauses before the next candidate; resume is refused while unmet, then continues without duplicates", async () => {
+    clock = "2026-11-25T03:00:00.000Z";
+    c.used = 0;
+    let first = true;
+    onFetch = () => {
+      if (first) {
+        first = false;
+        c.used = 14_990; // budget nearly spent right after the first candidate's DART fetch
+      }
+    };
+    const runId = await startAndSettle({ force_refresh: true });
+    onFetch = null;
+    const run = runOf(runId);
+    expect(run.status).toBe("paused_budget");
+    expect(run.pause_reason).toBe("dart_budget_reserve");
+    expect(itemOf(runId, "A").state).toBe("done");
+    expect(itemOf(runId, "B").state).toBe("pending"); // resumes at the first non-terminal item
+    expect(auditActions().find((x) => x.action === "target_eval.bulk_run.pause")?.target).toBe(
+      `${OPP}:run:${runId}:reason=dart_budget_reserve`,
+    );
+    const vBeforeA = (
+      db.query("SELECT COUNT(*) n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(T.A) as {
+        n: number;
+      }
+    ).n;
+    // the reserve is still unmet: 409 budget_reserve
+    const refused = await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/resume`, {});
+    expect(refused.status).toBe(409);
+    expect((await data(refused)).error.code).toBe("budget_reserve");
+    // budget restored: resume (manual) continues; the force_refresh flag survived on the run header
+    c.used = 0;
+    expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/resume`, {}, viewerCookie)).status).toBe(403);
+    const resumed = await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/resume`, {});
+    expect(resumed.status).toBe(202);
+    await settle(runId);
+    expect(runOf(runId).status).toBe("completed");
+    expect(runOf(runId).resumed_by).toBe(ANALYST);
+    expect(runOf(runId).force_refresh).toBe(1);
+    expect(itemOf(runId, "B").state).toBe("done");
+    // candidate A finished before the pause: the resume must not redo it (B legitimately gets a new version: its human-judged set changed)
+    expect(
+      (
+        db.query("SELECT COUNT(*) n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(T.A) as {
+          n: number;
+        }
+      ).n,
+    ).toBe(vBeforeA);
+    expect(auditActions().some((x) => x.action === "target_eval.bulk_run.resume")).toBe(true);
+    // a completed run cannot be resumed
+    expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/resume`, {})).status).toBe(409);
+  });
+
+  test("T6: a stale heartbeat marks the run interrupted on read; resume completes it", async () => {
+    clock = "2026-11-26T03:00:00.000Z";
+    const { run } = repo.createRun(db, {
+      opportunityId: OPP,
+      categories: "both",
+      targetIds: [T.A, T.B],
+      webEvidence: false,
+      forceRefresh: false,
+      startedBy: ANALYST,
+      startedVia: "ui",
+      now: new Date(Date.now() - 3_600_000).toISOString(),
+    });
+    // no engine runs for it (as after a process restart); the heartbeat is an hour old
+    const prog = (await data(await get(`/api/brownfield/${OPP}/eval-draft-runs/${run.id}`))).data;
+    expect(prog.run.status).toBe("interrupted");
+    expect(prog.run.pause_reason).toBe("heartbeat_stale");
+    expect((await get(`/api/brownfield/${ulid()}/eval-draft-runs/${run.id}`)).status).toBe(404);
+    const resumed = await post(`/api/brownfield/${OPP}/eval-draft-runs/${run.id}/resume`, {});
+    expect(resumed.status).toBe(202);
+    await settle(run.id);
+    expect(runOf(run.id).status).toBe("completed");
+  });
+
+  test("cancel: stops an active run, keeps written versions, leaves remaining items pending; a finished run cannot be cancelled", async () => {
+    const { run } = repo.createRun(db, {
+      opportunityId: OPP,
+      categories: "both",
+      targetIds: [T.A, T.B],
+      webEvidence: false,
+      forceRefresh: false,
+      startedBy: ANALYST,
+      startedVia: "ui",
+      now: NOW,
+    });
+    const res = await post(`/api/brownfield/${OPP}/eval-draft-runs/${run.id}/cancel`, {});
+    expect(res.status).toBe(200);
+    expect(runOf(run.id).status).toBe("cancelled");
+    expect(repo.listRunItems(db, run.id).every((i) => i.state === "pending")).toBe(true);
+    expect(auditActions().some((x) => x.action === "target_eval.bulk_run.cancel")).toBe(true);
+    expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${run.id}/cancel`, {})).status).toBe(409);
+  });
+
+  test("an unconfigured DART key fails the item with dart_not_configured instead of calling out", async () => {
+    dartConfigured = false;
+    const id = await startAndSettle({});
+    dartConfigured = true;
+    expect(itemOf(id, "A").state).toBe("failed");
+    expect(itemOf(id, "A").error_message).toBe("dart_not_configured");
+  });
+});
+
+describe("T25 — cache content isolation", () => {
+  test("the three cache tables have no opportunity, user, candidate or verdict column", () => {
+    for (const t of ["dart_disclosure", "dart_business_report_extract", "dart_corp_sync_state"]) {
+      const cols = (db.query(`PRAGMA table_info(${t})`).all() as Array<{ name: string }>).map((x) => x.name);
+      for (const banned of [
+        "opportunity_id",
+        "user_id",
+        "created_by",
+        "brownfield_target_id",
+        "status_verdict",
+        "verdict",
+      ]) {
+        expect(cols).not.toContain(banned);
+      }
+    }
+  });
+  test("no route or MCP tool reads the cache tables (route-table scan)", () => {
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir)) {
+        const full = join(dir, e);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (
+          /\.(ts|tsx)$/.test(e) &&
+          /dart_disclosure|dart_business_report_extract|dart_corp_sync_state/.test(readFileSync(full, "utf8"))
+        )
+          hits.push(full);
+      }
+    };
+    walk(join(ROOT, "app/web-next/app/api"));
+    walk(join(ROOT, "mcp"));
+    expect(hits).toEqual([]);
+  });
+  test("deleting a candidate leaves the cache rows intact and cascades its versions and run items", () => {
+    const disclosures = (db.query("SELECT COUNT(*) n FROM dart_disclosure").get() as { n: number }).n;
+    expect(disclosures).toBeGreaterThan(0);
+    db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [T.B]);
+    db.run("DELETE FROM brownfield_target WHERE id = ?", [T.B]);
+    expect((db.query("SELECT COUNT(*) n FROM dart_disclosure").get() as { n: number }).n).toBe(disclosures);
+    expect(
+      (
+        db.query("SELECT COUNT(*) n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(T.B) as {
+          n: number;
+        }
+      ).n,
+    ).toBe(0);
+    expect(cache.getCorpSyncState(db, CORP_B)).not.toBeNull();
+  });
+});
+
+describe("security review fixes", () => {
+  const firstTechItem = () => {
+    const v = latest("A", "technical")!;
+    return { v, id: (JSON.parse(v.payload).items[0] as { criterion_id: string }).criterion_id };
+  };
+  const put = (crit: string, body: unknown) =>
+    req(`/api/brownfield/${OPP}/targets/${T.A}/eval-state/${crit}`, {
+      method: "PUT",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify(body),
+    });
+
+  test("1: confirmed_from_version_id is human-only and validated (candidate, category, criterion in the payload)", async () => {
+    const { v, id } = firstTechItem();
+    const finId = critIds("financial")[0].id;
+    expect((await put(finId, { status: "pass", confirmed_from_version_id: v.id })).status).toBe(400); // wrong category
+    expect(
+      (await put(id, { status: "pass", confirmed_from_version_id: latest("B", "technical")?.id ?? "x" })).status,
+    ).toBe(400); // other candidate
+    const port = new InProcessRestPort({
+      userId: ANALYST,
+      role: "analyst",
+      scopes: ["read", "write", "propose"],
+      mustChangePassword: false,
+      tokenId: "t",
+      clientId: "c",
+    });
+    const agent = await port.put(`/api/brownfield/${OPP}/targets/${T.A}/eval-state/${id}`, {
+      status: "pass",
+      confirmed_from_version_id: v.id,
+    });
+    expect(agent.error?.code).toBe("human_only");
+    expect(
+      db
+        .query(
+          "SELECT 1 FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=? AND confirmed_from_version_id IS NOT NULL",
+        )
+        .get(T.A, id),
+    ).toBeNull();
+    const ok = await put(id, { status: "pass", confirmed_from_version_id: v.id });
+    expect(ok.status).toBe(200);
+    expect(
+      auditActions()
+        .filter((x) => x.action === "target_eval.edit_from_version")
+        .at(-1)?.target,
+    ).toContain(`version=${v.id}:via=ui`);
+  });
+
+  test("2: a verdict backed only by a disclosure title or the profile stays unverified", async () => {
+    addCustomCriterion(OPP, "technical", "인용 게이트 항목", null, ANALYST);
+    llmMode = "disclosure_only";
+    const id = await startAndSettle({ categories: "technical" });
+    llmMode = "ok";
+    expect(itemOf(id, "A").technical_outcome).toBe("versioned");
+    expect(
+      (JSON.parse(latest("A", "technical")!.payload).items as any[]).every((i) => i.proposed_status === null),
+    ).toBe(true);
+  });
+
+  test("3: a promoted opportunity refuses start, resume and confirm with 409 already_promoted", async () => {
+    const v = latest("A", "technical")!;
+    db.run("PRAGMA foreign_keys = OFF");
+    db.run("UPDATE opportunity SET project_id = 'p-promoted' WHERE id = ?", [OPP]);
+    try {
+      const start = await startRoute({});
+      expect(start.status).toBe(409);
+      expect((await data(start)).error.code).toBe("already_promoted");
+      expect((await post(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions/${v.id}/confirm`, {})).status).toBe(
+        409,
+      );
+      const r = repo.listRunItems(db, run1).length ? run1 : run1;
+      expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${r}/resume`, {})).status).toBe(409);
+      expect((await get(`/api/brownfield/${OPP}/eval-draft-runs/latest`)).status).toBe(200);
+    } finally {
+      db.run("UPDATE opportunity SET project_id = NULL WHERE id = ?", [OPP]);
+      db.run("PRAGMA foreign_keys = ON");
+    }
+  });
+
+  test("4: a cancelled engine still finishing blocks a new start; per-user cooldown applies", async () => {
+    addCustomCriterion(OPP, "technical", "취소 루프 항목", null, ANALYST);
+    let release: () => void = () => {};
+    gate = new Promise<void>((r) => (release = r));
+    const res = await startRoute({ categories: "technical" });
+    const runId = (await data(res)).data.run_id as string;
+    for (let i = 0; i < 300 && !bulk.isEngineActive(runId); i++) await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 50));
+    expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/cancel`, {})).status).toBe(200);
+    const again = await startRoute({ categories: "technical" });
+    expect(again.status).toBe(409);
+    const body = await data(again);
+    expect(body.error.code).toBe("engine_active");
+    expect(body.error.details.run_id).toBe(runId);
+    release();
+    gate = null;
+    await settle(runId);
+    bulk.setStartCooldownForTests(60_000);
+    bulk.noteRunStart(ANALYST);
+    const cool = await startRoute({});
+    expect(cool.status).toBe(429);
+    bulk.setStartCooldownForTests(0);
+  });
+
+  test("4: unchanged inputs cost no web call, even with web_evidence on", async () => {
+    await startAndSettle({ categories: "technical", web_evidence: true }); // establishes the version
+    c.web.length = 0;
+    const id = await startAndSettle({ categories: "technical", web_evidence: true });
+    expect(itemOf(id, "A").technical_outcome).toBe("unchanged");
+    expect(c.web).toEqual([]);
+  });
+
+  test("5: stored errors are fixed codes and secrets are redacted", () => {
+    expect(
+      bulk.redactSecrets("GET https://opendart.fss.or.kr/api/list.json?crtfc_key=SECRET123&corp_code=1 failed"),
+    ).not.toContain("SECRET123");
+    expect(bulk.errorCodeOf(new Error("llm_failed"))).toBe("llm_error");
+    expect(bulk.errorCodeOf(new Error("llm_unparseable"))).toBe("parse_error");
+    expect(bulk.errorCodeOf(new Error("DART HTTP 503 https://opendart.fss.or.kr/x?crtfc_key=K"))).toBe("dart_error");
+    expect(bulk.errorCodeOf(new Error("whatever"))).toBe("unknown");
+    const stored = (
+      db
+        .query("SELECT error_message e FROM brownfield_eval_draft_run_item WHERE error_message IS NOT NULL")
+        .all() as Array<{ e: string }>
+    ).map((r) => r.e);
+    for (const e of stored)
+      expect(e).toMatch(
+        /^(technical|financial): (dart_error|llm_error|parse_error|db_error|unknown)|^(dart_not_configured|excluded|llm_unconfigured)$|^.*(dart_error|llm_error)/,
+      );
+  });
+});
