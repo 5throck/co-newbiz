@@ -12,7 +12,13 @@ import type { TargetRow, ChecklistItem, PrecheckDraftItem } from "./types.ts";
 // 재무·기술 평가와 역할을 분리). 판정 기록은 이 화면 "사전 검토" 섹션에서
 // 인라인으로 한다. 종합 점수는 참고로만 덧붙인다. 제외된 후보는 뺀다.
 // 프롬프트 비대화 방지로 최대 12개 후보만 담는다.
-export function buildEvalBriefMd(targets: TargetRow[], checklist: ChecklistItem[], overrides: Record<string, Record<string, PrecheckDraftItem>> | undefined, t: TranslatorFn): string | undefined {
+export function buildEvalBriefMd(
+  targets: TargetRow[],
+  checklist: ChecklistItem[],
+  overrides: Record<string, Record<string, PrecheckDraftItem>> | undefined,
+  t: TranslatorFn,
+): string | undefined {
+  const tr = t;
   const candidates = targets.filter((t) => t.status !== "excluded").slice(0, 12);
   if (candidates.length === 0) return undefined;
   const ids = checklist.map((it) => it.id);
@@ -22,7 +28,9 @@ export function buildEvalBriefMd(targets: TargetRow[], checklist: ChecklistItem[
   const agenda = [
     t("stages.s67.evalBrief.dealsShortlistFinalRecommendationTarget"),
     "",
-    t("stages.s67.evalBrief.targetCandidatesP1", { p1: candidates.map((t) => `${t.company_name}${t.rank ? ` (rank ${t.rank})` : ""}`).join(", ") }),
+    t("stages.s67.evalBrief.targetCandidatesP1", {
+      p1: candidates.map((t) => `${t.company_name}${t.rank ? ` (rank ${t.rank})` : ""}`).join(", "),
+    }),
     t("stages.s67.evalBrief.requestedDecisionBasedOnEach"),
     t("stages.s67.evalBrief.deliberatesAndProposesOneOf"),
   ].join("\n");
@@ -41,8 +49,13 @@ export function buildEvalBriefMd(targets: TargetRow[], checklist: ChecklistItem[
     }
     const verdicts = ids.map((id) => SCREENING_VERDICT_KO[normalizeVerdict(states[id])]);
     const assessed = ids.filter((id) => normalizeVerdict(states[id]) !== "pending").length;
-    return `| ${t.company_name} | ${verdicts.join(" | ")} | ${assessed}/${ids.length} | ${t.eval_summary?.combined ?? "—"} |`;
+    // ADR-0200 §6: the committee must never read an AI-filled score as a human one.
+    const unreviewed = t.eval_summary?.unreviewed_total ?? 0;
+    const unreviewedSuffix = unreviewed > 0 ? ` ${tr("stages.s67.evalBrief.unreviewedSuffix", { n: unreviewed })}` : "";
+    return `| ${t.company_name} | ${verdicts.join(" | ")} | ${assessed}/${ids.length} | ${t.eval_summary?.combined ?? "—"}${unreviewedSuffix} |`;
   });
-  const legend = t("stages.s67.evalBrief.judgementScaleMetClearEvidence") + (hasProposed ? t("stages.s67.evalBrief.someJudgementsAreCommitteeProposal") : "");
+  const legend =
+    t("stages.s67.evalBrief.judgementScaleMetClearEvidence") +
+    (hasProposed ? t("stages.s67.evalBrief.someJudgementsAreCommitteeProposal") : "");
   return [agenda, "", header, sep, ...rows, "", legend].join("\n").slice(0, 4000);
 }

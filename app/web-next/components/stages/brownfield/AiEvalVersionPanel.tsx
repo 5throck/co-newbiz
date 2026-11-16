@@ -1,33 +1,24 @@
 "use client";
 
-// Expandable per-candidate version comparison (ADR-0199 §10): criteria rows x last 5 versions, with the per-candidate
-// confirm-from-version action. Confirmation is human-only (the route denies non-human callers) and per candidate:
-// there is deliberately no longlist-wide confirm-all.
+// Expandable per-candidate version history (ADR-0199 §10, read-only since ADR-0200): criteria rows x last 5 versions.
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, api } from "../../../lib/api.ts";
-import { AiEvalConfirmBody, AiEvalModal } from "./AiEvalDialogs.tsx";
+import { api } from "../../../lib/api.ts";
 import { rubricChanged, rubricLine } from "./aiEvalRules.ts";
-import {
-  KNOWN_CALL_ERRORS,
-  buildComparison,
-  buildConfirmPlan,
-  type CompareCell,
-  type DraftCategory,
-  type VersionRow,
-} from "./aiEvalTypes.ts";
+import { buildComparison, type CompareCell, type DraftCategory, type VersionRow } from "./aiEvalTypes.ts";
 
 const CATEGORIES: DraftCategory[] = ["financial", "technical"];
 
-function Cell({ cell }: { cell: CompareCell }) {
+function Cell({ cell, category }: { cell: CompareCell; category: DraftCategory }) {
   const t = useTranslations("stages.s67.aiEval");
   if (cell.kind === "absent") return <span className="text-[color:var(--muted-fg)]">—</span>;
   const text =
     cell.kind === "unverified"
       ? t("unverified")
       : cell.kind === "human"
-        ? `${t("humanJudged")} · ${t(`verdict.${cell.status}`)}`
-        : t(`verdict.${cell.status}`);
+        ? `${t("originHuman")} · ${t(`verdict.${cell.status}`)}`
+        : // a proposal in a version is rule-derived for financial items and AI-derived for technical ones
+          `${t(category === "financial" ? "originRule" : "originAi")} · ${t(`verdict.${cell.status}`)}`;
   return (
     <span>
       {text}
@@ -59,18 +50,16 @@ export function VersionTable({ category, versions }: { category: DraftCategory; 
           {columns.map((v) => (
             <th key={v.id} scope="col">
               v{v.version_no}
-              {v.confirmed_count > 0 && (
-                <span className="block text-[length:var(--fs-caption)] font-normal">
-                  {t("confirmedBasis", { k: v.confirmed_count })}
-                </span>
-              )}
+              <span className="block text-[length:var(--fs-caption)] font-normal">
+                {t("appliedReviewed", { k: v.applied_count, r: v.reviewed_count })}
+              </span>
             </th>
           ))}
         </tr>
       </thead>
       <tbody>
         <tr>
-          <th scope="row">{t("provisionalScore")}</th>
+          <th scope="row">{t("versionScore")}</th>
           {scores.map((s) => (
             <td key={s.version_no} className="tabular-nums">
               {s.score ?? "—"}
@@ -104,7 +93,7 @@ export function VersionTable({ category, versions }: { category: DraftCategory; 
               const ruleChanged = !!line && !!older?.payload && rubricChanged(snap(columns[i]), snap(older));
               return (
                 <td key={columns[i].id}>
-                  <Cell cell={c} />
+                  <Cell cell={c} category={category} />
                   {line && (
                     <span
                       className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
@@ -129,25 +118,13 @@ export function VersionTable({ category, versions }: { category: DraftCategory; 
   );
 }
 
-export function AiEvalVersionPanel({
-  oppId,
-  targetId,
-  companyName,
-  canAct,
-  onConfirmed,
-}: {
-  oppId: string;
-  targetId: string;
-  companyName: string;
-  canAct: boolean;
-  onConfirmed: () => void;
-}) {
+/** Read-only audit history of one candidate's AI evaluation versions (ADR-0200 §7.1): per-version score, coverage,
+ * per-item verdict changes with their origin, and the thresholds used. There is no confirm control: verdicts are
+ * applied directly and a person reviews them on the candidate detail screen (항목 검토). */
+export function AiEvalVersionPanel({ oppId, targetId }: { oppId: string; targetId: string }) {
   const t = useTranslations("stages.s67.aiEval");
   const [byCat, setByCat] = useState<Record<DraftCategory, VersionRow[]> | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<VersionRow | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -165,32 +142,6 @@ export function AiEvalVersionPanel({
     void load();
   }, [load]);
 
-  async function confirm(v: VersionRow) {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const r = await api.post<{ confirmed: number; skipped: unknown[] }>(
-        `/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/eval-draft-versions/${encodeURIComponent(v.id)}/confirm`,
-        {},
-      );
-      setNotice(t("confirmResult", { confirmed: r.data.confirmed, skipped: r.data.skipped.length }));
-      setConfirming(null);
-      await load();
-      onConfirmed();
-    } catch (e) {
-      setConfirming(null);
-      setNotice(
-        e instanceof ApiError && (KNOWN_CALL_ERRORS as readonly string[]).includes(e.code)
-          ? t(`callErrors.${e.code}`)
-          : e instanceof Error
-            ? e.message
-            : t("callErrors.unknown"),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (loadError)
     return (
       <p role="alert" className="text-[color:var(--red-fg)] m-0">
@@ -198,51 +149,16 @@ export function AiEvalVersionPanel({
       </p>
     );
   if (!byCat) return <p className="m-0 text-[color:var(--muted-fg)]">{t("loading")}</p>;
-  const none = CATEGORIES.every((c) => byCat[c].length === 0);
-  if (none) return <p className="m-0 text-[color:var(--muted-fg)]">{t("noVersions")}</p>;
-  const plan = confirming?.payload ? buildConfirmPlan(confirming.payload) : null;
+  if (CATEGORIES.every((c) => byCat[c].length === 0))
+    return <p className="m-0 text-[color:var(--muted-fg)]">{t("noVersions")}</p>;
   return (
     <div className="flex flex-col gap-3">
-      {CATEGORIES.map((c) => {
-        const versions = byCat[c];
-        const latest = versions[0];
-        if (!latest) return null;
-        const pending = latest.payload ? buildConfirmPlan(latest.payload).write.length : 0;
-        return (
+      {CATEGORIES.map((c) =>
+        byCat[c].length === 0 ? null : (
           <section key={c} aria-label={t(`category.${c}`)}>
-            <VersionTable category={c} versions={versions} />
-            {canAct && (
-              <button
-                type="button"
-                className="btn-ghost btn-sm mt-1"
-                disabled={busy || pending === 0}
-                onClick={() => setConfirming(latest)}
-              >
-                {t("confirmVersion", { n: latest.version_no, k: pending })}
-              </button>
-            )}
+            <VersionTable category={c} versions={byCat[c]} />
           </section>
-        );
-      })}
-      {notice && (
-        <p role="status" className="m-0 text-[length:var(--fs-caption)]">
-          {notice}
-        </p>
-      )}
-      {confirming && plan && (
-        <AiEvalModal
-          title={t("confirmTitle", { company: companyName, n: confirming.version_no })}
-          onClose={() => setConfirming(null)}
-        >
-          <AiEvalConfirmBody
-            versionNo={confirming.version_no}
-            plan={plan}
-            statusLabel={(s) => t(`verdict.${s}`)}
-            busy={busy}
-            onSubmit={() => void confirm(confirming)}
-            onCancel={() => setConfirming(null)}
-          />
-        </AiEvalModal>
+        ),
       )}
     </div>
   );

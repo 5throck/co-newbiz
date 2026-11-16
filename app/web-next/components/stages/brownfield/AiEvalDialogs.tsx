@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
-import type { ConfirmPlan } from "./aiEvalTypes.ts";
 import type { StartOptions } from "./useAiEval.ts";
 
 /** Dialog panel on the shared `.modal-backdrop` pattern: focus moves in, Tab cycles, Escape closes, focus returns.
@@ -114,7 +113,7 @@ export function AiEvalStartForm({
         {summary ??
           t("startSummary", { candidates: stats.candidates, dart: stats.dartEligible, calls: stats.estimatedCalls })}
       </p>
-      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("humanConfirms")}</p>
+      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("appliesDirectly")}</p>
       <fieldset className="m-0 p-0 border-0">
         <legend className="text-[length:var(--fs-caption)] font-semibold">{t("categories")}</legend>
         <div className="flex gap-3 flex-wrap mt-1">
@@ -167,73 +166,5 @@ export function AiEvalStartForm({
         </button>
       </div>
     </form>
-  );
-}
-
-function ItemList({
-  heading,
-  items,
-}: {
-  heading: string;
-  items: Array<{ criterion_id: string; label: string; suffix?: string }>;
-}) {
-  return (
-    <div>
-      <h3 className="m-0 text-[length:var(--fs-body)]">
-        {heading} ({items.length})
-      </h3>
-      {items.length > 0 && (
-        <ul className="m-0 mt-1 pl-5 text-[length:var(--fs-caption)]">
-          {items.map((i) => (
-            <li key={i.criterion_id}>
-              {i.label}
-              {i.suffix ? ` — ${i.suffix}` : ""}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-export function AiEvalConfirmBody({
-  versionNo,
-  plan,
-  statusLabel,
-  busy,
-  onSubmit,
-  onCancel,
-}: {
-  versionNo: number;
-  plan: ConfirmPlan;
-  statusLabel: (status: string) => string;
-  busy: boolean;
-  onSubmit: () => void;
-  onCancel: () => void;
-}) {
-  const t = useTranslations("stages.s67.aiEval");
-  const tc = useTranslations("common");
-  return (
-    <div className="flex flex-col gap-3 mt-2">
-      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-        {t("confirmIntro", { n: versionNo })} {t("humanConfirms")}
-      </p>
-      <ItemList heading={t("willWrite")} items={plan.write.map((w) => ({ ...w, suffix: statusLabel(w.status) }))} />
-      <ItemList heading={t("skippedHuman")} items={plan.skippedHuman} />
-      <ItemList heading={t("skippedUnverified")} items={plan.skippedUnverified} />
-      <div className="flex justify-end gap-2">
-        <button type="button" className="btn-ghost btn-sm" onClick={onCancel}>
-          {tc("cancel")}
-        </button>
-        <button
-          type="button"
-          className="btn-premium btn-sm"
-          disabled={busy || plan.write.length === 0}
-          onClick={onSubmit}
-        >
-          {t("confirmSubmit", { n: plan.write.length })}
-        </button>
-      </div>
-    </div>
   );
 }

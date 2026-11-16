@@ -7,8 +7,9 @@
 // cheaper than the original.
 //
 // Hard rules enforced here:
-//   - a draft is a PROPOSAL stored as an immutable version; nothing here writes brownfield_target_eval_state
-//     (only the human-only confirm route does, brownfield-eval-confirm.ts);
+//   - a draft is an immutable version; its proposals are applied DIRECTLY as item verdicts carrying their origin
+//     (financial `auto_rule`, technical `ai_draft`) inside the version's own transaction (ADR-0200,
+//     applyVersionToEvalState) — never over a human verdict; a person reviews them per item on the detail screen;
 //   - a version is inserted only when a category step completes (replace-on-success); unchanged inputs write no
 //     version and make no LLM call (commitCategoryDraft);
 //   - the engine never resumes itself: a paused/interrupted run restarts only through the resume route, called by a
@@ -66,12 +67,16 @@ import {
 import { deriveFinancialAnalysis } from "./company-financials.ts";
 import {
   computeEvalScore,
+  humanVerdictHashComponent,
+  isEligibleForDraft,
+  isHumanJudged,
   targetEvalStates,
   type EvalCategory,
   type EvalCriterion,
   type EvalStateRow,
   type EvalStatus,
 } from "./brownfield-eval-criteria.ts";
+import { applyVersionToEvalState } from "./brownfield-eval-apply.ts";
 import { draftFinancialVerdict, isFinancialDataRef } from "./brownfield-financial-rubric.ts";
 import {
   disclosureEvidenceBlock,
@@ -269,7 +274,7 @@ function criteriaSnapshot(items: EvalItem[]): EvalDraftPayload["criteria_snapsho
 
 function humanItems(items: EvalItem[]): EvalDraftPayload["human_items"] {
   return items
-    .filter((c) => c.state && c.state.status !== "pending")
+    .filter((c) => isHumanJudged(c.state))
     .map((c) => ({
       criterion_id: c.id,
       status: (c.state as EvalStateRow).status,
@@ -286,7 +291,7 @@ function provisionalScore(
 ): EvalDraftPayload["provisional_score"] {
   const scored = computeEvalScore(
     items.map((c) => {
-      const human = c.state && c.state.status !== "pending" ? c.state.status : null;
+      const human = isHumanJudged(c.state) ? (c.state as EvalStateRow).status : null;
       const status: EvalStatus = human ?? proposals.get(c.id) ?? "pending";
       return { category, weight: c.weight, state: { status } };
     }),
@@ -432,11 +437,9 @@ function needsOf(c: Ctx, item: DraftRunItemRow, evalItems: EvalItem[]): Needs {
       it.category === "financial" &&
       it.source === "builtin" &&
       isFinancialDataRef(it.data_ref) &&
-      (it.state?.status ?? "pending") === "pending",
+      isEligibleForDraft(it.state),
   );
-  const techPending = evalItems.filter(
-    (it) => it.category === "technical" && (it.state?.status ?? "pending") === "pending",
-  );
+  const techPending = evalItems.filter((it) => it.category === "technical" && isEligibleForDraft(it.state));
   return {
     financial: c.categories.includes("financial") && item.financial_outcome === null && finPending.length > 0,
     technical: c.categories.includes("technical") && item.technical_outcome === null && techPending.length > 0,
@@ -640,7 +643,7 @@ async function financialDraft(
       .map((r) => [r.fiscal_year, r.account_name, r.value, r.revision_no])
       .sort((a, b) => (a[0] as number) - (b[0] as number) || String(a[1]).localeCompare(String(b[1]))),
     criteria: criteriaSnapshot(catItems),
-    human: humanItems(catItems).map((h) => [h.criterion_id, h.status]),
+    human: humanVerdictHashComponent(catItems),
   });
   const now = deps.now();
   const result = await commitCategoryDraft(db, {
@@ -649,6 +652,7 @@ async function financialDraft(
     inputHash,
     createdBy: c.actor,
     now,
+    apply: (version) => applyVersionToEvalState(db, { version, actor: c.actor, now: deps.now(), runId: c.runId }),
     produce: (): DraftVersionContent => {
       const analysis = deriveFinancialAnalysis({
         corpCode: facts.company.dart_corp_code ?? "",
@@ -782,7 +786,7 @@ async function technicalDraft(
     v: 1,
     category: "technical",
     criteria: criteriaSnapshot(catItems),
-    human: humanItems(catItems).map((h) => [h.criterion_id, h.status]),
+    human: humanVerdictHashComponent(catItems),
     disclosures: evidenceDisclosures.map((d) => d.rcept_no),
     business_report: {
       rcept_no: report?.rcept_no ?? null,
@@ -805,6 +809,7 @@ async function technicalDraft(
     inputHash,
     createdBy: c.actor,
     now,
+    apply: (version) => applyVersionToEvalState(db, { version, actor: c.actor, now: deps.now(), runId: c.runId }),
     produce: async (): Promise<DraftVersionContent> => {
       if (c.webEvidence && deps.isWebConfigured()) {
         for (const it of pending) {

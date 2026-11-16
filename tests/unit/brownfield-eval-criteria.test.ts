@@ -9,8 +9,15 @@ import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import {
-  listOrSeedCriteria, addCustomCriterion, deleteCriterion, upsertEvalState, targetEvalStates, summarizeEvalStates,
-  computeEvalScore, updateCriterionWeight, combinedEvalScore,
+  listOrSeedCriteria,
+  addCustomCriterion,
+  deleteCriterion,
+  recordEvalVerdict,
+  targetEvalStates,
+  summarizeEvalStates,
+  computeEvalScore,
+  updateCriterionWeight,
+  combinedEvalScore,
 } from "../../app/web-next/lib/brownfield-eval-criteria.ts";
 
 const TEST_DB_PATH = "db/data/test-brownfield-eval-criteria.sqlite";
@@ -24,7 +31,20 @@ function insertOpportunity(gapRows: Array<{ capability: string }> | null = null)
   const id = ulid();
   db.run(
     "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at, capability_gap_json) VALUES (?,?,?,?,?,?,?)",
-    [id, `opp-${id.slice(-6)}`, "테스트 산업", "selected", U1, NOW, gapRows ? JSON.stringify({ rows: gapRows.map((g, i) => ({ id: `gap-${i}`, capability: g.capability })), updatedAt: NOW }) : null],
+    [
+      id,
+      `opp-${id.slice(-6)}`,
+      "테스트 산업",
+      "selected",
+      U1,
+      NOW,
+      gapRows
+        ? JSON.stringify({
+            rows: gapRows.map((g, i) => ({ id: `gap-${i}`, capability: g.capability })),
+            updatedAt: NOW,
+          })
+        : null,
+    ],
   );
   return id;
 }
@@ -53,6 +73,17 @@ afterAll(() => {
     if (existsSync(p)) rmSync(p);
   }
 });
+
+const upsertEvalState = (
+  targetId: string,
+  criterionId: string,
+  o: {
+    status: "pending" | "pass" | "partial" | "fail" | "na" | "waived";
+    note: string | null;
+    evidence_ref: string | null;
+    assessedBy: string;
+  },
+) => recordEvalVerdict(targetId, criterionId, { ...o, source: "human", sourceVersionId: null });
 
 describe("listOrSeedCriteria", () => {
   test("seeds 4 builtin financial items and one technical item per S3 gap row", () => {
@@ -182,26 +213,35 @@ describe("computeEvalScore", () => {
   });
 });
 
+// ADR-0200 §5.1 fields; combinedEvalScore reads only `score`.
+const NO_SPLIT = { byWeight: { human: 0, auto_rule: 0, ai_draft: 0 }, unreviewed: 0 };
+
 describe("combinedEvalScore", () => {
   test("averages financial and technical when both scored", () => {
-    expect(combinedEvalScore({
-      financial: { score: 80, scoredWeight: 10, totalWeight: 10, excludedWeight: 0 },
-      technical: { score: 40, scoredWeight: 10, totalWeight: 10, excludedWeight: 0 },
-    })).toBe(60);
+    expect(
+      combinedEvalScore({
+        financial: { score: 80, scoredWeight: 10, totalWeight: 10, excludedWeight: 0, ...NO_SPLIT },
+        technical: { score: 40, scoredWeight: 10, totalWeight: 10, excludedWeight: 0, ...NO_SPLIT },
+      }),
+    ).toBe(60);
   });
 
   test("falls back to whichever category is scored when the other is null", () => {
-    expect(combinedEvalScore({
-      financial: { score: 70, scoredWeight: 10, totalWeight: 10, excludedWeight: 0 },
-      technical: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0 },
-    })).toBe(70);
+    expect(
+      combinedEvalScore({
+        financial: { score: 70, scoredWeight: 10, totalWeight: 10, excludedWeight: 0, ...NO_SPLIT },
+        technical: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0, ...NO_SPLIT },
+      }),
+    ).toBe(70);
   });
 
   test("returns null when neither category has a score yet", () => {
-    expect(combinedEvalScore({
-      financial: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0 },
-      technical: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0 },
-    })).toBeNull();
+    expect(
+      combinedEvalScore({
+        financial: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0, ...NO_SPLIT },
+        technical: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0, ...NO_SPLIT },
+      }),
+    ).toBeNull();
   });
 });
 
@@ -221,7 +261,9 @@ describe("targetEvalStates / upsertEvalState", () => {
 
     // Re-upsert on the same (target, criterion) pair updates, not duplicates.
     upsertEvalState(targetId, financial.id, { status: "fail", note: null, evidence_ref: null, assessedBy: U1 });
-    const row = db.query("SELECT COUNT(*) c FROM brownfield_target_eval_state WHERE brownfield_target_id = ? AND criterion_id = ?").get(targetId, financial.id) as { c: number };
+    const row = db
+      .query("SELECT COUNT(*) c FROM brownfield_target_eval_state WHERE brownfield_target_id = ? AND criterion_id = ?")
+      .get(targetId, financial.id) as { c: number };
     expect(row.c).toBe(1);
   });
 });

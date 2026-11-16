@@ -7,7 +7,7 @@
  * Covers T1, T3-T11, T13-T15, T21, T23, T25 (route-table scan) and the A5/A7/A8 additions.
  */
 import { test, expect, describe, beforeAll, afterAll } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -351,11 +351,9 @@ describe("A1 start + engine happy path (T7, T13, T4, T11, T12)", () => {
     expect(chips.find((t) => t.id === T.N).eval_draft.run_item.state).toBe("skipped_not_dart");
     expect(chips.find((t) => t.id === T.A).eval_draft.financial.version_no).toBe(1);
     expect(chips.find((t) => t.id === T.A).eval_draft.technical.evidence_grade).toBe("C");
-    // Per-category counts are exposed additively so a score-less draft can show "unverified n/total".
+    // ADR-0200 §8 A8: eval_draft is version history + run state only — no provisional score or draft counts.
     const tech = chips.find((t) => t.id === T.A).eval_draft.technical;
-    const techV = latest("A", "technical")!;
-    expect(tech.proposed_count).toBe(techV.proposed_count);
-    expect(tech.unverified_count).toBe(techV.unverified_count);
+    expect(Object.keys(tech).sort()).toEqual(["checked_at", "evidence_grade", "stale", "version_no"]);
   });
 
   test("T12: a verdict whose citation is not in the held evidence is downgraded to unverified; valid quotes stay", () => {
@@ -391,9 +389,37 @@ describe("A1 start + engine happy path (T7, T13, T4, T11, T12)", () => {
     expect(strip(a)).toBe(strip(b));
   });
 
-  test("T11: provisional drafts never touch eval state, eval_summary or completion", async () => {
-    expect(evalStateCount()).toBe(0);
-    expect((await targetsList()).map((t) => t.eval_summary)).toEqual(summaryBefore as any);
+  test("TA2/TA3/TA11: AI results are applied directly with their origin (financial auto_rule, technical ai_draft)", async () => {
+    const rows = db
+      .query(
+        `SELECT s.brownfield_target_id t, c.category, s.status, s.verdict_source src, s.source_version_id v, s.evidence_ref e, s.assessed_by
+           FROM brownfield_target_eval_state s JOIN brownfield_eval_criterion c ON c.id = s.criterion_id`,
+      )
+      .all() as any[];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) {
+      expect(r.assessed_by).toBe(ANALYST); // the run actor is accountable; the origin says it was not a person's judgement
+      expect(r.src).toBe(r.category === "financial" ? "auto_rule" : "ai_draft");
+      const key = r.t === T.A ? "A" : "B";
+      expect(r.v).toBe(latest(key, r.category)!.id); // TA3: points at this candidate's version of the category
+      expect(r.status).not.toBe("pending");
+    }
+    expect(rows.some((r) => r.category === "financial" && r.src === "auto_rule")).toBe(true);
+    const list = await targetsList();
+    const a = list.find((t) => t.id === T.A).eval_summary;
+    expect(a.unreviewed_total).toBe(a.financial.unreviewed + a.technical.unreviewed);
+    expect(a.unreviewed_total).toBeGreaterThan(0);
+    expect(a.financial.judged_by_source.auto_rule).toBe(a.financial.scoredWeight);
+    expect(a.financial.judged_by_source.human).toBe(0);
+    expect(a.financial.score).not.toBeNull(); // the ranking fills at once
+    // the run item records what was applied (§4.2)
+    const sum = repo.parseApplySummary(itemOf(run1, "A").apply_summary);
+    expect(sum.financial?.applied).toBeGreaterThan(0);
+    expect(sum.financial?.kept_human).toBe(0);
+    // run audit: one apply event per category and candidate (§4.4)
+    expect(
+      auditActions().filter((x) => x.action === "target_eval.ai_verdict.apply" && x.target.includes(`:${T.A}:`)).length,
+    ).toBe(2);
   });
 
   test("T14: audit events carry the documented target shapes, attributed to the caller", () => {
@@ -447,7 +473,13 @@ describe("T23 + T21 — unchanged evidence, warm cache, force_refresh", () => {
     expect(actions[0].target).toBe(`${OPP}:${T.A}:financial:v1:run=${run2}`);
     // checked_at advanced without mutating the immutable version
     const chip = (await targetsList()).find((t) => t.id === T.A).eval_draft.financial;
-    expect(chip.checked_at > chip.created_at).toBe(true);
+    expect(chip.checked_at > latest("A", "financial")!.created_at).toBe(true);
+    // TA7: the unchanged path re-applies the latest version idempotently (same statuses, one apply audit per category)
+    expect(
+      auditActions().filter((x) => x.action === "target_eval.ai_verdict.apply" && x.target.includes(`run=${run2}`))
+        .length,
+    ).toBe(4);
+    expect(repo.parseApplySummary(itemOf(run2, "A").apply_summary).financial?.kept_human).toBe(0);
     expect(chip.stale).toBe(false);
   });
 
@@ -544,12 +576,14 @@ describe("T3 — replace-on-success", () => {
 });
 
 describe("A5 versions list and A7 PUT link", () => {
-  test("lists versions newest first with confirmed_count; include=payload returns payloads; bad params are 400", async () => {
+  test("lists versions newest first with applied_count / reviewed_count; include=payload returns payloads; bad params are 400", async () => {
     const res = await data(await get(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions?category=technical`));
     const vs = res.data.versions as any[];
     expect(vs.length).toBeGreaterThanOrEqual(3);
     expect(vs[0].version_no).toBeGreaterThan(vs[1].version_no);
-    expect(vs[0]).toHaveProperty("confirmed_count", 0);
+    expect(vs[0]).toHaveProperty("applied_count");
+    expect(vs[0]).toHaveProperty("reviewed_count", 0);
+    expect(vs[0]).not.toHaveProperty("confirmed_count");
     expect(vs[0]).not.toHaveProperty("payload");
     const full = await data(
       await get(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions?category=technical&limit=1&include=payload`),
@@ -560,150 +594,228 @@ describe("A5 versions list and A7 PUT link", () => {
   });
 });
 
-describe("A6 confirm — human-only, never overwrites, attribution (T8, T9, T10)", () => {
-  const confirm = (targetKey: "A" | "B", versionId: string, body: unknown = {}, cookie = analystCookie) =>
-    post(`/api/brownfield/${OPP}/targets/${T[targetKey]}/eval-draft-versions/${versionId}/confirm`, body, cookie);
+describe("ADR-0200 origin, writer rules and the human boundary (TA2, TA4, TA12-TA15, TA18)", () => {
+  const MCP_PRINCIPAL = {
+    userId: ANALYST,
+    role: "analyst" as const,
+    scopes: ["read", "write", "propose"],
+    mustChangePassword: false,
+    tokenId: "t",
+    clientId: "c",
+  };
+  const port = () => new InProcessRestPort(MCP_PRINCIPAL);
+  const evalUrl = (k: "A" | "B" | "N", crit: string) => `/api/brownfield/${OPP}/targets/${T[k]}/eval-state/${crit}`;
+  const humanPut = (k: "A" | "B" | "N", crit: string, body: unknown) =>
+    req(evalUrl(k, crit), { method: "PUT", headers: { cookie: analystCookie }, body: JSON.stringify(body) });
+  const row = (k: "A" | "B" | "N", crit: string) =>
+    db
+      .query(
+        "SELECT status, note, evidence_ref, assessed_by, verdict_source src, source_version_id v FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
+      )
+      .get(T[k], crit) as any;
+  const proposedIds = (k: "A" | "B", cat: "financial" | "technical") =>
+    (JSON.parse(latest(k, cat)!.payload).items as any[]).filter((i) => i.proposed_status).map((i) => i.criterion_id);
 
-  test("T8: bearer-like/agent callers are refused at the in-process port and the route is registered human-only", async () => {
+  test("TA14: the confirm route A6 is gone — 404, no HUMAN_ONLY_ROUTES entry, no exclusion, no openapi path, no lib; the S7 draft route (Q7) too", async () => {
     const v = latest("A", "technical")!;
     const url = `/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions/${v.id}/confirm`;
-    expect(isHumanOnly("POST", url, {})).toBe(true);
-    expect(
-      HUMAN_ONLY_ROUTES.some(
-        (r) => r.pattern === "/api/brownfield/:oppId/targets/:targetId/eval-draft-versions/:versionId/confirm",
-      ),
-    ).toBe(true);
-    const port = new InProcessRestPort({
-      userId: ANALYST,
-      role: "analyst",
-      scopes: ["read", "write", "propose"],
-      mustChangePassword: false,
-      tokenId: "t",
-      clientId: "c",
-    });
-    const refused = await port.post(url, {});
-    expect(refused.error?.code).toBe("human_only");
-    const before = evalStateCount();
-    expect(evalStateCount()).toBe(before);
-    // a bearer-token request (no cookie session) gets 403 human_only as well
-    const bearer = await req(url, { method: "POST", headers: { authorization: "Bearer nope" }, body: "{}" });
-    expect([401, 403]).toContain(bearer.status);
-    expect((await confirm("A", v.id, {}, viewerCookie)).status).toBe(403);
+    expect((await post(url, {})).status).toBe(404);
+    expect(isHumanOnly("POST", url, {})).toBe(false);
+    expect(HUMAN_ONLY_ROUTES.some((r) => r.pattern.includes("/confirm") && r.pattern.includes("eval-draft"))).toBe(
+      false,
+    );
+    expect(readFileSync("scripts/co-newbiz/mcp-coverage.exclusions.yaml", "utf8")).not.toContain(
+      "eval-draft-version-confirm",
+    );
+    const openapi = readFileSync("docs/architecture/openapi.yaml", "utf8");
+    expect(openapi).not.toContain("eval-draft-versions/{versionId}/confirm");
+    expect(openapi).not.toContain("/targets/{targetId}/eval-draft:");
+    expect(existsSync("app/web-next/lib/brownfield-eval-confirm.ts")).toBe(false);
+    expect((await post(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft`, { category: "financial" })).status).toBe(
+      404,
+    );
   });
 
-  test("T9/T10: only pending proposed items are written, with attribution; unverified and human-judged items are skipped", async () => {
+  test("TA2/TA12/TA18: a human save of an unchanged AI verdict flips origin to human, keeps the version, note and evidence; the review audit says changed=0", async () => {
     const v = latest("B", "financial")!;
-    const p = JSON.parse(v.payload);
-    const proposedIds = p.items.filter((i: any) => i.proposed_status).map((i: any) => i.criterion_id);
-    expect(proposedIds.length).toBeGreaterThanOrEqual(2);
-    const humanId = proposedIds[0];
-    // a person judges one criterion between the snapshot and the confirm
-    const put = await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${humanId}`, {
-      method: "PUT",
-      headers: { cookie: analystCookie },
-      body: JSON.stringify({ status: "fail", note: "사람 판단" }),
+    const [first, second] = proposedIds("B", "financial");
+    const before = row("B", first);
+    expect(before).toMatchObject({ src: "auto_rule", v: v.id, assessed_by: ANALYST, evidence_ref: v.id });
+    // a bare `확인`: same status + the version it rests on; note / evidence_ref OMITTED
+    const ok = await humanPut("B", first, { status: before.status, source_version_id: v.id });
+    expect(ok.status).toBe(200);
+    const after = row("B", first);
+    expect(after).toMatchObject({
+      src: "human",
+      v: v.id,
+      status: before.status,
+      note: before.note,
+      evidence_ref: before.evidence_ref,
     });
-    expect(put.status).toBe(200);
-    const res = await data(await confirm("B", v.id));
-    expect(res.data.confirmed).toBe(proposedIds.length - 1);
-    expect(res.data.skipped).toContainEqual({ criterion_id: humanId, reason: "already_judged" });
-    const human = db
-      .query(
-        "SELECT status, note, confirmed_from_version_id f FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
-      )
-      .get(T.B, humanId) as any;
-    expect(human).toMatchObject({ status: "fail", note: "사람 판단", f: null }); // never overwritten
-    const other = proposedIds[1];
-    const row = db
-      .query(
-        "SELECT status, assessed_by, evidence_ref, confirmed_from_version_id f, note FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
-      )
-      .get(T.B, other) as any;
-    expect(row).toMatchObject({ assessed_by: ANALYST, evidence_ref: v.id, f: v.id });
-    expect(row.status).toBe(p.items.find((i: any) => i.criterion_id === other).proposed_status);
-    expect(row.note).toContain("DART");
-    expect(res.data.scores.financial).toBeDefined();
-    const counts = await data(
-      await get(`/api/brownfield/${OPP}/targets/${T.B}/eval-draft-versions?category=financial`),
-    );
-    expect(counts.data.versions[0].confirmed_count).toBe(proposedIds.length - 1);
-    expect(auditActions().find((x) => x.action === "target_eval.confirm_from_version")?.target).toBe(
-      `${OPP}:${T.B}:financial:v1:confirmed=${proposedIds.length - 1}:via=ui`,
-    );
-    // T10: a later plain PUT (no draft cited) clears the link — the verdict no longer rests on the draft
-    const plain = await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${other}`, {
-      method: "PUT",
-      headers: { cookie: analystCookie },
-      body: JSON.stringify({ status: "partial" }),
-    });
-    expect(plain.status).toBe(200);
     expect(
-      (
-        db
-          .query(
-            "SELECT confirmed_from_version_id f FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
-          )
-          .get(T.B, other) as any
-      ).f,
-    ).toBeNull();
-    // A7: saving an edited draft with the basis keeps the link even though the status differs from the proposal
-    const withBasis = await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${other}`, {
-      method: "PUT",
-      headers: { cookie: analystCookie },
-      body: JSON.stringify({ status: "fail", confirmed_from_version_id: v.id }),
-    });
-    expect(withBasis.status).toBe(200);
+      auditActions()
+        .filter((x) => x.action === "target_eval.ai_verdict.review")
+        .at(-1)?.target,
+    ).toBe(`${OPP}:${T.B}:${first}:from=auto_rule:version=${v.id}:changed=0`);
+    // evalStateHash covers status+note+evidence_ref: unchanged by a bare accept (ADR-0171 parity)
+    const { evalStateHash } = await import("../../app/web-next/lib/brownfield-capability-judgement.ts");
+    expect(evalStateHash(after)).toBe(evalStateHash(before));
+    // changing the status is also a review; changed=1, note/evidence cleared when omitted (as before ADR-0200)
+    const other = row("B", second);
+    const flipped = other.status === "fail" ? "pass" : "fail";
+    expect((await humanPut("B", second, { status: flipped, source_version_id: v.id })).status).toBe(200);
+    expect(row("B", second)).toMatchObject({ src: "human", status: flipped, v: v.id, note: null, evidence_ref: null });
     expect(
-      (
-        db
-          .query(
-            "SELECT confirmed_from_version_id f FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
-          )
-          .get(T.B, other) as any
-      ).f,
-    ).toBe(v.id);
-    expect(
-      (
-        await req(`/api/brownfield/${OPP}/targets/${T.B}/eval-state/${other}`, {
-          method: "PUT",
-          headers: { cookie: analystCookie },
-          body: JSON.stringify({ status: "pass", confirmed_from_version_id: "nope" }),
-        })
-      ).status,
-    ).toBe(400);
+      auditActions()
+        .filter((x) => x.action === "target_eval.ai_verdict.review")
+        .at(-1)?.target,
+    ).toBe(`${OPP}:${T.B}:${second}:from=auto_rule:version=${v.id}:changed=1`);
+    // sent keys always overwrite; the link survives an unchanged-status edit
+    expect((await humanPut("B", second, { status: flipped, note: "사람 메모" })).status).toBe(200);
+    expect(row("B", second)).toMatchObject({ note: "사람 메모", v: v.id });
   });
 
-  test("T9: unverified items are never written; a non-latest version is 409 stale_version; a changed rubric is skipped", async () => {
-    const tv = latest("A", "technical")!;
-    const items = JSON.parse(tv.payload).items as any[];
-    const unverified = items.find((i) => i.proposed_status === null);
-    expect(unverified).toBeDefined();
-    const res = await data(await confirm("A", tv.id));
-    expect(res.data.skipped).toContainEqual({ criterion_id: unverified.criterion_id, reason: "unverified" });
+  test("TA4/TA15/TA2: non-human callers store ai_draft, never overwrite a human verdict (409), cannot set na/waived, source_version_id or verdict_source", async () => {
+    const [humanCrit] = proposedIds("B", "financial");
+    const before = row("B", humanCrit);
+    expect(before.src).toBe("human");
+    const locked = await port().put(evalUrl("B", humanCrit), { status: "fail", note: "에이전트" });
+    expect(locked.error?.code).toBe("human_verdict_locked");
+    expect(row("B", humanCrit)).toEqual(before); // byte-equal
     expect(
-      db
-        .query("SELECT 1 FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?")
-        .get(T.A, unverified.criterion_id),
-    ).toBeNull();
-    const old = repo.listVersions(db, T.A, { category: "technical" }).at(-1)!;
-    const stale = await confirm("A", old.id);
-    expect(stale.status).toBe(409);
-    expect((await data(stale)).error.code).toBe("stale_version");
-    // changed rubric on a financial criterion after the snapshot
-    const fv = latest("A", "financial")!;
-    const fitems = JSON.parse(fv.payload).items as any[];
-    const target = fitems.find((i) => i.proposed_status);
-    updateCriterionRubric(target.criterion_id, { minYears: 2 });
-    const res2 = await data(await confirm("A", fv.id, { criterion_ids: [target.criterion_id, "ghost"] }));
-    expect(res2.data.skipped).toContainEqual({ criterion_id: target.criterion_id, reason: "criterion_changed" });
-    expect(res2.data.skipped).toContainEqual({ criterion_id: "ghost", reason: "not_in_version" });
-    expect(res2.data.confirmed).toBe(0);
-    expect((await confirm("A", ulid())).status).toBe(404);
+      auditActions()
+        .filter((x) => x.action === "target_eval.agent_verdict.refused")
+        .at(-1)?.target,
+    ).toBe(`${OPP}:${T.B}:${humanCrit}:reason=human_verdict_locked:via=mcp`);
+    // over an AI verdict the write lands as ai_draft, attributed to the delegating user
+    const [aiCrit] = proposedIds("A", "technical");
+    expect(row("A", aiCrit).src).toBe("ai_draft");
+    const wrote = await port().put(evalUrl("A", aiCrit), { status: "partial", note: "에이전트 판정" });
+    expect(wrote.error).toBeNull();
+    expect(row("A", aiCrit)).toMatchObject({ src: "ai_draft", status: "partial", assessed_by: ANALYST, v: null });
+    expect(
+      auditActions()
+        .filter((x) => x.action === "target_eval.agent_verdict")
+        .at(-1)?.target,
+    ).toBe(`${OPP}:${T.A}:${aiCrit}:via=mcp`);
+    // TA15: na / waived and the draft link are a person's act
+    for (const status of ["na", "waived"])
+      expect((await port().put(evalUrl("A", aiCrit), { status })).error?.code).toBe("human_only");
+    expect(
+      (await port().put(evalUrl("A", aiCrit), { status: "pass", source_version_id: latest("A", "technical")!.id }))
+        .error?.code,
+    ).toBe("human_only");
+    expect(row("A", aiCrit).status).toBe("partial");
+    // the origin is never taken from the body
+    expect((await humanPut("A", aiCrit, { status: "pass", verdict_source: "human" })).status).toBe(400);
+    // a human session over the agent's ai_draft lands as human
+    expect((await humanPut("A", aiCrit, { status: "pass" })).status).toBe(200);
+    expect(row("A", aiCrit)).toMatchObject({ src: "human", status: "pass" });
+  });
+
+  test("TA13: Short List promotion is human-only (route, HUMAN_ONLY_ROUTES, exclusion, no MCP tool) and records unreviewed=n", async () => {
+    const url = `/api/brownfield/${OPP}/targets/${T.N}/shortlist`;
+    expect(isHumanOnly("POST", url, {})).toBe(true);
+    expect((await port().post(url, {})).error?.code).toBe("human_only");
+    expect([401, 403]).toContain(
+      (await req(url, { method: "POST", headers: { authorization: "Bearer nope" }, body: "{}" })).status,
+    );
+    expect(readFileSync("scripts/co-newbiz/mcp-coverage.exclusions.yaml", "utf8")).toContain("/targets/{}/shortlist");
+    const { REGISTRY } = await import("../../mcp/co-newbiz/registry.ts");
+    expect(REGISTRY.some((t: { name: string }) => t.name === "shortlist_candidate")).toBe(false);
+    // N has every criterion judged by AI only: promotion warns (counts), never blocks
+    const all = [...critIds("financial"), ...critIds("technical")];
+    for (const cr of all)
+      db.run(
+        "INSERT INTO brownfield_target_eval_state (id, brownfield_target_id, criterion_id, status, assessed_by, assessed_at, verdict_source, source_version_id) VALUES (?,?,?,?,?,?,?,NULL)",
+        [ulid(), T.N, cr.id, "pass", ANALYST, NOW, "ai_draft"],
+      );
+    try {
+      const res = await data(await post(url, {}));
+      expect(res.data.unreviewed).toBe(all.length);
+      expect(res.data.unreviewed_detail).toMatchObject({ ai_draft: all.length });
+      const last = db
+        .query("SELECT target FROM audit_log WHERE action = 'brownfield_target.shortlist' ORDER BY rowid DESC LIMIT 1")
+        .get() as { target: string };
+      expect(last.target).toBe(`${OPP}:${T.N}:rank1:unreviewed=${all.length}`);
+    } finally {
+      db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [T.N]);
+      db.run("UPDATE brownfield_target SET status = 'pending', rank = NULL WHERE id = ?", [T.N]);
+    }
+  });
+
+  test("Q1: rule-only bulk accept is human-only, accepts only auto_rule items of the category as human, leaves ai_draft alone", async () => {
+    const url = `/api/brownfield/${OPP}/targets/${T.A}/eval-state/accept-rule`;
+    expect(isHumanOnly("POST", url, {})).toBe(true);
+    expect((await port().post(url, { category: "financial" })).error?.code).toBe("human_only");
+    expect((await post(url, { category: "x" })).status).toBe(400);
+    expect((await post(url, { category: "financial" }, viewerCookie)).status).toBe(403);
+    const fin = critIds("financial").map((cr) => row("A", cr.id));
+    const autoCount = fin.filter((r) => r?.src === "auto_rule" && r.status !== "pending").length;
+    expect(autoCount).toBeGreaterThan(0);
+    const techBefore = critIds("technical").map((cr) => row("A", cr.id));
+    const res = await data(await post(url, { category: "financial" }));
+    expect(res.data.accepted).toBe(autoCount);
+    for (const cr of critIds("financial")) expect(row("A", cr.id).src).toBe("human");
+    expect(critIds("technical").map((cr) => row("A", cr.id))).toEqual(techBefore); // technical / ai_draft untouched
+    expect(
+      auditActions().filter(
+        (x) =>
+          x.action === "target_eval.ai_verdict.review" &&
+          x.target.includes(`:${T.A}:`) &&
+          x.target.includes("from=auto_rule"),
+      ).length,
+    ).toBe(autoCount);
+    expect((await data(await post(url, { category: "financial" }))).data.accepted).toBe(0); // nothing left
+  });
+
+  test("defect (b): an AI re-apply with the same status and a new version keeps evidence_ref stable; the version link still moves", async () => {
+    const { applyVersionToEvalState } = await import("../../app/web-next/lib/brownfield-eval-apply.ts");
+    const v1 = latest("A", "technical")!;
+    const payload = JSON.parse(v1.payload);
+    const item = payload.items.find((i: any) => i.proposed_status);
+    const crit = item.criterion_id;
+    db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ? AND criterion_id = ?", [T.A, crit]);
+    expect(
+      repo.writeEvalVerdict(db, {
+        targetId: T.A,
+        criterionId: crit,
+        status: item.proposed_status,
+        note: "n",
+        evidenceRef: v1.id,
+        assessedBy: ANALYST,
+        source: "ai_draft",
+        sourceVersionId: v1.id,
+        now: NOW,
+      }).ok,
+    ).toBe(true);
+    const v2 = repo.insertDraftVersion(db, {
+      payload,
+      provisionalScore: null,
+      proposedCount: 1,
+      unverifiedCount: 0,
+      evidenceGrade: "C",
+      targetId: T.A,
+      category: "technical",
+      runId: v1.run_id,
+      inputHash: `h-${ulid()}`,
+      createdBy: ANALYST,
+      now: NOW,
+    });
+    applyVersionToEvalState(db, { version: v2, actor: ANALYST, now: NOW });
+    expect(row("A", crit)).toMatchObject({ v: v2.id, evidence_ref: v1.id, status: item.proposed_status });
   });
 });
 
 describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
   test("T5: the reserve rule pauses before the next candidate; resume is refused while unmet, then continues without duplicates", async () => {
+    // The earlier boundary tests turned some verdicts human; hand them back to their engine origin so the run has
+    // eligible work for both candidates (human verdicts are, by design, never re-drafted).
+    db.run(
+      `UPDATE brownfield_target_eval_state SET verdict_source = (SELECT CASE c.category WHEN 'financial' THEN 'auto_rule' ELSE 'ai_draft' END
+         FROM brownfield_eval_criterion c WHERE c.id = criterion_id) WHERE brownfield_target_id IN (?, ?)`,
+      [T.A, T.B],
+    );
     clock = "2026-11-25T03:00:00.000Z";
     c.used = 0;
     let first = true;
@@ -868,13 +980,13 @@ describe("security review fixes", () => {
       body: JSON.stringify(body),
     });
 
-  test("1: confirmed_from_version_id is human-only and validated (candidate, category, criterion in the payload)", async () => {
+  test("1: source_version_id (and the deprecated confirmed_from_version_id) is human-only and validated (candidate, category, criterion in the payload)", async () => {
     const { v, id } = firstTechItem();
     const finId = critIds("financial")[0].id;
-    expect((await put(finId, { status: "pass", confirmed_from_version_id: v.id })).status).toBe(400); // wrong category
-    expect(
-      (await put(id, { status: "pass", confirmed_from_version_id: latest("B", "technical")?.id ?? "x" })).status,
-    ).toBe(400); // other candidate
+    expect((await put(finId, { status: "pass", source_version_id: v.id })).status).toBe(400); // wrong category
+    expect((await put(id, { status: "pass", source_version_id: latest("B", "technical")?.id ?? "x" })).status).toBe(
+      400,
+    ); // other candidate
     const port = new InProcessRestPort({
       userId: ANALYST,
       role: "analyst",
@@ -888,20 +1000,14 @@ describe("security review fixes", () => {
       confirmed_from_version_id: v.id,
     });
     expect(agent.error?.code).toBe("human_only");
-    expect(
-      db
-        .query(
-          "SELECT 1 FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=? AND confirmed_from_version_id IS NOT NULL",
-        )
-        .get(T.A, id),
-    ).toBeNull();
-    const ok = await put(id, { status: "pass", confirmed_from_version_id: v.id });
+    const ok = await put(id, { status: "pass", confirmed_from_version_id: v.id }); // deprecated alias still works for a person
     expect(ok.status).toBe(200);
-    expect(
-      auditActions()
-        .filter((x) => x.action === "target_eval.edit_from_version")
-        .at(-1)?.target,
-    ).toContain(`version=${v.id}:via=ui`);
+    const stored = db
+      .query(
+        "SELECT source_version_id v, verdict_source s FROM brownfield_target_eval_state WHERE brownfield_target_id=? AND criterion_id=?",
+      )
+      .get(T.A, id) as any;
+    expect(stored).toEqual({ v: v.id, s: "human" });
   });
 
   test("2: a verdict backed only by a disclosure title or the profile stays unverified", async () => {
@@ -931,17 +1037,13 @@ describe("security review fixes", () => {
     expect(items.every((i) => i.proposed_status === null)).toBe(true);
   });
 
-  test("3: a promoted opportunity refuses start, resume and confirm with 409 already_promoted", async () => {
-    const v = latest("A", "technical")!;
+  test("3: a promoted opportunity refuses start and resume with 409 already_promoted", async () => {
     db.run("PRAGMA foreign_keys = OFF");
     db.run("UPDATE opportunity SET project_id = 'p-promoted' WHERE id = ?", [OPP]);
     try {
       const start = await startRoute({});
       expect(start.status).toBe(409);
       expect((await data(start)).error.code).toBe("already_promoted");
-      expect((await post(`/api/brownfield/${OPP}/targets/${T.A}/eval-draft-versions/${v.id}/confirm`, {})).status).toBe(
-        409,
-      );
       const r = repo.listRunItems(db, run1).length ? run1 : run1;
       expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${r}/resume`, {})).status).toBe(409);
       expect((await get(`/api/brownfield/${OPP}/eval-draft-runs/latest`)).status).toBe(200);
@@ -1189,5 +1291,81 @@ describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follo
     gate = null;
     for (const id of ids) await settle(id);
     expect(await active()).toEqual([]);
+  });
+});
+
+describe("security review fixes (PR-A review 3, 4, 6)", () => {
+  const port = () =>
+    new InProcessRestPort({
+      userId: ANALYST,
+      role: "analyst",
+      scopes: ["read", "write", "propose"],
+      mustChangePassword: false,
+      tokenId: "t",
+      clientId: "c",
+    });
+
+  test("3: rubric and weight edits are human-only; the rubric audit records via", async () => {
+    const crit = critIds("financial")[0].id;
+    const url = `/api/brownfield/${OPP}/eval-criteria/${crit}`;
+    // the in-process MCP table carries no route for it; every non-cookie caller is refused by the route guard itself
+    const src = readFileSync("app/web-next/app/api/brownfield/[oppId]/eval-criteria/[criterionId]/route.ts", "utf8");
+    expect(src).toContain("humanOnlyDenied(");
+    const bearer = await req(url, { method: "PATCH", headers: { authorization: "Bearer nope" }, body: "{}" });
+    expect([401, 403]).toContain(bearer.status);
+    const ok = await req(url, {
+      method: "PATCH",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ rubric: { minYears: 2 } }),
+    });
+    expect(ok.status).toBe(200);
+    const last = db
+      .query("SELECT target FROM audit_log WHERE action = 'eval_criterion.rubric_update' ORDER BY rowid DESC LIMIT 1")
+      .get() as { target: string };
+    expect(last.target).toBe(`${crit}:via=ui`);
+  });
+
+  test("4: a write expecting auto_rule never touches a row that became human meanwhile", () => {
+    const crit = critIds("financial")[1].id;
+    const base = {
+      targetId: T.N,
+      criterionId: crit,
+      status: "pass" as const,
+      note: null,
+      evidenceRef: null,
+      assessedBy: ANALYST,
+      now: NOW,
+    };
+    db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [T.N]);
+    const v = latest("A", "financial")!;
+    expect(repo.writeEvalVerdict(db, { ...base, source: "auto_rule", sourceVersionId: v.id }).ok).toBe(true);
+    // a person's save lands between the read and the bulk-accept write
+    expect(repo.writeEvalVerdict(db, { ...base, status: "fail", source: "human", sourceVersionId: null }).ok).toBe(
+      true,
+    );
+    const res = repo.writeEvalVerdict(db, {
+      ...base,
+      source: "human",
+      sourceVersionId: v.id,
+      expectSource: "auto_rule",
+    });
+    expect(res).toMatchObject({ ok: false, reason: "human_verdict_locked" });
+    const row = db
+      .query(
+        "SELECT status, verdict_source s, source_version_id v FROM brownfield_target_eval_state WHERE brownfield_target_id = ? AND criterion_id = ?",
+      )
+      .get(T.N, crit) as any;
+    expect(row).toEqual({ status: "fail", s: "human", v: null });
+    db.run("DELETE FROM brownfield_target_eval_state WHERE brownfield_target_id = ?", [T.N]);
+  });
+
+  test("6: a refused non-human na/waived write is audited as forbidden_status", async () => {
+    const crit = critIds("technical")[0].id;
+    const res = await port().put(`/api/brownfield/${OPP}/targets/${T.A}/eval-state/${crit}`, { status: "na" });
+    expect(res.error?.code).toBe("human_only");
+    const last = auditActions()
+      .filter((x) => x.action === "target_eval.agent_verdict.refused")
+      .at(-1);
+    expect(last?.target).toBe(`${OPP}:${T.A}:${crit}:reason=forbidden_status:via=mcp`);
   });
 });

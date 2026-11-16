@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useConfirm } from "../crud.tsx";
 import { useChartTheme } from "../../lib/echarts-theme.ts";
 import { api, ApiError } from "../../lib/api.ts";
-import type { DetailResponse, CompanyProfileResp, EvalDraftItem, FinancialsResp, DisclosuresResp } from "./types.ts";
+import type { DetailResponse, CompanyProfileResp, FinancialsResp, DisclosuresResp } from "./types.ts";
 
 /** design 2026-11-11 §7.1 (D6) — a DART financial-sync failure surfaces as
  *  banner state instead of being swallowed. `corp_code_unregistered` is the
@@ -37,6 +37,10 @@ export function useTargetDetail() {
   const [profileTab, setProfileTab] = useState<
     "overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources"
   >("overview");
+  // ADR-0200: the S6 longlist's 항목 검토 button links here with ?tab=eval (read after mount so SSR markup is unchanged).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "eval") setProfileTab("eval");
+  }, []);
   // AI 분석 — 그룹/계열사 화면과 동일한 LLM 프로파일 파이프라인 재사용(일반화, 2026-09-15).
   const [companyProfile, setCompanyProfile] = useState<CompanyProfileResp | null | undefined>(undefined);
   const [analyzing, setAnalyzing] = useState(false);
@@ -50,10 +54,6 @@ export function useTargetDetail() {
   const [newCriterionLabel, setNewCriterionLabel] = useState<Record<string, string>>({});
   // 재무·기술 평가 자동 초안(ADR-0140/0141) — 초안은 클라이언트 상태(미저장).
   // 사람이 select를 바꾸거나 "초안 저장"을 누를 때 비로소 판정으로 기록된다.
-  const [evalDraft, setEvalDraft] = useState<Record<string, EvalDraftItem> | null>(null);
-  const [draftCategory, setDraftCategory] = useState<"financial" | "technical" | null>(null);
-  const [draftBusy, setDraftBusy] = useState(false);
-  const [draftNote, setDraftNote] = useState<string | null>(null);
   const [rubricOpen, setRubricOpen] = useState(false);
   const [rubricBusy, setRubricBusy] = useState<string | null>(null);
   // DART
@@ -70,7 +70,7 @@ export function useTargetDetail() {
   const oppId = detail?.opportunity.id ?? "";
   const companyId = detail?.target.company_id ?? null;
   // ADR-0142 — 확정 경쟁사 레지스트리 (사람의 수용·등록으로만 생긴 목록)
-  const [confirmedCompetitors, setConfirmedCompetitors] = useState<Array<{
+  const [_confirmedCompetitors, setConfirmedCompetitors] = useState<Array<{
     id: string;
     name: string;
     note: string | null;
@@ -236,12 +236,6 @@ export function useTargetDetail() {
     targetId,
     loadDetail,
     setError,
-    draftBusy,
-    setDraftBusy,
-    setDraftNote,
-    setDraftCategory,
-    setEvalDraft,
-    evalDraft,
     busy,
     setBusy,
     setRubricBusy,
@@ -269,10 +263,8 @@ export function useTargetDetail() {
     discPreset,
     setDiscPreset,
     disclosures,
-    draftCategory,
     rubricOpen,
     setRubricOpen,
-    draftNote,
     evalBusy,
     rubricBusy,
     syncError,

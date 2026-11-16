@@ -46,10 +46,33 @@ describe("coverage helpers", () => {
     expect(active.weightCoverage({})).toBeNull();
     expect(active.weightCoverage(undefined)).toBeNull();
   });
-  test("draftCoverage: judged = proposed, total = proposed + unverified, null when counts are absent", () => {
-    expect(active.draftCoverage({ proposed_count: 3, unverified_count: 7 })).toEqual({ judged: 3, total: 10 });
-    expect(active.draftCoverage({ proposed_count: 0, unverified_count: 0 })).toBeNull();
-    expect(active.draftCoverage({})).toBeNull();
+  test("summaryMarkers: partial from weights, unreviewed from eval_summary counts, falls back to complete without weights", () => {
+    const f = (o: Loose) => ({ score: 50, scoredWeight: 30, totalWeight: 100, unreviewed: 0, ...o });
+    expect(active.summaryMarkers(undefined)).toEqual({
+      partial: false,
+      unreviewed: 0,
+      byCategory: { financial: 0, technical: 0 },
+    });
+    expect(
+      active.summaryMarkers({ financial: f({}), technical: f({ scoredWeight: 100 }), unreviewed_total: 2 }),
+    ).toMatchObject({ partial: true, unreviewed: 2 });
+    expect(
+      active.summaryMarkers({ financial: f({ scoredWeight: 100 }), technical: f({ scoredWeight: 100 }) }).partial,
+    ).toBe(false);
+    expect(active.summaryMarkers({ financial: { score: 1 }, technical: { score: 1 }, complete: false }).partial).toBe(
+      true,
+    );
+    expect(active.summaryMarkers({ financial: { score: 1 }, technical: { score: 1 }, complete: true }).partial).toBe(
+      false,
+    );
+    expect(active.summaryMarkers({ financial: f({ unreviewed: 1 }), technical: f({ unreviewed: 2 }) }).unreviewed).toBe(
+      3,
+    );
+  });
+  test("draftIsStale reads either category", () => {
+    expect(active.draftIsStale({ technical: { stale: true } })).toBe(true);
+    expect(active.draftIsStale({ financial: { stale: false } })).toBe(false);
+    expect(active.draftIsStale(undefined)).toBe(false);
   });
   test("elapsedParts and parseUtcMs", () => {
     expect(active.elapsedParts(42_000)).toMatchObject({ unit: "s", s: 42 });
@@ -63,87 +86,117 @@ describe("coverage helpers", () => {
   });
 });
 
-describe("a. provisional chips show judged/total items", () => {
-  const chip = (over: Record<string, unknown> = {}) => ({
-    version_no: 3,
-    created_at: "2026-11-16T01:00:00Z",
-    checked_at: "2026-11-16T01:00:00Z",
-    provisional_score: 50,
-    stale: false,
-    evidence_grade: "A",
-    ...over,
-  });
-  const view = (c: unknown, locale: "ko" | "en" = "ko") =>
-    render(createElement(chips.ProvisionalChips, { draft: { technical: c }, dartCorpCode: "00123456" }), locale);
-  test("score with counts: AI 잠정 기술 50 · 판정 3/10 항목 · v3", () => {
-    const html = view(chip({ proposed_count: 3, unverified_count: 7 }));
-    expect(html).toContain("AI 잠정 기술 50 · 판정 3/10 항목 · v3");
-    expect(view(chip({ proposed_count: 3, unverified_count: 7 }), "en")).toContain("judged 3/10 items");
-  });
-  test("fully judged still shows the count; counts absent keep the old wording; null score keeps 확인 안됨", () => {
-    expect(view(chip({ proposed_count: 10, unverified_count: 0 }))).toContain("판정 10/10 항목");
-    expect(view(chip())).toContain("AI 잠정 기술 50 · v3");
-    expect(view(chip())).not.toMatch(/판정 \d/);
-    expect(view(chip({ provisional_score: null, proposed_count: 0, unverified_count: 10 }))).toContain(
-      "AI 잠정 기술 · 확인 안됨 10/10 · v3",
-    );
-  });
-});
-
-describe("b + c. confirmed chips and rank cell", () => {
+describe("a. one chip per category with judged coverage (no provisional chip layer)", () => {
   const sum = (over: Record<string, unknown> = {}) => ({
-    financial: { score: 80, scoredWeight: 60, totalWeight: 60, excludedWeight: 0 },
-    technical: { score: 50, scoredWeight: 30, totalWeight: 100, excludedWeight: 0 },
+    financial: { score: 80, scoredWeight: 60, totalWeight: 60, excludedWeight: 0, unreviewed: 0 },
+    technical: { score: 50, scoredWeight: 30, totalWeight: 100, excludedWeight: 0, unreviewed: 0 },
     combined: 65,
     complete: false,
+    unreviewed_total: 0,
     ...over,
   });
   const chipsHtml = (s: unknown, locale: "ko" | "en" = "ko") =>
-    render(createElement(cov.ConfirmedScoreChips, { summary: s }), locale);
-  test("partial category: score, judged weight over total, and the 일부 항목 미평가 marker as text", () => {
+    render(createElement(cov.ScoreChips, { summary: s }), locale);
+  test("exactly two chips: 재무 80 · 평가 60/60 and 기술 50 · 평가 30/100", () => {
     const html = chipsHtml(sum());
-    expect(html).toContain("기술 50 · 평가 30/100");
-    expect(html).toContain("기술 일부 항목 미평가");
     expect(html).toContain("재무 80 · 평가 60/60");
-    expect(html).not.toContain("재무 일부 항목 미평가"); // the fully judged category has no marker
-    expect(html).toContain('aria-hidden="true">⚠ ');
-    expect(chipsHtml(sum(), "en")).toContain("Technology"[0] === "T" ? "Judged 30/100" : "");
-    expect(chipsHtml(sum(), "en")).toContain("some items not evaluated");
+    expect(html).toContain("기술 50 · 평가 30/100");
+    expect(html.match(/status-chip/g)?.length).toBe(2);
+    expect(html).not.toContain("AI 잠정");
+    expect(html).not.toContain("일부 항목 미평가"); // markers are a separate single line
+    expect(chipsHtml(sum(), "en")).toContain("Judged 30/100");
   });
-  test("complete evaluation shows coverage numbers but no partial marker", () => {
-    const html = chipsHtml(
-      sum({
-        technical: { score: 90, scoredWeight: 100, totalWeight: 100, excludedWeight: 0 },
-        complete: true,
-      }),
-    );
-    expect(html).toContain("기술 90 · 평가 100/100");
-    expect(html).not.toContain("일부 항목 미평가");
-  });
-  test("no weights (older payload) or nothing judged: no coverage text, no crash", () => {
+  test("no weights (older payload): score only, no crash", () => {
     const old = chipsHtml({ financial: { score: 70 }, technical: { score: null }, combined: 70 });
     expect(old).toContain("재무 70");
     expect(old).not.toMatch(/평가 \d+\/\d+/);
-    expect(old).not.toContain("일부 항목 미평가");
     expect(chipsHtml(undefined)).toContain("재무 —");
   });
   test("the chip row wraps (no clipped chips at the 730 px pane)", () => {
     expect(readFileSync(`${DIR}/AiEvalCoverage.tsx`, "utf8")).toContain("flex flex-wrap");
   });
-  test("rank marker: only when the summary is explicitly incomplete and has a combined score", () => {
-    const m = (s: unknown, locale: "ko" | "en" = "ko") =>
-      render(createElement(cov.RankPartialMarker, { summary: s }), locale);
-    expect(m(sum())).toContain("일부 항목 미평가 · 잠정");
-    expect(m(sum(), "en")).toContain("Some items not evaluated · provisional");
-    expect(m(sum({ complete: true }))).toBe("");
-    expect(m(sum({ complete: undefined }))).toBe("");
+});
+
+describe("b. ONE row marker line: partial once, unreviewed only when counts > 0", () => {
+  const sum = (over: Record<string, unknown> = {}) => ({
+    financial: { score: 80, scoredWeight: 60, totalWeight: 60, unreviewed: 0 },
+    technical: { score: 50, scoredWeight: 30, totalWeight: 100, unreviewed: 0 },
+    combined: 65,
+    complete: false,
+    unreviewed_total: 0,
+    ...over,
+  });
+  const markers = (s: unknown, draft: unknown = undefined, locale: "ko" | "en" = "ko") =>
+    render(createElement(cov.RowMarkers, { summary: s, draft }), locale);
+  test("partial marker appears exactly once even when both categories are partial", () => {
+    const both = sum({ financial: { score: 80, scoredWeight: 10, totalWeight: 60, unreviewed: 0 } });
+    const html = markers(both);
+    expect(html.match(/일부 항목 미평가/g)?.length).toBe(1);
+    expect(html).toContain('aria-hidden="true">⚠ ');
+    expect(html).not.toContain("AI 판정");
+    expect(markers(sum(), undefined, "en")).toContain("Some items not evaluated");
+  });
+  test("AI 판정 n건 미검토 only when unreviewed_total > 0, with the category split as tooltip", () => {
+    const html = markers(
+      sum({
+        complete: true,
+        technical: { score: 90, scoredWeight: 100, totalWeight: 100, unreviewed: 3 },
+        financial: { score: 80, scoredWeight: 60, totalWeight: 60, unreviewed: 2 },
+        unreviewed_total: 5,
+      }),
+    );
+    expect(html).toContain("AI 판정 5건 미검토");
+    expect(html).toContain('title="재무 2건 · 기술 3건 미검토"');
+    expect(html).not.toContain("일부 항목 미평가");
+    expect(markers(sum({ unreviewed_total: 0 }))).not.toContain("미검토");
+  });
+  test("fully judged, nothing unreviewed, fresh: no marker line at all", () => {
+    const done = sum({ technical: { score: 90, scoredWeight: 100, totalWeight: 100, unreviewed: 0 }, complete: true });
+    expect(markers(done)).toBe("");
+    expect(markers(done, { financial: { version_no: 1, checked_at: "x", stale: false, evidence_grade: "A" } })).toBe(
+      "",
+    );
+  });
+  test("stale history shows AI 평가 갱신 권장 as text", () => {
+    const done = sum({ technical: { score: 90, scoredWeight: 100, totalWeight: 100, unreviewed: 0 } });
+    expect(
+      markers(done, { technical: { version_no: 1, checked_at: "x", stale: true, evidence_grade: "C" } }),
+    ).toContain("AI 평가 갱신 권장");
+  });
+  test("the longlist renders chips, markers and rank markers from eval_summary", () => {
+    const src = readFileSync(`${DIR}/LonglistSection.tsx`, "utf8");
+    expect(src).toContain("<ScoreChips summary={es} />");
+    expect(src).toContain("<RowMarkers summary={es} draft={tgt.eval_draft} />");
+    expect(src).toContain("<RankMarkers summary={es} />");
+  });
+});
+
+describe("c. rank cell carries the same markers", () => {
+  const sum = (over: Record<string, unknown> = {}) => ({
+    financial: { score: 80, scoredWeight: 60, totalWeight: 60, unreviewed: 0 },
+    technical: { score: 50, scoredWeight: 30, totalWeight: 100, unreviewed: 0 },
+    combined: 65,
+    complete: false,
+    unreviewed_total: 0,
+    ...over,
+  });
+  const m = (s: unknown, locale: "ko" | "en" = "ko") => render(createElement(cov.RankMarkers, { summary: s }), locale);
+  test("partial → ⚠ 일부 항목 미평가; with unreviewed → … · AI 판정 포함 잠정", () => {
+    expect(m(sum())).toContain("일부 항목 미평가");
+    expect(m(sum())).not.toContain("AI 판정 포함 잠정");
+    expect(
+      m(sum({ unreviewed_total: 2, financial: { score: 80, scoredWeight: 60, totalWeight: 60, unreviewed: 2 } })),
+    ).toContain("일부 항목 미평가 · AI 판정 포함 잠정");
+    expect(
+      m(sum({ unreviewed_total: 2, technical: { score: 9, scoredWeight: 100, totalWeight: 100, unreviewed: 2 } })),
+    ).toContain("AI 판정 포함 잠정");
+    expect(m(sum(), "en")).toContain("Some items not evaluated");
+  });
+  test("complete and reviewed → no marker; no combined score → no marker", () => {
+    const done = sum({ technical: { score: 90, scoredWeight: 100, totalWeight: 100, unreviewed: 0 }, complete: true });
+    expect(m(done)).toBe("");
     expect(m(sum({ combined: null }))).toBe("");
     expect(m(undefined)).toBe("");
-  });
-  test("the longlist renders both from eval_summary", () => {
-    const src = readFileSync(`${DIR}/LonglistSection.tsx`, "utf8");
-    expect(src).toContain("<ConfirmedScoreChips summary={es} />");
-    expect(src).toContain("<RankPartialMarker summary={es} />");
   });
 });
 
@@ -296,10 +349,11 @@ test("ko/en parity for the coverage and progress keys", () => {
     Object.entries(o).flatMap(([k, v]) => (typeof v === "object" && v ? flat(v, `${p}${k}.`) : [`${p}${k}`]));
   expect(flat(en.stages.s67.aiEval).sort()).toEqual(flat(ko.stages.s67.aiEval).sort());
   for (const k of [
-    "chipScoreCoverage",
+    "partialMarker",
+    "unreviewed",
+    "unreviewedSplit",
+    "rankIncludesAi",
     "coverageWeight",
-    "coveragePartial",
-    "coverageRankPartial",
     "versionCoverage",
     "runCount",
     "elapsed",

@@ -188,10 +188,14 @@ exclusions:
     kind: route
     route: "POST /api/brownfield/{}/targets/{}/rerank"
     reason: Short List rank order is confirmed by a person, separate from the computed scores.
-  - id: eval-draft-version-confirm
+  - id: target-shortlist-promote
     kind: route
-    route: "POST /api/brownfield/{}/targets/{}/eval-draft-versions/{}/confirm"
-    reason: Confirming an AI draft version's proposals writes human S7 verdicts (ADR-0199 A6, boundary #2); agents may start drafting runs but only a person confirms.
+    route: "POST /api/brownfield/{}/targets/{}/shortlist"
+    reason: Short List promotion is a human-only act (ADR-0200 Q3, boundary #2); an agent must not promote a candidate whose AI verdicts no person has reviewed.
+  - id: eval-draft-accept-rule-verdicts
+    kind: route
+    route: "POST /api/brownfield/{}/targets/{}/eval-state/accept-rule"
+    reason: Accepting rule verdicts as human verdicts is a person's review act (ADR-0200 Q1, boundary #2); an agent never records a human verdict.
   - id: waiver-decision
     kind: route
     route: "PATCH /api/projects/{}/waivers/{}"

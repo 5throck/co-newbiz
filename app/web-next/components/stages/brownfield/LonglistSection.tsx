@@ -14,12 +14,12 @@ import { ColGroup } from "../../ui.tsx";
 const LONG_LIST_COL_PCT = [18, 8, 26, 9, 12, 27] as const;
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
-import { AiEvalRunsPanel, ProvisionalChips } from "./AiEvalChips.tsx";
-import { ConfirmedScoreChips, RankPartialMarker } from "./AiEvalCoverage.tsx";
-import { activeItemFor, liveFor, rowBlock } from "./aiEvalActive.ts";
+import { AiEvalRunsPanel, RunStateChips } from "./AiEvalChips.tsx";
+import { RankMarkers, RowMarkers, ScoreChips } from "./AiEvalCoverage.tsx";
+import { liveFor, rowBlock } from "./aiEvalActive.ts";
+import { PromoteButton, reviewItemsHref, unreviewedOf } from "./AiEvalPromote.tsx";
 import { AiEvalCriteriaDialog } from "./AiEvalCriteriaPanel.tsx";
 import { AiEvalRowButton } from "./AiEvalRowButton.tsx";
-import { AiEvalRowConfirm } from "./AiEvalRowConfirm.tsx";
 import { AiEvalStartButton } from "./AiEvalStart.tsx";
 import { AiEvalVersionPanel } from "./AiEvalVersionPanel.tsx";
 import { useAiEval } from "./useAiEval.ts";
@@ -49,6 +49,13 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
   const ai = useAiEval({ oppId: selected?.opportunity.id ?? null, loadDetail: ctx.loadDetail });
   const ta = useTranslations("stages.s67.aiEval");
   const [compareId, setCompareId] = useState<string | null>(null);
+  // ADR-0200 §5.2: after promoting with unreviewed AI / rule verdicts, say so (the response carries the count).
+  const [promoteNote, setPromoteNote] = useState<string | null>(null);
+  async function promote(targetId: string) {
+    setPromoteNote(null);
+    const n = await shortlist(targetId);
+    if (n > 0) setPromoteNote(ta("promotedWithUnreviewed", { n }));
+  }
   const activeRunIds = ai.activeRuns.flatMap((v) => (v.run ? [v.run.id] : []));
   const anyRunActive = activeRunIds.length > 0;
   const evalCandidates = targets.filter((x) => x.status !== "excluded");
@@ -92,6 +99,12 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                 </>
               }
             />
+            {promoteNote && (
+              <p role="status" className="text-[length:var(--fs-caption)] mt-0 mb-2">
+                <span aria-hidden="true">⚠ </span>
+                {promoteNote}
+              </p>
+            )}
             {ai.message && (
               <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-0 mb-2">
                 {ai.message}
@@ -210,8 +223,9 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                 <code className="dd-item-id">{tgt.dart_corp_code ?? "—"}</code>
                               </td>
                               <td>
-                                <ConfirmedScoreChips summary={es} />
-                                <ProvisionalChips
+                                <ScoreChips summary={es} />
+                                <RowMarkers summary={es} draft={tgt.eval_draft} />
+                                <RunStateChips
                                   draft={tgt.eval_draft}
                                   dartCorpCode={tgt.dart_corp_code}
                                   activeRunIds={activeRunIds}
@@ -242,7 +256,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                 ) : (
                                   <span className="text-[color:var(--muted-fg)]">{t("evaluationNeeded")}</span>
                                 )}
-                                {tgt.status !== "excluded" && <RankPartialMarker summary={es} />}
+                                {tgt.status !== "excluded" && <RankMarkers summary={es} />}
                               </td>
                               <td>
                                 <span
@@ -267,18 +281,16 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                         onStart={ai.start}
                                       />
                                     )}
-                                    {canAct && selected && (
-                                      <AiEvalRowConfirm
-                                        oppId={selected.opportunity.id}
-                                        targetId={tgt.id}
-                                        companyName={tgt.company_name}
-                                        excluded={tgt.status === "excluded"}
-                                        hasDart={!!tgt.dart_corp_code}
-                                        running={activeItemFor(ai.activeRuns, tgt.id) !== null}
-                                        draft={tgt.eval_draft}
-                                        onConfirmed={() => ctx.loadDetail(selected.opportunity.id)}
-                                      />
-                                    )}
+                                    {/* 항목 검토: the candidate detail evaluation tab (per-item human review); replaces the
+                                        removed confirm button. Secondary emphasis while unreviewed verdicts exist. */}
+                                    <a
+                                      className={`btn-ghost btn-sm${(es?.unreviewed_total ?? 0) > 0 ? " font-semibold" : ""}`}
+                                      href={reviewItemsHref(tgt.id)}
+                                      aria-label={ta("reviewItemsLabel", { company: tgt.company_name })}
+                                      title={ta("reviewItemsHint")}
+                                    >
+                                      {ta("reviewItems")}
+                                    </a>
                                     <button
                                       type="button"
                                       className="btn-ghost btn-sm"
@@ -293,16 +305,13 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                     </button>
                                   </span>
                                   {canAct && canPromote && (
-                                    <button
-                                      type="button"
-                                      className="btn-ghost btn-sm"
-                                      disabled={busy}
-                                      title={t("financialAndTechnologyEvaluationComplete")}
-                                      aria-label={t("promoteP1ToTheShortlist", { p1: tgt.company_name })}
-                                      onClick={() => shortlist(tgt.id)}
-                                    >
-                                      {t("promote")}
-                                    </button>
+                                    <PromoteButton
+                                      companyName={tgt.company_name}
+                                      targetId={tgt.id}
+                                      unreviewed={unreviewedOf(es)}
+                                      busy={busy}
+                                      onPromote={() => void promote(tgt.id)}
+                                    />
                                   )}
                                   {canAct && tgt.status === "shortlisted" && (
                                     // biome-ignore lint/a11y/useSemanticElements: an inline <span> strip; <fieldset> would change layout/styling (fieldset has block box and default border/padding)
@@ -337,13 +346,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                             {compareId === tgt.id && selected && (
                               <tr>
                                 <td colSpan={6} id={`ai-versions-${tgt.id}`}>
-                                  <AiEvalVersionPanel
-                                    oppId={selected.opportunity.id}
-                                    targetId={tgt.id}
-                                    companyName={tgt.company_name}
-                                    canAct={canAct}
-                                    onConfirmed={() => ctx.loadDetail(selected.opportunity.id)}
-                                  />
+                                  <AiEvalVersionPanel oppId={selected.opportunity.id} targetId={tgt.id} />
                                 </td>
                               </tr>
                             )}

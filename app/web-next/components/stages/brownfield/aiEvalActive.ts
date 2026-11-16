@@ -127,13 +127,34 @@ export function weightCoverage(
   return { scored: c.scoredWeight, total: c.totalWeight, partial: c.scoredWeight < c.totalWeight };
 }
 
-/** Item coverage of a provisional draft version: judged = proposed, total = proposed + unverified (null when the counts
- * are absent or nothing was evaluated). */
-export function draftCoverage(chip: {
-  proposed_count?: number;
-  unverified_count?: number;
-}): { judged: number; total: number } | null {
-  if (typeof chip.proposed_count !== "number" || typeof chip.unverified_count !== "number") return null;
-  const total = chip.proposed_count + chip.unverified_count;
-  return total > 0 ? { judged: chip.proposed_count, total } : null;
+export interface SummaryMarkers {
+  /** Any item of either category is still pending (judged weight below total weight). */
+  partial: boolean;
+  /** Non-pending, non-human verdicts nobody reviewed yet (rule + AI), both categories. */
+  unreviewed: number;
+  byCategory: { financial: number; technical: number };
 }
+
+/** Row-level markers from `eval_summary` (ADR-0200 §7.1): shown once per row, never repeated per category. */
+export function summaryMarkers(
+  s:
+    | {
+        financial: { scoredWeight?: number; totalWeight?: number; unreviewed?: number };
+        technical: { scoredWeight?: number; totalWeight?: number; unreviewed?: number };
+        complete?: boolean;
+        unreviewed_total?: number;
+      }
+    | undefined,
+): SummaryMarkers {
+  if (!s) return { partial: false, unreviewed: 0, byCategory: { financial: 0, technical: 0 } };
+  const covs = [weightCoverage(s.financial), weightCoverage(s.technical)];
+  // Weights absent (older payload): fall back to the server's `complete` flag.
+  const partial = covs.some((c) => c?.partial === true) || (covs.every((c) => c === null) && s.complete === false);
+  const byCategory = { financial: s.financial.unreviewed ?? 0, technical: s.technical.unreviewed ?? 0 };
+  return { partial, unreviewed: s.unreviewed_total ?? byCategory.financial + byCategory.technical, byCategory };
+}
+
+/** AI evaluation refresh recommended: the latest version of either category was last checked over 90 days ago. */
+export const draftIsStale = (
+  d: { financial?: { stale: boolean }; technical?: { stale: boolean } } | undefined,
+): boolean => !!d && (d.financial?.stale === true || d.technical?.stale === true);

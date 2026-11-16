@@ -1,10 +1,10 @@
 // GET /api/brownfield/[oppId]/targets/[targetId]/eval-draft-versions?category=&limit=&include=payload — draft versions of
-// one candidate, newest first (`versions[0]` = latest per category, the S1 shape), each with `confirmed_count` = the
-// verdicts that cite it (ADR-0199 A5). `include=payload` returns the parsed payloads (the comparison table). Same read
+// one candidate, newest first (`versions[0]` = latest per category, the S1 shape), each with `applied_count` (non-human
+// verdicts resting on it) and `reviewed_count` (human verdicts resting on it) from `source_version_id` (ADR-0200 §8 A5). `include=payload` returns the parsed payloads (the comparison table). Same read
 // gate as the candidate list; an unknown or out-of-scope candidate is 404.
 import { getDb } from "../../../../../../../../../db/client.ts";
 import {
-  confirmedCountByVersion,
+  verdictCountsByVersion,
   EVAL_DRAFT_CATEGORIES,
   listVersions,
   type DraftVersionRow,
@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
     limit,
     includePayload,
   });
-  const counts = confirmedCountByVersion(
+  const counts = verdictCountsByVersion(
     db,
     rows.map((r) => r.id),
   );
@@ -44,7 +44,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
     const { payload, ...summary } = r as DraftVersionRow;
     return {
       ...summary,
-      confirmed_count: counts.get(r.id) ?? 0,
+      applied_count: counts.get(r.id)?.applied ?? 0,
+      reviewed_count: counts.get(r.id)?.reviewed ?? 0,
       ...(includePayload ? { payload: JSON.parse(payload) as unknown } : {}),
     };
   });

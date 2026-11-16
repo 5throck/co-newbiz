@@ -422,7 +422,9 @@ const SPECS: readonly RouteToolSpec[] = [
     method: "GET",
     path: "/api/brownfield/{opportunityId}/targets",
     activities: ["target-longlist"],
-    description: "The target-company long list.",
+    artifacts: ["stage:S7:1"],
+    description:
+      "The target-company long list and short list (read-only: Short List promotion is a human-only act, ADR-0200).",
   },
   {
     name: "add_candidate",
@@ -473,17 +475,7 @@ const SPECS: readonly RouteToolSpec[] = [
     activities: ["target-screening", "ownership-regulatory-screening", "target-ranking"],
     artifacts: ["stage:S7:2"],
     description:
-      "Record one criterion judgment for a target. Scores feed the ranking; the final rank order is a human act (rerank is not exposed).",
-  },
-  {
-    name: "shortlist_candidate",
-    kind: "write",
-    method: "POST",
-    path: "/api/brownfield/{opportunityId}/targets/{targetId}/shortlist",
-    body: "optional",
-    activities: ["target-screening"],
-    artifacts: ["stage:S7:1"],
-    description: "Promote a fully evaluated target to the short list.",
+      "Record one criterion finding for a target. Stored as an unreviewed AI verdict (ai_draft); it never overwrites a person's verdict (409 human_verdict_locked) and cannot set na/waived. A person reviews it on the candidate detail screen. Scores feed the ranking; Short List promotion and the final rank order are human acts (neither is exposed).",
   },
   {
     name: "exclude_candidate",

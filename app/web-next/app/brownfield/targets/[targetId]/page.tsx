@@ -9,7 +9,6 @@
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { StageFrame } from "../../../../components/StageFrame.tsx";
-import { isFinancialDataRef } from "../../../../lib/brownfield-financial-rubric.ts";
 import { ListBackButton } from "../../../../components/ListBackButton.tsx";
 import { SectionToolbar } from "../../../../components/layout.tsx";
 import { useTargetDetail } from "../../../../components/brownfield-target/useTargetDetail.ts";
@@ -26,6 +25,7 @@ import {
   TargetSourcesTab,
 } from "../../../../components/brownfield-target/TargetDataTabs.tsx";
 import { TargetPrecheckTab } from "../../../../components/brownfield-target/TargetPrecheckTab.tsx";
+import { PromoteButton } from "../../../../components/stages/brownfield/AiEvalPromote.tsx";
 import { TargetEvalTab } from "../../../../components/brownfield-target/TargetEvalTab.tsx";
 import { STATUS_KEY, PROFILE_TABS } from "../../../../components/brownfield-target/constants.ts";
 import type { ScreeningItemEvidence } from "../../../../components/brownfield-target/types.ts";
@@ -64,7 +64,6 @@ export function TargetDetailView() {
     exclude,
     deleteTarget,
     detail,
-    evalDraft,
   } = ctx;
 
   if (!detail) {
@@ -92,22 +91,6 @@ export function TargetDetailView() {
     : {};
 
   const hasPrecheckData = evidence.length > 0 || screening_summary.assessed > 0;
-
-  // 재무 자동 초안 대상 — 재무 빌트인 + data_ref 있는 항목 중 미판정만.
-  const pendingFinancial = evalItems.filter(
-    (it) =>
-      it.category === "financial" &&
-      it.source === "builtin" &&
-      isFinancialDataRef(it.data_ref) &&
-      (it.state?.status ?? "pending") === "pending",
-  );
-
-  // 기술 자동 초안 대상 — 기술 항목(시딩·커스텀 무관) 중 미판정만.
-  const pendingTechnical = evalItems.filter(
-    (it) => it.category === "technical" && (it.state?.status ?? "pending") === "pending",
-  );
-
-  const proposedCount = evalDraft ? Object.values(evalDraft).filter((d) => d.status != null).length : 0;
 
   const scoreChip = (score: number | null) =>
     `status-chip ${score == null ? "status-not-started" : score >= 70 ? "status-green" : score >= 40 ? "status-amber" : "status-red"}`;
@@ -174,15 +157,20 @@ export function TargetDetailView() {
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {canAct && t.status !== "shortlisted" && (
-              <button
-                type="button"
+              <PromoteButton
                 className="btn-premium btn-sm"
-                disabled={busy || !evalComplete}
+                label={tr("shortlistButton")}
+                companyName={t.company_name}
+                targetId={t.id}
+                unreviewed={{
+                  total: (scores.financial.unreviewed ?? 0) + (scores.technical.unreviewed ?? 0),
+                  financial: scores.financial.unreviewed ?? 0,
+                  technical: scores.technical.unreviewed ?? 0,
+                }}
+                busy={busy || !evalComplete}
                 title={evalComplete ? tr("shortlistReadyTitle") : tr("shortlistBlockedTitle")}
-                onClick={() => void shortlist()}
-              >
-                {tr("shortlistButton")}
-              </button>
+                onPromote={() => void shortlist()}
+              />
             )}
             {canAct && t.status !== "excluded" && (
               <span className="flex items-center gap-1">
@@ -307,15 +295,7 @@ export function TargetDetailView() {
           evidence={evidence}
         />
 
-        <TargetEvalTab
-          ctx={ctx}
-          evalItems={evalItems}
-          scores={scores}
-          scoreChip={scoreChip}
-          pendingFinancial={pendingFinancial}
-          proposedCount={proposedCount}
-          pendingTechnical={pendingTechnical}
-        />
+        <TargetEvalTab ctx={ctx} evalItems={evalItems} scores={scores} scoreChip={scoreChip} />
 
         <TargetSourcesTab ctx={ctx} />
       </section>

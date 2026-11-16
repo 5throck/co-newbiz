@@ -16,6 +16,18 @@ export interface ChecklistItem {
   mandatory: boolean;
   waiver_eligible: boolean;
 }
+/** One category of `eval_summary`: the live score, judged weight coverage, and the verdict-origin split (ADR-0200). */
+export interface EvalSummaryCategory {
+  score: number | null;
+  scoredWeight?: number;
+  totalWeight?: number;
+  excludedWeight?: number;
+  /** Judged weight by verdict origin (sums to scoredWeight). */
+  judged_by_source?: { human: number; auto_rule: number; ai_draft: number };
+  /** Non-pending, non-human verdicts in this category. */
+  unreviewed?: number;
+}
+
 export interface TargetRow {
   id: string;
   opportunity_id: string;
@@ -37,13 +49,14 @@ export interface TargetRow {
   // 재무·기술 평가(ADR-0139) 기반 랭킹 점수 — 서버가 계산해 붙여준다.
   // 위원회 심의(9개 항목)와 역할을 분리한다(사용자 요청, 2026-09-15).
   eval_summary?: {
-    // Weights are already in the targets payload (computeEvalScore spread); they drive the coverage markers.
-    financial: { score: number | null; scoredWeight?: number; totalWeight?: number; excludedWeight?: number };
-    technical: { score: number | null; scoredWeight?: number; totalWeight?: number; excludedWeight?: number };
+    financial: EvalSummaryCategory;
+    technical: EvalSummaryCategory;
     combined: number | null;
     complete?: boolean;
+    // ADR-0200 §5.1: non-pending, non-human verdicts across both categories (AI / rule verdicts nobody reviewed yet).
+    unreviewed_total?: number;
   };
-  // ADR-0199 A8 — provisional AI draft state; never part of eval_summary / ranking / promotion.
+  // ADR-0200 §8 A8 — version history + run state only (no provisional score: verdicts are applied directly).
   eval_draft?: import("./aiEvalTypes.ts").EvalDraftView;
 }
 // 재무 참고 패널 — GET /api/companies/[companyId]/financials 응답의 필요한 부분만.
