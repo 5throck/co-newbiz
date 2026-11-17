@@ -1,36 +1,78 @@
 // Split from app/brownfield/targets/[targetId]/page.tsx (Wave U-3 decomposition); behavior unchanged.
 
 export interface TargetDetail {
-  id: string; opportunity_id: string; company_name: string; dart_corp_code: string | null;
-  universe_note: string | null; status: "pending" | "shortlisted" | "excluded";
-  rank: number | null; exclusion_reason: string | null; screening_json: string | null;
+  id: string;
+  opportunity_id: string;
+  company_name: string;
+  dart_corp_code: string | null;
+  universe_note: string | null;
+  status: "pending" | "shortlisted" | "excluded";
+  rank: number | null;
+  exclusion_reason: string | null;
+  screening_json: string | null;
   screening_evidence_json: string | null;
   company_id: string | null;
 }
 export interface EvalItem {
-  id: string; category: "financial" | "technical"; source: "builtin" | "seeded" | "custom";
-  label: string; description: string | null; is_mandatory: 0 | 1; is_deletable: 0 | 1; weight: number;
-  data_ref: string | null; rubric_json: string | null;
-  state: { status: "pending" | "pass" | "partial" | "fail" | "na" | "waived"; note: string | null } | null;
+  id: string;
+  category: "financial" | "technical";
+  source: "builtin" | "seeded" | "custom";
+  label: string;
+  description: string | null;
+  is_mandatory: 0 | 1;
+  is_deletable: 0 | 1;
+  weight: number;
+  data_ref: string | null;
+  rubric_json: string | null;
+  state: {
+    status: "pending" | "pass" | "partial" | "fail" | "na" | "waived";
+    note: string | null;
+    /** ADR-0200: who produced the verdict. A missing value reads as `human` (pre-0197 rows). */
+    verdict_source?: "human" | "auto_rule" | "ai_draft";
+    source_version_id?: string | null;
+    assessed_by?: string | null;
+  } | null;
 }
-// 재무 평가 자동 초안(ADR-0140) — 서버가 만든 제안. 클라이언트 상태로만
-// 존재하고 확인·수정 후 기존 판정 저장(PUT eval-state)으로 확정된다.
-export interface EvalDraftItem {
-  criterion_id: string; label: string; data_ref: string;
-  status: "pass" | "partial" | "fail" | null; reason: string | null;
-  metrics: Array<{ label: string; value: string }>; note: string;
+export interface EvalCategoryScore {
+  score: number | null;
+  scoredWeight: number;
+  totalWeight: number;
+  excludedWeight: number;
+  /** ADR-0200: judged weight by verdict origin, and the count of non-pending non-human verdicts. */
+  byWeight?: { human: number; auto_rule: number; ai_draft: number };
+  unreviewed?: number;
 }
-export interface EvalDraftResp { source: string; years: string[]; latest_sync_at: string | null; drafts: EvalDraftItem[]; note: string }
-export interface EvalCategoryScore { score: number | null; scoredWeight: number; totalWeight: number; excludedWeight: number }
 // 사전 검토(대상 사전 검토 체크리스트) 근거 — 위원회 추천 검토·등록·재분석에서
 // 수집된 "나중에 참고할" 정보(사용자 결정, 2026-09-16). 이 화면은 읽기 전용
 // 저장소다 — 판정 기록은 /brownfield 최종 후보 목록 "사전 검토" 섹션에서 한다.
-export interface ScreeningItem { id: string; text: string; mandatory: boolean; waiver_eligible: boolean }
-export interface ScreeningSummary { assessed: number; total: number; knockOutsPassed: boolean; anyKnockOutFail: boolean; mandatoryOpen: string[] }
-export interface ScreeningItemEvidence { verdict?: string; rationale?: string; source_url?: string | null; kind?: string }
+export interface ScreeningItem {
+  id: string;
+  text: string;
+  mandatory: boolean;
+  waiver_eligible: boolean;
+}
+export interface ScreeningSummary {
+  assessed: number;
+  total: number;
+  knockOutsPassed: boolean;
+  anyKnockOutFail: boolean;
+  mandatoryOpen: string[];
+}
+export interface ScreeningItemEvidence {
+  verdict?: string;
+  rationale?: string;
+  source_url?: string | null;
+  kind?: string;
+}
 export interface EvidenceRow {
-  id: string; kind: string; title: string; detail: string | null;
-  source_url: string | null; source_kind: string | null; created_by: string | null; created_at: string;
+  id: string;
+  kind: string;
+  title: string;
+  detail: string | null;
+  source_url: string | null;
+  source_kind: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 // ADR-0171 D6: S3 rows vs the seeded technical criteria (read-only detection; reconcile is an explicit action).
 export interface ReconcilePlan {
@@ -55,10 +97,20 @@ export interface FinancialsResp {
   analysis: {
     years: string[];
     series: Array<{ key: string; label: string; points: Array<{ year: string; value: number | null }> }>;
-    ratios: Array<{ year: string; operatingMargin?: number | null; netMargin?: number | null; debtRatio?: number | null }>;
+    ratios: Array<{
+      year: string;
+      operatingMargin?: number | null;
+      netMargin?: number | null;
+      debtRatio?: number | null;
+    }>;
   };
 }
-export interface DisclosureRow { rcept_no: string; report_nm: string; rcept_dt: string; viewer_url: string | null }
+export interface DisclosureRow {
+  rcept_no: string;
+  report_nm: string;
+  rcept_dt: string;
+  viewer_url: string | null;
+}
 export interface DisclosuresResp {
   dart_linked: boolean;
   presets: Array<{ key: string; label: string }>;

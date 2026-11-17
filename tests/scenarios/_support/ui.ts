@@ -89,7 +89,7 @@ export async function openGatePanels(page: Page, index = 0): Promise<Locator> {
     );
   if (!mounted) {
     await page
-      .getByRole("tab", { name: /^(의사결정|결정)$/ })
+      .getByRole("tab", { name: /^(의사결정 — 승인 기록|의사결정|결정)$/ })
       .filter({ visible: true })
       .first()
       .click();

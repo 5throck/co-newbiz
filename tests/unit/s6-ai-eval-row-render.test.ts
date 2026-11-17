@@ -100,99 +100,41 @@ describe("longlist table fits the pane (no horizontal scroll at about 730px)", (
 
 test("ko/en parity for row keys", () => {
   const keys = Object.keys(ko.stages.s67.aiEval).filter((k) => k.startsWith("row"));
-  expect(keys.length).toBe(20); // + rowTargetRunning, rowCapReached (parallel runs), rowSeg (progress phrases)
+  expect(keys.length).toBe(13); // row button + reasons + rowSeg phrases (the row confirm keys are gone, ADR-0200)
   for (const k of keys) expect(en.stages.s67.aiEval[k]).toBeTruthy();
 });
 
-describe("row confirm button (ADR-0199)", () => {
-  const rc = Promise.resolve(import(`${WEB}/components/stages/brownfield/AiEvalRowConfirm.tsx`));
-  const chipOf = (over: Record<string, unknown> = {}) => ({
-    version_no: 1,
-    created_at: "2026-11-16T01:00:00Z",
-    checked_at: "2026-11-16T01:00:00Z",
-    provisional_score: 50,
-    proposed_count: 3,
-    unverified_count: 1,
-    stale: false,
-    evidence_grade: "A",
-    ...over,
-  });
-  const base = { excluded: false, hasDart: true, running: false, draft: { financial: chipOf() } };
-  test("disabled reasons: excluded, no DART, running, no draft, nothing writable; enabled otherwise", async () => {
-    const m = (await rc) as Loose;
-    expect(m.confirmDisabledReason(base)).toBeNull();
-    expect(m.confirmDisabledReason({ ...base, excluded: true })).toBe("excluded");
-    expect(m.confirmDisabledReason({ ...base, hasDart: false })).toBe("noDart");
-    expect(m.confirmDisabledReason({ ...base, running: true })).toBe("running");
-    expect(m.confirmDisabledReason({ ...base, draft: undefined })).toBe("noDraft");
-    expect(m.confirmDisabledReason({ ...base, draft: { financial: chipOf({ proposed_count: 0 }) } })).toBe(
-      "nothingWritable",
-    );
-  });
-  test("button renders its reason as title + described-by text; enabled has none", async () => {
-    const m = (await rc) as Loose;
-    const mk = (over: Record<string, unknown>, locale: "ko" | "en" = "ko") =>
-      render(
-        createElement(m.AiEvalRowConfirm, {
-          oppId: "o",
-          targetId: "t",
-          companyName: "Acme",
-          onConfirmed: () => {},
-          ...base,
-          ...over,
-        }),
-        locale,
-      );
-    const off = mk({ running: true });
-    expect(off).toContain("disabled");
-    expect(off).toContain("aria-describedby");
-    expect(off).toContain(ko.stages.s67.aiEval.rowConfirmDisabled.running);
-    expect(mk({}, "en")).toContain('aria-label="Set Confirmed Status for Acme"');
-    expect(mk({})).not.toContain("aria-describedby");
-  });
-  test("dialog: per-category checkbox sections with write/skip lists; no confirm-all", async () => {
-    const m = (await rc) as Loose;
-    const plan = (write: number) => ({
-      write: Array.from({ length: write }, (_, i) => ({ criterion_id: `c${i}`, label: `기준${i}`, status: "pass" })),
-      skippedHuman: [{ criterion_id: "h", label: "사람판정" }],
-      skippedUnverified: [{ criterion_id: "u", label: "미확인" }],
-    });
-    const html = render(
-      createElement(m.AiEvalRowConfirmBody, {
-        sections: [
-          { category: "financial", versionNo: 2, plan: plan(2) },
-          { category: "technical", versionNo: 1, plan: plan(0) },
-        ],
-        selected: ["financial"],
-        onToggle: () => {},
-        busy: false,
-        onSubmit: () => {},
-        onCancel: () => {},
-      }),
-    );
-    expect(html).toContain("재무 v2 확정");
-    expect(html).toContain("기술 v1 확정");
-    expect(html).toContain("기준0");
-    expect(html).toContain("사람판정");
-    expect(html).toContain("미확인");
-    expect(html.match(/type="checkbox"/g)?.length).toBe(2);
-    expect(html).toContain("2건 확정"); // only the selected category counts
-    expect(html).toContain(ko.stages.s67.aiEval.rowConfirmNothing); // technical has nothing writable
-    expect(html).not.toMatch(/전체 확정|confirm all/i);
-  });
-  test("row action order in the longlist: evaluate, confirm, compare on one nowrap group", () => {
-    const src = readFileSync(
-      `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistSection.tsx`,
-      "utf8",
-    );
+describe("row actions (ADR-0200): [AI 평가][항목 검토][버전 비교], no confirm", () => {
+  const src = readFileSync(
+    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistSection.tsx`,
+    "utf8",
+  );
+  test("order in the longlist: AI 평가, 항목 검토 (link to the detail evaluation tab), 버전 비교 on one nowrap group", () => {
     const a = src.indexOf("<AiEvalRowButton");
-    const b = src.indexOf("<AiEvalRowConfirm");
+    const b = src.indexOf("reviewItemsHref(tgt.id)");
     const c = src.indexOf('ta("compare")');
     expect(a).toBeGreaterThan(0);
     expect(a).toBeLessThan(b);
     expect(b).toBeLessThan(c);
+    expect(src).not.toContain("AiEvalRowConfirm");
     expect(src).toContain('className="ai-row-actions"');
     const css = readFileSync(`${import.meta.dir}/../../app/web-next/app/styles.css`, "utf8");
     expect(css).toMatch(/\.ai-row-actions \{[^}]*flex-wrap: nowrap/);
+  });
+  test("항목 검토 goes to the candidate detail page with ?tab=eval, which the detail page reads", () => {
+    const promote = readFileSync(
+      `${import.meta.dir}/../../app/web-next/components/stages/brownfield/AiEvalPromote.tsx`,
+      "utf8",
+    );
+    expect(promote).toContain("/brownfield/targets/$" + "{encodeURIComponent(targetId)}?tab=eval");
+    const detail = readFileSync(
+      `${import.meta.dir}/../../app/web-next/components/brownfield-target/useTargetDetail.ts`,
+      "utf8",
+    );
+    expect(detail).toContain('get("tab") === "eval"');
+    expect(ko.stages.s67.aiEval.reviewItems).toBe("항목 검토");
+  });
+  test("the row link is emphasized only while unreviewed verdicts exist", () => {
+    expect(src).toContain('(es?.unreviewed_total ?? 0) > 0 ? " font-semibold" : ""');
   });
 });

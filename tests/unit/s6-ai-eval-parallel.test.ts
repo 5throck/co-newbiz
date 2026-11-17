@@ -98,7 +98,7 @@ describe("rows rendered from two simultaneous runs plus an idle row", () => {
     );
   const chipsFor = (id: string) =>
     render(
-      createElement(chips.ProvisionalChips, {
+      createElement(chips.RunStateChips, {
         draft: undefined,
         dartCorpCode: "00123456",
         activeRunIds: ["r1", "r2"],

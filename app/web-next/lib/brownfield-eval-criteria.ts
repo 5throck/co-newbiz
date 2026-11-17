@@ -9,6 +9,13 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { parseGapRegister } from "./capability-gap.ts";
 import {
+  isHumanJudged,
+  isUnreviewedVerdict,
+  writeEvalVerdict,
+  type VerdictSource,
+  type WriteEvalVerdictResult,
+} from "../../../db/repositories/brownfield-eval-draft.repository.ts";
+import {
   isFinancialDataRef,
   parseRubric,
   sanitizeRubricInput,
@@ -52,6 +59,10 @@ export interface EvalStateRow {
   evidence_ref: string | null;
   assessed_by: string;
   assessed_at: string;
+  /** Migration 0197 (ADR-0200): origin of the current verdict. "Human-judged" = `human` on a non-pending row. */
+  verdict_source: VerdictSource;
+  /** Migration 0197: the draft version the verdict rests on (applied for AI rows, reviewed for human rows). */
+  source_version_id: string | null;
 }
 
 // 재무 평가 고정 항목 — 과거 5개년 매출/영업이익/부채 규모·추이를 기준으로
@@ -326,6 +337,20 @@ export interface EvalCategoryScore {
   totalWeight: number;
   /** 예외(해당없음·예외)로 처리되어 점수 계산에서 빠진 항목의 가중치 합. */
   excludedWeight: number;
+  /** Item counts for display: judged items over all non-excluded items (the weight sums above drive the score). */
+  judgedCount: number;
+  totalCount: number;
+  /** ADR-0200 §5.1: judged weight split by verdict origin; the three values sum to scoredWeight. */
+  byWeight: Record<VerdictSource, number>;
+  /** ADR-0200 §5.1: non-pending, non-human verdicts (unreviewed AI / rule verdicts) in this category. */
+  unreviewed: number;
+}
+
+/** Per-item input of computeEvalScore. A missing `verdict_source` reads as the column default `human`. */
+export interface EvalScoreItem {
+  category: EvalCategory;
+  weight: number;
+  state: { status: EvalStatus; verdict_source?: VerdictSource | null } | null;
 }
 
 /** S7 재무·기술 평가 — 카테고리(financial/technical)별로 가중 점수를 100점
@@ -335,13 +360,18 @@ export interface EvalCategoryScore {
  * 넣지 않되, totalWeight에는 잡아 "판정 진행률"을 따로 보여줄 수 있게 한다.
  * 두 카테고리를 하나로 합치지 않는다 — 재무와 기술은 서로 다른 평가 영역이라
  * 각자 100점으로 보여준다(사용자 요구). */
-export function computeEvalScore(
-  items: Array<{ category: EvalCategory; weight: number; state: { status: EvalStatus } | null }>,
-): Record<EvalCategory, EvalCategoryScore> {
-  const out: Record<EvalCategory, EvalCategoryScore> = {
-    financial: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0 },
-    technical: { score: null, scoredWeight: 0, totalWeight: 0, excludedWeight: 0 },
-  };
+export function computeEvalScore(items: EvalScoreItem[]): Record<EvalCategory, EvalCategoryScore> {
+  const empty = (): EvalCategoryScore => ({
+    score: null,
+    scoredWeight: 0,
+    totalWeight: 0,
+    excludedWeight: 0,
+    judgedCount: 0,
+    totalCount: 0,
+    byWeight: { human: 0, auto_rule: 0, ai_draft: 0 },
+    unreviewed: 0,
+  });
+  const out: Record<EvalCategory, EvalCategoryScore> = { financial: empty(), technical: empty() };
   const acc: Record<EvalCategory, { num: number; den: number }> = {
     financial: { num: 0, den: 0 },
     technical: { num: 0, den: 0 },
@@ -349,16 +379,22 @@ export function computeEvalScore(
   for (const item of items) {
     const bucket = out[item.category];
     const status = item.state?.status ?? "pending";
+    // Unreviewed counts every non-pending, non-human verdict (na/waived included, defensively: non-human writers cannot
+    // set them, Q8); the arithmetic below is unchanged and counts every origin (§5.1).
+    if (isUnreviewedVerdict(item.state)) bucket.unreviewed++;
     if (status === "na" || status === "waived") {
       bucket.excludedWeight += item.weight;
       continue;
     }
     bucket.totalWeight += item.weight;
+    bucket.totalCount++;
     if (status === "pending") continue;
+    bucket.judgedCount++;
     const value = status === "pass" ? 1 : status === "partial" ? 0.5 : 0; // fail = 0
     acc[item.category].num += item.weight * value;
     acc[item.category].den += item.weight;
     bucket.scoredWeight += item.weight;
+    bucket.byWeight[item.state?.verdict_source ?? "human"] += item.weight;
   }
   for (const cat of ["financial", "technical"] as const) {
     out[cat].score = acc[cat].den > 0 ? Math.round((acc[cat].num / acc[cat].den) * 100) : null;
@@ -378,9 +414,60 @@ export function combinedEvalScore(scores: Record<EvalCategory, EvalCategoryScore
   return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
 }
 
-/** `confirmedFromVersionId` (ADR-0199): the draft version this verdict rested on. Omitted = NULL — a save that does not
- *  cite a draft clears the link, because the verdict no longer rests on one. */
-export function upsertEvalState(
+/** One category of `eval_summary` (§8 A8): the score plus `judged_by_source` (weights) and `unreviewed`. */
+export type EvalSummaryCategory = EvalCategoryScore & { judged_by_source: Record<VerdictSource, number> };
+
+export interface EvalSummary {
+  financial: EvalSummaryCategory;
+  technical: EvalSummaryCategory;
+  /** Ranking metric, unchanged (combinedEvalScore). */
+  combined: number | null;
+  /** No pending item in either category, whatever the origins (meaning unchanged, §5.1). */
+  complete: boolean;
+  /** Unreviewed verdicts across both categories (§5.1/§7.1 row marker, committee brief suffix). */
+  unreviewed_total: number;
+}
+
+/** The targets-list `eval_summary` (§5.1, §8 A8) built from computeEvalScore output. */
+export function buildEvalSummary(scores: Record<EvalCategory, EvalCategoryScore>): EvalSummary {
+  const cat = (c: EvalCategory): EvalSummaryCategory => ({ ...scores[c], judged_by_source: { ...scores[c].byWeight } });
+  return {
+    financial: cat("financial"),
+    technical: cat("technical"),
+    combined: combinedEvalScore(scores),
+    complete: (["financial", "technical"] as const).every(
+      (c) => scores[c].totalWeight > 0 && scores[c].scoredWeight === scores[c].totalWeight,
+    ),
+    unreviewed_total: scores.financial.unreviewed + scores.technical.unreviewed,
+  };
+}
+
+/**
+ * The `human` component of a draft's input_hash (§4.3): `[criterion_id, status]` of HUMAN-judged rows only. Applied AI
+ * verdicts are excluded, so applying them never changes the next run's hash. On pre-0197 data (every row `human`) this
+ * equals the old "non-pending" set, so existing hashes stay valid.
+ */
+export function humanVerdictHashComponent(
+  items: Array<{ id: string; state: { status: EvalStatus; verdict_source?: VerdictSource | null } | null }>,
+): Array<[string, EvalStatus]> {
+  return items
+    .filter((c) => isHumanJudged(c.state))
+    .map((c) => [c.id, (c.state as { status: EvalStatus }).status] as [string, EvalStatus]);
+}
+
+export {
+  isEligibleForDraft,
+  isHumanJudged,
+  isUnreviewedVerdict,
+} from "../../../db/repositories/brownfield-eval-draft.repository.ts";
+
+/**
+ * Record one item verdict with its origin (ADR-0200 §4.1) — the typed path for callers whose origin may be non-human.
+ * `source` is derived server-side (human UI session → `human`; MCP / bearer / agent → `ai_draft`), never from a body.
+ * Returns `{ ok: false, reason: "human_verdict_locked" | "forbidden_status" }` instead of throwing (Q8); a person's
+ * save always lands and makes the row `human`, even with the same status (G5).
+ */
+export function recordEvalVerdict(
   targetId: string,
   criterionId: string,
   opts: {
@@ -388,47 +475,25 @@ export function upsertEvalState(
     note: string | null;
     evidence_ref: string | null;
     assessedBy: string;
-    confirmedFromVersionId?: string | null;
+    source: VerdictSource;
+    /** The draft version the verdict rests on (null = none). Human-only for API callers (route-enforced). */
+    sourceVersionId: string | null;
+    expectSource?: VerdictSource;
   },
-): EvalStateRow {
-  const db = getDb();
-  const existing = db
-    .query("SELECT id FROM brownfield_target_eval_state WHERE brownfield_target_id = ? AND criterion_id = ?")
-    .get(targetId, criterionId) as { id: string } | undefined;
-  const at = now();
-  const fromVersion = opts.confirmedFromVersionId ?? null;
-  if (existing) {
-    db.run(
-      "UPDATE brownfield_target_eval_state SET status = ?, note = ?, evidence_ref = ?, assessed_by = ?, assessed_at = ?, confirmed_from_version_id = ? WHERE id = ?",
-      [opts.status, opts.note, opts.evidence_ref, opts.assessedBy, at, fromVersion, existing.id],
-    );
-    return {
-      id: existing.id,
-      brownfield_target_id: targetId,
-      criterion_id: criterionId,
-      status: opts.status,
-      note: opts.note,
-      evidence_ref: opts.evidence_ref,
-      assessed_by: opts.assessedBy,
-      assessed_at: at,
-    };
-  }
-  const id = ulid();
-  db.run(
-    `INSERT INTO brownfield_target_eval_state (id, brownfield_target_id, criterion_id, status, note, evidence_ref, assessed_by, assessed_at, confirmed_from_version_id)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
-    [id, targetId, criterionId, opts.status, opts.note, opts.evidence_ref, opts.assessedBy, at, fromVersion],
-  );
-  return {
-    id,
-    brownfield_target_id: targetId,
-    criterion_id: criterionId,
+  db: Database = getDb(),
+): WriteEvalVerdictResult {
+  return writeEvalVerdict(db, {
+    targetId,
+    criterionId,
     status: opts.status,
     note: opts.note,
-    evidence_ref: opts.evidence_ref,
-    assessed_by: opts.assessedBy,
-    assessed_at: at,
-  };
+    evidenceRef: opts.evidence_ref,
+    assessedBy: opts.assessedBy,
+    source: opts.source,
+    sourceVersionId: opts.sourceVersionId,
+    expectSource: opts.expectSource,
+    now: now(),
+  });
 }
 
 // ── Criteria reconcile (ADR-0171 D6) ─────────────────────────────────────────

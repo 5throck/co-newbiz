@@ -11,7 +11,12 @@ import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { route } from "../../../../../lib/route.ts";
 import { goLadderCheck, goRationaleCheck } from "../../../../../lib/gate-write-checks.ts";
-import { checkExtrasReferences, integrityActive, parseDecisionExtras, recordGateDecisionRow } from "../../../../../lib/gate-decision-contract.ts";
+import {
+  checkExtrasReferences,
+  integrityActive,
+  parseDecisionExtras,
+  recordGateDecisionRow,
+} from "../../../../../lib/gate-decision-contract.ts";
 import { primeSnapshotCache } from "../../../../../lib/gate-snapshot.ts";
 import { captureReviewSnapshot, recordHumanFinalReview } from "../../../../../lib/review/human-final.ts";
 
@@ -25,7 +30,10 @@ const DECISIONS = new Set(["go", "hold", "kill"]);
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(auth.auth, "read");
+    if (denied) return denied;
+  }
   const { id } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
@@ -37,16 +45,52 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
        WHERE g.entity_type = 'opportunity' AND g.entity_id = ?
        ORDER BY g.decided_at DESC`,
     )
-    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; judgement_confirmations_json: string | null; decided_by: string; decided_at: string; ai_recommended_decision: string | null; divergence_reason: string | null; snapshot_hash: string | null; acknowledgements_json: string | null }>;
+    .all(id) as Array<{
+    id: string;
+    gate: string;
+    decision: string;
+    rationale: string;
+    missing_artifacts_json: string | null;
+    judgement_confirmations_json: string | null;
+    decided_by: string;
+    decided_at: string;
+    ai_recommended_decision: string | null;
+    divergence_reason: string | null;
+    snapshot_hash: string | null;
+    acknowledgements_json: string | null;
+  }>;
   const history = rawHistory.map((v) => {
     let judgement_confirmations: string[] = [];
-    try { judgement_confirmations = v.judgement_confirmations_json ? (JSON.parse(v.judgement_confirmations_json) as string[]) : []; } catch { /* corrupt json → none */ }
+    try {
+      judgement_confirmations = v.judgement_confirmations_json
+        ? (JSON.parse(v.judgement_confirmations_json) as string[])
+        : [];
+    } catch {
+      /* corrupt json → none */
+    }
     let acknowledgements: Array<{ key: string; kind: string; reason: string }> = [];
-    try { acknowledgements = v.acknowledgements_json ? (JSON.parse(v.acknowledgements_json) as typeof acknowledgements) : []; } catch { /* corrupt json → none */ }
+    try {
+      acknowledgements = v.acknowledgements_json
+        ? (JSON.parse(v.acknowledgements_json) as typeof acknowledgements)
+        : [];
+    } catch {
+      /* corrupt json → none */
+    }
     return {
-      id: v.id, gate: v.gate, decision: v.decision, rationale: v.rationale, missing_artifacts: v.missing_artifacts_json ? JSON.parse(v.missing_artifacts_json) as string[] : null, judgement_confirmations, decided_by: v.decided_by, decided_at: v.decided_at,
+      id: v.id,
+      gate: v.gate,
+      decision: v.decision,
+      rationale: v.rationale,
+      missing_artifacts: v.missing_artifacts_json ? (JSON.parse(v.missing_artifacts_json) as string[]) : null,
+      judgement_confirmations,
+      decided_by: v.decided_by,
+      decided_at: v.decided_at,
       // ADR-0186: a decision without a snapshot row is "legacy" (recorded before the acknowledged-GO contract; never rewritten).
-      legacy: v.snapshot_hash === null, snapshot_hash: v.snapshot_hash, acknowledgements, ai_recommended_decision: v.ai_recommended_decision, divergence_reason: v.divergence_reason,
+      legacy: v.snapshot_hash === null,
+      snapshot_hash: v.snapshot_hash,
+      acknowledgements,
+      ai_recommended_decision: v.ai_recommended_decision,
+      divergence_reason: v.divergence_reason,
     };
   });
   // Latest decision per gate — same helper as the process engine (ADR-0094),
@@ -61,44 +105,69 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
     // so the buckets can render the saved state instead of pending checkboxes.
     judgement_confirmations: v.judgementConfirmations,
   }));
-  return ok({ latest, history,
-  }, 200, { count: history.length });
+  return ok({ latest, history }, 200, { count: history.length });
 });
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Recording gate decisions requires the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Recording gate decisions requires the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
-    gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
+    gate?: string;
+    decision?: string;
+    rationale?: string;
+    missing_artifacts?: string[];
     // ADR-0097 back-compat: optional provenance link to the committee
     // deliberation that proposed this decision (0066 nullable column).
-    gate_evaluation_id?: string; learning_capture?: string;
+    gate_evaluation_id?: string;
+    learning_capture?: string;
     // ADR-0182 §5 — needs_judgement claims the human marks as reviewed.
     // Optional, never validated against the review records, never blocks.
     judgement_confirmations?: string[];
     // ADR-0186 D1/D9 - the human acts of the decision contract (see lib/gate-decision-contract.ts).
-    snapshot_hash?: string; acknowledgements?: unknown; brief_id?: string; divergence_reason?: string; kill_override_id?: string;
+    snapshot_hash?: string;
+    acknowledgements?: unknown;
+    brief_id?: string;
+    divergence_reason?: string;
+    kill_override_id?: string;
   } | null;
   if (!body?.gate || !GATES.has(body.gate)) {
-    return badRequest("invalid_request", `gate must be one of ${[...GATES].join("|")} — fs/dd/entity_ic/group_ic are project-carrier (S8–S12) gates and belong on /api/projects/[id]/gate-decisions.`);
+    return badRequest(
+      "invalid_request",
+      `gate must be one of ${[...GATES].join("|")} — fs/dd/entity_ic/group_ic are project-carrier (S8–S12) gates and belong on /api/projects/[id]/gate-decisions.`,
+    );
   }
   if (!body.decision || !DECISIONS.has(body.decision)) {
     return badRequest("invalid_request", `decision must be one of ${[...DECISIONS].join("|")}.`);
   }
   const rationale = body.rationale?.trim();
-  if (!rationale) return badRequest("invalid_request", "rationale is required — a gate decision without its reasoning is not recordable.");
+  if (!rationale)
+    return badRequest(
+      "invalid_request",
+      "rationale is required — a gate decision without its reasoning is not recordable.",
+    );
   // HOLD must carry the list of what is missing; otherwise it reads as a soft pass.
   const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
   if (body.decision === "hold" && missing.length === 0) {
-    return badRequest("hold_requires_artifacts", "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).");
+    return badRequest(
+      "hold_requires_artifacts",
+      "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).",
+    );
   }
   // ADR-0152 — every KILL carries learning capture (422 when absent).
   const learningCapture = body.learning_capture?.trim() || null;
   if (body.decision === "kill" && !learningCapture) {
-    return unprocessable("learning_capture_required", "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).");
+    return unprocessable(
+      "learning_capture_required",
+      "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).",
+    );
   }
   const db = getDb();
   const opp = db.query("SELECT id, name FROM opportunity WHERE id = ?").get(id) as { id: string; name: string } | null;
@@ -119,10 +188,18 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (ladderDenied) return ladderDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "opportunity", id }, body.gate as GateId);
     if (gaps.length > 0) {
-      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`);
+      return fail(
+        409,
+        "gate_prerequisites_incomplete",
+        `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`,
+        { gaps },
+      );
     }
     // ADR-0186 D2 (family `rationale`): GO only - HOLD and KILL are never blocked by the integrity families.
-    const rationaleDenied = goRationaleCheck({ entityType: "opportunity", entityId: id, gate: body.gate, actor: ctx.userId }, rationale);
+    const rationaleDenied = goRationaleCheck(
+      { entityType: "opportunity", entityId: id, gate: body.gate, actor: ctx.userId },
+      rationale,
+    );
     if (rationaleDenied) return rationaleDenied;
   }
 
@@ -133,7 +210,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // committee session.
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
+    return badRequest(
+      "invalid_request",
+      "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.",
+    );
   }
   // Provenance binding: the cited evaluation's process_run must address THIS
   // opportunity — another entity's proposal cannot be recorded as this gate's
@@ -146,7 +226,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       )
       .get(gateEvaluationId, id);
     if (!bound) {
-      return badRequest("provenance_mismatch", "gate_evaluation_id is not an output of this opportunity's committee session.");
+      return badRequest(
+        "provenance_mismatch",
+        "gate_evaluation_id is not an output of this opportunity's committee session.",
+      );
     }
   }
   // ADR-0153 — snapshot the artifact as the human saw it, BEFORE the decision lands.
@@ -159,18 +242,44 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // ADR-0186: legacy single INSERT when no snapshot family is on; otherwise ONE BEGIN IMMEDIATE transaction holds the
   // recomputed snapshot (opportunity gates keep outcomes in the snapshot only), the contract checks, the decision row and its snapshot.
   const recorded = recordGateDecisionRow(db, {
-    entityType: "opportunity", entityId: id, gate: body.gate, decision: body.decision as "go" | "hold" | "kill", storedRationale: rationale,
-    missingArtifactsJson: body.decision === "hold" ? JSON.stringify(missing) : null, actor: ctx.userId, gateEvaluationId,
+    entityType: "opportunity",
+    entityId: id,
+    gate: body.gate,
+    decision: body.decision as "go" | "hold" | "kill",
+    storedRationale: rationale,
+    missingArtifactsJson: body.decision === "hold" ? JSON.stringify(missing) : null,
+    actor: ctx.userId,
+    gateEvaluationId,
     learningCapture: body.decision === "kill" ? learningCapture : null,
     judgementConfirmationsJson: judgementConfirmations.length > 0 ? JSON.stringify(judgementConfirmations) : null,
-    extras, now: nowTs,
+    extras,
+    now: nowTs,
   });
   if (!recorded.ok) {
-    if (recorded.built) primeSnapshotCache({ entityType: "opportunity", entityId: id, gate: body.gate, actor: ctx.userId, briefId: extras?.briefId ?? null }, recorded.built);
+    if (recorded.built)
+      primeSnapshotCache(
+        {
+          entityType: "opportunity",
+          entityId: id,
+          gate: body.gate,
+          actor: ctx.userId,
+          briefId: extras?.briefId ?? null,
+        },
+        recorded.built,
+      );
     return fail(recorded.failure.status, recorded.failure.code, recorded.failure.message, recorded.failure.details);
   }
   const gid = recorded.id;
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.
   recordHumanFinalReview(reviewSnapshot, ctx.userId, body.decision);
-  return ok({ id: gid, gate: body.gate, decision: body.decision, snapshot_hash: recorded.snapshotHash, acknowledgements: recorded.acknowledgements.length }, 201);
+  return ok(
+    {
+      id: gid,
+      gate: body.gate,
+      decision: body.decision,
+      snapshot_hash: recorded.snapshotHash,
+      acknowledgements: recorded.acknowledgements.length,
+    },
+    201,
+  );
 });

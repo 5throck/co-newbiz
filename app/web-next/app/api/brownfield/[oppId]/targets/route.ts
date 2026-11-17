@@ -11,7 +11,7 @@ import {
   screeningItems,
   screeningSummary,
 } from "../../../../../lib/brownfield-targets.ts";
-import { combinedEvalScore, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
+import { buildEvalSummary, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 import { evalDraftView } from "../../../../../lib/brownfield-eval-draft-view.ts";
 
@@ -50,14 +50,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
         // 체크리스트(screening_summary)는 위원회 심의의 판정 근거로 쓰고,
         // Long List 단계의 스코어·정렬에는 쓰지 않는다(사용자 요청, 2026-09-15).
         const evalScores = computeEvalScore(targetEvalStates(oppId, t.id, auth.auth.userId));
-        const complete = (["financial", "technical"] as const).every(
-          (c) => evalScores[c].totalWeight > 0 && evalScores[c].scoredWeight === evalScores[c].totalWeight,
-        );
         return {
           ...t,
           screening_summary: screeningSummary(t),
-          eval_summary: { ...evalScores, combined: combinedEvalScore(evalScores), complete },
-          // ADR-0199 A8 — provisional AI draft chips; additive and never part of eval_summary / ranking / promotion.
+          // ADR-0200 §5.1/§8 A8: every origin counts; per-category `judged_by_source` + `unreviewed`, plus `unreviewed_total`.
+          eval_summary: buildEvalSummary(evalScores),
+          // ADR-0200 §8 A8: version history + run state only (no provisional score — verdicts are applied directly).
           eval_draft: evalDraftView(db, t.id),
         };
       }),

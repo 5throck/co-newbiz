@@ -39,10 +39,6 @@ const { WebDiscoveryPanel } = (await import(`${WEB}/components/stages/brownfield
 
 const HOOK = readFileSync("app/web-next/components/brownfield-target/useTargetDetail.ts", "utf8");
 const SYNC_ROUTE = readFileSync("app/web-next/app/api/companies/[companyId]/sync/route.ts", "utf8");
-const EVAL_DRAFT = readFileSync(
-  "app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/eval-draft/route.ts",
-  "utf8",
-);
 const PANELS = readFileSync("app/web-next/components/stages/brownfield/DiscoveryPanels.tsx", "utf8");
 
 function render(el: unknown, locale: "ko" | "en" = "ko"): string {
@@ -210,21 +206,7 @@ describe("D6 — hook surfaces sync failures; banner renders the three states", 
   });
 });
 
-// ── D6 eval-draft note branches on the target's code ──
-describe("D6 — eval-draft note conditional on the target's dart_corp_code", () => {
-  test("the target row carries dart_corp_code and the empty-facts note has both variants", () => {
-    expect(EVAL_DRAFT).toContain("bt.dart_corp_code,");
-    expect(EVAL_DRAFT).toContain("target.dart_corp_code");
-    expect(EVAL_DRAFT).toContain(
-      "DART 재무 동기화가 아직 성공하지 못했습니다. 후보 상세의 재무 동기화를 다시 실행하세요",
-    );
-    expect(EVAL_DRAFT).toContain(
-      "DART 고유번호가 없어 자동 동기화가 시도되지 않았습니다. 후보 수정에서 고유번호를 등록한 뒤 다시 시도하세요",
-    );
-    // the old unconditional "retry later" advice is gone
-    expect(EVAL_DRAFT).not.toContain("잠시 후 다시 시도하세요");
-  });
-});
+// ── D6 eval-draft note: retired with the S7 non-persisted draft route (ADR-0200 Q7) ──
 
 // ── D7 chip ──
 describe("D7 — 고유번호 미확인 chip on codeless suggestion cards", () => {

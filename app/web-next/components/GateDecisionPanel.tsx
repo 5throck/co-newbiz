@@ -733,6 +733,11 @@ export function GateDecisionPanel({
       setError(`${err.message} ${ti("priorAwaiting")}`);
       return;
     }
+    if (err.code === "gate_prerequisites_incomplete" && Array.isArray(d.gaps) && d.gaps.length > 0) {
+      // Name what is missing, not only that something is (the localized code text alone is generic).
+      setError(`${err.message} ${(d.gaps as unknown[]).map(String).join(" · ")}`);
+      return;
+    }
     setError(err.message);
   }
 

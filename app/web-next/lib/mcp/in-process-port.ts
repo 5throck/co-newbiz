@@ -369,8 +369,9 @@ export const HUMAN_ONLY_ROUTES: readonly HumanOnlyRule[] = [
   { method: "POST", pattern: "/api/opportunities/:id/synergy-confirm" },
   { method: "DELETE", pattern: "/api/opportunities/:id/synergy-confirm" },
   { method: "POST", pattern: "/api/brownfield/:oppId/targets/:targetId/rerank" },
-  // ADR-0199 A6: confirming a draft version's proposals writes human verdicts; drafting is a proposal, confirming is a person's act.
-  { method: "POST", pattern: "/api/brownfield/:oppId/targets/:targetId/eval-draft-versions/:versionId/confirm" },
+  // ADR-0200: Short List promotion and accepting rule verdicts as human verdicts are person's acts (the confirm route A6 is gone).
+  { method: "POST", pattern: "/api/brownfield/:oppId/targets/:targetId/shortlist" },
+  { method: "POST", pattern: "/api/brownfield/:oppId/targets/:targetId/eval-state/accept-rule" },
   { method: "PATCH", pattern: "/api/projects/:id/waivers/:waiverId" },
   { method: "PUT", pattern: "/api/projects/:id/dd-checklist/tailor/:itemId/review" },
   { method: "POST", pattern: "/api/opportunities/:id/promote" },

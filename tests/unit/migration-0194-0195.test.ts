@@ -139,7 +139,7 @@ describe("migrations 0194 + 0195 (ADR-0199)", () => {
     expect(cols(db, "brownfield_eval_draft_run_item")).toContain("dart_calls");
     expect(cols(db, "brownfield_eval_draft_version")).toContain("input_hash");
     const evalCols = cols(db, "brownfield_target_eval_state");
-    expect(evalCols[evalCols.length - 1]).toBe("confirmed_from_version_id");
+    expect(evalCols).toContain("confirmed_from_version_id"); // no longer the last column since 0197 (ADR-0200)
     const fks = db.query("PRAGMA foreign_key_list(brownfield_target_eval_state)").all() as Array<{
       table: string;
       from: string;

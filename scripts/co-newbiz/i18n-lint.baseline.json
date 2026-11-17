@@ -6,8 +6,6 @@
   "app/web-next/app/api/brownfield/[oppId]/eval-draft-runs/route.ts": 2,
   "app/web-next/app/api/brownfield/[oppId]/target-proposals/route.ts": 2,
   "app/web-next/app/api/brownfield/[oppId]/target-proposals/web-search/route.ts": 42,
-  "app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/eval-draft-versions/[versionId]/confirm/route.ts": 2,
-  "app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/eval-draft/route.ts": 19,
   "app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/eval-state/[criterionId]/route.ts": 1,
   "app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/route.ts": 1,
   "app/web-next/app/api/brownfield/[oppId]/targets/[targetId]/screening-draft/route.ts": 53,

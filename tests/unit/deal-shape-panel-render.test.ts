@@ -76,6 +76,9 @@ const view = (d: unknown, over: Record<string, unknown> = {}, locale: "ko" | "en
       onForm: () => {},
       onSubmit: () => {},
       onEdit: () => {},
+      reco: { busy: false, error: null, note: null, items: [] },
+      onRecommend: () => {},
+      onApply: () => {},
       busy: false,
       problem: null,
       serverError: null,
@@ -156,12 +159,13 @@ describe("view logic", () => {
 });
 
 describe("status line", () => {
-  test("nothing recorded: unassessed text, every shape not evaluated, no verdict chip", () => {
+  test("nothing recorded: unassessed text, no recorded list (no table), no verdict chip", () => {
     const html = view(data([]));
     expect(html).toContain("아직 기록된 평가가 없습니다 — 중단 조건 #9는 평가 전으로 남습니다");
     expect(html).toContain('data-status="unassessed"');
     expect(html).not.toContain("가능한 형태 0건");
-    expect(html.match(/data-state="unevaluated"/g)?.length).toBe(8);
+    expect(html).not.toContain("<table");
+    expect(html).not.toContain("deal-shape-recorded");
   });
   test("zero viable: warning that #9 is triggered, conditional, with an icon", () => {
     const html = view(data([row("spv", false), row("license_in", false)]));
@@ -183,7 +187,8 @@ describe("shape rows", () => {
   test("verdicts are icon plus text, not colour alone", () => {
     expect(html).toContain('<span aria-hidden="true">✓</span> 가능');
     expect(html).toContain('<span aria-hidden="true">✕</span> 불가');
-    expect(html).toContain('<span aria-hidden="true">○</span> 평가 전');
+    expect(html).not.toContain("평가 전"); // only recorded shapes are listed; nothing says "not evaluated" per shape
+    expect(html.match(/data-shape="/g)?.length).toBe(2);
   });
   test("shape and intent labels are localized (existing S10 wording reused, two new keys added)", () => {
     for (const label of [
@@ -220,7 +225,8 @@ describe("shape rows", () => {
 describe("human-only recording", () => {
   test("states that no AI suggestion is pre-filled, and the form starts empty with required fields marked", () => {
     const html = view(data([]));
-    expect(html).toContain("AI 제안을 미리 채우지 않습니다");
+    expect(html).toContain("AI 추천은 제안일 뿐입니다");
+    expect(html).toContain("AI 추천</button>");
     const form = (html.match(/<form[\s\S]*?<\/form>/) ?? [""])[0];
     expect(form).not.toContain("checked");
     expect(form).toContain('aria-required="true"');
@@ -369,10 +375,12 @@ describe("mount points (source pins)", () => {
   });
   test("S7 mounts it in the shortlist section before the gate decision, only when asked (S7 tab, not S6)", () => {
     const section = src("components/stages/brownfield/ShortlistSection.tsx");
-    const at = section.indexOf("<DealShapePanel");
-    expect(at).toBeGreaterThan(-1);
-    expect(at).toBeLessThan(section.indexOf("<GateDecisionPanel"));
+    expect(section).toContain("<S7DecisionTabs");
     expect(section).toContain("dealShapePanel &&");
+    const tabs = src("components/stages/brownfield/S7DecisionTabs.tsx");
+    const at = tabs.indexOf("<DealShapePanel");
+    expect(at).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(tabs.indexOf("<GateDecisionPanel"));
     expect(src("app/deals/[id]/[stage]/page.tsx")).toContain('dealShapePanel={stageId === "S7"}');
     expect(src("components/stages/brownfield/BrownfieldStage.tsx")).toContain(
       "dealShapePanel={props0.dealShapePanel === true}",

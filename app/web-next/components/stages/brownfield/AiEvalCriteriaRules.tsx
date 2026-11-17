@@ -12,7 +12,7 @@ export function ScoreExplanation() {
       <h4 className="m-0 text-[length:var(--fs-body)]">{t("scoreTitle")}</h4>
       <ul className="m-0 pl-5 text-[length:var(--fs-caption)]">
         <li>{t("score.formula")}</li>
-        <li>{t("score.provisional")}</li>
+        <li>{t("score.direct")}</li>
         <li>{t("score.coverage")}</li>
         <li>{t("score.grades")}</li>
         <li>{t("score.dartReuse", { days: DART_REUSE_DAYS, season: DART_REUSE_DAYS_FILING_SEASON })}</li>

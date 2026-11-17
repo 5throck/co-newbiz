@@ -21,7 +21,20 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.21.0"
+  version: "2.21.1"
+  # v2.21.1 - wording/comment alignment with the screens shipped in PR 898
+  #   (process-governance-manager audit 2026-11-17; no stage, gate, kill-criteria,
+  #   track, artifact-list or blocker-key change):
+  #   - S3 entryCriteria[0] no longer claims a selected opportunity exists at S3
+  #     entry, and completionCriteria[2] reads "this opportunity is selected":
+  #     selection is the explicit human "이 기회 선택" act on the S3 decision tab
+  #     (ADR-0192 decision 4); synergy confirmation never selects (boundary #2).
+  #     The engine already checks this opportunity's own status (lib/process-flow.ts S3).
+  #   - S7 target-screening comment records ADR-0200 (item verdict origin
+  #     human / auto_rule / ai_draft, AI results applied directly, Short List
+  #     promotion "심사 종료" human-only, MCP shortlist_candidate removed).
+  #   - S7 deal-shape-evaluation comment records the proposal-only AI
+  #     recommendation (prompt s7.deal_shape_recommend); it never writes a row.
   # v2.21.0 - ADR-0196 Phase E (decision 9; design 2026-11-08-committee-minutes-as-meeting-design §7.2):
   #   entity_ic and group_ic gate exit criteria each gain one line: the IC
   #   committee session exists and its (confirmed or draft) minutes are
@@ -570,7 +583,7 @@ stages:
       - 필요 역량 목록 (시장 요구사항 — S2 스케치 requiredCapabilities·S1 요인에서 도출)
       - 역량 갭 분석 (그룹/계열사 보유 역량 대비; 내부(자사 단독) 역량 평가는 후속 보강)
     entryCriteria:
-      - S2 완료 (selected 기회 존재)
+      - S2 완료 (기회 등록·매력도 평가 — 선정(selected)은 이 단계에서 사람이 기록한다, ADR-0192)
     activities:
       - id: strategic-fit-screening
         agent: process-governance-manager
@@ -636,7 +649,7 @@ stages:
     completionCriteria:
       - 기회에 synergy_score와 근거가 기록되었다
       - 적합성 판단이 사람이 확정한 시너지 평가(synergy_score_confirmed_at 기록 + 비어 있지 않은 synergy_rationale)로 충족되었다 (ADR-0192, v2.18.0 — 2026-11-06 이전 생성 기회는 종전 기준(opportunity.rationale) 유지)
-      - 최소 1개 기회가 selected 상태이다 (시너지·적합성 평가 후 선정)
+      - 이 기회가 selected 상태이다 — 선정은 시너지 점수 확정 후 사람이 S3 의사결정 탭의 '이 기회 선택'으로 기록하는 명시적 행위이며, 시너지 확정만으로는 선정되지 않는다 (ADR-0192, 경계 #2)
       - 필요 역량 등록부에 출처(source)가 기록된 역량이 1건 이상 존재한다 (capability-register 활동 — grandfathered 기회 제외)
       # v2.14.0 (ADR-0187 H8): declares the engine blocker
       # countSourcedCapabilityRows(capability_gap_json) > 0 (lib/process-flow.ts S3).
@@ -873,6 +886,16 @@ stages:
         agent: brownfield-agent
         skills: [brownfield-feasibility, strategic-fit-screening, peer-benchmarking]
         procedure: [brownfield-target-screening]
+        # v2.21.1 (ADR-0200, amends ADR-0199): per-candidate evaluation items carry a
+        # verdict origin - human / auto_rule (deterministic financial rubric) /
+        # ai_draft (LLM technical evidence). AI evaluation results are applied
+        # directly as item verdicts (no confirm step) and count in the score and
+        # rank, with unreviewed counts shown; a person reviews per item on the
+        # candidate detail screen. Short List promotion ("심사 종료" - closing the
+        # candidate's screening into the 최종 후보 목록) is a human-only act; the MCP
+        # tool shortlist_candidate is removed. The evaluation and promotion surface
+        # is the shared S6/S7 brownfield body; the target_screening approval record
+        # is shown on S7 only. No gate, kill-criteria or blocker reads eval scores.
       - id: ownership-regulatory-screening
         agent: antitrust-agent
         skills: [antitrust-screening, regulatory-screening]
@@ -894,6 +917,11 @@ stages:
         # (brownfield-agent). It feeds kill criterion #9 no_viable_deal_shape
         # (brownfield-only, reevaluate_at target_screening; RECYCLE, never a kill).
         # The partner funnel deal-shape-chain stays hosted at S4 (route-strategy).
+        # v2.21.1: a proposal-only AI recommendation is offered on this activity
+        # (prompt s7.deal_shape_recommend, POST /api/opportunities/{id}/deal-shapes/recommend):
+        # it never writes a deal-shape row; the person copies, edits and records
+        # through POST /api/opportunities/{id}/deal-shapes, so #9 reads recorded
+        # rows only, never the recommendation.
     requiredArtifacts:
       - Target Company Short List
       - Target Ranking/Score

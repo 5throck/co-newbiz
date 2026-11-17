@@ -1,18 +1,13 @@
 // S6 bulk AI evaluation (ADR-0199) — client-side types and pure helpers shared by the progress panel, chips,
-// version comparison and confirm dialog. UI-only: shapes mirror the A2/A5/A6/A8 route responses.
+// version history. UI-only: shapes mirror the A2/A5/A8 route responses (ADR-0200: no confirm route any more).
 
 export type DraftCategory = "financial" | "technical";
 export type ProposedStatus = "pass" | "partial" | "fail" | null;
 
-/** A8 — `eval_draft.<category>` on each targets row. */
+/** A8 — `eval_draft.<category>` on each targets row: version HISTORY only (ADR-0200 §8). Scores live in `eval_summary`. */
 export interface VersionChip {
   version_no: number;
-  created_at: string;
   checked_at: string;
-  provisional_score: number | null;
-  /** Optional: absent on responses from before the counts were exposed. */
-  proposed_count?: number;
-  unverified_count?: number;
   stale: boolean;
   evidence_grade: string;
 }
@@ -76,7 +71,9 @@ export interface VersionRow {
   unverified_count: number;
   evidence_grade: string;
   created_at: string;
-  confirmed_count: number;
+  /** Non-human verdicts resting on this version (applied) and human verdicts resting on it (reviewed) — ADR-0200 A5. */
+  applied_count: number;
+  reviewed_count: number;
   payload?: DraftPayload;
 }
 
@@ -179,26 +176,4 @@ export function buildComparison(
     return { version_no: v.version_no, score: v.provisional_score, delta };
   });
   return { columns, rows, scores };
-}
-
-export interface ConfirmPlan {
-  write: Array<{ criterion_id: string; label: string; status: Exclude<ProposedStatus, null> }>;
-  skippedHuman: Array<{ criterion_id: string; label: string }>;
-  skippedUnverified: Array<{ criterion_id: string; label: string }>;
-}
-
-/** Items the confirm route will write vs skip, as known from the version payload (the server re-checks at confirm). */
-export function buildConfirmPlan(payload: DraftPayload): ConfirmPlan {
-  const label = (id: string) => payload.criteria_snapshot.find((c) => c.criterion_id === id)?.label ?? id;
-  const human = new Set(payload.human_items.map((h) => h.criterion_id));
-  const plan: ConfirmPlan = { write: [], skippedHuman: [], skippedUnverified: [] };
-  for (const h of payload.human_items)
-    plan.skippedHuman.push({ criterion_id: h.criterion_id, label: label(h.criterion_id) });
-  for (const i of payload.items) {
-    if (human.has(i.criterion_id)) continue;
-    if (i.proposed_status === null)
-      plan.skippedUnverified.push({ criterion_id: i.criterion_id, label: label(i.criterion_id) });
-    else plan.write.push({ criterion_id: i.criterion_id, label: label(i.criterion_id), status: i.proposed_status });
-  }
-  return plan;
 }

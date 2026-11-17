@@ -228,6 +228,35 @@ An ADR is required on three grounds:
 - **Security review** of the origin derivation, the bearer → `ai_draft` rule, the
   human-verdict lock, and human-only promotion is required before the API phase merges.
 
+## Deployment notes
+
+Before applying migration 0197, the operator checks the backfill premise. Migration 0197 marks every existing verdict
+`human`. That holds for the ADR-0199 confirm route (human-only), but before 0197 the eval-state PUT was also reachable by
+MCP `record_candidate_screening` and by bearer tokens, and only `edit_from_version` saves were audited, so agent-written
+rows cannot be told apart afterwards. The check lists write-scope tokens whose usage window covers a verdict's
+`assessed_at` (the SQL is in the migration header):
+
+```sql
+SELECT s.id, s.assessed_by, s.assessed_at, t.id AS token_id, t.kind, t.scopes, t.last_used_at
+  FROM brownfield_target_eval_state s
+  JOIN api_token t ON t.user_id = s.assessed_by
+ WHERE t.scopes LIKE '%write%' AND t.created_at <= s.assessed_at
+   AND (t.revoked_at IS NULL OR t.revoked_at >= s.assessed_at)
+   AND (t.last_used_at IS NULL OR t.last_used_at >= s.assessed_at);
+```
+
+If any agent write could have happened, set the affected rows to `ai_draft` after the migration. The dev database was
+checked: its 24 rows were written within 7 seconds by 6 `target_eval.confirm_from_version` audit rows (the human-only
+confirm route), so they are legitimately `human`. Rollback runs in maintenance / read-only mode: a person saving through
+the old code in the gap would lose the save.
+
+## Follow-ups (security review of PR-A, not implemented here)
+
+Prompt injection can now move the rank directly, because technical `ai_draft` verdicts (grade C) count in the score.
+A follow-up should: (1) flag `ai_draft` verdicts whose only citations are `web`; (2) show a human-only score next to the
+combined score; (3) keep unreviewed `ai_draft` verdicts out of any gate snapshot or committee figure unless the figure is
+marked unreviewed.
+
 ## Why a new ADR rather than amending ADR-0199
 
 ADR-0199 recorded "drafts are proposals that never enter scores, rank, or promotion until

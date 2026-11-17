@@ -10,12 +10,11 @@ import {
   SCREENING_VERDICT_KO,
 } from "../../../lib/brownfield-precheck.ts";
 import { CommitteePanel } from "../../CommitteePanel.tsx";
-import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
 import { ColGroup } from "../../ui.tsx";
 import { SECTION_IDS, shortlistColPct } from "./constants.ts";
 import { buildEvalBriefMd } from "./evalBrief.ts";
-import { DealShapePanel } from "../DealShapePanel.tsx";
+import { S7DecisionTabs } from "./S7DecisionTabs.tsx";
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
 
@@ -352,19 +351,19 @@ export function ShortlistSection({
               />
             </section>
           )}
-          {dealShapePanel && <DealShapePanel opportunityId={selected.opportunity.id} canAct={canAct} />}
           {/* flow.spec target_screening killCriteria: knock-out 통과 후보가 0건이다. 2026-10-20 decider:
               the old proxy ("evaluation complete = every item judged") fired the kill language whenever
-              later-seeded criteria stayed pending — evaluation completeness is informational, not a kill. */}
-          <GateDecisionPanel
-            opportunityId={selected.opportunity.id}
-            gates={["target_screening"]}
-            killHint={
-              selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
-                ? t("zeroCandidatesPassedTheScreening")
-                : null
-            }
-          />
+              later-seeded criteria stayed pending — evaluation completeness is informational, not a kill.
+              The approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
+          {dealShapePanel && (
+            <S7DecisionTabs
+              opportunityId={selected.opportunity.id}
+              canAct={canAct}
+              zeroCandidatesPassed={
+                selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
+              }
+            />
+          )}
           {(() => {
             const incomplete = selected.targets.filter(
               (t) => t.status !== "excluded" && t.eval_summary && !t.eval_summary.complete,

@@ -9,14 +9,35 @@ import type { useBrownfieldUniverse } from "./useBrownfieldUniverse.tsx";
 import type { PrecheckDraftItem, ScreeningDraftResponse } from "./types.ts";
 import { useTranslations } from "next-intl";
 
-export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> & ReturnType<typeof useBrownfieldUniverse>) {const tr = useTranslations(); const t = useTranslations("stages.s67.useBrownfieldTargets");
-  const { selected, newTarget, busy, setBusy, setError, setNewTarget, loadDetail, onSaved, precheckBusy, precheckDraft, setPrecheckBusy, setPrecheckDraft, setPrecheckDraftNote, recoBusy, setRecoBusy, setRecoProgress } = prev;
-
+export function useBrownfieldTargets(
+  prev: ReturnType<typeof useBrownfieldBase> & ReturnType<typeof useBrownfieldUniverse>,
+) {
+  const tr = useTranslations();
+  const t = useTranslations("stages.s67.useBrownfieldTargets");
+  const {
+    selected,
+    newTarget,
+    busy,
+    setBusy,
+    setError,
+    setNewTarget,
+    loadDetail,
+    onSaved,
+    precheckBusy,
+    precheckDraft,
+    setPrecheckBusy,
+    setPrecheckDraft,
+    setPrecheckDraftNote,
+    recoBusy,
+    setRecoBusy,
+    setRecoProgress,
+  } = prev;
 
   async function addTarget(e: React.FormEvent) {
     e.preventDefault();
     if (!selected || !newTarget.company_name.trim() || busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.post(`/api/brownfield/${selected.opportunity.id}/targets`, {
         company_name: newTarget.company_name.trim(),
@@ -49,11 +70,23 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
       evidenceMeta[itemId] = { rationale: d.rationale, source_url: d.source_url ?? null, kind: d.kind };
     }
     if (Object.keys(states).length === 0) return;
-    setPrecheckBusy(targetId); setError(null);
+    setPrecheckBusy(targetId);
+    setError(null);
     try {
-      await api.post(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}`, { states, evidence: evidenceMeta });
-      setPrecheckDraft((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
-      setPrecheckDraftNote((prev) => { const n = { ...prev }; delete n[targetId]; return n; });
+      await api.post(
+        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}`,
+        { states, evidence: evidenceMeta },
+      );
+      setPrecheckDraft((prev) => {
+        const n = { ...prev };
+        delete n[targetId];
+        return n;
+      });
+      setPrecheckDraftNote((prev) => {
+        const n = { ...prev };
+        delete n[targetId];
+        return n;
+      });
       loadDetail(selected.opportunity.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("failedToSaveTheJudgement"));
@@ -68,7 +101,10 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
   // 건드리지 않고, 그 외 항목은 재실행 시 새 제안으로 갱신한다 — 이미 제안된
   // 항목을 스킵하면 다시 눌러도 변화가 없어 버튼이 죽어 보였다(사용자 리포트,
   // 2026-09-16). 실패는 삼키지 않고 호출자(소집 흐름)로 전파한다.
-  async function draftPrecheckInto(targetId: string, acc: Record<string, Record<string, PrecheckDraftItem>>): Promise<void> {
+  async function draftPrecheckInto(
+    targetId: string,
+    acc: Record<string, Record<string, PrecheckDraftItem>>,
+  ): Promise<void> {
     if (!selected) return;
     const res = await api.post<ScreeningDraftResponse>(
       `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets/${encodeURIComponent(targetId)}/screening-draft`,
@@ -96,7 +132,8 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
   // 성공한 제안으로 소집을 진행한다.
   async function runCommitteePrecheck(): Promise<string | undefined> {
     if (!selected || recoBusy) return;
-    setRecoBusy(true); setError(null);
+    setRecoBusy(true);
+    setError(null);
     const failures: string[] = [];
     let lastError: Error | null = null;
     try {
@@ -122,15 +159,23 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
     }
   }
 
-  async function shortlist(targetId: string) {
-    if (!selected) return;
-    setBusy(true); setError(null);
+  /** Promotes one candidate (human act). Resolves with the response's `unreviewed` count (ADR-0200 §5.2: promotion is
+   * never blocked; the count of unreviewed AI / rule verdicts it included is reported back to the caller). */
+  async function shortlist(targetId: string): Promise<number> {
+    if (!selected) return 0;
+    setBusy(true);
+    setError(null);
     try {
-      await api.post(`/api/brownfield/${selected.opportunity.id}/targets/${targetId}/shortlist`, {});
+      const r = await api.post<{ unreviewed?: number }>(
+        `/api/brownfield/${selected.opportunity.id}/targets/${targetId}/shortlist`,
+        {},
+      );
       loadDetail(selected.opportunity.id);
       onSaved?.();
+      return r.data.unreviewed ?? 0;
     } catch (err) {
       setError(err instanceof Error ? err.message : t("failedToPromoteToThe"));
+      return 0;
     } finally {
       setBusy(false);
     }
@@ -139,7 +184,8 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
   // 최종 후보 목록 순위 조정 — 이웃 행과 rank를 교환한다(사람이 확정하는 순위).
   async function rerank(targetId: string, direction: "up" | "down") {
     if (!selected) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.post(`/api/brownfield/${selected.opportunity.id}/targets/${targetId}/rerank`, { direction });
       loadDetail(selected.opportunity.id);
@@ -160,20 +206,21 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
   // 최종 후보 목록 승격 후 순위(rank)는 사람이 손으로 조정하는 영역이라 건드리지
   // 않는다(status가 다르면 비교 없이 0을 반환해 안정 정렬로 원래 그룹 순서를
   // 보존한다).
-  const displayedTargets = targets
-    .slice()
-    .sort((a, b) => {
-      if (a.status !== "pending" || b.status !== "pending") return 0;
-      return (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1);
-    });
+  const displayedTargets = targets.slice().sort((a, b) => {
+    if (a.status !== "pending" || b.status !== "pending") return 0;
+    return (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1);
+  });
   // 평가 기반 잠정 순위 — 제외를 뺀 전 후보(pending + shortlisted) 대상.
   // 최종 후보 목록으로 승격해도 순위가 사라지지 않는다(사용자 리포트, 2026-09-16 —
   // 승격·제외 시 잠정 순위가 "—"로 사라지는 문제). 승격이 같은 점수 기준이므로
   // 순위 모집단도 같게 유지한다. 최종 후보 목록의 표시 순위(rank)는 별개(사람 조정).
-  const evalRank = new Map(targets.filter((t) => t.status !== "excluded" && t.eval_summary?.combined != null)
-    .slice()
-    .sort((a, b) => (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1))
-    .map((t, i) => [t.id, i + 1]));
+  const evalRank = new Map(
+    targets
+      .filter((t) => t.status !== "excluded" && t.eval_summary?.combined != null)
+      .slice()
+      .sort((a, b) => (b.eval_summary?.combined ?? -1) - (a.eval_summary?.combined ?? -1))
+      .map((t, i) => [t.id, i + 1]),
+  );
   const shortlistOrder = shortlistedTargets.map((t) => t.id);
   // 최종 후보 목록 후보 중 사전 검토(대상 사전 검토 체크리스트)가 미완료인 후보 수 —
   // 위원회 최종 검토 전 판정 기록 권장 신호(사용자 결정, 2026-09-16: 체크리스트는
@@ -182,7 +229,24 @@ export function useBrownfieldTargets(prev: ReturnType<typeof useBrownfieldBase> 
     const s = t.screening_summary;
     return !s || s.anyKnockOutFail || s.assessed < s.total || s.mandatoryOpen.length > 0;
   }).length;
-  return { addTarget, targets, shortlistedTargets, displayedTargets, shortlistOrder, evalRank, shortlist, rerank, precheckIncomplete, checklistItems, part1Count, part2Count, savePrecheck, runCommitteePrecheck };
+  return {
+    addTarget,
+    targets,
+    shortlistedTargets,
+    displayedTargets,
+    shortlistOrder,
+    evalRank,
+    shortlist,
+    rerank,
+    precheckIncomplete,
+    checklistItems,
+    part1Count,
+    part2Count,
+    savePrecheck,
+    runCommitteePrecheck,
+  };
 }
 
-export type BrownfieldStageState = ReturnType<typeof useBrownfieldBase> & ReturnType<typeof useBrownfieldUniverse> & ReturnType<typeof useBrownfieldTargets>;
+export type BrownfieldStageState = ReturnType<typeof useBrownfieldBase> &
+  ReturnType<typeof useBrownfieldUniverse> &
+  ReturnType<typeof useBrownfieldTargets>;

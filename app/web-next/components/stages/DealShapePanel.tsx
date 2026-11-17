@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../lib/api.ts";
-import { ColGroup } from "../ui.tsx";
 import { formatDateTime } from "../../lib/format.ts";
 import {
   DEAL_SHAPE_PANEL_ID,
@@ -60,9 +59,6 @@ export function useDealShapeLabels() {
   return { shape, intent };
 }
 
-const COL_PCT_EDIT = [14, 10, 10, 34, 20, 12] as const;
-const COL_PCT_READ = [14, 10, 12, 40, 24] as const;
-
 function Verdict({ state }: { state: "viable" | "not_viable" | "unevaluated" }) {
   const t = useTranslations("stages.s67.dealShapePanel");
   if (state === "viable")
@@ -84,6 +80,20 @@ function Verdict({ state }: { state: "viable" | "not_viable" | "unevaluated" }) 
   );
 }
 
+export interface ShapeRecommendation {
+  shape: string;
+  viable: boolean | null;
+  intent: string;
+  rationale: string;
+}
+export interface RecoState {
+  busy: boolean;
+  error: string | null;
+  note: string | null;
+  items: ShapeRecommendation[];
+}
+export const EMPTY_RECO: RecoState = { busy: false, error: null, note: null, items: [] };
+
 export interface DealShapePanelViewProps {
   data: DealShapeData | null;
   /** Load failure kind, when the GET failed. */
@@ -93,6 +103,11 @@ export interface DealShapePanelViewProps {
   onForm: (next: DealShapeForm) => void;
   onSubmit: () => void;
   onEdit: (row: DealShapeRow) => void;
+  /** AI recommendation (proposal only; nothing is saved by it). */
+  reco: RecoState;
+  onRecommend: () => void;
+  /** Copy a proposal into the form; the person still edits and records. */
+  onApply: (r: ShapeRecommendation) => void;
   busy: boolean;
   problem: FormProblem | null;
   serverError: string | null;
@@ -111,6 +126,7 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
 
   const status = data ? viableStatus(data.viable_count) : null;
   const verdicts = data ? shapeVerdictRows(data) : [];
+  const recordedRows = verdicts.flatMap((v) => (v.state === "unevaluated" ? [] : [v]));
   const evaluated = data ? data.live.length : 0;
   const history = data ? data.history.filter((r) => r.superseded_by !== null) : [];
   const problemText = p.problem
@@ -179,77 +195,108 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
             </p>
           )}
 
-          {/* biome-ignore lint/a11y/useSemanticElements lint/a11y/noNoninteractiveTabindex: design-system scroll region (WCAG 2.1.1) — a focusable labelled region so keyboard users can scroll a wide table; <section> is not phrasing-neutral here */}
-          <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
-            <table className="data-table report-table table-fixed-pct tmin-64" aria-label={t("tableLabel")}>
-              <caption className="sr-only">{t("tableCaption")}</caption>
-              <ColGroup widths={p.canAct ? COL_PCT_EDIT : COL_PCT_READ} />
-              <thead>
-                <tr>
-                  <th scope="col">{t("colShape")}</th>
-                  <th scope="col">{t("colVerdict")}</th>
-                  <th scope="col">{t("colIntent")}</th>
-                  <th scope="col">{t("colRationale")}</th>
-                  <th scope="col">{t("colRecordedBy")}</th>
-                  {p.canAct && (
-                    <th scope="col">
-                      <span className="sr-only">{t("colActions")}</span>
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {verdicts.map((v) => (
-                  <tr key={v.shape} data-shape={v.shape} data-state={v.state}>
-                    <th scope="row">{labels.shape(v.shape)}</th>
-                    <td>
-                      <Verdict state={v.state} />
-                    </td>
-                    {v.state === "unevaluated" ? (
-                      <>
-                        <td>—</td>
-                        <td className="text-[color:var(--muted-fg)]">{t("noRecordYet")}</td>
-                        <td>—</td>
-                      </>
-                    ) : (
-                      <>
-                        <td>{labels.intent(v.row.intent)}</td>
-                        <td>
-                          {v.row.rationale}
-                          {v.row.evidence_ref && (
-                            <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                              {t("evidenceRef", { ref: v.row.evidence_ref })}
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-[length:var(--fs-caption)]">
-                          {t("recordedBy", {
-                            who: v.row.evaluated_by,
-                            when: formatDateTime(v.row.evaluated_at, locale),
-                          })}
-                        </td>
-                      </>
-                    )}
+          {recordedRows.length > 0 && (
+            <ul
+              className="list-none p-0 m-0 mb-3 grid gap-2 text-[length:var(--fs-caption)]"
+              aria-label={t("recordedListLabel")}
+              data-testid="deal-shape-recorded"
+            >
+              {recordedRows.map((v) => (
+                <li
+                  key={v.shape}
+                  data-shape={v.shape}
+                  data-state={v.state}
+                  className="border-b border-[color:var(--border)] pb-2"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong>{labels.shape(v.shape)}</strong>
+                    <Verdict state={v.state} />
+                    <span className="text-[color:var(--muted-fg)]">{labels.intent(v.row.intent)}</span>
                     {p.canAct && (
-                      <td>
-                        {v.state !== "unevaluated" && (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        disabled={p.busy}
+                        aria-label={t("editAria", { shape: labels.shape(v.shape) })}
+                        onClick={() => p.onEdit(v.row)}
+                      >
+                        {t("edit")}
+                      </button>
+                    )}
+                  </div>
+                  <p className="m-0 mt-1">
+                    {v.row.rationale}
+                    {v.row.evidence_ref && (
+                      <span className="block text-[color:var(--muted-fg)]">
+                        {t("evidenceRef", { ref: v.row.evidence_ref })}
+                      </span>
+                    )}
+                  </p>
+                  <p className="m-0 mt-1 text-[color:var(--muted-fg)]">
+                    {t("recordedBy", { who: v.row.evaluated_by, when: formatDateTime(v.row.evaluated_at, locale) })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {p.canAct && (
+            <div className="mb-3" data-testid="deal-shape-ai">
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                disabled={p.busy || p.reco.busy}
+                onClick={p.onRecommend}
+              >
+                {p.reco.busy ? t("aiRecommending") : t("aiRecommend")}
+              </button>
+              {p.reco.error && (
+                <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2 mb-0">
+                  <span aria-hidden="true">✕</span> {p.reco.error}
+                </p>
+              )}
+              {p.reco.note && (
+                <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">
+                  <span aria-hidden="true">ⓘ</span> {p.reco.note}
+                </p>
+              )}
+              {p.reco.items.length > 0 && (
+                <ul
+                  className="list-none p-0 m-0 mt-2 grid gap-2 text-[length:var(--fs-caption)]"
+                  aria-label={t("aiListLabel")}
+                  data-testid="deal-shape-ai-list"
+                >
+                  {p.reco.items.map((r) => (
+                    <li key={r.shape} className="border border-[color:var(--border)] rounded-lg px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong>{labels.shape(r.shape)}</strong>
+                        {r.viable === null ? (
+                          <span className="status-chip status-not-started">
+                            <span aria-hidden="true">?</span> {t("aiUndecided")}
+                          </span>
+                        ) : (
+                          <Verdict state={r.viable ? "viable" : "not_viable"} />
+                        )}
+                        {r.intent && <span className="text-[color:var(--muted-fg)]">{labels.intent(r.intent)}</span>}
+                        {r.viable !== null && (
                           <button
                             type="button"
                             className="btn-ghost btn-sm"
                             disabled={p.busy}
-                            aria-label={t("editAria", { shape: labels.shape(v.shape) })}
-                            onClick={() => p.onEdit(v.row)}
+                            aria-label={t("aiApplyAria", { shape: labels.shape(r.shape) })}
+                            onClick={() => p.onApply(r)}
                           >
-                            {t("edit")}
+                            {t("aiApply")}
                           </button>
                         )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <p className="m-0 mt-1">{r.rationale}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {history.length > 0 && (
             <details className="review-dev mt-2" data-testid="deal-shape-history">
@@ -291,7 +338,7 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
                     <span aria-hidden="true">ⓘ</span> {t("editLoadedNote")}
                   </p>
                 )}
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
                   <label className="text-[length:var(--fs-caption)]" htmlFor={`${uid}-shape`}>
                     <span className="block mb-1 font-medium">
                       {t("fieldShape")}{" "}
@@ -314,6 +361,34 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
                       ))}
                     </select>
                   </label>
+                  <fieldset className="border-0 p-0 m-0">
+                    <legend className="text-[length:var(--fs-caption)] font-medium mb-1">
+                      {t("fieldViable")}{" "}
+                      <span aria-hidden="true" className="text-[color:var(--red-fg)]">
+                        *
+                      </span>
+                    </legend>
+                    <div className="flex flex-wrap gap-4 text-[length:var(--fs-caption)]">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`${uid}-viable`}
+                          checked={form.viable === true}
+                          onChange={() => p.onForm({ ...form, viable: true })}
+                        />
+                        <span>{t("verdictViable")}</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`${uid}-viable`}
+                          checked={form.viable === false}
+                          onChange={() => p.onForm({ ...form, viable: false })}
+                        />
+                        <span>{t("verdictNotViable")}</span>
+                      </label>
+                    </div>
+                  </fieldset>
                   <label className="text-[length:var(--fs-caption)]" htmlFor={`${uid}-intent`}>
                     <span className="block mb-1 font-medium">
                       {t("fieldIntent")}{" "}
@@ -337,34 +412,6 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
                     </select>
                   </label>
                 </div>
-                <fieldset className="border-0 p-0 m-0 mt-2">
-                  <legend className="text-[length:var(--fs-caption)] font-medium mb-1">
-                    {t("fieldViable")}{" "}
-                    <span aria-hidden="true" className="text-[color:var(--red-fg)]">
-                      *
-                    </span>
-                  </legend>
-                  <div className="flex flex-wrap gap-4 text-[length:var(--fs-caption)]">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`${uid}-viable`}
-                        checked={form.viable === true}
-                        onChange={() => p.onForm({ ...form, viable: true })}
-                      />
-                      <span>{t("verdictViable")}</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`${uid}-viable`}
-                        checked={form.viable === false}
-                        onChange={() => p.onForm({ ...form, viable: false })}
-                      />
-                      <span>{t("verdictNotViable")}</span>
-                    </label>
-                  </div>
-                </fieldset>
                 <label className="block text-[length:var(--fs-caption)] mt-2" htmlFor={`${uid}-rationale`}>
                   <span className="block mb-1 font-medium">
                     {t("fieldRationale", { max: RATIONALE_MAX })}{" "}
@@ -455,6 +502,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
   const [problem, setProblem] = useState<FormProblem | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reco, setReco] = useState<RecoState>(EMPTY_RECO);
 
   const load = useCallback(async () => {
     try {
@@ -496,8 +544,39 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
     }
   };
 
+  const recommend = async () => {
+    setReco({ ...EMPTY_RECO, busy: true });
+    try {
+      const r = await api.post<{ recommendations: ShapeRecommendation[]; note: string | null }>(`${url}/recommend`, {});
+      setReco({
+        busy: false,
+        error: null,
+        note: r.data.note ? t(`aiNote.${r.data.note}` as never) : null,
+        items: r.data.recommendations,
+      });
+    } catch (e) {
+      const kind = e instanceof ApiError ? dealShapeErrorKind(e.status, e.code) : "other";
+      setReco({
+        ...EMPTY_RECO,
+        error: kind === "invalid" || kind === "conflict" ? (e as Error).message : t(`serverError.${kind}` as never),
+      });
+    }
+  };
+
   return (
     <DealShapePanelView
+      reco={reco}
+      onRecommend={() => {
+        void recommend();
+      }}
+      onApply={(r) => {
+        // A proposal only fills the form; recording stays a person's action (boundary #2).
+        setForm({ shape: r.shape, intent: r.intent, viable: r.viable, rationale: r.rationale, evidenceRef: "" });
+        setLoadedFromRow(false);
+        setProblem(null);
+        setServerError(null);
+        setNotice(t("aiApplied"));
+      }}
       data={data}
       loadError={loadError}
       canAct={canAct}

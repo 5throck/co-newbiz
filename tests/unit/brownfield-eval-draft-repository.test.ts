@@ -408,7 +408,8 @@ describe("versions: numbering, replace-on-success, unchanged inputs", () => {
       [`crit-${opp}`, opp, T0],
     );
     db.run(
-      "INSERT INTO brownfield_target_eval_state (id, brownfield_target_id, criterion_id, status, assessed_by, assessed_at, confirmed_from_version_id) VALUES (?, ?, ?, 'pass', 'u1', ?, ?)",
+      // ADR-0200: the link lives in source_version_id since 0197 (confirmed_from_version_id is frozen).
+      "INSERT INTO brownfield_target_eval_state (id, brownfield_target_id, criterion_id, status, assessed_by, assessed_at, source_version_id) VALUES (?, ?, ?, 'pass', 'u1', ?, ?)",
       [`s-${opp}`, t1, `crit-${opp}`, T0, v.id],
     );
     const counts = repo.confirmedCountByVersion(db, [v.id, "other"]);

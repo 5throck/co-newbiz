@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.21.0";
+export const SPEC_VERSION = "2.21.1";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "9ee816111fa499a5",
-  "flowSpecYaml": "6f422e41baf5c01b",
+  "promptsJson": "94e540a8f4793846",
+  "flowSpecYaml": "2fe5973c32ae7b0c",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
@@ -285,6 +285,16 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
     "activityId": "target-universe-definition",
     "stageId": "S6",
     "purpose": "S6 유니버스 선정 기준 초안 — S1·S3 산출물 기반 제안 (수익성·지속가능성 축 포함)",
+    "trackScope": [
+      "brownfield"
+    ]
+  },
+  "s7.deal_shape_recommend": {
+    "promptKey": "s7.deal_shape_recommend",
+    "agentKey": "brownfield-agent",
+    "activityId": "deal-shape-evaluation",
+    "stageId": "S7",
+    "purpose": "S7 진출 형태 평가 — 최종 후보 목록·S6·S3 산출물 기반 형태별 가능 여부 추천 (제안 전용)",
     "trackScope": [
       "brownfield"
     ]

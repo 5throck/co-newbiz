@@ -23,7 +23,16 @@
  * Audit events (`target_eval.bulk_run.*`, `target_eval.draft_version.*`) are appended by the engine/route
  * layer that owns the caller context (phase 2c), not by this repository. Identity fields (`startedBy`,
  * `createdBy`, `resumedBy`) are the calling user's id from the session, never from a request body (boundary #1).
- * Drafts are proposals: nothing in this file writes brownfield_target_eval_state verdicts or eval_summary.
+ *
+ * Verdict origin (migration 0197, ADR-0200, spec 2026-11-17-s6-direct-ai-verdict §3/§4): `writeEvalVerdict` is the single
+ * guarded write path for brownfield_target_eval_state rows that carry an origin (`verdict_source`):
+ *   - a non-human write (`auto_rule` | `ai_draft`) never replaces a human, non-pending verdict — the guard is in the SQL
+ *     WHERE clause, so a human save that lands between a read and the write wins (`human_verdict_locked`);
+ *   - a non-human write may not set `na` / `waived` (`forbidden_status`, Q8): excluding a criterion is a judgement;
+ *   - `auto_rule` always carries `source_version_id` (TA3 invariant; ALTER cannot express it as a CHECK);
+ *   - `confirmed_from_version_id` (0194) is frozen: nothing here writes it.
+ * `commitCategoryDraft` accepts an optional `apply` hook that runs in the SAME transaction as the version insert or the
+ * `unchanged` decision and records its result in the run item's `apply_summary`.
  */
 import type { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
@@ -237,6 +246,8 @@ export interface DraftRunItemRow {
   dart_calls: number;
   error_message: string | null;
   updated_at: string;
+  /** Migration 0197 (ADR-0200): JSON `{ financial?: CategoryApplySummary, technical?: CategoryApplySummary }`. */
+  apply_summary: string | null;
 }
 
 export interface DraftVersionSummaryRow {
@@ -272,7 +283,7 @@ export class EvalDraftError extends Error {
 const RUN_COLUMNS =
   "id, opportunity_id, categories, web_evidence, force_refresh, status, total_targets, started_by, started_via, resumed_by, started_at, heartbeat_at, finished_at, pause_reason, error_message";
 const ITEM_COLUMNS =
-  "id, run_id, brownfield_target_id, seq, state, financial_outcome, technical_outcome, financial_version_id, technical_version_id, dart_calls, error_message, updated_at";
+  "id, run_id, brownfield_target_id, seq, state, financial_outcome, technical_outcome, financial_version_id, technical_version_id, dart_calls, error_message, updated_at, apply_summary";
 const VERSION_SUMMARY_COLUMNS =
   "id, brownfield_target_id, category, version_no, run_id, provisional_score, proposed_count, unverified_count, evidence_grade, input_hash, created_by, created_at";
 
@@ -594,14 +605,19 @@ export function listVersions(
     .all(...args) as Array<DraftVersionSummaryRow | DraftVersionRow>;
 }
 
-/** Verdict rows citing each version (`confirmed_count`, A5). Versions with no citing verdict map to 0. */
+/**
+ * Human verdict rows citing each version (`confirmed_count`, A5). Since 0197 the link lives in `source_version_id`
+ * (the 0194 `confirmed_from_version_id` is frozen); restricted to `human` rows so the ADR-0199 meaning is kept.
+ * @deprecated ADR-0200: the A5 route moves to `verdictCountsByVersion` (`applied_count` / `reviewed_count`).
+ */
 export function confirmedCountByVersion(db: Database, versionIds: readonly string[]): Map<string, number> {
   const out = new Map<string, number>(versionIds.map((id) => [id, 0]));
   if (versionIds.length === 0) return out;
   const rows = db
     .query(
-      `SELECT confirmed_from_version_id AS id, COUNT(*) AS n FROM brownfield_target_eval_state
-        WHERE confirmed_from_version_id IN (${placeholders(versionIds.length)}) GROUP BY confirmed_from_version_id`,
+      `SELECT source_version_id AS id, COUNT(*) AS n FROM brownfield_target_eval_state
+        WHERE source_version_id IN (${placeholders(versionIds.length)}) AND verdict_source = 'human'
+        GROUP BY source_version_id`,
     )
     .all(...versionIds) as Array<{ id: string; n: number }>;
   for (const r of rows) out.set(r.id, r.n);
@@ -723,11 +739,18 @@ export interface CommitCategoryDraftInput {
    * is written and the error propagates: the caller classifies it (failed vs paused, §6.3/§7) and records the item.
    */
   produce: () => DraftVersionContent | Promise<DraftVersionContent>;
+  /**
+   * ADR-0200 direct apply (§4.2/§4.3): applies the version's proposals to brownfield_target_eval_state. Runs inside the
+   * SAME transaction as the version insert (`versioned`) or the `unchanged` decision, against the version the item now
+   * points at; its summary is stored under `apply_summary[category]` on the run item. A throwing hook rolls back the
+   * version insert and the item update too (TA9). Omitted = no apply (the ADR-0199 behaviour).
+   */
+  apply?: (version: DraftVersionRow, outcome: "versioned" | "unchanged") => CategoryApplySummary;
 }
 
 export type CommitCategoryDraftResult =
-  | { outcome: "unchanged"; version: DraftVersionRow }
-  | { outcome: "versioned"; version: DraftVersionRow };
+  | { outcome: "unchanged"; version: DraftVersionRow; applySummary?: CategoryApplySummary }
+  | { outcome: "versioned"; version: DraftVersionRow; applySummary?: CategoryApplySummary };
 
 /**
  * One category step's success moment (§5 checkpointing, §3.3 unchanged rule, ADR-0199 decision 2):
@@ -749,12 +772,19 @@ export async function commitCategoryDraft(
 
   const latest = getLatestVersion(db, item.brownfield_target_id, input.category);
   if (latest && latest.input_hash === input.inputHash) {
-    updateRunItem(db, item.id, { [outcomeKey]: "unchanged", [versionKey]: latest.id, errorMessage: null }, input.now);
-    return { outcome: "unchanged", version: latest };
+    // ADR-0200 §4.3: no version, no producer call — but the apply still runs against the latest version, atomically
+    // with the `unchanged` decision (idempotent: rows already holding the proposals are rewritten identically).
+    const applySummary = db.transaction(() => {
+      updateRunItem(db, item.id, { [outcomeKey]: "unchanged", [versionKey]: latest.id, errorMessage: null }, input.now);
+      return input.apply ? applyAndRecord(db, item.id, input, latest, "unchanged") : undefined;
+    })();
+    return applySummary
+      ? { outcome: "unchanged", version: latest, applySummary }
+      : { outcome: "unchanged", version: latest };
   }
 
   const content = await input.produce();
-  const version = db.transaction(() => {
+  const committed = db.transaction(() => {
     const v = insertDraftVersion(db, {
       ...content,
       targetId: item.brownfield_target_id,
@@ -765,7 +795,281 @@ export async function commitCategoryDraft(
       now: input.now,
     });
     updateRunItem(db, item.id, { [outcomeKey]: "versioned", [versionKey]: v.id, errorMessage: null }, input.now);
-    return v;
+    return { v, applySummary: input.apply ? applyAndRecord(db, item.id, input, v, "versioned") : undefined };
   })();
-  return { outcome: "versioned", version };
+  return committed.applySummary
+    ? { outcome: "versioned", version: committed.v, applySummary: committed.applySummary }
+    : { outcome: "versioned", version: committed.v };
+}
+
+/** Run the apply hook and merge its summary into the run item's `apply_summary[category]` (inside the caller's tx). */
+function applyAndRecord(
+  db: Database,
+  itemId: string,
+  input: CommitCategoryDraftInput,
+  version: DraftVersionRow,
+  outcome: "versioned" | "unchanged",
+): CategoryApplySummary {
+  const summary = (input.apply as NonNullable<CommitCategoryDraftInput["apply"]>)(version, outcome);
+  recordApplySummary(db, itemId, input.category, summary);
+  return summary;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Verdict origin and direct apply (migration 0197, ADR-0200, spec 2026-11-17-s6-direct-ai-verdict §3/§4/§5).
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Closed vocabulary — byte-identical to the migration 0197 CHECK on brownfield_target_eval_state.verdict_source. */
+export const VERDICT_SOURCES = ["human", "auto_rule", "ai_draft"] as const;
+export type VerdictSource = (typeof VERDICT_SOURCES)[number];
+export const NON_HUMAN_VERDICT_SOURCES: readonly VerdictSource[] = ["auto_rule", "ai_draft"];
+
+export const VERDICT_STATUSES = ["pending", "pass", "partial", "fail", "na", "waived"] as const;
+export type VerdictStatus = (typeof VERDICT_STATUSES)[number];
+/** Excluding a criterion changes the score denominator — a judgement, never a finding (Q8). Human only. */
+export const HUMAN_ONLY_VERDICT_STATUSES: readonly VerdictStatus[] = ["na", "waived"];
+
+/** The origin a draft version's category writes when applied (§4.1): deterministic rubric vs LLM. */
+export function verdictSourceForCategory(category: EvalDraftCategory): Exclude<VerdictSource, "human"> {
+  return category === "financial" ? "auto_rule" : "ai_draft";
+}
+
+/** Why an apply skipped an item without writing (§4.2). */
+export type ApplySkipReason = "criterion_retired" | "criterion_changed";
+
+/** Per-category apply counts (§4.2, stored under `apply_summary[category]`). */
+export interface CategoryApplySummary {
+  /** Proposals written (new verdict, or a non-human verdict replaced). */
+  applied: number;
+  /** Items left alone because a person already judged them. */
+  kept_human: number;
+  /** `확인 안됨` proposals on pending/missing rows: nothing written. */
+  unverified: number;
+  /** Non-human verdicts reset to pending because the latest evidence could not verify them (Q2). */
+  cleared: number;
+  skipped: Array<{ criterion_id: string; reason: ApplySkipReason }>;
+}
+
+export interface EvalVerdictRow {
+  id: string;
+  brownfield_target_id: string;
+  criterion_id: string;
+  status: VerdictStatus;
+  note: string | null;
+  evidence_ref: string | null;
+  assessed_by: string;
+  assessed_at: string;
+  verdict_source: VerdictSource;
+  source_version_id: string | null;
+}
+
+const VERDICT_COLUMNS =
+  "id, brownfield_target_id, criterion_id, status, note, evidence_ref, assessed_by, assessed_at, verdict_source, source_version_id";
+
+export function getEvalVerdict(db: Database, targetId: string, criterionId: string): EvalVerdictRow | null {
+  return (
+    (db
+      .query(
+        `SELECT ${VERDICT_COLUMNS} FROM brownfield_target_eval_state WHERE brownfield_target_id = ? AND criterion_id = ?`,
+      )
+      .get(targetId, criterionId) as EvalVerdictRow | null) ?? null
+  );
+}
+
+/** "Human-judged" means `verdict_source = 'human'` on a non-pending row and nothing else (§3.2, G2). */
+export function isHumanJudged(state: { status: string; verdict_source?: string | null } | null | undefined): boolean {
+  return !!state && state.status !== "pending" && (state.verdict_source ?? "human") === "human";
+}
+
+/** An unreviewed verdict: non-pending and not human (§3.2). A missing origin reads as the column default `human`. */
+export function isUnreviewedVerdict(
+  state: { status: string; verdict_source?: string | null } | null | undefined,
+): boolean {
+  return !!state && state.status !== "pending" && (state.verdict_source ?? "human") !== "human";
+}
+
+/** The engine's eligible set (§4.3): no row, a pending row, or a non-human verdict. Replaces "pending" in the engine. */
+export function isEligibleForDraft(
+  state: { status: string; verdict_source?: string | null } | null | undefined,
+): boolean {
+  return !isHumanJudged(state);
+}
+
+export interface WriteEvalVerdictInput {
+  targetId: string;
+  criterionId: string;
+  status: VerdictStatus;
+  note: string | null;
+  evidenceRef: string | null;
+  /** The accountable person: the human saver, the run actor, or the delegating user of an MCP/agent call (§3.2). */
+  assessedBy: string;
+  /** Derived server-side from the caller (human UI session) or the engine category — never from a request body. */
+  source: VerdictSource;
+  /** The version the verdict rests on; null = no version basis. Required (non-null) for `auto_rule` (TA3). */
+  sourceVersionId: string | null;
+  now: string;
+  /**
+   * Optimistic guard: the write lands only while the stored row still has this origin (a row that became `human` in the
+   * meantime is refused as `human_verdict_locked`, never overwritten). Used by the human accept-rule bulk action.
+   */
+  expectSource?: VerdictSource;
+}
+
+export type WriteEvalVerdictResult =
+  | {
+      ok: true;
+      row: EvalVerdictRow;
+      /** The row before this write (null = no row existed) — feeds the `.ai_verdict.review` audit (`from`, `changed`). */
+      previous: EvalVerdictRow | null;
+    }
+  | { ok: false; reason: "human_verdict_locked"; current: EvalVerdictRow }
+  | { ok: false; reason: "forbidden_status"; status: VerdictStatus };
+
+/**
+ * The single guarded write of an item verdict with its origin (§4.1/§4.2):
+ *   - `human` writes always land (a person may revise a person, and a person's save of an AI verdict makes it `human`
+ *     even with the same status — G5);
+ *   - non-human writes return `forbidden_status` for `na`/`waived` and `human_verdict_locked` over a human non-pending
+ *     verdict. The lock is repeated in the UPDATE's WHERE clause so a refactor that splits the read cannot break it;
+ *   - `auto_rule` without a `sourceVersionId` throws (programming error, TA3 invariant).
+ * Never writes `confirmed_from_version_id` (frozen 0194 column). Runs inside the caller's transaction when there is one.
+ */
+export function writeEvalVerdict(db: Database, input: WriteEvalVerdictInput): WriteEvalVerdictResult {
+  if (!(VERDICT_SOURCES as readonly string[]).includes(input.source))
+    throw new EvalDraftError("invalid", `verdict source must be one of: ${VERDICT_SOURCES.join(" | ")}.`);
+  if (!(VERDICT_STATUSES as readonly string[]).includes(input.status))
+    throw new EvalDraftError("invalid", `status must be one of: ${VERDICT_STATUSES.join(" | ")}.`);
+  if (!input.assessedBy) throw new EvalDraftError("invalid", "assessedBy is required.");
+  if (input.source === "auto_rule" && !input.sourceVersionId)
+    throw new EvalDraftError("invalid", "an auto_rule verdict must rest on a draft version (source_version_id).");
+  const human = input.source === "human";
+  if (!human && HUMAN_ONLY_VERDICT_STATUSES.includes(input.status))
+    return { ok: false, reason: "forbidden_status", status: input.status };
+
+  return db.transaction((): WriteEvalVerdictResult => {
+    const previous = getEvalVerdict(db, input.targetId, input.criterionId);
+    const values = [
+      input.status,
+      input.note,
+      input.evidenceRef,
+      input.assessedBy,
+      input.now,
+      input.source,
+      input.sourceVersionId,
+    ];
+    if (previous) {
+      const res = db.run(
+        `UPDATE brownfield_target_eval_state
+            SET status = ?, note = ?, evidence_ref = ?, assessed_by = ?, assessed_at = ?, verdict_source = ?, source_version_id = ?
+          WHERE brownfield_target_id = ? AND criterion_id = ?
+            AND (? = 'human' OR status = 'pending' OR verdict_source <> 'human')
+            AND (? IS NULL OR verdict_source = ?)`,
+        [
+          ...values,
+          input.targetId,
+          input.criterionId,
+          input.source,
+          input.expectSource ?? null,
+          input.expectSource ?? null,
+        ],
+      );
+      if (res.changes === 0) return { ok: false, reason: "human_verdict_locked", current: previous };
+    } else {
+      db.run(
+        `INSERT INTO brownfield_target_eval_state
+           (id, brownfield_target_id, criterion_id, status, note, evidence_ref, assessed_by, assessed_at, verdict_source, source_version_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [ulid(), input.targetId, input.criterionId, ...values],
+      );
+    }
+    return { ok: true, row: getEvalVerdict(db, input.targetId, input.criterionId) as EvalVerdictRow, previous };
+  })();
+}
+
+/** Merge one category's summary into `apply_summary` on the run item (read-modify-write; caller's transaction). */
+export function recordApplySummary(
+  db: Database,
+  itemId: string,
+  category: EvalDraftCategory,
+  summary: CategoryApplySummary,
+): void {
+  const row = db.query("SELECT apply_summary FROM brownfield_eval_draft_run_item WHERE id = ?").get(itemId) as {
+    apply_summary: string | null;
+  } | null;
+  if (!row) throw new EvalDraftError("not_found", `Run item '${itemId}' not found.`);
+  const doc = parseApplySummary(row.apply_summary);
+  doc[category] = summary;
+  db.run("UPDATE brownfield_eval_draft_run_item SET apply_summary = ? WHERE id = ?", [JSON.stringify(doc), itemId]);
+}
+
+/** Parse a stored `apply_summary`; anything unreadable reads as empty (it is operational telemetry, not attribution). */
+export function parseApplySummary(text: string | null): Partial<Record<EvalDraftCategory, CategoryApplySummary>> {
+  if (!text) return {};
+  try {
+    const v = JSON.parse(text) as unknown;
+    return v && typeof v === "object" && !Array.isArray(v)
+      ? (v as Partial<Record<EvalDraftCategory, CategoryApplySummary>>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+export interface UnreviewedVerdictCounts {
+  financial: number;
+  technical: number;
+  total: number;
+  /** Split for the `자동 규칙 {a}건 · AI {b}건` tooltip. */
+  auto_rule: number;
+  ai_draft: number;
+}
+
+/**
+ * Unreviewed (non-pending, non-human) verdicts of one candidate on live criteria (§5.2 promote warning, longlist marker,
+ * committee brief). Served by the partial index idx_bf_target_eval_state_unreviewed. Deleted/retired criteria are not
+ * counted — they are not part of the score either.
+ */
+export function countUnreviewedVerdicts(db: Database, targetId: string): UnreviewedVerdictCounts {
+  const rows = db
+    .query(
+      `SELECT c.category AS category, s.verdict_source AS source, COUNT(*) AS n
+         FROM brownfield_target_eval_state s
+         JOIN brownfield_eval_criterion c ON c.id = s.criterion_id
+        WHERE s.brownfield_target_id = ? AND s.verdict_source <> 'human' AND s.status <> 'pending'
+          AND c.deleted_at IS NULL AND c.retired_at IS NULL
+        GROUP BY c.category, s.verdict_source`,
+    )
+    .all(targetId) as Array<{ category: EvalDraftCategory; source: Exclude<VerdictSource, "human">; n: number }>;
+  const out: UnreviewedVerdictCounts = { financial: 0, technical: 0, total: 0, auto_rule: 0, ai_draft: 0 };
+  for (const r of rows) {
+    out[r.category] += r.n;
+    out[r.source] += r.n;
+    out.total += r.n;
+  }
+  return out;
+}
+
+/**
+ * A5 version history counts from `source_version_id` (§8): `applied` = non-human verdicts resting on the version,
+ * `reviewed` = human verdicts resting on it. Pending rows are not counted. Versions with no verdicts map to zeros.
+ */
+export function verdictCountsByVersion(
+  db: Database,
+  versionIds: readonly string[],
+): Map<string, { applied: number; reviewed: number }> {
+  const out = new Map<string, { applied: number; reviewed: number }>(
+    versionIds.map((id) => [id, { applied: 0, reviewed: 0 }]),
+  );
+  if (versionIds.length === 0) return out;
+  const rows = db
+    .query(
+      `SELECT source_version_id AS id, SUM(CASE WHEN verdict_source = 'human' THEN 0 ELSE 1 END) AS applied,
+              SUM(CASE WHEN verdict_source = 'human' THEN 1 ELSE 0 END) AS reviewed
+         FROM brownfield_target_eval_state
+        WHERE source_version_id IN (${placeholders(versionIds.length)}) AND status <> 'pending'
+        GROUP BY source_version_id`,
+    )
+    .all(...versionIds) as Array<{ id: string; applied: number; reviewed: number }>;
+  for (const r of rows) out.set(r.id, { applied: r.applied, reviewed: r.reviewed });
+  return out;
 }

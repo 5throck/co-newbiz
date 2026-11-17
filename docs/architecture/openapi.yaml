@@ -4841,6 +4841,22 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/opportunities/{id}/deal-shapes/recommend:
+    post:
+      operationId: recommendOpportunityDealShapes
+      summary: AI recommendation of per-shape viability for the S7 deal-shape evaluation (analyst+, brownfield, S7 reached). A PROPOSAL only (ADR-0118, boundary 2) - it writes nothing; recording stays the person's POST on /deal-shapes. Returns {recommendations[{shape, viable|null, intent, rationale}], note (no_shortlist | llm_unavailable | parse_failed | null), manifest, prompt_version}. No shortlisted target means no LLM call. Refused with 409 `deal_shape_not_open` like the record route.
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /api/projects/{id}/dimension-inputs:
     get:
       operationId: getProjectDimensionInputs
@@ -5637,7 +5653,7 @@ paths:
   /api/brownfield/{oppId}/targets:
     get:
       operationId: listBrownfieldTargets
-      summary: Long List + checklist definition + screening summaries. Each target also carries an additive eval_draft field (ADR-0199 A8) with provisional AI draft chips per category (version_no, created_at, checked_at, provisional_score, stale, evidence_grade) and the latest run item; it never changes eval_summary.
+      summary: "Long List + checklist definition + screening summaries. Each target carries eval_summary (ADR-0200 A8: per category the score, scored/total weight, judged_by_source {human, auto_rule, ai_draft} weights and unreviewed count, plus combined, complete and unreviewed_total) and eval_draft = version history and run state only ({financial?, technical?: {version_no, checked_at, stale, evidence_grade}, run_item?}); there is no provisional score because AI results are applied directly as item verdicts."
       tags:
         - Analysis
       responses:
@@ -5753,7 +5769,7 @@ paths:
   /api/brownfield/{oppId}/targets/{targetId}/shortlist:
     post:
       operationId: shortlistTarget
-      summary: Promote to Short List (knock-out + mandatory pass required).
+      summary: "HUMAN-ONLY (cookie session of a non-agent account; bearer, MCP and agent callers get 403 human_only; ADR-0200 Q3). Promote to Short List (every evaluation item judged). Unreviewed AI verdicts do not block: the response carries unreviewed (count of non-pending, non-human verdicts) and unreviewed_detail, and the audit target records unreviewed=n (Q4)."
       tags:
         - Analysis
       responses:
@@ -5761,6 +5777,8 @@ paths:
           $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/market-overview/industry/{industryId}/external-reference:
     delete:
@@ -5852,22 +5870,10 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/brownfield/{oppId}/targets/{targetId}/eval-draft:
-    post:
-      operationId: draftTargetEvaluation
-      summary: Generate financial/technical evaluation DRAFTS (evidence-based LLM proposals, nothing persisted); humans confirm via PUT eval-state. Analyst+.
-      tags:
-        - Brownfield
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
   /api/brownfield/{oppId}/eval-draft-runs:
     post:
       operationId: startBrownfieldEvalDraftRun
-      summary: "Start an S6 bulk AI evaluation run over the non-excluded candidates (ADR-0199 A1). Drafting is a proposal: every result is an immutable draft version and only the human-only confirm route writes verdicts. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). Concurrency: a bulk start (no target_ids, or more than one id) refuses with 409 engine_active reason=bulk_block while any engine is active; a single-candidate start may run beside other engines up to MAX_CONCURRENT_EVAL_ENGINES=3 and refuses with reason=concurrency_cap at the cap. The 30 s start cooldown (429) applies to bulk starts per user and to restarting the same single candidate per user+candidate; starting a different single candidate is never delayed. An active run over exactly the requested candidates is reused (meta.reused true). 202 returns run_id; the engine works in the background. Analyst+."
+      summary: "Start an S6 bulk AI evaluation run over the non-excluded candidates (ADR-0199 A1). Every result is an immutable draft version whose proposals are applied directly as item verdicts with their origin (financial auto_rule, technical ai_draft; ADR-0200) and never over a person's verdict; a person reviews them per item. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). Concurrency: a bulk start (no target_ids, or more than one id) refuses with 409 engine_active reason=bulk_block while any engine is active; a single-candidate start may run beside other engines up to MAX_CONCURRENT_EVAL_ENGINES=3 and refuses with reason=concurrency_cap at the cap. The 30 s start cooldown (429) applies to bulk starts per user and to restarting the same single candidate per user+candidate; starting a different single candidate is never delayed. An active run over exactly the requested candidates is reused (meta.reused true). 202 returns run_id; the engine works in the background. Analyst+."
       tags:
         - Brownfield
       parameters:
@@ -5996,7 +6002,7 @@ paths:
   /api/brownfield/{oppId}/targets/{targetId}/eval-draft-versions:
     get:
       operationId: listBrownfieldEvalDraftVersions
-      summary: "Draft versions of one candidate, newest first, each with confirmed_count (ADR-0199 A5). Query category (financial|technical), limit (1..100, default 20), include=payload for the full payloads."
+      summary: "Draft versions of one candidate, newest first, each with applied_count (non-human verdicts resting on it) and reviewed_count (human verdicts resting on it) from source_version_id (ADR-0200 A5). Query category (financial|technical), limit (1..100, default 20), include=payload for the full payloads."
       tags:
         - Brownfield
       parameters:
@@ -6006,34 +6012,6 @@ paths:
           schema:
             type: string
         - name: targetId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /api/brownfield/{oppId}/targets/{targetId}/eval-draft-versions/{versionId}/confirm:
-    post:
-      operationId: confirmBrownfieldEvalDraftVersion
-      summary: "HUMAN-ONLY (cookie session of a non-agent account; bearer, MCP and agent callers get 403 human_only). Bulk-confirm the proposals of the LATEST draft version of a candidate (ADR-0199 A6): pending criteria only, unverified items skipped, a person's verdict never overwritten, assessed_by is the caller, confirmed_from_version_id and evidence_ref record the version. Body criterion_ids (optional). 409 stale_version when the version is not the latest. Analyst+."
-      tags:
-        - Brownfield
-      parameters:
-        - name: oppId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: targetId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: versionId
           in: path
           required: true
           schema:
@@ -6235,7 +6213,7 @@ paths:
   /api/brownfield/{oppId}/targets/{targetId}/eval-state:
     get:
       operationId: listBrownfieldTargetEvalState
-      summary: One target's financial/technical verdicts, defaulted to pending for any catalog item missing a state row.
+      summary: One target's financial/technical verdicts, defaulted to pending for any catalog item missing a state row. Each item state carries verdict_source (human|auto_rule|ai_draft) and source_version_id; the response adds unreviewed {financial, technical, total} (ADR-0200 A8).
       tags:
         - Analysis
       responses:
@@ -6249,7 +6227,27 @@ paths:
   /api/brownfield/{oppId}/targets/{targetId}/eval-state/{criterionId}:
     put:
       operationId: upsertBrownfieldTargetEvalState
-      summary: Upsert one target's verdict for one evaluation criterion (pass/fail/na/waived) — verdict is always human-entered, DART figures are reference-only. Optional confirmed_from_version_id records the AI draft version the person's verdict rested on (ADR-0199 A7); a save without it clears the link.
+      summary: "Upsert one target's verdict for one criterion (ADR-0200 §4.1). The stored origin is derived from the caller, never the body (a body verdict_source is 400): a human UI session stores human (always lands; saving an AI verdict with the same status makes it human); MCP, stdio REST client, bearer and agent callers store ai_draft, cannot overwrite a human verdict (409 human_verdict_locked) and cannot set na/waived or source_version_id (403 human_only). note / evidence_ref omitted with an unchanged status keep the stored values (a bare confirm must not change the capability-judgement eval hash). Optional source_version_id (human only; deprecated alias confirmed_from_version_id) links the draft version the person reviewed. Response row carries verdict_source and source_version_id."
+      tags:
+        - Analysis
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/brownfield/{oppId}/targets/{targetId}/eval-state/accept-rule:
+    post:
+      operationId: acceptBrownfieldRuleVerdicts
+      summary: "HUMAN-ONLY (ADR-0200 Q1). Accept every non-pending auto_rule verdict of one category (body category financial|technical) for one candidate as human verdicts (same status/note/evidence, source_version_id kept); ai_draft verdicts are never touched. Audits target_eval.ai_verdict.review per item and target_eval.rule_verdict.accept_all. Analyst+."
       tags:
         - Analysis
       responses:

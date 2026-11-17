@@ -80,7 +80,7 @@ describe("explanations + save", () => {
   test("score explanation text and DART window values match the repository constants", () => {
     const html = render(createElement(rules.ScoreExplanation, {}));
     expect(html).toContain("충족 1, 부분충족 0.5, 미충족 0");
-    expect(html).toContain("순위에 반영되지 않습니다");
+    expect(html).toContain("바로 점수와 순위에 반영됩니다");
     expect(html).toContain("A = DART");
     expect(helpers.DART_REUSE_DAYS).toBe(repo.DART_FRESHNESS_DAYS);
     expect(helpers.DART_REUSE_DAYS_FILING_SEASON).toBe(repo.DART_FRESHNESS_DAYS_FILING_SEASON);

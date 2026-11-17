@@ -7,7 +7,7 @@
  * lists; no longlist-wide confirm-all; ko + en key parity for every fixed API code.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 // biome-ignore lint/suspicious/noExplicitAny: test reads untyped module namespaces and JSON catalogs
 type Loose = any;
@@ -43,7 +43,6 @@ const chip = (over: Record<string, unknown> = {}) => ({
   version_no: 3,
   created_at: "2026-11-16T01:00:00Z",
   checked_at: "2026-11-16T01:00:00Z",
-  provisional_score: 72,
   stale: false,
   evidence_grade: "A",
   ...over,
@@ -73,7 +72,8 @@ describe("start dialog", () => {
       '<input type="checkbox"/>',
     ]);
     expect(html).not.toContain(ko.stages.s67.aiEval.webEvidenceWarning);
-    expect(html).toContain("판정 확정은 사람이 합니다");
+    expect(html).toContain("AI 결과는 바로 판정에 반영되며, 사람이 항목별로 검토합니다");
+    expect(html).not.toContain("판정 확정은 사람이 합니다");
   });
   test("checking web evidence shows the provider warning (ko + en)", () => {
     expect(startForm({ web_evidence: true })).toContain(ko.stages.s67.aiEval.webEvidenceWarning);
@@ -81,52 +81,23 @@ describe("start dialog", () => {
   });
 });
 
-describe("provisional chips", () => {
+describe("run-state chips (ADR-0200: no provisional chip layer)", () => {
   const view = (draft: unknown, dart: string | null = "00123456", active: string | null = null) =>
-    render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, activeRunIds: active ? [active] : [] }));
-  test("chip carries the literal AI 잠정 text, an icon with a text label, and the dashed-outline class", () => {
-    const html = view({ financial: chip(), technical: chip({ provisional_score: 55, version_no: 2 }) });
-    expect(html).toContain("AI 잠정 재무 72 · v3");
-    expect(html).toContain("AI 잠정 기술 55 · v2");
-    // Compact: the long explanation and date live in the tooltip, not in the visible chip text.
-    expect(html).toContain('title="AI 잠정 초안 (사람 판정 전) · ');
-    expect(html).not.toContain("AI 잠정 v3 ·");
-    expect(html).toContain("ai-draft-chip");
-    expect(html).toContain("AI 잠정 초안 (사람 판정 전)");
-    expect(html).toContain("재무");
-    expect(html).toContain("72");
-    expect(html).toContain('aria-hidden="true">✎');
-  });
-  test("score-less draft shows unverified counts, never a bare dash", () => {
-    const draft = { technical: chip({ provisional_score: null, proposed_count: 0, unverified_count: 10 }) };
-    const html = view(draft);
-    expect(html).toContain("AI 잠정 기술 · 확인 안됨 10/10 · v3");
-    expect(html).not.toContain("기술 —");
-    const en_ = render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: "1" }), "en");
-    expect(en_).toContain("unverified 10/10");
-  });
-  test("chips sit on one wrapping line (no stacked column)", () => {
-    expect(view({ financial: chip(), technical: chip() })).toContain("flex flex-wrap gap-1 mt-1");
-  });
-  test("a confirmed score chip is not produced by the provisional chips (separate row)", () => {
-    expect(view({ financial: chip() })).not.toContain("status-green");
-  });
-  test("stale chip reads 갱신 권장 as text", () => {
-    expect(view({ financial: chip({ stale: true }) })).toContain("갱신 권장");
-    expect(view({ financial: chip() })).not.toContain("갱신 권장");
-  });
-  test("non-DART candidate shows 확인 안됨 · DART 미등록 with no draft chip", () => {
-    const html = view({}, null);
-    expect(html).toContain("확인 안됨 · DART 미등록");
+    render(createElement(chips.RunStateChips, { draft, dartCorpCode: dart, activeRunIds: active ? [active] : [] }));
+  test("version history alone renders nothing: no AI 잠정 chip, no dashed draft chip, no v{n} 유지", () => {
+    const html = view({ financial: chip(), technical: chip({ version_no: 2 }) });
+    expect(html).toBe("");
+    expect(html).not.toContain("AI 잠정");
     expect(html).not.toContain("ai-draft-chip");
   });
-  test("failed item keeps the previous version and names the error code in friendly text", () => {
+  test("non-DART candidate shows 확인 안됨 · DART 미등록", () => {
+    expect(view({}, null)).toContain("확인 안됨 · DART 미등록");
+  });
+  test("failed item names the error code in friendly text", () => {
     const html = view({ financial: chip(), run_item: { run_id: "r1", state: "failed", error: "dart_error" } });
-    expect(html).toContain("v3 유지");
-    expect(html).toContain("DART 조회 오류");
-    expect(html).toContain("AI 잠정 재무 72 · v3");
-    const nov = view({ run_item: { run_id: "r1", state: "failed", error: "llm_error" } });
-    expect(nov).toContain("AI 응답 오류");
+    expect(html).toContain("실패 · DART 조회 오류");
+    expect(html).not.toContain("v3 유지");
+    expect(view({ run_item: { run_id: "r1", state: "failed", error: "llm_error" } })).toContain("AI 응답 오류");
   });
   test("in-progress shows only for the active run", () => {
     const item = { run_id: "r1", state: "financial_sync", error: null };
@@ -137,8 +108,8 @@ describe("provisional chips", () => {
 
 describe("row run progress chips (S1-style, live run item)", () => {
   const liveView = (draft: unknown, item: unknown, runActive: boolean, dart = "00123456") =>
-    render(createElement(chips.ProvisionalChips, { draft, dartCorpCode: dart, live: { runActive, item } }));
-  test("in-flight item shows 평가 진행 중 as a full phrase per state, with glyph + text marks and 이전 버전 유지", () => {
+    render(createElement(chips.RunStateChips, { draft, dartCorpCode: dart, live: { runActive, item } }));
+  test("in-flight item shows 평가 진행 중 as a full phrase per state, with glyph + text marks", () => {
     const at = (state: string, over: Record<string, unknown> = {}) =>
       liveView(
         { financial: chip(), technical: chip() },
@@ -148,7 +119,6 @@ describe("row run progress chips (S1-style, live run item)", () => {
     const sync = at("financial_sync");
     expect(sync).toContain("평가 진행 중");
     expect(sync).toContain("DART 재무 동기화 중");
-    expect(sync).toContain("이전 버전 유지");
     expect(at("financial_draft")).toContain("재무 초안 작성 중");
     expect(at("financial_draft")).toContain("기술 초안 대기 중");
     const mid = at("technical_draft", { financial_outcome: "versioned" });
@@ -169,7 +139,7 @@ describe("row run progress chips (S1-style, live run item)", () => {
     expect(seg("done")).toEqual(["✓done"]);
     expect(seg("something_else")).toEqual(["⋯pending"]);
   });
-  test("unchanged outcomes show 재평가 · 변경 없음 (v{n} 유지) per category, not silence", () => {
+  test("unchanged outcomes show 재평가 · 변경 없음, not silence", () => {
     const html = liveView(
       { financial: chip(), technical: chip({ version_no: 4 }) },
       {
@@ -181,26 +151,26 @@ describe("row run progress chips (S1-style, live run item)", () => {
       },
       false,
     );
-    expect(html).toContain("재평가 · 변경 없음 (v3 유지)");
-    expect(html).toContain("재평가 · 변경 없음 (v4 유지)");
+    expect(html).toContain("재평가 · 변경 없음");
+    expect(html).not.toContain("유지)");
     const en_ = render(
-      createElement(chips.ProvisionalChips, {
+      createElement(chips.RunStateChips, {
         draft: { financial: chip(), technical: chip() },
         dartCorpCode: "1",
         live: { runActive: false, item: { state: "done", financial_outcome: "unchanged", technical_outcome: null } },
       }),
       "en",
     );
-    expect(en_).toContain("no change (v3 kept)");
+    expect(en_).toContain("Re-evaluated · no change");
   });
-  test("failed live item names the error and keeps the previous version", () => {
+  test("failed live item names the error", () => {
     const html = liveView(
       { financial: chip() },
       { run_id: "r1", state: "failed", financial_outcome: null, technical_outcome: null, error_message: "dart_error" },
       false,
     );
     expect(html).toContain("DART 조회 오류");
-    expect(html).toContain("v3 유지");
+    expect(html).not.toContain("v3 유지");
   });
 });
 
@@ -243,7 +213,7 @@ const payload = (items: Array<[string, string | null]>, human: Array<[string, st
   items: items.map(([criterion_id, proposed_status]) => ({ criterion_id, proposed_status })),
   human_items: human.map(([criterion_id, status]) => ({ criterion_id, status })),
 });
-const ver = (no: number, score: number | null, p: unknown, confirmed = 0) => ({
+const ver = (no: number, score: number | null, p: unknown, applied = 0, reviewed = 0) => ({
   id: `v${no}`,
   category: "financial",
   version_no: no,
@@ -252,7 +222,8 @@ const ver = (no: number, score: number | null, p: unknown, confirmed = 0) => ({
   unverified_count: 1,
   evidence_grade: "A",
   created_at: "2026-11-16T01:00:00Z",
-  confirmed_count: confirmed,
+  applied_count: applied,
+  reviewed_count: reviewed,
   payload: p,
 });
 
@@ -266,6 +237,7 @@ describe("version comparison table", () => {
       ["c3", null],
     ]),
     2,
+    1,
   );
   const v1 = ver(
     1,
@@ -279,9 +251,10 @@ describe("version comparison table", () => {
   const html = render(createElement(panel.VersionTable, { category: "financial", versions: [v2, v1] }));
   test("columns newest first with score row and delta", () => {
     expect(html.indexOf("v2")).toBeLessThan(html.indexOf("v1"));
-    expect(html).toContain("잠정 점수");
+    expect(html).toContain("점수");
+    expect(html).not.toContain("잠정 점수");
     expect(html).toContain("(+12)");
-    expect(html).toContain("확정 근거 2건");
+    expect(html).toContain("적용 2건 · 사람 검토 1건");
   });
   test("per-item verdict text; changed cell is marked in text, unchanged is not", () => {
     expect(html).toContain("부분충족");
@@ -289,73 +262,46 @@ describe("version comparison table", () => {
     expect(html).toContain("확인 안됨");
     expect(html.match(/변경/g)?.length).toBe(1); // only c2 changed (v1 -> v2); oldest column never marked
   });
-  test("human-judged cell is labelled 사람 판정", () => {
+  test("each cell names its origin: 자동 규칙 (financial) / AI (technical) / 사람 (human item)", () => {
     const h = ver(2, 80, payload([["c1", "pass"]], [["c2", "pass"]]));
-    const out = render(createElement(panel.VersionTable, { category: "financial", versions: [h] }));
-    expect(out).toContain("사람 판정");
+    const fin = render(createElement(panel.VersionTable, { category: "financial", versions: [h] }));
+    expect(fin).toContain("자동 규칙 · 충족");
+    expect(fin).toContain("사람 · 충족");
+    const tech = render(createElement(panel.VersionTable, { category: "technical", versions: [h] }));
+    expect(tech).toContain("AI · 충족");
   });
 });
 
-describe("confirm dialog", () => {
-  const plan = types.buildConfirmPlan(
-    payload(
-      [
-        ["c1", "pass"],
-        ["c2", null],
-        ["c3", "fail"],
-      ],
-      [["c2", "pass"]],
-    ),
-  );
-  test("plan separates written, human-judged and unverified items", () => {
-    expect(plan.write.map((w: Loose) => w.criterion_id)).toEqual(["c1", "c3"]);
-    expect(plan.skippedHuman.map((w: Loose) => w.criterion_id)).toEqual(["c2"]);
-    expect(plan.skippedUnverified).toEqual([]);
-    const p2 = types.buildConfirmPlan(
-      payload([
-        ["c1", null],
-        ["c2", "pass"],
-      ]),
+describe("version panel is a read-only audit history (no confirm path)", () => {
+  const src = (f: string) => readFileSync(new URL(`${WEB}/components/stages/brownfield/${f}`, import.meta.url), "utf8");
+  test("no confirm control, route call, confirm dialog or confirm-plan helper remains", () => {
+    const vp = src("AiEvalVersionPanel.tsx");
+    expect(vp).not.toMatch(/\/confirm|confirmVersion|AiEvalConfirmBody|buildConfirmPlan|onConfirmed|<button/);
+    expect(src("LonglistSection.tsx")).not.toContain("/confirm");
+    expect(existsSync(new URL(`${WEB}/components/stages/brownfield/AiEvalRowConfirm.tsx`, import.meta.url))).toBe(
+      false,
     );
-    expect(p2.skippedUnverified.map((w: Loose) => w.criterion_id)).toEqual(["c1"]);
+    expect(types.buildConfirmPlan).toBeUndefined();
+    expect(dialogs.AiEvalConfirmBody).toBeUndefined();
   });
-  const html = render(
-    createElement(dialogs.AiEvalConfirmBody, {
-      versionNo: 3,
-      plan,
-      statusLabel: (s: string) => ko.stages.s67.aiEval.verdict[s],
-      busy: false,
-      onSubmit: noop,
-      onCancel: noop,
-    }),
-  );
-  test("lists items to write and skipped items, with the human-confirms notice", () => {
-    expect(html).toContain("기록할 항목 (2)");
-    expect(html).toContain("매출 CAGR");
-    expect(html).toContain("충족");
-    expect(html).toContain("건너뛸 항목 — 사람이 이미 판정 (1)");
-    expect(html).toContain("영업이익률");
-    expect(html).toContain("판정 확정은 사람이 합니다");
-    expect(html).toContain("2건 확정");
+  test("catalogs carry no confirm / provisional wording any more", () => {
+    const flat = JSON.stringify(ko.stages.s67.aiEval);
+    for (const w of [
+      "제안 확정",
+      "전체 확정",
+      "AI 잠정",
+      "판정 확정은 사람이 합니다",
+      "rowConfirm",
+      "confirmVersion",
+    ]) {
+      expect(flat).not.toContain(w);
+    }
+    expect(JSON.stringify(en.stages.s67.aiEval)).not.toContain("provisional draft");
   });
-});
-
-describe("no confirm-all, provisional isolation", () => {
-  const long = readFileSync(
-    new URL(`${WEB}/components/stages/brownfield/LonglistSection.tsx`, import.meta.url),
-    "utf8",
-  );
-  test("no longlist-wide confirm action exists in code or catalogs", () => {
-    expect(JSON.stringify(ko.stages.s67.aiEval)).not.toContain("전체 확정");
-    expect(JSON.stringify(en.stages.s67.aiEval).toLowerCase()).not.toContain("confirm all");
-    expect(long).not.toContain("/confirm");
-    expect(
-      readFileSync(new URL(`${WEB}/components/stages/brownfield/AiEvalVersionPanel.tsx`, import.meta.url), "utf8"),
-    ).toMatch(/eval-draft-versions\/\$\{[^}]*\}\/confirm/);
-  });
-  test("provisional chips never feed rank, promotion or confirmed counts", () => {
-    expect(long).not.toMatch(/eval_draft[^\n]*(evalRank|canPromote|combined|complete)/);
-    expect(long).toContain('canPromote = tgt.status === "pending" && tgt.eval_summary?.complete === true');
+  test("the longlist drives promotion from the explicit complete flag, never from AI verdicts alone", () => {
+    expect(src("LonglistSection.tsx")).toContain(
+      'canPromote = tgt.status === "pending" && tgt.eval_summary?.complete === true',
+    );
   });
 });
 

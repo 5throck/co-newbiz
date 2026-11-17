@@ -4,21 +4,41 @@
 import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
 import type { useTargetDetail } from "./useTargetDetail.ts";
-import type { EvalDraftResp, EvalDraftItem, EvalItem } from "./types.ts";
+import type { EvalItem } from "./types.ts";
 
 export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
   const t = useTranslations("components.brownfieldTarget.useTargetActions");
-  const { oppId, setEvalBusy, targetId, loadDetail, setError, draftBusy, setDraftBusy, setDraftNote, setDraftCategory, setEvalDraft, evalDraft, busy, setBusy, setRubricBusy, newCriterionLabel, setNewCriterionLabel, excludeReason, editDraft, setEditing } = prev;
+  const {
+    oppId,
+    setEvalBusy,
+    targetId,
+    loadDetail,
+    setError,
+    busy,
+    setBusy,
+    setRubricBusy,
+    newCriterionLabel,
+    setNewCriterionLabel,
+    excludeReason,
+    editDraft,
+    setEditing,
+  } = prev;
 
-
-  async function setEvalVerdict(criterionId: string, status: "pending" | "pass" | "partial" | "fail" | "na" | "waived", note?: string) {
+  async function setEvalVerdict(
+    criterionId: string,
+    status: "pending" | "pass" | "partial" | "fail" | "na" | "waived",
+    note?: string,
+  ) {
     if (!oppId) return;
     setEvalBusy(criterionId);
     try {
-      await api.put(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/eval-state/${encodeURIComponent(criterionId)}`, {
-        status,
-        ...(note !== undefined ? { note } : {}),
-      });
+      await api.put(
+        `/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/eval-state/${encodeURIComponent(criterionId)}`,
+        {
+          status,
+          ...(note !== undefined ? { note } : {}),
+        },
+      );
       loadDetail();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("verdictSaveFailed"));
@@ -27,50 +47,21 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
     }
   }
 
-  // ── 재무·기술 평가 자동 초안(ADR-0140/0141) ── 초안 생성은 저장이 아니다:
-  // 서버가 전자공시 재무 정보(재무) 또는 공시·프로파일·웹 근거(기술)로 계산한 제안을
-  // 클라이언트 상태에만 싣는다. 사람이 select를 바꾸거나 "초안 저장"을 누를
-  // 때 기존 판정 저장 경로로 확정된다(경계 #2). 기술 근거로 확인 안 된 항목은
-  // 제안 없이 "확인 안됨" 사유가 내려온다 — 날조된 판정이 아니라 명시적 미확인.
-  async function generateEvalDraft(category: "financial" | "technical") {
-    if (!oppId || draftBusy) return;
-    setDraftBusy(true); setError(null);
+  // ADR-0200 Q1: accept every NON-PENDING rule verdict (`자동 규칙`) of one category as a human verdict. AI (`AI`)
+  // verdicts are never included — they are reviewed one at a time. Human-only route; the count comes back from the server.
+  async function acceptRuleVerdicts(category: "financial" | "technical") {
+    if (!oppId) return;
+    setEvalBusy(`accept-rule:${category}`);
     try {
-      const r = await api.post<EvalDraftResp>(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/eval-draft`, { category });
-      setDraftNote(r.data.note);
-      setDraftCategory(category);
-      const byId: Record<string, EvalDraftItem> = {};
-      for (const d of r.data.drafts) byId[d.criterion_id] = d;
-      setEvalDraft(byId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("draftGenerateFailed"));
-    } finally {
-      setDraftBusy(false);
-    }
-  }
-
-  /** 초안 전체 저장 — 사람이 버튼을 눌러 확정. 제안(status·note)을 그대로
-   * PUT eval-state로 기록한다(assessed_by=사용자). 데이터 부족 항목은 건너뛴다. */
-  async function saveDraftVerdicts() {
-    if (!oppId || !evalDraft || busy) return;
-    const entries = Object.values(evalDraft).filter((d) => d.status != null);
-    if (entries.length === 0) return;
-    setBusy(true); setError(null);
-    try {
-      for (const d of entries) {
-        await api.put(
-          `/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/eval-state/${encodeURIComponent(d.criterion_id)}`,
-          { status: d.status, note: d.note },
-        );
-      }
-      setEvalDraft(null);
-      setDraftCategory(null);
-      setDraftNote(null);
+      await api.post(
+        `/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/eval-state/accept-rule`,
+        { category },
+      );
       loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("draftSaveFailed"));
+      setError(err instanceof Error ? err.message : t("acceptRuleFailed"));
     } finally {
-      setBusy(false);
+      setEvalBusy(null);
     }
   }
 
@@ -79,7 +70,9 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
     if (!oppId) return;
     setRubricBusy(criterionId);
     try {
-      await api.patch(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`, { rubric });
+      await api.patch(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`, {
+        rubric,
+      });
       loadDetail();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("rubricSaveFailed"));
@@ -92,7 +85,9 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
     if (!oppId || !Number.isFinite(weight) || weight <= 0) return;
     setEvalBusy(criterionId);
     try {
-      await api.patch(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`, { weight });
+      await api.patch(`/api/brownfield/${encodeURIComponent(oppId)}/eval-criteria/${encodeURIComponent(criterionId)}`, {
+        weight,
+      });
       loadDetail();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("weightSaveFailed"));
@@ -135,7 +130,10 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
     if (!oppId || busy) return;
     setBusy(true);
     try {
-      await api.post(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/shortlist`, {});
+      await api.post(
+        `/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/shortlist`,
+        {},
+      );
       loadDetail();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("shortlistFailed"));
@@ -148,7 +146,9 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
     if (!oppId || busy || !excludeReason.trim()) return;
     setBusy(true);
     try {
-      await api.post(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/exclude`, { reason: excludeReason.trim() });
+      await api.post(`/api/brownfield/${encodeURIComponent(oppId)}/targets/${encodeURIComponent(targetId)}/exclude`, {
+        reason: excludeReason.trim(),
+      });
       loadDetail();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("excludeFailed"));
@@ -162,7 +162,8 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
   // 삭제할 수 있어야 한다(제외는 사유를 남기는 별도 상태 — 삭제는 레코드 자체 제거).
   async function saveEdit() {
     if (busy || !editDraft.company_name.trim()) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.patch(`/api/brownfield/targets/${encodeURIComponent(targetId)}`, {
         company_name: editDraft.company_name.trim(),
@@ -180,7 +181,8 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
 
   async function deleteTarget() {
     if (busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.delete(`/api/brownfield/targets/${encodeURIComponent(targetId)}`);
       window.location.href = `/brownfield?opportunity=${encodeURIComponent(oppId)}`;
@@ -189,7 +191,18 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
       setBusy(false);
     }
   }
-  return { shortlist, exclude, deleteTarget, saveEdit, generateEvalDraft, saveDraftVerdicts, setEvalWeight, setEvalVerdict, removeEvalCriterion, saveRubric, addEvalCriterion };
+  return {
+    shortlist,
+    exclude,
+    deleteTarget,
+    saveEdit,
+    acceptRuleVerdicts,
+    setEvalWeight,
+    setEvalVerdict,
+    removeEvalCriterion,
+    saveRubric,
+    addEvalCriterion,
+  };
 }
 
 export type TargetDetailViewState = ReturnType<typeof useTargetDetail> & ReturnType<typeof useTargetActions>;

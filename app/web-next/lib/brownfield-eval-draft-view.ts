@@ -1,5 +1,6 @@
 // brownfield-eval-draft-view.ts — read model for the additive `eval_draft` field on the S6 targets list (ADR-0199 A8).
-// Provisional (AI draft) state only: it never touches eval_summary, ranking or promotion (spec §8).
+// ADR-0200 §8 A8: version HISTORY and run state only. AI results are applied directly as item verdicts, so there is no
+// provisional score, no proposed/unverified count here — scores live in eval_summary.
 import type { Database } from "bun:sqlite";
 import {
   getLatestRunItemForTarget,
@@ -13,11 +14,7 @@ export const DRAFT_STALE_DAYS = 90;
 
 export interface VersionChip {
   version_no: number;
-  created_at: string;
   checked_at: string;
-  provisional_score: number | null;
-  proposed_count: number;
-  unverified_count: number;
   stale: boolean;
   evidence_grade: EvidenceGrade;
 }
@@ -35,11 +32,7 @@ export function evalDraftView(db: Database, targetId: string, now: Date = new Da
     if (!v) continue;
     out[category] = {
       version_no: v.version_no,
-      created_at: v.created_at,
       checked_at: v.checked_at,
-      provisional_score: v.provisional_score,
-      proposed_count: v.proposed_count,
-      unverified_count: v.unverified_count,
       stale: now.getTime() - new Date(v.checked_at).getTime() > DRAFT_STALE_DAYS * 86_400_000,
       evidence_grade: v.evidence_grade,
     };

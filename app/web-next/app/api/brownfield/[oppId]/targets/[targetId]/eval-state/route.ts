@@ -12,9 +12,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const db = getDb();
-  const target = db.query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?").get(targetId, oppId) as { id: string } | undefined;
+  const target = db
+    .query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
+    .get(targetId, oppId) as { id: string } | undefined;
   if (!target) return notFound();
   const items = targetEvalStates(oppId, targetId, auth.auth.userId);
   const scores = computeEvalScore(items);
-  return ok({ items, scores }, 200, { count: items.length });
+  // ADR-0200 §8: each item's `state` carries `verdict_source` / `source_version_id`; `scores[cat]` carries `byWeight` and
+  // `unreviewed`, repeated here as the per-category + total unreviewed counts (non-pending, non-human verdicts).
+  const unreviewed = {
+    financial: scores.financial.unreviewed,
+    technical: scores.technical.unreviewed,
+    total: scores.financial.unreviewed + scores.technical.unreviewed,
+  };
+  return ok({ items, scores, unreviewed }, 200, { count: items.length });
 }
