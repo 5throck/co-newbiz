@@ -18,6 +18,9 @@ const { registerCompetitor, updateCompetitor, excludeCompetitor, restoreCompetit
 const NOW = new Date().toISOString();
 const tmpDirs: string[] = [];
 afterAll(() => {
+  // Close the bun:sqlite connection before unlinking — Windows keeps the
+  // file locked (EBUSY) as long as the connection is open.
+  resetDb();
   for (const d of tmpDirs) rmSync(d, { recursive: true, force: true });
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });

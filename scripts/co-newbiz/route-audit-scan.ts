@@ -83,7 +83,10 @@ export function scanRouteAudit(
   apiDir: string = API_DIR,
   allowlist: Record<string, string> = loadRouteAllowlist(),
 ): RouteAuditReport {
-  const rel = (f: string) => f.slice(apiDir.length + 1);
+  // Allowlist keys are forward-slash route paths; normalize the OS-native
+  // separators join() produced so the scan is platform-independent (the
+  // operator workstation runs Windows, the CI runners Linux).
+  const rel = (f: string) => f.slice(apiDir.length + 1).replace(/\\/g, "/");
   const writeRoutes = routeFiles(apiDir).filter((f) => writeMethods(readFileSync(f, "utf8")).length > 0);
   const writeRel = new Set(writeRoutes.map(rel));
   const allowlistErrors: string[] = [];

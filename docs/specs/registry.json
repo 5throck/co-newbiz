@@ -1769,6 +1769,15 @@
       "superseded_by": "2026-11-17-s6-universe-direction-review-design"
     },
     {
+      "id": "2026-11-18-mcp-package-distribution-design",
+      "title": "mcp package distribution design",
+      "file": "docs/designs/2026-11-18-mcp-package-distribution-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-17",
+      "last_updated": "2026-11-17"
+    },
+    {
       "id": "design-checklist",
       "title": "DESIGN CHECKLIST",
       "file": "docs/designs/DESIGN-CHECKLIST.md",
