@@ -48,11 +48,11 @@ export interface SpecialistTrackAffinity {
 }
 
 export const CATALOG_VERSION = "1.0.0";
-export const SPEC_VERSION = "2.21.0";
+export const SPEC_VERSION = "2.21.1";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
   "promptsJson": "94e540a8f4793846",
-  "flowSpecYaml": "6f422e41baf5c01b",
+  "flowSpecYaml": "2fe5973c32ae7b0c",
   "agentRoster": "4f4cf81169a7e46f"
 };
 
