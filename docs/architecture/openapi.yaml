@@ -8268,7 +8268,7 @@ paths:
   /api/brownfield/{oppId}/universe-criteria-draft:
     post:
       operationId: draftUniverseCriteria
-      summary: LLM draft of Target Universe selection criteria from S1 market analysis + S3 capability outputs (proposal only, analyst+).
+      summary: LLM draft of the S6 evaluation target direction (prompt s6.universe_criteria_draft@3) from the S1 + S3 evidence catalog — envelope carries draft (validated direction, market support line, cited evidence), counts, a legacy criteria projection, manifest and provenance (proposal only, analyst+).
       tags:
         - Analysis
       responses:

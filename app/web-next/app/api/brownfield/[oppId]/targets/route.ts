@@ -13,6 +13,7 @@ import {
 } from "../../../../../lib/brownfield-targets.ts";
 import { buildEvalSummary, computeEvalScore, targetEvalStates } from "../../../../../lib/brownfield-eval-criteria.ts";
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
+import { directionRecordKeys } from "../../../../../lib/universe-direction.ts";
 import { evalDraftView } from "../../../../../lib/brownfield-eval-draft-view.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
@@ -81,15 +82,20 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
     scope?: string;
     financial_criteria?: string;
     min_long_list?: number;
+    direction?: unknown;
+    evidence?: unknown;
+    origin?: unknown;
+    drafted?: unknown;
   } | null;
   const definition = body?.definition?.trim();
-  if (!definition) return badRequest("invalid_request", "definition (target market definition) is required.");
+  if (!definition) return badRequest("invalid_request", "definition (evaluation target direction) is required.");
   const db = getDb();
   const existingRow = db.query("SELECT target_universe_json FROM opportunity WHERE id = ?").get(oppId) as
     | { target_universe_json: string | null }
     | undefined;
   if (!existingRow) return notFound();
   let existing: {
+    [key: string]: unknown;
     criteria?: string[];
     scope?: string | null;
     financial_criteria?: string | null;
@@ -116,6 +122,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ oppI
         ? body.financial_criteria?.trim().slice(0, 600) || null
         : (existing.financial_criteria ?? null),
     min_long_list: minLongList,
+    // Direction-review keys (design 2026-11-17 §5.4) are additive and come AFTER
+    // `definition`, which must stay the first key (deal-shapes/recommend reads
+    // the first 600 chars of the raw JSON). Preserve-when-absent; null clears.
+    ...directionRecordKeys(existing, body ?? {}),
   };
   db.run("UPDATE opportunity SET target_universe_json = ? WHERE id = ?", [JSON.stringify(universe), oppId]);
   appendAudit(db, { actor: ctx.userId, action: "target_universe.save", target: oppId, now: new Date().toISOString() });

@@ -6,6 +6,12 @@
 // 확정된다. S1·S3 근거가 전혀 없으면 LLM을 호출하지 않고 제안을 보류한다 —
 // 근거 없는 기준을 날조하지 않는다.
 //
+// Design 2026-11-17-s6-universe-direction-review (prompt @3): the draft is a
+// structured evaluation-target direction. The model sees ONLY a numbered
+// evidence catalog (E1..En) and cites ids; the server clamps, checks
+// citations, traces numbers per field, and composes the market support line
+// (lib/universe-direction.ts). `criteria` stays one release as a projection.
+//
 // DEC-20261111-05 (design 2026-11-11-s6-universe-viability-criteria §3–§4):
 // ① S1은 opportunity.sizing_version_id 고정 버전 우선 해석 사슬(pinned →
 //   industry FK → name fallback FK 자기배제 → honest unset)을 따른다 —
@@ -26,28 +32,28 @@ import { systemMessage } from "../../../../../lib/prompts.ts";
 import { trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 import {
   buildDraftProvenance,
+  buildUniverseEvidenceCatalog,
   readStageFinancials,
   resolveUniverseS1,
-  s1ContextLines,
   s1ManifestLine,
   s1StructureLines,
   s1UnsetLabel,
   s3CapabilityLines,
   STALE_PIN_FALLBACK_LINE,
   stageFinancialsLines,
+  type StageFinancialRow,
 } from "../../../../../lib/brownfield-universe.ts";
+import {
+  catalogPromptLines,
+  criteriaProjection,
+  deterministicDirection,
+  directionCounts,
+  normalizeDirection,
+} from "../../../../../lib/universe-direction.ts";
 
 // MINUTES_PROMPT 패턴의 호출점 버전 상수(lib/committee-chair.ts) — 프롬프트
 // 레지스트리는 키별 버전을 추적하지 않으므로 제안 봉투가 버전 정체를 운반한다.
-export const UNIVERSE_CRITERIA_PROMPT_VERSION = "s6.universe_criteria_draft@2";
-
-interface DraftCriteria {
-  industry: string;
-  region: string;
-  size: string;
-  viability: string;
-  rationale: string;
-}
+export const UNIVERSE_CRITERIA_PROMPT_VERSION = "s6.universe_criteria_draft@3";
 
 function parseJson(text: string): Record<string, unknown> | null {
   const start = text.indexOf("{");
@@ -58,27 +64,6 @@ function parseJson(text: string): Record<string, unknown> | null {
   } catch {
     return null;
   }
-}
-
-const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
-
-/**
- * Whitelist-clamp the LLM's criteria object — never trusted raw. viability is
- * NOT required to parse (honest unset): an LLM that omits it yields "" and
- * the UI renders the field as unset rather than fabricating one (design
- * §4.4). Exported for the pure parse tests (house pattern: the same file's
- * normalizeLlmSuggestions / parseScreeningDrafts).
- */
-export function parseDraftCriteria(c: Record<string, unknown> | null): DraftCriteria | null {
-  if (!c) return null;
-  const criteria: DraftCriteria = {
-    industry: str(c.industry, 200),
-    region: str(c.region, 200),
-    size: str(c.size, 200),
-    viability: str(c.viability, 400),
-    rationale: str(c.rationale, 600),
-  };
-  return criteria.industry ? criteria : null;
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
@@ -111,10 +96,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // DEC-20261111-05: pinned-first S1 resolution chain (§4.1).
   const manifest: string[] = [];
   const s1 = resolveUniverseS1(db, oppId);
-  let s1Context = "";
-  let structureContext: string[] = [];
-  let financialContext: string[] = [];
-  let stageFinancialRowCount = 0;
+  let stageFinancialRows: StageFinancialRow[] = [];
   if (s1.row) {
     // S1 identity + grade line, then the S1-declared structure blocks — every
     // line goes into the manifest AND the user message (§4.2).
@@ -126,28 +108,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     // resolution is pinned/industry_fk/name_fallback; pinDiscarded is false
     // for "pinned" by construction, so this keys the fall-through exactly.
     if (s1.pinDiscarded) manifest.push(STALE_PIN_FALLBACK_LINE);
-    s1Context = s1ContextLines(s1).join("\n");
-    structureContext = s1StructureLines(s1.row.payload);
-    manifest.push(...structureContext);
+    manifest.push(...s1StructureLines(s1.row.payload));
     // Value-chain stage financials (fact_industry, ADR-0066 plane) — 0 rows
     // emits the honest gap line naming the producing S1 activity (§4.3).
-    const stageFinancialRows = readStageFinancials(db, s1.row.industry_id);
-    stageFinancialRowCount = stageFinancialRows.length;
-    financialContext = stageFinancialsLines(stageFinancialRows);
-    manifest.push(...financialContext);
+    stageFinancialRows = readStageFinancials(db, s1.row.industry_id);
+    manifest.push(...stageFinancialsLines(stageFinancialRows));
   } else {
     // Honest unset — the gate-brief §9.4 labels; no anchor is quoted and the
     // draft may still run on S3 evidence alone.
     manifest.push(s1UnsetLabel(db, oppId));
   }
 
-  let capabilityContext = "";
+  let hasCapabilities = false;
   if (opp.capability_gap_json) {
     const { lines, total } = s3CapabilityLines(opp.capability_gap_json);
     if (total > 0) {
       manifest.push("S3 필요 역량 (역량 갭 레지스터)");
       manifest.push(...lines);
-      capabilityContext = lines.join("\n");
+      hasCapabilities = true;
     }
   }
   const longListCount = (
@@ -164,13 +142,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   // S1·S3 근거가 모두 없으면 LLM을 부르지 않는다 — 근거 없는 기준 날조 방지.
   // provenance는 제안된 것이 없다는 뜻으로 null이다 (§4.4).
-  if (!s1Context && !capabilityContext) {
+  if (!s1.row && !hasCapabilities) {
     return ok(
       {
         source: "synthesis",
         provider: "deterministic",
         note: "제안에 필요한 S1 시장분석·S3 필요 역량 산출물이 아직 없습니다 — 먼저 S1 분석을 완료하거나 S3 역량 갭을 작성하세요.",
         criteria: null,
+        draft: null,
         manifest,
         prompt_version: UNIVERSE_CRITERIA_PROMPT_VERSION,
         provenance: null,
@@ -180,17 +159,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     );
   }
 
+  // The numbered evidence catalog is the only evidence the model sees (design
+  // 2026-11-17 §4.2): `[E3] S1 v7 · {fact} · confidence U`. Sources are server facts.
+  const catalog = buildUniverseEvidenceCatalog(s1, stageFinancialRows, opp.capability_gap_json);
   const userContent = [
-    `검토/안건: ${opp.name}`,
-    s1Context,
-    ...structureContext,
-    ...financialContext,
-    capabilityContext,
-    `현재 Long List: ${longListCount}건 (제외 제외)`,
-    existingDefinition ? `기존 정의(참고): ${existingDefinition.slice(0, 200)}` : "",
+    `Review subject: ${opp.name}`,
+    "Evidence catalog (cite ids only):",
+    ...catalogPromptLines(catalog),
+    `Current long list: ${longListCount} candidates (excluded ones not counted)`,
+    existingDefinition ? `Existing definition (reference only): ${existingDefinition.slice(0, 200)}` : "",
     "",
-    "위 근거로 대상 후보(Long List)의 선정 기준을 제안하세요. JSON만 반환:",
-    '{"criteria":{"industry":"산업 범위 (한 문장)","region":"지역 범위 (한 문장)","size":"규모 조건 (한 문장)","viability":"수익성·지속가능성 조건 (1~3문장 — 근거 없으면 검증 필요 + 필요 데이터 명시)","rationale":"이 기준을 제안한 근거 2~3문장 — S1/S3 산출물을 인용"}}',
+    "Return the evaluation-target direction as the JSON object defined in the output contract.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -202,7 +181,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       maxTokens: 800,
       agent: {
         key: "brownfield-agent",
-        purpose: "S6 유니버스 선정 기준 초안 — S1·S3 산출물 기반 제안 (수익성·지속가능성 축 포함)",
+        purpose: "S6 평가 대상 방향성 초안 — S1·S3 근거 인용",
         contextType: "opportunity",
         contextId: oppId,
       },
@@ -218,16 +197,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   // provenance는 제안 봉투(비오류 200)에 항상 실린다 — 해석 실패·폴백 봉투에도
   // S1 근원과 단계 재무 유무를 그대로 운반한다 (§4.4).
-  const chainFinancials: "present" | "absent" = stageFinancialRowCount > 0 ? "present" : "absent";
+  const chainFinancials: "present" | "absent" = stageFinancialRows.length > 0 ? "present" : "absent";
   const provenance = buildDraftProvenance(s1, chainFinancials);
 
   if (llmRes.source !== "llm") {
+    // Deterministic fallback (§5.2.8): the support line and evidence only, every direction field empty.
+    const draft = deterministicDirection(catalog);
     return ok(
       {
         source: "synthesis",
         provider: llmRes.provider,
         note: "LLM 호출 실패 — 결정론 폴백으로는 근거 없는 기준을 만들지 않습니다.",
         criteria: null,
+        draft,
+        counts: directionCounts(draft.checks),
         manifest,
         prompt_version: UNIVERSE_CRITERIA_PROMPT_VERSION,
         provenance,
@@ -237,14 +220,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     );
   }
   const parsed = parseJson(llmRes.text);
-  const criteria = parseDraftCriteria((parsed?.criteria ?? null) as Record<string, unknown> | null);
-  if (!criteria) {
+  const draft = normalizeDirection(parsed?.direction, catalog);
+  if (!draft) {
     return ok(
       {
         source: "llm",
         provider: llmRes.provider,
         note: "LLM 응답을 해석하지 못했습니다 — 다시 생성해 보세요.",
         criteria: null,
+        draft: null,
         manifest,
         prompt_version: UNIVERSE_CRITERIA_PROMPT_VERSION,
         provenance,
@@ -258,7 +242,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       source: "llm",
       provider: llmRes.provider,
       note: null,
-      criteria,
+      criteria: criteriaProjection(draft),
+      draft,
+      counts: directionCounts(draft.checks),
       manifest,
       prompt_version: UNIVERSE_CRITERIA_PROMPT_VERSION,
       provenance,

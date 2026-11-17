@@ -1,0 +1,10 @@
+{
+  "_comment": "Line labels of the composed `definition` text (design 2026-11-17-s6-universe-direction-review section 5.4). Korean literals live here so UI TS stays inside the i18n baseline; they are record content read by S7 and the web-search route, not UI chrome.",
+  "headline": "결론",
+  "industry": "산업",
+  "region": "지역",
+  "size": "규모",
+  "value_chain": "가치사슬",
+  "prioritise": "우선",
+  "exclude": "제외"
+}

@@ -124,14 +124,22 @@ function mockLlm(reply: string | null): { messages: () => unknown[] | null } {
   return { messages: () => state.messages };
 }
 
-const criteriaReply = (viability: string | null): string =>
+/** A direction reply citing the pinned-v7 fixture catalog: E1 identity, E2 anchor,
+ * E3 competitive structure (rich payloads add more items after them). */
+const directionReply = (over: Record<string, unknown> = {}): string =>
   JSON.stringify({
-    criteria: {
-      industry: "산업 범위 문장",
-      region: "지역 범위 문장",
-      size: "규모 조건 문장",
-      ...(viability !== null ? { viability } : {}),
-      rationale: "S1 v7(신뢰도 B)과 S3 필요 역량 산출물을 인용한 근거 문장.",
+    direction: {
+      headline: { text: "원자력 발전소 부품 공급 기업을 롱리스트로 본다", refs: ["E1"] },
+      scope: {
+        industry: { text: "원자력 발전소 부품·장비 업종 기업", refs: ["E1"] },
+        region: { text: "국내 기업 중심", refs: [] },
+        size: { text: "기준 시장규모 $39.88B 안에서 활동하는 기업", refs: ["E2"] },
+      },
+      value_chain: { text: "", refs: [] },
+      prioritise: [{ type: "과점 시장 내 중견 공급사", why: "과점 구조라 진입 여지를 본다", refs: ["E3"] }],
+      exclude: [],
+      basis: { text: "기준 규모와 경쟁 구조를 묶은 한 줄 요약", refs: ["E1", "E2", "E3"] },
+      ...over,
     },
   });
 
@@ -140,6 +148,8 @@ interface DraftEnvelope {
   provider: string;
   note: string | null;
   criteria: { industry: string; region: string; size: string; viability: string; rationale: string } | null;
+  draft?: import("../../app/web-next/lib/universe-direction.ts").UniverseDirectionView | null;
+  counts?: { emptied_fields: number; dropped_refs: number; clamped: number };
   manifest: string[];
   prompt_version?: string;
   provenance?: {
@@ -267,17 +277,13 @@ const GAP_ROWS = JSON.stringify({
 describe("§4.1 — pinned-first S1 resolution chain", () => {
   test("pinned: the draft quotes $39.88B from industry A v7, provenance.resolution=pinned, manifest carries 고정 버전 v7 · 신뢰도 B", async () => {
     const opp = insertOpp({ capability_gap_json: GAP_ROWS });
-    const m = mockLlm(
-      criteriaReply(
-        "부품 세그먼트의 이익풀·마진 구조·가격결정력 근거가 아직 없습니다 — 검증 필요: 가치사슬 단계별 재무",
-      ),
-    );
+    const m = mockLlm(directionReply());
     const data = await draft(opp);
     const userText = String(
       (m.messages() as Array<{ role: string; content: string }>).find((x) => x.role === "user")?.content ?? "",
     );
     expect(userText).toContain("$39.88B");
-    expect(data.prompt_version).toBe("s6.universe_criteria_draft@2");
+    expect(data.prompt_version).toBe("s6.universe_criteria_draft@3");
     expect(data.provenance?.s1.resolution).toBe("pinned");
     expect(data.provenance?.s1.version_id).toBe(vA7);
     expect(data.provenance?.s1.version_no).toBe(7);
@@ -294,7 +300,7 @@ describe("§4.1 — pinned-first S1 resolution chain", () => {
 
   test("pin cleared → industry_fk resolves industry A latest (the shadow B may not win while the FK is set)", async () => {
     const opp = insertOpp({ sizing_version_id: null, capability_gap_json: GAP_ROWS });
-    const m = mockLlm(criteriaReply(null));
+    const m = mockLlm(directionReply());
     const data = await draft(opp);
     const userText = String(
       (m.messages() as Array<{ role: string; content: string }>).find((x) => x.role === "user")?.content ?? "",
@@ -325,7 +331,7 @@ describe("§4.1 — pinned-first S1 resolution chain", () => {
       "INSERT INTO market_sizing_version (id, analysis_id, version_no, payload, created_by, created_at, data_confidence_grade, chain_hops, confidence_basis) VALUES (?,?,?,?,?,?,?,?,?)",
       [vB2, analysisB, 2, matrixPayload(38.66, false), "test", NOW, "C", 2, "근거 없음"],
     );
-    mockLlm(criteriaReply(null));
+    mockLlm(directionReply());
     const data = await draft(opp);
     expect(data.provenance?.s1.resolution).toBe("name_fallback");
     expect(data.provenance?.s1.version_no).toBe(2);
@@ -343,14 +349,14 @@ describe("§4.1 — pinned-first S1 resolution chain", () => {
       market_scope: null,
       capability_gap_json: GAP_ROWS,
     });
-    mockLlm(criteriaReply(null));
+    mockLlm(directionReply());
     const data = await draft(opp);
     expect(data.provenance?.s1.resolution).toBe("unset");
     expect(data.provenance?.s1.version_id).toBeNull();
     expect(data.provenance?.s1.anchor_total_b).toBeNull();
     expect(data.manifest).toContain("S1 시장분석: 없음 (market_scope 미지정)");
     // The draft ran (S3 evidence alone) — NOT the no-grounding hold.
-    expect(data.criteria).not.toBeNull();
+    expect(data.draft).not.toBeNull();
     expect(data.criteria?.viability).toBe("");
     expect(data.note).toBeNull();
   });
@@ -378,7 +384,7 @@ describe("§4.1 — pinned-first S1 resolution chain", () => {
       [vDraft, analysisDraft, 8, matrixPayload(1.23, false), "test", NOW],
     );
     const opp = insertOpp({ sizing_version_id: vDraft, capability_gap_json: GAP_ROWS });
-    mockLlm(criteriaReply(null));
+    mockLlm(directionReply());
     const data = await draft(opp);
     // Falls through to industry_fk — the stale in-progress pin is not quoted.
     expect(data.provenance?.s1.resolution).toBe("industry_fk");
@@ -427,31 +433,23 @@ describe("§4.2 — input manifest expansion (S1-declared structure + full S3 ro
         ],
       }),
     });
-    const m = mockLlm(criteriaReply(null));
+    const m = mockLlm(directionReply());
     const data = await draft(opp);
     const userText = String(
       (m.messages() as Array<{ role: string; content: string }>).find((x) => x.role === "user")?.content ?? "",
     );
 
-    // Segment structure — all labels, code in parens.
-    expect(userText).toContain("세그먼트: 핵심부품(SEG1) · 검사장비(SEG2) · 유지보수 서비스(SEG3)");
-    // Region mix — code + share%.
-    expect(userText).toContain("지역 믹스: KR 60% · US 40%");
-    // Value-chain position — chainGrade + chainDirection.
-    expect(userText).toContain("가치사슬 위치: midstream (사슬 등급 B, hops 2) — 인접: 상류 특수강 소재");
-    // Qualitative factors — each block suffixed with the matching sectionConfidence grade.
-    expect(userText).toContain("기회 요인: 원전 재가동 수요 · 수출 인증 수혜 (섹션 신뢰도 B-)");
-    expect(userText).toContain("위험 요인: 규제 지연 (섹션 신뢰도 B-)");
-    // Full S3 row — capability name NOT truncated to 60, requiredNote carried.
-    expect(userText).toContain(longCap);
-    expect(userText).toContain(
-      "필요수준 양산 수준 · 보유 부분 보유 · 필요성 부분 필수 · 검사·문서 범위는 필수, 양산 규모는 선택",
-    );
-    expect(userText).toContain(
-      "— 핵심부품은 공차 ±0.01mm 이상의 정밀 가공과 원자력 품질보증 체계를 동시에 갖춘 공급이 필요하다",
-    );
-    // The user-message JSON example line asks for viability.
-    expect(userText).toContain('"viability"');
+    // The user message carries the numbered catalog, not free-form context lines.
+    expect(userText).toContain("Segments: 핵심부품 · 검사장비 · 유지보수 서비스");
+    expect(userText).toContain("Region mix: KR 60% · US 40%");
+    expect(userText).toContain("Value-chain position: midstream (chain grade B, hops 2)");
+    expect(userText).toContain("Opportunity factor: 원전 재가동 수요");
+    expect(userText).toContain("Opportunity factor: 수출 인증 수혜");
+    expect(userText).toContain("Risk factor: 규제 지연");
+    expect(userText).toMatch(/\[E\d+\] S1 v9 · Segments: .* · confidence A/);
+    // S3 capability: catalog line with the name untruncated and the required level.
+    expect(userText).toContain(`S3 required capability: ${longCap} (required)`);
+    expect(userText).not.toContain('"viability"');
 
     // Manifest carries each added block's name (the UI's proposal-artifact line).
     expect(data.manifest.some((l) => l.startsWith("세그먼트:"))).toBeTrue();
@@ -495,14 +493,15 @@ describe("§4.2 — input manifest expansion (S1-declared structure + full S3 ro
       currentLevel: "",
     }));
     const opp = insertOpp({ sizing_version_id: v, capability_gap_json: JSON.stringify({ rows }) });
-    const m = mockLlm(criteriaReply(null));
+    const m = mockLlm(directionReply());
     const data = await draft(opp);
     const userText = String(
       (m.messages() as Array<{ role: string; content: string }>).find((x) => x.role === "user")?.content ?? "",
     );
-    expect(userText).toContain("외 2건"); // 8 segments, 6 shown
-    expect(userText).toContain("외 2건"); // 14 capability rows, 12 shown (same overflow token)
-    expect(userText.match(/외 2건/g)?.length).toBe(2);
+    expect(userText).toContain("+2 more"); // 8 segments, 6 shown
+    // 14 capability rows → the catalog keeps 5; the manifest still counts the overflow.
+    expect(userText.match(/S3 required capability:/g)?.length).toBe(5);
+    expect(data.manifest.filter((l) => l === "외 2건").length).toBe(1);
     expect(data.manifest.some((l) => l.startsWith("세그먼트:"))).toBeTrue();
   });
 });
@@ -510,7 +509,7 @@ describe("§4.2 — input manifest expansion (S1-declared structure + full S3 ro
 describe("§4.3 — fact_industry stage financials (honest absence vs present)", () => {
   test("0 rows → the gap line names the producing S1 activity and chain_financials=absent", async () => {
     const opp = insertOpp({ capability_gap_json: GAP_ROWS });
-    mockLlm(criteriaReply(null));
+    mockLlm(directionReply());
     const data = await draft(opp);
     const GAP =
       "가치사슬 단계별 재무: 데이터 없음 — S1의 가치사슬 단계 재무 분석(value-chain-stage-financials, ADR-0066)이 산출하면 자동 반영";
@@ -545,43 +544,84 @@ describe("§4.3 — fact_industry stage financials (honest absence vs present)",
       [ulid(), idA, period2026, "gross_margin", 30.0, 1, NOW],
     );
     const opp = insertOpp({ capability_gap_json: GAP_ROWS });
-    const m = mockLlm(criteriaReply(null));
+    const m = mockLlm(directionReply());
     const data = await draft(opp);
     const userText = String(
       (m.messages() as Array<{ role: string; content: string }>).find((x) => x.role === "user")?.content ?? "",
     );
     // Latest period per metric survives within the ≤12-row bound.
-    expect(userText).toContain("단계 재무: operating_margin=18.5 (2026, rev2)");
-    expect(userText).toContain("단계 재무: gross_margin=30 (2026, rev1)");
+    expect(userText).toContain("Stage financial: operating_margin=18.5 (2026, rev2)");
+    expect(userText).toContain("Stage financial: gross_margin=30 (2026, rev1)");
     expect(userText).not.toContain("15 (2025, rev1)");
     expect(data.provenance?.chain_financials).toBe("present");
   });
 });
 
-describe("§4.4 — parse validity, honest unset, and envelope shape", () => {
-  test("response WITHOUT viability parses with viability '' (honest unset)", async () => {
+describe("direction envelope (design 2026-11-17 §5.3)", () => {
+  test("LLM draft → envelope carries draft, counts and the criteria projection with empty viability/rationale", async () => {
     const opp = insertOpp({ capability_gap_json: GAP_ROWS });
-    mockLlm(criteriaReply(null));
+    mockLlm(directionReply());
     const data = await draft(opp);
     expect(data.source).toBe("llm");
-    expect(data.criteria).not.toBeNull();
-    expect(data.criteria?.viability).toBe("");
-    expect(data.prompt_version).toBe("s6.universe_criteria_draft@2");
+    expect(data.prompt_version).toBe("s6.universe_criteria_draft@3");
     expect(data.provenance?.s1.resolution).toBe("pinned");
+    expect(data.draft?.origin).toBe("ai");
+    expect(data.draft?.headline.refs).toEqual(["E1"]);
+    expect(data.draft?.scope.region.unverified).toBeTrue(); // text with zero refs
+    expect(data.draft?.scope.size.refs).toEqual(["E2"]);
+    expect(data.draft?.evidence.map((e) => e.id)).toEqual(["E1", "E2", "E3", "E4"]);
+    expect(data.draft?.support.segments.map((x) => x.key)).toEqual(["size", "growth", "profitability"]);
+    expect(data.counts).toEqual({ emptied_fields: 0, dropped_refs: 0, clamped: 0 });
+    expect(data.criteria).toEqual({
+      industry: "원자력 발전소 부품·장비 업종 기업",
+      region: "국내 기업 중심",
+      size: "기준 시장규모 $39.88B 안에서 활동하는 기업",
+      viability: "",
+      rationale: "",
+    });
   });
 
-  test("missing industry → parse_failed envelope unchanged (criteria null, provenance still carried)", async () => {
+  test("a number outside the field's own refs empties that field and is counted", async () => {
     const opp = insertOpp({ capability_gap_json: GAP_ROWS });
-    mockLlm(JSON.stringify({ criteria: { region: "지역", size: "규모", viability: "v", rationale: "r" } }));
+    mockLlm(
+      directionReply({
+        scope: {
+          industry: { text: "연 8% 성장 업종", refs: ["E1"] },
+          region: { text: "", refs: [] },
+          size: { text: "$39.88B 규모", refs: ["E2"] },
+        },
+      }),
+    );
+    const data = await draft(opp);
+    expect(data.draft?.scope.industry.text).toBe("");
+    expect(data.draft?.scope.size.text).toBe("$39.88B 규모");
+    expect(data.counts?.emptied_fields).toBe(1);
+    expect(data.draft?.checks.untraced_numbers).toEqual([{ field: "scope.industry", token: "8" }]);
+  });
+
+  test("response without a usable headline or scope → parse_failed envelope (draft null, provenance carried)", async () => {
+    const opp = insertOpp({ capability_gap_json: GAP_ROWS });
+    mockLlm(JSON.stringify({ direction: { basis: { text: "요약", refs: ["E1"] } } }));
     const data = await draft(opp);
     expect(data.source).toBe("llm");
     expect(data.criteria).toBeNull();
+    expect(data.draft).toBeNull();
     expect(data.note).toContain("해석하지 못했습니다");
-    expect(data.prompt_version).toBe("s6.universe_criteria_draft@2");
+    expect(data.prompt_version).toBe("s6.universe_criteria_draft@3");
     expect(data.provenance?.s1.resolution).toBe("pinned");
   });
 
-  test("deterministic fallback envelope unchanged (criteria null, provenance present)", async () => {
+  test("a legacy criteria-shaped reply no longer parses", async () => {
+    const opp = insertOpp({ capability_gap_json: GAP_ROWS });
+    mockLlm(
+      JSON.stringify({ criteria: { industry: "산업", region: "지역", size: "규모", viability: "v", rationale: "r" } }),
+    );
+    const data = await draft(opp);
+    expect(data.draft).toBeNull();
+    expect(data.criteria).toBeNull();
+  });
+
+  test("deterministic fallback: draft.origin deterministic, support line + evidence only, direction fields empty", async () => {
     const opp = insertOpp({ capability_gap_json: GAP_ROWS });
     mockLlm(null);
     const data = await draft(opp);
@@ -589,8 +629,15 @@ describe("§4.4 — parse validity, honest unset, and envelope shape", () => {
     expect(data.provider).toBe("deterministic");
     expect(data.criteria).toBeNull();
     expect(data.note).toContain("LLM 호출 실패");
-    expect(data.prompt_version).toBe("s6.universe_criteria_draft@2");
+    expect(data.prompt_version).toBe("s6.universe_criteria_draft@3");
     expect(data.provenance?.s1.resolution).toBe("pinned");
+    expect(data.draft?.origin).toBe("deterministic");
+    expect(data.draft?.headline.text).toBe("");
+    expect(data.draft?.prioritise).toEqual([]);
+    expect(data.draft?.support.segments.find((x) => x.key === "size")?.value).toBe("$39.88B (2026)");
+    expect(data.draft?.support.segments.find((x) => x.key === "growth")?.kind).toBe("unrecorded");
+    // Earlier tests recorded fact_industry rows for industry A, so profitability is the stage item here.
+    expect(data.draft?.support.segments.find((x) => x.key === "profitability")?.kind).toBe("stage_financial");
   });
 
   test("no-grounding envelope keeps provenance null and the S1·S3 note", async () => {
@@ -600,35 +647,13 @@ describe("§4.4 — parse validity, honest unset, and envelope shape", () => {
       market_scope: null,
       capability_gap_json: null,
     });
-    mockLlm(criteriaReply(null));
+    mockLlm(directionReply());
     const data = await draft(opp);
     expect(data.source).toBe("synthesis");
     expect(data.criteria).toBeNull();
+    expect(data.draft).toBeNull();
     expect(data.note).toContain("S1 시장분석·S3 필요 역량");
     expect(data.provenance).toBeNull();
-    expect(data.prompt_version).toBe("s6.universe_criteria_draft@2");
-  });
-
-  test("parseDraftCriteria caps: industry/region/size 200, viability 400, rationale 600; trims", async () => {
-    const { parseDraftCriteria } = await import(
-      "../../app/web-next/app/api/brownfield/[oppId]/universe-criteria-draft/route.ts"
-    );
-    expect(parseDraftCriteria(null)).toBeNull();
-    expect(parseDraftCriteria({})).toBeNull();
-    expect(
-      parseDraftCriteria({
-        industry: "  인  ",
-        region: "r".repeat(300),
-        size: "s".repeat(300),
-        viability: "v".repeat(500),
-        rationale: "r".repeat(900),
-      }),
-    ).toEqual({
-      industry: "인",
-      region: "r".repeat(200),
-      size: "s".repeat(200),
-      viability: "v".repeat(400),
-      rationale: "r".repeat(600),
-    });
+    expect(data.prompt_version).toBe("s6.universe_criteria_draft@3");
   });
 });
