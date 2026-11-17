@@ -7,7 +7,7 @@ import {
   precheckRecommendation,
   KNOCKOUT_IDS,
   SCREENING_VERDICT_KEYS,
-  SCREENING_VERDICT_KO,
+  SCREENING_VERDICT_LABEL_KEYS,
 } from "../../../lib/brownfield-precheck.ts";
 import { CommitteePanel } from "../../CommitteePanel.tsx";
 import { PromotionPanel } from "../../PromotionPanel.tsx";
@@ -265,7 +265,7 @@ export function ShortlistSection({
                                         <option value="pending">{tc("unjudged")}</option>
                                         {SCREENING_VERDICT_KEYS.map((sv) => (
                                           <option key={sv} value={sv}>
-                                            {SCREENING_VERDICT_KO[sv]}
+                                            {t(SCREENING_VERDICT_LABEL_KEYS[sv])}
                                           </option>
                                         ))}
                                       </select>

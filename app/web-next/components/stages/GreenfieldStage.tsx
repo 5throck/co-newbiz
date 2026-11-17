@@ -25,8 +25,8 @@ import {
   dirtyIndicatorText,
   filledComponentCount,
   GF_TAB_KEYS,
-  GF_TAB_LABELS,
   parseGfTab,
+  simRerunNeeded,
   tabMarker,
   type GfTabKey,
 } from "../../lib/greenfield-tabs.ts";
@@ -114,7 +114,6 @@ import {
   unifiedFooter,
   unifiedInvestmentRows,
   validateLineYears,
-  capabilityEndYearOf,
   SIM_OVERRIDE_KEYS,
   simOverridesOf,
   validateSimOverrides,
@@ -130,7 +129,13 @@ import {
   type SimOverrides,
 } from "../../lib/capability-cost-lines.ts";
 import type { AttainabilityRowView } from "../../lib/capability-attainability.ts";
-import { useTranslations } from "next-intl";
+import {
+  manualRowDirtyByRow,
+  manualRowsWithoutName,
+  nextManualRowId,
+  stripManualRowIds,
+} from "../../lib/greenfield-manual-rows.ts";
+import { useLocale, useTranslations } from "next-intl";
 
 type BcLine = ManualCostLine;
 interface Assessment {
@@ -304,7 +309,9 @@ function SubCategoryOptions({ category }: { category: string | undefined }) {
 export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const tr = useTranslations();
   const t = useTranslations("stages.s5.stage");
+  const tabsT = useTranslations("stages.s5.tabs");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
   const [selected, setSelected] = useState<OppDetail | null>(null);
@@ -439,8 +446,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                 Record<string, unknown>
               >
             ).map(normalizeLegacyLine);
-            setBcLines(manual);
-            setSavedManualLines(manual);
+            const withIds = manual.map((l) => ({ ...l, rowId: nextManualRowId() }));
+            setBcLines(withIds);
+            setSavedManualLines(withIds);
             setStoredCapEntries(all.filter((l) => isCapabilityEntry(l)));
             setCapSel({});
             setCapStartYear({});
@@ -542,6 +550,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setBcLines((prev) => [
       ...prev,
       {
+        rowId: nextManualRowId(),
         line: item.line,
         category: item.category,
         amount: 0,
@@ -672,12 +681,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     () => JSON.stringify(bcLines) !== JSON.stringify(savedManualLines),
     [bcLines, savedManualLines],
   );
-  // Per-row: saved when the line at the same index still equals the last saved snapshot.
+  // Per-row: saved when the row with the SAME STABLE ID still equals the last saved snapshot —
+  // deleting row k no longer mislabels the chips of the rows below it (review finding #3).
   const manualRowDirty = useCallback(
-    (i: number): boolean => {
-      const s = savedManualLines[i];
-      return !s || JSON.stringify(s) !== JSON.stringify(bcLines[i]);
-    },
+    (i: number): boolean => manualRowDirtyByRow(bcLines[i], savedManualLines),
     [bcLines, savedManualLines],
   );
   const staffDirty = useMemo(() => JSON.stringify(staffEff) !== savedStaffJson, [staffEff, savedStaffJson]);
@@ -753,6 +760,9 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     [capStartYear],
   );
   const investDirty = manualDirty || reflectDirty || staffDirty || simOvDirty || startYearDirty;
+  // Finding #4 (review 2026-11-17): unsaved plan edits also mean the run no longer matches the plan —
+  // the client-side complement of the server's simStale flag.
+  const simPlanDirty = simRerunNeeded(simStale, investDirty);
   const savedReflected = useMemo(() => {
     const saved = capLines.filter((l) => lineStates[l.capabilityKey] === "saved");
     return { count: saved.length, krwM: saved.reduce((n, l) => n + l.costKrwM, 0) };
@@ -827,6 +837,13 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!selected || busy) return;
+    // Finding #2 (review 2026-11-17): a row with content but no item name must never be dropped
+    // silently — block the save and keep the row in the form so the person can complete or delete it.
+    const incomplete = manualRowsWithoutName(bcLines);
+    if (incomplete.length > 0) {
+      setError(t("incompleteRowsNotSaved", { p1: incomplete.length }));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -836,7 +853,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         entry_strategy: serializeEntryStrategy(entryModes, entryStrategy) || undefined,
         alternatives_considered: alternatives || undefined,
         // Capability entries carry only the person's choices; the server rebuilds amount, name and hash from the live judgement.
-        business_case_lines: [metaEntry(), ...bcLines.filter((l) => l.line.trim()), ...capEntriesWithYears()],
+        business_case_lines: [
+          metaEntry(),
+          ...stripManualRowIds(bcLines).filter((l) => l.line.trim()),
+          ...capEntriesWithYears(),
+        ],
         rationale: rationale || undefined,
       });
       entryDirty.current = false;
@@ -851,7 +872,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     }
   }
 
-  const hhmm = () => new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const hhmm = () => new Date().toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: false });
 
   // 진출전략 저장 — ONLY the strategy fields; omitted fields (business_case_lines, rationale) keep their stored values.
   async function saveStrategy() {
@@ -884,7 +905,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setCostNote(null);
     try {
       await judgeApiRef.current?.saveDirty?.();
-      const body = reflectionBody(bcLines, capLines, capSel);
+      const body = reflectionBody(stripManualRowIds(bcLines), capLines, capSel);
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
         business_case_lines: [
           metaEntry(),
@@ -926,7 +947,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     setLinesNote(null);
     try {
       await judgeApiRef.current?.saveDirty?.();
-      const body = reflectionBody(bcLines, capLines, capSel);
+      const body = reflectionBody(stripManualRowIds(bcLines), capLines, capSel);
       await api.post(`/api/greenfield/${selected.opportunity.id}`, {
         business_case_lines: [
           metaEntry(),
@@ -996,7 +1017,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
     investment: manualDirty || reflectDirty,
     review: rationaleDirty,
   });
-  const dirtyText = dirtyIndicatorText(dirtyAgg);
+  const dirtyText = dirtyIndicatorText(dirtyAgg, tabsT);
   const checklist = buildCompletionChecklist({
     entry: { filled: entryStrategy !== "" || entryModes.modes.length > 0, dirty: entryIsDirty },
     capability: { filled: gapRows.length > 0, dirty: judgeDirty, issues: issueCounts.cap },
@@ -1015,8 +1036,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
   });
   const markerOf = (key: GfTabKey) =>
     key === "review"
-      ? tabMarker(rationaleDirty ? { status: "dirty", issues: 0 } : null)
-      : tabMarker(checklist.find((c) => c.key === key) ?? null);
+      ? tabMarker(rationaleDirty ? { status: "dirty", issues: 0 } : null, tabsT)
+      : tabMarker(checklist.find((c) => c.key === key) ?? null, tabsT);
   const markerNode = (key: GfTabKey) => {
     const m = markerOf(key);
     if (m.kind === "none") return null;
@@ -1085,7 +1106,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
         />
         {dirtyText && (
           <p className="status-chip status-amber mb-2" role="status" data-testid="gf-dirty-indicator">
-            <span aria-hidden="true">!</span> {dirtyText} · {dirtyAgg.labels.join(", ")}
+            <span aria-hidden="true">!</span> {dirtyText} · {dirtyAgg.tabs.map((k) => tabsT(k)).join(", ")}
           </p>
         )}
         <TabNav
@@ -1094,7 +1115,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
           onSelect={setTab}
           tabs={GF_TAB_KEYS.map((k) => ({
             key: k,
-            label: GF_TAB_LABELS[k],
+            label: tabsT(k),
             id: `gf-tab-${k}`,
             panelId: `gf-panel-${k}`,
             marker: markerNode(k),
@@ -1105,32 +1126,30 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
             {/* ① 진출전략 */}
             {panel(
               "entry",
-              <>
-                <EntryStrategySection
-                  opportunityId={selected.opportunity.id}
-                  value={{ modes: entryModes, rationale: entryStrategy, alternatives }}
-                  onChange={(v: EntryFormState) => {
-                    entryDirty.current = true;
-                    setEntryIsDirty(true);
-                    setEntryModes(v.modes);
-                    setEntryStrategy(v.rationale);
-                    setAlternatives(v.alternatives);
-                  }}
-                  canAct={canAct}
-                  rows={(attRows ?? gapRows.map((r) => ({ capability: r.capability, resolution: r.resolution }))).map(
-                    (r) => ({ capability: r.capability, resolution: r.resolution }),
-                  )}
-                  resetKey={entryReset}
-                  save={{
-                    dirty: entryIsDirty,
-                    saving: entrySaving,
-                    onSave: () => void saveStrategy(),
-                    note: entryNote,
-                    error: entryError,
-                    onDismissNote: () => setEntryNote(null),
-                  }}
-                />
-              </>,
+              <EntryStrategySection
+                opportunityId={selected.opportunity.id}
+                value={{ modes: entryModes, rationale: entryStrategy, alternatives }}
+                onChange={(v: EntryFormState) => {
+                  entryDirty.current = true;
+                  setEntryIsDirty(true);
+                  setEntryModes(v.modes);
+                  setEntryStrategy(v.rationale);
+                  setAlternatives(v.alternatives);
+                }}
+                canAct={canAct}
+                rows={(attRows ?? gapRows.map((r) => ({ capability: r.capability, resolution: r.resolution }))).map(
+                  (r) => ({ capability: r.capability, resolution: r.resolution }),
+                )}
+                resetKey={entryReset}
+                save={{
+                  dirty: entryIsDirty,
+                  saving: entrySaving,
+                  onSave: () => void saveStrategy(),
+                  note: entryNote,
+                  error: entryError,
+                  onDismissNote: () => setEntryNote(null),
+                }}
+              />,
             )}
 
             {/* ② 필요 역량 — S3 정의 읽기 전용 + S5 달성 가능성 판정 편집 (ADR-0171) */}
@@ -1260,11 +1279,11 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       key={c.key}
                       type="button"
                       className={`status-chip ${c.key === "confirm" && issueCounts.invest + issueCounts.staff > 0 ? "status-amber" : "status-not-started"}`}
-                      title={t("goToTheP1Tab", { p1: GF_TAB_LABELS[c.tab] })}
+                      title={t("goToTheP1Tab", { p1: tabsT(c.tab) })}
                       data-testid={`invest-source-chip-${c.key}`}
                       onClick={() => setTab(c.tab)}
                     >
-                      <span aria-hidden="true">{c.icon}</span> {c.text}
+                      <span aria-hidden="true">{c.icon}</span> {tabsT(c.textKey, c.values)}
                     </button>
                   ))}
                 </div>
@@ -1413,6 +1432,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       setBcLines((prev) => [
                         ...prev,
                         {
+                          rowId: nextManualRowId(),
                           line: "",
                           category: undefined,
                           amount: 0,
@@ -2610,10 +2630,10 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   >
                     {simRun ? (
                       <>
-                        {t("latestRun")} {new Date(simRun.created_at).toLocaleString("ko-KR")} · {simRun.created_by} ·{" "}
+                        {t("latestRun")} {new Date(simRun.created_at).toLocaleString(locale)} · {simRun.created_by} ·{" "}
                         {simRun.draw_count}
                         {t("drawsSeed")} {simRun.seed}{" "}
-                        {simStale ? (
+                        {simPlanDirty ? (
                           <span className="status-chip status-amber" data-testid="invest-sim-stale">
                             <span aria-hidden="true">!</span> {t("thePlanOrAssumptionScope")}
                           </span>
@@ -2632,7 +2652,7 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                       {simRun.confirmed_at ? (
                         <span className="status-chip status-green" data-testid="invest-sim-confirmed">
                           <span aria-hidden="true">✓</span> {t("confirmed")} {simRun.confirmed_by},{" "}
-                          {new Date(simRun.confirmed_at).toLocaleString("ko-KR")} {t("theS8CaseReflectsThis")}
+                          {new Date(simRun.confirmed_at).toLocaleString(locale)} {t("theS8CaseReflectsThis")}
                         </span>
                       ) : (
                         <>
@@ -2642,8 +2662,8 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                           <button
                             type="button"
                             className="btn-ghost btn-sm"
-                            disabled={!canAct || simConfirming || simStale}
-                            title={simStale ? t("thePlanOrAssumptionScope2") : t("onlyAPersonCanConfirm")}
+                            disabled={!canAct || simConfirming || simPlanDirty}
+                            title={simPlanDirty ? t("thePlanOrAssumptionScope2") : t("onlyAPersonCanConfirm")}
                             onClick={() => void confirmSimulation()}
                             data-testid="invest-sim-confirm-button"
                           >
@@ -2837,15 +2857,15 @@ export function GreenfieldStage({ opportunityId, onSaved }: { opportunityId: str
                   className="flex flex-wrap items-center gap-2 mb-1"
                   data-testid={`gf-checklist-${c.key}`}
                 >
-                  <span className="font-semibold">{c.label}</span>
+                  <span className="font-semibold">{tabsT(c.tab)}</span>
                   <span
                     className={`status-chip ${c.status === "filled" ? "status-green" : c.status === "empty" ? "status-not-started" : "status-amber"}`}
                   >
                     <span aria-hidden="true">{c.status === "filled" ? "✓" : c.status === "empty" ? "–" : "!"}</span>{" "}
-                    {c.statusText}
+                    {tabsT(c.statusTextKey, c.statusTextValues)}
                   </span>
                   <button type="button" className="btn-ghost btn-sm" onClick={() => setTab(c.tab)}>
-                    {GF_TAB_LABELS[c.tab]} {t("goToTheTab")}
+                    {tabsT(c.tab)} {t("goToTheTab")}
                   </button>
                 </li>
               ))}

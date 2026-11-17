@@ -2,11 +2,37 @@
 // milestone candidates. Pure and client-safe (no db, no node:crypto) so the S5 screen and the
 // route share one derivation. Decision support only: reflection is a per-line human choice, the
 // server recomputes every capability amount from the live judgement, nothing is a gate or a cap.
-import { JUDGEMENT_CATEGORIES, RESOLUTION_LABEL, type CapabilityGapRow, type GapResolution, type JudgementCategory, type MilestoneCandidate } from "./capability-gap.ts";
+import {
+  JUDGEMENT_CATEGORIES,
+  RESOLUTION_LABEL,
+  type CapabilityGapRow,
+  type GapResolution,
+  type JudgementCategory,
+  type MilestoneCandidate,
+} from "./capability-gap.ts";
 import { isStale, sha256Hex } from "./capability-linkage.ts";
-import { findStaffingDuplicateWarnings, isStaffingPlanEntry, normalizeStaffingPlanEntry, staffingPlanAuditHash, staffingPlanChanged, staffingPlanOf, staffingPlanView, staffingSummaryVector, type StaffingPlanEntry, type StaffingDuplicateWarning, type StaffingPlanView } from "./staffing-plan.ts";
+import {
+  findStaffingDuplicateWarnings,
+  isStaffingPlanEntry,
+  normalizeStaffingPlanEntry,
+  staffingPlanAuditHash,
+  staffingPlanChanged,
+  staffingPlanOf,
+  staffingPlanView,
+  staffingSummaryVector,
+  type StaffingPlanEntry,
+  type StaffingDuplicateWarning,
+  type StaffingPlanView,
+} from "./staffing-plan.ts";
 import { formatNumber, type Locale } from "./format.ts";
-export { findStaffingDuplicateWarnings, isStaffingPlanEntry, staffingPlanOf, type StaffingDuplicateWarning, type StaffingPlanEntry, type StaffingPlanView };
+export {
+  findStaffingDuplicateWarnings,
+  isStaffingPlanEntry,
+  staffingPlanOf,
+  type StaffingDuplicateWarning,
+  type StaffingPlanEntry,
+  type StaffingPlanView,
+};
 
 export type CostCategory = JudgementCategory;
 /** Categories a capability line may carry (cost side of the S8 vocabulary). */
@@ -24,9 +50,28 @@ export const MILESTONE_START_NOTE = "착수일은 S11 기준선을 확정할 때
 // to this list require an ADR-0177 amendment. No unit prices or amounts live here.
 
 export type SubCategoryKey =
-  | "land_building" | "machinery" | "it_software" | "rnd_development" | "tech_license" | "patent_filing" | "fto_search" | "trademark_design" | "cert_equipment"
-  | "rent_utility" | "materials" | "outsourcing" | "marketing_sales" | "insurance_tax_legal" | "product_cert" | "business_permit" | "cert_maintenance" | "patent_maintenance" | "opening_working_capital"
-  | "direct_labor" | "recruiting_training" | "management_labor";
+  | "land_building"
+  | "machinery"
+  | "it_software"
+  | "rnd_development"
+  | "tech_license"
+  | "patent_filing"
+  | "fto_search"
+  | "trademark_design"
+  | "cert_equipment"
+  | "rent_utility"
+  | "materials"
+  | "outsourcing"
+  | "marketing_sales"
+  | "insurance_tax_legal"
+  | "product_cert"
+  | "business_permit"
+  | "cert_maintenance"
+  | "patent_maintenance"
+  | "opening_working_capital"
+  | "direct_labor"
+  | "recruiting_training"
+  | "management_labor";
 
 export interface SubCategoryDef {
   key: SubCategoryKey;
@@ -44,12 +89,31 @@ const DEV_INTANGIBLE = "개발·무형";
 export const SUB_CATEGORIES: readonly SubCategoryDef[] = [
   { key: "land_building", label: "토지·건물", parent: "capex", defaultPeriod: "lumpsum" },
   { key: "machinery", label: "기계·설비", parent: "capex", defaultPeriod: "lumpsum" },
-  { key: "it_software", label: "정보시스템·소프트웨어", parent: "capex", defaultPeriod: "lumpsum", hint: "SaaS 구독은 운영비 외주·용역" },
+  {
+    key: "it_software",
+    label: "정보시스템·소프트웨어",
+    parent: "capex",
+    defaultPeriod: "lumpsum",
+    hint: "SaaS 구독은 운영비 외주·용역",
+  },
   { key: "rnd_development", label: "연구개발비", parent: "capex", defaultPeriod: "yearly", group: DEV_INTANGIBLE },
-  { key: "tech_license", label: "라이선스·기술 도입", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE, hint: "경상 로열티는 운영비 외주·용역" },
+  {
+    key: "tech_license",
+    label: "라이선스·기술 도입",
+    parent: "capex",
+    defaultPeriod: "lumpsum",
+    group: DEV_INTANGIBLE,
+    hint: "경상 로열티는 운영비 외주·용역",
+  },
   { key: "patent_filing", label: "특허 출원·등록", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE },
   { key: "fto_search", label: "FTO·선행기술 조사", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE },
-  { key: "trademark_design", label: "상표·디자인 등록", parent: "capex", defaultPeriod: "lumpsum", group: DEV_INTANGIBLE },
+  {
+    key: "trademark_design",
+    label: "상표·디자인 등록",
+    parent: "capex",
+    defaultPeriod: "lumpsum",
+    group: DEV_INTANGIBLE,
+  },
   { key: "cert_equipment", label: "인증·인허가 설비", parent: "capex", defaultPeriod: "lumpsum" },
   { key: "rent_utility", label: "임차·유틸리티", parent: "opex", defaultPeriod: "monthly" },
   { key: "materials", label: "재료·소모품", parent: "opex", defaultPeriod: "yearly" },
@@ -60,26 +124,45 @@ export const SUB_CATEGORIES: readonly SubCategoryDef[] = [
   { key: "business_permit", label: "사업 인허가", parent: "opex", defaultPeriod: "lumpsum" },
   { key: "cert_maintenance", label: "인증 유지·갱신·감사", parent: "opex", defaultPeriod: "yearly" },
   { key: "patent_maintenance", label: "특허 유지·연차료", parent: "opex", defaultPeriod: "yearly" },
-  { key: "opening_working_capital", label: "초기 운전자본", parent: "opex", defaultPeriod: "lumpsum", hint: "운전자본 — S8에서 비용 처리됨, 회수 미반영" },
+  {
+    key: "opening_working_capital",
+    label: "초기 운전자본",
+    parent: "opex",
+    defaultPeriod: "lumpsum",
+    hint: "운전자본 — S8에서 비용 처리됨, 회수 미반영",
+  },
   { key: "direct_labor", label: "직접 인건비", parent: "labor", defaultPeriod: "yearly" },
   { key: "recruiting_training", label: "채용·교육비", parent: "labor", defaultPeriod: "lumpsum" },
   { key: "management_labor", label: "임원·관리 인건비", parent: "labor", defaultPeriod: "yearly" },
 ];
 
 const SUB_BY_KEY: ReadonlyMap<string, SubCategoryDef> = new Map(SUB_CATEGORIES.map((d) => [d.key, d]));
-export const SUB_CATEGORY_LABEL = Object.fromEntries(SUB_CATEGORIES.map((d) => [d.key, d.label])) as Record<SubCategoryKey, string>;
-export const SUB_CATEGORY_PARENT = Object.fromEntries(SUB_CATEGORIES.map((d) => [d.key, d.parent])) as Record<SubCategoryKey, CostCategory>;
+export const SUB_CATEGORY_LABEL = Object.fromEntries(SUB_CATEGORIES.map((d) => [d.key, d.label])) as Record<
+  SubCategoryKey,
+  string
+>;
+export const SUB_CATEGORY_PARENT = Object.fromEntries(SUB_CATEGORIES.map((d) => [d.key, d.parent])) as Record<
+  SubCategoryKey,
+  CostCategory
+>;
 /** Label of the per-category row for lines without a sub-category. */
 export const UNASSIGNED_SUB_LABEL = "미지정";
 /** Opex one-off sub-categories that the S8 `s5_plan` basis leaves out of the NPV (design §2.1). */
-export const S5_PLAN_EXCLUDED_ONE_OFF: ReadonlySet<SubCategoryKey> = new Set<SubCategoryKey>(["product_cert", "business_permit", "opening_working_capital"]);
+export const S5_PLAN_EXCLUDED_ONE_OFF: ReadonlySet<SubCategoryKey> = new Set<SubCategoryKey>([
+  "product_cert",
+  "business_permit",
+  "opening_working_capital",
+]);
 /** Design §2.1 rule shown under the summary. */
-export const SUB_CATEGORY_S8_NOTE = "세부 과목은 S8 계산 경로를 바꾸지 않습니다 — s5_plan 기준에서는 설비투자(capex) 하위 과목만 투자로 집계되고, 운영비 하위 과목(인증·인허가·특허 유지 포함)은 s5_plan_full에서만 반영됩니다.";
+export const SUB_CATEGORY_S8_NOTE =
+  "세부 과목은 S8 계산 경로를 바꾸지 않습니다 — s5_plan 기준에서는 설비투자(capex) 하위 과목만 투자로 집계되고, 운영비 하위 과목(인증·인허가·특허 유지 포함)은 s5_plan_full에서만 반영됩니다.";
 
 export const isSubCategoryKey = (v: unknown): v is SubCategoryKey => typeof v === "string" && SUB_BY_KEY.has(v);
-export const subCategoryDef = (key: unknown): SubCategoryDef | undefined => (typeof key === "string" ? SUB_BY_KEY.get(key) : undefined);
+export const subCategoryDef = (key: unknown): SubCategoryDef | undefined =>
+  typeof key === "string" ? SUB_BY_KEY.get(key) : undefined;
 /** Sub-categories offered for a category (none for revenue/gov_rnd/unset). */
-export const subCategoriesOf = (category: unknown): SubCategoryDef[] => SUB_CATEGORIES.filter((d) => d.parent === category);
+export const subCategoriesOf = (category: unknown): SubCategoryDef[] =>
+  SUB_CATEGORIES.filter((d) => d.parent === category);
 /** True when `sub` is a known key whose parent equals `category`. revenue/gov_rnd never have one. */
 export function validSubCategory(category: unknown, sub: unknown): sub is SubCategoryKey {
   const d = subCategoryDef(sub);
@@ -87,21 +170,40 @@ export function validSubCategory(category: unknown, sub: unknown): sub is SubCat
 }
 
 /** Suggested sub-category for a capability judgement (design §5): resolution first, else the category's common default; null when no category. */
-export function suggestSubCategory(resolution: GapResolution | null, category: CostCategory | null | undefined): SubCategoryKey | null {
-  const byResolution: Partial<Record<GapResolution, SubCategoryKey>> = { build: "machinery", hire: "direct_labor", partner: "outsourcing", invest: "machinery" };
-  const fallback: Record<CostCategory, SubCategoryKey> = { capex: "machinery", opex: "outsourcing", labor: "direct_labor" };
+export function suggestSubCategory(
+  resolution: GapResolution | null,
+  category: CostCategory | null | undefined,
+): SubCategoryKey | null {
+  const byResolution: Partial<Record<GapResolution, SubCategoryKey>> = {
+    build: "machinery",
+    hire: "direct_labor",
+    partner: "outsourcing",
+    invest: "machinery",
+  };
+  const fallback: Record<CostCategory, SubCategoryKey> = {
+    capex: "machinery",
+    opex: "outsourcing",
+    labor: "direct_labor",
+  };
   const r = resolution ? byResolution[resolution] : undefined;
   if (!category) return r ?? null;
   return r && SUB_CATEGORY_PARENT[r] === category ? r : fallback[category];
 }
 /** ADR-0175 staffing defaults (fixed, read-only, no storage): derived salary lines and the recruiting one-off. */
-export const STAFFING_SUB_CATEGORY = { salary: "direct_labor", recruiting: "recruiting_training" } as const satisfies Record<string, SubCategoryKey>;
+export const STAFFING_SUB_CATEGORY = {
+  salary: "direct_labor",
+  recruiting: "recruiting_training",
+} as const satisfies Record<string, SubCategoryKey>;
 
 /** The judgement fields this feature reads (a subset of AttainabilityRowView, so server and client share it). */
 export type LinkedSpendPeriod = "monthly" | "quarterly" | "yearly" | "lumpsum";
 
 /** Korean labels for the recurring periods (promotion notes); lumpsum is labelled 일시불 separately. */
-const PERIOD_LABEL_KO: Record<Exclude<LinkedSpendPeriod, "lumpsum">, string> = { monthly: "월간", quarterly: "분기", yearly: "연간" };
+const PERIOD_LABEL_KO: Record<Exclude<LinkedSpendPeriod, "lumpsum">, string> = {
+  monthly: "월간",
+  quarterly: "분기",
+  yearly: "연간",
+};
 
 export interface CostSourceRow {
   id: string;
@@ -131,7 +233,7 @@ export const sourceRowOf = (r: CapabilityGapRow): CostSourceRow => {
     closing_cost_krw_m: a?.closingCostKrwM ?? null,
     months_to_attain: a?.monthsToAttain ?? null,
     grade: a?.grade ?? null,
-    confirmed_at: stale ? null : a?.confirmedAt ?? null,
+    confirmed_at: stale ? null : (a?.confirmedAt ?? null),
     stale,
   };
 };
@@ -167,10 +269,20 @@ export interface SimOverrides {
   capabilityRange?: number;
   manualLineRange?: number;
 }
-export const SIM_OVERRIDE_KEYS = ["salaryRange", "salaryIncreaseRangePp", "onCostRangePp", "rampShiftHalfYears", "capabilityRange", "manualLineRange"] as const;
+export const SIM_OVERRIDE_KEYS = [
+  "salaryRange",
+  "salaryIncreaseRangePp",
+  "onCostRangePp",
+  "rampShiftHalfYears",
+  "capabilityRange",
+  "manualLineRange",
+] as const;
 export type SimOverrideKey = (typeof SIM_OVERRIDE_KEYS)[number];
 const isSimOverridesShape = (x: unknown): x is Record<string, unknown> =>
-  !!x && typeof x === "object" && !Array.isArray(x) && Object.keys(x as object).every((k) => (SIM_OVERRIDE_KEYS as readonly string[]).includes(k));
+  !!x &&
+  typeof x === "object" &&
+  !Array.isArray(x) &&
+  Object.keys(x as object).every((k) => (SIM_OVERRIDE_KEYS as readonly string[]).includes(k));
 /** Client/route validation: every present key must be a finite number >= 0 (no upper clamp — permissive by design). */
 export function validateSimOverrides(x: unknown): string | null {
   if (x === undefined || x === null) return null;
@@ -178,7 +290,8 @@ export function validateSimOverrides(x: unknown): string | null {
   for (const k of SIM_OVERRIDE_KEYS) {
     const v = x[k];
     if (v === undefined) continue;
-    if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return `시뮬레이션 가정 범위(${k})는 0 이상의 숫자여야 합니다.`;
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0)
+      return `시뮬레이션 가정 범위(${k})는 0 이상의 숫자여야 합니다.`;
   }
   return null;
 }
@@ -224,12 +337,17 @@ export const isValidYearValue = (v: unknown): v is number => Number.isInteger(v)
 export const PRE_LAUNCH_START_YEAR = 0;
 export const PRE_LAUNCH_LABEL = "시작 전";
 export const isPreLaunchLine = (l: { startYear?: unknown }): boolean => l.startYear === PRE_LAUNCH_START_YEAR;
-export const preLaunchEligible = (l: { category?: unknown; period?: unknown }): boolean => l.category === "capex" && isLumpsum(l.period);
-export const PRE_LAUNCH_INELIGIBLE_MESSAGE = "시작 전 투자(0년차)는 설비투자(capex) 분류의 일시불 항목에만 지정할 수 있습니다 — 분류·주기를 확인하거나 시작 연차를 1 이상으로 바꾸세요.";
+export const preLaunchEligible = (l: { category?: unknown; period?: unknown }): boolean =>
+  l.category === "capex" && isLumpsum(l.period);
+export const PRE_LAUNCH_INELIGIBLE_MESSAGE =
+  "시작 전 투자(0년차)는 설비투자(capex) 분류의 일시불 항목에만 지정할 수 있습니다 — 분류·주기를 확인하거나 시작 연차를 1 이상으로 바꾸세요.";
 /** Integer >= 0: the values a stored/posted manual startYear may carry through normalisation (0 is checked by validateLineYears). */
 export const isStartYearValue = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
 /** 1 <= startYear <= endYear <= horizon (message names the rule for the 400); startYear 0 only for eligible pre-launch lines. */
-export function validateLineYears(l: { startYear?: unknown; endYear?: unknown; category?: unknown; period?: unknown }, horizon: number): string | null {
+export function validateLineYears(
+  l: { startYear?: unknown; endYear?: unknown; category?: unknown; period?: unknown },
+  horizon: number,
+): string | null {
   if (l.startYear === undefined && l.endYear === undefined) return null;
   if (l.startYear === PRE_LAUNCH_START_YEAR) {
     if (!preLaunchEligible(l)) return PRE_LAUNCH_INELIGIBLE_MESSAGE;
@@ -256,7 +374,10 @@ export const capabilityDefaultStartYear = (monthsToAttain: number | null): numbe
 /** Read-only end-year display (ADR-0173 amendment 2026-10-15): start + ceil(months/12) − 1; a 12-month spend starting Y1 ends Y1. */
 /** Year vector of a linked line: 일시불 = 총액 at startYear; 연간 = 연간 금액 from startYear through the horizon
  *  (2026-10-18 decider ask — the cadence is person-editable). Consumers (totals, vectors) share this. */
-export function capabilityYearVector(c: { startYear: number; endYear?: number; period: LinkedSpendPeriod; costKrwM: number }, H: number): number[] {
+export function capabilityYearVector(
+  c: { startYear: number; endYear?: number; period: LinkedSpendPeriod; costKrwM: number },
+  H: number,
+): number[] {
   // 금액 = 주기당 금액 (수동 항목과 동일 규약). 연간 벡터 = 금액 × 주기계수를
   // 시작~종료 창구 매년 반영; 일시불 = 금액을 시작 연차 1회.
   const vec = Array<number>(Math.max(1, Math.floor(H))).fill(0);
@@ -295,7 +416,8 @@ export const lineAmountKrwM = (l: { amount?: unknown; amountUnit?: unknown }): n
   return l.amountUnit === AMOUNT_UNIT_KRW_M ? Math.round(n * 100) / 100 : eokToKrwM(n);
 };
 /** "1,250백만원" (up to 2 decimals, thousands separators). */
-export const formatKrwM = (krwM: number, locale: Locale | string = "ko"): string => `${formatNumber(Math.round(krwM * 100) / 100, locale, { maximumFractionDigits: 2 })}백만원`;
+export const formatKrwM = (krwM: number, locale: Locale | string = "ko"): string =>
+  `${formatNumber(Math.round(krwM * 100) / 100, locale, { maximumFractionDigits: 2 })}백만원`;
 
 // ── Manual line units (amountUnitConfirmed model, decider 2026-10-15) ────────
 // A stored/posted manual line is CONFIRMED only when a human explicitly picked its unit in the UI
@@ -315,7 +437,7 @@ export const isFxUnit = (u: unknown): u is FxAmountUnit => u === "fx_m" || u ===
 export const isKnownAmountUnit = (u: unknown): u is AmountUnit => isKrwUnit(u) || isFxUnit(u);
 /** UI label of a unit; the fx labels need the line currency (e.g. "백만 USD"). */
 export const amountUnitLabel = (u: AmountUnit, currency = "USD"): string => {
-  if (isKrwUnit(u)) return ({ krw: "원", krw_k: "천원", krw_m: "백만원", krw_eok: "억원" })[u];
+  if (isKrwUnit(u)) return { krw: "원", krw_k: "천원", krw_m: "백만원", krw_eok: "억원" }[u];
   return u === "fx_m" ? `백만 ${currency}` : `억 ${currency}`;
 };
 
@@ -342,6 +464,8 @@ export interface ManualCostLine {
   subCategory?: SubCategoryKey;
   /** Read-only: an unknown/mismatched stored sub-category, shown once and dropped on the next save. */
   legacySubCategory?: string;
+  /** UI-only stable row id for the saved/unsaved chip (strip with stripManualRowIds() before building a POST payload). */
+  rowId?: string;
 }
 
 const MANUAL_CATEGORIES: readonly string[] = ["labor", "opex", "capex", "revenue", "gov_rnd"];
@@ -351,10 +475,39 @@ const MANUAL_PERIODS: readonly string[] = ["monthly", "quarterly", "yearly", "lu
 // Cadence aliases seen in stored/LLM/legacy lines (Korean and English variants). Anything not
 // listed stays unset (needs a human pick) rather than being guessed.
 const PERIOD_ALIASES: Record<string, NonNullable<ManualCostLine["period"]>> = {
-  monthly: "monthly", month: "monthly", months: "monthly", per_month: "monthly", mo: "monthly", "월": "monthly", "매월": "monthly", "월간": "monthly", "월별": "monthly",
-  quarterly: "quarterly", quarter: "quarterly", per_quarter: "quarterly", "분기": "quarterly", "분기별": "quarterly",
-  yearly: "yearly", year: "yearly", annual: "yearly", annually: "yearly", per_year: "yearly", "년": "yearly", "연": "yearly", "연간": "yearly", "매년": "yearly",
-  lumpsum: "lumpsum", lump_sum: "lumpsum", "lump-sum": "lumpsum", once: "lumpsum", one_off: "lumpsum", oneoff: "lumpsum", "one-off": "lumpsum", "일시": "lumpsum", "일시불": "lumpsum", "일시불(총액)": "lumpsum",
+  monthly: "monthly",
+  month: "monthly",
+  months: "monthly",
+  per_month: "monthly",
+  mo: "monthly",
+  월: "monthly",
+  매월: "monthly",
+  월간: "monthly",
+  월별: "monthly",
+  quarterly: "quarterly",
+  quarter: "quarterly",
+  per_quarter: "quarterly",
+  분기: "quarterly",
+  분기별: "quarterly",
+  yearly: "yearly",
+  year: "yearly",
+  annual: "yearly",
+  annually: "yearly",
+  per_year: "yearly",
+  년: "yearly",
+  연: "yearly",
+  연간: "yearly",
+  매년: "yearly",
+  lumpsum: "lumpsum",
+  lump_sum: "lumpsum",
+  "lump-sum": "lumpsum",
+  once: "lumpsum",
+  one_off: "lumpsum",
+  oneoff: "lumpsum",
+  "one-off": "lumpsum",
+  일시: "lumpsum",
+  일시불: "lumpsum",
+  "일시불(총액)": "lumpsum",
 };
 
 /** Canonical cadence for any stored variant ("월", "Monthly", "month", ...); undefined when unknown. */
@@ -366,7 +519,10 @@ export function normalizePeriod(v: unknown): ManualCostLine["period"] {
 
 /** Cadence read from the current field or legacy field names (cadence/periodicity/frequency). */
 const rawPeriodOf = (raw: Record<string, unknown>): ManualCostLine["period"] =>
-  normalizePeriod(raw.period) ?? normalizePeriod(raw.cadence) ?? normalizePeriod(raw.periodicity) ?? normalizePeriod(raw.frequency);
+  normalizePeriod(raw.period) ??
+  normalizePeriod(raw.cadence) ??
+  normalizePeriod(raw.periodicity) ??
+  normalizePeriod(raw.frequency);
 
 /** Old demo/LLM shape that predates categories: `kind` (revenue/cost) and `growth_rate`. */
 export const manualLineIsOldShape = (l: Record<string, unknown>): boolean => "kind" in l || "growth_rate" in l;
@@ -386,8 +542,16 @@ export const manualLineIsLegacy = (l: Record<string, unknown>): boolean =>
 export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLine {
   const old = manualLineIsOldShape(raw);
   const kind = typeof raw.kind === "string" ? raw.kind : undefined;
-  const category = typeof raw.category === "string" && MANUAL_CATEGORIES.includes(raw.category) ? (raw.category as ManualCostLine["category"]) : kind === "revenue" ? ("revenue" as const) : undefined;
-  const currency = typeof raw.currency === "string" && MANUAL_CURRENCIES.includes(raw.currency) ? (raw.currency as ManualCostLine["currency"]) : ("KRW" as const);
+  const category =
+    typeof raw.category === "string" && MANUAL_CATEGORIES.includes(raw.category)
+      ? (raw.category as ManualCostLine["category"])
+      : kind === "revenue"
+        ? ("revenue" as const)
+        : undefined;
+  const currency =
+    typeof raw.currency === "string" && MANUAL_CURRENCIES.includes(raw.currency)
+      ? (raw.currency as ManualCostLine["currency"])
+      : ("KRW" as const);
   const period = rawPeriodOf(raw);
   const unit = raw.amountUnit;
   // An unconfirmed stored unit is not shown as if it were chosen: a unit select that already
@@ -409,13 +573,21 @@ export function normalizeLegacyLine(raw: Record<string, unknown>): ManualCostLin
     endYear: isValidYearValue(raw.endYear) ? raw.endYear : undefined,
     note: typeof raw.note === "string" ? raw.note : undefined,
     dupDismissed: Array.isArray(raw.dupDismissed) ? (raw.dupDismissed as string[]) : undefined,
-    growthRate: typeof raw.growth_rate === "number" ? raw.growth_rate : typeof raw.growthRate === "number" ? raw.growthRate : undefined,
+    growthRate:
+      typeof raw.growth_rate === "number"
+        ? raw.growth_rate
+        : typeof raw.growthRate === "number"
+          ? raw.growthRate
+          : undefined,
     ...subCategoryFieldsOf(category, raw.subCategory),
   };
 }
 
 /** Known + parent-matching key -> `subCategory`; any other non-empty string -> `legacySubCategory` (display only). */
-function subCategoryFieldsOf(category: unknown, raw: unknown): Pick<ManualCostLine, "subCategory" | "legacySubCategory"> {
+function subCategoryFieldsOf(
+  category: unknown,
+  raw: unknown,
+): Pick<ManualCostLine, "subCategory" | "legacySubCategory"> {
   if (raw === undefined || raw === null || raw === "") return {};
   if (validSubCategory(category, raw)) return { subCategory: raw };
   return typeof raw === "string" ? { legacySubCategory: raw } : {};
@@ -431,7 +603,10 @@ export function checkSubCategory(category: unknown, sub: unknown, label: string)
   const d = subCategoryDef(sub);
   if (!d) return { code: "invalid_sub_category", message: `${label}: 알 수 없는 세부 과목입니다: ${String(sub)}` };
   if (category !== undefined && category !== null && category !== "" && d.parent !== category) {
-    return { code: "subcategory_parent_mismatch", message: `${label}: 세부 과목 '${d.label}'은(는) ${CATEGORY_LABEL[d.parent]} 하위 과목입니다 — 분류와 맞지 않습니다.` };
+    return {
+      code: "subcategory_parent_mismatch",
+      message: `${label}: 세부 과목 '${d.label}'은(는) ${CATEGORY_LABEL[d.parent]} 하위 과목입니다 — 분류와 맞지 않습니다.`,
+    };
   }
   return null;
 }
@@ -447,12 +622,17 @@ export function manualLineIssues(l: ManualCostLine): ManualLineIssue[] {
   return out;
 }
 /** Implicit unit confirmation: typing an amount in a row whose unit is already shown confirms that unit. Legacy rows (no unit shown) stay unconfirmed. */
-export function confirmUnitOnAmountEdit<T extends { amount: number; amountUnit?: string; amountUnitConfirmed?: boolean }>(l: T): T {
+export function confirmUnitOnAmountEdit<
+  T extends { amount: number; amountUnit?: string; amountUnitConfirmed?: boolean },
+>(l: T): T {
   if (l.amountUnitConfirmed || !l.amount || !isKnownAmountUnit(l.amountUnit)) return l;
   return { ...l, amountUnitConfirmed: true };
 }
 /** Currency switch: a confirmed KRW 백만/억 unit maps to its FX counterpart (and stays confirmed); anything else is cleared so the person must pick. */
-export function unitOnCurrencyChange(prev: { amountUnit?: string; amountUnitConfirmed?: boolean }, next: string): { amountUnit: AmountUnit | undefined; amountUnitConfirmed: boolean } {
+export function unitOnCurrencyChange(
+  prev: { amountUnit?: string; amountUnitConfirmed?: boolean },
+  next: string,
+): { amountUnit: AmountUnit | undefined; amountUnitConfirmed: boolean } {
   const wasConfirmed = prev.amountUnitConfirmed === true;
   if (next !== "KRW" && wasConfirmed && (prev.amountUnit === "krw_m" || prev.amountUnit === "krw_eok")) {
     return { amountUnit: prev.amountUnit === "krw_m" ? "fx_m" : "fx_eok", amountUnitConfirmed: true };
@@ -477,7 +657,9 @@ export type FxRates = Record<string, number>;
  *  copy only: the stored entry keeps the original currency/amount/unit so the
  *  person's input is never mutated. Returns the line unchanged when the
  *  currency is KRW or no rate exists. */
-export function manualLineInKrw<T extends { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown }>(l: T, fxRates?: FxRates): T {
+export function manualLineInKrw<
+  T extends { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown },
+>(l: T, fxRates?: FxRates): T {
   const cur = (l.currency ?? "KRW") as string;
   if (cur === "KRW") return l;
   const rate = fxRates?.[cur];
@@ -486,22 +668,43 @@ export function manualLineInKrw<T extends { amount?: unknown; amountUnit?: unkno
   const round2 = (v: number) => Math.round(v * 100) / 100;
   if (l.amountUnit === "fx_m") {
     const krwM = round2(n * rate); // 백만 통화 × 원/통화 = 백만원
-    return { ...l, amount: krwM, amountUnit: "krw_m", amountUnitConfirmed: true as const, amountKrwM: krwM, currency: "KRW" } as T;
+    return {
+      ...l,
+      amount: krwM,
+      amountUnit: "krw_m",
+      amountUnitConfirmed: true as const,
+      amountKrwM: krwM,
+      currency: "KRW",
+    } as T;
   }
   if (l.amountUnit === "fx_eok") {
     const krwM = round2(n * rate * 100); // 억 통화 → 백만원 = ×rate×100
-    return { ...l, amount: krwM, amountUnit: "krw_m", amountUnitConfirmed: true as const, amountKrwM: krwM, currency: "KRW" } as T;
+    return {
+      ...l,
+      amount: krwM,
+      amountUnit: "krw_m",
+      amountUnitConfirmed: true as const,
+      amountKrwM: krwM,
+      currency: "KRW",
+    } as T;
   }
   return l;
 }
 
 export function convertManualLinesToKrw<T>(lines: ReadonlyArray<T>, fxRates?: FxRates): T[] {
   return fxRates && Object.keys(fxRates).length > 0
-    ? (lines.map((l) => manualLineInKrw(l as { amount?: unknown; amountUnit?: unknown; currency?: unknown }, fxRates)) as T[])
+    ? (lines.map((l) =>
+        manualLineInKrw(l as { amount?: unknown; amountUnit?: unknown; currency?: unknown }, fxRates),
+      ) as T[])
     : [...lines];
 }
 
-export function manualLineKrwM(l: { amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown }): number | null {
+export function manualLineKrwM(l: {
+  amount?: unknown;
+  amountUnit?: unknown;
+  amountKrwM?: unknown;
+  currency?: unknown;
+}): number | null {
   if (l.currency !== undefined && l.currency !== "KRW") return null;
   // Derive from the live amount + unit first: a stored amountKrwM goes stale the moment the person
   // edits the amount or unit (and the server used to echo the stale value back on save).
@@ -523,13 +726,26 @@ export const sanityTotalOversize = (krwM: number): boolean => krwM > SANITY_TOTA
 
 // ── Category mapping (design 4.3, OD-2) ─────────────────────────────────────
 
-export function suggestCategory(resolution: GapResolution | null): { category: CostCategory; alternative: CostCategory | null; hint: string | null } {
+export function suggestCategory(resolution: GapResolution | null): {
+  category: CostCategory;
+  alternative: CostCategory | null;
+  hint: string | null;
+} {
   switch (resolution) {
-    case "build": return { category: "capex", alternative: "labor", hint: null };
-    case "hire": return { category: "labor", alternative: null, hint: null };
-    case "partner": return { category: "opex", alternative: null, hint: null };
-    case "invest": return { category: "capex", alternative: null, hint: null };
-    default: return { category: "capex", alternative: null, hint: "확인 필요: 해소 방식이 정해지지 않아 설비투자로 제안했습니다." };
+    case "build":
+      return { category: "capex", alternative: "labor", hint: null };
+    case "hire":
+      return { category: "labor", alternative: null, hint: null };
+    case "partner":
+      return { category: "opex", alternative: null, hint: null };
+    case "invest":
+      return { category: "capex", alternative: null, hint: null };
+    default:
+      return {
+        category: "capex",
+        alternative: null,
+        hint: "확인 필요: 해소 방식이 정해지지 않아 설비투자로 제안했습니다.",
+      };
   }
 }
 
@@ -586,7 +802,10 @@ export interface StoredCapabilityEntry {
 }
 
 export const isCapabilityEntry = (x: unknown): x is Partial<StoredCapabilityEntry> & { capabilityKey: string } =>
-  !!x && typeof x === "object" && (x as { source?: unknown }).source === "capability" && typeof (x as { capabilityKey?: unknown }).capabilityKey === "string";
+  !!x &&
+  typeof x === "object" &&
+  (x as { source?: unknown }).source === "capability" &&
+  typeof (x as { capabilityKey?: unknown }).capabilityKey === "string";
 
 // ── Derived lines ───────────────────────────────────────────────────────────
 
@@ -637,7 +856,12 @@ export interface CapabilityCostLine {
   basisHash: string;
 }
 
-export interface OrphanCapabilityEntry { capabilityKey: string; line: string; reflected: boolean; reason: "deleted" | "no_cost" }
+export interface OrphanCapabilityEntry {
+  capabilityKey: string;
+  line: string;
+  reflected: boolean;
+  reason: "deleted" | "no_cost";
+}
 
 export interface CapabilityCostView {
   lines: CapabilityCostLine[];
@@ -664,7 +888,11 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
     const hash = costBasisHash(r);
     const storedAmount = typeof e?.amount === "number" ? lineAmountKrwM(e) : null;
     const judgementCategory = r.category ?? null;
-    const category = judgementCategory ?? (e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : sug.category);
+    const category =
+      judgementCategory ??
+      (e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory)
+        ? (e.category as CostCategory)
+        : sug.category);
     const defaultStartYear = capabilityDefaultStartYear(r.months_to_attain);
     const startYear = isValidYearValue(e?.startYear) ? e.startYear : defaultStartYear;
     const subCategory = validSubCategory(category, e?.subCategory) ? (e!.subCategory as SubCategoryKey) : null;
@@ -689,17 +917,25 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
       defaultStartYear,
       startYear,
       /** End year display: stored override, else start + ceil(months/12) − 1. 연간 주기에서는 이 창구까지 균분된다. */
-      endYear: isValidYearValue(e?.endYear) ? (e!.endYear as number) : capabilityEndYearOf(startYear, r.months_to_attain),
+      endYear: isValidYearValue(e?.endYear)
+        ? (e!.endYear as number)
+        : capabilityEndYearOf(startYear, r.months_to_attain),
       // 주기 관리 주체 = 판정 (2026-10-18 decider ask) — 판정에 주기가 있으면 그 값을
       // 따르고, 없으면 저장 entry(기존 표에서 바꾼 값) → 일시불 순으로 폴백.
       period: r.period ?? e?.period ?? "lumpsum",
       state: reflectable ? "reflectable" : "reference",
       stateLabel: reflectable ? "반영 가능" : "참고(미반영)",
-      disabledReason: reflectable || (e?.reflected === true) ? null : r.stale ? "S3 내용이 바뀌어 재판정이 필요합니다 — 재판정·확정 후 반영할 수 있습니다." : "사람이 확정한 판정만 반영할 수 있습니다 — 판정을 확정하세요.",
+      disabledReason:
+        reflectable || e?.reflected === true
+          ? null
+          : r.stale
+            ? "S3 내용이 바뀌어 재판정이 필요합니다 — 재판정·확정 후 반영할 수 있습니다."
+            : "사람이 확정한 판정만 반영할 수 있습니다 — 판정을 확정하세요.",
       reflected,
       persisted: !!e,
       stale: r.stale,
-      needsRejudge: reflected && (r.stale || (!!e && e.reflected === true && !!e.basisHash && !basisHashMatches(e.basisHash, r))),
+      needsRejudge:
+        reflected && (r.stale || (!!e && e.reflected === true && !!e.basisHash && !basisHashMatches(e.basisHash, r))),
       amountChanged: !!e && e.reflected === true && storedAmount !== null && Math.abs(storedAmount - cost) > 1e-6,
       previousAmountEok: storedAmount !== null ? eokOf(storedAmount) : null,
       previousAmountKrwM: storedAmount,
@@ -710,7 +946,12 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
   const known = new Set(rows.map((r) => r.id));
   const orphans: OrphanCapabilityEntry[] = entries
     .filter((e) => !live.has(e.capabilityKey))
-    .map((e) => ({ capabilityKey: e.capabilityKey, line: String(e.line ?? ""), reflected: e.reflected === true, reason: known.has(e.capabilityKey) ? ("no_cost" as const) : ("deleted" as const) }));
+    .map((e) => ({
+      capabilityKey: e.capabilityKey,
+      line: String(e.line ?? ""),
+      reflected: e.reflected === true,
+      reason: known.has(e.capabilityKey) ? ("no_cost" as const) : ("deleted" as const),
+    }));
   const reflected = lines.filter((l) => l.reflected);
   return {
     lines,
@@ -727,7 +968,13 @@ export function deriveCapabilityCostLines(rows: CostSourceRow[], stored: unknown
 // ── Double-count guard (design 4.6, OD-6) ───────────────────────────────────
 
 export const normalizeName = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-const tokensOf = (s: string): Set<string> => new Set(s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 0));
+const tokensOf = (s: string): Set<string> =>
+  new Set(
+    s
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((t) => t.length > 0),
+  );
 
 /** Does the manual line look like the same item as the capability? Containment, >= 60% token overlap, or note mention. */
 export function isLikelyDuplicate(capabilityName: string, manual: { line?: string; note?: string }): boolean {
@@ -745,23 +992,49 @@ export function isLikelyDuplicate(capabilityName: string, manual: { line?: strin
   return cap.length >= 2 && note.includes(cap);
 }
 
-export interface ManualLineLike { line: string; note?: string; dupDismissed?: string[]; source?: unknown; subCategory?: unknown }
-export interface DuplicateWarning { capabilityKey: string; capabilityName: string; manualIndex: number; manualLine: string; /** ADR-0177: "sub_category" when it fired on the same 세부 과목; absent for the name rule. */ reason?: "sub_category" }
+export interface ManualLineLike {
+  line: string;
+  note?: string;
+  dupDismissed?: string[];
+  source?: unknown;
+  subCategory?: unknown;
+}
+export interface DuplicateWarning {
+  capabilityKey: string;
+  capabilityName: string;
+  manualIndex: number;
+  manualLine: string /** ADR-0177: "sub_category" when it fired on the same 세부 과목; absent for the name rule. */;
+  reason?: "sub_category";
+}
 
 /**
  * Warning only, never a block. A manual line can dismiss it per capability (`dupDismissed`).
  * ADR-0177 slice 1: the guard also compares 세부 과목 — a manual line carrying the same sub-category
  * as a reflected capability line warns even when the names differ.
  */
-export function findDuplicateWarnings(reflectedLines: Array<Pick<CapabilityCostLine, "capabilityKey" | "name"> & { subCategory?: SubCategoryKey | null }>, manual: ManualLineLike[]): DuplicateWarning[] {
+export function findDuplicateWarnings(
+  reflectedLines: Array<Pick<CapabilityCostLine, "capabilityKey" | "name"> & { subCategory?: SubCategoryKey | null }>,
+  manual: ManualLineLike[],
+): DuplicateWarning[] {
   const out: DuplicateWarning[] = [];
   manual.forEach((m, i) => {
     if (m?.source === "capability" || !m?.line?.trim()) return;
     for (const c of reflectedLines) {
       if (m.dupDismissed?.includes(c.capabilityKey)) continue;
-      const reason: "name" | "sub_category" | null = isLikelyDuplicate(c.name, m) ? "name" : c.subCategory && isSubCategoryKey(m.subCategory) && m.subCategory === c.subCategory ? "sub_category" : null;
+      const reason: "name" | "sub_category" | null = isLikelyDuplicate(c.name, m)
+        ? "name"
+        : c.subCategory && isSubCategoryKey(m.subCategory) && m.subCategory === c.subCategory
+          ? "sub_category"
+          : null;
       // `reason` is set only for the sub-category match, so name-based warnings keep their pre-ADR-0177 shape.
-      if (reason) out.push({ capabilityKey: c.capabilityKey, capabilityName: c.name, manualIndex: i, manualLine: m.line.trim(), ...(reason === "sub_category" ? { reason } : {}) });
+      if (reason)
+        out.push({
+          capabilityKey: c.capabilityKey,
+          capabilityName: c.name,
+          manualIndex: i,
+          manualLine: m.line.trim(),
+          ...(reason === "sub_category" ? { reason } : {}),
+        });
     }
   });
   return out;
@@ -780,7 +1053,19 @@ export const isLumpsum = (period: unknown): boolean => normalizePeriod(period) =
  * annualised (per-period amount x cadence) on every active year Y{start}..Y{end}; a lump sum lands
  * once on its start year. Every table, tile, chart and the item-row readout goes through this.
  */
-export function manualLineYearVector(l: { category?: unknown; amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown; period?: unknown; startYear?: number; endYear?: number }, horizon: number): number[] {
+export function manualLineYearVector(
+  l: {
+    category?: unknown;
+    amount?: unknown;
+    amountUnit?: unknown;
+    amountKrwM?: unknown;
+    currency?: unknown;
+    period?: unknown;
+    startYear?: number;
+    endYear?: number;
+  },
+  horizon: number,
+): number[] {
   const H = Math.max(1, Math.floor(horizon));
   const out: number[] = Array(H).fill(0);
   const v = manualLineKrwM(l);
@@ -788,7 +1073,10 @@ export function manualLineYearVector(l: { category?: unknown; amount?: unknown; 
   // ADR-0178: a pre-launch (year-0) line is not part of Y1..YN - never moved into Y1; see preLaunchAmountOf.
   if (isPreLaunchLine(l)) return out;
   const start = Math.max(1, l.startYear ?? 1);
-  if (isLumpsum(l.period)) { if (start <= H) out[start - 1] += v; return out; }
+  if (isLumpsum(l.period)) {
+    if (start <= H) out[start - 1] += v;
+    return out;
+  }
   const annual = v * cadenceMultiplier(l.period);
   for (let y = start; y <= Math.min(l.endYear ?? H, H); y++) out[y - 1] += annual;
   return out;
@@ -799,7 +1087,19 @@ export function manualLineYearVector(l: { category?: unknown; amount?: unknown; 
  * eligible lines (capex lump sum, startYear 0) that the Y1.. totals would count otherwise (confirmed
  * unit, KRW). Zero when no line is marked - callers add it, so legacy results are unchanged.
  */
-export function preLaunchAmountOf(lines: ReadonlyArray<{ category?: unknown; amount?: unknown; amountUnit?: unknown; amountKrwM?: unknown; currency?: unknown; period?: unknown; startYear?: unknown; endYear?: unknown; amountUnitConfirmed?: unknown }>): number {
+export function preLaunchAmountOf(
+  lines: ReadonlyArray<{
+    category?: unknown;
+    amount?: unknown;
+    amountUnit?: unknown;
+    amountKrwM?: unknown;
+    currency?: unknown;
+    period?: unknown;
+    startYear?: unknown;
+    endYear?: unknown;
+    amountUnitConfirmed?: unknown;
+  }>,
+): number {
   let sum = 0;
   for (const l of lines) {
     if (!isPreLaunchLine(l) || !preLaunchEligible(l)) continue;
@@ -813,15 +1113,26 @@ export function preLaunchAmountOf(lines: ReadonlyArray<{ category?: unknown; amo
 }
 
 /** Row readout: annualised run-rate (null for lump sums) and the horizon total of a manual line, 백만원. */
-export function manualLineAmounts(l: Parameters<typeof manualLineYearVector>[0], horizon: number): { annualKrwM: number | null; totalKrwM: number } | null {
+export function manualLineAmounts(
+  l: Parameters<typeof manualLineYearVector>[0],
+  horizon: number,
+): { annualKrwM: number | null; totalKrwM: number } | null {
   const v = manualLineKrwM(l);
   if (v === null) return null;
-  const total = manualLineYearVector(l, horizon).reduce((a, n) => a + n, 0) + (isPreLaunchLine(l) && preLaunchEligible(l) ? v : 0);
-  return { annualKrwM: isLumpsum(l.period) ? null : Math.round(v * cadenceMultiplier(l.period) * 100) / 100, totalKrwM: Math.round(total * 100) / 100 };
+  const total =
+    manualLineYearVector(l, horizon).reduce((a, n) => a + n, 0) + (isPreLaunchLine(l) && preLaunchEligible(l) ? v : 0);
+  return {
+    annualKrwM: isLumpsum(l.period) ? null : Math.round(v * cadenceMultiplier(l.period) * 100) / 100,
+    totalKrwM: Math.round(total * 100) / 100,
+  };
 }
 
 /** Whole years a recurring line is active inside the review horizon (start defaults Y1, end defaults the horizon). */
-export function recurringActiveYears(startYear: number | undefined, endYear: number | undefined, horizon: number): number {
+export function recurringActiveYears(
+  startYear: number | undefined,
+  endYear: number | undefined,
+  horizon: number,
+): number {
   const H = Math.max(1, Math.floor(horizon));
   const start = Math.max(1, startYear ?? 1);
   const end = Math.min(endYear ?? H, H);
@@ -857,7 +1168,23 @@ export interface InvestmentTotals {
 }
 
 /** Manual cost lines count lump sums as entered and recurring lines annualised; revenue and 정부 R&D are not 투자비. */
-export function investmentTotals(view: CapabilityCostView, reflectedKeys: ReadonlySet<string>, manual: Array<{ category?: string; amount?: number; amountUnit?: string; amountUnitConfirmed?: boolean; amountKrwM?: number | null; currency?: string; period?: string; startYear?: number; endYear?: number }>, staffing: StaffingPlanEntry | null = null, horizon: number = DEFAULT_HORIZON_YEARS): InvestmentTotals {
+export function investmentTotals(
+  view: CapabilityCostView,
+  reflectedKeys: ReadonlySet<string>,
+  manual: Array<{
+    category?: string;
+    amount?: number;
+    amountUnit?: string;
+    amountUnitConfirmed?: boolean;
+    amountKrwM?: number | null;
+    currency?: string;
+    period?: string;
+    startYear?: number;
+    endYear?: number;
+  }>,
+  staffing: StaffingPlanEntry | null = null,
+  horizon: number = DEFAULT_HORIZON_YEARS,
+): InvestmentTotals {
   const staffView = staffing ? staffingPlanView(staffing, horizon) : null;
   const staffingKrwM = staffView ? staffView.totalKrwM + staffView.recruitingTotalKrwM : 0;
   const reflected = view.lines.filter((l) => reflectedKeys.has(l.capabilityKey));
@@ -870,10 +1197,19 @@ export function investmentTotals(view: CapabilityCostView, reflectedKeys: Readon
   const preLaunch = preLaunchAmountOf(manual);
   for (const m of manual) {
     if (m.category === "revenue" || m.category === "gov_rnd") continue;
-    if (manualLineNeedsConfirm(m as ManualCostLine)) { excludedNeedsConfirm += 1; continue; }
-    if (m.currency && m.currency !== "KRW") { excluded += 1; continue; }
+    if (manualLineNeedsConfirm(m as ManualCostLine)) {
+      excludedNeedsConfirm += 1;
+      continue;
+    }
+    if (m.currency && m.currency !== "KRW") {
+      excluded += 1;
+      continue;
+    }
     const krwM = manualLineKrwM(m);
-    if (krwM === null) { excludedNeedsConfirm += 1; continue; }
+    if (krwM === null) {
+      excludedNeedsConfirm += 1;
+      continue;
+    }
     // Same per-year vector as the summary/charts (annualised by cadence over the active years).
     const total = manualLineYearVector(m, horizon).reduce((a, n) => a + n, 0) + preLaunchAmountOf([m]);
     manualKrwM += total;
@@ -919,10 +1255,27 @@ export interface SummaryLine {
 }
 
 /** ADR-0177: one 세부 과목 subtotal (horizon total, cadence-annualised); key null = 미지정. */
-export interface InvestmentSubCategoryRow { key: SubCategoryKey | null; label: string; totalKrwM: number; /** ADR-0178 slice 1: the 시작 전 part of totalKrwM (only when > 0). */ preLaunchKrwM?: number; /** Y1..YN values (백만원); sums per year to the category's schedule value. */ yearly: number[]; /** Opex one-off left out of the NPV under s5_plan (design §2.1). */ s5PlanExcluded: boolean; hint?: string }
-export interface InvestmentSubCategoryGroup { category: "labor" | "opex" | "capex"; totalKrwM: number; rows: InvestmentSubCategoryRow[] }
+export interface InvestmentSubCategoryRow {
+  key: SubCategoryKey | null;
+  label: string;
+  totalKrwM: number /** ADR-0178 slice 1: the 시작 전 part of totalKrwM (only when > 0). */;
+  preLaunchKrwM?: number /** Y1..YN values (백만원); sums per year to the category's schedule value. */;
+  yearly: number[] /** Opex one-off left out of the NPV under s5_plan (design §2.1). */;
+  s5PlanExcluded: boolean;
+  hint?: string;
+}
+export interface InvestmentSubCategoryGroup {
+  category: "labor" | "opex" | "capex";
+  totalKrwM: number;
+  rows: InvestmentSubCategoryRow[];
+}
 
-export interface InvestmentSummaryCategoryRow { category: "labor" | "opex" | "capex"; annualKrwM: number; lumpsumKrwM: number; totalKrwM: number }
+export interface InvestmentSummaryCategoryRow {
+  category: "labor" | "opex" | "capex";
+  annualKrwM: number;
+  lumpsumKrwM: number;
+  totalKrwM: number;
+}
 
 export interface InvestmentSummary {
   horizon: number;
@@ -935,7 +1288,15 @@ export interface InvestmentSummary {
   capexSubtotalKrwM: number;
   byCategory: InvestmentSummaryCategoryRow[];
   /** Y1..Y{horizon} per category, the investment total, and inflow rows (never inside 투자비). */
-  schedule: Array<{ year: number; labor: number; opex: number; capex: number; investmentTotal: number; revenue: number; govRnd: number }>;
+  schedule: Array<{
+    year: number;
+    labor: number;
+    opex: number;
+    capex: number;
+    investmentTotal: number;
+    revenue: number;
+    govRnd: number;
+  }>;
   excludedNonKrw: number;
   excludedNeedsConfirm: number;
   /** Recurring lines whose endYear exceeds the horizon (flagged, clamped to the horizon). */
@@ -957,19 +1318,33 @@ export interface InvestmentSummary {
  * excluded and counted. Legacy defaults: no startYear = Y1, recurring without endYear runs
  * through the horizon, missing plan_meta = 5 years.
  */
-export function buildInvestmentSummary(manual: SummaryLine[], capLines: CapabilityCostLine[], horizon: number, reflectedKeys: ReadonlySet<string>, staffing: StaffingPlanEntry | null = null): InvestmentSummary {
+export function buildInvestmentSummary(
+  manual: SummaryLine[],
+  capLines: CapabilityCostLine[],
+  horizon: number,
+  reflectedKeys: ReadonlySet<string>,
+  staffing: StaffingPlanEntry | null = null,
+): InvestmentSummary {
   const H = Math.max(1, Math.floor(horizon));
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const cats: Array<"labor" | "opex" | "capex"> = ["labor", "opex", "capex"];
   const annualByCat: Record<"labor" | "opex" | "capex", number> = { labor: 0, opex: 0, capex: 0 };
   const lumpByCat: Record<"labor" | "opex" | "capex", number> = { labor: 0, opex: 0, capex: 0 };
-  const yearCat: Record<"labor" | "opex" | "capex", number[]> = { labor: Array(H).fill(0), opex: Array(H).fill(0), capex: Array(H).fill(0) };
+  const yearCat: Record<"labor" | "opex" | "capex", number[]> = {
+    labor: Array(H).fill(0),
+    opex: Array(H).fill(0),
+    capex: Array(H).fill(0),
+  };
   const inflow: Record<"revenue" | "gov_rnd", number[]> = { revenue: Array(H).fill(0), gov_rnd: Array(H).fill(0) };
   let excludedNonKrw = 0;
   let excludedNeedsConfirm = 0;
   let endYearExceedsHorizon = 0;
   // 세부 과목 subtotals per category ("" = 미지정), horizon totals in 백만원.
-  const subTotals: Record<"labor" | "opex" | "capex", Map<string, number[]>> = { labor: new Map(), opex: new Map(), capex: new Map() };
+  const subTotals: Record<"labor" | "opex" | "capex", Map<string, number[]>> = {
+    labor: new Map(),
+    opex: new Map(),
+    capex: new Map(),
+  };
   // ADR-0178 slice 1: 시작 전 (year-0) capex lump sums, kept outside the Y1..YN schedule.
   let preLaunch = 0;
   const subPre = new Map<string, number>();
@@ -987,9 +1362,18 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
       for (let i = 0; i < H; i++) inflow[m.category === "revenue" ? "revenue" : "gov_rnd"][i] += vec[i];
       continue;
     }
-    if (manualLineNeedsConfirm(m as ManualCostLine)) { excludedNeedsConfirm += 1; continue; }
-    if (m.currency && m.currency !== "KRW") { excludedNonKrw += 1; continue; }
-    if (v === null) { excludedNeedsConfirm += 1; continue; }
+    if (manualLineNeedsConfirm(m as ManualCostLine)) {
+      excludedNeedsConfirm += 1;
+      continue;
+    }
+    if (m.currency && m.currency !== "KRW") {
+      excludedNonKrw += 1;
+      continue;
+    }
+    if (v === null) {
+      excludedNeedsConfirm += 1;
+      continue;
+    }
     if (m.endYear !== undefined && m.endYear > H) endYearExceedsHorizon += 1;
     if (m.category !== "labor" && m.category !== "opex" && m.category !== "capex") continue;
     const cat = m.category as "labor" | "opex" | "capex";
@@ -1012,8 +1396,11 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     for (let i = 0; i < H; i++) yearCat[c.category][i] += vec[i];
     addSub(c.category, c.subCategory, vec);
     if (c.period === "lumpsum") lumpByCat[c.category] += c.costKrwM;
-    else annualByCat[c.category] += Math.round(c.costKrwM * cadenceMultiplier(c.period as Exclude<LinkedSpendPeriod, "lumpsum">) * 100) / 100;
-    if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0) capabilitySpendFromMilestone += 1;
+    else
+      annualByCat[c.category] +=
+        Math.round(c.costKrwM * cadenceMultiplier(c.period as Exclude<LinkedSpendPeriod, "lumpsum">) * 100) / 100;
+    if (c.startYear === c.defaultStartYear && c.monthsToAttain !== null && c.monthsToAttain > 0)
+      capabilitySpendFromMilestone += 1;
   }
   // ADR-0175: the 인력 운영 계획 vector feeds the 인건비 category per year (derived, read-only,
   // never a manual line). Recurring run-rate = the last in-window year's cost; recruiting one-offs are lump sums.
@@ -1032,11 +1419,28 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     staffingLaborKrwM = view.totalKrwM + recruiting;
     staffingNeedConfirmCount = view.needConfirmCount;
   }
-  const totalByCat: Record<"labor" | "opex" | "capex", number> = { labor: yearCat.labor.reduce((s, n) => s + n, 0), opex: yearCat.opex.reduce((s, n) => s + n, 0), capex: yearCat.capex.reduce((s, n) => s + n, 0) + preLaunch };
-  const byCategory = cats.map((c) => ({ category: c, annualKrwM: round2(annualByCat[c]), lumpsumKrwM: round2(lumpByCat[c]), totalKrwM: round2(totalByCat[c]) }));
+  const totalByCat: Record<"labor" | "opex" | "capex", number> = {
+    labor: yearCat.labor.reduce((s, n) => s + n, 0),
+    opex: yearCat.opex.reduce((s, n) => s + n, 0),
+    capex: yearCat.capex.reduce((s, n) => s + n, 0) + preLaunch,
+  };
+  const byCategory = cats.map((c) => ({
+    category: c,
+    annualKrwM: round2(annualByCat[c]),
+    lumpsumKrwM: round2(lumpByCat[c]),
+    totalKrwM: round2(totalByCat[c]),
+  }));
   const schedule = Array.from({ length: H }, (_, i) => {
     const catSum = cats.reduce((s, c) => s + yearCat[c][i], 0);
-    return { year: i + 1, labor: round2(yearCat.labor[i]), opex: round2(yearCat.opex[i]), capex: round2(yearCat.capex[i]), investmentTotal: round2(catSum), revenue: round2(inflow.revenue[i]), govRnd: round2(inflow.gov_rnd[i]) };
+    return {
+      year: i + 1,
+      labor: round2(yearCat.labor[i]),
+      opex: round2(yearCat.opex[i]),
+      capex: round2(yearCat.capex[i]),
+      investmentTotal: round2(catSum),
+      revenue: round2(inflow.revenue[i]),
+      govRnd: round2(inflow.gov_rnd[i]),
+    };
   });
   return {
     horizon: H,
@@ -1052,23 +1456,58 @@ export function buildInvestmentSummary(manual: SummaryLine[], capLines: Capabili
     capabilitySpendFromMilestone,
     staffingLaborKrwM: round2(staffingLaborKrwM),
     staffingNeedConfirmCount,
-    bySubCategory: cats.map((c) => subCategoryGroupOf(c, subTotals[c], schedule.map((r) => r[c]), totalByCat[c], c === "capex" ? subPre : undefined)),
+    bySubCategory: cats.map((c) =>
+      subCategoryGroupOf(
+        c,
+        subTotals[c],
+        schedule.map((r) => r[c]),
+        totalByCat[c],
+        c === "capex" ? subPre : undefined,
+      ),
+    ),
     ...(preLaunch > 0 ? { preLaunchKrwM: round2(preLaunch) } : {}),
   };
 }
 
 /** Rows of one category: vocabulary order, rows with any non-zero year only, then 미지정; each year sums exactly to the category's schedule value. */
-function subCategoryGroupOf(cat: "labor" | "opex" | "capex", vecs: Map<string, number[]>, catYearly: number[], categoryTotal: number, pre?: Map<string, number>): InvestmentSubCategoryGroup {
+function subCategoryGroupOf(
+  cat: "labor" | "opex" | "capex",
+  vecs: Map<string, number[]>,
+  catYearly: number[],
+  categoryTotal: number,
+  pre?: Map<string, number>,
+): InvestmentSubCategoryGroup {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const H = catYearly.length;
   const rows: InvestmentSubCategoryRow[] = [];
-  const push = (key: SubCategoryKey | null, label: string, vec: number[] | undefined, extra: Partial<InvestmentSubCategoryRow>, preKey: string) => {
+  const push = (
+    key: SubCategoryKey | null,
+    label: string,
+    vec: number[] | undefined,
+    extra: Partial<InvestmentSubCategoryRow>,
+    preKey: string,
+  ) => {
     const yearly = Array.from({ length: H }, (_, i) => round2(vec?.[i] ?? 0));
     const p = round2(pre?.get(preKey) ?? 0);
     if (yearly.every((v) => v === 0) && !(p > 0)) return;
-    rows.push({ key, label, totalKrwM: 0, yearly, s5PlanExcluded: false, ...(p > 0 ? { preLaunchKrwM: p } : {}), ...extra });
+    rows.push({
+      key,
+      label,
+      totalKrwM: 0,
+      yearly,
+      s5PlanExcluded: false,
+      ...(p > 0 ? { preLaunchKrwM: p } : {}),
+      ...extra,
+    });
   };
-  for (const d of subCategoriesOf(cat)) push(d.key, d.label, vecs.get(d.key), { s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) }, d.key);
+  for (const d of subCategoriesOf(cat))
+    push(
+      d.key,
+      d.label,
+      vecs.get(d.key),
+      { s5PlanExcluded: S5_PLAN_EXCLUDED_ONE_OFF.has(d.key), ...(d.hint ? { hint: d.hint } : {}) },
+      d.key,
+    );
   push(null, UNASSIGNED_SUB_LABEL, vecs.get(""), {}, "");
   // Per-cell 0.01 rounding can leave a cent of drift against the category's year value; fold it into that year's largest row.
   if (rows.length > 0) {
@@ -1084,7 +1523,16 @@ function subCategoryGroupOf(cat: "labor" | "opex" | "capex", vecs: Map<string, n
 }
 
 /** Task: per-year 투자비 합계 and per-row horizon totals of the 연도별 투자 계획 table (inflow rows reported separately, never in the total). */
-export interface ScheduleTotals { yearTotals: number[]; rowTotals: { labor: number; opex: number; capex: number }; grandKrwM: number; inflow: { revenue: number; govRnd: number }; /** ADR-0178 slice 1: 시작 전 part, already inside rowTotals.capex and grandKrwM (only when > 0). */ preLaunchKrwM?: number }
+export interface ScheduleTotals {
+  yearTotals: number[];
+  rowTotals: { labor: number; opex: number; capex: number };
+  grandKrwM: number;
+  inflow: {
+    revenue: number;
+    govRnd: number;
+  } /** ADR-0178 slice 1: 시작 전 part, already inside rowTotals.capex and grandKrwM (only when > 0). */;
+  preLaunchKrwM?: number;
+}
 export function scheduleTotals(summary: Pick<InvestmentSummary, "schedule" | "preLaunchKrwM">): ScheduleTotals {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const s = summary.schedule;
@@ -1098,7 +1546,6 @@ export function scheduleTotals(summary: Pick<InvestmentSummary, "schedule" | "pr
     ...(pre > 0 ? { preLaunchKrwM: round2(pre) } : {}),
   };
 }
-
 
 export interface InvestmentChartData {
   /** Axis labels "Y1".."YN". */
@@ -1123,7 +1570,10 @@ export function buildInvestmentChartData(summary: InvestmentSummary): Investment
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const sched = summary.schedule;
   let run = summary.preLaunchKrwM ?? 0; // ADR-0178: 시작 전 투자 precedes Y1 in the running total
-  const cumulative = sched.map((s) => { run += s.investmentTotal; return round2(run); });
+  const cumulative = sched.map((s) => {
+    run += s.investmentTotal;
+    return round2(run);
+  });
   const total = summary.byCategory.reduce((a, r) => a + r.totalKrwM, 0);
   const composition = summary.byCategory.map((r) => ({
     category: r.category,
@@ -1146,8 +1596,19 @@ export function buildInvestmentChartData(summary: InvestmentSummary): Investment
   };
 }
 
-
-export type CostLineError = { code: "invalid_request" | "unknown_capability" | "invalid_category" | "amount_mismatch" | "not_reflectable" | "no_cost" | "invalid_amount_unit" | "invalid_sub_category" | "subcategory_parent_mismatch"; message: string };
+export type CostLineError = {
+  code:
+    | "invalid_request"
+    | "unknown_capability"
+    | "invalid_category"
+    | "amount_mismatch"
+    | "not_reflectable"
+    | "no_cost"
+    | "invalid_amount_unit"
+    | "invalid_sub_category"
+    | "subcategory_parent_mismatch";
+  message: string;
+};
 
 const AMOUNT_EPS = 1e-6;
 
@@ -1162,17 +1623,26 @@ export function normalizeBusinessCaseLines(
   rows: CostSourceRow[],
   previous: unknown,
   actor: { userId: string; at: string },
-): { ok: true; lines: unknown[]; events: Array<{ action: string; target: string }> } | { ok: false; error: CostLineError } {
-  if (!Array.isArray(incoming)) return { ok: false, error: { code: "invalid_request", message: "business_case_lines는 배열이어야 합니다." } };
+):
+  | { ok: true; lines: unknown[]; events: Array<{ action: string; target: string }> }
+  | { ok: false; error: CostLineError } {
+  if (!Array.isArray(incoming))
+    return { ok: false, error: { code: "invalid_request", message: "business_case_lines는 배열이어야 합니다." } };
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const prev = new Map((Array.isArray(previous) ? previous.filter(isCapabilityEntry) : []).map((e) => [e.capabilityKey, e]));
+  const prev = new Map(
+    (Array.isArray(previous) ? previous.filter(isCapabilityEntry) : []).map((e) => [e.capabilityKey, e]),
+  );
   const out: unknown[] = [];
   const events: Array<{ action: string; target: string }> = [];
   const seen = new Set<string>();
   const horizonRaw = planMetaOf(incoming);
   const horizon = horizonRaw ? horizonRaw.horizonYears : DEFAULT_HORIZON_YEARS;
   for (const raw of incoming) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, error: { code: "invalid_request", message: "business_case_lines의 각 항목은 객체여야 합니다." } };
+    if (!raw || typeof raw !== "object" || Array.isArray(raw))
+      return {
+        ok: false,
+        error: { code: "invalid_request", message: "business_case_lines의 각 항목은 객체여야 합니다." },
+      };
     if (isPlanMetaEntry(raw)) {
       // ADR-0176: an invalid simOverrides object is a hard 400 — a person typed these values,
       // so silent drops would hide their input (same reasoning as the staffing plan rows).
@@ -1193,23 +1663,43 @@ export function normalizeBusinessCaseLines(
       const prevPlan = staffingPlanOf(previous);
       if (!out.some(isStaffingPlanEntry)) {
         out.push({ ...v.entry, updatedAt: actor.at, updatedBy: actor.userId });
-        if (staffingPlanChanged(prevPlan, v.entry)) events.push({ action: "staffing_plan.updated", target: staffingPlanAuditHash(v.entry) });
+        if (staffingPlanChanged(prevPlan, v.entry))
+          events.push({ action: "staffing_plan.updated", target: staffingPlanAuditHash(v.entry) });
       }
       continue;
     }
     if (!isCapabilityEntry(raw)) {
       // A manual line must not smuggle the capability markers.
-      const { source: _s, capabilityKey: _k, reflected: _r, basisHash: _b, reflectedBy: _rb, reflectedAt: _ra, legacySubCategory: _ls, ...rest } = raw as Record<string, unknown>;
+      const {
+        source: _s,
+        capabilityKey: _k,
+        reflected: _r,
+        basisHash: _b,
+        reflectedBy: _rb,
+        reflectedAt: _ra,
+        legacySubCategory: _ls,
+        ...rest
+      } = raw as Record<string, unknown>;
       // ADR-0177: a posted sub-category must be a known key under the line's category (400 otherwise);
       // a line without a category takes the sub-category's parent. legacySubCategory is never stored.
       const subErr = checkSubCategory(rest.category, rest.subCategory, String(rest.line ?? "") || "항목");
       if (subErr) return { ok: false, error: subErr };
       if (rest.subCategory === null || rest.subCategory === "") delete rest.subCategory;
-      if (rest.subCategory !== undefined && (rest.category === undefined || rest.category === null || rest.category === "")) rest.category = SUB_CATEGORY_PARENT[rest.subCategory as SubCategoryKey];
-      if (!("amount" in rest) && rest.amountUnit === undefined && !("amountKrwM" in rest)) { out.push(rest); continue; }
+      if (
+        rest.subCategory !== undefined &&
+        (rest.category === undefined || rest.category === null || rest.category === "")
+      )
+        rest.category = SUB_CATEGORY_PARENT[rest.subCategory as SubCategoryKey];
+      if (!("amount" in rest) && rest.amountUnit === undefined && !("amountKrwM" in rest)) {
+        out.push(rest);
+        continue;
+      }
       // Unknown units are rejected outright; there is no silent fallback unit.
       if (typeof rest.amountUnit === "string" && !AMOUNT_UNITS.includes(rest.amountUnit as AmountUnit)) {
-        return { ok: false, error: { code: "invalid_amount_unit", message: `알 수 없는 금액 단위입니다: ${rest.amountUnit}` } };
+        return {
+          ok: false,
+          error: { code: "invalid_amount_unit", message: `알 수 없는 금액 단위입니다: ${rest.amountUnit}` },
+        };
       }
       // No silent unit migration: the line keeps the amount and unit the person chose; the server
       // computes the canonical 백만원 only when the line is complete and its unit is confirmed.
@@ -1222,31 +1712,66 @@ export function normalizeBusinessCaseLines(
     }
     const key = raw.capabilityKey;
     const row = byId.get(key);
-    if (!row || seen.has(key)) return { ok: false, error: { code: "unknown_capability", message: `레지스터에 없는 역량 항목입니다: ${key}` } };
+    if (!row || seen.has(key))
+      return { ok: false, error: { code: "unknown_capability", message: `레지스터에 없는 역량 항목입니다: ${key}` } };
     seen.add(key);
     const cost = row.closing_cost_krw_m;
-    if (cost === null || !(cost > 0)) return { ok: false, error: { code: "no_cost", message: `${row.capability}: 해소 비용이 0보다 커야 투자비에 담을 수 있습니다.` } };
+    if (cost === null || !(cost > 0))
+      return {
+        ok: false,
+        error: { code: "no_cost", message: `${row.capability}: 해소 비용이 0보다 커야 투자비에 담을 수 있습니다.` },
+      };
     const category = raw.category ?? row.category ?? suggestCategory(row.resolution).category;
-    if (!CAPABILITY_COST_CATEGORIES.includes(category as CostCategory)) return { ok: false, error: { code: "invalid_category", message: `${row.capability}: 분류는 인건비·운영비·설비투자 중 하나여야 합니다.` } };
+    if (!CAPABILITY_COST_CATEGORIES.includes(category as CostCategory))
+      return {
+        ok: false,
+        error: {
+          code: "invalid_category",
+          message: `${row.capability}: 분류는 인건비·운영비·설비투자 중 하나여야 합니다.`,
+        },
+      };
     // The amount is stored and compared in 백만원; a client without the unit marker (legacy) sent 억.
     const live = cost;
     const rawAmount = raw.amount as unknown;
-    const rawKrwM = typeof rawAmount === "number" && Number.isFinite(rawAmount) ? ((raw as { amountUnit?: unknown }).amountUnit === AMOUNT_UNIT_KRW_M ? rawAmount : rawAmount * 100) : null;
+    const rawKrwM =
+      typeof rawAmount === "number" && Number.isFinite(rawAmount)
+        ? (raw as { amountUnit?: unknown }).amountUnit === AMOUNT_UNIT_KRW_M
+          ? rawAmount
+          : rawAmount * 100
+        : null;
     if (rawAmount !== undefined && (rawKrwM === null || Math.abs(rawKrwM - live) > AMOUNT_EPS * 100)) {
-      return { ok: false, error: { code: "amount_mismatch", message: `${row.capability}: 금액은 판정에서 정해집니다(${formatKrwM(live)}) — 금액을 바꾸려면 판정을 바꾸세요. 화면을 새로 고쳐 최신 판정을 확인하세요.` } };
+      return {
+        ok: false,
+        error: {
+          code: "amount_mismatch",
+          message: `${row.capability}: 금액은 판정에서 정해집니다(${formatKrwM(live)}) — 금액을 바꾸려면 판정을 바꾸세요. 화면을 새로 고쳐 최신 판정을 확인하세요.`,
+        },
+      };
     }
     const reflected = raw.reflected === true;
     const before = prev.get(key);
     const wasReflected = before?.reflected === true;
     if (reflected && !wasReflected && (row.confirmed_at === null || row.stale)) {
-      return { ok: false, error: { code: "not_reflectable", message: `${row.capability}: 확정되지 않았거나 재판정이 필요한 판정은 투자비에 반영할 수 없습니다.` } };
+      return {
+        ok: false,
+        error: {
+          code: "not_reflectable",
+          message: `${row.capability}: 확정되지 않았거나 재판정이 필요한 판정은 투자비에 반영할 수 없습니다.`,
+        },
+      };
     }
     const rawSub = (raw as { subCategory?: unknown }).subCategory;
     const capSubErr = checkSubCategory(category, rawSub, row.capability);
     if (capSubErr) return { ok: false, error: capSubErr };
     const subCategory = isSubCategoryKey(rawSub) ? rawSub : undefined;
     if ((raw as { startYear?: unknown }).startYear === PRE_LAUNCH_START_YEAR) {
-      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 역량 해소 비용은 시작 전 투자(0년차)로 지정할 수 없습니다 — 집행 연차는 1..${horizon}년이어야 합니다.` } };
+      return {
+        ok: false,
+        error: {
+          code: "invalid_request",
+          message: `${row.capability}: 역량 해소 비용은 시작 전 투자(0년차)로 지정할 수 없습니다 — 집행 연차는 1..${horizon}년이어야 합니다.`,
+        },
+      };
     }
     // 2026-10-18 decider report — a POST that omits startYear (e.g. a save for a
     // DIFFERENT row) must not wipe this row's saved spend-year override: fall back
@@ -1257,20 +1782,48 @@ export function normalizeBusinessCaseLines(
         ? (before as { startYear: number }).startYear
         : undefined;
     if (startYear !== undefined && (startYear < 1 || startYear > horizon)) {
-      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` } };
+      return {
+        ok: false,
+        error: { code: "invalid_request", message: `${row.capability}: 집행 연차는 1..${horizon}년이어야 합니다.` },
+      };
     }
     // 2026-10-18 decider ask — the linked line's cadence is person-editable: 일시불(총액) or 연간(총액을 시작~종료 창구에 균분).
     const rawPeriod = normalizePeriod((raw as { period?: unknown }).period);
-    if (rawPeriod !== undefined && rawPeriod !== "lumpsum" && rawPeriod !== "yearly" && rawPeriod !== "monthly" && rawPeriod !== "quarterly") {
-      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 주기는 월간·분기·연간·일시불 중 하나여야 합니다.` } };
+    if (
+      rawPeriod !== undefined &&
+      rawPeriod !== "lumpsum" &&
+      rawPeriod !== "yearly" &&
+      rawPeriod !== "monthly" &&
+      rawPeriod !== "quarterly"
+    ) {
+      return {
+        ok: false,
+        error: {
+          code: "invalid_request",
+          message: `${row.capability}: 주기는 월간·분기·연간·일시불 중 하나여야 합니다.`,
+        },
+      };
     }
     const rawEndYear = (raw as { endYear?: unknown }).endYear;
     if (rawEndYear !== undefined && !isValidYearValue(rawEndYear)) {
-      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 종료 연차는 1..${horizon}년의 정수여야 합니다.` } };
+      return {
+        ok: false,
+        error: {
+          code: "invalid_request",
+          message: `${row.capability}: 종료 연차는 1..${horizon}년의 정수여야 합니다.`,
+        },
+      };
     }
-    const rawStartForEnd = isValidYearValue((raw as { startYear?: unknown }).startYear) ? (raw as { startYear: number }).startYear : isValidYearValue(before?.startYear) ? (before as { startYear: number }).startYear : undefined;
+    const rawStartForEnd = isValidYearValue((raw as { startYear?: unknown }).startYear)
+      ? (raw as { startYear: number }).startYear
+      : isValidYearValue(before?.startYear)
+        ? (before as { startYear: number }).startYear
+        : undefined;
     if (isValidYearValue(rawEndYear) && rawStartForEnd !== undefined && (rawEndYear as number) < rawStartForEnd) {
-      return { ok: false, error: { code: "invalid_request", message: `${row.capability}: 종료 연차는 시작 연차보다 빠를 수 없습니다.` } };
+      return {
+        ok: false,
+        error: { code: "invalid_request", message: `${row.capability}: 종료 연차는 시작 연차보다 빠를 수 없습니다.` },
+      };
     }
     out.push({
       line: `${row.capability} 역량 해소`,
@@ -1289,12 +1842,25 @@ export function normalizeBusinessCaseLines(
       reflected,
       basisHash: costBasisHash(row),
       costKrwM: cost,
-      ...(reflected ? (wasReflected && before?.reflectedBy ? { reflectedBy: before.reflectedBy, reflectedAt: before.reflectedAt } : { reflectedBy: actor.userId, reflectedAt: actor.at }) : {}),
-    } satisfies Omit<StoredCapabilityEntry, "reflectedBy" | "reflectedAt"> & { reflectedBy?: string; reflectedAt?: string });
+      ...(reflected
+        ? wasReflected && before?.reflectedBy
+          ? { reflectedBy: before.reflectedBy, reflectedAt: before.reflectedAt }
+          : { reflectedBy: actor.userId, reflectedAt: actor.at }
+        : {}),
+    } satisfies Omit<StoredCapabilityEntry, "reflectedBy" | "reflectedAt"> & {
+      reflectedBy?: string;
+      reflectedAt?: string;
+    });
     const target = `${key}:${cost}:${category}:${costBasisHash(row)}`;
     if (reflected && !wasReflected) events.push({ action: "capability_cost.reflect", target });
     else if (!reflected && wasReflected) events.push({ action: "capability_cost.unreflect", target });
-    else if (reflected && wasReflected && typeof before?.amount === "number" && Math.abs(lineAmountKrwM(before) - live) > 1e-6) events.push({ action: "capability_cost.amount_followed", target: `${key}:${lineAmountKrwM(before)}->${live}` });
+    else if (
+      reflected &&
+      wasReflected &&
+      typeof before?.amount === "number" &&
+      Math.abs(lineAmountKrwM(before) - live) > 1e-6
+    )
+      events.push({ action: "capability_cost.amount_followed", target: `${key}:${lineAmountKrwM(before)}->${live}` });
   }
   // ADR-0175 slice 1: a lines-only POST that does not carry the staffing plan (e.g. the reflection
   // save) keeps the stored plan — delete is an explicit empty-rows save, never an omission.
@@ -1303,15 +1869,30 @@ export function normalizeBusinessCaseLines(
     if (prev) out.push(prev);
   }
   // Newly dismissed duplicate warnings.
-  const dismissed = (xs: unknown) => new Set((Array.isArray(xs) ? xs : []).flatMap((x) => (x && typeof x === "object" && Array.isArray((x as { dupDismissed?: unknown }).dupDismissed) ? ((x as { dupDismissed: string[] }).dupDismissed.map((k) => `${(x as { line?: string }).line ?? ""}|${k}`)) : [])));
+  const dismissed = (xs: unknown) =>
+    new Set(
+      (Array.isArray(xs) ? xs : []).flatMap((x) =>
+        x && typeof x === "object" && Array.isArray((x as { dupDismissed?: unknown }).dupDismissed)
+          ? (x as { dupDismissed: string[] }).dupDismissed.map((k) => `${(x as { line?: string }).line ?? ""}|${k}`)
+          : [],
+      ),
+    );
   const before = dismissed(previous);
-  for (const d of dismissed(out)) if (!before.has(d)) events.push({ action: "capability_cost.dup_dismissed", target: d });
+  for (const d of dismissed(out))
+    if (!before.has(d)) events.push({ action: "capability_cost.dup_dismissed", target: d });
   return { ok: true, lines: out, events };
 }
 
 // ── Promotion (server) ──────────────────────────────────────────────────────
 
-export interface PromotionCapabilityLine { category: CostCategory; name: string; /** 일시불 = 총액; 연간(균분) = 연간 집행액. */ krwM: number; note: string; /** Spend year: stored override, else the milestone months (OD-6), else 1. */ startYear: number; /** Windowed yearly: the last spend year; lumpsum = startYear. */ endYear?: number }
+export interface PromotionCapabilityLine {
+  category: CostCategory;
+  name: string /** 일시불 = 총액; 연간(균분) = 연간 집행액. */;
+  krwM: number;
+  note: string /** Spend year: stored override, else the milestone months (OD-6), else 1. */;
+  startYear: number /** Windowed yearly: the last spend year; lumpsum = startYear. */;
+  endYear?: number;
+}
 
 /**
  * Split stored lines for the greenfield promotion copy (ADR-0137/0138, ADR-0174 slice 2): `reflected:false`
@@ -1319,7 +1900,17 @@ export interface PromotionCapabilityLine { category: CostCategory; name: string;
  * sums recomputed from the live judgement (a deleted/zero-cost capability is skipped and listed); the plan
  * horizon from `plan_meta` (default 5) is returned for the copied model.
  */
-export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRates?: FxRates): { manual: unknown[]; capability: PromotionCapabilityLine[]; skipped: string[]; skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }>; horizon: number } {
+export function splitForPromotion(
+  lines: unknown[],
+  rows: CostSourceRow[],
+  fxRates?: FxRates,
+): {
+  manual: unknown[];
+  capability: PromotionCapabilityLine[];
+  skipped: string[];
+  skippedManual: Array<{ line: string; reason: "unit_unconfirmed" | "currency_non_krw" }>;
+  horizon: number;
+} {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const manual: unknown[] = [];
   const capability: PromotionCapabilityLine[] = [];
@@ -1330,7 +1921,10 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
     if (isPlanMetaEntry(l) || isStaffingPlanEntry(l)) continue; // staffing hand-off to S8 is ADR-0175 slice 2
     if (!isCapabilityEntry(l)) {
       const m = l as ManualCostLine;
-      if (manualLineNeedsConfirm(m)) { skippedManual.push({ line: String(m.line ?? ""), reason: "unit_unconfirmed" }); continue; }
+      if (manualLineNeedsConfirm(m)) {
+        skippedManual.push({ line: String(m.line ?? ""), reason: "unit_unconfirmed" });
+        continue;
+      }
       if (m.currency && m.currency !== "KRW" && !(fxRates && (fxRates[m.currency] ?? 0) > 0)) {
         // A foreign line with a person-set rate converts (manualLineInKrw below); without a rate it stays skipped (환율 미반영).
         skippedManual.push({ line: String(m.line ?? ""), reason: "currency_non_krw" });
@@ -1342,8 +1936,15 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
     if (l.reflected !== true) continue;
     const row = byId.get(l.capabilityKey);
     const cost = row?.closing_cost_krw_m ?? null;
-    if (!row || cost === null || !(cost > 0)) { skipped.push(l.capabilityKey); continue; }
-    const category = row.category ?? (CAPABILITY_COST_CATEGORIES.includes(l.category as CostCategory) ? (l.category as CostCategory) : suggestCategory(row.resolution).category);
+    if (!row || cost === null || !(cost > 0)) {
+      skipped.push(l.capabilityKey);
+      continue;
+    }
+    const category =
+      row.category ??
+      (CAPABILITY_COST_CATEGORIES.includes(l.category as CostCategory)
+        ? (l.category as CostCategory)
+        : suggestCategory(row.resolution).category);
     {
       const capStart = isValidYearValue(l.startYear) ? l.startYear : capabilityDefaultStartYear(row.months_to_attain);
       const capEnd = isValidYearValue(l.endYear) ? l.endYear : capabilityEndYearOf(capStart, row.months_to_attain);
@@ -1351,12 +1952,23 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
       // 금액 × 주기계수 in EVERY window year — capabilityYearVector parity. The old
       // 균분(cost/active) rule halved 연간 lines, and 월간/분기 rows collapsed to a
       // single start year with no ×12/×4.
-      const recurringPeriod = l.period === "monthly" || l.period === "quarterly" || l.period === "yearly" ? l.period : null;
+      const recurringPeriod =
+        l.period === "monthly" || l.period === "quarterly" || l.period === "yearly" ? l.period : null;
       const annual = recurringPeriod ? Math.round(cost * cadenceMultiplier(recurringPeriod) * 100) / 100 : cost;
-      const periodFlag = recurringPeriod ? `${PERIOD_LABEL_KO[recurringPeriod]} 주기당 금액 — ${capStart}~${capEnd}연차 반복` : "일시불 총액";
+      const periodFlag = recurringPeriod
+        ? `${PERIOD_LABEL_KO[recurringPeriod]} 주기당 금액 — ${capStart}~${capEnd}연차 반복`
+        : "일시불 총액";
       const flags = ["역량 해소 비용", `S5 연동 (판정 ${row.id})`, periodFlag];
-      if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row))) flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
-      capability.push({ category, name: `${row.capability} 역량 해소`, krwM: annual, note: flags.join(". "), startYear: capStart, endYear: recurringPeriod ? capEnd : capStart });
+      if (row.stale || (!!l.basisHash && !basisHashMatches(l.basisHash, row)))
+        flags.push("역량 판정 재판정 필요 — 금액 검증 필요");
+      capability.push({
+        category,
+        name: `${row.capability} 역량 해소`,
+        krwM: annual,
+        note: flags.join(". "),
+        startYear: capStart,
+        endYear: recurringPeriod ? capEnd : capStart,
+      });
     }
   }
   return { manual, capability, skipped, skippedManual, horizon };
@@ -1364,7 +1976,10 @@ export function splitForPromotion(lines: unknown[], rows: CostSourceRow[], fxRat
 
 // ── Milestone candidate ─────────────────────────────────────────────────────
 
-export function milestoneDerivedHash(row: Pick<CapabilityGapRow, "id" | "capability" | "resolution">, months: number): string {
+export function milestoneDerivedHash(
+  row: Pick<CapabilityGapRow, "id" | "capability" | "resolution">,
+  months: number,
+): string {
   return sha256Hex(JSON.stringify([row.id, row.capability.trim(), row.resolution ?? null, months])).slice(0, 16);
 }
 
@@ -1372,7 +1987,13 @@ export function milestoneDerivedHash(row: Pick<CapabilityGapRow, "id" | "capabil
 export function milestoneCandidateOf(row: CapabilityGapRow): MilestoneCandidate | undefined {
   const months = row.attainability?.monthsToAttain ?? null;
   if (months === null || !(months > 0)) return undefined;
-  return { name: `${row.capability.trim()} 해소`, months, resolution: row.resolution ?? null, rowId: row.id, derivedFromHash: milestoneDerivedHash(row, months) };
+  return {
+    name: `${row.capability.trim()} 해소`,
+    months,
+    resolution: row.resolution ?? null,
+    rowId: row.id,
+    derivedFromHash: milestoneDerivedHash(row, months),
+  };
 }
 
 export interface MilestoneCandidateView extends MilestoneCandidate {
@@ -1388,16 +2009,31 @@ export function milestoneCandidateView(row: CapabilityGapRow): MilestoneCandidat
   const stored = row.attainability?.milestoneCandidate;
   const live = milestoneCandidateOf(row);
   if (!stored && !live) return null;
+  // biome-ignore lint/style/noNonNullAssertion: at least one of stored/live exists (guarded above); the other may be null
   const base = stored ?? live!;
-  return { ...base, stale: isStale(row), outdated: !!stored && (!live || stored.derivedFromHash !== live.derivedFromHash), stored: !!stored };
+  return {
+    ...base,
+    stale: isStale(row),
+    outdated: !!stored && (!live || stored.derivedFromHash !== live.derivedFromHash),
+    stored: !!stored,
+  };
 }
 
 // ── Client selection overlay ────────────────────────────────────────────────
 
-export interface CostSelection { reflected?: boolean; category?: CostCategory; /** ADR-0177: null = explicitly cleared. */ subCategory?: SubCategoryKey | null; /** 2026-10-18 decider ask: the linked line's cadence is person-editable (일시불/연간). */ period?: "lumpsum" | "yearly"; /** 창구 끝 연차 (연간 균분의 마지막 해). */ endYear?: number }
+export interface CostSelection {
+  reflected?: boolean;
+  category?: CostCategory /** ADR-0177: null = explicitly cleared. */;
+  subCategory?: SubCategoryKey | null /** 2026-10-18 decider ask: the linked line's cadence is person-editable (일시불/연간). */;
+  period?: "lumpsum" | "yearly" /** 창구 끝 연차 (연간 균분의 마지막 해). */;
+  endYear?: number;
+}
 
 /** Overlay the person's unsaved checkbox/category choices on the derived lines. */
-export function applySelection(view: CapabilityCostView, sel: Readonly<Record<string, CostSelection>>): CapabilityCostLine[] {
+export function applySelection(
+  view: CapabilityCostView,
+  sel: Readonly<Record<string, CostSelection>>,
+): CapabilityCostLine[] {
   return view.lines.map((l) => {
     const s = sel[l.capabilityKey];
     if (!s) return l;
@@ -1408,15 +2044,49 @@ export function applySelection(view: CapabilityCostView, sel: Readonly<Record<st
     const pickedSub = s.subCategory !== undefined ? s.subCategory : l.subCategory;
     // A category change drops a sub-category that no longer fits (the UI shows a chip for it).
     const subCategory = pickedSub && validSubCategory(category, pickedSub) ? pickedSub : null;
-    return { ...l, reflected, category, period, endYear, subCategory, suggestedSubCategory: suggestSubCategory(l.resolution, category), needsRejudge: reflected && (l.stale || l.needsRejudge) };
+    return {
+      ...l,
+      reflected,
+      category,
+      period,
+      endYear,
+      subCategory,
+      suggestedSubCategory: suggestSubCategory(l.resolution, category),
+      needsRejudge: reflected && (l.stale || l.needsRejudge),
+    };
   });
 }
 
 /** Payload entries for the saved capability lines: reflected ones, plus explicit un-checks of default/previously stored rows. */
-export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): Array<{ source: "capability"; capabilityKey: string; reflected: boolean; category: CostCategory; amount: number; amountUnit: typeof AMOUNT_UNIT_KRW_M; amountUnitConfirmed: true; period: LinkedSpendPeriod; endYear?: number; subCategory?: SubCategoryKey }> {
+export function selectionPayload(
+  lines: CapabilityCostLine[],
+  sel: Readonly<Record<string, CostSelection>>,
+): Array<{
+  source: "capability";
+  capabilityKey: string;
+  reflected: boolean;
+  category: CostCategory;
+  amount: number;
+  amountUnit: typeof AMOUNT_UNIT_KRW_M;
+  amountUnitConfirmed: true;
+  period: LinkedSpendPeriod;
+  endYear?: number;
+  subCategory?: SubCategoryKey;
+}> {
   return lines
     .filter((l) => l.reflected || l.persisted || sel[l.capabilityKey]?.reflected === false)
-    .map((l) => ({ source: "capability" as const, capabilityKey: l.capabilityKey, reflected: l.reflected, category: l.category, amount: l.costKrwM, amountUnit: AMOUNT_UNIT_KRW_M, amountUnitConfirmed: true as const, period: l.period, endYear: l.endYear, ...(l.subCategory ? { subCategory: l.subCategory } : {}) }));
+    .map((l) => ({
+      source: "capability" as const,
+      capabilityKey: l.capabilityKey,
+      reflected: l.reflected,
+      category: l.category,
+      amount: l.costKrwM,
+      amountUnit: AMOUNT_UNIT_KRW_M,
+      amountUnitConfirmed: true as const,
+      period: l.period,
+      endYear: l.endYear,
+      ...(l.subCategory ? { subCategory: l.subCategory } : {}),
+    }));
 }
 
 // ── S5 reflection action (explicit save of the capability selections) ────────
@@ -1424,34 +2094,63 @@ export function selectionPayload(lines: CapabilityCostLine[], sel: Readonly<Reco
 export type LineSaveState = "saved" | "unsaved" | null;
 
 /** Per capability line: reflected AND stored the same way = saved; any difference between the page and the stored entry = unsaved. */
-export function lineSaveStates(lines: CapabilityCostLine[], stored: unknown, sel: Readonly<Record<string, CostSelection>>): Record<string, LineSaveState> {
-  const entries = new Map((Array.isArray(stored) ? stored.filter(isCapabilityEntry) : []).map((e) => [e.capabilityKey, e]));
+export function lineSaveStates(
+  lines: CapabilityCostLine[],
+  stored: unknown,
+  sel: Readonly<Record<string, CostSelection>>,
+): Record<string, LineSaveState> {
+  const entries = new Map(
+    (Array.isArray(stored) ? stored.filter(isCapabilityEntry) : []).map((e) => [e.capabilityKey, e]),
+  );
   const out: Record<string, LineSaveState> = {};
   for (const l of lines) {
     const e = entries.get(l.capabilityKey);
     const savedReflected = e?.reflected === true;
-    const savedCategory = e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory) ? (e.category as CostCategory) : l.suggestedCategory;
+    const savedCategory =
+      e && CAPABILITY_COST_CATEGORIES.includes(e.category as CostCategory)
+        ? (e.category as CostCategory)
+        : l.suggestedCategory;
     const touched = !!sel[l.capabilityKey];
     const savedSub = e && validSubCategory(savedCategory, e.subCategory) ? e.subCategory : null;
     const savedPeriod = e?.period ?? "lumpsum";
     const periodChanged = (sel[l.capabilityKey]?.period ?? l.period) !== savedPeriod;
     const subChanged = (l.subCategory ?? null) !== (savedSub ?? null);
     const savedPeriodMatch = (sel[l.capabilityKey]?.period ?? l.period ?? "lumpsum") === savedPeriod;
-    if (l.reflected && savedReflected && l.category === savedCategory && !subChanged && !periodChanged && savedPeriodMatch) out[l.capabilityKey] = "saved";
-    else if (l.reflected !== savedReflected || (l.reflected && (l.category !== savedCategory || subChanged || !savedPeriodMatch)) || (touched && !e && l.reflected)) out[l.capabilityKey] = "unsaved";
+    if (
+      l.reflected &&
+      savedReflected &&
+      l.category === savedCategory &&
+      !subChanged &&
+      !periodChanged &&
+      savedPeriodMatch
+    )
+      out[l.capabilityKey] = "saved";
+    else if (
+      l.reflected !== savedReflected ||
+      (l.reflected && (l.category !== savedCategory || subChanged || !savedPeriodMatch)) ||
+      (touched && !e && l.reflected)
+    )
+      out[l.capabilityKey] = "unsaved";
     else out[l.capabilityKey] = null;
   }
   return out;
 }
-export const hasUnsavedReflection = (states: Record<string, LineSaveState>): boolean => Object.values(states).some((s) => s === "unsaved");
+export const hasUnsavedReflection = (states: Record<string, LineSaveState>): boolean =>
+  Object.values(states).some((s) => s === "unsaved");
 
 /** The partial-save body: ONLY business_case_lines (manual lines as held + capability selections). */
-export function reflectionBody(manual: Array<{ line: string }>, capLines: CapabilityCostLine[], sel: Readonly<Record<string, CostSelection>>): { business_case_lines: unknown[] } {
+export function reflectionBody(
+  manual: Array<{ line: string }>,
+  capLines: CapabilityCostLine[],
+  sel: Readonly<Record<string, CostSelection>>,
+): { business_case_lines: unknown[] } {
   return { business_case_lines: [...manual.filter((l) => l.line.trim()), ...selectionPayload(capLines, sel)] };
 }
 
 /** "N건 반영, 반영 합계 X백만원 — 투자비 전체 합계 Y백만원" */
-export function reflectionSummary(totals: Pick<InvestmentTotals, "reflectedCount" | "reflectedKrwM" | "grandKrwM">): string {
+export function reflectionSummary(
+  totals: Pick<InvestmentTotals, "reflectedCount" | "reflectedKrwM" | "grandKrwM">,
+): string {
   return `${totals.reflectedCount}건 반영, 반영 합계 ${formatKrwM(totals.reflectedKrwM)} — 투자비 전체 합계 ${formatKrwM(totals.grandKrwM)}`;
 }
 
@@ -1517,7 +2216,10 @@ export function unifiedInvestmentRows(
 }
 
 /** Footer of the unified list: the count of listed items (pending removals excluded) and the sum, which is investmentTotals.grandKrwM. */
-export function unifiedFooter(rows: UnifiedRow[], totals: Pick<InvestmentTotals, "grandKrwM"> & Partial<Pick<InvestmentTotals, "manualExcludedNeedsConfirm">>): { count: number; text: string } {
+export function unifiedFooter(
+  rows: UnifiedRow[],
+  totals: Pick<InvestmentTotals, "grandKrwM"> & Partial<Pick<InvestmentTotals, "manualExcludedNeedsConfirm">>,
+): { count: number; text: string } {
   const count = rows.filter((r) => r.kind === "manual" || !r.pendingRemoval).length;
   const excluded = totals.manualExcludedNeedsConfirm ?? 0;
   // Listed-but-excluded rows are named in the footer so the sum never silently covers fewer rows than shown.

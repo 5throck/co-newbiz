@@ -4,7 +4,7 @@
 import { useModalFocus } from "../../../lib/use-modal-focus.ts";
 import { api } from "../../../lib/api.ts";
 import { type CapabilityGapRow, summarizeGap } from "../../../lib/capability-gap.ts";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { useBrownfieldBase } from "./useBrownfieldBase.ts";
 import type { WebProposalResponse, UniRecoResponse } from "./types.ts";
 import { draftFromSaved, draftFromView, savePayload } from "./universeDraft.ts";
@@ -73,6 +73,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // 수정 모달 열기 — 매번 저장된 값으로 새로 채운다(이전에 취소한 미저장
   // 입력이 남아있지 않도록). 참고용 S3 역량 갭 힌트도 함께 불러온다.
   function openUniverseEditor() {
+    invalidateUniGen();
     setUniverseDraft(universeDraftFromSaved());
     setUniReco(null);
     setUniRecoApplied(false);
@@ -93,6 +94,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // 취소 — 입력값을 버리고 저장된 값으로 되돌린 뒤 모달을 닫는다. 저장 전까지는
   // 어떤 값도 반영되지 않는다(보기/수정 분리).
   function closeUniverseEditor() {
+    invalidateUniGen();
     setUniverseDraft(universeDraftFromSaved());
     setUniReco(null);
     setUniRecoApplied(false);
@@ -187,8 +189,15 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
 
   // 기회를 바꾸면 진행 중이던 수정을 닫는다 — 다른 기회의 미저장 입력이 새
   // 기회 폼에 남지 않도록.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset is deliberately keyed on the opportunity id without reading it (re-run on every opportunity switch) — the setters are stable useState identities
+  // Generation token: a response that resolves AFTER the editor was closed/reopened (or the
+  // opportunity switched) must not resurrect the closed panel (review finding #17).
+  const uniGenRef = useRef(0);
+  const invalidateUniGen = () => {
+    uniGenRef.current += 1;
+  };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset is deliberately keyed on the opportunity id without reading it (re-run on the opportunity switch) — the setters are stable useState identities
   useEffect(() => {
+    invalidateUniGen();
     setEditingUniverse(false);
     setUniReco(null);
     setUniRecoApplied(false);
@@ -217,6 +226,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   // ── D: 유니버스 선정 기준 초안 생성 ──
   async function generateUniReco() {
     if (!selected || uniBusy) return;
+    const gen = ++uniGenRef.current;
     setUniBusy(true);
     setError(null);
     try {
@@ -224,9 +234,11 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
         `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/universe-criteria-draft`,
         {},
       );
+      if (gen !== uniGenRef.current) return; // stale: the panel was closed/reopened meanwhile - drop the response
       setUniReco(res.data);
       setUniRecoApplied(false);
     } catch (err) {
+      if (gen !== uniGenRef.current) return; // stale failure too - do not surface it
       setError(err instanceof Error ? err.message : t("failedToGenerateTheDefinition"));
     } finally {
       setUniBusy(false);

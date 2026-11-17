@@ -348,6 +348,15 @@ describe("useBrownfieldUniverse wiring (source pins)", () => {
     expect(hook).toContain("UniverseDirectionFields");
     expect(hook).not.toContain("c.rationale");
   });
+  test("generation-token guard: a stale AI recommendation response cannot overwrite newer UI state (review fix 2026-11-17)", () => {
+    // Every editor-open/close and opportunity change bumps the token; the awaited
+    // generateUniReco continuation drops its result when the token has moved on.
+    expect(hook).toContain("uniGenRef = useRef(0)");
+    expect(hook).toContain("const gen = ++uniGenRef.current");
+    const bumpCount = (hook.match(/invalidateUniGen\(\)/g) ?? []).length;
+    expect(bumpCount).toBeGreaterThanOrEqual(3); // called on opp change / open editor / close editor
+    expect(hook).toContain("if (gen !== uniGenRef.current) return;");
+  });
 });
 
 describe("label rename — 목표 시장 정의 → 평가 대상 방향성 (§7.3)", () => {

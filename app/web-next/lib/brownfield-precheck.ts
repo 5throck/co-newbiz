@@ -16,16 +16,28 @@ export const SCREENING_VERDICT_KO: Record<string, string> = {
   insufficient: "근거 부족",
   pending: "미판정",
 };
+/** Catalog keys (stages.s67.shortlistSection.*) for UI rendering; SCREENING_VERDICT_KO stays the
+ *  record/prompt vocabulary for server briefs and the legacy precheck tab, not UI chrome. */
+export const SCREENING_VERDICT_LABEL_KEYS: Record<string, string> = {
+  confirmed: "verdictConfirmed",
+  probable: "verdictProbable",
+  partial: "verdictPartial",
+  unfulfilled: "verdictUnfulfilled",
+  insufficient: "verdictInsufficient",
+};
 
 /** 구버전 척도(pass/fail/na/waived/pending)를 새 척도로 정규화한다 — 기존에
  * 저장된 screening_json을 깨지 않고 척도를 전환하기 위함(읽기 시점 정규화). */
 export function normalizeVerdict(v: string | undefined | null): ScreeningVerdict {
   if (!v) return "pending";
   switch (v) {
-    case "pass": return "confirmed";
-    case "fail": return "unfulfilled";
+    case "pass":
+      return "confirmed";
+    case "fail":
+      return "unfulfilled";
     case "na":
-    case "waived": return "insufficient";
+    case "waived":
+      return "insufficient";
     default:
       return (SCREENING_VERDICT_KEYS as readonly string[]).includes(v) ? (v as ScreeningVerdict) : "pending";
   }
@@ -62,10 +74,15 @@ export function precheckRecommendation(states: Record<string, string>): { label:
 export function screeningVerdictChipClass(v: string | undefined): string {
   switch (normalizeVerdict(v)) {
     case "confirmed":
-    case "probable": return "status-green";
-    case "partial": return "status-amber";
-    case "unfulfilled": return "status-red";
-    case "insufficient": return "";
-    default: return "status-not-started";
+    case "probable":
+      return "status-green";
+    case "partial":
+      return "status-amber";
+    case "unfulfilled":
+      return "status-red";
+    case "insufficient":
+      return "";
+    default:
+      return "status-not-started";
   }
 }

@@ -118,7 +118,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const recorded = [
     ...(overall ? [`- overall not viable — ${overall.rationale.slice(0, 160)}`] : []),
     ...live.map(
-      (r) => `- ${r.shape}: ${r.viable ? "viable" : "not viable"} (${r.intent}) — ${r.rationale.slice(0, 160)}`,
+      (r) => `- ${r.shape}: ${r.viable ? "viable" : "not viable"} (${r.intent || "-"}) — ${r.rationale.slice(0, 160)}`,
     ),
   ];
   const capability = opp.capability_gap_json ? s3CapabilityLines(opp.capability_gap_json).lines : [];

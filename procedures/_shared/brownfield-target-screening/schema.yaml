@@ -71,8 +71,10 @@ steps:
       decision of 2026-11-08; overall viability first per ADR-0201): per Short
       List candidate (or per opportunity when the shapes are candidate-
       independent), first record whether any deal shape is viable at all
-      (overall viability). When viable, record the viable deal shapes — M&A /
-      JV / strategic investment / minority stake / partnership / R&BD / CVC —
+      (overall viability). When viable, record the viable deal shapes —
+      full_acquisition / majority_stake / spv / holdco_route / joint_venture /
+      minority_stake / license_in / co_development (the DEAL_SHAPES vocabulary
+      of opportunity-deal-shape.repository.ts) —
       with intent and rationale, judged against the ranked survivors of step 3.
       When not viable, record one overall not-viable verdict instead of shape
       rows. Written through POST /api/opportunities/{id}/deal-shapes (MCP

@@ -210,6 +210,18 @@ describe("view logic", () => {
     expect(V.formFromLive(data([row("spv", true), row("joint_venture", true)])).intent).toBe("integration");
     expect(V.formFromLive(data([]))).toEqual(V.EMPTY_DEAL_SHAPE_FORM);
   });
+  test("formIsEmpty gates the 'recorded evaluation loaded' note (review fix 2026-11-17)", () => {
+    // A record with no viable shapes and no drafts parses to the blank form → no misleading "loaded" note on edit.
+    expect(V.formIsEmpty(V.formFromLive(data([])))).toBe(true);
+    expect(V.formIsEmpty(V.formFromLive(notViable()))).toBe(false); // a recorded rationale is content
+    expect(V.formIsEmpty(V.formFromLive(data([row("spv", true)])))).toBe(false);
+    expect(V.formIsEmpty(V.EMPTY_DEAL_SHAPE_FORM)).toBe(true);
+    // any user-entered content makes the form non-empty
+    expect(V.formIsEmpty({ ...V.EMPTY_DEAL_SHAPE_FORM, viable: false })).toBe(false);
+    expect(V.formIsEmpty({ ...V.EMPTY_DEAL_SHAPE_FORM, rationale: "x" })).toBe(false);
+    expect(V.formIsEmpty({ ...V.EMPTY_DEAL_SHAPE_FORM, shapes: ["spv"] })).toBe(false);
+    expect(V.formIsEmpty({ ...V.EMPTY_DEAL_SHAPE_FORM, drafts: { spv: { rationale: "r" } } })).toBe(false);
+  });
   test("formFromRecommendation fills the whole form; a null verdict fills nothing", () => {
     const reco = {
       overall_viable: true,

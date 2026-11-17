@@ -15,10 +15,22 @@ import {
   dirtyIndicatorText,
   filledComponentCount,
   GF_TAB_KEYS,
-  GF_TAB_LABELS,
   parseGfTab,
+  simRerunNeeded,
+  statusParts,
   tabMarker,
 } from "../../app/web-next/lib/greenfield-tabs.ts";
+
+// Catalog-backed test translator: resolves stages.s5.tabs.* keys exactly like the render sites do.
+const tabs = (await import("../../app/web-next/locales/ko.json")).default as unknown as {
+  stages: { s5: { tabs: Record<string, string> } };
+};
+const TABS = tabs.stages.s5.tabs;
+const tf = (key: string, values: Record<string, string | number> = {}): string => {
+  let out: string = TABS[key] ?? "";
+  for (const [k, v] of Object.entries(values ?? {})) out = out.replaceAll(`{${k}}`, String(v));
+  return out;
+};
 
 const WEB = join(import.meta.dirname, "../../app/web-next");
 const stage = normSrc(readFileSync(join(WEB, "components/stages/GreenfieldStage.tsx"), "utf8"));
@@ -26,14 +38,9 @@ const tabNav = readFileSync(join(WEB, "components/TabNav.tsx"), "utf8");
 
 describe("tab list and URL parser", () => {
   test("six tabs, exact labels, dependency order", () => {
-    expect(GF_TAB_KEYS.map((k) => GF_TAB_LABELS[k])).toEqual([
-      "진출전략",
-      "필요 역량",
-      "인력 운영 계획",
-      "투자비",
-      "투자 시뮬레이션",
-      "검토/확정",
-    ]);
+    expect(GF_TAB_KEYS).toHaveLength(6); // labels resolve from stages.s5.tabs at the render site
+    expect(tf("entry")).toBe("진출전략");
+    expect(tf("review")).toBe("검토");
     expect([...GF_TAB_KEYS]).toEqual(["entry", "capability", "staffing", "investment", "simulation", "review"]);
   });
   test("parseGfTab: known keys pass, unknown/empty/null fall back to entry, #suffix ignored", () => {
@@ -49,14 +56,14 @@ describe("tab list and URL parser", () => {
 describe("aggregateDirty", () => {
   test("empty and all-false flags", () => {
     expect(aggregateDirty({}).count).toBe(0);
-    expect(dirtyIndicatorText(aggregateDirty({ entry: false }))).toBeNull();
+    expect(dirtyIndicatorText(aggregateDirty({ entry: false }), tf)).toBeNull();
   });
   test("counts sections, lists tab labels in tab order", () => {
     const a = aggregateDirty({ review: true, entry: true, staffing: true, capability: false });
     expect(a.count).toBe(3);
     expect(a.tabs).toEqual(["entry", "staffing", "review"]);
-    expect(a.labels).toEqual(["진출전략", "인력 운영 계획", "검토/확정"]);
-    expect(dirtyIndicatorText(a)).toBe("저장하지 않은 변경 3곳");
+    expect(a.tabs.map((k) => tf(k))).toEqual(["진출전략", "인력 운영 계획", "검토"]);
+    expect(dirtyIndicatorText(a, tf)).toBe("저장하지 않은 변경 3곳");
   });
 });
 
@@ -68,7 +75,7 @@ describe("buildSourceSummary", () => {
       manualCount: 3,
       needsConfirmCount: 1,
     });
-    expect(c.map((x) => x.text)).toEqual([
+    expect(c.map((x) => tf(x.textKey, x.values))).toEqual([
       "역량 2건 반영",
       "인력 운영 계획 인건비 1,234.5백만원",
       "수동 항목 3건",
@@ -76,8 +83,11 @@ describe("buildSourceSummary", () => {
     ]);
     expect(c.map((x) => x.tab)).toEqual(["capability", "staffing", "investment", "investment"]);
     expect(
-      buildSourceSummary({ reflectedCapabilityCount: 0, staffingKrwM: 0, manualCount: 0, needsConfirmCount: 0 })[1]
-        .text,
+      tf(
+        buildSourceSummary({ reflectedCapabilityCount: 0, staffingKrwM: 0, manualCount: 0, needsConfirmCount: 0 })[1]
+          .textKey,
+        { amount: "0" },
+      ),
     ).toBe("인력 운영 계획 인건비 0백만원");
   });
 });
@@ -92,18 +102,35 @@ describe("completion checklist", () => {
   test("status precedence: dirty > empty > issues > filled", () => {
     const rows = buildCompletionChecklist({ ...base, capability: { filled: true, dirty: true, issues: 3 } });
     expect(rows.map((r) => r.status)).toEqual(["filled", "dirty", "empty", "issues"]);
-    expect(rows.map((r) => r.statusText)).toEqual(["채움", "저장 전 변경", "미입력", "확인 필요 2건"]);
+    expect(rows.map((r) => tf(r.statusTextKey, r.statusTextValues))).toEqual([
+      "채움",
+      "저장 전 변경",
+      "미입력",
+      "확인 필요 2건",
+    ]);
     expect(rows.map((r) => r.tab)).toEqual(["entry", "capability", "staffing", "investment"]);
   });
   test("counter N/4 counts components with content", () => {
     expect(filledComponentCount(buildCompletionChecklist(base))).toBe(3);
   });
   test("tab markers: dirty, issues, done, none", () => {
-    expect(tabMarker({ status: "dirty", issues: 0 })).toEqual({ kind: "dirty", text: "저장 전 변경" });
-    expect(tabMarker({ status: "issues", issues: 4 })).toEqual({ kind: "issues", text: "확인 필요 4" });
-    expect(tabMarker({ status: "filled", issues: 0 }).kind).toBe("done");
-    expect(tabMarker({ status: "empty", issues: 0 }).kind).toBe("none");
-    expect(tabMarker(null).kind).toBe("none");
+    expect(tabMarker({ status: "dirty", issues: 0 }, tf)).toEqual({ kind: "dirty", text: "저장 전 변경" });
+    expect(tabMarker({ status: "issues", issues: 4 }, tf)).toEqual({ kind: "issues", text: "확인 필요 4" });
+    expect(tabMarker({ status: "filled", issues: 0 }, tf).kind).toBe("done");
+    expect(tabMarker({ status: "empty", issues: 0 }, tf).kind).toBe("none");
+    expect(tabMarker(null, tf).kind).toBe("none");
+  });
+  test("statusParts returns catalog keys for all four statuses", () => {
+    for (const st of ["dirty", "issues", "filled", "empty"] as const) {
+      const p = statusParts(st, 7);
+      expect(TABS[p.key]).toBeTruthy();
+    }
+  });
+  test("simRerunNeeded: server stale or unsaved plan edits both demand a rerun (finding #4)", () => {
+    expect(simRerunNeeded(true, false)).toBe(true);
+    expect(simRerunNeeded(false, true)).toBe(true);
+    expect(simRerunNeeded(true, true)).toBe(true);
+    expect(simRerunNeeded(false, false)).toBe(false);
   });
 });
 

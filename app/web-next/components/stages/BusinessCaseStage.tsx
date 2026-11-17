@@ -37,7 +37,7 @@ import { S8PartHeader } from "./S8PartHeader.tsx";
 import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
 import { api, ApiError } from "../../lib/api.ts";
 import { reconfirmErrorText } from "../../lib/reconfirm-view.ts";
-import { irrGuardBand, IRR_GUARD_CHIP_LABEL, IRR_GUARD_DIAGNOSTIC } from "../../lib/irr-guard.ts";
+import { irrGuardBand, IRR_GUARD_DIAGNOSTIC_KEY, IRR_GUARD_LABEL_KEYS } from "../../lib/irr-guard.ts";
 import type { RatioGuardFlag } from "../../lib/share-guard.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { GateDecisionJump, GateDecisionPanel } from "../GateDecisionPanel.tsx";
@@ -827,7 +827,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         {tab === "bep" && <BepAnalysisPanel projectId={projectId} />}
 
         {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
-        {tab === "targets" && targets.length === 0 && (
+        {tab === "targets" && data && targets.length === 0 && (
           <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)] mb-3" role="note">
             {t("thisProjectHasNoTarget")}
           </p>
@@ -944,16 +944,19 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                       {t("case")}
                     </th>
                     <th scope="col">{t("calculationEngine")}</th>
-                    <th scope="col" title={t("howFarTheFadedDcf")}>
+                    <th scope="col" aria-label={`${t("structure")} — ${t("howFarTheFadedDcf")}`}>
                       {t("structure")}
                       <span className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-normal block">
                         {t("fadedDcfVsMedian")}
                       </span>
                     </th>
-                    <th scope="col" title={t("theGeneratorAppliesTheSame")}>
+                    <th
+                      scope="col"
+                      aria-label={`${t("assumedEvRevenueMultipleEntry")} — ${t("theGeneratorAppliesTheSame")}`}
+                    >
                       {t("assumedEvRevenueMultipleEntry")}
                     </th>
-                    <th scope="col" title={t("whichRevenueBasisThisTarget")}>
+                    <th scope="col" aria-label={`${t("evaluationCriteria")} — ${t("whichRevenueBasisThisTarget")}`}>
                       {t("evaluationCriteria")}
                     </th>
                     <th scope="col" className="min-w-[calc(var(--space-8)*3)]">
@@ -1004,14 +1007,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                               )}
                             </>
                           ) : tgt.recommended ? (
-                            <span className="status-chip status-amber" title={t("noFadedDcfIsRecorded")}>
+                            <span className="status-chip status-amber">
                               <span aria-hidden="true">⚠</span> {t("no")}
+                              <span className="sr-only">{t("noFadedDcfIsRecorded")}</span>
                             </span>
                           ) : (
                             // biome-ignore lint/a11y/useAriaPropsSupportedByRole: the span's accessible name is intentional — the visible N/A plus the title tooltip stay unchanged (DOM/styling shared with the sibling cells, not this batch)
-                            <span aria-label={t("notApplicableNoRecord")} title={t("noFadedDcfIsRecorded2")}>
-                              N/A
-                            </span>
+                            <span aria-label={t("notApplicableNoRecord")}>N/A</span>
                           )}
                           {tgt.structureMismatch && (
                             <span className="status-chip status-amber block mt-1" role="note">
@@ -1341,9 +1343,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
             {!greenfield && targets.length > 0 ? (
               <>
                 {t("brownfieldRequiredCapabilityJudgementHappens")}{" "}
-                <a href={`/projects/${projectId}/dd`} className="text-[color:var(--accent)] font-bold">
+                <Link href={`/projects/${projectId}/dd`} className="text-[color:var(--accent)] font-bold">
                   {t("requiredCapabilityVerificationTab")}
-                </a>
+                </Link>
               </>
             ) : (
               <>
@@ -1560,9 +1562,9 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                             <span
                                               data-testid={`irr-guard-chip-${band}`}
                                               className="status-chip status-amber mt-1 block w-fit max-w-full whitespace-normal [overflow-wrap:anywhere]"
-                                              title={IRR_GUARD_DIAGNOSTIC}
+                                              title={t(IRR_GUARD_DIAGNOSTIC_KEY)}
                                             >
-                                              {IRR_GUARD_CHIP_LABEL[band]} {t("base2")}{" "}
+                                              {tr(IRR_GUARD_LABEL_KEYS[band])} {t("base2")}{" "}
                                               {irrThresholds
                                                 ? `${(irrThresholds[band === "extreme" ? "flag" : "caution"] * 100).toFixed(0)}%`
                                                 : band === "extreme"
@@ -1655,47 +1657,58 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                   </td>
                                 )}
                                 <td className="align-middle">
-                                  {canAct &&
-                                    (() => {
-                                      const rowCtx = `${VARIANT_LABEL(tr)[c.variant] ?? c.variant} · ${SCEN_LABEL(tr)[c.scenario ?? s] ?? c.scenario ?? s}`;
-                                      return (
-                                        <div
-                                          className="flex items-center justify-end gap-1 whitespace-nowrap"
-                                          data-testid="scenario-row-actions"
-                                          data-case-id={c.id}
+                                  {(() => {
+                                    if (!canAct)
+                                      return greenfield ? (
+                                        <button
+                                          type="button"
+                                          className="btn-ghost btn-sm whitespace-nowrap"
+                                          aria-label={t("viewP1", { p1: c.name })}
+                                          onClick={() => startView(c)}
+                                          data-testid="scenario-row-view"
                                         >
-                                          {!c.adopted && (
-                                            <button
-                                              type="button"
-                                              className="btn-ghost btn-sm whitespace-nowrap font-semibold text-[color:var(--accent)]"
-                                              disabled={busy}
-                                              aria-label={t("p1Adopt", { p1: rowCtx })}
-                                              onClick={() => adopt(c.id, c.scenario, c.variant)}
-                                            >
-                                              {t("adopt")}
-                                            </button>
-                                          )}
-                                          <RowMenu
-                                            label={t("p1WorkOn", { p1: rowCtx })}
-                                            items={[
-                                              {
-                                                key: "lines",
-                                                label: greenfield ? t("viewLines") : t("editLine"),
-                                                onSelect: () => (greenfield ? startView(c) : startEdit(c)),
-                                              },
-                                              {
-                                                key: "delete",
-                                                label: tc("delete"),
-                                                danger: true,
-                                                separatorBefore: true,
-                                                disabled: busy,
-                                                onSelect: () => remove(c),
-                                              },
-                                            ]}
-                                          />
-                                        </div>
-                                      );
-                                    })()}
+                                          {t("viewLines")}
+                                        </button>
+                                      ) : null;
+                                    const rowCtx = `${VARIANT_LABEL(tr)[c.variant] ?? c.variant} · ${SCEN_LABEL(tr)[c.scenario ?? s] ?? c.scenario ?? s}`;
+                                    return (
+                                      <div
+                                        className="flex items-center justify-end gap-1 whitespace-nowrap"
+                                        data-testid="scenario-row-actions"
+                                        data-case-id={c.id}
+                                      >
+                                        {!c.adopted && (
+                                          <button
+                                            type="button"
+                                            className="btn-ghost btn-sm whitespace-nowrap font-semibold text-[color:var(--accent)]"
+                                            disabled={busy}
+                                            aria-label={t("p1Adopt", { p1: rowCtx })}
+                                            onClick={() => adopt(c.id, c.scenario, c.variant)}
+                                          >
+                                            {t("adopt")}
+                                          </button>
+                                        )}
+                                        <RowMenu
+                                          label={t("p1WorkOn", { p1: rowCtx })}
+                                          items={[
+                                            {
+                                              key: "lines",
+                                              label: greenfield ? t("viewLines") : t("editLine"),
+                                              onSelect: () => (greenfield ? startView(c) : startEdit(c)),
+                                            },
+                                            {
+                                              key: "delete",
+                                              label: tc("delete"),
+                                              danger: true,
+                                              separatorBefore: true,
+                                              disabled: busy,
+                                              onSelect: () => remove(c),
+                                            },
+                                          ]}
+                                        />
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
                             );
@@ -1810,7 +1823,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </>
         )}
 
-        {data && data.cases.length === 0 && (
+        {data && data.cases.length === 0 && (tab === "overview" || tab === "scenarios") && (
           <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
             {t("noBusinessCaseRegisteredRun")}
           </p>

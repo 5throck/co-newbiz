@@ -42,6 +42,9 @@ export function DealShapeForm(p: {
   const hintId = `${uid}-disabled-hint`;
   const describedBy = viable ? undefined : hintId;
   const problemId = p.problemText ? `${uid}-problem` : undefined;
+  // Finding #14: when the problem is the intent, the select must point at the problem alert too.
+  const intentDescribedBy =
+    [describedBy, p.problem === "intent" ? problemId : undefined].filter(Boolean).join(" ") || undefined;
   const invalid = (key: string) => (p.problem === key ? true : undefined);
   const toggleShape = (shape: string, on: boolean) =>
     p.onForm({ ...form, shapes: on ? [...form.shapes, shape] : form.shapes.filter((s) => s !== shape) });
@@ -131,7 +134,7 @@ export function DealShapeForm(p: {
               disabled={!viable}
               aria-required={viable ? "true" : undefined}
               aria-invalid={invalid("intent")}
-              aria-describedby={describedBy}
+              aria-describedby={intentDescribedBy}
               value={form.intent}
               onChange={(e) => p.onForm({ ...form, intent: e.target.value })}
             >
@@ -179,6 +182,7 @@ export function DealShapeForm(p: {
                 className="sizing-new-input w-full"
                 value={form.evidenceRef}
                 aria-invalid={invalid("evidenceTooLong")}
+                aria-describedby={invalid("evidenceTooLong") ? problemId : undefined}
                 onChange={(e) => p.onForm({ ...form, evidenceRef: e.target.value })}
               />
             </label>
@@ -214,6 +218,7 @@ export function DealShapeForm(p: {
                     className="sizing-new-input w-full"
                     value={d.evidenceRef}
                     aria-invalid={d.evidenceRef.trim().length > EVIDENCE_MAX ? true : undefined}
+                    aria-describedby={d.evidenceRef.trim().length > EVIDENCE_MAX ? problemId : undefined}
                     onChange={(e) => setDraft(s, { evidenceRef: e.target.value })}
                   />
                 </label>
