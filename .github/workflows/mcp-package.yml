@@ -42,7 +42,9 @@ jobs:
           # Fail on any path outside the allowlist: the package must ship only
           # the MCP relay subtree — no db/, app/, scripts/ or stray files.
           node -e '
-            const { files } = JSON.parse(require("fs").readFileSync("/tmp/pack.json", "utf8"));
+            const parsed = JSON.parse(require("fs").readFileSync("/tmp/pack.json", "utf8"));
+            const pack = Array.isArray(parsed) ? parsed[0] : parsed;
+            const { files } = pack;
             const paths = files.map((f) => f.path);
             const entryFiles = ["index.ts", "define.ts", "registry.ts", "stage-guides.ts", "stage-guides.generated.ts"];
             const offenders = paths.filter((p) => {
