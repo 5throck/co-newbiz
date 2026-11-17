@@ -15,6 +15,7 @@ import {
   EVIDENCE_MAX,
   RATIONALE_MAX,
   buildDealShapeBody,
+  buildDealShapeSetBody,
   dealShapeErrorKind,
   formFromRow,
   shapeVerdictRows,
@@ -507,7 +508,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
   const load = useCallback(async () => {
     try {
       const r = await api.get<DealShapeData>(url);
-      setData(r.data);
+      setData({ ...r.data, history: r.data.history.filter((h) => h.shape) }); // overall rows have no shape (ADR-0201)
       setLoadError(null);
     } catch (e) {
       setData(null);
@@ -529,7 +530,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
     if (found) return;
     setBusy(true);
     try {
-      await api.post(url, buildDealShapeBody(form));
+      await api.post(url, data ? buildDealShapeSetBody(form, data) : buildDealShapeBody(form));
       setForm(EMPTY_DEAL_SHAPE_FORM);
       setLoadedFromRow(false);
       setNotice(t("recorded"));

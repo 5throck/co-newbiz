@@ -1,4 +1,4 @@
-// @version 1.0.3 (deal-shape tools re-homed to the S7 deal-shape-evaluation activity; record write refused with 409 deal_shape_not_open before S7 / off brownfield). 1.0.2: ADR-0187 P0: S3 synergy-red-team and capability-register-* activity ids mapped onto existing tools
+// @version 1.0.4 (ADR-0201: deal-shape record/get are overall-viability-first with live_token). 1.0.3: (deal-shape tools re-homed to the S7 deal-shape-evaluation activity; record write refused with 409 deal_shape_not_open before S7 / off brownfield). 1.0.2: ADR-0187 P0: S3 synergy-red-team and capability-register-* activity ids mapped onto existing tools
 /**
  * Stage tools S1-S12 — ADR-0154 §4, design §5 (Wave M M-2).
  *
@@ -321,7 +321,7 @@ const SPECS: readonly RouteToolSpec[] = [
     activities: ["deal-shape-evaluation"],
     artifacts: ["stage:S7:4"],
     description:
-      "The opportunity-scope S7 deal-shape evaluation (brownfield only; hosted by target screening): live human verdicts (one per shape), superseded history, shapes not yet evaluated, and the live viable count that kill criterion #9 reads (null = nothing recorded, which reads unassessed).",
+      "The opportunity-scope S7 deal-shape evaluation (brownfield only; hosted by target screening), overall viability first: verdict (unassessed | not_viable | viable), the live overall row or the live viable shape rows, superseded history, unselected shapes, the live_token a record call must echo, and the live viable count that kill criterion #9 reads (null = nothing recorded, which reads unassessed; an overall not-viable verdict reads 0). Call this BEFORE record_deal_shape_evaluation to get live_token.",
   },
   {
     name: "record_deal_shape_evaluation",
@@ -330,11 +330,11 @@ const SPECS: readonly RouteToolSpec[] = [
     path: "/api/opportunities/{opportunityId}/deal-shapes",
     body: "required",
     bodyHint:
-      "{shape: full_acquisition | majority_stake | spv | holdco_route | joint_venture | minority_stake | license_in | co_development, intent: integration | capability_access, viable: boolean, rationale: string (required), evidence_ref?: string}",
+      "Not viable: {viable: false, rationale: string (required), evidence_ref?: string, live_token: string} (no shape, no intent). Viable: {viable: true, intent: integration | capability_access, shapes: [{shape: full_acquisition | majority_stake | spv | holdco_route | joint_venture | minority_stake | license_in | co_development, rationale: string (required), evidence_ref?: string}] (1-8 unique shapes), live_token: string}. live_token comes from get_deal_shape_evaluations.",
     activities: ["deal-shape-evaluation"],
     artifacts: ["stage:S7:4"],
     description:
-      "Record ONE deal-shape verdict (viable or not, with its written rationale) on the opportunity's S7 deal-shape evaluation as the calling user - it is the data source of kill criterion #9 (brownfield only). The write is refused with 409 deal_shape_not_open before the opportunity reaches S7 or when its current route decision is not brownfield. Record only a verdict the user has explicitly given you for that shape (shape, intent, viable and rationale as they stated them); never infer viability from scores, route recommendations, advisory output or your own draft, and never fill unevaluated shapes in on your own. Re-recording a shape supersedes its live verdict (history is kept).",
+      "Record the overall deal-shape verdict on the opportunity's S7 deal-shape evaluation as the calling user - it is the data source of kill criterion #9 (brownfield only). Overall viability comes first: not viable needs one rationale only; viable needs the shape(s), the one intent and a rationale per shape. A write REPLACES the whole live set (history is kept), so call get_deal_shape_evaluations first and echo its live_token; a stale or missing token is refused with 409 deal_shape_stale. The write is also refused with 409 deal_shape_not_open before the opportunity reaches S7 or when its current route decision is not brownfield. Record only the overall verdict the user has explicitly given you and, for viable, only the shapes the user named, with the intent and rationales as they stated them; never infer viability from scores, route recommendations, advisory output, the recommend route or your own draft, and never add shapes the user did not select.",
   },
   {
     name: "get_route_advisory",
