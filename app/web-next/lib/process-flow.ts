@@ -115,7 +115,7 @@ export const STAGES: StageDefinition[] = [
     name: "대상 선정",
     sequence: 7,
     objective:
-      "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)",
+      "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행한다)",
     applicableTracks: ["brownfield"],
     gateIds: ["target_screening"],
     // v2.20.0: the deal-shape evaluation is declared in the spec as a non-blocking artifact (kill criterion #9 carries the RECYCLE signal).
@@ -131,7 +131,7 @@ export const STAGES: StageDefinition[] = [
     name: "사업성 분석",
     sequence: 8,
     objective:
-      "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다",
+      "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 최종 후보 목록 대상별 밸류에이션을 정량화해 비교·선정한다",
     applicableTracks: ["all"],
     gateIds: ["fs"],
     requiredArtifacts: [
@@ -147,7 +147,7 @@ export const STAGES: StageDefinition[] = [
     name: "실사·검증",
     sequence: 9,
     objective:
-      "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)",
+      "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 최종 후보 목록 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)",
     applicableTracks: ["all"],
     gateIds: ["dd"],
     requiredArtifacts: ["DD 체크리스트 판정(필수 항목 해소)"],
@@ -746,7 +746,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       (t) => t.status !== "shortlisted" && !(t.status === "excluded" && t.exclusion_reason),
     );
     if (unresolved.length > 0) {
-      blockers.push(`판정 대기 후보 ${unresolved.length}건 — Short List 승격 또는 제외 사유 기록 필요`);
+      blockers.push(`판정 대기 후보 ${unresolved.length}건 — 최종 후보 목록 심사 종료 또는 제외 사유 기록 필요`);
       missing.push(blocker("s7.candidate_verdict"));
     }
     // Wave F-6: a shortlisted candidate needs screening evidence (an excluded
@@ -756,7 +756,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
       const noEvidence = targets.filter((t) => t.status === "shortlisted" && !hasScreeningEvidence(t));
       if (noEvidence.length > 0) {
         blockers.push(
-          `스크리닝 근거가 기록되지 않은 Short List 후보 ${noEvidence.length}건 — ${noEvidence
+          `스크리닝 근거가 기록되지 않은 최종 후보 목록 후보 ${noEvidence.length}건 — ${noEvidence
             .slice(0, 3)
             .map((t) => t.company_name)
             .join(", ")} (후보별 근거 저장 필요)`,
@@ -849,7 +849,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
         )
         .all(project.source_opportunity_id) as Array<{ id: string; company_name: string }>;
       if (targets.length === 0) {
-        blockers.push("Short List 대상이 없습니다 — S7 Short List를 확인하세요");
+        blockers.push("최종 후보 목록 대상이 없습니다 — S7 최종 후보 목록을 확인하세요");
         missing.push(blocker("s8.business_case_per_target"));
         return { complete: false, blockers, missing };
       }
@@ -866,7 +866,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
           )
           .get(project.id, target.id) as { id: string; inputs_json: string | null } | undefined;
         if (!model) {
-          blockers.push(`대상 [${target.company_name}]의 Business Case가 필요합니다 (Short List 대상별 분석)`);
+          blockers.push(`대상 [${target.company_name}]의 Business Case가 필요합니다 (최종 후보 목록 대상별 분석)`);
           missing.push(blocker("s8.business_case_per_target"));
           continue;
         }
@@ -907,7 +907,7 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
             .query("SELECT status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
             .get(selectedTargetId, project.source_opportunity_id ?? "") as { status: string } | undefined;
           if (sel?.status !== "shortlisted") {
-            blockers.push("선정된 대상이 Short List에서 제외되었습니다 — 대상을 재선정하세요");
+            blockers.push("선정된 대상이 최종 후보 목록에서 제외되었습니다 — 대상을 재선정하세요");
             missing.push(blocker("s8.target_selection_record"));
           }
         }
@@ -1555,6 +1555,41 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
  *  - fs / dd          S8 / S9
  *  - entity_ic / group_ic  S10 (S11 itself is completed BY the IC approvals)
  */
+/**
+ * ADR-0202 (owner decision 2026-11-17, N1): at the brownfield pre_fs and target_screening
+ * gates, S6 target-evaluation verdicts still marked `ai_draft` (a person has not reviewed
+ * them) count as INCOMPLETE review items and are reported as gate prerequisite gaps — the
+ * GO is refused (409 gate_prerequisites_incomplete) instead of silently passing.
+ *
+ * The gap is a machine-readable token, NOT localized text: gateGoPrerequisiteGaps strings
+ * are already user-facing, but the i18n rules forbid new Korean in .ts files, so the UI
+ * (GateDecisionPanel) translates `ai_draft_review:<n>` via the locale JSON key
+ * `components.gateDecision.gapAiDraftReview` and falls back to the raw token elsewhere.
+ *
+ * The gap does NOT auto-clear: only a person's save (recordEvalVerdict, human) or the
+ * accept-rule flow makes the verdict `human`. `auto_rule` verdicts are deterministic
+ * checks and never block.
+ *
+ * Returns null when the count is 0 (no gap).
+ */
+export const AI_DRAFT_REVIEW_GAP_PREFIX = "ai_draft_review:";
+
+export function pushAiDraftReviewGap(opportunityId: string, gaps: string[], db = getDb()): void {
+  const row = db
+    .query(
+      `SELECT COUNT(*) AS n
+         FROM brownfield_target_eval_state s
+         JOIN brownfield_target t ON t.id = s.brownfield_target_id
+        WHERE t.opportunity_id = ?
+          AND s.verdict_source = 'ai_draft'
+          AND s.status <> 'pending'
+          AND t.status <> 'excluded'`,
+    )
+    .get(opportunityId) as { n: number } | null;
+  const n = row?.n ?? 0;
+  if (n > 0) gaps.push(`${AI_DRAFT_REVIEW_GAP_PREFIX}${n}`);
+}
+
 export function gateGoPrerequisiteGaps(entity: ProcessEntity, gate: GateId): string[] {
   const ev = evaluateProcess(entity);
   const stageName = (id: StageId) => `${id} ${STAGES.find((s) => s.id === id)?.name ?? ""}`.trim();
@@ -1570,11 +1605,18 @@ export function gateGoPrerequisiteGaps(entity: ProcessEntity, gate: GateId): str
     case "pre_fs":
       need(["S4"]);
       if (ev.track === "greenfield") need(["S5"]);
-      else if (ev.track === "brownfield") need(["S6"]);
+      else if (ev.track === "brownfield") {
+        need(["S6"]);
+        // ADR-0202: live AI-draft verdicts a person has not reviewed are INCOMPLETE review items.
+        // auto_rule verdicts are deterministic checks and never block (ADR-0200 §4.1).
+        pushAiDraftReviewGap(entity.id, gaps);
+      }
       break;
     case "target_screening":
       if (ev.track !== "brownfield") gaps.push("brownfield 트랙 결정(S4 route_decision)이 필요합니다");
       need(["S7"]);
+      // ADR-0202: re-checked here — S7 consumes the S6 verdicts.
+      if (ev.track === "brownfield") pushAiDraftReviewGap(entity.id, gaps);
       break;
     case "fs":
       need(["S8"]);

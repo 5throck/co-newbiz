@@ -766,11 +766,25 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               active={primaryKeyOfS8Tab(tab) ?? tab}
               onSelect={(k) => setTab(k === "financial" ? "overview" : k)}
               tabs={[
-                { key: "goals", label: t("businessGoals") }, // INTERIM-WORDING
-                { key: "technical", label: t("technicalFeasibility") }, // INTERIM-WORDING
-                { key: "financial", label: t("financialFeasibility") }, // INTERIM-WORDING
-                ...(targets.length > 0 ? [{ key: "targets", label: t("targetComparisonAndSelection") }] : []),
-                { key: "decision", label: tc("decision") },
+                { key: "goals", label: t("businessGoals"), id: "s8-tab-goals", panelId: "s8-panel-goals" }, // INTERIM-WORDING
+                {
+                  key: "technical",
+                  label: t("technicalFeasibility"),
+                  id: "s8-tab-technical",
+                  panelId: "s8-panel-technical",
+                }, // INTERIM-WORDING
+                { key: "financial", label: t("financialFeasibility"), id: "s8-tab-financial" }, // INTERIM-WORDING
+                ...(targets.length > 0
+                  ? [
+                      {
+                        key: "targets",
+                        label: t("targetComparisonAndSelection"),
+                        id: "s8-tab-targets",
+                        panelId: "s8-panel-targets",
+                      },
+                    ]
+                  : []),
+                { key: "decision", label: tc("decision"), id: "s8-tab-decision", panelId: "s8-panel-decision" },
               ]}
             />
             {partOfS8Tab(tab) === "financial" && (
@@ -780,13 +794,38 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 active={tab}
                 onSelect={setTab}
                 tabs={[
-                  { key: "overview", label: t("explanationGenerationRecommendation") },
-                  { key: "scenarios", label: t("scenarioComparison") },
-                  { key: "wacc", label: "WACC" },
-                  { key: "financial-analysis", label: t("targetCompany") },
-                  { key: "bep", label: t("financialAnalysis") },
-                  { key: "params", label: t("parametersAndSnapshot") },
-                  { key: "target-costing", label: t("targetCosting") },
+                  {
+                    key: "overview",
+                    label: t("explanationGenerationRecommendation"),
+                    id: "s8fin-tab-overview",
+                    panelId: "s8fin-panel-overview",
+                  },
+                  {
+                    key: "scenarios",
+                    label: t("scenarioComparison"),
+                    id: "s8fin-tab-scenarios",
+                    panelId: "s8fin-panel-scenarios",
+                  },
+                  { key: "wacc", label: "WACC", id: "s8fin-tab-wacc", panelId: "s8fin-panel-wacc" },
+                  {
+                    key: "financial-analysis",
+                    label: t("targetCompany"),
+                    id: "s8fin-tab-financial-analysis",
+                    panelId: "s8fin-panel-financial-analysis",
+                  },
+                  { key: "bep", label: t("financialAnalysis"), id: "s8fin-tab-bep", panelId: "s8fin-panel-bep" },
+                  {
+                    key: "params",
+                    label: t("parametersAndSnapshot"),
+                    id: "s8fin-tab-params",
+                    panelId: "s8fin-panel-params",
+                  },
+                  {
+                    key: "target-costing",
+                    label: t("targetCosting"),
+                    id: "s8fin-tab-target-costing",
+                    panelId: "s8fin-panel-target-costing",
+                  },
                 ]}
               />
             )}
@@ -798,33 +837,53 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </p>
         )}
 
-        {tab === "goals" && <S8PartHeader part="goals" />}
+        {tab === "goals" && (
+          <div role="tabpanel" id="s8-panel-goals" aria-labelledby="s8-tab-goals">
+            <S8PartHeader part="goals" />
+            <GoalsPanel
+              projectId={projectId}
+              data={goalsData}
+              canAct={canAct}
+              onChanged={onGoalsChanged}
+              loadError={goalsLoadError}
+            />
+            {/* IA cleanup 2026-10-14: ONE attainment table (was one per scenario section),
+              in its single home — the goals tab. Per-case columns are kept. */}
+            <GoalAttainmentTable cases={attainmentCases} attainment={data?.goal_attainment} goalCount={goalCount} />
+          </div>
+        )}
         {tab === "technical" && (
-          <>
+          <div role="tabpanel" id="s8-panel-technical" aria-labelledby="s8-tab-technical">
             <S8PartHeader part="technical" />
             <TechnicalLensPanel projectId={projectId} />
-          </>
+          </div>
         )}
         {partOfS8Tab(tab) === "financial" && <S8PartHeader part="financial" />}
-        {tab === "goals" && (
-          <GoalsPanel
-            projectId={projectId}
-            data={goalsData}
-            canAct={canAct}
-            onChanged={onGoalsChanged}
-            loadError={goalsLoadError}
-          />
+        {tab === "params" && (
+          <div role="tabpanel" id="s8fin-panel-params" aria-labelledby="s8fin-tab-params">
+            <ParamsPanel projectId={projectId} onOpenTargets={() => setTab("targets")} />
+          </div>
         )}
-        {/* IA cleanup 2026-10-14: ONE attainment table (was one per scenario section),
-          in its single home — the goals tab. Per-case columns are kept. */}
-        {tab === "goals" && (
-          <GoalAttainmentTable cases={attainmentCases} attainment={data?.goal_attainment} goalCount={goalCount} />
+        {tab === "target-costing" && (
+          <div role="tabpanel" id="s8fin-panel-target-costing" aria-labelledby="s8fin-tab-target-costing">
+            <TargetCostingPanel projectId={projectId} />
+          </div>
         )}
-        {tab === "params" && <ParamsPanel projectId={projectId} onOpenTargets={() => setTab("targets")} />}
-        {tab === "target-costing" && <TargetCostingPanel projectId={projectId} />}
-        {tab === "wacc" && <WaccPanel projectId={projectId} />}
-        {tab === "financial-analysis" && <FinancialAnalysisPanel projectId={projectId} />}
-        {tab === "bep" && <BepAnalysisPanel projectId={projectId} />}
+        {tab === "wacc" && (
+          <div role="tabpanel" id="s8fin-panel-wacc" aria-labelledby="s8fin-tab-wacc">
+            <WaccPanel projectId={projectId} />
+          </div>
+        )}
+        {tab === "financial-analysis" && (
+          <div role="tabpanel" id="s8fin-panel-financial-analysis" aria-labelledby="s8fin-tab-financial-analysis">
+            <FinancialAnalysisPanel projectId={projectId} />
+          </div>
+        )}
+        {tab === "bep" && (
+          <div role="tabpanel" id="s8fin-panel-bep" aria-labelledby="s8fin-tab-bep">
+            <BepAnalysisPanel projectId={projectId} />
+          </div>
+        )}
 
         {/* ── ADR-0143 대상 비교·선정 (brownfield) — 권고 ≠ 선정, 선정은 사람 ── */}
         {tab === "targets" && data && targets.length === 0 && (
@@ -833,7 +892,13 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </p>
         )}
         {tab === "targets" && targets.length > 0 && (
-          <section className="market-section sizing-step mb-3" aria-label={t("compareAndSelectAmongShortlist")}>
+          <section
+            role="tabpanel"
+            id="s8-panel-targets"
+            aria-labelledby="s8-tab-targets"
+            className="market-section sizing-step mb-3"
+            aria-label={t("compareAndSelectAmongShortlist")}
+          >
             <h3 className="sizing-step-title">
               {t("compareAndSelectAmongShortlist2")}{" "}
               <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
@@ -1182,7 +1247,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         )}
 
         {tab === "overview" && (
-          <>
+          <div role="tabpanel" id="s8fin-panel-overview" aria-labelledby="s8fin-tab-overview">
             {/* S5 connection status + human-only connect actions sit directly above the primary action (decider feedback 2026-10-16) */}
             {greenfield && (
               <S5ConnectBlock
@@ -1327,7 +1392,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 </button>
               </p>
             )}
-          </>
+          </div>
         )}
 
         {/* 시나리오별 이중 관점 비교 — brownfield는 유효 대상 필터의 케이스만.
@@ -1362,7 +1427,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </p>
         )}
         {tab === "scenarios" && (
-          <>
+          <div role="tabpanel" id="s8fin-panel-scenarios" aria-labelledby="s8fin-tab-scenarios">
             {targets.length > 1 && (
               <div className="mt-3 mb-1 flex flex-wrap items-center gap-2">
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
@@ -1820,7 +1885,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 </p>
               );
             })()}
-          </>
+          </div>
         )}
 
         {data && data.cases.length === 0 && (tab === "overview" || tab === "scenarios") && (
@@ -1945,7 +2010,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
 
         {/* ── 결정 탭: fs 게이트 진행 근거(대상 점검) → 게이트 결정 — IA cleanup 2026-10-14 ── */}
         {tab === "decision" && (
-          <div className="mt-4">
+          <div role="tabpanel" id="s8-panel-decision" aria-labelledby="s8-tab-decision" className="mt-4">
             <S8LensStrip projectId={projectId} />
             <TargetCheckPanel projectId={projectId} />
             <AiJudgementSupport

@@ -78,7 +78,9 @@ export function BetaPanel({
   onRunRegression: () => void;
   observedDe: { value: string; source: string; asOf: string };
   onObservedDe: (f: { value: string; source: string; asOf: string }) => void;
-}) {const t = useTranslations("stages.s8.wacc.betaPanel"); const tc = useTranslations("common");
+}) {
+  const t = useTranslations("stages.s8.wacc.betaPanel");
+  const tc = useTranslations("common");
   const peerBeta = (p: PeerRow) => {
     const b = Number(p.beta);
     const de = Number(p.de);
@@ -87,7 +89,12 @@ export function BetaPanel({
   };
   const numericPeers = peers
     .filter((p) => p.name.trim() !== "" && p.beta.trim() !== "")
-    .map((p) => ({ label: p.name, betaLevered: Number(p.beta), deRatio: Number(p.de) || 0, taxRate: peerTaxRate ?? 0 }));
+    .map((p) => ({
+      label: p.name,
+      betaLevered: Number(p.beta),
+      deRatio: Number(p.de) || 0,
+      taxRate: peerTaxRate ?? 0,
+    }));
   let peerMedian: number | null = null;
   try {
     if (numericPeers.length > 0) peerMedian = medianBetaUnlevered(numericPeers).median;
@@ -104,7 +111,13 @@ export function BetaPanel({
       const xs = pts.map((p) => p.x);
       const xmin = Math.min(...xs);
       const xmax = Math.max(...xs);
-      return { pts, line: [[xmin, regression.beta * xmin], [xmax, regression.beta * xmax]] };
+      return {
+        pts,
+        line: [
+          [xmin, regression.beta * xmin],
+          [xmax, regression.beta * xmax],
+        ],
+      };
     } catch {
       return { pts: [], line: [] };
     }
@@ -112,14 +125,27 @@ export function BetaPanel({
 
   const scatterOption: EChartsOption = {
     grid: { left: 56, right: 20, top: 20, bottom: 44 },
-    tooltip: { trigger: "item", formatter: (p: unknown) => {
-      const d = (p as { seriesType: string; value: [number, number] }).value;
-      return t("marketP1AssetP2", { p1: (d[0] * 100).toFixed(2), p2: (d[1] * 100).toFixed(2) });
-    } },
-    xAxis: { type: "value", name: t("marketDailyReturns"), nameLocation: "middle", nameGap: 26, nameTextStyle: { fontSize: 10 },
-      axisLabel: { fontSize: 10, formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
-    yAxis: { type: "value", name: t("asset"), nameTextStyle: { fontSize: 10 },
-      axisLabel: { fontSize: 10, formatter: (v: number) => `${(v * 100).toFixed(1)}%` } },
+    tooltip: {
+      trigger: "item",
+      formatter: (p: unknown) => {
+        const d = (p as { seriesType: string; value: [number, number] }).value;
+        return t("marketP1AssetP2", { p1: (d[0] * 100).toFixed(2), p2: (d[1] * 100).toFixed(2) });
+      },
+    },
+    xAxis: {
+      type: "value",
+      name: t("marketDailyReturns"),
+      nameLocation: "middle",
+      nameGap: 26,
+      nameTextStyle: { fontSize: 10 },
+      axisLabel: { fontSize: 10, formatter: (v: number) => `${(v * 100).toFixed(1)}%` },
+    },
+    yAxis: {
+      type: "value",
+      name: t("asset"),
+      nameTextStyle: { fontSize: 10 },
+      axisLabel: { fontSize: 10, formatter: (v: number) => `${(v * 100).toFixed(1)}%` },
+    },
     series: [
       { type: "scatter", symbolSize: 6, itemStyle: { opacity: 0.45 }, data: scatter.pts.map((p) => [p.x, p.y]) },
       ...(scatter.line.length === 2
@@ -191,6 +217,7 @@ export function BetaPanel({
     }
   };
   const loadCollectedSeries = () => fetchCollected(true);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load once per project; fetchCollected is re-created every render and must not retrigger the fetch
   useEffect(() => {
     void fetchCollected(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,12 +250,12 @@ export function BetaPanel({
         </button>
       </div>
       <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mb-2">
-        {betaTab === "peer"
-          ? t("convertsListedPeersPublishedBetas")
-          : t("pasteDailyReturnsOfThe")}
+        {betaTab === "peer" ? t("convertsListedPeersPublishedBetas") : t("pasteDailyReturnsOfThe")}
       </p>
 
       {betaTab === "peer" ? (
+        // biome-ignore lint/a11y/useSemanticElements: keyboard-scroll affordance shared by every table-scroll region
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-focusable
         <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-48" aria-label={t("peerPublishedBeta")}>
             <caption className="sr-only">{t("peerPublishedBetaLeveredBeta")}</caption>
@@ -238,7 +265,10 @@ export function BetaPanel({
                 <th className="py-1.5 px-1.5">{t("peerCompany")}</th>
                 <th className="py-1.5 px-1.5 text-right">{t("publishedBetaLevered")}</th>
                 <th className="py-1.5 px-1.5 text-right">D/E</th>
-                <th className="py-1.5 px-1.5 text-right">{t("betauComputed")}{peerTaxRate != null ? `, t=${(peerTaxRate * 100).toFixed(0)}%` : t("taxRate4Required")})</th>
+                <th className="py-1.5 px-1.5 text-right">
+                  {t("betauComputed")}
+                  {peerTaxRate != null ? `, t=${(peerTaxRate * 100).toFixed(0)}%` : t("taxRate4Required")})
+                </th>
                 <th className="py-1.5 px-1.5">{tc("source")}</th>
                 <th className="px-1.5" aria-label={t("deleteRow")} />
               </tr>
@@ -247,14 +277,50 @@ export function BetaPanel({
               {peers.map((p, i) => {
                 const u = peerBeta(p);
                 return (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: peer rows are user-editable, have no stable id, and are never reordered
                   <tr key={i} className="border-b border-[color:var(--border-subtle)]">
-                    <td className="py-1 px-1.5"><input className="form-input" value={p.name} placeholder={t("peerCompanyName")} onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))} /></td>
-                    <td className="py-1 px-1.5"><input className="form-input text-right" value={p.beta} placeholder="1.35" onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, beta: e.target.value } : r)))} /></td>
-                    <td className="py-1 px-1.5"><input className="form-input text-right" value={p.de} placeholder="0.90" onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, de: e.target.value } : r)))} /></td>
+                    <td className="py-1 px-1.5">
+                      <input
+                        className="form-input"
+                        value={p.name}
+                        placeholder={t("peerCompanyName")}
+                        onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5">
+                      <input
+                        className="form-input text-right"
+                        value={p.beta}
+                        placeholder="1.35"
+                        onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, beta: e.target.value } : r)))}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5">
+                      <input
+                        className="form-input text-right"
+                        value={p.de}
+                        placeholder="0.90"
+                        onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, de: e.target.value } : r)))}
+                      />
+                    </td>
                     <td className="py-1 px-1.5 text-right tabular-nums font-semibold">{u != null ? num(u) : "—"}</td>
-                    <td className="py-1 px-1.5"><input className="form-input" value={p.source} placeholder="AlphaSpread · 2026-09" onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, source: e.target.value } : r)))} /></td>
+                    <td className="py-1 px-1.5">
+                      <input
+                        className="form-input"
+                        value={p.source}
+                        placeholder="AlphaSpread · 2026-09"
+                        onChange={(e) => onPeers(peers.map((r, j) => (j === i ? { ...r, source: e.target.value } : r)))}
+                      />
+                    </td>
                     <td className="px-1.5">
-                      <button type="button" className="text-[color:var(--muted-fg)] hover:text-[color:var(--danger)] px-1" aria-label={t("deleteP1Row", { p1: p.name || t("peerP1", { p1: i + 1 }) })} onClick={() => onPeers(peers.filter((_, j) => j !== i))}>✕</button>
+                      <button
+                        type="button"
+                        className="text-[color:var(--muted-fg)] hover:text-[color:var(--danger)] px-1"
+                        aria-label={t("deleteP1Row", { p1: p.name || t("peerP1", { p1: i + 1 }) })}
+                        onClick={() => onPeers(peers.filter((_, j) => j !== i))}
+                      >
+                        ✕
+                      </button>
                     </td>
                   </tr>
                 );
@@ -262,7 +328,13 @@ export function BetaPanel({
             </tbody>
           </table>
           <div className="flex items-center gap-3 mt-2">
-            <button type="button" className="btn-ghost btn-sm" onClick={() => onPeers([...peers, { name: "", beta: "", de: "", source: "" }])}>{t("addRow")}</button>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => onPeers([...peers, { name: "", beta: "", de: "", source: "" }])}
+            >
+              {t("addRow")}
+            </button>
             <span className="text-[length:var(--fs-caption)]">
               {t("medianBetau")} <b className="tabular-nums">{peerMedian != null ? num(peerMedian) : "—"}</b>
             </span>
@@ -272,16 +344,26 @@ export function BetaPanel({
         <div>
           {/* Step 1 card: source switch (collected | paste) -> data + status. Step 2 card: compute. Tab order follows DOM order. */}
           <section className="card" aria-labelledby="beta-step1-title">
-            <h4 id="beta-step1-title" className="font-semibold mb-2">{t("n1ImportData")} {/* INTERIM-WORDING */}</h4>
+            <h4 id="beta-step1-title" className="font-semibold mb-2">
+              {t("n1ImportData")} {/* INTERIM-WORDING */}
+            </h4>
             <TabNav
               label={t("dataInputMethod")}
-              tabs={[{ key: "collected", label: t("useCollectedData") }, { key: "paste", label: t("pasteDirectly") }]}
+              tabs={[
+                {
+                  key: "collected",
+                  label: t("useCollectedData"),
+                  id: "beta-src-tab-collected",
+                  panelId: "beta-src-panel-collected",
+                },
+                { key: "paste", label: t("pasteDirectly"), id: "beta-src-tab-paste", panelId: "beta-src-panel-paste" },
+              ]}
               active={sourceMode}
               onSelect={(k) => setSourceChoice(k as BetaSourceMode)}
               className="mb-3"
             />
             {sourceMode === "collected" ? (
-              <div role="tabpanel" aria-label={t("useCollectedData2")}>
+              <div role="tabpanel" id="beta-src-panel-collected" aria-labelledby="beta-src-tab-collected">
                 <div className="flex flex-wrap items-center gap-3">
                   {indexOptions.length > 0 && (
                     <label className="flex items-center gap-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
@@ -305,35 +387,65 @@ export function BetaPanel({
                       </select>
                     </label>
                   )}
-                  <button type="button" className="btn-ghost btn-sm" disabled={loading} aria-busy={loading} aria-label={t("loadCollectedData")} onClick={() => void loadCollectedSeries()}>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    disabled={loading}
+                    aria-busy={loading}
+                    aria-label={t("loadCollectedData")}
+                    onClick={() => void loadCollectedSeries()}
+                  >
                     {loading ? tc("loadingEllipsis") : t("loadCollectedData2")}
                   </button>
                 </div>
                 <div aria-live="polite" className="mt-3">
                   {loadedInfo && (
                     <p className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--accent)] mb-2">
-                      ✓ {loadedInfo.count}{t("daysLoaded")}{loadedInfo.first} ~ {loadedInfo.last}) {/* INTERIM-WORDING */}
+                      ✓ {loadedInfo.count}
+                      {t("daysLoaded")}
+                      {loadedInfo.first} ~ {loadedInfo.last}) {/* INTERIM-WORDING */}
                     </p>
                   )}
                   {collection && (
                     <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)] text-[length:var(--fs-caption)]">
-                      <p className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))]" : "text-[color:var(--red-fg,var(--danger))]"}`}>
-                        {statusTone(collection.status) === "ok" ? "✓" : statusTone(collection.status) === "warn" ? "⚠" : "✕"} {statusMessage(collection)}
+                      <p
+                        className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))]" : "text-[color:var(--red-fg,var(--danger))]"}`}
+                      >
+                        {statusTone(collection.status) === "ok"
+                          ? "✓"
+                          : statusTone(collection.status) === "warn"
+                            ? "⚠"
+                            : "✕"}{" "}
+                        {statusMessage(collection)}
                       </p>
                       <dl className="mt-1 grid gap-x-3 gap-y-0.5 grid-cols-[max-content_1fr] text-[color:var(--muted-fg)] tabular-nums">
-                        <dt>{t("stockP1", { p1: collection.subject_company_name ? ` (${collection.subject_company_name})` : "" })}</dt>
+                        <dt>
+                          {t("stockP1", {
+                            p1: collection.subject_company_name ? ` (${collection.subject_company_name})` : "",
+                          })}
+                        </dt>
                         <dd>{seriesRange(collection.price)}</dd>
                         <dt>{t("p1Index", { p1: collection.index_market ?? "KOSPI" })}</dt>
                         <dd>{seriesRange(collection.index)}</dd>
                         <dt>{t("pairedIndex")}</dt> {/* INTERIM-WORDING */}
                         <dd>{indexPairingNote(collection, indexChoice !== null)}</dd>
                         <dt>{t("sort")}</dt> {/* INTERIM-WORDING */}
-                        <dd>{t("transactionDate")} {collection.aligned.count}{t("daysMinimum")} {collection.min_rows}{t("d")} {collection.aligned.count >= collection.min_rows ? "✓" : t("insufficient")}</dd>
+                        <dd>
+                          {t("transactionDate")} {collection.aligned.count}
+                          {t("daysMinimum")} {collection.min_rows}
+                          {t("d")} {collection.aligned.count >= collection.min_rows ? "✓" : t("insufficient")}
+                        </dd>
                       </dl>
                       {showsRunbook(collection.status) && (
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">{collection.runbook_command}</code>
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => void copyRunbook(collection.runbook_command)}>
+                          <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">
+                            {collection.runbook_command}
+                          </code>
+                          <button
+                            type="button"
+                            className="btn-ghost btn-sm"
+                            onClick={() => void copyRunbook(collection.runbook_command)}
+                          >
                             {copied ? t("copied") : t("copyCommand")}
                           </button>
                         </div>
@@ -343,30 +455,60 @@ export function BetaPanel({
                 </div>
                 {collectedRowCount > 0 && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("viewImportedRawRows")}{collectedRowCount}{t("row")}</summary> {/* INTERIM-WORDING */}
-                    <pre className="font-mono text-[length:var(--fs-caption)] max-h-48 overflow-auto mt-1 p-2 rounded border border-[color:var(--border-subtle)]" tabIndex={0} aria-label={t("importedRawRows")}>{regressionText}</pre>
+                    <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("viewImportedRawRows")}
+                      {collectedRowCount}
+                      {t("row")}
+                    </summary>{" "}
+                    {/* INTERIM-WORDING */}
+                    {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: labelled scrollable raw-data block */}
+                    <pre
+                      className="font-mono text-[length:var(--fs-caption)] max-h-48 overflow-auto mt-1 p-2 rounded border border-[color:var(--border-subtle)]"
+                      // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-focusable
+                      tabIndex={0}
+                      aria-label={t("importedRawRows")}
+                    >
+                      {regressionText}
+                    </pre>
                   </details>
                 )}
               </div>
             ) : (
-              <div role="tabpanel" aria-label={t("pasteDirectly2")}>
-                <textarea className="form-input font-mono text-[length:var(--fs-caption)] w-full" rows={5} value={regressionText}
-                  aria-label={t("timeSeriesDataDatePrice")} aria-describedby="beta-paste-hint"
+              <div role="tabpanel" id="beta-src-panel-paste" aria-labelledby="beta-src-tab-paste">
+                <textarea
+                  className="form-input font-mono text-[length:var(--fs-caption)] w-full"
+                  rows={5}
+                  value={regressionText}
+                  aria-label={t("timeSeriesDataDatePrice")}
+                  aria-describedby="beta-paste-hint"
                   placeholder={t("pasteAsDatePriceIndex")} /* INTERIM-WORDING */
-                  onChange={(e) => onRegressionText(e.target.value)} />
-                <p id="beta-paste-hint" className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("enterOneLineAsDate")} {/* INTERIM-WORDING */}</p>
+                  onChange={(e) => onRegressionText(e.target.value)}
+                />
+                <p id="beta-paste-hint" className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                  {t("enterOneLineAsDate")} {/* INTERIM-WORDING */}
+                </p>
               </div>
             )}
-            {loadError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {loadError}</p>}
+            {loadError && (
+              <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">
+                ✕ {loadError}
+              </p>
+            )}
             {insufficientRows && collectedRowCount < 63 && (
-              <p role="status" className="text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))] text-[length:var(--fs-caption)] mt-2">
-                {t("regressionNeedsAboutThreeMonths")} {collectedRowCount}{tc("countUnit")}
+              <p
+                role="status"
+                className="text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))] text-[length:var(--fs-caption)] mt-2"
+              >
+                {t("regressionNeedsAboutThreeMonths")} {collectedRowCount}
+                {tc("countUnit")}
               </p>
             )}
           </section>
 
           <section className="card mt-3" aria-labelledby="beta-step2-title">
-            <h4 id="beta-step2-title" className="font-semibold mb-2">{t("n2Calculate")} {/* INTERIM-WORDING */}</h4>
+            <h4 id="beta-step2-title" className="font-semibold mb-2">
+              {t("n2Calculate")} {/* INTERIM-WORDING */}
+            </h4>
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -379,52 +521,88 @@ export function BetaPanel({
                 {t("runRegression2")}
               </button>
               {!canRunRegression && (
-                <span id="beta-regression-disabled-reason" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                <span
+                  id="beta-regression-disabled-reason"
+                  className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                >
                   {runDisabledReason(collectedRowCount, collection?.status)}
                 </span>
               )}
             </div>
           </section>
-          {regressionError && <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">✕ {regressionError}</p>}
+          {regressionError && (
+            <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">
+              ✕ {regressionError}
+            </p>
+          )}
           {regression && (
             <>
               <dl className="grid gap-2 md:grid-cols-4 mt-3 text-sm">
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("betaBetaLevered")}</dt>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                    {t("betaBetaLevered")}
+                  </dt>
                   <dd className="font-bold text-[1.05rem] tabular-nums">{num(regression.beta)}</dd>
                 </div>
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("coefficientOfDetermination")}</dt>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                    {t("coefficientOfDetermination")}
+                  </dt>
                   <dd className="font-bold text-[1.05rem] tabular-nums">{regression.r2.toFixed(2)}</dd>
                 </div>
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
                   <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("sample")}</dt>
-                  <dd className="font-bold text-[1.05rem] tabular-nums">{regression.n}{t("d2")} <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">{regression.windowStart} ~ {regression.windowEnd}</span></dd>
+                  <dd className="font-bold text-[1.05rem] tabular-nums">
+                    {regression.n}
+                    {t("d2")}{" "}
+                    <span className="text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]">
+                      {regression.windowStart} ~ {regression.windowEnd}
+                    </span>
+                  </dd>
                 </div>
                 <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)]">
-                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("alphaAnnualized")}</dt>
+                  <dt className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                    {t("alphaAnnualized")}
+                  </dt>
                   <dd className="font-bold text-[1.05rem] tabular-nums">{pct(regression.annualAlpha)}</dd>
                 </div>
               </dl>
 
               <div className="mt-3">
-                <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-semibold">{t("annualizedVolatilityVsMarketAverage")}</div>
+                <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-semibold">
+                  {t("annualizedVolatilityVsMarketAverage")}
+                </div>
                 <div className="grid grid-cols-[10rem_1fr_4rem] gap-2 items-center text-[length:var(--fs-caption)] mt-1">
                   <span>{t("targetAssets")}</span>
-                  <div className="h-2.5 rounded-full bg-[color:var(--muted-bg)] overflow-hidden"><div className="h-full rounded-full bg-[color:var(--accent)]" style={{ width: `${(regression.annualVolAsset / volMax) * 100}%` }} /></div>
+                  <div className="h-2.5 rounded-full bg-[color:var(--muted-bg)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[color:var(--accent)]"
+                      style={{ width: `${(regression.annualVolAsset / volMax) * 100}%` }}
+                    />
+                  </div>
                   <span className="text-right font-bold tabular-nums">{pct(regression.annualVolAsset)}</span>
                   <span>{t("marketIndex2")}</span>
-                  <div className="h-2.5 rounded-full bg-[color:var(--muted-bg)] overflow-hidden"><div className="h-full rounded-full bg-[color:var(--accent)] opacity-50" style={{ width: `${(regression.annualVolMarket / volMax) * 100}%` }} /></div>
+                  <div className="h-2.5 rounded-full bg-[color:var(--muted-bg)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[color:var(--accent)] opacity-50"
+                      style={{ width: `${(regression.annualVolMarket / volMax) * 100}%` }}
+                    />
+                  </div>
                   <span className="text-right font-bold tabular-nums">{pct(regression.annualVolMarket)}</span>
                 </div>
                 <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mt-1">
-                  {t("volatilityRatioVsMarket")} {num(regression.volRatio)}{t("beta")} {num(regression.beta)}{t("interpretTogetherOfTheMarket")} {num(regression.beta)}{t("xMoveIdiosyncraticVarianceIs")} {(100 - regression.r2 * 100).toFixed(0)}%.
+                  {t("volatilityRatioVsMarket")} {num(regression.volRatio)}
+                  {t("beta")} {num(regression.beta)}
+                  {t("interpretTogetherOfTheMarket")} {num(regression.beta)}
+                  {t("xMoveIdiosyncraticVarianceIs")} {(100 - regression.r2 * 100).toFixed(0)}%.
                 </p>
               </div>
 
               {scatter.pts.length > 0 && (
                 <div className="mt-3">
-                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-semibold">{t("regressionScatterDailyReturns")}</div>
+                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] font-semibold">
+                    {t("regressionScatterDailyReturns")}
+                  </div>
                   <EChart option={scatterOption} height={220} ariaLabel={t("betaRegressionScatter")} />
                 </div>
               )}
@@ -435,16 +613,36 @@ export function BetaPanel({
           <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_7.5rem] gap-2 items-end mt-4 text-sm border-t border-[color:var(--border-subtle)] pt-3">
             <div>
               <div className="text-[length:var(--fs-body)] font-semibold">{tc("observedDE")}</div>
-              <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("theRegressionStockSCapital")}</div>
+              <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                {t("theRegressionStockSCapital")}
+              </div>
             </div>
-            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("value")}
-              <input className="form-input" value={observedDe.value} placeholder="0.90" onChange={(e) => onObservedDe({ ...observedDe, value: e.target.value })} />
+            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {tc("value")}
+              <input
+                className="form-input"
+                value={observedDe.value}
+                placeholder="0.90"
+                onChange={(e) => onObservedDe({ ...observedDe, value: e.target.value })}
+              />
             </label>
-            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("sourceName")}
-              <input className="form-input" value={observedDe.source} placeholder={t("latestClosingDebtEquityDart")} onChange={(e) => onObservedDe({ ...observedDe, source: e.target.value })} />
+            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {tc("sourceName")}
+              <input
+                className="form-input"
+                value={observedDe.source}
+                placeholder={t("latestClosingDebtEquityDart")}
+                onChange={(e) => onObservedDe({ ...observedDe, source: e.target.value })}
+              />
             </label>
-            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("asOfDate")}
-              <input className="form-input" value={observedDe.asOf} placeholder="2026-06-30" onChange={(e) => onObservedDe({ ...observedDe, asOf: e.target.value })} />
+            <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {tc("asOfDate")}
+              <input
+                className="form-input"
+                value={observedDe.asOf}
+                placeholder="2026-06-30"
+                onChange={(e) => onObservedDe({ ...observedDe, asOf: e.target.value })}
+              />
             </label>
           </div>
         </div>

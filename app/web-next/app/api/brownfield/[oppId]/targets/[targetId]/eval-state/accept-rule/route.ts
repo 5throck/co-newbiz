@@ -8,6 +8,7 @@ import { getDb } from "../../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../../db/lib/access-control.ts";
 import { authenticate, humanOnlyDenied, requireBusinessActor } from "../../../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../../../../lib/selected-guard.ts";
 import { recordEvalVerdict } from "../../../../../../../../lib/brownfield-eval-criteria.ts";
 import {
   EVAL_DRAFT_CATEGORIES,
@@ -31,6 +32,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const db = getDb();
   if (!db.query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?").get(targetId, oppId))
     return notFound();
+  // N2 (owner decision 2026-11-17): S6/S7 target eval verdicts presuppose a selected opportunity.
+  const selectionDenied = notSelectedResponse(db, oppId);
+  if (selectionDenied) return selectionDenied;
   const body = (await request.json().catch(() => null)) as { category?: string } | null;
   const category = body?.category;
   if (!category || !(EVAL_DRAFT_CATEGORIES as readonly string[]).includes(category))

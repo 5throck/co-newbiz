@@ -19,7 +19,7 @@ import { ulid } from "../lib/ulid.ts";
 
 /** The dedicated run kind: carried in run.label (the run table has no kind column). */
 export const GATE_INTEGRITY_EVAL_KIND = "gate_integrity_eval";
-/** 2 (ADR-0193): kill.current_stage / not_reached / carried_in / lineage_missing and triggered[].partial_input are inside the hash. Version 1 rows verify under the same canonicaliser (versioned in gate-snapshot.ts). */
+/** 2 (ADR-0193): kill.current_stage / not_reached / carried_in / lineage_missing and triggered[].partial_input are inside the hash. Version 1 rows verify under the same canonicaliser (versioned in gate-snapshot.ts). ADR-0202 adds an OPTIONAL ai_draft_review key (opportunity brownfield pre_fs / target_screening only) without a version bump: absent elsewhere, so existing hashes are unchanged. */
 export const GATE_SNAPSHOT_SCHEMA_VERSION = 3;
 
 export type EvalEvent = "brief" | "decision" | "snapshot";

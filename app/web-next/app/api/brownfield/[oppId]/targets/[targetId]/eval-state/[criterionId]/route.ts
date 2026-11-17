@@ -16,6 +16,7 @@ import { getDb } from "../../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../../db/lib/access-control.ts";
 import { authenticate, callPathOf, humanOnlyDenied, requireBusinessActor } from "../../../../../../../../lib/auth.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../../../../lib/selected-guard.ts";
 import { recordEvalVerdict, type EvalStatus } from "../../../../../../../../lib/brownfield-eval-criteria.ts";
 import { invalidateTargetJudgements } from "../../../../../../../../lib/brownfield-capability-judgement.ts";
 import {
@@ -43,6 +44,9 @@ export async function PUT(
     .query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
     .get(targetId, oppId) as { id: string } | undefined;
   if (!target) return notFound();
+  // N2 (owner decision 2026-11-17): S6/S7 target eval verdicts presuppose a selected opportunity.
+  const selectionDenied = notSelectedResponse(db, oppId);
+  if (selectionDenied) return selectionDenied;
   const criterion = db
     .query(
       "SELECT id, category FROM brownfield_eval_criterion WHERE id = ? AND opportunity_id = ? AND deleted_at IS NULL AND retired_at IS NULL",

@@ -314,6 +314,21 @@ function DecisionChip({ row }: { row: GateLatest }) {
   );
 }
 
+/**
+ * ADR-0202: translate the machine-readable gate-gap tokens that gateGoPrerequisiteGaps
+ * (lib/process-flow.ts) emits. `ai_draft_review:<n>` maps to the locale JSON key
+ * `components.gateIntegrity.gapAiDraftReview` ({count}); anything else (the existing
+ * Korean stage-name gaps) renders raw as before. Local literal: the lib cannot be
+ * imported into a client component (it pulls the DB client into the bundle).
+ */
+const AI_DRAFT_REVIEW_GAP_PREFIX = "ai_draft_review:";
+
+function formatGap(g: string, ti: ReturnType<typeof useTranslations>): string {
+  if (!g.startsWith(AI_DRAFT_REVIEW_GAP_PREFIX)) return g;
+  const count = Number(g.slice(AI_DRAFT_REVIEW_GAP_PREFIX.length)) || 0;
+  return ti("gapAiDraftReview", { count });
+}
+
 function condText(raw: string): string {
   try {
     const v = JSON.parse(raw) as unknown;
@@ -735,7 +750,10 @@ export function GateDecisionPanel({
     }
     if (err.code === "gate_prerequisites_incomplete" && Array.isArray(d.gaps) && d.gaps.length > 0) {
       // Name what is missing, not only that something is (the localized code text alone is generic).
-      setError(`${err.message} ${(d.gaps as unknown[]).map(String).join(" · ")}`);
+      // ADR-0202: `ai_draft_review:<n>` gap tokens translate via the locale JSON; other gap
+      // strings (existing Korean stage names) render raw as before.
+      const gaps = (d.gaps as unknown[]).map(String).map((g) => formatGap(g, ti));
+      setError(`${err.message} ${gaps.join(" · ")}`);
       return;
     }
     setError(err.message);

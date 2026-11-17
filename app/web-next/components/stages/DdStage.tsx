@@ -4,14 +4,42 @@
 // /deals/[id]/s9 탭이 동일 컴포넌트를 소비한다). StageTabs·StageFrame이
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
-import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
+import { type TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import {
-  PLAN_READINESS_KEY, PLAN_STATUS_TEXT, codeMeta, countAnnouncement, countLocation, judgedLine, needsNaReason, notCountedNotice, planArtefactHref, planReadinessLabel,
-  REPLACED_PENDING_NOTE, pointerText, replacementUndecided, s9Heading, splitItems, statusText, tabCounts, tabLabel, tabStepTags, validateNaReason, workspaceView, type GfScope, type WsItemScope,
+  PLAN_STATUS_TEXT,
+  codeMeta,
+  countAnnouncement,
+  countLocation,
+  judgedLine,
+  needsNaReason,
+  notCountedNotice,
+  planArtefactHref,
+  planReadinessLabel,
+  REPLACED_PENDING_NOTE,
+  pointerText,
+  replacementUndecided,
+  s9Heading,
+  splitItems,
+  statusText,
+  tabCounts,
+  tabLabel,
+  tabStepTags,
+  validateNaReason,
+  workspaceView,
+  type GfScope,
+  type WsItemScope,
 } from "../../lib/greenfield-dd-view.ts";
 import { GreenfieldScopePanel } from "./GreenfieldScopePanel.tsx";
 import { BrownfieldScopePanel } from "./BrownfieldScopePanel.tsx";
-import { bfCodeMeta, bfExcludedGroups, bfNeedsNaReason, bfPreviousForTab, bfScopeBlock, isBfExtraTab, type BfScopeBlock } from "../../lib/brownfield-dd-view.ts";
+import {
+  bfCodeMeta,
+  bfExcludedGroups,
+  bfNeedsNaReason,
+  bfPreviousForTab,
+  bfScopeBlock,
+  isBfExtraTab,
+  type BfScopeBlock,
+} from "../../lib/brownfield-dd-view.ts";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -144,20 +172,25 @@ interface WorkspaceView {
 }
 
 // P5: 상태는 색+아이콘+텍스트의 조합 — 색 단독으로 상태를 전달하지 않는다.
-const STATE_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> => resolveLabels(tr, {
-  pending: { icon: "○", label: "stages.s9.stage.judgementPending", cls: "status-not-started" },
-  pass: { icon: "✓", label: "stages.s9.stage.met", cls: "status-green" },
-  fail: { icon: "✕", label: "stages.s9.stage.notMet", cls: "status-red" },
-  na: { icon: "—", label: "stages.s9.stage.notApplicable", cls: "status-not-started" },
-  waived: { icon: "⚖", label: "stages.s9.stage.waived", cls: "status-amber" },
-});
+const STATE_META = (tr: TranslatorFn): Record<string, { icon: string; label: string; cls: string }> =>
+  resolveLabels(tr, {
+    pending: { icon: "○", label: "stages.s9.stage.judgementPending", cls: "status-not-started" },
+    pass: { icon: "✓", label: "stages.s9.stage.met", cls: "status-green" },
+    fail: { icon: "✕", label: "stages.s9.stage.notMet", cls: "status-red" },
+    na: { icon: "—", label: "stages.s9.stage.notApplicable", cls: "status-not-started" },
+    waived: { icon: "⚖", label: "stages.s9.stage.waived", cls: "status-amber" },
+  });
 
 function stateMeta(status: string | undefined, tr: TranslatorFn) {
   const m = STATE_META(tr)[status ?? "pending"];
   return m ? { ...m, label: m.label } : { icon: "?", label: status ?? "unknown", cls: "status-not-started" };
 }
 
-export function DdStage({ projectId }: { projectId: string }) {const tr = useTranslations(); const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common"); const tdd = useTranslations("stages.dd");
+export function DdStage({ projectId }: { projectId: string }) {
+  const tr = useTranslations();
+  const t = useTranslations("stages.s9.stage");
+  const tc = useTranslations("common");
+  const tdd = useTranslations("stages.dd");
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const { confirm, confirmDialog } = useConfirm();
@@ -174,17 +207,23 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
   const [openDlg, setOpenDlg] = useState<{ targetId: string; name: string } | null>(null);
   // Row-level waiver dialog (R2-B item 5): link an active waiver, or request a new one prefilled with the item.
   const [waiverDlg, setWaiverDlg] = useState<{
-    checklistId: string; itemId: string; label: string;
+    checklistId: string;
+    itemId: string;
+    label: string;
     active: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string }>;
     docs: Array<{ id: string; layer: string; key: string; title: string }>;
   } | null>(null);
 
-  const load = useCallback((scope: string | null) => {
-    const qs = scope ? `?target_id=${encodeURIComponent(scope)}` : "";
-    api.get<WorkspaceView>(`/api/projects/${encodeURIComponent(projectId)}/dd${qs}`)
-      .then((r) => setData(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadDueDiligence")));
-  }, [projectId]);
+  const load = useCallback(
+    (scope: string | null) => {
+      const qs = scope ? `?target_id=${encodeURIComponent(scope)}` : "";
+      api
+        .get<WorkspaceView>(`/api/projects/${encodeURIComponent(projectId)}/dd${qs}`)
+        .then((r) => setData(r.data))
+        .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadDueDiligence")));
+    },
+    [projectId, t],
+  );
 
   // 2026-10-19 decider-approved option: adopt the four newer DD domains into this
   // project's S9 completion count — person-only, rationale mandatory, audited.
@@ -192,14 +231,18 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
   const [adoptRationale, setAdoptRationale] = useState("");
   const [adoptBusy, setAdoptBusy] = useState(false);
   useEffect(() => {
-    api.get<{ adoption: { adopted: boolean; rationale: string; by: string; at: string } | null }>(
-      `/api/projects/${encodeURIComponent(projectId)}/dd-domain-adopt`,
-    ).then((r) => setAdopt(r.data.adoption)).catch(() => setAdopt(null));
+    api
+      .get<{ adoption: { adopted: boolean; rationale: string; by: string; at: string } | null }>(
+        `/api/projects/${encodeURIComponent(projectId)}/dd-domain-adopt`,
+      )
+      .then((r) => setAdopt(r.data.adoption))
+      .catch(() => setAdopt(null));
   }, [projectId]);
 
   async function submitAdopt() {
     if (adoptBusy || adoptRationale.trim().length < 10) return;
-    setAdoptBusy(true); setError(null);
+    setAdoptBusy(true);
+    setError(null);
     try {
       const r = await api.post<{ adoption: { adopted: boolean; rationale: string; by: string; at: string } | null }>(
         `/api/projects/${encodeURIComponent(projectId)}/dd-domain-adopt`,
@@ -216,14 +259,16 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
     }
   }
 
-  useEffect(() => { load(null); }, [load]);
+  useEffect(() => {
+    load(null);
+  }, [load]);
 
   const targets = data?.targets ?? [];
   // 실사 조사 도구 트랙 필터 (2026-10-21 decider): greenfield는 고객 CoC·경영진 보상
   // (M&A 실사 항목)이 도메인 범위 밖 — ADR-0160/0162의 도메인 범위를 따른다.
   const toolsGf = !!data?.greenfield_scope;
   const selectedTarget = targets.find((t) => t.is_selected) ?? null;
-  const viewSummary = viewTarget ? targets.find((t) => t.target_id === viewTarget) ?? null : null;
+  const viewSummary = viewTarget ? (targets.find((t) => t.target_id === viewTarget) ?? null) : null;
   // A comparison target whose DD was never opened has no checklist to show or edit.
   const viewNotOpened = !!viewSummary && !viewSummary.opened;
   const scopeParam = viewSummary?.opened ? viewSummary.target_id : null;
@@ -245,7 +290,9 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
   function chooseTarget(id: string | null) {
     const next = id === null || id === selectedTarget?.target_id ? null : id;
     setViewTarget(next);
-    setTab(0); setError(null); setNotice(null);
+    setTab(0);
+    setError(null);
+    setNotice(null);
     const summary = next ? targets.find((t) => t.target_id === next) : null;
     if (next === null) load(null);
     else if (summary?.opened) load(next);
@@ -253,7 +300,9 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
 
   async function tailor(regenerate = false) {
     if (busy) return;
-    setBusy(true); setError(null); setNotice(null);
+    setBusy(true);
+    setError(null);
+    setNotice(null);
     try {
       const r = await api.post<{ runId: string; proposedCount: number }>(
         `/api/projects/${encodeURIComponent(projectId)}/dd-checklist/tailor`,
@@ -275,30 +324,30 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
       decision === "approved" ? t("approveItem") : t("dismissItem"),
       () => {
         void (async () => {
-          setBusy(true); setError(null);
+          setBusy(true);
+          setError(null);
           try {
             await api.put(
               `/api/projects/${encodeURIComponent(projectId)}/dd-checklist/tailor/${encodeURIComponent(item.id)}/review`,
               { decision },
             );
-            setNotice(
-              decision === "approved"
-                ? t("approvedTheItemJoinedThe")
-                : t("dismissedTheItemWasRemoved"),
-            );
+            setNotice(decision === "approved" ? t("approvedTheItemJoinedThe") : t("dismissedTheItemWasRemoved"));
             reload();
           } catch (e) {
-            setError((e as { code?: string } | null)?.code === "second_person_required" ? t("thePersonWhoProposedA") /* INTERIM-WORDING */ : e instanceof Error ? e.message : t("approveDismissFailed"));
+            setError(
+              (e as { code?: string } | null)?.code === "second_person_required"
+                ? t("thePersonWhoProposedA") /* INTERIM-WORDING */
+                : e instanceof Error
+                  ? e.message
+                  : t("approveDismissFailed"),
+            );
           } finally {
             setBusy(false);
           }
         })();
       },
       {
-        body:
-          decision === "approved"
-            ? t("addsThisItemToThe")
-            : t("dismissesThisProposalDismissedItems"),
+        body: decision === "approved" ? t("addsThisItemToThe") : t("dismissesThisProposalDismissedItems"),
         confirmLabel: decision === "approved" ? tc("approve") : tc("dismiss"),
       },
     );
@@ -306,7 +355,8 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
 
   async function judge(checklistId: string, itemId: string, status: "pass" | "fail" | "na", note?: string) {
     if (busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.put(`/api/projects/${encodeURIComponent(projectId)}/dd-checklist/state`, {
         checklist_id: checklistId,
@@ -326,23 +376,46 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
 
   /** `na` on a sub-track-ruled checklist needs a written reason (ADR-0160 section 4.4); other `na` judgements are unchanged. */
   function requestNa(checklistId: string, itemId: string, label: string) {
-    if (needsNaReason(data?.greenfield_scope, checklistId, itemId) || bfNeedsNaReason(data?.brownfield_scope, checklistId)) setNaDlg({ checklistId, itemId, label });
+    if (
+      needsNaReason(data?.greenfield_scope, checklistId, itemId) ||
+      bfNeedsNaReason(data?.brownfield_scope, checklistId)
+    )
+      setNaDlg({ checklistId, itemId, label });
     else void judge(checklistId, itemId, "na");
   }
 
   /** 면제 - 항목 행에서 바로 연다: 활성 waiver 연결 또는 항목이 채워진 새 요청. */
   function openWaiverDialog(checklistId: string, itemId: string, label: string) {
     setError(null);
-    api.get<{ waivers: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string; effective_status: string }>; governanceDocs: Array<{ id: string; layer: string; key: string; title: string }> }>(
-      `/api/projects/${encodeURIComponent(projectId)}/waivers${scopeParam ? `?target_id=${encodeURIComponent(scopeParam)}` : ""}`,
-    )
-      .then((r) => setWaiverDlg({ checklistId, itemId, label, active: r.data.waivers.filter((w) => w.effective_status === "active"), docs: r.data.governanceDocs }))
+    api
+      .get<{
+        waivers: Array<{
+          id: string;
+          clause_ref: string;
+          governance_doc_id: string;
+          expires_at: string;
+          effective_status: string;
+        }>;
+        governanceDocs: Array<{ id: string; layer: string; key: string; title: string }>;
+      }>(
+        `/api/projects/${encodeURIComponent(projectId)}/waivers${scopeParam ? `?target_id=${encodeURIComponent(scopeParam)}` : ""}`,
+      )
+      .then((r) =>
+        setWaiverDlg({
+          checklistId,
+          itemId,
+          label,
+          active: r.data.waivers.filter((w) => w.effective_status === "active"),
+          docs: r.data.governanceDocs,
+        }),
+      )
       .catch((e) => setError(e instanceof Error ? e.message : t("failedToFetchTheWaiver")));
   }
 
   async function judgeWaived(waiverId: string) {
     if (!waiverDlg || busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.put(`/api/projects/${encodeURIComponent(projectId)}/dd-checklist/state`, {
         checklist_id: waiverDlg.checklistId,
@@ -378,18 +451,25 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
   // 조사내역 정정 (2026-10-19 decider): recorded findings were append-only; the person
   // now can correct or remove a mis-recorded finding (analyst+, audited).
   const [editingFinding, setEditingFinding] = useState<string | null>(null);
-  const [findingDraft, setFindingDraft] = useState<{ description: string; value_impact: string; evidence_ref: string }>({ description: "", value_impact: "", evidence_ref: "" });
+  const [findingDraft, setFindingDraft] = useState<{ description: string; value_impact: string; evidence_ref: string }>(
+    { description: "", value_impact: "", evidence_ref: "" },
+  );
 
   async function saveFinding(fid: string) {
     if (busy) return;
     const valueImpact = findingDraft.value_impact.trim() === "" ? null : Number(findingDraft.value_impact);
     if (findingDraft.value_impact.trim() !== "" && !Number.isInteger(valueImpact)) {
-      setError(t("enterTheValueImpactAs")); return;
+      setError(t("enterTheValueImpactAs"));
+      return;
     }
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.put(`/api/projects/${encodeURIComponent(projectId)}/dd/findings`, {
-        finding_id: fid, description: findingDraft.description, value_impact: valueImpact, evidence_ref: findingDraft.evidence_ref,
+        finding_id: fid,
+        description: findingDraft.description,
+        value_impact: valueImpact,
+        evidence_ref: findingDraft.evidence_ref,
       });
       setNotice(t("findingAmendedTheReflectionPath"));
       setEditingFinding(null);
@@ -402,57 +482,88 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
   }
 
   function removeFinding(fid: string) {
-    confirm(t("deleteFinding"), () => {
-      void (async () => {
-        setBusy(true); setError(null);
-        try {
-          await api.delete(`/api/projects/${encodeURIComponent(projectId)}/dd/findings`, { finding_id: fid });
-          setNotice(t("findingDeletedRecordedInThe"));
-          reload();
-        } catch (e) {
-          setError(e instanceof Error ? e.message : t("failedToDeleteTheFinding"));
-        } finally { setBusy(false); }
-      })();
-    }, { body: t("deletedFindingsAreAlsoExcluded"), tone: "danger" });
+    confirm(
+      t("deleteFinding"),
+      () => {
+        void (async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await api.delete(`/api/projects/${encodeURIComponent(projectId)}/dd/findings`, { finding_id: fid });
+            setNotice(t("findingDeletedRecordedInThe"));
+            reload();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : t("failedToDeleteTheFinding"));
+          } finally {
+            setBusy(false);
+          }
+        })();
+      },
+      { body: t("deletedFindingsAreAlsoExcluded"), tone: "danger" },
+    );
   }
 
   // Decision-tab summary: verdict COUNTS only — for Brownfield the acquisition itself is the
   // capability resolution, so no cost input and no business-case reflection (decider 2026-10-19).
-  const [capSummary, setCapSummary] = useState<{ resolved: number; partial: number; unresolved: number; pending: number } | null>(null);
+  const [capSummary, setCapSummary] = useState<{
+    resolved: number;
+    partial: number;
+    unresolved: number;
+    pending: number;
+  } | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tab is an intentional refetch trigger so the summary refreshes after edits on other tabs
   useEffect(() => {
     if (!isBrownfield) return;
-    api.get<{ rows: Array<{ verdict: { coverage: string } | null }>; pending: number }>(
-      `/api/projects/${encodeURIComponent(projectId)}/capability-dd`,
-    ).then((r) => {
-      const rows = r.data.rows ?? [];
-      setCapSummary({
-        resolved: rows.filter((x) => x.verdict?.coverage === "resolved").length,
-        partial: rows.filter((x) => x.verdict?.coverage === "partial").length,
-        unresolved: rows.filter((x) => x.verdict?.coverage === "unresolved").length,
-        pending: r.data.pending ?? 0,
-      });
-    }).catch(() => setCapSummary(null));
+    api
+      .get<{ rows: Array<{ verdict: { coverage: string } | null }>; pending: number }>(
+        `/api/projects/${encodeURIComponent(projectId)}/capability-dd`,
+      )
+      .then((r) => {
+        const rows = r.data.rows ?? [];
+        setCapSummary({
+          resolved: rows.filter((x) => x.verdict?.coverage === "resolved").length,
+          partial: rows.filter((x) => x.verdict?.coverage === "partial").length,
+          unresolved: rows.filter((x) => x.verdict?.coverage === "unresolved").length,
+          pending: r.data.pending ?? 0,
+        });
+      })
+      .catch(() => setCapSummary(null));
   }, [isBrownfield, projectId, tab]);
-  const domainTabs = (data?.domains ?? []).map((d, i) => ({ key: String(i), label: resolveLabelTokens(tabLabel(data?.greenfield_scope, d), tr) }));
+  const domainTabs = (data?.domains ?? []).map((d, i) => ({
+    key: String(i),
+    label: resolveLabelTokens(tabLabel(data?.greenfield_scope, d), tr),
+  }));
   const tabItems = data
     ? [
         ...domainTabs,
-        ...(ws ? [{ key: String(data.domains.length), label: resolveLabelTokens(planReadinessLabel(data.greenfield_scope), tr) }] : []),
+        ...(ws
+          ? [
+              {
+                key: String(data.domains.length),
+                label: resolveLabelTokens(planReadinessLabel(data.greenfield_scope), tr),
+              },
+            ]
+          : []),
         ...(isBrownfield ? [{ key: String(capTabIdx), label: t("requiredCapabilityVerification") }] : []),
         { key: String(decisionTabIdx), label: tc("decisionMaking") },
       ]
     : domainTabs;
-  const headerCount = countLocation(data?.greenfield_scope) === "header" ? judgedLine(data?.greenfield_scope, data?.domains ?? []) : null;
+  const headerCount =
+    countLocation(data?.greenfield_scope) === "header" ? judgedLine(data?.greenfield_scope, data?.domains ?? []) : null;
   const split = domain ? splitItems(domain.items) : null;
   const counts = domain ? tabCounts(domain) : null;
   const stepTags = domain ? tabStepTags(data?.greenfield_scope, domain) : [];
   const notCounted = domain ? notCountedNotice(domain) : null;
-  const previousHere = domain ? (ws ? ws.previous_scope.filter((p) => p.checklist_id === domain.checklistId) : bfPreviousForTab(bf, domain.checklistId)) : [];
+  const previousHere = domain
+    ? ws
+      ? ws.previous_scope.filter((p) => p.checklist_id === domain.checklistId)
+      : bfPreviousForTab(bf, domain.checklistId)
+    : [];
 
   const bfExtraTab = !!domain && isBfExtraTab(bf, domain.checklistId);
 
   return (
-<>
+    <>
       {/* 리뷰 2026-10-22 (사용자 리포트): StageTabs를 레일 슬롯으로 — h1·스트립이
           탭 행 아래로 밀리지 않고 S1~S7 딜 화면과 같은 머리 위치를 유지한다. */}
       <StageFrame
@@ -460,7 +571,13 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
         subtitle={resolveLabelTokens(s9Heading(data?.greenfield_scope), tr)}
         railSlot={<StageTabs projectId={projectId} />}
       >
-        <GateDecisionJump inline gate="dd" beforeJump={() => { if (data) setTab(decisionTabIdx); }} />
+        <GateDecisionJump
+          inline
+          gate="dd"
+          beforeJump={() => {
+            if (data) setTab(decisionTabIdx);
+          }}
+        />
         <ReviewBuckets entityType="project" entityId={projectId} gates={["dd"]} artifacts={stageArtifactTabs("S9")} />
         {data && (
           <div className="mb-3 flex flex-wrap items-center gap-2" data-testid="dd-subject-header">
@@ -475,7 +592,8 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
             ) : (
               <>
                 <p className="text-[length:var(--fs-body)]">
-                  <strong>{tc("ddTargetColon")}</strong> <strong data-testid="dd-subject-name">{(viewSummary ?? selectedTarget).name}</strong>
+                  <strong>{tc("ddTargetColon")}</strong>{" "}
+                  <strong data-testid="dd-subject-name">{(viewSummary ?? selectedTarget).name}</strong>
                 </p>
                 {viewSummary && viewSummary.target_id !== selectedTarget.target_id ? (
                   <span className="status-chip status-amber">{tc("compareEvidence")}</span>
@@ -490,20 +608,40 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           {t("s9CompletesOnlyWhenEvery")}
           {data && (
+            // biome-ignore lint/complexity/noUselessFragments: keeps the legacy nested conditional layout intact
             <>
-              {countLocation(data.greenfield_scope) === "panel" ? null : <>{" — "}
-              <span className={`status-chip ${data.completion.pending === 0 && data.completion.unassessed === 0 && data.completion.mandatoryUnmet === 0 && data.completion.total > 0 ? "status-green" : "status-amber"}`}>
-                {data.completion.total === 0 && data.completion.unassessed === 0
-                  ? t("noJudgementRecord")
-                  : data.completion.pending === 0 && data.completion.unassessed === 0 && data.completion.mandatoryUnmet === 0
-                    ? t("judgementCompleteZeroUnmetRequired")
-                    : t("pendingP1UnjudgedP2Unmet", { p1: data.completion.pending, p2: data.completion.unassessed, p3: data.completion.mandatoryUnmet })}
-              </span>
-              {headerCount && (
-                <span className="ml-2 status-chip status-not-started" role="status" aria-live="polite" aria-atomic="true" data-testid="dd-header-judged">
-                  {headerCount.text}<span className="sr-only">{countAnnouncement(headerCount)}</span>
-                </span>
-              )}</>}
+              {countLocation(data.greenfield_scope) === "panel" ? null : (
+                <>
+                  {" — "}
+                  <span
+                    className={`status-chip ${data.completion.pending === 0 && data.completion.unassessed === 0 && data.completion.mandatoryUnmet === 0 && data.completion.total > 0 ? "status-green" : "status-amber"}`}
+                  >
+                    {data.completion.total === 0 && data.completion.unassessed === 0
+                      ? t("noJudgementRecord")
+                      : data.completion.pending === 0 &&
+                          data.completion.unassessed === 0 &&
+                          data.completion.mandatoryUnmet === 0
+                        ? t("judgementCompleteZeroUnmetRequired")
+                        : t("pendingP1UnjudgedP2Unmet", {
+                            p1: data.completion.pending,
+                            p2: data.completion.unassessed,
+                            p3: data.completion.mandatoryUnmet,
+                          })}
+                  </span>
+                  {headerCount && (
+                    <span
+                      className="ml-2 status-chip status-not-started"
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      data-testid="dd-header-judged"
+                    >
+                      {headerCount.text}
+                      <span className="sr-only">{countAnnouncement(headerCount)}</span>
+                    </span>
+                  )}
+                </>
+              )}
             </>
           )}
           <span className="ml-2 status-chip status-not-started">{t("agentProposalIsNotApproval")}</span>
@@ -523,48 +661,85 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
 
         {/* ── 실사 조사 도구 (2026-10-21 decider) — 실사 산물인 조사 화면을 워크스페이스에서 한 눈에 ── */}
         {data?.tool_counts && (
-          <section className="market-section sizing-step mb-3" aria-label={t("ddInvestigationTools")} data-testid="dd-tools">
+          <section
+            className="market-section sizing-step mb-3"
+            aria-label={t("ddInvestigationTools")}
+            data-testid="dd-tools"
+          >
             <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-              <span className="sizing-step-badge" aria-hidden="true">🧰</span> {t("ddInvestigationToolsScreensRecording")}
+              <span className="sizing-step-badge" aria-hidden="true">
+                🧰
+              </span>{" "}
+              {t("ddInvestigationToolsScreensRecording")}
             </h3>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               {t("recordsFromTheseScreensFlow")}
-              {toolsGf
-                ? t("forGreenFieldCustomerAnd")
-                : t("brownFieldAlsoIncludesCustomer")}
+              {toolsGf ? t("forGreenFieldCustomerAnd") : t("brownFieldAlsoIncludesCustomer")}
             </p>
             <ul className="grid gap-2 md:grid-cols-4 list-none p-0 m-0">
               <li>
-                <Link href={`/projects/${projectId}/interviews`} className="card block" data-testid="dd-tool-interviews">
+                <Link
+                  href={`/projects/${projectId}/interviews`}
+                  className="card block"
+                  data-testid="dd-tool-interviews"
+                >
                   <strong>{t("expertInterviewsAndChannelChecks")}</strong>
-                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("atLeastTwoIndependentSources")}</span>
-                  <span className={`status-chip ${data.tool_counts.interviews.pending_claims > 0 ? "status-amber" : "status-green"} mt-1`}>{t("interviews")} {data.tool_counts.interviews.total}{t("itemSTriangulated")} {data.tool_counts.interviews.triangulated_claims} {t("notMet2")} {data.tool_counts.interviews.pending_claims}</span>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                    {t("atLeastTwoIndependentSources")}
+                  </span>
+                  <span
+                    className={`status-chip ${data.tool_counts.interviews.pending_claims > 0 ? "status-amber" : "status-green"} mt-1`}
+                  >
+                    {t("interviews")} {data.tool_counts.interviews.total}
+                    {t("itemSTriangulated")} {data.tool_counts.interviews.triangulated_claims} {t("notMet2")}{" "}
+                    {data.tool_counts.interviews.pending_claims}
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link href={`/projects/${projectId}/risk-heatmap`} className="card block" data-testid="dd-tool-heatmap">
                   <strong>{t("riskHeatmap")}</strong>
-                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("consolidatedDdCocClawbackAnd")}</span>
-                  <span className={`status-chip ${data.tool_counts.heatmap.high > 0 ? "status-red" : "status-green"} mt-1`}>{tc("items")} {data.tool_counts.heatmap.total}{t("itemSHigh")} {data.tool_counts.heatmap.high}{tc("countUnit")}</span>
+                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                    {t("consolidatedDdCocClawbackAnd")}
+                  </span>
+                  <span
+                    className={`status-chip ${data.tool_counts.heatmap.high > 0 ? "status-red" : "status-green"} mt-1`}
+                  >
+                    {tc("items")} {data.tool_counts.heatmap.total}
+                    {t("itemSHigh")} {data.tool_counts.heatmap.high}
+                    {tc("countUnit")}
+                  </span>
                 </Link>
               </li>
               {!toolsGf && (
-              <li>
-                <Link href={`/projects/${projectId}/customer-coc`} className="card block" data-testid="dd-tool-coc">
-                  <strong>{t("customerConcentrationAndChangeOf")}</strong>
-                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("n08ContractScanAutomaticFlag")}</span>
-                  <span className="status-chip status-not-started mt-1">{tc("record")} {data.tool_counts.contracts.total}{t("itemSFlagged")} {data.tool_counts.contracts.plotted}{tc("countUnit")}</span>
-                </Link>
-              </li>
+                <li>
+                  <Link href={`/projects/${projectId}/customer-coc`} className="card block" data-testid="dd-tool-coc">
+                    <strong>{t("customerConcentrationAndChangeOf")}</strong>
+                    <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("n08ContractScanAutomaticFlag")}
+                    </span>
+                    <span className="status-chip status-not-started mt-1">
+                      {tc("record")} {data.tool_counts.contracts.total}
+                      {t("itemSFlagged")} {data.tool_counts.contracts.plotted}
+                      {tc("countUnit")}
+                    </span>
+                  </Link>
+                </li>
               )}
               {!toolsGf && (
-              <li>
-                <Link href={`/projects/${projectId}/comp-parity`} className="card block" data-testid="dd-tool-comp">
-                  <strong>{t("executiveCompensationAndPayParity")}</strong>
-                  <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("hddCocTriggerCompensationAggregation")}</span>
-                  <span className="status-chip status-not-started mt-1">{t("package")} {data.tool_counts.compensation.packages}{t("itemSParity")} {data.tool_counts.compensation.parity_rows}{tc("countUnit")}</span>
-                </Link>
-              </li>
+                <li>
+                  <Link href={`/projects/${projectId}/comp-parity`} className="card block" data-testid="dd-tool-comp">
+                    <strong>{t("executiveCompensationAndPayParity")}</strong>
+                    <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("hddCocTriggerCompensationAggregation")}
+                    </span>
+                    <span className="status-chip status-not-started mt-1">
+                      {t("package")} {data.tool_counts.compensation.packages}
+                      {t("itemSParity")} {data.tool_counts.compensation.parity_rows}
+                      {tc("countUnit")}
+                    </span>
+                  </Link>
+                </li>
               )}
             </ul>
           </section>
@@ -592,7 +767,8 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
             />
             {comparing && (
               <p role="note" className="status-chip status-amber mt-2" data-testid="dd-comparison-banner">
-                <span aria-hidden="true">⚠ </span>{t("comparisonEvidenceNotReflectedIn")}
+                <span aria-hidden="true">⚠ </span>
+                {t("comparisonEvidenceNotReflectedIn")}
               </p>
             )}
           </div>
@@ -604,6 +780,8 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               {t("openDdStatusShowsThe")}
             </p>
+            {/* biome-ignore lint/a11y/useSemanticElements: keyboard-scroll affordance shared by every table-scroll region */}
+            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-focusable */}
             <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
               <table className="data-table table-fixed-pct tmin-56" aria-label={t("ddComparisonEvidence")}>
                 <caption className="sr-only">{t("openDdComparisonEvidenceAll")}</caption>
@@ -612,23 +790,47 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
                   <tr>
                     <th scope="col">{t("target")}</th>
                     <th scope="col">{tc("division")}</th>
-                    <th scope="col" className="col-num">{t("allItems")}</th>
-                    <th scope="col" className="col-num">{tc("unjudged")}</th>
-                    <th scope="col" className="col-num">{t("judgementPending2")}</th>
-                    <th scope="col" className="col-num">{t("requiredCriteriaNotMet")}</th>
-                    <th scope="col" className="col-num">{t("valueImpactFindings")}</th>
+                    <th scope="col" className="col-num">
+                      {t("allItems")}
+                    </th>
+                    <th scope="col" className="col-num">
+                      {tc("unjudged")}
+                    </th>
+                    <th scope="col" className="col-num">
+                      {t("judgementPending2")}
+                    </th>
+                    <th scope="col" className="col-num">
+                      {t("requiredCriteriaNotMet")}
+                    </th>
+                    <th scope="col" className="col-num">
+                      {t("valueImpactFindings")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {comparisonRows.map((row) => (
                     <tr key={row.target_id}>
-                      <th scope="row" data-label={tc("subjectTarget")}>{row.name}</th>
-                      <td data-label={tc("division")}>{row.is_selected ? t("selectedTargetGateJudgement") : tc("compareEvidence")}</td>
-                      <td data-label={t("allItems")} className="col-num tabular-nums">{row.total}</td>
-                      <td data-label={tc("unjudged")} className="col-num tabular-nums">{row.unassessed}</td>
-                      <td data-label={t("judgementPending")} className="col-num tabular-nums">{row.pending}</td>
-                      <td data-label={t("requiredCriteriaNotMet")} className="col-num tabular-nums">{row.mandatory_unmet}</td>
-                      <td data-label={t("valueImpactFindings")} className="col-num tabular-nums">{row.findings_with_value_impact} / {row.findings}</td>
+                      <th scope="row" data-label={tc("subjectTarget")}>
+                        {row.name}
+                      </th>
+                      <td data-label={tc("division")}>
+                        {row.is_selected ? t("selectedTargetGateJudgement") : tc("compareEvidence")}
+                      </td>
+                      <td data-label={t("allItems")} className="col-num tabular-nums">
+                        {row.total}
+                      </td>
+                      <td data-label={tc("unjudged")} className="col-num tabular-nums">
+                        {row.unassessed}
+                      </td>
+                      <td data-label={t("judgementPending")} className="col-num tabular-nums">
+                        {row.pending}
+                      </td>
+                      <td data-label={t("requiredCriteriaNotMet")} className="col-num tabular-nums">
+                        {row.mandatory_unmet}
+                      </td>
+                      <td data-label={t("valueImpactFindings")} className="col-num tabular-nums">
+                        {row.findings_with_value_impact} / {row.findings}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -640,10 +842,15 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
         {viewNotOpened && viewSummary && (
           <section className="market-section sizing-step mb-3" aria-label={t("targetsWithDdNotOpened")}>
             <p className="text-[length:var(--fs-body)] mb-2">
-              <strong>{viewSummary.name}</strong>{t("ddHasNotBeenOpened")}
+              <strong>{viewSummary.name}</strong>
+              {t("ddHasNotBeenOpened")}
             </p>
             {canAct ? (
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setOpenDlg({ targetId: viewSummary.target_id, name: viewSummary.name })}>
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                onClick={() => setOpenDlg({ targetId: viewSummary.target_id, name: viewSummary.name })}
+              >
                 {t("openDd")}
               </button>
             ) : (
@@ -654,25 +861,40 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
 
         {canAct && !viewNotOpened && (
           <div className="mb-3">
-            <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => {
-              const hasProposed = (data?.domains ?? []).some((d) => d.custom.some((c) => c.status === "proposed"));
-              if (hasProposed) {
-                confirm(
-                  t("regenerateProposals"),
-                  () => { void tailor(true); },
-                  { body: t("deletesPendingProposalsUnapprovedAi") },
-                );
-              } else {
-                void tailor(false);
-              }
-            }}>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              disabled={busy}
+              onClick={() => {
+                const hasProposed = (data?.domains ?? []).some((d) => d.custom.some((c) => c.status === "proposed"));
+                if (hasProposed) {
+                  confirm(
+                    t("regenerateProposals"),
+                    () => {
+                      void tailor(true);
+                    },
+                    { body: t("deletesPendingProposalsUnapprovedAi") },
+                  );
+                } else {
+                  void tailor(false);
+                }
+              }}
+            >
               {busy ? tc("creating") : t("generateOrRegenerateProposals")}
             </button>
           </div>
         )}
 
-        {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">✕ {error}</p>}
-        {notice && <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">✓ {notice}</p>}
+        {error && (
+          <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-2">
+            ✕ {error}
+          </p>
+        )}
+        {notice && (
+          <p role="status" className="text-[color:var(--green-fg)] text-[length:var(--fs-caption)] mb-2">
+            ✓ {notice}
+          </p>
+        )}
 
         <div className="mt-3">
           <WaiverPanel projectId={projectId} targetId={scopeParam} />
@@ -684,20 +906,36 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
               label={t("ddChecklistDomain")}
               active={String(tab)}
               onSelect={(key) => setTab(Number(key))}
-              tabs={tabItems}
+              tabs={tabItems.map((t) => ({ ...t, id: `dd-tab-${t.key}`, panelId: `dd-panel-${t.key}` }))}
             />
             {planTab && ws && (
-              <section className="market-section sizing-step mt-3" aria-label={t("planReadiness")} data-testid="dd-plan-readiness">
-                <h3 className="sizing-step-title text-[length:var(--fs-body)]">{resolveLabelTokens(planReadinessLabel(data?.greenfield_scope), tr)}</h3>
+              <section
+                role="tabpanel"
+                id={`dd-panel-${data.domains.length}`}
+                aria-labelledby={`dd-tab-${data.domains.length}`}
+                className="market-section sizing-step mt-3"
+                aria-label={t("planReadiness")}
+                data-testid="dd-plan-readiness"
+              >
+                <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+                  {resolveLabelTokens(planReadinessLabel(data?.greenfield_scope), tr)}
+                </h3>
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
                   {t("statusOfStepsWithoutChecklist")} {/* INTERIM-WORDING */}
                 </p>
+                {/* biome-ignore lint/a11y/useSemanticElements: keyboard-scroll affordance shared by every table-scroll region */}
+                {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-focusable */}
                 <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
                   <table className="data-table table-fixed-pct tmin-40" aria-label={t("planReadiness2")}>
                     <caption className="sr-only">{t("statusOfSteps45")}</caption>
                     <ColGroup widths={PLAN_COL_PCT} />
                     <thead>
-                      <tr><th scope="col">{tc("stage")}</th><th scope="col">{t("scope")}</th><th scope="col">{tc("status")}</th><th scope="col">{t("evidenceAndLinkage")}</th></tr>
+                      <tr>
+                        <th scope="col">{tc("stage")}</th>
+                        <th scope="col">{t("scope")}</th>
+                        <th scope="col">{tc("status")}</th>
+                        <th scope="col">{t("evidenceAndLinkage")}</th>
+                      </tr>
                     </thead>
                     <tbody>
                       {ws.plan_readiness.map((r) => {
@@ -705,13 +943,39 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
                         const href = planArtefactHref(r.step);
                         return (
                           <tr key={r.step}>
-                            <th scope="row" data-label={tc("stage")} className="text-left">{r.step}{tc("stage")} {resolveLabelTokens(GF_DD_STEP_KEY[r.step] ?? r.purpose, tr)}</th>
-                            <td data-label={t("scope")}>{r.in_scope ? t("inRange") : t("outOfScope")}{r.reason && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.reason}</span>}</td>
-                            <td data-label={tc("status")}><span className={`status-chip ${r.status === "recorded" ? "status-green" : "status-not-started"}`}>{st.icon} {st.text}</span></td>
+                            <th scope="row" data-label={tc("stage")} className="text-left">
+                              {r.step}
+                              {tc("stage")} {resolveLabelTokens(GF_DD_STEP_KEY[r.step] ?? r.purpose, tr)}
+                            </th>
+                            <td data-label={t("scope")}>
+                              {r.in_scope ? t("inRange") : t("outOfScope")}
+                              {r.reason && (
+                                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                  {r.reason}
+                                </span>
+                              )}
+                            </td>
+                            <td data-label={tc("status")}>
+                              <span
+                                className={`status-chip ${r.status === "recorded" ? "status-green" : "status-not-started"}`}
+                              >
+                                {st.icon} {st.text}
+                              </span>
+                            </td>
                             <td data-label={t("evidenceAndLinkage")}>
-                              {r.detail && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{r.detail}</span>}
-                              {r.artefact && <span className="block text-[length:var(--fs-caption)]">{r.artefact}</span>}
-                              {href && <a className="text-[length:var(--fs-caption)]" href={href}>{t("goToThatLocation")}</a>}
+                              {r.detail && (
+                                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                  {r.detail}
+                                </span>
+                              )}
+                              {r.artefact && (
+                                <span className="block text-[length:var(--fs-caption)]">{r.artefact}</span>
+                              )}
+                              {href && (
+                                <a className="text-[length:var(--fs-caption)]" href={href}>
+                                  {t("goToThatLocation")}
+                                </a>
+                              )}
                             </td>
                           </tr>
                         );
@@ -722,249 +986,486 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
               </section>
             )}
 
-            {capTab && <CapabilityDdTab projectId={projectId} />}
+            {capTab && (
+              <div role="tabpanel" id={`dd-panel-${capTabIdx}`} aria-labelledby={`dd-tab-${capTabIdx}`}>
+                <CapabilityDdTab projectId={projectId} />
+              </div>
+            )}
 
-            {domain && split && counts && (<>
-            <div className="mt-3 mb-2" data-testid="dd-tab-header">
-              <h3 className="sizing-step-title text-[length:var(--fs-body)]">
-                {resolveLabelTokens(tabLabel(data?.greenfield_scope, domain), tr)}
-                {(ws || bf) && (
-                  <span className="ml-2 text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]" role="status" aria-live="polite" data-testid="dd-tab-count">
-                    {t("inThisTab")} {counts.judged} / {counts.judgeable} {tc("judgement")}
-                  </span>
-                )}
-              </h3>
-              {stepTags.length > 0 && (
-                <ul className="flex flex-wrap gap-2 mt-1" aria-label={t("procedureStepsThisTabCovers")} data-testid="dd-step-tags">
-                  {stepTags.map((tag2) => (
-                    <li key={tag2.step} className={`status-chip ${tag2.inScope ? "status-green" : "status-not-started"}`} title={tag2.reason ?? undefined}>
-                      <span aria-hidden="true">{tag2.icon} </span>{tag2.step}{tc("stage")} {resolveLabelTokens(tag2.label, tr)} — {tag2.stateText}{tag2.reason ? ` (${tag2.reason})` : ""}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {notCounted && (
-                <p role="note" className="status-chip status-amber block mt-2" data-testid="dd-not-counted">
-                  <span aria-hidden="true">ⓘ </span>{notCounted.text}
-                </p>
-              )}
-              {notCounted && canAct && !adopt?.adopted && (
-                <div className="mt-2 mb-1 grid gap-1" data-testid="dd-adopt">
-                  <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-adopt-rationale">
-                    {t("theseDomainsCanBeReflected")}
-                  </label>
-                  <textarea
-                    id="dd-adopt-rationale"
-                    className="sizing-new-input sizing-new-input-sm w-full"
-                    rows={2}
-                    value={adoptRationale}
-                    placeholder={t("eGThisDealSubstantively")}
-                    onChange={(e) => setAdoptRationale(e.target.value)}
-                  />
-                  <button type="button" className="btn-ghost btn-sm justify-self-start" disabled={adoptBusy || adoptRationale.trim().length < 10} onClick={() => void submitAdopt()} data-testid="dd-adopt-submit">
-                    {adoptBusy ? t("reflecting") : t("reflectAdditionalDdDomainsIn")}
-                  </button>
-                </div>
-              )}
-              {domain.domain === "hr" && ws && (
-                <p role="note" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2" data-testid="dd-hr-tab-hint">
-                  {t("theStaffingAndOrganizationTab")}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 mb-2" role="group" aria-label={t("itemFilter")}>
-              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("view")}</span>
-              {([["all", tc("all")], ["pending", t("only")], ["fail", t("only2")]] as const).map(([k, label]) => (
-                <button key={k} type="button" className="control-chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>
-              ))}
-              {!canAct && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("onlyTheAnalystRoleOr")}</span>}
-              {busy && <span role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("recordingJudgementButtonsStayLocked")}</span>}
-            </div>
-            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
-            <table className="data-table dd-table table-fixed-pct tmin-48" aria-label={t("p1Checklist", { p1: resolveLabelTokens(tabLabel(data?.greenfield_scope, domain), tr) })}>
-              <caption className="sr-only">{resolveLabelTokens(tabLabel(data?.greenfield_scope, domain), tr)} {t("checklistJudgement")}</caption>
-              <ColGroup widths={rowCanAct ? DD_COL_PCT_ACT : DD_COL_PCT_READONLY} />
-              <thead>
-                <tr>
-                  <th scope="col">{tc("items")}</th>
-                  <th scope="col">{t("required")}</th>
-                  <th scope="col">{tc("judgement")}</th>
-                  {rowCanAct && <th scope="col">{t("judgementRecord")}</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {split.judgeable.map((item) => {
-                  const display = ddItemDisplay(item.state);
-                  if (!matchesFilter(filter, display)) return null;
-                  const meta = stateMeta(display.status, tr);
-                  const ko = koChecklistText(domain.checklistId, item.id, item.text);
-                  return (
-                    <tr key={item.id}>
-                      <td data-label={tc("items")}>
-                        {/* 2026-10-19 decider: the 검토 상태 chip left the row — the id carries
-                            the full draft-AI tooltip, counsel-reviewed/confirmed keep their chips. */}
-                        <span
-                          className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1"
-                          title={reviewBadge(item).status === "draft-AI" ? t("reviewStatusP1", { p1: DRAFT_AI_MARKER }) : undefined}
+            {domain && split && counts && (
+              <div role="tabpanel" id={`dd-panel-${tab}`} aria-labelledby={`dd-tab-${tab}`}>
+                <div className="mt-3 mb-2" data-testid="dd-tab-header">
+                  <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+                    {resolveLabelTokens(tabLabel(data?.greenfield_scope, domain), tr)}
+                    {(ws || bf) && (
+                      <span
+                        className="ml-2 text-[length:var(--fs-caption)] font-normal text-[color:var(--muted-fg)]"
+                        role="status"
+                        aria-live="polite"
+                        data-testid="dd-tab-count"
+                      >
+                        {t("inThisTab")} {counts.judged} / {counts.judgeable} {tc("judgement")}
+                      </span>
+                    )}
+                  </h3>
+                  {stepTags.length > 0 && (
+                    <ul
+                      className="flex flex-wrap gap-2 mt-1"
+                      aria-label={t("procedureStepsThisTabCovers")}
+                      data-testid="dd-step-tags"
+                    >
+                      {stepTags.map((tag2) => (
+                        <li
+                          key={tag2.step}
+                          className={`status-chip ${tag2.inScope ? "status-green" : "status-not-started"}`}
+                          title={tag2.reason ?? undefined}
                         >
-                          {item.id}
-                        </span>
-                        <span title={ko.translated ? item.text : undefined}>{ko.text}</span>
-                        {item.state?.waiver_id && <span className="status-chip status-amber ml-1" title={`waiver ${item.state.waiver_id}`}>⚖ waiver</span>}
-                        {reviewBadge(item).status !== "draft-AI" && <ReviewBadgeChip item={item} />}
-                        {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
-                      </td>
-                      <td data-label={tc("required")}>{item.mandatory ? t("required2") : tc("select")}</td>
-                      <td data-label={tc("judgement")}>
-                        <span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span>
-                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{display.judged ? (display.byline ? t("judgementP1", { p1: display.byline }) : t("judged")) : t("notYetJudged")}</span>
-                      </td>
-                      {rowCanAct && item.state?.derived === true && (
-                        <td data-label={t("judgementRecord")}>
-                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-derived-item">
-                            <span aria-hidden="true">⚙</span> {tdd("derivedItem")}
-                            <span className="block">{tdd("derivedHint")}</span>
-                          </span>
-                        </td>
-                      )}
-                      {rowCanAct && item.state?.derived !== true && (
-                        <td data-label={t("judgementRecord")}>
-                          <span className="actions-row dd-actions">
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title={t("metJudgement")} aria-label={t("markP1Met", { p1: ko.text })} onClick={() => void judge(domain.checklistId, item.id, "pass")}>{t("met2")}</button>
-                            <button type="button" className="btn-danger btn-sm" disabled={busy} title={t("judgementRequiredItemsCannotClose")} aria-label={t("markP1NotMet", { p1: ko.text })} onClick={() => void judge(domain.checklistId, item.id, "fail")}>{t("notMet3")}</button>
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title={t("judgement")} aria-label={t("markP1NotApplicable", { p1: ko.text })} onClick={() => requestNa(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>{t("notApplicable2")}</button>
-                            {item.waiver_eligible ? (
-                              <button type="button" className="btn-ghost btn-sm" disabled={busy} aria-label={t("p1WaiverRequestAndLink", { p1: ko.text })} onClick={() => openWaiverDialog(domain.checklistId, item.id, `${item.id} ${ko.text}`)}>
-                                {t("waiverRequestAndLink")}
-                              </button>
-                            ) : (
-                              <span className="dd-nowaive text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{nonWaivableReason(domain.checklistId, item.id)}</span>
-                            )}
-                          </span>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-                {/* 승인된 맞춤 항목은 일반 항목이다 — 같은 표에서 같은 방식으로 판정된다 (ADR-0099 §4). */}
-                {domain.custom.filter((c) => c.status === "approved").map((c) => {
-                  const display = ddItemDisplay(c.state);
-                  if (!matchesFilter(filter, display)) return null;
-                  const meta = stateMeta(display.status, tr);
-                  return (
-                    <tr key={c.id}>
-                      <td data-label={tc("items")}>
-                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{resolveLabelTokens(DD_DOMAIN_KEY[c.domain] ?? c.domain, tr)}-custom</span>
-                        {c.item_label}
-                        <span className="status-chip status-not-started ml-1" title={t("itemsApprovedFromProposals")}>{t("custom")}</span>
-                        {c.state?.waiver_id && <span className="status-chip status-amber ml-1" title={`waiver ${c.state.waiver_id}`}>⚖ waiver</span>}
-                      </td>
-                      <td data-label={tc("required")}>{t("requiredAddedOnApproval")}</td>
-                      <td data-label={tc("judgement")}>
-                        <span className={`status-chip ${meta.cls}`}>{meta.icon} {meta.label}</span>
-                        <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{display.judged ? (display.byline ? t("judgementP12", { p1: display.byline }) : t("judged2")) : t("notYetJudged2")}</span>
-                      </td>
-                      {rowCanAct && (
-                        <td data-label={t("judgementRecord")}>
-                          <span className="actions-row dd-actions">
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title={t("metJudgement2")} aria-label={t("markP1Met2", { p1: c.item_label })} onClick={() => void judge(`custom:${c.domain}`, c.id, "pass")}>{t("met3")}</button>
-                            <button type="button" className="btn-danger btn-sm" disabled={busy} title={t("judgementRequiredItemsCannotClose2")} aria-label={t("markP1NotMet2", { p1: c.item_label })} onClick={() => void judge(`custom:${c.domain}`, c.id, "fail")}>{t("notMet4")}</button>
-                            <button type="button" className="btn-ghost btn-sm" disabled={busy} title={t("judgement2")} aria-label={t("markP1NotApplicable2", { p1: c.item_label })} onClick={() => requestNa(`custom:${c.domain}`, c.id, `${c.id} ${c.item_label}`)}>{t("notApplicable3")}</button>
-                          </span>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            </div>
-
-            {split.excluded.length > 0 && (
-              <details className="mt-3" data-testid="dd-excluded">
-                <summary className="cursor-pointer text-[length:var(--fs-body)]">{t("itemsExcludedByTrackRules")}{split.excluded.length}{t("itemSNotJudged")}</summary> {/* INTERIM-WORDING */}
-                {bfExcludedGroups(split.excluded, bfExtraTab).map((g) => (
-                  <div key={g.key} role="group" aria-label={g.label ?? undefined} data-testid={g.label ? "dd-excluded-section" : undefined}>
-                    {g.label && <p className="mt-2 text-[length:var(--fs-caption)] font-semibold">{g.label}</p>}
-                    <ul className="sizing-note-list mt-2">
-                      {g.items.map((item) => {
+                          <span aria-hidden="true">{tag2.icon} </span>
+                          {tag2.step}
+                          {tc("stage")} {resolveLabelTokens(tag2.label, tr)} — {tag2.stateText}
+                          {tag2.reason ? ` (${tag2.reason})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {notCounted && (
+                    <p role="note" className="status-chip status-amber block mt-2" data-testid="dd-not-counted">
+                      <span aria-hidden="true">ⓘ </span>
+                      {notCounted.text}
+                    </p>
+                  )}
+                  {notCounted && canAct && !adopt?.adopted && (
+                    <div className="mt-2 mb-1 grid gap-1" data-testid="dd-adopt">
+                      <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-adopt-rationale">
+                        {t("theseDomainsCanBeReflected")}
+                      </label>
+                      <textarea
+                        id="dd-adopt-rationale"
+                        className="sizing-new-input sizing-new-input-sm w-full"
+                        rows={2}
+                        value={adoptRationale}
+                        placeholder={t("eGThisDealSubstantively")}
+                        onChange={(e) => setAdoptRationale(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm justify-self-start"
+                        disabled={adoptBusy || adoptRationale.trim().length < 10}
+                        onClick={() => void submitAdopt()}
+                        data-testid="dd-adopt-submit"
+                      >
+                        {adoptBusy ? t("reflecting") : t("reflectAdditionalDdDomainsIn")}
+                      </button>
+                    </div>
+                  )}
+                  {domain.domain === "hr" && ws && (
+                    <p
+                      role="note"
+                      className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2"
+                      data-testid="dd-hr-tab-hint"
+                    >
+                      {t("theStaffingAndOrganizationTab")}
+                    </p>
+                  )}
+                </div>
+                {/* biome-ignore lint/a11y/useSemanticElements: filter group label; fieldset would reflow the toolbar */}
+                <div className="flex flex-wrap items-center gap-2 mb-2" role="group" aria-label={t("itemFilter")}>
+                  <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("view")}</span>
+                  {(
+                    [
+                      ["all", tc("all")],
+                      ["pending", t("only")],
+                      ["fail", t("only2")],
+                    ] as const
+                  ).map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className="control-chip"
+                      aria-pressed={filter === k}
+                      onClick={() => setFilter(k)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  {!canAct && (
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("onlyTheAnalystRoleOr")}
+                    </span>
+                  )}
+                  {busy && (
+                    <span role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("recordingJudgementButtonsStayLocked")}
+                    </span>
+                  )}
+                </div>
+                {/* biome-ignore lint/a11y/useSemanticElements: keyboard-scroll affordance shared by every table-scroll region */}
+                {/* biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-focusable */}
+                <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+                  <table
+                    className="data-table dd-table table-fixed-pct tmin-48"
+                    aria-label={t("p1Checklist", {
+                      p1: resolveLabelTokens(tabLabel(data?.greenfield_scope, domain), tr),
+                    })}
+                  >
+                    <caption className="sr-only">
+                      {resolveLabelTokens(tabLabel(data?.greenfield_scope, domain), tr)} {t("checklistJudgement")}
+                    </caption>
+                    <ColGroup widths={rowCanAct ? DD_COL_PCT_ACT : DD_COL_PCT_READONLY} />
+                    <thead>
+                      <tr>
+                        <th scope="col">{tc("items")}</th>
+                        <th scope="col">{t("required")}</th>
+                        <th scope="col">{tc("judgement")}</th>
+                        {rowCanAct && <th scope="col">{t("judgementRecord")}</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {split.judgeable.map((item) => {
+                        const display = ddItemDisplay(item.state);
+                        if (!matchesFilter(filter, display)) return null;
+                        const meta = stateMeta(display.status, tr);
                         const ko = koChecklistText(domain.checklistId, item.id, item.text);
                         return (
-                          <li key={item.id}>
-                            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{item.id}</span>
-                            {ko.text}
-                            {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
-                          </li>
+                          <tr key={item.id}>
+                            <td data-label={tc("items")}>
+                              {/* 2026-10-19 decider: the 검토 상태 chip left the row — the id carries
+                            the full draft-AI tooltip, counsel-reviewed/confirmed keep their chips. */}
+                              <span
+                                className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1"
+                                title={
+                                  reviewBadge(item).status === "draft-AI"
+                                    ? t("reviewStatusP1", { p1: DRAFT_AI_MARKER })
+                                    : undefined
+                                }
+                              >
+                                {item.id}
+                              </span>
+                              <span title={ko.translated ? item.text : undefined}>{ko.text}</span>
+                              {item.state?.waiver_id && (
+                                <span
+                                  className="status-chip status-amber ml-1"
+                                  title={`waiver ${item.state.waiver_id}`}
+                                >
+                                  ⚖ waiver
+                                </span>
+                              )}
+                              {reviewBadge(item).status !== "draft-AI" && <ReviewBadgeChip item={item} />}
+                              {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
+                            </td>
+                            <td data-label={tc("required")}>{item.mandatory ? t("required2") : tc("select")}</td>
+                            <td data-label={tc("judgement")}>
+                              <span className={`status-chip ${meta.cls}`}>
+                                {meta.icon} {meta.label}
+                              </span>
+                              <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                {display.judged
+                                  ? display.byline
+                                    ? t("judgementP1", { p1: display.byline })
+                                    : t("judged")
+                                  : t("notYetJudged")}
+                              </span>
+                            </td>
+                            {rowCanAct && item.state?.derived === true && (
+                              <td data-label={t("judgementRecord")}>
+                                <span
+                                  className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                                  data-testid="dd-derived-item"
+                                >
+                                  <span aria-hidden="true">⚙</span> {tdd("derivedItem")}
+                                  <span className="block">{tdd("derivedHint")}</span>
+                                </span>
+                              </td>
+                            )}
+                            {rowCanAct && item.state?.derived !== true && (
+                              <td data-label={t("judgementRecord")}>
+                                <span className="actions-row dd-actions">
+                                  <button
+                                    type="button"
+                                    className="btn-ghost btn-sm"
+                                    disabled={busy}
+                                    title={t("metJudgement")}
+                                    aria-label={t("markP1Met", { p1: ko.text })}
+                                    onClick={() => void judge(domain.checklistId, item.id, "pass")}
+                                  >
+                                    {t("met2")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger btn-sm"
+                                    disabled={busy}
+                                    title={t("judgementRequiredItemsCannotClose")}
+                                    aria-label={t("markP1NotMet", { p1: ko.text })}
+                                    onClick={() => void judge(domain.checklistId, item.id, "fail")}
+                                  >
+                                    {t("notMet3")}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-ghost btn-sm"
+                                    disabled={busy}
+                                    title={t("judgement")}
+                                    aria-label={t("markP1NotApplicable", { p1: ko.text })}
+                                    onClick={() => requestNa(domain.checklistId, item.id, `${item.id} ${ko.text}`)}
+                                  >
+                                    {t("notApplicable2")}
+                                  </button>
+                                  {item.waiver_eligible ? (
+                                    <button
+                                      type="button"
+                                      className="btn-ghost btn-sm"
+                                      disabled={busy}
+                                      aria-label={t("p1WaiverRequestAndLink", { p1: ko.text })}
+                                      onClick={() =>
+                                        openWaiverDialog(domain.checklistId, item.id, `${item.id} ${ko.text}`)
+                                      }
+                                    >
+                                      {t("waiverRequestAndLink")}
+                                    </button>
+                                  ) : (
+                                    <span className="dd-nowaive text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                      {nonWaivableReason(domain.checklistId, item.id)}
+                                    </span>
+                                  )}
+                                </span>
+                              </td>
+                            )}
+                          </tr>
                         );
                       })}
+                      {/* 승인된 맞춤 항목은 일반 항목이다 — 같은 표에서 같은 방식으로 판정된다 (ADR-0099 §4). */}
+                      {domain.custom
+                        .filter((c) => c.status === "approved")
+                        .map((c) => {
+                          const display = ddItemDisplay(c.state);
+                          if (!matchesFilter(filter, display)) return null;
+                          const meta = stateMeta(display.status, tr);
+                          return (
+                            <tr key={c.id}>
+                              <td data-label={tc("items")}>
+                                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">
+                                  {resolveLabelTokens(DD_DOMAIN_KEY[c.domain] ?? c.domain, tr)}-custom
+                                </span>
+                                {c.item_label}
+                                <span
+                                  className="status-chip status-not-started ml-1"
+                                  title={t("itemsApprovedFromProposals")}
+                                >
+                                  {t("custom")}
+                                </span>
+                                {c.state?.waiver_id && (
+                                  <span className="status-chip status-amber ml-1" title={`waiver ${c.state.waiver_id}`}>
+                                    ⚖ waiver
+                                  </span>
+                                )}
+                              </td>
+                              <td data-label={tc("required")}>{t("requiredAddedOnApproval")}</td>
+                              <td data-label={tc("judgement")}>
+                                <span className={`status-chip ${meta.cls}`}>
+                                  {meta.icon} {meta.label}
+                                </span>
+                                <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                  {display.judged
+                                    ? display.byline
+                                      ? t("judgementP12", { p1: display.byline })
+                                      : t("judged2")
+                                    : t("notYetJudged2")}
+                                </span>
+                              </td>
+                              {rowCanAct && (
+                                <td data-label={t("judgementRecord")}>
+                                  <span className="actions-row dd-actions">
+                                    <button
+                                      type="button"
+                                      className="btn-ghost btn-sm"
+                                      disabled={busy}
+                                      title={t("metJudgement2")}
+                                      aria-label={t("markP1Met2", { p1: c.item_label })}
+                                      onClick={() => void judge(`custom:${c.domain}`, c.id, "pass")}
+                                    >
+                                      {t("met3")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-danger btn-sm"
+                                      disabled={busy}
+                                      title={t("judgementRequiredItemsCannotClose2")}
+                                      aria-label={t("markP1NotMet2", { p1: c.item_label })}
+                                      onClick={() => void judge(`custom:${c.domain}`, c.id, "fail")}
+                                    >
+                                      {t("notMet4")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-ghost btn-sm"
+                                      disabled={busy}
+                                      title={t("judgement2")}
+                                      aria-label={t("markP1NotApplicable2", { p1: c.item_label })}
+                                      onClick={() => requestNa(`custom:${c.domain}`, c.id, `${c.id} ${c.item_label}`)}
+                                    >
+                                      {t("notApplicable3")}
+                                    </button>
+                                  </span>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {split.excluded.length > 0 && (
+                  <details className="mt-3" data-testid="dd-excluded">
+                    <summary className="cursor-pointer text-[length:var(--fs-body)]">
+                      {t("itemsExcludedByTrackRules")}
+                      {split.excluded.length}
+                      {t("itemSNotJudged")}
+                    </summary>{" "}
+                    {/* INTERIM-WORDING */}
+                    {bfExcludedGroups(split.excluded, bfExtraTab).map((g) => (
+                      // biome-ignore lint/a11y/useSemanticElements: grouping wrapper keyed by section; fieldset would change layout
+                      <div
+                        key={g.key}
+                        role="group"
+                        aria-label={g.label ?? undefined}
+                        data-testid={g.label ? "dd-excluded-section" : undefined}
+                      >
+                        {g.label && <p className="mt-2 text-[length:var(--fs-caption)] font-semibold">{g.label}</p>}
+                        <ul className="sizing-note-list mt-2">
+                          {g.items.map((item) => {
+                            const ko = koChecklistText(domain.checklistId, item.id, item.text);
+                            return (
+                              <li key={item.id}>
+                                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">
+                                  {item.id}
+                                </span>
+                                {ko.text}
+                                {item.scope && <ScopeNote sc={item.scope} brownfield={!!bf} />}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))}
+                  </details>
+                )}
+                {previousHere.length > 0 && (
+                  <details className="mt-2" data-testid="dd-previous-scope">
+                    <summary className="cursor-pointer text-[length:var(--fs-body)]">
+                      {t("judgedUnderThePreviousScope")}
+                      {previousHere.length}
+                      {tc("countSuffixParen")}
+                    </summary>{" "}
+                    {/* INTERIM-WORDING */}
+                    <ul className="sizing-note-list mt-2">
+                      {previousHere.map((p) => (
+                        <li key={p.item_id}>
+                          <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">
+                            {p.item_id}
+                          </span>
+                          {p.code === "X" ? t("xReplaced") : t("nNotApplicable")} {t("recordedJudgement")}{" "}
+                          {statusText(p.status)}
+                          {p.assessed_by &&
+                            ` (${p.assessed_by}${p.assessed_at ? ` · ${p.assessed_at.slice(0, 10)}` : ""})`}
+                          {p.stays_unmet && (
+                            <span className="status-chip status-red ml-1">{t("staysUntilAPersonJudges")}</span>
+                          )}
+                        </li>
+                      ))}
                     </ul>
-                  </div>
-                ))}
-              </details>
+                  </details>
+                )}
+
+                <section className="market-section sizing-step mt-3" aria-label={t("proposals")}>
+                  <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("proposalsProposed")}</h3>
+                  {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
+                    <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("noPendingProposalsAgentProposals")}
+                    </p>
+                  )}
+                  <ul className="sizing-note-list">
+                    {domain.custom
+                      .filter((c) => c.status === "proposed")
+                      .map((c) => (
+                        <li key={c.id}>
+                          {c.item_label}
+                          <span
+                            className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                            title={proposerLabel(c, tr)}
+                          >
+                            ({resolveLabelTokens(DD_DOMAIN_KEY[c.domain] ?? c.domain, tr)} · {proposerLabel(c, tr)})
+                          </span>
+                          {c.rationale && (
+                            <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                              {tc("evidenceColon")} {c.rationale}
+                            </span>
+                          )}
+                          {c.source_url ? (
+                            <a
+                              className="text-[length:var(--fs-caption)]"
+                              href={c.source_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {t("source")}
+                              {c.source_reliability ?? "?"}): {c.source_url}
+                            </a>
+                          ) : (
+                            <span className="status-chip status-amber ml-0" title={t("thisProposalHasNoVerified")}>
+                              {t("noSourceC")}
+                            </span>
+                          )}
+                          {canAct && c.is_proposer && (
+                            <span
+                              className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                              data-testid="dd-self-approval-hint"
+                            >
+                              {t(SELF_APPROVAL_HINT_KEY)}
+                            </span>
+                          )}
+                          {canAct && !c.is_proposer && (
+                            <span className="actions-row ml-2">
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                disabled={busy}
+                                onClick={() => review(c, "approved")}
+                              >
+                                {tc("approve")}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-danger btn-sm"
+                                disabled={busy}
+                                onClick={() => review(c, "rejected")}
+                              >
+                                {tc("dismiss")}
+                              </button>
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                  </ul>
+                </section>
+              </div>
             )}
-            {previousHere.length > 0 && (
-              <details className="mt-2" data-testid="dd-previous-scope">
-                <summary className="cursor-pointer text-[length:var(--fs-body)]">{t("judgedUnderThePreviousScope")}{previousHere.length}{tc("countSuffixParen")}</summary> {/* INTERIM-WORDING */}
-                <ul className="sizing-note-list mt-2">
-                  {previousHere.map((p) => (
-                    <li key={p.item_id}>
-                      <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] tabular-nums mr-1">{p.item_id}</span>
-                      {p.code === "X" ? t("xReplaced") : t("nNotApplicable")} {t("recordedJudgement")} {statusText(p.status)}
-                      {p.assessed_by && ` (${p.assessed_by}${p.assessed_at ? ` · ${p.assessed_at.slice(0, 10)}` : ""})`}
-                      {p.stays_unmet && <span className="status-chip status-red ml-1">{t("staysUntilAPersonJudges")}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-
-            <section className="market-section sizing-step mt-3" aria-label={t("proposals")}>
-              <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("proposalsProposed")}</h3>
-              {domain.custom.filter((c) => c.status === "proposed").length === 0 && (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noPendingProposalsAgentProposals")}</p>
-              )}
-              <ul className="sizing-note-list">
-                {domain.custom.filter((c) => c.status === "proposed").map((c) => (
-                  <li key={c.id}>
-                    {c.item_label}
-                    <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={proposerLabel(c, tr)}>
-                      ({resolveLabelTokens(DD_DOMAIN_KEY[c.domain] ?? c.domain, tr)} · {proposerLabel(c, tr)})
-                    </span>
-                    {c.rationale && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("evidenceColon")} {c.rationale}</span>}
-                    {c.source_url ? (
-                      <a className="text-[length:var(--fs-caption)]" href={c.source_url} target="_blank" rel="noreferrer">
-                        {t("source")}{c.source_reliability ?? "?"}): {c.source_url}
-                      </a>
-                    ) : (
-                      <span className="status-chip status-amber ml-0" title={t("thisProposalHasNoVerified")}>
-                        {t("noSourceC")}
-                      </span>
-                    )}
-                    {canAct && c.is_proposer && (
-                      <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="dd-self-approval-hint">{t(SELF_APPROVAL_HINT_KEY)}</span>
-                    )}
-                    {canAct && !c.is_proposer && (
-                      <span className="actions-row ml-2">
-                        <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => review(c, "approved")}>{tc("approve")}</button>
-                        <button type="button" className="btn-danger btn-sm" disabled={busy} onClick={() => review(c, "rejected")}>{tc("dismiss")}</button>
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            </>)}
-
 
             <section className="market-section sizing-step mt-3" aria-label={t("findings")} id="dd-findings">
               <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("findings2")}</h3>
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-findings-flow">
-                {t("reflectionPathTogetherWithThe")} <b>{t("ddGateJudgementEvidence")}</b>{t("andTheSixMostRecent")}{" "}
-                <b>{t("s10InvestmentStructureRecommendation")}</b> {t("isPassedAutomaticallyToThe")} <b>{t("investmentReviewPackage")}</b>{t("asWellThereIsNo")}
+              <p
+                className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2"
+                data-testid="dd-findings-flow"
+              >
+                {t("reflectionPathTogetherWithThe")} <b>{t("ddGateJudgementEvidence")}</b>
+                {t("andTheSixMostRecent")} <b>{t("s10InvestmentStructureRecommendation")}</b>{" "}
+                {t("isPassedAutomaticallyToThe")} <b>{t("investmentReviewPackage")}</b>
+                {t("asWellThereIsNo")}
               </p>
               {(data?.findings.length ?? 0) === 0 && (
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noFindingsRegisteredRecordFacts")}</p>
+                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                  {t("noFindingsRegisteredRecordFacts")}
+                </p>
               )}
               <ul className="sizing-note-list">
                 {(data?.findings ?? []).map((f) => (
@@ -972,21 +1473,79 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
                     <strong>{resolveLabelTokens(DD_DOMAIN_KEY[f.category] ?? f.category, tr)}</strong>:{" "}
                     {editingFinding === f.id ? (
                       <span className="inline-flex flex-wrap gap-1 items-center align-middle">
-                        <input aria-label={t("editFinding")} className="sizing-new-input sizing-new-input-sm" style={{ width: "24rem" }} value={findingDraft.description} onChange={(e) => setFindingDraft((d) => ({ ...d, description: e.target.value }))} />
-                        <input aria-label={t("editValueImpactKrwMillions")} className="sizing-new-input sizing-new-input-sm" style={{ width: "8rem" }} placeholder={t("valueImpact")} value={findingDraft.value_impact} onChange={(e) => setFindingDraft((d) => ({ ...d, value_impact: e.target.value }))} />
-                        <input aria-label={t("editEvidenceReference")} className="sizing-new-input sizing-new-input-sm" style={{ width: "10rem" }} placeholder={t("evidence")} value={findingDraft.evidence_ref} onChange={(e) => setFindingDraft((d) => ({ ...d, evidence_ref: e.target.value }))} />
-                        <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => void saveFinding(f.id)}>{tc("save")}</button>
-                        <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingFinding(null)}>{tc("cancel")}</button>
+                        <input
+                          aria-label={t("editFinding")}
+                          className="sizing-new-input sizing-new-input-sm"
+                          style={{ width: "24rem" }}
+                          value={findingDraft.description}
+                          onChange={(e) => setFindingDraft((d) => ({ ...d, description: e.target.value }))}
+                        />
+                        <input
+                          aria-label={t("editValueImpactKrwMillions")}
+                          className="sizing-new-input sizing-new-input-sm"
+                          style={{ width: "8rem" }}
+                          placeholder={t("valueImpact")}
+                          value={findingDraft.value_impact}
+                          onChange={(e) => setFindingDraft((d) => ({ ...d, value_impact: e.target.value }))}
+                        />
+                        <input
+                          aria-label={t("editEvidenceReference")}
+                          className="sizing-new-input sizing-new-input-sm"
+                          style={{ width: "10rem" }}
+                          placeholder={t("evidence")}
+                          value={findingDraft.evidence_ref}
+                          onChange={(e) => setFindingDraft((d) => ({ ...d, evidence_ref: e.target.value }))}
+                        />
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          disabled={busy}
+                          onClick={() => void saveFinding(f.id)}
+                        >
+                          {tc("save")}
+                        </button>
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => setEditingFinding(null)}>
+                          {tc("cancel")}
+                        </button>
                       </span>
                     ) : (
                       <>
                         {f.description}
-                        {f.value_impact != null && <span className="status-chip status-info ml-1 tabular-nums" title={t("passedToTheS10Investment")}>{t("valueImpact2")} {f.value_impact} → S10</span>}
-                        {f.evidence_ref && <span className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" title={t("evidenceReference")}>{tc("proofColon")} {f.evidence_ref}</span>}
+                        {f.value_impact != null && (
+                          <span
+                            className="status-chip status-info ml-1 tabular-nums"
+                            title={t("passedToTheS10Investment")}
+                          >
+                            {t("valueImpact2")} {f.value_impact} → S10
+                          </span>
+                        )}
+                        {f.evidence_ref && (
+                          <span
+                            className="ml-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+                            title={t("evidenceReference")}
+                          >
+                            {tc("proofColon")} {f.evidence_ref}
+                          </span>
+                        )}
                         {canAct && (
                           <span className="actions-row ml-2 align-middle">
-                            <button type="button" className="btn-ghost btn-sm" onClick={() => { setEditingFinding(f.id); setFindingDraft({ description: f.description, value_impact: f.value_impact != null ? String(f.value_impact) : "", evidence_ref: f.evidence_ref ?? "" }); }}>{t("amend")}</button>
-                            <button type="button" className="btn-ghost btn-sm" onClick={() => removeFinding(f.id)}>{tc("delete")}</button>
+                            <button
+                              type="button"
+                              className="btn-ghost btn-sm"
+                              onClick={() => {
+                                setEditingFinding(f.id);
+                                setFindingDraft({
+                                  description: f.description,
+                                  value_impact: f.value_impact != null ? String(f.value_impact) : "",
+                                  evidence_ref: f.evidence_ref ?? "",
+                                });
+                              }}
+                            >
+                              {t("amend")}
+                            </button>
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => removeFinding(f.id)}>
+                              {tc("delete")}
+                            </button>
                           </span>
                         )}
                       </>
@@ -996,41 +1555,73 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
               </ul>
               {(data?.findings.length ?? 0) > 6 && (
                 <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1" role="note">
-                  {t("theFindings")} {data?.findings.length}{t("itemSOnlyTheSix")}
+                  {t("theFindings")} {data?.findings.length}
+                  {t("itemSOnlyTheSix")}
                 </p>
               )}
             </section>
-                    {decisionTab && (
-          <div className="mt-4">
-            {capSummary && (
-              <div className="market-section sizing-step mb-3" aria-label={t("requiredCapabilityJudgementSummary")} data-testid="capability-dd-summary">
-                <h3 className="sizing-step-title text-[length:var(--fs-body)]">{t("requiredCapabilityJudgementSummary2")}</h3>
-                <p className="flex flex-wrap gap-2 items-center">
-                  <span className="status-chip status-green">{t("resolved")} {capSummary.resolved}</span>
-                  <span className="status-chip status-amber">{t("partiallyResolved")} {capSummary.partial}</span>
-                  <span className={`status-chip ${capSummary.unresolved > 0 ? "status-red" : "status-not-started"}`}>{t("unresolved")} {capSummary.unresolved}</span>
-                  {capSummary.pending > 0 && <span className="status-chip status-amber">{tc("unjudged")} {capSummary.pending}</span>}
-                  {capSummary.unresolved + capSummary.partial > 0 && (
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      {t("aCapabilityNotResolvedBy")}
-                    </span>
-                  )}
+            {decisionTab && (
+              <div
+                role="tabpanel"
+                id={`dd-panel-${decisionTabIdx}`}
+                aria-labelledby={`dd-tab-${decisionTabIdx}`}
+                className="mt-4"
+              >
+                {capSummary && (
+                  // biome-ignore lint/a11y/useAriaPropsSupportedByRole: labelled summary section, role-less wrapper
+                  <div
+                    className="market-section sizing-step mb-3"
+                    aria-label={t("requiredCapabilityJudgementSummary")}
+                    data-testid="capability-dd-summary"
+                  >
+                    <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+                      {t("requiredCapabilityJudgementSummary2")}
+                    </h3>
+                    <p className="flex flex-wrap gap-2 items-center">
+                      <span className="status-chip status-green">
+                        {t("resolved")} {capSummary.resolved}
+                      </span>
+                      <span className="status-chip status-amber">
+                        {t("partiallyResolved")} {capSummary.partial}
+                      </span>
+                      <span
+                        className={`status-chip ${capSummary.unresolved > 0 ? "status-red" : "status-not-started"}`}
+                      >
+                        {t("unresolved")} {capSummary.unresolved}
+                      </span>
+                      {capSummary.pending > 0 && (
+                        <span className="status-chip status-amber">
+                          {tc("unjudged")} {capSummary.pending}
+                        </span>
+                      )}
+                      {capSummary.unresolved + capSummary.partial > 0 && (
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                          {t("aCapabilityNotResolvedBy")}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+                <p
+                  className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2"
+                  data-testid="dd-gate-subject"
+                >
+                  {t("gateJudgementSubject")}{" "}
+                  <strong>{selectedTarget?.name ?? t("noSelectedTargetProjectBasis")}</strong>
+                  {targets.length >= 2 && t("anotherTargetSDdIs")}
                 </p>
+                <GateDecisionPanel
+                  opportunityId={projectId}
+                  gates={["dd"]}
+                  entityType="project"
+                  showReview={false}
+                  nextStage={{
+                    label: t("s10InvestmentStructureDesign"),
+                    href: `/projects/${projectId}/deal-structure`,
+                  }}
+                />
               </div>
             )}
-            <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2" data-testid="dd-gate-subject">
-              {t("gateJudgementSubject")} <strong>{selectedTarget?.name ?? t("noSelectedTargetProjectBasis")}</strong>
-              {targets.length >= 2 && t("anotherTargetSDdIs")}
-            </p>
-            <GateDecisionPanel
-              opportunityId={projectId}
-              gates={["dd"]}
-              entityType="project"
-              showReview={false}
-              nextStage={{ label: t("s10InvestmentStructureDesign"), href: `/projects/${projectId}/deal-structure` }}
-            />
-          </div>
-        )}
           </>
         )}
 
@@ -1042,7 +1633,10 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
             busy={busy}
             onLink={(id) => void judgeWaived(id)}
             onClose={() => setWaiverDlg(null)}
-            onRequested={() => { setWaiverDlg(null); toast(t("waiverRequestRegisteredOnceApproved")); }}
+            onRequested={() => {
+              setWaiverDlg(null);
+              toast(t("waiverRequestRegisteredOnceApproved"));
+            }}
           />
         )}
         {confirmDialog}
@@ -1051,7 +1645,11 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
             label={naDlg.label}
             busy={busy}
             onClose={() => setNaDlg(null)}
-            onSubmit={(note) => { const d = naDlg; setNaDlg(null); void judge(d.checklistId, d.itemId, "na", note); }}
+            onSubmit={(note) => {
+              const d = naDlg;
+              setNaDlg(null);
+              void judge(d.checklistId, d.itemId, "na", note);
+            }}
           />
         )}
         {openDlg && (
@@ -1069,12 +1667,15 @@ export function DdStage({ projectId }: { projectId: string }) {const tr = useTra
           />
         )}
       </StageFrame>
-</>
+    </>
   );
 }
 
 /** Proposer label: human proposals show the person, agent proposals the agent, neither shows an explicit "no record" text. */
-function proposerLabel(c: { proposed_by_agent: string | null; proposed_by_user: string | null }, tr: TranslatorFn): string {
+function proposerLabel(
+  c: { proposed_by_agent: string | null; proposed_by_user: string | null },
+  tr: TranslatorFn,
+): string {
   if (c.proposed_by_agent) return c.proposed_by_agent;
   if (c.proposed_by_user) return tr("stages.s9.stage.proposedP1", { p1: c.proposed_by_user }); // INTERIM-WORDING
   return tr("stages.s9.stage.noProposerRecord"); // INTERIM-WORDING
@@ -1082,50 +1683,105 @@ function proposerLabel(c: { proposed_by_agent: string | null; proposed_by_user: 
 const SELF_APPROVAL_HINT_KEY = "stages.s9.stage.theProposerCannotApproveIt"; // INTERIM-WORDING
 
 /** Code badge (text + icon, never colour only) with the reading / reason / replacement pointer the overlay gives, rendered as given. */
-function ScopeNote({ sc, brownfield = false }: { sc: WsItemScope; brownfield?: boolean }) {const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common");
+function ScopeNote({ sc, brownfield = false }: { sc: WsItemScope; brownfield?: boolean }) {
+  const t = useTranslations("stages.s9.stage");
+  const tc = useTranslations("common");
   // Brownfield: a plain "A" row (as written, nothing special) carries no badge; only R / X / N and fail-closed rows do.
   if (brownfield && sc.code === "A" && sc.rule !== "fail_closed") return null;
   const m = brownfield ? bfCodeMeta(sc) : codeMeta(sc);
   const fallbackNote = sc.fallback === "replacement_not_judged" ? t("judgingThisItemBecauseIts") : null; // INTERIM-WORDING
   return (
     <span className="block mt-1 text-[length:var(--fs-caption)]" data-testid="dd-scope-note" data-code={sc.code}>
-      <span className="status-chip status-not-started" title={m.hint}><span aria-hidden="true">{m.icon} </span>{m.label}</span>
+      <span className="status-chip status-not-started" title={m.hint}>
+        <span aria-hidden="true">{m.icon} </span>
+        {m.label}
+      </span>
       {m.ruleText && <span className="ml-1 text-[color:var(--muted-fg)]">{m.ruleText}</span>}
-      {sc.code === "R" && sc.reading && <span className="block text-[color:var(--muted-fg)]">{brownfield ? t("howToRead") : t("greenfieldInterpretation")}: {sc.reading}</span>}
-      {sc.code === "N" && !sc.judgeable && <span className="block text-[color:var(--muted-fg)]">{t("exclusionReason")} {sc.reason ?? tc("noReason")} {t("notAJudgementSubject")}</span>}
-      {sc.code === "X" && sc.replaced_by.map((p) => <span key={`${p.checklist_id}:${p.item_id}`} className="block text-[color:var(--muted-fg)]">{brownfield ? t("substituteItems") : t("substitute")}: {pointerText(p)}</span>)}
-      {sc.code === "X" && replacementUndecided(sc) && <span className="block text-[color:var(--muted-fg)]" data-testid="dd-replaced-pending">{REPLACED_PENDING_NOTE}</span>}
+      {sc.code === "R" && sc.reading && (
+        <span className="block text-[color:var(--muted-fg)]">
+          {brownfield ? t("howToRead") : t("greenfieldInterpretation")}: {sc.reading}
+        </span>
+      )}
+      {sc.code === "N" && !sc.judgeable && (
+        <span className="block text-[color:var(--muted-fg)]">
+          {t("exclusionReason")} {sc.reason ?? tc("noReason")} {t("notAJudgementSubject")}
+        </span>
+      )}
+      {sc.code === "X" &&
+        sc.replaced_by.map((p) => (
+          <span key={`${p.checklist_id}:${p.item_id}`} className="block text-[color:var(--muted-fg)]">
+            {brownfield ? t("substituteItems") : t("substitute")}: {pointerText(p)}
+          </span>
+        ))}
+      {sc.code === "X" && replacementUndecided(sc) && (
+        <span className="block text-[color:var(--muted-fg)]" data-testid="dd-replaced-pending">
+          {REPLACED_PENDING_NOTE}
+        </span>
+      )}
       {fallbackNote && <span className="block text-[color:var(--muted-fg)]">{fallbackNote}</span>}
     </span>
   );
 }
 
 /** Per-row waiver dialog: link an existing active waiver, or request a new one prefilled with the item. */
-function WaiverDialog({ dlg, projectId, targetId, busy, onLink, onClose, onRequested }: {
-  dlg: { checklistId: string; itemId: string; label: string; active: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string }>; docs: Array<{ id: string; layer: string; key: string; title: string }> };
+function WaiverDialog({
+  dlg,
+  projectId,
+  targetId,
+  busy,
+  onLink,
+  onClose,
+  onRequested,
+}: {
+  dlg: {
+    checklistId: string;
+    itemId: string;
+    label: string;
+    active: Array<{ id: string; clause_ref: string; governance_doc_id: string; expires_at: string }>;
+    docs: Array<{ id: string; layer: string; key: string; title: string }>;
+  };
   projectId: string;
   targetId: string | null;
   busy: boolean;
   onLink: (waiverId: string) => void;
   onClose: () => void;
   onRequested: () => void;
-}) {const t = useTranslations("stages.s9.stage");
+}) {
+  const t = useTranslations("stages.s9.stage");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop/stopPropagation guard, keyboard handled by the dialog
     <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
-      <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-label={t("waiverRequestAndLink2")} style={{ maxWidth: "40rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop/stopPropagation guard, keyboard handled by the dialog */}
+      <div
+        ref={panelRef}
+        className="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("waiverRequestAndLink2")}
+        style={{ maxWidth: "40rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-[1rem] font-semibold mb-1">{t("waiverRequestAndLink3")}</h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          {t("targetItems")} {dlg.label}{t("aWaivedJudgementRequiresAn")}
+          {t("targetItems")} {dlg.label}
+          {t("aWaivedJudgementRequiresAn")}
         </p>
         <h4 className="text-[length:var(--fs-body)] mb-1">{t("linkAnApprovedWaiver")}</h4>
         {dlg.active.length === 0 ? (
-          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">{t("noActiveWaiverToLink")}</p>
+          <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
+            {t("noActiveWaiverToLink")}
+          </p>
         ) : (
           <ul className="space-y-2 mb-3">
             {dlg.active.map((w) => (
               <li key={w.id}>
-                <button type="button" className="btn-ghost btn-sm w-full text-left" disabled={busy} onClick={() => onLink(w.id)}>
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm w-full text-left"
+                  disabled={busy}
+                  onClick={() => onLink(w.id)}
+                >
                   ⚖ {w.governance_doc_id} {w.clause_ref} {t("expiry")} {w.expires_at.slice(0, 10)}
                 </button>
               </li>
@@ -1133,19 +1789,33 @@ function WaiverDialog({ dlg, projectId, targetId, busy, onLink, onClose, onReque
           </ul>
         )}
         <h4 className="text-[length:var(--fs-body)] mb-1">{t("newWaiverRequest")}</h4>
-        <WaiverRequestForm projectId={projectId} docs={dlg.docs} prefill={{ clause: `${dlg.checklistId} ${dlg.itemId}`, checklist_id: dlg.checklistId, item_id: dlg.itemId }} targetId={targetId} onDone={onRequested} onCancel={onClose} />
+        <WaiverRequestForm
+          projectId={projectId}
+          docs={dlg.docs}
+          prefill={{ clause: `${dlg.checklistId} ${dlg.itemId}`, checklist_id: dlg.checklistId, item_id: dlg.itemId }}
+          targetId={targetId}
+          onDone={onRequested}
+          onCancel={onClose}
+        />
       </div>
     </div>
   );
 }
 
 /** `DD 열기` dialog (ADR-0157): a human opens comparison DD on a non-selected shortlisted target with a required rationale. */
-function OpenDdDialog({ projectId, target, onClose, onOpened }: {
+function OpenDdDialog({
+  projectId,
+  target,
+  onClose,
+  onOpened,
+}: {
   projectId: string;
   target: { targetId: string; name: string };
   onClose: () => void;
   onOpened: (targetId: string) => void;
-}) {const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common");
+}) {
+  const t = useTranslations("stages.s9.stage");
+  const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   const [rationale, setRationale] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1153,9 +1823,13 @@ function OpenDdDialog({ projectId, target, onClose, onOpened }: {
   const missing = rationale.trim().length === 0;
   async function submit() {
     if (saving || missing) return;
-    setSaving(true); setError(null);
+    setSaving(true);
+    setError(null);
     try {
-      await api.post(`/api/projects/${encodeURIComponent(projectId)}/dd/targets`, { target_id: target.targetId, rationale: rationale.trim() });
+      await api.post(`/api/projects/${encodeURIComponent(projectId)}/dd/targets`, {
+        target_id: target.targetId,
+        rationale: rationale.trim(),
+      });
       onOpened(target.targetId);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("failedToOpenDd"));
@@ -1164,12 +1838,22 @@ function OpenDdDialog({ projectId, target, onClose, onOpened }: {
     }
   }
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop/stopPropagation guard, keyboard handled by the dialog
     <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
-      <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dd-open-title" style={{ maxWidth: "36rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h3 id="dd-open-title" className="text-[1rem] font-semibold mb-1">{t("openDd2")} {target.name}</h3>
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          {t("addingDdToATarget")}
-        </p>
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop/stopPropagation guard, keyboard handled by the dialog */}
+      <div
+        ref={panelRef}
+        className="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dd-open-title"
+        style={{ maxWidth: "36rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="dd-open-title" className="text-[1rem] font-semibold mb-1">
+          {t("openDd2")} {target.name}
+        </h3>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">{t("addingDdToATarget")}</p>
         <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-open-rationale">
           {t("evidenceForOpeningDdRequired")}
         </label>
@@ -1185,13 +1869,29 @@ function OpenDdDialog({ projectId, target, onClose, onOpened }: {
           onChange={(e) => setRationale(e.target.value)}
           placeholder={t("whyDdThisTargetAs")}
         />
-        <p id="dd-open-error" role="alert" aria-live="assertive" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]">
+        <p
+          id="dd-open-error"
+          role="alert"
+          aria-live="assertive"
+          className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]"
+        >
           {error ? `✕ ${error}` : ""}
         </p>
         <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
-          {missing && <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("evidenceIsRequiredToOpen")}</span>}
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{tc("cancel")}</button>
-          <button type="button" className="btn-premium btn-sm" disabled={saving || missing} onClick={() => void submit()}>
+          {missing && (
+            <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {t("evidenceIsRequiredToOpen")}
+            </span>
+          )}
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
+            {tc("cancel")}
+          </button>
+          <button
+            type="button"
+            className="btn-premium btn-sm"
+            disabled={saving || missing}
+            onClick={() => void submit()}
+          >
             {saving ? t("opening") : t("openDd3")}
           </button>
         </div>
@@ -1201,19 +1901,46 @@ function OpenDdDialog({ projectId, target, onClose, onOpened }: {
 }
 
 /** Reason dialog for `na` on a checklist whose applicability the sub-track rule decided (no silent drops). */
-function NaReasonDialog({ label, busy, onClose, onSubmit }: { label: string; busy: boolean; onClose: () => void; onSubmit: (note: string) => void }) {const t = useTranslations("stages.s9.stage"); const tc = useTranslations("common");
+function NaReasonDialog({
+  label,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  label: string;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (note: string) => void;
+}) {
+  const t = useTranslations("stages.s9.stage");
+  const tc = useTranslations("common");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
   const [note, setNote] = useState("");
   const [touched, setTouched] = useState(false);
   const problem = validateNaReason(note);
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop/stopPropagation guard, keyboard handled by the dialog
     <div className="modal-backdrop" role="presentation" onKeyDown={onKeyDown} onClick={onClose}>
-      <div ref={panelRef} className="modal-panel" role="dialog" aria-modal="true" aria-labelledby="dd-na-title" style={{ maxWidth: "36rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h3 id="dd-na-title" className="text-[1rem] font-semibold mb-1">{t("reason")}</h3>
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: backdrop/stopPropagation guard, keyboard handled by the dialog */}
+      <div
+        ref={panelRef}
+        className="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dd-na-title"
+        style={{ maxWidth: "36rem", width: "100%", maxHeight: "90vh", overflowY: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id="dd-na-title" className="text-[1rem] font-semibold mb-1">
+          {t("reason")}
+        </h3>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-3">
-          {t("targetItems2")} {label}{t("whetherThisItemAppliesIs")}
+          {t("targetItems2")} {label}
+          {t("whetherThisItemAppliesIs")}
         </p>
-        <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-na-reason">{t("reasonRequired")}</label>
+        <label className="text-[length:var(--fs-caption)] block" htmlFor="dd-na-reason">
+          {t("reasonRequired")}
+        </label>
         <textarea
           id="dd-na-reason"
           className="sizing-new-input mt-1 w-full"
@@ -1227,12 +1954,27 @@ function NaReasonDialog({ label, busy, onClose, onSubmit }: { label: string; bus
           onChange={(e) => setNote(e.target.value)}
           placeholder={t("whyThisItemDoesNot")}
         />
-        <p id="dd-na-error" role="alert" aria-live="assertive" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]">
+        <p
+          id="dd-na-error"
+          role="alert"
+          aria-live="assertive"
+          className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1 min-h-[1.25rem]"
+        >
           {touched && problem ? `✕ ${problem}` : ""}
         </p>
         <div className="flex flex-wrap items-center justify-end gap-2 mt-2">
-          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>{tc("cancel")}</button>
-          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={() => { setTouched(true); if (!problem) onSubmit(note.trim()); }}>
+          <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
+            {tc("cancel")}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            disabled={busy}
+            onClick={() => {
+              setTouched(true);
+              if (!problem) onSubmit(note.trim());
+            }}
+          >
             {t("recordAsNotApplicable")}
           </button>
         </div>

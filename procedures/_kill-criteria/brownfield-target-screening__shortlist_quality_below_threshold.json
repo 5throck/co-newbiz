@@ -1,7 +1,7 @@
 {
   "procedure": "brownfield-target-screening",
   "criterion_id": "shortlist_quality_below_threshold",
-  "title": "Short List quality below threshold — no candidate clears the rated-scorecard bar (t-06..t-09)",
+  "title": "최종 후보 목록 (final candidate list) quality below threshold — no candidate clears the rated-scorecard bar (t-06..t-09)",
   "action": "back_to_target_identification",
   "predicate": null,
   "enabled": false,

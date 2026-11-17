@@ -13,15 +13,30 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { computeTrackAdvisory, type TrackAdvisory } from "../../../../../lib/track-advisory.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../lib/selected-guard.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
 
 const TRACKS = ["greenfield", "brownfield"] as const;
 const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;
-const BF_SUB = ["m_and_a", "jv", "strategic_investment", "minority_investment", "partnership", "rbd", "corporate_venture"] as const;
+const BF_SUB = [
+  "m_and_a",
+  "jv",
+  "strategic_investment",
+  "minority_investment",
+  "partnership",
+  "rbd",
+  "corporate_venture",
+] as const;
 const INTENTS = ["integration", "capability_access"] as const;
-const CRITERIA = ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"] as const;
+const CRITERIA = [
+  "control_need",
+  "capability_criticality",
+  "market_uncertainty",
+  "integration_capacity",
+  "speed_to_capability",
+] as const;
 
 interface RecoDraft {
   track: (typeof TRACKS)[number];
@@ -38,7 +53,11 @@ interface RecoDraft {
 function strList(raw: unknown, max: number): string[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((s) => String(s ?? "").trim().slice(0, 300))
+    .map((s) =>
+      String(s ?? "")
+        .trim()
+        .slice(0, 300),
+    )
     .filter((s) => s !== "")
     .slice(0, max);
 }
@@ -50,13 +69,17 @@ function normalizeReco(raw: Record<string, unknown>, advisory: TrackAdvisory): R
     ? (rawTrack as RecoDraft["track"])
     : advisory.recommendedTrack !== "neutral"
       ? advisory.recommendedTrack
-      : advisory.greenfieldScore >= advisory.brownfieldScore ? "greenfield" : "brownfield";
+      : advisory.greenfieldScore >= advisory.brownfieldScore
+        ? "greenfield"
+        : "brownfield";
   const subWhitelist = track === "greenfield" ? GF_SUB : BF_SUB;
   const rawSub = String(raw.sub_track ?? "").trim();
   const subTrack = (subWhitelist as readonly string[]).includes(rawSub) ? rawSub : null;
   const rawIntent = String(raw.intent ?? "").trim();
   const intent = (INTENTS as readonly string[]).includes(rawIntent) ? rawIntent : null;
-  const rawConfidence = String(raw.confidence ?? "").trim().toLowerCase();
+  const rawConfidence = String(raw.confidence ?? "")
+    .trim()
+    .toLowerCase();
   const confidence = ["high", "medium", "low"].includes(rawConfidence) ? rawConfidence : null;
 
   const seen = new Set<string>();
@@ -68,7 +91,14 @@ function normalizeReco(raw: Record<string, unknown>, advisory: TrackAdvisory): R
       if (!(CRITERIA as readonly string[]).includes(criterion) || seen.has(criterion)) continue;
       if (!Number.isInteger(score) || score < 1 || score > 3) continue;
       seen.add(criterion);
-      scores.push({ criterion, score, evidence_note: String(item?.evidence_note ?? "").trim().slice(0, 500) || "검증 필요" });
+      scores.push({
+        criterion,
+        score,
+        evidence_note:
+          String(item?.evidence_note ?? "")
+            .trim()
+            .slice(0, 500) || "검증 필요",
+      });
     }
   }
 
@@ -78,8 +108,13 @@ function normalizeReco(raw: Record<string, unknown>, advisory: TrackAdvisory): R
     intent,
     confidence,
     scores: scores.length > 0 ? scores : null,
-    rationale_draft: String(raw.rationale_draft ?? "").trim().slice(0, 2000),
-    alternatives_draft: String(raw.alternatives_draft ?? "").trim().slice(0, 1000) || null,
+    rationale_draft: String(raw.rationale_draft ?? "")
+      .trim()
+      .slice(0, 2000),
+    alternatives_draft:
+      String(raw.alternatives_draft ?? "")
+        .trim()
+        .slice(0, 1000) || null,
     key_evidence: strList(raw.key_evidence, 8),
     cautions: strList(raw.cautions, 8),
   };
@@ -90,7 +125,9 @@ function synthesisReco(advisory: TrackAdvisory, oppName: string, why: string): R
   const track =
     advisory.recommendedTrack !== "neutral"
       ? advisory.recommendedTrack
-      : advisory.greenfieldScore >= advisory.brownfieldScore ? "greenfield" : "brownfield";
+      : advisory.greenfieldScore >= advisory.brownfieldScore
+        ? "greenfield"
+        : "brownfield";
   return {
     track,
     sub_track: null,
@@ -110,52 +147,79 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "LLM recommendation generation requires the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "LLM recommendation generation requires the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id } = await params;
   const db = getDb();
   const opp = db
-    .query("SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score, market_size_krw_m, growth_rate FROM opportunity WHERE id = ?")
-    .get(id) as
-    | { id: string; name: string; market_scope: string | null; value_chain_node: string | null; rationale: string | null; attractiveness_score: number | null; synergy_score: number | null; market_size_krw_m: number | null; growth_rate: number | null }
-    | null;
+    .query(
+      "SELECT id, name, market_scope, value_chain_node, rationale, attractiveness_score, synergy_score, market_size_krw_m, growth_rate FROM opportunity WHERE id = ?",
+    )
+    .get(id) as {
+    id: string;
+    name: string;
+    market_scope: string | null;
+    value_chain_node: string | null;
+    rationale: string | null;
+    attractiveness_score: number | null;
+    synergy_score: number | null;
+    market_size_krw_m: number | null;
+    growth_rate: number | null;
+  } | null;
   if (!opp) return notFound();
   // S4 화면과 동일한 전제 — 선별(selected)된 기회만 결정 작업의 대상이다.
-  const row = db.query("SELECT status FROM opportunity WHERE id = ?").get(id) as { status: string } | undefined;
-  if (!row || row.status !== "selected") return badRequest("invalid_request", "Only a selected opportunity can get an LLM market-entry recommendation.");
+  // N2 (owner decision 2026-11-17): server-side selection enforcement — 409 not_selected, not a 400.
+  const selectionDenied = notSelectedResponse(db, id);
+  if (selectionDenied) return selectionDenied;
 
   const advisory = computeTrackAdvisory(db, id);
 
   // S1 근거 — 기회의 산업의 최신 완료 시장분석 (스케치 생성과 동일한 출처).
   let s1 = "S1 시장분석: 없음";
   const ind = opp.market_scope
-    ? db.query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1").get(opp.market_scope) as { id: string } | undefined
+    ? (db.query("SELECT id FROM md_industry WHERE name_ko = ? LIMIT 1").get(opp.market_scope) as
+        | { id: string }
+        | undefined)
     : undefined;
   const version = ind
-    ? db.query(
-        `SELECT v.payload FROM market_sizing_version v
+    ? (db
+        .query(
+          `SELECT v.payload FROM market_sizing_version v
          JOIN market_sizing_analysis a ON a.id = v.analysis_id
          WHERE a.industry_id = ? AND a.status = 'completed'
          ORDER BY v.version_no DESC LIMIT 1`,
-      ).get(ind.id) as { payload: string } | undefined
+        )
+        .get(ind.id) as { payload: string } | undefined)
     : undefined;
   if (version) {
     try {
-      const m = (JSON.parse(version.payload) as {
-        matrix?: {
-          anchor?: { total?: number };
-          consistency?: { bottomUpCagr?: number };
-          competitive?: { structure?: string };
-          qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] };
-        };
-      }).matrix ?? {};
+      const m =
+        (
+          JSON.parse(version.payload) as {
+            matrix?: {
+              anchor?: { total?: number };
+              consistency?: { bottomUpCagr?: number };
+              competitive?: { structure?: string };
+              qualitative?: { opportunityFactors?: string[]; riskFactors?: string[] };
+            };
+          }
+        ).matrix ?? {};
       s1 = [
         `기준 시장규모: ${m.anchor?.total ? `$${m.anchor.total.toFixed(2)}B` : "미상"}`,
         `CAGR: ${m.consistency?.bottomUpCagr !== undefined && m.consistency.bottomUpCagr !== null ? `${m.consistency.bottomUpCagr.toFixed(1)}%` : "미상"}`,
         m.competitive?.structure ? `경쟁 구조: ${m.competitive.structure}` : "",
         m.qualitative?.opportunityFactors?.length ? `기회 요인: ${m.qualitative.opportunityFactors.join(" / ")}` : "",
         m.qualitative?.riskFactors?.length ? `위험 요인: ${m.qualitative.riskFactors.join(" / ")}` : "",
-      ].filter(Boolean).join("\n");
-    } catch { /* malformed payload — keep the "없음" default */ }
+      ]
+        .filter(Boolean)
+        .join("\n");
+    } catch {
+      /* malformed payload — keep the "없음" default */
+    }
   }
 
   // S3 근거 — 이 기회에 연결된 최신 완료 시너지 분석 (synergy_version payload).
@@ -178,9 +242,15 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       s3 = [
         `시너지 권고 점수: ${typeof p.synergyScore === "number" ? p.synergyScore : "미상"}`,
         p.synergyRationale ? `시너지 근거: ${p.synergyRationale}` : "",
-        p.shortList?.length ? `우선 시너지 영역: ${p.shortList.map((s) => `${s.area ?? "?"}(${s.verdict ?? "?"})`).join(", ")}` : "",
-      ].filter(Boolean).join("\n");
-    } catch { /* malformed payload — keep the "없음" default */ }
+        p.shortList?.length
+          ? `우선 시너지 영역: ${p.shortList.map((s) => `${s.area ?? "?"}(${s.verdict ?? "?"})`).join(", ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    } catch {
+      /* malformed payload — keep the "없음" default */
+    }
   }
 
   const context = [
@@ -197,7 +267,9 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     `[결정론 트랙 어드바이저 (ADR-0104) — 참고 신호]`,
     ...advisory.signals.map((s) => `- ${s.label} (${s.leans}, 가중치 ${s.weight}): ${s.note}`),
     advisory.reReviewTriggers.length > 0 ? `재검토 트리거: ${advisory.reReviewTriggers.join(" / ")}` : "",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const messages = [
     systemMessage("s4.route_recommendation"),
@@ -217,13 +289,20 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   let provider: string | null = null;
   let note: string;
   if (isLlmConfigured()) {
-    const res = await completeOrFallback(messages, () => "", { maxTokens: 2200, agent: promptAgent("s4.route_recommendation") });
+    const res = await completeOrFallback(messages, () => "", {
+      maxTokens: 2200,
+      agent: promptAgent("s4.route_recommendation"),
+    });
     if (res.source === "llm") {
       const start = res.text.indexOf("{");
       const end = res.text.lastIndexOf("}");
       let raw: Record<string, unknown> | null = null;
       if (start !== -1 && end > start) {
-        try { raw = JSON.parse(res.text.slice(start, end + 1)) as Record<string, unknown>; } catch { raw = null; }
+        try {
+          raw = JSON.parse(res.text.slice(start, end + 1)) as Record<string, unknown>;
+        } catch {
+          raw = null;
+        }
       }
       if (raw) {
         draft = normalizeReco(raw, advisory);
@@ -231,18 +310,35 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         provider = res.provider;
         note = "LLM 제안 — 결정 폼에 반영해 검토·수정한 뒤 사람이 결정을 기록합니다 (경계 #2).";
       } else {
-        draft = synthesisReco(advisory, opp.name, "LLM 응답을 파싱하지 못해 결정론 폴백으로 대체했습니다 — 재생성하거나 사람이 직접 작성하세요.");
+        draft = synthesisReco(
+          advisory,
+          opp.name,
+          "LLM 응답을 파싱하지 못해 결정론 폴백으로 대체했습니다 — 재생성하거나 사람이 직접 작성하세요.",
+        );
         note = "LLM 응답 파싱 실패 — 결정론 폴백으로 대체했습니다.";
       }
     } else {
-      draft = synthesisReco(advisory, opp.name, "LLM 호출이 실패해 결정론 폴백으로 대체했습니다 — 제공자 상태를 확인하세요.");
+      draft = synthesisReco(
+        advisory,
+        opp.name,
+        "LLM 호출이 실패해 결정론 폴백으로 대체했습니다 — 제공자 상태를 확인하세요.",
+      );
       note = "LLM 호출 실패 — 결정론 폴백으로 대체했습니다.";
     }
   } else {
-    draft = synthesisReco(advisory, opp.name, "LLM 미구성 — 이 제안은 결정론 신호 기반이며 5기준 채점 초안은 포함하지 않습니다.");
+    draft = synthesisReco(
+      advisory,
+      opp.name,
+      "LLM 미구성 — 이 제안은 결정론 신호 기반이며 5기준 채점 초안은 포함하지 않습니다.",
+    );
     note = "LLM 미구성 — 결정론 폴백(채점 초안 없음). CO_NEWBIZ_LLM_* 구성 후 재생성하세요.";
   }
 
-  appendAudit(db, { actor: ctx.userId, action: "route_recommendation.generate", target: `${id}:${source}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: ctx.userId,
+    action: "route_recommendation.generate",
+    target: `${id}:${source}`,
+    now: new Date().toISOString(),
+  });
   return ok({ source, provider, note, recommendation: draft }, 200);
 });

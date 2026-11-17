@@ -25,13 +25,26 @@ const read = (p: string) => readFileSync(join(WEB, p), "utf8");
 // and the ko master catalog value (the original Korean label).
 const koCatalog = await import("../../app/web-next/locales/ko.json");
 const koOf = (key: string): string =>
-  key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), koCatalog) as string;
+  key
+    .split(".")
+    .reduce<unknown>(
+      (acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
+      koCatalog,
+    ) as string;
 
 describe("S8 tab order and greenfield redirect", () => {
   test("stage tab row: goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
     expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "bep", "params", "target-costing"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual([
+      "overview",
+      "scenarios",
+      "/wacc",
+      "/financial-analysis",
+      "bep",
+      "params",
+      "target-costing",
+    ]);
     expect(primaryTabKeys(false)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
     expect(primaryTabKeys(true)).toEqual(["goals", "technical", "financial", "decision"]);
   });
@@ -85,12 +98,29 @@ describe("attainment mapping", () => {
       expect(v.icon.length).toBeGreaterThan(0);
       expect(v.label.length).toBeGreaterThan(0);
     }
-    const labels = new Set((["met", "missed", "indeterminate", "manual", null] as const).map((s) => attainmentView(s).label));
+    const labels = new Set(
+      (["met", "missed", "indeterminate", "manual", null] as const).map((s) => attainmentView(s).label),
+    );
     expect(labels.size).toBe(5);
   });
   test("summary counts", () => {
-    const e = (status: "met" | "missed" | "indeterminate" | "manual") => ({ metric_key: "npv", label: "x", direction: "gte" as const, target_value: 1, unit: "krw_m" as const, source: "project" as const, status, actual: null, actual_basis: "" });
-    expect(summarizeAttainment([e("met"), e("met"), e("missed"), e("manual")])).toEqual({ met: 2, missed: 1, indeterminate: 0, manual: 1 });
+    const e = (status: "met" | "missed" | "indeterminate" | "manual") => ({
+      metric_key: "npv",
+      label: "x",
+      direction: "gte" as const,
+      target_value: 1,
+      unit: "krw_m" as const,
+      source: "project" as const,
+      status,
+      actual: null,
+      actual_basis: "",
+    });
+    expect(summarizeAttainment([e("met"), e("met"), e("missed"), e("manual")])).toEqual({
+      met: 2,
+      missed: 1,
+      indeterminate: 0,
+      manual: 1,
+    });
     expect(summarizeAttainment(undefined)).toEqual({ met: 0, missed: 0, indeterminate: 0, manual: 0 });
   });
   test("starter chips are existing presets only", () => {
@@ -104,7 +134,10 @@ describe("source-reading checks", () => {
     const src = read("components/stages/BusinessCaseStage.tsx");
     // Whitespace-tolerant: biome format wraps the GoalsPanel render to its own
     // line inside the conditional; the pin asserts the wiring, not the layout.
-    expect(src).toMatch(/tab === "goals" && \(\s*<GoalsPanel/);
+    // 2026-11-17: the goals content now sits inside a tabpanel wrapper (role/id/aria-labelledby wiring).
+    expect(src).toMatch(
+      /tab === "goals" && \(\s*<div role="tabpanel" id="s8-panel-goals" aria-labelledby="s8-tab-goals">\s*<S8PartHeader part="goals" \/>\s*<GoalsPanel/,
+    );
     // IA 2026-10-14: goal setting/status lives only in the goals tab -- no banner on any other tab.
     expect(src).not.toContain("<GoalsBanner");
     expect(src).not.toContain("S8GoalsBannerLoader");
@@ -123,7 +156,11 @@ describe("source-reading checks", () => {
     for (const needle of ["SOURCE_VIEW", "shadowed_note", "e.rationale", "e.set_by"]) expect(src).toContain(needle);
   });
   test("new UI strings are marked INTERIM-WORDING and use no raw colours", () => {
-    for (const f of ["components/business-case/GoalsPanel.tsx", "components/business-case/GoalAttainment.tsx", "lib/business-goals-view.ts"]) {
+    for (const f of [
+      "components/business-case/GoalsPanel.tsx",
+      "components/business-case/GoalAttainment.tsx",
+      "lib/business-goals-view.ts",
+    ]) {
       const src = read(f);
       expect(src).toContain("INTERIM-WORDING");
       expect(src).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgb\(/);
@@ -147,18 +184,35 @@ describe("ack note, migration_pending and two-person release", () => {
     expect(goalsAckErrorText({ code: "other" })).toBeNull();
   });
   test("migration_pending renders the restart instruction", () => {
-    expect(goalsLoadErrorText({ code: "migration_pending", message: "x" }, "f")).toBe("서버를 재시작해 마이그레이션을 적용해야 합니다.");
+    expect(goalsLoadErrorText({ code: "migration_pending", message: "x" }, "f")).toBe(
+      "서버를 재시작해 마이그레이션을 적용해야 합니다.",
+    );
     expect(goalsLoadErrorText(new Error("boom"), "f")).toBe("boom");
     expect(goalsLoadErrorText("x", "f")).toBe("f");
-    for (const f of ["components/business-case/GoalsPanel.tsx", "components/stages/BusinessCaseStage.tsx", "components/TargetCheckPanel.tsx"]) expect(read(f)).toContain("goalsLoadErrorText");
+    for (const f of [
+      "components/business-case/GoalsPanel.tsx",
+      "components/stages/BusinessCaseStage.tsx",
+      "components/TargetCheckPanel.tsx",
+    ])
+      expect(read(f)).toContain("goalsLoadErrorText");
   });
   test("release action hides approve for requester and creator", () => {
     const base = { created_by: "c" };
     expect(releaseAction({ ...base, pending_release: null }, "c").kind).toBe("request");
     const pending = { requested_by: "r", requested_at: "t" };
-    expect(releaseAction({ ...base, pending_release: pending }, "r")).toMatchObject({ allowed: false, kind: "awaiting_other" });
-    expect(releaseAction({ ...base, pending_release: pending }, "c")).toMatchObject({ allowed: false, kind: "creator_blocked" });
-    expect(releaseAction({ ...base, pending_release: pending }, "x")).toMatchObject({ allowed: true, kind: "approve", label: "집행 승인" });
+    expect(releaseAction({ ...base, pending_release: pending }, "r")).toMatchObject({
+      allowed: false,
+      kind: "awaiting_other",
+    });
+    expect(releaseAction({ ...base, pending_release: pending }, "c")).toMatchObject({
+      allowed: false,
+      kind: "creator_blocked",
+    });
+    expect(releaseAction({ ...base, pending_release: pending }, "x")).toMatchObject({
+      allowed: true,
+      kind: "approve",
+      label: "집행 승인",
+    });
     expect(trancheErrorText("second_person_required", "f")).toMatch(/다른 사람/);
     expect(read("components/stages/CapexTrancheTable.tsx")).toContain('aria-live="polite"');
   });
@@ -174,7 +228,9 @@ describe("S8 scenario row actions (RowMenu)", () => {
     expect(koOf("common.delete")).toBe("삭제");
     // ADR-0178 (2026-10-16): the lines action is conditional — Green Field opens the
     // read-only view, Brown Field keeps the editor.
-    expect(src).toMatch(/key: "lines",\s*label: greenfield \? t\("viewLines"\) : t\("editLine"\),[^}]*startView\(c\) : startEdit\(c\)/);
+    expect(src).toMatch(
+      /key: "lines",\s*label: greenfield \? t\("viewLines"\) : t\("editLine"\),[^}]*startView\(c\) : startEdit\(c\)/,
+    );
     expect(koOf("stages.s8.stage.viewLines")).toBe("라인 보기");
     expect(koOf("stages.s8.stage.editLine")).toBe("라인 편집");
     expect(src).toMatch(/aria-label=\{t\("p1Adopt", \{ p1: rowCtx \}\)\}[^>]*onClick=\{\(\) => adopt\(/);
@@ -190,7 +246,7 @@ describe("S8 scenario row actions (RowMenu)", () => {
     expect(koOf("stages.s8.stage.editing2")).toBe("편집 대상:");
     expect(src).toContain('t("theLineEditorIsOpen")');
     expect(koOf("stages.s8.stage.theLineEditorIsOpen")).toBe("라인 편집기가 아래에 열렸습니다 —");
-    expect(src).toContain('.row-menu-trigger`)?.focus()');
+    expect(src).toContain(".row-menu-trigger`)?.focus()");
   });
 });
 
@@ -209,14 +265,21 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
   const src = readFileSync(join(import.meta.dir, "../../app/web-next/components/stages/BusinessCaseStage.tsx"), "utf8");
   test("attainment table renders once, in the goals tab (per-case columns kept)", () => {
     expect(src).toContain("attainmentCases");
-    expect(src).toMatch(/tab === "goals" && \(\s*\n\s*<GoalAttainmentTable/);
-    expect(src).not.toContain("tab === \"scenarios\" && <GoalAttainmentTable");
+    // Single render site inside the goals tabpanel, after GoalsPanel.
+    expect(src.match(/<GoalAttainmentTable/g)).toHaveLength(1);
+    expect(src).toMatch(
+      /<GoalsPanel[\s\S]*?\/>[\s\S]*?<GoalAttainmentTable[\s\S]*?\n\s*<\/div>\s*\n\s*\)\}\s*\n\s*\{tab === "technical"/,
+    );
+    expect(src).not.toContain('tab === "scenarios" && <GoalAttainmentTable');
     expect(src).toContain('t("goalAttainmentJudgementIsIn")');
     expect(koOf("stages.s8.stage.goalAttainmentJudgementIsIn")).toBe("목표 달성 판정은 사업 목표 탭 →");
   });
   test("S8LensStrip renders only on the decision tab (one site, above TargetCheckPanel)", () => {
     expect(src.match(/<S8LensStrip/g)).toHaveLength(1);
-    expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/);
+    // 2026-11-17: the wrapper div now also carries tabpanel wiring (role/id/aria-labelledby).
+    expect(src).toMatch(
+      /tab === "decision" && \(\s*\n\s*<div role="tabpanel" id="s8-panel-decision" aria-labelledby="s8-tab-decision" className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/,
+    );
     expect(read("components/StageTabs.tsx")).not.toContain("S8LensStrip");
   });
   test("goals tab layout: one primary add action, status line, sections, editor above the table", () => {
@@ -240,7 +303,9 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
     expect(koOf("common.scenarioAttainment")).toBe("시나리오별 달성 여부");
     expect(a).toContain("attainment-legend");
     expect(a).toContain('t("onceATargetIsAdded")');
-    expect(koOf("stages.s8.goalAttainment.onceATargetIsAdded")).toBe("목표를 추가하면 시나리오별 달성 여부가 표시됩니다.");
+    expect(koOf("stages.s8.goalAttainment.onceATargetIsAdded")).toBe(
+      "목표를 추가하면 시나리오별 달성 여부가 표시됩니다.",
+    );
   });
   test("add button opens the editor directly; select lists all presets, taken ones disabled; chips only when empty", () => {
     const g = read("components/business-case/GoalsPanel.tsx");
@@ -254,18 +319,25 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
   });
   test("moved tabs sit in the financial sub-tab row, not the primary row", () => {
     expect(src).toMatch(/label=\{t\("financialFeasibility2"\)\}[\s\S]*?key: "target-costing"/);
-    const primary = src.slice(src.indexOf('label={t("s8BusinessCaseScreen")}'), src.indexOf('label={t("financialFeasibility2")}'));
+    const primary = src.slice(
+      src.indexOf('label={t("s8BusinessCaseScreen")}'),
+      src.indexOf('label={t("financialFeasibility2")}'),
+    );
     for (const k of ["overview", "params", "target-costing"]) expect(primary).not.toContain(`key: "${k}"`);
   });
   test("TargetCheckPanel is decision-tab only, above GateDecisionPanel", () => {
     expect(src.match(/<TargetCheckPanel/g)).toHaveLength(1);
-    expect(src).toMatch(/tab === "decision" && \(\s*\n\s*<div className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/);
+    expect(src).toMatch(
+      /tab === "decision" && \(\s*\n\s*<div role="tabpanel" id="s8-panel-decision" aria-labelledby="s8-tab-decision" className="mt-4">\s*\n\s*<S8LensStrip[^>]*\/>\s*\n\s*<TargetCheckPanel/,
+    );
     expect(src).toMatch(/<TargetCheckPanel[^>]*\/>\s*\n\s*<AiJudgementSupport[\s\S]*?<GateDecisionPanel/);
   });
   test("single generate entry (overview), decision jump hidden on decision, no global recalc row", () => {
     expect(src).not.toContain("밸류에이션 재계산 (재생성)");
     expect(src).toContain('t("marketPastBasis3Scenarios")');
-    expect(koOf("stages.s8.stage.marketPastBasis3Scenarios")).toBe("이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)");
+    expect(koOf("stages.s8.stage.marketPastBasis3Scenarios")).toBe(
+      "이중 관점 자동 생성 (시장 기반 + 과거 기반 × 3 시나리오)",
+    );
     expect(src).not.toContain("결정 기록은 위쪽");
     expect(src).toContain('t("recordTheDecisionInThe")');
     expect(koOf("stages.s8.stage.recordTheDecisionInThe")).toBe("결정 기록은 '결정' 탭에서 합니다.");
@@ -276,7 +348,9 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
     expect(src).not.toContain("<CapabilityAttainabilityPanel");
     expect(src).toContain('t("theCapabilityAttainabilityJudgement")');
     expect(koOf("stages.s8.stage.theCapabilityAttainabilityJudgement")).toBe("필요 역량 달성 가능성 판정은");
-    expect(src).toMatch(/onClick=\{\(\) => setTab\("technical"\)\}\s*>\s*\{t\("technicalFeasibilityTab"\)\}\s*<\/button>/);
+    expect(src).toMatch(
+      /onClick=\{\(\) => setTab\("technical"\)\}\s*>\s*\{t\("technicalFeasibilityTab"\)\}\s*<\/button>/,
+    );
     expect(koOf("stages.s8.stage.technicalFeasibilityTab")).toBe("기술적 타당성 탭 →");
   });
 });
@@ -292,7 +366,9 @@ describe("S8 greenfield single-perspective wording", () => {
     expect(stage).toContain('t("whatTheEvaluationPerspectiveMeans")');
     expect(koOf("stages.s8.stage.whatTheEvaluationPerspectiveMeans")).toBe("평가 관점의 의미");
     expect(stage).toContain('t("comparisonAppliesOnlyToBrown")');
-    expect(koOf("stages.s8.stage.comparisonAppliesOnlyToBrown")).toBe("과거 기반 비교는 대상 회사가 있는 Brown Field에만 적용됩니다.");
+    expect(koOf("stages.s8.stage.comparisonAppliesOnlyToBrown")).toBe(
+      "과거 기반 비교는 대상 회사가 있는 Brown Field에만 적용됩니다.",
+    );
     expect(stage).toContain("{!hasHistorical && !greenfield && (");
     expect(stage).toContain("greenfield={greenfield}");
   });
@@ -333,10 +409,12 @@ describe("S8 decision tab: one AI judgement support section (ADR-0118)", () => {
     expect(section).toContain("/gate-brief");
   });
   test("overview keeps only a pointer; the old reco section is gone", () => {
-    expect(stage).not.toContain("AI 추천 채택 권고\"");
+    expect(stage).not.toContain('AI 추천 채택 권고"');
     expect(stage).not.toContain("generateAdoptionReco");
     expect(stage).toContain('t("theAiAdoptionRecommendationIs")');
-    expect(koOf("stages.s8.stage.theAiAdoptionRecommendationIs")).toBe("AI 채택 권고는 결정 탭의 AI 판단 지원에서 확인합니다.");
+    expect(koOf("stages.s8.stage.theAiAdoptionRecommendationIs")).toBe(
+      "AI 채택 권고는 결정 탭의 AI 판단 지원에서 확인합니다.",
+    );
   });
   test("GateDecisionPanel still offers the standalone brief for other gates", () => {
     expect(panel).toContain('t("generateAiBrief")');

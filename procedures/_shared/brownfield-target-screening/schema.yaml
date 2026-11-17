@@ -1,6 +1,6 @@
 schema_version: "1.0"
 procedure_id: shared-brownfield-target-screening
-title: "Brown Field Target Screening (Long List → Short List)"
+title: "Brown Field Target Screening (Long List → 최종 후보 목록)"
 scope: shared
 level: entity
 version: "1.2.0"
@@ -11,10 +11,10 @@ workflow_type: core
 gate: Target Screening
 
 # Post-route-decision stage (flow.spec v2.0.0 S7 대상 스크리닝, brownfield only).
-# Narrows the S6 Target Company Long List to a Short List via knock-out screens
+# Narrows the S6 Target Company Long List to a 최종 후보 목록 via knock-out screens
 # (strategic fit, capability fit, financial, geographic, ownership/availability,
 # regulatory) plus ranked scoring — desk research only. Detailed assessment
-# (CDD/TDD/valuation) starts ONLY after the Short List is confirmed at the
+# (CDD/TDD/valuation) starts ONLY after the 최종 후보 목록 is confirmed at the
 # target_screening gate; no commissioned DD work before that gate.
 #
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): 이 절차의 트랙 범위는 소유 stage가
@@ -30,15 +30,19 @@ steps:
     skill_key: strategic-fit-screening
     output_type: target_screening_result
     description: >
-      Run the knock-out screens per candidate against
-      `checklists/target-screening-checklist.yaml` (chk-target-screening,
-      ADR-0081): t-01 ownership/availability, t-02 regulatory (incl.
-      concentration pre-screen), t-03 geographic fit, t-04 structural market
-      contraction+commoditization, t-05 capability relevance vs the S1/S3
-      required-capability list. Every knock-out failure is recorded with a
-      written exclusion reason (Exclusion Reasons); the rated scorecard
-      (t-06..t-09) feeds the Target Ranking. Desk research only — no
-      commissioned analysis before the target_screening gate.
+      Screen the candidates already carried over from S6 target
+      identification (shared-brownfield-target-identification) — this step
+      screens, it does not identify or generate candidates; the candidate set
+      is fixed at the S6 boundary. Run the knock-out screens per candidate
+      against `checklists/target-screening-checklist.yaml`
+      (chk-target-screening, ADR-0081): t-01 ownership/availability, t-02
+      regulatory (incl. concentration pre-screen), t-03 geographic fit, t-04
+      structural market contraction+commoditization, t-05 capability
+      relevance vs the S1/S3 required-capability list. Every knock-out
+      failure is recorded with a written exclusion reason (Exclusion
+      Reasons); the rated scorecard (t-06..t-09) feeds the Target Ranking.
+      Desk research only — no commissioned analysis before the
+      target_screening gate.
   - id: 2
     gate: Target Screening
     agent_key: antitrust-agent
@@ -58,9 +62,14 @@ steps:
     description: >
       Rank the surviving candidates on the rated scorecard (strategic value,
       capability complementarity, financial attractiveness, integration/
-      partnership complexity) calibrated against peer benchmarks. Produce the
-      Target Ranking/Score with per-criterion evidence and propose the Short
-      List cut — the cut line itself is confirmed at the target_screening gate.
+      partnership complexity) calibrated against peer benchmarks. Per the
+      direct-verdict flow of ADR-0200, the per-candidate financial/technical
+      verdicts are item verdicts applied directly (each verdict records its
+      origin); there is no separate per-candidate confirm pass — the person's
+      judgement is recorded per item on the candidate detail screen, and the
+      ranking derives from those verdicts. Produce the Target Ranking/Score
+      with per-criterion evidence and propose the 최종 후보 목록 cut — the
+      cut line itself is confirmed at the target_screening gate.
   - id: 3.5
     gate: Target Screening
     agent_key: brownfield-agent
@@ -68,8 +77,8 @@ steps:
     output_type: deal_shape_evaluation
     description: >
       Deal-shape evaluation (human-recorded; moved here from S4 by the owner
-      decision of 2026-11-08; overall viability first per ADR-0201): per Short
-      List candidate (or per opportunity when the shapes are candidate-
+      decision of 2026-11-08; overall viability first per ADR-0201): per 최종
+      후보 목록 candidate (or per opportunity when the shapes are candidate-
       independent), first record whether any deal shape is viable at all
       (overall viability). When viable, record the viable deal shapes —
       full_acquisition / majority_stake / spv / holdco_route / joint_venture /
@@ -93,18 +102,22 @@ steps:
     skill_key: stage-gate-governance
     output_type: gate_pass_record
     description: >
-      Confirm the Target Screening gate deliverables — Short List exists,
+      Confirm the Target Screening gate deliverables — 최종 후보 목록 exists,
       every Long List candidate has a ranking or exclusion reason, all
-      Short List candidates passed the knock-out screens, and the deal-shape
+      최종 후보 목록 candidates passed the knock-out screens, the ranking
+      verdicts behind the cut are human-reviewed (an unreviewed AI 초안 판정
+      does not count as reviewed — 심사 종료 into the 최종 후보 목록 requires
+      human review), and the deal-shape
       evaluation of step 3.5 is recorded (an unassessed
       `no_viable_deal_shape` is acknowledged, a triggered one is a RECYCLE
       signal for the human gate) — then open S8
-      (사업성 분석) for the Short List targets.
+      (사업성 분석) for the 최종 후보 목록 targets.
 
 completion_criteria:
-  - Short List exists and every Short List candidate passed the knock-out screens
+  - 최종 후보 목록 exists and every 최종 후보 목록 candidate passed the knock-out screens
   - Every Long List candidate carries a ranking score or a written exclusion reason
   - Screening evidence is recorded per candidate
+  - 심사 종료 into the 최종 후보 목록 rests on human-reviewed verdicts — an unreviewed AI 초안 판정은 사람 검토를 거쳐야 심사 종료할 수 있다 (no ranking or cut credit for unreviewed AI verdicts)
   - The deal-shape evaluation is recorded overall viability first; when viable, the viable shapes with intent and rationale; an overall not-viable verdict (or a legacy set with zero viable shapes) triggers #9
 
 kill_criteria:
@@ -119,6 +132,7 @@ legal_basis:
   - "checklists/strategic-fit-screening-checklist.yaml (chk-strategic-fit, rated-scorecard convention)"
   - "shared-brownfield-screening step 3 (fact-gated HHI pre-screen rule reused in step 2)"
   - "Owner decision 2026-11-08 (deal-shape evaluation moves from S4 to S7) and docs/designs/2026-11-08-deal-shape-to-s7-design.md; ADR-0195 (amends ADR-0193/0194)"
+  - "ADR-0200 (S6 direct AI verdicts with recorded origin; step 3 wording aligns to the direct-verdict flow; 1.2.0 wording folds in the short-list terminology unification — 최종 후보 목록 / 심사 종료, owner decision 2026-11-17)"
 
 owner_agent: brownfield-agent
-last_reviewed: "2026-11-08"
+last_reviewed: "2026-11-17"

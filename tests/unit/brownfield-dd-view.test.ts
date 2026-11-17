@@ -4,29 +4,83 @@
 import { test, expect, describe } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
-  bfCanOfferOptIn, bfCodeMeta, bfCountAnnouncement, bfExcludedGroups, bfJudgedLine, bfNeedsNaReason, bfPreviousForTab, bfPreviousLine, bfScopeBlock,
-  bfScopeErrorText, bfSubTrackName, bfOptInExtrasLines, bfExtraChecklistLabel, isBfExtraTab, type BfScopeBlock,
+  bfCanOfferOptIn,
+  bfCodeMeta,
+  bfCountAnnouncement,
+  bfExcludedGroups,
+  bfJudgedLine,
+  bfNeedsNaReason,
+  bfPreviousForTab,
+  bfPreviousLine,
+  bfScopeBlock,
+  bfScopeErrorText,
+  bfSubTrackName,
+  bfOptInExtrasLines,
+  bfExtraChecklistLabel,
+  isBfExtraTab,
+  type BfScopeBlock,
 } from "../../app/web-next/lib/brownfield-dd-view.ts";
 import type { WsDomainLike, WsItemScope } from "../../app/web-next/lib/greenfield-dd-view.ts";
 
 const sc = (over: Partial<WsItemScope> = {}): WsItemScope => ({
-  checklist_id: "chk-legal-dd-checklist", item_id: "ldd-01", overlay_code: "A", code: "A", judgeable: true, reading: null, reason: null, note: null,
-  replaced_by: [], fallback: null, rule: "overlay", steps: [], ...over,
+  checklist_id: "chk-legal-dd-checklist",
+  item_id: "ldd-01",
+  overlay_code: "A",
+  code: "A",
+  judgeable: true,
+  reading: null,
+  reason: null,
+  note: null,
+  replaced_by: [],
+  fallback: null,
+  rule: "overlay",
+  steps: [],
+  ...over,
 });
 
 const block = (over: Partial<BfScopeBlock> = {}, ws: Partial<BfScopeBlock["workspace_scope"]> = {}): BfScopeBlock => ({
   sub_track: "partnership",
   workspace_scope: {
-    active: true, overlay_version: "1.0.0", scope_key: "partnership", opted_in: true,
+    active: true,
+    overlay_version: "1.0.0",
+    scope_key: "partnership",
+    opted_in: true,
     extra_checklists: ["chk-deal-shape-presigning-checklist"],
     items: {
       "chk-legal-dd-checklist:ldd-01": sc(),
-      "chk-legal-dd-checklist:ldd-02": sc({ item_id: "ldd-02", code: "N", overlay_code: "N", judgeable: false, reason: "지분을 인수하지 않습니다" }),
-      "chk-deal-shape-presigning-checklist:jvd-01": sc({ checklist_id: "chk-deal-shape-presigning-checklist", item_id: "jvd-01", code: "N", judgeable: false }),
+      "chk-legal-dd-checklist:ldd-02": sc({
+        item_id: "ldd-02",
+        code: "N",
+        overlay_code: "N",
+        judgeable: false,
+        reason: "지분을 인수하지 않습니다",
+      }),
+      "chk-deal-shape-presigning-checklist:jvd-01": sc({
+        checklist_id: "chk-deal-shape-presigning-checklist",
+        item_id: "jvd-01",
+        code: "N",
+        judgeable: false,
+      }),
     },
     previous_scope: [
-      { checklist_id: "chk-legal-dd-checklist", item_id: "ldd-02", code: "N", status: "fail", assessed_by: "kim", assessed_at: "2026-10-01T09:00:00Z", stays_unmet: true },
-      { checklist_id: "chk-technical-dd-checklist", item_id: "tdd-01", code: "X", status: "pass", assessed_by: null, assessed_at: null, stays_unmet: false },
+      {
+        checklist_id: "chk-legal-dd-checklist",
+        item_id: "ldd-02",
+        code: "N",
+        status: "fail",
+        assessed_by: "kim",
+        assessed_at: "2026-10-01T09:00:00Z",
+        stays_unmet: true,
+      },
+      {
+        checklist_id: "chk-technical-dd-checklist",
+        item_id: "tdd-01",
+        code: "X",
+        status: "pass",
+        assessed_by: null,
+        assessed_at: null,
+        stays_unmet: false,
+      },
     ],
     counts: { judged: 6, judgeable: 12, workspace_judgeable: 10, excluded: 3, extras_excluded: 4, mandatory_unmet: 1 },
     ...ws,
@@ -34,7 +88,13 @@ const block = (over: Partial<BfScopeBlock> = {}, ws: Partial<BfScopeBlock["works
   ...over,
 });
 
-const dom = (checklistId: string, items: WsDomainLike["items"], extra: Partial<WsDomainLike> = {}): WsDomainLike => ({ domain: checklistId, checklistId, title: checklistId, items, ...extra });
+const dom = (checklistId: string, items: WsDomainLike["items"], extra: Partial<WsDomainLike> = {}): WsDomainLike => ({
+  domain: checklistId,
+  checklistId,
+  title: checklistId,
+  items,
+  ...extra,
+});
 const done = { status: "pass" };
 
 describe("bfScopeBlock — which projects get the scoped view", () => {
@@ -55,7 +115,8 @@ describe("bfScopeBlock — which projects get the scoped view", () => {
   });
   test("sub-track names are the shared Korean labels (i18n re-pin T3-6: common.subTrack.* keys)", () => {
     const ko = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8")) as Record<string, any>;
-    const tr = (key: string): string => key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], ko) as string;
+    const tr = (key: string): string =>
+      key.split(".").reduce<unknown>((acc, k) => (acc as Record<string, any>)[k], ko) as string;
     expect(tr(bfSubTrackName("partnership"))).toBe("전략 제휴");
     expect(tr(bfSubTrackName("minority_investment"))).toBe("소수지분 투자");
     expect(bfSubTrackName("zzz")).toBe("zzz");
@@ -80,7 +141,11 @@ describe("code badges", () => {
 
 describe("single judged line", () => {
   const domains = [
-    dom("chk-legal-dd-checklist", [{ id: "ldd-01", state: done, scope: sc() }, { id: "ldd-03", state: null, scope: sc({ item_id: "ldd-03" }) }, { id: "ldd-02", state: done, scope: sc({ code: "N", judgeable: false }) }]),
+    dom("chk-legal-dd-checklist", [
+      { id: "ldd-01", state: done, scope: sc() },
+      { id: "ldd-03", state: null, scope: sc({ item_id: "ldd-03" }) },
+      { id: "ldd-02", state: done, scope: sc({ code: "N", judgeable: false }) },
+    ]),
     dom("chk-hr-dd-checklist", [{ id: "hdd-01", state: done, scope: sc() }]),
     dom("chk-financial-dd-checklist", [{ id: "fdd-01", state: done }], { counted: false }),
     dom("chk-deal-shape-presigning-checklist", [{ id: "jvd-02", state: done, scope: sc() }]),
@@ -95,11 +160,25 @@ describe("single judged line", () => {
   });
   test("replacedCount counts X rows of counted tabs only (helper sentence shows only when > 0)", () => {
     expect(bfJudgedLine(block(), domains)!.replacedCount).toBe(0);
-    const withX = [dom("chk-legal-dd-checklist", [{ id: "ldd-09", state: null, scope: sc({ code: "X", replaced_by: [] }) }])];
+    const withX = [
+      dom("chk-legal-dd-checklist", [{ id: "ldd-09", state: null, scope: sc({ code: "X", replaced_by: [] }) }]),
+    ];
     expect(bfJudgedLine(block(), withX)!.replacedCount).toBe(1);
   });
   test("no extra line without extra judgeable items; announcement carries the numbers", () => {
-    const b = block({}, { counts: { judged: 2, judgeable: 10, workspace_judgeable: 10, excluded: 3, extras_excluded: 0, mandatory_unmet: 0 } });
+    const b = block(
+      {},
+      {
+        counts: {
+          judged: 2,
+          judgeable: 10,
+          workspace_judgeable: 10,
+          excluded: 3,
+          extras_excluded: 0,
+          mandatory_unmet: 0,
+        },
+      },
+    );
     const line = bfJudgedLine(b, domains)!;
     expect(line.extra).toBeNull();
     expect(bfCountAnnouncement(line)).toContain("판정 2 / 10");
@@ -146,7 +225,14 @@ describe("opt-in", () => {
     expect(bfCanOfferOptIn(block(), { eligible: true })).toBe(false);
   });
   test("error codes of the route map to Korean text", () => {
-    for (const code of ["human_only", "role_required", "not_brownfield", "no_scope_change", "already_opted_in", "overlay_unavailable"]) {
+    for (const code of [
+      "human_only",
+      "role_required",
+      "not_brownfield",
+      "no_scope_change",
+      "already_opted_in",
+      "overlay_unavailable",
+    ]) {
       expect(bfScopeErrorText(code, 409, "x")).not.toBe("x");
     }
     expect(bfScopeErrorText(undefined, 403, "")).toContain("권한");
@@ -184,7 +270,7 @@ describe("components (source reading)", () => {
   test("DdStage adds no brownfield element unless the payload carries the scope: the tab count and notes are gated on the block", () => {
     expect(stage).toContain("const bf = bfScopeBlock(data?.brownfield_scope)");
     expect(stage).toContain("{(ws || bf) && (");
-    expect(stage).toContain("if (brownfield && sc.code === \"A\" && sc.rule !== \"fail_closed\") return null");
+    expect(stage).toContain('if (brownfield && sc.code === "A" && sc.rule !== "fail_closed") return null');
     expect(stage).toContain("bfNeedsNaReason(data?.brownfield_scope");
   });
   test("brownfield keeps the shared tab labels (HR stays 인사 실사); no greenfield tab-label override is applied to it", () => {
@@ -203,10 +289,23 @@ describe("components (source reading)", () => {
   });
 
   test("opt-in extras lines: labelled counts, tolerant of absent or empty field", () => {
-    const base = { eligible: true, reason: null, before: { judged: 0, judgeable: 10 }, after: { judged: 0, judgeable: 20, workspace_judgeable: 10, excluded: 2 }, moves_to_previous_scope: [], fails_stay_unmet: [] };
+    const base = {
+      eligible: true,
+      reason: null,
+      before: { judged: 0, judgeable: 10 },
+      after: { judged: 0, judgeable: 20, workspace_judgeable: 10, excluded: 2 },
+      moves_to_previous_scope: [],
+      fails_stay_unmet: [],
+    };
     expect(bfOptInExtrasLines(base)).toEqual([]);
     expect(bfOptInExtrasLines({ ...base, extras_attached_by_opt_in: [] })).toEqual([]);
-    const lines = bfOptInExtrasLines({ ...base, extras_attached_by_opt_in: [{ checklist_id: "chk-partnership-checklist", judgeable: 7, excluded: 1 }, { checklist_id: "chk-deal-shape-presigning-checklist", judgeable: 5, excluded: 3 }] });
+    const lines = bfOptInExtrasLines({
+      ...base,
+      extras_attached_by_opt_in: [
+        { checklist_id: "chk-partnership-checklist", judgeable: 7, excluded: 1 },
+        { checklist_id: "chk-deal-shape-presigning-checklist", judgeable: 5, excluded: 3 },
+      ],
+    });
     expect(lines[0]).toContain("전략 제휴 체크리스트(판정 대상 7건, 제외 1건)");
     expect(lines[0]).toContain("딜 형태 사전 점검(판정 대상 5건, 제외 3건)");
     expect(lines[1]).toContain("판정 X / Y");
@@ -218,19 +317,32 @@ describe("replaced-item wording and custom proposer (DdStage)", () => {
   const src = readFileSync(new URL("../../app/web-next/components/stages/DdStage.tsx", import.meta.url), "utf8");
   test("human proposals show 제안: user; never the unknown-agent text; self-approval hidden with hint", () => {
     // i18n: proposer wording moved to the catalog (stages.s9.stage.*) — pin the keys.
-    expect(src).toContain('stages.s9.stage.noProposerRecord');
+    expect(src).toContain("stages.s9.stage.noProposerRecord");
     expect(src).not.toContain("알 수 없는 에이전트");
-    expect(src).toContain('stages.s9.stage.theProposerCannotApproveIt');
+    expect(src).toContain("stages.s9.stage.theProposerCannotApproveIt");
     expect(src).toContain("canAct && !c.is_proposer");
   });
   test("draft-AI chips are trimmed from checklist rows — the item id carries the full tooltip (2026-10-17 round 2)", () => {
-    expect(src).toContain('reviewBadge(item).status === "draft-AI" ? t("reviewStatusP1", { p1: DRAFT_AI_MARKER }) : undefined');
+    // 2026-11-17: pin updated for biome-formatted multi-line ternary in DdStage — logic unchanged.
+    expect(src).toContain('reviewBadge(item).status === "draft-AI"');
+    expect(src).toContain('? t("reviewStatusP1", { p1: DRAFT_AI_MARKER })');
     expect(src).toContain('reviewBadge(item).status !== "draft-AI" && <ReviewBadgeChip item={item} />');
-    expect(src).toContain('import { DRAFT_AI_MARKER, reviewBadge, type ReviewStatus } from "../../lib/checklist-review-status.ts"');
+    expect(src).toContain(
+      'import { DRAFT_AI_MARKER, reviewBadge, type ReviewStatus } from "../../lib/checklist-review-status.ts"',
+    );
   });
   test("X rows show pending note until a pointer is pass/fail", async () => {
     const v = await import("../../app/web-next/lib/greenfield-dd-view.ts");
-    const ptr = (status: string | null) => ({ checklist_id: "c", item_id: "i", stage: "S9", in_s9: true, status, judged: status === "pass", assessed_by: null, assessed_at: null });
+    const ptr = (status: string | null) => ({
+      checklist_id: "c",
+      item_id: "i",
+      stage: "S9",
+      in_s9: true,
+      status,
+      judged: status === "pass",
+      assessed_by: null,
+      assessed_at: null,
+    });
     expect(v.replacementUndecided(sc({ code: "X", replaced_by: [ptr("pending")] }))).toBe(true);
     expect(v.replacementUndecided(sc({ code: "X", replaced_by: [ptr("fail")] }))).toBe(false);
     expect(v.replacementUndecided(sc({ code: "A" }))).toBe(false);

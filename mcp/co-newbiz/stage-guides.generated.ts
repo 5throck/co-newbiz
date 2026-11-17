@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.21.2";
+export const GUIDE_SPEC_VERSION = "2.21.3";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -325,7 +325,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S7",
     "name": "대상 선정",
-    "objective": "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)",
+    "objective": "어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행한다)",
     "applicableTracks": [
       "brownfield"
     ],
@@ -370,14 +370,14 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     ],
     "completionCriteria": [
       "모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다",
-      "Short List 후보가 knock-out 스크리닝을 통과했다",
+      "최종 후보 목록 후보가 knock-out 스크리닝을 통과했다",
       "스크리닝 근거(evidence)가 후보별로 기록되었다"
     ]
   },
   {
     "id": "S8",
     "name": "사업성 분석",
-    "objective": "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다",
+    "objective": "돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 최종 후보 목록 대상별 밸류에이션을 정량화해 비교·선정한다",
     "applicableTracks": [
       "greenfield",
       "brownfield"
@@ -435,7 +435,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     "completionCriteria": [
       "민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)",
       "BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다",
-      "brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)",
+      "brownfield: 최종 후보 목록의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)",
       "brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다",
       "할인율 적용 주체와 WACC·hurdle IRR을 사람이 확인했다 (ADR-0186 D8 — 가족 wacc가 enforce일 때 차단)"
     ]
@@ -443,7 +443,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S9",
     "name": "실사·검증",
-    "objective": "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)",
+    "objective": "사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 최종 후보 목록 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)",
     "applicableTracks": [
       "greenfield",
       "brownfield"

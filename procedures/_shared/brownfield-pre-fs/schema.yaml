@@ -32,7 +32,7 @@ steps:
       (direct / SPC / holdco, per docs/pilots/pilot-009-emart-ebay-korea.md
       finding F-3) — as a hypothesis the FS can price. The deal SHAPE (M&A / JV
       / strategic investment / minority stake / partnership / R&BD / CVC) is no
-      longer judged here: it is evaluated against the ranked Short List in
+      longer judged here: it is evaluated against the ranked 최종 후보 목록 in
       `shared-brownfield-target-screening` step 3.5 (owner decision 2026-11-08,
       flow.spec 2.20.0), and the binding structure is decided at S10
       `deal-structuring` step 1. For R&BD deals (technology_track: rbd on the

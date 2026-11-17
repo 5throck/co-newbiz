@@ -48,12 +48,12 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **판정 기준**
 - Target Company Short List가 존재한다
 - 모든 Long List 후보에 랭킹 또는 제외 사유가 기록되었다
-- Short List 후보가 knock-out 스크리닝을 통과했다
+- 최종 후보 목록 후보가 knock-out 스크리닝을 통과했다
 
 **Kill 기준**
 - knock-out 통과 후보가 0건이다 (스크리닝 결과 진입 가능한 대상 없음)
 
-**자원 결정**: Short List 대상 사업성 분석 자원 배정
+**자원 결정**: 최종 후보 목록 대상 사업성 분석 자원 배정
 
 ### FS (fs)
 **판정 기준**
@@ -421,7 +421,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S7 — 대상 선정 (brownfield 전용)
 
-**목표**: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)
+**목표**: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행한다)
 
 **입력**
 - Target Company Long List (S6)
@@ -443,7 +443,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 **완료 기준**
 - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
-- Short List 후보가 knock-out 스크리닝을 통과했다
+- 최종 후보 목록 후보가 knock-out 스크리닝을 통과했다
 - 스크리닝 근거(evidence)가 후보별로 기록되었다
 
 **엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
@@ -461,21 +461,21 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **판정 기준**
 - Target Company Short List가 존재한다
 - 모든 Long List 후보에 랭킹 또는 제외 사유가 기록되었다
-- Short List 후보가 knock-out 스크리닝을 통과했다
+- 최종 후보 목록 후보가 knock-out 스크리닝을 통과했다
 
 **Kill 기준**
 - knock-out 통과 후보가 0건이다 (스크리닝 결과 진입 가능한 대상 없음)
 
-**자원 결정**: Short List 대상 사업성 분석 자원 배정
+**자원 결정**: 최종 후보 목록 대상 사업성 분석 자원 배정
 
 ## S8 — 사업성 분석
 
-**목표**: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다
+**목표**: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 최종 후보 목록 대상별 밸류에이션을 정량화해 비교·선정한다
 
 **입력**
 - 트랙 결정
 - 진출전략·Business Case 라인 (greenfield — S5)
-- Short List 대상 재무 정보 (brownfield — S7, 대상별)
+- 최종 후보 목록 대상 재무 정보 (brownfield — S7, 대상별)
 - 진입시장 산정 (S2 확정 — ADR-0181; 시장 앵커·성장률·환율 개산과 몬테카를로 환 리스크의 기준)
 
 **Activities**
@@ -495,7 +495,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 **완료 기준**
 - 민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
 - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
-- brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)
+- brownfield: 최종 후보 목록의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)
 - brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다
 - 할인율 적용 주체와 WACC·hurdle IRR을 사람이 확인했다 (ADR-0186 D8 — 가족 wacc가 enforce일 때 차단)
 
@@ -524,7 +524,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 
 ## S9 — 실사·검증
 
-**목표**: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)
+**목표**: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 최종 후보 목록 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)
 
 **입력**
 - 게이트 체크리스트 (commercial/technical/legal)
