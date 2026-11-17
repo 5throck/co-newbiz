@@ -117,13 +117,6 @@
     "run_shell_command(tail .env)"
   ],
   "mcpServers": {
-    "graft": {
-      "command": "graft",
-      "args": [
-        "mcp",
-        "@nanonets/graft"
-      ]
-    },
     "trail": {
       "command": "trail",
       "args": [
