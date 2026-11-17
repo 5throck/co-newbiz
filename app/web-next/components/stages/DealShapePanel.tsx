@@ -1,9 +1,10 @@
 "use client";
 
-// S7 "진출 형태 평가" (ADR-0194 item A, relocated from S4 by ADR-0195; design 2026-11-08-deal-shape-to-s7-design): a person records, per deal shape,
-// whether it is viable and why. The recorded live verdicts are the data source of kill criterion #9
-// (deal-shape-chain:no_viable_deal_shape). Human recording only (boundary #2): no AI suggestion, score or recommendation
-// is ever pre-filled here - the form starts empty and the only value it can load is the person's own earlier entry.
+// S7 "진출 형태 평가" (ADR-0194 item A, relocated from S4 by ADR-0195, reshaped to overall-viability-first by ADR-0201):
+// a person records the overall viability first; "불가능" is one rationale only, "가능" is the viable shape(s), one intent and one
+// rationale per checked shape. Every write replaces the whole live set. The recorded live verdict is the data source of kill
+// criterion #9 (deal-shape-chain:no_viable_deal_shape). Human recording only (boundary #2): an AI proposal only fills the form
+// when the person applies it; the form otherwise starts empty and can only load the person's own recorded verdict.
 // The page keeps one primary action (the committee review / gate decision); the record button here is a secondary (ghost) control.
 import { useCallback, useEffect, useId, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -15,100 +16,53 @@ import {
   EVIDENCE_MAX,
   RATIONALE_MAX,
   buildDealShapeBody,
-  buildDealShapeSetBody,
   dealShapeErrorKind,
-  formFromRow,
-  shapeVerdictRows,
+  formFromLive,
+  formFromRecommendation,
   validateDealShapeForm,
-  viableStatus,
+  verdictOf,
   type DealShapeData,
-  type DealShapeForm,
+  type DealShapeForm as Form,
+  type DealShapeRecommendation,
   type DealShapeRow,
   type FormProblem,
 } from "../../lib/deal-shape-view.ts";
+import { DealShapeForm } from "./DealShapeForm.tsx";
+import { DealShapeRecommendCard, EMPTY_RECO, type RecoState } from "./DealShapeRecommendCard.tsx";
+import { useDealShapeLabels } from "./useDealShapeLabels.ts";
 
-/** Shape / intent labels. The four shapes the S10 structure screen already names reuse its keys (one wording per shape). */
-export function useDealShapeLabels() {
-  const t = useTranslations("stages.s67.dealShapePanel");
-  const ts = useTranslations("stages.s10.stage");
-  const tc = useTranslations("common");
-  const td = useTranslations("stages.s4.decisionTab");
-  const shape = (s: string): string => {
-    switch (s) {
-      case "full_acquisition":
-        return ts("fullAcquisition");
-      case "majority_stake":
-        return ts("majorityStake");
-      case "minority_stake":
-        return ts("minorityStake");
-      case "joint_venture":
-        return ts("jointVentureJv");
-      case "spv":
-        return ts("spcSpvSpecialPurposeEntity");
-      case "holdco_route":
-        return ts("viaHoldingCompanyHoldco");
-      case "license_in":
-        return t("shape.license_in");
-      case "co_development":
-        return t("shape.co_development");
-      default:
-        return s;
-    }
-  };
-  const intent = (i: string): string =>
-    i === "integration" ? td("consolidated") : i === "capability_access" ? tc("capabilityApproach") : i;
-  return { shape, intent };
-}
+export { useDealShapeLabels } from "./useDealShapeLabels.ts";
+export { EMPTY_RECO, type RecoState } from "./DealShapeRecommendCard.tsx";
 
-function Verdict({ state }: { state: "viable" | "not_viable" | "unevaluated" }) {
+type Chip = "viable" | "not_viable";
+function Verdict({ state }: { state: Chip }) {
   const t = useTranslations("stages.s67.dealShapePanel");
-  if (state === "viable")
-    return (
-      <span className="status-chip status-green">
-        <span aria-hidden="true">✓</span> {t("verdictViable")}
-      </span>
-    );
-  if (state === "not_viable")
-    return (
-      <span className="status-chip status-red">
-        <span aria-hidden="true">✕</span> {t("verdictNotViable")}
-      </span>
-    );
-  return (
-    <span className="status-chip status-not-started">
-      <span aria-hidden="true">○</span> {t("verdictUnevaluated")}
+  return state === "viable" ? (
+    <span className="status-chip status-green">
+      <span aria-hidden="true">✓</span> {t("verdictViable")}
+    </span>
+  ) : (
+    <span className="status-chip status-red">
+      <span aria-hidden="true">✕</span> {t("verdictNotViable")}
     </span>
   );
 }
-
-export interface ShapeRecommendation {
-  shape: string;
-  viable: boolean | null;
-  intent: string;
-  rationale: string;
-}
-export interface RecoState {
-  busy: boolean;
-  error: string | null;
-  note: string | null;
-  items: ShapeRecommendation[];
-}
-export const EMPTY_RECO: RecoState = { busy: false, error: null, note: null, items: [] };
 
 export interface DealShapePanelViewProps {
   data: DealShapeData | null;
   /** Load failure kind, when the GET failed. */
   loadError: "viewer" | "admin" | "notFound" | "other" | null;
   canAct: boolean;
-  form: DealShapeForm;
-  onForm: (next: DealShapeForm) => void;
+  form: Form;
+  onForm: (next: Form) => void;
   onSubmit: () => void;
-  onEdit: (row: DealShapeRow) => void;
+  /** Loads the whole recorded live verdict into the form. */
+  onEdit: () => void;
   /** AI recommendation (proposal only; nothing is saved by it). */
   reco: RecoState;
   onRecommend: () => void;
   /** Copy a proposal into the form; the person still edits and records. */
-  onApply: (r: ShapeRecommendation) => void;
+  onApply: (r: DealShapeRecommendation) => void;
   busy: boolean;
   problem: FormProblem | null;
   serverError: string | null;
@@ -123,18 +77,22 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
   const locale = useLocale();
   const labels = useDealShapeLabels();
   const uid = useId().replace(/:/g, "");
-  const { data, form } = p;
+  const { data } = p;
 
-  const status = data ? viableStatus(data.viable_count) : null;
-  const verdicts = data ? shapeVerdictRows(data) : [];
-  const recordedRows = verdicts.flatMap((v) => (v.state === "unevaluated" ? [] : [v]));
-  const evaluated = data ? data.live.length : 0;
+  const verdict = data ? verdictOf(data) : null;
+  const liveEntries: DealShapeRow[] = data ? [...(data.overall ? [data.overall] : []), ...data.live] : [];
+  const viableCount = data ? data.live.filter((r) => r.viable).length : 0;
   const history = data ? data.history.filter((r) => r.superseded_by !== null) : [];
-  const problemText = p.problem
-    ? (t as (k: string, v?: Record<string, number>) => string)(`problem.${p.problem}`, {
-        max: p.problem === "evidenceTooLong" ? EVIDENCE_MAX : RATIONALE_MAX,
-      })
-    : null;
+  const who = (r: DealShapeRow) =>
+    t("recordedBy", { who: r.evaluated_by, when: formatDateTime(r.evaluated_at, locale) });
+  const problemText = (() => {
+    if (!p.problem) return null;
+    const [key, shape] = p.problem.split(":") as [string, string | undefined];
+    return (t as (k: string, v?: Record<string, unknown>) => string)(`problem.${key}`, {
+      max: key === "evidenceTooLong" ? EVIDENCE_MAX : RATIONALE_MAX,
+      shape: shape ? labels.shape(shape) : "",
+    });
+  })();
 
   return (
     <section className="card" id={DEAL_SHAPE_PANEL_ID} aria-labelledby={`${uid}-h`} data-testid="deal-shape-panel">
@@ -159,9 +117,9 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
         </p>
       )}
 
-      {data && status && (
+      {data && verdict && (
         <>
-          {status.kind === "unassessed" && (
+          {verdict === "unassessed" && (
             <p
               role="status"
               className="status-chip status-not-started mb-2"
@@ -172,18 +130,18 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
               <span aria-hidden="true">○</span> {t("statusUnassessed")}
             </p>
           )}
-          {status.kind === "triggered" && (
+          {verdict === "not_viable" && (
             <p
               role="alert"
               className="status-chip status-amber mb-2"
               style={{ whiteSpace: "normal" }}
               data-testid="deal-shape-status"
-              data-status="triggered"
+              data-status="not_viable"
             >
-              <span aria-hidden="true">⚠</span> {t("statusTriggered")}
+              <span aria-hidden="true">⚠</span> {t("statusNotViable")}
             </p>
           )}
-          {status.kind === "viable" && (
+          {verdict === "viable" && (
             <p
               role="status"
               className="status-chip status-green mb-2"
@@ -191,112 +149,75 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
               data-testid="deal-shape-status"
               data-status="viable"
             >
-              <span aria-hidden="true">✓</span>{" "}
-              {t("statusViable", { count: status.count, evaluated, total: verdicts.length })}
+              <span aria-hidden="true">✓</span> {t("statusViable", { count: viableCount })}
             </p>
           )}
 
-          {recordedRows.length > 0 && (
-            <ul
-              className="list-none p-0 m-0 mb-3 grid gap-2 text-[length:var(--fs-caption)]"
-              aria-label={t("recordedListLabel")}
-              data-testid="deal-shape-recorded"
-            >
-              {recordedRows.map((v) => (
-                <li
-                  key={v.shape}
-                  data-shape={v.shape}
-                  data-state={v.state}
-                  className="border-b border-[color:var(--border)] pb-2"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <strong>{labels.shape(v.shape)}</strong>
-                    <Verdict state={v.state} />
-                    <span className="text-[color:var(--muted-fg)]">{labels.intent(v.row.intent)}</span>
-                    {p.canAct && (
-                      <button
-                        type="button"
-                        className="btn-ghost btn-sm"
-                        disabled={p.busy}
-                        aria-label={t("editAria", { shape: labels.shape(v.shape) })}
-                        onClick={() => p.onEdit(v.row)}
-                      >
-                        {t("edit")}
-                      </button>
-                    )}
-                  </div>
-                  <p className="m-0 mt-1">
-                    {v.row.rationale}
-                    {v.row.evidence_ref && (
-                      <span className="block text-[color:var(--muted-fg)]">
-                        {t("evidenceRef", { ref: v.row.evidence_ref })}
-                      </span>
-                    )}
-                  </p>
-                  <p className="m-0 mt-1 text-[color:var(--muted-fg)]">
-                    {t("recordedBy", { who: v.row.evaluated_by, when: formatDateTime(v.row.evaluated_at, locale) })}
-                  </p>
-                </li>
-              ))}
-            </ul>
+          {liveEntries.length > 0 && (
+            <>
+              {p.canAct && (
+                <div className="mb-2">
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    disabled={p.busy}
+                    aria-label={t("editAria")}
+                    onClick={p.onEdit}
+                    data-testid="deal-shape-edit"
+                  >
+                    {t("edit")}
+                  </button>
+                </div>
+              )}
+              <ul
+                className="list-none p-0 m-0 mb-3 grid gap-2 text-[length:var(--fs-caption)]"
+                aria-label={t("recordedListLabel")}
+                data-testid="deal-shape-recorded"
+              >
+                {liveEntries.map((r) => (
+                  <li
+                    key={r.id}
+                    data-shape={r.shape ?? "overall"}
+                    data-state={r.shape === null ? "overall_not_viable" : r.viable ? "viable" : "legacy_not_viable"}
+                    className="border-b border-[color:var(--border)] pb-2"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      {r.shape === null ? (
+                        <>
+                          <strong>{t("overallNotViable")}</strong>
+                          <Verdict state="not_viable" />
+                        </>
+                      ) : (
+                        <>
+                          <strong>{labels.shape(r.shape)}</strong>
+                          {r.viable ? (
+                            <Verdict state="viable" />
+                          ) : (
+                            <span className="status-chip status-red">
+                              <span aria-hidden="true">✕</span> {t("legacyNotViable")}
+                            </span>
+                          )}
+                          {r.intent && <span className="text-[color:var(--muted-fg)]">{labels.intent(r.intent)}</span>}
+                        </>
+                      )}
+                    </div>
+                    <p className="m-0 mt-1">
+                      {r.rationale}
+                      {r.evidence_ref && (
+                        <span className="block text-[color:var(--muted-fg)]">
+                          {t("evidenceRef", { ref: r.evidence_ref })}
+                        </span>
+                      )}
+                    </p>
+                    <p className="m-0 mt-1 text-[color:var(--muted-fg)]">{who(r)}</p>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           {p.canAct && (
-            <div className="mb-3" data-testid="deal-shape-ai">
-              <button
-                type="button"
-                className="btn-ghost btn-sm"
-                disabled={p.busy || p.reco.busy}
-                onClick={p.onRecommend}
-              >
-                {p.reco.busy ? t("aiRecommending") : t("aiRecommend")}
-              </button>
-              {p.reco.error && (
-                <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2 mb-0">
-                  <span aria-hidden="true">✕</span> {p.reco.error}
-                </p>
-              )}
-              {p.reco.note && (
-                <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-0">
-                  <span aria-hidden="true">ⓘ</span> {p.reco.note}
-                </p>
-              )}
-              {p.reco.items.length > 0 && (
-                <ul
-                  className="list-none p-0 m-0 mt-2 grid gap-2 text-[length:var(--fs-caption)]"
-                  aria-label={t("aiListLabel")}
-                  data-testid="deal-shape-ai-list"
-                >
-                  {p.reco.items.map((r) => (
-                    <li key={r.shape} className="border border-[color:var(--border)] rounded-lg px-3 py-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <strong>{labels.shape(r.shape)}</strong>
-                        {r.viable === null ? (
-                          <span className="status-chip status-not-started">
-                            <span aria-hidden="true">?</span> {t("aiUndecided")}
-                          </span>
-                        ) : (
-                          <Verdict state={r.viable ? "viable" : "not_viable"} />
-                        )}
-                        {r.intent && <span className="text-[color:var(--muted-fg)]">{labels.intent(r.intent)}</span>}
-                        {r.viable !== null && (
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm"
-                            disabled={p.busy}
-                            aria-label={t("aiApplyAria", { shape: labels.shape(r.shape) })}
-                            onClick={() => p.onApply(r)}
-                          >
-                            {t("aiApply")}
-                          </button>
-                        )}
-                      </div>
-                      <p className="m-0 mt-1">{r.rationale}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <DealShapeRecommendCard reco={p.reco} busy={p.busy} onRecommend={p.onRecommend} onApply={p.onApply} />
           )}
 
           {history.length > 0 && (
@@ -305,9 +226,16 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
               <ul className="list-none p-0 m-0 mt-2 grid gap-1 text-[length:var(--fs-caption)]">
                 {history.map((r) => (
                   <li key={r.id}>
-                    <strong>{labels.shape(r.shape)}</strong> · <Verdict state={r.viable ? "viable" : "not_viable"} /> ·{" "}
-                    {labels.intent(r.intent)} ·{" "}
-                    {t("recordedBy", { who: r.evaluated_by, when: formatDateTime(r.evaluated_at, locale) })}
+                    {r.shape === null ? (
+                      <strong>{t("overallNotViable")}</strong>
+                    ) : (
+                      <>
+                        <strong>{labels.shape(r.shape)}</strong> ·{" "}
+                        <Verdict state={r.viable ? "viable" : "not_viable"} />
+                        {r.intent && <> · {labels.intent(r.intent)}</>}
+                      </>
+                    )}{" "}
+                    · {who(r)}
                     <span className="block text-[color:var(--muted-fg)]">
                       {r.rationale} <span>({t("superseded")})</span>
                     </span>
@@ -318,165 +246,19 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
           )}
 
           {p.canAct ? (
-            <form
-              className="mt-3"
-              aria-label={t("formLabel")}
-              noValidate
-              onSubmit={(e) => {
-                e.preventDefault();
-                p.onSubmit();
-              }}
-              data-testid="deal-shape-form"
-            >
-              <fieldset className="border border-[color:var(--border)] rounded-lg px-3 py-2 m-0" disabled={p.busy}>
-                <legend className="text-[length:var(--fs-body)] px-1">{t("formLegend")}</legend>
-                {p.loadedFromRow && (
-                  <p
-                    role="note"
-                    className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2"
-                    data-testid="deal-shape-loaded-note"
-                  >
-                    <span aria-hidden="true">ⓘ</span> {t("editLoadedNote")}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
-                  <label className="text-[length:var(--fs-caption)]" htmlFor={`${uid}-shape`}>
-                    <span className="block mb-1 font-medium">
-                      {t("fieldShape")}{" "}
-                      <span aria-hidden="true" className="text-[color:var(--red-fg)]">
-                        *
-                      </span>
-                    </span>
-                    <select
-                      id={`${uid}-shape`}
-                      className="sizing-new-input"
-                      aria-required="true"
-                      value={form.shape}
-                      onChange={(e) => p.onForm({ ...form, shape: e.target.value })}
-                    >
-                      <option value="">{tc("selectEllipsis")}</option>
-                      {data.vocabulary.shapes.map((s) => (
-                        <option key={s} value={s}>
-                          {labels.shape(s)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <fieldset className="border-0 p-0 m-0">
-                    <legend className="text-[length:var(--fs-caption)] font-medium mb-1">
-                      {t("fieldViable")}{" "}
-                      <span aria-hidden="true" className="text-[color:var(--red-fg)]">
-                        *
-                      </span>
-                    </legend>
-                    <div className="flex flex-wrap gap-4 text-[length:var(--fs-caption)]">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name={`${uid}-viable`}
-                          checked={form.viable === true}
-                          onChange={() => p.onForm({ ...form, viable: true })}
-                        />
-                        <span>{t("verdictViable")}</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name={`${uid}-viable`}
-                          checked={form.viable === false}
-                          onChange={() => p.onForm({ ...form, viable: false })}
-                        />
-                        <span>{t("verdictNotViable")}</span>
-                      </label>
-                    </div>
-                  </fieldset>
-                  <label className="text-[length:var(--fs-caption)]" htmlFor={`${uid}-intent`}>
-                    <span className="block mb-1 font-medium">
-                      {t("fieldIntent")}{" "}
-                      <span aria-hidden="true" className="text-[color:var(--red-fg)]">
-                        *
-                      </span>
-                    </span>
-                    <select
-                      id={`${uid}-intent`}
-                      className="sizing-new-input"
-                      aria-required="true"
-                      value={form.intent}
-                      onChange={(e) => p.onForm({ ...form, intent: e.target.value })}
-                    >
-                      <option value="">{tc("selectEllipsis")}</option>
-                      {data.vocabulary.intents.map((i) => (
-                        <option key={i} value={i}>
-                          {labels.intent(i)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <label className="block text-[length:var(--fs-caption)] mt-2" htmlFor={`${uid}-rationale`}>
-                  <span className="block mb-1 font-medium">
-                    {t("fieldRationale", { max: RATIONALE_MAX })}{" "}
-                    <span aria-hidden="true" className="text-[color:var(--red-fg)]">
-                      *
-                    </span>
-                  </span>
-                  <textarea
-                    id={`${uid}-rationale`}
-                    className="sizing-new-input w-full"
-                    rows={3}
-                    aria-required="true"
-                    aria-invalid={p.problem === "rationale" || p.problem === "rationaleTooLong" ? true : undefined}
-                    aria-describedby={problemText ? `${uid}-problem` : undefined}
-                    value={form.rationale}
-                    onChange={(e) => p.onForm({ ...form, rationale: e.target.value })}
-                  />
-                </label>
-                <label className="block text-[length:var(--fs-caption)] mt-2" htmlFor={`${uid}-evidence`}>
-                  <span className="block mb-1 font-medium">{t("fieldEvidence")}</span>
-                  <input
-                    id={`${uid}-evidence`}
-                    type="text"
-                    className="sizing-new-input w-full"
-                    value={form.evidenceRef}
-                    aria-invalid={p.problem === "evidenceTooLong" ? true : undefined}
-                    onChange={(e) => p.onForm({ ...form, evidenceRef: e.target.value })}
-                  />
-                </label>
-                {problemText && (
-                  <p
-                    id={`${uid}-problem`}
-                    role="alert"
-                    className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2 mb-0"
-                    data-testid="deal-shape-problem"
-                  >
-                    <span aria-hidden="true">✕</span> {problemText}
-                  </p>
-                )}
-                {p.serverError && (
-                  <p
-                    role="alert"
-                    className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2 mb-0"
-                    data-testid="deal-shape-server-error"
-                  >
-                    <span aria-hidden="true">✕</span> {p.serverError}
-                  </p>
-                )}
-                {p.notice && (
-                  <p
-                    role="status"
-                    className="text-[length:var(--fs-caption)] mt-2 mb-0"
-                    data-testid="deal-shape-notice"
-                  >
-                    <span aria-hidden="true">✓</span> {p.notice}
-                  </p>
-                )}
-                <div className="mt-3">
-                  <button type="submit" className="btn-ghost btn-sm" disabled={p.busy}>
-                    {p.busy ? t("recording") : t("record")}
-                  </button>
-                </div>
-              </fieldset>
-            </form>
+            <DealShapeForm
+              uid={uid}
+              vocabulary={data.vocabulary}
+              form={p.form}
+              onForm={p.onForm}
+              onSubmit={p.onSubmit}
+              busy={p.busy}
+              problem={p.problem}
+              problemText={problemText}
+              serverError={p.serverError}
+              notice={p.notice}
+              loadedFromRow={p.loadedFromRow}
+            />
           ) : (
             <p
               role="note"
@@ -497,7 +279,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
   const url = `/api/opportunities/${encodeURIComponent(opportunityId)}/deal-shapes`;
   const [data, setData] = useState<DealShapeData | null>(null);
   const [loadError, setLoadError] = useState<DealShapePanelViewProps["loadError"]>(null);
-  const [form, setForm] = useState<DealShapeForm>(EMPTY_DEAL_SHAPE_FORM);
+  const [form, setForm] = useState<Form>(EMPTY_DEAL_SHAPE_FORM);
   const [loadedFromRow, setLoadedFromRow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<FormProblem | null>(null);
@@ -508,7 +290,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
   const load = useCallback(async () => {
     try {
       const r = await api.get<DealShapeData>(url);
-      setData({ ...r.data, history: r.data.history.filter((h) => h.shape) }); // overall rows have no shape (ADR-0201)
+      setData(r.data);
       setLoadError(null);
     } catch (e) {
       setData(null);
@@ -522,24 +304,30 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
     void load();
   }, [load]);
 
+  const errorMessage = (e: unknown): string => {
+    if (!(e instanceof ApiError)) return t("serverError.other");
+    const kind = dealShapeErrorKind(e.status, e.code);
+    return kind === "invalid" || kind === "conflict" ? e.message : t(`serverError.${kind}` as never);
+  };
+
   const submit = async () => {
-    const found = validateDealShapeForm(form);
+    const order = data?.vocabulary.shapes ?? [];
+    const found = validateDealShapeForm(form, order);
     setNotice(null);
     setServerError(null);
     setProblem(found);
-    if (found) return;
+    if (found || !data) return;
     setBusy(true);
     try {
-      await api.post(url, data ? buildDealShapeSetBody(form, data) : buildDealShapeBody(form));
+      await api.post(url, buildDealShapeBody(form, data.live_token ?? "", order));
       setForm(EMPTY_DEAL_SHAPE_FORM);
       setLoadedFromRow(false);
       setNotice(t("recorded"));
       await load();
     } catch (e) {
-      if (e instanceof ApiError) {
-        const kind = dealShapeErrorKind(e.status, e.code);
-        setServerError(kind === "invalid" || kind === "conflict" ? e.message : t(`serverError.${kind}` as never));
-      } else setServerError(t("serverError.other"));
+      setServerError(errorMessage(e));
+      // Someone else recorded first: show the current verdict, keep the person's input (ADR-0201 §6.1).
+      if (e instanceof ApiError && dealShapeErrorKind(e.status, e.code) === "stale") await load();
     } finally {
       setBusy(false);
     }
@@ -548,20 +336,24 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
   const recommend = async () => {
     setReco({ ...EMPTY_RECO, busy: true });
     try {
-      const r = await api.post<{ recommendations: ShapeRecommendation[]; note: string | null }>(`${url}/recommend`, {});
+      const r = await api.post<{ recommendation: DealShapeRecommendation | null; note: string | null }>(
+        `${url}/recommend`,
+        {},
+      );
       setReco({
         busy: false,
         error: null,
         note: r.data.note ? t(`aiNote.${r.data.note}` as never) : null,
-        items: r.data.recommendations,
+        item: r.data.recommendation,
       });
     } catch (e) {
-      const kind = e instanceof ApiError ? dealShapeErrorKind(e.status, e.code) : "other";
-      setReco({
-        ...EMPTY_RECO,
-        error: kind === "invalid" || kind === "conflict" ? (e as Error).message : t(`serverError.${kind}` as never),
-      });
+      setReco({ ...EMPTY_RECO, error: errorMessage(e) });
     }
+  };
+
+  const clearMessages = () => {
+    setProblem(null);
+    setServerError(null);
   };
 
   return (
@@ -572,10 +364,9 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
       }}
       onApply={(r) => {
         // A proposal only fills the form; recording stays a person's action (boundary #2).
-        setForm({ shape: r.shape, intent: r.intent, viable: r.viable, rationale: r.rationale, evidenceRef: "" });
+        setForm(formFromRecommendation(r));
         setLoadedFromRow(false);
-        setProblem(null);
-        setServerError(null);
+        clearMessages();
         setNotice(t("aiApplied"));
       }}
       data={data}
@@ -595,11 +386,11 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
       onSubmit={() => {
         void submit();
       }}
-      onEdit={(row) => {
-        setForm(formFromRow(row));
+      onEdit={() => {
+        if (!data) return;
+        setForm(formFromLive(data));
         setLoadedFromRow(true);
-        setProblem(null);
-        setServerError(null);
+        clearMessages();
         setNotice(null);
       }}
     />

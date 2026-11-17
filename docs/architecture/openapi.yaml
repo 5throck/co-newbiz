@@ -4844,7 +4844,7 @@ paths:
   /api/opportunities/{id}/deal-shapes/recommend:
     post:
       operationId: recommendOpportunityDealShapes
-      summary: AI recommendation of per-shape viability for the S7 deal-shape evaluation (analyst+, brownfield, S7 reached). A PROPOSAL only (ADR-0118, boundary 2) - it writes nothing; recording stays the person's POST on /deal-shapes. Returns {recommendations[{shape, viable|null, intent, rationale}], note (no_shortlist | llm_unavailable | parse_failed | null), manifest, prompt_version}. No shortlisted target means no LLM call. Refused with 409 `deal_shape_not_open` like the record route.
+      summary: AI recommendation for the S7 deal-shape evaluation, overall viability first (ADR-0201; analyst+, brownfield, S7 reached). A PROPOSAL only (ADR-0118, boundary 2) - it writes nothing; recording stays the person's POST on /deal-shapes. Returns {recommendation {overall_viable true|false|null, intent (empty unless viable), rationale, shapes[{shape, rationale}] (empty unless viable)} | null, note (no_shortlist | llm_unavailable | parse_failed | null), manifest, prompt_version `s7.deal_shape_recommend@2`}. null overall_viable means the evidence cannot settle it and the rationale names the missing data. No shortlisted target means no LLM call. Refused with 409 `deal_shape_not_open` like the record route.
       tags:
         - Analysis
       responses:
