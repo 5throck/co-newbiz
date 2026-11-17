@@ -3,6 +3,7 @@
 // Split from components/stages/BrownfieldStage.tsx (Wave U-3 decomposition); behavior unchanged.
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
+import { UniverseDraftPanel } from "./UniverseDraftPanel.tsx";
 
 export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
   const t = useTranslations("stages.s67.discoveryPanels");
@@ -192,21 +193,7 @@ export function WebDiscoveryPanel({ ctx }: { ctx: BrownfieldStageState }) {
 export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
   const t = useTranslations("stages.s67.discoveryPanels");
   const tc = useTranslations("common");
-  const {
-    editingUniverse,
-    savingUniverse,
-    uniReco,
-    uniBusy,
-    universeDraft,
-    uniRecoApplied,
-    setUniReco,
-    setUniRecoApplied,
-    closeUniverseEditor,
-    universeModalFocus,
-    generateUniReco,
-    applyUniReco,
-    universeForm,
-  } = ctx;
+  const { editingUniverse, savingUniverse, closeUniverseEditor, universeModalFocus, universeForm } = ctx;
   return (
     <>
       {editingUniverse && (
@@ -244,131 +231,7 @@ export function UniverseEditModal({ ctx }: { ctx: BrownfieldStageState }) {
               {t("nothingIsReflectedUntilSaved")}
             </p>
 
-            {/* D — 선정 기준 LLM 초안. 적용은 아래 정의 입력에 바로 반영되고,
-                선정 기준·최소 후보 수는 사람이 정한 값을 그대로 둔다. */}
-            <div className="sizing-grade-card mb-3">
-              <h4 className="text-[length:var(--fs-caption)] mb-2">
-                {t("generateDefinitionDraft")} <span className="status-chip status-amber">{t("proposalAi")}</span>
-              </h4>
-              <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                {t("proposesADefinitionWordingDraft")} <b>{t("definition")}</b> {t("inputsOnlyTheCandidateEligibility")}
-              </p>
-              {uniReco === null ? (
-                <button
-                  type="button"
-                  className="btn-ghost btn-sm"
-                  disabled={uniBusy}
-                  onClick={() => void generateUniReco()}
-                >
-                  {uniBusy ? t("generatingDraft") : t("generateDefinitionDraft2")}
-                </button>
-              ) : uniReco.criteria ? (
-                (() => {
-                  // Non-null narrowed by the ternary above — bound to a const
-                  // so the apply handler needs no non-null assertion.
-                  const criteria = uniReco.criteria;
-                  const rationaleAlreadySaved =
-                    !!uniReco.criteria.rationale &&
-                    uniReco.criteria.rationale.trim() === universeDraft.definition.trim();
-                  return (
-                    <div>
-                      <p className="mb-1 text-[length:var(--fs-caption)]">
-                        <span className={`status-chip mr-1 ${uniRecoApplied ? "status-green" : "status-amber"}`}>
-                          {uniRecoApplied ? t("applied") : tc("proposal")}
-                        </span>
-                        {uniReco.source === "llm" ? "AI" : t("deterministic")}
-                      </p>
-                      <ul className="sizing-note-list mb-2">
-                        {uniReco.criteria.industry && (
-                          <li>
-                            {t("industry")} {uniReco.criteria.industry}
-                          </li>
-                        )}
-                        {uniReco.criteria.region && (
-                          <li>
-                            {t("region")} {uniReco.criteria.region}
-                          </li>
-                        )}
-                        {uniReco.criteria.size && (
-                          <li>
-                            {t("size")} {uniReco.criteria.size}
-                          </li>
-                        )}
-                        {/* 재무 기준 초안 행 (DEC-20261111-05) — `검증 필요`를
-                          포함하면 미검증 표시 칩을 붙인다(honest unset). */}
-                        {uniReco.criteria.viability && (
-                          <li>
-                            {t("viability")} {uniReco.criteria.viability}
-                            {uniReco.criteria.viability.includes("검증 필요") && (
-                              <span className="status-chip status-amber ml-1">{t("needsVerification")}</span>
-                            )}
-                          </li>
-                        )}
-                      </ul>
-                      {uniReco.criteria.rationale &&
-                        (rationaleAlreadySaved ? (
-                          <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                            {t("evidenceSameAsTheDefinition")}
-                          </p>
-                        ) : (
-                          <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                            {tc("evidenceColon")} {uniReco.criteria.rationale}
-                          </p>
-                        ))}
-                      <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                        {tc("proposalArtifactColon")} {uniReco.manifest.join(" · ") || t("noEvidence")}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          className="btn-ghost btn-sm"
-                          disabled={rationaleAlreadySaved}
-                          onClick={() => applyUniReco(criteria)}
-                        >
-                          {rationaleAlreadySaved
-                            ? t("alreadyReflected")
-                            : uniRecoApplied
-                              ? t("applyAgain")
-                              : t("applyToTheDefinitionInput")}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-ghost btn-sm"
-                          onClick={() => {
-                            setUniReco(null);
-                            setUniRecoApplied(false);
-                          }}
-                        >
-                          {tc("close")}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-ghost btn-sm"
-                          disabled={uniBusy}
-                          onClick={() => void generateUniReco()}
-                        >
-                          {uniBusy ? tc("regenerating") : t("regenerateAi")}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()
-              ) : (
-                <div>
-                  <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]">
-                    {uniReco.note ?? t("aDraftCannotBeCreated")}
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm"
-                    disabled={uniBusy}
-                    onClick={() => void generateUniReco()}
-                  >
-                    {uniBusy ? tc("regenerating") : t("retryAi")}
-                  </button>
-                </div>
-              )}
-            </div>
+            <UniverseDraftPanel ctx={ctx} />
 
             {universeForm()}
           </div>

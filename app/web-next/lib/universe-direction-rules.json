@@ -1,0 +1,8 @@
+{
+  "_comment": "S6 direction validator text rules (design 2026-11-17-s6-universe-direction-review section 5.2). Korean literals live here so server TS stays inside the i18n baseline.",
+  "marker": "검증 필요",
+  "derivation": ["(근거|바탕|토대)로", "(설정|처리|제외|반영|도출|판단)(했|하였|하여|하도록)"],
+  "sourceLeak": ["\\bS\\d{1,2}\\b", "산출물", "제안이며", "확정되어야"],
+  "capability": "인증|실적|기술력|트랙 ?레코드",
+  "numberUnits": "%$BM억조원년배"
+}

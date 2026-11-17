@@ -1,5 +1,34 @@
 // Split from components/stages/BrownfieldStage.tsx (Wave U-3 decomposition); behavior unchanged.
 
+import type {
+  CriteriaProjection,
+  DirectionCounts,
+  DirectionDrafted,
+  DirectionOrigin,
+  DirField,
+  DirItem,
+  EvidenceView,
+  Grade,
+  StoredDirection,
+  SupportSegment,
+  UniverseDirectionView,
+} from "../../../lib/universe-direction.ts";
+
+// The direction-review types live in lib/universe-direction.ts; re-exported here for the stage components.
+export type {
+  CriteriaProjection,
+  DirectionCounts,
+  DirectionDrafted,
+  DirectionOrigin,
+  DirField,
+  DirItem,
+  EvidenceView,
+  Grade,
+  StoredDirection,
+  SupportSegment,
+  UniverseDirectionView,
+};
+
 export interface OppRow {
   id: string;
   name: string;
@@ -85,6 +114,12 @@ export interface OppDetail {
     scope?: string | null;
     financial_criteria?: string | null;
     min_long_list?: number;
+    // Direction review (design 2026-11-17 §5.4) — additive keys; legacy records omit them.
+    direction_version?: 1;
+    direction?: StoredDirection | null;
+    evidence?: EvidenceView[];
+    origin?: DirectionOrigin;
+    drafted?: DirectionDrafted;
   } | null;
   checklist: ChecklistItem[];
   targets: TargetRow[];
@@ -135,8 +170,12 @@ export interface UniRecoResponse {
   provider: string;
   note: string | null;
   criteria: UniCriteria | null;
+  /** Validated evaluation-target direction (design 2026-11-17); null on no-grounding or parse failure. */
+  draft?: UniverseDirectionView | null;
+  /** Emptied fields / dropped refs / clamps — the modal preview counts. */
+  counts?: DirectionCounts;
   manifest: string[];
-  /** 호출점 프롬프트 버전 상수 (s6.universe_criteria_draft@2). */
+  /** 호출점 프롬프트 버전 상수 (s6.universe_criteria_draft@3). */
   prompt_version?: string;
   provenance?: UniRecoProvenance | null;
 }

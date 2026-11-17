@@ -28,7 +28,7 @@ export const STAGE_ARTIFACT_LABELS: readonly StageArtifactLabel[] = [
   { key: "stage:S5:2", stageId: "S5", label: "S5 진출전략" },
   { key: "stage:S5:3", stageId: "S5", label: "S5 그린필드 실현가능성 체크리스트 판정" },
   { key: "stage:S5:4", stageId: "S5", label: "S5 부지 선정 체크리스트 판정" },
-  { key: "stage:S6:1", stageId: "S6", label: "S6 대상 기업군(Target Universe) 정의" },
+  { key: "stage:S6:1", stageId: "S6", label: "S6 평가 대상 방향성(Target Universe)" },
   { key: "stage:S6:2", stageId: "S6", label: "S6 대상 기업 롱리스트" },
   { key: "stage:S7:1", stageId: "S7", label: "S7 대상 기업 숏리스트" },
   { key: "stage:S7:2", stageId: "S7", label: "S7 대상 순위·점수" },

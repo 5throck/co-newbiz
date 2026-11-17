@@ -6,7 +6,9 @@ import { api } from "../../../lib/api.ts";
 import { type CapabilityGapRow, summarizeGap } from "../../../lib/capability-gap.ts";
 import { useEffect } from "react";
 import type { useBrownfieldBase } from "./useBrownfieldBase.ts";
-import type { WebProposalResponse, UniRecoResponse, UniCriteria } from "./types.ts";
+import type { WebProposalResponse, UniRecoResponse } from "./types.ts";
+import { draftFromSaved, draftFromView, savePayload } from "./universeDraft.ts";
+import { UniverseDirectionFields } from "./UniverseDirectionFields.tsx";
 import { useTranslations } from "next-intl";
 
 export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>) {
@@ -48,15 +50,13 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     setSavingUniverse(true);
     setError(null);
     try {
-      await api.put(`/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets`, {
-        definition: universeDraft.definition.trim(),
-        // criteria는 더 이상 이 화면에서 입력받지 않는다 — 서버가 기존 값을
-        // 그대로 보존한다(생략 시 덮어쓰지 않음).
-        // financial_criteria는 이 화면의 새 입력(DEC-20261111-05) — 항상
-        // 보내 서버가 trim·600자 절단 후 저장하게 한다(빈 값은 null).
-        financial_criteria: universeDraft.financial_criteria.trim(),
-        min_long_list: Number(universeDraft.min_long_list) || 5,
-      });
+      // The payload (definition, min_long_list and — for direction
+      // records — direction/evidence/origin/drafted) is built by savePayload; the server
+      // preserves criteria and any key we omit.
+      await api.put(
+        `/api/brownfield/${encodeURIComponent(selected.opportunity.id)}/targets`,
+        savePayload(universeDraft),
+      );
       loadDetail(selected.opportunity.id);
       setEditingUniverse(false);
       setUniReco(null);
@@ -68,14 +68,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     }
   }
 
-  function universeDraftFromSaved() {
-    const u = selected?.universe;
-    return {
-      definition: u?.definition ?? "",
-      financial_criteria: u?.financial_criteria ?? "",
-      min_long_list: String(u?.min_long_list ?? 5),
-    };
-  }
+  const universeDraftFromSaved = () => draftFromSaved(selected?.universe);
 
   // 수정 모달 열기 — 매번 저장된 값으로 새로 채운다(이전에 취소한 미저장
   // 입력이 남아있지 않도록). 참고용 S3 역량 갭 힌트도 함께 불러온다.
@@ -115,9 +108,6 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   const formLabels = {
     definition: t("definitionTheCandidatePoolS"),
     definitionPlaceholder: t("eGAllListedDomestic"),
-    financialCriteriaLabel: t("financialCriteriaLabel"),
-    financialCriteriaPlaceholder: t("financialCriteriaPlaceholder"),
-    financialCriteriaHint: t("financialCriteriaHint"),
     minimumCandidateCount: t("minimumCandidateCount"),
     referenceNotAForcedFormula: t("referenceNotAForcedFormula"),
     itemSPartiallyMet: t("itemSPartiallyMet"),
@@ -137,30 +127,23 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
         }}
         aria-label={formLabels.formAriaLabel}
       >
-        <label className="text-[length:var(--fs-caption)] block mb-3">
-          <span className="block mb-1">{formLabels.definition}</span>
-          <textarea
-            value={universeDraft.definition}
-            onChange={(e) => setUniverseDraft({ ...universeDraft, definition: e.target.value })}
-            placeholder={formLabels.definitionPlaceholder}
-            required
-            rows={3}
-            className="sizing-new-input w-full"
-          />
-        </label>
-        {/* 재무 기준 (DEC-20261111-05) — S7 t-08이 후보 재무를 비교하는
-            기록값. 선택 입력이며 근거 없는 수치는 쓰지 않는다. */}
-        <label className="text-[length:var(--fs-caption)] block mb-3">
-          <span className="block mb-1">{formLabels.financialCriteriaLabel}</span>
-          <textarea
-            value={universeDraft.financial_criteria}
-            onChange={(e) => setUniverseDraft({ ...universeDraft, financial_criteria: e.target.value })}
-            placeholder={formLabels.financialCriteriaPlaceholder}
-            rows={2}
-            className="sizing-new-input w-full"
-          />
-          <span className="block mt-1 text-[color:var(--muted-fg)]">{formLabels.financialCriteriaHint}</span>
-        </label>
+        {/* Direction records edit the conclusion fields (definition is recomposed from them);
+            legacy records keep the plain definition textarea (no auto-convert). */}
+        {universeDraft.direction ? (
+          <UniverseDirectionFields draft={universeDraft} setDraft={setUniverseDraft} />
+        ) : (
+          <label className="text-[length:var(--fs-caption)] block mb-3">
+            <span className="block mb-1">{formLabels.definition}</span>
+            <textarea
+              value={universeDraft.definition}
+              onChange={(e) => setUniverseDraft({ ...universeDraft, definition: e.target.value })}
+              placeholder={formLabels.definitionPlaceholder}
+              required
+              rows={3}
+              className="sizing-new-input w-full"
+            />
+          </label>
+        )}
         <label className="text-[length:var(--fs-caption)] w-32 shrink-0 block mb-3">
           <span className="block mb-1">{formLabels.minimumCandidateCount}</span>
           <input
@@ -250,22 +233,14 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     }
   }
 
-  // 적용 — 아래 목표 시장 정의 폼의 "정의" 필드만 채운다(저장은 사람이 "목표
-  // 시장 저장" 클릭). 산업/지역/규모 요약은 참고용일 뿐 자동으로 선정 기준·
-  // 최소 후보 수 입력에 밀어넣지 않는다 — 그 두 값은 사람이 이미 정한 값을
-  // 그대로 유지한다.
-  // DEC-20261111-05: 초안의 viability(수익성 조건)는 definition에 붙여 넣지
-  // 않고 별도 "재무 기준" 입력에 매핑한다 — 빈 viability는 필드를 그대로
-  // 둔다(honest unset). rationale(버전·등급 인용)을 definition에 채우는
-  // 기존 UX 계약은 유지된다.
-  function applyUniReco(c: UniCriteria) {
-    const content = c.rationale || [c.industry, c.region, c.size].filter(Boolean).join(" · ");
-    if (!content) return;
-    setUniverseDraft((prev) => ({
-      ...prev,
-      definition: content,
-      ...(c.viability ? { financial_criteria: c.viability } : {}),
-    }));
+  // 적용 — 초안의 편집 가능 필드(결론·범위·가치사슬·우선·제외)만 아래 폼에 채운다.
+  // 저장은 사람이 "방향성 저장"을 눌러야 한다. 선정 기준(재무 기준)·최소 후보 수는
+  // 사람이 정한 값을 그대로 둔다(DEC-20261111-05 honest unset). `definition`은 채워진
+  // 방향성에서 라벨 문장으로 다시 만들어진다(universeDraft.composeDefinition).
+  function applyUniReco(res: UniRecoResponse) {
+    const view = res.draft;
+    if (!view) return;
+    setUniverseDraft((prev) => draftFromView(view, res.prompt_version, prev));
     setUniRecoApplied(true);
   }
   return {

@@ -17,6 +17,7 @@ import type {
   FinancialsResp,
 } from "./types.ts";
 import { useTranslations } from "next-intl";
+import { emptyUniverseDraft, type UniverseDraft } from "./universeDraft.ts";
 
 export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: string; onSaved?: () => void }) {
   const t = useTranslations("stages.s67.useBrownfieldBase");
@@ -43,7 +44,7 @@ export function useBrownfieldBase({ opportunityId, onSaved }: { opportunityId: s
   // 보기/수정 분리: 평소엔 저장된 값을 읽기 전용 카드로 보여주고, "수정" 클릭
   // 시 모달에서 편집한다 — 모달을 취소하면 어떤 값도 반영되지 않는다.
   // financial_criteria(DEC-20261111-05): S7 t-08이 비교하는 재무 기준 입력.
-  const [universeDraft, setUniverseDraft] = useState({ definition: "", financial_criteria: "", min_long_list: "5" });
+  const [universeDraft, setUniverseDraft] = useState<UniverseDraft>(emptyUniverseDraft());
   const [savingUniverse, setSavingUniverse] = useState(false);
   const [editingUniverse, setEditingUniverse] = useState(false);
   // 최소 후보 수 근거 입력 시 참고용으로만 보여주는 S3

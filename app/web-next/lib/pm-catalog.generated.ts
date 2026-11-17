@@ -51,7 +51,7 @@ export const CATALOG_VERSION = "1.0.0";
 export const SPEC_VERSION = "2.21.1";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "94e540a8f4793846",
+  "promptsJson": "553b67d58c4de91e",
   "flowSpecYaml": "2fe5973c32ae7b0c",
   "agentRoster": "4f4cf81169a7e46f"
 };
@@ -284,7 +284,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
     "agentKey": "brownfield-agent",
     "activityId": "target-universe-definition",
     "stageId": "S6",
-    "purpose": "S6 유니버스 선정 기준 초안 — S1·S3 산출물 기반 제안 (수익성·지속가능성 축 포함)",
+    "purpose": "S6 평가 대상 방향성 초안 — S1·S3 근거 인용",
     "trackScope": [
       "brownfield"
     ]

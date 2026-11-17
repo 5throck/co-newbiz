@@ -56,9 +56,10 @@ describe("prompt registry", () => {
     }
   });
 
-  test("s6.universe_criteria_draft output schema carries the viability field (DEC-20261111-05)", () => {
+  test("s6.universe_criteria_draft@3 output schema is the structured direction (design 2026-11-17)", () => {
     const s6 = SSOT.prompts.find((p) => p.key === "s6.universe_criteria_draft");
     if (!s6) throw new Error("s6.universe_criteria_draft missing from prompts.json");
-    expect(s6.system).toContain('{"criteria":{"industry":"","region":"","size":"","viability":"","rationale":""}}');
+    expect(s6.system).toContain('{"direction":{"headline":{"text":"","refs":[]}');
+    expect(s6.system).not.toContain("rationale");
   });
 });

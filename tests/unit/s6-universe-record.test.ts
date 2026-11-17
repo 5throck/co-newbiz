@@ -147,3 +147,142 @@ describe("§5.1 — financial_criteria in target_universe_json", () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ── design 2026-11-17-s6-universe-direction-review §5.4 / §8 item 5 ──
+const EVIDENCE = [
+  {
+    id: "E1",
+    kind: "s1_identity",
+    ref: "S1 v7",
+    version_id: "V7",
+    fact: "Industry definition: X (pinned v7)",
+    grade: "U",
+  },
+  {
+    id: "E2",
+    kind: "s1_anchor",
+    ref: "S1 v7",
+    version_id: "V7",
+    fact: "Anchor market size $39.88B (2026, global)",
+    grade: "B",
+  },
+];
+const field = (text: string, refs: string[], unverified = false) => ({ text, refs, unverified });
+const DIRECTION = {
+  direction_version: 1,
+  headline: field("미드스트림 부품 기업을 본다", ["E1"]),
+  scope: { industry: field("업종", ["E1", "E9"]), region: field("", []), size: field("규모", ["E2"], true) },
+  value_chain: field("미드스트림", []),
+  prioritise: [{ type: "유형", why: "이유", refs: ["E2", "E9"], unverified: false }],
+  exclude: [],
+  basis: field("한 줄 근거", ["E1", "E2"]),
+  support: {
+    segments: [{ key: "size", label: "Market size", kind: "anchor", value: "$39.88B (2026)", ref: "E2", grade: "B" }],
+  },
+  grade: "Z",
+};
+
+describe("§5.4 — direction keys in target_universe_json", () => {
+  test("PUT with the direction keys persists them; definition stays the FIRST key", async () => {
+    const { universe } = await putUniverse({
+      definition: "산업: 업종\n우선: 유형",
+      direction: DIRECTION,
+      evidence: EVIDENCE,
+      origin: { headline: "ai", scope: "person", value_chain: "bogus" },
+      drafted: { prompt_version: "s6.universe_criteria_draft@3", generated_at: "2026-11-17T00:00:00Z" },
+    });
+    const raw = (
+      db.query("SELECT target_universe_json FROM opportunity WHERE id = ?").get(oppId) as {
+        target_universe_json: string;
+      }
+    ).target_universe_json;
+    expect(Object.keys(JSON.parse(raw))[0]).toBe("definition");
+    expect(raw.slice(0, 40)).toContain('"definition"');
+    expect(universe?.direction_version).toBe(1);
+    const d = (await storedUniverse()).direction as Record<string, any>;
+    expect(d.headline.text).toBe("미드스트림 부품 기업을 본다");
+    expect(d.scope.size.unverified).toBeTrue();
+    expect(d.checks).toBeUndefined();
+    expect(d.origin).toBeUndefined();
+    expect(d.evidence).toBeUndefined();
+    expect(d.grade).toBe("U"); // worst grade of the kept evidence; the client's "Z" is not trusted
+    expect((await storedUniverse()).origin).toEqual({ headline: "ai", scope: "person" });
+    expect((await storedUniverse()).drafted).toEqual({
+      prompt_version: "s6.universe_criteria_draft@3",
+      generated_at: "2026-11-17T00:00:00Z",
+    });
+    expect((await storedUniverse()).evidence).toHaveLength(2);
+  });
+
+  test("refs outside the evidence list are dropped (hand edits are not re-traced)", async () => {
+    await putUniverse({ definition: "정의", direction: DIRECTION, evidence: EVIDENCE });
+    const d = (await storedUniverse()).direction as Record<string, any>;
+    expect(d.scope.industry.refs).toEqual(["E1"]);
+    expect(d.prioritise[0].refs).toEqual(["E2"]);
+    expect(d.scope.industry.text).toBe("업종");
+  });
+
+  test("clamps are re-applied and bad evidence ids / overflow are dropped", async () => {
+    await putUniverse({
+      definition: "정의",
+      direction: {
+        ...DIRECTION,
+        headline: field("가".repeat(300), ["E1"]),
+        prioritise: Array.from({ length: 6 }, (_, i) => ({ type: `t${i}`, why: "w", refs: [] })),
+      },
+      evidence: [
+        ...EVIDENCE,
+        { id: "X1", kind: "s1_identity", fact: "bad id" },
+        ...Array.from({ length: 20 }, (_, i) => ({
+          id: `E${i + 3}`,
+          kind: "s1_segments",
+          ref: "S1",
+          fact: "f",
+          grade: null,
+        })),
+      ],
+    });
+    const u = await storedUniverse();
+    const d = u.direction as Record<string, any>;
+    expect(d.headline.text).toHaveLength(90);
+    expect(d.prioritise).toHaveLength(3);
+    expect((u.evidence as unknown[]).length).toBe(16);
+    expect((u.evidence as Array<{ id: string }>).some((e) => e.id === "X1")).toBeFalse();
+  });
+
+  test("a body without the direction keys preserves them (legacy UI paths)", async () => {
+    await putUniverse({ definition: "정의", direction: DIRECTION, evidence: EVIDENCE, origin: { headline: "ai" } });
+    const { universe } = await putUniverse({ definition: "정의 수정", min_long_list: 5 });
+    expect(universe?.direction_version).toBe(1);
+    expect(((universe?.direction ?? {}) as Record<string, any>).headline.text).toBe("미드스트림 부품 기업을 본다");
+    expect(universe?.evidence).toHaveLength(2);
+    expect(universe?.origin).toEqual({ headline: "ai" });
+  });
+
+  test("direction: null clears it (and direction_version); evidence null clears the list", async () => {
+    await putUniverse({ definition: "정의", direction: DIRECTION, evidence: EVIDENCE });
+    const { universe } = await putUniverse({ definition: "정의", direction: null, evidence: null });
+    expect(universe?.direction).toBeUndefined();
+    expect(universe?.direction_version).toBeUndefined();
+    expect(universe?.evidence).toBeUndefined();
+  });
+
+  test("a legacy body (definition + financial_criteria only) writes none of the new keys", async () => {
+    await putUniverse({ definition: "정의", direction: null, evidence: null, origin: null, drafted: null });
+    const { universe } = await putUniverse({ definition: "레거시 정의", financial_criteria: "재무 기준" });
+    for (const k of ["direction", "direction_version", "evidence", "origin", "drafted"])
+      expect(universe?.[k]).toBeUndefined();
+    expect(Object.keys(universe ?? {})).toEqual([
+      "definition",
+      "criteria",
+      "scope",
+      "financial_criteria",
+      "min_long_list",
+    ]);
+  });
+
+  test("the direction does not prefill financial_criteria (honest unset)", async () => {
+    await putUniverse({ definition: "정의", financial_criteria: "  ", direction: DIRECTION, evidence: EVIDENCE });
+    expect((await storedUniverse()).financial_criteria).toBeNull();
+  });
+});
