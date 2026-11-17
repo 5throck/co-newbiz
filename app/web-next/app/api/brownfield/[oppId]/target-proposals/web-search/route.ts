@@ -9,6 +9,12 @@
 // 저장은 없다 — 사람이 "Long List에 등록"을 눌러야 brownfield_target 행이
 // 생긴다(기존 POST .../target-proposals 경로 재사용, discovery_source=
 // web_proposal로 기록).
+import {
+  directionHints,
+  directionPromptLines,
+  directionQueries,
+} from "../../../../../../lib/universe-direction-discovery.ts";
+import type { StoredDirection } from "../../../../../../lib/universe-direction.ts";
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../lib/auth.ts";
@@ -40,6 +46,8 @@ interface UniverseShape {
    * seeding logic consumes definition context, not this field. */
   financial_criteria?: string;
   min_long_list?: number;
+  /** S6 evaluation-target direction (additive): prioritised types steer discovery, excluded ones are not proposed. */
+  direction?: Partial<StoredDirection> | null;
 }
 
 interface Suggestion {
@@ -210,6 +218,7 @@ export function buildKnowledgePrompt(
     universe.definition ? `Target Universe 정의: ${universe.definition}` : "",
     requiredCapabilities.length ? `필요 역량(S3, 미보유·부분 충족): ${requiredCapabilities.join(" · ")}` : "",
     universe.criteria?.length ? `선정 기준: ${universe.criteria.join(" · ")}` : "",
+    ...directionPromptLines(directionHints(universe)),
     "",
     "이미 Long List에 등록된 후보(중복 제안 금지):",
     existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(없음)",
@@ -417,7 +426,7 @@ export function buildQueries(
 ): string[] {
   const base = opp.name?.trim() || opp.market_scope?.trim();
   if (!base) return [];
-  const q: string[] = [`${base} 사업 주요 기업`];
+  const q: string[] = [`${base} 사업 주요 기업`, ...directionQueries(base, directionHints(universe))];
   if (opp.market_scope && opp.market_scope.trim() !== base) q.push(`${opp.market_scope.trim()} 시장 주요 기업 점유율`);
   if (universe.definition) q.push(`${base} ${universe.definition.slice(0, 40)} 대표 기업`);
   if (universe.criteria?.length) q.push(`${base} ${universe.criteria.slice(0, 3).join(" ")} 기업`);
@@ -443,6 +452,7 @@ export function buildPrompt(
     universe.definition ? `Target Universe 정의: ${universe.definition}` : "",
     requiredCapabilities.length ? `필요 역량(S3, 미보유·부분 충족): ${requiredCapabilities.join(" · ")}` : "",
     universe.criteria?.length ? `선정 기준: ${universe.criteria.join(" · ")}` : "",
+    ...directionPromptLines(directionHints(universe)),
     "",
     "이미 Long List에 등록된 후보(중복 제안 금지):",
     existingNames.length ? existingNames.map((n) => `- ${n}`).join("\n") : "(없음)",

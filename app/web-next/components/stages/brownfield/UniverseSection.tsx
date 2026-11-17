@@ -35,7 +35,7 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
       {selected && (
         <div
           id={SECTION_IDS.universe}
-          className="grid gap-3 items-stretch md:grid-cols-[2fr_3fr]"
+          className="grid gap-3 items-stretch md:grid-cols-[3fr_2fr]"
           style={{ scrollMarginTop: "1rem" }}
         >
           <section aria-label={t("targetMarketDefinition")} className="market-section mb-0 flex flex-col">

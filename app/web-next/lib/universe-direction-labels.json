@@ -6,5 +6,10 @@
   "size": "규모",
   "value_chain": "가치사슬",
   "prioritise": "우선",
-  "exclude": "제외"
+  "exclude": "제외",
+  "query_suffix": "기업",
+  "discovery_value_chain": "평가 대상 방향성 — 가치사슬 위치",
+  "discovery_priority_header": "평가 대상 방향성 — 우선 검토할 후보 유형(S6):",
+  "discovery_exclude_header": "평가 대상 방향성 — 제외할 방향(S6, 제안 금지):",
+  "discovery_rule": "위 우선 후보 유형에 해당하는 기업을 먼저 제안하고, rationale에 어떤 우선 유형에 해당하는지 적으세요. 제외할 방향의 기업은 제안하지 마세요. 우선 유형에 맞는 후보가 근거에서 확인되지 않으면 그 한계를 rationale에 명시하세요."
 }
