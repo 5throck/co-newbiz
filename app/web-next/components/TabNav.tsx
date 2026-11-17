@@ -30,6 +30,9 @@ export function TabNav({
   label: string;
   className?: string;
 }) {
+  // ARIA tabs pattern (design-accessibility.md, keyboard interaction): roving
+  // tabindex — the active tab is the only tab stop (0); inactive tabs are -1
+  // and reachable via ArrowLeft/ArrowRight, which move selection as focus.
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
@@ -51,6 +54,7 @@ export function TabNav({
           type="button"
           className="tab-nav-item"
           role="tab"
+          tabIndex={t.key === active ? 0 : -1}
           aria-current={t.key === active}
           aria-selected={t.key === active}
           onClick={() => onSelect(t.key)}

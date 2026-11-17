@@ -139,6 +139,8 @@ describe("GreenfieldStage tab structure (source)", () => {
   test("tablist semantics come from TabNav; default tab is entry via the parser", () => {
     expect(tabNav).toContain(normSrc('role="tablist"'));
     expect(tabNav).toContain(normSrc("aria-selected"));
+    // ARIA tabs pattern: roving tabindex — active tab 0, inactive -1 (2026-11-17 ruling).
+    expect(tabNav).toContain(normSrc("tabIndex={t.key === active ? 0 : -1}"));
     expect(stage).toContain(normSrc("<TabNav"));
     expect(stage).toContain(normSrc('parseGfTab(searchParams.get("tab"))'));
     expect(stage).toContain(normSrc("GF_TAB_KEYS.map"));

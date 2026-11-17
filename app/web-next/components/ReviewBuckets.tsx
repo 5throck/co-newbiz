@@ -229,22 +229,27 @@ export function ReviewBuckets({
   const { me } = useAuth();
   const canRequest = entityType === "project" ? canWriteProject(me?.role) : canWriteBusiness(me?.role);
   const reviewGates = useMemo(() => (gates ?? []).filter((g) => REVIEW_GATE_IDS.has(g)) as ReviewGateId[], [gates]);
+  const uid = useId();
+  const tabId = useCallback((key: string) => `${uid}-review-artifacts-tab-${key.replace(/:/g, "-")}`, [uid]);
   const tabs = useMemo(
     () => [
       ...reviewGates.map((g) => ({
         key: `gate:${g}`,
         label: gateLabelKey(g) ? tr(gateLabelKey(g)) : gateDisplayName(g),
+        id: tabId(`gate:${g}`),
+        panelId: `${uid}-review-artifacts-panel`,
       })),
-      ...(artifacts ?? []).filter((a) => /^stage:(S[1-9]|S1[0-2]):[1-9][0-9]*$/.test(a.key)),
+      ...(artifacts ?? [])
+        .filter((a) => /^stage:(S[1-9]|S1[0-2]):[1-9][0-9]*$/.test(a.key))
+        .map((a) => ({ ...a, id: tabId(a.key), panelId: `${uid}-review-artifacts-panel` })),
     ],
-    [reviewGates, artifacts, tr],
+    [reviewGates, artifacts, tr, uid, tabId],
   );
   const [active, setActive] = useState<string>(tabs[0]?.key ?? "");
   const [views, setViews] = useState<Record<string, ReviewView>>({});
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const uid = useId();
   const [open, setOpen] = useState(variant === "expanded");
 
   // 2026-10-21 decider: "게이트 결정이 끝났는데도 검토가 종결되지 않는다" —
@@ -494,6 +499,8 @@ export function ReviewBuckets({
           {...(tabs.length > 1
             ? {
                 role: "tabpanel",
+                id: `${uid}-review-artifacts-panel`,
+                "aria-labelledby": tabId(active),
                 "aria-label": tr("review.aria.artifactPanel", {
                   label: tabs.find((t) => t.key === active)?.label ?? "",
                 }),
