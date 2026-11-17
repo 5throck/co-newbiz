@@ -47,6 +47,8 @@ cd app/web-next && bun --bun run start
 
 MCP 서버는 각 AI 클라이언트 자체의 설정(Claude Code는 `.mcp.json`; 나머지 세 클라이언트의 설정 위치는 `docs/architecture/mcp-integration.md` §4 참조)을 통해 클라이언트별로 실행 — 별도로 배포된 서비스가 아니며 각 클라이언트가 stdio 상에서 자체 `bun run mcp/co-newbiz/index.ts` 프로세스를 스폰합니다. REST API 표면을 변경하는 릴리스는 `dispatch()` 수준 테스트뿐 아니라 `tests/unit/mcp.test.ts`의 실제 stdio 전송 테스트도 통과하는지 확인해야 합니다 — 실제 클라이언트가 사용하는 JSON-RPC 와이어 프로토콜을 실제로 exercise하는 것은 그 테스트이기 때문입니다.
 
+**npm 패키지 채널 (체크아웃 불필요)** — 리포 클론 밖의 소비자를 위해 동일한 서버를 GitHub Packages에 `@co-newbiz/co-newbiz-mcp`로 발행합니다(설계: `docs/designs/2026-11-18-mcp-package-distribution-design.md`). 릴리스 절차: `mcp/co-newbiz/package.json` 버전과 일치하는 태그 `mcp-vX.Y.Z`를 푸시하면 `.github/workflows/mcp-package.yml`이 tarball 경계를 검증하고(ADR-0011), `MCP_PACKAGES_PAT` 시크릿(조직 멤버 PAT, `write:packages` — 선행 조건: `co-newbiz` GitHub 조직 존재)으로 `npm.pkg.github.com`에 발행한 뒤 설치된 tarball을 실제 stdio로 스모크 테스트합니다. 소비자 선행 조건: bun + `~/.npmrc`의 `read:packages` PAT, 진입은 `bunx @co-newbiz/co-newbiz-mcp`이며 env 계약(`CO_NEWBIZ_API_BASE_URL` / `CO_NEWBIZ_API_TOKEN`)은 동일합니다. 인증 모델 변경 없음 — 이는 배포 채널 변경일 뿐 신뢰 경계 변화가 아닙니다.
+
 ## 6. 롤백
 
 헬스 체크 실패 또는 배포 후 문제 발생 시: `docs/runbooks/backup-restore.md` §3의 롤백 절차 — 위 3.1 단계에서 취한 마이그레이션 전 백업을 복원한 뒤 이전 릴리스의 코드를 재배포. DB 롤백과 코드 롤백은 분리되고 순서화된 두 개의 작업입니다; 최신 코드에 대해 DB만 복원하는 것(또는 그 반대)은 유효한 롤백 상태가 아닙니다.

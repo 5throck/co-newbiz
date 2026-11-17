@@ -1,0 +1,158 @@
+# Publish @co-newbiz/co-newbiz-mcp to GitHub Packages on mcp-v* tags.
+# Design of record: docs/designs/2026-11-18-mcp-package-distribution-design.md.
+# Distribution channel only — the source of truth stays mcp/co-newbiz/ in this
+# repository (ADR-0011 REST-only relay; the tarball gate below keeps db/app
+# code from ever leaking into the package).
+# Jobs re-pack from the tagged commit instead of passing artifacts: npm pack
+# is deterministic for the same commit, so no upload/download actions are
+# needed and every action used is SHA-pinned.
+name: MCP package publish
+
+on:
+  push:
+    tags:
+      - "mcp-v*"
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  guard:
+    name: Guard — tag matches manifest and tarball stays in the subtree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+
+      - name: Tag must equal mcp/co-newbiz/package.json version
+        run: |
+          tag_version="${GITHUB_REF_NAME#mcp-v}"
+          manifest_version="$(node -p "require('./mcp/co-newbiz/package.json').version")"
+          if [ "$tag_version" != "$manifest_version" ]; then
+            echo "::error::tag mcp-v$tag_version does not match manifest version $manifest_version — bump mcp/co-newbiz/package.json first"
+            exit 1
+          fi
+
+      - name: Tarball contains only subtree files (ADR-0011)
+        run: |
+          cd mcp/co-newbiz
+          npm pack --dry-run --json > /tmp/pack.json
+          # Fail on any path outside the allowlist: the package must ship only
+          # the MCP relay subtree — no db/, app/, scripts/ or stray files.
+          node -e '
+            const { files } = JSON.parse(require("fs").readFileSync("/tmp/pack.json", "utf8"));
+            const paths = files.map((f) => f.path);
+            const entryFiles = ["index.ts", "define.ts", "registry.ts", "stage-guides.ts", "stage-guides.generated.ts"];
+            const offenders = paths.filter((p) => {
+              if (p === "package.json" || entryFiles.includes(p)) return false;
+              return !["shared/", "tools/"].some((prefix) => p.startsWith(prefix));
+            });
+            if (offenders.length > 0) {
+              console.error("Files outside the subtree:", offenders);
+              process.exit(1);
+            }
+            const dbLeak = paths.filter((p) => /(^|\/)(db|app|scripts)\//.test(p));
+            if (dbLeak.length > 0) {
+              console.error("db/app/scripts code leaked into the package:", dbLeak);
+              process.exit(1);
+            }
+            console.log(`tarball OK — ${paths.length} files, all within the mcp/co-newbiz subtree`);
+          '
+
+  publish:
+    name: Publish to npm.pkg.github.com
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+
+      # The repository is personal-account-owned while the package scope is
+      # org-owned (@co-newbiz), so the repo-scoped GITHUB_TOKEN does not carry
+      # org package write rights — publish with an org-member PAT instead
+      # (repository secret MCP_PACKAGES_PAT, classic PAT, write:packages).
+      # If the repo is ever transferred into the co-newbiz org, switch to
+      # GITHUB_TOKEN with packages:write (same shape as docker.yml).
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.MCP_PACKAGES_PAT }}
+        run: |
+          echo "@co-newbiz:registry=https://npm.pkg.github.com" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> ~/.npmrc
+          cd mcp/co-newbiz
+          npm publish
+
+  smoke:
+    name: Smoke — install tarball, stdio initialize + tools/list
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.x
+
+      # Installs from the packed tarball (not a registry round-trip): the
+      # publish step already validates the registry path, and a tarball
+      # install avoids the GitHub Packages propagation delay between the
+      # publish and smoke jobs.
+      - name: Install package and run stdio handshake against a stub REST server
+        run: |
+          mkdir -p /tmp/smoke && cd /tmp/smoke
+          # Stub REST server: answers GET /api/projects so the relay has
+          # something to call during the smoke handshake.
+          cat > stub-server.ts <<'EOF'
+          Bun.serve({
+            port: 7788,
+            fetch(req) {
+              const url = new URL(req.url);
+              if (url.pathname === "/api/projects") {
+                return Response.json({ data: [{ id: "stub" }], meta: { count: 1 }, error: null });
+              }
+              return Response.json({ data: null, meta: {}, error: null });
+            },
+          });
+          EOF
+          bun stub-server.ts &
+          STUB_PID=$!
+          trap "kill $STUB_PID" EXIT
+
+          bun init -y >/dev/null 2>&1 || true
+          cd "$GITHUB_WORKSPACE/mcp/co-newbiz" && npm pack --pack-destination /tmp/smoke
+          cd /tmp/smoke && bun add ./co-newbiz-co-newbiz-mcp-*.tgz
+
+          # initialize then tools/list over the real stdio transport
+          bun run -e '
+            const { spawn } = require("child_process");
+            const child = spawn("bunx", ["co-newbiz-mcp"], {
+              env: { ...process.env, CO_NEWBIZ_API_BASE_URL: "http://127.0.0.1:7788", CO_NEWBIZ_API_TOKEN: "stub-token" },
+            });
+            const send = (obj) => child.stdin.write(JSON.stringify(obj) + "\n");
+            send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "smoke", version: "0" } } });
+            let buffer = "";
+            const replies = [];
+            child.stdout.on("data", (chunk) => {
+              buffer += chunk.toString();
+              let idx;
+              while ((idx = buffer.indexOf("\n")) >= 0) {
+                replies.push(JSON.parse(buffer.slice(0, idx)));
+                buffer = buffer.slice(idx + 1);
+              }
+              const initReply = replies.find((r) => r.id === 1);
+              if (initReply && !initReply.error) {
+                send({ jsonrpc: "2.0", method: "notifications/initialized" });
+                send({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+              }
+              const listReply = replies.find((r) => r.id === 2);
+              if (listReply) {
+                const names = (listReply.result?.tools ?? []).map((t) => t.name);
+                console.log(`smoke OK — ${names.length} tools advertised`);
+                if (names.length === 0) process.exit(1);
+                child.kill();
+                process.exit(0);
+              }
+            });
+            setTimeout(() => { console.error("smoke FAILED — no tools/list reply"); process.exit(1); }, 30000);
+          '
