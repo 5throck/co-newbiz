@@ -129,17 +129,29 @@ export function buildDealShapeSetBody(f: DealShapeForm, data: Pick<DealShapeData
   const evidence = f.evidenceRef.trim();
   const kept = data.live
     .filter((r) => r.viable && r.shape !== f.shape)
-    .map((r) => ({ shape: r.shape, rationale: r.rationale, ...(r.evidence_ref ? { evidence_ref: r.evidence_ref } : {}) }));
+    .map((r) => ({
+      shape: r.shape,
+      rationale: r.rationale,
+      ...(r.evidence_ref ? { evidence_ref: r.evidence_ref } : {}),
+    }));
   const live_token = data.live_token ?? "";
   if (f.viable === true)
     return {
       viable: true,
       intent: f.intent,
-      shapes: [...kept, { shape: f.shape, rationale: f.rationale.trim(), ...(evidence ? { evidence_ref: evidence } : {}) }],
+      shapes: [
+        ...kept,
+        { shape: f.shape, rationale: f.rationale.trim(), ...(evidence ? { evidence_ref: evidence } : {}) },
+      ],
       live_token,
     };
   if (kept.length === 0)
-    return { viable: false, rationale: f.rationale.trim(), ...(evidence ? { evidence_ref: evidence } : {}), live_token };
+    return {
+      viable: false,
+      rationale: f.rationale.trim(),
+      ...(evidence ? { evidence_ref: evidence } : {}),
+      live_token,
+    };
   return { viable: true, intent: f.intent, shapes: kept, live_token };
 }
 

@@ -94,7 +94,13 @@ const verdict = (shape: string, viable: boolean, extra: Record<string, unknown> 
     ? {
         viable: true,
         intent: "integration",
-        shapes: [{ shape, rationale: `reason for ${shape}`, ...(extra.evidence_ref ? { evidence_ref: extra.evidence_ref } : {}) }],
+        shapes: [
+          {
+            shape,
+            rationale: `reason for ${shape}`,
+            ...(extra.evidence_ref ? { evidence_ref: extra.evidence_ref } : {}),
+          },
+        ],
         live_token: AUTO,
         ...Object.fromEntries(Object.entries(extra).filter(([k]) => k !== "evidence_ref")),
       }
@@ -123,7 +129,17 @@ function legacyRecord(i: {
     );
     db.run(
       "INSERT INTO opportunity_deal_shape_evaluation (id, opportunity_id, shape, intent, viable, rationale, evidence_ref, evaluated_by, evaluated_at, superseded_by) VALUES (?,?,?,?,?,?,?,?,?,NULL)",
-      [id, i.opportunityId, i.shape, i.intent, i.viable ? 1 : 0, i.rationale, i.evidenceRef ?? null, i.evaluatedBy, i.now],
+      [
+        id,
+        i.opportunityId,
+        i.shape,
+        i.intent,
+        i.viable ? 1 : 0,
+        i.rationale,
+        i.evidenceRef ?? null,
+        i.evaluatedBy,
+        i.now,
+      ],
     );
   })();
   return { id };
@@ -227,9 +243,33 @@ describe("repository", () => {
     const o = newOpp();
     const other = newOpp();
     for (const sh of ["minority_stake", "full_acquisition", "spv"])
-      legacyRecord({ opportunityId: o, shape: sh, intent: "integration", viable: true, rationale: "r", evaluatedBy: ANALYST, now: NOW });
-    const first = legacyRecord({ opportunityId: o, shape: "spv", intent: "integration", viable: false, rationale: "again", evaluatedBy: ANALYST, now: NOW });
-    legacyRecord({ opportunityId: other, shape: "spv", intent: "integration", viable: false, rationale: "r", evaluatedBy: ANALYST, now: NOW });
+      legacyRecord({
+        opportunityId: o,
+        shape: sh,
+        intent: "integration",
+        viable: true,
+        rationale: "r",
+        evaluatedBy: ANALYST,
+        now: NOW,
+      });
+    const first = legacyRecord({
+      opportunityId: o,
+      shape: "spv",
+      intent: "integration",
+      viable: false,
+      rationale: "again",
+      evaluatedBy: ANALYST,
+      now: NOW,
+    });
+    legacyRecord({
+      opportunityId: other,
+      shape: "spv",
+      intent: "integration",
+      viable: false,
+      rationale: "r",
+      evaluatedBy: ANALYST,
+      now: NOW,
+    });
     const { live, history, overall, verdict: v } = repo.listDealShapeEvaluations(db, o);
     expect(live.map((r) => r.shape)).toEqual(["full_acquisition", "spv", "minority_stake"]);
     expect(live.find((r) => r.shape === "spv")?.id).toBe(first.id);
@@ -335,7 +375,12 @@ describe("REST /api/opportunities/:id/deal-shapes", () => {
       { ...verdict("spv", true), viable: "yes" },
       { rationale: "r", live_token: AUTO }, // viable missing
       viable({ shapes: [{ shape: "royalty", rationale: "r" }] }),
-      viable({ shapes: [{ shape: "spv", rationale: "r" }, { shape: "spv", rationale: "r" }] }),
+      viable({
+        shapes: [
+          { shape: "spv", rationale: "r" },
+          { shape: "spv", rationale: "r" },
+        ],
+      }),
       viable({ shapes: [] }),
       viable({ shapes: undefined }),
       viable({ shapes: repo.DEAL_SHAPES.concat(["spv"]).map((shape) => ({ shape, rationale: "r" })) }),

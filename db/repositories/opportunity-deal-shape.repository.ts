@@ -138,13 +138,17 @@ function cleanRationale(v: unknown, field: string, details: Record<string, unkno
       ...details,
     });
   if (rationale.length > RATIONALE_MAX)
-    throw new DealShapeError("invalid", `rationale must be at most ${RATIONALE_MAX} characters.`, { field, ...details });
+    throw new DealShapeError("invalid", `rationale must be at most ${RATIONALE_MAX} characters.`, {
+      field,
+      ...details,
+    });
   return rationale;
 }
 
 function cleanEvidence(v: unknown, details: Record<string, unknown> = {}): string | null {
   if (v === undefined || v === null) return null;
-  if (typeof v !== "string") throw new DealShapeError("invalid", "evidence_ref must be a string.", { field: "evidence_ref", ...details });
+  if (typeof v !== "string")
+    throw new DealShapeError("invalid", "evidence_ref must be a string.", { field: "evidence_ref", ...details });
   const evidence = v.trim() || null;
   if (evidence && evidence.length > EVIDENCE_REF_MAX)
     throw new DealShapeError("invalid", `evidence_ref must be at most ${EVIDENCE_REF_MAX} characters.`, {
@@ -195,11 +199,23 @@ function replaceLiveSet(
       db.run(
         `INSERT INTO opportunity_deal_shape_evaluation (id, opportunity_id, shape, intent, viable, rationale, evidence_ref, evaluated_by, evaluated_at, superseded_by)
          VALUES (?,?,?,?,?,?,?,?,?,NULL)`,
-        [ids[i], base.opportunityId, r.shape, r.intent, r.viable ? 1 : 0, r.rationale, r.evidence_ref, base.evaluatedBy, base.now],
+        [
+          ids[i],
+          base.opportunityId,
+          r.shape,
+          r.intent,
+          r.viable ? 1 : 0,
+          r.rationale,
+          r.evidence_ref,
+          base.evaluatedBy,
+          base.now,
+        ],
       );
     });
     result = {
-      rows: ids.map((id) => toRow(db.query(`SELECT ${COLUMNS} FROM opportunity_deal_shape_evaluation WHERE id = ?`).get(id) as RawRow)),
+      rows: ids.map((id) =>
+        toRow(db.query(`SELECT ${COLUMNS} FROM opportunity_deal_shape_evaluation WHERE id = ?`).get(id) as RawRow),
+      ),
       superseded: live.map((r) => r.id),
       changed: true,
     };
@@ -236,7 +252,9 @@ export function recordOverallNotViable(db: Database, input: RecordOverallNotViab
 export function recordViableShapes(db: Database, input: RecordViableShapesInput): DealShapeWriteResult {
   const intent = typeof input.intent === "string" ? input.intent : "";
   if (!(DEAL_SHAPE_INTENTS as readonly string[]).includes(intent))
-    throw new DealShapeError("invalid", `intent must be one of: ${DEAL_SHAPE_INTENTS.join(" | ")}.`, { field: "intent" });
+    throw new DealShapeError("invalid", `intent must be one of: ${DEAL_SHAPE_INTENTS.join(" | ")}.`, {
+      field: "intent",
+    });
   if (!Array.isArray(input.shapes) || input.shapes.length === 0)
     throw new DealShapeError("invalid", "shapes must list at least one viable shape.", { field: "shapes" });
   if (input.shapes.length > MAX_SHAPES)
@@ -248,7 +266,8 @@ export function recordViableShapes(db: Database, input: RecordViableShapesInput)
     const shape = typeof entry.shape === "string" ? entry.shape : "";
     if (!(DEAL_SHAPES as readonly string[]).includes(shape))
       throw new DealShapeError("invalid", `shape must be one of: ${DEAL_SHAPES.join(" | ")}.`, { field: "shape" });
-    if (seen.has(shape)) throw new DealShapeError("invalid", `shape ${shape} is listed more than once.`, { field: "shapes", shape });
+    if (seen.has(shape))
+      throw new DealShapeError("invalid", `shape ${shape} is listed more than once.`, { field: "shapes", shape });
     seen.add(shape);
     rows.push({
       shape: shape as DealShape,

@@ -120,7 +120,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     if (!result.changed)
       return ok({ verdict: body.viable ? "viable" : "not_viable", rows: [], superseded: [], changed: false }, 200);
     return ok(
-      { verdict: body.viable ? "viable" : "not_viable", rows: result.rows, superseded: result.superseded, changed: true },
+      {
+        verdict: body.viable ? "viable" : "not_viable",
+        rows: result.rows,
+        superseded: result.superseded,
+        changed: true,
+      },
       201,
     );
   } catch (e) {
