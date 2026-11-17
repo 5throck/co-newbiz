@@ -13,8 +13,18 @@ import { gateGoPrerequisiteGaps, latestGateDecisions, type GateId } from "../../
 import { badRequest, fail, forbidden, notFound, ok, unprocessable } from "../../../../../lib/envelope.ts";
 import { IC_GAP_GATES, composeRationale, icGoGapItems, parseRationale } from "../../../../../lib/ic-gap-override.ts";
 import { IC_SEQUENCE, IC_STEP_LABEL, gateSequenceBlocker } from "../../../../../lib/gate-sequence-view.ts";
-import { goLadderCheck, goRationaleCheck, goValidatorsCheck, goWaccCheck } from "../../../../../lib/gate-write-checks.ts";
-import { checkExtrasReferences, integrityActive, parseDecisionExtras, recordGateDecisionRow } from "../../../../../lib/gate-decision-contract.ts";
+import {
+  goLadderCheck,
+  goRationaleCheck,
+  goValidatorsCheck,
+  goWaccCheck,
+} from "../../../../../lib/gate-write-checks.ts";
+import {
+  checkExtrasReferences,
+  integrityActive,
+  parseDecisionExtras,
+  recordGateDecisionRow,
+} from "../../../../../lib/gate-decision-contract.ts";
 import { primeSnapshotCache } from "../../../../../lib/gate-snapshot.ts";
 import { countersignState, type CountersignState } from "../../../../../../../db/lib/gate-effective.ts";
 import { parseConditionsInput } from "../../../../../lib/gate-conditions.ts";
@@ -27,7 +37,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
+  if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
   const history = db
     .query(
@@ -41,7 +51,26 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
        WHERE g.entity_type = 'project' AND g.entity_id = ?
        ORDER BY g.decided_at DESC`,
     )
-    .all(id) as Array<{ id: string; gate: string; decision: string; rationale: string; missing_artifacts_json: string | null; judgement_confirmations_json: string | null; decided_by: string; decided_at: string; stale_at: string | null; stale_reason: string | null; ai_recommended_decision: string | null; divergence_reason: string | null; snapshot_hash: string | null; acknowledgements_json: string | null; countersign_status: string | null; countersigned_by: string | null; countersigned_at: string | null; countersign_conditions: string | null }>;
+    .all(id) as Array<{
+    id: string;
+    gate: string;
+    decision: string;
+    rationale: string;
+    missing_artifacts_json: string | null;
+    judgement_confirmations_json: string | null;
+    decided_by: string;
+    decided_at: string;
+    stale_at: string | null;
+    stale_reason: string | null;
+    ai_recommended_decision: string | null;
+    divergence_reason: string | null;
+    snapshot_hash: string | null;
+    acknowledgements_json: string | null;
+    countersign_status: string | null;
+    countersigned_by: string | null;
+    countersigned_at: string | null;
+    countersign_conditions: string | null;
+  }>;
   // Latest decision per gate - same helper as the process engine, so the tie-breaking rule cannot drift between
   // surfaces. `decision` is the EFFECTIVE verdict (ADR-0186 D6: an IC GO awaiting its countersign reads `pending`
   // when family maker_checker = enforce); `recorded_decision` is what was recorded.
@@ -61,15 +90,39 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   return ok(
     {
       latest,
-      history: history.map(({ acknowledgements_json, countersign_status, countersigned_by, countersigned_at, countersign_conditions, ...h }) => {
-        const state: CountersignState = countersignState(db, id, { id: h.id, gate: h.gate, decision: h.decision, decided_by: h.decided_by });
-        return {
-          ...h, ...parseRationale(h.rationale), judgement_confirmations: parseConfirmations(h.judgement_confirmations_json),
-          legacy: h.snapshot_hash === null, acknowledgements: parseAcks(acknowledgements_json),
-          countersign_state: state,
-          countersign: countersign_status ? { status: countersign_status, by: countersigned_by, at: countersigned_at, conditions: countersign_conditions } : null,
-        };
-      }),
+      history: history.map(
+        ({
+          acknowledgements_json,
+          countersign_status,
+          countersigned_by,
+          countersigned_at,
+          countersign_conditions,
+          ...h
+        }) => {
+          const state: CountersignState = countersignState(db, id, {
+            id: h.id,
+            gate: h.gate,
+            decision: h.decision,
+            decided_by: h.decided_by,
+          });
+          return {
+            ...h,
+            ...parseRationale(h.rationale),
+            judgement_confirmations: parseConfirmations(h.judgement_confirmations_json),
+            legacy: h.snapshot_hash === null,
+            acknowledgements: parseAcks(acknowledgements_json),
+            countersign_state: state,
+            countersign: countersign_status
+              ? {
+                  status: countersign_status,
+                  by: countersigned_by,
+                  at: countersigned_at,
+                  conditions: countersign_conditions,
+                }
+              : null,
+          };
+        },
+      ),
     },
     200,
     { count: history.length, reconfirmation: reconfirmNotice(db, id) },
@@ -79,12 +132,20 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
 /** ADR-0182 §5 — the decision's confirmation snapshot, parsed leniently. */
 function parseConfirmations(raw: string | null): string[] {
   if (!raw) return [];
-  try { return JSON.parse(raw) as string[]; } catch { return []; }
+  try {
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
 }
 
 function parseAcks(raw: string | null): Array<{ key: string; kind: string; reason: string }> {
   if (!raw) return [];
-  try { return JSON.parse(raw) as Array<{ key: string; kind: string; reason: string }>; } catch { return []; }
+  try {
+    return JSON.parse(raw) as Array<{ key: string; kind: string; reason: string }>;
+  } catch {
+    return [];
+  }
 }
 
 // ADR-0186: wrapped in route() so a fault inside the decision transaction answers with the standard 500 envelope (the transaction has unwound).
@@ -92,17 +153,27 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Recording gate decisions requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Recording gate decisions requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
-    gate?: string; decision?: string; rationale?: string; missing_artifacts?: string[];
-    gate_evaluation_id?: string; learning_capture?: string; gap_rationale?: string;
+    gate?: string;
+    decision?: string;
+    rationale?: string;
+    missing_artifacts?: string[];
+    gate_evaluation_id?: string;
+    learning_capture?: string;
+    gap_rationale?: string;
     // ADR-0182 §5 — checked 판단 필요 claims ride with the decision (the project
     // route dropped them until 2026-10-21 — fixed to match the opportunity route).
     judgement_confirmations?: string[];
     // ADR-0186 D1/D9 - the human acts of the decision contract (see lib/gate-decision-contract.ts).
-    snapshot_hash?: string; acknowledgements?: unknown; brief_id?: string; divergence_reason?: string; kill_override_id?: string;
+    snapshot_hash?: string;
+    acknowledgements?: unknown;
+    brief_id?: string;
+    divergence_reason?: string;
+    kill_override_id?: string;
     // ADR-0186 D4 - condition precedents of an IC GO (a human act; never part of a proposal).
     conditions?: unknown;
   } | null;
@@ -113,19 +184,33 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     return badRequest("invalid_request", `decision must be one of ${[...DECISIONS].join("|")}.`);
   }
   const rationale = body.rationale?.trim();
-  if (!rationale) return badRequest("invalid_request", "rationale is required — a gate decision without its reasoning is not recordable.");
+  if (!rationale)
+    return badRequest(
+      "invalid_request",
+      "rationale is required — a gate decision without its reasoning is not recordable.",
+    );
   const missing = (body.missing_artifacts ?? []).map((m) => m.trim()).filter(Boolean);
   if (body.decision === "hold" && missing.length === 0) {
-    return badRequest("hold_requires_artifacts", "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).");
+    return badRequest(
+      "hold_requires_artifacts",
+      "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).",
+    );
   }
   // ADR-0152 — every KILL carries learning capture (422 when absent).
   const learningCapture = body.learning_capture?.trim() || null;
   if (body.decision === "kill" && !learningCapture) {
-    return unprocessable("learning_capture_required", "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).");
+    return unprocessable(
+      "learning_capture_required",
+      "A KILL decision requires learning_capture — lessons from the kill reason must be captured (ADR-0152).",
+    );
   }
   const db = getDb();
   // ADR-0186 D4: conditions[] ride an IC GO only; the shape is validated whatever the flag mode.
-  if (body.conditions !== undefined && body.conditions !== null && (body.decision !== "go" || !(IC_GAP_GATES as readonly string[]).includes(body.gate))) {
+  if (
+    body.conditions !== undefined &&
+    body.conditions !== null &&
+    (body.decision !== "go" || !(IC_GAP_GATES as readonly string[]).includes(body.gate))
+  ) {
     return badRequest("invalid_request", "conditions can be attached to an entity_ic or group_ic GO only.");
   }
   const parsedConditions = parseConditionsInput(body.conditions, body.gate);
@@ -154,7 +239,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       // ADR-0186 D6: the predecessor GO may be recorded but still awaiting its countersign (not-GO for the ladder).
       const awaiting = latestRows.get(blocker as GateId)?.awaitingCountersign === true;
       return fail(
-        409, "gate_prerequisites_incomplete",
+        409,
+        "gate_prerequisites_incomplete",
         `GO is not allowed — the ${label} (${blocker}) GO must precede the ${body.gate} decision${awaiting ? " and it is recorded but not yet countersigned by a second reviewer" : ""}. HOLD or KILL can be recorded at any time.`,
         awaiting ? { blocker, awaiting_countersign: true } : undefined,
       );
@@ -163,19 +249,32 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const ladderDenied = goLadderCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
     if (ladderDenied) return ladderDenied;
     // ADR-0186 D4 (family `validators`): bf-01 hard block, ahead of the generic stage gaps it would otherwise be masked by.
-    const validatorsDenied = goValidatorsCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
+    const validatorsDenied = goValidatorsCheck({
+      entityType: "project",
+      entityId: id,
+      gate: body.gate,
+      actor: ctx.userId,
+    });
     if (validatorsDenied) return validatorsDenied;
     // ADR-0186 D8 (family `wacc`): the discount rate must be human-confirmed before the fs GO (bf-02).
     const waccDenied = goWaccCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
     if (waccDenied) return waccDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
-      return fail(409, "gate_prerequisites_incomplete", `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`, { gaps });
+      return fail(
+        409,
+        "gate_prerequisites_incomplete",
+        `GO is not allowed — prerequisite steps of the ${body.gate} stage are incomplete: ${gaps.join("; ")}. HOLD or KILL can be recorded at any time.`,
+        { gaps },
+      );
     }
   }
   const gateEvaluationId = body.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
+    return badRequest(
+      "invalid_request",
+      "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.",
+    );
   }
   // Provenance binding: the cited evaluation's process_run must address THIS
   // project — another entity's proposal cannot be recorded as this gate's
@@ -188,7 +287,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       )
       .get(gateEvaluationId, id);
     if (!bound) {
-      return badRequest("provenance_mismatch", "gate_evaluation_id is not an output of this project's committee session.");
+      return badRequest(
+        "provenance_mismatch",
+        "gate_evaluation_id is not an output of this project's committee session.",
+      );
     }
   }
   // R2-B item 3 - an IC GO with missing artifacts is never blocked (boundary #2: the human decides).
@@ -209,12 +311,14 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
   // ADR-0186 D2 (family `rationale`): GO only - HOLD and KILL are never blocked by the integrity families.
   if (body.decision === "go") {
-    const rationaleDenied = goRationaleCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId }, rationale, gapRationale);
+    const rationaleDenied = goRationaleCheck(
+      { entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId },
+      rationale,
+      gapRationale,
+    );
     if (rationaleDenied) return rationaleDenied;
   }
-  const gapOverride = icGo && gapRationale && openGaps.length > 0
-    ? { items: openGaps, rationale: gapRationale }
-    : null;
+  const gapOverride = icGo && gapRationale && openGaps.length > 0 ? { items: openGaps, rationale: gapRationale } : null;
   const storedRationale = composeRationale(rationale, gapOverride);
   const nowTs = new Date().toISOString();
   // ADR-0182 §5 — the checked "판단 필요" claims ride with the decision as a
@@ -227,20 +331,48 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // ADR-0186: legacy single INSERT when no snapshot family is on; otherwise ONE BEGIN IMMEDIATE transaction holds the
   // kill-evaluation run + ledger, the recomputed snapshot, the contract checks, the decision row and its snapshot.
   const recorded = recordGateDecisionRow(db, {
-    entityType: "project", entityId: id, gate: body.gate, decision: body.decision as "go" | "hold" | "kill", storedRationale,
-    missingArtifactsJson: body.decision === "hold" ? JSON.stringify(missing) : null, actor: ctx.userId, gateEvaluationId,
+    entityType: "project",
+    entityId: id,
+    gate: body.gate,
+    decision: body.decision as "go" | "hold" | "kill",
+    storedRationale,
+    missingArtifactsJson: body.decision === "hold" ? JSON.stringify(missing) : null,
+    actor: ctx.userId,
+    gateEvaluationId,
     learningCapture: body.decision === "kill" ? learningCapture : null,
     judgementConfirmationsJson: judgementConfirmations.length > 0 ? JSON.stringify(judgementConfirmations) : null,
-    extras, conditions: parsedConditions.items, now: nowTs,
+    extras,
+    conditions: parsedConditions.items,
+    now: nowTs,
   });
   if (!recorded.ok) {
-    if (recorded.built) primeSnapshotCache({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId, briefId: extras?.briefId ?? null }, recorded.built);
+    if (recorded.built)
+      primeSnapshotCache(
+        { entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId, briefId: extras?.briefId ?? null },
+        recorded.built,
+      );
     return fail(recorded.failure.status, recorded.failure.code, recorded.failure.message, recorded.failure.details);
   }
   const gid = recorded.id;
   // ADR-0153 — human_final review row: a side effect of THIS human POST only.
   recordHumanFinalReview(reviewSnapshot, ctx.userId, body.decision);
   // ADR-0186 D6: an IC GO recorded under the contract is effective only after a different reviewer countersigns it.
-  const awaitingCountersign = body.decision === "go" && (IC_GAP_GATES as readonly string[]).includes(body.gate) && countersignState(db, id, { id: gid, gate: body.gate, decision: body.decision, decided_by: ctx.userId }) === "pending_countersign";
-  return ok({ id: gid, gate: body.gate, decision: body.decision, gap_override: gapOverride, snapshot_hash: recorded.snapshotHash, acknowledgements: recorded.acknowledgements.length, conditions: recorded.conditionIds, awaiting_countersign: awaitingCountersign }, 201);
+  const awaitingCountersign =
+    body.decision === "go" &&
+    (IC_GAP_GATES as readonly string[]).includes(body.gate) &&
+    countersignState(db, id, { id: gid, gate: body.gate, decision: body.decision, decided_by: ctx.userId }) ===
+      "pending_countersign";
+  return ok(
+    {
+      id: gid,
+      gate: body.gate,
+      decision: body.decision,
+      gap_override: gapOverride,
+      snapshot_hash: recorded.snapshotHash,
+      acknowledgements: recorded.acknowledgements.length,
+      conditions: recorded.conditionIds,
+      awaiting_countersign: awaitingCountersign,
+    },
+    201,
+  );
 });
