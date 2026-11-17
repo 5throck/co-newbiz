@@ -390,7 +390,7 @@ describe("applyVersionToEvalState (TA2, TA4, TA5, TA6, TA8)", () => {
 
 describe("commitCategoryDraft apply hook (TA7, TA8 summary, TA9)", () => {
   function runItem(): string {
-    const { run } = repo.createRun(db, {
+    const { run } = repo.createRunOrThrow(db, {
       opportunityId: opp,
       categories: "both",
       targetIds: [target],

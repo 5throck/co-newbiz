@@ -8,6 +8,7 @@ lang_reason: Row 0 design dispatched in English; docs/context.md English-only zo
 **Status**: Accepted (2026-11-17, user approval of spec `2026-11-17-s6-direct-ai-verdict` with all eleven open questions accepted as recommended; implementation pending)
 **Date**: 2026-11-17
 **Deciders**: User (direction agreed in chat 2026-11-17: direct apply, confirm removed, per-item human review on the detail screen, origin safeguard; whole-list AI evaluation to run like the per-candidate one); PM dispatch (Row 0 non-exempt); schema designed by data-architect, to be landed by backend-engineer with a dba operational review and a security-engineer review
+**Amended by**: [ADR-0202](0202-unreviewed-ai-verdicts-block-gate.md) (2026-11-18): unreviewed `ai_draft` verdicts now block GO at the `pre_fs` and `target_screening` gates, which reverses the rejected alternative on blocking promotion below.
 **Amends**: [ADR-0199](0199-s6-bulk-ai-eval-draft-versions.md). This ADR reverses ADR-0199 decision 6 (provisional-only drafts, the human-only confirm route) and the rejected alternative "count provisional scores in ranking or promotion until a human confirms". It also supersedes the §5 concurrency amendment of design `2026-11-16-s6-bulk-ai-eval-versioning` (the `bulk_block` / `concurrency_cap` refusals).
 **Related**: ADR-0139 (S7 eval layer), ADR-0140/0141 (financial rubric, technical evidence draft), ADR-0171 (criteria reconcile, judgement invalidation), ADR-0005 (run versioning and attribution), ADR-0014 (reversible migrations), ADR-0012 (append-only audit), ADR-0187 D1 (data-confidence grades), ADR-0198 (no grade uplift on human acceptance), ADR-0184 (next-intl ko/en), design `2026-11-17-s6-direct-ai-verdict-design`
 
@@ -36,7 +37,7 @@ blocking and never blocked.
 An ADR is required on three grounds:
 
 - The house baseline requires one for any DB schema change. Migration 0197 adds columns;
-  migration 0198 rebuilds a table to widen a CHECK.
+  migration 0199 rebuilds a table to widen a CHECK.
 - The co-newbiz trigger list covers schema and MCP tool scope. The MCP write tool
   `shortlist_candidate` is removed, and the meaning of `record_candidate_screening`
   writes changes.
@@ -127,7 +128,7 @@ An ADR is required on three grounds:
      `POST .../targets/{targetId}/eval-draft` are retired. The detail tab starts a
      single-candidate run instead, so there is one AI path.
 8. **Bulk evaluation as a queue of per-candidate items** (migration
-   `0198_eval_run_item_queue_states.sql`, number tentative):
+   `0199_eval_run_item_queue_states.sql`):
    - Every candidate evaluation is one run item processed by a **process-wide worker
      pool** of `EVAL_WORKER_POOL_SIZE = 3`. A bulk start enqueues one item per eligible
      candidate; a single start enqueues one. Both share the slots, the per-row states,
@@ -194,7 +195,7 @@ An ADR is required on three grounds:
   survives looking human. `source_version_id` takes part in an FK, so removing it needs a
   table rebuild or the pre-migration backup (ADR-0014). The dba runs backup-before and
   health-after (`foreign_key_check`, `integrity_check`, origin and copy counts).
-- **Migration 0198 is a table rebuild** (not additive), so it is separate and ships with
+- **Migration 0199 is a table rebuild** (not additive), so it is separate and ships with
   the queue work. Precondition: no active run. Rollback maps the new states, then
   rebuilds or restores.
 - **The ranking fills at once.** Scores and ranks reflect AI verdicts as soon as a run
@@ -223,7 +224,7 @@ An ADR is required on three grounds:
   `bulk_block` and `concurrency_cap`.
 - **Phasing.** Part A (origin and direct apply) and Part B (queue) are independent and
   ship as two PRs: PR-A (migration 0197, engine apply, MCP and bearer rule, confirm route
-  and UI removal, human-only promotion, detail-tab changes), then PR-B (migration 0198,
+  and UI removal, human-only promotion, detail-tab changes), then PR-B (migration 0199,
   worker pool, API, UI). The design's §12 lists the files per PR.
 - **Security review** of the origin derivation, the bearer → `ai_draft` rule, the
   human-verdict lock, and human-only promotion is required before the API phase merges.

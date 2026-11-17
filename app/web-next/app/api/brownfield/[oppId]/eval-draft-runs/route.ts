@@ -1,10 +1,11 @@
-// POST /api/brownfield/[oppId]/eval-draft-runs — start an S6 bulk AI evaluation run (ADR-0199 A1, spec
-// 2026-11-16-s6-bulk-ai-eval-versioning §4). Drafting is a PROPOSAL (not human-only): every version it produces is an
-// immutable draft, and only the human-only confirm route turns one into a recorded verdict. Analyst+.
-// Body { categories?: "both"|"financial"|"technical", target_ids?: string[], web_evidence?: boolean,
-// force_refresh?: boolean } — web_evidence and force_refresh default to false and are stored on the run so a resume
-// keeps them. An active run for the opportunity is REUSED (`meta.reused: true`). Returns 202 { run_id }; the engine
-// works in the background. Audit target_eval.bulk_run.start.
+// POST /api/brownfield/[oppId]/eval-draft-runs — start an S6 AI evaluation run (ADR-0199 A1; queue model ADR-0200 decision 8,
+// design 2026-11-17 §10). Drafting is a PROPOSAL (not human-only); its verdicts are applied with their origin and a person
+// reviews them per item. Analyst+. Body { categories?: "both"|"financial"|"technical", target_ids?: string[],
+// web_evidence?: boolean, force_refresh?: boolean } — web_evidence and force_refresh default to false and are stored on the
+// run so a resume keeps them. An active run over exactly the requested candidates is REUSED (`meta.reused: true`).
+// Always 202 when accepted — bulk and single starts only enqueue per-candidate items for the process-wide worker pool:
+// { run_id, status, queued, skipped: [{ target_id, reason }], taken_over: [{ target_id, from_run_id }] }. 429 start_cooldown
+// and 429 queue_full ({ queued, limit }) are the only refusals for load. Audit target_eval.bulk_run.start (+ take_over).
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import {
@@ -18,13 +19,8 @@ import { authenticate, callPathOf, requireBusinessActor } from "../../../../../l
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
 import { notSelectedResponse } from "../../../../../lib/selected-guard.ts";
 import { listTargets } from "../../../../../lib/brownfield-targets.ts";
-import {
-  activeEngineRunsForOpportunity,
-  launchBulkEval,
-  noteRunStart,
-  startCooldownRemaining,
-  MAX_CONCURRENT_EVAL_ENGINES,
-} from "../../../../../lib/brownfield-eval-bulk.ts";
+import { classifyStartTarget, noteRunStart, startCooldownRemaining } from "../../../../../lib/brownfield-eval-bulk.ts";
+import { launchBulkEval } from "../../../../../lib/brownfield-eval-queue.ts";
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
@@ -81,28 +77,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   }
   if (ids.length === 0) return badRequest("no_candidates", "There are no candidates to evaluate.");
 
-  // Reuse (T13) matches an active run whose candidate set is exactly the requested one, so a parallel engine over
-  // OTHER candidates cannot swallow the start; re-issuing a start for a running run just returns it.
+  // Reuse matches an active run whose candidate set is exactly the requested one, so re-issuing a start returns it.
+  // Nothing else refuses a start for running work: bulk and single starts enqueue (design §10.1), the pool schedules.
   const single = ids.length === 1;
   const activeRun = getActiveRunForTargets(db, oppId, ids);
   if (!activeRun) {
-    // Concurrency rule (§5, MAX_CONCURRENT_EVAL_ENGINES): a BULK start (no target_ids, or more than one id) refuses
-    // while ANY engine for the opportunity is active — including a cancelled engine finishing its current item. A
-    // SINGLE-candidate start may run beside other engines up to the cap; at the cap it refuses with a machine-readable
-    // reason (bulk_block vs concurrency_cap) so the UI can localize both. Cooldown (429) is unchanged.
-    const engineRuns = activeEngineRunsForOpportunity(oppId);
-    if (!single && engineRuns.length > 0) {
-      return fail(409, "engine_active", "A run is still finishing its current step.", {
-        run_id: engineRuns[0],
-        reason: "bulk_block",
-      });
-    }
-    if (engineRuns.length >= MAX_CONCURRENT_EVAL_ENGINES) {
-      return fail(409, "engine_active", "Too many evaluations are running for this opportunity.", {
-        run_id: engineRuns[0],
-        reason: "concurrency_cap",
-      });
-    }
     const wait = startCooldownRemaining(ctx.userId, single ? ids[0] : undefined);
     if (wait > 0) return fail(429, "start_cooldown", `Wait ${Math.ceil(wait / 1000)}s before starting another run.`);
   }
@@ -119,25 +98,55 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       startedBy: ctx.userId,
       startedVia: via,
       now,
+      classify: (targetId) => classifyStartTarget(db, oppId, targetId),
+      // Audit rows commit with the start (and any take-over) or not at all.
+      onWrite: (r) => {
+        appendAudit(db, {
+          actor: ctx.userId,
+          action: "target_eval.bulk_run.start",
+          target: `${oppId}:run:${r.run.id}:targets=${ids.length}:categories=${categories}`,
+          now,
+        });
+        for (const t of r.taken_over) {
+          appendAudit(db, {
+            actor: ctx.userId,
+            action: "target_eval.bulk_run.take_over",
+            target: `${oppId}:run:${t.from_run_id}:target=${t.target_id}:taken_over_by=${r.run.id}`,
+            now,
+          });
+        }
+      },
     });
   } catch (e) {
     if (e instanceof EvalDraftError)
       return e.kind === "not_found"
         ? notFound()
-        : e.kind === "conflict"
-          ? fail(409, "conflict", e.message)
-          : badRequest("invalid_request", e.message);
+        : e.kind === "queue_full"
+          ? fail(429, "queue_full", e.message, e.details)
+          : e.kind === "conflict"
+            ? fail(409, "conflict", e.message)
+            : badRequest("invalid_request", e.message);
     throw e;
+  }
+  // Every candidate skipped: nothing to enqueue, so no run row and no audit rows exist (200, run_id null).
+  if (!created.run) {
+    return ok({ run_id: null, status: null, queued: 0, skipped: created.skipped, taken_over: [] }, 200, {
+      reused: false,
+    });
   }
   if (!created.reused) {
     noteRunStart(ctx.userId, single ? ids[0] : undefined);
-    appendAudit(db, {
-      actor: ctx.userId,
-      action: "target_eval.bulk_run.start",
-      target: `${oppId}:run:${created.run.id}:targets=${ids.length}:categories=${categories}`,
-      now,
-    });
     launchBulkEval(db, created.run.id);
   }
-  return ok({ run_id: created.run.id, status: created.run.status }, 202, { reused: created.reused });
+  return ok(
+    {
+      run_id: created.run.id,
+      status: created.run.status,
+      queued: created.queued,
+      skipped: created.skipped,
+      taken_over: created.taken_over,
+    },
+    202,
+    { reused: created.reused },
+  );
 }

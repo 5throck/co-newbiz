@@ -741,7 +741,7 @@ set returns that run (`meta.reused: true`).
 | DART budget | The global reserve (§10.2). |
 | Pool size | A code constant, not a request parameter. |
 
-### 10.7 Schema: migration `0198_eval_run_item_queue_states.sql` (number tentative)
+### 10.7 Schema: migration `0199_eval_run_item_queue_states.sql`
 
 Two item states are needed: `skipped_active` and `cancelled`. The run-item `state` CHECK
 cannot be altered in SQLite, so this is a table rebuild (the 0104 create-copy-rename
@@ -832,7 +832,7 @@ every write.
 **Part B.**
 
 1. Drain or cancel active runs.
-2. Apply 0198 (backup before, health after).
+2. Apply 0199 (backup before, health after).
 3. Deploy the dispatcher.
 
 Rollback: drain, map the new states, then rebuild or restore (§10.7). The 0196 state
@@ -864,7 +864,7 @@ with `db/`, `mcp/`, `scripts/`, `docs/`, or `tests/`.
 
 | Row | Work | Files | Agent (tier / model) | Exit |
 |---|---|---|---|---|
-| B1 | Migration `0198_eval_run_item_queue_states.sql` (§10.7): rebuild with `skipped_active` and `cancelled`, keep the 0197 `apply_summary` column, add `idx_bedri_target_state` | `db/migrations/0198_eval_run_item_queue_states.sql` (new), `db/repositories/brownfield-eval-draft.repository.ts` (state type, dedupe query, counts query) | data-architect reviews → backend-engineer (High / opus); dba review (rebuild, drain precondition, rollback rehearsal) | migration checks |
+| B1 | Migration `0199_eval_run_item_queue_states.sql` (§10.7): rebuild with `skipped_active` and `cancelled`, keep the 0197 `apply_summary` column, add `idx_bedri_target_state` | `db/migrations/0199_eval_run_item_queue_states.sql` (new), `db/repositories/brownfield-eval-draft.repository.ts` (state type, dedupe query, counts query) | data-architect reviews → backend-engineer (High / opus); dba review (rebuild, drain precondition, rollback rehearsal) | migration checks |
 | B2 | Dispatcher: `EVAL_WORKER_POOL_SIZE = 3` process-wide, single-first selection with one bulk slot reserved, round-robin across bulk runs, per-minute heartbeat of registered runs, interrupted rule (§10.5), global DART reserve check per item; `runBulkEval` loop replaced by the dispatcher calling `processItem`; `MAX_CONCURRENT_EVAL_ENGINES` removed | `lib/brownfield-eval-queue.ts` (new), `lib/brownfield-eval-bulk.ts` | backend-engineer (High / opus) | TB1–TB3, TB8–TB10 |
 | B3 | API: start returns 202 with `queued`, `skipped`, `taken_over`; dedupe and take-over (§10.4); `MAX_QUEUED_ITEMS_PER_OPPORTUNITY = 200` → 429 `queue_full`; remove 409 `engine_active` (`bulk_block`, `concurrency_cap`); `counts` on active / latest / run; run cancel semantics; new A4b item cancel route | `app/api/brownfield/[oppId]/eval-draft-runs/route.ts`, `.../eval-draft-runs/active/route.ts`, `.../eval-draft-runs/latest/route.ts`, `.../eval-draft-runs/[runId]/route.ts`, `.../eval-draft-runs/[runId]/cancel/route.ts`, `.../eval-draft-runs/[runId]/resume/route.ts`, `.../eval-draft-runs/[runId]/items/[itemId]/cancel/route.ts` (new), `docs/architecture/openapi.yaml` | backend-engineer (High / opus) | TB4–TB7 |
 | B4 | UI (§10.9): multi-run panel with the full summary line, per-row queue states, `대기 취소`, row button disabled only while that candidate is queued or running, bulk button always enabled with queued and skipped counts in the dialog | `components/stages/brownfield/LonglistSection.tsx`, `aiEvalActive.ts`, `aiEvalTypes.ts`, `useBrownfieldTargets.ts`; `locales/ko.json`, `locales/en.json` | frontend-engineer (Medium / sonnet) | TB11 |

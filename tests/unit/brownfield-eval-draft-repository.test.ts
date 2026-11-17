@@ -89,7 +89,7 @@ const content = (category: "financial" | "technical" = "financial", score = 70):
 });
 
 function startRun(targets = [t1, t2]) {
-  return repo.createRun(db, {
+  return repo.createRunOrThrow(db, {
     opportunityId: opp,
     categories: "both",
     targetIds: targets,
@@ -185,8 +185,8 @@ describe("runs and items", () => {
 
   test("T6: a stale running heartbeat becomes interrupted; resume keeps options and records who resumed", () => {
     const { run } = startRun();
-    expect(repo.markStaleRunInterrupted(db, opp, "2026-11-16T01:05:00.000Z")).toBe(0);
-    expect(repo.markStaleRunInterrupted(db, opp, "2026-11-16T01:11:00.000Z")).toBe(1);
+    expect(repo.markStaleRunInterrupted(db, opp, "2026-11-16T01:05:00.000Z", () => false)).toBe(0);
+    expect(repo.markStaleRunInterrupted(db, opp, "2026-11-16T01:11:00.000Z", () => false)).toBe(1);
     expect(repo.getRun(db, run.id)?.status).toBe("interrupted");
     expect(repo.getActiveRun(db, opp)?.id).toBe(run.id);
     const resumed = repo.resumeRun(db, run.id, "u2", "2026-11-16T02:00:00.000Z");
@@ -344,7 +344,7 @@ describe("versions: numbering, replace-on-success, unchanged inputs", () => {
     expect(repo.getLatestVersionWithCheckedAt(db, t1, "financial")?.checked_at).toBe(T0);
 
     const later = "2026-11-30T05:00:00.000Z";
-    const r2 = repo.createRun(db, {
+    const r2 = repo.createRunOrThrow(db, {
       opportunityId: opp,
       categories: "financial",
       targetIds: [t1],

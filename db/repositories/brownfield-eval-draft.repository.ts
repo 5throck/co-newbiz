@@ -64,6 +64,8 @@ export const RUN_ITEM_STATES = [
   "skipped_not_dart",
   "skipped_no_company",
   "skipped_llm_unconfigured",
+  "skipped_active",
+  "cancelled",
 ] as const;
 export type RunItemState = (typeof RUN_ITEM_STATES)[number];
 export const TERMINAL_ITEM_STATES: readonly RunItemState[] = [
@@ -72,7 +74,13 @@ export const TERMINAL_ITEM_STATES: readonly RunItemState[] = [
   "skipped_not_dart",
   "skipped_no_company",
   "skipped_llm_unconfigured",
+  "skipped_active",
+  "cancelled",
 ];
+/** Item states that mean "an engine step is executing" (mid-item); `pending` is queued, the rest are terminal. */
+export const STEP_ITEM_STATES: readonly RunItemState[] = ["financial_sync", "financial_draft", "technical_draft"];
+/** Design 2026-11-17 section 10.6: pending items across an opportunity's active runs; a start that would exceed it is refused. */
+export const MAX_QUEUED_ITEMS_PER_OPPORTUNITY = 200;
 
 export const CATEGORY_OUTCOMES = ["versioned", "unchanged", "failed", "skipped", "nothing_pending"] as const;
 export type CategoryOutcome = (typeof CATEGORY_OUTCOMES)[number];
@@ -272,8 +280,9 @@ export interface DraftVersionRow extends DraftVersionSummaryRow {
 /** `invalid` = input shape/vocabulary problem; `not_found` = unknown run/item/opportunity; `conflict` = illegal transition. */
 export class EvalDraftError extends Error {
   constructor(
-    readonly kind: "invalid" | "not_found" | "conflict" | "payload_too_large",
+    readonly kind: "invalid" | "not_found" | "conflict" | "payload_too_large" | "queue_full",
     message: string,
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "EvalDraftError";
@@ -304,6 +313,32 @@ export interface CreateRunInput {
   startedBy: string;
   startedVia: string;
   now: string;
+  /**
+   * Start-time classification of a candidate (design 2026-11-17 section 10.8): `not_dart` / `no_company` candidates get
+   * their terminal skipped item at once and are reported in `skipped`. Omitted = every candidate is queued.
+   */
+  classify?: (targetId: string) => "ok" | "not_dart" | "no_company";
+  /**
+   * Called INSIDE the start transaction after the writes (not for a reused or empty start), so the decision-bearing write and
+   * its audit rows commit or roll back together: a throwing callback rolls the whole start back.
+   */
+  onWrite?: (result: CreateRunResult & { run: DraftRunRow }) => void;
+}
+
+/** `pause_reason` marker of a `running` run whose cancel waits for its in-flight items (design section 10.5). */
+export const CANCEL_REQUESTED = "cancel_requested";
+
+export type StartSkipReason = "already_active" | "paused_run" | "taken_over" | "not_dart" | "no_company";
+export interface CreateRunResult {
+  /** `null` when nothing was enqueued (every candidate skipped): no run row and no audit rows are written. */
+  run: DraftRunRow | null;
+  reused: boolean;
+  /** Items left `pending` (waiting for a worker slot). */
+  queued: number;
+  /** `run_id` is the paused or interrupted run that holds the candidate (reason `paused_run`) so the UI can offer resume or cancel. */
+  skipped: Array<{ target_id: string; reason: StartSkipReason; run_id?: string }>;
+  /** Bulk-queue items this (single) start took over; the bulk run's item is now `skipped_active`. */
+  taken_over: Array<{ target_id: string; from_run_id: string }>;
 }
 
 export function getRun(db: Database, runId: string): DraftRunRow | null {
@@ -337,6 +372,7 @@ export function getActiveRunForTargets(
 ): DraftRunRow | null {
   const want = [...targetIds].sort().join("\n");
   for (const run of getActiveRunsForOpportunity(db, opportunityId)) {
+    if (run.pause_reason === CANCEL_REQUESTED) continue; // a run being cancelled is never reused
     const have = listRunItems(db, run.id)
       .map((i) => i.brownfield_target_id)
       .sort()
@@ -369,10 +405,55 @@ export function getLatestRun(db: Database, opportunityId: string, targetId?: str
 }
 
 /**
- * Start a run, or return the active one (`reused: true`, the S1 alreadyRunning precedent). Inserts the header and one
- * `pending` item per candidate in a single transaction. Every target must belong to the opportunity.
+ * Pending items across the opportunity's `running` and `paused_budget` runs (the `queue_full` population, section 10.6).
+ * An `interrupted` run is crash residue and does not hold the cap.
  */
-export function createRun(db: Database, input: CreateRunInput): { run: DraftRunRow; reused: boolean } {
+export function countQueuedItems(db: Database, opportunityId: string): number {
+  return (
+    db
+      .query(
+        `SELECT COUNT(*) AS n FROM brownfield_eval_draft_run_item i JOIN brownfield_eval_draft_run r ON r.id = i.run_id
+          WHERE r.opportunity_id = ? AND r.status IN ('running', 'paused_budget') AND i.state = 'pending'`,
+      )
+      .get(opportunityId) as { n: number }
+  ).n;
+}
+
+interface OtherItem {
+  item_id: string;
+  run_id: string;
+  state: RunItemState;
+  total_targets: number;
+  run_status: RunStatus;
+}
+
+/** Non-terminal items of the given candidates in the ACTIVE runs of the opportunity (the dedupe population, section 10.4). */
+function nonTerminalItemsOf(db: Database, opportunityId: string, ids: readonly string[]): Map<string, OtherItem[]> {
+  const out = new Map<string, OtherItem[]>();
+  if (ids.length === 0) return out;
+  const rows = db
+    .query(
+      `SELECT i.id AS item_id, i.run_id, i.brownfield_target_id AS target_id, i.state, r.total_targets, r.status AS run_status
+         FROM brownfield_eval_draft_run_item i JOIN brownfield_eval_draft_run r ON r.id = i.run_id
+        WHERE i.brownfield_target_id IN (${placeholders(ids.length)}) AND r.opportunity_id = ?
+          AND r.status IN (${placeholders(ACTIVE_RUN_STATUSES.length)})
+          AND i.state NOT IN (${placeholders(TERMINAL_ITEM_STATES.length)})`,
+    )
+    .all(...ids, opportunityId, ...ACTIVE_RUN_STATUSES, ...TERMINAL_ITEM_STATES) as Array<
+    OtherItem & { target_id: string }
+  >;
+  for (const r of rows) out.set(r.target_id, [...(out.get(r.target_id) ?? []), r]);
+  return out;
+}
+
+/**
+ * Start a run, or return the active one (`reused: true`, the S1 alreadyRunning precedent). Inserts the header and one
+ * item per candidate in a single transaction. Every target must belong to the opportunity. Queue rules (design
+ * 2026-11-17 section 10): a candidate already evaluated in another active run becomes `skipped_active`; a SINGLE start
+ * (one id) takes over a candidate that only waits in a BULK run (the bulk item becomes `skipped_active`, `taken_over_by`
+ * in its error_message); more than MAX_QUEUED_ITEMS_PER_OPPORTUNITY pending items throw `queue_full`.
+ */
+export function createRun(db: Database, input: CreateRunInput): CreateRunResult {
   if (!(RUN_CATEGORY_SELECTIONS as readonly string[]).includes(input.categories)) {
     throw new EvalDraftError("invalid", `categories must be one of: ${RUN_CATEGORY_SELECTIONS.join(" | ")}.`);
   }
@@ -381,9 +462,12 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
   const ids = [...input.targetIds];
   if (new Set(ids).size !== ids.length) throw new EvalDraftError("invalid", "targetIds must not repeat.");
 
-  return db.transaction(() => {
+  return db.transaction((): CreateRunResult => {
     const active = getActiveRunForTargets(db, input.opportunityId, ids);
-    if (active) return { run: active, reused: true };
+    if (active) {
+      const queued = listRunItems(db, active.id).filter((i) => i.state === "pending").length;
+      return { run: active, reused: true, queued, skipped: [], taken_over: [] };
+    }
     if (ids.length > 0) {
       const found = db
         .query(
@@ -393,6 +477,60 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
       if (found.n !== ids.length)
         throw new EvalDraftError("not_found", "Every target must be a candidate of this opportunity.");
     }
+    const single = ids.length === 1;
+    const elsewhere = nonTerminalItemsOf(db, input.opportunityId, ids);
+    type Plan = { state: RunItemState; skip?: StartSkipReason; holder?: string; takeOver?: OtherItem[] };
+    const plans = new Map<string, Plan>();
+    for (const id of ids) {
+      const others = elsewhere.get(id) ?? [];
+      // Only runs that are actually `running` make a candidate "active"; paused and interrupted runs hold queued work.
+      const live = others.filter((o) => o.run_status === "running");
+      const running = live.some((o) => (STEP_ITEM_STATES as readonly string[]).includes(o.state));
+      const queuedInSingle = live.some((o) => o.state === "pending" && o.total_targets === 1);
+      if (single && others.length > 0 && !running && !queuedInSingle) {
+        plans.set(id, { state: "pending", takeOver: others }); // single start over bulk-queued or paused/interrupted work
+      } else if (live.length > 0) {
+        plans.set(id, { state: "skipped_active", skip: "already_active" });
+      } else if (others.length > 0) {
+        plans.set(id, { state: "skipped_active", skip: "paused_run", holder: others[0].run_id });
+      } else {
+        const kind = input.classify?.(id) ?? "ok";
+        plans.set(
+          id,
+          kind === "not_dart"
+            ? { state: "skipped_not_dart", skip: "not_dart" }
+            : kind === "no_company"
+              ? { state: "skipped_no_company", skip: "no_company" }
+              : { state: "pending" },
+        );
+      }
+    }
+    // The cap counts what this start would actually enqueue, not the candidates asked for.
+    const pendingNew = [...plans.values()].filter((p) => p.state === "pending").length;
+    if (pendingNew === 0) {
+      const skipped = ids.flatMap((id) => {
+        const p = plans.get(id) as Plan;
+        return p.skip ? [{ target_id: id, reason: p.skip, ...(p.holder ? { run_id: p.holder } : {}) }] : [];
+      });
+      return { run: null, reused: false, queued: 0, skipped, taken_over: [] };
+    }
+    const already = countQueuedItems(db, input.opportunityId);
+    // A take-over moves counted pending items out of the queue, so it nets out against the new pending item.
+    const freed = [...plans.values()].reduce(
+      (n, p) =>
+        n +
+        (p.takeOver ?? []).filter(
+          (o) => o.state === "pending" && (o.run_status === "running" || o.run_status === "paused_budget"),
+        ).length,
+      0,
+    );
+    const queuedAfter = already - freed + pendingNew;
+    if (queuedAfter > MAX_QUEUED_ITEMS_PER_OPPORTUNITY)
+      throw new EvalDraftError(
+        "queue_full",
+        `The evaluation queue is full (${already} waiting, limit ${MAX_QUEUED_ITEMS_PER_OPPORTUNITY}).`,
+        { queued: already, limit: MAX_QUEUED_ITEMS_PER_OPPORTUNITY },
+      );
     const runId = ulid();
     db.run(
       `INSERT INTO brownfield_eval_draft_run (id, opportunity_id, categories, web_evidence, force_refresh, status, total_targets,
@@ -411,10 +549,114 @@ export function createRun(db: Database, input: CreateRunInput): { run: DraftRunR
       ],
     );
     const insertItem = db.prepare(
-      `INSERT INTO brownfield_eval_draft_run_item (id, run_id, brownfield_target_id, seq, state, updated_at) VALUES (?, ?, ?, ?, 'pending', ?)`,
+      `INSERT INTO brownfield_eval_draft_run_item (id, run_id, brownfield_target_id, seq, state, financial_outcome, technical_outcome, error_message, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-    for (const [seq, targetId] of ids.entries()) insertItem.run(ulid(), runId, targetId, seq, input.now);
-    return { run: getRun(db, runId) as DraftRunRow, reused: false };
+    const takeOver = db.prepare(
+      `UPDATE brownfield_eval_draft_run_item SET state = 'skipped_active', error_message = ?, updated_at = ?
+        WHERE id = ? AND state NOT IN (${placeholders(TERMINAL_ITEM_STATES.length)})`,
+    );
+    const wants = (cat: EvalDraftCategory) => input.categories === "both" || input.categories === cat;
+    const skipped: CreateRunResult["skipped"] = [];
+    const taken_over: CreateRunResult["taken_over"] = [];
+    for (const [seq, targetId] of ids.entries()) {
+      const plan = plans.get(targetId) as Plan;
+      const terminalSkip = plan.state !== "pending";
+      const outcome = (cat: EvalDraftCategory) =>
+        terminalSkip && plan.state !== "skipped_active" && wants(cat) ? "skipped" : null;
+      insertItem.run(
+        ulid(),
+        runId,
+        targetId,
+        seq,
+        plan.state,
+        outcome("financial"),
+        outcome("technical"),
+        plan.holder ? `paused_run:${plan.holder}` : null,
+        input.now,
+      );
+      if (plan.skip)
+        skipped.push({ target_id: targetId, reason: plan.skip, ...(plan.holder ? { run_id: plan.holder } : {}) });
+      for (const o of plan.takeOver ?? []) {
+        takeOver.run(`taken_over_by:${runId}`, input.now, o.item_id, ...TERMINAL_ITEM_STATES);
+        taken_over.push({ target_id: targetId, from_run_id: o.run_id });
+      }
+    }
+    const run = getRun(db, runId) as DraftRunRow;
+    const result = { run, reused: false, queued: pendingNew, skipped, taken_over };
+    input.onWrite?.(result);
+    return result;
+  })();
+}
+
+/** createRun for callers that know something will be enqueued (fixtures, tests): throws instead of returning `run: null`. */
+export function createRunOrThrow(db: Database, input: CreateRunInput): CreateRunResult & { run: DraftRunRow } {
+  const r = createRun(db, input);
+  if (!r.run) throw new EvalDraftError("invalid", "Nothing to enqueue: every candidate was skipped.");
+  return r as CreateRunResult & { run: DraftRunRow };
+}
+
+/** Run item states grouped for the progress panel (design section 10.8 `counts`). */
+export interface RunItemCounts {
+  done: number;
+  running: number;
+  queued: number;
+  skipped: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+}
+
+export function summarizeRunItems(items: ReadonlyArray<{ state: RunItemState }>): RunItemCounts {
+  const counts: RunItemCounts = {
+    done: 0,
+    running: 0,
+    queued: 0,
+    skipped: 0,
+    failed: 0,
+    cancelled: 0,
+    total: items.length,
+  };
+  for (const { state } of items) {
+    if (state === "done") counts.done++;
+    else if (state === "pending") counts.queued++;
+    else if ((STEP_ITEM_STATES as readonly string[]).includes(state)) counts.running++;
+    else if (state === "failed") counts.failed++;
+    else if (state === "cancelled") counts.cancelled++;
+    else counts.skipped++;
+  }
+  return counts;
+}
+
+/** Run cancel (A4): every `pending` item becomes `cancelled`. Returns how many. In-flight items are untouched. */
+export function cancelPendingItems(db: Database, runId: string, now: string): number {
+  return db.run(
+    "UPDATE brownfield_eval_draft_run_item SET state = 'cancelled', updated_at = ? WHERE run_id = ? AND state = 'pending'",
+    [now, runId],
+  ).changes;
+}
+
+/** Mark a `running` run as being cancelled (its in-flight items are still finishing); it is no longer reusable. */
+export function markCancelRequested(db: Database, runId: string): void {
+  db.run("UPDATE brownfield_eval_draft_run SET pause_reason = ? WHERE id = ? AND status = 'running'", [
+    CANCEL_REQUESTED,
+    runId,
+  ]);
+}
+
+/**
+ * Per-row cancel (A4b): only a `pending` item can be cancelled. Returns false when it is not pending. `onWrite` runs inside
+ * the same transaction (audit): if it throws, the cancel rolls back.
+ */
+export function cancelQueuedItem(db: Database, itemId: string, now: string, onWrite?: () => void): boolean {
+  return db.transaction((): boolean => {
+    const changed =
+      db.run(
+        "UPDATE brownfield_eval_draft_run_item SET state = 'cancelled', updated_at = ? WHERE id = ? AND state = 'pending'",
+        [now, itemId],
+      ).changes === 1;
+    if (changed) onWrite?.();
+    return changed;
   })();
 }
 
@@ -424,17 +666,26 @@ export function touchRunHeartbeat(db: Database, runId: string, now: string): voi
 }
 
 /**
- * Lazily mark this opportunity's `running` run `interrupted` when its heartbeat is stale (design §4 A2). Returns the
- * number of runs marked (0 or 1). Paused and terminal runs are untouched.
+ * Lazily mark this opportunity's `running` runs `interrupted` (design section 10.5): only when the run is NOT registered
+ * with the in-process dispatcher (`isRegistered`) AND its heartbeat is stale. A queued run waiting for a slot is
+ * registered, so a long queue is never mistaken for a dead run. Returns the number of runs marked. Paused and terminal
+ * runs are untouched.
  */
-export function markStaleRunInterrupted(db: Database, opportunityId: string, now: string): number {
-  const run = getActiveRun(db, opportunityId);
-  if (run?.status !== "running" || !isHeartbeatStale(run.heartbeat_at, now)) return 0;
-  const res = db.run(
-    "UPDATE brownfield_eval_draft_run SET status = 'interrupted', pause_reason = 'heartbeat_stale' WHERE id = ? AND status = 'running' AND heartbeat_at = ?",
-    [run.id, run.heartbeat_at],
-  );
-  return res.changes;
+export function markStaleRunInterrupted(
+  db: Database,
+  opportunityId: string,
+  now: string,
+  isRegistered: (runId: string) => boolean,
+): number {
+  let marked = 0;
+  for (const run of getActiveRunsForOpportunity(db, opportunityId)) {
+    if (run.status !== "running" || isRegistered(run.id) || !isHeartbeatStale(run.heartbeat_at, now)) continue;
+    marked += db.run(
+      "UPDATE brownfield_eval_draft_run SET status = 'interrupted', pause_reason = 'heartbeat_stale' WHERE id = ? AND status = 'running' AND heartbeat_at = ?",
+      [run.id, run.heartbeat_at],
+    ).changes;
+  }
+  return marked;
 }
 
 /** `running` → `paused_budget` (budget reserve / DART 020). The in-flight item stays at its step. */

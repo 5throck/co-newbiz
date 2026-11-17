@@ -3,12 +3,12 @@ lang: en
 lang_reason: Code-adjacent decision record; docs are English-only zone
 ---
 
-# ADR-0202: Unreviewed AI-draft verdicts block the S6-consuming gates (draft)
+# ADR-0202: Unreviewed AI-draft verdicts block the S6-consuming gates
 
-**Status**: Draft (2026-11-17; owner chose option ① — block at the gate — in chat 2026-11-17, N1)
+**Status**: Accepted (2026-11-18; owner chose option 1 - block at the gate - in chat as decision N1, implemented in PR #907)
 **Date**: 2026-11-17
 **Deciders**: Owner (direction in chat 2026-11-17); drafted by backend-engineer. PM runs spec-register.
-**Amends**: [ADR-0200](0200-s6-direct-ai-verdicts-with-origin.md) (adds a gate-consumption rule on top of the verdict-origin model; the origin model itself is unchanged)
+**Amends**: [ADR-0200](0200-s6-direct-ai-verdicts-with-origin.md) (adds a gate-consumption rule on top of the verdict-origin model; the origin model itself is unchanged). It reverses ADR-0200's rejected alternative "Block Short List promotion while unreviewed AI verdicts exist": the owner now accepts that block, applied at the `pre_fs` and `target_screening` gates rather than as a per-version confirm wall.
 **Related**: ADR-0005 (append-only), ADR-0118 (proposal-only AI), ADR-0184 (next-intl ko/en, i18n rules), ADR-0186 (Wave C-3 gate prerequisites), ADR-0201 (migration-number neighbour)
 
 ## Context

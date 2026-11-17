@@ -21,13 +21,10 @@ import type { Database } from "bun:sqlite";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import {
   commitCategoryDraft,
-  finishRun,
   getRun,
   listRunItems,
-  nextResumableItem,
   pauseRun,
-  touchRunHeartbeat,
-  updateRunItem,
+  updateRunItem as updateRunItemRaw,
   computeDraftInputHash,
   type CategoryOutcome,
   type DraftRunItemRow,
@@ -167,24 +164,9 @@ export function currentBudget(): { calls: number; budget: number } {
   return { ...defaultDeps, ...(testDeps ?? {}) }.budget();
 }
 
-const activeEngines = new Map<string, string>(); // runId -> opportunityId
-
-/** Max simultaneously ACTIVE engines for one opportunity (bulk start still requires zero; §5 concurrency rule). */
-export const MAX_CONCURRENT_EVAL_ENGINES = 3;
-
-/**
- * Every run id with an engine still executing for this opportunity in THIS process (even a cancelled one finishing
- * its item) — the concurrency-cap population.
- */
-export function activeEngineRunsForOpportunity(oppId: string): string[] {
-  const out: string[] = [];
-  for (const [runId, opp] of activeEngines) if (opp === oppId) out.push(runId);
-  return out;
-}
-
-/** The run id of an engine still executing for this opportunity in THIS process (even a cancelled one finishing its item). */
-export function activeEngineRunForOpportunity(oppId: string): string | null {
-  return activeEngineRunsForOpportunity(oppId)[0] ?? null;
+/** The dependencies a dispatched item runs with: defaults, then the test seam, then a per-start override. */
+export function resolveDeps(override: Partial<BulkEvalDeps> = {}): BulkEvalDeps {
+  return { ...defaultDeps, ...(testDeps ?? {}), ...override };
 }
 
 /**
@@ -202,18 +184,18 @@ export function startCooldownRemaining(userId: string, targetId?: string, nowMs:
   return last === undefined ? 0 : Math.max(0, last + startCooldownMs - nowMs);
 }
 export function noteRunStart(userId: string, targetId?: string, nowMs: number = Date.now()): void {
+  for (const [k, t] of lastStartByKey) if (t + startCooldownMs <= nowMs) lastStartByKey.delete(k); // prune expired windows
   lastStartByKey.set(cooldownKey(userId, targetId), nowMs);
+}
+/** Test seam: number of remembered cooldown windows (expired ones are pruned on each start). */
+export function cooldownEntryCountForTests(): number {
+  return lastStartByKey.size;
 }
 /** Test seam: 0 disables the cooldown; the map is cleared. */
 export function setStartCooldownForTests(ms: number): void {
   startCooldownMs = ms;
   lastStartByKey.clear();
 }
-/** True while an engine for the run is executing in THIS process (guards lazy interruption and double resume). */
-export function isEngineActive(runId: string): boolean {
-  return activeEngines.has(runId);
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // Helpers.
 // ---------------------------------------------------------------------------------------------------------------
@@ -299,7 +281,7 @@ function provisionalScore(
   return { score: scored.score, scored_weight: scored.scoredWeight, total_weight: scored.totalWeight };
 }
 
-function categoriesOf(sel: DraftRunRow["categories"]): EvalDraftCategory[] {
+export function categoriesOf(sel: DraftRunRow["categories"]): EvalDraftCategory[] {
   return sel === "both" ? ["financial", "technical"] : [sel];
 }
 
@@ -310,6 +292,13 @@ interface TargetCtx {
   company_id: string | null;
   company_name_ko: string | null;
   corp_code: string | null;
+}
+
+/** Start-time classification (design section 10.8): a candidate without a company-master or DART link is skipped at once. */
+export function classifyStartTarget(db: Database, oppId: string, targetId: string): "ok" | "not_dart" | "no_company" {
+  const t = loadTarget(db, oppId, targetId);
+  if (!t || !t.company_id || !t.company_name_ko) return "no_company";
+  return t.corp_code ? "ok" : "not_dart";
 }
 
 /** Same company-master linkage rule as the detail route / S7 draft route (DART code first, name fallback). */
@@ -345,7 +334,7 @@ function loadTarget(db: Database, oppId: string, targetId: string): TargetCtx | 
 // Engine.
 // ---------------------------------------------------------------------------------------------------------------
 
-interface Ctx {
+export interface Ctx {
   db: Database;
   deps: BulkEvalDeps;
   runId: string;
@@ -355,64 +344,12 @@ interface Ctx {
   webEvidence: boolean;
   forceRefresh: boolean;
   categories: EvalDraftCategory[];
+  /** Set by the dispatcher: true once the item timed out; late work must not move the item out of `failed`. */
+  abandoned?: () => boolean;
 }
 
-function audit(c: Ctx, action: string, target: string): void {
+export function audit(c: Ctx, action: string, target: string): void {
   appendAudit(c.db, { actor: c.actor, action, target, now: c.deps.now() });
-}
-
-/** Fire-and-forget launch (the S1 rerun precedent): the request returns 202 while the engine works through the run. */
-export function launchBulkEval(db: Database, runId: string): void {
-  if (activeEngines.has(runId)) return;
-  void runBulkEval(db, runId).catch((err) => {
-    console.error("brownfield bulk eval engine failed:", errMsg(err));
-    try {
-      const run = getRun(db, runId);
-      if (run && (run.status === "running" || run.status === "paused_budget" || run.status === "interrupted")) {
-        finishRun(db, runId, "failed", new Date().toISOString(), errorCodeOf(err));
-      }
-    } catch {
-      /* the lazy heartbeat check will surface the run as interrupted */
-    }
-  });
-}
-
-/**
- * Process a run to completion, a pause, or cancellation. Resumes at the first non-terminal item. Safe to call again
- * after resumeRun; a second concurrent call for the same run returns immediately.
- */
-export async function runBulkEval(db: Database, runId: string, override: Partial<BulkEvalDeps> = {}): Promise<void> {
-  if (activeEngines.has(runId)) return;
-  const deps: BulkEvalDeps = { ...defaultDeps, ...(testDeps ?? {}), ...override };
-  activeEngines.set(runId, getRun(db, runId)?.opportunity_id ?? "");
-  try {
-    for (;;) {
-      const run = getRun(db, runId);
-      if (run?.status !== "running") return; // cancelled, paused, finished elsewhere
-      const c: Ctx = {
-        db,
-        deps,
-        runId,
-        oppId: run.opportunity_id,
-        actor: run.resumed_by ?? run.started_by,
-        via: run.started_via,
-        webEvidence: run.web_evidence === 1,
-        forceRefresh: run.force_refresh === 1,
-        categories: categoriesOf(run.categories),
-      };
-      const item = nextResumableItem(db, runId);
-      if (!item) {
-        finishRun(db, runId, "completed", deps.now());
-        audit(c, "target_eval.bulk_run.complete", `${run.opportunity_id}:run:${runId}`);
-        return;
-      }
-      const outcome = await processItem(c, item);
-      touchRunHeartbeat(db, runId, deps.now());
-      if (outcome === "paused") return;
-    }
-  } finally {
-    activeEngines.delete(runId);
-  }
 }
 
 function pause(c: Ctx, reason: string): "paused" {
@@ -462,8 +399,12 @@ function fullyCached(c: Ctx, corpCode: string, needs: Needs): boolean {
   return true;
 }
 
-async function processItem(c: Ctx, item: DraftRunItemRow): Promise<"continue" | "paused"> {
+export async function processItem(c: Ctx, item: DraftRunItemRow): Promise<"continue" | "paused"> {
   const { db, deps } = c;
+  // After a timeout the dispatcher has already failed the item: late progress must not move it out of `failed`.
+  const updateRunItem = (...a: Parameters<typeof updateRunItemRaw>): void => {
+    if (!c.abandoned?.()) updateRunItemRaw(...a);
+  };
   const target = loadTarget(db, c.oppId, item.brownfield_target_id);
   const skipAll = (state: DraftRunItemRow["state"], error: string | null): "continue" => {
     const out: Partial<Record<"financialOutcome" | "technicalOutcome", CategoryOutcome>> = {};
@@ -593,6 +534,7 @@ async function processItem(c: Ctx, item: DraftRunItemRow): Promise<"continue" | 
     }
   }
 
+  if (c.abandoned?.()) return "continue";
   const finalState: DraftRunItemRow["state"] = anyFailed
     ? "failed"
     : llmSkipped && !needs.financial

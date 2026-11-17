@@ -5873,7 +5873,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs:
     post:
       operationId: startBrownfieldEvalDraftRun
-      summary: "Start an S6 bulk AI evaluation run over the non-excluded candidates (ADR-0199 A1). Every result is an immutable draft version whose proposals are applied directly as item verdicts with their origin (financial auto_rule, technical ai_draft; ADR-0200) and never over a person's verdict; a person reviews them per item. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). Concurrency: a bulk start (no target_ids, or more than one id) refuses with 409 engine_active reason=bulk_block while any engine is active; a single-candidate start may run beside other engines up to MAX_CONCURRENT_EVAL_ENGINES=3 and refuses with reason=concurrency_cap at the cap. The 30 s start cooldown (429) applies to bulk starts per user and to restarting the same single candidate per user+candidate; starting a different single candidate is never delayed. An active run over exactly the requested candidates is reused (meta.reused true). 202 returns run_id; the engine works in the background. Analyst+."
+      summary: "Start an S6 AI evaluation run over the non-excluded candidates (ADR-0199 A1; queue model ADR-0200 decision 8). Every result is an immutable draft version whose proposals are applied directly as item verdicts with their origin (financial auto_rule, technical ai_draft; ADR-0200) and never over a person's verdict; a person reviews them per item. Body categories (both|financial|technical, default both), target_ids, web_evidence (default false, stored on the run), force_refresh (default false, stored on the run). Bulk and single starts only enqueue one item per candidate for a process-wide pool of EVAL_WORKER_POOL_SIZE=3 workers (single-candidate items first, with one slot always reserved for bulk; round-robin across bulk runs), so a start is never refused because other work is running: 202 returns { run_id, status, queued, skipped: [{ target_id, reason: already_active|paused_run|not_dart|no_company, run_id? }], taken_over: [{ target_id, from_run_id }] }. A candidate already evaluated by a running run is skipped (already_active, state skipped_active); one held by a paused or interrupted run is skipped with reason paused_run and that run's run_id so the UI can offer resume or cancel. A single start takes over a candidate that only waits in a bulk run's queue or sits in a paused or interrupted run. When nothing would be enqueued (every candidate skipped) no run and no audit row is created and the response is 200 with run_id null, status null, queued 0 and the skipped list. The cap counts only items this start would actually enqueue, against pending items of running and paused_budget runs (an interrupted run does not hold it). The 30 s start cooldown (429 start_cooldown) applies to bulk starts per user and to restarting the same single candidate per user+candidate. 429 queue_full {queued, limit} when the opportunity would exceed MAX_QUEUED_ITEMS_PER_OPPORTUNITY=200 pending items. An active run over exactly the requested candidates is reused (meta.reused true). Analyst+."
       tags:
         - Brownfield
       parameters:
@@ -5891,7 +5891,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs/latest:
     get:
       operationId: getLatestBrownfieldEvalDraftRun
-      summary: "Latest S6 bulk evaluation run of the opportunity with items and the DART budget snapshot { calls, budget, reserve } (ADR-0199 A2); run is null when none exists. Additive query parameter target_id: when present, returns the latest run that has a run item for that candidate (else the global latest). A running run with a stale heartbeat is lazily marked interrupted."
+      summary: "Latest S6 evaluation run of the opportunity with items, the per-state counts { done, running, queued, skipped, failed, cancelled, total } and the DART budget snapshot { calls, budget, reserve } (ADR-0199 A2); run is null when none exists. Item states include skipped_active and cancelled (ADR-0200 decision 8). Additive query parameter target_id: when present, returns the latest run that has a run item for that candidate (else the global latest). A running run is lazily marked interrupted only when it is not registered with the in-process dispatcher and its heartbeat is older than 10 minutes."
       tags:
         - Brownfield
       parameters:
@@ -5915,7 +5915,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs/active:
     get:
       operationId: listActiveBrownfieldEvalDraftRuns
-      summary: "Every S6 evaluation run of the opportunity whose engine is active in this process (running, including a cancelled engine still finishing its item), oldest first, as { runs: [{ run, items, progress, budget }] } (each element has the same shape as the latest response); empty array when none (ADR-0199 follow-up, parallel per-candidate runs)."
+      summary: "Every S6 evaluation run of the opportunity registered with the dispatcher in this process (running or queued for a worker slot, including a cancelled run whose in-flight items are finishing), oldest first, as { runs: [{ run, items, progress, counts, budget }] } (each element has the same shape as the latest response, including the per-state counts); empty array when none (ADR-0200 decision 8)."
       tags:
         - Brownfield
       parameters:
@@ -5933,7 +5933,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs/{runId}:
     get:
       operationId: getBrownfieldEvalDraftRun
-      summary: "One S6 bulk evaluation run with items and the DART budget snapshot (ADR-0199 A2). A run of another opportunity is 404."
+      summary: "One S6 evaluation run with items, per-state counts and the DART budget snapshot (ADR-0199 A2; item states include skipped_active and cancelled, ADR-0200 decision 8). A run of another opportunity is 404."
       tags:
         - Brownfield
       parameters:
@@ -5956,7 +5956,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs/{runId}/resume:
     post:
       operationId: resumeBrownfieldEvalDraftRun
-      summary: "Resume a paused_budget or interrupted run from its first non-terminal item (ADR-0199 A3). Manual only: the scheduler never resumes a run. 409 budget_reserve while the DART reserve is unmet, 409 not_resumable otherwise. Sets resumed_by. Analyst+."
+      summary: "Resume a paused_budget or interrupted run: its pending items are re-queued and an item left mid-step restarts at the start of that step (ADR-0199 A3, ADR-0200 decision 8). Manual only: the scheduler never resumes a run, also not after a server restart. 409 budget_reserve while the DART reserve is unmet, 409 not_resumable otherwise. Sets resumed_by. Analyst+."
       tags:
         - Brownfield
       parameters:
@@ -5979,7 +5979,7 @@ paths:
   /api/brownfield/{oppId}/eval-draft-runs/{runId}/cancel:
     post:
       operationId: cancelBrownfieldEvalDraftRun
-      summary: "Cancel an active run after its current step (ADR-0199 A4). Versions already written stay. Analyst+."
+      summary: "Cancel an active run (ADR-0199 A4; ADR-0200 decision 8). Every queued (pending) item becomes cancelled; items a worker already holds finish their current step (no partial version), then the run becomes cancelled (at once when nothing is in flight). Versions and applied verdicts already written stay. Returns { run_id, status, cancelled_items }. 409 not_cancellable for a finished run. Analyst+."
       tags:
         - Brownfield
       parameters:
@@ -5989,6 +5989,34 @@ paths:
           schema:
             type: string
         - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/brownfield/{oppId}/eval-draft-runs/{runId}/items/{itemId}/cancel:
+    post:
+      operationId: cancelBrownfieldEvalDraftRunItem
+      summary: "Cancel one queued item of an S6 evaluation run (A4b, ADR-0200 decision 8). Allowed only while the item is pending (waiting for a worker slot); it becomes cancelled and the run is not cancelled. 409 item_running for an item a worker already holds (cancel the run instead), 409 item_finished for a finished item; an item or run of another opportunity is 404. Not human-only: cancelling is not a judgement. Analyst+."
+      tags:
+        - Brownfield
+      parameters:
+        - name: oppId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: itemId
           in: path
           required: true
           schema:
