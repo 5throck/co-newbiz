@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.21.1";
+export const GUIDE_SPEC_VERSION = "2.21.2";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -366,7 +366,7 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
       "Target Company Short List",
       "Target Ranking/Score",
       "Exclusion Reasons",
-      "Deal Shape Evaluation (viable shapes, intent, rationale)"
+      "Deal Shape Evaluation (overall viability; viable shapes with intent and rationale)"
     ],
     "completionCriteria": [
       "모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다",

@@ -21,7 +21,13 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.21.1"
+  version: "2.21.2"
+  # v2.21.2 - ADR-0201 (S7 deal-shape evaluation asks overall viability first; patch, no stage, gate,
+  #   kill-criteria, track or blocker-key change): the S7 deal-shape-evaluation comment records the
+  #   overall-first write (one overall not-viable row, or one-or-more shape rows with intent and
+  #   rationale) and the @2 recommendation (prompt s7.deal_shape_recommend@2); requiredArtifacts
+  #   item 4 and outputs read "Deal Shape Evaluation (overall viability; viable shapes with intent
+  #   and rationale)". brownfield-target-screening 1.2.0 carries the reworded step 3.5.
   # v2.21.1 - wording/comment alignment with the screens shipped in PR 898
   #   (process-governance-manager audit 2026-11-17; no stage, gate, kill-criteria,
   #   track, artifact-list or blocker-key change):
@@ -878,7 +884,7 @@ stages:
       - Target Ranking/Score
       - Screening Evidence
       - Exclusion Reasons
-      - Deal Shape Evaluation (viable shapes, intent, rationale)
+      - Deal Shape Evaluation (overall viability; viable shapes with intent and rationale)
     entryCriteria:
       - S6 완료 (Long List 존재)
     activities:
@@ -922,11 +928,17 @@ stages:
         # it never writes a deal-shape row; the person copies, edits and records
         # through POST /api/opportunities/{id}/deal-shapes, so #9 reads recorded
         # rows only, never the recommendation.
+        # v2.21.2 (ADR-0201): overall viability comes first. The recommendation is
+        # s7.deal_shape_recommend@2 (overall verdict first, then shapes only when
+        # viable). A person records either one overall not-viable row (kill criterion
+        # #9 reads viable_count 0) or one-or-more viable shape rows with intent and
+        # rationale; a write replaces the live set under a live_token. Still proposal-
+        # only: the recommendation never writes a row.
     requiredArtifacts:
       - Target Company Short List
       - Target Ranking/Score
       - Exclusion Reasons
-      - Deal Shape Evaluation (viable shapes, intent, rationale)
+      - Deal Shape Evaluation (overall viability; viable shapes with intent and rationale)
     completionCriteria:
       - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
       - Short List 후보가 knock-out 스크리닝을 통과했다

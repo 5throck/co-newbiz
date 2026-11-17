@@ -4,6 +4,8 @@
 
 > **Amended by ADR-0195 (2026-11-08)**: item A placement — #9 and the deal-shape evaluation move from the opportunity `pre_fs` gate (S4) to the end of S7 (`brownfield-target-screening` step 3.5, `reevaluate_at: target_screening`, brownfield-only).
 
+> **Amended by ADR-0201 (2026-11-17)**: item A data source - the human records overall viability first; one live overall not-viable row (shape and intent NULL) counts as `dealshape.viable_shapes` = 0 (present, triggers), and a legacy all-`viable = 0` set still triggers. Nothing recorded stays unassessed.
+
 Risk-officer confirmation: confirmed 2026-11-07 with amendments A-1..C-1 (design doc)
 **Date**: 2026-11-07
 **Deciders**: Owner (decision); risk-officer (kill-criteria authority); drafted by data-architect

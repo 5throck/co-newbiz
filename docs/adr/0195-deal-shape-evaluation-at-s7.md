@@ -5,6 +5,8 @@
 **Deciders**: Owner (decision); risk-officer (kill-criteria authority); drafted by process-governance-manager
 **Related**: ADR-0020, ADR-0053, ADR-0074 (flow.spec SSOT), ADR-0187 P2 (M2), ADR-0193 (amended), ADR-0194 (amended), design `2026-11-08-deal-shape-to-s7-design`
 
+> **Amended by ADR-0201 (2026-11-17)**: the S7 step 3.5 write is overall-viability-first (one overall not-viable row, or one-or-more viable shape rows with intent and rationale, replace-the-set under `live_token`); placement, brownfield-only scope, write guard and RECYCLE semantics are unchanged.
+
 ## Context
 
 The `deal-shape-evaluation` activity sits at S4 and hosts `brownfield-pre-fs` step 2, and kill criterion #9

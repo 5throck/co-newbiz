@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-target-screening
 title: "Brown Field Target Screening (Long List → Short List)"
 scope: shared
 level: entity
-version: "1.1.0"
+version: "1.2.0"
 effective_from: "2026-09-01"
 status: active
 applicability: mandatory
@@ -68,16 +68,22 @@ steps:
     output_type: deal_shape_evaluation
     description: >
       Deal-shape evaluation (human-recorded; moved here from S4 by the owner
-      decision of 2026-11-08): per Short List candidate (or per opportunity
-      when the shapes are candidate-independent), record the viable deal shapes
-      — M&A / JV / strategic investment / minority stake / partnership / R&BD /
-      CVC — with intent and rationale, judged against the ranked survivors of
-      step 3. Written through POST /api/opportunities/{id}/deal-shapes (MCP
-      record_deal_shape_evaluation); only human-written live rows count, and the
-      rows are never derived from the route decision, scores or LLM drafts. A
-      recorded set with zero viable shapes triggers kill criterion
-      `deal-shape-chain:no_viable_deal_shape` (RECYCLE semantics: the need
-      returns to scouting with written feedback — mark_conditional, not a Kill).
+      decision of 2026-11-08; overall viability first per ADR-0201): per Short
+      List candidate (or per opportunity when the shapes are candidate-
+      independent), first record whether any deal shape is viable at all
+      (overall viability). When viable, record the viable deal shapes — M&A /
+      JV / strategic investment / minority stake / partnership / R&BD / CVC —
+      with intent and rationale, judged against the ranked survivors of step 3.
+      When not viable, record one overall not-viable verdict instead of shape
+      rows. Written through POST /api/opportunities/{id}/deal-shapes (MCP
+      record_deal_shape_evaluation); a write replaces the live set under a
+      live_token. Only human-written live rows count, and the rows are never
+      derived from the route decision, scores or LLM drafts (the AI
+      recommendation s7.deal_shape_recommend@2 is proposal-only). An overall
+      not-viable verdict, or a legacy recorded set with zero viable shapes,
+      triggers kill criterion `deal-shape-chain:no_viable_deal_shape` (RECYCLE
+      semantics: the need returns to scouting with written feedback —
+      mark_conditional, not a Kill).
       The binding structure stays with S10 deal-structuring step 1.
   - id: 4
     gate: Target Screening
@@ -97,7 +103,7 @@ completion_criteria:
   - Short List exists and every Short List candidate passed the knock-out screens
   - Every Long List candidate carries a ranking score or a written exclusion reason
   - Screening evidence is recorded per candidate
-  - The deal-shape evaluation (viable shapes with intent and rationale) is recorded
+  - The deal-shape evaluation is recorded overall viability first; when viable, the viable shapes with intent and rationale; an overall not-viable verdict (or a legacy set with zero viable shapes) triggers #9
 
 kill_criteria:
   - condition: no_candidate_passes_knock_out
