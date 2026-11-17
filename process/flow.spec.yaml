@@ -15,13 +15,19 @@
 #
 # v2.0.0 — Route Decision (S4) 이후 Greenfield/Brownfield 트랙 분리:
 #   Greenfield: S5 역량 평가·진출전략 → S8 사업성 분석 → ...
-#   Brownfield: S6 대상 후보 발굴(Long List) → S7 대상 선정(Short List) → S8 사업성 분석 → ...
+#   Brownfield: S6 대상 후보 발굴(Long List) → S7 대상 선정(최종 후보 목록) → S8 사업성 분석 → ...
 #   트랙에 해당 없는 Stage는 applicableTracks로 스킵한다 (단일 선형 체인 유지).
 
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.21.2"
+  version: "2.21.3"
+  # v2.21.3 - short-list terminology unification (owner decision 2026-11-17, N3; patch, no stage, gate,
+  #   kill-criteria key, track or blocker-key change): prose labels "Short List" become "최종 후보 목록"
+  #   and shortlist "promotion" wording becomes "심사 종료" throughout comments, objectives, gate
+  #   criteria and requiredArtifacts text. Technical identifiers stay unchanged (artifact name
+  #   "Target Company Short List", subjectScope enum brownfield=shortlist, prompt key s7.knockout_shortlist,
+  #   kill-criterion id shortlist_quality_below_threshold, MCP tool shortlist_candidate).
   # v2.21.2 - ADR-0201 (S7 deal-shape evaluation asks overall viability first; patch, no stage, gate,
   #   kill-criteria, track or blocker-key change): the S7 deal-shape-evaluation comment records the
   #   overall-first write (one overall not-viable row, or one-or-more shape rows with intent and
@@ -37,8 +43,8 @@ meta:
   #     (ADR-0192 decision 4); synergy confirmation never selects (boundary #2).
   #     The engine already checks this opportunity's own status (lib/process-flow.ts S3).
   #   - S7 target-screening comment records ADR-0200 (item verdict origin
-  #     human / auto_rule / ai_draft, AI results applied directly, Short List
-  #     promotion "심사 종료" human-only, MCP shortlist_candidate removed).
+  #     human / auto_rule / ai_draft, AI results applied directly, 최종 후보 목록
+  #     심사 종료 human-only, MCP shortlist_candidate removed).
   #   - S7 deal-shape-evaluation comment records the proposal-only AI
   #     recommendation (prompt s7.deal_shape_recommend); it never writes a row.
   # v2.21.0 - ADR-0196 Phase E (decision 9; design 2026-11-08-committee-minutes-as-meeting-design §7.2):
@@ -268,20 +274,20 @@ meta:
   #   수행되지 않았고 이것이 유일한 2.7.0 변경이다). stage/gate 구조 변경 없음.
   # v2.6.0 — Brownfield S9 선택적 대상별 DD (ADR-0157, design
   #   2026-10-09-optional-per-target-dd). 선정 대상 DD가 게이트의 판정 대상인
-  #   것은 그대로이며, 사람이 명시적으로 열면 다른 Short List 대상에도 비교
+  #   것은 그대로이며, 사람이 명시적으로 열면 다른 최종 후보 목록 대상에도 비교
   #   근거용 DD를 수행할 수 있다. 문언만 변경: S9 objective에 선택적 비교 DD를
   #   덧붙이고 outputs에 "대상별 DD 비교(선택)"을 추가한다. completionCriteria는
   #   "적용 체크리스트…" 그대로 선정 대상에 묶인다. procedures/**·policies/**
   #   변경 없음 — brownfield-dd 프로시저는 열린 대상마다 디스패치 계층에서
   #   반복된다 (ADR-0143 §6 패턴).
   # v2.5.0 — Brownfield S8 다중 대상 사업성 분석 (ADR-0143, design
-  #   2026-09-22-s8-multi-target-feasibility). Short List에 오른 각 대상이
+  #   2026-09-22-s8-multi-target-feasibility). 최종 후보 목록에 오른 각 대상이
   #   S8의 분석 주체(subject)가 된다: stage schema에 subjectScope 키를 새로
   #   도입해 반복을 기계판독 가능하게 선언하고(S8: greenfield=single,
   #   brownfield=shortlist), S8 activities에 target-comparison(대상 간 비교·
   #   권고)과 target-selection(사람의 대상 선정 — 경계 #2, ADR-0053)을
   #   추가한다. requiredArtifacts·completionCriteria에 대상 축을 명시하고
-  #   fs gate에 선정 기록 판정기준을 추가한다. S9는 "Short List 대상 DD"에서
+  #   fs gate에 선정 기록 판정기준을 추가한다. S9는 "최종 후보 목록 대상 DD"에서
   #   "선정 대상 DD"로 좁힌다 — S8의 정량 비교가 선정 수단이며 DD 비용은
   #   선정된 1개 대상에 집중된다. 프로젝트 캐리어는 1:1 승격 그대로 유지
   #   (ADR-0095), 반복은 디스패치 계층의 대상별 프로시저 호출로 처리한다
@@ -389,7 +395,7 @@ gates:
     decisionCriteria:
       - Target Company Short List가 존재한다
       - 모든 Long List 후보에 랭킹 또는 제외 사유가 기록되었다
-      - Short List 후보가 knock-out 스크리닝을 통과했다
+      - 최종 후보 목록 후보가 knock-out 스크리닝을 통과했다
     killCriteria:
       - knock-out 통과 후보가 0건이다 (스크리닝 결과 진입 가능한 대상 없음)
     killCriteriaRegistry:
@@ -397,7 +403,7 @@ gates:
       - brownfield-target-screening__shortlist_quality_below_threshold
       # v2.20.0 (risk-officer R-2): #9 binds where the human-recorded deal-shape screen is hosted (S7, brownfield-only via registry `track`).
       - deal-shape-chain__no_viable_deal_shape
-    fundingDecision: Short List 대상 사업성 분석 자원 배정
+    fundingDecision: 최종 후보 목록 대상 사업성 분석 자원 배정
   - id: fs
     name: FS
     decisionCriteria:
@@ -873,7 +879,7 @@ stages:
 
   - id: S7
     name: 대상 선정
-    objective: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 Short List 확정 후 S9에서 수행한다)
+    objective: 어떤 대상이 유망한가? — Long List를 전략·역량·재무·소유권·규제 기준으로 스크리닝해 Target Company Short List로 좁힌다 (Brownfield 전용 — CDD/TDD는 최종 후보 목록 확정 후 S9에서 수행한다)
     inputs:
       - Target Company Long List (S6)
       - 트랙 결정·Route 유형 (S4)
@@ -897,9 +903,9 @@ stages:
         # ai_draft (LLM technical evidence). AI evaluation results are applied
         # directly as item verdicts (no confirm step) and count in the score and
         # rank, with unreviewed counts shown; a person reviews per item on the
-        # candidate detail screen. Short List promotion ("심사 종료" - closing the
+        # candidate detail screen. 최종 후보 목록 심사 종료 (closing the
         # candidate's screening into the 최종 후보 목록) is a human-only act; the MCP
-        # tool shortlist_candidate is removed. The evaluation and promotion surface
+        # tool shortlist_candidate is removed. The evaluation and 심사 종료 surface
         # is the shared S6/S7 brownfield body; the target_screening approval record
         # is shown on S7 only. No gate, kill-criteria or blocker reads eval scores.
       - id: ownership-regulatory-screening
@@ -941,7 +947,7 @@ stages:
       - Deal Shape Evaluation (overall viability; viable shapes with intent and rationale)
     completionCriteria:
       - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
-      - Short List 후보가 knock-out 스크리닝을 통과했다
+      - 최종 후보 목록 후보가 knock-out 스크리닝을 통과했다
       - 스크리닝 근거(evidence)가 후보별로 기록되었다
     # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
     # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
@@ -962,9 +968,9 @@ stages:
 
   - id: S8
     name: 사업성 분석
-    objective: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 Short List 대상별 밸류에이션을 정량화해 비교·선정한다
+    objective: 돈이 되는가? — Greenfield는 진출전략 기반 Business Case, Brownfield는 최종 후보 목록 대상별 밸류에이션을 정량화해 비교·선정한다
     # subjectScope (v2.5.0, ADR-0143) — 이 단계의 분석 주체 반복 단위를
-    # 선언한다. single = 프로젝트당 1회, shortlist = Short List 대상별 1회씩
+    # 선언한다. single = 프로젝트당 1회, shortlist = 최종 후보 목록 대상별 1회씩
     # (activities·프로시저는 대상별로 반복 호출 — 루프 구문 없이 디스패치
     # 계층의 반복). 구현: business_case_model.target_id 축, S8 완료 술어의
     # 트랙 분기 (lib/process-flow.ts).
@@ -972,7 +978,7 @@ stages:
     inputs:
       - 트랙 결정
       - 진출전략·Business Case 라인 (greenfield — S5)
-      - Short List 대상 재무 정보 (brownfield — S7, 대상별)
+      - 최종 후보 목록 대상 재무 정보 (brownfield — S7, 대상별)
       - 진입시장 산정 (S2 확정 — ADR-0181; 시장 앵커·성장률·환율 개산과 몬테카를로 환 리스크의 기준)
     outputs:
       - Business Case / 밸류에이션 (brownfield — 대상별)
@@ -983,13 +989,13 @@ stages:
       - 대상 선정 기록 (brownfield — 사람 결정)
       - 채택 Business Case (사람의 채택 기록 s8_case_adopt — S10·S11 투자심의 자료의 정량 축)
     entryCriteria:
-      - "greenfield: S5 완료 / brownfield: S7 완료 (Short List 존재)"
+      - "greenfield: S5 완료 / brownfield: S7 완료 (최종 후보 목록 존재)"
     activities:
       - id: business-case-modeling
         agent: financial-analyst
         skills: [growth-projection-modeling, investment-feasibility-modeling, target-costing-analysis, financial-statement-analysis, antitrust-screening, peer-benchmarking, quality-of-earnings, scenario-planning, value-chain-stage-financials, historical-financial-analysis, site-infrastructure-assessment]
         procedure: [greenfield-fs, brownfield-fs]
-        # brownfield는 Short List 대상별로 본 활동 체계를 반복 호출한다
+        # brownfield는 최종 후보 목록 대상별로 본 활동 체계를 반복 호출한다
         # (subjectScope: shortlist — 각 호출의 산출물은 target_id로 귀속).
       - id: valuation
         agent: valuation-agent
@@ -1029,7 +1035,7 @@ stages:
     completionCriteria:
       - 민감도가 포함된 정량 평가가 존재한다 (시뮬레이션 또는 밸류에이션 범위)
       - BEP 시점과 시뮬레이션 입력 스냅샷이 산출되어 있다
-      - "brownfield: Short List의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)"
+      - "brownfield: 최종 후보 목록의 모든 대상이 각각 분석되어 있다 (대상별 Business Case + 시뮬레이션)"
       - "brownfield: 대상 비교 분석과 사람의 대상 선정 기록이 존재한다"
       - 할인율 적용 주체와 WACC·hurdle IRR을 사람이 확인했다 (ADR-0186 D8 — 가족 wacc가 enforce일 때 차단)
     # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
@@ -1051,7 +1057,7 @@ stages:
 
   - id: S9
     name: 실사·검증
-    objective: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 Short List 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)
+    objective: 사실인가? 위험은 무엇인가? — 트랙별 실사 체크리스트를 수행한다 (brownfield는 S8에서 선정된 대상 DD, 선택적으로 다른 최종 후보 목록 대상 DD를 비교 근거로 열 수 있다. greenfield는 실현가능성 검증)
     inputs:
       - 게이트 체크리스트 (commercial/technical/legal)
       - 조사 근거

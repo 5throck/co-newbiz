@@ -461,11 +461,11 @@ describe("catalog", () => {
     Object.entries(o as Record<string, unknown>).flatMap(([k, v]) =>
       v && typeof v === "object" ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`],
     );
-  test("the panel namespace left S4 for S67 and the intro says it is recorded after the short list is set", () => {
+  test("the panel namespace left S4 for S67 and the intro says it is recorded after the final candidate list is set", () => {
     expect((ko.stages as { s4: Record<string, unknown> }).s4.dealShapePanel).toBeUndefined();
     expect((en.stages as { s4: Record<string, unknown> }).s4.dealShapePanel).toBeUndefined();
-    expect(view(data([]))).toContain("단축 후보 목록(최종 후보 목록)을 정한 뒤");
-    expect(view(data([]), {}, "en")).toContain("Once the short list is set");
+    expect(view(data([]))).toContain("최종 후보 목록을 정한 뒤");
+    expect(view(data([]), {}, "en")).toContain("Once the final candidate list is set");
   });
   test("the stale (409) and too-large (413) messages exist in both locales", () => {
     for (const cat of [ko, en]) {

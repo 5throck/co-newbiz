@@ -16,7 +16,7 @@ gate: Pre-FS
 # procedure runs AFTER track = brownfield is fixed and defines the full
 # candidate universe with explicit selection criteria and coverage, then
 # registers the Target Company Long List that S7 (target_screening gate)
-# narrows to a Short List.
+# narrows to a 최종 후보 목록.
 #
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): 이 절차의 트랙 범위는 소유 stage가
 # 강제한다 — flow.spec S6 applicableTracks [brownfield] (S6·S7 brownfield 전용)이며,

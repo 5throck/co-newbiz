@@ -42,7 +42,13 @@ beforeAll(async () => {
   process.env.CO_NEWBIZ_LLM_MODEL = "";
   await createUser(db, { userId: "reco-a", role: "analyst", password: "pw-reco-a-12345", createdBy: "test", now: NOW });
   approveUser(db, { userId: "reco-a", approvedBy: "test", now: NOW });
-  await createUser(db, { userId: "reco-view", role: "viewer", password: "pw-reco-view-123456", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: "reco-view",
+    role: "viewer",
+    password: "pw-reco-view-123456",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: "reco-view", approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
   cookie = await loginCookie("reco-a", "pw-reco-a-12345");
@@ -54,10 +60,13 @@ beforeAll(async () => {
     [oppId, "추천 테스트 기회", "selected", 72, 55, "Go", "test", NOW],
   );
   draftId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)",
-    [draftId, "미선별 기회", "assessed", "test", NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, status, created_by, created_at) VALUES (?,?,?,?,?)", [
+    draftId,
+    "미선별 기회",
+    "assessed",
+    "test",
+    NOW,
+  ]);
 });
 
 afterAll(() => {
@@ -67,27 +76,47 @@ afterAll(() => {
 
 describe("POST /api/opportunities/[id]/route-recommendation", () => {
   test("401 without a session", async () => {
-    const res = await nextRequest(`/api/opportunities/${oppId}/route-recommendation`, { method: "POST", body: JSON.stringify({}) });
+    const res = await nextRequest(`/api/opportunities/${oppId}/route-recommendation`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
     expect(res.status).toBe(401);
   });
 
   test("403 for the viewer role", async () => {
-    const res = await nextRequest(`/api/opportunities/${oppId}/route-recommendation`, { method: "POST", body: JSON.stringify({}), headers: { cookie: viewerCookie } });
+    const res = await nextRequest(`/api/opportunities/${oppId}/route-recommendation`, {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { cookie: viewerCookie },
+    });
     expect(res.status).toBe(403);
   });
 
   test("404 for an unknown opportunity", async () => {
-    const res = await nextRequest("/api/opportunities/UNKNOWNID/route-recommendation", { method: "POST", body: JSON.stringify({}), headers: { cookie } });
+    const res = await nextRequest("/api/opportunities/UNKNOWNID/route-recommendation", {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { cookie },
+    });
     expect(res.status).toBe(404);
   });
 
-  test("400 for a non-selected opportunity", async () => {
-    const res = await nextRequest(`/api/opportunities/${draftId}/route-recommendation`, { method: "POST", body: JSON.stringify({}), headers: { cookie } });
-    expect(res.status).toBe(400);
+  test("409 not_selected for a non-selected opportunity", async () => {
+    const res = await nextRequest(`/api/opportunities/${draftId}/route-recommendation`, {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { cookie },
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("not_selected");
   });
 
   test("synthesis fallback — advisory-based proposal without fabricated scores", async () => {
-    const res = await nextRequest(`/api/opportunities/${oppId}/route-recommendation`, { method: "POST", body: JSON.stringify({}), headers: { cookie } });
+    const res = await nextRequest(`/api/opportunities/${oppId}/route-recommendation`, {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { cookie },
+    });
     expect(res.status).toBe(200);
     const { data } = await res.json();
     expect(data.source).toBe("synthesis");
@@ -104,7 +133,9 @@ describe("POST /api/opportunities/[id]/route-recommendation", () => {
 
   test("generation lands in the audit trail with its source", () => {
     const row = db
-      .query("SELECT target FROM audit_log WHERE action = 'route_recommendation.generate' ORDER BY created_at DESC, rowid DESC LIMIT 1")
+      .query(
+        "SELECT target FROM audit_log WHERE action = 'route_recommendation.generate' ORDER BY created_at DESC, rowid DESC LIMIT 1",
+      )
       .get() as { target: string } | undefined;
     expect(row?.target).toBe(`${oppId}:synthesis`);
   });

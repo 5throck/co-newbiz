@@ -1,5 +1,5 @@
-version: 1.5.0
-last_updated: 2026-10-29
+version: 1.6.0
+last_updated: 2026-11-17
 terms:
   Green Field:
     ko: 그린필드
@@ -325,10 +325,65 @@ terms:
     used_in: [brownfield-feasibility, greenfield-feasibility]
     owner: platform-lead
 
+  Final Candidate List:
+    ko: 최종 후보 목록
+    en: Final Candidate List
+    definition_ko: 브라운필드 S6에서 롱리스트(후보 전체 목록)를 필수 탈락 기준과 평가를 거쳐 좁힌 최종 후보의 목록. 이 목록이 확정된 뒤에야 S7·S8의 상세 평가가 시작된다.
+    why_it_matters_ko: 목록에 든 모든 후보가 필수 탈락 기준을 통과해야 하고, 심사 종료는 사람이 검토한 판정에 근거해야 한다. 예전 '숏리스트'·'Short List' 표기는 이 용어로 통일했다.
+    category: business
+    aliases: [숏리스트, Short List, Shortlist, 최종 후보]
+    related: [Review Completion, Evaluation Target Direction, AI Draft Verdict, Brown Field]
+    used_in: [brownfield-feasibility]
+    owner: brownfield-agent
+
+  Review Completion:
+    ko: 심사 종료
+    en: Review Completion
+    definition_ko: 롱리스트의 후보 한 곳에 대한 S6 평가를 마치고 그 후보를 최종 후보 목록에 올리는 일. 사람이 검토한 판정에 근거해야 하며, 검토하지 않은 AI 초안 판정만으로는 할 수 없다.
+    why_it_matters_ko: 예전의 '승격'은 기회→프로젝트 전환과 뜻이 겹쳐 혼동되므로, 후보를 최종 후보 목록에 올리는 일은 '심사 종료'로 통일했다. 기회가 프로젝트로 바뀌는 '승격'과는 다른 말이다.
+    category: business
+    aliases: [후보 승격, 최종 후보 승격, 숏리스트 승격]
+    related: [Final Candidate List, AI Draft Verdict, Opportunity]
+    used_in: [brownfield-feasibility]
+    owner: brownfield-agent
+
+  Evaluation Target Direction:
+    ko: 평가 대상 방향성
+    en: Evaluation Target Direction
+    definition_ko: S6에서 후보 등록에 앞서 롱리스트가 어떤 기업을 볼지 정하는 카드. 평가할 대상의 범위·성격과 최소 커버리지를 확정해 둔다.
+    why_it_matters_ko: 방향이 정해지지 않으면 후보를 모을 기준이 없다. 예전 'Target Universe'·'목표 시장 정의' 표기를 이 용어로 바꿨다.
+    category: business
+    aliases: [목표 시장 정의, Target Universe, Target Market Definition]
+    related: [Final Candidate List, Brown Field]
+    used_in: [brownfield-feasibility]
+    owner: brownfield-agent
+
+  AI Draft Verdict:
+    ko: AI 초안 판정
+    en: AI-draft Verdict
+    definition_ko: AI 평가 결과가 S6 후보 평가 항목에 곧바로 반영된 판정 가운데 사람이 아직 검토하지 않은 것(verdict_source가 ai_draft). 사람이 저장하면 사람 판정으로 바뀐다.
+    why_it_matters_ko: 점수에는 반영되지만 사람이 본 판정이 아니다. 브라운필드 사전 FS와 대상 선별 게이트는 검토하지 않은 AI 초안 판정이 남아 있으면 GO를 막고 심사 종료도 허용하지 않는다.
+    category: business
+    aliases: [AI 초안, ai_draft]
+    related: [Auto Rule Verdict, Review Completion, Final Candidate List]
+    used_in: [brownfield-feasibility]
+    owner: platform-lead
+
+  Auto Rule Verdict:
+    ko: 자동 규칙 판정
+    en: Auto Rule Verdict
+    definition_ko: AI가 아니라 정해진 규칙이 결정적으로 내린 S6 후보 평가 판정(verdict_source가 auto_rule). 사람이 일괄 수락하면 사람 판정으로 바뀐다.
+    why_it_matters_ko: 규칙으로 계산된 값이라 재현할 수 있어 게이트를 막지 않는다. 막는 것은 검토하지 않은 AI 초안 판정뿐이다.
+    category: business
+    aliases: [자동 판정, auto_rule]
+    related: [AI Draft Verdict, Final Candidate List]
+    used_in: [brownfield-feasibility]
+    owner: platform-lead
+
   Target Capability Judgement:
     ko: 대상별 필요 역량 점검
     en: Target Capability Judgement
-    definition_ko: 브라운필드 S7에서 최종 후보(숏리스트) 대상마다 S3 필요 역량 행에 대해 해소 방식·기대 수준·비용·기간·달성 가능성을 판정한 기록. 그린필드는 S5가 같은 판정을 맡는다. 사람이 확정하기 전까지는 확정 전 판정이다.
+    definition_ko: 브라운필드 S7에서 최종 후보 목록 대상마다 S3 필요 역량 행에 대해 해소 방식·기대 수준·비용·기간·달성 가능성을 판정한 기록. 그린필드는 S5가 같은 판정을 맡는다. 사람이 확정하기 전까지는 확정 전 판정이다.
     why_it_matters_ko: 어떤 대상이 유망한가는 대상마다 다르다. 판정이 대상별로 저장되어 한 대상의 변경이 다른 대상의 판정을 흔들지 않는다. S8은 선정된 대상의 판정을 읽기 전용으로 보여 줄 뿐 고치지 않는다.
     category: business
     aliases: [S7 필요 역량 점검, 대상별 역량 판정]

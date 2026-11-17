@@ -216,6 +216,10 @@ export interface GateSnapshot {
     prior_awaiting_countersign: boolean;
   };
   ai: { brief_id: string; recommended: string | null; confidence: string | null; source: string } | null;
+  /** ADR-0202: S6 AI-draft verdicts a person has not reviewed, at the gates that consume
+   * them (opportunity pre_fs / target_screening on the brownfield track); null elsewhere.
+   * Display-only — inside the hash; the key is absent at every other gate/entity. */
+  ai_draft_review?: { unreviewed: number };
   /** ADR-0196 Phase E (design §7.2, ADR-0186 amendment): the project's IC
    * committee sessions at entity_ic / group_ic — DISPLAY only, never an
    * input to any hard block or ACK rule. Inside the hash: the snapshot_hash
@@ -588,6 +592,35 @@ function aiSection(brief: BriefRecord | null): GateSnapshot["ai"] {
   return brief
     ? { brief_id: brief.id, recommended: brief.recommended, confidence: brief.confidence, source: brief.source }
     : null;
+}
+
+/**
+ * ADR-0202 display-only section: live ai_draft S6 verdicts a person has not reviewed.
+ * Present at the opportunity gates that consume the S6 verdicts (pre_fs / target_screening)
+ * on the brownfield track; null elsewhere. The GO refusal itself lives in
+ * gateGoPrerequisiteGaps (process-flow.ts).
+ */
+function aiDraftReviewEntry(
+  db: Database,
+  o: BuildOptions,
+  track: LadderTrack | null,
+): { ai_draft_review?: { unreviewed: number } } {
+  // The key is ABSENT (not null) elsewhere, so every other gate's snapshot and hash is byte-identical to before.
+  if (o.entityType !== "opportunity") return {};
+  if (track !== "brownfield") return {};
+  if (o.gate !== "pre_fs" && o.gate !== "target_screening") return {};
+  const row = db
+    .query(
+      `SELECT COUNT(*) AS n
+         FROM brownfield_target_eval_state s
+         JOIN brownfield_target t ON t.id = s.brownfield_target_id
+        WHERE t.opportunity_id = ?
+          AND s.verdict_source = 'ai_draft'
+          AND s.status <> 'pending'
+          AND t.status <> 'excluded'`,
+    )
+    .get(o.entityId) as { n: number };
+  return { ai_draft_review: { unreviewed: row.n } };
 }
 
 /** The project's project-scoped committee sessions for the IC DISPLAY section (latest 10, newest first). */
@@ -1269,6 +1302,9 @@ export function buildGateSnapshot(o: BuildOptions): BuiltSnapshot {
       .map((c) => ({ id: c.id, text: c.text, clear_by: c.clear_by }))
       .sort((a, b) => (a.id < b.id ? -1 : 1)),
     ladder: ladderSection(db, o, track),
+    // ADR-0202: live ai_draft verdicts awaiting a person's review, at the gates that
+    // consume the S6 verdicts (display-only; the GO refusal itself is gateGoPrerequisiteGaps).
+    ...aiDraftReviewEntry(db, o, track),
     ai: aiSection(brief),
     committee: isProject ? committeeSection(db, o.entityId, o.gate) : null,
   };
@@ -1372,6 +1408,12 @@ export function snapshotInputVersion(db: Database, entityType: SnapshotEntity, e
       ),
       one(
         "SELECT COUNT(*) c, COALESCE(MAX(updated_at),'') m FROM brownfield_target WHERE opportunity_id = ?",
+        entityId,
+      ),
+      // ADR-0202: a human verdict save (or an AI draft application) must stale the cached
+      // snapshot so ai_draft_review.unreviewed recomputes.
+      one(
+        "SELECT COUNT(*) c, COALESCE(MAX(s.assessed_at),'') m, COALESCE(MAX(s.rowid),0) r FROM brownfield_target_eval_state s JOIN brownfield_target t ON t.id = s.brownfield_target_id WHERE t.opportunity_id = ?",
         entityId,
       ),
       one("SELECT COUNT(*) c, COALESCE(MAX(rowid),0) m FROM route_decision WHERE opportunity_id = ?", entityId),

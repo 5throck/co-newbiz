@@ -4,34 +4,59 @@
 // 채점 프레임워크: 2026-08-24 Class-C 결정 (d) / ADR-0052 — Stage 1 의도 분기
 // (integration | capability_access) → Stage 2 5기준 × 20% × 1–3점 + 사전배제.
 import { getDb } from "../../../../../../../db/client.ts";
-import { finalizeRouteDecisionCurrency, getDraftRouteDecision, listRouteDecisionsWithScores } from "../../../../../../../db/repositories/route-decision.repository.ts";
+import {
+  finalizeRouteDecisionCurrency,
+  getDraftRouteDecision,
+  listRouteDecisionsWithScores,
+} from "../../../../../../../db/repositories/route-decision.repository.ts";
 import { ulid } from "../../../../../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../lib/selected-guard.ts";
 import { route } from "../../../../../lib/route.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../lib/review/human-final.ts";
 
 const TRACKS = ["greenfield", "brownfield"] as const;
 const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;
-const BF_SUB = ["m_and_a", "jv", "strategic_investment", "minority_investment", "partnership", "rbd", "corporate_venture"] as const;
+const BF_SUB = [
+  "m_and_a",
+  "jv",
+  "strategic_investment",
+  "minority_investment",
+  "partnership",
+  "rbd",
+  "corporate_venture",
+] as const;
 const INTENTS = ["integration", "capability_access"] as const;
 // 통제 필요도=高 + 역량접근 의도에서 license/co-dev 성 라우트는 사전배제된다
 // (합산 점수와 무관하게 — lexicographic override, Class-C 결정 (d)).
 const OVERRIDDEN_SUBS = ["partnership", "rbd", "corporate_venture"] as const;
-const CRITERIA = ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"] as const;
+const CRITERIA = [
+  "control_need",
+  "capability_criticality",
+  "market_uncertainty",
+  "integration_capacity",
+  "speed_to_capability",
+] as const;
 
-interface ScoreInput { criterion: string; score: number; evidence_note: string }
+interface ScoreInput {
+  criterion: string;
+  score: number;
+  evidence_note: string;
+}
 
 function validateScores(raw: unknown): { scores: ScoreInput[] } | { error: string } {
   if (!Array.isArray(raw)) return { error: "scores는 5기준 배열입니다." };
   const seen = new Map<string, ScoreInput>();
   for (const item of raw as Array<Record<string, unknown>>) {
     const criterion = String(item?.criterion ?? "");
-    if (!CRITERIA.includes(criterion as typeof CRITERIA[number])) return { error: `알 수 없는 채점 기준: ${criterion}` };
+    if (!CRITERIA.includes(criterion as (typeof CRITERIA)[number]))
+      return { error: `알 수 없는 채점 기준: ${criterion}` };
     if (seen.has(criterion)) return { error: `중복 기준: ${criterion}` };
     const score = Number(item?.score);
-    if (!Number.isInteger(score) || score < 1 || score > 3) return { error: `${criterion} 점수는 1–3 사이 정수입니다.` };
+    if (!Number.isInteger(score) || score < 1 || score > 3)
+      return { error: `${criterion} 점수는 1–3 사이 정수입니다.` };
     const note = String(item?.evidence_note ?? "").trim();
     if (!note) return { error: `${criterion} 근거(evidence_note)는 필수입니다.` };
     seen.set(criterion, { criterion, score, evidence_note: note });
@@ -46,12 +71,17 @@ function validateScores(raw: unknown): { scores: ScoreInput[] } | { error: strin
 export const GET = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  { const denied = requireBusinessActor(auth.auth, "read"); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(auth.auth, "read");
+    if (denied) return denied;
+  }
   const { id } = await params;
   const db = getDb();
-  const opp = db.query("SELECT id, name, status FROM opportunity WHERE id = ?").get(id) as
-    | { id: string; name: string; status: string }
-    | null;
+  const opp = db.query("SELECT id, name, status FROM opportunity WHERE id = ?").get(id) as {
+    id: string;
+    name: string;
+    status: string;
+  } | null;
   if (!opp) return notFound();
   const decisions = listRouteDecisionsWithScores(id);
   const draft = getDraftRouteDecision(id);
@@ -62,32 +92,45 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Market-entry route decisions require the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Market-entry route decisions require the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
-    track?: string; sub_track?: string; rationale?: string; alternatives_considered?: string;
-    intent?: string; scores?: unknown;
+    track?: string;
+    sub_track?: string;
+    rationale?: string;
+    alternatives_considered?: string;
+    intent?: string;
+    scores?: unknown;
     // ADR-0097 back-compat: optional provenance link to the committee
     // deliberation that proposed this decision (0066 nullable column).
     gate_evaluation_id?: string;
   } | null;
   const track = body?.track;
   const rationale = body?.rationale?.trim();
-  if (!track || !TRACKS.includes(track as typeof TRACKS[number])) return badRequest("invalid_request", "track must be one of: greenfield | brownfield.");
+  if (!track || !TRACKS.includes(track as (typeof TRACKS)[number]))
+    return badRequest("invalid_request", "track must be one of: greenfield | brownfield.");
   if (!rationale) return badRequest("invalid_request", "rationale is required.");
   const subTrack = body?.sub_track?.trim() || null;
-  if (track === "greenfield" && subTrack && ![...GF_SUB].includes(subTrack as typeof GF_SUB[number])) {
+  if (track === "greenfield" && subTrack && ![...GF_SUB].includes(subTrack as (typeof GF_SUB)[number])) {
     return badRequest("invalid_request", "greenfield sub_track must be one of: existing_business_rbd | intra_venture.");
   }
-  if (track === "brownfield" && subTrack && !BF_SUB.includes(subTrack as typeof BF_SUB[number])) {
-    return badRequest("invalid_request", "brownfield sub_track must be one of: m_and_a | jv | strategic_investment | minority_investment | partnership | rbd | corporate_venture.");
+  if (track === "brownfield" && subTrack && !BF_SUB.includes(subTrack as (typeof BF_SUB)[number])) {
+    return badRequest(
+      "invalid_request",
+      "brownfield sub_track must be one of: m_and_a | jv | strategic_investment | minority_investment | partnership | rbd | corporate_venture.",
+    );
   }
 
   // 채점 — 스펙 v2.2.0+ completionCriteria (ADR-0104 트랙 간 비교 가능성):
   // 양 트랙 모두 intent(Stage 1) + 5criteria 채점이 의무.
   const intent = body?.intent;
   if (!intent) return badRequest("invalid_request", "A decision requires intent (the Stage 1 intent branch).");
-  if (!INTENTS.includes(intent as typeof INTENTS[number])) {
+  if (!INTENTS.includes(intent as (typeof INTENTS)[number])) {
     return badRequest("invalid_request", "intent must be one of: integration | capability_access.");
   }
   const intentValue: string = intent;
@@ -98,7 +141,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // (brownfield 라우트만 존재하는 하위 유형이다)
   if (track === "brownfield") {
     const controlNeed = scoreRows.find((s) => s.criterion === "control_need")!.score;
-    if (intentValue === "capability_access" && controlNeed === 3 && subTrack && OVERRIDDEN_SUBS.includes(subTrack as typeof OVERRIDDEN_SUBS[number])) {
+    if (
+      intentValue === "capability_access" &&
+      controlNeed === 3 &&
+      subTrack &&
+      OVERRIDDEN_SUBS.includes(subTrack as (typeof OVERRIDDEN_SUBS)[number])
+    ) {
       return badRequest(
         "invalid_request",
         "Pre-exclusion: with high control need and tacit partner knowledge under a capability-access intent, license/co-development-grade routes (partnership/rbd/corporate_venture) are excluded. Change the route or recheck the scoring.",
@@ -107,21 +155,26 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
 
   const db = getDb();
-  const opp = db.query("SELECT id, status FROM opportunity WHERE id = ?").get(id) as
-    | { id: string; status: string }
-    | null;
+  const opp = db.query("SELECT id, status FROM opportunity WHERE id = ?").get(id) as {
+    id: string;
+    status: string;
+  } | null;
   if (!opp) return notFound();
-  if (opp.status !== "selected") return badRequest("invalid_request", "Only a selected opportunity can decide its market-entry route.");
+  // N2 (owner decision 2026-11-17): server-side selection enforcement — 409 not_selected, not a 400.
+  const selectionDenied = notSelectedResponse(db, id);
+  if (selectionDenied) return selectionDenied;
 
   // 합산 점수(각 20%, 만점 3.0)와 기본 스테이징 권고는 서버가 계산한다.
-  const total = scoreRows.length === CRITERIA.length
-    ? Math.round(scoreRows.reduce((sum, s) => sum + s.score * 0.2, 0) * 100) / 100
-    : null;
+  const total =
+    scoreRows.length === CRITERIA.length
+      ? Math.round(scoreRows.reduce((sum, s) => sum + s.score * 0.2, 0) * 100) / 100
+      : null;
   const uncertainty = scoreRows.find((s) => s.criterion === "market_uncertainty")?.score ?? null;
   const controlNeed = scoreRows.find((s) => s.criterion === "control_need")?.score ?? null;
   let stagingRecommended: string | null = null;
   if (uncertainty === 3 && controlNeed !== null && controlNeed <= 2) {
-    stagingRecommended = "소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거 — 다음 진행에서 행사) 권고";
+    stagingRecommended =
+      "소수지분/공동개발 + 사전 협약된 step-up(call option / ROFR / 전환 트리거 — 다음 진행에서 행사) 권고";
   }
 
   const now = new Date().toISOString();
@@ -130,7 +183,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // bare FK error, so the caller sees the real problem).
   const gateEvaluationId = body?.gate_evaluation_id?.trim() || null;
   if (gateEvaluationId && !db.query("SELECT id FROM gate_evaluation WHERE id = ?").get(gateEvaluationId)) {
-    return badRequest("invalid_request", "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.");
+    return badRequest(
+      "invalid_request",
+      "gate_evaluation_id does not exist — check the gate_evaluation of the committee session.",
+    );
   }
 
   // ADR-0124: "결정"은 열려 있는 초안(status='draft')이 있으면 그 행을
@@ -146,8 +202,20 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       `UPDATE route_decision SET track=?, sub_track=?, rationale=?, alternatives_considered=?, decided_by=?, decided_at=?,
                                   intent=?, override_flagged=0, staging_recommended=?, total_score=?, gate_evaluation_id=?, status='final', updated_at=?
        WHERE id=?`,
-      [track, subTrack, rationale, body?.alternatives_considered?.trim() || null, ctx.userId, now,
-       intentValue, stagingRecommended, total, gateEvaluationId, now, decisionId],
+      [
+        track,
+        subTrack,
+        rationale,
+        body?.alternatives_considered?.trim() || null,
+        ctx.userId,
+        now,
+        intentValue,
+        stagingRecommended,
+        total,
+        gateEvaluationId,
+        now,
+        decisionId,
+      ],
     );
     db.run("DELETE FROM route_decision_score WHERE decision_id = ?", [decisionId]);
   } else {
@@ -155,8 +223,21 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       `INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, alternatives_considered, decided_by, decided_at,
                                    intent, override_flagged, staging_recommended, total_score, gate_evaluation_id, status)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'final')`,
-      [decisionId, id, track, subTrack, rationale, body?.alternatives_considered?.trim() || null, ctx.userId, now,
-       intentValue, 0, stagingRecommended, total, gateEvaluationId],
+      [
+        decisionId,
+        id,
+        track,
+        subTrack,
+        rationale,
+        body?.alternatives_considered?.trim() || null,
+        ctx.userId,
+        now,
+        intentValue,
+        0,
+        stagingRecommended,
+        total,
+        gateEvaluationId,
+      ],
     );
   }
   // ADR-0135: 이 결정이 기회의 권위 행이 된다 — 직전 권위 행은 삭제되지 않고
@@ -174,8 +255,17 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   // ADR-0153: the human's route decision is the human_final review of the S4 artifacts.
   recordHumanFinalForStageArtifacts("S4", id, ctx.userId, "route_decision");
 
-  return ok({
-    id: decisionId, track, sub_track: subTrack, rationale, decided_at: now,
-    intent: intentValue, total_score: total, staging_recommended: stagingRecommended,
-  }, 201);
+  return ok(
+    {
+      id: decisionId,
+      track,
+      sub_track: subTrack,
+      rationale,
+      decided_at: now,
+      intent: intentValue,
+      total_score: total,
+      staging_recommended: stagingRecommended,
+    },
+    201,
+  );
 });

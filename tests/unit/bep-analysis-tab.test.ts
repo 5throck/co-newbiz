@@ -20,7 +20,15 @@ function inputsFor(basis: BusinessCaseParams["investmentBasis"], overrides?: Par
     projectId: "01TESTPROJECT0000000000",
     marketSizeKrwM: 100000,
     anchorGrowth: 0.03,
-    wacc: { value: 0.08, source: "default", assumption_id: null, run_id: null, as_of: null, rationale: null, anchor_ref: null },
+    wacc: {
+      value: 0.08,
+      source: "default",
+      assumption_id: null,
+      run_id: null,
+      as_of: null,
+      rationale: null,
+      anchor_ref: null,
+    },
     bcParams: { ...resolveBusinessCaseParamsDefaults(), investmentBasis: basis },
     s5Plan: {
       modelId: "model-1",
@@ -85,12 +93,13 @@ describe("deterministicCaseYearTable (재무분석 탭 데이터)", () => {
   });
 
   test("exit split: 처분가 배수(bc.exit_ev_revenue) moves only the exit value; unpinned reuses the entry multiple (2026-10-19 decider direction)", () => {
-    const mk = (exit: number | null) => ({
-      ...inputsFor("ratio"),
-      revenueAnchor: { krwM: 40000, source: "대상 최연 매출 (test)" },
-      acquisition: { evRevenue: 3, source: "밴드 기본 (test)" },
-      bcParams: { ...inputsFor("ratio").bcParams, exitEvRevenue: exit },
-    }) as CaseInputs;
+    const mk = (exit: number | null) =>
+      ({
+        ...inputsFor("ratio"),
+        revenueAnchor: { krwM: 40000, source: "대상 최연 매출 (test)" },
+        acquisition: { evRevenue: 3, source: "밴드 기본 (test)" },
+        bcParams: { ...inputsFor("ratio").bcParams, exitEvRevenue: exit },
+      }) as CaseInputs;
     // unpinned: exit = entry multiple (멀티플 확대 없음)
     const same = deterministicCaseYearTable(mk(null), "base");
     expect(same.initialInvestment).toBe(120000); // 40,000 × 3.0 (band default)
@@ -125,7 +134,9 @@ describe("S8 tab restructure: 재무분석 → 대상회사 + 신규 재무분�
 
   test("the stage renders the BEP panel; the old panel keeps its route", () => {
     const stage = read("app/web-next/components/stages/BusinessCaseStage.tsx");
-    expect(stage).toContain('{tab === "bep" && <BepAnalysisPanel projectId={projectId} />}');
+    // 2026-11-17: pin updated — the bep site is now wrapped in an aria tabpanel div (tabpanel wiring, #906 follow-up).
+    expect(stage).toContain('{tab === "bep" && (');
+    expect(stage).toContain("<BepAnalysisPanel projectId={projectId} />");
     expect(stage).toContain('label: t("targetCompany")');
     expect(read("app/web-next/components/stages/BepAnalysisPanel.tsx")).toContain("BEP Analysis");
   });

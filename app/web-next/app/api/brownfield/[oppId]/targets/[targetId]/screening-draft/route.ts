@@ -14,6 +14,7 @@ import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../../../lib/selected-guard.ts";
 import { completeOrFallback, type LlmOrFallback } from "../../../../../../../lib/llm.ts";
 import { isWebResearchConfigured, researchSources, type WebSource } from "../../../../../../../lib/web-research.ts";
 import { screeningItems, insertTargetEvidence } from "../../../../../../../lib/brownfield-targets.ts";
@@ -74,7 +75,8 @@ export function parseScreeningDrafts(
   for (const it of openItems) {
     const d = raw[it.id];
     if (!d) continue;
-    const verdict = typeof d.verdict === "string" && VERDICTS.has(d.verdict) ? (d.verdict as ItemDraft["verdict"]) : null;
+    const verdict =
+      typeof d.verdict === "string" && VERDICTS.has(d.verdict) ? (d.verdict as ItemDraft["verdict"]) : null;
     if (!verdict) continue; // 근거·판정 없는 항목은 초안도 없다
     const srcIdx = typeof d.source_index === "number" ? Math.floor(d.source_index) - 1 : -1;
     const sources = evidence.get(it.id) ?? [];
@@ -91,13 +93,17 @@ export function parseScreeningDrafts(
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Judgement-draft generation requires the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Judgement-draft generation requires the analyst role or higher.",
+  });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const db = getDb();
   const opp = db
     .query("SELECT id, name, target_universe_json, capability_gap_json FROM opportunity WHERE id = ?")
-    .get(oppId) as { id: string; name: string; target_universe_json: string | null; capability_gap_json: string | null } | undefined;
+    .get(oppId) as
+    | { id: string; name: string; target_universe_json: string | null; capability_gap_json: string | null }
+    | undefined;
   if (!opp) return notFound();
   const target = db
     .query(
@@ -108,8 +114,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
          ) AS company_id
        FROM brownfield_target bt WHERE bt.id = ? AND bt.opportunity_id = ?`,
     )
-    .get(targetId, oppId) as { id: string; company_name: string; screening_json: string | null; company_id: string | null } | undefined;
+    .get(targetId, oppId) as
+    | { id: string; company_name: string; screening_json: string | null; company_id: string | null }
+    | undefined;
   if (!target) return notFound();
+  // N2 (owner decision 2026-11-17): S6 writes presuppose a selected opportunity.
+  const selectionDenied = notSelectedResponse(db, oppId);
+  if (selectionDenied) return selectionDenied;
 
   const items = screeningItems();
   if (items.length === 0) return notFound();
@@ -121,7 +132,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   });
   if (openItems.length === 0) {
     return ok(
-      { source: "synthesis", provider: "deterministic", note: "모든 항목이 이미 판정되어 있습니다 — 사람이 저장한 판정을 유지합니다.", drafts: {}, manifest: [] },
+      {
+        source: "synthesis",
+        provider: "deterministic",
+        note: "모든 항목이 이미 판정되어 있습니다 — 사람이 저장한 판정을 유지합니다.",
+        drafts: {},
+        manifest: [],
+      },
       200,
       { nothing_to_draft: true },
     );
@@ -130,9 +147,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   // ── 기확보 정보 블록 (사용자 결정 2026-09-16 — 재수집하지 않고 그대로 쓴다) ──
   // 1) DART 재무 facts 5개년 요약, 2) 회사 AI 프로파일, 3) 최근 3년 공시 제목.
   const company = target.company_id
-    ? db.query("SELECT name_ko, dart_corp_code FROM md_company WHERE id = ?").get(target.company_id) as
+    ? (db.query("SELECT name_ko, dart_corp_code FROM md_company WHERE id = ?").get(target.company_id) as
         | { name_ko: string; dart_corp_code: string | null }
-        | undefined
+        | undefined)
     : undefined;
 
   let financialBlock = "없음 — 동기화된 DART 재무 facts가 없습니다.";
@@ -169,7 +186,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   const profile = target.company_id ? loadLatestProfile(db, { kind: "company", id: target.company_id }) : null;
   // ADR-0142 — 확정 경쟁사 레지스트리 우선 (미확정 payload 제안은 표기 후 폴백)
-  const confirmedCompetitors = target.company_id ? listConfirmedCompetitors(db, { kind: "company", id: target.company_id }) : [];
+  const confirmedCompetitors = target.company_id
+    ? listConfirmedCompetitors(db, { kind: "company", id: target.company_id })
+    : [];
 
   // 기확보 근거 4 — 기회의 목표 시장 정의(지역 기준)·S3 필요 역량(갭)·후보 기술
   // 평가 판정. t-03(지역)/t-05(역량 적합성)/t-07(역량 보완성)의 판정 앵커다
@@ -184,7 +203,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
         u.scope ? `범위: ${u.scope}` : null,
       ].filter(Boolean);
       if (lines.length > 0) universeBlock = lines.join("\n");
-    } catch { /* 깨진 JSON은 무시 */ }
+    } catch {
+      /* 깨진 JSON은 무시 */
+    }
   }
 
   let gapBlock = "없음 — S3 필요 역량(갭) 레지스터가 비어 있습니다.";
@@ -193,18 +214,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       const rows = parseGapRegister(opp.capability_gap_json).rows.filter((r) => r.capability);
       if (rows.length > 0) {
         gapBlock = rows
-          .map((r) => `  - ${r.capability}${r.requiredLevel ? ` (요구 수준: ${r.requiredLevel})` : ""}${r.held?.status ? ` — 내부 보유: ${HELD_STATUS_LABEL[r.held.status] ?? r.held.status}` : ""}`)
+          .map(
+            (r) =>
+              `  - ${r.capability}${r.requiredLevel ? ` (요구 수준: ${r.requiredLevel})` : ""}${r.held?.status ? ` — 내부 보유: ${HELD_STATUS_LABEL[r.held.status] ?? r.held.status}` : ""}`,
+          )
           .join("\n");
       }
-    } catch { /* 깨진 JSON은 무시 */ }
+    } catch {
+      /* 깨진 JSON은 무시 */
+    }
   }
 
   const techEval = targetEvalStates(oppId, targetId, auth.auth.userId)
     .filter((it) => it.category === "technical")
-    .map((it) => `  - ${it.label}: ${it.state ? `${it.state.status}${it.state.note ? ` (${it.state.note})` : ""}` : "미판정"}`);
-  const techEvalBlock = techEval.length > 0
-    ? `후보 기술 평가 판정(ADR-0139, 사람이 확정한 값):\n${techEval.join("\n")}`
-    : "없음 — 후보의 기술 평가가 아직 판정되지 않았습니다.";
+    .map(
+      (it) =>
+        `  - ${it.label}: ${it.state ? `${it.state.status}${it.state.note ? ` (${it.state.note})` : ""}` : "미판정"}`,
+    );
+  const techEvalBlock =
+    techEval.length > 0
+      ? `후보 기술 평가 판정(ADR-0139, 사람이 확정한 값):\n${techEval.join("\n")}`
+      : "없음 — 후보의 기술 평가가 아직 판정되지 않았습니다.";
 
   let disclosureTitles: string[] = [];
   if (company?.dart_corp_code) {
@@ -233,7 +263,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     "회사 AI 프로파일:",
     profileEvidenceBlock(profile, confirmedCompetitors),
     "",
-    disclosureTitles.length > 0 ? `최근 공시 제목(3년):\n${disclosureTitles.map((t) => `  - ${t}`).join("\n")}` : "최근 공시 제목: 없음",
+    disclosureTitles.length > 0
+      ? `최근 공시 제목(3년):\n${disclosureTitles.map((t) => `  - ${t}`).join("\n")}`
+      : "최근 공시 제목: 없음",
   ].join("\n");
 
   // ── 웹검색 근거 확보 — 기확보 재무로 판정 가능한 t-08(재무적 매력도)은
@@ -249,7 +281,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
         evidence.set(it.id, [
           {
             title: "DART 재무 facts 5개년 (기확보 데이터)",
-            url: company?.dart_corp_code ? `https://dart.fss.or.kr/dsab007/main.do?corpCode=${company.dart_corp_code}` : "https://dart.fss.or.kr",
+            url: company?.dart_corp_code
+              ? `https://dart.fss.or.kr/dsab007/main.do?corpCode=${company.dart_corp_code}`
+              : "https://dart.fss.or.kr",
             snippet: financialBlock,
           },
         ]);
@@ -263,7 +297,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
       // 충분한 검색(사용자 리포트, 2026-09-16) — 항목당 3개 쿼리 변형 × 항목당
       // 최대 5건. 짧은 라벨은 재현율, 보조 절·본문 키워드는 정밀도를 보완한다.
       const shortLabel = it.text.split(" — ")[0].trim();
-      const subParts = (it.text.split(" — ")[1] ?? "").split(/[.,;·]/).map((s) => s.trim()).filter((s) => s.length >= 6);
+      const subParts = (it.text.split(" — ")[1] ?? "")
+        .split(/[.,;·]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 6);
       const queries = [
         `${target.company_name} ${shortLabel}`,
         subParts[0] ? `${target.company_name} ${subParts[0].slice(0, 30)}` : null,
@@ -297,8 +334,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
 
   // ── LLM 초안 — 근거가 있는 항목만 판정 ──
   const evidenceBlock = [...evidence.entries()]
-    .map(([itemId, sources]) =>
-      `${itemId}:\n${sources.map((s, i) => `  [${i + 1}] ${s.title}\n  URL: ${s.url}\n  ${s.snippet.slice(0, 200)}`).join("\n")}`,
+    .map(
+      ([itemId, sources]) =>
+        `${itemId}:\n${sources.map((s, i) => `  [${i + 1}] ${s.title}\n  URL: ${s.url}\n  ${s.snippet.slice(0, 200)}`).join("\n")}`,
     )
     .join("\n\n");
   const llmRes: LlmOrFallback = await completeOrFallback(
@@ -346,9 +384,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     },
   );
 
-  appendAudit(db, { actor: auth.auth.userId, action: "target_screening.llm_draft", target: `${oppId}:${targetId}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "target_screening.llm_draft",
+    target: `${oppId}:${targetId}`,
+    now: new Date().toISOString(),
+  });
 
-  const drafts = parseScreeningDrafts(llmRes, evidence, openItems.map((it) => ({ id: it.id })));
+  const drafts = parseScreeningDrafts(
+    llmRes,
+    evidence,
+    openItems.map((it) => ({ id: it.id })),
+  );
   // 근거 구분 표시 — 웹검색 근거가 있는 항목은 "web", 기확보 정보만으로 판정된
   // 항목은 "secured"로 구분해 클라이언트가 저장 시 함께 보존하게 한다.
   for (const [itemId, d] of Object.entries(drafts)) {
@@ -360,10 +407,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     targetId,
     kind: "screening",
     title: `위원회 추천 검토 — 판정 제안 ${Object.keys(drafts).length}/${openItems.length}건`,
-    detail: [
-      ...Object.entries(drafts).map(([itemId, d]) => `${itemId} ${VERDICT_LABEL[d.verdict]} — ${d.rationale}`),
-      ...(manifest.length > 0 ? [`수집: ${manifest.join(" · ")}`] : []),
-    ].join("\n") || null,
+    detail:
+      [
+        ...Object.entries(drafts).map(([itemId, d]) => `${itemId} ${VERDICT_LABEL[d.verdict]} — ${d.rationale}`),
+        ...(manifest.length > 0 ? [`수집: ${manifest.join(" · ")}`] : []),
+      ].join("\n") || null,
     sourceKind: llmRes.source,
     createdBy: auth.auth.userId,
   });
@@ -372,5 +420,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     Object.keys(drafts).length === 0
       ? "근거가 판정을 뒷받침하지 못해 초안을 만들 항목이 없습니다 — 판정은 사람이 직접하세요."
       : `${openItems.length}개 미판정 항목 중 ${Object.keys(drafts).length}개에 제안을 만들었습니다 (기확보 ${Object.values(drafts).filter((d) => d.kind === "secured").length} + 웹검색 ${Object.values(drafts).filter((d) => d.kind === "web").length})${unproposed > 0 ? ` — 나머지 ${unproposed}건은 근거 부족으로 제안 없음, 사람이 직접 판정하세요` : ""}. 확인·수정 뒤 "판정 저장"으로 확정하세요.`;
-  return ok({ source: llmRes.source, provider: llmRes.provider, note, drafts, manifest }, 200, { drafted: Object.keys(drafts).length });
+  return ok({ source: llmRes.source, provider: llmRes.provider, note, drafts, manifest }, 200, {
+    drafted: Object.keys(drafts).length,
+  });
 }

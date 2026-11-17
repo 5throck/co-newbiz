@@ -3,7 +3,7 @@ procedure_id: shared-brownfield-fs-comparative
 title: "Brown Field FS Comparative Selection"
 scope: shared
 level: entity
-version: "1.0.1"
+version: "1.1.0"
 effective_from: "2026-09-22"
 status: active
 # 트랙 스코핑 (2026-10-22 프로젝트 리뷰 M7): S8은 project 계층 stage이므로
@@ -18,7 +18,7 @@ gate: FS
 
 # Brownfield S8의 대상 간 비교·선정 프로시저 (ADR-0143, design
 # 2026-09-22-s8-multi-target-feasibility). 대상별 인스턴스 분석은
-# shared-brownfield-fs가 소유하고, 이 프로시저는 Short List 전체를 한 번
+# shared-brownfield-fs가 소유하고, 이 프로시저는 최종 후보 목록 전체를 한 번
 # 실행한다 — subjectScope: shortlist 반복의 "접합부"다. 프로시저 스키마에는
 # 루프 구문이 없다: 대상별 반복은 디스패치 계층이 shared-brownfield-fs를
 # 대상마다 호출하는 방식으로 처리한다 (flow.spec S8 subjectScope 주석).

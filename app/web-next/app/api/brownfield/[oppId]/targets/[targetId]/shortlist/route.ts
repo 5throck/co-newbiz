@@ -3,6 +3,7 @@ import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate, humanOnlyDenied, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../../../lib/selected-guard.ts";
 import { resolveOrCreateCompany, type TargetRow } from "../../../../../../../lib/brownfield-targets.ts";
 import { computeEvalScore, targetEvalStates } from "../../../../../../../lib/brownfield-eval-criteria.ts";
 import { countUnreviewedVerdicts } from "../../../../../../../../../db/repositories/brownfield-eval-draft.repository.ts";
@@ -41,6 +42,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .query("SELECT * FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
     .get(targetId, oppId) as unknown as TargetRow | undefined;
   if (!target) return notFound();
+  // N2 (owner decision 2026-11-17): S6 writes presuppose a selected opportunity.
+  const selectionDenied = notSelectedResponse(db, oppId);
+  if (selectionDenied) return selectionDenied;
   // T-20261022-039: Short List membership is the S8 subjectScope set (ADR-0143) —
   // frozen at promotion; the ADR-0157 per-target DD path covers post-promotion
   // analysis on existing members.

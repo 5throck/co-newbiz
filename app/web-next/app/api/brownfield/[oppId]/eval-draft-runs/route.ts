@@ -16,6 +16,7 @@ import {
 } from "../../../../../../../db/repositories/brownfield-eval-draft.repository.ts";
 import { authenticate, callPathOf, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { badRequest, fail, notFound, ok } from "../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../lib/selected-guard.ts";
 import { listTargets } from "../../../../../lib/brownfield-targets.ts";
 import {
   activeEngineRunsForOpportunity,
@@ -37,6 +38,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   const { oppId } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(oppId)) return notFound();
+  // N2 (owner decision 2026-11-17): S6 writes presuppose a selected opportunity.
+  const selectionDenied = notSelectedResponse(db, oppId);
+  if (selectionDenied) return selectionDenied;
   const conflict = trackConflictResponse(
     db,
     oppId,

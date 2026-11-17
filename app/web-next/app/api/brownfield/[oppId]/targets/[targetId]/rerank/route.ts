@@ -6,13 +6,16 @@ import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { notSelectedResponse } from "../../../../../../../lib/selected-guard.ts";
 
 const now = () => new Date().toISOString();
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Rank adjustments require the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Rank adjustments require the analyst role or higher.",
+  });
   if (denied) return denied;
   const { oppId, targetId } = await params;
   const body = (await request.json().catch(() => null)) as { direction?: string } | null;
@@ -25,6 +28,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     .query("SELECT id FROM brownfield_target WHERE id = ? AND opportunity_id = ? AND status = 'shortlisted'")
     .get(targetId, oppId) as { id: string } | undefined;
   if (!target) return notFound();
+  // N2 (owner decision 2026-11-17): S6 writes presuppose a selected opportunity.
+  const selectionDenied = notSelectedResponse(db, oppId);
+  if (selectionDenied) return selectionDenied;
 
   const rows = db
     .query(
@@ -41,6 +47,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
   ids.forEach((id, i) => {
     db.run("UPDATE brownfield_target SET rank = ?, updated_at = ? WHERE id = ?", [i + 1, now(), id]);
   });
-  appendAudit(db, { actor: auth.auth.userId, action: "brownfield_target.rerank", target: `${oppId}:${targetId}:${direction}`, now: now() });
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "brownfield_target.rerank",
+    target: `${oppId}:${targetId}:${direction}`,
+    now: now(),
+  });
   return ok({ moved: true, rank: swapIdx + 1 }, 200);
 }
