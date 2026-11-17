@@ -23,7 +23,8 @@ const API_DIR = join(ROOT, "app", "web-next", "app", "api");
 const ALLOWLIST_FILE = join(import.meta.dirname, "route-audit-allowlist.json");
 const MAX_DEPTH = 3;
 
-const WRITE_HANDLER = /export\s+(?:async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b|export\s+const\s+(POST|PUT|PATCH|DELETE)\b/g;
+const WRITE_HANDLER =
+  /export\s+(?:async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b|export\s+const\s+(POST|PUT|PATCH|DELETE)\b/g;
 /** Real audit writes only: appendAudit(), a local audit() helper that wraps it, auditTokenUse(), or a raw audit_log insert. */
 const AUDIT_TOKEN = /(?<!function\s)\b(?:appendAudit|audit|auditTokenUse)\s*\(|INTO\s+audit_log\b/;
 const IMPORT_RE = /(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+)["']/g;
@@ -83,7 +84,10 @@ export function scanRouteAudit(
   apiDir: string = API_DIR,
   allowlist: Record<string, string> = loadRouteAllowlist(),
 ): RouteAuditReport {
-  const rel = (f: string) => f.slice(apiDir.length + 1);
+  // Allowlist keys are forward-slash route paths; normalize the OS-native
+  // separators join() produced so the scan is platform-independent (the
+  // operator workstation runs Windows, the CI runners Linux).
+  const rel = (f: string) => f.slice(apiDir.length + 1).replace(/\\/g, "/");
   const writeRoutes = routeFiles(apiDir).filter((f) => writeMethods(readFileSync(f, "utf8")).length > 0);
   const writeRel = new Set(writeRoutes.map(rel));
   const allowlistErrors: string[] = [];
@@ -102,7 +106,9 @@ if (import.meta.main) {
   else {
     for (const u of r.unaudited) console.log(`route-audit  ${u}  state-changing handler with no audit token`);
     for (const e of r.allowlistErrors) console.log(`route-audit  ${e}`);
-    console.log(`route-audit-scan: ${r.unaudited.length + r.allowlistErrors.length === 0 ? "PASS" : "FAIL"} — ${r.writeRoutes} write route(s), ${r.unaudited.length} unaudited, ${r.allowlistErrors.length} allowlist error(s).`);
+    console.log(
+      `route-audit-scan: ${r.unaudited.length + r.allowlistErrors.length === 0 ? "PASS" : "FAIL"} — ${r.writeRoutes} write route(s), ${r.unaudited.length} unaudited, ${r.allowlistErrors.length} allowlist error(s).`,
+    );
   }
   process.exit(r.unaudited.length + r.allowlistErrors.length === 0 ? 0 : 1);
 }

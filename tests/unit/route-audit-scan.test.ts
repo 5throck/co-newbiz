@@ -3,7 +3,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadRouteAllowlist, reachesAudit, scanRouteAudit, writeMethods } from "../../scripts/co-newbiz/route-audit-scan.ts";
+import {
+  loadRouteAllowlist,
+  reachesAudit,
+  scanRouteAudit,
+  writeMethods,
+} from "../../scripts/co-newbiz/route-audit-scan.ts";
 
 const TEST_DB_PATH = "db/data/test-route-audit-competitors.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -13,11 +18,16 @@ const { runMigrations } = await import("../../db/migrate.ts");
 resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
-const { registerCompetitor, updateCompetitor, excludeCompetitor, restoreCompetitor } = await import("../../app/web-next/lib/company-competitors.ts");
+const { registerCompetitor, updateCompetitor, excludeCompetitor, restoreCompetitor } = await import(
+  "../../app/web-next/lib/company-competitors.ts"
+);
 
 const NOW = new Date().toISOString();
 const tmpDirs: string[] = [];
 afterAll(() => {
+  // Close the bun:sqlite connection before unlinking — Windows keeps the
+  // file locked (EBUSY) as long as the connection is open.
+  resetDb();
   for (const d of tmpDirs) rmSync(d, { recursive: true, force: true });
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });
@@ -62,7 +72,11 @@ describe("route audit scan (M11)", () => {
 
   test("rejects wildcard, reasonless and stale allowlist entries", () => {
     const api = seedApi({ "a/route.ts": "export async function POST(){ appendAudit(db,{}); }" });
-    const r = scanRouteAudit(api, { "a/*": "wildcard reason text here", "a/route.ts": "short", "z/route.ts": "stale entry reason text" });
+    const r = scanRouteAudit(api, {
+      "a/*": "wildcard reason text here",
+      "a/route.ts": "short",
+      "z/route.ts": "stale entry reason text",
+    });
     expect(r.allowlistErrors.length).toBe(4);
   });
 
@@ -92,13 +106,25 @@ describe("route audit scan (M11)", () => {
 describe("competitor registry writes land in audit_log (M11)", () => {
   test("register, update, exclude, restore each append an audit row", () => {
     db.run("INSERT INTO company_group (id, name, created_at, created_by) VALUES ('g1','G',?,'t')", [NOW]);
-    db.run("INSERT INTO company_group_member (id, group_id, company_name, dart_corp_code, role, created_at) VALUES ('m1','g1','Acme',NULL,'affiliate',?)", [NOW]);
+    db.run(
+      "INSERT INTO company_group_member (id, group_id, company_name, dart_corp_code, role, created_at) VALUES ('m1','g1','Acme',NULL,'affiliate',?)",
+      [NOW],
+    );
     const subject = { kind: "member" as const, id: "m1", companyName: "Acme", dartCorpCode: null, groupName: "G" };
-    const { id } = registerCompetitor(db, subject, { name: "Rival", dart_corp_code: null, note: null, discovery_source: "manual" }, "analyst1");
+    const { id } = registerCompetitor(
+      db,
+      subject,
+      { name: "Rival", dart_corp_code: null, note: null, discovery_source: "manual" },
+      "analyst1",
+    );
     updateCompetitor(db, subject, id, { note: "n" }, "analyst1");
     excludeCompetitor(db, subject, id, "out of scope", "analyst1");
     restoreCompetitor(db, subject, id, "analyst1");
-    const actions = (db.query("SELECT action FROM audit_log WHERE actor_user_id = 'analyst1' ORDER BY created_at, rowid").all() as { action: string }[]).map((r) => r.action);
+    const actions = (
+      db.query("SELECT action FROM audit_log WHERE actor_user_id = 'analyst1' ORDER BY created_at, rowid").all() as {
+        action: string;
+      }[]
+    ).map((r) => r.action);
     expect(actions).toEqual(["competitor.register", "competitor.update", "competitor.exclude", "competitor.restore"]);
   });
 });
