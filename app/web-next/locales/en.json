@@ -6385,7 +6385,6 @@
         "rowTitle": "Run the AI evaluation for {company} only (results are applied directly to the verdicts, and a person reviews them item by item)",
         "rowStartTitle": "Start AI evaluation — {company}",
         "rowSummary": "Evaluating {company} only. Up to about {calls} DART calls (cache reuse not counted).",
-        "rowRunning": "Another AI evaluation is running, so this cannot start now",
         "rowExcluded": "Excluded candidates are not evaluated",
         "rowNoDart": "This candidate is not registered in DART, so it cannot be evaluated",
         "thresholdsUsed": "Thresholds used when this version was drafted",
@@ -6475,8 +6474,10 @@
           "stale_version": "A newer version exists, so this one cannot be confirmed. Review the latest version.",
           "human_only": "Only a person can confirm verdicts.",
           "unknown": "The request could not be processed.",
-          "engine_active_bulk_block": "A full-list evaluation cannot run alongside other AI evaluations. Try again once the running ones finish.",
-          "engine_active_concurrency_cap": "The limit of 3 concurrent AI evaluations is reached. Try again once one finishes."
+          "queue_full": "The evaluation queue is full ({queued} waiting, limit {limit}). Try again once some have finished.",
+          "item_running": "This evaluation has already started, so it can no longer be cancelled from the queue. Progress was reloaded. To stop it, use the run Cancel button.",
+          "item_finished": "This item has already finished, so it cannot be cancelled from the queue. Progress was reloaded.",
+          "not_selected": "AI evaluation can only be started on a selected opportunity."
         },
         "unverified": "Unverified",
         "reasonDetail": {
@@ -6503,8 +6504,6 @@
         "compare": "Compare versions",
         "compareToggle": "Compare versions: toggle the AI evaluation version history of {company}",
         "rowTargetRunning": "AI evaluation for this candidate is already running",
-        "rowCapReached": "The limit of {max} concurrent AI evaluations is reached. Start again once one finishes",
-        "bulkBlocked": "Start the full evaluation after the running AI evaluations finish",
         "cancelRun": "Stop evaluation for {company}",
         "rowSeg": {
           "pending": "Waiting to start — begins shortly",
@@ -6517,7 +6516,6 @@
           "done": "Done"
         },
         "runNames": "{first} and {n} more",
-        "runCount": "Progress {done}/{total}",
         "elapsed": "Elapsed {time}",
         "elapsedUnit": {
           "s": "{s}s",
@@ -6554,7 +6552,38 @@
         "promotedWithUnreviewed": "Review closed with {n} unreviewed AI verdicts.",
         "appliedReviewed": "Applied {k} · reviewed by a person {r}",
         "versionScore": "Score",
-        "unchangedNoChange": "Re-evaluated · no change"
+        "unchangedNoChange": "Re-evaluated · no change",
+        "queued": "Waiting",
+        "queuedHint": "Starts in turn as other evaluations finish",
+        "skippedActive": "Already running",
+        "skippedActiveHint": "Another evaluation run is already evaluating this candidate, so this run skips it",
+        "pausedRunHint": "A paused or interrupted evaluation run holds this candidate. Resume or cancel that run, then start again",
+        "itemCancelled": "Cancelled",
+        "cancelQueued": "Cancel waiting",
+        "cancelQueuedLabel": "Cancel waiting: {company}",
+        "rowQueuedBlock": "AI evaluation for this candidate is waiting in the queue",
+        "queueSummary": "{done}/{total} done · {running} running · {queued} waiting",
+        "queueExtra": {
+          "skipped": "{n} skipped",
+          "cancelled": "{n} cancelled",
+          "failed": "{n} failed"
+        },
+        "queueEstimate": "Up to {queued} candidates will be queued and {skipped} skipped (already running or not registered in DART)",
+        "startNotice": {
+          "queued": "{n} candidates were added to the evaluation queue.",
+          "none": "There are no candidates to add to the evaluation queue.",
+          "takenOver": "{n} candidates were taken over from a bulk evaluation queue and will run first.",
+          "skipped": "Skipped {n}: {reasons}.",
+          "pausedRun": "A paused evaluation run holds some candidates. Resume or cancel that run.",
+          "reason": {
+            "already_active": "{n} already running",
+            "paused_run": "{n} held by a paused run",
+            "taken_over": "{n} taken over from another run",
+            "not_dart": "{n} not registered in DART",
+            "no_company": "{n} without company data",
+            "other": "{n} other"
+          }
+        }
       }
     },
     "s8": {

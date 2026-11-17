@@ -1,13 +1,15 @@
 "use client";
 
-// S6 AI evaluation run state (ADR-0199 A1-A4, parallel runs 2026-11-16). Two views of the server:
-//  - `activeRuns`: every engine-active run (GET /eval-draft-runs/active), polled every 3 s only while non-empty;
+// S6 AI evaluation run state (ADR-0199 A1-A4, queue model ADR-0200 part B). Two views of the server:
+//  - `activeRuns`: every run registered with the dispatcher (GET /eval-draft-runs/active), polled every 3 s only while
+//    non-empty and cleared on unmount;
 //  - `view`: the latest run (GET /eval-draft-runs/latest), which drives the paused / interrupted / resume panel.
 // Starts / resumes / cancels refresh both. Drafting is a proposal — nothing here writes a verdict or touches ranking.
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../../../lib/api.ts";
-import { callErrorKey, finishedRunIds } from "./aiEvalActive.ts";
+import { finishedRunIds } from "./aiEvalActive.ts";
+import { errorParams, formatStartNotice, summarizeStart, type StartResponse } from "./aiEvalQueueState.ts";
 import { KNOWN_CALL_ERRORS, type RunProgressView } from "./aiEvalTypes.ts";
 
 export const AI_EVAL_POLL_MS = 3000;
@@ -29,14 +31,17 @@ export function useAiEval({ oppId, loadDetail }: { oppId: string | null; loadDet
   const [activeRuns, setActiveRuns] = useState<RunProgressView[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /** Result of the last start (queued / skipped counts and reasons): information, not an error. */
+  const [notice, setNotice] = useState<string | null>(null);
   const lastDone = useRef(0);
   const prevIds = useRef<string[]>([]);
 
   const callError = useCallback(
     (e: unknown): string => {
       if (e instanceof ApiError) {
-        const key = callErrorKey(e.code, e.details);
-        return (KNOWN_CALL_ERRORS as readonly string[]).includes(key) ? t(`callErrors.${key}`) : e.message;
+        return (KNOWN_CALL_ERRORS as readonly string[]).includes(e.code)
+          ? t(`callErrors.${e.code}`, errorParams(e.details))
+          : e.message;
       }
       return e instanceof Error ? e.message : t("callErrors.unknown");
     },
@@ -102,13 +107,14 @@ export function useAiEval({ oppId, loadDetail }: { oppId: string | null; loadDet
   async function call(fn: () => Promise<unknown>): Promise<boolean> {
     setBusy(true);
     setMessage(null);
+    setNotice(null);
     try {
       await fn();
       await refresh();
       return true;
     } catch (e) {
       setMessage(callError(e));
-      void refreshActive(); // a refused start usually means the active set changed under us
+      void refresh(); // a refused call usually means the queue changed under us (e.g. a queued item started meanwhile)
       return false;
     } finally {
       setBusy(false);
@@ -120,7 +126,15 @@ export function useAiEval({ oppId, loadDetail }: { oppId: string | null; loadDet
     activeRuns,
     busy,
     message,
-    start: (o: StartOptions, targetIds?: string[]) => call(() => api.post(base, buildStartBody(o, targetIds))),
+    notice,
+    start: (o: StartOptions, targetIds?: string[]) =>
+      call(async () => {
+        const r = await api.post<StartResponse>(base, buildStartBody(o, targetIds));
+        setNotice(formatStartNotice(t, summarizeStart(r.data)));
+      }),
+    /** Cancel one waiting item (A4b). A 409 `item_running` is reported by `message` after the lists refresh. */
+    cancelItem: (runId: string, itemId: string) =>
+      call(() => api.post(`${base}/${encodeURIComponent(runId)}/items/${encodeURIComponent(itemId)}/cancel`, {})),
     resume: (runId: string) => call(() => api.post(`${base}/${encodeURIComponent(runId)}/resume`, {})),
     cancel: (runId: string) => call(() => api.post(`${base}/${encodeURIComponent(runId)}/cancel`, {})),
   };

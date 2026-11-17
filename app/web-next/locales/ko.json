@@ -6385,7 +6385,6 @@
         "rowTitle": "{company} 한 곳에 대해서만 AI 평가를 실행합니다 (결과는 바로 판정에 반영되며, 사람이 항목별로 검토합니다)",
         "rowStartTitle": "AI 평가 시작 — {company}",
         "rowSummary": "{company} 한 곳을 평가합니다. DART 조회는 최대 약 {calls}건입니다 (캐시 재사용분은 제외).",
-        "rowRunning": "다른 AI 평가가 진행 중이라 지금은 실행할 수 없습니다",
         "rowExcluded": "제외된 후보는 평가하지 않습니다",
         "rowNoDart": "DART에 등록되지 않은 후보라 평가할 수 없습니다",
         "thresholdsUsed": "이 버전을 만들 때 쓴 임계값",
@@ -6475,8 +6474,10 @@
           "stale_version": "더 새로운 버전이 있어 이 버전은 확정할 수 없습니다. 최신 버전을 확인하세요.",
           "human_only": "판정 확정은 사람만 할 수 있습니다.",
           "unknown": "요청을 처리하지 못했습니다.",
-          "engine_active_bulk_block": "전체 후보 일괄 평가는 다른 AI 평가와 함께 실행할 수 없습니다. 진행 중인 평가가 끝난 뒤 다시 시도하세요.",
-          "engine_active_concurrency_cap": "동시에 실행할 수 있는 AI 평가 3건에 도달했습니다. 하나가 끝난 뒤 다시 시도하세요."
+          "queue_full": "평가 대기열이 가득 찼습니다 (대기 {queued}건 / 한도 {limit}건). 일부가 끝난 뒤 다시 시도하세요.",
+          "item_running": "이미 평가가 시작되어 대기 취소할 수 없습니다. 진행 상황을 새로 불러왔습니다. 실행을 멈추려면 실행의 중단 버튼을 쓰세요.",
+          "item_finished": "이미 끝난 항목이라 대기 취소할 수 없습니다. 진행 상황을 새로 불러왔습니다.",
+          "not_selected": "선택된 기회에서만 AI 평가를 시작할 수 있습니다."
         },
         "unverified": "확인 안됨",
         "reasonDetail": {
@@ -6503,8 +6504,6 @@
         "compare": "버전 비교",
         "compareToggle": "버전 비교: {company} AI 평가 버전 이력 펼치기·접기",
         "rowTargetRunning": "이 후보의 AI 평가가 진행 중입니다",
-        "rowCapReached": "동시에 실행할 수 있는 AI 평가 {max}건에 도달했습니다. 하나가 끝난 뒤 시작하세요",
-        "bulkBlocked": "진행 중인 AI 평가가 끝난 뒤에 전체 평가를 시작할 수 있습니다",
         "cancelRun": "{company} 평가 중단",
         "rowSeg": {
           "pending": "평가 대기 중 — 곧 시작합니다",
@@ -6517,7 +6516,6 @@
           "done": "완료"
         },
         "runNames": "{first} 외 {n}곳",
-        "runCount": "진행 {done}/{total}",
         "elapsed": "경과 {time}",
         "elapsedUnit": {
           "s": "{s}초",
@@ -6554,7 +6552,38 @@
         "promotedWithUnreviewed": "미검토 AI 판정 {n}건을 포함해 심사 종료했습니다.",
         "appliedReviewed": "적용 {k}건 · 사람 검토 {r}건",
         "versionScore": "점수",
-        "unchangedNoChange": "재평가 · 변경 없음"
+        "unchangedNoChange": "재평가 · 변경 없음",
+        "queued": "대기 중",
+        "queuedHint": "다른 평가가 끝나면 차례로 시작합니다",
+        "skippedActive": "이미 진행 중",
+        "skippedActiveHint": "다른 평가 실행이 이 후보를 이미 평가하고 있어 이번 실행에서는 건너뜁니다",
+        "pausedRunHint": "일시 정지되었거나 중단된 평가 실행이 이 후보를 잡고 있습니다. 그 실행을 이어서 실행하거나 중단한 뒤 다시 시작하세요",
+        "itemCancelled": "취소됨",
+        "cancelQueued": "대기 취소",
+        "cancelQueuedLabel": "대기 취소: {company}",
+        "rowQueuedBlock": "이 후보의 AI 평가가 대기 중입니다",
+        "queueSummary": "{done}/{total} 완료 · {running}건 진행 중 · {queued}건 대기",
+        "queueExtra": {
+          "skipped": "건너뜀 {n}건",
+          "cancelled": "취소 {n}건",
+          "failed": "실패 {n}건"
+        },
+        "queueEstimate": "대기열에 최대 {queued}곳을 넣고, {skipped}곳은 건너뜁니다 (이미 진행 중이거나 DART 미등록)",
+        "startNotice": {
+          "queued": "{n}곳을 평가 대기열에 넣었습니다.",
+          "none": "평가 대기열에 넣을 후보가 없습니다.",
+          "takenOver": "{n}곳은 일괄 평가 대기열에서 가져와 먼저 평가합니다.",
+          "skipped": "건너뜀 {n}곳: {reasons}.",
+          "pausedRun": "일시 정지된 평가 실행이 일부 후보를 잡고 있습니다. 그 실행을 이어서 실행하거나 중단하세요.",
+          "reason": {
+            "already_active": "이미 진행 중 {n}곳",
+            "paused_run": "일시 정지된 실행에 묶임 {n}곳",
+            "taken_over": "다른 실행에서 가져옴 {n}곳",
+            "not_dart": "DART 미등록 {n}곳",
+            "no_company": "기업 정보 없음 {n}곳",
+            "other": "기타 {n}곳"
+          }
+        }
       }
     },
     "s8": {

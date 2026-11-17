@@ -2,8 +2,9 @@
 
 // Run-state chips and run progress panel for the S6 longlist (ADR-0199 §10, ADR-0200).
 import { useTranslations } from "next-intl";
-import { PROGRESS_STATES } from "./aiEvalActive.ts";
+import { PROGRESS_STATES, RUNNING_STATES } from "./aiEvalActive.ts";
 import { ElapsedTime, PhaseText } from "./AiEvalPhase.tsx";
+import { QueueSummaryLine } from "./AiEvalQueuePanel.tsx";
 import {
   KNOWN_ITEM_CODES,
   KNOWN_PAUSE_REASONS,
@@ -32,7 +33,8 @@ export function RunStateChips({
 }) {
   const t = useTranslations("stages.s67.aiEval");
   const item = draft?.run_item;
-  const inFlight = (state: string) => (PROGRESS_STATES as readonly string[]).includes(state);
+  // A queued (`pending`) item is not "in progress": the row shows its own 대기 중 chip (AiEvalQueuePanel).
+  const inFlight = (state: string) => (RUNNING_STATES as readonly string[]).includes(state);
   const liveEval = !!live && live.runActive && inFlight(live.item.state);
   const failed = item?.state === "failed" || (!!live && !live.runActive && live.item.state === "failed");
   const inProgress = liveEval || (!!item && activeRunIds.includes(item.run_id) && inFlight(item.state));
@@ -88,6 +90,7 @@ export function AiEvalProgress({
   onResume,
   onCancel,
   compact = false,
+  live = true,
   nowMs,
 }: {
   view: RunProgressView;
@@ -97,6 +100,8 @@ export function AiEvalProgress({
   onCancel: (runId: string) => void;
   /** One row of the multi-run list: no card of its own, the cancel button names the candidate. */
   compact?: boolean;
+  /** Announce changes (aria-live); a run inside an already-live list passes false. */
+  live?: boolean;
   /** Pins the elapsed-time clock (tests). */
   nowMs?: number;
 }) {
@@ -120,11 +125,18 @@ export function AiEvalProgress({
     <Wrapper
       className={compact ? "ai-eval-progress" : "ai-eval-progress sizing-grade-card mb-2"}
       aria-label={compact ? undefined : t("progressRegion")}
+      aria-live={live ? "polite" : undefined}
     >
-      <div aria-live="polite" className="text-[length:var(--fs-body)]">
+      <div className="text-[length:var(--fs-body)]">
         {run.status === "running" && (
           <>
-            <strong>{names}</strong> — <PhaseText state={current?.state ?? first?.state ?? "pending"} />
+            <strong>{names}</strong>
+            {view.items.length <= 1 && (
+              <>
+                {" — "}
+                <PhaseText state={current?.state ?? first?.state ?? "pending"} />
+              </>
+            )}
           </>
         )}
         {paused && (
@@ -141,7 +153,7 @@ export function AiEvalProgress({
         )}
       </div>
       <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-        {t("runCount", { done, total })}
+        <QueueSummaryLine view={view} />
         {" · "}
         <ElapsedTime startedAt={run.started_at} nowMs={nowMs} />
       </p>
@@ -199,11 +211,11 @@ export function AiEvalRunsPanel({
   const props = { canAct, busy, onResume, onCancel };
   if (runs.length === 1) return <AiEvalProgress view={runs[0]} {...props} />;
   return (
-    <section className="sizing-grade-card mb-2" aria-label={t("progressRegion")}>
+    <section className="sizing-grade-card mb-2" aria-label={t("progressRegion")} aria-live="polite">
       <ul className="m-0 p-0 list-none flex flex-col gap-2">
         {runs.map((v) => (
           <li key={v.run?.id}>
-            <AiEvalProgress view={v} compact {...props} />
+            <AiEvalProgress view={v} compact live={false} {...props} />
           </li>
         ))}
       </ul>

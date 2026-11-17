@@ -4,7 +4,7 @@
 // candidate and starts the run with `target_ids: [id]`. Web evidence and force refresh stay OFF by default.
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { MAX_CONCURRENT_RUNS, type RowBlock } from "./aiEvalActive.ts";
+import type { RowBlock } from "./aiEvalActive.ts";
 import { AiEvalModal, AiEvalStartForm } from "./AiEvalDialogs.tsx";
 import type { StartOptions } from "./useAiEval.ts";
 
@@ -24,7 +24,7 @@ export function AiEvalRowButton({
   targetId: string;
   excluded: boolean;
   hasDart: boolean;
-  /** Run-state block (parallel runs): this candidate is already running, a bulk run is active, or the cap is reached. */
+  /** Run-state block: this candidate is waiting in the queue or running. Other runs never block it (ADR-0200 part B). */
   block: RowBlock | null;
   busy: boolean;
   onStart: (o: StartOptions, targetIds?: string[]) => Promise<boolean>;
@@ -32,14 +32,7 @@ export function AiEvalRowButton({
   const t = useTranslations("stages.s67.aiEval");
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<StartOptions>(DEFAULTS);
-  const blockText =
-    block === "target"
-      ? t("rowTargetRunning")
-      : block === "bulk"
-        ? t("rowRunning")
-        : block === "cap"
-          ? t("rowCapReached", { max: MAX_CONCURRENT_RUNS })
-          : null;
+  const blockText = block === "running" ? t("rowTargetRunning") : block === "queued" ? t("rowQueuedBlock") : null;
   const reason = excluded ? t("rowExcluded") : !hasDart ? t("rowNoDart") : blockText;
   const close = () => {
     setOpen(false);

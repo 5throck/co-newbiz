@@ -296,7 +296,7 @@ describe("progress panel: names, full step, elapsed time, cancel, nothing trunca
     expect(html).toContain("<strong>삼미금속</strong> — ");
     expect(html).toContain("재무 초안 완료");
     expect(html).toContain("기술 초안 작성 중(LLM 분석)");
-    expect(html).toContain("진행 0/1");
+    expect(html).toContain("0/1 완료 · 1건 진행 중 · 0건 대기");
     expect(html).toContain("경과 1분 05초");
     expect(html).toContain('aria-label="삼미금속 평가 중단"');
     expect(html).toContain(">중단</button>");
@@ -324,7 +324,9 @@ describe("progress panel: names, full step, elapsed time, cancel, nothing trunca
       view({ total_targets: 3 }, [item("a", "done"), item("b", "financial_sync"), item("c", "pending")]),
     );
     expect(html).toContain("회사b 외 2곳");
-    expect(html).toContain("DART 재무 동기화 중");
+    // parallel workers: no single step phrase for a bulk run, the full summary line carries the state
+    expect(html).not.toContain("DART 재무 동기화 중");
+    expect(html).toContain("1/3 완료 · 1건 진행 중 · 1건 대기");
   });
   test("ElapsedTime renders nothing without a parsable start", () => {
     expect(render(createElement(phase.ElapsedTime, { startedAt: null, nowMs: 1 }))).toBe("");
@@ -370,7 +372,7 @@ test("ko/en parity for the coverage and progress keys", () => {
     "rankProvisional",
     "coverageWeight",
     "versionCoverage",
-    "runCount",
+    "queueSummary",
     "elapsed",
     "runNames",
   ]) {

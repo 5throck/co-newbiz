@@ -89,6 +89,7 @@ export function AiEvalStartForm({
   onSubmit,
   onCancel,
   summary,
+  note,
 }: {
   value: StartOptions;
   onChange: (v: StartOptions) => void;
@@ -98,6 +99,8 @@ export function AiEvalStartForm({
   onCancel: () => void;
   /** Overrides the bulk summary line (the per-candidate dialog names the candidate). */
   summary?: string;
+  /** Extra line under the summary (bulk dialog: how many candidates will be queued and skipped). */
+  note?: string;
 }) {
   const t = useTranslations("stages.s67.aiEval");
   const tc = useTranslations("common");
@@ -113,6 +116,7 @@ export function AiEvalStartForm({
         {summary ??
           t("startSummary", { candidates: stats.candidates, dart: stats.dartEligible, calls: stats.estimatedCalls })}
       </p>
+      {note && <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{note}</p>}
       <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("appliesDirectly")}</p>
       <fieldset className="m-0 p-0 border-0">
         <legend className="text-[length:var(--fs-caption)] font-semibold">{t("categories")}</legend>
