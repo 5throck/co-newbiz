@@ -11,14 +11,11 @@ import {
   resumeRun,
 } from "../../../../../../../../../db/repositories/brownfield-eval-draft.repository.ts";
 import { authenticate, requireBusinessActor } from "../../../../../../../lib/auth.ts";
-import { promotedCarrierResponse } from "../../../../../../../lib/route-track-guard.ts";
+import { notSelectedResponse } from "../../../../../../../lib/selected-guard.ts";
+import { promotedCarrierResponse, trackConflictResponse } from "../../../../../../../lib/route-track-guard.ts";
 import { fail, notFound, ok } from "../../../../../../../lib/envelope.ts";
-import {
-  currentBudget,
-  dartReserve,
-  isEngineActive,
-  launchBulkEval,
-} from "../../../../../../../lib/brownfield-eval-bulk.ts";
+import { currentBudget, dartReserve } from "../../../../../../../lib/brownfield-eval-bulk.ts";
+import { isEngineActive, launchBulkEval } from "../../../../../../../lib/brownfield-eval-queue.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ oppId: string; runId: string }> }) {
   const auth = authenticate(request);
@@ -37,9 +34,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ opp
     "이 기회는 이미 프로젝트로 승격되었습니다 — 실행을 이어갈 수 없습니다.",
   );
   if (promoted) return promoted;
+  const selectionDenied = notSelectedResponse(db, oppId); // N2: S6 writes presuppose a selected opportunity
+  if (selectionDenied) return selectionDenied;
+  const conflict = trackConflictResponse(
+    db,
+    oppId,
+    "brownfield",
+    "S6 AI evaluation runs can only be resumed on the Brownfield route; this opportunity's current route decision is Greenfield.",
+  );
+  if (conflict) return conflict;
   const now = new Date().toISOString();
   if (!isEngineActive(runId)) {
-    markStaleRunInterrupted(db, oppId, now);
+    markStaleRunInterrupted(db, oppId, now, isEngineActive);
     run = getRun(db, runId) ?? run;
   }
   if (isEngineActive(runId)) return fail(409, "engine_active", "The run is still being processed.");

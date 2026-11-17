@@ -31,6 +31,7 @@ const { ulid } = await import("../../db/lib/ulid.ts");
 const repo = await import("../../db/repositories/brownfield-eval-draft.repository.ts");
 const cache = await import("../../db/repositories/dart-evidence-cache.repository.ts");
 const bulk = await import("../../app/web-next/lib/brownfield-eval-bulk.ts");
+const queue = await import("../../app/web-next/lib/brownfield-eval-queue.ts");
 const { listOrSeedCriteria, addCustomCriterion, updateCriterionRubric } = await import(
   "../../app/web-next/lib/brownfield-eval-criteria.ts"
 );
@@ -257,7 +258,7 @@ function deps(): Partial<import("../../app/web-next/lib/brownfield-eval-bulk.ts"
 
 async function settle(runId: string): Promise<void> {
   for (let i = 0; i < 500; i++) {
-    if (!bulk.isEngineActive(runId)) return;
+    if (!queue.isEngineActive(runId)) return;
     await new Promise((r) => setTimeout(r, 10));
   }
   throw new Error("engine did not settle");
@@ -817,21 +818,13 @@ describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
       [T.A, T.B],
     );
     clock = "2026-11-25T03:00:00.000Z";
-    c.used = 0;
-    let first = true;
-    onFetch = () => {
-      if (first) {
-        first = false;
-        c.used = 14_990; // budget nearly spent right after the first candidate's DART fetch
-      }
-    };
+    c.used = 14_990; // the DART budget is nearly spent: the item that needs DART calls pauses its run before it starts
     const runId = await startAndSettle({ force_refresh: true });
-    onFetch = null;
     const run = runOf(runId);
     expect(run.status).toBe("paused_budget");
     expect(run.pause_reason).toBe("dart_budget_reserve");
-    expect(itemOf(runId, "A").state).toBe("done");
-    expect(itemOf(runId, "B").state).toBe("pending"); // resumes at the first non-terminal item
+    expect(itemOf(runId, "A").state).toBe("pending"); // queued items stay pending and resume manually
+    expect(itemOf(runId, "B").state).toBe("pending");
     expect(auditActions().find((x) => x.action === "target_eval.bulk_run.pause")?.target).toBe(
       `${OPP}:run:${runId}:reason=dart_budget_reserve`,
     );
@@ -854,14 +847,14 @@ describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
     expect(runOf(runId).resumed_by).toBe(ANALYST);
     expect(runOf(runId).force_refresh).toBe(1);
     expect(itemOf(runId, "B").state).toBe("done");
-    // candidate A finished before the pause: the resume must not redo it (B legitimately gets a new version: its human-judged set changed)
-    expect(
-      (
-        db.query("SELECT COUNT(*) n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(T.A) as {
-          n: number;
-        }
-      ).n,
-    ).toBe(vBeforeA);
+    expect(itemOf(runId, "A").state).toBe("done");
+    // nothing was drafted while paused; the resume starts each pending item exactly once (no duplicate versions)
+    const vAfterA = (
+      db.query("SELECT COUNT(*) n FROM brownfield_eval_draft_version WHERE brownfield_target_id = ?").get(T.A) as {
+        n: number;
+      }
+    ).n;
+    expect(vAfterA).toBeGreaterThan(vBeforeA);
     expect(auditActions().some((x) => x.action === "target_eval.bulk_run.resume")).toBe(true);
     // a completed run cannot be resumed
     expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/resume`, {})).status).toBe(409);
@@ -869,7 +862,7 @@ describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
 
   test("T6: a stale heartbeat marks the run interrupted on read; resume completes it", async () => {
     clock = "2026-11-26T03:00:00.000Z";
-    const { run } = repo.createRun(db, {
+    const { run } = repo.createRunOrThrow(db, {
       opportunityId: OPP,
       categories: "both",
       targetIds: [T.A, T.B],
@@ -890,8 +883,8 @@ describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
     expect(runOf(run.id).status).toBe("completed");
   });
 
-  test("cancel: stops an active run, keeps written versions, leaves remaining items pending; a finished run cannot be cancelled", async () => {
-    const { run } = repo.createRun(db, {
+  test("cancel: stops an active run, keeps written versions, turns queued items into cancelled; a finished run cannot be cancelled", async () => {
+    const { run } = repo.createRunOrThrow(db, {
       opportunityId: OPP,
       categories: "both",
       targetIds: [T.A, T.B],
@@ -904,7 +897,9 @@ describe("T5 / T6 — budget pause, interrupted, manual resume", () => {
     const res = await post(`/api/brownfield/${OPP}/eval-draft-runs/${run.id}/cancel`, {});
     expect(res.status).toBe(200);
     expect(runOf(run.id).status).toBe("cancelled");
-    expect(repo.listRunItems(db, run.id).every((i) => i.state === "pending")).toBe(true);
+    expect(res.status).toBe(200);
+    expect((await data(res)).data.cancelled_items).toBe(2);
+    expect(repo.listRunItems(db, run.id).every((i) => i.state === "cancelled")).toBe(true);
     expect(auditActions().some((x) => x.action === "target_eval.bulk_run.cancel")).toBe(true);
     expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${run.id}/cancel`, {})).status).toBe(409);
   });
@@ -1053,31 +1048,52 @@ describe("security review fixes", () => {
     }
   });
 
-  test("4: a cancelled engine still finishing blocks a new start; per-user cooldown applies", async () => {
+  test("4: run cancel with items in flight — queued items are cancelled, the run ends cancelled after the in-flight step; no 409 for running work; per-user cooldown applies", async () => {
     addCustomCriterion(OPP, "technical", "취소 루프 항목", null, ANALYST);
+    // three more DART candidates (temporary): five DART items against a pool of three leaves two queued
+    const extra = [ulid(), ulid(), ulid()];
+    for (const [i, id] of extra.entries())
+      db.run(
+        "INSERT INTO brownfield_target (id, opportunity_id, company_name, dart_corp_code, created_at, updated_at) VALUES (?,?,?,?,?,?)",
+        [id, OPP, `임시후보${i}`, i % 2 ? CORP_A : CORP_B, NOW, NOW],
+      );
     let release: () => void = () => {};
     gate = new Promise<void>((r) => (release = r));
-    const res = await startRoute({ categories: "technical" });
-    const runId = (await data(res)).data.run_id as string;
-    for (let i = 0; i < 300 && !bulk.isEngineActive(runId); i++) await new Promise((r) => setTimeout(r, 10));
-    await new Promise((r) => setTimeout(r, 50));
-    expect((await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/cancel`, {})).status).toBe(200);
+    const runId = (await data(await startRoute({ categories: "technical" }))).data.run_id as string;
+    for (let i = 0; i < 300 && queue.inFlightCount() < queue.EVAL_WORKER_POOL_SIZE; i++)
+      await new Promise((r) => setTimeout(r, 10));
+    expect(queue.inFlightCount()).toBe(queue.EVAL_WORKER_POOL_SIZE);
+    const states = () => repo.listRunItems(db, runId).map((i) => i.state);
+    const queuedBefore = states().filter((x) => x === "pending").length;
+    expect(queuedBefore).toBeGreaterThan(0);
+    const cancel = await data(await post(`/api/brownfield/${OPP}/eval-draft-runs/${runId}/cancel`, {}));
+    expect(cancel.data.cancelled_items).toBe(queuedBefore);
+    expect(runOf(runId).status).toBe("running"); // ends cancelled once the in-flight items return
+    expect(queue.isEngineActive(runId)).toBe(true);
+    // a new bulk start is accepted (202): in-flight candidates are skipped_active, the cancelled ones are queued again
     const again = await startRoute({ categories: "technical" });
-    expect(again.status).toBe(409);
-    const body = await data(again);
-    expect(body.error.code).toBe("engine_active");
-    expect(body.error.details.run_id).toBe(runId);
-    expect(body.error.details.reason).toBe("bulk_block");
-    // A single-candidate start is allowed beside the cancelled engine still finishing (it counts toward the cap,
-    // but the cap is 3): a fresh single-candidate run starts while the cancelled engine finishes its item.
-    const solo = await startRoute({ categories: "technical", target_ids: [T.A] });
-    expect(solo.status).toBe(202);
+    expect(again.status).toBe(202);
+    const againBody = await data(again);
+    expect(againBody.data.queued).toBe(queuedBefore);
+    expect(againBody.data.skipped.filter((x: any) => x.reason === "already_active").length).toBe(
+      queue.EVAL_WORKER_POOL_SIZE,
+    );
+    // a single start of an in-flight candidate is skipped, not refused
+    const inFlightTarget = repo.listRunItems(db, runId).find((i) => i.state !== "cancelled" && i.state !== "pending");
+    const solo = await startRoute({ categories: "technical", target_ids: [inFlightTarget!.brownfield_target_id] });
+    expect(solo.status).toBe(200); // nothing to enqueue: no run row, run_id null
     const soloBody = await data(solo);
-    expect(soloBody.meta.reused).toBe(false);
+    expect(soloBody.data.run_id).toBeNull();
+    expect(soloBody.data.skipped).toEqual([
+      { target_id: inFlightTarget!.brownfield_target_id, reason: "already_active" },
+    ]);
     release();
     gate = null;
-    await settle(soloBody.data.run_id as string);
     await settle(runId);
+    await settle(againBody.data.run_id as string);
+    expect(runOf(runId).status).toBe("cancelled");
+    expect(states().filter((x) => x === "cancelled").length).toBe(queuedBefore);
+    db.run(`UPDATE brownfield_target SET status = 'excluded' WHERE id IN (${extra.map(() => "?").join(",")})`, extra);
     bulk.setStartCooldownForTests(60_000);
     bulk.noteRunStart(ANALYST);
     const cool = await startRoute({});
@@ -1113,7 +1129,7 @@ describe("security review fixes", () => {
   });
 });
 
-describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follow-up)", () => {
+describe("per-candidate concurrency (EVAL_WORKER_POOL_SIZE, ADR-0199 follow-up, ADR-0200 decision 8)", () => {
   const TC: Record<"C" | "D" | "E", string> = { C: ulid(), D: ulid(), E: ulid() };
   let runC = "";
   beforeAll(() => {
@@ -1130,7 +1146,7 @@ describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follo
     mk(TC.E, "가나다이", CORP_A);
   });
 
-  const engineCount = () => bulk.activeEngineRunsForOpportunity(OPP).length;
+  const engineCount = () => queue.activeEngineRunsForOpportunity(OPP).length;
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   async function waitForEngines(n: number): Promise<void> {
     for (let i = 0; i < 500; i++) {
@@ -1141,7 +1157,7 @@ describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follo
   }
   const startSingle = (id: string) => startRoute({ categories: "technical", target_ids: [id] });
 
-  test("single-candidate starts run beside each other up to the cap; bulk always needs a quiet engine table", async () => {
+  test("single-candidate starts run beside each other up to the pool size; further starts queue (202), never 409", async () => {
     let release: () => void = () => {};
     gate = new Promise<void>((r) => (release = r));
     llmMode = "ok";
@@ -1155,18 +1171,28 @@ describe("per-candidate concurrency (MAX_CONCURRENT_EVAL_ENGINES, ADR-0199 follo
     }
     runC = ids[0];
     await waitForEngines(3);
-    // the 4th engine is refused at the cap, with the machine-readable reason
+    for (let i = 0; i < 300 && queue.inFlightCount() < 3; i++) await sleep(10);
+    expect(queue.inFlightCount()).toBe(3);
+    // the 4th single start waits for a slot: 202 with queued = 1
     const capped = await startSingle(T.A);
-    expect(capped.status).toBe(409);
-    const capBody = await data(capped);
-    expect(capBody.error.code).toBe("engine_active");
-    expect(capBody.error.details.reason).toBe("concurrency_cap");
-    // bulk (no target_ids) and multi-id starts refuse on ANY active engine
-    for (const body of [{}, { target_ids: [T.A, TC.D] }]) {
-      const res = await startRoute(body);
-      expect(res.status).toBe(409);
-      expect((await data(res)).error.details.reason).toBe("bulk_block");
-    }
+    expect(capped.status).toBe(202);
+    const cappedBody = await data(capped);
+    expect(cappedBody.data.queued).toBe(1);
+    ids.push(cappedBody.data.run_id as string);
+    expect(queue.inFlightCount()).toBe(3);
+    // a bulk start while singles run is accepted too: A waits in a single run, C/D/E run, N is not a DART company (B was excluded earlier)
+    const bulkRes = await startRoute({});
+    expect(bulkRes.status).toBe(200); // every candidate skipped: no run is created
+    const bulkBody = await data(bulkRes);
+    expect(bulkBody.data.run_id).toBeNull();
+    expect(bulkBody.data.queued).toBe(0); // nothing is free: every other candidate is active or not a DART company
+    expect(bulkBody.data.skipped.map((x: any) => x.reason).sort()).toEqual([
+      "already_active",
+      "already_active",
+      "already_active",
+      "already_active",
+      "not_dart",
+    ]);
     // reuse still works per candidate set: the same single start reuses its own active run
     const again = await startSingle(TC.C);
     expect(again.status).toBe(202);
