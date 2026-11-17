@@ -10,6 +10,7 @@ import { useSynergyResult } from "./useSynergyResult.ts";
 import { COMPLETION_HEADING_ID, SynergySelectPanel } from "./SynergySelectPanel.tsx";
 import { SynergyCompletionStatusLine } from "./SynergyCompletionStatusLine.tsx";
 import { useOpportunityStatus } from "./useOpportunityStatus.ts";
+import { CapabilityRescoreNotice, isCapabilityStale } from "./CapabilityRescoreNotice.tsx";
 import { SynergyScoreEvaluationTab, SynergyShortlistTab, SynergyProfileContext } from "./SynergyTabs.tsx";
 import { SynergyCapabilityTab } from "./SynergyCapabilityTab.tsx";
 import { SynergyFlowDiagram } from "./SynergyFlowDiagram.tsx";
@@ -189,6 +190,14 @@ export function SynergyResult(props0: {
 
           {tab === "capability" && <SynergyCapabilityTab ctx={ctx} p={p} />}
 
+          {tab === "scoreEval" && isCapabilityStale(p.synergyScoreFactors, ctx.gapSummary.evaluated) && (
+            <CapabilityRescoreNotice
+              analysisId={ctx.analysis?.id}
+              canCurate={ctx.canCurate}
+              onRefresh={ctx.onRefresh}
+              refreshSynState={ctx.refreshSynState}
+            />
+          )}
           {tab === "scoreEval" && <SynergyScoreEvaluationTab ctx={ctx} p={p} />}
 
           {tab === "refs" && (
