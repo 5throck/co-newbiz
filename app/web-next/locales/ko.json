@@ -6060,6 +6060,7 @@
         "unreviewedSuffix": "(AI 미검토 {n})"
       },
       "longlistSection": {
+        "statusShortlistedShort": "최종 후보",
         "dartCorpCode": "DART 고유번호",
         "adjustShortlistRanking": "최종 후보 목록 순위 조정",
         "candidate": "후보",
