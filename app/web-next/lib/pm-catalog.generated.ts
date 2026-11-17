@@ -51,7 +51,7 @@ export const CATALOG_VERSION = "1.0.0";
 export const SPEC_VERSION = "2.21.1";
 /** SSOT 원문 해시(앞 16자) — 드리프트 원인 규명용. */
 export const CATALOG_SOURCES = {
-  "promptsJson": "553b67d58c4de91e",
+  "promptsJson": "6d90db3259ca64d1",
   "flowSpecYaml": "2fe5973c32ae7b0c",
   "agentRoster": "4f4cf81169a7e46f"
 };
@@ -294,7 +294,7 @@ export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {
     "agentKey": "brownfield-agent",
     "activityId": "deal-shape-evaluation",
     "stageId": "S7",
-    "purpose": "S7 진출 형태 평가 — 최종 후보 목록·S6·S3 산출물 기반 형태별 가능 여부 추천 (제안 전용)",
+    "purpose": "S7 진출 형태 평가 — 전체 가능 여부 우선, 가능할 때만 형태·의도·형태별 근거 추천 (제안 전용)",
     "trackScope": [
       "brownfield"
     ]
