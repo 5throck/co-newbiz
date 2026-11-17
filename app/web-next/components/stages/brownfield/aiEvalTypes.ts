@@ -31,6 +31,17 @@ export interface RunItemView {
   error_message: string | null;
 }
 
+/** Per-state item counts of a run (A2 `counts`; design 2026-11-17 §10.8). */
+export interface RunItemCounts {
+  done: number;
+  running: number;
+  queued: number;
+  skipped: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+}
+
 /** A2 — latest run header + items (`run: null` when the opportunity never ran). */
 export interface RunProgressView {
   run: {
@@ -46,6 +57,8 @@ export interface RunProgressView {
   } | null;
   items: RunItemView[];
   progress: { done: number; total: number };
+  /** Queue model (ADR-0200 part B); absent on older payloads, in which case it is derived from `items`. */
+  counts?: RunItemCounts;
   budget: { calls: number; budget: number; reserve: number };
 }
 
@@ -92,8 +105,10 @@ export const KNOWN_ITEM_CODES = [
 export const KNOWN_PAUSE_REASONS = ["dart_budget_reserve", "dart_budget_exhausted", "dart_status_020"] as const;
 export const KNOWN_CALL_ERRORS = [
   "engine_active",
-  "engine_active_bulk_block",
-  "engine_active_concurrency_cap",
+  "queue_full",
+  "item_running",
+  "item_finished",
+  "not_selected",
   "already_promoted",
   "start_cooldown",
   "budget_reserve",

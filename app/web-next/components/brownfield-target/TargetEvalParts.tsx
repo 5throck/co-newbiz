@@ -45,6 +45,12 @@ export function EvalAiBar({ ctx, unreviewedTotal }: { ctx: TargetDetailViewState
           {ta("appliesDirectly")}
         </span>
       </div>
+      {ai.notice && (
+        <p role="status" className="m-0 text-[length:var(--fs-caption)]">
+          <span aria-hidden="true">ⓘ </span>
+          {ai.notice}
+        </p>
+      )}
       {ai.message && (
         <p role="alert" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--red-fg)]">
           {ai.message}

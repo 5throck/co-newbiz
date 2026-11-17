@@ -54,31 +54,33 @@ const run = (id: string, targetIds: string[], state = "financial_draft", done = 
   budget: { calls: 0, budget: 0, reserve: 0 },
 });
 
-describe("rowBlock: what disables a row", () => {
+describe("rowBlock: what disables a row (queue model, ADR-0200 part B)", () => {
   const two = [run("r1", ["a"]), run("r2", ["b"], "financial_sync")];
   test("idle with no active run, and an idle third row next to two single runs", () => {
     expect(active.rowBlock([], "c")).toBeNull();
     expect(active.rowBlock(two, "c")).toBeNull();
   });
-  test("the candidate with its own in-flight item is blocked, the others are not", () => {
-    expect(active.rowBlock(two, "a")).toBe("target");
-    expect(active.rowBlock(two, "b")).toBe("target");
+  test("the candidate with its own running item is blocked, the others are not", () => {
+    expect(active.rowBlock(two, "a")).toBe("running");
+    expect(active.rowBlock(two, "b")).toBe("running");
   });
-  test("a finished item of an active run does not block its candidate", () => {
+  test("a finished, skipped or cancelled item of an active run does not block its candidate", () => {
     expect(active.rowBlock([run("r1", ["a"], "done")], "a")).toBeNull();
+    expect(active.rowBlock([run("r1", ["a"], "skipped_active")], "a")).toBeNull();
+    expect(active.rowBlock([run("r1", ["a"], "cancelled")], "a")).toBeNull();
   });
-  test("cap: three active runs block every other row; two do not", () => {
-    const three = [...two, run("r3", ["c"])];
-    expect(active.MAX_CONCURRENT_RUNS).toBe(3);
-    expect(active.rowBlock(three, "d")).toBe("cap");
-    expect(active.rowBlock(three, "c")).toBe("target"); // own run wins over the cap
-    expect(active.rowBlock(two, "d")).toBeNull();
+  test("no frontend concurrency cap: any number of other runs leaves an idle row startable", () => {
+    const many = ["r1", "r2", "r3", "r4", "r5"].map((id, i) => run(id, [`x${i}`]));
+    expect(active.rowBlock(many, "d")).toBeNull();
+    expect(active.MAX_CONCURRENT_RUNS).toBeUndefined();
   });
-  test("a bulk run (more than one candidate) blocks idle rows with the bulk reason", () => {
-    const bulk = [run("rb", ["a", "b", "c"], "pending")];
-    expect(active.isBulkRun(bulk[0])).toBe(true);
-    expect(active.rowBlock(bulk, "d")).toBe("bulk");
-    expect(active.rowBlock([run("rb", ["a", "b"], "done")], "a")).toBe("bulk"); // done item, still a bulk run
+  test("a bulk run only blocks the candidates it holds: queued rows are 'queued', running rows 'running'", () => {
+    const bulk = run("rb", ["a", "b", "c"], "pending");
+    bulk.items[0].state = "technical_draft";
+    expect(active.rowBlock([bulk], "a")).toBe("running");
+    expect(active.rowBlock([bulk], "b")).toBe("queued");
+    expect(active.rowBlock([bulk], "d")).toBeNull(); // not in the run
+    expect(active.rowBlock([run("rb", ["a", "b"], "done")], "a")).toBeNull();
   });
 });
 
@@ -124,28 +126,9 @@ describe("rows rendered from two simultaneous runs plus an idle row", () => {
     expect(html).toContain('aria-label="Gamma AI 평가 실행"');
     expect(chipsFor("c")).toBe("");
   });
-  test("cap reached: the idle row is disabled with the cap reason (ko + en)", () => {
-    const three = [...runs, run("r3", ["z"])];
-    const btn = (locale: "ko" | "en") =>
-      render(
-        createElement(rowBtn.AiEvalRowButton, {
-          companyName: "Gamma",
-          targetId: "c",
-          excluded: false,
-          hasDart: true,
-          block: active.rowBlock(three, "c"),
-          busy: false,
-          onStart: async () => true,
-        }),
-        locale,
-      );
-    expect(btn("ko")).toContain("동시에 실행할 수 있는 AI 평가 3건에 도달했습니다");
-    expect(btn("en")).toContain("limit of 3 concurrent AI evaluations");
-    expect(btn("ko")).toContain("disabled");
-  });
   test("liveFor falls back to the latest run's item (not active) once nothing is running", () => {
     const latest = run("r9", ["c"], "done");
-    expect(active.liveFor([], latest, "c")).toEqual({ runActive: false, item: latest.items[0] });
+    expect(active.liveFor([], latest, "c")).toEqual({ runActive: false, runId: "r9", item: latest.items[0] });
     expect(active.liveFor([], latest, "x")).toBeNull();
   });
   test("the longlist wires rowBlock / liveFor / the runs panel from useAiEval's activeRuns", () => {
@@ -153,28 +136,29 @@ describe("rows rendered from two simultaneous runs plus an idle row", () => {
     expect(src).toContain("rowBlock(ai.activeRuns, tgt.id)");
     expect(src).toContain("liveFor(ai.activeRuns, ai.view, tgt.id)");
     expect(src).toContain("<AiEvalRunsPanel");
-    expect(src).toContain("disabled={anyRunActive}");
+    expect(src).not.toContain("anyRunActive");
+    expect(src).toContain("estimate={estimateBulkStart(");
     expect(src).not.toContain("activeRunId !== null");
   });
 });
 
 describe("toolbar bulk button", () => {
-  const bulk = (disabled: boolean) =>
+  const bulk = (estimate = { queued: 4, skippedActive: 0, skippedNotDart: 1 }, locale: "ko" | "en" = "ko") =>
     render(
       createElement(start.AiEvalStartButton, {
         candidates: 5,
         dartEligible: 4,
-        disabled,
+        estimate,
         busy: false,
         onStart: async () => true,
       }),
+      locale,
     );
-  test("disabled while any run is active, with the reason as title", () => {
-    const html = bulk(true);
-    expect(html).toContain("disabled");
-    expect(html).toContain(ko.stages.s67.aiEval.bulkBlocked);
-    expect(bulk(false)).not.toContain("disabled");
-    expect(bulk(false)).toContain(ko.stages.s67.aiEval.actionHint);
+  test("enabled while other runs exist: no disabled prop, no block reason", () => {
+    const html = bulk({ queued: 0, skippedActive: 4, skippedNotDart: 1 });
+    expect(html).not.toContain("disabled");
+    expect(html).toContain(ko.stages.s67.aiEval.actionHint);
+    expect(readFileSync(`${DIR}/AiEvalStart.tsx`, "utf8")).not.toContain("bulkBlocked");
   });
 });
 
@@ -217,20 +201,19 @@ describe("runs panel lists every active run compactly", () => {
   });
 });
 
-describe("409 engine_active reasons", () => {
-  test("details.reason maps to a specific catalog key, everything else keeps the code", () => {
-    expect(active.callErrorKey("engine_active", { reason: "bulk_block" })).toBe("engine_active_bulk_block");
-    expect(active.callErrorKey("engine_active", { reason: "concurrency_cap" })).toBe("engine_active_concurrency_cap");
-    expect(active.callErrorKey("engine_active", { reason: "other" })).toBe("engine_active");
-    expect(active.callErrorKey("engine_active", undefined)).toBe("engine_active");
-    expect(active.callErrorKey("start_cooldown", { reason: "bulk_block" })).toBe("start_cooldown");
-  });
-  test("both new keys are known codes with ko + en text", () => {
-    for (const k of ["engine_active_bulk_block", "engine_active_concurrency_cap"]) {
+describe("call errors and run tracking", () => {
+  test("the queue error codes are known codes with ko + en text; the retired 409 reasons are gone", () => {
+    for (const k of ["queue_full", "item_running", "item_finished", "not_selected", "start_cooldown"]) {
       expect(types.KNOWN_CALL_ERRORS).toContain(k);
       expect(ko.stages.s67.aiEval.callErrors[k]).toBeTruthy();
       expect(en.stages.s67.aiEval.callErrors[k]).toBeTruthy();
     }
+    for (const k of ["engine_active_bulk_block", "engine_active_concurrency_cap"]) {
+      expect(types.KNOWN_CALL_ERRORS).not.toContain(k);
+      expect(ko.stages.s67.aiEval.callErrors[k]).toBeUndefined();
+      expect(en.stages.s67.aiEval.callErrors[k]).toBeUndefined();
+    }
+    expect(active.callErrorKey).toBeUndefined();
   });
   test("a run leaving the active set is detected (drives the chip refresh)", () => {
     expect(active.finishedRunIds(["r1", "r2"], ["r2"])).toEqual(["r1"]);
@@ -275,8 +258,12 @@ describe("modal shell: focus hook lives in the mounted panel, close button, labe
 });
 
 test("ko/en parity for the new keys", () => {
-  for (const k of ["rowTargetRunning", "rowCapReached", "bulkBlocked", "cancelRun"]) {
+  for (const k of ["rowTargetRunning", "rowQueuedBlock", "cancelRun"]) {
     expect(ko.stages.s67.aiEval[k]).toBeTruthy();
     expect(en.stages.s67.aiEval[k]).toBeTruthy();
+  }
+  for (const k of ["rowRunning", "rowCapReached", "bulkBlocked"]) {
+    expect(ko.stages.s67.aiEval[k]).toBeUndefined();
+    expect(en.stages.s67.aiEval[k]).toBeUndefined();
   }
 });

@@ -17,6 +17,8 @@ import { useTranslations } from "next-intl";
 import { AiEvalRunsPanel, RunStateChips } from "./AiEvalChips.tsx";
 import { RankMarkers, RowMarkers, ScoreChips } from "./AiEvalCoverage.tsx";
 import { liveFor, rowBlock } from "./aiEvalActive.ts";
+import { estimateBulkStart, rowQueueState } from "./aiEvalQueueState.ts";
+import { RowQueueChips } from "./AiEvalQueuePanel.tsx";
 import { PromoteButton, reviewItemsHref, unreviewedOf } from "./AiEvalPromote.tsx";
 import { AiEvalCriteriaDialog } from "./AiEvalCriteriaPanel.tsx";
 import { AiEvalRowButton } from "./AiEvalRowButton.tsx";
@@ -57,7 +59,6 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
     if (n > 0) setPromoteNote(ta("promotedWithUnreviewed", { n }));
   }
   const activeRunIds = ai.activeRuns.flatMap((v) => (v.run ? [v.run.id] : []));
-  const anyRunActive = activeRunIds.length > 0;
   const evalCandidates = targets.filter((x) => x.status !== "excluded");
   const visibleTargets = filterTargetsByStatus(displayedTargets, statusFilter);
   const statusLabels = STATUS_LABEL(tr);
@@ -88,7 +89,10 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                     <AiEvalStartButton
                       candidates={evalCandidates.length}
                       dartEligible={evalCandidates.filter((x) => !!x.dart_corp_code).length}
-                      disabled={anyRunActive}
+                      estimate={estimateBulkStart(
+                        evalCandidates.map((x) => ({ id: x.id, hasDart: !!x.dart_corp_code })),
+                        ai.activeRuns,
+                      )}
                       busy={ai.busy}
                       onStart={ai.start}
                     />
@@ -103,6 +107,12 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
               <p role="status" className="text-[length:var(--fs-caption)] mt-0 mb-2">
                 <span aria-hidden="true">⚠ </span>
                 {promoteNote}
+              </p>
+            )}
+            {ai.notice && (
+              <p role="status" className="text-[length:var(--fs-caption)] mt-0 mb-2">
+                <span aria-hidden="true">ⓘ </span>
+                {ai.notice}
               </p>
             )}
             {ai.message && (
@@ -230,6 +240,12 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                   dartCorpCode={tgt.dart_corp_code}
                                   activeRunIds={activeRunIds}
                                   live={liveFor(ai.activeRuns, ai.view, tgt.id)}
+                                />
+                                <RowQueueChips
+                                  state={rowQueueState(liveFor(ai.activeRuns, ai.view, tgt.id))}
+                                  companyName={tgt.company_name}
+                                  busy={ai.busy}
+                                  onCancelQueued={canAct ? (runId, itemId) => void ai.cancelItem(runId, itemId) : null}
                                 />
                               </td>
                               <td className="col-num tabular-nums" title={t("provisionalRankingByTheFinancial")}>

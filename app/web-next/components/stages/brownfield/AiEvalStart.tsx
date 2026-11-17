@@ -4,6 +4,7 @@
 // default to OFF; the run is a proposal and a person confirms verdicts per candidate.
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import type { BulkEstimate } from "./aiEvalQueueState.ts";
 import { AiEvalModal, AiEvalStartForm } from "./AiEvalDialogs.tsx";
 import type { StartOptions } from "./useAiEval.ts";
 
@@ -14,13 +15,14 @@ const MAX_CALLS_PER_CANDIDATE = 14;
 export function AiEvalStartButton({
   candidates,
   dartEligible,
-  disabled,
+  estimate,
   busy,
   onStart,
 }: {
   candidates: number;
   dartEligible: number;
-  disabled: boolean;
+  /** How many candidates this start would queue or skip, derived from the active runs (the server has the last word). */
+  estimate: BulkEstimate;
   busy: boolean;
   onStart: (o: StartOptions) => Promise<boolean>;
 }) {
@@ -36,8 +38,8 @@ export function AiEvalStartButton({
       <button
         type="button"
         className="btn-ghost btn-sm"
-        disabled={disabled || busy || candidates === 0}
-        title={candidates === 0 ? t("noCandidates") : disabled ? t("bulkBlocked") : t("actionHint")}
+        disabled={busy || candidates === 0}
+        title={candidates === 0 ? t("noCandidates") : t("actionHint")}
         onClick={() => setOpen(true)}
       >
         {t("action")}
@@ -48,10 +50,14 @@ export function AiEvalStartButton({
             value={value}
             onChange={setValue}
             stats={{ candidates, dartEligible, estimatedCalls: dartEligible * MAX_CALLS_PER_CANDIDATE }}
+            note={t("queueEstimate", {
+              queued: estimate.queued,
+              skipped: estimate.skippedActive + estimate.skippedNotDart,
+            })}
             busy={busy}
             onCancel={close}
             onSubmit={() => {
-              // Close either way: a refusal (409 / 429) is shown by the section's alert line, not trapped here.
+              // Close either way: a refusal (429 / 409) is shown by the section's alert line, not trapped here.
               void onStart(value).then(close);
             }}
           />
