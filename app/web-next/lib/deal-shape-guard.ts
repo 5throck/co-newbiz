@@ -4,6 +4,9 @@
 // CURRENT route decision (is_current = 1, ADR-0135) is not brownfield. Reads stay open: the viable count is what kill
 // criterion #9 evaluates at target_screening and a recorded history must stay visible.
 //
+// A terminated/killed opportunity is NOT refused here: with the process killed every stage reads terminated, so S7 cannot be
+// told apart and only the track rule applies - a killed brownfield opportunity stays writable (pinned by a test).
+//
 // This is the single enforcement point for every write path: the web panel and the MCP record_deal_shape_evaluation tool
 // both reach the REST route (ADR-0011), and only the route calls the repository.
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";

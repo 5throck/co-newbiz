@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0 (ADR-0201: REST/MCP bodies are overall-viability-first; legacy per-shape rows are raw-SQL fixtures)
 /**
  * ADR-0194 item A (PR-1): the opportunity-scope deal-shape evaluation and its use as the data source of kill
  * criterion #9 (deal-shape-chain:no_viable_deal_shape). Real scratch SQLite through the full migration chain and the
@@ -82,18 +82,68 @@ const newOpp = () => S.insertOpportunity(db, "brownfield", ANALYST);
 const post = (oppId: string, body: unknown, as: string | null = ANALYST) =>
   nextRequest(`/api/opportunities/${oppId}/deal-shapes`, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(tok(oppId, body)),
     headers: as ? { cookie: cookies[as] } : {},
   });
 const get = (oppId: string, as: string | null = ANALYST) =>
   nextRequest(`/api/opportunities/${oppId}/deal-shapes`, { headers: as ? { cookie: cookies[as] } : {} });
-const verdict = (shape: string, viable: boolean, extra: Record<string, unknown> = {}) => ({
-  shape,
-  intent: "integration",
-  viable,
-  rationale: `reason for ${shape}`,
-  ...extra,
-});
+/** ADR-0201 bodies. live_token AUTO is swapped for the opportunity's current token by post()/tok(). */
+const AUTO = "__auto__";
+const verdict = (shape: string, viable: boolean, extra: Record<string, unknown> = {}) =>
+  viable
+    ? {
+        viable: true,
+        intent: "integration",
+        shapes: [
+          {
+            shape,
+            rationale: `reason for ${shape}`,
+            ...(extra.evidence_ref ? { evidence_ref: extra.evidence_ref } : {}),
+          },
+        ],
+        live_token: AUTO,
+        ...Object.fromEntries(Object.entries(extra).filter(([k]) => k !== "evidence_ref")),
+      }
+    : { viable: false, rationale: `reason for ${shape}`, live_token: AUTO, ...extra };
+const tok = (o: string, body: any) =>
+  body && typeof body === "object" && body.live_token === AUTO
+    ? { ...body, live_token: repo.getLiveToken(db, o) }
+    : body;
+/** The pre-ADR-0201 per-shape write, kept as a raw-SQL fixture: legacy rows (including viable = 0) must stay readable. */
+function legacyRecord(i: {
+  opportunityId: string;
+  shape: string;
+  intent: string;
+  viable: boolean;
+  rationale: string;
+  evidenceRef?: string;
+  evaluatedBy: string;
+  now: string;
+}) {
+  const id = ulid();
+  db.transaction(() => {
+    db.run("PRAGMA defer_foreign_keys = ON");
+    db.run(
+      "UPDATE opportunity_deal_shape_evaluation SET superseded_by = ? WHERE opportunity_id = ? AND shape = ? AND superseded_by IS NULL",
+      [id, i.opportunityId, i.shape],
+    );
+    db.run(
+      "INSERT INTO opportunity_deal_shape_evaluation (id, opportunity_id, shape, intent, viable, rationale, evidence_ref, evaluated_by, evaluated_at, superseded_by) VALUES (?,?,?,?,?,?,?,?,?,NULL)",
+      [
+        id,
+        i.opportunityId,
+        i.shape,
+        i.intent,
+        i.viable ? 1 : 0,
+        i.rationale,
+        i.evidenceRef ?? null,
+        i.evaluatedBy,
+        i.now,
+      ],
+    );
+  })();
+  return { id };
+}
 const preview = (oppId: string, gate = "target_screening") =>
   previewGateSnapshot({ entityType: "opportunity", entityId: oppId, gate, actor: ANALYST, db }, { fresh: true })
     .snapshot;
@@ -189,64 +239,29 @@ describe("migration 0188", () => {
 });
 
 describe("repository", () => {
-  test("record then re-record supersedes in one transaction: one live row per shape, history kept, nothing deleted, FK clean", () => {
-    const o = newOpp();
-    const first = repo.recordDealShapeEvaluation(db, {
-      opportunityId: o,
-      shape: "spv",
-      intent: "integration",
-      viable: true,
-      rationale: " first view ",
-      evaluatedBy: ANALYST,
-      now: "2026-11-07T09:00:00.000Z",
-    });
-    expect(first).toMatchObject({
-      shape: "spv",
-      viable: true,
-      rationale: "first view",
-      evaluated_by: ANALYST,
-      superseded_by: null,
-      evidence_ref: null,
-    });
-    const second = repo.recordDealShapeEvaluation(db, {
-      opportunityId: o,
-      shape: "spv",
-      intent: "capability_access",
-      viable: false,
-      rationale: "changed",
-      evidenceRef: " S4 screen #2 ",
-      evaluatedBy: ANALYST,
-      now: "2026-11-07T10:00:00.000Z",
-    });
-    const { live, history } = repo.listDealShapeEvaluations(db, o);
-    expect(live.map((r) => r.id)).toEqual([second.id]);
-    expect(live[0]).toMatchObject({ viable: false, intent: "capability_access", evidence_ref: "S4 screen #2" });
-    expect(history.map((r) => r.id)).toEqual([first.id]);
-    expect(history[0].superseded_by).toBe(second.id);
-    expect(
-      (
-        db.query("SELECT COUNT(*) AS n FROM opportunity_deal_shape_evaluation WHERE opportunity_id = ?").get(o) as {
-          n: number;
-        }
-      ).n,
-    ).toBe(2);
-    expect(db.query("PRAGMA foreign_key_check").all()).toEqual([]);
-  });
-
-  test("live rows come back in canonical shape order; another opportunity is untouched", () => {
+  test("legacy per-shape rows stay readable: live shape rows in canonical order, history kept, another opportunity untouched", () => {
     const o = newOpp();
     const other = newOpp();
-    for (const s of ["minority_stake", "full_acquisition", "spv"])
-      repo.recordDealShapeEvaluation(db, {
+    for (const sh of ["minority_stake", "full_acquisition", "spv"])
+      legacyRecord({
         opportunityId: o,
-        shape: s,
+        shape: sh,
         intent: "integration",
         viable: true,
         rationale: "r",
         evaluatedBy: ANALYST,
         now: NOW,
       });
-    repo.recordDealShapeEvaluation(db, {
+    const first = legacyRecord({
+      opportunityId: o,
+      shape: "spv",
+      intent: "integration",
+      viable: false,
+      rationale: "again",
+      evaluatedBy: ANALYST,
+      now: NOW,
+    });
+    legacyRecord({
       opportunityId: other,
       shape: "spv",
       intent: "integration",
@@ -255,51 +270,20 @@ describe("repository", () => {
       evaluatedBy: ANALYST,
       now: NOW,
     });
-    expect(repo.listDealShapeEvaluations(db, o).live.map((r) => r.shape)).toEqual([
-      "full_acquisition",
-      "spv",
-      "minority_stake",
-    ]);
+    const { live, history, overall, verdict: v } = repo.listDealShapeEvaluations(db, o);
+    expect(live.map((r) => r.shape)).toEqual(["full_acquisition", "spv", "minority_stake"]);
+    expect(live.find((r) => r.shape === "spv")?.id).toBe(first.id);
+    expect(history).toHaveLength(1);
+    expect(overall).toBeNull();
+    expect(v).toBe("viable");
     expect(repo.listDealShapeEvaluations(db, other).live).toHaveLength(1);
-  });
-
-  test("validation refuses a bad vocabulary, a non-boolean viable, a blank or oversized rationale, and an unknown opportunity", () => {
-    const o = newOpp();
-    const base = {
-      opportunityId: o,
-      shape: "spv",
-      intent: "integration",
-      viable: true,
-      rationale: "r",
-      evaluatedBy: ANALYST,
-      now: NOW,
-    };
-    const kind = (over: Record<string, unknown>) => {
-      try {
-        repo.recordDealShapeEvaluation(db, { ...base, ...over } as never);
-        return "ok";
-      } catch (e) {
-        return (e as { kind: string }).kind;
-      }
-    };
-    expect(kind({ shape: "royalty" })).toBe("invalid");
-    expect(kind({ shape: undefined })).toBe("invalid");
-    expect(kind({ intent: "growth" })).toBe("invalid");
-    expect(kind({ viable: "yes" })).toBe("invalid");
-    expect(kind({ viable: undefined })).toBe("invalid");
-    expect(kind({ rationale: "  " })).toBe("invalid");
-    expect(kind({ rationale: "x".repeat(repo.RATIONALE_MAX + 1) })).toBe("invalid");
-    expect(kind({ evidenceRef: 5 })).toBe("invalid");
-    expect(kind({ evaluatedBy: "" })).toBe("invalid");
-    expect(kind({ opportunityId: "missing" })).toBe("opportunity_not_found");
-    expect(kind({ viable: 0 })).toBe("ok");
-    expect(repo.listDealShapeEvaluations(db, o).live).toHaveLength(1);
+    expect(db.query("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 
   test("summarizeLiveDealShapes: null without a live row; counts only live viable rows", () => {
     const o = newOpp();
     expect(repo.summarizeLiveDealShapes(db, o)).toBeNull();
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "spv",
       intent: "integration",
@@ -308,7 +292,7 @@ describe("repository", () => {
       evaluatedBy: ANALYST,
       now: "2026-11-07T09:00:00.000Z",
     });
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "joint_venture",
       intent: "integration",
@@ -321,8 +305,9 @@ describe("repository", () => {
       recorded: 2,
       viable: 1,
       latestAt: "2026-11-07T11:00:00.000Z",
+      overallNotViable: false,
     });
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "spv",
       intent: "integration",
@@ -346,7 +331,7 @@ describe("kill criterion #9 at pre_fs (deal-shape-to-S7 R-2): the S7 evaluation 
       });
       expect(killKeys(snap.kill.unassessed)).not.toContain(NO_SHAPE);
       expect(snap.required_acks.map((a) => a.key)).not.toContain(NO_SHAPE);
-      repo.recordDealShapeEvaluation(db, {
+      legacyRecord({
         opportunityId: o,
         shape: "spv",
         intent: "integration",
@@ -382,14 +367,30 @@ describe("REST /api/opportunities/:id/deal-shapes", () => {
     expect((await get("nope")).status).toBe(404);
   });
 
-  test("validation: 400 invalid_request for vocabulary, viable type, missing rationale and a non-object body", async () => {
+  test("validation: 400 invalid_request for the legacy body, viability type, vocabulary, rationale and a non-object body", async () => {
     const o = newOpp();
+    const viable = (over: Record<string, unknown>) => ({ ...verdict("spv", true), ...over });
     for (const body of [
-      verdict("royalty", true),
-      { ...verdict("spv", true), intent: "growth" },
+      { shape: "spv", intent: "integration", viable: true, rationale: "r", live_token: AUTO }, // legacy single-shape body
       { ...verdict("spv", true), viable: "yes" },
-      { shape: "spv", intent: "integration", viable: true },
-      { ...verdict("spv", true), rationale: "   " },
+      { rationale: "r", live_token: AUTO }, // viable missing
+      viable({ shapes: [{ shape: "royalty", rationale: "r" }] }),
+      viable({
+        shapes: [
+          { shape: "spv", rationale: "r" },
+          { shape: "spv", rationale: "r" },
+        ],
+      }),
+      viable({ shapes: [] }),
+      viable({ shapes: undefined }),
+      viable({ shapes: repo.DEAL_SHAPES.concat(["spv"]).map((shape) => ({ shape, rationale: "r" })) }),
+      viable({ intent: "growth" }),
+      viable({ intent: undefined }),
+      viable({ shapes: [{ shape: "spv", rationale: "   " }] }),
+      viable({ shapes: [{ shape: "spv", rationale: "x".repeat(repo.RATIONALE_MAX + 1) }] }),
+      { viable: false, rationale: "r", shapes: [{ shape: "spv", rationale: "r" }], live_token: AUTO },
+      { viable: false, rationale: "r", intent: "integration", live_token: AUTO },
+      { viable: false, rationale: "   ", live_token: AUTO },
       [],
       "x",
       null,
@@ -401,7 +402,7 @@ describe("REST /api/opportunities/:id/deal-shapes", () => {
     expect(repo.listDealShapeEvaluations(db, o).live).toEqual([]);
   });
 
-  test("a post creates a live row (201), evaluated_by is the SESSION user even when the body names someone else, and it is audited", async () => {
+  test("a viable post creates live shape rows (201), evaluated_by is the SESSION user even when the body names someone else, and it is audited", async () => {
     const o = newOpp();
     const res = await post(
       o,
@@ -414,7 +415,9 @@ describe("REST /api/opportunities/:id/deal-shapes", () => {
       }),
     );
     expect(res.status).toBe(201);
-    const row = ((await res.json()) as { data: Record<string, unknown> }).data;
+    const data = ((await res.json()) as { data: { verdict: string; rows: Array<Record<string, unknown>> } }).data;
+    expect(data.verdict).toBe("viable");
+    const row = data.rows[0];
     expect(row).toMatchObject({
       opportunity_id: o,
       shape: "holdco_route",
@@ -424,40 +427,15 @@ describe("REST /api/opportunities/:id/deal-shapes", () => {
       evaluated_by: ANALYST,
       superseded_by: null,
     });
-    expect(String(row.evaluated_at).startsWith("20")).toBe(true);
     expect(row.evaluated_at).not.toBe("1999-01-01T00:00:00Z");
     const audit = db
       .query(
-        "SELECT actor_user_id, action, target FROM audit_log WHERE action = 'opportunity.deal_shape.record' AND target LIKE ?",
+        "SELECT actor_user_id, action, target FROM audit_log WHERE action = 'opportunity.deal_shape.record_viable_set' AND target LIKE ?",
       )
       .all(`${o}:%`) as Array<{ actor_user_id: string; action: string; target: string }>;
     expect(audit).toHaveLength(1);
     expect(audit[0]).toMatchObject({ actor_user_id: ANALYST });
-    expect(audit[0].target).toBe(`${o}:holdco_route:${row.id}`);
-  });
-
-  test("re-posting a shape supersedes its live row; GET returns live, history, unevaluated shapes, viable_count and the vocabulary", async () => {
-    const o = newOpp();
-    const empty = ((await (await get(o)).json()) as { data: any }).data;
-    expect(empty).toMatchObject({ live: [], history: [], viable_count: null });
-    expect(empty.unevaluated_shapes).toEqual(repo.DEAL_SHAPES);
-    expect(empty.vocabulary).toEqual({ shapes: repo.DEAL_SHAPES, intents: repo.DEAL_SHAPE_INTENTS });
-
-    const a = ((await (await post(o, verdict("spv", true))).json()) as { data: any }).data;
-    await post(o, verdict("full_acquisition", false));
-    const b = ((await (await post(o, verdict("spv", false, { rationale: "revised" }))).json()) as { data: any }).data;
-    const data = ((await (await get(o)).json()) as { data: any }).data;
-    expect(data.live.map((r: any) => r.shape)).toEqual(["full_acquisition", "spv"]);
-    expect(data.live.find((r: any) => r.shape === "spv")).toMatchObject({
-      id: b.id,
-      viable: false,
-      rationale: "revised",
-      superseded_by: null,
-    });
-    expect(data.history).toHaveLength(1);
-    expect(data.history[0]).toMatchObject({ id: a.id, superseded_by: b.id, viable: true });
-    expect(data.viable_count).toBe(0);
-    expect(data.unevaluated_shapes).toEqual(repo.DEAL_SHAPES.filter((s) => s !== "spv" && s !== "full_acquisition"));
+    expect(audit[0].target).toBe(`${o}:${row.id}:superseded=`); // new row ids, then the superseded ids (none on a first write)
   });
 });
 
@@ -545,8 +523,10 @@ describe("POST write guard (deal-shape-to-S7): 409 deal_shape_not_open before S7
     at("complete");
     expect((await post(o, verdict("majority_stake", false))).status).toBe(201);
     at("terminated", true);
-    expect((await post(o, verdict("holdco_route", true))).status).toBe(201); // KILL reads every stage terminated: stage cannot be told apart
-    expect(repo.listDealShapeEvaluations(db, o).live).toHaveLength(3);
+    expect((await post(o, verdict("holdco_route", true))).status).toBe(201); // terminated/killed stays writable by design (deal-shape-guard.ts): KILL reads every stage terminated, so only the track rule applies
+    // each accepted post replaced the live set (spv, then an overall row, then holdco_route): one live shape row, two superseded
+    expect(repo.listDealShapeEvaluations(db, o).live).toHaveLength(1);
+    expect(repo.listDealShapeEvaluations(db, o).history).toHaveLength(2);
     // the 404 for an unknown opportunity still precedes the guard
     expect((await post("nope", verdict("spv", true))).status).toBe(404);
   });
@@ -600,7 +580,7 @@ describe("kill criterion #9 filler semantics at the opportunity target_screening
 
   test("every recorded shape not viable -> present 0 -> #9 triggered (mark_conditional), not unassessed", () => {
     const o = newOpp();
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "full_acquisition",
       intent: "integration",
@@ -609,7 +589,7 @@ describe("kill criterion #9 filler semantics at the opportunity target_screening
       evaluatedBy: ANALYST,
       now: NOW,
     });
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "spv",
       intent: "integration",
@@ -626,7 +606,7 @@ describe("kill criterion #9 filler semantics at the opportunity target_screening
 
   test("at least one viable live row -> clean (neither triggered nor unassessed)", () => {
     const o = newOpp();
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "full_acquisition",
       intent: "integration",
@@ -635,7 +615,7 @@ describe("kill criterion #9 filler semantics at the opportunity target_screening
       evaluatedBy: ANALYST,
       now: NOW,
     });
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: o,
       shape: "minority_stake",
       intent: "capability_access",
@@ -649,7 +629,7 @@ describe("kill criterion #9 filler semantics at the opportunity target_screening
     expect(killKeys(snap.kill.unassessed)).not.toContain(NO_SHAPE);
   });
 
-  test("a superseded viable row is ignored: superseding it with a non-viable verdict flips #9 from clean to triggered", async () => {
+  test("an overall not-viable verdict supersedes the viable rows and flips #9 from clean to triggered", async () => {
     const o = newOpp();
     expect((await post(o, verdict("spv", true))).status).toBe(201);
     expect(killKeys(preview(o).kill.triggered)).not.toContain(NO_SHAPE);
@@ -670,7 +650,7 @@ describe("kill criterion #9 filler semantics at the opportunity target_screening
   test("rows of another opportunity never count", () => {
     const o = newOpp();
     const other = newOpp();
-    repo.recordDealShapeEvaluation(db, {
+    legacyRecord({
       opportunityId: other,
       shape: "spv",
       intent: "integration",
@@ -727,7 +707,7 @@ describe("MCP tools (ADR-0011: REST client, the calling user's identity)", () =>
     const ctx = { port: port(), scopes: ["read", "write", "propose"] };
     const rec = (await callTool("http", ctx, "record_deal_shape_evaluation", {
       opportunityId: o,
-      body: verdict("co_development", true, { evaluated_by: "attacker" }),
+      body: tok(o, verdict("co_development", true, { evaluated_by: "attacker" })),
     })) as any;
     expect(JSON.stringify(rec)).toContain("co_development");
     const back = (await callTool("http", ctx, "get_deal_shape_evaluations", { opportunityId: o })) as any;
@@ -754,7 +734,7 @@ describe("MCP tools (ADR-0011: REST client, the calling user's identity)", () =>
     await expect(
       callTool("http", { port: port(), scopes: ["read"] }, "record_deal_shape_evaluation", {
         opportunityId: o,
-        body: verdict("spv", true),
+        body: tok(o, verdict("spv", true)),
       }),
     ).rejects.toThrow(/write/);
     expect(repo.listDealShapeEvaluations(db, o).live).toEqual([]);

@@ -20,6 +20,8 @@ export interface DealShapeData {
   live: DealShapeRow[];
   history: DealShapeRow[];
   unevaluated_shapes: string[];
+  /** ADR-0201: token of the live set, echoed by every write (replace-the-set concurrency guard). */
+  live_token?: string;
   /** null = nothing recorded: kill criterion #9 stays unassessed (never "zero viable"). */
   viable_count: number | null;
   vocabulary: { shapes: string[]; intents: string[] };
@@ -116,6 +118,41 @@ export function buildDealShapeBody(f: DealShapeForm): {
     rationale: f.rationale.trim(),
     ...(evidence ? { evidence_ref: evidence } : {}),
   };
+}
+
+/**
+ * TEMPORARY ADAPTER (ADR-0201 PR 1; replaced by the overall-first form in the UI PR): the per-shape form is mapped onto the
+ * replace-the-set contract. Viable = the other live viable shapes plus this one; not viable = this shape leaves the set, and an
+ * empty remainder becomes one overall "no shape is viable" verdict. Carries the live_token the panel last loaded.
+ */
+export function buildDealShapeSetBody(f: DealShapeForm, data: Pick<DealShapeData, "live" | "live_token">) {
+  const evidence = f.evidenceRef.trim();
+  const kept = data.live
+    .filter((r) => r.viable && r.shape !== f.shape)
+    .map((r) => ({
+      shape: r.shape,
+      rationale: r.rationale,
+      ...(r.evidence_ref ? { evidence_ref: r.evidence_ref } : {}),
+    }));
+  const live_token = data.live_token ?? "";
+  if (f.viable === true)
+    return {
+      viable: true,
+      intent: f.intent,
+      shapes: [
+        ...kept,
+        { shape: f.shape, rationale: f.rationale.trim(), ...(evidence ? { evidence_ref: evidence } : {}) },
+      ],
+      live_token,
+    };
+  if (kept.length === 0)
+    return {
+      viable: false,
+      rationale: f.rationale.trim(),
+      ...(evidence ? { evidence_ref: evidence } : {}),
+      live_token,
+    };
+  return { viable: true, intent: f.intent, shapes: kept, live_token };
 }
 
 export type DealShapeErrorKind = "viewer" | "admin" | "notFound" | "invalid" | "notOpen" | "conflict" | "other";

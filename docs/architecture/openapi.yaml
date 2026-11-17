@@ -4814,7 +4814,7 @@ paths:
   /api/opportunities/{id}/deal-shapes:
     get:
       operationId: getOpportunityDealShapes
-      summary: Opportunity-scope deal-shape evaluation (ADR-0194; hosted at S7 target screening, brownfield only - ADR-0195) - live human verdicts (one per shape), superseded history, unevaluated shapes, the live viable count that feeds kill criterion #9 (null when nothing is recorded), and the closed shape/intent vocabularies.
+      summary: Opportunity-scope deal-shape evaluation, overall viability first (ADR-0194, ADR-0195, ADR-0201; hosted at S7 target screening, brownfield only) - {verdict (unassessed|not_viable|viable), overall (the live overall not-viable row or null), live (viable shape rows only), history (both row kinds, newest first), live_token, unselected_shapes (unevaluated_shapes is a one-release alias), viable_count (feeds kill criterion #9; null when nothing is recorded, 0 for an overall not-viable row), vocabulary}.
       tags:
         - Analysis
       responses:
@@ -4826,7 +4826,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: recordOpportunityDealShape
-      summary: Record one deal-shape verdict {shape, intent, viable, rationale, evidence_ref?} (analyst+). evaluated_by is the session user. Re-posting a shape supersedes its live row (append-only; never deleted). Record-only - no recommendation or score path writes here. Refused with 409 `deal_shape_not_open` (error.details.reason = `stage_not_reached` | `track_not_brownfield`) before the opportunity has reached S7 or when its current (is_current) route decision is not brownfield; reads are never guarded.
+      summary: Record the overall deal-shape verdict (analyst+). Body is a union - not viable {viable false, rationale, evidence_ref?, live_token} (no shape, no intent) or viable {viable true, intent, shapes[1-8 unique {shape, rationale, evidence_ref?}], live_token}. Every write REPLACES the whole live set (append-only; nothing deleted); an identical set returns 200 {changed false}. The legacy single-shape body, shape/intent on a not-viable body and a bad vocabulary are 400 invalid_request (error.details.field/shape); a missing or stale live_token is 409 deal_shape_stale (error.details.live_token = the current token). evaluated_by is the session user. Refused with 409 deal_shape_not_open (error.details.reason = `stage_not_reached` | `track_not_brownfield`) before the opportunity has reached S7 or when its current (is_current) route decision is not brownfield; reads are never guarded. Audit opportunity.deal_shape.record_not_viable | record_viable_set.
       tags:
         - Analysis
       responses:

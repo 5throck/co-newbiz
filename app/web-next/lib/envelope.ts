@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 
-export type EnvelopeStatus = 200 | 201 | 202 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 423 | 429 | 500 | 503;
+export type EnvelopeStatus = 200 | 201 | 202 | 400 | 401 | 403 | 404 | 409 | 410 | 413 | 422 | 423 | 429 | 500 | 503;
 
 export interface ErrorBody {
   code: string;
@@ -39,7 +39,11 @@ export function provenance(fields: { [K in keyof Provenance]: string | null | un
 
 export function fail(status: EnvelopeStatus, code: string, message: string, details?: Record<string, unknown>) {
   return NextResponse.json(
-    { data: null, meta: { as_of: new Date().toISOString() }, error: (details ? { code, message, details } : { code, message }) satisfies ErrorBody },
+    {
+      data: null,
+      meta: { as_of: new Date().toISOString() },
+      error: (details ? { code, message, details } : { code, message }) satisfies ErrorBody,
+    },
     { status },
   );
 }
@@ -47,7 +51,11 @@ export function fail(status: EnvelopeStatus, code: string, message: string, deta
 /** 410 for an edit surface that moved (ADR-0171): the body names the stage that owns it now. */
 export function moved(message: string, editAt: string) {
   return NextResponse.json(
-    { data: null, meta: { as_of: new Date().toISOString() }, error: { code: "moved", message, editAt } satisfies ErrorBody },
+    {
+      data: null,
+      meta: { as_of: new Date().toISOString() },
+      error: { code: "moved", message, editAt } satisfies ErrorBody,
+    },
     { status: 410 },
   );
 }
