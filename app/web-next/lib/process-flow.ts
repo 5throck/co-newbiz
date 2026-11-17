@@ -123,7 +123,7 @@ export const STAGES: StageDefinition[] = [
       "Target Company Short List",
       "Target Ranking/Score",
       "Exclusion Reasons",
-      "Deal Shape Evaluation (viable shapes, intent, rationale)",
+      "Deal Shape Evaluation (overall viability; viable shapes with intent and rationale)",
     ],
   },
   {

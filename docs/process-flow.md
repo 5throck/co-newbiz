@@ -439,7 +439,7 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - Target Company Short List
 - Target Ranking/Score
 - Exclusion Reasons
-- Deal Shape Evaluation (viable shapes, intent, rationale)
+- Deal Shape Evaluation (overall viability; viable shapes with intent and rationale)
 
 **완료 기준**
 - 모든 Long List 후보에 랭킹 점수 또는 제외 사유가 기록되었다
