@@ -5,7 +5,7 @@ lang_reason: Row 0 design dispatched in English; docs/context.md English-only zo
 
 # ADR-0201: S7 deal-shape evaluation asks overall viability first, and records "no shape is viable" as one overall verdict
 
-**Status**: Proposed (2026-11-17; awaiting user approval of spec `2026-11-17-deal-shape-viability-first` and its five open questions)
+**Status**: Accepted (2026-11-17; owner accepted the five open-question recommendations of spec `2026-11-17-deal-shape-viability-first`)
 **Date**: 2026-11-17
 **Deciders**: Owner (direction decided in chat 2026-11-17: overall viability `가능 여부` first; not viable asks only a rationale; viable asks the shape(s), the intent, and a rationale per selected shape; shape and intent disabled until `가능`; the AI recommendation follows the same structure; controls on one wrapping row); PM dispatch (Row 0 non-exempt); drafted by brownfield-agent. The schema is reviewed by data-architect and landed by backend-engineer, with a dba operational review and a security-engineer review.
 **Amends**: [ADR-0194](0194-kill-criteria-data-sources.md) item A (the row vocabulary of `opportunity_deal_shape_evaluation`: every row a shape with an intent, one live row per shape) and [ADR-0195](0195-deal-shape-evaluation-at-s7.md) decision 1 (the content of `brownfield-target-screening` step 3.5).

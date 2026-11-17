@@ -2,7 +2,7 @@
 
 - Spec ID: `2026-11-17-deal-shape-viability-first`
 - Date: 2026-11-17
-- Status: proposed
+- Status: approved (2026-11-17; owner accepted the Q1-Q5 recommendations)
 - Author: brownfield-agent (S7 `deal-shape-evaluation` owner). Row 0 design, PM dispatch.
 - ADR: [ADR-0201](../adr/0201-deal-shape-viability-first.md) (amends ADR-0194 item A and ADR-0195). This change rebuilds a
   table (migration 0198), changes the MCP write tool schema, and changes the wording of procedure
