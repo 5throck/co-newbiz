@@ -272,11 +272,10 @@ describe("universeDraft helpers — apply, edit, save", () => {
     evidence,
     checks: { clamped: [], dropped_refs: [], untraced_numbers: [], forbidden_phrases: [] },
   };
-  const prev = { ...draftLib.emptyUniverseDraft(), financial_criteria: "마진 조건", min_long_list: "7" };
+  const prev = { ...draftLib.emptyUniverseDraft(), min_long_list: "7" };
   const applied = draftLib.draftFromView(view as never, "s6.universe_criteria_draft@3", prev);
 
-  test("applying fills the editable fields only; criteria and the minimum count stay", () => {
-    expect(applied.financial_criteria).toBe("마진 조건");
+  test("applying fills the editable fields only; the minimum count stays", () => {
     expect(applied.min_long_list).toBe("7");
     expect(applied.direction?.headline.text).toContain("원자력");
     expect(applied.evidence as unknown).toEqual(evidence);
@@ -317,7 +316,7 @@ describe("universeDraft helpers — apply, edit, save", () => {
     const p = draftLib.savePayload(applied);
     expect(Object.keys(p)[0]).toBe("definition");
     expect(p.min_long_list).toBe(7);
-    expect(p.financial_criteria).toBe("마진 조건");
+    expect("financial_criteria" in p).toBe(false);
     expect(p.direction).toBeTruthy();
     expect(p.evidence).toEqual(evidence);
     expect((p.drafted as { prompt_version: string }).prompt_version).toBe("s6.universe_criteria_draft@3");

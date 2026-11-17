@@ -15,7 +15,6 @@ import type {
 
 export interface UniverseDraft {
   definition: string;
-  financial_criteria: string;
   min_long_list: string;
   /** null = legacy record (no direction) — the plain definition textarea is shown. */
   direction: StoredDirection | null;
@@ -34,7 +33,6 @@ export const TEXT_CAPS = { headline: 90, industry: 120, region: 120, size: 120, 
 export function emptyUniverseDraft(): UniverseDraft {
   return {
     definition: "",
-    financial_criteria: "",
     min_long_list: "5",
     direction: null,
     evidence: [],
@@ -71,7 +69,6 @@ export function draftFromSaved(u: Universe | null | undefined): UniverseDraft {
   const hasDirection = u?.direction_version === 1 && !!u.direction;
   return {
     definition: u?.definition ?? "",
-    financial_criteria: u?.financial_criteria ?? "",
     min_long_list: String(u?.min_long_list ?? 5),
     direction: hasDirection ? (u?.direction ?? null) : null,
     evidence: hasDirection ? (u?.evidence ?? []) : [],
@@ -169,7 +166,6 @@ export function savePayload(draft: UniverseDraft): Record<string, unknown> {
   return {
     definition: draft.definition.trim(),
     // The criteria input is gone from this screen; the server preserves the stored value when omitted.
-    financial_criteria: draft.financial_criteria.trim(),
     min_long_list: Number(draft.min_long_list) || 5,
     ...(draft.direction
       ? {

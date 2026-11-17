@@ -146,7 +146,7 @@ export function UniverseDirectionView({
   return (
     <div>
       {preview && <p className="mb-2 text-[length:var(--fs-caption)]">{t("proposalNotice")}</p>}
-      <dl className="m-0 grid gap-2">
+      <dl className="m-0 grid gap-2 text-[length:var(--fs-body)]">
         <Row label={t("conclusion")}>
           <Text f={d.headline} t={t} />
           {d.grade && (

@@ -50,7 +50,7 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
     setSavingUniverse(true);
     setError(null);
     try {
-      // The payload (definition, financial_criteria, min_long_list and — for direction
+      // The payload (definition, min_long_list and — for direction
       // records — direction/evidence/origin/drafted) is built by savePayload; the server
       // preserves criteria and any key we omit.
       await api.put(
@@ -108,9 +108,6 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
   const formLabels = {
     definition: t("definitionTheCandidatePoolS"),
     definitionPlaceholder: t("eGAllListedDomestic"),
-    financialCriteriaLabel: t("financialCriteriaLabel"),
-    financialCriteriaPlaceholder: t("financialCriteriaPlaceholder"),
-    financialCriteriaHint: t("financialCriteriaHint"),
     minimumCandidateCount: t("minimumCandidateCount"),
     referenceNotAForcedFormula: t("referenceNotAForcedFormula"),
     itemSPartiallyMet: t("itemSPartiallyMet"),
@@ -147,19 +144,6 @@ export function useBrownfieldUniverse(prev: ReturnType<typeof useBrownfieldBase>
             />
           </label>
         )}
-        {/* 재무 기준 (DEC-20261111-05) — S7 t-08이 후보 재무를 비교하는
-            기록값. 선택 입력이며 근거 없는 수치는 쓰지 않는다. */}
-        <label className="text-[length:var(--fs-caption)] block mb-3">
-          <span className="block mb-1">{formLabels.financialCriteriaLabel}</span>
-          <textarea
-            value={universeDraft.financial_criteria}
-            onChange={(e) => setUniverseDraft({ ...universeDraft, financial_criteria: e.target.value })}
-            placeholder={formLabels.financialCriteriaPlaceholder}
-            rows={2}
-            className="sizing-new-input w-full"
-          />
-          <span className="block mt-1 text-[color:var(--muted-fg)]">{formLabels.financialCriteriaHint}</span>
-        </label>
         <label className="text-[length:var(--fs-caption)] w-32 shrink-0 block mb-3">
           <span className="block mb-1">{formLabels.minimumCandidateCount}</span>
           <input
