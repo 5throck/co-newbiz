@@ -32,7 +32,9 @@ export function S7DecisionTabs({
             key={key}
             type="button"
             role="tab"
+            id={`s7-tab-${key}`}
             aria-selected={tab === key}
+            aria-controls={`s7-panel-${key}`}
             className={`library-tab ${tab === key ? "library-tab-active" : ""}`}
             onClick={() => setTab(key)}
           >
@@ -40,15 +42,21 @@ export function S7DecisionTabs({
           </button>
         ))}
       </div>
-      {tab === "dealShape" && <DealShapePanel opportunityId={opportunityId} canAct={canAct} />}
+      {tab === "dealShape" && (
+        <div role="tabpanel" id="s7-panel-dealShape" aria-labelledby="s7-tab-dealShape">
+          <DealShapePanel opportunityId={opportunityId} canAct={canAct} />
+        </div>
+      )}
       {tab === "approval" && (
-        // the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies
-        <div className="[&>section]:!mt-0">
-          <GateDecisionPanel
-            opportunityId={opportunityId}
-            gates={["target_screening"]}
-            killHint={zeroCandidatesPassed ? t("zeroCandidatesPassedTheScreening") : null}
-          />
+        <div role="tabpanel" id="s7-panel-approval" aria-labelledby="s7-tab-approval">
+          {/* the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies */}
+          <div className="[&>section]:!mt-0">
+            <GateDecisionPanel
+              opportunityId={opportunityId}
+              gates={["target_screening"]}
+              killHint={zeroCandidatesPassed ? t("zeroCandidatesPassedTheScreening") : null}
+            />
+          </div>
         </div>
       )}
     </>

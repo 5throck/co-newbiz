@@ -19,6 +19,7 @@ import {
   dealShapeErrorKind,
   formFromLive,
   formFromRecommendation,
+  formIsEmpty,
   validateDealShapeForm,
   verdictOf,
   type DealShapeData,
@@ -30,9 +31,6 @@ import {
 import { DealShapeForm } from "./DealShapeForm.tsx";
 import { DealShapeRecommendCard, EMPTY_RECO, type RecoState } from "./DealShapeRecommendCard.tsx";
 import { useDealShapeLabels } from "./useDealShapeLabels.ts";
-
-export { useDealShapeLabels } from "./useDealShapeLabels.ts";
-export { EMPTY_RECO, type RecoState } from "./DealShapeRecommendCard.tsx";
 
 type Chip = "viable" | "not_viable";
 function Verdict({ state }: { state: Chip }) {
@@ -388,8 +386,11 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
       }}
       onEdit={() => {
         if (!data) return;
-        setForm(formFromLive(data));
-        setLoadedFromRow(true);
+        const restored = formFromLive(data);
+        // Finding #18: only claim "the whole recorded evaluation is loaded" when something was
+        // actually restored — a legacy zero-viable set loads a blank form.
+        setLoadedFromRow(!formIsEmpty(restored));
+        setForm(restored);
         clearMessages();
         setNotice(null);
       }}

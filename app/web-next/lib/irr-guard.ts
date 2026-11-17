@@ -27,13 +27,12 @@ export function irrGuardBand(
   return null;
 }
 
-export const IRR_GUARD_CHIP_LABEL: Record<IrrGuardBand, string> = {
-  extreme: "극단값 — 검토 필요",
-  caution: "주의",
-};
+// Display labels moved out of TS: UI render sites resolve the stages.s8.irrGuard* catalog keys
+// (ADR-0184); gate-brief embeds the identical Korean text from lib/irr-guard-labels.json into
+// generated record content. No user-facing string lives in this module any more.
 
-/** Diagnostic pointer (design §7): the likely causes when the guard trips,
- *  shown with the chip so the reviewer knows WHAT to check, not just THAT
- *  something looks wrong. */
-export const IRR_GUARD_DIAGNOSTIC =
-  "가정 점검: 시장 범위(앵커와 대상 범위 일치 여부), 시장점유율 근거, 투자 규모(과소 계상 여부)";
+export const IRR_GUARD_LABEL_KEYS: Record<IrrGuardBand, string> = {
+  extreme: "stages.s8.stage.irrGuardExtreme",
+  caution: "stages.s8.stage.irrGuardCaution",
+};
+export const IRR_GUARD_DIAGNOSTIC_KEY = "stages.s8.stage.irrGuardDiagnostic";

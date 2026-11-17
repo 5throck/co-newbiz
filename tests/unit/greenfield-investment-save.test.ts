@@ -42,7 +42,7 @@ const json = JSON.stringify;
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
 const stage = () => normSrc(read("app/web-next/components/stages/GreenfieldStage.tsx"));
 const req = (path: string, init?: RequestInit) => nextRequest(path, init);
-const WEB = join(ROOT, "app/web-next");
+const _WEB = join(ROOT, "app/web-next");
 
 const LEAD = "inv-save-lead";
 let cookie = "";
@@ -345,7 +345,7 @@ describe("save button wiring: lines-only payload, dirty tracking, success note",
   test("save handler POSTs only business_case_lines (manual + selectionPayload + start-year overrides); amount_mismatch falls back to a reload", () => {
     const s = stage();
     expect(s).toContain(normSrc("async function saveInvestmentLines()"));
-    expect(s).toContain(normSrc("reflectionBody(bcLines, capLines, capSel)"));
+    expect(s).toContain(normSrc("reflectionBody(stripManualRowIds(bcLines), capLines, capSel)"));
     expect(s).toContain(normSrc("api.post(`/api/greenfield/${selected.opportunity.id}`, {"));
     expect(s).toContain(normSrc("business_case_lines: [metaEntry(), ...body.business_case_lines.map"));
     expect(s).toContain(normSrc("amount_mismatch"));
@@ -365,7 +365,8 @@ describe("save button wiring: lines-only payload, dirty tracking, success note",
       normSrc("const investDirty = manualDirty || reflectDirty || staffDirty || simOvDirty || startYearDirty;"),
     ); // ADR-0175 slice 1 adds the staffing plan; ADR-0176 adds the sim overrides
     expect(s).toContain(normSrc("const manualRowDirty = useCallback"));
-    expect(s).toContain(normSrc("setSavedManualLines(manual);"));
+    expect(s).toContain(normSrc("manualRowDirtyByRow(bcLines[i], savedManualLines)"));
+    expect(s).toContain(normSrc("setSavedManualLines(withIds);"));
   });
   test("the whole-assessment save paths are untouched", () => {
     const s = stage();

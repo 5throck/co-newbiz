@@ -9,7 +9,7 @@
  * deterministic agents. ASCII-only source (Korean via \u escapes).
  */
 import { test, expect, beforeAll, afterAll, describe } from "bun:test";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 
 const TEST_DB_PATH = "db/data/test-irr-guard.sqlite";
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
@@ -34,23 +34,58 @@ let projectId = "";
 
 function makeGreenfieldProject(): string {
   const oppId = ulid();
-  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at, capability_gap_json, market_size_krw_m, growth_rate) VALUES (?,?,?,?,?,?,?,?,?)",
-    [oppId, "guard opp", "scope", "selected", ACTOR, NOW, JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), 80000, 0.06]);
-  db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)", [ulid(), oppId, "greenfield", "r", ACTOR, NOW]);
+  db.run(
+    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at, capability_gap_json, market_size_krw_m, growth_rate) VALUES (?,?,?,?,?,?,?,?,?)",
+    [
+      oppId,
+      "guard opp",
+      "scope",
+      "selected",
+      ACTOR,
+      NOW,
+      JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }),
+      80000,
+      0.06,
+    ],
+  );
+  db.run(
+    "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
+    [ulid(), oppId, "greenfield", "r", ACTOR, NOW],
+  );
   for (const gate of ["screening", "pre_fs"]) {
-    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "t", ACTOR, NOW]);
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "opportunity", oppId, gate, "go", "t", ACTOR, NOW],
+    );
   }
-  db.run("INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at, business_case_lines_json) VALUES (?,?,?,?,?,?,?,?,?)",
-    [ulid(), oppId, "s", "a", "r", ACTOR, NOW, NOW, null]);
+  db.run(
+    "INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at, business_case_lines_json) VALUES (?,?,?,?,?,?,?,?,?)",
+    [ulid(), oppId, "s", "a", "r", ACTOR, NOW, NOW, null],
+  );
   return promoteOpportunity(oppId, { promotedBy: ACTOR, needToKnowBasis: "t" }).project.id;
 }
 const p50Row = (pid: string, scenario = "base") =>
-  db.query("SELECT irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = ? AND percentile = 'p50' ORDER BY created_at DESC, id DESC").get(pid, scenario) as { irr: number | null; note: string };
+  db
+    .query(
+      "SELECT irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = ? AND percentile = 'p50' ORDER BY created_at DESC, id DESC",
+    )
+    .get(pid, scenario) as { irr: number | null; note: string };
 const setThresholds = async (pid: string, flag: number, caution: number) =>
-  gen.recordBusinessCaseParams(db, { projectId: pid, params: { irr_flag_threshold: flag, irr_caution_threshold: caution }, rationale: "t", actor: ACTOR });
+  gen.recordBusinessCaseParams(db, {
+    projectId: pid,
+    params: { irr_flag_threshold: flag, irr_caution_threshold: caution },
+    rationale: "t",
+    actor: ACTOR,
+  });
 
 beforeAll(async () => {
-  await createUser(db, { userId: ACTOR, role: "analyst", password: "pw-guard-analyst-12", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: ACTOR,
+    role: "analyst",
+    password: "pw-guard-analyst-12",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: ACTOR, approvedBy: "test", now: NOW });
   projectId = makeGreenfieldProject();
 });
@@ -75,10 +110,22 @@ describe("irrGuardBand", () => {
     expect(guard.irrGuardBand(null)).toBeNull();
     expect(guard.irrGuardBand(Number.NaN)).toBeNull();
   });
-  test("labels and the diagnostic pointer are the display vocabulary", () => {
-    expect(guard.IRR_GUARD_CHIP_LABEL.extreme).toBe("\uadf9\ub2e8\uac12 \u2014 \uac80\ud1a0 \ud544\uc694");
-    expect(guard.IRR_GUARD_CHIP_LABEL.caution).toBe("주의");
-    expect(guard.IRR_GUARD_DIAGNOSTIC).toContain("시장 범위");
+  test("labels live in the lib JSON (record vocabulary) and mirror the stages.s8 catalog keys", () => {
+    const labels = JSON.parse(
+      readFileSync(new URL("../../app/web-next/lib/irr-guard-labels.json", import.meta.url), "utf8"),
+    );
+    expect(labels.extreme).toBe("\uadf9\ub2e8\uac12 \u2014 \uac80\ud1a0 \ud544\uc694");
+    expect(labels.caution).toBe("\uc8fc\uc758");
+    expect(labels.diagnostic).toContain("\uc2dc\uc7a5 \ubc94\uc704");
+    const ko = JSON.parse(readFileSync(new URL("../../app/web-next/locales/ko.json", import.meta.url), "utf8"));
+    const en = JSON.parse(readFileSync(new URL("../../app/web-next/locales/en.json", import.meta.url), "utf8"));
+    expect(ko.stages.s8.stage.irrGuardExtreme).toBe(labels.extreme);
+    expect(ko.stages.s8.stage.irrGuardCaution).toBe(labels.caution);
+    expect(ko.stages.s8.stage.irrGuardDiagnostic).toBe(labels.diagnostic);
+    expect(en.stages.s8.stage.irrGuardExtreme).toBeTruthy();
+    expect(en.stages.s8.stage.irrGuardDiagnostic).toBeTruthy();
+    expect(guard.IRR_GUARD_LABEL_KEYS.extreme).toBe("stages.s8.stage.irrGuardExtreme");
+    expect(guard.IRR_GUARD_DIAGNOSTIC_KEY).toBe("stages.s8.stage.irrGuardDiagnostic");
   });
 });
 
@@ -123,7 +170,11 @@ describe("run-note fragment", () => {
     expect(row.note).toContain("; irr_guard=extreme");
     // p05/p95 rows carry no irr of their own; the note string is shared across
     // the three percentile rows (it describes the run, not the point)
-    const p05 = db.query("SELECT irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = 'base' AND percentile = 'p05' ORDER BY created_at DESC, id DESC").get(projectId) as { irr: number | null; note: string };
+    const p05 = db
+      .query(
+        "SELECT irr, note FROM valuation_simulation WHERE project_id = ? AND scenario = 'base' AND percentile = 'p05' ORDER BY created_at DESC, id DESC",
+      )
+      .get(projectId) as { irr: number | null; note: string };
     expect(p05.irr).toBeNull();
     expect(p05.note).toBe(row.note);
   });

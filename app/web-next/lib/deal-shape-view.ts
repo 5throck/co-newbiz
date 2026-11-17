@@ -82,6 +82,12 @@ export const EMPTY_DEAL_SHAPE_FORM: DealShapeForm = {
 export const draftOf = (f: Pick<DealShapeForm, "drafts">, shape: string): ShapeDraft =>
   f.drafts[shape] ?? { rationale: "", evidenceRef: "" };
 
+/** True when the form holds no restored content — the "recorded evaluation loaded" note must not
+ *  appear for a blank form (legacy zero-viable set with no overall verdict, review finding #18). */
+export function formIsEmpty(f: Pick<DealShapeForm, "viable" | "rationale" | "shapes" | "drafts">): boolean {
+  return f.viable === null && f.rationale === "" && f.shapes.length === 0 && Object.keys(f.drafts).length === 0;
+}
+
 /** Checked shapes in vocabulary order (unknown codes last, in checked order). */
 export function orderedShapes(f: Pick<DealShapeForm, "shapes">, order: readonly string[]): string[] {
   const rank = (s: string) => (order.indexOf(s) === -1 ? order.length : order.indexOf(s));

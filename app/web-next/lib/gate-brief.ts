@@ -10,7 +10,8 @@ import { readRagView } from "../../../db/lib/rag-service.ts";
 import { effectiveState } from "../../../db/lib/gate-effective.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
 import { listBusinessCases, latestAdoption } from "./business-case.ts";
-import { irrGuardBand, IRR_GUARD_CHIP_LABEL } from "./irr-guard.ts";
+import { irrGuardBand } from "./irr-guard.ts";
+import irrGuardLabels from "./irr-guard-labels.json" with { type: "json" };
 import { resolveAnchorScopeFlag, type AnchorScopeFlag } from "./anchor-scope.ts";
 import { resolveBusinessCaseParams } from "./business-case-generator.ts";
 import { SHARE_UN_SOURCED_LABEL, isShareUnsourced, resolveRatioGuardFlag } from "./share-guard.ts";
@@ -449,7 +450,7 @@ function s8Summary(projectId: string): string {
     const lines = cases.slice(0, 8).map((c) => {
       const p50 = c.simulations?.find((s) => s.percentile === "p50") ?? null;
       const band = irrGuardBand(p50?.irr, bc?.irrFlagThreshold, bc?.irrCautionThreshold);
-      const guard = band ? ` [IRR ${IRR_GUARD_CHIP_LABEL[band]}]` : "";
+      const guard = band ? ` [IRR ${(irrGuardLabels as Record<string, string>)[band]}]` : "";
       return `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.adopted ? " [채택]" : ""}${c.recommended ? " [결정론 RECOMMENDED]" : ""}${guard}`;
     });
     return [

@@ -1,0 +1,6 @@
+{
+  "_comment": "IRR guard display labels (ADR-0179): Korean literals live here (lib/universe-direction-labels.json pattern) so irr-guard.ts stays pure; UI render sites resolve the same text from the stages.s8 catalog keys, and gate-brief embeds the JSON text into generated record content.",
+  "extreme": "극단값 — 검토 필요",
+  "caution": "주의",
+  "diagnostic": "가정 점검: 시장 범위(앵커와 대상 범위 일치 여부), 시장점유율 근거, 투자 규모(과소 계상 여부)"
+}

@@ -9,19 +9,45 @@ import type { GapResolution } from "./capability-gap.ts";
 
 export type EntryMode = GapResolution;
 export const ENTRY_MODES: EntryMode[] = ["build", "partner", "hire", "invest"];
-export const ENTRY_MODE_LABEL: Record<EntryMode, string> = { build: "직접 구축", partner: "전략 제휴", hire: "인력 영입", invest: "지분 투자" };
-export const ENTRY_MODE_HINT: Record<EntryMode, string> = {
-  build: "자체 투자와 인력으로 직접 만든다",
-  partner: "외부 파트너와 제휴·합작으로 확보한다",
-  hire: "필요 인력·조직을 채용·영입해 갖춘다",
-  invest: "공급·제휴·기술 기업의 지분(소수·전략 지분)을 취득해 역량을 확보한다",
+/** UI labels come from the catalog (stages.s5.entryStrategy.mode- and hint-keys) — the maps below
+ *  are NOT user-facing chrome: ENTRY_MODE_LABEL is parse vocabulary for matching the Korean mode
+ *  names in LLM drafts / stored text (lib/entry-strategy-draft.ts), and entryStrategyText renders
+ *  stored values for downstream prompts and charters (server content, not UI). */
+export const ENTRY_MODE_LABEL: Record<EntryMode, string> = {
+  build: "직접 구축",
+  partner: "전략 제휴",
+  hire: "인력 영입",
+  invest: "지분 투자",
+};
+/** Catalog keys (stages.s5.entryStrategy.*) for UI rendering; resolve with the section translator. */
+export const ENTRY_MODE_LABEL_KEYS: Record<EntryMode, string> = {
+  build: "modeBuild",
+  partner: "modePartner",
+  hire: "modeHire",
+  invest: "modeInvest",
+};
+export const ENTRY_MODE_HINT_KEYS: Record<EntryMode, string> = {
+  build: "hintBuild",
+  partner: "hintPartner",
+  hire: "hintHire",
+  invest: "hintInvest",
+};
+export const ENTRY_AI_FIELD_LABEL_KEYS: Record<EntryAiField, string> = {
+  modes: "aiFieldModes",
+  rationale: "aiFieldRationale",
+  alternatives: "aiFieldAlternatives",
 };
 export const ENTRY_RATIONALE_CAP = 600;
 export const ENTRY_ALTERNATIVES_CAP = 600;
 const HEADER_TAG = "[진출방식]";
 
-export interface EntryModes { modes: EntryMode[]; main: EntryMode | null }
-export interface ParsedEntryStrategy extends EntryModes { rationale: string }
+export interface EntryModes {
+  modes: EntryMode[];
+  main: EntryMode | null;
+}
+export interface ParsedEntryStrategy extends EntryModes {
+  rationale: string;
+}
 
 const canonical = (list: EntryMode[]): EntryMode[] => ENTRY_MODES.filter((m) => list.includes(m));
 
@@ -50,9 +76,15 @@ export function parseEntryStrategy(raw: string | null | undefined): ParsedEntryS
   const nl = text.indexOf("\n");
   const head = (nl === -1 ? text : text.slice(0, nl)).slice(HEADER_TAG.length);
   const rationale = nl === -1 ? "" : text.slice(nl + 1).trim();
-  const tokens = head.split(",").map((t) => t.trim()).filter(Boolean);
+  const tokens = head
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
   const main = tokens.find((t) => t.endsWith("*"))?.slice(0, -1) ?? null;
-  const m = normalizeModes(tokens.map((t) => t.replace(/\*$/, "")), main);
+  const m = normalizeModes(
+    tokens.map((t) => t.replace(/\*$/, "")),
+    main,
+  );
   // A header that names no valid mode is not a header: keep the whole text as the rationale.
   if (m.modes.length === 0) return { modes: [], main: null, rationale: text.trim() };
   return { ...m, rationale };
@@ -79,18 +111,25 @@ export function entryStrategyText(raw: string | null | undefined): string {
   const p = parseEntryStrategy(raw);
   if (p.modes.length === 0) return p.rationale;
   const main = p.main;
-  const modes = p.modes.map((m) => `${ENTRY_MODE_LABEL[m]}${p.modes.length > 1 && m === main ? "(주)" : ""}`).join(", ");
+  const modes = p.modes
+    .map((m) => `${ENTRY_MODE_LABEL[m]}${p.modes.length > 1 && m === main ? "(주)" : ""}`)
+    .join(", ");
   return p.rationale ? `진출방식: ${modes} — 근거: ${p.rationale}` : `진출방식: ${modes}`;
 }
 
 // ── caution: judgement 해소 방식 outside the selected modes ───────────────────
 
-export interface CautionRow { capability: string; resolution: EntryMode | null }
+export interface CautionRow {
+  capability: string;
+  resolution: EntryMode | null;
+}
 
 /** Capabilities whose 해소 방식 is not among the selected modes (empty when no mode is selected). Decision support only. */
 export function strategyMismatches(e: EntryModes, rows: readonly CautionRow[]): string[] {
   if (e.modes.length === 0) return [];
-  return rows.filter((r) => r.resolution && !e.modes.includes(r.resolution)).map((r) => r.capability.trim() || "(이름 없음)");
+  return rows
+    .filter((r) => r.resolution && !e.modes.includes(r.resolution))
+    .map((r) => r.capability.trim() || "(이름 없음)");
 }
 
 export function cautionText(names: readonly string[], max = 3): string {
@@ -108,20 +147,39 @@ export interface EntryStrategyProposal {
   cautions: string[];
   confidence?: "low" | "medium" | "high";
 }
-export interface EntryFormState { modes: EntryModes; rationale: string; alternatives: string }
+export interface EntryFormState {
+  modes: EntryModes;
+  rationale: string;
+  alternatives: string;
+}
 export type EntryAiField = "modes" | "rationale" | "alternatives";
-export const ENTRY_AI_FIELD_LABEL: Record<EntryAiField, string> = { modes: "진출 방식 선택", rationale: "선택 근거", alternatives: "검토했으나 선택하지 않은 대안" };
 
 /** Fills ONLY the empty parts (no mode selected / empty text). Human-entered values are never overwritten. */
-export function mergeEntryProposal(current: EntryFormState, p: EntryStrategyProposal): { state: EntryFormState; marks: EntryAiField[] } {
-  const state: EntryFormState = { modes: { ...current.modes, modes: [...current.modes.modes] }, rationale: current.rationale, alternatives: current.alternatives };
+export function mergeEntryProposal(
+  current: EntryFormState,
+  p: EntryStrategyProposal,
+): { state: EntryFormState; marks: EntryAiField[] } {
+  const state: EntryFormState = {
+    modes: { ...current.modes, modes: [...current.modes.modes] },
+    rationale: current.rationale,
+    alternatives: current.alternatives,
+  };
   const marks: EntryAiField[] = [];
   if (current.modes.modes.length === 0 && p.modes.length > 0) {
     const main = p.modes.find((m) => m.main)?.mode ?? null;
-    state.modes = normalizeModes(p.modes.map((m) => m.mode), main);
+    state.modes = normalizeModes(
+      p.modes.map((m) => m.mode),
+      main,
+    );
     if (state.modes.modes.length > 0) marks.push("modes");
   }
-  if (!current.rationale.trim() && p.rationale.trim()) { state.rationale = p.rationale.trim().slice(0, ENTRY_RATIONALE_CAP); marks.push("rationale"); }
-  if (!current.alternatives.trim() && p.alternatives.trim()) { state.alternatives = p.alternatives.trim().slice(0, ENTRY_ALTERNATIVES_CAP); marks.push("alternatives"); }
+  if (!current.rationale.trim() && p.rationale.trim()) {
+    state.rationale = p.rationale.trim().slice(0, ENTRY_RATIONALE_CAP);
+    marks.push("rationale");
+  }
+  if (!current.alternatives.trim() && p.alternatives.trim()) {
+    state.alternatives = p.alternatives.trim().slice(0, ENTRY_ALTERNATIVES_CAP);
+    marks.push("alternatives");
+  }
   return { state, marks };
 }

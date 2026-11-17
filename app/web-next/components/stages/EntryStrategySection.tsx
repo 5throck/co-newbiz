@@ -9,12 +9,29 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../lib/api.ts";
 import { useTranslations } from "next-intl";
 import {
-  ENTRY_AI_FIELD_LABEL, ENTRY_ALTERNATIVES_CAP, ENTRY_MODES, ENTRY_MODE_HINT, ENTRY_MODE_LABEL, ENTRY_RATIONALE_CAP,
-  cautionText, mergeEntryProposal, normalizeModes, strategyMismatches, toggleMode,
-  type CautionRow, type EntryAiField, type EntryFormState, type EntryMode, type EntryStrategyProposal,
+  ENTRY_AI_FIELD_LABEL_KEYS,
+  ENTRY_ALTERNATIVES_CAP,
+  ENTRY_MODES,
+  ENTRY_MODE_HINT_KEYS,
+  ENTRY_MODE_LABEL_KEYS,
+  ENTRY_RATIONALE_CAP,
+  cautionText,
+  mergeEntryProposal,
+  normalizeModes,
+  strategyMismatches,
+  toggleMode,
+  type CautionRow,
+  type EntryAiField,
+  type EntryFormState,
+  type EntryMode,
+  type EntryStrategyProposal,
 } from "../../lib/greenfield-entry-strategy.ts";
 
-interface DraftResponse { proposal: EntryStrategyProposal | null; source: "llm" | "synthesis"; note: string }
+interface DraftResponse {
+  proposal: EntryStrategyProposal | null;
+  source: "llm" | "synthesis";
+  note: string;
+}
 
 export interface EntryStrategySaveUi {
   /** Unsaved changes (human edits or AI drafts) in this section. */
@@ -27,7 +44,15 @@ export interface EntryStrategySaveUi {
   onDismissNote: () => void;
 }
 
-export function EntryStrategySection({ opportunityId, value, onChange, canAct, rows, resetKey, save }: {
+export function EntryStrategySection({
+  opportunityId,
+  value,
+  onChange,
+  canAct,
+  rows,
+  resetKey,
+  save,
+}: {
   opportunityId: string;
   value: EntryFormState;
   /** Every change (human edit or AI draft) goes through here so the page can keep unsaved text across refetches. */
@@ -39,30 +64,50 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
   resetKey: number;
   /** Own save of ONLY the strategy fields (modes, main, rationale, alternatives). */
   save?: EntryStrategySaveUi;
-}) {const t = useTranslations("stages.s5.entryStrategy"); const tc = useTranslations("common");
+}) {
+  const t = useTranslations("stages.s5.entryStrategy");
+  const tc = useTranslations("common");
   const uid = useId();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [marks, setMarks] = useState<EntryAiField[]>([]);
   const [info, setInfo] = useState<{ proposal: EntryStrategyProposal } | null>(null);
-  const valueRef = useRef(value); valueRef.current = value;
-  const marksRef = useRef(marks); marksRef.current = marks;
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
 
-  useEffect(() => { setMarks([]); setInfo(null); setNote(null); setError(null); }, [resetKey]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resetKey is a reset trigger — the effect intentionally re-runs on key change without reading it
+  useEffect(() => {
+    setMarks([]);
+    setInfo(null);
+    setNote(null);
+    setError(null);
+  }, [resetKey]);
 
   const clearMark = (f: EntryAiField) => setMarks((m) => m.filter((x) => x !== f));
   const mismatches = strategyMismatches(value.modes, rows);
   const main = value.modes.main;
 
-  function pickMode(mode: EntryMode) { clearMark("modes"); onChange({ ...value, modes: toggleMode(value.modes, mode) }); }
-  function pickMain(mode: EntryMode) { clearMark("modes"); onChange({ ...value, modes: normalizeModes(value.modes.modes, mode) }); }
+  function pickMode(mode: EntryMode) {
+    clearMark("modes");
+    onChange({ ...value, modes: toggleMode(value.modes, mode) });
+  }
+  function pickMain(mode: EntryMode) {
+    clearMark("modes");
+    onChange({ ...value, modes: normalizeModes(value.modes.modes, mode) });
+  }
 
   async function propose() {
     if (busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
-      const res = await api.post<DraftResponse>(`/api/greenfield/${encodeURIComponent(opportunityId)}/entry-strategy-draft`, {});
+      const res = await api.post<DraftResponse>(
+        `/api/greenfield/${encodeURIComponent(opportunityId)}/entry-strategy-draft`,
+        {},
+      );
       const { proposal, note: n } = res.data;
       setNote(n);
       if (!proposal) return;
@@ -91,18 +136,35 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       else next.alternatives = "";
     }
     onChange(next);
-    setMarks([]); setInfo(null);
+    setMarks([]);
+    setInfo(null);
   }
 
-  const aiChip = (f: EntryAiField) => marks.includes(f)
-    ? <span className="status-chip status-not-started" data-testid={`entry-ai-chip-${f}`} title={t("aiDraftUnsavedP1A", { p1: ENTRY_AI_FIELD_LABEL[f] })}><span aria-hidden="true">✦</span> {tc("aiDraft")}</span>
-    : null;
-  const basisLine = (f: EntryAiField, text: string | undefined) => marks.includes(f) && text
-    ? <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid={`entry-ai-basis-${f}`}>{t("aiEvidence")} {text}</p>
-    : null;
-  const modeReasons = info && marks.includes("modes")
-    ? info.proposal.modes.map((m) => t("p1P2P3", { p1: ENTRY_MODE_LABEL[m.mode], p2: m.main ? t("wks") : "", p3: m.reason })).join(" / ")
-    : undefined;
+  const aiChip = (f: EntryAiField) =>
+    marks.includes(f) ? (
+      <span
+        className="status-chip status-not-started"
+        data-testid={`entry-ai-chip-${f}`}
+        title={t("aiDraftUnsavedP1A", { p1: t(ENTRY_AI_FIELD_LABEL_KEYS[f]) })}
+      >
+        <span aria-hidden="true">✦</span> {tc("aiDraft")}
+      </span>
+    ) : null;
+  const basisLine = (f: EntryAiField, text: string | undefined) =>
+    marks.includes(f) && text ? (
+      <p
+        className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1"
+        data-testid={`entry-ai-basis-${f}`}
+      >
+        {t("aiEvidence")} {text}
+      </p>
+    ) : null;
+  const modeReasons =
+    info && marks.includes("modes")
+      ? info.proposal.modes
+          .map((m) => t("p1P2P3", { p1: t(ENTRY_MODE_LABEL_KEYS[m.mode]), p2: m.main ? t("wks") : "", p3: m.reason }))
+          .join(" / ")
+      : undefined;
 
   return (
     <div className="mb-3" data-testid="entry-strategy-section">
@@ -110,44 +172,102 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
         <h3 className="text-[length:var(--fs-body)] mb-0">{t("entryStrategy")}</h3>
         {marks.length > 0 && (
           <span className="flex items-center gap-1" data-testid="entry-ai-unsaved">
-            <span className="status-chip status-not-started" role="status"><span aria-hidden="true">✦</span> {tc("unsavedAiDraft")} {marks.length}{tc("countUnit")}</span>
-            {canAct && <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>{tc("discardAiDraft")}</button>}
+            <span className="status-chip status-not-started" role="status">
+              <span aria-hidden="true">✦</span> {tc("unsavedAiDraft")} {marks.length}
+              {tc("countUnit")}
+            </span>
+            {canAct && (
+              <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={discard}>
+                {tc("discardAiDraft")}
+              </button>
+            )}
           </span>
         )}
         {canAct && (
-          <button type="button" className="btn-ghost btn-sm ml-auto" disabled={busy} onClick={() => void propose()}
-            title={t("theAiDraftsTheEmpty")}>
+          <button
+            type="button"
+            className="btn-ghost btn-sm ml-auto"
+            disabled={busy}
+            onClick={() => void propose()}
+            title={t("theAiDraftsTheEmpty")}
+          >
             {busy ? tc("proposing") : t("entryStrategyProposalAi")}
           </button>
         )}
       </div>
       {note && (
-        <div className="legacy-model-notice mb-2 flex items-start justify-between gap-2" role="status" data-testid="entry-ai-note">
+        <div
+          className="legacy-model-notice mb-2 flex items-start justify-between gap-2"
+          role="status"
+          data-testid="entry-ai-note"
+        >
           <p className="legacy-model-notice-text">{note}</p>
-          <button type="button" className="btn-ghost btn-sm" aria-label={t("closeAiProposalResult")} onClick={() => setNote(null)}>{tc("close")}</button>
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            aria-label={t("closeAiProposalResult")}
+            onClick={() => setNote(null)}
+          >
+            {tc("close")}
+          </button>
         </div>
       )}
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-1">{error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mb-1">
+          {error}
+        </p>
+      )}
 
       <div className="flex items-center gap-2 mb-1">
-        <span id={`${uid}-modes`} className="text-[length:var(--fs-caption)] font-semibold">{t("entryModeSelectionMultipleAllowed")}</span>
+        <span id={`${uid}-modes`} className="text-[length:var(--fs-caption)] font-semibold">
+          {t("entryModeSelectionMultipleAllowed")}
+        </span>
         {aiChip("modes")}
       </div>
+      {/* biome-ignore lint/a11y/useSemanticElements: checkbox group inside a text panel; a native fieldset would change the panel layout */}
       <div role="group" aria-labelledby={`${uid}-modes`} className="flex flex-wrap gap-2 mb-1">
         {ENTRY_MODES.map((m) => {
           const on = value.modes.modes.includes(m);
           return (
-            <div key={m} className="sizing-grade-card" style={{ minWidth: 190, flex: "1 1 190px" /* design-token-exempt: layout-tuned card flex-basis (one-off) */ }} data-testid={`entry-mode-${m}`}>
+            <div
+              key={m}
+              className="sizing-grade-card"
+              style={{
+                minWidth: 190,
+                flex: "1 1 190px" /* design-token-exempt: layout-tuned card flex-basis (one-off) */,
+              }}
+              data-testid={`entry-mode-${m}`}
+            >
               <label className="flex items-center gap-1">
-                <input type="checkbox" checked={on} onChange={() => pickMode(m)} aria-describedby={`${uid}-${m}-hint`} />
-                <span className="font-semibold">{ENTRY_MODE_LABEL[m]}</span>
-                {on && <span className="status-chip status-green" data-testid={`entry-selected-${m}`}><span aria-hidden="true">✓</span> {tc("select")}</span>}
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={() => pickMode(m)}
+                  aria-describedby={`${uid}-${m}-hint`}
+                />
+                <span className="font-semibold">{t(ENTRY_MODE_LABEL_KEYS[m])}</span>
+                {on && (
+                  <span className="status-chip status-green" data-testid={`entry-selected-${m}`}>
+                    <span aria-hidden="true">✓</span> {tc("select")}
+                  </span>
+                )}
               </label>
-              <p id={`${uid}-${m}-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{ENTRY_MODE_HINT[m]}</p>
+              <p id={`${uid}-${m}-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
+                {t(ENTRY_MODE_HINT_KEYS[m])}
+              </p>
               {on && (
                 <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-                  <input type="radio" name={`${uid}-main`} checked={main === m} disabled={value.modes.modes.length === 1} onChange={() => pickMain(m)} />
-                  <span>{t("primaryMode")}{main === m ? t("current") : ""}</span>
+                  <input
+                    type="radio"
+                    name={`${uid}-main`}
+                    checked={main === m}
+                    disabled={value.modes.modes.length === 1}
+                    onChange={() => pickMain(m)}
+                  />
+                  <span>
+                    {t("primaryMode")}
+                    {main === m ? t("current") : ""}
+                  </span>
                 </label>
               )}
             </div>
@@ -158,34 +278,62 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       {basisLine("modes", info?.proposal.basis.modes)}
 
       <div className="flex items-center gap-2 mt-2 mb-1">
-        <label htmlFor={`${uid}-rationale`} className="text-[length:var(--fs-caption)] font-semibold">{t("selectionEvidence")}</label>
+        <label htmlFor={`${uid}-rationale`} className="text-[length:var(--fs-caption)] font-semibold">
+          {t("selectionEvidence")}
+        </label>
         {aiChip("rationale")}
-        <span className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="entry-rationale-count">{value.rationale.length}/{ENTRY_RATIONALE_CAP}</span>
+        <span
+          className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+          data-testid="entry-rationale-count"
+        >
+          {value.rationale.length}/{ENTRY_RATIONALE_CAP}
+        </span>
       </div>
       <textarea
         id={`${uid}-rationale`}
         aria-label={t("selectionEvidence2")}
         value={value.rationale}
         maxLength={ENTRY_RATIONALE_CAP}
-        onChange={(e) => { clearMark("rationale"); onChange({ ...value, rationale: e.target.value }); }}
+        onChange={(e) => {
+          clearMark("rationale");
+          onChange({ ...value, rationale: e.target.value });
+        }}
         rows={3}
         placeholder={t("whyThisModeWasChosen")}
         className="sizing-new-input mb-1"
         style={{ width: "100%" }}
       />
-      {basisLine("rationale", [info?.proposal.basis.rationale, info?.proposal.basis.assumption ? t("keyAssumptionP1", { p1: info.proposal.basis.assumption }) : ""].filter(Boolean).join(" · "))}
+      {basisLine(
+        "rationale",
+        [
+          info?.proposal.basis.rationale,
+          info?.proposal.basis.assumption ? t("keyAssumptionP1", { p1: info.proposal.basis.assumption }) : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      )}
 
       <div className="flex items-center gap-2 mt-1 mb-1">
-        <label htmlFor={`${uid}-alt`} className="text-[length:var(--fs-caption)] font-semibold">{t("alternativesConsideredButNotChosen")}</label>
+        <label htmlFor={`${uid}-alt`} className="text-[length:var(--fs-caption)] font-semibold">
+          {t("alternativesConsideredButNotChosen")}
+        </label>
         {aiChip("alternatives")}
-        <span className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="entry-alternatives-count">{value.alternatives.length}/{ENTRY_ALTERNATIVES_CAP}</span>
+        <span
+          className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
+          data-testid="entry-alternatives-count"
+        >
+          {value.alternatives.length}/{ENTRY_ALTERNATIVES_CAP}
+        </span>
       </div>
       <textarea
         id={`${uid}-alt`}
         aria-label={t("alternativesConsideredButNotChosen2")}
         value={value.alternatives}
         maxLength={ENTRY_ALTERNATIVES_CAP}
-        onChange={(e) => { clearMark("alternatives"); onChange({ ...value, alternatives: e.target.value }); }}
+        onChange={(e) => {
+          clearMark("alternatives");
+          onChange({ ...value, alternatives: e.target.value });
+        }}
         rows={2}
         className="sizing-new-input mb-1"
         style={{ width: "100%" }}
@@ -197,28 +345,68 @@ export function EntryStrategySection({ opportunityId, value, onChange, canAct, r
       </p>
       {mismatches.length > 0 && (
         <p className="mb-1" data-testid="entry-mismatch">
-          <span className="status-chip status-not-started" role="status"><span aria-hidden="true">⚠</span> {cautionText(mismatches)}</span>
+          <span className="status-chip status-not-started" role="status">
+            <span aria-hidden="true">⚠</span> {cautionText(mismatches)}
+          </span>
         </p>
       )}
       {save && canAct && (
         <div className="flex flex-wrap items-center gap-2 mt-2" data-testid="entry-save-actions">
-          <button type="button" className={save.dirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"} disabled={!save.dirty || save.saving} aria-describedby={`${uid}-save-hint`} onClick={save.onSave}>
+          <button
+            type="button"
+            className={save.dirty ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+            disabled={!save.dirty || save.saving}
+            aria-describedby={`${uid}-save-hint`}
+            onClick={save.onSave}
+          >
             {save.saving ? t("item") : t("saveEntryStrategy")}
           </button>
-          {save.dirty && <span className="status-chip status-amber" role="status" data-testid="entry-dirty"><span aria-hidden="true">!</span> {tc("unsavedChanges")}</span>}
-          {!save.dirty && <span id={`${uid}-save-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("noChangesToSave")}</span>}
-          {save.note && (
-            <span className="flex items-center gap-1" role="status" data-testid="entry-save-note">
-              <span className="status-chip status-green"><span aria-hidden="true">✓</span> {save.note}</span>
-              <button type="button" className="btn-ghost btn-sm" aria-label={t("closeSaveResult")} onClick={save.onDismissNote}>{tc("close")}</button>
+          {save.dirty && (
+            <span className="status-chip status-amber" role="status" data-testid="entry-dirty">
+              <span aria-hidden="true">!</span> {tc("unsavedChanges")}
             </span>
           )}
-          {save.error && <span role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]" data-testid="entry-save-error">{save.error}</span>}
+          {!save.dirty && (
+            <span id={`${uid}-save-hint`} className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+              {t("noChangesToSave")}
+            </span>
+          )}
+          {save.note && (
+            <span className="flex items-center gap-1" role="status" data-testid="entry-save-note">
+              <span className="status-chip status-green">
+                <span aria-hidden="true">✓</span> {save.note}
+              </span>
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                aria-label={t("closeSaveResult")}
+                onClick={save.onDismissNote}
+              >
+                {tc("close")}
+              </button>
+            </span>
+          )}
+          {save.error && (
+            <span
+              role="alert"
+              className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)]"
+              data-testid="entry-save-error"
+            >
+              {save.error}
+            </span>
+          )}
         </div>
       )}
       {info && info.proposal.cautions.length > 0 && marks.length > 0 && (
-        <ul className="sizing-note-list text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1" data-testid="entry-ai-cautions">
-          {info.proposal.cautions.map((c, i) => <li key={i}><span aria-hidden="true">⚠</span> {t("aiCaution")} {c}</li>)}
+        <ul
+          className="sizing-note-list text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1"
+          data-testid="entry-ai-cautions"
+        >
+          {info.proposal.cautions.map((c) => (
+            <li key={c}>
+              <span aria-hidden="true">⚠</span> {t("aiCaution")} {c}
+            </li>
+          ))}
         </ul>
       )}
     </div>
