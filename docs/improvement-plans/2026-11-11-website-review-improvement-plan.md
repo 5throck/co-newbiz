@@ -7,7 +7,7 @@
 
 **Sources**
 
-- `memory/meeting-2026-11-11-ui-review-panels.md` — panel transcripts, verdict tables #1–18, cross-panel agreements, handoffs
+- `memory/archive/meeting-2026-11-11-ui-review-panels.md` — panel transcripts, verdict tables #1–18, cross-panel agreements, handoffs
 - `docs/security/2026-11-11-admin-account-review.md` — admin-account review (12 questions; 4 P2 findings, 4 P3 accepted-risks, 4 OK verdicts)
 - Panel basis: screen inventory from the PM survey; Onyx 3.0 standard patterns P0–P5 (`docs/design-system/design-screens.md`); `DESIGN-CHECKLIST.md`; the two success criteria of the 2026-09-12 usability review (CRUD surfaces + stage-linkage strip); `flow.spec.yaml` v2.21.0 (stage/gate SSOT); FR-SYS-03/05; FR-SEC-01/02
 - C3 status (handbook + flow console): handbook refresh landed in `docs/wiki/ko` (8 pages) — self-registration closure, committee minutes sections (S4 위원회 회의록 읽기 / S11 위원회 심의 세션 / hard-block row); flow console projections verified fresh (all `--check` exit 0, SPEC_VERSION 2.21.0); pending screenshot captures recorded in 82-변경이력 (login, S4 minutes dialog, S11 committee section)
