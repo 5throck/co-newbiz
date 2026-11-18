@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-translated_from_hash: 6057d32a73c854f48ce2e6f7ed71a80f48803d2799430175e3bab92e7eef51bf
+translated_from_hash: fb5988ac764b6f35c4d975006a810973d893772dd756e4d680eeec0d307d948e
 lang: ko
 lang_reason: source-material
 ---
@@ -141,6 +141,8 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 
 이 변형은 신사업 검토 거버넌스 팀과 그 지원 시스템을 구현합니다: 정책·절차·체크리스트 작성 및 운영, SQLite 기반 Next.js Route Handler REST API, 그 위의 MCP 서버, Python 연산 레이어, Green Field 및 Brown Field 딜 리뷰 워크플로. (원래 ADR-0010에 따라 Hono + React/Vite + ECharts로 구축되었으나, ADR-0069/0070(2026-08-26 승인)에 따라 Next.js + Prisma + Tailwind + Recharts로 이관되었습니다.)
 
+stdio MCP 서버는 GitHub Packages의 npm 패키지 `@co-newbiz/co-newbiz-mcp`로도 배포합니다 — 저장소 체크아웃 없이 `bunx @co-newbiz/co-newbiz-mcp`와 개인 액세스 토큰(`read:packages`)으로 설치합니다.
+
 > ⚠️ 프로토타입 변형 — 프로덕션 용도가 아닙니다.
 
 에이전트/스킬/스크립트 수명주기 규칙은 [AGENTS.md](AGENTS.md) §8(Lifecycle Management)과 `docs/context.md`를 참조하세요.
@@ -152,4 +154,4 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 ---
 
 *최근 업데이트: 2026-08-24*
-*Last Updated: 2026-11-06*
+*Last Updated: 2026-11-18*

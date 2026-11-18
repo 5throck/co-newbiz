@@ -1,4 +1,4 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * Connected-apps personal API tokens UI — frontend Row 2 source-reading tests
  * (docs/designs/2026-10-11-self-service-api-tokens-design.md §4.2, §7).
@@ -196,6 +196,10 @@ describe("connected-apps personal API tokens UI", () => {
     expect(ko("pages.connectedApps.revealSnippetCopiedOk")).toBe("설정 예시를 복사했습니다.");
     expect(PAGE).toMatch(/<Button variant="ghost" onClick=\{\(\) => void copySnippet\(\)\}>/);
     expect(PAGE).toMatch(/writeText\(snippet\)/);
+    // snippet runs the published npm package via bunx (mcp-package-distribution design §5) — no repo checkout path anywhere
+    expect(PAGE).toMatch(/command: "bunx",\n\s*args: \["-y", "@co-newbiz\/co-newbiz-mcp"\]/);
+    expect(PAGE).not.toContain("<repo-path>");
+    expect(PAGE).not.toContain("mcp/co-newbiz/index.ts");
     expect(PAGE).toMatch(/role="status" aria-live="polite"/);
     expect(PAGE).toMatch(/t\("revealSnippetCopiedOk"\)/);
     expect(PAGE).toMatch(/t\("revealSnippetCopyFail"\)/);

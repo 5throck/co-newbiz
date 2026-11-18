@@ -95,6 +95,8 @@ Client registration example (stdio; env supplied by the consumer, no repo paths 
 }
 ```
 
+The connected-apps page (`app/web-next/app/settings/connected-apps/page.tsx`) now copies this exact package command as its one-time reveal dialog's config snippet, so in-app users get a working `mcpServers` block without a repository checkout (origin and token filled in automatically).
+
 Personal API tokens (issued via `POST /api/tokens`) remain the auth model for this transport — unchanged from §2 of mcp-integration.md. The OAuth-only constraint of `/api/mcp` (ADR-0154) is untouched and remains the path for OAuth-capable clients.
 
 ### 6. Tests and gates
@@ -109,6 +111,8 @@ Personal API tokens (issued via `POST /api/tokens`) remain the auth model for th
 ### 7. Docs and security-model currency
 
 Same-PR doc updates (runbook rule): `docs/architecture/mcp-integration.md` §4 (add package row: "any client, no checkout"), `docs/runbooks/deployment.md` §5 (consumer prerequisite + release note: publishing now includes the npm channel).
+
+Post-publish extension (`mcp-v1.0.0` shipped to GitHub Packages): the docs surfaces reach the consumer-facing layer too — wiki page `docs/wiki/ko/12-공통-화면-둘러보기.md` §6 (token flow notes the copied `bunx` config snippet), the docs hub `docs/README.md` architecture row (MCP integration entry names the npm distribution), and the root `README.md` / `README_ko.md` architecture notes (stdio server also installable as `@co-newbiz/co-newbiz-mcp`).
 
 Threat-model currency check: this is a **distribution channel change, not a new trust boundary** — same code, same bearer-token auth, same REST-only enforcement, no new endpoint and no new auth path. The published tarball is private (GitHub Packages inherits repo visibility). `docs/security/security-model.md` needs no STRIDE update; this paragraph is the record of that check.
 
