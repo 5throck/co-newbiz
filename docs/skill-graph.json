@@ -1422,7 +1422,7 @@
       "name": "pm",
       "scope": "root",
       "capability": "pm",
-      "content_hash": "4550eac0e3afa974",
+      "content_hash": "751806c9f1b561cc",
       "version": "1.2.0",
       "mirrors": [
         "agents/pm.md"
@@ -2450,8 +2450,8 @@
       "name": "design-foundation",
       "scope": "root",
       "capability": "design-foundation",
-      "content_hash": "bc50d03c2de4aade",
-      "version": "1.1.0",
+      "content_hash": "74fdd004a399497b",
+      "version": "1.1.1",
       "mirrors": [
         "skills/design-foundation/SKILL.md",
         ".claude/skills/design-foundation/SKILL.md",
@@ -2522,8 +2522,8 @@
       "name": "explain-me",
       "scope": "root",
       "capability": "explain-me",
-      "content_hash": "7bff142975a1c6c7",
-      "version": "1.0.0",
+      "content_hash": "757f9b180ab5df7e",
+      "version": "1.0.1",
       "mirrors": [
         "skills/explain-me/SKILL.md",
         ".claude/skills/explain-me/SKILL.md",
@@ -2577,7 +2577,7 @@
       "scope": "root",
       "capability": "finishing-a-development-branch",
       "content_hash": "7aa95cd39dce01f1",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "mirrors": [
         "skills/finishing-a-development-branch/SKILL.md",
         ".claude/skills/finishing-a-development-branch/SKILL.md",
@@ -2756,8 +2756,8 @@
       "name": "i18n-audit",
       "scope": "root",
       "capability": "i18n-audit",
-      "content_hash": "5029572bc159b21d",
-      "version": "1.0.0",
+      "content_hash": "b5259cc88ab22d58",
+      "version": "1.0.2",
       "mirrors": [
         "skills/i18n-audit/SKILL.md",
         ".claude/skills/i18n-audit/SKILL.md",
@@ -2774,8 +2774,8 @@
       "name": "i18n-formatting",
       "scope": "root",
       "capability": "i18n-formatting",
-      "content_hash": "db8381f1fbb2ed31",
-      "version": "1.0.0",
+      "content_hash": "4db7cf2ed408dd22",
+      "version": "1.0.1",
       "mirrors": [
         "skills/i18n-formatting/SKILL.md",
         ".claude/skills/i18n-formatting/SKILL.md",
@@ -2792,8 +2792,8 @@
       "name": "i18n-layout",
       "scope": "root",
       "capability": "i18n-layout",
-      "content_hash": "a043d20f098dd093",
-      "version": "1.1.0",
+      "content_hash": "67b31c6f61b62452",
+      "version": "1.1.1",
       "mirrors": [
         "skills/i18n-layout/SKILL.md",
         ".claude/skills/i18n-layout/SKILL.md",
@@ -2810,8 +2810,8 @@
       "name": "i18n-locale-config",
       "scope": "root",
       "capability": "i18n-locale-config",
-      "content_hash": "3878ed90d1fad170",
-      "version": "1.0.0",
+      "content_hash": "7e9e381d9fd82e21",
+      "version": "1.0.1",
       "mirrors": [
         "skills/i18n-locale-config/SKILL.md",
         ".claude/skills/i18n-locale-config/SKILL.md",
@@ -2954,8 +2954,8 @@
       "name": "k-dart",
       "scope": "root",
       "capability": "k-dart",
-      "content_hash": "10c42957298ab758",
-      "version": "2.1.2",
+      "content_hash": "504b2be43a8db594",
+      "version": "2.1.3",
       "mirrors": [
         "skills/k-dart/SKILL.md",
         ".claude/skills/k-dart/SKILL.md",
@@ -2972,8 +2972,8 @@
       "name": "k-ecos",
       "scope": "root",
       "capability": "k-ecos",
-      "content_hash": "0ed59c1bd4af881a",
-      "version": "1.0.0",
+      "content_hash": "a60b6889af1e140d",
+      "version": "1.0.1",
       "mirrors": [
         "skills/k-ecos/SKILL.md",
         ".claude/skills/k-ecos/SKILL.md",
@@ -2990,8 +2990,8 @@
       "name": "k-kosis",
       "scope": "root",
       "capability": "k-kosis",
-      "content_hash": "53beb717d9eacffc",
-      "version": "1.0.2",
+      "content_hash": "774769a47ac76f85",
+      "version": "1.0.3",
       "mirrors": [
         "skills/k-kosis/SKILL.md",
         ".claude/skills/k-kosis/SKILL.md",
@@ -3008,8 +3008,8 @@
       "name": "k-krx",
       "scope": "root",
       "capability": "k-krx",
-      "content_hash": "9d29fbb4b6b46a36",
-      "version": "1.0.2",
+      "content_hash": "4049e38d28de84aa",
+      "version": "1.0.3",
       "mirrors": [
         "skills/k-krx/SKILL.md",
         ".claude/skills/k-krx/SKILL.md",
@@ -3044,8 +3044,8 @@
       "name": "k-opendata",
       "scope": "root",
       "capability": "k-opendata",
-      "content_hash": "2661c11b5cd90f4c",
-      "version": "1.2.2",
+      "content_hash": "9a7fbbb322def552",
+      "version": "1.2.3",
       "mirrors": [
         "skills/k-opendata/SKILL.md",
         ".claude/skills/k-opendata/SKILL.md",
@@ -3134,8 +3134,8 @@
       "name": "meeting-facilitation",
       "scope": "root",
       "capability": "meeting-facilitation",
-      "content_hash": "d78142170434628e",
-      "version": "1.4.4",
+      "content_hash": "4f69368ecb0cedd5",
+      "version": "1.5.0",
       "mirrors": [
         "skills/meeting-facilitation/SKILL.md",
         ".claude/skills/meeting-facilitation/SKILL.md",
@@ -3297,7 +3297,7 @@
       "scope": "root",
       "capability": "platform-skill-lifecycle-manager",
       "content_hash": "08e425f43401cabc",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "mirrors": [
         "skills/platform-skill-lifecycle-manager/SKILL.md",
         ".claude/skills/platform-skill-lifecycle-manager/SKILL.md",
@@ -3710,8 +3710,8 @@
       "name": "sync",
       "scope": "root",
       "capability": "sync",
-      "content_hash": "a0e1df01c91ed3ae",
-      "version": "1.9.0",
+      "content_hash": "80a9c66a71aac4f1",
+      "version": "1.10.0",
       "mirrors": [
         "skills/sync/SKILL.md",
         ".claude/skills/sync/SKILL.md",
@@ -4020,8 +4020,8 @@
       "name": "zod-contract-gate",
       "scope": "root",
       "capability": "zod-contract-gate",
-      "content_hash": "9efb8baca890bb8e",
-      "version": "1.0.2",
+      "content_hash": "11e4c739d4dfeedc",
+      "version": "1.0.3",
       "mirrors": [
         "skills/zod-contract-gate/SKILL.md",
         ".claude/skills/zod-contract-gate/SKILL.md",
@@ -5688,6 +5688,12 @@
       "type": "references",
       "from": "agent:root/pm",
       "to": "skill:root/decision-record",
+      "source": "prose"
+    },
+    {
+      "type": "references",
+      "from": "agent:root/pm",
+      "to": "skill:root/meeting-facilitation",
       "source": "prose"
     },
     {

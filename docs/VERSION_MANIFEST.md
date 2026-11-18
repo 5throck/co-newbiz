@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-18T17:42:32.303Z
+**Generated**: 2026-11-18T23:26:59.091Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -8,9 +8,9 @@
 
 ## Summary
 
-- **Agents**: 46
+- **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 212 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 214 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -50,12 +50,11 @@
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-11-10 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-11-10 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-11-10 |
-| pm | agents/pm.md | medium | inherit | 2026-10-28 |
+| pm | agents/pm.md | medium | inherit | 2026-11-18 |
 | pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-11-10 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-11-10 |
 | public-data-analyst | agents/public-data-analyst.md | medium | claude-sonnet-5-5 | 2026-11-18 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-11-10 |
-| README_ko | agents/README_ko.md | N/A | — | 2026-10-26 |
 | region-lead | agents/region-lead.md | high | inherit | 2026-11-10 |
 | release-engineer | agents/release-engineer.md | medium | inherit | 2026-11-10 |
 | risk-officer | agents/risk-officer.md | high | inherit | 2026-11-10 |
@@ -94,14 +93,14 @@
 | debt-and-contingent-liability-simulation | 1.1.0 | active | skills/debt-and-contingent-liability-simulation/SKILL.md | workspace | contingent liability, covenant breach test, rate shock, Monte Carlo liability integration, CoC debt acceleration | risk-officer |
 | decision-record | 1.1.2 | active | skills/decision-record/SKILL.md | workspace | decision record, record a gate ruling, go/no-go decision, escalation decision, record a decision | pm |
 | delegate-to-hub | 1.0.1 | active | skills/delegate-to-hub/SKILL.md | workspace | delegate to hub, delegation ticket, hub delegation, escalate to hub, file delegation | pm |
-| design-foundation | 1.1.0 | active | skills/design-foundation/SKILL.md | workspace | design foundation, design principles, design guide, design tokens setup, design decision record | design-system-agent |
+| design-foundation | 1.1.1 | active | skills/design-foundation/SKILL.md | workspace | design foundation, design principles, design guide, design tokens setup, design decision record | design-system-lead |
 | documentation-writing | 1.0.3 | active | skills/documentation-writing/SKILL.md | workspace | write documentation, create guide, draft communication, write manual, create tutorial, documentation, technical writing | pm |
 | evidence-ledger | 1.1.1 | active | skills/evidence-ledger/SKILL.md | workspace | evidence ledger, citation ledger, ledger row, claim-to-source trace, supersede a ledger row | pm |
 | executive-presentation | 1.0.0 | active | skills/executive-presentation/SKILL.md | workspace | executive presentation, executive deck, IC presentation, decision deck, strategy deck, board presentation | docs-writer |
-| explain-me | 1.0.0 | experimental | skills/explain-me/SKILL.md | workspace | /explain-me, /reportme, make a report, create report, explain this topic | pm |
+| explain-me | 1.0.1 | experimental | skills/explain-me/SKILL.md | workspace | /explain-me, /reportme, make a report, create report, explain this topic | pm |
 | financial-statement-analysis | 1.0.0 | active | skills/financial-statement-analysis/SKILL.md | workspace | financial statement analysis, ROIC analysis, value driver tree, financial KPI, profitability analysis, cash flow analysis, DART analysis, fundamental analysis, corporate financial analysis | financial-analyst |
 | financing-plan-review | 1.3.0 | active | skills/financing-plan-review/SKILL.md | workspace | financing plan, certainty of funds, sources and uses | valuation-agent |
-| finishing-a-development-branch | 1.0.1 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
+| finishing-a-development-branch | 1.0.2 | active | skills/finishing-a-development-branch/SKILL.md | workspace | finish branch, complete work, wrap up, finishing a development branch, merge branch, create PR, push and PR | pm |
 | forward-industry-research | 1.1.0 | experimental | skills/forward-industry-research/SKILL.md | workspace | industry research, industry outlook, sector research, forward industry view | market-intelligence-agent |
 | gateguard | 1.0.2 | active | skills/gateguard/SKILL.md | workspace | gateguard, /gateguard, investigate file, check before edit, pre-edit check | pm |
 | greenfield-feasibility | 1.2.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
@@ -111,10 +110,10 @@
 | handbook-sync-audit | 1.0.5 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | pm |
 | historical-financial-analysis | 1.0.1 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
 | humanize-polish | 1.0.1 | active | skills/humanize-polish/SKILL.md | workspace | polish Korean, humanize, humanize Korean, Korean polishing, Korean deliverable polish, before output of Korean deliverables | docs-writer |
-| i18n-audit | 1.0.0 | active | skills/i18n-audit/SKILL.md | workspace | i18n audit, locale parity, translation parity, glossary audit, L10N parity | pm |
-| i18n-formatting | 1.0.0 | active | skills/i18n-formatting/SKILL.md | workspace | date format, number format, currency format, unit conversion, paper size, korean numerals | pm |
-| i18n-layout | 1.1.0 | active | skills/i18n-layout/SKILL.md | workspace | character encoding, RTL, bidi, font selection, CRLF, BOM | pm |
-| i18n-locale-config | 1.0.0 | active | skills/i18n-locale-config/SKILL.md | workspace | locale config, locale code, BCP 47, collation, collation order, timezone | pm |
+| i18n-audit | 1.0.2 | active | skills/i18n-audit/SKILL.md | workspace | i18n audit, locale parity, translation parity, glossary audit, L10N parity | i18n-specialist |
+| i18n-formatting | 1.0.1 | active | skills/i18n-formatting/SKILL.md | workspace | date format, number format, currency format, unit conversion, paper size, korean numerals | i18n-specialist |
+| i18n-layout | 1.1.1 | active | skills/i18n-layout/SKILL.md | workspace | character encoding, RTL, bidi, font selection, CRLF, BOM | i18n-specialist |
+| i18n-locale-config | 1.0.1 | active | skills/i18n-locale-config/SKILL.md | workspace | locale config, locale code, BCP 47, collation, collation order, timezone | i18n-specialist |
 | incentive-clawback-assessment | 1.1.0 | active | skills/incentive-clawback-assessment/SKILL.md | workspace | incentive clawback, clawback exposure, relocation clawback risk, incentive obligation | incentive-agent |
 | insight-synthesis | 1.0.0 | active | skills/insight-synthesis/SKILL.md | workspace | synthesize insights, insight synthesis, integrate analysis, strategic synthesis, combine findings, cross-analysis integration | process-governance-manager |
 | intra-group-transaction-compliance | 1.1.0 | active | skills/intra-group-transaction-compliance/SKILL.md | workspace | related party transaction, Fair Trade Act Art. 47, intra-group transaction, affiliate transaction screen | group-review-agent |
@@ -122,17 +121,17 @@
 | investment-vehicle-structuring | 1.3.0 | active | skills/investment-vehicle-structuring/SKILL.md | workspace | investment vehicle structure, SPV structuring, direct investment vs SPV, holding company routing, deal structure hypothesis vehicle axis | brownfield-agent |
 | ip-fto-review | 1.0.1 | experimental | skills/ip-fto-review/SKILL.md | workspace | freedom to operate, FTO, IP landscape, patent landscape, target IP valuation | ip-agent |
 | jv-structuring | 1.2.0 | active | skills/jv-structuring/SKILL.md | workspace | JV structuring, joint venture governance, veto matters, drag-along tag-along, deadlock resolution, technology contribution valuation | partnership-agent |
-| k-dart | 2.1.2 | active | skills/k-dart/SKILL.md | workspace | k-dart, /k-dart, DART, DART OpenAPI, `DART 공시`, `공시검색`, `기업개황`, `재무제표`, `재무정보`, `재무제표 조회`, financial statement, corporate disclosure | financial-analyst |
-| k-ecos | 1.0.0 | active | skills/k-ecos/SKILL.md | workspace | k-ecos, /k-ecos, ECOS, `한국은행`, `한국은행 Open API`, `경제통계시스템`, `기준금리`, `환율`, `본원통화`, `100대 통계지표`, Bank of Korea statistics, Korean monetary statistics | financial-analyst |
-| k-kosis | 1.0.2 | active | skills/k-kosis/SKILL.md | workspace | k-kosis, /k-kosis, KOSIS, `통계청`, `국가통계포털`, `인구통계`, `물가지수`, `경제통계`, `국가통계`, Korean national statistics | financial-analyst |
-| k-krx | 1.0.2 | active | skills/k-krx/SKILL.md | workspace | k-krx, /k-krx, KRX, `한국거래소`, `KRX Open API`, `정보데이터시스템`, `주식 시세`, `코스피`, `코스닥`, `코넥스`, `일별매매정보`, `종목기본정보`, Korean stock market data, KOSPI market data, KOSDAQ market data | financial-analyst |
+| k-dart | 2.1.3 | active | skills/k-dart/SKILL.md | workspace | k-dart, /k-dart, DART, DART OpenAPI, `DART 공시`, `공시검색`, `기업개황`, `재무제표`, `재무정보`, `재무제표 조회`, financial statement, corporate disclosure | public-data-analyst |
+| k-ecos | 1.0.1 | active | skills/k-ecos/SKILL.md | workspace | k-ecos, /k-ecos, ECOS, `한국은행`, `한국은행 Open API`, `경제통계시스템`, `기준금리`, `환율`, `본원통화`, `100대 통계지표`, Bank of Korea statistics, Korean monetary statistics | public-data-analyst |
+| k-kosis | 1.0.3 | active | skills/k-kosis/SKILL.md | workspace | k-kosis, /k-kosis, KOSIS, `통계청`, `국가통계포털`, `인구통계`, `물가지수`, `경제통계`, `국가통계`, Korean national statistics | public-data-analyst |
+| k-krx | 1.0.3 | active | skills/k-krx/SKILL.md | workspace | k-krx, /k-krx, KRX, `한국거래소`, `KRX Open API`, `정보데이터시스템`, `주식 시세`, `코스피`, `코스닥`, `코넥스`, `일별매매정보`, `종목기본정보`, Korean stock market data, KOSPI market data, KOSDAQ market data | public-data-analyst |
 | k-law | 1.0.3 | active | skills/k-law/SKILL.md | workspace | k-law, /k-law, `법령`, `법률`, `법령정보`, `법령검색`, `판례`, law, statute, legal search, Korea law | legal-counsel |
-| k-opendata | 1.2.2 | active | skills/k-opendata/SKILL.md | workspace | k-opendata, /k-opendata, 공공데이터포털, data.go.kr, `관세청`, `수출입무역통계`, `품목별 국가별 수출입실적`, Korea Customs Service trade statistics, HS code trade data | quant-methodologist |
+| k-opendata | 1.2.3 | active | skills/k-opendata/SKILL.md | workspace | k-opendata, /k-opendata, 공공데이터포털, data.go.kr, `관세청`, `수출입무역통계`, `품목별 국가별 수출입실적`, Korea Customs Service trade statistics, HS code trade data | public-data-analyst |
 | legal-due-diligence | 1.1.1 | active | skills/legal-due-diligence/SKILL.md | workspace | legal DD, change-of-control clause scan, IP title chain | legal-counsel |
 | legal-risk-register | 1.1.0 | experimental | skills/legal-risk-register/SKILL.md | workspace | legal risk register, legal issues, risk register, IC legal risk summary | risk-officer |
 | management-incentive-review | 1.1.0 | active | skills/management-incentive-review/SKILL.md | workspace | executive compensation review, golden parachute, change of control triggers, key-person retention, non-compete enforceability | hr-integration-agent |
 | market-data-pipeline | 1.1.0 | experimental | skills/market-data-pipeline/SKILL.md | workspace | market data, data pipeline, data freshness, series provenance | market-intelligence-agent |
-| meeting-facilitation | 1.4.4 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
+| meeting-facilitation | 1.5.0 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | org-readiness-assessment | 1.1.0 | active | skills/org-readiness-assessment/SKILL.md | workspace | organizational readiness, change readiness, change capacity, readiness assessment, transformation readiness | hr-integration-agent |
 | partner-due-diligence | 1.1.0 | active | skills/partner-due-diligence/SKILL.md | workspace | partner due diligence, partner compliance screening, sanctions screening for a partner, post-transfer competitor risk | partnership-agent |
@@ -141,7 +140,7 @@
 | peer-benchmarking | 1.0.0 | active | skills/peer-benchmarking/SKILL.md | workspace | peer benchmarking, comparable company analysis, peer multiple comparison, industry benchmark | financial-analyst |
 | permit-pathway-mapping | 1.1.0 | active | skills/permit-pathway-mapping/SKILL.md | workspace | permit pathway, permit DAG, permit critical path, operating permit requirements | legal-counsel |
 | platform-command-lifecycle-manager | 1.0.3 | active | skills/platform-command-lifecycle-manager/SKILL.md | workspace | create platform command, new .claude command, new .gemini command, platform command lifecycle, command parity, propagate command | pm |
-| platform-skill-lifecycle-manager | 1.0.2 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
+| platform-skill-lifecycle-manager | 1.0.3 | active | skills/platform-skill-lifecycle-manager/SKILL.md | workspace | create platform skill, new .claude skill, new .gemini skill, platform skill version, platform skill lifecycle, update platform skill | pm |
 | pmi-planning | 1.1.0 | active | skills/pmi-planning/SKILL.md | workspace | PMI planning, post-merger integration, integration timeline, day-one integration plan | pmi-agent |
 | policy-and-procedure-governance | 1.1.0 | experimental | skills/policy-and-procedure-governance/SKILL.md | workspace | procedure governance, policy procedure, process governance, document hierarchy check | process-governance-manager |
 | portfolio-fit-assessment | 1.3.0 | active | skills/portfolio-fit-assessment/SKILL.md | workspace | portfolio overlap, cannibalization, portfolio fit, group agenda ranking, rank against other group companies | group-review-agent |
@@ -164,7 +163,7 @@
 | stage-gate-governance | 1.4.3 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.1.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
 | strategic-fit-screening | 1.1.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
-| sync | 1.9.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | pm |
+| sync | 1.10.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | automation-engineer |
 | systematic-market-sizing | 1.5.0 | active | skills/systematic-market-sizing/SKILL.md | workspace | market sizing, TAM SAM SOM, market matrix, region segment demand estimate, market cross-validation, scenario bands | market-intelligence-agent |
 | talent-pipeline-planning | 1.1.0 | active | skills/talent-pipeline-planning/SKILL.md | workspace | talent pipeline, labor market assessment, hiring ramp-up plan, workforce availability | hr-integration-agent |
 | target-costing-analysis | 1.1.0 | experimental | skills/target-costing-analysis/SKILL.md | workspace | target costing, allowable cost, cost gap, target cost | quant-methodologist |
@@ -181,7 +180,7 @@
 | value-chain-stage-financials | 1.1.0 | experimental | skills/value-chain-stage-financials/SKILL.md | workspace | stage financials, value chain economics, segment financials, chain stage rollup | financial-analyst |
 | wacc-input-session | 1.3.2 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
 | waiver-management | 1.1.2 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval, waiver expiry | compliance-officer |
-| zod-contract-gate | 1.0.2 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | backend-engineer |
+| zod-contract-gate | 1.0.3 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | contract-gate-engineer |
 
 <!-- validate-md-language:allowlist-end -->
 
@@ -191,218 +190,220 @@
 
 | Name | Version | Location | Dependencies |
 |------|---------|----------|--------------|
-| adapter-gates.test.ts | 1.0.0 | scripts/humanize/tests/adapter-gates.test.ts | bun:test |
-| adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | N/A |
-| agent-create.ts | 1.0.1 | scripts/agent-create.ts | N/A |
-| agent-delete.ts | 1.0.1 | scripts/agent-delete.ts | N/A |
-| agent-lifecycle-audit.ts | 1.9.0 | scripts/agent-lifecycle-audit.ts | N/A |
-| agent-list.ts | 1.1.0 | scripts/agent-list.ts | N/A |
-| agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | N/A |
-| align-existing-projects.ts | 1.1.0 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite |
+| adapter-gates.test.ts | 1.0.0 | scripts/humanize/tests/adapter-gates.test.ts | bun:test, fs, os, path |
+| adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | fs, path |
+| agent-create.ts | 1.0.2 | scripts/agent-create.ts | fs, path |
+| agent-delete.ts | 1.0.2 | scripts/agent-delete.ts | fs, path |
+| agent-lifecycle-audit.ts | 1.9.1 | scripts/agent-lifecycle-audit.ts | child_process, fs, path, process |
+| agent-list.ts | 1.1.0 | scripts/agent-list.ts | fs, path |
+| agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | fs, path |
+| align-existing-projects.ts | 1.1.0 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite, fs, path, url |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
 | anchors.test.ts | 1.0.0 | scripts/humanize/tests/anchors.test.ts | bun:test |
-| apply-handbook-theme.test.ts | 1.0.1 | scripts/tests/apply-handbook-theme.test.ts | bun:test |
-| apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
-| archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
+| apply-handbook-theme.test.ts | 1.0.1 | scripts/tests/apply-handbook-theme.test.ts | bun:test, child_process, fs, os, path |
+| apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
+| archive-memory.ts | 1.2.0 | scripts/archive-memory.ts | fs, path |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.9.0 | scripts/co-newbiz/audit-variant.ts | N/A |
-| audit.ts | 2.64.0 | scripts/audit.ts | bun |
+| audit-variant.ts | 1.9.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
+| audit.ts | 2.64.0 | scripts/audit.ts | bun, child_process, fs, os, path |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
-| backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | N/A |
-| beta-series.ts | 1.3.1 | scripts/co-newbiz/beta-series.ts | N/A |
+| backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | fs, path |
+| beta-series.ts | 1.3.1 | scripts/co-newbiz/beta-series.ts | fs, path |
 | bootstrap-stages.ts | 1.1.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
-| build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | N/A |
-| calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | N/A |
+| build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | fs, path |
+| calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | fs, os, path |
 | calibration.ts | 1.0.0 | scripts/eval/calibration.ts | N/A |
-| changelog-normalize.ts | 1.0.0 | scripts/changelog-normalize.ts | N/A |
-| check-a11y.ts | 1.0.0 | scripts/handbook/check-a11y.ts | N/A |
-| check-authoring.ts | 1.3.0 | scripts/handbook/check-authoring.ts | N/A |
-| check-external-links.ts | 1.2.0 | scripts/handbook/check-external-links.ts | N/A |
-| check-i18n-parity.ts | 1.0.0 | scripts/handbook/check-i18n-parity.ts | N/A |
-| check-labels.ts | 1.0.0 | scripts/handbook/check-labels.ts | N/A |
-| check-links.ts | 1.0.0 | scripts/handbook/check-links.ts | N/A |
-| check-lint.ts | 1.0.0 | scripts/handbook/check-lint.ts | N/A |
-| check-search.ts | 2.0.0 | scripts/handbook/check-search.ts | N/A |
-| check-spell.ts | 1.0.0 | scripts/handbook/check-spell.ts | N/A |
-| check-structure.test.ts | 1.0.0 | scripts/tests/check-structure.test.ts | bun:test |
-| check-structure.ts | 1.0.0 | scripts/handbook/check-structure.ts | N/A |
-| check-symmetry.ts | 1.0.0 | scripts/handbook/check-symmetry.ts | N/A |
-| check-tables.ts | 1.0.0 | scripts/handbook/check-tables.ts | N/A |
-| check-wiki-nav.ts | 1.0.2 | scripts/co-newbiz/check-wiki-nav.ts | N/A |
-| cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | N/A |
-| clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | N/A |
-| committee-deliberation.ts | 1.3.0 | scripts/co-newbiz/committee-deliberation.ts | N/A |
+| changelog-normalize.ts | 1.0.0 | scripts/changelog-normalize.ts | fs |
+| check-a11y.ts | 1.0.0 | scripts/handbook/check-a11y.ts | path |
+| check-authoring.ts | 1.3.0 | scripts/handbook/check-authoring.ts | fs, path |
+| check-external-links.ts | 1.2.0 | scripts/handbook/check-external-links.ts | http, https, path, url |
+| check-i18n-parity.ts | 1.0.0 | scripts/handbook/check-i18n-parity.ts | fs, path |
+| check-labels.ts | 1.0.0 | scripts/handbook/check-labels.ts | path |
+| check-links.ts | 1.0.0 | scripts/handbook/check-links.ts | path |
+| check-lint.ts | 1.0.0 | scripts/handbook/check-lint.ts | path |
+| check-search.ts | 2.0.0 | scripts/handbook/check-search.ts | fs, path |
+| check-spell.ts | 1.0.0 | scripts/handbook/check-spell.ts | path |
+| check-structure.test.ts | 1.0.0 | scripts/tests/check-structure.test.ts | bun:test, fs, os, path |
+| check-structure.ts | 1.0.0 | scripts/handbook/check-structure.ts | fs, path |
+| check-symmetry.ts | 1.0.0 | scripts/handbook/check-symmetry.ts | path |
+| check-tables.ts | 1.0.0 | scripts/handbook/check-tables.ts | fs, path |
+| check-wiki-nav.ts | 1.0.2 | scripts/co-newbiz/check-wiki-nav.ts | fs, path |
+| cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | fs, path |
+| clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | fs |
+| committee-deliberation.ts | 1.3.0 | scripts/co-newbiz/committee-deliberation.ts | fs, path |
 | common.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/common.ts | N/A |
-| compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | N/A |
-| contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | N/A |
+| compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | fs, path |
+| contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | fs, path |
 | convert.ts | 1.1.0 | scripts/co-newbiz/convert.ts | N/A |
 | copy-legacy-bf-capability-judgements.ts | 1.0.0 | scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts | bun:sqlite |
-| coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | N/A |
+| coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | fs, path |
 | dart-collect.ts | 1.0.0 | scripts/co-newbiz/dart-collect.ts | N/A |
 | dart.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/dart.ts | N/A |
-| db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | N/A |
+| db-export.ts | 1.0.0 | scripts/co-newbiz/db-export.ts | fs |
 | db-integrity.ts | 1.0.2 | scripts/co-newbiz/db-integrity.ts | N/A |
-| demo.ts | 1.0.0 | scripts/co-newbiz/demo.ts | N/A |
-| dependency-audit.ts | 1.1.0 | scripts/dependency-audit.ts | N/A |
-| deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | N/A |
-| deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test |
-| deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | N/A |
-| design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | N/A |
-| design-lint.ts | 2.5.0 | scripts/design-lint.ts | js-yaml |
-| deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | N/A |
-| dev-sync.ts | 1.37.1 | scripts/dev-sync.ts | bun |
+| demo.ts | 1.0.0 | scripts/co-newbiz/demo.ts | fs, path |
+| dependency-audit.ts | 1.1.0 | scripts/dependency-audit.ts | fs, path |
+| deploy-handbook.ts | 1.1.0 | scripts/handbook/deploy-handbook.ts | child_process, fs, path |
+| deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test, fs, os, path |
+| deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | child_process, path |
+| design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | fs, path |
+| design-lint.ts | 2.5.0 | scripts/design-lint.ts | fs, js-yaml, path |
+| detect-backport.ts | 1.0.0 | scripts/detect-backport.ts | child_process, crypto, fs, path |
+| deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | fs, path |
+| dev-sync.ts | 1.37.1 | scripts/dev-sync.ts | bun, crypto, fs, path |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
-| dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | N/A |
-| dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
-| driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | N/A |
+| dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | url |
+| dispatch.ts | 1.1.1 | scripts/dispatch.ts | path |
+| driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | child_process, fs, path |
 | ecos.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/ecos.ts | N/A |
-| eligibility.test.ts | 1.0.0 | scripts/humanize/tests/eligibility.test.ts | bun:test |
-| env-check.ts | 1.2.0 | scripts/co-newbiz/env-check.ts | N/A |
-| evidence-backport-scan.ts | 1.3.0 | scripts/evidence-backport-scan.ts | N/A |
-| external-deps.ts | 1.0.0 | scripts/external-deps.ts | N/A |
-| extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | N/A |
+| eligibility.test.ts | 1.0.0 | scripts/humanize/tests/eligibility.test.ts | bun:test, fs, path |
+| env-check.ts | 1.2.0 | scripts/co-newbiz/env-check.ts | fs, path |
+| evidence-backport-scan.ts | 1.3.0 | scripts/evidence-backport-scan.ts | child_process, fs, path |
+| external-deps.ts | 1.0.0 | scripts/external-deps.ts | fs, path |
+| extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | fs, path |
 | fetch-source.ts | 1.3.1 | scripts/co-newbiz/jobs/collect/fetch-source.ts | bun:sqlite |
-| fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | N/A |
-| fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | N/A |
+| fin-analyze.ts | 1.0.0 | scripts/co-newbiz/fin-analyze.ts | child_process, fs, path |
+| fin-pipeline.ts | 1.0.0 | scripts/co-newbiz/fin-pipeline.ts | child_process, fs, path |
 | fin-project.ts | 1.0.1 | scripts/co-newbiz/fin-project.ts | N/A |
 | fix-construction-machinery-link.ts | 1.0.0 | scripts/co-newbiz/fix-construction-machinery-link.ts | N/A |
-| gate-integrity-shadow-report.ts | 1.1.0 | scripts/co-newbiz/gate-integrity-shadow-report.ts | bun:sqlite |
-| gate-integrity-shadow-report.ts | 1.0.0 | scripts/co-newbiz/jobs/gate-integrity-shadow-report.ts | N/A |
+| gate-integrity-shadow-report.ts | 1.1.0 | scripts/co-newbiz/gate-integrity-shadow-report.ts | bun:sqlite, fs, path |
+| gate-integrity-shadow-report.ts | 1.0.0 | scripts/co-newbiz/jobs/gate-integrity-shadow-report.ts | fs, path |
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
-| gen-pr-body.ts | 1.2.0 | scripts/gen-pr-body.ts | bun |
-| generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | N/A |
-| generate-glossary-data.ts | 1.1.0 | scripts/co-newbiz/generate-glossary-data.ts | js-yaml |
-| generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | N/A |
-| generate-pm-catalog.ts | 1.4.1 | scripts/co-newbiz/generate-pm-catalog.ts | js-yaml |
-| generate-process-flow.ts | 1.5.1 | scripts/co-newbiz/generate-process-flow.ts | js-yaml |
-| generate-prompt-registry.ts | 2.1.1 | scripts/co-newbiz/generate-prompt-registry.ts | N/A |
-| generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | js-yaml |
-| generate-review-matrix.ts | 1.0.0 | scripts/co-newbiz/generate-review-matrix.ts | js-yaml |
-| generate-skill-graph.ts | 2.0.1 | scripts/generate-skill-graph.ts | js-yaml |
-| generate-spec-activities.ts | 1.2.0 | scripts/co-newbiz/generate-spec-activities.ts | js-yaml |
-| generate-version-manifest.ts | 1.11.0 | scripts/generate-version-manifest.ts | bun, js-yaml |
-| glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | js-yaml |
-| governance-sync.ts | 1.0.0 | scripts/co-newbiz/governance-sync.ts | js-yaml |
-| graph-delta-log.ts | 1.1.0 | scripts/graph-delta-log.ts | N/A |
-| graph-map.ts | 1.3.0 | scripts/co-newbiz/graph-map.ts | js-yaml |
-| graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | js-yaml |
-| handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
-| handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
-| humanize-adapter.ts | 1.0.0 | scripts/humanize/humanize-adapter.ts | N/A |
-| humanize-contract.test.ts | 1.0.0 | scripts/humanize/tests/humanize-contract.test.ts | bun:test |
-| hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
-| i18n-lint.ts | 1.2.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
-| import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | N/A |
-| import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | N/A |
+| gen-pr-body.ts | 1.2.1 | scripts/gen-pr-body.ts | bun, fs |
+| generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | fs, path |
+| generate-glossary-data.ts | 1.1.0 | scripts/co-newbiz/generate-glossary-data.ts | fs, js-yaml, path |
+| generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | fs, path |
+| generate-pm-catalog.ts | 1.4.1 | scripts/co-newbiz/generate-pm-catalog.ts | crypto, fs, js-yaml, path |
+| generate-process-flow.ts | 1.5.1 | scripts/co-newbiz/generate-process-flow.ts | fs, js-yaml |
+| generate-prompt-registry.ts | 2.1.1 | scripts/co-newbiz/generate-prompt-registry.ts | fs, path |
+| generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | fs, js-yaml, path |
+| generate-review-matrix.ts | 1.0.0 | scripts/co-newbiz/generate-review-matrix.ts | fs, js-yaml |
+| generate-skill-graph.ts | 2.0.1 | scripts/generate-skill-graph.ts | child_process, fs, js-yaml, path, url |
+| generate-skill-lifecycle-records.ts | 1.3.1 | scripts/generate-skill-lifecycle-records.ts | fs, js-yaml, path, url |
+| generate-spec-activities.ts | 1.2.0 | scripts/co-newbiz/generate-spec-activities.ts | fs, js-yaml |
+| generate-version-manifest.ts | 1.12.1 | scripts/generate-version-manifest.ts | bun, child_process, fs, js-yaml, module, path |
+| glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | fs, js-yaml, path |
+| governance-sync.ts | 1.0.0 | scripts/co-newbiz/governance-sync.ts | fs, js-yaml, path |
+| graph-delta-log.ts | 1.1.0 | scripts/graph-delta-log.ts | child_process, fs, path, url |
+| graph-map.ts | 1.3.0 | scripts/co-newbiz/graph-map.ts | fs, js-yaml, path |
+| graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | fs, js-yaml, path |
+| handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | fs, path |
+| handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | fs, path |
+| humanize-adapter.ts | 1.0.0 | scripts/humanize/humanize-adapter.ts | child_process, crypto, fs, os, path |
+| humanize-contract.test.ts | 1.0.0 | scripts/humanize/tests/humanize-contract.test.ts | bun:test, child_process, fs, os, path |
+| hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | child_process, fs, path |
+| i18n-lint.ts | 1.2.0 | scripts/co-newbiz/i18n-lint.ts | fs, path |
+| import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | fs |
+| import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | fs |
 | index.ts | 1.2.0 | scripts/co-newbiz/jobs/index.ts | N/A |
-| inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
+| inventory.ts | 1.0.0 | scripts/eval/inventory.ts | fs, js-yaml, path, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
 | korean.ts | 1.0.0 | scripts/humanize/tests/fixtures/korean.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
 | kosis.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/kosis.ts | N/A |
 | krx.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/krx.ts | N/A |
 | law.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/law.ts | N/A |
-| lifecycle-sync-audit.ts | 1.21.0 | scripts/lifecycle-sync-audit.ts | js-yaml |
-| lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | N/A |
-| lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | N/A |
-| llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | zod |
-| loader.ts | 1.0.0 | scripts/eval/loader.ts | js-yaml, zod |
-| locale-jargon-lint.ts | 1.0.0 | scripts/co-newbiz/locale-jargon-lint.ts | N/A |
-| manual-capture.ts | 1.1.0 | scripts/co-newbiz/manual-capture.ts | N/A |
-| mcp-coverage.ts | 1.0.0 | scripts/co-newbiz/mcp-coverage.ts | js-yaml |
+| lifecycle-sync-audit.ts | 1.21.0 | scripts/lifecycle-sync-audit.ts | crypto, fs, js-yaml, path, process |
+| lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | fs, path |
+| lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | fs, path |
+| llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | crypto, zod |
+| loader.ts | 1.0.0 | scripts/eval/loader.ts | fs, js-yaml, path, zod |
+| locale-jargon-lint.ts | 1.0.0 | scripts/co-newbiz/locale-jargon-lint.ts | fs, path |
+| manual-capture.ts | 1.1.0 | scripts/co-newbiz/manual-capture.ts | fs, module, path |
+| mcp-coverage.ts | 1.0.0 | scripts/co-newbiz/mcp-coverage.ts | fs, js-yaml, path, url |
 | md-to-ooxml.ts | 1.2.0 | scripts/md-to-ooxml.ts | fs, path |
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
 | model.ts | 1.0.0 | scripts/co-newbiz/model.ts | N/A |
-| nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | N/A |
-| newbiz.ts | 1.26.0 | scripts/co-newbiz/newbiz.ts | N/A |
+| nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | fs, path |
+| newbiz.ts | 1.26.0 | scripts/co-newbiz/newbiz.ts | path |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
 | notify-deliver.ts | 1.1.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
 | notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
 | orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
-| policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | N/A |
-| proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | js-yaml |
-| process-ssot-check.ts | 4.2.0 | scripts/co-newbiz/process-ssot-check.ts | js-yaml |
-| qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun |
-| rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite |
-| readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | N/A |
+| policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | fs, path |
+| proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | fs, js-yaml, path |
+| process-ssot-check.ts | 4.2.0 | scripts/co-newbiz/process-ssot-check.ts | fs, js-yaml, path, url |
+| qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun, crypto |
+| rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite, crypto, fs, path |
+| readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | fs, path, process |
 | reconfirm-requirement.ts | 1.1.0 | scripts/co-newbiz/reconfirm-requirement.ts | N/A |
-| regenerate-agents-md.ts | 1.4.0 | scripts/regenerate-agents-md.ts | fs, path |
+| regenerate-agents-md.ts | 1.5.0 | scripts/regenerate-agents-md.ts | fs, path |
 | register-hydraulic-breaker-assumptions.ts | 1.0.0 | scripts/co-newbiz/register-hydraulic-breaker-assumptions.ts | N/A |
-| render-commands.ts | 1.1.0 | scripts/render-commands.ts | N/A |
-| render-pdf-deck.ts | 1.0.1 | scripts/render-pdf-deck.ts | N/A |
-| report.ts | 1.0.0 | scripts/co-newbiz/report.ts | N/A |
+| render-commands.ts | 1.1.0 | scripts/render-commands.ts | fs, path |
+| render-pdf-deck.ts | 1.0.1 | scripts/render-pdf-deck.ts | fs, path, url |
+| report.ts | 1.0.0 | scripts/co-newbiz/report.ts | child_process, fs, path |
 | resolve-variants.ts | 1.0.3 | scripts/resolve-variants.ts | fs, js-yaml, path |
-| restore-capability-levels.ts | 1.0.0 | scripts/co-newbiz/restore-capability-levels.ts | bun:sqlite |
-| restore.ts | 1.0.0 | scripts/co-newbiz/restore.ts | N/A |
-| retention-cleanup.ts | 1.2.0 | scripts/co-newbiz/jobs/retention-cleanup.ts | bun:sqlite |
-| retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | N/A |
-| route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | N/A |
-| route-audit-scan.ts | 1.0.1 | scripts/route-audit-scan.ts | N/A |
-| run-job.ts | 1.0.0 | scripts/co-newbiz/run-job.ts | N/A |
-| run.ts | 1.1.0 | scripts/eval/run.ts | N/A |
-| runbook-validate.ts | 1.0.0 | scripts/co-newbiz/runbook-validate.ts | js-yaml |
-| scaffold-handbook.ts | 1.2.0 | scripts/handbook/scaffold-handbook.ts | N/A |
+| restore-capability-levels.ts | 1.0.0 | scripts/co-newbiz/restore-capability-levels.ts | bun:sqlite, fs |
+| restore.ts | 1.0.0 | scripts/co-newbiz/restore.ts | fs |
+| retention-cleanup.ts | 1.2.0 | scripts/co-newbiz/jobs/retention-cleanup.ts | bun:sqlite, fs, path, zlib |
+| retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | path |
+| route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | fs, path |
+| route-audit-scan.ts | 1.0.1 | scripts/route-audit-scan.ts | fs, path |
+| run-job.ts | 1.0.0 | scripts/co-newbiz/run-job.ts | path |
+| run.ts | 1.1.0 | scripts/eval/run.ts | child_process, fs, path |
+| runbook-validate.ts | 1.0.0 | scripts/co-newbiz/runbook-validate.ts | fs, js-yaml, path |
+| scaffold-handbook.ts | 1.2.0 | scripts/handbook/scaffold-handbook.ts | fs, path |
 | schedule-seed.ts | 1.1.0 | scripts/co-newbiz/schedule-seed.ts | bun:sqlite |
-| schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | N/A |
+| schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | path |
 | scheduler-core.ts | 1.0.0 | scripts/co-newbiz/scheduler-core.ts | N/A |
-| scheduler-install.ts | 1.0.0 | scripts/co-newbiz/scheduler-install.ts | N/A |
+| scheduler-install.ts | 1.0.0 | scripts/co-newbiz/scheduler-install.ts | fs, os, path |
 | scope-impact.ts | 1.0.0 | scripts/co-newbiz/scope-impact.ts | bun:sqlite |
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
-| seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite |
+| seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite, path |
 | seed-demo-gate-contract.ts | 1.0.0 | scripts/co-newbiz/seed-demo-gate-contract.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
 | seed-s1-s12-demo.ts | 1.17.1 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | segment.test.ts | 1.0.0 | scripts/humanize/tests/segment.test.ts | bun:test |
-| setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
+| setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun, fs, os, path |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
-| simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
-| skill-lifecycle-audit.ts | 1.11.0 | scripts/skill-lifecycle-audit.ts | N/A |
-| skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun |
+| simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | child_process, fs, path |
+| skill-lifecycle-audit.ts | 1.11.0 | scripts/skill-lifecycle-audit.ts | fs, path, process |
+| skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun, fs, path |
 | source-adapters.ts | 1.5.1 | scripts/co-newbiz/source-adapters.ts | bun:sqlite |
-| spec-register.ts | 1.6.0 | scripts/spec-register.ts | N/A |
-| sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | js-yaml |
-| sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | N/A |
-| sync-library-projection.ts | 1.3.0 | scripts/co-newbiz/sync-library-projection.ts | js-yaml |
+| spec-register.ts | 1.6.0 | scripts/spec-register.ts | fs, path |
+| sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | fs, js-yaml, path, url |
+| sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | fs, path |
+| sync-library-projection.ts | 1.3.0 | scripts/co-newbiz/sync-library-projection.ts | fs, js-yaml, path |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
-| sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | N/A |
-| sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | N/A |
-| sync-wiki-projection.ts | 1.0.0 | scripts/co-newbiz/sync-wiki-projection.ts | js-yaml |
-| team-builder.ts | 1.5.0 | scripts/team-builder.ts | N/A |
+| sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | child_process, fs, path, process |
+| sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | fs, path |
+| sync-wiki-projection.ts | 1.0.0 | scripts/co-newbiz/sync-wiki-projection.ts | fs, js-yaml, path |
+| team-builder.ts | 1.5.0 | scripts/team-builder.ts | fs, path |
 | test-runner.ts | 1.11.0 | scripts/test-runner.ts | fs, os, path |
-| translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, fs, path |
-| typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | N/A |
-| typecheck.ts | 1.2.0 | scripts/typecheck.ts | N/A |
+| translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, crypto, fs, path, url |
+| typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | fs, path |
+| typecheck.ts | 1.2.0 | scripts/typecheck.ts | fs, path |
 | types.ts | 1.0.0 | scripts/co-newbiz/jobs/types.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
-| update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | N/A |
-| ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | N/A |
-| validate-agents.ts | 1.4.1 | scripts/validate-agents.ts | N/A |
-| validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | js-yaml |
-| validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | N/A |
+| update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | fs, path |
+| ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | fs |
+| validate-agents.ts | 1.4.1 | scripts/validate-agents.ts | fs, path, process |
+| validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | fs, js-yaml, path, process |
+| validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
-| validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | N/A |
-| validate-md-language.ts | 1.16.1 | scripts/validate-md-language.ts | fs |
-| validate-model-registry.ts | 2.3.0 | scripts/validate-model-registry.ts | N/A |
+| validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | child_process, path |
+| validate-md-language.ts | 1.16.2 | scripts/validate-md-language.ts | child_process, fs, path |
+| validate-model-registry.ts | 2.3.0 | scripts/validate-model-registry.ts | fs, path, url |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
-| validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | N/A |
-| validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | js-yaml |
-| validate-process.ts | 1.0.0 | scripts/validate-process.ts | js-yaml |
-| validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | js-yaml |
-| validate-skills.ts | 1.5.2 | scripts/validate-skills.ts | N/A |
-| validate-surface-registry.ts | 1.1.1 | scripts/validate-surface-registry.ts | N/A |
-| validate-templates.ts | 1.75.0 | scripts/validate-templates.ts | js-yaml |
-| validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | N/A |
+| validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | child_process, fs, path |
+| validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | fs, js-yaml, path |
+| validate-process.ts | 1.0.0 | scripts/validate-process.ts | fs, js-yaml, path |
+| validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | fs, js-yaml, path |
+| validate-skills.ts | 1.5.2 | scripts/validate-skills.ts | fs, path, process |
+| validate-surface-registry.ts | 1.1.2 | scripts/validate-surface-registry.ts | fs, path |
+| validate-templates.ts | 1.75.0 | scripts/validate-templates.ts | child_process, fs, js-yaml, path, url |
+| validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | fs, path |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
-| verify-memory.ts | 1.2.0 | scripts/verify-memory.ts | fs, path |
-| verify-platform-lifecycle.ts | 1.6.1 | scripts/verify-platform-lifecycle.ts | N/A |
-| verify-readme-sync.ts | 1.5.0 | scripts/verify-readme-sync.ts | bun, fs, path |
-| verify-scripts.ts | 1.14.0 | scripts/verify-scripts.ts | N/A |
-| verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | N/A |
-| verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | N/A |
+| verify-memory.ts | 1.3.0 | scripts/verify-memory.ts | fs, path |
+| verify-platform-lifecycle.ts | 1.6.1 | scripts/verify-platform-lifecycle.ts | fs, path |
+| verify-readme-sync.ts | 1.5.0 | scripts/verify-readme-sync.ts | bun, crypto, fs, path |
+| verify-scripts.ts | 1.14.0 | scripts/verify-scripts.ts | crypto, fs, path |
+| verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | fs, path, url |
+| verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | fs, path |
 | watch-evaluate.ts | 1.0.0 | scripts/co-newbiz/jobs/watch-evaluate.ts | N/A |
-| watch-run.ts | 1.1.1 | scripts/co-newbiz/watch-run.ts | bun:sqlite |
+| watch-run.ts | 1.1.1 | scripts/co-newbiz/watch-run.ts | bun:sqlite, fs, path |
 
 ---
 
@@ -433,6 +434,4 @@
 
 ## Drift Detection
 
-⚠️ **Drift detected**:
-
-- [WARNING] Agent README_ko missing tier metadata
+✅ No drift detected. All components are properly versioned and integrated.

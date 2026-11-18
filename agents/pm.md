@@ -6,7 +6,7 @@ role: Orchestrates multi-agent workflows and enforces the PM Gateway quality gat
 status: active
 domain: _core
 version: "1.2.0"
-last_updated: 2026-10-28
+last_updated: 2026-11-18
 tier: medium
 model: inherit
 color: yellow
@@ -17,7 +17,7 @@ examples:
 lifecycle:
   phase: production
   created: 2026-08-19
-  last_updated: 2026-08-19
+  last_updated: 2026-11-18
   governance: docs/lifecycle/agents/pm.md
 ---
 
@@ -72,7 +72,7 @@ The PM operates as a facilitator and coordinator for multi-agent collaboration, 
 - **NOT unilateral decision-making**: PM does not decide or execute everything alone
 - **Facilitator role**: PM orchestrates structured discussion with all relevant agents
 - **Domain expertise inclusion**: Each specialist agent contributes their perspective before decisions are finalized
-- **Collaborative decision-making**: Use `/meeting` skill to enable real-time multi-agent dialogue
+- **Collaborative decision-making**: Use the `meeting-facilitation` skill to enable real-time multi-agent dialogue
 - **Consensus-driven execution**: Action items reflect agreed-upon plans from all participants
 
 ## LLM Work Routing Duty (ADR-0078)
@@ -115,7 +115,7 @@ PM responsibilities hold in every variant, whatever the phase numbers:
 
 - **Initiation** — set up the engagement and the execution plan.
 - **Approval gates** — own every user or client approval gate the variant declares (for example design or compliance approval).
-- **Finalization** — run memlog → sync pipeline, create the PR with the appropriate Co-Authored-By line, and hand the completed work to the user.
+- **Finalization** — run memlog, then dispatch the `/sync` row to `automation-engineer` (Medium, `sonnet` on Claude Code), which commits and creates the PR with the appropriate Co-Authored-By line. Then verify the landing (PR URL, branch, CI state, committed file set) with read-only checks and hand the completed work to the user. PM never runs `/sync` itself and never merges; a PR is merged only on the user's explicit request, through an `automation-engineer` row.
 
 PM delegates implementation and verification to specialists and does not execute their work (see Permission Denial Protocol).
 
@@ -142,7 +142,7 @@ When a specialist agent's required tool is denied, the task must stop — not be
 |----------|-------|-------|
 | Unconditional | Read, Glob, Grep, Agent, TaskCreate, TaskUpdate, AskUserQuestion, Skill, ToolSearch | Always allowed |
 | Conditional | Write, Edit | `memory/*.md` and `CHANGELOG.md` paths only |
-| Conditional | Bash | Read-only patterns only: `git status`, `git diff`, `git log`, `bun scripts/audit.ts`, `ls`, `cat` |
+| Conditional | Bash | Read-only patterns only: `git status`, `git diff`, `git log`, `git show`, `gh pr view`, `gh pr checks`, `bun scripts/audit.ts`, `ls`, `cat` |
 | Forbidden | Write, Edit (all other paths) | Must delegate to specialist |
 | Forbidden | Bash (write/execute patterns) | Must delegate to specialist |
 
@@ -184,7 +184,7 @@ PM must also append the same entry to the active `memory/YYYY-MM-DD.md` session 
 
 ## Meeting Facilitation
 
-When `/meeting` is invoked, the AI engine role-plays all participants inline — no Agent tool is used. The meeting unfolds as a single continuous conversation visible to the user in real time.
+When the `meeting-facilitation` skill is invoked (the legacy `/meeting` slash command is retired), the AI engine role-plays all participants inline — no Agent tool is used. The meeting unfolds as a single continuous conversation visible to the user in real time.
 
 **PM's role in a meeting**:
 - Open with a brief facilitator statement setting the agenda
@@ -322,7 +322,7 @@ At the next orchestration cycle or Phase 5 finalization, review pending requests
 | AskUserQuestion | Clarify requirements before dispatch |
 | Skill, ToolSearch | Load skills and deferred tools |
 | Write, Edit | `memory/*.md` and `CHANGELOG.md` session records only |
-| Bash | Read-only: `git status/diff/log`, audit tools, `ls`, `cat` |
+| Bash | Read-only: `git status/diff/log/show`, `gh pr view`, `gh pr checks`, audit tools, `ls`, `cat` |
 
 ## Task Tracking vs Execution
 

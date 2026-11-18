@@ -34,24 +34,24 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `debt-and-contingent-liability-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8D — ADR-0026 probability-weighted Monte Carlo integration, covenant Kill Criterion |
 | `decision-record` | 1.1.2 | active | pm | 2026-08-25 | — | — |
 | `delegate-to-hub` | 1.0.1 | active | pm | 2026-11-02 | — | — |
-| `design-foundation` | 1.1.0 | active | design-system-agent | 2026-09-26 | — | — |
+| `design-foundation` | 1.1.1 | active | design-system-lead | 2026-11-12 | — | — |
 | `documentation-writing` | 1.0.3 | active | pm | 2026-07-19 | — | — |
 | `evidence-ledger` | 1.1.1 | active | pm | 2026-08-25 | — | — |
 | `executive-presentation` | 1.0.0 | active | docs-writer | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — retargeted to Entity/Group IC deck |
-| `explain-me` | 1.0.0 | experimental | pm | 2026-08-03 | — | Single-file interactive HTML report generation. Inspired by beret21/reportme (MIT). Korean loanword data in references/loanword-refinements.json |
+| `explain-me` | 1.0.1 | experimental | pm | 2026-08-03 | — | Single-file interactive HTML report generation. Inspired by beret21/reportme (MIT). Korean loanword data in references/loanword-refinements.json |
 | `financial-statement-analysis` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — DART pipeline, retargeted to co-newbiz's own `newbiz.ts fin:*` CLI |
 | `financing-plan-review` | 1.3.0 | active | valuation-agent | 2026-10-28 | — | ADR-0051 (PR-10 workflow concretization) — certainty-of-funds evidence pack per chk-financing; DD step 12 + Entity IC precondition |
-| `finishing-a-development-branch` | 1.0.1 | active | pm | 2026-06-13 | — | — |
+| `finishing-a-development-branch` | 1.0.2 | active | pm | 2026-11-08 | — | — |
 | `gateguard` | 1.0.2 | active | pm | 2026-08-01 | — | — |
 | `greenfield-feasibility` | 1.2.0 | active | greenfield-agent | 2026-10-01 | — | Wave 5.8C — Green Field Screening/Pre-FS |
 | `growth-projection-modeling` | 1.2.0 | active | financial-analyst | 2026-10-28 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
 | `handbook` | 0.6.0 | active | pm | 2026-09-20 | — | — |
 | `historical-financial-analysis` | 1.0.1 | active | financial-analyst | 2026-10-28 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
 | `humanize-polish` | 1.0.1 | active | docs-writer | 2026-11-18 | — | Spec humanize-polish — pre-output Korean polishing via pinned Humanize KR clone (external-deps entry `humanize`), default-deny eligibility, deterministic gates; polished text stays a proposal |
-| `i18n-audit` | 1.0.0 | active | pm | 2026-08-29 | — | — |
-| `i18n-formatting` | 1.0.0 | active | pm | 2026-08-24 | — | — |
-| `i18n-layout` | 1.1.0 | active | pm | 2026-11-06 | — | — |
-| `i18n-locale-config` | 1.0.0 | active | pm | 2026-08-24 | — | — |
+| `i18n-audit` | 1.0.2 | active | i18n-specialist | 2026-11-19 | — | — |
+| `i18n-formatting` | 1.0.1 | active | i18n-specialist | 2026-08-24 | — | — |
+| `i18n-layout` | 1.1.1 | active | i18n-specialist | 2026-11-06 | — | — |
+| `i18n-locale-config` | 1.0.1 | active | i18n-specialist | 2026-08-24 | — | — |
 | `incentive-clawback-assessment` | 1.1.0 | active | incentive-agent | 2026-08-23 | — | Wave 5.8D — ADR-0030 one-table acquisition/clawback design |
 | `insight-synthesis` | 1.0.0 | active | process-governance-manager | 2026-08-20 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult — cross-domain synthesis for stage-gate decisions |
 | `intra-group-transaction-compliance` | 1.1.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — Fair Trade Act Art. 47 screen, validated against pilot-003 |
@@ -59,14 +59,14 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `investment-vehicle-structuring` | 1.3.0 | active | brownfield-agent | 2026-08-23 | — | ADR-0045 — post-Wave-5.10 addendum, deal-structure-hypothesis vehicle axis (tax/liability-isolation/financing-leverage/exit) flagged during the pilot-001 system re-run |
 | `ip-fto-review` | 1.0.1 | experimental | ip-agent | 2026-10-28 | — | ADR-0185 W2-C2 — brownfield-dd step 3.5 patent landscape, FTO and target IP valuation (R&BD) |
 | `jv-structuring` | 1.2.0 | active | partnership-agent | 2026-08-23 | — | Wave 5.8E — governance/valuation/exit/deadlock documented before term-sheet negotiation |
-| `k-dart` | 2.1.2 | active | financial-analyst | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-ecos` | 1.0.0 | active | financial-analyst | 2026-09-11 | — | Queries the Bank of Korea ECOS Open API for Korean macro-financial statistics (base rate, exchange rates, money supply, GDP) |
-| `k-kosis` | 1.0.2 | active | financial-analyst | 2026-08-23 | — | Korean Statistical Information Service (KOSIS) OpenAPI — national statistics search, table browsing, data retrieval, metadata lookup; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
-| `k-krx` | 1.0.2 | active | financial-analyst | 2026-09-11 | — | Queries the KRX Data Marketplace OPEN API for Korean exchange market data (KOSPI/KOSDAQ daily trading, stock master, ETF/ETN) |
-| `k-opendata` | 1.2.2 | active | quant-methodologist | 2026-09-03 | — | — |
+| `k-dart` | 2.1.3 | active | public-data-analyst | 2026-08-09 | — | Unified DART OpenAPI skill — disclosure query, financial parsing, line-item extraction; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-ecos` | 1.0.1 | active | public-data-analyst | 2026-09-11 | — | Queries the Bank of Korea ECOS Open API for Korean macro-financial statistics (base rate, exchange rates, money supply, GDP) |
+| `k-kosis` | 1.0.3 | active | public-data-analyst | 2026-08-23 | — | Korean Statistical Information Service (KOSIS) OpenAPI — national statistics search, table browsing, data retrieval, metadata lookup; KR-scoped — deploys only to --country KR projects (registry: `country_scoped_assets`) |
+| `k-krx` | 1.0.3 | active | public-data-analyst | 2026-09-11 | — | Queries the KRX Data Marketplace OPEN API for Korean exchange market data (KOSPI/KOSDAQ daily trading, stock master, ETF/ETN) |
+| `k-opendata` | 1.2.3 | active | public-data-analyst | 2026-09-03 | — | — |
 | `legal-due-diligence` | 1.1.1 | active | legal-counsel | 2026-10-28 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 | `management-incentive-review` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
-| `meeting-facilitation` | 1.4.4 | active | pm | 2026-09-26 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
+| `meeting-facilitation` | 1.5.0 | active | pm | 2026-11-10 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
 | `monte-carlo-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
 | `org-readiness-assessment` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
 | `partner-due-diligence` | 1.1.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E — compliance/financial/dependency screening incl. post-transfer competitor risk |
@@ -75,7 +75,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `peer-benchmarking` | 1.0.0 | active | financial-analyst | 2026-08-20 | — | Wave 5.8G — cross-sectional peer distribution, the other anchor input |
 | `permit-pathway-mapping` | 1.1.0 | active | legal-counsel | 2026-08-23 | — | Wave 5.8H — permit DAG + critical path, strictly separate from certification |
 | `platform-command-lifecycle-manager` | 1.0.3 | active | pm | 2026-09-25 | — | — |
-| `platform-skill-lifecycle-manager` | 1.0.2 | active | pm | 2026-05-31 | — | — |
+| `platform-skill-lifecycle-manager` | 1.0.3 | active | pm | 2026-11-08 | — | — |
 | `pmi-planning` | 1.1.0 | active | pmi-agent | 2026-08-23 | — | Wave 5.8D — synthesis skill sequencing the other five M&A special-topics outputs |
 | `portfolio-fit-assessment` | 1.3.0 | active | group-review-agent | 2026-08-23 | — | Wave 5.8C — overlap finding + agenda-ranking formula (meeting M2 D-M2-2) |
 | `project-review` | 1.3.2 | active | pm | 2026-10-08 | — | Graph-aligned project review runbook refresh |
@@ -95,7 +95,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `stage-gate-governance` | 1.4.3 | active | process-governance-manager | 2026-10-27 | — | Wave 5.8C — Screening-DD-Entity IC-Group IC sequence + 6-item Kill Criteria list |
 | `standup-synthesizer` | 1.1.0 | active | pm | 2026-11-06 | — | Daily standup digest synthesizer aggregating commits, issues, PRs, and blockers |
 | `strategic-fit-screening` | 1.1.0 | active | process-governance-manager | 2026-08-23 | — | ADR-0051 (PR-10 workflow concretization) — entity-level knock-out + scorecard screen at first gate per chk-strategic-fit; thresholds illustrative until the thresholds meeting |
-| `sync` | 1.9.0 | active | pm | 2026-11-07 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
+| `sync` | 1.10.0 | active | automation-engineer | 2026-11-18 | — | Full project sync pipeline — lifecycle, audit, publish, commit, push, PR. Reassigned from lifecycle-manager — same orphan cause as security-scan |
 | `systematic-market-sizing` | 1.5.0 | active | market-intelligence-agent | 2026-09-03 | — | — |
 | `talent-pipeline-planning` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8C — Green Field local labor-market supply assessment |
 | `target-costing-analysis` | 1.1.0 | experimental | quant-methodologist | — | — | Added by fleet resync reconcile backfill (2026-09-22) |
@@ -110,7 +110,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `value-chain-linkage-analysis` | 1.2.0 | active | market-intelligence-agent | 2026-10-28 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
 | `wacc-input-session` | 1.3.2 | active | valuation-agent | 2026-10-27 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
 | `waiver-management` | 1.1.2 | experimental | compliance-officer | 2026-10-28 | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle |
-| `zod-contract-gate` | 1.0.2 | active | backend-engineer | 2026-08-06 | — | Defines Zod runtime schema validation patterns and contract safety rules |
+| `zod-contract-gate` | 1.0.3 | active | contract-gate-engineer | 2026-11-12 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 |`assumption-audit`| 1.2.0 | experimental | risk-officer |2026-10-28|—|Wave 5.8I — user/assumed/derived kind-tag correctness audit|
 |`company-intelligence`| 1.1.0 | experimental | market-intelligence-agent |2026-08-20|—|Wave 5.8A reuse layer, adapted from Projects/co-consult|
 |`deal-execution-playbook`| 1.2.0 | experimental | brownfield-agent |2026-11-08|—|Wave 5.8I — navigates `docs/governance/process-map.md`/`docs/governance/raci.md`'s real per-gate RACI, never restates|
