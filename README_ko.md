@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-translated_from_hash: fb5988ac764b6f35c4d975006a810973d893772dd756e4d680eeec0d307d948e
+translated_from_hash: be3b08b90f78f2f0eebc529e97909a184b5450603a59dac8063064fb278f2ead
 lang: ko
 lang_reason: source-material
 ---
@@ -141,7 +141,7 @@ PM이 **New Business Review Lead**로서 모든 전문가를 직접 디스패치
 
 이 변형은 신사업 검토 거버넌스 팀과 그 지원 시스템을 구현합니다: 정책·절차·체크리스트 작성 및 운영, SQLite 기반 Next.js Route Handler REST API, 그 위의 MCP 서버, Python 연산 레이어, Green Field 및 Brown Field 딜 리뷰 워크플로. (원래 ADR-0010에 따라 Hono + React/Vite + ECharts로 구축되었으나, ADR-0069/0070(2026-08-26 승인)에 따라 Next.js + Prisma + Tailwind + Recharts로 이관되었습니다.)
 
-stdio MCP 서버는 GitHub Packages의 npm 패키지 `@co-newbiz/co-newbiz-mcp`로도 배포합니다 — 저장소 체크아웃 없이 `bunx @co-newbiz/co-newbiz-mcp`와 개인 액세스 토큰(`read:packages`)으로 설치합니다.
+stdio MCP 서버는 npm 패키지 `@co-newbiz/co-newbiz-mcp`로도 배포합니다. 주 배포 채널은 npmjs.com이라 저장소 체크아웃도 토큰도 필요 없습니다 — `bunx @co-newbiz/co-newbiz-mcp`로 설치하며 선행 조건은 `bun` 설치뿐입니다(`.npmrc`도, 개인 액세스 토큰도 필요 없습니다). 동일 버전을 GitHub Packages에도 보조 채널로 발행하며, 이 경로는 `@co-newbiz` 스코프 매핑과 `read:packages` 개인 액세스 토큰을 함께 요구합니다.
 
 > ⚠️ 프로토타입 변형 — 프로덕션 용도가 아닙니다.
 
