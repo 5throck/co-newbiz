@@ -213,6 +213,16 @@ All resolved by the user after the design was drafted, except where noted.
 6. Upstream script flags and I/O (formerly: unverified remote listing): resolved by reading the pinned clone. `prepare_monolith_input.py` takes `--run-dir`, `--genre` (also `--text`, `--diagnosis`, `--chunk`, `--no-sanitize`) and rewrites `01_input.txt` in place when sanitizing; `restore_modality.py`, `strip_injected_commas.py` and `lexical_layer.py restore` take `--before --after --out` and always exit 0; `verify_gates.py` takes `--before --after --genre [--json] [--ignore-markup]` and exits 0, 1, 2 or 3 as designed; `verify_change_rate.py` is the older character-rate-only gate and is not used (superseded by `verify_gates.py`).
 7. Packing: resolved. The adapter packs units to 5,000 characters on paragraph boundaries itself; upstream `reassemble_chunks.py` is not used.
 
+## Production runs
+
+The first two production batches landed on 2026-11-18 and 2026-11-19 (PR #925, manuals; PR #926, wiki pages). The manuals batch polished six Korean manuals: 25 units, whole-document change rates 0 to 0.58 percent. The wiki batch polished 31 of 39 Korean wiki pages: 205 units; 52 adopted, 6 adopted with warnings, 145 unchanged, 2 rolled back; change rates 0.01 to 0.66 percent. Glossary YAML and flow-console procedure content stayed excluded per the skill rules.
+
+The gates fired on real model output for the first time: one wiki unit rolled back for a number-anchor frequency distortion (wiki page 32), one for removing the glossary-protected WACC term (page 41), and one manuals unit for inserting an unsupported token that the model's self-report had missed. All protected blocks stayed byte-identical across both batches.
+
+Landing rulings were recorded (the standing archive policy is DEC-20261119-01): a `_Sidebar.md` proposal was reverted because it renamed link-group titles pinned by the check-wiki-nav chain rules (the rules were not relaxed); one business-manual hunk that dropped a repeated subject noun was rejected by the user; four pre-existing particle typos around the direction term in pages 50 and 51 were fixed as a follow-up to the batch.
+
+The intensity was conservative; no route above light was needed because the sources scored low.
+
 ## Disclaimer
 
 Polished text is decision-support material produced by an automated rewrite, not legal advice, not a verified restatement, and not an approval. Regulatory, legal, and certification content is never polished by design; where polished prose and the original differ in meaning, the original and the cited source texts govern, and the human reviewer remains accountable for the final text.

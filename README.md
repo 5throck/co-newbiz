@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-content_hash: be3b08b90f78f2f0eebc529e97909a184b5450603a59dac8063064fb278f2ead
+content_hash: 16fdeeeef213b4d0586dce8cbcf745a87a79ddd9ee1c1aa430b5b1e7a0dfe7db
 ---
 
 # co-newbiz
@@ -154,7 +154,7 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 
 ## Skills
 
-The team ships 120+ workflow skills (governance authoring, due diligence playbooks, financial analysis, platform operations). The maintained index lives at [skills/SKILLS.md](skills/SKILLS.md); per-skill instructions are in `skills/<name>/SKILL.md`, with mirrored copies under `.claude/skills/`, `.gemini/skills/`, and `.agents/skills/`.
+The team ships 120+ workflow skills (governance authoring, due diligence playbooks, financial analysis, platform operations). The maintained index lives at [skills/SKILLS.md](skills/SKILLS.md); per-skill instructions are in `skills/<name>/SKILL.md`, with mirrored copies under `.claude/skills/`, `.gemini/skills/`, and `.agents/skills/`. Korean-language deliverables are polished through the Humanize KR external dependency before output (skill `humanize-polish`, spec `humanize-polish`).
 
 ## Session Start Checklist
 
@@ -209,4 +209,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-11-18*
+*Last Updated: 2026-11-19*
