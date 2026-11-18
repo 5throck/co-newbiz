@@ -12,6 +12,12 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
     "domain": "functional"
   },
   {
+    "key": "automation-engineer",
+    "name": "Automation Engineer",
+    "role": "specialist",
+    "domain": "_shared"
+  },
+  {
     "key": "backend-engineer",
     "name": "Backend Engineer",
     "role": "Next.js Route Handler API, authentication, the MCP server (REST-client-only), the analysis-engine CLI, and the monitoring/alerting pipeline",
@@ -42,6 +48,12 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
     "domain": "functional"
   },
   {
+    "key": "contract-gate-engineer",
+    "name": "Contract Gate Engineer Agent",
+    "role": "specialist",
+    "domain": "_shared"
+  },
+  {
     "key": "customer-retention-agent",
     "name": "Customer Retention Agent",
     "role": "Customer retention risk specialist — change-of-control clause scanning across customer and supplier contracts, concentration and competitive-overlap assessment, and attrition exposure quantification",
@@ -64,6 +76,12 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
     "name": "Design System Agent",
     "role": "Onyx 3.0 design system governance — token, component, and accessibility consistency enforcement via design-lint",
     "domain": "technical"
+  },
+  {
+    "key": "design-system-lead",
+    "name": "Design System Lead Agent",
+    "role": "specialist",
+    "domain": "_shared"
   },
   {
     "key": "docs-writer",
@@ -190,6 +208,12 @@ export const AGENT_REGISTRY: AgentRegistryEntry[] = [
     "name": "Process Governance Manager",
     "role": "Functional-domain lead and process authority — design and review owner of the rules the pipeline runs on, not a dispatcher",
     "domain": "functional"
+  },
+  {
+    "key": "public-data-analyst",
+    "name": "Public Data Analyst Agent",
+    "role": "specialist",
+    "domain": "_shared"
   },
   {
     "key": "quant-methodologist",
