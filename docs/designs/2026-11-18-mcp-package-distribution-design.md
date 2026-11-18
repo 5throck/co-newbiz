@@ -139,7 +139,7 @@ Published `@co-newbiz/co-newbiz-mcp@1.0.0` on 2026-11-18 via tag `mcp-v1.0.0` at
 
 **Decision amendment (owner decision, 2026-11-18): package visibility changes from private to public.** The repository `5throck/co-newbiz` is already public, so no new code is exposed; the visibility flip itself is a package-level, one-way change made in the GitHub UI. Consequences:
 
-- Consumer `.npmrc` no longer needs the `//npm.pkg.github.com/:_authToken=` line — only the `@co-newbiz:registry=https://npm.pkg.github.com` scope mapping. The `read:packages` PAT requirement for consumers is dropped: once public, tokens are simply unnecessary.
+- Consumer `.npmrc` still needs both the `@co-newbiz:registry=https://npm.pkg.github.com` scope mapping and the `//npm.pkg.github.com/:_authToken=` line with a `read:packages` PAT — GitHub Packages npm authenticates every registry request even for public packages. What the public flip removes is the org-side requirement: any GitHub account's own `read:packages` PAT now works, without org membership or the package-level access grant (Settings → Packages → add user/team) that private packages require. (Correction 2026-11-18: this bullet originally claimed the PAT/`_authToken` requirement was dropped — anonymous registry requests are rejected, 401/403, even for public packages.)
 - The publish workflow now passes `--access public` to `npm publish`, so a future first publish (e.g. after package deletion) re-lands public instead of inheriting the registry's private default.
 - Note: the GitHub UI visibility flip is one-way — a package cannot be made private again without deletion.
 
