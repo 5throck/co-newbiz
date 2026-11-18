@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-18T22:05:28.040Z
+**Generated**: 2026-11-18T22:32:33.868Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -50,7 +50,7 @@
 | market-intelligence-agent | agents/market-intelligence-agent.md | high | inherit | 2026-11-10 |
 | partnership-agent | agents/partnership-agent.md | medium | inherit | 2026-11-10 |
 | platform-lead | agents/platform-lead.md | high | inherit | 2026-11-10 |
-| pm | agents/pm.md | medium | inherit | 2026-10-28 |
+| pm | agents/pm.md | medium | inherit | 2026-11-18 |
 | pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-11-10 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-11-10 |
 | public-data-analyst | agents/public-data-analyst.md | medium | claude-sonnet-5-5 | 2026-11-18 |
