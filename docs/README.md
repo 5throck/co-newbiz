@@ -13,7 +13,7 @@ For project identity and standards start at
 
 | Folder | Contents |
 |--------|----------|
-| [`architecture/`](architecture/) | Engineering contracts — SRS, API spec, OpenAPI, DB schema, UI spec, MCP integration |
+| [`architecture/`](architecture/) | Engineering contracts — SRS, API spec, OpenAPI, DB schema, UI spec, MCP integration (repo stdio server + GitHub Packages npm distribution) |
 | [`governance/`](governance/) | Process and governance operations — process map, RACI, RAG framework, ops cadence, traceability |
 | [`security/`](security/) | Security model, baseline, and policy |
 | [`design-system/`](design-system/) | Design guide and the design philosophy/tokens/components/screens/accessibility pages |

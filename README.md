@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-content_hash: 6057d32a73c854f48ce2e6f7ed71a80f48803d2799430175e3bab92e7eef51bf
+content_hash: fb5988ac764b6f35c4d975006a810973d893772dd756e4d680eeec0d307d948e
 ---
 
 # co-newbiz
@@ -94,6 +94,8 @@ flowchart LR
   eval -.->|scores| review
   mcpStdio -. "propose only;<br/>a person confirms" .-> web
 ```
+
+The stdio MCP server is also distributed as the npm package `@co-newbiz/co-newbiz-mcp` on GitHub Packages — install with `bunx @co-newbiz/co-newbiz-mcp` and a personal access token (`read:packages`), no repository checkout needed.
 
 AI agents can only create proposals. Gate decisions, the S12 transition and closure are recorded by a person on the same screens shown in the demo.
 
@@ -207,4 +209,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-11-06*
+*Last Updated: 2026-11-18*
