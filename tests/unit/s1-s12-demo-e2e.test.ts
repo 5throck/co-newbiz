@@ -56,6 +56,10 @@ function stageStatus(ev: Evaluation, id: flowT.StageId): string {
 }
 
 afterAll(() => {
+  // Close the bun:sqlite connection before unlinking — Windows keeps the
+  // file locked (EBUSY) while the connection is open (resetDb also runs
+  // Bun.gc to finalize un-finalized prepared statements).
+  resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 });
 

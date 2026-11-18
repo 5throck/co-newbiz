@@ -101,7 +101,10 @@ describe("S6 per-candidate source and attributes", () => {
   test("an accepted web proposal counts as a source; grandfathered ignores both", () => {
     const { db, opportunityId } = demo();
     db.run("DELETE FROM brownfield_target_evidence WHERE target_id = 'demo-s1-s12-target-2'");
-    db.run("UPDATE brownfield_target SET discovery_source = 'web_proposal', proposal_accepted_at = ? WHERE id = 'demo-s1-s12-target-2'", [OLD]);
+    db.run(
+      "UPDATE brownfield_target SET discovery_source = 'web_proposal', proposal_accepted_at = ? WHERE id = 'demo-s1-s12-target-2'",
+      [OLD],
+    );
     expect(opp(opportunityId).completedStages).toContain("S6");
     db.run("DELETE FROM brownfield_target_evidence");
     db.run("UPDATE opportunity SET created_at = ?", [OLD]);
@@ -120,7 +123,9 @@ describe("S7 per-candidate screening evidence", () => {
   test("screening_evidence_json also counts; grandfathered exempt", () => {
     const { db, opportunityId } = demo();
     db.run("DELETE FROM brownfield_target_evidence WHERE kind = 'screening'");
-    db.run("UPDATE brownfield_target SET screening_evidence_json = ? WHERE id = 'demo-s1-s12-target-1'", [JSON.stringify({ a: { reason: "r" } })]);
+    db.run("UPDATE brownfield_target SET screening_evidence_json = ? WHERE id = 'demo-s1-s12-target-1'", [
+      JSON.stringify({ a: { reason: "r" } }),
+    ]);
     expect(opp(opportunityId).completedStages).toContain("S7");
     db.run("UPDATE brownfield_target SET screening_evidence_json = NULL");
     db.run("UPDATE opportunity SET created_at = ?", [OLD]);
@@ -139,9 +144,18 @@ describe("S11 PMI kickoff and human reviewer", () => {
   test("a recorded kickoff clears it; agents cannot record one", () => {
     const { db, projectId } = demo();
     db.run("DELETE FROM process_run WHERE stage = 's11_pmi_kickoff'");
-    expect(() => recordPmiKickoff(db, { projectId, owner: "o", planNote: "x".repeat(25), recordedBy: "pm" })).toThrow(PmiKickoffError);
-    expect(() => recordPmiKickoff(db, { projectId, owner: "o", planNote: "short", recordedBy: "human1" })).toThrow(PmiKickoffError);
-    recordPmiKickoff(db, { projectId, owner: "integration lead", planNote: "Day-1 plan baseline agreed", recordedBy: "human1" });
+    expect(() => recordPmiKickoff(db, { projectId, owner: "o", planNote: "x".repeat(25), recordedBy: "pm" })).toThrow(
+      PmiKickoffError,
+    );
+    expect(() => recordPmiKickoff(db, { projectId, owner: "o", planNote: "short", recordedBy: "human1" })).toThrow(
+      PmiKickoffError,
+    );
+    recordPmiKickoff(db, {
+      projectId,
+      owner: "integration lead",
+      planNote: "Day-1 plan baseline agreed",
+      recordedBy: "human1",
+    });
     expect(proj(projectId).completedStages).toContain("S12");
   });
   test("non-PMI sub-track (minority_investment) does not need a kickoff", () => {
@@ -153,7 +167,15 @@ describe("S11 PMI kickoff and human reviewer", () => {
       for (const item of getChecklistItems(checklistId) ?? []) {
         db.run(
           "INSERT OR IGNORE INTO project_checklist_item_state (id, project_id, checklist_id, item_id, status, assessed_by, assessed_at) VALUES (?,?,?,?,?,?,?)",
-          [`f6-${checklistId}-${item.id}`, projectId, checklistId, item.id, "pass", "human1", "2026-10-08T00:00:00.000Z"],
+          [
+            `f6-${checklistId}-${item.id}`,
+            projectId,
+            checklistId,
+            item.id,
+            "pass",
+            "human1",
+            "2026-10-08T00:00:00.000Z",
+          ],
         );
       }
     }
@@ -215,6 +237,7 @@ describe("S12 staleness and run-status consistency", () => {
       companyId: "demo-gf-company",
     });
     expect(maybeReopenStaleS12(gfRun).status).toBe("running");
+    resetDb(); // close the gf.sqlite handle (and gc-finalize statements) before the Windows unlink
     rmSync(gfDir, { recursive: true, force: true });
   });
   test("a stale brownfield scorecard cycle does not reopen a completed run (T-20261022-001: recommended-only)", () => {

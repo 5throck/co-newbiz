@@ -1,0 +1,6 @@
+# Design: docs/designs/2026-11-18-windows-test-suite-compatibility-design.md
+# The preload wraps bun:sqlite's close so un-finalized prepared statements
+# stop holding the Windows file lock after tests delete their temp DB dirs
+# (EBUSY). win32-only inside the guard; POSIX platforms run stock close.
+[test]
+preload = ["./tests/helpers/test-env-guard.ts"]

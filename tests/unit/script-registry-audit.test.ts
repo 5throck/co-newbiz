@@ -17,7 +17,8 @@ test("findAgentFiles counts named agents in agents/ even without role/color", ()
     writeFileSync(join(root, "agents", "a.md"), "---\nname: a\ndescription: does a\n---\nbody\n");
     writeFileSync(join(root, "agents", "nameless.md"), "---\ndescription: x\n---\n");
     writeFileSync(join(root, "agents", "README_ko.md"), "---\nname: readme\n---\n");
-    const found = findAgentFiles(join(root, "agents"), 0, true).map((f) => f.split("/").pop());
+    // findAgentFiles returns OS-native absolute paths — split on both separators
+    const found = findAgentFiles(join(root, "agents"), 0, true).map((f) => f.split(/[\\/]/).pop());
     expect(found).toEqual(["a.md"]);
   } finally {
     rmSync(root, { recursive: true, force: true });

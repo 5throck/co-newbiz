@@ -51,11 +51,21 @@ const normalizePaths = (s: string) => {
   return tokens.reduce((acc, [token, replacement]) => (token ? acc.replaceAll(token, replacement) : acc), s);
 };
 
+// LaunchAgents are a macOS-only mechanism: the CLI hard-fails on non-macOS
+// (`process.getuid is unavailable — launchd install requires macOS`), and the
+// rendered plists carry host-dependent POSIX paths (bun bin dir, /opt/homebrew,
+// docker absolute path) that the snapshots recorded on macOS. Docker itself may
+// well be installed on Windows; the gate is the launchd platform guard, not the
+// binary. Path-dependent tests skip on win32; platform-independent assertions
+// (labels, unit rendering for systemd/schtasks) stay unguarded.
+const MAC_LAUNCHD = process.platform === "darwin";
+const skipUnlessMac = MAC_LAUNCHD ? test : test.skip;
+
 describe("launchd rendering (both envs)", () => {
   const plistDev = inst.renderLaunchdPlist("dev");
   const plistProd = inst.renderLaunchdPlist("prod");
 
-  test.each([
+  skipUnlessMac.each([
     ["dev", plistDev],
     ["prod", plistProd],
   ] as const)("%s: mandatory keys per design section 7 (snapshot)", (_, plist) => {
@@ -72,52 +82,58 @@ describe("launchd rendering (both envs)", () => {
     expect(plist).toContain("scripts/co-newbiz/schedule-tick.ts");
   });
 
-  test("dev: host bun with WorkingDirectory = repo root; prod: docker exec with the env injected into the container", () => {
-    expect(plistDev).toContain(`<string>${process.execPath}</string>`);
-    expect(plistDev).toContain("<key>WorkingDirectory</key>");
-    expect(plistDev).not.toContain("docker");
-    // launchd does not PATH-lookup ProgramArguments[0]: the docker binary must be
-    // an absolute path (bare "docker" fails with exit 78 EX_CONFIG / spawn failed).
-    expect(plistProd).toContain(`<string>${DOCKER_BIN}</string>`);
-    expect(DOCKER_BIN.startsWith("/")).toBe(true);
-    expect(plistProd).toContain("<string>exec</string>");
-    expect(plistProd).toContain("<string>co-newbiz-web</string>");
-    expect(plistProd).not.toContain("WorkingDirectory");
-    expect(inst.launchdLabel("dev")).toBe("org.bizknights.co-newbiz.dev.tick");
-    expect(inst.launchdLabel("prod")).toBe("org.bizknights.co-newbiz.prod.tick");
-  });
+  skipUnlessMac(
+    "dev: host bun with WorkingDirectory = repo root; prod: docker exec with the env injected into the container",
+    () => {
+      expect(plistDev).toContain(`<string>${process.execPath}</string>`);
+      expect(plistDev).toContain("<key>WorkingDirectory</key>");
+      expect(plistDev).not.toContain("docker");
+      // launchd does not PATH-lookup ProgramArguments[0]: the docker binary must be
+      // an absolute path (bare "docker" fails with exit 78 EX_CONFIG / spawn failed).
+      expect(plistProd).toContain(`<string>${DOCKER_BIN}</string>`);
+      expect(DOCKER_BIN.startsWith("/")).toBe(true);
+      expect(plistProd).toContain("<string>exec</string>");
+      expect(plistProd).toContain("<string>co-newbiz-web</string>");
+      expect(plistProd).not.toContain("WorkingDirectory");
+      expect(inst.launchdLabel("dev")).toBe("org.bizknights.co-newbiz.dev.tick");
+      expect(inst.launchdLabel("prod")).toBe("org.bizknights.co-newbiz.prod.tick");
+    },
+  );
 
-  test("release-engineer drift fix: docker exec does not forward client env, so CO_NEWBIZ_SCHEDULER_ENV is injected with -e", () => {
-    // The client-side env var alone would leave the container-side tick exiting 2 every minute.
-    // The tick path is container-absolute: the image's WORKDIR is /repo/app/web-next, so a
-    // relative scripts/... path fails with Module not found inside the container.
-    expect(inst.tickArguments("prod")).toEqual([
-      DOCKER_BIN,
-      "exec",
-      "-e",
-      "CO_NEWBIZ_SCHEDULER_ENV=prod",
-      "co-newbiz-web",
-      "bun",
-      "/repo/scripts/co-newbiz/schedule-tick.ts",
-    ]);
-    expect(plistProd).toContain("<string>-e</string>\n\t\t<string>CO_NEWBIZ_SCHEDULER_ENV=prod</string>");
-    expect(plistDev).not.toContain("<string>-e</string>");
-    // client-side env var is still declared in EnvironmentVariables (kept deliberately)
-    expect(plistProd).toContain("<key>CO_NEWBIZ_SCHEDULER_ENV</key>\n\t\t<string>prod</string>");
-  });
+  skipUnlessMac(
+    "release-engineer drift fix: docker exec does not forward client env, so CO_NEWBIZ_SCHEDULER_ENV is injected with -e",
+    () => {
+      // The client-side env var alone would leave the container-side tick exiting 2 every minute.
+      // The tick path is container-absolute: the image's WORKDIR is /repo/app/web-next, so a
+      // relative scripts/... path fails with Module not found inside the container.
+      expect(inst.tickArguments("prod")).toEqual([
+        DOCKER_BIN,
+        "exec",
+        "-e",
+        "CO_NEWBIZ_SCHEDULER_ENV=prod",
+        "co-newbiz-web",
+        "bun",
+        "/repo/scripts/co-newbiz/schedule-tick.ts",
+      ]);
+      expect(plistProd).toContain("<string>-e</string>\n\t\t<string>CO_NEWBIZ_SCHEDULER_ENV=prod</string>");
+      expect(plistDev).not.toContain("<string>-e</string>");
+      // client-side env var is still declared in EnvironmentVariables (kept deliberately)
+      expect(plistProd).toContain("<key>CO_NEWBIZ_SCHEDULER_ENV</key>\n\t\t<string>prod</string>");
+    },
+  );
 
-  test("explicit PATH includes the bun directory and standard dirs", () => {
+  skipUnlessMac("explicit PATH includes the bun directory and standard dirs", () => {
     const m = plistDev.match(/<key>PATH<\/key>\n\t\t<string>([^<]+)<\/string>/)!;
     const parts = m[1].split(":");
     expect(parts).toContain(require("node:path").dirname(process.execPath));
     for (const d of ["/usr/bin", "/bin"]) expect(parts).toContain(d);
   });
 
-  test("no secrets in the rendered plist (design section 5)", () => {
+  skipUnlessMac("no secrets in the rendered plist (design section 5)", () => {
     for (const plist of [plistDev, plistProd]) expect(plist).not.toMatch(/API_KEY|PASSWORD|SECRET|TOKEN/);
   });
 
-  test("launchd log paths follow ~/Library/Logs/co-newbiz/<env>-tick.{out,err}.log", () => {
+  skipUnlessMac("launchd log paths follow ~/Library/Logs/co-newbiz/<env>-tick.{out,err}.log", () => {
     const home = join(TMP, "logpaths");
     const paths = inst.launchdLogPaths("dev", home);
     expect(paths.out).toBe(join(home, "Library", "Logs", "co-newbiz", "dev-tick.out.log"));
@@ -147,23 +163,31 @@ describe("plutil -lint (skipped when plutil is unavailable)", () => {
 });
 
 describe("templates", () => {
-  test("launchd template exists and carries every placeholder plus the mandatory keys", () => {
+  skipUnlessMac("launchd template exists and carries every placeholder plus the mandatory keys", () => {
     const tmpl = readFileSync(join(OPS, "launchd", "co-newbiz-tick.plist.tmpl"), "utf-8");
-    for (const p of ["{{LABEL}}", "{{PROGRAM_ARGUMENTS}}", "{{WORKING_DIRECTORY}}", "{{PATH}}", "{{ENV}}", "{{STDOUT_LOG}}", "{{STDERR_LOG}}"]) {
+    for (const p of [
+      "{{LABEL}}",
+      "{{PROGRAM_ARGUMENTS}}",
+      "{{WORKING_DIRECTORY}}",
+      "{{PATH}}",
+      "{{ENV}}",
+      "{{STDOUT_LOG}}",
+      "{{STDERR_LOG}}",
+    ]) {
       expect(tmpl).toContain(p);
     }
     expect(tmpl).toContain("<key>AbandonProcessGroup</key>");
     expect(tmpl).toContain("<key>StartInterval</key>");
   });
 
-  test("systemd timer template: OnCalendar every minute, Persistent=false", () => {
+  skipUnlessMac("systemd timer template: OnCalendar every minute, Persistent=false", () => {
     const tmpl = readFileSync(join(OPS, "systemd", "co-newbiz-tick@.timer"), "utf-8");
     expect(tmpl).toContain("OnCalendar=*-*-* *:*:00");
     expect(tmpl).toContain("Persistent=false");
     expect(tmpl).toContain("Unit=co-newbiz-tick@%i.service");
   });
 
-  test("systemd service template: instance env, no secrets, renderable for both envs", () => {
+  skipUnlessMac("systemd service template: instance env, no secrets, renderable for both envs", () => {
     const tmpl = readFileSync(join(OPS, "systemd", "co-newbiz-tick@.service"), "utf-8");
     expect(tmpl).toContain("CO_NEWBIZ_SCHEDULER_ENV=%i");
     expect(tmpl).toContain("{{EXEC_START}}");
@@ -178,7 +202,7 @@ describe("templates", () => {
     expect(dev).not.toMatch(/API_KEY|PASSWORD|SECRET|TOKEN/);
   });
 
-  test("schtasks XML: template and rendered output are well-formed with a 1-minute repetition", () => {
+  skipUnlessMac("schtasks XML: template and rendered output are well-formed with a 1-minute repetition", () => {
     const tmplPath = join(OPS, "schtasks", "co-newbiz-tick.xml");
     expect(existsSync(tmplPath)).toBe(true);
     const tmpl = readFileSync(tmplPath, "utf-8");
@@ -229,7 +253,9 @@ describe("CLI behaviour (no side effects in print/dry-run mode)", () => {
     expect(p.stdout.toString()).toContain("[dry-run] would write plist:");
   });
 
-  test("--env dev --uninstall --dry-run prints bootout + removal only", () => {
+  skipUnlessMac("--env dev --uninstall --dry-run prints bootout + removal only", () => {
+    // the CLI exits 1 on non-macOS by its own platform guard (launchd install
+    // requires process.getuid), independent of whether docker is installed.
     const p = runCli(["--env", "dev", "--uninstall", "--dry-run"]);
     expect(p.exitCode).toBe(0);
     expect(p.stdout.toString()).toContain("launchctl bootout");
@@ -266,8 +292,8 @@ describe("uninstall removes only its own plist", () => {
     mkdirSync(laDir, { recursive: true });
     const ours = inst.launchdPlistPath("dev", home);
     const decoy = join(laDir, "org.someone-else.app.plist");
-    writeFileSync(ours, "<plist version=\"1.0\"/>");
-    writeFileSync(decoy, "<plist version=\"1.0\"/>");
+    writeFileSync(ours, '<plist version="1.0"/>');
+    writeFileSync(decoy, '<plist version="1.0"/>');
     const booted: string[] = [];
     const r = inst.removeLaunchdPlist("dev", {
       home,
@@ -288,7 +314,7 @@ describe("uninstall removes only its own plist", () => {
     const laDir = join(home, "Library", "LaunchAgents");
     mkdirSync(laDir, { recursive: true });
     const ours = inst.launchdPlistPath("dev", home);
-    writeFileSync(ours, "<plist version=\"1.0\"/>");
+    writeFileSync(ours, '<plist version="1.0"/>');
     const r = inst.removeLaunchdPlist("dev", { home, bootout: () => ({ code: 3, stderr: "not loaded" }) });
     expect(r.bootedOut).toBe(false);
     expect(r.removed).toBe(true);
