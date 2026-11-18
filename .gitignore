@@ -66,8 +66,7 @@ NUL
 # --- Sandbox for testing ---
 .sandbox/
 
-# Archive directory ignored to save space (local preservation only)
-memory/archive/
+# memory/archive/ is tracked since 2026-11-19: DEC knowledge_refs evidence must survive on fresh clones. LOCAL-PATCH(upstream-request: U-20261119-001)
 
 # Ignore test temp directories
 tests/.temp/

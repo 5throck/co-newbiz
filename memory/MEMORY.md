@@ -16,7 +16,7 @@
 | 2026-11-10 | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
 | 2026-11-09 | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
 | 2026-11-10 | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
-| [2026-11-09](2026-11-09.md) | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
+| 2026-11-09 | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
 | 2026-11-08 | chore: workspace sync — session residue (Step 1 local-work) |
 | 2026-11-07 | feat(review): localize AI review items via next-intl with legacy fallback |
 | 2026-11-06 | docs(docs): workspace sync (10 files) |
