@@ -28,9 +28,7 @@ export type ProtectedReason =
   | "blank"
   | "not-hangul-dominant";
 
-export type Block =
-  | { type: "protected"; reason: ProtectedReason; text: string }
-  | { type: "prose"; text: string };
+export type Block = { type: "protected"; reason: ProtectedReason; text: string } | { type: "prose"; text: string };
 
 export interface SegmentOptions {
   /** Headings (text without the leading #) whose section is protected (glossary definitions). */
@@ -246,7 +244,13 @@ export function buildPlan(blocks: Block[], max: number = MAX_UNIT_CHARS): PlanIt
   const flush = () => {
     if (!curText) return;
     unitNo++;
-    plan.push({ type: "unit", id: String(unitNo).padStart(3, "0"), text: curText, start: curStart, end: curStart + curText.length });
+    plan.push({
+      type: "unit",
+      id: String(unitNo).padStart(3, "0"),
+      text: curText,
+      start: curStart,
+      end: curStart + curText.length,
+    });
     curText = "";
   };
 

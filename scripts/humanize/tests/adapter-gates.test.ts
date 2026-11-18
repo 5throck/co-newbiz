@@ -35,7 +35,8 @@ afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 function runOne(candidate: string | null) {
   const doc = ORIGINAL_PARAGRAPH + "\n";
   const prep = prepareRun({ text: doc, kind: "report", originPath: "docs/x_ko.md", config: cfg });
-  if (prep.status !== "prepared") throw new Error(`prepare failed: ${prep.status === "not_polished" ? prep.reason : ""}`);
+  if (prep.status !== "prepared")
+    throw new Error(`prepare failed: ${prep.status === "not_polished" ? prep.reason : ""}`);
   if (candidate !== null) writeFileSync(join(prep.runDir, "units", "001", "final.md"), candidate + "\n");
   const fin = finalizeRun({ runDir: prep.runDir, keep: true, config: cfg });
   const proposal = readFileSync(fin.proposalPath, "utf8");
@@ -101,9 +102,15 @@ describe.skipIf(!usable)("finalize gates", () => {
     const prep = prepareRun({ text: doc, kind: "report", originPath: "docs/x_ko.md", config: cfg });
     if (prep.status !== "prepared") throw new Error("prepare failed");
     expect(prep.units).toBe(2);
-    writeFileSync(join(prep.runDir, "units", "001", "final.md"), paragraph({ rewritten: 2, anchor: ANCHOR_NUMBER_CHANGED }) + "\n");
+    writeFileSync(
+      join(prep.runDir, "units", "001", "final.md"),
+      paragraph({ rewritten: 2, anchor: ANCHOR_NUMBER_CHANGED }) + "\n",
+    );
     const second = readFileSync(join(prep.runDir, "units", "002", "00_original.txt"), "utf8");
-    writeFileSync(join(prep.runDir, "units", "002", "final.md"), second.replace("별도의 단위로 다뤄진다", "따로 다뤄진다") + "\n");
+    writeFileSync(
+      join(prep.runDir, "units", "002", "final.md"),
+      second.replace("별도의 단위로 다뤄진다", "따로 다뤄진다") + "\n",
+    );
     const fin = finalizeRun({ runDir: prep.runDir, keep: true, config: cfg });
     const report = JSON.parse(readFileSync(join(fin.outDir, "report.json"), "utf8"));
     expect(fin.exitCode).toBe(1);
@@ -165,7 +172,11 @@ describe("failure posture (no clone needed)", () => {
   });
 
   test("prepare reports not_polished instead of throwing when tooling is unusable", () => {
-    const r = prepareRun({ text: ORIGINAL_PARAGRAPH, kind: "report", config: { ...base, cloneDir: join(tmpdir(), "humanize-no-such-clone") } });
+    const r = prepareRun({
+      text: ORIGINAL_PARAGRAPH,
+      kind: "report",
+      config: { ...base, cloneDir: join(tmpdir(), "humanize-no-such-clone") },
+    });
     expect(r.status).toBe("not_polished");
   });
 

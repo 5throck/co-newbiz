@@ -58,7 +58,9 @@ describe("anchor gate", () => {
   });
 
   test("glossary terms keep their count", () => {
-    expect(anchorDiff("시너지 효과를 본다.", "결합 효과를 본다.", ["시너지"]).map((d) => d.category)).toEqual(["glossary"]);
+    expect(anchorDiff("시너지 효과를 본다.", "결합 효과를 본다.", ["시너지"]).map((d) => d.category)).toEqual([
+      "glossary",
+    ]);
   });
 
   test("article references keep their full form", () => {

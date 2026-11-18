@@ -41,7 +41,8 @@ describe("segmentDocument", () => {
   });
 
   test("protected blocks come back byte-identical", () => {
-    const prot = (reason: string) => blocks.filter((b) => b.type === "protected" && b.reason === reason).map((b) => b.text);
+    const prot = (reason: string) =>
+      blocks.filter((b) => b.type === "protected" && b.reason === reason).map((b) => b.text);
     expect(prot("frontmatter")).toEqual(["---\ntitle: 샘플\n---\n"]);
     expect(prot("fenced-code")).toEqual([`${FENCE}ts\nconst x = 1;\n${FENCE}\n`]);
     expect(prot("table")).toEqual(["| 항목 | 값 |\n|---|---|\n| a | b |\n"]);
@@ -64,13 +65,19 @@ describe("segmentDocument", () => {
   test("a section under a marked heading is protected", () => {
     const doc = "# 용어\n\n정의 문단은 용어집 정의다.\n\n# 본문\n\n일반 본문 문단이다.\n";
     const b = segmentDocument(doc, { protectedHeadings: ["용어"] });
-    expect(b.some((x) => x.type === "protected" && x.reason === "marked-section" && x.text.includes("정의 문단"))).toBe(true);
+    expect(b.some((x) => x.type === "protected" && x.reason === "marked-section" && x.text.includes("정의 문단"))).toBe(
+      true,
+    );
     expect(b.some((x) => x.type === "prose" && x.text.includes("일반 본문"))).toBe(true);
   });
 
   test("CRLF documents round-trip", () => {
     const doc = "본문 문단이다.\r\n\r\n| a | b |\r\n|---|---|\r\n\r\n둘째 문단이다.\r\n";
-    expect(segmentDocument(doc).map((b) => b.text).join("")).toBe(doc);
+    expect(
+      segmentDocument(doc)
+        .map((b) => b.text)
+        .join(""),
+    ).toBe(doc);
   });
 });
 

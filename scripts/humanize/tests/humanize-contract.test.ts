@@ -109,10 +109,19 @@ describe("pinned clone", () => {
     writeFileSync(join(dir, "a.txt"), ORIGINAL_PARAGRAPH + "\n");
     writeFileSync(join(dir, "same.txt"), ORIGINAL_PARAGRAPH + "\n");
     writeFileSync(join(dir, "heavy.txt"), paragraph({ rewritten: 9, heavy: true }) + "\n");
-    const run = (after: string) => runUpstream(cfg, UPSTREAM.scripts.gates, ["--before", join(dir, "a.txt"), "--after", join(dir, after), "--genre", "report"], dir);
+    const run = (after: string) =>
+      runUpstream(
+        cfg,
+        UPSTREAM.scripts.gates,
+        ["--before", join(dir, "a.txt"), "--after", join(dir, after), "--genre", "report"],
+        dir,
+      );
     expect(run("same.txt").status).toBe(0);
     expect(run("heavy.txt").status).toBe(2);
-    expect(runUpstream(cfg, UPSTREAM.scripts.gates, ["--before", join(dir, "nope"), "--after", join(dir, "a.txt")], dir).status).toBe(3);
+    expect(
+      runUpstream(cfg, UPSTREAM.scripts.gates, ["--before", join(dir, "nope"), "--after", join(dir, "a.txt")], dir)
+        .status,
+    ).toBe(3);
   });
 
   test("the input shim writes metrics and keeps the unit text intact for clean input", () => {
@@ -127,7 +136,15 @@ describe("pinned clone", () => {
 
   test("running the upstream scripts leaves the clone untouched (no bytecode written)", () => {
     const stray = (d: string): string[] =>
-      readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.name === ".git" ? [] : e.isDirectory() ? (e.name === "__pycache__" ? [join(d, e.name)] : stray(join(d, e.name))) : []));
+      readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+        e.name === ".git"
+          ? []
+          : e.isDirectory()
+            ? e.name === "__pycache__"
+              ? [join(d, e.name)]
+              : stray(join(d, e.name))
+            : [],
+      );
     expect(stray(cfg.cloneDir)).toEqual([]);
   });
 });

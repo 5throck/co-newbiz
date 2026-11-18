@@ -163,13 +163,23 @@ export function doctor(cfg: AdapterConfig = defaultConfig()): DoctorResult {
   } catch (e) {
     add("manifest", false, (e as Error).message);
   }
-  const py = spawnSync(cfg.python, ["-I", "-B", "-c", "import sys;print(sys.version.split()[0])"], { encoding: "utf8" });
+  const py = spawnSync(cfg.python, ["-I", "-B", "-c", "import sys;print(sys.version.split()[0])"], {
+    encoding: "utf8",
+  });
   add("python3", py.status === 0, py.status === 0 ? `python ${(py.stdout ?? "").trim()}` : `${cfg.python} not usable`);
   const cloneExists = existsSync(join(cfg.cloneDir, UPSTREAM.scripts.gates));
-  add("clone", cloneExists, cloneExists ? cfg.cloneDir : `missing: run 'bun scripts/external-deps.ts install --id ${MANIFEST_ID}'`);
+  add(
+    "clone",
+    cloneExists,
+    cloneExists ? cfg.cloneDir : `missing: run 'bun scripts/external-deps.ts install --id ${MANIFEST_ID}'`,
+  );
   if (cloneExists) {
     const head = cloneHead(cfg.cloneDir);
-    add("commit", !!head && head === facts.commit, `clone ${head?.slice(0, 12) ?? "unknown"} vs manifest ${facts.commit.slice(0, 12)}`);
+    add(
+      "commit",
+      !!head && head === facts.commit,
+      `clone ${head?.slice(0, 12) ?? "unknown"} vs manifest ${facts.commit.slice(0, 12)}`,
+    );
     const needed = [...Object.values(UPSTREAM.scripts), UPSTREAM.agent, UPSTREAM.quickRules];
     const missing = needed.filter((f) => !existsSync(join(cfg.cloneDir, f)));
     add("files", missing.length === 0, missing.length ? `missing: ${missing.join(", ")}` : "all adapter files present");
@@ -177,7 +187,11 @@ export function doctor(cfg: AdapterConfig = defaultConfig()): DoctorResult {
       // Upstream declares no minimum python version at the pin, so the check is
       // behavioural: the gate script must import its own dependencies.
       const imp = runUpstream(cfg, UPSTREAM.scripts.gates, ["--help"], tmpdir());
-      add("upstream-import", imp.status === 0, imp.status === 0 ? "verify_gates imports cleanly" : `verify_gates --help exit ${imp.status}`);
+      add(
+        "upstream-import",
+        imp.status === 0,
+        imp.status === 0 ? "verify_gates imports cleanly" : `verify_gates --help exit ${imp.status}`,
+      );
     }
   }
   return { ok: checks.every((c) => c.ok), pin: facts.pin, commit: facts.commit, checks };
@@ -192,7 +206,9 @@ export function loadGlossaryTerms(root: string): string[] {
   try {
     for (const f of readdirSync(dir)) {
       if (!f.endsWith(".yaml") || f.startsWith("_")) continue;
-      for (const m of readFileSync(join(dir, f), "utf8").matchAll(/^\s*-?\s*(?:ko|en):\s*["']?([^"'\n#]+?)["']?\s*$/gm)) {
+      for (const m of readFileSync(join(dir, f), "utf8").matchAll(
+        /^\s*-?\s*(?:ko|en):\s*["']?([^"'\n#]+?)["']?\s*$/gm,
+      )) {
         const t = m[1].trim();
         if (t.length >= 2) terms.add(t);
       }
@@ -239,12 +255,19 @@ interface UnitMeta {
 export function prepareRun(opts: PrepareOptions): PrepareResult {
   const cfg = opts.config ?? defaultConfig();
   const genre = opts.genre ?? DEFAULT_GENRE;
-  if (!GENRES.includes(genre)) return { status: "not_polished", reason: `unknown genre '${genre}' (use ${GENRES.join("|")})` };
+  if (!GENRES.includes(genre))
+    return { status: "not_polished", reason: `unknown genre '${genre}' (use ${GENRES.join("|")})` };
   const el = classify({ text: opts.text, kind: opts.kind, path: opts.originPath, root: cfg.root });
   if (!el.eligible) return { status: "not_polished", reason: `excluded: ${el.rule}` };
   const doc = doctor(cfg);
   if (!doc.ok) {
-    return { status: "not_polished", reason: `doctor failed: ${doc.checks.filter((c) => !c.ok).map((c) => `${c.name} (${c.detail})`).join("; ")}` };
+    return {
+      status: "not_polished",
+      reason: `doctor failed: ${doc.checks
+        .filter((c) => !c.ok)
+        .map((c) => `${c.name} (${c.detail})`)
+        .join("; ")}`,
+    };
   }
   const plan = buildPlan(segmentDocument(opts.text, { protectedHeadings: opts.glossaryHeadings }), MAX_UNIT_CHARS);
   const units = plan.filter((p): p is Extract<PlanItem, { type: "unit" }> => p.type === "unit");
@@ -261,7 +284,10 @@ export function prepareRun(opts: PrepareOptions): PrepareResult {
     writeFileSync(join(udir, "00_original.txt"), u.text);
     writeFileSync(join(udir, "01_input.txt"), u.text);
     const shim = runUpstream(cfg, UPSTREAM.scripts.shim, ["--run-dir", udir, "--genre", genre], udir);
-    const degraded = shim.status !== 0 || existsSync(join(udir, "00_metrics.error")) || !existsSync(join(udir, "01_input_with_metrics.txt"));
+    const degraded =
+      shim.status !== 0 ||
+      existsSync(join(udir, "00_metrics.error")) ||
+      !existsSync(join(udir, "01_input_with_metrics.txt"));
     const routeHint = /^route_hint=(\S+)/m.exec(shim.stdout)?.[1] ?? "absent";
     meta.push({ id: u.id, routeHint, degraded, sanitized: existsSync(join(udir, "00_sanitize.json")) });
     dispatchUnits.push({
@@ -282,7 +308,19 @@ export function prepareRun(opts: PrepareOptions): PrepareResult {
   writeFileSync(join(runDir, "dispatch.json"), JSON.stringify(dispatch, null, 2));
   writeFileSync(
     join(runDir, "plan.json"),
-    JSON.stringify({ runId, genre, kind: opts.kind, pin: facts.pin, commit: facts.commit, items: plan.map((p) => (p.type === "unit" ? { type: "unit", id: p.id, start: p.start, end: p.end } : p)), units: meta }, null, 2),
+    JSON.stringify(
+      {
+        runId,
+        genre,
+        kind: opts.kind,
+        pin: facts.pin,
+        commit: facts.commit,
+        items: plan.map((p) => (p.type === "unit" ? { type: "unit", id: p.id, start: p.start, end: p.end } : p)),
+        units: meta,
+      },
+      null,
+      2,
+    ),
   );
   return { status: "prepared", runDir, runId, units: units.length };
 }
@@ -298,7 +336,12 @@ interface GateRun {
 }
 
 function runGate(cfg: AdapterConfig, cwd: string, before: string, after: string, genre: string): GateRun {
-  const r = runUpstream(cfg, UPSTREAM.scripts.gates, ["--before", before, "--after", after, "--genre", genre, "--json"], cwd);
+  const r = runUpstream(
+    cfg,
+    UPSTREAM.scripts.gates,
+    ["--before", before, "--after", after, "--genre", genre, "--json"],
+    cwd,
+  );
   const exit = r.status ?? 3;
   let rate: number | undefined;
   const reasons: string[] = [];
@@ -347,7 +390,14 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
     kind: string;
     pin: string;
     commit: string;
-    items: Array<{ type: "protected" | "unit"; id?: string; text?: string; reason?: string; start: number; end: number }>;
+    items: Array<{
+      type: "protected" | "unit";
+      id?: string;
+      text?: string;
+      reason?: string;
+      start: number;
+      end: number;
+    }>;
     units: UnitMeta[];
   };
   const source = readFileSync(join(runDir, "source.md"), "utf8");
@@ -365,7 +415,8 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
     writeFileSync(join(outDir, "report.json"), JSON.stringify(report, null, 2));
     writeFileSync(reportPath, renderReportMd(rep));
     if (!opts.keep && report.exitCode <= 1) {
-      for (const d of ["units", "plan.json", "dispatch.json", "source.md"]) rmSync(join(runDir, d), { recursive: true, force: true });
+      for (const d of ["units", "plan.json", "dispatch.json", "source.md"])
+        rmSync(join(runDir, d), { recursive: true, force: true });
     }
     return { exitCode: report.exitCode, status: report.status, outDir, proposalPath, reportPath };
   };
@@ -373,7 +424,16 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
   const doc = doctor(cfg);
   if (!doc.ok) {
     return finish(
-      { ...base, units: [], protectedBlocks: protectedItems.length, protectedIdentical: true, notPolishedReason: `Tooling unusable at finalize time: ${doc.checks.filter((c) => !c.ok).map((c) => c.name).join(", ")}.` },
+      {
+        ...base,
+        units: [],
+        protectedBlocks: protectedItems.length,
+        protectedIdentical: true,
+        notPolishedReason: `Tooling unusable at finalize time: ${doc.checks
+          .filter((c) => !c.ok)
+          .map((c) => c.name)
+          .join(", ")}.`,
+      },
       source,
     );
   }
@@ -388,7 +448,15 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
     const udir = join(runDir, "units", id);
     const m = plan.units.find((x) => x.id === id);
     const orig = readFileSync(join(udir, "00_original.txt"), "utf8");
-    const rep: UnitReport = { id, status: "kept_original", reasons: [], anchorDiffs: [], routeHint: m?.routeHint, metricsDegraded: m?.degraded, sanitized: m?.sanitized };
+    const rep: UnitReport = {
+      id,
+      status: "kept_original",
+      reasons: [],
+      anchorDiffs: [],
+      routeHint: m?.routeHint,
+      metricsDegraded: m?.degraded,
+      sanitized: m?.sanitized,
+    };
     unitReports.push(rep);
     chosen.set(id, orig);
 
@@ -406,9 +474,18 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
 
     // Deterministic post-processing in upstream's documented order, before judging.
     let helperFailed: string | undefined;
-    for (const [name, script] of [["modality", UPSTREAM.scripts.modality], ["commas", UPSTREAM.scripts.commas], ["lexical", UPSTREAM.scripts.lexical]] as const) {
+    for (const [name, script] of [
+      ["modality", UPSTREAM.scripts.modality],
+      ["commas", UPSTREAM.scripts.commas],
+      ["lexical", UPSTREAM.scripts.lexical],
+    ] as const) {
       const args = name === "lexical" ? ["restore"] : [];
-      const r = runUpstream(cfg, script, [...args, "--before", inputPath, "--after", polishedPath, "--out", polishedPath], udir);
+      const r = runUpstream(
+        cfg,
+        script,
+        [...args, "--before", inputPath, "--after", polishedPath, "--out", polishedPath],
+        udir,
+      );
       if (r.status !== 0) {
         helperFailed = name;
         break;
@@ -463,7 +540,11 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
   for (const item of plan.items) {
     const start = out.length;
     out += item.type === "unit" ? (chosen.get(item.id as string) as string) : (item.text as string);
-    if (item.type === "protected" && (out.slice(start) !== source.slice(item.start, item.end) || item.text !== source.slice(item.start, item.end))) identical = false;
+    if (
+      item.type === "protected" &&
+      (out.slice(start) !== source.slice(item.start, item.end) || item.text !== source.slice(item.start, item.end))
+    )
+      identical = false;
   }
 
   let documentChangeRate: number | undefined;
@@ -474,7 +555,17 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
   documentChangeRate = docGate.rate;
   if (docGate.exit === 3) extra.push("The document-level gate could not judge the assembled document.");
 
-  return finish({ ...base, units: unitReports, documentChangeRate, protectedBlocks: protectedItems.length, protectedIdentical: identical, extraUnverified: extra }, out);
+  return finish(
+    {
+      ...base,
+      units: unitReports,
+      documentChangeRate,
+      protectedBlocks: protectedItems.length,
+      protectedIdentical: identical,
+      extraUnverified: extra,
+    },
+    out,
+  );
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────────
@@ -503,14 +594,25 @@ async function main(argv: string[]): Promise<number> {
     case "classify": {
       const inp = arg(rest, "--in");
       if (!inp) return usage();
-      const r = classify({ text: await readInput(inp), kind: arg(rest, "--kind"), path: arg(rest, "--path"), root: cfg.root });
+      const r = classify({
+        text: await readInput(inp),
+        kind: arg(rest, "--kind"),
+        path: arg(rest, "--path"),
+        root: cfg.root,
+      });
       console.log(r.eligible ? "eligible" : `excluded: ${r.rule}`);
       return r.eligible ? 0 : 1;
     }
     case "prepare": {
       const inp = arg(rest, "--in");
       if (!inp || inp === "-") return usage();
-      const r = prepareRun({ text: readFileSync(inp, "utf8"), kind: arg(rest, "--kind") ?? "", originPath: arg(rest, "--path") ?? inp, genre: arg(rest, "--genre"), config: cfg });
+      const r = prepareRun({
+        text: readFileSync(inp, "utf8"),
+        kind: arg(rest, "--kind") ?? "",
+        originPath: arg(rest, "--path") ?? inp,
+        genre: arg(rest, "--genre"),
+        config: cfg,
+      });
       if (r.status === "prepared") {
         console.log(r.runDir);
         return 0;
@@ -521,7 +623,12 @@ async function main(argv: string[]): Promise<number> {
     case "finalize": {
       const run = arg(rest, "--run");
       if (!run) return usage();
-      const r = finalizeRun({ runDir: run, keep: rest.includes("--keep"), outDir: arg(rest, "--out-dir"), config: cfg });
+      const r = finalizeRun({
+        runDir: run,
+        keep: rest.includes("--keep"),
+        outDir: arg(rest, "--out-dir"),
+        config: cfg,
+      });
       console.log(`${r.proposalPath}\nstatus: ${r.status}\nreport: ${r.reportPath}`);
       return r.exitCode;
     }
@@ -531,7 +638,9 @@ async function main(argv: string[]): Promise<number> {
 }
 
 function usage(): number {
-  console.error("usage: humanize-adapter.ts doctor | classify --in <file|-> --kind <k> [--path <p>] | prepare --in <file> --kind <k> [--path <p>] [--genre <g>] | finalize --run <dir> [--keep] [--out-dir <dir>]");
+  console.error(
+    "usage: humanize-adapter.ts doctor | classify --in <file|-> --kind <k> [--path <p>] | prepare --in <file> --kind <k> [--path <p>] [--genre <g>] | finalize --run <dir> [--keep] [--out-dir <dir>]",
+  );
   return 2;
 }
 

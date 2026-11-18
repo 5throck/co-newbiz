@@ -163,4 +163,3 @@ export function classify(input: ClassifyInput): Eligibility {
   if (hangul === 0) return { eligible: false, rule: "script: no Hangul text" };
   return { eligible: true };
 }
-

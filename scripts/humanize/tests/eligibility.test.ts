@@ -27,9 +27,12 @@ describe("default-deny exclusions", () => {
     expect(ok({ path: `${ROOT}/${dir}/deep/x.md` }).eligible).toBe(false);
   });
 
-  test.each(["a.yaml", "a.yml", "a.json", "a.ts", "a.py", "CHANGELOG.md", "sub/CHANGELOG.md"])("%s is excluded", (f) => {
-    expect(ok({ path: f }).eligible).toBe(false);
-  });
+  test.each(["a.yaml", "a.yml", "a.json", "a.ts", "a.py", "CHANGELOG.md", "sub/CHANGELOG.md"])(
+    "%s is excluded",
+    (f) => {
+      expect(ok({ path: f }).eligible).toBe(false);
+    },
+  );
 
   test("an eligible kind under docs/manuals/*_ko.md is eligible", () => {
     expect(ok({ kind: "manual-ko", path: "docs/manuals/admin-manual_ko.md" }).eligible).toBe(true);
