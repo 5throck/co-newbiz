@@ -1,8 +1,8 @@
 {
   "name": "@co-newbiz/co-newbiz-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
-  "description": "co-newbiz stdio MCP server — a thin REST relay (ADR-0011: no direct DB access). Distributed via GitHub Packages; design: docs/designs/2026-11-18-mcp-package-distribution-design.md",
+  "description": "co-newbiz stdio MCP server — a thin REST relay (ADR-0011: no direct DB access). Published to npmjs.com (primary) and GitHub Packages (secondary); design: docs/designs/2026-11-18-mcp-package-distribution-design.md",
   "bin": {
     "co-newbiz-mcp": "./index.ts"
   },

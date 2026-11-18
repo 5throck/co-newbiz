@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-content_hash: fb5988ac764b6f35c4d975006a810973d893772dd756e4d680eeec0d307d948e
+content_hash: be3b08b90f78f2f0eebc529e97909a184b5450603a59dac8063064fb278f2ead
 ---
 
 # co-newbiz
@@ -95,7 +95,7 @@ flowchart LR
   mcpStdio -. "propose only;<br/>a person confirms" .-> web
 ```
 
-The stdio MCP server is also distributed as the npm package `@co-newbiz/co-newbiz-mcp` on GitHub Packages — install with `bunx @co-newbiz/co-newbiz-mcp` and a personal access token (`read:packages`), no repository checkout needed.
+The stdio MCP server is also distributed as the npm package `@co-newbiz/co-newbiz-mcp`. The primary channel is npmjs.com, so install needs no repository checkout and no token: `bunx @co-newbiz/co-newbiz-mcp`, with `bun` as the only prerequisite (no `.npmrc`, no personal access token). The same version also publishes to GitHub Packages as a secondary channel, which does require the `@co-newbiz` scope mapping plus a `read:packages` personal access token.
 
 AI agents can only create proposals. Gate decisions, the S12 transition and closure are recorded by a person on the same screens shown in the demo.
 
