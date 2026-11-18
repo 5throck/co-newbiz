@@ -233,7 +233,7 @@ function isHeadingLine(trimmed: string): boolean {
 
 /** ATX level of a heading line (1–6), else 0. */
 export function headingLevel(line: string): number {
-  return line.match(/^\s*(#{1,6})\s/)?.[1]!.length ?? 0;
+  return line.match(/^\s*(#{1,6})\s/)?.[1]?.length ?? 0;
 }
 
 /** True when the (trimmed) line is a single-line HTML comment opener. */

@@ -332,9 +332,15 @@ function generateMatrix(
       const actorTypes: Record<string, "human" | "agent"> = {};
       const allAgents = new Set<string>();
       allAgents.add(accountable);
-      responsible.forEach((a) => allAgents.add(a));
-      row.consulted?.forEach((a) => allAgents.add(a));
-      row.informed?.forEach((a) => allAgents.add(a));
+      responsible.forEach((a) => {
+        allAgents.add(a);
+      });
+      row.consulted?.forEach((a) => {
+        allAgents.add(a);
+      });
+      row.informed?.forEach((a) => {
+        allAgents.add(a);
+      });
 
       for (const agent of allAgents) {
         const type = resolveActorType(agent, humanRoles, root);

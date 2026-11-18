@@ -249,9 +249,18 @@ function validateRACIFile(variant: string, root: string, issues: Issue[]): RACIM
     // DEG-R-04: Every RACI agent key resolves to an agent file or human-role entry
     const allAgents = new Set<string>();
     if (typeof accountable === "string") allAgents.add(accountable);
-    if (Array.isArray(responsible)) responsible.forEach((a: string) => allAgents.add(a));
-    if (Array.isArray(row.consulted)) (row.consulted as string[]).forEach((a) => allAgents.add(a));
-    if (Array.isArray(row.informed)) (row.informed as string[]).forEach((a) => allAgents.add(a));
+    if (Array.isArray(responsible))
+      responsible.forEach((a: string) => {
+        allAgents.add(a);
+      });
+    if (Array.isArray(row.consulted))
+      (row.consulted as string[]).forEach((a) => {
+        allAgents.add(a);
+      });
+    if (Array.isArray(row.informed))
+      (row.informed as string[]).forEach((a) => {
+        allAgents.add(a);
+      });
 
     for (const agent of allAgents) {
       if (!agentFileExists(agent, root) && !humanRoles.has(agent)) {
@@ -281,9 +290,18 @@ function validateRACIFile(variant: string, root: string, issues: Issue[]): RACIM
     if (row.actor_types && typeof row.actor_types === "object") {
       const expectedKeys = new Set<string>();
       if (typeof accountable === "string") expectedKeys.add(accountable);
-      if (Array.isArray(responsible)) responsible.forEach((a: string) => expectedKeys.add(a));
-      if (Array.isArray(row.consulted)) (row.consulted as string[]).forEach((a) => expectedKeys.add(a));
-      if (Array.isArray(row.informed)) (row.informed as string[]).forEach((a) => expectedKeys.add(a));
+      if (Array.isArray(responsible))
+        responsible.forEach((a: string) => {
+          expectedKeys.add(a);
+        });
+      if (Array.isArray(row.consulted))
+        (row.consulted as string[]).forEach((a) => {
+          expectedKeys.add(a);
+        });
+      if (Array.isArray(row.informed))
+        (row.informed as string[]).forEach((a) => {
+          expectedKeys.add(a);
+        });
 
       const actualKeys = new Set<string>(Object.keys(row.actor_types));
 
