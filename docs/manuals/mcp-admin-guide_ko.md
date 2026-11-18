@@ -55,11 +55,11 @@ counterpart: mcp-admin-guide.md
 
 ## 4. NPM_TOKEN 순환(90일마다)
 
-**요건.** `NPM_TOKEN`은 `@co-newbiz/*`에 **읽기·쓰기(Read and write)** 권한을 가진 npm **세분화 접근 토큰(granular access token)** 이어야 하고, **2FA 우회(bypass 2FA)** 가 켜져 있어야 하며, 만든 날부터 90일 안에 끝나야 한다. **90일마다, 만료 전에** 바꾼다.
+**요건.** `NPM_TOKEN`은 `@co-newbiz/*`에 **읽기·쓰기(Read and write)** 권한을 가진 npm **세분화 접근 토큰(granular access token)** 이어야 하고 **2FA 우회(bypass 2FA)** 가 켜져 있어야 하며 만든 날부터 90일 안에 끝나야 한다. **90일마다, 만료 전에** 바꾼다.
 
 **현재 상태.** 지금 쓰는 토큰은 2026-11-18에 설정했으므로 **2027-02-16쯤** 만료된다. 정확한 만료일은 npmjs.com(Access Tokens 화면)에서 확인해 아래 표에 적는다.
 
-**실패 징후.** 토큰이 만료되었거나 권한이 모자라면 `publish-npmjs`가 E403으로 실패하고, 다른 시크릿을 쓰는 GitHub Packages `publish` 잡은 그대로 통과한다. 2026-11-18의 첫 npmjs 발행 실패도 2FA 우회가 없어서 같은 E403이 났다. 토큰이 만료되지 않았음을 확인한 뒤에는 2FA 우회 설정을 살핀다.
+**실패 징후.** 토큰이 만료되었거나 권한이 모자라면 `publish-npmjs`가 E403으로 실패하고 다른 시크릿을 쓰는 GitHub Packages `publish` 잡은 그대로 통과한다. 2026-11-18의 첫 npmjs 발행 실패도 2FA 우회가 없어서 같은 E403이 났다. 토큰이 만료되지 않았음을 확인한 뒤에는 2FA 우회 설정을 살핀다.
 
 **순환 절차.**
 
