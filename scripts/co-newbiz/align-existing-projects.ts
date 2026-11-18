@@ -28,7 +28,7 @@
 //     integrity + row counts afterwards. A second run is a no-op.
 import { Database } from "bun:sqlite";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ACTOR = "system:data-alignment";
@@ -70,8 +70,9 @@ export function isLiveDbPath(dbPath: string): boolean {
     /* file may not exist yet */
   }
   const liveDir = join(REPO_ROOT, "db", "data");
-  const inLiveDir = (p: string) => p === liveDir || p.startsWith(liveDir + "/");
-  const dockerVolume = (p: string) => /\/docker\/volumes\/|\/var\/lib\/docker\//.test(p);
+  // sep-aware prefix: liveDir + "/" never matches on Windows (backslashes)
+  const inLiveDir = (p: string) => p === liveDir || p.startsWith(liveDir + sep);
+  const dockerVolume = (p: string) => /[/\\]docker[/\\]volumes[/\\]|[/\\]var[/\\]lib[/\\]docker[/\\]/.test(p);
   return inLiveDir(abs) || inLiveDir(real) || dockerVolume(abs) || dockerVolume(real);
 }
 
@@ -167,8 +168,14 @@ export function buildPlan(db: Database): Finding[] {
           current: "origin=NULL",
           proposed: "origin=internal",
           class: "deterministic",
-          reason: "ADR-0166 default for every Green Field sub-track (including none). Adds the S11 establishment requirement.",
-          change: { sql: "UPDATE md_project SET origin = 'internal' WHERE id = ? AND (origin IS NULL OR origin = '')", params: [p.id], table: "md_project", key: p.id },
+          reason:
+            "ADR-0166 default for every Green Field sub-track (including none). Adds the S11 establishment requirement.",
+          change: {
+            sql: "UPDATE md_project SET origin = 'internal' WHERE id = ? AND (origin IS NULL OR origin = '')",
+            params: [p.id],
+            table: "md_project",
+            key: p.id,
+          },
         });
         effOrigin = "internal";
       }
@@ -189,7 +196,8 @@ export function buildPlan(db: Database): Finding[] {
         current: "no current route_decision",
         proposed: "needs decision",
         class: "human",
-        reason: "project.sub_track resolves UNASSESSED; DD scope and site steps stay fail-closed until a route is decided.",
+        reason:
+          "project.sub_track resolves UNASSESSED; DD scope and site steps stay fail-closed until a route is decided.",
       });
     }
 
@@ -228,9 +236,13 @@ export function buildPlan(db: Database): Finding[] {
       }
     }
     if (hasSteps) {
-      stepCount = (db
-        .query("SELECT COUNT(*) c FROM entity_establishment_step WHERE project_id = ? OR (project_id IS NULL AND opportunity_id = ?)")
-        .get(p.id, p.source_opportunity_id ?? "") as { c: number }).c;
+      stepCount = (
+        db
+          .query(
+            "SELECT COUNT(*) c FROM entity_establishment_step WHERE project_id = ? OR (project_id IS NULL AND opportunity_id = ?)",
+          )
+          .get(p.id, p.source_opportunity_id ?? "") as { c: number }
+      ).c;
       const dups = db
         .query(
           `SELECT step_no, COUNT(*) c, GROUP_CONCAT(status) st FROM entity_establishment_step
@@ -243,7 +255,8 @@ export function buildPlan(db: Database): Finding[] {
           current: `step ${d.step_no}: ${d.c} rows (${d.st})`,
           proposed: "needs decision",
           class: "human",
-          reason: "Assignee bug 2026-10-13 created a second row for the same step; deleting a row is a data decision and history events may reference it.",
+          reason:
+            "Assignee bug 2026-10-13 created a second row for the same step; deleting a row is a data decision and history events may reference it.",
         });
       }
     }
@@ -287,9 +300,16 @@ export function buildPlan(db: Database): Finding[] {
     }
 
     // 5. site_required confirmation (ADR-0160)
-    if (greenfield && route?.sub_track && GREENFIELD_SUB_TRACKS.has(route.sub_track) && tableExists(db, "dimension_input")) {
+    if (
+      greenfield &&
+      route?.sub_track &&
+      GREENFIELD_SUB_TRACKS.has(route.sub_track) &&
+      tableExists(db, "dimension_input")
+    ) {
       const live = db
-        .query("SELECT 1 FROM dimension_input WHERE project_id = ? AND var_key = 'project.site_required' AND superseded_by IS NULL")
+        .query(
+          "SELECT 1 FROM dimension_input WHERE project_id = ? AND var_key = 'project.site_required' AND superseded_by IS NULL",
+        )
         .get(p.id);
       if (!live) {
         add({
@@ -304,11 +324,11 @@ export function buildPlan(db: Database): Finding[] {
 
     // 6. business goals (ADR-0159)
     if (tableExists(db, "project_business_goal") && tableExists(db, "process_run")) {
-      const s8 = db
-        .query("SELECT 1 FROM process_run WHERE project_id = ? AND stage LIKE 's8%' LIMIT 1")
-        .get(p.id);
+      const s8 = db.query("SELECT 1 FROM process_run WHERE project_id = ? AND stage LIKE 's8%' LIMIT 1").get(p.id);
       const goals = db
-        .query("SELECT COUNT(*) c FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL")
+        .query(
+          "SELECT COUNT(*) c FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL",
+        )
         .get(p.id) as { c: number };
       if (s8 && goals.c === 0) {
         add({
@@ -316,7 +336,8 @@ export function buildPlan(db: Database): Finding[] {
           current: "0 active project goals",
           proposed: "needs decision",
           class: "human",
-          reason: "Goals are analyst-set per deal; target resolution falls back to affiliate/group standards meanwhile.",
+          reason:
+            "Goals are analyst-set per deal; target resolution falls back to affiliate/group standards meanwhile.",
         });
       }
     }
@@ -338,7 +359,9 @@ export function buildPlan(db: Database): Finding[] {
     // 8. policy pins versus current policy versions
     if (tableExists(db, "project_policy_pin")) {
       const pins = db
-        .query("SELECT policy_doc_id, pinned_version FROM project_policy_pin WHERE project_id = ? AND superseded_by IS NULL")
+        .query(
+          "SELECT policy_doc_id, pinned_version FROM project_policy_pin WHERE project_id = ? AND superseded_by IS NULL",
+        )
         .all(p.id) as { policy_doc_id: string; pinned_version: string }[];
       for (const pin of pins) {
         const file = POLICY_VERSION_FILES[pin.policy_doc_id];
@@ -370,7 +393,8 @@ export function buildPlan(db: Database): Finding[] {
           current: `valid dd gate decision (${dd.decision})`,
           proposed: "no change",
           class: "none",
-          reason: "ADR-0160 (f) / ADR-0162 (c): a recorded dd decision pins the pre-scope S9 view; opt-in pins override.",
+          reason:
+            "ADR-0160 (f) / ADR-0162 (c): a recorded dd decision pins the pre-scope S9 view; opt-in pins override.",
         });
       }
     }
@@ -393,7 +417,8 @@ const COUNT_TABLES = [
 
 export function rowCounts(db: Database): Record<string, number> {
   const r: Record<string, number> = {};
-  for (const t of COUNT_TABLES) if (tableExists(db, t)) r[t] = (db.query(`SELECT COUNT(*) c FROM ${t}`).get() as { c: number }).c;
+  for (const t of COUNT_TABLES)
+    if (tableExists(db, t)) r[t] = (db.query(`SELECT COUNT(*) c FROM ${t}`).get() as { c: number }).c;
   return r;
 }
 
@@ -442,8 +467,12 @@ export function applyPlan(dbPath: string, now: string = new Date().toISOString()
     const after = rowCounts(db);
     const integrity = (db.query("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check;
     const fk = db.query("PRAGMA foreign_key_check").all();
-    for (const t of Object.keys(before)) if (before[t] !== after[t]) throw new Error(`Row count changed for ${t}: ${before[t]} -> ${after[t]}`);
-    if (integrity !== "ok" || fk.length > 0) throw new Error(`Post-apply verification failed: integrity=${integrity}, fk violations=${fk.length}. Restore from ${backup}.`);
+    for (const t of Object.keys(before))
+      if (before[t] !== after[t]) throw new Error(`Row count changed for ${t}: ${before[t]} -> ${after[t]}`);
+    if (integrity !== "ok" || fk.length > 0)
+      throw new Error(
+        `Post-apply verification failed: integrity=${integrity}, fk violations=${fk.length}. Restore from ${backup}.`,
+      );
     return { applied, backup, before, after, integrity };
   } finally {
     db.close();
@@ -472,11 +501,14 @@ const REPIN_NOTE = "aligned 2026-10-14 by approved data alignment";
 export function buildApprovedPlan(db: Database): { items: ApprovedItem[]; skipped: ApprovedSkip[] } {
   const items: ApprovedItem[] = [];
   const skipped: ApprovedSkip[] = [];
-  const skip = (item: string, project_no: string, reason: string) => skipped.push({ item, project_no, status: "skipped", reason });
+  const skip = (item: string, project_no: string, reason: string) =>
+    skipped.push({ item, project_no, status: "skipped", reason });
   const proj = (no: string) =>
-    db.query("SELECT id, origin, deleted_at FROM md_project WHERE project_no = ?").get(no) as
-      | { id: string; origin: string | null; deleted_at: string | null }
-      | null;
+    db.query("SELECT id, origin, deleted_at FROM md_project WHERE project_no = ?").get(no) as {
+      id: string;
+      origin: string | null;
+      deleted_at: string | null;
+    } | null;
 
   // (1) duplicate establishment step 1 of PRJ-DSE4PW
   {
@@ -485,12 +517,20 @@ export function buildApprovedPlan(db: Database): { items: ApprovedItem[]; skippe
     if (!p || !tableExists(db, "entity_establishment_step")) skip(item, "PRJ-DSE4PW", "project or step table absent");
     else {
       const rows = db
-        .query("SELECT id, status, note, evidence_url FROM entity_establishment_step WHERE project_id = ? AND step_no = 1")
+        .query(
+          "SELECT id, status, note, evidence_url FROM entity_establishment_step WHERE project_id = ? AND step_no = 1",
+        )
         .all(p.id) as { id: string; status: string; note: string | null; evidence_url: string | null }[];
       const done = rows.filter((r) => r.status === "done");
       const pending = rows.filter((r) => r.status === "pending");
-      if (rows.length !== 2 || done.length !== 1 || pending.length !== 1) skip(item, "PRJ-DSE4PW", `precondition differs: ${rows.length} rows for step 1 (need exactly one done and one pending)`);
-      else if ((pending[0].note ?? "") !== "" || (pending[0].evidence_url ?? "") !== "") skip(item, "PRJ-DSE4PW", "pending row carries a note or evidence; refusing to delete");
+      if (rows.length !== 2 || done.length !== 1 || pending.length !== 1)
+        skip(
+          item,
+          "PRJ-DSE4PW",
+          `precondition differs: ${rows.length} rows for step 1 (need exactly one done and one pending)`,
+        );
+      else if ((pending[0].note ?? "") !== "" || (pending[0].evidence_url ?? "") !== "")
+        skip(item, "PRJ-DSE4PW", "pending row carries a note or evidence; refusing to delete");
       else {
         const keep = done[0].id;
         const drop = pending[0].id;
@@ -500,8 +540,12 @@ export function buildApprovedPlan(db: Database): { items: ApprovedItem[]; skippe
           project_no: "PRJ-DSE4PW",
           description: `delete pending duplicate ${drop}; re-point its events to done row ${keep}`,
           run: (d) => {
-            if (tableExists(d, "entity_establishment_step_event")) d.run("UPDATE entity_establishment_step_event SET step_id = ? WHERE step_id = ?", [keep, drop]);
-            const r = d.run("DELETE FROM entity_establishment_step WHERE id = ? AND status = 'pending' AND COALESCE(note,'') = '' AND COALESCE(evidence_url,'') = ''", [drop]);
+            if (tableExists(d, "entity_establishment_step_event"))
+              d.run("UPDATE entity_establishment_step_event SET step_id = ? WHERE step_id = ?", [keep, drop]);
+            const r = d.run(
+              "DELETE FROM entity_establishment_step WHERE id = ? AND status = 'pending' AND COALESCE(note,'') = '' AND COALESCE(evidence_url,'') = ''",
+              [drop],
+            );
             if (r.changes !== 1) throw new Error("duplicate_step_cleanup: guarded delete matched no row");
           },
         });
@@ -517,14 +561,20 @@ export function buildApprovedPlan(db: Database): { items: ApprovedItem[]; skippe
     const item = "policy_repin";
     const p = proj(no);
     const cur = fileVersion(POLICY_VERSION_FILES[doc]);
-    const live = p && tableExists(db, "project_policy_pin")
-      ? (db.query("SELECT id, pinned_version FROM project_policy_pin WHERE project_id = ? AND policy_doc_id = ? AND superseded_by IS NULL").get(p.id, doc) as { id: string; pinned_version: string } | null)
-      : null;
+    const live =
+      p && tableExists(db, "project_policy_pin")
+        ? (db
+            .query(
+              "SELECT id, pinned_version FROM project_policy_pin WHERE project_id = ? AND policy_doc_id = ? AND superseded_by IS NULL",
+            )
+            .get(p.id, doc) as { id: string; pinned_version: string } | null)
+        : null;
     if (!p) skip(item, no, "project absent");
     else if (!cur) skip(item, no, "current policy version unreadable");
     else if (!live) skip(item, no, `no live pin for ${doc}`);
     else if (live.pinned_version === cur) skip(item, no, `already on ${cur}`);
-    else if (live.pinned_version !== "1.0.0") skip(item, no, `precondition differs: pinned ${live.pinned_version}, approved only from 1.0.0`);
+    else if (live.pinned_version !== "1.0.0")
+      skip(item, no, `precondition differs: pinned ${live.pinned_version}, approved only from 1.0.0`);
     else
       items.push({
         item,
@@ -534,11 +584,18 @@ export function buildApprovedPlan(db: Database): { items: ApprovedItem[]; skippe
         run: (d, now) => {
           const id = ulid();
           // Same mechanism as the opt-in code: insert superseding the old row first (unique live index), then release.
-          d.run("INSERT INTO project_policy_pin (id, project_id, policy_doc_id, pinned_version, pinned_at, pinned_by, superseded_by) VALUES (?,?,?,?,?,?,?)", [id, p.id, doc, cur, now, ACTOR, live.id]);
+          d.run(
+            "INSERT INTO project_policy_pin (id, project_id, policy_doc_id, pinned_version, pinned_at, pinned_by, superseded_by) VALUES (?,?,?,?,?,?,?)",
+            [id, p.id, doc, cur, now, ACTOR, live.id],
+          );
           d.run("UPDATE project_policy_pin SET superseded_by = ? WHERE id = ?", [id, live.id]);
           d.run("UPDATE project_policy_pin SET superseded_by = NULL WHERE id = ?", [id]);
           d.run("INSERT INTO audit_log (id, actor_user_id, action, target, created_at) VALUES (?,?,?,?,?)", [
-            ulid(), ACTOR, "policy_pin_migrated", `${p.id}:${doc}:${cur} migration_note=${REPIN_NOTE}`, now,
+            ulid(),
+            ACTOR,
+            "policy_pin_migrated",
+            `${p.id}:${doc}:${cur} migration_note=${REPIN_NOTE}`,
+            now,
           ]);
         },
       });
@@ -571,21 +628,35 @@ export function applyApproved(dbPath: string, now: string = new Date().toISOStri
   try {
     const { items, skipped } = buildApprovedPlan(db);
     const before = rowCounts(db);
-    if (items.length === 0) return { results: [...skipped] as { item: string; project_no: string; status: string; reason: string }[], backup: null as string | null, before, after: before, integrity: "ok (no change)" };
+    if (items.length === 0)
+      return {
+        results: [...skipped] as { item: string; project_no: string; status: string; reason: string }[],
+        backup: null as string | null,
+        before,
+        after: before,
+        integrity: "ok (no change)",
+      };
     const backup = `${dbPath}.align-backup-${now.replace(/[:.]/g, "-")}.sqlite`;
     db.run(`VACUUM INTO '${backup.replace(/'/g, "''")}'`);
     db.transaction(() => {
       for (const it of items) {
         it.run(db, now);
         db.run("INSERT INTO audit_log (id, actor_user_id, action, target, created_at) VALUES (?,?,?,?,?)", [
-          ulid(), ACTOR, `data_alignment.approved.${it.item}`, `${it.project_id}#${it.description}`, now,
+          ulid(),
+          ACTOR,
+          `data_alignment.approved.${it.item}`,
+          `${it.project_id}#${it.description}`,
+          now,
         ]);
       }
     })();
     const after = rowCounts(db);
     const integrity = (db.query("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check;
     const fk = db.query("PRAGMA foreign_key_check").all();
-    if (integrity !== "ok" || fk.length > 0) throw new Error(`Post-apply verification failed: integrity=${integrity}, fk violations=${fk.length}. Restore from ${backup}.`);
+    if (integrity !== "ok" || fk.length > 0)
+      throw new Error(
+        `Post-apply verification failed: integrity=${integrity}, fk violations=${fk.length}. Restore from ${backup}.`,
+      );
     const results = [
       ...items.map((i) => ({ item: i.item, project_no: i.project_no, status: "applied", reason: i.description })),
       ...skipped,
@@ -600,7 +671,8 @@ export function applyApproved(dbPath: string, now: string = new Date().toISOStri
 
 export function formatReport(plan: Finding[]): string {
   const lines = ["project_no | track | item | current | proposed | class | reason", "-".repeat(60)];
-  for (const f of plan) lines.push([f.project_no, show(f.track), f.item, f.current, f.proposed, f.class, f.reason].join(" | "));
+  for (const f of plan)
+    lines.push([f.project_no, show(f.track), f.item, f.current, f.proposed, f.class, f.reason].join(" | "));
   const c = (k: ItemClass) => plan.filter((f) => f.class === k).length;
   lines.push("", `deterministic=${c("deterministic")} human=${c("human")} none=${c("none")}`);
   return lines.join("\n");

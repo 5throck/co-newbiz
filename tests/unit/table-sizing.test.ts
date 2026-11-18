@@ -53,7 +53,9 @@ function scanTables(): TableInfo[] {
   const tables: TableInfo[] = [];
   for (const path of walk(ROOT).sort()) {
     const src = readFileSync(path, "utf8");
-    const file = relative(ROOT, path);
+    // AUDITED_TABLES keys are forward-slash repo paths; normalize the
+    // OS-native separators relative() produced (Windows backslashes).
+    const file = relative(ROOT, path).replace(/\\/g, "/");
     const lines = src.split("\n");
     let ordinal = 0;
     for (const m of src.matchAll(/<table\b/g)) {

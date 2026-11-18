@@ -111,4 +111,9 @@ export function getDb(dbPath: string = DEFAULT_DB_PATH): any {
 export function resetDb(): void {
   _db?.close();
   _db = null;
+  // On Windows, an un-finalized bun:sqlite prepared statement keeps the DB
+  // file locked even after close() — tests that rm their temp DB dir right
+  // after resetDb() hit EBUSY. Collecting garbage finalizes every statement
+  // that is no longer referenced (POSIX behavior is unaffected).
+  if (typeof Bun !== "undefined") Bun.gc(true);
 }

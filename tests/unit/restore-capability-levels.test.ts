@@ -1,21 +1,42 @@
-// @version 1.0.0
+// @version 1.0.1
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { applyRestore, assertFiles, buildDiff } from "../../scripts/co-newbiz/restore-capability-levels.ts";
+import { rmDirSafe } from "../helpers/rm-dir-safe.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true });
+  while (dirs.length) rmDirSafe(dirs.pop()!);
 });
 
+// Windows: an un-finalized statement or a never-closed handle keeps the DB
+// file locked — every Database here is closed, and cleanup retries via gc.
+const json = (p: string, id: string) => {
+  const db = new Database(p, { readonly: true });
+  try {
+    return (db.query("SELECT capability_gap_json j FROM opportunity WHERE id=?").get(id) as { j: string }).j;
+  } finally {
+    db.close();
+  }
+};
+
 const row = (id: string, req: string, cur: string, extra: Record<string, unknown> = {}) => ({
-  id, capability: `cap ${id}`, source: "manual", requiredNote: "note", held: { status: "unmet", holders: [], evidence: "" },
-  resolution: null, note: "", requiredLevel: req, currentLevel: cur, ...extra,
+  id,
+  capability: `cap ${id}`,
+  source: "manual",
+  requiredNote: "note",
+  held: { status: "unmet", holders: [], evidence: "" },
+  resolution: null,
+  note: "",
+  requiredLevel: req,
+  currentLevel: cur,
+  ...extra,
 });
-const reg = (rows: unknown[], extra: Record<string, unknown> = {}) => JSON.stringify({ rows, updatedAt: "2026-10-01", ...extra });
+const reg = (rows: unknown[], extra: Record<string, unknown> = {}) =>
+  JSON.stringify({ rows, updatedAt: "2026-10-01", ...extra });
 
 function mk(dir: string, name: string, regs: Record<string, string>): string {
   const p = join(dir, name);
@@ -30,7 +51,16 @@ function mk(dir: string, name: string, regs: Record<string, string>): string {
 function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "rcl-"));
   dirs.push(dir);
-  const att = { closingCostKrwM: 5, monthsToAttain: 3, grade: "high", rationale: "r", evidence: [], draftedBy: "human", confirmedBy: "u", confirmedAt: "t" };
+  const att = {
+    closingCostKrwM: 5,
+    monthsToAttain: 3,
+    grade: "high",
+    rationale: "r",
+    evidence: [],
+    draftedBy: "human",
+    confirmedBy: "u",
+    confirmedAt: "t",
+  };
   const backup = mk(dir, "backup.sqlite", {
     o1: reg([row("a", "고급", "기초"), row("b", "", "")]),
     o3: reg([row("z", "x", "y")]),
@@ -45,7 +75,6 @@ function fixture() {
   });
   return { dir, live, backup };
 }
-const json = (p: string, id: string) => (new Database(p, { readonly: true }).query("SELECT capability_gap_json j FROM opportunity WHERE id=?").get(id) as { j: string }).j;
 
 describe("restore-capability-levels", () => {
   test("dry run changes nothing and classifies", () => {
@@ -54,9 +83,14 @@ describe("restore-capability-levels", () => {
     const l = new Database(live, { readonly: true });
     const b = new Database(backup, { readonly: true });
     const d = buildDiff(l, b);
-    l.close(); b.close();
+    l.close();
+    b.close();
     const o1 = d.find((o) => o.opportunityId === "o1")!;
-    expect(o1.rows.map((r) => [r.rowId, r.cls])).toEqual([["a", "would-restore"], ["b", "would-restore"], ["c", "row-new-since-backup"]]);
+    expect(o1.rows.map((r) => [r.rowId, r.cls])).toEqual([
+      ["a", "would-restore"],
+      ["b", "would-restore"],
+      ["c", "row-new-since-backup"],
+    ]);
     expect(d.find((o) => o.opportunityId === "o2")!.status).toBe("opportunity-new");
     expect(d.find((o) => o.opportunityId === "o3")!.rows[0].cls).toBe("unchanged");
     expect(json(live, "o1")).toBe(before);
@@ -68,7 +102,12 @@ describe("restore-capability-levels", () => {
     expect(r.rowsRestored).toBe(2);
     expect(r.opportunitiesChanged).toBe(1);
     const o1 = JSON.parse(json(live, "o1"));
-    expect(o1.rows[0]).toMatchObject({ requiredLevel: "고급", currentLevel: "기초", unknownKey: 7, attainability: { grade: "high", confirmedBy: "u" } });
+    expect(o1.rows[0]).toMatchObject({
+      requiredLevel: "고급",
+      currentLevel: "기초",
+      unknownKey: 7,
+      attainability: { grade: "high", confirmedBy: "u" },
+    });
     expect(o1.rows[1]).toMatchObject({ requiredLevel: "", currentLevel: "", requiredNote: "note" });
     expect(o1.rows[2]).toMatchObject({ requiredLevel: "n", currentLevel: "n" });
     expect(o1.technicalLens).toEqual({ T1: "keep" });
@@ -79,7 +118,7 @@ describe("restore-capability-levels", () => {
     expect(audits).toHaveLength(1);
     expect(audits[0]).toMatchObject({ a: "system:capability-levels-restore", action: "capability_levels.restore" });
     expect(audits[0].target).toContain("o1");
-    expect(readdirSync(r.safetyCopy.replace(/\/[^/]+$/, "")).some((f) => f.includes("pre-levels-restore"))).toBe(true);
+    expect(readdirSync(dirname(r.safetyCopy)).some((f) => f.includes("pre-levels-restore"))).toBe(true);
   });
 
   test("idempotent: second apply changes nothing", () => {
