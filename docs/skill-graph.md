@@ -31,14 +31,14 @@
 | `root/debt-and-contingent-liability-simulation` | L3 | 1.1.0 | root/risk-officer, root/valuation-agent | root/phase 4 | root/certification-transferability (follows), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/decision-record` | L3 | 1.1.2 | — | — | root/evidence-ledger (composes_with), root/stage-gate-governance | — | — |
 | `root/delegate-to-hub` | L3 | 1.0.1 | — | — | — | — | — |
-| `root/design-foundation` | L3 | 1.1.0 | root/design-system-lead | — | root/accessibility-audit (composes_with), root/token-usage-lint (composes_with), root/ui-ux-design-intelligence (enables) | — | — |
+| `root/design-foundation` | L3 | 1.1.1 | root/design-system-lead | — | root/accessibility-audit (composes_with), root/token-usage-lint (composes_with), root/ui-ux-design-intelligence (enables) | — | — |
 | `root/documentation-writing` | L3 | 1.0.3 | — | — | root/team-builder (composes_with) | — | — |
 | `root/evidence-ledger` | L3 | 1.1.1 | — | — | root/decision-record (composes_with), root/stage-gate-governance | — | — |
 | `root/executive-presentation` | L3 | 1.0.0 | root/docs-writer | root/phase 5 | root/financing-plan-review (composes_with), root/intra-group-transaction-compliance (composes_with), root/portfolio-fit-assessment (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (follows), root/two-tier-approval-chain (composes_with) | — | — |
-| `root/explain-me` | L3 | 1.0.0 | — | — | — | — | — |
+| `root/explain-me` | L3 | 1.0.1 | — | — | — | — | — |
 | `root/financial-statement-analysis` | L3 | 1.0.0 | root/financial-analyst | root/phase 3 | root/growth-projection-modeling (composes_with), root/historical-financial-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/investment-vehicle-structuring (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/financing-plan-review` | L3 | 1.3.0 | root/financing-agent, root/valuation-agent | root/phase 4, root/phase 5 | root/incentive-clawback-assessment (composes_with), root/insight-synthesis (follows), root/investment-feasibility-modeling (composes_with), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/org-readiness-assessment (follows), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with), root/wacc-input-session (composes_with) | — | — |
-| `root/finishing-a-development-branch` | L3 | 1.0.1 | — | — | — | — | — |
+| `root/finishing-a-development-branch` | L3 | 1.0.2 | — | — | — | — | — |
 | `root/forward-industry-research` | L3 | 1.1.0 | root/market-intelligence-agent, root/process-governance-manager | — | — | — | — |
 | `root/gateguard` | L3 | 1.0.2 | root/automation-engineer | — | — | — | — |
 | `root/greenfield-feasibility` | L3 | 1.2.0 | root/greenfield-agent | root/phase 2 | root/community-partnership-planning (composes_with), root/permit-pathway-mapping (composes_with), root/regional-incentive-sourcing (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/talent-pipeline-planning (composes_with), root/wacc-input-session (follows) | — | — |
@@ -48,10 +48,10 @@
 | `root/handbook-sync-audit` | L3 | 1.0.5 | — | — | — | — | — |
 | `root/historical-financial-analysis` | L3 | 1.0.1 | root/financial-analyst | root/phase 3 | root/financial-statement-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/humanize-polish` | L3 | 1.0.1 | — | — | — | — | — |
-| `root/i18n-audit` | L3 | 1.0.0 | root/i18n-specialist | — | — | — | — |
-| `root/i18n-formatting` | L3 | 1.0.0 | root/i18n-specialist | — | — | — | — |
-| `root/i18n-layout` | L3 | 1.1.0 | root/i18n-specialist | — | — | — | — |
-| `root/i18n-locale-config` | L3 | 1.0.0 | root/i18n-specialist | — | — | — | — |
+| `root/i18n-audit` | L3 | 1.0.2 | root/i18n-specialist | — | — | — | — |
+| `root/i18n-formatting` | L3 | 1.0.1 | root/i18n-specialist | — | — | — | — |
+| `root/i18n-layout` | L3 | 1.1.1 | root/i18n-specialist | — | — | — | — |
+| `root/i18n-locale-config` | L3 | 1.0.1 | root/i18n-specialist | — | — | — | — |
 | `root/incentive-clawback-assessment` | L3 | 1.1.0 | root/incentive-agent | root/phase 4 | root/debt-and-contingent-liability-simulation (follows), root/legal-due-diligence (composes_with), root/management-incentive-review (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with) | — | — |
 | `root/insight-synthesis` | L3 | 1.0.0 | root/market-intelligence-agent, root/process-governance-manager | root/phase 5 | root/executive-presentation (follows), root/project-review (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/strategic-fit-screening (composes_with), root/two-tier-approval-chain (composes_with) | — | — |
 | `root/intra-group-transaction-compliance` | L3 | 1.1.0 | root/group-review-agent | root/phase 5 | root/portfolio-fit-assessment (follows), root/stage-gate-governance (composes_with), root/two-tier-approval-chain (composes_with) | — | — |
@@ -59,17 +59,17 @@
 | `root/investment-vehicle-structuring` | L3 | 1.3.0 | root/brownfield-agent, root/legal-counsel | root/phase 1, root/phase 3 | root/antitrust-screening (follows), root/certification-transferability (composes_with), root/k-law (composes_with), root/legal-due-diligence (composes_with), root/partner-due-diligence (composes_with), root/partner-sourcing-strategy (composes_with), root/peer-benchmarking (composes_with), root/project-review (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/ip-fto-review` | L3 | 1.0.1 | root/ip-agent | — | — | — | — |
 | `root/jv-structuring` | L3 | 1.2.0 | root/legal-counsel, root/partnership-agent | root/phase 1, root/phase 6 | root/certification-transferability (composes_with), root/investment-vehicle-structuring (follows), root/k-law (composes_with), root/legal-due-diligence (composes_with), root/partner-sourcing-strategy (composes_with), root/portfolio-fit-assessment (composes_with), root/project-review (composes_with), root/project-review (follows) | — | — |
-| `root/k-dart` | L3 | 2.1.2 | root/financial-analyst, root/public-data-analyst, root/technical-dd-agent | root/phase 4, root/phase 5 | root/k-ecos (composes_with), root/k-kosis (composes_with), root/k-law | — | — |
-| `root/k-ecos` | L3 | 1.0.0 | root/financial-analyst, root/public-data-analyst | — | root/k-dart (composes_with), root/k-kosis (composes_with), root/k-opendata (composes_with) | — | — |
-| `root/k-kosis` | L3 | 1.0.2 | root/financial-analyst, root/market-intelligence-agent, root/public-data-analyst | root/phase 2, root/phase 4 | root/k-dart (composes_with), root/k-ecos (composes_with), root/k-law | — | — |
-| `root/k-krx` | L3 | 1.0.2 | root/financial-analyst, root/public-data-analyst | — | root/k-dart (composes_with), root/k-ecos (composes_with), root/k-kosis (composes_with), root/k-opendata (composes_with) | — | — |
+| `root/k-dart` | L3 | 2.1.3 | root/financial-analyst, root/public-data-analyst, root/technical-dd-agent | root/phase 4, root/phase 5 | root/k-ecos (composes_with), root/k-kosis (composes_with), root/k-law | — | — |
+| `root/k-ecos` | L3 | 1.0.1 | root/financial-analyst, root/public-data-analyst | — | root/k-dart (composes_with), root/k-kosis (composes_with), root/k-opendata (composes_with) | — | — |
+| `root/k-kosis` | L3 | 1.0.3 | root/financial-analyst, root/market-intelligence-agent, root/public-data-analyst | root/phase 2, root/phase 4 | root/k-dart (composes_with), root/k-ecos (composes_with), root/k-law | — | — |
+| `root/k-krx` | L3 | 1.0.3 | root/financial-analyst, root/public-data-analyst | — | root/k-dart (composes_with), root/k-ecos (composes_with), root/k-kosis (composes_with), root/k-opendata (composes_with) | — | — |
 | `root/k-law` | L3 | 1.0.3 | root/legal-counsel, root/process-governance-manager, root/public-data-analyst | root/phase 5 | root/k-dart, root/k-kosis | — | — |
-| `root/k-opendata` | L3 | 1.2.2 | root/public-data-analyst, root/quant-methodologist | — | root/k-ecos (composes_with), root/k-kosis | — | — |
+| `root/k-opendata` | L3 | 1.2.3 | root/public-data-analyst, root/quant-methodologist | — | root/k-ecos (composes_with), root/k-kosis | — | — |
 | `root/legal-due-diligence` | L3 | 1.1.1 | root/legal-counsel, root/process-governance-manager | root/phase 4, root/phase 5 | root/antitrust-screening (follows), root/certification-transferability (composes_with), root/investment-vehicle-structuring (composes_with), root/jv-structuring (composes_with), root/k-law (follows), root/management-incentive-review (composes_with), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with) | — | — |
 | `root/legal-risk-register` | L3 | 1.1.0 | root/process-governance-manager, root/risk-officer | — | — | — | — |
 | `root/management-incentive-review` | L3 | 1.1.0 | root/hr-integration-agent | root/phase 4 | root/compensation-harmonization-analysis (composes_with), root/customer-attrition-risk (follows), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with) | — | — |
 | `root/market-data-pipeline` | L3 | 1.1.0 | root/market-intelligence-agent, root/process-governance-manager | — | — | — | — |
-| `root/meeting-facilitation` | L3 | 1.4.4 | — | — | — | — | — |
+| `root/meeting-facilitation` | L3 | 1.5.0 | — | — | — | — | — |
 | `root/monte-carlo-simulation` | L3 | 1.1.0 | root/quant-methodologist, root/risk-officer, root/valuation-agent | root/phase 3 | root/investment-vehicle-structuring (follows), root/peer-benchmarking (composes_with), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/scenario-planning (follows), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/org-readiness-assessment` | L3 | 1.1.0 | root/greenfield-agent, root/hr-integration-agent, root/process-governance-manager | root/phase 4, root/phase 5 | root/compensation-harmonization-analysis (composes_with), root/compliance-monitoring (follows), root/stage-gate-governance (composes_with), root/stage-gate-governance (follows), root/technical-due-diligence (composes_with) | — | — |
 | `root/partner-due-diligence` | L3 | 1.1.0 | root/partnership-agent | root/phase 1 | root/jv-structuring (follows), root/partner-sourcing-strategy (composes_with), root/project-review (composes_with) | — | — |
@@ -78,7 +78,7 @@
 | `root/peer-benchmarking` | L3 | 1.0.0 | root/brownfield-agent, root/financial-analyst | root/phase 3 | root/proxy-industry-chain (follows), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/permit-pathway-mapping` | L3 | 1.1.0 | root/certification-agent, root/legal-counsel | root/phase 2 | root/certification-roadmap (follows), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/platform-command-lifecycle-manager` | L3 | 1.0.3 | — | — | — | — | — |
-| `root/platform-skill-lifecycle-manager` | L3 | 1.0.2 | — | — | — | — | — |
+| `root/platform-skill-lifecycle-manager` | L3 | 1.0.3 | — | — | — | — | — |
 | `root/pmi-planning` | L3 | 1.1.0 | root/pmi-agent | root/phase 6 | root/compensation-harmonization-analysis (follows), root/stage-gate-governance (composes_with) | — | — |
 | `root/policy-and-procedure-governance` | L3 | 1.1.0 | root/process-governance-manager | — | — | — | — |
 | `root/portfolio-fit-assessment` | L3 | 1.3.0 | root/group-review-agent, root/process-governance-manager | root/phase 5, root/phase 6 | root/executive-presentation (follows), root/intra-group-transaction-compliance (follows), root/jv-structuring (follows), root/project-review (follows), root/stage-gate-governance (composes_with) | — | — |
@@ -101,7 +101,7 @@
 | `root/stage-gate-governance` | L3 | 1.4.3 | root/process-governance-manager | root/phase 1, root/phase 2, root/phase 3, root/phase 4, root/phase 5, root/phase 6 | root/decision-record, root/evidence-ledger, root/strategic-fit-screening (composes_with), root/talent-pipeline-planning (composes_with), root/technical-due-diligence (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/standup-synthesizer` | L3 | 1.1.0 | — | — | — | — | — |
 | `root/strategic-fit-screening` | L3 | 1.1.0 | root/brownfield-agent, root/process-governance-manager | root/phase 1 | root/antitrust-screening (follows), root/insight-synthesis (composes_with), root/project-review (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (follows) | — | — |
-| `root/sync` | L3 | 1.9.0 | root/automation-engineer | — | — | — | — |
+| `root/sync` | L3 | 1.10.0 | root/automation-engineer | — | — | — | — |
 | `root/systematic-market-sizing` | L3 | 1.5.0 | root/market-intelligence-agent, root/quant-methodologist | root/phase 2, root/phase 3 | root/evidence-ledger (enables), root/proxy-industry-chain (follows), root/scenario-planning (composes_with) | — | — |
 | `root/talent-pipeline-planning` | L3 | 1.1.0 | root/greenfield-agent, root/hr-integration-agent | root/phase 4 | root/community-partnership-planning (follows), root/greenfield-feasibility (composes_with), root/regional-incentive-sourcing (composes_with), root/site-infrastructure-assessment (composes_with) | — | — |
 | `root/target-costing-analysis` | L3 | 1.1.0 | root/process-governance-manager, root/quant-methodologist | — | — | — | — |
@@ -118,7 +118,7 @@
 | `root/value-chain-stage-financials` | L3 | 1.1.0 | root/financial-analyst, root/market-intelligence-agent, root/process-governance-manager | — | — | — | — |
 | `root/wacc-input-session` | L3 | 1.3.2 | root/quant-methodologist, root/valuation-agent | root/phase 2 | root/brownfield-feasibility (follows), root/debt-and-contingent-liability-simulation (composes_with), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/site-infrastructure-assessment (follows) | — | — |
 | `root/waiver-management` | L3 | 1.1.2 | root/compliance-officer, root/process-governance-manager | — | — | — | — |
-| `root/zod-contract-gate` | L3 | 1.0.2 | root/contract-gate-engineer | — | — | — | — |
+| `root/zod-contract-gate` | L3 | 1.0.3 | root/contract-gate-engineer | — | — | — | — |
 
 ## Lifecycle Phase Grouping
 
