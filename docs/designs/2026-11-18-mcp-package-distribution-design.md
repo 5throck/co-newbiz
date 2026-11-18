@@ -144,3 +144,15 @@ Published `@co-newbiz/co-newbiz-mcp@1.0.0` on 2026-11-18 via tag `mcp-v1.0.0` at
 - Note: the GitHub UI visibility flip is one-way — a package cannot be made private again without deletion.
 
 This amendment supersedes the "private npm package" framing in the Decision and §7 above for consumer-install purposes; the env contract, REST-only relay boundary (ADR-0011), and tag-driven publish flow are unchanged.
+
+**Decision amendment (owner decision, 2026-11-18): dual publish — npmjs.com becomes the primary channel.** Supersedes the "Out of scope" bullet "Publishing to the public npm registry".
+
+- **Why.** The public-visibility flip above removed the *org-side* prerequisite, not the *token* prerequisite. GitHub Packages npm authenticates every registry request, public packages included — anonymous requests are rejected with 401/403 (verified; see the correction in the bullet above). A token-free install is therefore impossible on that registry, no matter the package's visibility. npmjs.com serves public packages anonymously by design, which is what a `bunx` consumer with no `.npmrc` needs.
+- **What changed.**
+  - `mcp/co-newbiz/package.json` → `1.0.1`.
+  - `.github/workflows/mcp-package.yml` gains a `publish-npmjs` job (`needs: guard`, runs in parallel with the existing `publish` job) that writes a fresh `~/.npmrc` containing only `//registry.npmjs.org/:_authToken=${NPM_TOKEN}` and runs `npm publish --access public --registry https://registry.npmjs.org`. The existing `publish` job is retained unchanged as the **secondary** channel — same version, same tag, same tagged commit.
+  - Both jobs publish from a single `mcp-vX.Y.Z` tag, so the two registries cannot drift in version by construction.
+- **Consumer consequence.** The install path is now `bunx @co-newbiz/co-newbiz-mcp` with **no `.npmrc` and no PAT**; prerequisite is bun alone. The GitHub Packages path remains available for anyone who wants (or already has) that auth route — scope mapping plus a `read:packages` PAT, as documented in §5 above.
+- **Version reality.** `1.0.0` exists only on GitHub Packages. A version already published there cannot be re-published to npmjs under the same number from the existing tag, so **`1.0.1` (tag `mcp-v1.0.1`) is the first npmjs release**. From `1.0.1` onward both registries carry the same version.
+
+§5's consumer-install block above stays valid as the *secondary-channel* instructions; read it in that light. The env contract (`CO_NEWBIZ_API_BASE_URL` / `CO_NEWBIZ_API_TOKEN`) and the REST-only relay boundary (ADR-0011) are unchanged by this amendment — publishing to a public registry exposes the same already-public code to the same already-documented npmjs audience, so no new trust boundary is introduced and `docs/security/security-model.md` needs no STRIDE update.
