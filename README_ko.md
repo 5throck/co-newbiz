@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-translated_from_hash: be3b08b90f78f2f0eebc529e97909a184b5450603a59dac8063064fb278f2ead
+translated_from_hash: 16fdeeeef213b4d0586dce8cbcf745a87a79ddd9ee1c1aa430b5b1e7a0dfe7db
 lang: ko
 lang_reason: source-material
 ---
@@ -96,7 +96,7 @@ co-newbiz/
 
 ## 스킬
 
-팀은 120개 이상의 워크플로 스킬(거버넌스 문서 작성, 실사 플레이북, 재무 분석, 플랫폼 운영)을 갖추고 있습니다. 관리되는 인덱스는 [skills/SKILLS.md](skills/SKILLS.md)에 있으며, 개별 스킬 지침은 `skills/<name>/SKILL.md`와 그 미러 복사본(`.claude/skills/`, `.gemini/skills/`, `.agents/skills/`)에 있습니다.
+팀은 120개 이상의 워크플로 스킬(거버넌스 문서 작성, 실사 플레이북, 재무 분석, 플랫폼 운영)을 갖추고 있습니다. 관리되는 인덱스는 [skills/SKILLS.md](skills/SKILLS.md)에 있으며, 개별 스킬 지침은 `skills/<name>/SKILL.md`와 그 미러 복사본(`.claude/skills/`, `.gemini/skills/`, `.agents/skills/`)에 있습니다. 한국어 산출물은 출력 전에 Humanize KR 외부 의존성을 통해 다듬어집니다(스킬 `humanize-polish`, 스펙 `humanize-polish`).
 
 ## 세션 시작 체크리스트
 
@@ -154,4 +154,4 @@ stdio MCP 서버는 npm 패키지 `@co-newbiz/co-newbiz-mcp`로도 배포합니�
 ---
 
 *최근 업데이트: 2026-08-24*
-*Last Updated: 2026-11-18*
+*Last Updated: 2026-11-19*
