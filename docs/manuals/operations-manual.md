@@ -54,6 +54,7 @@ The CLI, run by a human operator, still resolves to a real `project_member` cont
 
 - `docs/governance/governance-operations.md` — the *business* governance operation (compliance, waivers), distinct from this document's *system* operation.
 - `docs/security/security-baseline.md` *(Stage 4)*.
+- [`mcp-admin-guide.md`](mcp-admin-guide.md) — MCP package release and the 90-day `NPM_TOKEN` rotation.
 
 ## 7. Related Screens
 

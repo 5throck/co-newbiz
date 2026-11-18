@@ -53,6 +53,7 @@ counterpart: admin-manual.md
 ## 8. 관련 문서
 
 - `docs/governance/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).
+- [`mcp-admin-guide_ko.md`](mcp-admin-guide_ko.md) — MCP 개인 토큰 정책, 패키지 릴리스, 90일마다 하는 `NPM_TOKEN` 순환. [`mcp-user-guide_ko.md`](mcp-user-guide_ko.md) — AI 클라이언트 연결의 사용자 쪽 안내.
 
 ## 9. 관련 화면
 

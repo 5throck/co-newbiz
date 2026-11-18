@@ -28,7 +28,7 @@ lang_reason: source-material
 | [`decisions/`](decisions/) | 날짜별 의사결정 기록 (임계값 승인, 어휘, 안건 팩) |
 | [`designs/`](designs/) | 주요 작업 라운드의 설계 문서(기록본) |
 | [`lifecycle/`](lifecycle/) | 에이전트/스킬/스크립트 거버넌스 기록 (`agents/` 1:1 대응) |
-| [`manuals/`](manuals/) | 3개 청중용 사용자 가이드 — business / admin / operations — 각각 한국어판(`*_ko.md`) 포함 |
+| [`manuals/`](manuals/) | 3개 청중용 사용자 가이드 — business / admin / operations — 와 MCP 사용자 안내서(`mcp-user-guide.md`)·MCP 관리자 안내서(`mcp-admin-guide.md`), 각각 한국어판(`*_ko.md`) 포함 |
 | [`pilots/`](pilots/) | 절차를 검증한 실제 케이스 수동 파일럿 기록 |
 | [`research/`](research/) | 출처를 갖춘 외부 조사 입력자료 |
 | [`runbooks/`](runbooks/) | 운영 런북 (배포, 백업/복원) |
