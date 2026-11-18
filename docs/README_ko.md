@@ -16,7 +16,7 @@ lang_reason: source-material
 
 | 폴더 | 내용 |
 |------|------|
-| [`architecture/`](architecture/) | 엔지니어링 계약 — SRS, API 명세, OpenAPI, DB 스키마, UI 명세, MCP 통합(저장소 stdio 서버 + GitHub Packages npm 배포) |
+| [`architecture/`](architecture/) | 엔지니어링 계약 — SRS, API 명세, OpenAPI, DB 스키마, UI 명세, MCP 통합(저장소 stdio 서버 + npm 배포: npmjs.com 주 채널, GitHub Packages 보조 채널) |
 | [`governance/`](governance/) | 프로세스·거버넌스 운영 — 프로세스 맵, RACI, RAG 프레임워크, 운영 주기, 추적성 매트릭스 |
 | [`security/`](security/) | 보안 모델, 베이스라인, 정책 |
 | [`design-system/`](design-system/) | 디자인 가이드와 철학·토큰·컴포넌트·표준화면·접근성 페이지 |
