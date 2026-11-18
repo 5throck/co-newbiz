@@ -169,6 +169,26 @@ entries:
       ko: docs/manuals/business-manual_ko.md
     status: active
 
+  - id: man-mcp-user-guide
+    layer: manual
+    title: "MCP User Guide — Connecting an AI Client"
+    audience: analysts, viewers using AI clients
+    owner: process-governance-manager
+    files:
+      en: docs/manuals/mcp-user-guide.md
+      ko: docs/manuals/mcp-user-guide_ko.md
+    status: active
+
+  - id: man-mcp-admin-guide
+    layer: manual
+    title: "MCP Admin Guide — Token Policy and Package Release"
+    audience: system administrators, release operators
+    owner: platform-lead
+    files:
+      en: docs/manuals/mcp-admin-guide.md
+      ko: docs/manuals/mcp-admin-guide_ko.md
+    status: active
+
   - id: man-operations-manual
     layer: manual
     title: "Operations Manual — System Operators"

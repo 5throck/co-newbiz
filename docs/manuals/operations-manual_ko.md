@@ -55,6 +55,7 @@ counterpart: operations-manual.md
 
 - `docs/governance/governance-operations.md` — 이 문서의 *시스템* 운영과 구별되는 *비즈니스* 거버넌스 운영(컴플라이언스, waiver).
 - `docs/security/security-baseline.md` *(Stage 4)*.
+- [`mcp-admin-guide_ko.md`](mcp-admin-guide_ko.md) — MCP 패키지 릴리스와 90일마다 하는 `NPM_TOKEN` 순환.
 
 ## 7. 관련 화면
 

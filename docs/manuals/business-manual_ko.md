@@ -59,3 +59,4 @@ Kill Criteria 적중은 프로젝트를 정지시킨다. 권고 사항이 아니
 - `/flows` — 스테이지 플로우 시각화 및 드라이런 레인 (ADR-0183).
 - UI 언어 전환 — 쿠키 기반 로케일 협상으로 ko/en 메시지 카탈로그 지원 (ADR-0184).
 - `/wiki` — 사용자 안내서 위키의 인앱 뷰어.
+- [`mcp-user-guide_ko.md`](mcp-user-guide_ko.md) — AI 클라이언트 연결(연결된 앱 화면, 개인 API 토큰).
