@@ -13,7 +13,7 @@ counterpart: mcp-user-guide.md
 
 ## 이 안내서가 다루는 것
 
-MCP로 AI 클라이언트를 co-newbiz에 연결하는 방법 — 어느 길을 고를지, 개인 API 토큰을 발급하는 법, 설정 예시를 등록하는 법, 도구가 할 수 있는 일, 연결이 안 될 때 살필 것. 구조 설명은 `docs/architecture/mcp-integration.md`에 있고, 이 안내서는 쓰는 법만 다룬다.
+MCP로 AI 클라이언트를 co-newbiz에 연결하는 방법 — 어느 길을 고를지, 개인 API 토큰을 발급하는 법, 설정 예시를 등록하는 법, 도구가 할 수 있는 일, 연결이 안 될 때 살필 것. 구조 설명은 `docs/architecture/mcp-integration.md`에 있고 이 안내서는 쓰는 법만 다룬다.
 
 ## 1. 길 고르기
 
