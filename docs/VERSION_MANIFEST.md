@@ -1,7 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-18T06:28:18.702Z
-**Generated**: 2026-11-18T05:58:20.598Z
+**Generated**: 2026-11-18T11:48:23.702Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -21,18 +20,18 @@
 | Name | File | Tier | Model | Last Modified |
 |------|------|------|-------|---------------|
 | antitrust-agent | agents/antitrust-agent.md | high | inherit | 2026-11-10 |
-| automation-engineer | agents/automation-engineer.md | medium | claude-sonnet-5-5 | N/A |
+| automation-engineer | agents/automation-engineer.md | medium | claude-sonnet-5-5 | 2026-11-18 |
 | backend-engineer | agents/backend-engineer.md | medium | inherit | 2026-11-10 |
 | brownfield-agent | agents/brownfield-agent.md | high | inherit | 2026-11-10 |
 | certification-agent | agents/certification-agent.md | high | inherit | 2026-11-10 |
 | commercial-dd-agent | agents/commercial-dd-agent.md | medium | inherit | 2026-11-10 |
 | compliance-officer | agents/compliance-officer.md | high | inherit | 2026-11-10 |
-| contract-gate-engineer | agents/contract-gate-engineer.md | medium | claude-sonnet-5-5 | N/A |
+| contract-gate-engineer | agents/contract-gate-engineer.md | medium | claude-sonnet-5-5 | 2026-11-18 |
 | customer-retention-agent | agents/customer-retention-agent.md | medium | inherit | 2026-11-10 |
 | data-architect | agents/data-architect.md | high | inherit | 2026-11-10 |
 | dba | agents/dba.md | medium | inherit | 2026-11-10 |
 | design-system-agent | agents/design-system-agent.md | medium | inherit | 2026-11-10 |
-| design-system-lead | agents/design-system-lead.md | medium | claude-sonnet-5-5 | N/A |
+| design-system-lead | agents/design-system-lead.md | medium | claude-sonnet-5-5 | 2026-11-18 |
 | docs-writer | agents/docs-writer.md | medium | inherit | 2026-11-10 |
 | financial-analyst | agents/financial-analyst.md | high | inherit | 2026-11-10 |
 | financing-agent | agents/financing-agent.md | medium | inherit | 2026-11-10 |
@@ -54,7 +53,7 @@
 | pm | agents/pm.md | medium | inherit | 2026-10-28 |
 | pmi-agent | agents/pmi-agent.md | medium | inherit | 2026-11-10 |
 | process-governance-manager | agents/process-governance-manager.md | high | inherit | 2026-11-10 |
-| public-data-analyst | agents/public-data-analyst.md | medium | claude-sonnet-5-5 | N/A |
+| public-data-analyst | agents/public-data-analyst.md | medium | claude-sonnet-5-5 | 2026-11-18 |
 | quant-methodologist | agents/quant-methodologist.md | high | inherit | 2026-11-10 |
 | README_ko | agents/README_ko.md | N/A | — | 2026-10-26 |
 | region-lead | agents/region-lead.md | high | inherit | 2026-11-10 |

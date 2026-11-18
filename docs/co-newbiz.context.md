@@ -2,7 +2,7 @@
 
 > Variant-specific configuration. Immutable cross-tool identity lives in `docs/context.md`.
 > Design of record: [`docs/designs/2026-08-19-co-newbiz-design_ko.md`](https://github.com/5throck/ai-workspace-standards/blob/main/docs/designs/2026-08-19-co-newbiz-design_ko.md) (v1.0 Final) — this file is a summary for quick orientation, not a substitute for it.
-> Refreshed 2026-11-04 (stale-figure refresh: flow.spec version, skill counts); previously 2026-10-25 against CHANGELOG/ADR/backlog review (design 2026-10-25-agent-and-context-ssot-upgrade); relocated from docs/meta/ per user decision (DEC record at finalization).
+> Refreshed 2026-11-18 (roster arithmetic post-#923: 45 agents, `_shared` 6); previously 2026-11-04 (stale-figure refresh: flow.spec version, skill counts); previously 2026-10-25 against CHANGELOG/ADR/backlog review (design 2026-10-25-agent-and-context-ssot-upgrade); relocated from docs/meta/ per user decision (DEC record at finalization).
 
 ## Overview
 
@@ -16,7 +16,7 @@ Distinctive to the domain: many target industries have no direct market data, so
 
 ## Agents
 
-**41 agents** across four co-equal domains plus `_core` and `_shared`, coordinated by PM acting as New Business Review Lead. Domain leads are design/review owners, not dispatchers — the workspace flat PM Gateway is preserved in full (PM is the only agent users invoke directly; all 40 specialists require PM dispatch).
+**45 agents** across four co-equal domains plus `_core` and `_shared`, coordinated by PM acting as New Business Review Lead. Domain leads are design/review owners, not dispatchers — the workspace flat PM Gateway is preserved in full (PM is the only agent users invoke directly; all 44 specialists require PM dispatch).
 
 | Domain | Count | Lead | Concern |
 |---|---|---|---|
@@ -25,7 +25,7 @@ Distinctive to the domain: many target industries have no direct market data, so
 | technical | 11 | `platform-lead` | System build and run — DB, API, UI, design system, deploy, ops, security |
 | industry | 1 | `industry-lead` | Industry-specific characteristics, owned via `industry-profiles/*.yaml` |
 | region | 1 | `region-lead` | Regional characteristics incl. domestic, owned via `region-profiles/*.yaml` |
-| `_shared` | 2 | — (`docs-writer`, `i18n-specialist`) | Document formatting / language policy and i18n, span all four domains |
+| `_shared` | 6 | — (`docs-writer`, `i18n-specialist`, `automation-engineer`, `contract-gate-engineer`, `design-system-lead`, `public-data-analyst`) | Cross-cutting support spanning all four domains — document formatting / language policy, i18n, repository automation, Zod contract safety, design foundations, Korean public-data gateway |
 
 Full roster with per-agent tier and role: `AGENTS.md`. Full definitions: `agents/*.md`.
 
