@@ -5,6 +5,8 @@
 // (docs/designs/2026-10-11-self-service-api-tokens-design.md §4.2).
 // 1) 호스팅 AI 앱(OAuth): 커넥터 주소 + 연결 방법 + 허용한 앱 목록.
 // 2) 개인 API 토큰: 로컬 stdio MCP 서버·스크립트용 발급/목록/해지. 발급·해지는 사람 웹 세션 전용(403 session_required).
+//    설정 예시 스니펫은 저장소 체크아웃 없이 npm 패키지(@co-newbiz/co-newbiz-mcp, GitHub Packages)를
+//    bunx로 실행한다 — docs/designs/2026-11-18-mcp-package-distribution-design.md §5.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { api, ApiError } from "../../../lib/api.ts";
@@ -116,8 +118,9 @@ function TokenRevealModal({
     {
       mcpServers: {
         "co-newbiz": {
-          command: "bun",
-          args: ["<repo-path>/mcp/co-newbiz/index.ts"],
+          type: "stdio",
+          command: "bunx",
+          args: ["-y", "@co-newbiz/co-newbiz-mcp"],
           env: { CO_NEWBIZ_API_BASE_URL: origin, CO_NEWBIZ_API_TOKEN: token },
         },
       },
@@ -201,7 +204,7 @@ function TokenRevealModal({
             {t("snippetAfterToken")}{" "}
             <code>CO_NEWBIZ_API_BASE_URL</code>
             {t("snippetAfterBase")}{" "}
-            <code>mcp/co-newbiz/index.ts</code>
+            <code>bunx @co-newbiz/co-newbiz-mcp</code>
             {t("snippetTail")}
           </p>
         </div>
