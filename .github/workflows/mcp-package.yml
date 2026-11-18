@@ -83,7 +83,10 @@ jobs:
           echo "@co-newbiz:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> ~/.npmrc
           cd mcp/co-newbiz
-          npm publish
+          # Public visibility is a package-level one-way UI flip; this flag
+          # keeps a future first publish (after package deletion) public
+          # instead of inheriting the registry's private default.
+          npm publish --access public
 
   smoke:
     name: Smoke — install tarball, stdio initialize + tools/list

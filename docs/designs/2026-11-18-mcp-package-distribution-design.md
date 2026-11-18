@@ -1,7 +1,7 @@
 ---
 lang: en
 date: 2026-11-18
-status: draft-for-approval
+status: implemented
 owner: backend-engineer (design), pm (dispatch)
 related: ADR-0011 (MCP access is REST-only), ADR-0154 (remote transport), docs/architecture/mcp-integration.md
 spec: mcp-package-distribution
@@ -129,3 +129,18 @@ Threat-model currency check: this is a **distribution channel change, not a new 
 - OAuth remote transport changes (ADR-0154 unchanged).
 - Compiled multi-platform binaries.
 - Publishing to the public npm registry (repo and package are private by design).
+
+## Implementation record (2026-11-18)
+
+Published `@co-newbiz/co-newbiz-mcp@1.0.0` on 2026-11-18 via tag `mcp-v1.0.0` at commit `19a62fb8` (workflow run 44206090564: guard / publish / smoke jobs all green). Two fixes landed during the first publish:
+
+- **PR #912** — the guard's `npm pack --dry-run --json` parsing now tolerates npm 11's array-of-pack-objects output shape (the original parser assumed a single object).
+- **Org precondition realized** — the GitHub organization `co-newbiz` had to exist before the first publish; without it the registry rejects the scoped package with 403 (owner not found). This was the §1 operator prerequisite, confirmed in practice.
+
+**Decision amendment (owner decision, 2026-11-18): package visibility changes from private to public.** The repository `5throck/co-newbiz` is already public, so no new code is exposed; the visibility flip itself is a package-level, one-way change made in the GitHub UI. Consequences:
+
+- Consumer `.npmrc` no longer needs the `//npm.pkg.github.com/:_authToken=` line — only the `@co-newbiz:registry=https://npm.pkg.github.com` scope mapping. The `read:packages` PAT requirement for consumers is dropped: once public, tokens are simply unnecessary.
+- The publish workflow now passes `--access public` to `npm publish`, so a future first publish (e.g. after package deletion) re-lands public instead of inheriting the registry's private default.
+- Note: the GitHub UI visibility flip is one-way — a package cannot be made private again without deletion.
+
+This amendment supersedes the "private npm package" framing in the Decision and §7 above for consumer-install purposes; the env contract, REST-only relay boundary (ADR-0011), and tag-driven publish flow are unchanged.
