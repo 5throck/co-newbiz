@@ -47,6 +47,7 @@
 | `root/handbook` | L3 | 0.6.0 | — | — | — | — | — |
 | `root/handbook-sync-audit` | L3 | 1.0.5 | — | — | — | — | — |
 | `root/historical-financial-analysis` | L3 | 1.0.1 | root/financial-analyst | root/phase 3 | root/financial-statement-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
+| `root/humanize-polish` | L3 | 1.0.0 | — | — | — | — | — |
 | `root/i18n-audit` | L3 | 1.0.0 | root/i18n-specialist | — | — | — | — |
 | `root/i18n-formatting` | L3 | 1.0.0 | root/i18n-specialist | — | — | — | — |
 | `root/i18n-layout` | L3 | 1.1.0 | root/i18n-specialist | — | — | — | — |
@@ -617,7 +618,7 @@ None — every capability has a single content hash.
 
 ## Skills Without `used_by` (G6)
 
-31 skill nodes have no `used_by` edge (no agent `required_skills` / manifest `used_by_agents` entry).
+32 skill nodes have no `used_by` edge (no agent `required_skills` / manifest `used_by_agents` entry).
 
 ### Suggested `required_by` agents (E4, report-only)
 
@@ -628,4 +629,4 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-18), window 90 days. Skill nodes with usage: 1.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (1): root/sync
-- **unused** (0 sessions in 90 days) (107): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/i18n-audit, root/i18n-formatting, root/i18n-layout … and 67 more
+- **unused** (0 sessions in 90 days) (108): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/humanize-polish, root/i18n-audit, root/i18n-formatting … and 68 more

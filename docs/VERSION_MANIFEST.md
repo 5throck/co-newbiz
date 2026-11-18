@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-18T03:56:40.699Z
+**Generated**: 2026-11-18T05:29:03.830Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -9,8 +9,8 @@
 ## Summary
 
 - **Agents**: 42
-- **Skills**: 108
-- **Scripts**: 205 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Skills**: 109
+- **Scripts**: 212 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -106,6 +106,7 @@
 | handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
 | handbook-sync-audit | 1.0.5 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | pm |
 | historical-financial-analysis | 1.0.1 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
+| humanize-polish | 1.0.0 | active | skills/humanize-polish/SKILL.md | workspace | polish Korean, humanize, humanize Korean, Korean polishing, Korean deliverable polish, before output of Korean deliverables | docs-writer |
 | i18n-audit | 1.0.0 | active | skills/i18n-audit/SKILL.md | workspace | i18n audit, locale parity, translation parity, glossary audit, L10N parity | pm |
 | i18n-formatting | 1.0.0 | active | skills/i18n-formatting/SKILL.md | workspace | date format, number format, currency format, unit conversion, paper size, korean numerals | pm |
 | i18n-layout | 1.1.0 | active | skills/i18n-layout/SKILL.md | workspace | character encoding, RTL, bidi, font selection, CRLF, BOM | pm |
@@ -186,6 +187,7 @@
 
 | Name | Version | Location | Dependencies |
 |------|---------|----------|--------------|
+| adapter-gates.test.ts | 1.0.0 | scripts/humanize/tests/adapter-gates.test.ts | bun:test |
 | adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | N/A |
 | agent-create.ts | 1.0.1 | scripts/agent-create.ts | N/A |
 | agent-delete.ts | 1.0.1 | scripts/agent-delete.ts | N/A |
@@ -194,6 +196,7 @@
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | N/A |
 | align-existing-projects.ts | 1.1.0 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
+| anchors.test.ts | 1.0.0 | scripts/humanize/tests/anchors.test.ts | bun:test |
 | apply-handbook-theme.test.ts | 1.0.1 | scripts/tests/apply-handbook-theme.test.ts | bun:test |
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | N/A |
 | archive-memory.ts | 1.1.0 | scripts/archive-memory.ts | N/A |
@@ -251,6 +254,7 @@
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | N/A |
 | driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | N/A |
 | ecos.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/ecos.ts | N/A |
+| eligibility.test.ts | 1.0.0 | scripts/humanize/tests/eligibility.test.ts | bun:test |
 | env-check.ts | 1.2.0 | scripts/co-newbiz/env-check.ts | N/A |
 | evidence-backport-scan.ts | 1.3.0 | scripts/evidence-backport-scan.ts | N/A |
 | external-deps.ts | 1.0.0 | scripts/external-deps.ts | N/A |
@@ -282,6 +286,8 @@
 | graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | js-yaml |
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | N/A |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | N/A |
+| humanize-adapter.ts | 1.0.0 | scripts/humanize/humanize-adapter.ts | N/A |
+| humanize-contract.test.ts | 1.0.0 | scripts/humanize/tests/humanize-contract.test.ts | bun:test |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | N/A |
 | i18n-lint.ts | 1.2.0 | scripts/co-newbiz/i18n-lint.ts | N/A |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | N/A |
@@ -289,6 +295,7 @@
 | index.ts | 1.2.0 | scripts/co-newbiz/jobs/index.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | js-yaml, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
+| korean.ts | 1.0.0 | scripts/humanize/tests/fixtures/korean.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
 | kosis.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/kosis.ts | N/A |
 | krx.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/krx.ts | N/A |
@@ -343,6 +350,7 @@
 | seed-demo-gate-contract.ts | 1.0.0 | scripts/co-newbiz/seed-demo-gate-contract.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
 | seed-s1-s12-demo.ts | 1.17.1 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
+| segment.test.ts | 1.0.0 | scripts/humanize/tests/segment.test.ts | bun:test |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | N/A |
@@ -414,8 +422,8 @@
 
 - **Commands with parity (gemini mirror)**: 7 / 7
 - **Commands with codex prompts mapping**: 7 / 7
-- **Skills in all four mirrors**: 0 / 108
-- **Skills in claude+gemini only (both)**: 0 / 108 (common-template skills are parity-exempt)
+- **Skills in all four mirrors**: 0 / 109
+- **Skills in claude+gemini only (both)**: 0 / 109 (common-template skills are parity-exempt)
 
 ---
 

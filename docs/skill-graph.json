@@ -2675,6 +2675,24 @@
       ]
     },
     {
+      "id": "skill:root/humanize-polish",
+      "type": "skill",
+      "layer": "L3",
+      "name": "humanize-polish",
+      "scope": "root",
+      "capability": "humanize-polish",
+      "content_hash": "4559b877f4b05984",
+      "version": "1.0.0",
+      "mirrors": [
+        "skills/humanize-polish/SKILL.md",
+        ".claude/skills/humanize-polish/SKILL.md",
+        ".gemini/skills/humanize-polish/SKILL.md",
+        ".agents/skills/humanize-polish/SKILL.md",
+        ".codex/skills/humanize-polish/SKILL.md",
+        ".hermes/skills/humanize-polish/SKILL.md"
+      ]
+    },
+    {
       "id": "skill:root/i18n-audit",
       "type": "skill",
       "layer": "L3",
@@ -9640,6 +9658,12 @@
         "field": "relates_to",
         "index": 6
       }
+    },
+    {
+      "type": "references",
+      "from": "skill:root/humanize-polish",
+      "to": "skill:root/translate",
+      "source": "prose"
     },
     {
       "type": "used_by",
