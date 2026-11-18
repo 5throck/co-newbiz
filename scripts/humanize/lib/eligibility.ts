@@ -148,7 +148,11 @@ export function classify(input: ClassifyInput): Eligibility {
   }
   const fm = parseFrontmatter(input.text);
   if (fm) {
-    if ("lang_reason" in fm) return { eligible: false, rule: "frontmatter: lang_reason" };
+    // Korean docs carry lang_reason by policy; only source-material is polishable.
+    // legal / proper-noun / unknown values are default-denied (text must not drift).
+    if ("lang_reason" in fm && fm.lang_reason.toLowerCase() !== "source-material") {
+      return { eligible: false, rule: `frontmatter: lang_reason: ${fm.lang_reason || "(empty)"}` };
+    }
     if ((fm.humanize ?? "").toLowerCase() === "skip") return { eligible: false, rule: "frontmatter: humanize: skip" };
     const k = (fm.kind ?? "").toLowerCase();
     if (k === "legal-opinion") return { eligible: false, rule: "frontmatter: kind: legal-opinion" };

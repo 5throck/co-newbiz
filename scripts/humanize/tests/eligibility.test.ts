@@ -1,5 +1,7 @@
 // @version 1.0.0
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { classify, DENY_DIRS, hangulRatio, isHangulDominant, matchDenylist } from "../lib/eligibility";
 import { ORIGINAL_PARAGRAPH } from "./fixtures/korean";
 
@@ -48,9 +50,34 @@ describe("default-deny exclusions", () => {
     expect(matchDenylist("/elsewhere/notes/p.md", ROOT)).toBeUndefined();
   });
 
-  test("lang_reason and humanize: skip frontmatter exclude", () => {
-    expect(ok({ text: `---\nlang: ko\nlang_reason: legal\n---\n${ORIGINAL_PARAGRAPH}` }).rule).toContain("lang_reason");
+  test("lang_reason: source-material (real Korean doc frontmatter shapes) is eligible", () => {
+    const manual = `---\nlang: ko\nlang_reason: source-material\ncounterpart: business-manual.md\n---\n${ORIGINAL_PARAGRAPH}`;
+    const wiki = `---\nlang: ko\nlang_reason: source-material\ndoc_type: reference\ntracks: [greenfield, brownfield]\nverified_on: 2026-11-18\n---\n${ORIGINAL_PARAGRAPH}`;
+    const readme = `---\nsync_version: 1\ntranslated_from_hash: be3b08b9\nlang: ko\nlang_reason: source-material\n---\n${ORIGINAL_PARAGRAPH}`;
+    expect(ok({ kind: "manual-ko", text: manual, path: "docs/manuals/business-manual_ko.md" }).eligible).toBe(true);
+    expect(ok({ kind: "wiki-ko", text: wiki, path: "docs/wiki/ko/12-x.md" }).eligible).toBe(true);
+    expect(ok({ kind: "wiki-ko", text: readme }).eligible).toBe(true);
+  });
+
+  test.each(["legal", "proper-noun", "unknown-value", ""])("lang_reason: %p is excluded", (v) => {
+    const r = ok({ kind: "manual-ko", text: `---\nlang: ko\nlang_reason: ${v}\n---\n${ORIGINAL_PARAGRAPH}` });
+    expect(r.eligible).toBe(false);
+    expect(r.rule).toContain("lang_reason");
+  });
+
+  test("humanize: skip frontmatter excludes", () => {
     expect(ok({ text: `---\nhumanize: skip\n---\n${ORIGINAL_PARAGRAPH}` }).rule).toContain("humanize: skip");
+  });
+
+  test("real files: mcp-user-guide_ko and a wiki/ko page are eligible; runbooks stay excluded", () => {
+    const root = resolve(import.meta.dir, "../../..");
+    const read = (p: string) => readFileSync(resolve(root, p), "utf8");
+    const guide = "docs/manuals/mcp-user-guide_ko.md";
+    const wiki = "docs/wiki/ko/12-공통-화면-둘러보기.md";
+    const rb = "docs/runbooks/deployment_ko.md";
+    expect(classify({ text: read(guide), kind: "manual-ko", path: guide, root }).eligible).toBe(true);
+    expect(classify({ text: read(wiki), kind: "wiki-ko", path: wiki, root }).eligible).toBe(true);
+    expect(classify({ text: read(rb), kind: "manual-ko", path: rb, root }).eligible).toBe(false);
   });
 
   test("frontmatter legal-opinion, glossary and legal-counsel ownership exclude", () => {

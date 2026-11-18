@@ -9,7 +9,7 @@ description: >
   Use when: a Korean-language document, report, summary, or Korean-counterpart
   manual or wiki page is about to be delivered, or the user asks to polish or
   humanize Korean text.
-version: 1.0.0
+version: 1.0.1
 last_reviewed: 2026-11-18
 status: active
 scope: co-newbiz
@@ -59,7 +59,7 @@ Skip polishing (do not run `prepare`) for any of the following. `classify` enfor
 - Policies, procedures, ADRs, governance documents, checklists, glossary definitions, region and industry profiles, skills, agents, `CHANGELOG.md`, `memory/`, and runbooks (including runbook Korean counterparts).
 - Legal-opinion text, including any output owned by `legal-counsel` and any text tagged `kind: legal-opinion`.
 - Quotations, tables, code, checklist lines, and machine-readable records inside an eligible document. The adapter passes these through byte-for-byte.
-- Files whose frontmatter carries `humanize: skip` or `lang_reason`.
+- Files whose frontmatter carries `humanize: skip`, or a `lang_reason` other than `source-material` (`legal`, `proper-noun`, or unknown values are excluded; `source-material` is the normal value for Korean manuals and wiki pages and stays eligible).
 - Any request where the kind is undeclared. Eligibility is default-deny.
 
 ## Procedure
