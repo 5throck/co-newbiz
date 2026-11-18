@@ -16,7 +16,16 @@ import { ROOT } from "./loader.ts";
 
 export const WEB_DIR = join(ROOT, "app", "web-next");
 export const INVENTORY_FILE = join(ROOT, "tests", "eval", "call-sites.yaml");
-export const SUITE_NAMES = ["rag", "kill", "antitrust", "review-ai2", "stage-reco", "committee", "dd-tailor", "business-case"] as const;
+export const SUITE_NAMES = [
+  "rag",
+  "kill",
+  "antitrust",
+  "review-ai2",
+  "stage-reco",
+  "committee",
+  "dd-tailor",
+  "business-case",
+] as const;
 
 const CALL_RE = /(^|[^.\w])(complete|completeOrFallback|completeStructured|completeDetailed)\(/g;
 const SKIP_DIRS = new Set(["node_modules", ".next", "tests", "__tests__"]);
@@ -39,7 +48,8 @@ function walk(dir: string, out: string[]): void {
   for (const d of readdirSync(dir, { withFileTypes: true })) {
     if (d.isDirectory()) {
       if (!SKIP_DIRS.has(d.name)) walk(join(dir, d.name), out);
-    } else if (/\.tsx?$/.test(d.name) && !/\.(test|spec)\.tsx?$/.test(d.name) && !d.name.endsWith(".d.ts")) out.push(join(dir, d.name));
+    } else if (/\.tsx?$/.test(d.name) && !/\.(test|spec)\.tsx?$/.test(d.name) && !d.name.endsWith(".d.ts"))
+      out.push(join(dir, d.name));
   }
 }
 
@@ -49,9 +59,13 @@ export function scanCallSites(webDir: string = WEB_DIR): Map<string, number> {
   walk(webDir, files);
   const found = new Map<string, number>();
   for (const f of files.sort()) {
-    const rel = relative(ROOT, f);
+    // call-sites.yaml keys are forward-slash repo paths; normalize the
+    // OS-native separators relative() produced (Windows backslashes)
+    const rel = relative(ROOT, f).replace(/\\/g, "/");
     if (rel === "app/web-next/lib/llm.ts") continue;
-    const src = readFileSync(f, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const src = readFileSync(f, "utf-8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
     const n = [...src.matchAll(CALL_RE)].length;
     if (n > 0) found.set(rel, n);
   }
@@ -63,15 +77,25 @@ export function readInventory(file: string = INVENTORY_FILE): InventoryEntry[] {
 }
 
 /** Returns human-readable problems; empty = inventory is complete. */
-export function checkInventory(found: Map<string, number> = scanCallSites(), entries: InventoryEntry[] = readInventory()): string[] {
+export function checkInventory(
+  found: Map<string, number> = scanCallSites(),
+  entries: InventoryEntry[] = readInventory(),
+): string[] {
   const problems: string[] = [];
   const byFile = new Map(entries.map((e) => [e.file, e]));
   for (const [file, n] of found) {
     const e = byFile.get(file);
-    if (!e) problems.push(`${file}: ${n} LLM call site(s) with no eval suite and no exemption — add it to tests/eval/call-sites.yaml`);
-    else if (e.sites !== n) problems.push(`${file}: ${n} call site(s) found, inventory records ${e.sites} — a call site was added or removed; map it to a suite or exempt it`);
+    if (!e)
+      problems.push(
+        `${file}: ${n} LLM call site(s) with no eval suite and no exemption — add it to tests/eval/call-sites.yaml`,
+      );
+    else if (e.sites !== n)
+      problems.push(
+        `${file}: ${n} call site(s) found, inventory records ${e.sites} — a call site was added or removed; map it to a suite or exempt it`,
+      );
   }
-  for (const e of entries) if (!found.has(e.file)) problems.push(`${e.file}: inventory entry is stale (no LLM call site in the file)`);
+  for (const e of entries)
+    if (!found.has(e.file)) problems.push(`${e.file}: inventory entry is stale (no LLM call site in the file)`);
   return problems;
 }
 

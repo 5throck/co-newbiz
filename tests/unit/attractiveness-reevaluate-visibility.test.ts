@@ -10,6 +10,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { canReEvaluateAttractiveness } from "../../app/web-next/lib/attractiveness-reevaluate.ts";
+import { resetDb } from "../../db/client.ts";
 
 describe("canReEvaluateAttractiveness", () => {
   test("assessed: yes (with or without context)", () => {
@@ -42,7 +43,12 @@ describe("canReEvaluateAttractiveness", () => {
 describe("route_confirmed API signal", () => {
   const dir = mkdtempSync(join(tmpdir(), "co-newbiz-reeval-"));
   process.env.CO_NEWBIZ_DB_PATH = join(dir, "t.sqlite");
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  afterAll(() => {
+    // Close the connection (and finalize statements via the resetDb gc hook)
+    // before the Windows unlink — an open bun:sqlite handle keeps the dir EBUSY.
+    resetDb();
+    rmSync(dir, { recursive: true, force: true });
+  });
 
   test("draft-only route decision is not confirmed; current final is", async () => {
     const { resetDb, getDb } = await import("../../db/client.ts");

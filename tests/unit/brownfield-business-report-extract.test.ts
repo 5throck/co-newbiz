@@ -153,7 +153,11 @@ describe("validateCitations", () => {
 });
 
 describe("fetchDisclosureText prefers the main document entry over an attachment listed first", () => {
-  test("<rcept_no>.xml wins over <rcept_no>_00760.xml (audit-report attachment)", async () => {
+  // The fixture zips via the external `zip` binary (the same graceful-skip
+  // pattern as plutil in scheduler-p2-install); the zip tool is not part of a
+  // base Windows install.
+  const skipNoZip = Bun.which("zip") ? test : test.skip;
+  skipNoZip("<rcept_no>.xml wins over <rcept_no>_00760.xml (audit-report attachment)", async () => {
     const { execFileSync } = await import("node:child_process");
     const { readFileSync, writeFileSync, mkdirSync } = await import("node:fs");
     const dir = join(TMP, "zip");

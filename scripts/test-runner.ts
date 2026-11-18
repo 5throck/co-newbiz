@@ -206,6 +206,13 @@ const FILE_TIME_BUDGETS: Record<string, { suite: number; test: number }> = {
   // 4 tests / 70 routes x 2 themes of axe scanning; killed at the 300s default with
   // the sweeps still running. Suite 900s keeps ~1.5-1.9x over the projected CI total.
   "axe-sweep.test.ts": { suite: 900000, test: 60000 },
+  // v1.11.0 (2026-11-18 Windows-compat sweep, win-test-run3.log): the file
+  // spawns the python sim engine per scenario; under full-suite load on the
+  // Windows workstation the overrides test (g) overran the 15s per-test
+  // ceiling (passes at 5.6s solo, killed at 15s under load). Test 30s keeps
+  // ~2x headroom over the observed kill point; suite stays at the unit
+  // default. Same documented win32 spawn-heavy family as mcp-upstream-server.
+  "business-case-revenue-anchor.test.ts": { suite: 120000, test: 30000 },
 };
 
 function getTestFiles(suite: TestSuite): string[] {
@@ -488,12 +495,7 @@ export async function runTests(suiteName: string = "integration", options: RunOp
       try {
         results = await runInParallel(files, concurrency, (file, _, workerId) => {
           const budgets = resolveBudgets(file);
-          return executeTestFile(
-            file,
-            budgets.suite,
-            budgets.test,
-            workerId,
-          );
+          return executeTestFile(file, budgets.suite, budgets.test, workerId);
         });
       } catch (err) {
         console.warn(
@@ -502,12 +504,7 @@ export async function runTests(suiteName: string = "integration", options: RunOp
         results = [];
         for (let i = 0; i < files.length; i++) {
           const budgets = resolveBudgets(files[i]);
-          const res = await executeTestFile(
-            files[i],
-            budgets.suite,
-            budgets.test,
-            1,
-          );
+          const res = await executeTestFile(files[i], budgets.suite, budgets.test, 1);
           results.push(res);
         }
       }
@@ -516,12 +513,7 @@ export async function runTests(suiteName: string = "integration", options: RunOp
         const file = files[i];
         console.log(`  Running: ${file}`);
         const budgets = resolveBudgets(file);
-        const res = await executeTestFile(
-          file,
-          budgets.suite,
-          budgets.test,
-          1,
-        );
+        const res = await executeTestFile(file, budgets.suite, budgets.test, 1);
         results.push(res);
       }
     }
@@ -607,9 +599,9 @@ export async function runTests(suiteName: string = "integration", options: RunOp
 
 function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
   let suiteName = "integration";
-  let parallel: boolean | undefined = undefined;
-  let concurrency: number | undefined = undefined;
-  let timeout: number | undefined = undefined;
+  let parallel: boolean | undefined;
+  let concurrency: number | undefined;
+  let timeout: number | undefined;
   let allowEmpty = false;
 
   for (let i = 0; i < args.length; i++) {

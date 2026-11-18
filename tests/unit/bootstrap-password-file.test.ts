@@ -16,6 +16,13 @@ import { tmpdir } from "node:os";
 
 const lib = await import("../../app/web-next/lib/bootstrap-password-file.ts");
 
+// Windows has no POSIX permission bits — `statSync().mode` always reports
+// 0o666-class values, so the 0600 contract is unassertable there. The code
+// under test calls chmodSync unconditionally, which is correct on every
+// POSIX platform the file actually runs on (the operator workstation).
+const POSIX_PERMS = process.platform !== "win32";
+const skipOnWindows = POSIX_PERMS ? test : test.skip;
+
 const DIRS: string[] = [];
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "cnb-bootstrap-pw-"));
@@ -28,7 +35,7 @@ afterAll(() => {
 const modeOf = (p: string) => statSync(p).mode & 0o777;
 
 describe("writeBootstrapPasswordFile", () => {
-  test("writes 0600 and the banner carries the password exactly once", () => {
+  skipOnWindows("writes 0600 and the banner carries the password exactly once", () => {
     const dir = tempDir();
     const file = join(dir, "bootstrap-admin-password.txt");
     const returned = lib.writeBootstrapPasswordFile(file, {
@@ -46,7 +53,7 @@ describe("writeBootstrapPasswordFile", () => {
     expect(content).toContain("first login"); // change-it guidance, not a log artifact
   });
 
-  test("overwriting a pre-existing wider-permission file re-chmods to 0600", () => {
+  skipOnWindows("overwriting a pre-existing wider-permission file re-chmods to 0600", () => {
     const dir = tempDir();
     const file = join(dir, "bootstrap-admin-password.txt");
     writeFileSync(file, "stale\n", { mode: 0o644 });
@@ -61,7 +68,7 @@ describe("writeBootstrapPasswordFile", () => {
     expect(readFileSync(file, "utf8")).toContain("New-Pw-Value");
   });
 
-  test("creates a missing directory recursively (mkdir -p)", () => {
+  skipOnWindows("creates a missing directory recursively (mkdir -p)", () => {
     const dir = tempDir();
     const file = join(dir, "deep", "nested", "bootstrap-admin-password.txt");
     lib.writeBootstrapPasswordFile(file, {
@@ -86,7 +93,10 @@ describe("bootstrapPasswordFilePath", () => {
     }
   });
 
-  test("default derives from the resolved DB file's directory", () => {
+  skipOnWindows("default derives from the resolved DB file's directory", () => {
+    // The POSIX-literal input path is normalized by dirname/join; on Windows
+    // the same call returns backslash form, so the literal expectation only
+    // holds on POSIX (where the container and operator host run).
     restore();
     expect(lib.bootstrapPasswordFilePath("/repo/db/data/app.sqlite")).toBe(
       "/repo/db/data/bootstrap-admin-password.txt",
