@@ -40,7 +40,8 @@ interface SessionEntry {
 const KEY = Symbol.for("co-newbiz.mcp.sessions");
 type Holder = { [KEY]?: { sessions: Map<string, SessionEntry>; hits: Map<string, number[]> } };
 const holder = globalThis as Holder;
-const state = holder[KEY] ?? (holder[KEY] = { sessions: new Map<string, SessionEntry>(), hits: new Map<string, number[]>() });
+if (!holder[KEY]) holder[KEY] = { sessions: new Map<string, SessionEntry>(), hits: new Map<string, number[]>() };
+const state = holder[KEY] as NonNullable<Holder[typeof KEY]>;
 
 function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message }, id: null }), {
@@ -74,7 +75,12 @@ function rateLimited(key: string, now: number): boolean {
 }
 
 /** Audit a refused request: token family id and Origin host only — never the token. */
-function auditRefusal(action: "mcp_origin_refused" | "mcp_https_refused", token: ValidAccessToken, request: Request, nowIso: string): void {
+function auditRefusal(
+  action: "mcp_origin_refused" | "mcp_https_refused",
+  token: ValidAccessToken,
+  request: Request,
+  nowIso: string,
+): void {
   let originHost: string | null = null;
   const origin = request.headers.get("origin");
   if (origin) {
@@ -97,7 +103,14 @@ function auditRefusal(action: "mcp_origin_refused" | "mcp_https_refused", token:
 }
 
 function toPrincipal(t: ValidAccessToken): DelegatedPrincipal {
-  return { userId: t.userId, role: t.role, scopes: t.scopes, mustChangePassword: t.mustChangePassword, tokenId: t.tokenId, clientId: t.clientId };
+  return {
+    userId: t.userId,
+    role: t.role,
+    scopes: t.scopes,
+    mustChangePassword: t.mustChangePassword,
+    tokenId: t.tokenId,
+    clientId: t.clientId,
+  };
 }
 
 function principalFrom(authInfo: AuthInfo | undefined): { principal: DelegatedPrincipal; familyId: string } {
@@ -121,8 +134,14 @@ function newSessionServer(): Server {
       try {
         const { principal, familyId } = principalFrom(rec.authInfo);
         auditTokenUse(getDb(), {
-          userId: principal.userId, clientId: principal.clientId, familyId, tool: rec.name, scope: rec.scope,
-          result: rec.ok ? "ok" : (rec.errorCode ?? "error"), argsHash: rec.argsHash, now: new Date().toISOString(),
+          userId: principal.userId,
+          clientId: principal.clientId,
+          familyId,
+          tool: rec.name,
+          scope: rec.scope,
+          result: rec.ok ? "ok" : (rec.errorCode ?? "error"),
+          argsHash: rec.argsHash,
+          now: new Date().toISOString(),
         });
       } catch {
         /* audit must not crash the transport; the route-level audit still applies */
@@ -192,7 +211,13 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (id) => {
-      state.sessions.set(id, { transport, server, userId: token.userId, clientId: token.clientId, lastSeen: Date.now() });
+      state.sessions.set(id, {
+        transport,
+        server,
+        userId: token.userId,
+        clientId: token.clientId,
+        lastSeen: Date.now(),
+      });
     },
     onsessionclosed: (id) => {
       state.sessions.delete(id);

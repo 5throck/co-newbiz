@@ -17,7 +17,16 @@ import { OAUTH_SCOPES, registerClient } from "../../../../../../db/lib/oauth.ts"
 import { oauthError, oauthJson, publicOrigin } from "../../../../lib/mcp/config.ts";
 import { violatesReservedName } from "../../../../lib/mcp/reserved-client-names.ts";
 import { preflight, withCors } from "../../../../lib/mcp/cors.ts";
-import { cfRay, clientIp, clientRequestId, ipHash, rateCheck, rateKey, requestId, withRequestId } from "../../../../lib/mcp/request-meta.ts";
+import {
+  cfRay,
+  clientIp,
+  clientRequestId,
+  ipHash,
+  rateCheck,
+  rateKey,
+  requestId,
+  withRequestId,
+} from "../../../../lib/mcp/request-meta.ts";
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_PER_WINDOW = 20;
@@ -29,13 +38,19 @@ const GLOBAL_KEY = Symbol.for("co-newbiz.oauth.dcrGlobalRegistrations");
 type Holder = { [KEY]?: Map<string, number[]>; [LOGGED_KEY]?: Map<string, number>; [GLOBAL_KEY]?: number[] };
 const holder = globalThis as Holder;
 // Successful registrations across all callers: a ceiling that rotating IPs cannot bypass.
-const globalRegs = holder[GLOBAL_KEY] ?? (holder[GLOBAL_KEY] = [] as number[]);
-const hits = holder[KEY] ?? (holder[KEY] = new Map<string, number[]>());
+if (!holder[GLOBAL_KEY]) holder[GLOBAL_KEY] = [];
+const globalRegs = holder[GLOBAL_KEY] as number[];
+if (!holder[KEY]) holder[KEY] = new Map<string, number[]>();
+const hits = holder[KEY] as Map<string, number[]>;
 // One rate_limited audit row per IP per window, so a flood cannot amplify the log.
-const rateLogged = holder[LOGGED_KEY] ?? (holder[LOGGED_KEY] = new Map<string, number>());
+if (!holder[LOGGED_KEY]) holder[LOGGED_KEY] = new Map<string, number>();
+const rateLogged = holder[LOGGED_KEY] as Map<string, number>;
 
 function hostAllowed(uri: string): boolean {
-  const list = (process.env.CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const list = (process.env.CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (list.length === 0) return true;
   const host = new URL(uri).hostname;
   return host === "127.0.0.1" || host === "localhost" || host === "[::1]" || list.includes(host);
@@ -50,7 +65,9 @@ interface Ctx {
 
 function log(ctx: Ctx, status: number, reason: string): void {
   const h = ipHash(ctx.ip);
-  console.info(JSON.stringify({ event: "oauth_dcr", status, reason, request_id: ctx.rid, ...(h ? { ip_hash: h } : {}) }));
+  console.info(
+    JSON.stringify({ event: "oauth_dcr", status, reason, request_id: ctx.rid, ...(h ? { ip_hash: h } : {}) }),
+  );
 }
 
 /** Audit one refusal: reason code + metadata only — no body, name, URIs or tokens. */
@@ -93,7 +110,12 @@ function appliedScope(value: unknown): string | undefined {
 
 export async function POST(request: Request) {
   const now = Date.now();
-  const ctx: Ctx = { rid: requestId(request), clientRid: clientRequestId(request), ip: clientIp(request), ray: cfRay(request) };
+  const ctx: Ctx = {
+    rid: requestId(request),
+    clientRid: clientRequestId(request),
+    ip: clientIp(request),
+    ray: cfRay(request),
+  };
   const check = rateCheck(hits, rateKey(ctx.ip), now, { windowMs: WINDOW_MS, max: MAX_PER_WINDOW, maxKeys: MAX_KEYS });
   if (check.limited) {
     // One rate_limited audit row per bucket per window; the log map is pruned and capped.
@@ -121,8 +143,17 @@ export async function POST(request: Request) {
   const body = parsed as Record<string, unknown>;
 
   const responseTypes = body.response_types;
-  if (responseTypes !== undefined && (!Array.isArray(responseTypes) || responseTypes.length === 0 || responseTypes.some((r) => r !== "code"))) {
-    return refuse(ctx, "response_type_unsupported", 400, "invalid_client_metadata", 'Only response_types ["code"] is supported.');
+  if (
+    responseTypes !== undefined &&
+    (!Array.isArray(responseTypes) || responseTypes.length === 0 || responseTypes.some((r) => r !== "code"))
+  ) {
+    return refuse(
+      ctx,
+      "response_type_unsupported",
+      400,
+      "invalid_client_metadata",
+      'Only response_types ["code"] is supported.',
+    );
   }
   const grants = body.grant_types === undefined ? ["authorization_code", "refresh_token"] : body.grant_types;
   if (
@@ -130,19 +161,38 @@ export async function POST(request: Request) {
     !grants.includes("authorization_code") ||
     grants.some((g) => g !== "authorization_code" && g !== "refresh_token")
   ) {
-    return refuse(ctx, "grant_unsupported", 400, "invalid_client_metadata", "Only authorization_code and refresh_token grants are supported.");
+    return refuse(
+      ctx,
+      "grant_unsupported",
+      400,
+      "invalid_client_metadata",
+      "Only authorization_code and refresh_token grants are supported.",
+    );
   }
   const uris = body.redirect_uris;
   if (Array.isArray(uris)) {
     const blocked = uris.find((u) => typeof u === "string" && URL.canParse(u) && !hostAllowed(u));
     if (typeof blocked === "string") {
-      return refuse(ctx, "redirect_host_not_allowed", 400, "invalid_redirect_uri", "Redirect host is not on the administrator allowlist.", {
-        redirect_host: new URL(blocked).hostname.slice(0, 253),
-      });
+      return refuse(
+        ctx,
+        "redirect_host_not_allowed",
+        400,
+        "invalid_redirect_uri",
+        "Redirect host is not on the administrator allowlist.",
+        {
+          redirect_host: new URL(blocked).hostname.slice(0, 253),
+        },
+      );
     }
   }
   if (violatesReservedName(body.client_name, uris, new URL(publicOrigin(request)).hostname)) {
-    return refuse(ctx, "reserved_client_name", 400, "invalid_client_metadata", "client_name uses a reserved brand name that does not match the redirect URI hosts.");
+    return refuse(
+      ctx,
+      "reserved_client_name",
+      400,
+      "invalid_client_metadata",
+      "client_name uses a reserved brand name that does not match the redirect URI hosts.",
+    );
   }
   const res = registerClient(getDb(), { name: body.client_name, redirectUris: uris, now: new Date().toISOString() });
   if (!res.ok) return refuse(ctx, res.error, 400, res.error, res.description);

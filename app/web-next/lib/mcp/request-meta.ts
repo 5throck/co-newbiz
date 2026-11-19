@@ -40,7 +40,7 @@ function expandV6(ip: string): number[] | null {
   const v4 = /(\d+\.\d+\.\d+\.\d+)$/.exec(addr);
   if (v4) {
     const o = v4[1].split(".").map(Number);
-    addr = addr.slice(0, -v4[1].length) + ((o[0] << 8) | o[1]).toString(16) + ":" + ((o[2] << 8) | o[3]).toString(16);
+    addr = `${addr.slice(0, -v4[1].length)}${((o[0] << 8) | o[1]).toString(16)}:${((o[2] << 8) | o[3]).toString(16)}`;
   }
   const [head, tail] = addr.split("::");
   const h = head ? head.split(":") : [];
@@ -111,7 +111,10 @@ export function ipHash(ip: string): string | null {
     }
     key = DEV_HMAC_KEY;
   }
-  return createHmac("sha256", key).update(normalizeIp(ip) ?? ip).digest("hex").slice(0, 16);
+  return createHmac("sha256", key)
+    .update(normalizeIp(ip) ?? ip)
+    .digest("hex")
+    .slice(0, 16);
 }
 
 /** Server-generated correlation id; always a fresh UUID. */

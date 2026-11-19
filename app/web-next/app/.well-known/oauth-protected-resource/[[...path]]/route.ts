@@ -11,7 +11,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   const { path } = await params;
   const suffix = (path ?? []).join("/");
   const rid = requestId(request);
-  if (suffix !== "" && suffix !== "api/mcp") return withRequestId(withCors(oauthJson({ error: "not_found" }, 404)), rid);
+  if (suffix !== "" && suffix !== "api/mcp")
+    return withRequestId(withCors(oauthJson({ error: "not_found" }, 404)), rid);
   return withRequestId(withCors(oauthJson(protectedResourceMetadata(request))), rid);
 }
 
