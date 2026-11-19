@@ -255,6 +255,8 @@ Every meeting-type surface moves to the same meeting form. The inventory comes f
 ## 8. Amendment (2026-11-10): S4 committee brief, minutes topic, resolution decision rule (supplements A–G)
 
 > **Status of this section.** Approved change set, revision v2 of the rejected fix plan, agreed in the supplement review meeting `memory/meeting-2026-11-10-committee-minutes-supplement.md` (2026-11-10) and approved by the user the same day. Row 0 only: this section is design + decision record + spec registration. Code, prompts, tests, and UI land in later rows per the landing order in §8.13. Gate-moment ruling: `docs/decisions/DEC-20261110-01.md`. No `process/flow.spec.yaml` change is in scope — committee session mechanics are ADR-0196 product code, not procedure `agent_key` steps.
+>
+> **Record location (annotated 2026-11-19).** The meeting record cited above lives under `memory/`, which is git-ignored and local-only once archived (CONSTITUTION §2.3), so it is not followable from the repository. The approved content itself is written out in this section, and the ruling is `DEC-20261110-01`; the citation chain deliberately does not depend on the memory file (upstream request U-20261119-001).
 
 ### 8.1 Confirmed defects this amendment fixes
 
