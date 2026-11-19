@@ -112,6 +112,27 @@ The container reads `.env.prod` (compose `env_file`), **not** the root `.env`. C
 
 The cookie-session CSRF check only compares the request Origin host with the Host header, so a new public hostname needs no app setting unless it calls `/api/mcp` from a browser.
 
+### When AI-app dynamic registration (DCR) gets a 403 from Cloudflare (observed 2026-11-19)
+
+Symptom: adding a custom connector in ChatGPT fails at the dynamic-client-registration step with `registration endpoint returned 403` (surfaced as `Some app settings were rejected`), while Claude.ai's DCR registers fine against the same endpoint.
+
+Diagnosis (observed): the server app returns only 201·400·429 from `/api/oauth/register` (an allowlist violation is also a 400). Next's dev cross-origin check (`blockCrossSiteDEV`) applies to `/_next` and `/__nextjs` paths only, so it is irrelevant for `/api`. Sending the same ChatGPT UA·Origin headers and the same body from a different IP returns 201. The 403 therefore comes from **Cloudflare edge IP/TLS-fingerprint bot scoring** flagging OpenAI-originated requests; Anthropic-originated ones pass. No app change is needed.
+
+Fix (Cloudflare dashboard, the `bizknights.org` zone — configured outside this repository):
+
+1. Check Security → Bots: is **Bot Fight Mode** or **Block AI Scrapers and Crawlers** on? Either one 403s automated POSTs from AI-vendor ASNs (OpenAI, Anthropic).
+2. On a paid plan (Super Bot Fight Mode): switch it to Allow, or add a WAF custom Skip rule scoped to the OAuth·MCP paths:
+
+   ```text
+   (http.request.uri.path contains "/api/oauth/") or (http.request.uri.path eq "/api/mcp")
+   or (startswith(http.request.uri.path, "/.well-known/")) or (http.request.uri.path eq "/oauth/authorize")
+   ```
+
+   Skip: bot defenses plus managed rules. Note the free plan's Bot Fight Mode cannot be skipped by rules — turn it off zone-wide or use the alternative below.
+3. Fallback when the dashboard cannot be touched: serve the connector on a public address that bypasses the Cloudflare proxy. Pin `CO_NEWBIZ_PUBLIC_ORIGIN` to a Tailscale Funnel URL and hand out that URL as the connector address (a DNS-only grey-cloud record is not possible for tunnel hostnames). This changes the issuer, so already-connected apps must reconnect.
+
+Verification: after the change, re-add the ChatGPT custom connector with defaults (DCR). It should be created without `Some app settings were rejected`, and the route's 403s should disappear from Cloudflare Security → Events. The app already rate-limits registrations to 20 per IP per hour, so abuse protection stays in place.
+
 ## 9. Scheduler (Minute-Tick)
 
 Periodic jobs fire from the host OS scheduler, one launchd entry per environment (`org.bizknights.co-newbiz.<env>.tick`, ADR-0189). The dev tick runs `schedule-tick.ts` as a host process against the dev DB; the prod tick runs it **inside the `co-newbiz-web` container** via `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod ...` — the prod tick therefore requires the container to be up, and the installer injects the environment flag itself (no container env setup needed). Install, verify (heartbeat), seed, uninstall, and troubleshooting: `docs/runbooks/scheduler.md`. §7 applies unchanged: container replacement must not disturb the host scheduler registrations.

@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-19](2026-11-19.md) | docs(docs): workspace sync (10 files) |
 | [2026-11-19](2026-11-19.md) | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
 | [2026-11-17](2026-11-17.md) | feat(s6): parallel per-candidate evaluation, criteria modal and coverage markers (ADR-0199) |
 | [2026-11-16](2026-11-16.md) | docs(designs): S6 bulk AI evaluation with draft versioning and incremental DART collection (ADR-0199) |
