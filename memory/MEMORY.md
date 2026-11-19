@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-20](2026-11-20.md) | chore: workspace sync (1 file) |
 | [2026-11-19](2026-11-19.md) | docs(docs): workspace sync (10 files) |
 | [2026-11-19](2026-11-19.md) | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
 | [2026-11-17](2026-11-17.md) | feat(s6): parallel per-candidate evaluation, criteria modal and coverage markers (ADR-0199) |
@@ -12,7 +13,7 @@
 | [2026-11-15](2026-11-15.md) | chore: workspace sync (1 file) |
 | [2026-11-14](2026-11-14.md) | s7 ignore suppression |
 | [2026-11-13](2026-11-13.md) | fix(s1): probe project-industry bindings only when a project row exists |
-| [2026-11-12](2026-11-12.md) | fix(brownfield): target identity resolution - canonical names, code-aware dedupe, unified PATCH, DART code authority, sync failure visibility |
+| 2026-11-12 | fix(brownfield): target identity resolution - canonical names, code-aware dedupe, unified PATCH, DART code authority, sync failure visibility |
 | 2026-11-11 | fix(committee): pre-fs brief injection, minutes topic, convergence decision rule, degraded visibility, minutes timeout |
 | 2026-11-10 | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
 | 2026-11-09 | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
