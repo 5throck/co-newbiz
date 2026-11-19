@@ -27,10 +27,19 @@ describe("next.config wiring", () => {
 
 describe("port layout", () => {
   const root = join(import.meta.dir, "..", "..");
-  test("dev scripts use 7748, compose maps 7749:7749", () => {
+  test("dev scripts use 7748, compose maps 7749 loopback-only", () => {
     const pkg = readFileSync(join(root, "app", "web-next", "package.json"), "utf8");
     expect(pkg).toContain("next dev -p 7748");
     expect(pkg).toContain("next start -p 7748");
-    expect(readFileSync(join(root, "docker-compose.yml"), "utf8")).toContain('"7749:7749"');
+    // Deployment contract: host port 7749 → container 7749, bound to 127.0.0.1 only.
+    // Loopback binding is a TRUST_PROXY_HEADERS precondition: an interface-wide
+    // binding would let any LAN peer hit 7749 directly and spoof CF-Connecting-IP,
+    // bypassing the Cloudflare tunnel (docs/runbooks/deployment.md §8).
+    const compose = readFileSync(join(root, "docker-compose.yml"), "utf8");
+    expect(compose).toContain('"127.0.0.1:7749:7749"');
+    // The un-hardened bare mapping must not coexist. The quoted form requires a
+    // double quote directly before 7749:7749, so the loopback line above can
+    // never satisfy it — a revert to the wide binding trips this check too.
+    expect(compose).not.toContain('"7749:7749"');
   });
 });
