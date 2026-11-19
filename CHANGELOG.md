@@ -6,6 +6,8 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-19]**: docs(env): **`.env.sample`'s Production section now documents the hosted-connector OAuth settings** — the redirect-host allowlist entry states the real semantics (empty = ANY https redirect host accepted, exact-match hostnames with no subdomain wildcarding, loopback always allowed) and carries the connector-host example `chatgpt.com,claude.ai,claude.com`; two previously undocumented variables gain entries: `CO_NEWBIZ_AUDIT_IP_HMAC_KEY` (keys the HMAC-SHA256 `ip_hash` pseudonym on `oauth_dcr_refused` audit rows — unset in production leaves rows without it plus a boot warning; generate with `openssl rand -hex 32`) and `CO_NEWBIZ_TRUST_PROXY_HEADERS=cloudflare` (per-client DCR rate-limit keying; set only after the origin port is bound to 127.0.0.1 behind the tunnel, never on a publicly bound port). Gemini is deliberately excluded from the example pending a confirmed redirect host.
+
 - **[2026-11-19]**: fix(mcp): **OAuth dynamic client registration now works for hosted connectors** — DCR registers every hosted client as a public client (ADR-0203), echoes RFC 7591 metadata, serves `openid-configuration` and path-suffixed well-known documents, checks the bearer before Origin on `/api/mcp`, audits every refusal (`oauth_dcr_refused`), keys the rate limit on a trustworthy client IP with bounded memory, and refuses brand-impersonating client names; the admin and user MCP guides gain a Cloudflare 403 troubleshooting section.
 
 - **[2026-11-18]**: chore(upgrade): template sync v0.30.0 (240 file(s) delivered; engine-scaffolded — edit or merge before commit; see templates/CHANGELOG.md v0.30.0)
