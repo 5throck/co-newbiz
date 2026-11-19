@@ -4,7 +4,7 @@
   "private": true,
   "description": "co-newbiz web + API (Next.js/Prisma). System of record as of Phase 5 cutover (ADR-0069/0070). Runs on port 7748. IMPORTANT: db/client.ts imports bun:sqlite, so next must run under the Bun runtime — the dev/start scripts pass --bun; a bare `next start` under Node fails on every DB route.",
   "scripts": {
-    "dev": "bun --bun next dev -p 7748",
+    "dev": "bun --bun next dev -H 127.0.0.1 -p 7748",
     "build": "bun --bun next build",
     "start": "bun --bun next start -p 7748",
     "prisma:pull": "prisma db pull",
