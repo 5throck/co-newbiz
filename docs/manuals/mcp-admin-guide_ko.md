@@ -86,6 +86,101 @@ counterpart: mcp-admin-guide.md
 | `smoke` 실패 | tarball 내용이나 스텁 악수가 깨졌다 | 잡 로그를 읽는다. 워크플로에서 `smoke`는 `publish` 뒤에 돈다 |
 | 소비자가 갓 발행한 버전을 설치하지 못한다 | 처음 발행 직후에는 레지스트리 조회가 잠시 늦을 수 있다. 2026-11-18에 몇 분간 404가 보였다. 한 번 본 일일 뿐 보장은 아니다 | 몇 분 뒤 다시 시도하고 그래도 안 되면 잡 결과를 확인한다 |
 
+## 6. 호스팅 커넥터: DCR이 403을 돌려줄 때(Cloudflare)
+
+**증상.** ChatGPT나 Claude.ai 커넥터를 만들 때 동적 클라이언트 등록(`POST /api/oauth/register`)에서 HTTP 403이 난다. 앱은 공개 OAuth 경로에서 403을 내지 않으므로 Cloudflare 가장자리(edge)가 원인일 가능성이 크다. Cloudflare는 앱이 아니라 관리자가 바꾼다.
+
+### 6.1 가장자리인지 앱인지 가리기
+
+1. Cloudflare에서 Security, Events를 연다. Host(`<APP_HOST>`, 그 환경이 서비스되는 호스트이며 그 환경의 CO_NEWBIZ_PUBLIC_ORIGIN 설정값을 쓴다), Path `/api/oauth/register`, 동작(action) 차단(block) 또는 도전(challenge)으로 거른다. 해당 이벤트가 작동한 서비스와 규칙 id를 알려 준다.
+2. 앱에서는 같은 시각의 `oauth_dcr_refused` 감사 행을 찾는다. 앱은 자기가 거절한 요청마다 이 행을 남기며, `reason`, `status`, `ip_hash`, `request_id`, `cf_ray`가 들어 있다.
+3. 앱 감사 행이 없는 403은 가장자리에서 온 것이다. 감사 행의 `cf_ray`와 Cloudflare 이벤트의 Ray ID를 맞추어 둘을 잇는다.
+
+### 6.2 건너뛰기(Skip) 규칙 더하기
+
+사용자 지정 규칙을 만들고 순서는 **맨 앞**에 둔다. 호스트는 환경마다 다르며 환경의 호스트는 바뀔 수 있다. 호스팅 커넥터를 서비스하는 호스트마다 규칙을 하나씩 더하고, 아래의 `<DEV_HOST>`나 `<PROD_HOST>`에 그 환경의 호스트를 적는다. 그 환경이 실제로 서비스되는 호스트를 쓴다. 이 호스트는 `CO_NEWBIZ_PUBLIC_ORIGIN`의 호스트와 같아야 한다. 그 환경의 `CO_NEWBIZ_PUBLIC_ORIGIN` 값에서 찾는다.
+
+규칙 1, 이름 `Allow OAuth DCR and discovery (<ENV>)`, `<ENV>`는 `dev`, 호스트는 `<DEV_HOST>`:
+
+```text
+(http.host eq "<DEV_HOST>" and (http.request.uri.path in {"/api/oauth/register" "/api/oauth/token" "/api/oauth/revoke" "/.well-known/openid-configuration"} or starts_with(http.request.uri.path, "/.well-known/oauth-")))
+```
+
+규칙 2, 이름 `Allow OAuth DCR and discovery (<ENV>)`, `<ENV>`는 `prod`, 호스트는 `<PROD_HOST>`. 그 환경이 호스팅 커넥터를 서비스할 때만 더한다.
+
+```text
+(http.host eq "<PROD_HOST>" and (http.request.uri.path in {"/api/oauth/register" "/api/oauth/token" "/api/oauth/revoke" "/.well-known/openid-configuration"} or starts_with(http.request.uri.path, "/.well-known/oauth-")))
+```
+
+동작(두 규칙 모두): **Skip**. 대상은 All managed rules, Super Bot Fight Mode 규칙(요금제에 따라 다름), Browser Integrity Check다. 6.1의 이벤트가 먼저 지목한 서비스만 건너뛴다. 호스팅 클라이언트는 브라우저가 아닌 User-Agent를 보내며 도전 과제를 풀 수 없다.
+
+`/api/mcp`와 `/oauth/authorize`는 규칙에 넣지 않고 그대로 보호한다. 이 경로들은 설계상 인증 없이 열려 있으므로(클라이언트 등록, 탐색) 보완 장치는 앱의 IP별 호출 제한, 리디렉션 호스트 허용 목록, 거절 감사다.
+
+### 6.3 Cloudflare 클라이언트 IP 믿기
+
+먼저 원본 서버 포트를 묶고(6.7), 그다음 운영 환경에 `CO_NEWBIZ_TRUST_PROXY_HEADERS=cloudflare`를 설정한다. 그러면 등록 호출 제한(IP당 시간당 20회, 메모리에만 있어 재시작하면 초기화)이 `CF-Connecting-IP`를 기준으로 걸린다. 설정하지 않으면 터널 뒤의 모든 클라이언트가 한 통을 같이 쓸 수 있다.
+
+### 6.4 리디렉션 호스트 허용 목록
+
+`CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST`는 호스트를 쉼표로 이은 목록이다. 루프백 호스트는 언제나 허용한다. 막힌 호스트는 403이 아니라 400 `invalid_redirect_uri`를 돌려받는다.
+
+- 운영에서는 반드시 설정한다. 설정하지 않으면 어떤 `https` 리디렉션 호스트로도 클라이언트를 등록할 수 있어, 피싱 동의 화면에 악용될 위험이 있다.
+- 후보 호스트: `chatgpt.com`, `claude.ai`, `claude.com`. 목록을 정하기 전에 실제로 쓰는 커넥터마다 호스트를 확인한다.
+- 설정은 관리자가 배포 환경에서 한다. 애플리케이션은 이 값을 스스로 정하지 않는다.
+
+예시(호스트를 먼저 확인한다):
+
+```text
+CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST=chatgpt.com,claude.ai,claude.com
+```
+
+서버는 예약된 클라이언트 이름도 거절한다. `client_name`에 ChatGPT·OpenAI, Claude·Anthropic, Gemini·Google, co-newbiz가 들어 있으면 모든 리디렉션 호스트가 그 브랜드 소유일 때만 받아들인다.
+
+| 브랜드 | 허용하는 리디렉션 호스트 |
+|---|---|
+| ChatGPT / OpenAI | `chatgpt.com`, `openai.com` |
+| Claude / Anthropic | `claude.ai`, `claude.com`, `anthropic.com` |
+| Gemini / Google | `gemini.google.com`, `google.com` |
+| co-newbiz | 애플리케이션 자체 호스트 |
+
+거절하면 400 `invalid_client_metadata`를 돌려주고 감사 사유는 `reserved_client_name`이다. 실제 ChatGPT와 Claude.ai의 등록에는 영향이 없다.
+
+### 6.5 거절 사유 코드
+
+거절할 때마다 아래 사유 가운데 하나로 `oauth_dcr_refused` 행이 남는다.
+
+| 사유 | 뜻 |
+|---|---|
+| `rate_limited` | IP별 등록 호출 한도에 이르렀다(HTTP 429) |
+| `body_not_json` | 요청 본문이 올바른 JSON이 아니다 |
+| `body_not_object` | JSON 본문이 객체가 아니다(배열, 문자열, null) |
+| `response_type_unsupported` | `response_types`가 `["code"]`가 아니다 |
+| `grant_unsupported` | `grant_types`에 `authorization_code`가 없다 |
+| `redirect_host_not_allowed` | 리디렉션 URI의 호스트가 허용 목록에 없다(6.4) |
+| `reserved_client_name` | `client_name`이 예약된 브랜드 이름을 쓰는데 리디렉션 호스트가 그 브랜드 소유가 아니다(6.4) |
+| `invalid_client_metadata` | 등록 엔진이 클라이언트 메타데이터를 거절했다 |
+| `invalid_redirect_uri` | 등록 엔진이 리디렉션 URI를 거절했다 |
+
+### 6.6 제공하는 탐색 주소
+
+- `/.well-known/oauth-authorization-server`(`/api/mcp` 꼬리가 붙은 주소도 같음)
+- `/.well-known/openid-configuration`
+- `/.well-known/oauth-protected-resource/api/mcp`
+
+### 6.7 프록시 헤더를 믿기 전에 원본 서버 포트 묶기
+
+앱의 공개 포트(`docker-compose.yml` 참고)를 모든 인터페이스에 여는 배포는 그대로 노출된다. 이 포트로 곧바로 들어오는 호출자는 `X-Forwarded-For`, `CF-Connecting-IP`, `X-Forwarded-Proto`, `cf-ray`를 위조할 수 있다. 아래 순서를 지킨다.
+
+1. 포트를 루프백에만 연다(`127.0.0.1:<APP_PORT>:<APP_PORT>`). 또는 `cloudflared`를 compose 네트워크에 넣고 포트 공개를 멈춘다. 관리자가 하는 변경이다. 소유자의 승인 없이 포트를 바꾸지 않는다.
+2. 그다음에야 `CO_NEWBIZ_TRUST_PROXY_HEADERS=cloudflare`를 설정한다(6.3).
+3. 같은 내부망의 다른 호스트에서 `http://<호스트>:<APP_PORT>`가 거절되는지 확인한다.
+
+감사 행의 `cf_ray` 값은 1단계를 마친 뒤에야 믿을 만한 증거가 된다.
+
+### 6.8 감사 가명화 키
+
+운영 환경에 `CO_NEWBIZ_AUDIT_IP_HMAC_KEY`를 설정한다. 비밀 값이므로 git에 올리지 않는다. 설정하지 않으면 `oauth_dcr_refused` 행에 `ip_hash`가 남지 않는다. 설정하면 `ip_hash`는 클라이언트 IP의 키 기반 가명 값이 되며, 키 없이는 되돌릴 수 없다.
+
 ## 관련 화면
 
 - `연결된 앱`(`/settings`) — 사용자가 자기 토큰을 발급하고 해지하는 곳.

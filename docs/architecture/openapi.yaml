@@ -593,14 +593,18 @@ paths:
   /api/oauth/register:
     post:
       operationId: oauthRegisterClient
-      summary: RFC 7591 dynamic client registration — public clients only (ADR-0154).
+      summary: RFC 7591 dynamic client registration — every client is public; any requested token_endpoint_auth_method is registered as `none` and reported as such, no secret issued (ADR-0154, ADR-0203). Unauthenticated by design; a client_name containing a reserved brand (ChatGPT/OpenAI, Claude/Anthropic, Gemini, co-newbiz) is refused with 400 invalid_client_metadata unless every redirect host belongs to that brand (ADR-0203 Decision 5); refusals are audited as `oauth_dcr_refused` (reason code only, e.g. `reserved_client_name`). Responses carry x-request-id.
       tags:
         - Tokens
       responses:
+        '201':
+          description: Client registered (RFC 7591 §3.2.1 body, not the web envelope) — client_id, client_id_issued_at, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method "none", and scope when known scopes were requested.
         '200':
           $ref: '#/components/responses/Ok'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Per-IP registration limit (20/hour) reached; audited once per IP per window.
   /api/oauth/authorize:
     get:
       operationId: oauthAuthorizeInfo

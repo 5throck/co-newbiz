@@ -5,8 +5,13 @@ import { getDb } from "../../../../../../db/client.ts";
 import { exchangeAuthorizationCode, refreshTokens } from "../../../../../../db/lib/oauth.ts";
 import { mcpResource, oauthError, oauthJson, readForm } from "../../../../lib/mcp/config.ts";
 import { preflight, withCors } from "../../../../lib/mcp/cors.ts";
+import { requestId, withRequestId } from "../../../../lib/mcp/request-meta.ts";
 
 export async function POST(request: Request) {
+  return withRequestId(await exchange(request), requestId(request));
+}
+
+async function exchange(request: Request): Promise<Response> {
   const form = await readForm(request);
   const db = getDb();
   const now = new Date().toISOString();
