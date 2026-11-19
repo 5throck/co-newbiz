@@ -23,6 +23,9 @@ permissions:
 jobs:
   build:
     name: Build image (PR gate)
+    # Single-platform (amd64) on purpose: the PR gate stays fast. The publish
+    # job's arm64 leg is validated by the first post-merge run (and was proven
+    # locally on Apple Silicon — see docs/designs/2026-10-11-port-swap-and-public-domain-access-design.md §8).
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
@@ -48,6 +51,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Multi-arch manifest: amd64 builds native on the CI runners, arm64 via
+      # QEMU emulation (slower, but one-time per push). The Apple Silicon
+      # deployment host pulls linux/arm64 natively.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - name: Log in to ghcr.io
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
@@ -59,6 +66,7 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/5throck/co-newbiz-web:latest
