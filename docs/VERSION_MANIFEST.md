@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-19T06:25:05.073Z
+**Generated**: 2026-11-19T07:16:35.301Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -259,7 +259,7 @@
 | driver-tree.ts | 1.0.0 | scripts/co-newbiz/driver-tree.ts | child_process, fs, path |
 | ecos.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/ecos.ts | N/A |
 | eligibility.test.ts | 1.0.0 | scripts/humanize/tests/eligibility.test.ts | bun:test, fs, path |
-| env-check.ts | 1.2.0 | scripts/co-newbiz/env-check.ts | fs, path |
+| env-check.ts | 1.3.0 | scripts/co-newbiz/env-check.ts | fs, path |
 | evidence-backport-scan.ts | 1.3.0 | scripts/evidence-backport-scan.ts | child_process, fs, path |
 | external-deps.ts | 1.0.0 | scripts/external-deps.ts | fs, path |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | fs, path |

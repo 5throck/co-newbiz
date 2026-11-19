@@ -49,6 +49,51 @@ describe("collectEnvDrift (design 2026-11-13-env-single-source §3.4A)", () => {
     expect(report.whitespace).toEqual([]);
   });
 
+  test("the four OAuth/request-meta keys are SSOT inventory members (§10 amendment, 2026-11-19)", () => {
+    // End-to-end proof through the classifier that the keys ADR-0203's direct
+    // process.env readers consume are inventory members: a leftover app copy
+    // with a different value must hard-fail, not slip through.
+    const report = collectEnvDrift(
+      `${[
+        "CO_NEWBIZ_PUBLIC_ORIGIN=https://root.example.org",
+        "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST=chatgpt.com,claude.ai",
+        "CO_NEWBIZ_AUDIT_IP_HMAC_KEY=hex-one",
+        "CO_NEWBIZ_TRUST_PROXY_HEADERS=cloudflare",
+      ].join("\n")}\n`,
+      `${[
+        "CO_NEWBIZ_PUBLIC_ORIGIN=https://app.example.org",
+        "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST=chatgpt.com",
+        "CO_NEWBIZ_AUDIT_IP_HMAC_KEY=hex-two",
+        "CO_NEWBIZ_TRUST_PROXY_HEADERS=",
+      ].join("\n")}\n`,
+    );
+    expect(report.divergent).toEqual([
+      "CO_NEWBIZ_PUBLIC_ORIGIN",
+      "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST",
+      "CO_NEWBIZ_AUDIT_IP_HMAC_KEY",
+      "CO_NEWBIZ_TRUST_PROXY_HEADERS",
+    ]);
+    expect(report.duplicate).toEqual([]);
+  });
+
+  test("an absent app file (empty text, the unified single-env layout) passes with all four OAuth keys in root", () => {
+    // env-check passes "" when app/web-next/.env does not exist — the expected
+    // state since the §10 amendment. Root-only SSOT keys must never be flagged.
+    const report = collectEnvDrift(
+      `${[
+        "CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org",
+        "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST=chatgpt.com,claude.ai",
+        "CO_NEWBIZ_AUDIT_IP_HMAC_KEY=deadbeef",
+        "CO_NEWBIZ_TRUST_PROXY_HEADERS=cloudflare",
+        "DATABASE_URL=file:/db/co-newbiz.sqlite",
+      ].join("\n")}\n`,
+      "",
+    );
+    expect(report.divergent).toEqual([]);
+    expect(report.duplicate).toEqual([]);
+    expect(report.whitespace).toEqual([]);
+  });
+
   test("a commented line is invisible: only active definitions count", () => {
     const report = collectEnvDrift(
       "CO_NEWBIZ_LLM_MODEL=model-a\n",

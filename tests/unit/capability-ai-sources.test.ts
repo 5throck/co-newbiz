@@ -366,16 +366,15 @@ describe("B1. web-research chain: Playwright last, opt-in, diagnosed, breaker-aw
     expect(src).toContain("playwrightSearchDetailed");
     expect(src).toContain("CHROME_PATH");
     expect(src).toContain("dynamicImport");
-    // DEC-20261113-01 (root .env SSOT): runtime config is documented in the repo-root
-    // .env.sample ONLY — app/web-next/.env.sample is the Prisma-remnant file and must
-    // not grow runtime keys again (the Next auto-load there would shadow the root value).
+    // DEC-20261113-01 (root .env SSOT) tightened by the §10 amendment
+    // (2026-11-19, single root env): the app-side sample is RETIRED — the repo
+    // carries no template for an app/web-next/.env at all, and runtime config
+    // (DATABASE_URL included) is documented in the repo-root .env.sample only.
+    expect(existsSync(join(ROOT, "app/web-next/.env.sample"))).toBe(false);
     const rootSample = readFileSync(join(ROOT, ".env.sample"), "utf8");
     expect(rootSample).toContain("WEB_SEARCH_PLAYWRIGHT_ENABLED");
     expect(rootSample).toContain("CHROME_PATH");
-    const appSample = readFileSync(join(ROOT, "app/web-next/.env.sample"), "utf8");
-    expect(appSample).not.toContain("WEB_SEARCH_PLAYWRIGHT_ENABLED");
-    expect(appSample).not.toContain("CHROME_PATH");
-    expect(appSample).toContain("DATABASE_URL");
+    expect(rootSample).toContain("DATABASE_URL");
   });
 });
 

@@ -1,18 +1,20 @@
 // Repo-root `.env` loader for the Next.js server.
 //
-// `next dev/start` runs with cwd app/web-next, so Next only auto-loads .env
-// files from there — yet operators keep pipeline credentials in the repo-root
-// `.env` (production gets `.env.prod` via the compose env_file instead, which
-// lands in process.env directly). This module walks up from cwd and imports
-// ONLY allowlisted keys that are not already set, never overriding explicit
-// values and never logging or returning values.
+// The app-side `app/web-next/.env` is RETIRED (design
+// 2026-11-13-env-single-source, amendment 2026-11-19 — single root env), so
+// Next/bun no longer auto-load a shadowing file and the repo-root `.env` is
+// the only env file in dev (production gets `.env.prod` via the compose
+// env_file instead, which lands in process.env directly). This module walks
+// up from cwd and imports ONLY allowlisted keys that are not already set,
+// never overriding explicit values and never logging or returning values.
 //
 // The allowlist is the SSOT inventory (ssotEnvKeys()/isSsotEnvKey): the source
 // adapters' credentials (derived from SOURCE_ADAPTERS[*].credentialEnv so it
 // cannot drift), the LLM and scheduler NOTIFY families, the executor agent-mode
 // family (*_AGENTS), and the exact-name keys the root .env owns — see design
-// docs/designs/2026-11-13-env-single-source-design.md §3.2. env-keys.ts and
-// scripts/lib/env-drift.ts derive their admission from this same inventory.
+// docs/designs/2026-11-13-env-single-source-design.md §3.2 (§10 amendment adds
+// the OAuth/request-meta keys). env-keys.ts and scripts/lib/env-drift.ts
+// derive their admission from this same inventory.
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { SOURCE_ADAPTERS } from "../../../scripts/co-newbiz/source-adapters.ts";
@@ -29,11 +31,15 @@ const NOTIFY_KEY = /^NOTIFY_[A-Z_0-9]+$/;
 // CO_NEWBIZ_DD_TAILOR_AGENTS). Family regex on purpose, matching the LLM/NOTIFY
 // prefix-wildcard style (DEC-20261104-04) so a future executor seam needs no loader edit.
 const AGENTS_KEY = /^CO_NEWBIZ_[A-Z_0-9]+_AGENTS$/;
-// Exact-name SSOT keys the root .env owns (design 2026-11-13-env-single-source §3.2).
+// Exact-name SSOT keys the root .env owns (design 2026-11-13-env-single-source §3.2;
+// §10 amendment, 2026-11-19, adds the OAuth/request-meta keys — standing rule: every
+// direct process.env reader (ADR-0203 shape) must be registered here, or the dev
+// server never sees its root .env value).
 // Explicitly NOT here: CO_NEWBIZ_ALLOWED_DEV_ORIGINS (its own reader at next.config eval),
-// CO_NEWBIZ_DIST_DIR (read before instrumentation — spawn env / app file only),
+// CO_NEWBIZ_DIST_DIR (read before instrumentation — spawn env only),
 // CO_NEWBIZ_API_BASE_URL / CO_NEWBIZ_API_TOKEN (MCP client contract, not server process.env),
-// DATABASE_URL (Prisma-CLI tooling remnant in app/web-next/.env).
+// DATABASE_URL (Prisma-CLI tooling: it lives in the root .env now, but prisma.config.ts
+// loads it itself — NOT via this loader).
 const SSOT_EXTRA_KEYS = [
   "CO_NEWBIZ_DB_PATH",
   "WEB_SEARCH_DDG_ENABLED",
@@ -41,6 +47,13 @@ const SSOT_EXTRA_KEYS = [
   "CHROME_PATH",
   "CO_NEWBIZ_BOOTSTRAP_MIGRATIONS",
   "CO_NEWBIZ_ALLOW_REGISTER",
+  // OAuth / request-meta keys (ADR-0203; §10 amendment 2026-11-19). Read
+  // directly from process.env at request time, so loader admission is the only
+  // channel a root .env value has to reach them in dev.
+  "CO_NEWBIZ_PUBLIC_ORIGIN",
+  "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST",
+  "CO_NEWBIZ_AUDIT_IP_HMAC_KEY",
+  "CO_NEWBIZ_TRUST_PROXY_HEADERS",
 ] as const;
 
 /** Exact-name allowlist for non-LLM keys (adapter credentials + search providers). */
@@ -91,13 +104,14 @@ export function loadRootEnvPipelineKeys(): void {
             process.env[m[1]] = value;
             fromRootEnv.add(m[1]);
           } else if (value !== process.env[m[1]]) {
-            // Boot-time drift warn (design 2026-11-13-env-single-source §3.4B):
-            // the Next auto-load of app/web-next/.env or a spawn-env value shadows
-            // a DIFFERENT root .env value. Warn-only — a dev server must not refuse
-            // to boot on config hygiene; the CLI env-check gate is the hard stop.
+            // Boot-time drift warn (design 2026-11-13-env-single-source §3.4B, §10
+            // amendment): a spawn-env value shadows a DIFFERENT root .env value. With
+            // the app-side .env retired there is no auto-load shadow source left —
+            // spawn env is the only one. Warn-only — a dev server must not refuse to
+            // boot on config hygiene; the CLI env-check gate is the hard stop.
             // Equal shadows stay silent; values are never printed.
             console.warn(
-              `[root-env] ${m[1]}: a value provided by the environment (app/web-next/.env auto-load or spawn env) shadows a different value in the repo-root .env — root .env is the SSOT; align or remove the shadowing copy`,
+              `[root-env] ${m[1]}: a value provided by the environment (spawn env) shadows a different value in the repo-root .env — root .env is the SSOT; align or remove the shadowing copy`,
             );
           }
         }

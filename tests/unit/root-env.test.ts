@@ -32,6 +32,10 @@ const TOUCHED = [
   "CHROME_PATH",
   "CO_NEWBIZ_BOOTSTRAP_MIGRATIONS",
   "CO_NEWBIZ_ALLOW_REGISTER",
+  "CO_NEWBIZ_PUBLIC_ORIGIN",
+  "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST",
+  "CO_NEWBIZ_AUDIT_IP_HMAC_KEY",
+  "CO_NEWBIZ_TRUST_PROXY_HEADERS",
 ];
 let tmp: string;
 let saved: Record<string, string | undefined>;
@@ -247,6 +251,57 @@ describe("SSOT inventory widening (design 2026-11-13-env-single-source §3.2)", 
     expect(process.env.CO_NEWBIZ_DB_PATH).toBe("preset");
     expect(process.env.CO_NEWBIZ_BUSINESS_CASE_AGENTS).toBe("llm");
     expect(envKeySource("CO_NEWBIZ_DB_PATH")).toBe("process_env");
+  });
+});
+
+describe("OAuth/request-meta SSOT keys (design 2026-11-13-env-single-source §10 amendment, 2026-11-19)", () => {
+  function loadWith(envText: string): void {
+    writeFileSync(join(tmp, ".env"), envText);
+    resetRootEnvForTests(tmp);
+    loadRootEnvPipelineKeys();
+  }
+
+  // The §10 gap this amendment closes: these keys are read directly from
+  // process.env at request time (request-meta.ts, oauth register route,
+  // mcp/config.ts), so without inventory admission a root .env value never
+  // reached the dev server (verified 2026-11-19: a probe registration with a
+  // non-allowlisted redirect host returned 201 because the allowlist never
+  // loaded).
+  test("admits each of the four OAuth/request-meta keys via isSsotEnvKey", () => {
+    for (const k of [
+      "CO_NEWBIZ_PUBLIC_ORIGIN",
+      "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST",
+      "CO_NEWBIZ_AUDIT_IP_HMAC_KEY",
+      "CO_NEWBIZ_TRUST_PROXY_HEADERS",
+    ]) {
+      expect(isPipelineEnvKey(k)).toBe(true);
+      expect(ssotEnvKeys().has(k)).toBe(true);
+    }
+  });
+
+  test("imports the four keys from the root .env walk", () => {
+    loadWith(
+      `${[
+        "CO_NEWBIZ_PUBLIC_ORIGIN=https://newbiz.bizknights.org",
+        "CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST=chatgpt.com,claude.ai",
+        "CO_NEWBIZ_AUDIT_IP_HMAC_KEY=deadbeef",
+        "CO_NEWBIZ_TRUST_PROXY_HEADERS=cloudflare",
+      ].join("\n")}\n`,
+    );
+    expect(process.env.CO_NEWBIZ_PUBLIC_ORIGIN).toBe("https://newbiz.bizknights.org");
+    expect(process.env.CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST).toBe("chatgpt.com,claude.ai");
+    expect(process.env.CO_NEWBIZ_AUDIT_IP_HMAC_KEY).toBe("deadbeef");
+    expect(process.env.CO_NEWBIZ_TRUST_PROXY_HEADERS).toBe("cloudflare");
+    expect(envKeySource("CO_NEWBIZ_PUBLIC_ORIGIN")).toBe("root_env");
+  });
+
+  test("never overrides a spawn-env value for the four keys", () => {
+    writeFileSync(join(tmp, ".env"), "CO_NEWBIZ_PUBLIC_ORIGIN=https://from-root.example.org\n");
+    process.env.CO_NEWBIZ_PUBLIC_ORIGIN = "https://spawn.example.org";
+    resetRootEnvForTests(tmp);
+    loadRootEnvPipelineKeys();
+    expect(process.env.CO_NEWBIZ_PUBLIC_ORIGIN).toBe("https://spawn.example.org");
+    expect(envKeySource("CO_NEWBIZ_PUBLIC_ORIGIN")).toBe("process_env");
   });
 });
 

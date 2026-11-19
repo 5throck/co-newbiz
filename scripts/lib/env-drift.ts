@@ -1,11 +1,15 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * env-drift.ts — pure drift classifier for the env SSOT split (ADR-0075 gate side).
  *
- * The repo-root .env is the SSOT for every co-newbiz runtime key; the only
- * legitimate app/web-next/.env remnant is the Prisma-CLI DATABASE_URL (design
- * docs/designs/2026-11-13-env-single-source-design.md §3.4A). This module
- * parses the two files and classifies SSOT-key overlap:
+ * The repo-root .env is the SSOT for every co-newbiz runtime key and, since the
+ * §10 amendment (2026-11-19, single root env), the ONLY env file: the app-side
+ * app/web-next/.env is retired and its absence is the expected state. This
+ * classifier still runs when an operator machine has not migrated yet (a
+ * leftover file exists), so a stale SSOT duplicate still hard-fails env-check
+ * and an identical duplicate still warns (design
+ * docs/designs/2026-11-13-env-single-source-design.md §3.4A / §10). It parses
+ * the two texts and classifies SSOT-key overlap:
  *
  *   - divergent  : key defined in BOTH files with different normalized values
  *                  — the exact failure class that produced two divergent LLM
