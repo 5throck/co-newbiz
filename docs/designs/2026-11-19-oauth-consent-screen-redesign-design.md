@@ -1,7 +1,7 @@
 ---
 lang: en
 date: 2026-11-19
-status: draft-for-approval
+status: implemented
 owner: ux-designer-agent (design), pm (dispatch)
 related: docs/designs/2026-10-08-wave-m-mcp-parity-design.md (§4.2/§10/§11 — consent design of record), docs/designs/2026-11-19-oauth-manual-client-registration-design.md, docs/design-system/design-guide.md, docs/design-system/design-tokens.md, docs/design-system/design-screens.md, ADR-0154, ADR-0203
 spec: oauth-consent-screen-redesign

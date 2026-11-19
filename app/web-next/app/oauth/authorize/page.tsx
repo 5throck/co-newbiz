@@ -1,15 +1,21 @@
 "use client";
 
-// OAuth 동의 화면 — ADR-0154 §2, design §4.2/§11.
+// OAuth 동의 화면 — ADR-0154 §2, design 2026-11-19-oauth-consent-screen-redesign.
 // MCP 커넥터(ChatGPT·Claude.ai 등)가 로그인한 사용자를 대신해 co-newbiz에
 // 접근하도록 허용할지 사람이 자기 웹 세션에서 결정한다. 화면 로드만으로는
 // 아무 일도 일어나지 않으며(no action on load), 기본 동작은 하나("허용")다.
 // 미검증 클라이언트는 텍스트 배지로 표시한다(색상만으로 구분하지 않음).
+//
+// 레이아웃(2026-11-19 재설계): 워크스페이스 크롬 없이(AppShell bare 경로)
+// 32rem 중앙 정렬 카드 3블록 — 신원(누가 묻는가) → 권한(무엇을 얻는가) →
+// 경계 노트(무엇을 못 하는가). 피싱 판별 핵심인 리다이렉트 돌아갈 주소는
+// 모노스페이스 대형 블록으로 승격한다. 거부(btn-danger)가 DOM/탭 순서에서
+// 먼저 온다(습관적 Enter가 안전 쪽에 떨어지게).
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "../../../lib/api.ts";
 import Link from "next/link";
-import { Button, PageState } from "../../../components/ui.tsx";
+import { Button, PageState, PrimaryAction } from "../../../components/ui.tsx";
 
 interface ConsentInfo {
   valid: boolean;
@@ -75,14 +81,18 @@ export default function OAuthAuthorizePage() {
   const failed = !!error || (info !== null && !info.valid);
 
   return (
-    <main aria-labelledby="consent-heading">
+    <main aria-labelledby="consent-heading" className="oauth-consent">
       <h1 id="consent-heading" ref={headingRef} tabIndex={-1}>
         {failed ? t("headingFailed") : t("heading")}
       </h1>
       <p aria-live="polite" className="sr-only">{status}</p>
-      {!info && !error && <PageState state="loading" />}
+      {!info && !error && (
+        <div className="card">
+          <PageState state="loading" />
+        </div>
+      )}
       {error && (
-        <section aria-labelledby="invalid-heading">
+        <section aria-labelledby="invalid-heading" className="card">
           <h2 id="invalid-heading">{t("invalidHeading")}</h2>
           <p role="alert">{t("invalidMissingBody")}</p>
           <details className="review-dev"><summary>{t("devNote")}</summary><span>{error}</span></details>
@@ -93,7 +103,7 @@ export default function OAuthAuthorizePage() {
         </section>
       )}
       {info && !info.valid && (
-        <section aria-labelledby="invalid-heading">
+        <section aria-labelledby="invalid-heading" className="card">
           <h2 id="invalid-heading">{t("invalidHeading")}</h2>
           <p role="alert">{t("invalidBody")}</p>
           {info.error_description && <details className="review-dev"><summary>{t("devNote")}</summary><span>{info.error_description}</span></details>}
@@ -103,41 +113,72 @@ export default function OAuthAuthorizePage() {
         </section>
       )}
       {info?.valid && info.client && (
-        <section aria-labelledby="client-heading">
-          <h2 id="client-heading">
-            {info.client.name}{" "}
-            <span className={`status-chip ${info.client.verified ? "status-green" : "status-amber"}`}>
-              {info.client.verified ? t("chipVerified") : t("chipUnverified")}
-            </span>
-          </h2>
-          <p className="objective">
-            {t("objLead")}<strong>{info.user_id}</strong>{t("objMid")}<strong>{info.redirect_host}</strong>
-          </p>
-          {!info.client.verified && (
-            <p>{t("unverifiedNote")}</p>
-          )}
-          <h3>{t("requestedScopesHeading")}</h3>
-          <dl>
-            {info.scopes?.map((s) => (
-              <div key={s.scope}>
-                <dt>{s.scope}</dt>
-                <dd>
-                  {t(SCOPE_KEY[s.scope])}
-                  {!s.allowed && <span className="status-chip status-red">{t("scopeNotAllowedChip")}</span>}
-                </dd>
+        <>
+          {/* 신원 카드 — 누가 묻는가: 이름+검증 배지, 계정, 돌아갈 주호스트. */}
+          <section aria-labelledby="client-heading" className="card">
+            <h2 id="client-heading">
+              {info.client.name}{" "}
+              <span className={`status-chip ${info.client.verified ? "status-green" : "status-amber"}`}>
+                {info.client.verified ? t("chipVerified") : t("chipUnverified")}
+              </span>
+            </h2>
+            <p className="oauth-lead">{t("consentLead")}</p>
+            {!info.client.verified && (
+              <p className="oauth-warning">
+                <span aria-hidden="true">⚠</span> {t("unverifiedNote")}
+              </p>
+            )}
+            <dl className="oauth-facts">
+              <div className="oauth-fact">
+                <dt className="oauth-fact-label">{t("accountLabel")}</dt>
+                <dd className="oauth-fact-value">{info.user_id}</dd>
               </div>
-            ))}
-          </dl>
-          <p>{t("noGateNote")}</p>
-          <div className="flex gap-2">
-            <Button variant="primary" onClick={() => void decide("approve")} disabled={busy || blocked}>
-              {t("approveBtn")}
-            </Button>
-            <Button onClick={() => void decide("deny")} disabled={busy}>
+            </dl>
+            {/* 돌아갈 주소 블록 — 서버가 등록 redirect URI에서 뽑은 호스트.
+                링크가 아니라 증거다: 클릭 대상·복사 단축 없이 평문으로만 렌더. */}
+            <div className="oauth-host-block">
+              <dl className="oauth-facts">
+                <div className="oauth-fact">
+                  <dt className="oauth-fact-label">
+                    <span aria-hidden="true">↗ </span>{t("redirectHostLabel")}
+                  </dt>
+                  <dd className="oauth-host-value">{info.redirect_host}</dd>
+                </div>
+              </dl>
+              <p className="oauth-host-caution">{t("redirectHostCaution")}</p>
+            </div>
+          </section>
+          {/* 권한 카드 — 무엇을 얻는가: 구분선 리스트, 역할이 못 주는 권한은 배지. */}
+          <section aria-labelledby="scopes-heading" className="card">
+            <h3 id="scopes-heading">{t("requestedScopesHeading")}</h3>
+            <dl className="oauth-scopes">
+              {info.scopes?.map((s) => (
+                <div key={s.scope} className="oauth-scope-row">
+                  <dt className="oauth-scope-name">{s.scope}</dt>
+                  <dd className="oauth-scope-desc">
+                    {t(SCOPE_KEY[s.scope])}
+                    {!s.allowed && <span className="status-chip status-red">{t("scopeNotAllowedChip")}</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          <p className="oauth-note">{t("noGateNote")}</p>
+          {/* 거부가 먼저(D5): 첫 탭 정지·습관적 Enter 입력이 안전 쪽으로 떨어진다.
+              승인은 커밋 위치(읽기 흐름의 끝)에 후행하며, 막혔을 때 이유를
+              PrimaryAction이 인접 텍스트(.primary-reason + aria-describedby)로 보여준다. */}
+          <div className="oauth-actions">
+            <Button variant="danger" onClick={() => void decide("deny")} disabled={busy}>
               {t("denyBtn")}
             </Button>
+            <PrimaryAction
+              label={t("approveBtn")}
+              onClick={() => void decide("approve")}
+              disabled={busy || blocked}
+              disabledReason={blocked ? t("approveBlockedNote") : undefined}
+            />
           </div>
-        </section>
+        </>
       )}
     </main>
   );
