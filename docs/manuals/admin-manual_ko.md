@@ -43,7 +43,7 @@ counterpart: admin-manual.md
 
 ## 6. 데이터 소스 관리
 
-**API 키는 절대 표시되지 않는다** — 관리 콘솔은 키 값이 아니라 존재 여부와 최종 성공 시각만 보여준다. UI 취향의 문제가 아니라 확정 규칙이다(design 4.9절).
+**API 키는 절대 표시되지 않는다** — 관리 콘솔은 키 값이 아니라 존재 여부와 최종 성공 시각만 보여준다. 확정 규칙이며 UI 취향과는 무관하다(design 4.9절).
 
 ## 7. 로그와 감사
 
@@ -53,6 +53,7 @@ counterpart: admin-manual.md
 ## 8. 관련 문서
 
 - `docs/governance/governance-operations.md` — waiver 및 해석 운영(compliance-officer의 도메인. 이 매뉴얼의 시스템 관리 범위와 인접하지만 별개다).
+- [`mcp-admin-guide_ko.md`](mcp-admin-guide_ko.md) — MCP 개인 토큰 정책, 패키지 릴리스, 90일마다 하는 `NPM_TOKEN` 순환. [`mcp-user-guide_ko.md`](mcp-user-guide_ko.md) — AI 클라이언트 연결의 사용자 쪽 안내.
 
 ## 9. 관련 화면
 

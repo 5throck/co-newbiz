@@ -13,7 +13,7 @@ For project identity and standards start at
 
 | Folder | Contents |
 |--------|----------|
-| [`architecture/`](architecture/) | Engineering contracts — SRS, API spec, OpenAPI, DB schema, UI spec, MCP integration (repo stdio server + GitHub Packages npm distribution) |
+| [`architecture/`](architecture/) | Engineering contracts — SRS, API spec, OpenAPI, DB schema, UI spec, MCP integration (repo stdio server + npm distribution: npmjs.com primary, GitHub Packages secondary) |
 | [`governance/`](governance/) | Process and governance operations — process map, RACI, RAG framework, ops cadence, traceability |
 | [`security/`](security/) | Security model, baseline, and policy |
 | [`design-system/`](design-system/) | Design guide and the design philosophy/tokens/components/screens/accessibility pages |
@@ -25,7 +25,7 @@ For project identity and standards start at
 | [`decisions/`](decisions/) | Dated decision records (threshold approvals, vocabularies, agenda packs) |
 | [`designs/`](designs/) | Design documents of record for major work rounds |
 | [`lifecycle/`](lifecycle/) | Agent/skill/script governance records (one per agent under `agents/`) |
-| [`manuals/`](manuals/) | Three-audience user guides — business / admin / operations — each with a Korean counterpart (`*_ko.md`) |
+| [`manuals/`](manuals/) | Three-audience user guides — business / admin / operations — plus the MCP user guide (`mcp-user-guide.md`) and MCP admin guide (`mcp-admin-guide.md`), each with a Korean counterpart (`*_ko.md`). The Korean counterparts are polished through Humanize KR (2026-11-19 batch); the in-app wiki pages are likewise polished. |
 | [`pilots/`](pilots/) | Real-case manual pilot records that validated the procedures |
 | [`research/`](research/) | Sourced external research inputs |
 | [`runbooks/`](runbooks/) | Operational runbooks (deployment, backup/restore) |

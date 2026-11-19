@@ -12,8 +12,10 @@
 | Claude Desktop App | `Bash` | `Agent()` (limited Teams) | `Read` / `Write` / `Edit` | `SendMessage` (limited) |
 | Antigravity (VS Code) | `run_command` | `define_subagent` + `invoke_subagent` | `view_file` / `write_to_file` | `send_message` (by `conversationID`) |
 | Antigravity CLI (Gemini CLI) | `run_command` | `define_subagent` + `invoke_subagent` | `view_file` / `write_to_file` | `send_message` (by `conversationID`) |
+| Codex CLI / Desktop App / IDE extension | built-in shell + file tools | **None** — no native subagent tool | built-in shell + file tools | — |
+| Hermes Agent | built-in shell + file tools | **None** — no specialist-dispatch tool | built-in shell + file tools | — |
 
-> **Note**: Antigravity VS Code does **not** fire hooks (extension limitation). Claude Desktop App hooks may fire intermittently. Claude CLI hooks fire reliably.
+> **Note**: Antigravity VS Code does **not** fire hooks (extension limitation). Claude Desktop App hooks may fire intermittently. Claude CLI hooks fire reliably. Codex and Hermes surfaces are **prompt-only** for subagent dispatch — run the §3 sequential fallback there (see §3.1).
 
 ---
 
@@ -54,18 +56,20 @@ Agent(
 
 ### 1.2 Model Tier Mapping
 
+> Registry model IDs live ONLY in docs/workspace-schema.json (`models.*`) and the CLAUDE.md §6 prose; this page deliberately carries no literal IDs (skills must not hardcode model IDs — workspace directive 2026-10-11).
+
 | Tier | Registry Model ID | Agent `model` Parameter | Typical Use |
 |------|-------------------|------------------------|-------------|
-| High | `opus` | `"opus"` | Synthesis agent, complex reasoning, merge conflicts |
-| Medium | `sonnet` | `"sonnet"` | Persona reviewers (§6), proofreaders (§7), SVG designer (§7.5) |
-| Low | `haiku` | `"haiku"` | Structural validation, simple checks, formatting |
+| High | `docs/workspace-schema.json → models.claude.high` | `"opus"` | Synthesis agent, complex reasoning, merge conflicts |
+| Medium | `docs/workspace-schema.json → models.claude.medium` | `"sonnet"` | Persona reviewers (§6), proofreaders (§7), SVG designer (§7.5) |
+| Low | `docs/workspace-schema.json → models.claude.low` | `"haiku"` | Structural validation, simple checks, formatting |
 
-> **docs-writer tier**: Medium (`sonnet`) — per 2026-05-28 team restructuring.
+> **docs-writer tier**: Medium tier — per 2026-05-28 team restructuring.
 
-**Translation rule**: When dispatching, translate the agent's tier to its registry model, then to the matching alias:
-- High → `opus` → `model = "opus"`
-- Medium → `sonnet` → `model = "sonnet"`
-- Low → `haiku` → `model = "haiku"`
+**Translation rule**: When dispatching, translate the agent's tier to its registry model (`docs/workspace-schema.json → models.claude.<tier>`), then to the matching alias:
+- High → `models.claude.high` → `model = "opus"`
+- Medium → `models.claude.medium` → `model = "sonnet"`
+- Low → `models.claude.low` → `model = "haiku"`
 
 ### 1.3 Parallel Dispatch
 
@@ -150,11 +154,11 @@ Spawn parallel instances to execute dedicated work concurrently. PM **must** exp
 
 | Tier | Model ID | Thinking Parameter | Typical Use |
 |------|----------|-------------------|-------------|
-| High | `pro` | `thinking_level="medium"` | Synthesis agent, complex reasoning |
-| Medium | `flash` | (none) | Persona reviewers (§6), proofreaders (§7), SVG designer (§7.5) |
-| Low | `flash` | (none) | Structural validation, simple checks |
+| High | `docs/workspace-schema.json → models.gemini.high` | `thinking_level="medium"` | Synthesis agent, complex reasoning |
+| Medium | `docs/workspace-schema.json → models.gemini.medium` | (none) | Persona reviewers (§6), proofreaders (§7), SVG designer (§7.5) |
+| Low | `docs/workspace-schema.json → models.gemini.low` | (none) | Structural validation, simple checks |
 
-> **Note**: Medium and Low tiers share the same model (`flash`) on the Gemini platform. The distinction is operational — Low-tier tasks get shorter prompts and simpler instructions. When writing the `Model` column in execution plan tables, use the literal Gemini model ID (e.g. `pro`), not a Claude-style short alias.
+> **Note**: Medium and Low tiers share the same registry model (see `models.gemini.medium` / `models.gemini.low`) on the Gemini platform. The distinction is operational — Low-tier tasks get shorter prompts and simpler instructions. When writing the `Model` column in execution plan tables, use the literal Gemini model ID from the registry (`models.gemini.*`), not a Claude-style short alias.
 
 ### 2.3 send_message for Inter-Agent Communication
 
@@ -184,6 +188,18 @@ The platform supports **Reactive Wakeup**: you do not need to poll or query task
 ## 3. Fallback: Single-Agent Sequential Review
 
 When subagent dispatch is **unavailable** (e.g., Claude Desktop App without Teams enabled, or a platform that lacks subagent tools entirely), fall back to a **single-agent sequential review** using personas/lenses as a structured checklist.
+
+### 3.1 Prompt-Only Surfaces: Codex and Hermes
+
+Codex (CLI, Desktop App, IDE extension) has **no native subagent tool**, and Hermes Agent has **no specialist-dispatch tool** — their role declarations (CODEX.md / HERMES.md) mandate loading each specialist's `agents/<name>.md` definition as role context and executing plan rows sequentially in-session.
+
+On these surfaces, **always** run the sequential fallback below:
+
+1. Adopt each §6 persona and each §7 lens in-session, one at a time (per the Degraded Workflow below), with the matching `agents/<name>.md` definition loaded as role context.
+2. Apply the "Tip for sequential mode" — review only the relevant tab/section per pass to limit context-window bias.
+3. Merge and apply all findings in a single edit pass (Degraded Workflow Step 4).
+
+Do not attempt parallel dispatch on these surfaces; there is no subagent primitive to parallelize with, and the verification rigor is unchanged (see the Sequential vs. Parallel Comparison below).
 
 ### Degraded Workflow
 
@@ -278,11 +294,11 @@ After all sequential passes, merge all findings, deduplicate, and apply fixes to
 
 | Role | Claude Model | Gemini Model |
 |------|-------------|--------------|
-| Domain Expert | `sonnet` | `flash` |
-| Devil's Advocate | `sonnet` | `flash` |
-| Clarity Editor | `sonnet` | `flash` |
-| Consistency Auditor | `sonnet` | `flash` |
-| Synthesis + Apply | `opus` | `pro` |
+| Domain Expert | `sonnet` | `models.gemini.medium` |
+| Devil's Advocate | `sonnet` | `models.gemini.medium` |
+| Clarity Editor | `sonnet` | `models.gemini.medium` |
+| Consistency Auditor | `sonnet` | `models.gemini.medium` |
+| Synthesis + Apply | `opus` | `models.gemini.high` |
 
 **Claude Code — Parallel Dispatch (single turn)**:
 
@@ -357,13 +373,13 @@ Agent(description = "§6 Synthesis — merge findings and apply fixes",
 
 | Role | Claude Model | Gemini Model |
 |------|-------------|--------------|
-| Grammar Checker | `sonnet` | `flash` |
-| Spelling + Terminology | `sonnet` | `flash` |
-| Loanword Refinement | `sonnet` | `flash` |
-| Style + Tone | `sonnet` | `flash` |
-| Merge + Apply | `sonnet` | `flash` |
+| Grammar Checker | `sonnet` | `models.gemini.medium` |
+| Spelling + Terminology | `sonnet` | `models.gemini.medium` |
+| Loanword Refinement | `sonnet` | `models.gemini.medium` |
+| Style + Tone | `sonnet` | `models.gemini.medium` |
+| Merge + Apply | `sonnet` | `models.gemini.medium` |
 
-> Language proofreading is less reasoning-intensive than content verification, so `sonnet`/`flash` is sufficient even for the merge step.
+> Language proofreading is less reasoning-intensive than content verification, so the Medium tier (`sonnet` / `models.gemini.medium`) is sufficient even for the merge step.
 
 **Claude Code — Parallel Dispatch (single turn)**:
 
@@ -438,7 +454,7 @@ Agent(description = "§7 Merge proofreading findings and apply",
 
 | Role | Claude Model | Gemini Model |
 |------|-------------|--------------|
-| SVG Designer | `sonnet` | `flash` |
+| SVG Designer | `sonnet` | `models.gemini.medium` |
 
 > SVG creation is a focused task that benefits from a single specialist rather than parallel dispatch. The designer receives the report section context and produces a self-contained inline SVG string.
 
@@ -490,6 +506,6 @@ Agent(
 
 | Tier | Claude Alias | Claude Registry ID | Gemini Model ID |
 |------|-------------|-------------------|-----------------|
-| **High** | `"opus"` | `opus` | `pro` |
-| **Medium** | `"sonnet"` | `sonnet` | `flash` |
-| **Low** | `"haiku"` | `haiku` | `flash` |
+| **High** | `"opus"` | `docs/workspace-schema.json → models.claude.high` | `docs/workspace-schema.json → models.gemini.high` |
+| **Medium** | `"sonnet"` | `docs/workspace-schema.json → models.claude.medium` | `docs/workspace-schema.json → models.gemini.medium` |
+| **Low** | `"haiku"` | `docs/workspace-schema.json → models.claude.low` | `docs/workspace-schema.json → models.gemini.low` |

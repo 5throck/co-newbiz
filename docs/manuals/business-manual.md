@@ -58,3 +58,4 @@ Per meeting M5, the six mandatory validators resolve in this order when you're a
 - `/flows` — stage-flow visualization with a dry-run lane (ADR-0183).
 - UI language switch — ko/en message catalogs behind cookie-based locale negotiation (ADR-0184).
 - `/wiki` — in-app viewer for the user-manual wiki.
+- [`mcp-user-guide.md`](mcp-user-guide.md) — connecting an AI client (Connected Apps screen, personal API token).

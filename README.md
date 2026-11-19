@@ -1,6 +1,6 @@
 ---
 sync_version: 1
-content_hash: fb5988ac764b6f35c4d975006a810973d893772dd756e4d680eeec0d307d948e
+content_hash: 16fdeeeef213b4d0586dce8cbcf745a87a79ddd9ee1c1aa430b5b1e7a0dfe7db
 ---
 
 # co-newbiz
@@ -95,7 +95,7 @@ flowchart LR
   mcpStdio -. "propose only;<br/>a person confirms" .-> web
 ```
 
-The stdio MCP server is also distributed as the npm package `@co-newbiz/co-newbiz-mcp` on GitHub Packages — install with `bunx @co-newbiz/co-newbiz-mcp` and a personal access token (`read:packages`), no repository checkout needed.
+The stdio MCP server is also distributed as the npm package `@co-newbiz/co-newbiz-mcp`. The primary channel is npmjs.com, so install needs no repository checkout and no token: `bunx @co-newbiz/co-newbiz-mcp`, with `bun` as the only prerequisite (no `.npmrc`, no personal access token). The same version also publishes to GitHub Packages as a secondary channel, which does require the `@co-newbiz` scope mapping plus a `read:packages` personal access token.
 
 AI agents can only create proposals. Gate decisions, the S12 transition and closure are recorded by a person on the same screens shown in the demo.
 
@@ -154,7 +154,7 @@ Your partners consist of specialized agents, each with a distinct role. The **Pr
 
 ## Skills
 
-The team ships 120+ workflow skills (governance authoring, due diligence playbooks, financial analysis, platform operations). The maintained index lives at [skills/SKILLS.md](skills/SKILLS.md); per-skill instructions are in `skills/<name>/SKILL.md`, with mirrored copies under `.claude/skills/`, `.gemini/skills/`, and `.agents/skills/`.
+The team ships 120+ workflow skills (governance authoring, due diligence playbooks, financial analysis, platform operations). The maintained index lives at [skills/SKILLS.md](skills/SKILLS.md); per-skill instructions are in `skills/<name>/SKILL.md`, with mirrored copies under `.claude/skills/`, `.gemini/skills/`, and `.agents/skills/`. Korean-language deliverables are polished through the Humanize KR external dependency before output (skill `humanize-polish`, spec `humanize-polish`).
 
 ## Session Start Checklist
 
@@ -209,4 +209,4 @@ Internal workspace project — not for external distribution. Governed by the sa
 
 ---
 
-*Last Updated: 2026-11-18*
+*Last Updated: 2026-11-19*

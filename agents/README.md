@@ -26,7 +26,7 @@ Register every agent in `AGENTS.md` and verify with `bun run agent:verify`.
 
 ## Agent classes (readiness audit 2026-08-23; expanded 2026-09-04)
 
-41 agents — four classes plus two outside them (`pm`, the coordinator itself, and the shared `i18n-specialist`); the classes, not the individual names, are the stable contract:
+45 agents — four classes plus six outside them (`pm`, the coordinator itself, and the five remaining `_shared` agents — `i18n-specialist`, `automation-engineer`, `contract-gate-engineer`, `design-system-lead`, `public-data-analyst`); the classes, not the individual names, are the stable contract:
 
 | Class | Count | Dispatch behavior |
 |---|---|---|

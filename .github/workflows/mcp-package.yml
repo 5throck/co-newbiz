@@ -1,4 +1,5 @@
-# Publish @co-newbiz/co-newbiz-mcp to GitHub Packages on mcp-v* tags.
+# Publish @co-newbiz/co-newbiz-mcp on mcp-v* tags — dual publish, two registries
+# from one tag and one manifest version.
 # Design of record: docs/designs/2026-11-18-mcp-package-distribution-design.md.
 # Distribution channel only — the source of truth stays mcp/co-newbiz/ in this
 # repository (ADR-0011 REST-only relay; the tarball gate below keeps db/app
@@ -6,6 +7,14 @@
 # Jobs re-pack from the tagged commit instead of passing artifacts: npm pack
 # is deterministic for the same commit, so no upload/download actions are
 # needed and every action used is SHA-pinned.
+#
+# PRIMARY channel: registry.npmjs.org. npmjs.com serves public packages
+#   anonymously by design, so a consumer installs with no .npmrc and no PAT —
+#   `bunx @co-newbiz/co-newbiz-mcp` just works.
+# SECONDARY channel: npm.pkg.github.com. GitHub Packages npm authenticates
+#   every registry request, public packages included (anonymous requests get
+#   401/403), so it can never be token-free. Retained for consumers already on
+#   that auth path.
 name: MCP package publish
 
 on:
@@ -63,8 +72,11 @@ jobs:
             console.log(`tarball OK — ${paths.length} files, all within the mcp/co-newbiz subtree`);
           '
 
+  # SECONDARY channel. Independent of publish-npmjs: both jobs `needs: guard`
+  # and run in parallel, with no ordering dependency — each publishes the same
+  # manifest version to its own registry and neither consumes the other's output.
   publish:
-    name: Publish to npm.pkg.github.com
+    name: Publish to npm.pkg.github.com (secondary)
     needs: guard
     runs-on: ubuntu-latest
     steps:
@@ -87,6 +99,34 @@ jobs:
           # keeps a future first publish (after package deletion) public
           # instead of inheriting the registry's private default.
           npm publish --access public
+
+  # PRIMARY channel. Same version, same tag, same tagged commit as `publish` —
+  # dual publish exists so token-free installs are possible (see the header
+  # comment). Reuses `guard` instead of repeating the tarball/version checks.
+  publish-npmjs:
+    name: Publish to registry.npmjs.org (primary)
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+
+      # The publish job above routes @co-newbiz at npm.pkg.github.com through
+      # its own ~/.npmrc. This job must NOT inherit that routing: a
+      # @co-newbiz:registry= line pointing at GitHub Packages would send this
+      # publish to the wrong registry and fail on auth/MCP_PACKAGES_PAT. Each
+      # job gets a fresh runner so ~/.npmrc is already job-local, but this job
+      # writes a fresh file containing ONLY the npmjs auth line, so the routing
+      # is explicit in the file itself rather than implicit in runner isolation.
+      # The scope resolves to npmjs by default — no scope mapping needed.
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN" > ~/.npmrc
+          cd mcp/co-newbiz
+          # --access public: a first publish of a scoped package defaults to
+          # restricted/private; npmjs scoped packages require the explicit flag.
+          npm publish --access public --registry https://registry.npmjs.org
 
   smoke:
     name: Smoke — install tarball, stdio initialize + tools/list

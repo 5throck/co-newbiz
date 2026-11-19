@@ -53,7 +53,7 @@ export const SPEC_VERSION = "2.21.3";
 export const CATALOG_SOURCES = {
   "promptsJson": "6d90db3259ca64d1",
   "flowSpecYaml": "593b6f78d233c3b9",
-  "agentRoster": "4f4cf81169a7e46f"
+  "agentRoster": "ca52ae0fb7e729ce"
 };
 
 export const PM_CATALOG: Record<PromptKey, PmCatalogEntry> = {

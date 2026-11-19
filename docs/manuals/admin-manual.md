@@ -52,6 +52,7 @@ Account management, regulation-version administration, master-data administratio
 ## 8. Related
 
 - `docs/governance/governance-operations.md` — waiver and interpretation administration (compliance-officer's domain, adjacent to but distinct from this manual's system-admin scope).
+- [`mcp-admin-guide.md`](mcp-admin-guide.md) — MCP personal-token policy, package release, and the 90-day `NPM_TOKEN` rotation; [`mcp-user-guide.md`](mcp-user-guide.md) — the user-side guide to connecting an AI client.
 
 ## 9. Related Screens
 

@@ -40,7 +40,7 @@ When leading execution and improvement tasks, PM MUST use the 3-Tier model strat
 
 ## Roster Overview
 
-**41 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
+**45 agents** across four domains, coordinated by PM as New Business Review Lead. Domain leads are design and review owners, not dispatchers — the workspace flat PM Gateway is preserved in full; see `agents/pm.md` for the coordination loop.
 
 | Domain | Count | Lead |
 |---|---|---|
@@ -49,7 +49,7 @@ When leading execution and improvement tasks, PM MUST use the 3-Tier model strat
 | technical | 11 | `platform-lead` |
 | industry | 1 | `industry-lead` |
 | region | 1 | `region-lead` |
-| `_shared` | 2 | — |
+| `_shared` | 6 | — |
 
 ---
 
@@ -117,12 +117,16 @@ When leading execution and improvement tasks, PM MUST use the 3-Tier model strat
 |---|---|---|---|---|
 | **region-lead** | [`agents/region-lead.md`](agents/region-lead.md) | High | _lead | Domain lead for region — owns the region-profiles/*.yaml system |
 
-## Shared — Belongs to No Single Domain (2)
+## Shared — Belongs to No Single Domain (6)
 
 | Agent | File | Tier | Subdomain | Role |
 |---|---|---|---|---|
 | docs-writer | [`agents/docs-writer.md`](agents/docs-writer.md) | Medium | _shared | Document formatting and language-policy enforcement across all four domains |
 | i18n-specialist | [`agents/i18n-specialist.md`](agents/i18n-specialist.md) | Medium | _shared | Locale configuration (BCP 47), locale-specific formatting, text layout guidance, and the i18n audit suite across all four domains |
+| Automation Engineer | [`agents/automation-engineer.md`](agents/automation-engineer.md) | Medium | _shared | Executes the /sync pipeline row, implements repository automation (project scripts, hooks, CI workflow files), and implements approved plans for the project software and tooling layer with their unit tests |
+| Contract Gate Engineer | [`agents/contract-gate-engineer.md`](agents/contract-gate-engineer.md) | Medium | _shared | Owns runtime schema (Zod) contract patterns for interface boundaries, IPC channels, and API endpoints, and the contract-safety rules around them. Owns the zod-contract-gate skill |
+| Design System Lead | [`agents/design-system-lead.md`](agents/design-system-lead.md) | Medium | _shared | Guides a project from domain evidence to design principles, recorded design decisions, and a 3-layer token architecture, staying style-neutral. Owns the design-foundation skill |
+| Public Data Analyst | [`agents/public-data-analyst.md`](agents/public-data-analyst.md) | Medium | _shared | Operates and maintains the Korean public-data gateway skills (BOK ECOS, KOSIS, KRX, DART, Open Law, data.go.kr): key setup, endpoint behaviour, response normalisation, and citation of source and receipt IDs. Does not make domain judgements; routes those to the project domain lead |
 
 ---
 
@@ -185,7 +189,7 @@ The tier of a dispatched subagent selects the model that the platform dispatch m
 
 ## Hub-and-Spoke Topology
 
-Hubs (co-develop, co-design, co-security, co-work) own their domain doctrine and tools as SERVICE PROVIDERS to variant projects, not as superior organizations — co-work owns general business-collaboration doctrine (the analyst/content-writer/ms365-expert/project-coordinator/technical-writer family). Routine quality gates (code review, security scan, local QA) run LOCALLY through each project's own PM Gateway. Hard problems in dev/design/security domains escalate to the hub via delegation (the channel activates in Phase 3; until then use the upstream-request path per the governance workflow, docs/governance/agents/workflows.md). Security incidents are classified locally without pre-authorization: SEV1 = confirmed secret/credential exposure in a tracked repo → notify hub security PM + user immediately and block pushes; SEV2 = exploitable shared-infrastructure vulnerability → same-day hub report; SEV3 = routine finding → normal tickets. Final adjudication for any hub-spoke conflict: workspace-root PM. Operating runbook: docs/guides/hub-operator-guide.md.
+Hubs (co-develop, co-design, co-security, co-work) own their domain doctrine and tools as SERVICE PROVIDERS to variant projects, not as superior organizations — co-work owns general business-collaboration doctrine (the analyst/content-writer/ms365-expert/project-coordinator/technical-writer family). Routine quality gates (code review, security scan, local QA) run LOCALLY through each project's own PM Gateway. Hard problems in dev/design/security domains escalate to the hub via delegation (the channel activates in Phase 3; until then use the upstream-request path per the governance workflow, docs/governance/agents/workflows.md). Security incidents are classified locally without pre-authorization: SEV1 = confirmed secret/credential exposure in a tracked repo → notify hub security PM + user immediately and block pushes; SEV2 = exploitable shared-infrastructure vulnerability → same-day hub report; SEV3 = routine finding → normal tickets. Final adjudication for any hub-spoke conflict: workspace-root PM. Operating runbook: docs/guides/hub-operator-guide.md (workspace root — not delivered to variant projects).
 
 <!-- COMMON-AGENTS:END -->
 

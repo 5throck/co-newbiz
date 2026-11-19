@@ -814,6 +814,22 @@
     {
       "name": "valuation-agent",
       "file": "agents/valuation-agent.md"
+    },
+    {
+      "name": "automation-engineer",
+      "file": "agents/automation-engineer.md"
+    },
+    {
+      "name": "contract-gate-engineer",
+      "file": "agents/contract-gate-engineer.md"
+    },
+    {
+      "name": "design-system-lead",
+      "file": "agents/design-system-lead.md"
+    },
+    {
+      "name": "public-data-analyst",
+      "file": "agents/public-data-analyst.md"
     }
   ]
 }

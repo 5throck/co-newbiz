@@ -5,6 +5,7 @@
 | Date | Summary |
 |------|---------|
 | [2026-11-19](2026-11-19.md) | docs(docs): workspace sync (10 files) |
+| [2026-11-19](2026-11-19.md) | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
 | [2026-11-17](2026-11-17.md) | feat(s6): parallel per-candidate evaluation, criteria modal and coverage markers (ADR-0199) |
 | [2026-11-16](2026-11-16.md) | docs(designs): S6 bulk AI evaluation with draft versioning and incremental DART collection (ADR-0199) |
 | [2026-11-18](2026-11-18.md) | docs(docs): workspace sync (12 files) |
@@ -16,7 +17,7 @@
 | 2026-11-10 | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
 | 2026-11-09 | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
 | 2026-11-10 | fix(web): globalThis-backed executor seams so bootstrap LLM registration reaches route bundles |
-| [2026-11-09](2026-11-09.md) | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
+| 2026-11-09 | feat(committee): ADR-0196 phase B chair agenda and structured minutes |
 | 2026-11-08 | chore: workspace sync — session residue (Step 1 local-work) |
 | 2026-11-07 | feat(review): localize AI review items via next-intl with legacy fallback |
 | 2026-11-06 | docs(docs): workspace sync (10 files) |

@@ -34,9 +34,9 @@ The mapping is immutable per generation:
 **Claude Tier Mapping:**
 - **High**: `claude-opus-5-5`
 - **Medium**: `claude-sonnet-5-5`
-- **Low**: `claude-haiku-4-5`
+- **Low**: `claude-haiku-5-5`
 
-Tier layering: the workspace-root PM and template PMs are all Medium (orchestration and coordination; workspace-root aligned to Medium 2026-09-15). Design-adjudication-heavy work dispatches to the architect or the High-tier design specialists. A variant whose PM must own design adjudication re-declares `tier: high` in its own `agents/pm.md` frontmatter.
+Tier layering: the workspace-root PM and template PMs are all Medium (orchestration and coordination; workspace-root aligned to Medium 2026-09-15). Design-adjudication-heavy work dispatches to the architect or the High-tier design specialists. A variant whose PM must own design adjudication re-declares `tier: high` in its own `agents/pm.md` frontmatter. Agent frontmatter declares tier only — one scalar `tier: high|medium|low`; which model a tier maps to on each platform is resolved at dispatch/validation time from the delivered `docs/workspace-schema.json` `models` block (ADR-0102).
 
 ### LLM Work Routing Policy (ADR-0078)
 
@@ -47,13 +47,13 @@ Substantive LLM-assisted development work — generation or modification of code
 - **Enforcement**: structural, via the existing hard gates (Design Gate spec-check, pre-commit audit, QA gate). Full decision: ADR-0078 in the workspace root `docs/adr/`.
 
 <!-- COMMON-CONTEXT:START -->
-### Instruction Writing Standard (ASD-STE100, ADR-0079)
+### Instruction Standard (LLM Interaction Standard, ADR-0098)
 
-Development-facing instruction text follows ASD-STE100 (Simplified Technical English) structural rules — in every development domain (web, app, API, scripts, documents).
+Human-to-LLM instructions and LLM-to-human answers follow the project-local standard `docs/standards/llm-interaction-standard.md` (ADR-0098, extending ADR-0079) — "Precision In, Intuition Out".
 
-- **Applies to**: requirement statements, task briefs, execution-plan task descriptions, agent dispatch prompts, design-doc requirement sections, API endpoint documentation, and how-to steps.
-- **Rules**: one instruction per sentence (≤ 20 words procedural / ≤ 25 descriptive); active voice with imperative steps; present tense; one term = one meaning (use glossary/registry terms exactly); no idioms; positive phrasing preferred; minimal pronouns; lists for parallel items and tables for structured data.
-- **Enforcement**: advisory — PM conforms task briefs at triage; architect checks requirement sections at Design Gate review. Full decision: ADR-0079 in the workspace root `docs/adr/`.
+- **Input (§2)**: one primary action per instruction; explicit verbs; defined terms; structural rules in §2.8 — one instruction per sentence (≤ 20 words procedural / ≤ 25 descriptive), active voice with imperative steps, present tense, no idioms, positive phrasing preferred, minimal pronouns. Applies to requirement statements, task briefs, execution-plan task descriptions, agent dispatch prompts, design-doc requirement sections, API endpoint documentation, and how-to steps.
+- **Output (§4–§9)**: conclusion and intuition before implementation detail; mental models before mechanics; facts, inferences, assumptions, and unknowns kept separate.
+- **Enforcement**: advisory — PM conforms task briefs at triage; architect checks requirement sections at Design Gate review. Decisions: ADR-0079 and ADR-0098 (workspace root `docs/adr/`).
 
 ### PM Team-Management Authority (ADR-0080)
 
@@ -81,6 +81,18 @@ Standard directory layout for all projects in this workspace:
 ```
 
 **Cross-Platform Skill Availability**: `skills/` is the Single Source of Truth (SSOT) for all skill definitions. Every skill MUST be available on all supported surfaces (see Supported Surfaces below: Claude Code, Claude Desktop App, Antigravity, Antigravity CLI, Codex CLI, Codex Desktop App, Hermes Agent, Hermes CLI; Gemini CLI as the legacy Google path). Platform distribution directories (`.claude/skills/`, `.gemini/skills/`, `.agents/skills/`) are derived copies — they MUST NOT be the sole location of any skill.
+
+---
+
+### Agent Frontmatter
+
+Every agent file under `agents/` starts with a YAML frontmatter block. The rules below come from the validators, so a reader can check them.
+
+- **Required fields** (`validate-templates.ts`): `name`, `status`, `tier`, `description`, `examples`.
+- **`status`**: one of `active`, `deprecated`, `experimental`.
+- **`tier`**: one scalar, `high`, `medium`, or `low` (no per-platform map).
+- **`lifecycle`** (`validate-agents.ts`): `lifecycle.phase` and `lifecycle.governance` are required in the own frontmatter of each `agents/*.md` file, including `extends` stubs. Only the roster-schema checks skip stubs.
+- **`extends`**: a relative path to a base agent file. For a stub, the required-field check in `validate-templates.ts` resolves the base file's fields for `name`, `status`, `tier`, `description`, and `examples`. A dangling `extends` path is reported by `validate-agents.ts`.
 
 ---
 
@@ -157,6 +169,26 @@ Backend/non-UI work is exempt only when the design doc or ADR states the exempti
   the blocking design-lint gate and the L0/L1 style-neutrality check (ADR-0064/0066), which
   verifies that design docs prescribe no colors, fonts, or trends — style decisions stay
   project-owned.
+
+### Design-lint Configuration (designLint)
+
+The audit's blocking design-lint gate reads its config from `docs/workspace-schema.json`
+(`designLint`: `{ enabled, scanRoots, allowlist }`). A scaffolded project can override it
+per project by declaring the same block in its `variant.json` (U-20261028-014):
+
+- **Order**: `variant.json` designLint > `workspace-schema.json` designLint. The block
+  replaces the schema block wholesale — `enabled` (boolean) is required; `scanRoots`
+  (string array) and `allowlist` (string array) are optional. No block in `variant.json`
+  means schema behavior, unchanged.
+- **Semantics**: `enabled: false` disables the gate for the project (the audit reports an
+  explicit SKIP naming `variant.json`); `enabled: true` scans the declared `scanRoots`
+  (falling back to the conventional `playground/src` / `src` roots when none exist on
+  disk, and skipping with an explicit reason when neither set exists); `allowlist`
+  entries exempt documented raw literals (same match-equality rule as schema allowlist
+  rows, forwarded to `scripts/design-lint.ts` via `--allow`).
+- **Validation**: an invalid block fails the audit naming the violation, and
+  `bun scripts/validate-templates.ts` enforces the same shape on template
+  `variant.json` files (Check 2, `variant-designlint`).
 
 ### Session Log Format (`memory/YYYY-MM-DD.md`)
 
@@ -245,6 +277,12 @@ authoritative within its project, and this baseline applies where no project lis
 <!-- COMMON-CONSTITUTION:END -->
 
 <!-- COMMON-CONSTITUTION:START -->
+#### Model-ID Hygiene in Skills
+
+Skills (`SKILL.md` and their `references/` files) MUST NOT hardcode literal model IDs (e.g. `claude-haiku-5-5`, `gemini-3.8-flash`). Model assignments change over time, and stale literals in derived documents rot silently and mislead dispatch. Registry IDs live only in `docs/workspace-schema.json` (`models.*` — the single source) and the tier→alias translation prose in `CLAUDE.md` §6 / `AGENTS.md` §3.6; skill-facing documents reference models by TIER plus a registry pointer instead, keeping operational aliases (`opus` / `sonnet` / `haiku`) that are stable across model swaps. Enforced by `skill-lifecycle-audit.ts` Check MM (ERROR per offending file; workspace directive 2026-10-11). To change a model mapping, use the `model-migration` skill.
+<!-- COMMON-CONSTITUTION:END -->
+
+<!-- COMMON-CONSTITUTION:START -->
 #### Language Policy Exception — Korean Legal/Regulatory Content
 
 The English-only policy admits a narrow exception for files where Korean is legally
@@ -324,12 +362,6 @@ Key rules:
 - Commit messages and PR artifacts in **English only**
 <!-- COMMON-CONTEXT:END -->
 
-### Project testing notes (co-newbiz, 2026-10-20)
-
-- The official unit command is `bun run test:unit` (`scripts/test-runner.ts`, one process per file). A bare `bun test tests/unit/` runs every file in one process and leaks module mocks across files; use `bun test tests/unit/ --isolate` when you need a single-process run.
-- Module mocks: bun's `mock.module()` mutates the module object in place and `mock.restore()` does not undo it. Snapshot the real module BEFORE mocking (`const real = { ...await import("./x.ts") }`) and re-register it in `afterAll` (`mock.module("./x.ts", () => ({ ...real }))`) — see `tests/unit/entry-market-derivation.test.ts`.
-- Route suites that must never dial the dev `.env` LLM set `process.env.CO_NEWBIZ_LLM_PROVIDER = "none"` at the top of the file.
-
 ---
 
 ## File Organization Policy
@@ -337,7 +369,7 @@ Key rules:
 All agents must follow this file routing policy. **Creating `.md` files at the project root is prohibited** unless they are standard root files.
 
 ### Standard Root Files (allowed at root)
-`README.md`, `CHANGELOG.md`, `AGENTS.md`, `SECURITY.md`, `workspace standards`, `CLAUDE.md`, `GEMINI.md`
+`README.md`, `CHANGELOG.md`, `AGENTS.md`, `SECURITY.md`, `workspace standards`, `CLAUDE.md`, `GEMINI.md`, `CODEX.md`, `HERMES.md`, `README_ko.md`
 
 ### File Type Routing
 | File Type | Default Location |
@@ -568,4 +600,4 @@ See the workspace governance documentation (Governance Enforcement Layers) and A
 
 ---
 
-*context.md version: 2.14 — Supported Surfaces section delivered to projects (footer bump: the section was added at 2.13 without a version bump, so same-version project copies never received it; T-20261001-021)*
+*context.md version: 2.16 — Standard Root Files adds README_ko.md (delivered-file parity: templates/README_ko.md ships to variants; U-20261112-006); 2.15 — Agent Frontmatter section added (U-20261112-002); 2.14 — Supported Surfaces section delivered to projects (footer bump: the section was added at 2.13 without a version bump, so same-version project copies never received it; T-20261001-021)*
