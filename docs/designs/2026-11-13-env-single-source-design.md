@@ -363,3 +363,45 @@ per docs/context.md.
   profiles) exports these keys with values that would shadow the root file — must be checked at
   Row 1 before editing the files; whether any untracked local `.env.<env>.local` files exist in
   `app/web-next` (the Next load order §2.2 item 1 would honor them above `.env`).
+
+## 10. Decision amendment (owner decision, 2026-11-19): single root env
+
+**Decision amendment (owner decision, 2026-11-19): the two-file layout is retired — the repo-root
+`.env` becomes the single env file.** This implements follow-up §8.2 (the prisma.config.ts root
+fallback) and supersedes §3.3: `app/web-next/.env` is no longer a deliberate remnant; it is
+retired. The decision was forced by a real gap found on 2026-11-19 — the direct-`process.env`
+readers introduced by ADR-0203 were absent from the SSOT inventory, so values kept in the root
+`.env` never reached the dev server's `process.env` (verified: a probe registration with a
+non-allowlisted redirect host returned 201 because `CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST`
+never loaded). Consequences:
+
+- **`app/web-next/.env` is retired.** Operators move `DATABASE_URL` into the repo-root `.env` and
+  delete the app copy; `app/web-next/.env.sample` is removed from the repo (the tracked template
+  is deleted with this change; the root `.env.sample` gains the `DATABASE_URL` documentation).
+- **`prisma.config.ts` now loads the repo-root `.env`** (`new URL("../../.env", import.meta.url)`).
+  The app-local `./.env` read is kept as a compatibility fallback ONLY when the file still exists
+  (an unmigrated operator copy keeps its historical precedence; it is consulted first) — there is
+  no hard dependency on it, and missing files are silent (`DATABASE_URL` may come from spawn env,
+  e.g. CI). Explicit `process.env` values always win in both loads.
+- **The SSOT inventory gains the four OAuth/request-meta keys** — `CO_NEWBIZ_PUBLIC_ORIGIN`,
+  `CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST`, `CO_NEWBIZ_AUDIT_IP_HMAC_KEY`,
+  `CO_NEWBIZ_TRUST_PROXY_HEADERS`. They are read directly from `process.env` at request time
+  (`lib/mcp/request-meta.ts`, `app/api/oauth/register/route.ts`, `lib/mcp/config.ts`) and are
+  never touched by any dotenv-style loader, so without inventory registration
+  (`SSOT_EXTRA_KEYS` in `root-env.ts`) the dev server never sees values kept in the root `.env`.
+  Standing rule recorded by this amendment: **every direct `process.env` reader introduced by
+  ADR-0203 (and future seams of the same shape) must be registered in the inventory.** Production
+  is unaffected — the compose `env_file` injects values into `process.env` directly, bypassing
+  this loader entirely.
+- **Consequence: bun's cwd auto-load of `app/web-next/.env` can no longer shadow root values.**
+  Bun auto-loads `.env` from the process cwd, which is why a leftover app file used to sit above
+  the root file in effective precedence (§2.2 item 1); with the file deleted there is nothing to
+  auto-load. The boot shadow warning (§3.4B) remains, and now concerns **spawn-env shadowing
+  only** — its message is reworded accordingly ("spawn env" instead of "app/web-next/.env
+  auto-load or spawn env"); the warn-only logic and the never-override rule are unchanged.
+
+Acceptance criteria §7.1 and §7.2 are amended accordingly: after migration no app-side `.env`
+exists at all (was: exactly one active key), and `env-check.ts` treats the file's absence as the
+expected unified state (an informational line, not a skip) while still hard-failing on divergent
+SSOT duplicates on operator machines that have not migrated yet. §3.4C's env-drift suite gains
+the four-key admission and app-absent cases.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.2.0
+// @version 1.3.0
 /**
  * env-check.ts — ADR-0075 pre-flight gate for pipeline API stages.
  *
@@ -15,7 +15,11 @@
  * the default check mode also classifies root-.env vs app/web-next/.env drift
  * through scripts/lib/env-drift.ts: an SSOT key defined in BOTH files with
  * different values FAILS (exit 1); identical duplication and whitespace
- * hygiene only WARN (exit stays 0). Values are never printed in check mode.
+ * hygiene only WARN (exit stays 0). Since the §10 amendment (2026-11-19,
+ * single root env) the app-side file is RETIRED — its absence is the expected
+ * unified state (reported informationally) — and the drift classification
+ * keeps running only for operator machines that still carry a leftover copy.
+ * Values are never printed in check mode.
  * The --exports output is meant for shells without process substitution:
  *   eval "$(bun scripts/co-newbiz/env-check.ts --exports)"
  */
@@ -78,12 +82,14 @@ if (hasCRLF) {
   );
 }
 
-// ── Env SSOT drift (design 2026-11-13-env-single-source §3.4A) ──
-// The repo-root .env is the SSOT; app/web-next/.env may hold only the
-// Prisma-CLI DATABASE_URL. A divergent SSOT duplicate is the exact failure
-// class that produced two divergent LLM blocks, so it is a hard failure; an
-// identical duplicate is redundancy (warning), whitespace is hygiene (warning).
-// No app file (fresh clone) means nothing to compare — skip silently.
+// ── Env SSOT drift (design 2026-11-13-env-single-source §3.4A, §10 amendment) ──
+// The repo-root .env is the SSOT and the ONLY env file (single root env):
+// app/web-next/.env is retired. A leftover copy (operator machines that have
+// not migrated yet) is still classified here: a divergent SSOT duplicate is
+// the exact failure class that produced two divergent LLM blocks, so it is a
+// hard failure; an identical duplicate is redundancy (warning), whitespace is
+// hygiene (warning). The file's absence is the expected unified state and is
+// reported informationally.
 const driftWarnings: string[] = [];
 if (existsSync(appEnvPath)) {
   const drift = collectEnvDrift(raw, readFileSync(appEnvPath, "utf8"));
@@ -103,6 +109,8 @@ if (existsSync(appEnvPath)) {
       `env drift: ${w.key} in the ${where} has an unquoted value with leading/trailing whitespace — normalize the line`,
     );
   }
+} else {
+  console.log("env-check: app/web-next/.env absent — unified single-env layout");
 }
 // LLM token-parameter knob hygiene (design 2026-11-13-llm-max-completion-tokens §3.1):
 // at runtime an unrecognized value is treated as "auto" with a one-shot warning —
