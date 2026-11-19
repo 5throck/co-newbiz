@@ -107,6 +107,27 @@ curl -sI https://newbiz.bizknights.org/ | head -1
 
 쿠키 세션 CSRF 검사는 요청 Origin의 호스트와 Host 헤더만 비교하므로 새 공개 호스트명은 브라우저에서 `/api/mcp`를 호출하지 않는 한 앱 설정이 필요 없습니다.
 
+### AI 앱 동적 등록(DCR)이 Cloudflare에서 403으로 거절될 때 (2026-11-19 실측)
+
+증상: ChatGPT에서 `Add custom MCP server`로 커스텀 커넥터를 만들면 동적 클라이언트 등록(DCR) 단계에서 `registration endpoint returned 403`으로 거절되고(`Some app settings were rejected` 안내), Claude.ai의 DCR은 같은 엔드포인트에서 정상 등록된다.
+
+원인 판별(실측): 서버 앱 코드는 `/api/oauth/register`에서 201·400·429만 반환한다(allowlist 위반도 400). Next 개발 서버의 cross-origin 검사(`blockCrossSiteDEV`)는 `/_next`·`/__nextjs` 경로에만 적용되어 `/api`와 무관하다. 동일한 헤더(ChatGPT UA·Origin)와 동일한 본문을 다른 IP에서 보내면 201이 돌아온다. 즉 403은 **Cloudflare 엣지의 IP·TLS 지문 기반 봇 차단**이 OpenAI 발신 요청을 걸은 것이고, Anthropic 발신은 스코어링을 통과한 것이다. 앱 코드 변경은 불필요하다.
+
+조치(Cloudflare 대시보드, `bizknights.org` 존 — 저장소 밖 설정):
+
+1. Security → Bots에서 **Bot Fight Mode**와 **Block AI Scrapers and Crawlers** 상태를 확인한다. 둘 중 하나가 켜져 있으면 AI 벤더 ASN(OpenAI·Anthropic)의 자동화 POST가 여기서 403을 맞는다.
+2. 유료 플랜(Super Bot Fight Mode)이면 해당 항목을 Allow로 바꾸거나, WAF 사용자 지정 규칙(Skip)으로 OAuth·MCP 경로만 예외를 둔다:
+
+   ```text
+   (http.request.uri.path contains "/api/oauth/") or (http.request.uri.path eq "/api/mcp")
+   or (startswith(http.request.uri.path, "/.well-known/")) or (http.request.uri.path eq "/oauth/authorize")
+   ```
+
+   Skip 항목은 봇 방어와 관리 규칙을 고른다. 참고로 무료 플랜의 Bot Fight Mode는 Skip 규칙으로 우회할 수 없으므로 존 전체에서 끄거나 아래 3번 대안을 쓴다.
+3. 대시보드를 건드릴 수 없을 때의 대안: Cloudflare 프록시를 거치지 않는 공개 주소로 커넥터를 제공한다. Tailscale Funnel 주소로 `CO_NEWBIZ_PUBLIC_ORIGIN`을 고정하고 그 주소를 커넥터 URL로 안내하면 엣지 봇 차단을 우회한다(DNS-only 그레이 클라우드는 터널 호스트명에는 쓸 수 없다). 이 경우 issuer가 바뀌므로 기존에 연결된 앱은 다시 연결해야 한다.
+
+검증: 변경 후 ChatGPT에서 커스텀 커넥터를 기본값(DCR)으로 다시 추가한다. `Some app settings were rejected` 없이 생성되고 Cloudflare Security → Events에서 해당 경로의 403이 사라지면 해소다. 앱 쪽에서는 IP당 시간 20건의 등록 레이트리밋이 이미 있어 남용 차단은 유지된다.
+
 ## 9. 스케줄러 (분 틱)
 
 주기 잡은 호스트 OS 스케줄러에서 실행됩니다. 환경마다 하나의 launchd 항목(`org.bizknights.co-newbiz.<env>.tick`, ADR-0189)입니다. dev 틱은 호스트 프로세스로 `schedule-tick.ts`를 dev DB에 대해 실행하고, prod 틱은 `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod ...`로 **`co-newbiz-web` 컨테이너 안에서** 실행합니다 — 따라서 prod 틱에는 컨테이너가 떠 있어야 하고, 환경 플래그는 설치기가 자체 주입합니다(컨테이너 환경 설정 불필요). 설치·검증(심박)·시드·제거·문제 해결은 `docs/runbooks/scheduler_ko.md`를 참고하세요. §7은 그대로 적용됩니다: 컨테이너 교체가 호스트 스케줄러 등록을 건드리지 않아야 합니다.
