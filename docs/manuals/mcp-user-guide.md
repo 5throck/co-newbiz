@@ -83,6 +83,12 @@ AI output from these tools is decision support. It is not investment advice or a
 | A freshly published package version cannot be found | A registry read can lag shortly after a first publish. On 2026-11-18 a read returned 404 for a few minutes. This was observed once and is not a guarantee. Retry after a few minutes |
 | You need the secondary GitHub Packages path | Add the scope mapping `@co-newbiz:registry=https://npm.pkg.github.com` and a `//npm.pkg.github.com/:_authToken=` line holding a `read:packages` PAT to `~/.npmrc`. Any GitHub account's own PAT works |
 
+### Connecting ChatGPT / Claude.ai (hosted connector)
+
+- **Creating the connector fails with HTTP 403 while you use the default dynamic client registration.** The request is blocked before it reaches the application. Ask an administrator to apply the section "Hosted connectors: DCR returns 403 (Cloudflare)" in `mcp-admin-guide.md`. Only an administrator can change this; the application cannot.
+- **Never paste a personal API token into a hosted app** to work around the failure.
+- **Leave the client secret empty.** The server registers any hosted client as a public client (PKCE, no client secret), whatever authentication method the client asks for.
+
 If a problem persists, send the masked token identifier from the token row menu (`Copy identifier`) to your administrator. The identifier is not secret; the token itself is.
 
 ## Related Screens

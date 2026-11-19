@@ -2,8 +2,9 @@
 // Remote MCP endpoint core — ADR-0154 §1/§2, design §3.2.
 //
 // Request pipeline for /api/mcp (POST/GET/DELETE):
-//   HTTPS (production) -> Origin allowlist (DNS rebinding) -> bearer OAuth
-//   access token, audience-bound to this resource (RFC 8707) -> per-token
+//   bearer OAuth access token, audience-bound to this resource (RFC 8707;
+//   checked first so discovery always gets its 401) -> HTTPS (production) ->
+//   Origin allowlist (DNS rebinding) -> per-token
 //   rate limit -> Mcp-Session-Id bound to (user_id, client_id) -> SDK
 //   WebStandardStreamableHTTPServerTransport -> shared registry ->
 //   InProcessRestPort as the delegated human.
@@ -16,6 +17,7 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { getDb } from "../../../../db/client.ts";
+import { appendAudit } from "../../../../db/lib/access-control.ts";
 import { auditTokenUse, validateAccessToken, type ValidAccessToken } from "../../../../db/lib/oauth.ts";
 import { buildMcpServer } from "../../../../mcp/co-newbiz/registry.ts";
 import { InProcessRestPort } from "./in-process-port.ts";
@@ -38,7 +40,8 @@ interface SessionEntry {
 const KEY = Symbol.for("co-newbiz.mcp.sessions");
 type Holder = { [KEY]?: { sessions: Map<string, SessionEntry>; hits: Map<string, number[]> } };
 const holder = globalThis as Holder;
-const state = holder[KEY] ?? (holder[KEY] = { sessions: new Map<string, SessionEntry>(), hits: new Map<string, number[]>() });
+if (!holder[KEY]) holder[KEY] = { sessions: new Map<string, SessionEntry>(), hits: new Map<string, number[]>() };
+const state = holder[KEY] as NonNullable<Holder[typeof KEY]>;
 
 function jsonRpcError(status: number, message: string, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32000, message }, id: null }), {
@@ -48,7 +51,7 @@ function jsonRpcError(status: number, message: string, headers: Record<string, s
 }
 
 function unauthorized(request: Request, invalidToken: boolean): Response {
-  const parts = [`resource_metadata="${protectedResourceMetadataUrl(request)}"`];
+  const parts = [`resource_metadata="${protectedResourceMetadataUrl(request)}"`, `scope="read propose"`];
   if (invalidToken) parts.unshift(`error="invalid_token"`);
   return jsonRpcError(401, "Unauthorized: a valid OAuth access token for this resource is required.", {
     "WWW-Authenticate": `Bearer ${parts.join(", ")}`,
@@ -71,8 +74,43 @@ function rateLimited(key: string, now: number): boolean {
   return recent.length > RATE_LIMIT_PER_MIN;
 }
 
+/** Audit a refused request: token family id and Origin host only — never the token. */
+function auditRefusal(
+  action: "mcp_origin_refused" | "mcp_https_refused",
+  token: ValidAccessToken,
+  request: Request,
+  nowIso: string,
+): void {
+  let originHost: string | null = null;
+  const origin = request.headers.get("origin");
+  if (origin) {
+    try {
+      originHost = new URL(origin).host.slice(0, 253);
+    } catch {
+      originHost = "invalid";
+    }
+  }
+  try {
+    appendAudit(getDb(), {
+      actor: token.userId,
+      action,
+      target: JSON.stringify({ family_id: token.familyId, client_id: token.clientId, origin_host: originHost }),
+      now: nowIso,
+    });
+  } catch {
+    /* the audit must not turn a refusal into a 500 */
+  }
+}
+
 function toPrincipal(t: ValidAccessToken): DelegatedPrincipal {
-  return { userId: t.userId, role: t.role, scopes: t.scopes, mustChangePassword: t.mustChangePassword, tokenId: t.tokenId, clientId: t.clientId };
+  return {
+    userId: t.userId,
+    role: t.role,
+    scopes: t.scopes,
+    mustChangePassword: t.mustChangePassword,
+    tokenId: t.tokenId,
+    clientId: t.clientId,
+  };
 }
 
 function principalFrom(authInfo: AuthInfo | undefined): { principal: DelegatedPrincipal; familyId: string } {
@@ -96,8 +134,14 @@ function newSessionServer(): Server {
       try {
         const { principal, familyId } = principalFrom(rec.authInfo);
         auditTokenUse(getDb(), {
-          userId: principal.userId, clientId: principal.clientId, familyId, tool: rec.name, scope: rec.scope,
-          result: rec.ok ? "ok" : (rec.errorCode ?? "error"), argsHash: rec.argsHash, now: new Date().toISOString(),
+          userId: principal.userId,
+          clientId: principal.clientId,
+          familyId,
+          tool: rec.name,
+          scope: rec.scope,
+          result: rec.ok ? "ok" : (rec.errorCode ?? "error"),
+          argsHash: rec.argsHash,
+          now: new Date().toISOString(),
         });
       } catch {
         /* audit must not crash the transport; the route-level audit still applies */
@@ -108,14 +152,23 @@ function newSessionServer(): Server {
 
 /** Handle one /api/mcp request (any method). */
 export async function handleMcpRequest(request: Request): Promise<Response> {
-  if (httpsRequired(request)) return jsonRpcError(403, "HTTPS is required.");
-  if (!originAllowed(request)) return jsonRpcError(403, "Origin not allowed.");
-
+  // Bearer first: an unauthenticated request must always get the 401 +
+  // WWW-Authenticate that starts OAuth discovery (RFC 9728), even when it
+  // carries a browser Origin or a proxy hides the scheme. The HTTPS and Origin
+  // checks guard authenticated state, so they run once a token is valid.
   const header = request.headers.get("authorization") ?? "";
   if (!header.toLowerCase().startsWith("bearer ")) return unauthorized(request, false);
   const nowIso = new Date().toISOString();
   const token = validateAccessToken(getDb(), header.slice(7).trim(), mcpResource(request), nowIso);
   if (!token) return unauthorized(request, true);
+  if (httpsRequired(request)) {
+    auditRefusal("mcp_https_refused", token, request, nowIso);
+    return jsonRpcError(403, "HTTPS is required (X-Forwarded-Proto must be https behind a proxy).");
+  }
+  if (!originAllowed(request)) {
+    auditRefusal("mcp_origin_refused", token, request, nowIso);
+    return jsonRpcError(403, "Origin not allowed.");
+  }
   if (token.mustChangePassword) return jsonRpcError(403, "Password change is required before any other action.");
 
   const now = Date.now();
@@ -158,7 +211,13 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (id) => {
-      state.sessions.set(id, { transport, server, userId: token.userId, clientId: token.clientId, lastSeen: Date.now() });
+      state.sessions.set(id, {
+        transport,
+        server,
+        userId: token.userId,
+        clientId: token.clientId,
+        lastSeen: Date.now(),
+      });
     },
     onsessionclosed: (id) => {
       state.sessions.delete(id);

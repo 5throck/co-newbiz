@@ -5,22 +5,36 @@ import { getDb } from "../../../../../../db/client.ts";
 import { exchangeAuthorizationCode, refreshTokens } from "../../../../../../db/lib/oauth.ts";
 import { mcpResource, oauthError, oauthJson, readForm } from "../../../../lib/mcp/config.ts";
 import { preflight, withCors } from "../../../../lib/mcp/cors.ts";
+import { requestId, withRequestId } from "../../../../lib/mcp/request-meta.ts";
 
 export async function POST(request: Request) {
+  return withRequestId(await exchange(request), requestId(request));
+}
+
+async function exchange(request: Request): Promise<Response> {
   const form = await readForm(request);
   const db = getDb();
   const now = new Date().toISOString();
   const expectedResource = mcpResource(request);
-  let result;
+  let result: ReturnType<typeof exchangeAuthorizationCode> | ReturnType<typeof refreshTokens>;
   if (form.grant_type === "authorization_code") {
     result = exchangeAuthorizationCode(db, {
-      code: form.code ?? null, clientId: form.client_id ?? null, redirectUri: form.redirect_uri ?? null,
-      codeVerifier: form.code_verifier ?? null, resource: form.resource ?? null, expectedResource, now,
+      code: form.code ?? null,
+      clientId: form.client_id ?? null,
+      redirectUri: form.redirect_uri ?? null,
+      codeVerifier: form.code_verifier ?? null,
+      resource: form.resource ?? null,
+      expectedResource,
+      now,
     });
   } else if (form.grant_type === "refresh_token") {
     result = refreshTokens(db, {
-      refreshToken: form.refresh_token ?? null, clientId: form.client_id ?? null, scope: form.scope ?? null,
-      resource: form.resource ?? null, expectedResource, now,
+      refreshToken: form.refresh_token ?? null,
+      clientId: form.client_id ?? null,
+      scope: form.scope ?? null,
+      resource: form.resource ?? null,
+      expectedResource,
+      now,
     });
   } else {
     return withCors(oauthError("unsupported_grant_type", "Only authorization_code and refresh_token are supported."));
