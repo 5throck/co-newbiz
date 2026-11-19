@@ -11,8 +11,9 @@ services:
       dockerfile: docker/Dockerfile
     container_name: co-newbiz-web
     restart: unless-stopped
+    # Loopback binding required before TRUST_PROXY_HEADERS is enabled (spoofed CF-Connecting-IP otherwise) — docs/runbooks/deployment.md
     ports:
-      - "7749:7749"
+      - "127.0.0.1:7749:7749"
     env_file:
       # Create from the Production section of .env.sample — secrets never enter git or the image.
       - path: .env.prod
