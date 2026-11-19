@@ -27,9 +27,16 @@ describe("next.config wiring", () => {
 
 describe("port layout", () => {
   const root = join(import.meta.dir, "..", "..");
-  test("dev scripts use 7748, compose maps 7749 loopback-only", () => {
+  test("dev uses 7748 loopback-bound, start uses 7748, compose maps 7749 loopback-only", () => {
     const pkg = readFileSync(join(root, "app", "web-next", "package.json"), "utf8");
-    expect(pkg).toContain("next dev -p 7748");
+    // Dev binding contract: the dev server binds to 127.0.0.1 so the
+    // Cloudflare tunnel ingress (host.docker.internal:7748) and localhost
+    // MCP clients keep working while the LAN-direct path (CF-Connecting-IP
+    // spoofing) is closed — same contract as the compose loopback binding.
+    expect(pkg).toContain("next dev -H 127.0.0.1 -p 7748");
+    // The un-hardened bare form must not coexist; the hardened form above
+    // cannot satisfy it, so a revert to the wide binding trips this check.
+    expect(pkg).not.toContain("next dev -p 7748");
     expect(pkg).toContain("next start -p 7748");
     // Deployment contract: host port 7749 → container 7749, bound to 127.0.0.1 only.
     // Loopback binding is a TRUST_PROXY_HEADERS precondition: an interface-wide
