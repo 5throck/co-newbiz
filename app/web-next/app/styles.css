@@ -4516,3 +4516,78 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 /* The 심사 확정 button stays on the row-action line, set apart from the three evaluation buttons (2026-11-17 user report). */
 .longlist-table .ai-row-actions + * { margin-inline-start: var(--space-3, 0.75rem); }
 .longlist-table .ai-row-actions > .btn-ghost { white-space: nowrap; padding-inline: var(--space-1, 0.25rem); }
+
+/* ── OAuth consent (chromeless trust decision, design 2026-11-19-oauth-consent-screen-redesign) ──
+   /oauth/* renders bare (AppShell bare-path branch): no sidebar/topbar, the
+   consent column centers itself on --bg. Single-column first — the real
+   viewport is the connector's popup (~400-600px). */
+.oauth-consent {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 32rem; /* design-token-exempt: design-specified card measure */
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-3);
+}
+.oauth-consent .oauth-lead { margin: 0; }
+/* D2 — unverified warning: icon + full text in an amber token box (never color-only). */
+.oauth-warning {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-border);
+  color: var(--amber-fg);
+  border-radius: var(--radius-md);
+}
+/* Account fact row — caption label + mono value. */
+.oauth-facts { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.oauth-fact { display: flex; align-items: baseline; gap: var(--space-2); }
+.oauth-fact-label { flex-shrink: 0; font-size: var(--fs-caption); color: var(--muted-fg); }
+.oauth-fact-value { margin: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
+/* D1 — the redirect return host: THE phishing discriminator. Boxed, mono, the
+   largest emphasized text on the screen; evidence, not navigation (no link). */
+.oauth-host-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.oauth-host-value {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.oauth-host-caution { margin: 0; font-size: var(--fs-caption); color: var(--muted-fg); }
+/* D3 — scope rows as a divided list; scope name in mono, chip unchanged. */
+.oauth-scopes { margin: 0; display: flex; flex-direction: column; }
+.oauth-scope-row { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) 0; }
+.oauth-scope-row + .oauth-scope-row { border-top: 1px solid var(--border-subtle); }
+.oauth-scope-row:first-child { padding-top: 0; }
+.oauth-scope-row:last-child { padding-bottom: 0; }
+.oauth-scope-name { font-family: var(--font-mono); }
+.oauth-scope-desc { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+/* D4 — boundary note: muted note box, distinct from the amber warning and body copy. */
+.oauth-note {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-caption);
+  color: var(--muted-fg);
+}
+/* D5 — deny leads (fail-safe first tab stop), approve trails as the commit action
+   (end of the reading flow in both LTR/RTL; flex mirrors under dir). */
+.oauth-actions { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
