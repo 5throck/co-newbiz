@@ -39,6 +39,9 @@ const { CommitteeTurnProgressView } = (await import(`${WEB}/components/Committee
 const { CommitteeTurnTranscript } = (await import(`${WEB}/components/CommitteeTurnTranscript.tsx`)) as {
   CommitteeTurnTranscript: unknown;
 };
+const { MeetingWindowDialog } = (await import(`${WEB}/components/CommitteeMeetingWindow.tsx`)) as {
+  MeetingWindowDialog: unknown;
+};
 const view = await import(`${WEB}/lib/committee-progress-view.ts`);
 
 const T0 = Date.parse("2026-11-20T10:00:00.000Z");
@@ -65,6 +68,8 @@ const turn = (seq: number, over: Partial<TurnView> = {}): TurnView => ({
   vetoDissent: false,
   outcome: null,
   votes: null,
+  participants: null,
+  nonParticipants: null,
   restsOn: [],
   reason: null,
   forSeat: null,
@@ -104,6 +109,9 @@ const renderView = (
   locale: "ko" | "en" = "ko",
   nowMs = T0 + 192_000,
 ) => wrap(createElement(CommitteeTurnProgressView, { turns: [], ...props, nowMs }), locale);
+
+const renderWindow = (props: Record<string, unknown>, locale: "ko" | "en" = "ko", nowMs = T0 + 192_000) =>
+  wrap(createElement(MeetingWindowDialog, { turns: [], onClose: () => {}, ...props, nowMs }), locale);
 
 const renderTranscript = (props: Record<string, unknown>, locale: "ko" | "en" = "ko") =>
   wrap(createElement(CommitteeTurnTranscript, props), locale);
@@ -356,6 +364,125 @@ describe("turnErrorKey", () => {
   });
 });
 
+describe("meeting window helpers", () => {
+  const m = (scrollTop: number, clientHeight = 400, scrollHeight = 1000) => ({ scrollTop, clientHeight, scrollHeight });
+
+  test("isNearBottom: at the bottom, within the threshold, and scrolled up", () => {
+    expect(view.isNearBottom(m(600))).toBe(true); // exactly at the bottom
+    expect(view.isNearBottom(m(560))).toBe(true); // 40px away: still "following"
+    expect(view.isNearBottom(m(500))).toBe(false); // 100px away
+    expect(view.isNearBottom(m(0))).toBe(false);
+    expect(view.isNearBottom({ scrollTop: 0, clientHeight: 400, scrollHeight: 300 })).toBe(true); // short content
+    expect(view.isNearBottom(m(550), 40)).toBe(false); // custom threshold
+  });
+
+  test("auto-follow: new turns keep following while at the bottom", () => {
+    let st = { following: true, seen: 3 };
+    st = view.followReducer(st, { type: "items", total: 5 });
+    expect(st).toEqual({ following: true, seen: 5 });
+    expect(view.unseenCount(st, 5)).toBe(0);
+    expect(view.showJumpToLatest(st, true)).toBe(false);
+  });
+
+  test("scrolling up pauses auto-follow: new turns are counted as unseen and the jump button shows", () => {
+    let st = { following: true, seen: 5 };
+    st = view.followReducer(st, { type: "scroll", metrics: m(100), total: 5 });
+    expect(st).toEqual({ following: false, seen: 5 });
+    st = view.followReducer(st, { type: "items", total: 8 });
+    expect(st).toEqual({ following: false, seen: 5 }); // not advanced while paused
+    expect(view.unseenCount(st, 8)).toBe(3);
+    expect(view.showJumpToLatest(st, true)).toBe(true);
+    // a finished record never shows the button
+    expect(view.showJumpToLatest(st, false)).toBe(false);
+  });
+
+  test("scrolling back to the bottom (or the jump button) resumes following and clears the count", () => {
+    const paused = { following: false, seen: 5 };
+    expect(view.followReducer(paused, { type: "scroll", metrics: m(600), total: 8 })).toEqual({
+      following: true,
+      seen: 8,
+    });
+    expect(view.followReducer(paused, { type: "jump", total: 8 })).toEqual({ following: true, seen: 8 });
+    expect(view.unseenCount({ following: true, seen: 8 }, 9)).toBe(0);
+    expect(view.unseenCount({ following: false, seen: 9 }, 7)).toBe(0); // never negative (turns dropped on a reset)
+  });
+
+  test("a programmatic scroll to the bottom keeps following (scroll event at the bottom)", () => {
+    const st = { following: true, seen: 5 };
+    expect(view.followReducer(st, { type: "scroll", metrics: m(600, 400, 1000), total: 6 }).following).toBe(true);
+  });
+
+  test("currentSpeakerSeat: the human floor holder while paused, the speaker in discussion, none elsewhere", () => {
+    expect(view.currentSpeakerSeat(progress())).toBe("financing-agent");
+    const aw = progress({
+      phase: "awaiting_human",
+      awaiting: { seat: "risk-officer", seq: 1, issue_index: 1, called_at: iso(T0), deadline_at: iso(T0 + 1) },
+    });
+    expect(view.currentSpeakerSeat(aw)).toBe("risk-officer");
+    expect(view.currentSpeakerSeat(progress({ phase: "consensus" }))).toBeNull();
+    expect(view.currentSpeakerSeat(progress({ phase: "discussion", speaker_seat: undefined }))).toBeNull();
+  });
+
+  test("isHumanTurnOpen: only a writer, only an open (unanswered) floor", () => {
+    const awaiting = { seat: "human", seq: 1, issue_index: 1, called_at: iso(T0), deadline_at: iso(T0 + 1) };
+    const aw = progress({ phase: "awaiting_human", awaiting });
+    expect(view.isHumanTurnOpen(aw, true)).toBe(true);
+    expect(view.isHumanTurnOpen(aw, false)).toBe(false);
+    expect(
+      view.isHumanTurnOpen(
+        progress({ phase: "awaiting_human", awaiting: { ...awaiting, answered_at: iso(T0) } }),
+        true,
+      ),
+    ).toBe(false);
+    expect(view.isHumanTurnOpen(progress(), true)).toBe(false);
+  });
+
+  test("normalizeParticipants: tolerant of the settling backend shape, de-duplicated, never throws", () => {
+    expect(view.normalizeParticipants(undefined)).toEqual([]);
+    expect(view.normalizeParticipants("risk-officer")).toEqual([]);
+    expect(
+      view.normalizeParticipants([
+        "legal-counsel",
+        { seat: "risk-officer", label: "위험 점검 위원", reason: "거부권 보유" },
+        { agent_key: "financing-agent", display_name: "자금 위원", reason: "  " },
+        { key: "ip-agent" },
+        { seat: "risk-officer", reason: "duplicate" },
+        { label: "no seat" },
+        null,
+        42,
+      ]),
+    ).toEqual([
+      { seat: "legal-counsel", label: null, reason: null },
+      { seat: "risk-officer", label: "위험 점검 위원", reason: "거부권 보유" },
+      { seat: "financing-agent", label: "자금 위원", reason: null },
+      { seat: "ip-agent", label: null, reason: null },
+    ]);
+  });
+
+  test("participantsByIssue: index 0 = issue 1; issues without participants give empty lists", () => {
+    expect(view.participantsByIssue(undefined)).toEqual([]);
+    expect(view.participantsByIssue(null)).toEqual([]);
+    expect(view.participantsByIssue([{ participants: [{ seat: "a" }] }, {}, { participants: "x" }, null])).toEqual([
+      [{ seat: "a", label: null, reason: null }],
+      [],
+      [],
+      [],
+    ]);
+  });
+
+  test("voteTally: not_participating is surfaced only when present and positive; a missing tally stays null", () => {
+    expect(view.voteTally(null)).toBeNull();
+    expect(view.voteTally({ accept: 3, reserve: 1, abstain: 0 })).toEqual({
+      accept: 3,
+      reserve: 1,
+      abstain: 0,
+      notParticipating: null,
+    });
+    expect(view.voteTally({ accept: 3, reserve: 1, abstain: 0, not_participating: 4 })?.notParticipating).toBe(4);
+    expect(view.voteTally({ accept: 3, reserve: 1, abstain: 0, not_participating: 0 })?.notParticipating).toBeNull();
+  });
+});
+
 describe("transcript rendering", () => {
   const chairOpen = turn(1, {
     role: "chair",
@@ -385,7 +512,7 @@ describe("transcript rendering", () => {
     });
     expect(count(html, 'data-testid="committee-turn-issue"')).toBe(2);
     expect(html.indexOf("안건 1. Scope")).toBeLessThan(html.indexOf("안건 2. Capex"));
-    expect(html).toContain("<h4");
+    expect(html).toContain("<h3");
     // chair: a text chip and the tinted rule, not color alone
     expect(html).toMatch(/data-kind="chair"[^>]*style="[^"]*var\(--primary\)/);
     expect(html).toContain("의장");
@@ -474,17 +601,57 @@ describe("transcript rendering", () => {
     expect(html).toContain("whitespace-pre-wrap");
   });
 
-  test("empty transcript is an honest line; finished sessions can be collapsed", () => {
+  test("empty transcript is an honest line", () => {
     expect(renderTranscript({ turns: [] })).toContain("아직 오간 발언이 없습니다.");
-    const collapsed = renderTranscript({ turns: [turn(1)], collapsible: true });
-    expect(collapsed).toMatch(/^<details/);
-    expect((collapsed.match(/<details[^>]*\sopen/g) ?? []).length).toBe(0);
+  });
+
+  test("a close row counts seats that did not take part as '불참', never as accept (ko + en)", () => {
+    const close = turn(3, {
+      role: "chair",
+      move: "close",
+      outcome: "agreed",
+      votes: { accept: 4, reserve: 0, abstain: 0, not_participating: 3 } as TurnView["votes"],
+      utteranceMd: "",
+    });
+    expect(renderTranscript({ turns: [close] })).toContain("찬성 4 · 유보 0 · 기권 0 · 불참 3");
+    expect(renderTranscript({ turns: [close] }, "en")).toContain("Not participating 3");
+    // absent / zero: the plain tally (older sessions)
+    const none = turn(3, { role: "chair", move: "close", votes: { accept: 2, reserve: 0, abstain: 0 } });
+    expect(renderTranscript({ turns: [none] })).not.toContain("불참");
+  });
+
+  test("a request_floor turn is labelled (ko + en); an unknown move is shown as received", () => {
+    const req = turn(4, { move: "request_floor" as TurnView["move"], utteranceMd: "Capex needs a look." });
+    expect(renderTranscript({ turns: [req] })).toContain("발언권 요청");
+    expect(renderTranscript({ turns: [req] }, "en")).toContain("Floor request");
+    expect(renderTranscript({ turns: [turn(5, { move: "brand_new" as TurnView["move"] })] })).toContain("brand_new");
+  });
+
+  test("per-issue participants: collapsed note with seat label and reason; absent = nothing", () => {
+    const participants = [
+      [
+        { seat: "risk-officer", label: null, reason: "거부권 보유" },
+        { seat: "financing-agent", label: "자금 위원 (표시명)", reason: null },
+      ],
+    ];
+    const html = renderTranscript({ turns: [turn(1)], participants });
+    expect(html).toContain('data-testid="committee-issue-participants"');
+    expect(html).toContain("참석 위원 2명");
+    expect(html).toContain("위험 점검 위원"); // seat key -> catalog label
+    expect(html).toContain("거부권 보유");
+    expect(html).toContain("자금 위원 (표시명)"); // payload label wins
+    expect(html).toContain("사유 없음");
+    expect((html.match(/<details[^>]*\sopen/g) ?? []).length).toBe(0);
+    expect(renderTranscript({ turns: [turn(1)], participants }, "en")).toContain("Participants (2)");
+    expect(renderTranscript({ turns: [turn(1)] })).not.toContain("committee-issue-participants");
+    expect(renderTranscript({ turns: [turn(1)], participants: [[]] })).not.toContain("committee-issue-participants");
   });
 
   test("no hardcoded colors in the new sources", () => {
     for (const f of [
       "components/CommitteeTurnTranscript.tsx",
       "components/CommitteeProgress.tsx",
+      "components/CommitteeMeetingWindow.tsx",
       "lib/committee-progress-view.ts",
     ]) {
       const src = readFileSync(new URL(`${WEB}/${f}`, import.meta.url), "utf8");
@@ -493,16 +660,20 @@ describe("transcript rendering", () => {
   });
 });
 
-describe("turn progress view", () => {
-  test("stepper with one aria-current step, status line with issue i/n, speaker and turn count (ko)", () => {
-    const html = renderView({ progress: progress(), turns: [turn(1)] });
-    expect(count(html, 'aria-current="step"')).toBe(1);
-    expect(html).toMatch(/data-step="discussion"[^>]*data-state="current"/);
+describe("turn progress view (page: one status line)", () => {
+  test("ONE status line with issue i/n, speaker and turns used, and the view-meeting button; no transcript on the page (ko)", () => {
+    const html = renderView({ progress: progress(), turns: [turn(1)], onOpenWindow: () => {} });
     expect(html).toContain("자금 조달 위원 발언 중…");
     expect(html).toContain("(안건 2/4, 발언 7/40회)");
-    expect(html).toContain("안건 2/4: Capex scope");
     expect(html).toContain("3분 12초 지남");
-    expect(html).toContain("토의 기록 1건");
+    expect(html).toContain('data-testid="committee-open-window"');
+    expect(html).toContain(">회의 보기<");
+    expect(html).toContain('aria-haspopup="dialog"');
+    // the transcript, stepper and statements are in the window, not on the page
+    expect(html).not.toContain('data-testid="committee-turn-transcript"');
+    expect(html).not.toContain("stage-stepper");
+    expect(html).not.toContain("Statement 1.");
+    expect(html).not.toContain('role="dialog"'); // never auto-opened
   });
 
   test("status line (en)", () => {
@@ -517,6 +688,7 @@ describe("turn progress view", () => {
     expect(m?.[1]).toContain("자금 조달 위원 발언 중…");
     expect(html).toMatch(/role="status"[^>]*aria-live="polite"/);
     expect(html.match(/<p[^>]*data-testid="committee-status-line"[^>]*>/)?.[0]).not.toContain("aria-live");
+    expect(count(html, 'aria-live="polite"')).toBe(1); // no per-turn announcements
   });
 
   test("per-issue consensus and the awaiting call have their own status sentences", () => {
@@ -535,48 +707,61 @@ describe("turn progress view", () => {
     expect(html).toContain("2번째 진행 — 안건 2부터 이어서 진행 중입니다.");
   });
 
-  describe("awaiting_human: the human's turn", () => {
+  describe("awaiting_human: the human's turn (page alert)", () => {
     const awaiting = { seat: "human", seq: 9, issue_index: 2, called_at: iso(T0), deadline_at: iso(T0 + 180_000) };
     const aw = progress({ phase: "awaiting_human", awaiting });
-    const form = createElement("form", { "data-testid": "the-form" }, "FORM");
 
-    test("a writer gets the your-turn title, a countdown to the deadline and the form slot", () => {
-      const html = renderView({ progress: aw, canAct: true, humanForm: form }, "ko", T0 + 60_000);
+    test("a writer gets a prominent your-turn alert with the countdown and a button that opens the window at the input", () => {
+      const html = renderView({ progress: aw, canAct: true, onOpenWindow: () => {} }, "ko", T0 + 60_000);
       expect(html).toContain('data-testid="committee-awaiting"');
+      expect(html).toContain("meeting-turn-alert");
       expect(html).toContain("내 차례입니다 — 사람 위원 자리에서 발언해 주세요");
+      expect(html).toMatch(/status-chip status-info">내 차례</); // text badge, not color alone
       expect(html).toContain("남은 시간 2분 0초");
-      expect(html).toContain('data-testid="the-form"');
+      expect(html).toContain('data-testid="committee-open-window-input"');
+      expect(html).toContain("발언하러 가기");
       expect(html).toContain('data-expired="false"');
+      // the form is NOT on the page — it lives in the window
+      expect(html).not.toContain("<form");
       // the countdown is plain text, not a live region
       expect(html.match(/<p[^>]*data-testid="committee-awaiting-countdown"[^>]*>/)?.[0]).not.toContain("aria-live");
     });
 
     test("English", () => {
-      const html = renderView({ progress: aw, canAct: true, humanForm: form }, "en", T0 + 60_000);
+      const html = renderView({ progress: aw, canAct: true, onOpenWindow: () => {} }, "en", T0 + 60_000);
       expect(html).toContain("Your turn — please speak for the Human member");
       expect(html).toContain("2m 0s left");
+      expect(html).toContain("Go to my statement");
     });
 
-    test("past the deadline: the form goes, an honest note and the resume button appear", () => {
-      const html = renderView({ progress: aw, canAct: true, humanForm: form, onResume: () => {} }, "ko", T0 + 181_000);
+    test("past the deadline: an honest note and the resume button replace the open-window button", () => {
+      const html = renderView(
+        { progress: aw, canAct: true, onResume: () => {}, onOpenWindow: () => {} },
+        "ko",
+        T0 + 181_000,
+      );
       expect(html).toContain('data-expired="true"');
       expect(html).toContain("시간이 지났습니다");
-      expect(html).not.toContain('data-testid="the-form"');
+      expect(html).not.toContain('data-testid="committee-open-window-input"');
       expect(html).toContain("회의 이어가기");
     });
 
-    test("a viewer without write access sees the read-only line, no form and no buttons", () => {
-      const html = renderView({ progress: aw, canAct: false, humanForm: form, onResume: () => {} }, "ko", T0 + 181_000);
-      expect(html).toContain("사람 위원 발언 대기 — 사람 위원");
-      expect(html).toContain("발언은 분석가 이상 권한으로 제출할 수 있습니다.");
-      expect(html).not.toContain('data-testid="the-form"');
+    test("a viewer without write access gets no alert: the status line and the plain view button only", () => {
+      const html = renderView(
+        { progress: aw, canAct: false, onResume: () => {}, onOpenWindow: () => {} },
+        "ko",
+        T0 + 181_000,
+      );
+      expect(html).not.toContain('data-testid="committee-awaiting"');
+      expect(html).toContain("사람 위원 발언 대기 중: 사람 위원");
+      expect(html).toContain('data-testid="committee-open-window"');
       expect(html).not.toContain("회의 이어가기");
     });
 
-    test("an answered floor hides the form while the meeting resumes", () => {
+    test("an answered floor shows no alert while the meeting resumes", () => {
       const answered = progress({ phase: "awaiting_human", awaiting: { ...awaiting, answered_at: iso(T0 + 30_000) } });
-      const html = renderView({ progress: answered, canAct: true, humanForm: form }, "ko", T0 + 40_000);
-      expect(html).not.toContain('data-testid="the-form"');
+      const html = renderView({ progress: answered, canAct: true }, "ko", T0 + 40_000);
+      expect(html).not.toContain('data-testid="committee-awaiting"');
     });
   });
 
@@ -606,10 +791,8 @@ describe("turn progress view", () => {
       expect(alert).toContain("멈춘 곳 — 토의 · 안건 2/4, 발언 9번째 · 자금 조달 위원");
       expect(alert).toContain("모델 응답이 비어 있습니다");
       expect(alert).toContain("오류 코드 llm_error");
-      expect(alert).toContain("끝난 발언 1건은 아래에 남아 있습니다"); // the abandoned turn is not counted
+      expect(alert).toContain("끝난 발언 1건은 회의 창에서 볼 수 있습니다"); // the abandoned turn is not counted
       expect(html).toContain("멈춘 안건부터 다시 시작");
-      expect(html).toMatch(/data-step="discussion"[^>]*data-state="failed"/);
-      expect(count(html, 'aria-current="step"')).toBe(0);
       // the live region is empty so the alert is the only announcement
       expect(html.match(/<p[^>]*data-testid="committee-live-region"[^>]*>([^<]*)<\/p>/)?.[1]).toBe("");
       expect(html).not.toContain('data-testid="committee-status-line"');
@@ -626,6 +809,188 @@ describe("turn progress view", () => {
       expect(html).toContain("다시 시작하는 중...");
       expect(html).toMatch(/<button[^>]*disabled[^>]*>다시 시작하는 중/);
     });
+
+    test("a run lost with its process shows the runner_lost explanation instead of the raw message, and keeps the code line", () => {
+      const lost = progress({
+        phase: "failed",
+        failed_at: { phase: "discussion", issue_index: 2, seq: 9, error_code: "runner_lost" },
+      });
+      const html = renderView({
+        progress: lost,
+        canAct: true,
+        onRetry: () => {},
+        failureMessage: "Convening process was lost",
+      });
+      expect(html).toContain("회의 진행이 도중에 끊겼습니다");
+      expect(html).not.toContain("Convening process was lost");
+      expect(html).toContain("오류 코드 runner_lost");
+    });
+  });
+});
+
+describe("meeting window (dialog body)", () => {
+  const awaiting = { seat: "human", seq: 9, issue_index: 2, called_at: iso(T0), deadline_at: iso(T0 + 180_000) };
+  const form = createElement("form", { "data-testid": "the-form" }, "FORM");
+  const liveProps = (over: Record<string, unknown> = {}) => ({
+    mode: "live",
+    progress: progress(),
+    turns: [turn(1, { issueIndex: 2, utteranceMd: "Latest words." })],
+    titles: ["Scope", "Capex scope"],
+    ...over,
+  });
+
+  test("a labelled modal dialog: role, aria-modal, labelled by its title; the title names the live meeting", () => {
+    const html = renderWindow(liveProps());
+    expect(html).toMatch(/role="dialog"[^>]*aria-modal="true"[^>]*aria-labelledby="([^"]+)"/);
+    const id = html.match(/aria-labelledby="([^"]+)"/)?.[1] ?? "";
+    expect(html).toContain(`<h2 id="${id}"`);
+    expect(html).toContain("회의 창");
+    expect(html).toContain('data-testid="committee-window-close"');
+    expect(html).toContain("창을 닫아도 회의는 계속됩니다.");
+  });
+
+  test("pinned header: stepper with one current step, issue title, current speaker, turns used (ko)", () => {
+    const html = renderWindow(liveProps());
+    const head = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
+    expect(count(head, 'aria-current="step"')).toBe(1);
+    expect(head).toMatch(/data-step="discussion"[^>]*data-state="current"/);
+    expect(head).toContain("안건 2/4: Capex scope");
+    expect(head).toContain("발언 중: 자금 조달 위원");
+    expect(head).toContain("발언 7/40회");
+  });
+
+  test("header (en) and the turn count without a budget", () => {
+    const head = renderWindow(liveProps(), "en").match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
+    expect(head).toContain("Issue 2/4: Capex scope");
+    expect(head).toContain("Speaking: Financing seat");
+    expect(head).toContain("Turn 7/40");
+    const noBudget = renderWindow(liveProps({ progress: progress({ turn_budget: undefined }) }), "en");
+    expect(noBudget).toContain("Turn 7");
+  });
+
+  test("the transcript sits in a labelled, keyboard-reachable scroll region that is NOT a live region", () => {
+    const html = renderWindow(liveProps());
+    const scroll = html.match(/<section[^>]*data-testid="committee-window-scroll"[^>]*>/)?.[0] ?? "";
+    expect(scroll).toContain("aria-label=");
+    expect(scroll).toContain('tabindex="0"');
+    expect(scroll).toContain('data-following="true"'); // a live window starts following the newest turn
+    expect(scroll).not.toContain("aria-live");
+    expect(html).not.toContain("aria-live"); // no announcements from inside the window
+    expect(html).toContain("Latest words.");
+    // no jump button while following
+    expect(html).not.toContain('data-testid="committee-jump-latest"');
+  });
+
+  test("open human floor: the statement form is in the pinned footer for a writer; a viewer gets the read-only line", () => {
+    const aw = progress({ phase: "awaiting_human", awaiting });
+    const writer = renderWindow(liveProps({ progress: aw, canAct: true, humanForm: form }), "ko", T0 + 60_000);
+    const foot = writer.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? "";
+    expect(foot).toContain('data-testid="the-form"');
+    expect(foot).toContain('data-testid="committee-awaiting-form"');
+    expect(foot).toContain("남은 시간 2분 0초");
+    expect(writer).toContain("발언 중: 사람 위원");
+    const viewer = renderWindow(liveProps({ progress: aw, canAct: false, humanForm: form }), "ko", T0 + 60_000);
+    expect(viewer).not.toContain('data-testid="the-form"');
+    expect(viewer).toContain("발언은 분석가 이상 권한으로 제출할 수 있습니다.");
+  });
+
+  test("past the deadline or answered: no form, the resume button for a writer", () => {
+    const aw = progress({ phase: "awaiting_human", awaiting });
+    const expired = renderWindow(
+      liveProps({ progress: aw, canAct: true, humanForm: form, onResume: () => {} }),
+      "ko",
+      T0 + 181_000,
+    );
+    expect(expired).not.toContain('data-testid="the-form"');
+    expect(expired).toContain("회의 이어가기");
+    const answered = progress({ phase: "awaiting_human", awaiting: { ...awaiting, answered_at: iso(T0 + 30_000) } });
+    expect(
+      renderWindow(liveProps({ progress: answered, canAct: true, humanForm: form }), "ko", T0 + 40_000),
+    ).not.toContain('data-testid="the-form"');
+  });
+
+  test("failed run: the stop location and the retry button are in the footer, no second role=alert", () => {
+    const failed = progress({
+      phase: "failed",
+      failed_at: {
+        phase: "discussion",
+        issue_index: 2,
+        seq: 9,
+        speaker_seat: "financing-agent",
+        error_code: "llm_error",
+      },
+    });
+    const html = renderWindow(
+      liveProps({ progress: failed, canAct: true, onRetry: () => {}, failureMessage: "empty reply" }),
+    );
+    const foot = html.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? "";
+    expect(foot).toContain("멈춘 곳 — 토의 · 안건 2/4, 발언 9번째 · 자금 조달 위원");
+    expect(foot).toContain("empty reply");
+    expect(foot).toContain("멈춘 안건부터 다시 시작");
+    expect(html).not.toContain('role="alert"'); // the page owns the alert
+    expect(html).toMatch(/data-step="discussion"[^>]*data-state="failed"/);
+  });
+
+  test("failed run lost with its process: the window footer shows the runner_lost explanation, not the raw message", () => {
+    const lost = progress({
+      phase: "failed",
+      failed_at: { phase: "discussion", issue_index: 2, seq: 9, error_code: "runner_lost" },
+    });
+    const html = renderWindow(
+      liveProps({ progress: lost, canAct: true, onRetry: () => {}, failureMessage: "Convening process was lost" }),
+    );
+    const foot = html.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? "";
+    expect(foot).toContain("회의 진행이 도중에 끊겼습니다");
+    expect(foot).not.toContain("Convening process was lost");
+  });
+
+  test("record mode: the finished session's full transcript, no stepper, no footer, no follow, participants shown", () => {
+    const html = renderWindow({
+      mode: "record",
+      turns: [turn(1), turn(2, { issueIndex: 2 })],
+      titles: ["Scope", "Capex"],
+      participants: [[{ seat: "risk-officer", label: null, reason: "veto seat" }], []],
+    });
+    expect(html).toContain('data-mode="record"');
+    expect(html).toContain("회의 기록");
+    expect(html).not.toContain("회의 창");
+    expect(html).not.toContain("창을 닫아도 회의는 계속됩니다");
+    expect(html).not.toContain("stage-stepper");
+    expect(html).not.toContain("<footer");
+    expect(html).toContain("토의 기록 2건");
+    expect(html).toContain("안건 1. Scope");
+    expect(html).toContain("안건 2. Capex");
+    expect(html).toContain("veto seat");
+    expect(html).toContain('data-following="false"');
+    expect(html).not.toContain('data-testid="committee-jump-latest"');
+  });
+});
+
+describe("panel and window wiring (design §16.5)", () => {
+  const panel = normSrc(readFileSync(new URL(`${WEB}/components/CommitteePanel.tsx`, import.meta.url), "utf8"));
+  const win = normSrc(readFileSync(new URL(`${WEB}/components/CommitteeMeetingWindow.tsx`, import.meta.url), "utf8"));
+
+  test("the window is opt-in: state starts closed and only the buttons open it", () => {
+    expect(panel).toContain(normSrc("useState<{ focusInput: boolean } | null>(null)"));
+    expect(panel).toContain(normSrc("onOpenWindow={setMeetingWindow}"));
+    expect(panel).toContain(normSrc("setMeetingWindow({ focusInput: false })"));
+    expect(panel).toContain(normSrc("{meetingWindow && windowProps && <CommitteeMeetingWindow"));
+  });
+
+  test("closing the window only clears window state — it never touches the watch", () => {
+    expect(panel).toContain(normSrc("const closeMeetingWindow = () => setMeetingWindow(null);"));
+  });
+
+  test("the window uses the shared modal focus trap (Esc, Tab trap, focus return) and aria-modal", () => {
+    expect(win).toContain(normSrc("useModalFocus(onClose)"));
+    expect(win).toContain(normSrc('aria-modal="true"'));
+    expect(win).toContain(normSrc("onKeyDown={onKeyDown}"));
+    expect(win).toContain(normSrc("createPortal("));
+  });
+
+  test("the statement form keeps its state in the panel and is rendered inside the window", () => {
+    expect(panel).toContain(normSrc("humanForm,"));
+    expect(win).toContain("humanForm");
   });
 });
 
@@ -667,6 +1032,7 @@ describe("panel wiring and catalogs", () => {
 
   test("finished turn sessions render the turn transcript instead of the rounds list", () => {
     expect(panel).toContain(normSrc('transcript.engine === "turns" && turnLive?.sessionId !== transcript.sessionId'));
+    expect(panel).toContain(normSrc('data-testid="committee-open-record"'));
     expect(panel).toContain(normSrc('transcript.engine !== "turns" && ('));
   });
 
@@ -695,14 +1061,77 @@ describe("panel wiring and catalogs", () => {
       "resume",
       "pass_on_behalf",
       "speak",
+      "request_floor",
+      "grant_floor",
+      "decline_floor",
     ];
     for (const cat of [ko, en]) {
       const m = turnsOf(cat).move as Record<string, string>;
       for (const move of moves) expect(m[move]).toBeTruthy();
       const r = turnsOf(cat).reason as Record<string, string>;
-      for (const reason of ["budget", "consensus_failed", "human_timeout", "human_wait_cap", "resume"]) {
+      for (const reason of [
+        "budget",
+        "consensus_failed",
+        "human_timeout",
+        "human_wait_cap",
+        "resume",
+        "floor_granted",
+        "floor_limit",
+        "turn_cap",
+        "mentioned",
+      ]) {
         expect(r[reason]).toBeTruthy();
       }
     }
+  });
+});
+
+describe("session history rows (소집 이력, 2026-11-20 UI revision)", () => {
+  const row = (over: Record<string, unknown> = {}) => ({
+    sessionId: "s-1",
+    status: "done",
+    startedAt: iso(T0),
+    convening: false,
+    engine: "turns" as const,
+    meta: { committee_key: "pre_fs_committee", gate: "pre_fs", synthesized: true },
+    progress: { phase: "done", updated_at: iso(T0 + 190_000) },
+    ...over,
+  });
+
+  test("committeeKeyLabel: readable words for a registry-less key", () => {
+    expect(view.committeeKeyLabel("pre_fs_committee")).toBe("Pre Fs Committee");
+    expect(view.committeeKeyLabel("route-decision")).toBe("Route Decision");
+    expect(view.committeeKeyLabel("")).toBe("");
+  });
+
+  test("sessionFinished: synthesized / done phase / done status count; convening and failures do not", () => {
+    expect(view.sessionFinished(row())).toBe(true);
+    expect(view.sessionFinished(row({ meta: { committee_key: "c", gate: "pre_fs" }, status: "done" }))).toBe(true);
+    expect(
+      view.sessionFinished(
+        row({
+          meta: { committee_key: "c", gate: "pre_fs", synthesized: false },
+          status: "failed",
+          progress: { phase: "failed", updated_at: iso(T0) },
+        }),
+      ),
+    ).toBe(false);
+    expect(view.sessionFinished(row({ convening: true }))).toBe(false);
+    expect(
+      view.sessionFinished(
+        row({
+          meta: { committee_key: "c", gate: "pre_fs", synthesized: false },
+          progress: { phase: "done", updated_at: iso(T0) },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  test("sessionDurationSeconds: finished only, progress write minus start, floored seconds; null on missing data", () => {
+    expect(view.sessionDurationSeconds(row())).toBe(190);
+    expect(view.sessionDurationSeconds(row({ progress: { phase: "done", updated_at: iso(T0 + 1999) } }))).toBe(1);
+    expect(view.sessionDurationSeconds(row({ convening: true }))).toBeNull();
+    expect(view.sessionDurationSeconds(row({ progress: {} }))).toBeNull();
+    expect(view.sessionDurationSeconds(row({ startedAt: "not-a-date" }))).toBeNull();
   });
 });

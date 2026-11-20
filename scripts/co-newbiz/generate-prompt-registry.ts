@@ -143,6 +143,7 @@ const JSON_OUTPUT = new Set<string>([
   "pm.flow_suggest",
   "committee.turn",
   "committee.consensus",
+  "committee.minutes_turns",
 ]);
 
 const HANGUL_RE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;

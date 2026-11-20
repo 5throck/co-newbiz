@@ -186,3 +186,174 @@ export function resolveMinutesDraft(
   const degraded = [...normalized.degradedIndexes].filter((idx) => kept.includes(idx)).length;
   return { draft: { ...draft, discussion }, degraded };
 }
+
+// ── Minutes v2 (ADR-0204 phase 3, design 2026-11-20 §4.6 / §13 Q7 / §15.2) ─────
+//
+// The stored shape of a turn-engine meeting's minutes. UNLIKE v1 almost every
+// field is assembled by CODE from the stored turn rows (participants, consensus
+// proposal, votes, outcome, tally, per-seat recommendation, sittings). The chair
+// model only SELECTS which turns go in the short per-issue excerpt (and may cut
+// a turn down to verbatim fragments) and lists open items. The full transcript
+// is NOT stored here: appendix A / B are rebuilt from agent_position at read
+// time (deterministic, never LLM text).
+//
+// Hard rules (enforced in committee-minutes-v2.ts, never left to the model):
+//   * every excerpt `turn_id` resolves to a live (non-abandoned) speech turn of
+//     the same issue in the same session;
+//   * every `quote` is made of verbatim fragments of that turn's utterance;
+//   * there is NO recommendation field and NO dissent field — the renderer reads
+//     the recommendation from gate_evaluation and dissent from dissent_json
+//     verbatim (ADR-0096 §6), exactly as for v1.
+
+export const MINUTES_V2_VERSION = 2 as const;
+
+const seatName = z.object({ seat: z.string().min(1), name: z.string().min(1) });
+
+export const minutesV2ExcerptSchema = z.object({
+  turn_id: z.string().min(1),
+  seq: z.number().int().min(1),
+  speaker_seat: z.string().min(1),
+  /** Display name (never an agent key); the chair is "의장". */
+  speaker_name: z.string().min(1),
+  role: z.enum(["seat", "chair", "human"]),
+  move: z.string().min(1),
+  addressed_name: z.string().min(1).optional(),
+  /** Verbatim words of the turn: the whole utterance, or fragments joined by " … ". */
+  quote: z.string().min(1),
+  /** True when the quote is the whole utterance. */
+  quote_full: z.boolean(),
+  /** True when the model's quote was not verbatim and the whole utterance was used instead. */
+  quote_repaired: z.boolean().optional(),
+});
+
+export const minutesV2VoteSchema = z.object({
+  seat: z.string().min(1),
+  name: z.string().min(1),
+  vote: z.enum(["accept", "reserve", "no_response"]),
+  /** The voter's own words (verbatim), when stored. */
+  reason: z.string().optional(),
+});
+
+export const minutesV2IssueSchema = z.object({
+  issue_id: issueId,
+  title: z.string().min(1),
+  participants: z.array(seatName.extend({ reason: z.string() })).max(40),
+  /** Seats that spoke on the issue on the chair's grant without being listed participants. */
+  guests: z.array(seatName).max(40),
+  /** Seats that sat the issue out — never counted as accept. */
+  sat_out: z.array(seatName).max(40),
+  excerpt: z.array(minutesV2ExcerptSchema).max(8),
+  excerpt_source: z.enum(["llm", "fallback"]),
+  consensus: z
+    .object({
+      turn_id: z.string().min(1),
+      proposal: z.string().min(1),
+      rests_on_turns: z.array(z.string()).max(40),
+    })
+    .nullable(),
+  votes: z.array(minutesV2VoteSchema).max(40),
+  outcome: z.enum(MINUTES_RESOLUTIONS),
+  /** close row reason: budget | consensus_failed | ... */
+  outcome_reason: z.string().optional(),
+  tally: z.object({
+    accept: z.number().int().min(0),
+    reserve: z.number().int().min(0),
+    abstain: z.number().int().min(0),
+    not_participating: z.number().int().min(0),
+  }),
+  seat_recommendations: z
+    .array(
+      seatName.extend({
+        recommendation: z.enum(["go", "hold", "kill"]),
+        veto_dissent: z.boolean().optional(),
+      }),
+    )
+    .max(40),
+});
+
+export const minutesV2OpenItemSchema = z.object({
+  text: z.string().min(1),
+  owner_seat: seatKey.optional(),
+  owner_name: z.string().optional(),
+  issue_id: issueId.optional(),
+});
+
+export const committeeMinutesV2Schema = z.object({
+  version: z.literal(MINUTES_V2_VERSION),
+  overview: z.object({
+    kind: z.literal("ai_committee_meeting"),
+    engine: z.literal("turns"),
+    held_at: z.string().min(1),
+    chair_seat: z.string().min(1),
+    seats: z.array(seatName).max(40),
+    /** Seats that took no part in any issue (reported, never counted as accept). */
+    not_participating: z.array(seatName).max(40),
+    human_participants: z.array(z.object({ user_id: z.string().min(1), seat: z.string().min(1) })).max(40),
+    /** One entry per sitting; more than one means the meeting was restarted (§15.2). */
+    sittings: z
+      .array(
+        z.object({
+          attempt: z.number().int().min(1),
+          started_at: z.string().optional(),
+          ended_at: z.string().optional(),
+          closed_issue_ids: z.array(issueId).max(8),
+        }),
+      )
+      .min(1)
+      .max(20),
+  }),
+  issues: z.array(minutesV2IssueSchema).max(8),
+  open_items: z.array(minutesV2OpenItemSchema).max(20),
+  provenance: z.object({
+    /** How the excerpts / open items were chosen. */
+    source: z.enum(["llm", "fallback", "mixed"]),
+    fallback_issue_ids: z.array(issueId).max(8),
+    /** Model references dropped because they did not resolve (logged, never silent). */
+    rejected_refs: z.number().int().min(0),
+    /** Model quotes that were not verbatim and were replaced by the whole utterance. */
+    repaired_quotes: z.number().int().min(0),
+    notes: z.array(z.string()).max(20),
+  }),
+});
+
+export type MinutesV2Excerpt = z.infer<typeof minutesV2ExcerptSchema>;
+export type MinutesV2Issue = z.infer<typeof minutesV2IssueSchema>;
+export type CommitteeMinutesV2Json = z.infer<typeof committeeMinutesV2Schema>;
+
+/** Any stored minutes JSON: v1 (round engine; no `version` key) or v2 (turn engine). */
+export type AnyMinutesJson = CommitteeMinutesJson | CommitteeMinutesV2Json;
+
+/** True for a v2 minutes JSON. A stored draft without `version` is v1. */
+export function isMinutesV2(json: unknown): json is CommitteeMinutesV2Json {
+  return typeof json === "object" && json !== null && (json as { version?: unknown }).version === MINUTES_V2_VERSION;
+}
+
+/** The raw model output of the v2 minutes pass (before reference resolution). */
+export const minutesV2LlmOutputSchema = z.object({
+  issues: z
+    .array(
+      z.object({
+        issue_id: issueId,
+        excerpt: z
+          .array(
+            z.object({
+              turn: z.union([z.number(), z.string()]),
+              quote: z.string().optional(),
+            }),
+          )
+          .max(12),
+      }),
+    )
+    .max(8),
+  open_items: z
+    .array(
+      z.object({
+        text: z.string().min(1),
+        owner_seat: z.string().optional(),
+        issue_id: z.string().optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
+});
+export type MinutesV2LlmOutput = z.infer<typeof minutesV2LlmOutputSchema>;

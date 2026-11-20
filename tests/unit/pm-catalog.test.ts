@@ -70,6 +70,7 @@ describe("pm catalog (ADR-0183 D1)", () => {
       "committee.agenda",
       "committee.consensus",
       "committee.minutes",
+      "committee.minutes_turns",
       "committee.position",
       "committee.turn",
       "s8.business_case_prose",

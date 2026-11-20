@@ -135,7 +135,9 @@ export function makeLlmChairAgenda(): (material: string) => Promise<string> {
   return async (material) =>
     complete([systemMessage("committee.agenda"), { role: "user", content: material }], {
       temperature: 0.2,
-      maxTokens: 600,
+      // 600 fit 2-5 bare issue titles; the turn engine's opening agenda also carries 3-5 participants
+      // with a one-line reason per issue (ADR-0204), which needs room or the JSON is cut mid-object.
+      maxTokens: 2000,
       agent: promptAgent("committee.agenda", { key: "process-governance-manager" }),
     });
 }
@@ -169,6 +171,22 @@ export function makeLlmChairMinutes(): (material: string) => Promise<string> {
       // The default transport timeout is sized for small completions and cut
       // off large minutes drafts mid-JSON; CHAIR_MINUTES_TIMEOUT_MS gives the
       // pass its own budget (see the constant's rationale above).
+      signal: AbortSignal.timeout(CHAIR_MINUTES_TIMEOUT_MS),
+    });
+}
+
+/**
+ * Chair minutes pass caller for a turn-engine meeting (ADR-0204 phase 3): the
+ * committee.minutes_turns system prompt. The model only selects excerpt turns
+ * (and verbatim fragments) and lists open items, so the output is small; the
+ * same raw-text contract and timeout budget as makeLlmChairMinutes.
+ */
+export function makeLlmChairMinutesV2(): (material: string) => Promise<string> {
+  return async (material) =>
+    complete([systemMessage("committee.minutes_turns"), { role: "user", content: material }], {
+      temperature: 0.2,
+      maxTokens: 3000,
+      agent: promptAgent("committee.minutes_turns", { key: "process-governance-manager" }),
       signal: AbortSignal.timeout(CHAIR_MINUTES_TIMEOUT_MS),
     });
 }

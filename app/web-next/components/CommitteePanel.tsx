@@ -13,16 +13,20 @@ import { api, ApiError } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { PrimaryAction } from "./ui.tsx";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { formatDateTime } from "../lib/format.ts";
 import { MinutesDialog } from "./CommitteeMinutesView.tsx";
+import type { MinutesJsonPayload } from "../lib/committee-minutes-view.ts";
+import { CommitteeMeetingWindow, type MeetingWindowProps } from "./CommitteeMeetingWindow.tsx";
 import { CommitteeProgressView, CommitteeTurnProgressView } from "./CommitteeProgress.tsx";
-import { CommitteeTurnTranscript } from "./CommitteeTurnTranscript.tsx";
 import type { LivePosition, MeetingAwaiting, MeetingProgress } from "../lib/committee-progress.ts";
 import {
+  type AgendaParticipant,
   attemptOf,
   buildTurnPollUrl,
+  committeeKeyLabel,
+  sessionDurationSeconds,
   CONVENING_DEADLINE_MS,
   CONVENING_POLL_MS,
   convenDeadlineReached,
@@ -31,6 +35,7 @@ import {
   MAX_TURN_PAGES_PER_TICK,
   mergeTurns,
   nextDeadlinePause,
+  participantsByIssue,
   pickFailedTurnSession,
   pickResumableSession,
   POSITION_META_RE,
@@ -39,6 +44,7 @@ import {
   type TurnView,
   turnErrorKey,
   turnsNeedReset,
+  visibleTurnCount,
 } from "../lib/committee-progress-view.ts";
 
 interface SessionPosition {
@@ -59,7 +65,7 @@ interface SessionTranscript {
   /** Turn engine: every turn in seq order (GET without afterSeq). */
   turns?: TurnView[];
   /** Turn engine: the stored chair agenda (titles label the issue groups). */
-  agenda?: Array<{ title: string }> | null;
+  agenda?: Array<{ title: string; participants?: unknown }> | null;
   rounds: Array<{ round: number; positions: SessionPosition[] }>;
   evaluation: {
     gateEvaluationId: string;
@@ -81,7 +87,7 @@ interface PollSession {
   awaiting?: MeetingAwaiting | null;
   turns?: TurnView[];
   hasMoreTurns?: boolean;
-  meta?: { agenda?: Array<{ title: string }> | null; synthesized?: boolean };
+  meta?: { agenda?: Array<{ title: string; participants?: unknown }> | null; synthesized?: boolean };
 }
 /** Live view of a TURN-engine session: kept after a failure so the stop location and the turns stay on screen. */
 interface TurnLive {
@@ -89,6 +95,8 @@ interface TurnLive {
   progress: MeetingProgress;
   turns: TurnView[];
   titles: string[];
+  /** Chair-selected participants by issue (empty lists while the engine does not report them). */
+  participants: AgendaParticipant[][];
   failureMessage?: string;
 }
 
@@ -169,12 +177,28 @@ export function CommitteePanel({
   headerPrimary?: boolean;
 }) {
   const tr = useTranslations();
+  const locale = useLocale();
   const { me } = useAuth();
   const canAct = canWriteBusiness(me?.role);
   const [sessions, setSessions] = useState<
-    Array<{ sessionId: string; meta: SessionTranscript["meta"]; status: string; startedAt: string }>
+    Array<{
+      sessionId: string;
+      meta: SessionTranscript["meta"];
+      status: string;
+      startedAt: string;
+      convening?: boolean;
+      engine?: "rounds" | "turns";
+      progress?: MeetingProgress | null;
+    }>
   >([]);
   const [minutesOpen, setMinutesOpen] = useState(false);
+  // Turn-meeting minutes v2 record: fetched once per "회의록 보기" open of the meeting window
+  // (the window then shows the 회의록 / 전체 발언 tabs). v1 / fetch failure fall back — v1 opens
+  // the MinutesDialog as before; a fetch failure closes the window and surfaces the error.
+  const [minutesRecord, setMinutesRecord] = useState<{
+    payload: MinutesJsonPayload | null;
+    state: "loading" | "error" | "loaded";
+  }>({ payload: null, state: "loading" });
   // Live progress of the session being convened (poll payload: progress +
   // the positions finished so far). Kept after a failure so the stop location
   // and the kept statements stay on screen; cleared on a new convene / success.
@@ -188,6 +212,16 @@ export function CommitteePanel({
   // Busy flag of the turn-meeting actions (submit the human turn, retry, resume). Separate from `busy`:
   // `busy` stays true for the whole watch, and the open human floor must stay usable while it does.
   const [turnBusy, setTurnBusy] = useState(false);
+  // The optional meeting window (design §16.5): never opened by itself; closing it does not touch the
+  // meeting (the poll and every piece of state live here). `focusInput` = opened from the "your turn" alert.
+  const [meetingWindow, setMeetingWindow] = useState<{ focusInput: boolean } | null>(null);
+  const meetingWindowRef = useRef<{ focusInput: boolean } | null>(null);
+  meetingWindowRef.current = meetingWindow;
+  // The last live snapshot the window showed: when the meeting finishes while the window is open, it keeps
+  // showing this until the finished transcript is loaded, then continues as the full record (no flicker).
+  const lastLiveRef = useRef<TurnLive | null>(null);
+  if (turnLive) lastLiveRef.current = turnLive;
+  else if (!meetingWindow) lastLiveRef.current = null;
   const [transcript, setTranscript] = useState<SessionTranscript | null>(null);
   // 아코디언 — 펼친 세션(소집 이력 행)의 id. 새로 소집한 세션은 자동 펼침.
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -242,7 +276,9 @@ export function CommitteePanel({
           engine?: "rounds" | "turns";
           awaiting?: MeetingAwaiting | null;
         }>;
-      }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`)
+      }>(
+        `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions?committeeKey=${encodeURIComponent(committeeKey)}`,
+      )
       .then((r) => {
         setSessions(r.data.sessions);
         return r.data.sessions;
@@ -251,7 +287,7 @@ export function CommitteePanel({
         setSessions([]);
         return [];
       });
-  }, [opportunityId]);
+  }, [opportunityId, committeeKey]);
 
   const loadTranscript = useCallback(
     (sessionId: string) => {
@@ -305,6 +341,45 @@ export function CommitteePanel({
     };
   }, [loadSessions]);
 
+  // GET .../minutes?format=json (envelope-unwrapped).
+  async function fetchMinutesPayload(sessionId: string): Promise<MinutesJsonPayload> {
+    const res = await fetch(
+      `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}/minutes?format=json`,
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const body = (await res.json()) as { data?: MinutesJsonPayload } | MinutesJsonPayload;
+    return "data" in body && body.data !== undefined ? body.data : (body as MinutesJsonPayload);
+  }
+
+  // The ONE record entry (2026-11-20 UI revision): a finished turn meeting opens the meeting
+  // window, which fetches the minutes and offers the 회의록 / 전체 발언 tabs (v2) or — for a
+  // pre-v2 draft — falls back to the v1 MinutesDialog. Round sessions go straight to the dialog.
+  async function openMinutesRecord(sessionIdArg?: string) {
+    const sessionId = sessionIdArg ?? transcript?.sessionId;
+    if (!sessionId) return;
+    const engine = sessionIdArg ? undefined : transcript?.engine;
+    if (engine !== undefined && engine !== "turns") {
+      setMinutesOpen(true);
+      return;
+    }
+    setMinutesRecord({ payload: null, state: "loading" });
+    setMeetingWindow({ focusInput: false });
+    try {
+      const payload = await fetchMinutesPayload(sessionId);
+      if (payload.minutesVersion === 2) {
+        setMinutesRecord({ payload, state: "loaded" });
+      } else {
+        setMeetingWindow(null);
+        setMinutesOpen(true);
+        setMinutesRecord({ payload: null, state: "loading" });
+      }
+    } catch {
+      setMinutesRecord({ payload: null, state: "loading" });
+      setMeetingWindow(null);
+      setError("회의록을 불러오지 못했습니다.");
+    }
+  }
+
   // Post-convene refresh — the same follow-up the synchronous path always did
   // (history row refresh + auto-expand + transcript load).
   function finalizeConvene(sessionId: string) {
@@ -313,6 +388,7 @@ export function CommitteePanel({
     setNotice(`위원회 세션이 소집되었습니다 (${sessionId.slice(-6)}).`);
     loadSessions();
     loadTranscript(sessionId);
+    if (meetingWindowRef.current) void openMinutesRecord(sessionId);
     setExpandedSessionId(sessionId); // 새 세션은 자동으로 펼친다
     setHistoryOpen(true); // 방금 소집한 행을 바로 보여준다
   }
@@ -385,6 +461,7 @@ export function CommitteePanel({
                 progress,
                 turns: heldTurns,
                 titles: (s.meta?.agenda ?? []).map((a) => a.title),
+                participants: participantsByIssue(s.meta?.agenda),
                 failureMessage: s.conveningError ?? undefined,
               });
               setNotice((prev) => (prev === progressNotice ? null : prev));
@@ -651,6 +728,91 @@ export function CommitteePanel({
     : [];
   const humanText = transcript && transcript.meta.decision_mode !== "agent_team" && !transcript.meta.synthesized;
 
+  // The human statement form of the open floor. It lives inside the meeting window (and keeps its state here,
+  // so closing and reopening the window never loses a half-written statement).
+  const humanForm = (
+    <form
+      className="sizing-new-form"
+      aria-label={tr(`${TURN_I18N}.awaiting.formLabel`)}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submitTurnPosition();
+      }}
+    >
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+        {tr(`${TURN_I18N}.awaiting.formHint`)}
+      </p>
+      <label className="block text-[length:var(--fs-caption)]">
+        <span className="block mb-1">{tr(`${TURN_I18N}.awaiting.positionLabel`)}</span>
+        <textarea
+          value={position.text}
+          onChange={(e) => setPosition({ ...position, text: e.target.value })}
+          className="sizing-new-input w-full"
+          rows={3}
+          required
+        />
+      </label>
+      <div className="flex flex-wrap items-end gap-2 mt-2">
+        <label className="text-[length:var(--fs-caption)]">
+          <span className="block mb-1">{tr(`${TURN_I18N}.awaiting.recommendationLabel`)}</span>
+          <select
+            value={position.recommendation}
+            onChange={(e) =>
+              setPosition({ ...position, recommendation: e.target.value as typeof position.recommendation })
+            }
+            className="sizing-new-input sizing-new-input-sm"
+          >
+            <option value="go">GO</option>
+            <option value="hold">HOLD</option>
+            <option value="kill">KILL</option>
+          </select>
+        </label>
+        <button type="submit" className="btn-ghost btn-sm" disabled={turnBusy || !position.text.trim()}>
+          {tr(`${TURN_I18N}.awaiting.submit`)}
+        </button>
+      </div>
+    </form>
+  );
+
+  // The window shows the live meeting while there is one (or until its finished record arrives), else the
+  // finished session's full record. `null` = nothing to show (the window then stays shut).
+  const windowLive =
+    turnLive ??
+    (lastLiveRef.current && transcript?.sessionId !== lastLiveRef.current.sessionId ? lastLiveRef.current : null);
+  const windowRecord =
+    !windowLive && transcript?.engine === "turns"
+      ? {
+          turns: transcript.turns ?? [],
+          titles: (transcript.agenda ?? []).map((a) => a.title),
+          participants: participantsByIssue(transcript.agenda),
+        }
+      : null;
+  const windowProps: Omit<MeetingWindowProps, "focusInput" | "onClose"> | null = windowLive
+    ? {
+        mode: "live",
+        progress: windowLive.progress,
+        turns: windowLive.turns,
+        titles: windowLive.titles,
+        participants: windowLive.participants,
+        failureMessage: windowLive.failureMessage,
+        canAct,
+        humanForm,
+        busy: turnBusy,
+        onRetry: () => void driveTurnMeeting(),
+        onResume: () => void driveTurnMeeting(),
+        minutes: null,
+        minutesState: null,
+      }
+    : windowRecord
+      ? {
+          mode: "record" as const,
+          ...windowRecord,
+          minutes: minutesRecord.payload,
+          minutesState: minutesRecord.state,
+        }
+      : null;
+  const closeMeetingWindow = () => setMeetingWindow(null);
+
   return (
     <section aria-label="위원회 심의" className="market-section sizing-step">
       <h3 className="sizing-step-title text-[length:var(--fs-body)]">
@@ -713,60 +875,18 @@ export function CommitteePanel({
         />
       )}
 
-      {/* Turn engine (ADR-0204): stepper, status, open human floor, retry, and the live transcript */}
+      {/* Turn engine (ADR-0204, design §16.5): ONE status line + "회의 보기"; the "your turn" alert while a human
+          seat has the floor. The transcript, stepper and statement form live in the meeting window below. */}
       {turnLive && (
         <CommitteeTurnProgressView
           progress={turnLive.progress}
           turns={turnLive.turns}
-          titles={turnLive.titles}
           failureMessage={turnLive.failureMessage}
           canAct={canAct}
           busy={turnBusy}
           onRetry={() => void driveTurnMeeting()}
           onResume={() => void driveTurnMeeting()}
-          humanForm={
-            <form
-              className="sizing-new-form"
-              aria-label={tr(`${TURN_I18N}.awaiting.formLabel`)}
-              onSubmit={(e) => {
-                e.preventDefault();
-                void submitTurnPosition();
-              }}
-            >
-              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
-                {tr(`${TURN_I18N}.awaiting.formHint`)}
-              </p>
-              <label className="block text-[length:var(--fs-caption)]">
-                <span className="block mb-1">{tr(`${TURN_I18N}.awaiting.positionLabel`)}</span>
-                <textarea
-                  value={position.text}
-                  onChange={(e) => setPosition({ ...position, text: e.target.value })}
-                  className="sizing-new-input w-full"
-                  rows={3}
-                  required
-                />
-              </label>
-              <div className="flex flex-wrap items-end gap-2 mt-2">
-                <label className="text-[length:var(--fs-caption)]">
-                  <span className="block mb-1">{tr(`${TURN_I18N}.awaiting.recommendationLabel`)}</span>
-                  <select
-                    value={position.recommendation}
-                    onChange={(e) =>
-                      setPosition({ ...position, recommendation: e.target.value as typeof position.recommendation })
-                    }
-                    className="sizing-new-input sizing-new-input-sm"
-                  >
-                    <option value="go">GO</option>
-                    <option value="hold">HOLD</option>
-                    <option value="kill">KILL</option>
-                  </select>
-                </label>
-                <button type="submit" className="btn-ghost btn-sm" disabled={turnBusy || !position.text.trim()}>
-                  {tr(`${TURN_I18N}.awaiting.submit`)}
-                </button>
-              </div>
-            </form>
-          }
+          onOpenWindow={setMeetingWindow}
         />
       )}
 
@@ -789,6 +909,20 @@ export function CommitteePanel({
           <div className="mt-1">
             {sessions.map((s) => {
               const expanded = expandedSessionId === s.sessionId;
+              const rec =
+                expanded && transcript?.sessionId === s.sessionId
+                  ? (transcript.evaluation?.recommendation ?? null)
+                  : null;
+              const duration = sessionDurationSeconds(s);
+              const durationText =
+                duration !== null
+                  ? Math.floor(duration / 60) > 0
+                    ? tr(`${TURN_I18N}.history.durationMinutesSeconds`, {
+                        minutes: Math.floor(duration / 60),
+                        seconds: duration % 60,
+                      })
+                    : tr(`${TURN_I18N}.history.durationSeconds`, { seconds: duration })
+                  : null;
               return (
                 <button
                   key={s.sessionId}
@@ -804,15 +938,30 @@ export function CommitteePanel({
                     loadTranscript(s.sessionId);
                   }}
                 >
-                  <span className="flex items-center gap-2 text-[length:var(--fs-caption)]">
-                    <span className="tabular-nums">{formatDateTime(s.startedAt)}</span>
+                  <span className="flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)]">
+                    <span className="tabular-nums">{formatDateTime(s.startedAt, locale)}</span>
+                    {/* Committee + gate in plain words — never the raw "agent_team · pre_fs" pair. */}
+                    <span className="font-semibold">{committeeLabel || committeeKeyLabel(committeeKey)}</span>
                     <span className="text-[color:var(--muted-fg)]">
-                      {s.meta.decision_mode} · {s.meta.gate}
+                      {tr(GATE_LABEL_KEY[s.meta.gate] ?? s.meta.gate)}
                     </span>
+                    {durationText && (
+                      <span className="text-[color:var(--muted-fg)] tabular-nums">· {durationText}</span>
+                    )}
+                    {s.engine === "turns" && (
+                      <span className="status-chip status-info">{tr(`${TURN_I18N}.history.engineTurns`)}</span>
+                    )}
                   </span>
                   <span className="flex items-center gap-1">
+                    {rec && (
+                      <span
+                        className={`status-chip ${rec === "go" ? "status-green" : rec === "hold" ? "status-amber" : "status-red"}`}
+                      >
+                        {tr(`${TURN_I18N}.history.proposal`)} {REC_LABEL[rec] ?? rec.toUpperCase()}
+                      </span>
+                    )}
                     <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>
-                      {s.meta.synthesized ? "제안됨" : "진행 중"}
+                      {s.meta.synthesized ? tr(`${TURN_I18N}.history.proposed`) : tr(`${TURN_I18N}.history.inProgress`)}
                     </span>
                     <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
                       {expanded ? "▲" : "▼"}
@@ -879,13 +1028,24 @@ export function CommitteePanel({
             </div>
           )}
 
-          {/* Turn engine: the finished meeting as a turn-by-turn record (the live view shows it while paused/failed). */}
+          {/* Turn engine: the finished meeting's full record opens in the same meeting window as the live view. */}
           {transcript.engine === "turns" && turnLive?.sessionId !== transcript.sessionId && (
-            <CommitteeTurnTranscript
-              turns={transcript.turns ?? []}
-              titles={(transcript.agenda ?? []).map((a) => a.title)}
-              collapsible
-            />
+            <div className="flex flex-wrap items-center gap-2 mb-3" data-testid="committee-turn-record">
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                {tr(`${TURN_I18N}.transcriptTitle`, { count: visibleTurnCount(transcript.turns ?? []) })}
+              </span>
+              {/* The ONE record entry: opens the meeting window, which shows the minutes v2 body
+                  (회의록 / 전체 발언 tabs). The old separate "회의 기록 보기" entry is gone. */}
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                aria-haspopup="dialog"
+                data-testid="committee-open-record"
+                onClick={() => void openMinutesRecord()}
+              >
+                {tr(`${TURN_I18N}.window.openMinutes`)}
+              </button>
+            </div>
           )}
 
           {/* 입장 원문 — 라운드별 상세 (감사용 원문 보존, 저장 형식 메타는 걷어냄) */}
@@ -927,9 +1087,11 @@ export function CommitteePanel({
           <section className="mt-2 mb-3" aria-label="회의록">
             <p className="text-[length:var(--fs-body)] font-semibold mb-1">회의록</p>
             <span className="actions-row">
-              <button type="button" className="btn-ghost btn-sm" onClick={() => setMinutesOpen(true)}>
-                회의록 보기
-              </button>
+              {transcript.engine !== "turns" && (
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setMinutesOpen(true)}>
+                  회의록 보기
+                </button>
+              )}
               <a
                 className="btn-ghost btn-sm"
                 href={`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(transcript.sessionId)}/minutes`}
@@ -1099,6 +1261,10 @@ export function CommitteePanel({
           committeeLabel={committeeLabel}
           onClose={() => setMinutesOpen(false)}
         />
+      )}
+      {/* ONE element for both modes: live -> record keeps the same window (focus and scroll are kept). */}
+      {meetingWindow && windowProps && (
+        <CommitteeMeetingWindow {...windowProps} focusInput={meetingWindow.focusInput} onClose={closeMeetingWindow} />
       )}
     </section>
   );

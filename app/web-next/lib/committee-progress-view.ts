@@ -412,3 +412,186 @@ const TURN_ERROR_CODES: ReadonlySet<string> = new Set(["floor_not_open", "floor_
 export function turnErrorKey(code: string): string | null {
   return TURN_ERROR_CODES.has(code) ? `common.committee.turns.errors.${code}` : null;
 }
+
+// ── Meeting window (design §16.5): participants, vote tally, auto-follow ──────
+
+/** One seat the chair selected for an agenda issue (design §16.2). */
+export interface AgendaParticipant {
+  /** Seat key (a role, never a person). */
+  seat: string;
+  /** Seat display label when the payload carries one. */
+  label: string | null;
+  /** The chair's one-line reason for selecting the seat. */
+  reason: string | null;
+}
+
+function nonEmptyString(v: unknown): string | null {
+  return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
+}
+
+/**
+ * Per-issue participants from a stored agenda entry (`meta.agenda[i].participants`).
+ * The backend shape is still settling, so this is tolerant: a bare string is a
+ * seat key; an object may name the seat as `seat` / `agent_key` / `seat_key` /
+ * `key` and carry `label` (or `display_name` / `seat_label`) and `reason`.
+ * Anything else — including an absent field — yields no participants, and
+ * duplicates of a seat are dropped (first wins).
+ */
+export function normalizeParticipants(raw: unknown): AgendaParticipant[] {
+  if (!Array.isArray(raw)) return [];
+  const out: AgendaParticipant[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    let seat: string | null = null;
+    let label: string | null = null;
+    let reason: string | null = null;
+    if (typeof item === "string") seat = nonEmptyString(item);
+    else if (item && typeof item === "object") {
+      const o = item as Record<string, unknown>;
+      seat =
+        nonEmptyString(o.seat) ?? nonEmptyString(o.agent_key) ?? nonEmptyString(o.seat_key) ?? nonEmptyString(o.key);
+      label = nonEmptyString(o.label) ?? nonEmptyString(o.display_name) ?? nonEmptyString(o.seat_label);
+      reason = nonEmptyString(o.reason);
+    }
+    if (!seat || seen.has(seat)) continue;
+    seen.add(seat);
+    out.push({ seat, label, reason });
+  }
+  return out;
+}
+
+/** Participants of every agenda issue, index 0 = issue 1; issues without any give an empty list. */
+export function participantsByIssue(
+  agenda: ReadonlyArray<{ participants?: unknown } | null | undefined> | null | undefined,
+): AgendaParticipant[][] {
+  return (agenda ?? []).map((a) => normalizeParticipants(a?.participants));
+}
+
+/** A close row's vote tally; `notParticipating` is null when the engine did not report it (older sessions). */
+export interface VoteTally {
+  accept: number;
+  reserve: number;
+  abstain: number;
+  notParticipating: number | null;
+}
+
+export function voteTally(
+  votes: { accept: number; reserve: number; abstain: number; not_participating?: number | null } | null | undefined,
+): VoteTally | null {
+  if (!votes) return null;
+  const np = votes.not_participating;
+  return {
+    accept: votes.accept,
+    reserve: votes.reserve,
+    abstain: votes.abstain,
+    notParticipating: typeof np === "number" && np > 0 ? np : null,
+  };
+}
+
+/** The seat to show as "speaking": the seat holding the human floor while paused, else the current speaker. */
+export function currentSpeakerSeat(p: MeetingProgress): string | null {
+  if (p.phase === "awaiting_human") return p.awaiting?.seat ?? p.speaker_seat ?? "human";
+  if (p.phase === "discussion") return p.speaker_seat ?? null;
+  return null;
+}
+
+/** Whether the human floor is open for the viewer to act on (prominent "your turn" alert). */
+export function isHumanTurnOpen(p: MeetingProgress, canAct: boolean): boolean {
+  return canAct && p.phase === "awaiting_human" && !!p.awaiting && !p.awaiting.answered_at;
+}
+
+/** Pixels from the bottom within which the scroller still counts as "at the newest turn". */
+export const FOLLOW_BOTTOM_THRESHOLD_PX = 48;
+
+export interface ScrollMetrics {
+  scrollTop: number;
+  clientHeight: number;
+  scrollHeight: number;
+}
+
+export function isNearBottom(m: ScrollMetrics, thresholdPx: number = FOLLOW_BOTTOM_THRESHOLD_PX): boolean {
+  return m.scrollHeight - m.scrollTop - m.clientHeight <= thresholdPx;
+}
+
+/**
+ * Auto-follow state of the meeting transcript: `following` while the reader is
+ * at the bottom (new turns scroll into view); scrolling up pauses it and the
+ * "jump to latest" button appears. `seen` is the item count at the moment the
+ * reader was last at the bottom, so the button can say how many turns arrived since.
+ */
+export interface FollowState {
+  following: boolean;
+  seen: number;
+}
+
+export type FollowEvent =
+  | { type: "scroll"; metrics: ScrollMetrics; total: number }
+  | { type: "items"; total: number }
+  | { type: "jump"; total: number };
+
+export function followReducer(s: FollowState, e: FollowEvent): FollowState {
+  switch (e.type) {
+    case "scroll": {
+      const following = isNearBottom(e.metrics);
+      return following ? { following: true, seen: e.total } : { following: false, seen: s.seen };
+    }
+    case "items":
+      return s.following ? { following: true, seen: e.total } : s;
+    case "jump":
+      return { following: true, seen: e.total };
+  }
+}
+
+/** Turns that arrived while following was paused (0 while following). */
+export function unseenCount(s: FollowState, total: number): number {
+  return s.following ? 0 : Math.max(0, total - s.seen);
+}
+
+/** The "jump to latest" button shows only for a live transcript the reader scrolled away from. */
+export function showJumpToLatest(s: FollowState, live: boolean): boolean {
+  return live && !s.following;
+}
+
+// ── Session history rows (소집 이력, 2026-11-20 UI revision) ────────────────
+
+/** The fields of a listed session the history row renders. */
+export interface SessionHistoryRow {
+  sessionId: string;
+  status: string;
+  startedAt: string;
+  convening?: boolean;
+  engine?: "rounds" | "turns";
+  meta?: { committee_key?: string; gate?: string; synthesized?: boolean } | null;
+  progress?: { phase?: string; started_at?: string; updated_at?: string } | null;
+}
+
+/** True when the meeting is over (synthesized, done phase, or a done status) — not convening, not failed. */
+export function sessionFinished(s: SessionHistoryRow): boolean {
+  if (s.convening === true) return false;
+  return s.meta?.synthesized === true || s.progress?.phase === "done" || s.status === "done";
+}
+
+/**
+ * Whole seconds the finished meeting ran: last progress write minus the process start.
+ * Null while the meeting is not finished, or when either timestamp is missing/unparseable.
+ */
+export function sessionDurationSeconds(s: SessionHistoryRow): number | null {
+  if (!sessionFinished(s)) return null;
+  const start = Date.parse(s.startedAt);
+  const end = Date.parse(s.progress?.updated_at ?? "");
+  if (Number.isNaN(start) || Number.isNaN(end)) return null;
+  return Math.max(0, Math.floor((end - start) / 1000));
+}
+
+/**
+ * A committee key with no registry label reads as readable words:
+ * "pre_fs_committee" → "Pre Fs Committee". Pure fallback; panels that know
+ * their committee pass a proper display label instead.
+ */
+export function committeeKeyLabel(key: string): string {
+  return key
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}

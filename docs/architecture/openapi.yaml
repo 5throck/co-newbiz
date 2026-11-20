@@ -4998,6 +4998,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/CommitteeSessionFilter'
         - $ref: '#/components/parameters/CommitteeAfterSeq'
+        - $ref: '#/components/parameters/CommitteeKeyFilter'
+        - $ref: '#/components/parameters/CommitteeGateFilter'
       responses:
         '200':
           description: Ok envelope whose data is {sessions} (CommitteeSessionListItem[]) and meta.count. Turn-engine sessions add engine, awaiting, turns and hasMoreTurns (ADR-0204 phase 2).
@@ -5011,7 +5013,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/CommitteeSessionListItemsResponse'
         '400':
-          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          description: afterSeq is not a non-negative integer, or committeeKey / gate is not an identifier (error.code invalid_request).
           content:
             application/json:
               schema:
@@ -5054,7 +5056,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/CommitteeSessionTranscript'
         '400':
-          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          description: afterSeq is not a non-negative integer, or committeeKey / gate is not an identifier (error.code invalid_request).
           content:
             application/json:
               schema:
@@ -5136,6 +5138,8 @@ paths:
     get:
       operationId: getProjectCommitteeMinutes
       summary: IC committee minutes as text/markdown (?format=json for the structured view payload).
+      description: >-
+        ?format=json returns minutesVersion (2 = turn-meeting minutes with a dialogue excerpt per issue, 1 = round-engine minutes or a turn session whose stored draft predates v2, null = none), engine, and for turn sessions appendix {transcript, abandoned} rebuilt from the stored turns. The markdown of a v2 session carries the body plus appendix A (full transcript) and, after a restart, appendix B (abandoned attempts).
       tags:
         - Reference
       parameters:
@@ -5180,6 +5184,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/CommitteeSessionFilter'
         - $ref: '#/components/parameters/CommitteeAfterSeq'
+        - $ref: '#/components/parameters/CommitteeKeyFilter'
+        - $ref: '#/components/parameters/CommitteeGateFilter'
       responses:
         '200':
           description: Ok envelope whose data is {sessions} (CommitteeSessionListItem[]) and meta.count. Turn-engine sessions add engine, awaiting, turns and hasMoreTurns (ADR-0204 phase 2).
@@ -5193,7 +5199,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/CommitteeSessionListItemsResponse'
         '400':
-          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          description: afterSeq is not a non-negative integer, or committeeKey / gate is not an identifier (error.code invalid_request).
           content:
             application/json:
               schema:
@@ -5236,7 +5242,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/CommitteeSessionTranscript'
         '400':
-          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          description: afterSeq is not a non-negative integer, or committeeKey / gate is not an identifier (error.code invalid_request).
           content:
             application/json:
               schema:
@@ -7669,6 +7675,8 @@ paths:
     get:
       operationId: getCommitteeMinutes
       summary: Committee meeting minutes as text/markdown (seat scorecard, position record, chair synthesis).
+      description: >-
+        ?format=json returns minutesVersion (2 = turn-meeting minutes with a dialogue excerpt per issue, 1 = round-engine minutes or a turn session whose stored draft predates v2, null = none), engine, and for turn sessions appendix {transcript, abandoned} rebuilt from the stored turns. The markdown of a v2 session carries the body plus appendix A (full transcript) and, after a restart, appendix B (abandoned attempts).
       tags:
         - Reference
       parameters:
@@ -11173,6 +11181,22 @@ components:
         type: integer
         minimum: 0
       description: Turn-engine cursor (ADR-0204 §4.7) — return only turns with seq greater than this value, at most 50 per session (hasMoreTurns = page again with the last seq). A non-integer or negative value is 400 invalid_request. Ignored on round-engine sessions.
+    CommitteeKeyFilter:
+      name: committeeKey
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'
+      description: Lists only sessions of this committee (process_run.meta.committee_key), so a screen shows its own committee's sessions and not another gate's. A value that is not an identifier is 400 invalid_request.
+    CommitteeGateFilter:
+      name: gate
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'
+      description: Lists only sessions convened at this gate (process_run.meta.gate, for example target_screening). A value that is not an identifier is 400 invalid_request.
   responses:
     Ok:
       description: Success — standard envelope; data shape is per-endpoint.

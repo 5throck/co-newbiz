@@ -14,6 +14,7 @@ import {
   createCommitteeSession,
   listCommitteeSessions,
   runCommitteeSession,
+  sessionListFilterFromQuery,
   type DecisionMode,
 } from "../../../../../lib/committee-session.ts";
 
@@ -33,9 +34,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (afterRaw !== null && !/^\d+$/.test(afterRaw)) {
     return badRequest("invalid_request", "afterSeq must be a non-negative integer.");
   }
+  // A panel lists only its own committee's sessions: `committeeKey` and/or `gate` narrow the list.
+  const filter = sessionListFilterFromQuery(query);
+  if (filter === null) return badRequest("invalid_request", "committeeKey and gate must be identifiers.");
   const sessions = listCommitteeSessions(id, "opportunity", {
     sessionId: query.get("sessionId") || undefined,
     afterSeq: afterRaw === null ? undefined : Number(afterRaw),
+    ...filter,
   });
   return ok({ sessions }, 200, { count: sessions.length });
 }

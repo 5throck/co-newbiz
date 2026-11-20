@@ -7,13 +7,18 @@
 // time, the finished positions grouped by round (current round open, each item collapsed), and — when the
 // run stopped — where it stopped, in a role="alert" block.
 //
+// Turn engine (ADR-0204, design §16.5): the page carries ONE status line and the
+// "회의 보기" button (CommitteeTurnProgressView); the transcript, stepper and the
+// human statement form live in the meeting window (CommitteeMeetingWindow). While a
+// human seat has the floor the status becomes a prominent "your turn" alert.
+//
 // Accessibility (ADR-0065, WCAG 2.1 AA): every step carries an icon AND a text
 // state (never color alone); the current step is aria-current="step"; progress
 // text goes to a polite live region throttled to one announcement per 10 s
 // (the visible status line updates immediately but is NOT a live region, so
 // the per-second elapsed time never reaches a screen reader). New items never
 // move focus. No new interactive control: each position is a native <details>.
-import { AlertTriangle, CheckCircle2, Circle, Clock, MinusCircle } from "lucide-react";
+import { AlertTriangle, BellRing, CheckCircle2, Circle, Clock, MinusCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { LivePosition, MeetingAwaiting, MeetingProgress } from "../lib/committee-progress.ts";
@@ -23,6 +28,7 @@ import {
   awaitingRemainingMs,
   elapsedSeconds,
   groupPositionsByRound,
+  isHumanTurnOpen,
   PROGRESS_STEPS,
   type ProgressStepKey,
   type ProgressStepState,
@@ -32,9 +38,8 @@ import {
   stripPositionMeta,
   throttleDecision,
   type TurnView,
-  turnStepStates,
 } from "../lib/committee-progress-view.ts";
-import { CommitteeTurnTranscript, seatName } from "./CommitteeTurnTranscript.tsx";
+import { seatName } from "./CommitteeTurnTranscript.tsx";
 
 type Translator = ReturnType<typeof useTranslations>;
 
@@ -42,7 +47,7 @@ const P = "common.committee.progress";
 const T = "common.committee.turns";
 
 /** Wall clock that ticks once a second while `enabled`; `override` pins it (tests). */
-function useNow(enabled: boolean, override?: number): number {
+export function useNow(enabled: boolean, override?: number): number {
   const [now, setNow] = useState(() => override ?? Date.now());
   useEffect(() => {
     if (!enabled || override !== undefined) return;
@@ -102,7 +107,7 @@ function StepIcon({ state }: { state: ProgressStepState }) {
   return <Circle size={14} aria-hidden="true" className="stage-step-icon" />;
 }
 
-function StepperList({ states }: { states: Record<ProgressStepKey, ProgressStepState> }) {
+export function StepperList({ states }: { states: Record<ProgressStepKey, ProgressStepState> }) {
   const tr = useTranslations();
   return (
     <ol className="stage-stepper stage-stepper--status meeting-stepper" aria-label={tr(`${P}.stepsLabel`)}>
@@ -293,7 +298,7 @@ export function CommitteeProgressView({
 
 // ── Turn engine (ADR-0204 phase 2) ─────────────────────────────────────────
 
-function humanSeatName(tr: Translator, seat: string | undefined): string {
+export function humanSeatName(tr: Translator, seat: string | undefined): string {
   return !seat || seat === "human" ? tr(`${T}.human`) : seatName(tr, seat);
 }
 
@@ -333,7 +338,7 @@ export function turnStatusText(tr: Translator, p: MeetingProgress): string {
   }
 }
 
-function turnFailurePlace(tr: Translator, p: MeetingProgress): string {
+export function turnFailurePlace(tr: Translator, p: MeetingProgress): string {
   const f = p.failed_at;
   if (!f) return "";
   const step = (PROGRESS_STEPS as readonly string[]).includes(f.phase)
@@ -352,13 +357,23 @@ function turnFailurePlace(tr: Translator, p: MeetingProgress): string {
 }
 
 /**
+ * The failure sentence for a turn run. A run lost with its process (`runner_lost`,
+ * the server-side RUNNER_LOST_CODE) gets the localized explanation; any other
+ * failure keeps the server's own message. The error code line is shown separately.
+ */
+export function turnFailureMessage(tr: Translator, p: MeetingProgress, failureMessage?: string | null): string | null {
+  if (p.failed_at?.error_code === "runner_lost") return tr(`${T}.failed.runnerLost`);
+  return failureMessage || null;
+}
+
+/**
  * The open human floor: a clear "your turn" call with a countdown to the
  * deadline. The countdown text is NOT a live region (it changes every second);
  * the throttled status announcement above carries "waiting for a human member".
  * `children` is the statement form (rendered by the panel, which owns its
  * state); viewers without write access get the read-only line instead.
  */
-function AwaitingFloor({
+export function AwaitingFloor({
   awaiting,
   canAct,
   nowMs,
@@ -404,72 +419,146 @@ function AwaitingFloor({
   );
 }
 
+/**
+ * Page-level "your turn" alert for the viewer who may speak: prominent (icon +
+ * text + a tinted frame — never color alone), with the countdown and a button
+ * that opens the meeting window at the statement form. The countdown is plain
+ * text (it changes every second); the throttled live region carries the
+ * "waiting for a human member" announcement.
+ */
+function HumanTurnAlert({
+  awaiting,
+  nowMs,
+  busy,
+  onOpenWindow,
+  onResume,
+}: {
+  awaiting: MeetingAwaiting;
+  nowMs?: number;
+  busy?: boolean;
+  onOpenWindow?: () => void;
+  onResume?: () => void;
+}) {
+  const tr = useTranslations();
+  const now = useNow(true, nowMs);
+  const remaining = awaitingRemainingMs(awaiting, now);
+  const expired = remaining === 0;
+  const { minutes, seconds } = splitCountdown(remaining);
+  const seat = humanSeatName(tr, awaiting.seat);
+  return (
+    <div className="meeting-turn-alert mb-2" data-testid="committee-awaiting" data-expired={expired ? "true" : "false"}>
+      <p className="flex flex-wrap items-center gap-2 font-semibold m-0 mb-1 text-[length:var(--fs-body)]">
+        <BellRing size={16} aria-hidden="true" />
+        <span className="status-chip status-info">{tr(`${T}.awaiting.badge`)}</span>
+        {tr(`${T}.awaiting.title`, { seat })}
+      </p>
+      <p className="m-0 mb-2 text-[length:var(--fs-caption)] tabular-nums" data-testid="committee-awaiting-countdown">
+        {expired ? tr(`${T}.awaiting.expired`) : tr(`${T}.awaiting.remaining`, { minutes, seconds })}
+      </p>
+      {expired ? (
+        onResume && (
+          <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={onResume}>
+            {tr(`${T}.awaiting.resume`)}
+          </button>
+        )
+      ) : (
+        <button
+          type="button"
+          className="btn-primary btn-sm"
+          aria-haspopup="dialog"
+          data-testid="committee-open-window-input"
+          onClick={onOpenWindow}
+        >
+          {tr(`${T}.awaiting.openWindow`)}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The turn meeting on the PAGE (design §16.5): one status line (issue i/n ·
+ * speaker · turns used, plus elapsed time) with the "view meeting" button, the
+ * "your turn" alert while a human seat has the floor, and — when the run
+ * stopped — where it stopped in a role="alert" block with the retry button.
+ * The window itself is rendered by the panel (it owns the data and the form);
+ * this view never opens it on its own.
+ */
 export function CommitteeTurnProgressView({
   progress,
   turns,
-  titles,
   failureMessage,
   canAct = false,
-  humanForm,
   busy,
   onRetry,
   onResume,
+  onOpenWindow,
   nowMs,
 }: {
   progress: MeetingProgress;
   turns: readonly TurnView[];
-  /** Agenda titles by issue (index 0 = issue 1). */
-  titles?: ReadonlyArray<string | null | undefined>;
   failureMessage?: string | null;
-  /** The viewer may write (analyst+): the statement form, retry and resume are offered. */
+  /** The viewer may write (analyst+): the "your turn" alert, retry and resume are offered. */
   canAct?: boolean;
-  /** The human statement form, shown while the floor is open and the viewer can act. */
-  humanForm?: ReactNode;
   busy?: boolean;
   /** Failed run: restart from the stopped issue (advance). */
   onRetry?: () => void;
   /** Paused run: drive the meeting on (advance) once the deadline passed. */
   onResume?: () => void;
+  /** Open the meeting window; `focusInput` puts the caret in the human statement form. */
+  onOpenWindow?: (opts: { focusInput: boolean }) => void;
   /** Pins the clock (tests); omitted in the app. */
   nowMs?: number;
 }) {
   const tr = useTranslations();
   const failed = progress.phase === "failed";
-  const awaiting = progress.phase === "awaiting_human" ? (progress.awaiting ?? null) : null;
+  const humanTurn = isHumanTurnOpen(progress, canAct);
   const now = useNow(!failed, nowMs);
-  const states = turnStepStates(progress);
   const statusText = turnStatusText(tr, progress);
   const announced = useThrottledText(statusText, ANNOUNCE_THROTTLE_MS);
   const { minutes, seconds } = splitElapsed(elapsedSeconds(progress.started_at, now));
   const elapsedText =
     minutes > 0 ? tr(`${P}.elapsedMinutes`, { minutes, seconds }) : tr(`${P}.elapsedSeconds`, { seconds });
-  const issueNo = failed ? progress.failed_at?.issue_index : progress.issue_index;
-  const issueTitle = progress.issue_title ?? (issueNo !== undefined ? titles?.[issueNo - 1] : undefined);
   const keptCount = turns.filter((t) => !t.abandoned).length;
+  const failureText = turnFailureMessage(tr, progress, failureMessage);
 
   return (
-    <section aria-label={tr(`${P}.liveLabel`)} className="mb-3" data-testid="committee-turn-progress">
-      <StepperList states={states} />
+    <section aria-label={tr(`${P}.liveLabel`)} className="card mb-3" data-testid="committee-turn-progress">
+      {humanTurn && progress.awaiting && (
+        <HumanTurnAlert
+          awaiting={progress.awaiting}
+          nowMs={nowMs}
+          busy={busy}
+          onOpenWindow={() => onOpenWindow?.({ focusInput: true })}
+          onResume={onResume}
+        />
+      )}
 
-      {!failed && (
-        <p className="flex items-center gap-1 mb-1 text-[length:var(--fs-caption)]" data-testid="committee-status-line">
-          <Clock size={14} aria-hidden="true" />
-          <span>{statusText}</span>
-          <span className="text-[color:var(--muted-fg)] tabular-nums">· {elapsedText}</span>
-        </p>
-      )}
-      {!failed && progress.issue_index !== undefined && progress.issue_count !== undefined && (
-        <p
-          className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]"
-          data-testid="committee-issue-line"
-        >
-          {issueTitle
-            ? tr(`${T}.issueLine`, { index: progress.issue_index, count: progress.issue_count, title: issueTitle })
-            : tr(`${T}.issueLineNoTitle`, { index: progress.issue_index, count: progress.issue_count })}
-        </p>
-      )}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {!failed && (
+          <p
+            className="flex flex-1 items-center gap-1 m-0 text-[length:var(--fs-caption)]"
+            data-testid="committee-status-line"
+          >
+            <Clock size={14} aria-hidden="true" />
+            <span>{statusText}</span>
+            <span className="text-[color:var(--muted-fg)] tabular-nums">· {elapsedText}</span>
+          </p>
+        )}
+        {onOpenWindow && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            aria-haspopup="dialog"
+            data-testid="committee-open-window"
+            onClick={() => onOpenWindow({ focusInput: false })}
+          >
+            {tr(`${T}.window.open`)}
+          </button>
+        )}
+      </div>
       {attemptOf(progress) > 1 && progress.resumed_from_issue_index !== undefined && (
-        <p className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+        <p className="mt-1 mb-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
           {tr(`${T}.attemptNote`, { attempt: attemptOf(progress), issue: progress.resumed_from_issue_index })}
         </p>
       )}
@@ -478,32 +567,26 @@ export function CommitteeTurnProgressView({
         {failed ? "" : announced}
       </p>
 
-      {awaiting && (
-        <AwaitingFloor awaiting={awaiting} canAct={canAct} nowMs={nowMs} busy={busy} onResume={onResume}>
-          {humanForm}
-        </AwaitingFloor>
-      )}
-
       {failed && (
         <>
-          <div role="alert" className="card mb-2 text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
+          <div role="alert" className="mb-2 text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
             <p className="flex items-center gap-1 font-semibold m-0 mb-1">
               <AlertTriangle size={14} aria-hidden="true" />
               {tr(`${P}.failedTitle`)}
             </p>
             <p className="m-0 mb-1">{tr(`${P}.failedPlace`, { place: turnFailurePlace(tr, progress) })}</p>
-            {failureMessage && <p className="m-0 mb-1">{failureMessage}</p>}
+            {failureText && <p className="m-0 mb-1">{failureText}</p>}
             {progress.failed_at?.error_code && (
               <p className="m-0 mb-1 text-[color:var(--muted-fg)]">
                 {tr(`${P}.failedCode`, { code: progress.failed_at.error_code })}
               </p>
             )}
             {keptCount > 0 && (
-              <p className="m-0 text-[color:var(--muted-fg)]">{tr(`${P}.failedKept`, { count: keptCount })}</p>
+              <p className="m-0 text-[color:var(--muted-fg)]">{tr(`${T}.failed.kept`, { count: keptCount })}</p>
             )}
           </div>
           {canAct && onRetry && (
-            <div className="mb-2">
+            <div>
               <button type="button" className="btn-ghost btn-sm" disabled={busy} onClick={onRetry}>
                 {busy ? tr(`${T}.failed.retrying`) : tr(`${T}.failed.retry`)}
               </button>
@@ -514,13 +597,6 @@ export function CommitteeTurnProgressView({
           )}
         </>
       )}
-
-      <CommitteeTurnTranscript
-        turns={turns}
-        titles={titles}
-        currentIssue={issueNo}
-        currentTitle={progress.issue_title}
-      />
     </section>
   );
 }

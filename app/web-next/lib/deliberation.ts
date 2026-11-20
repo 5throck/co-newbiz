@@ -38,7 +38,7 @@ import { isCommitteeResponsive } from "./committee-flags.ts";
 // Type-only import (design §9.2, F2): deliberation.ts is the SSOT for the
 // chair-pass result types, and committee-minutes-schema.ts imports only zod —
 // no cycle in either direction.
-import type { CommitteeMinutesJson } from "./committee-minutes-schema.ts";
+import type { AnyMinutesJson } from "./committee-minutes-schema.ts";
 
 export interface DeliberationPosition {
   /** agent_key for agent members; registry key for human members. */
@@ -171,10 +171,13 @@ export interface AgendaPassResult {
   promptVersion: string;
   inputHash: string;
   createdAt: string;
+  /** Turn engine: how the per-issue participants were chosen (the fallback is logged, never silent). */
+  participantsMeta?: { source: "llm" | "fallback" | "mixed"; fallback_issue_ids: string[]; notes: string[] };
 }
 
 export interface MinutesPassResult {
-  json: CommitteeMinutesJson;
+  /** v1 (round engine) or v2 (turn engine, ADR-0204 phase 3) minutes JSON; v2 carries `version: 2`. */
+  json: AnyMinutesJson;
   fallback: boolean;
   model?: string;
   promptVersion: string;
@@ -188,11 +191,19 @@ export interface MinutesPassResult {
 }
 
 /** One chair-proposed discussion issue (ADR-0196 §2.2). */
+/** One seat the chair named for an issue, with the one-line reason (turn engine, ADR-0204). */
+export interface AgendaParticipant {
+  seat: string;
+  reason: string;
+}
+
 export interface AgendaIssue {
   id: string;
   title: string;
   raisedBy?: string[];
   contested?: boolean;
+  /** Turn engine: the 3-5 seats that take discussion turns on this issue (veto seats always included). */
+  participants?: AgendaParticipant[];
 }
 
 export interface DeliberationPromptOpts {

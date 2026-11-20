@@ -3146,6 +3146,81 @@ a.funnel-card:hover { border-color: var(--primary); }
 }
 .modal-head h2 { margin: 0; font-size: 1.1rem; }
 
+/* ── Committee meeting window (design 2026-11-20 §16.5) ──
+   Large dialog on the shared .modal-backdrop/.modal-panel: header pinned, transcript
+   scrolls, footer (human floor / stop notice) pinned. Never auto-opened. */
+.meeting-window-backdrop { padding: var(--space-4); }
+.modal-panel.meeting-window {
+  width: min(64rem, 100%);
+  height: min(85vh, 56rem);
+  max-height: 100%;
+  padding: 0;
+  overflow: hidden; /* the panel never scrolls; only .meeting-window-scroll does */
+  display: flex; flex-direction: column;
+}
+.meeting-window-head {
+  flex: none;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.meeting-window-facts { margin: var(--space-1) 0 0; font-size: var(--fs-caption); }
+.meeting-window-issue { overflow-wrap: anywhere; }
+.meeting-window-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+.meeting-window-sep { color: var(--muted-fg); margin-inline: var(--space-1); }
+.meeting-window-note { margin: var(--space-1) 0 0; font-size: var(--fs-caption); color: var(--muted-fg); }
+.meeting-window-body { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.meeting-window-scroll-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.meeting-window-scroll {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+}
+.meeting-window-jump {
+  position: absolute; right: var(--space-4); bottom: var(--space-3);
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  box-shadow: var(--shadow-xl);
+}
+.meeting-window-foot {
+  flex: none; max-height: 50%; overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+/* 회의록 / 전체 발언 탭 (record mode, minutes v2) — pressed state is text weight + a
+   token border, never color alone */
+.meeting-window-tabs {
+  display: flex; gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.meeting-window-tab[aria-pressed="true"] {
+  font-weight: var(--font-weight-semibold, 600);
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+/* minutes v2 body */
+.committee-minutes-v2 .minutes-quote {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--border-width-strong, 2px) solid var(--primary);
+  background: var(--primary-bg);
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 640px) {
+  .meeting-window-backdrop { padding: 0; }
+  .modal-panel.meeting-window { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+}
+/* 내 차례 알림 — a tinted frame AND text/icon (never color alone) */
+.meeting-turn-alert {
+  padding: var(--space-3);
+  border: var(--border-width-strong) solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--primary-bg);
+}
+
 /* ── Glossary split + detail panel ── */
 .glossary-split { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(280px, 380px); gap: 1.25rem; align-items: start; } /* design-token-exempt: layout-tuned grid column minimum */
 .glossary-card-open { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left; background: transparent; border: none; padding: 0; color: inherit; cursor: pointer; font: inherit; }

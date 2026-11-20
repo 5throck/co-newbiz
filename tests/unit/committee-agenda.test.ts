@@ -274,7 +274,7 @@ describe("runChairAgenda — LLM path and failure fallback", () => {
     const out = await runChairAgenda({ topic: "안건", rows });
     expect(out.source).toBe("fallback");
     expect(out.model).toBeUndefined();
-    expect(out.promptVersion).toBe("committee.agenda@1");
+    expect(out.promptVersion).toBe("committee.agenda@2");
     expect(out.inputHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
@@ -443,7 +443,7 @@ describe("hybrid agenda via the advance route (decision 3)", () => {
     const t = (await transcript.json()).data;
     expect(Array.isArray(t.agenda)).toBe(true);
     expect(t.agendaMeta.source).toBe("fallback");
-    expect(t.agendaMeta.prompt_version).toBe("committee.agenda@1");
+    expect(t.agendaMeta.prompt_version).toBe("committee.agenda@2");
     // The agenda is generated exactly once — a second advance must not overwrite it.
     await req(`/api/opportunities/${oppId}/committee-sessions/${sessionId}/positions`, {
       method: "POST",
