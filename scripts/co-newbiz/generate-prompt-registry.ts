@@ -138,6 +138,8 @@ const JSON_OUTPUT = new Set<string>([
   "s11.report_narration",
   "s12.milestone_suggest",
   "pm.flow_suggest",
+  "committee.turn",
+  "committee.consensus",
 ]);
 
 const HANGUL_RE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;

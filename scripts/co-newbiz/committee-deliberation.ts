@@ -10,7 +10,7 @@
  * The transcript is written to memory/committee-YYYY-MM-DD-[slug].md.
  *
  * Usage:
- *   bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue] [--deterministic]
+ *   bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue] [--deterministic] [--engine turns|rounds]
  *
  *   --agents   comma-separated member keys (default: industry-lead,region-lead,
  *              market-intelligence-agent,risk-officer — the 5-seat skeleton
@@ -20,6 +20,11 @@
  *              other members' prior positions verbatim)
  *   --dialogue alias kept for back-compat with the stub's advertised flag —
  *              multi-round rebuttal IS the engine's only mode
+ *   --engine   turns | rounds (ADR-0204). Default: CO_NEWBIZ_COMMITTEE_ENGINE,
+ *              else rounds. turns runs the turn-based meeting (runTurnMeeting:
+ *              one short move per turn, bounded budgets, chair consensus + votes)
+ *              and writes the dialogue as the transcript; --rounds is ignored.
+ *              An invalid value is refused, never coerced.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -28,6 +33,13 @@ import { getDb, resetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
 import { runDeliberationRounds, type CommitteeMember } from "../../app/web-next/lib/deliberation.ts";
 import {
+  committeeEngineDefault,
+  parseCommitteeEngine,
+  type CommitteeEngine,
+} from "../../app/web-next/lib/committee-flags.ts";
+import { deterministicTurnCaller, loadTurnRecords, runTurnMeeting } from "../../app/web-next/lib/committee-turns.ts";
+import { makeLlmTurnCaller } from "../../app/web-next/lib/committee-llm.ts";
+import {
   COMMITTEE_LLM_GUIDANCE,
   committeeLlmAvailable,
   deterministicCallAgent,
@@ -35,6 +47,7 @@ import {
 } from "../../app/web-next/lib/committee-agents.ts";
 import {
   runChairAgenda,
+  runChairOpeningAgenda,
   runChairMinutes,
   type AgendaMeta,
   type MinutesDraft,
@@ -60,6 +73,7 @@ interface MeetingArgs {
   dialogue: boolean;
   /** Explicit pilot opt-in (owner decision 10): bypasses the LLM guard. */
   deterministic: boolean;
+  engine: CommitteeEngine;
 }
 
 function parseArgs(argv: string[]): MeetingArgs {
@@ -68,6 +82,7 @@ function parseArgs(argv: string[]): MeetingArgs {
   let rounds = 2;
   let dialogue = false;
   let deterministic = false;
+  let engineArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--agents") {
@@ -82,6 +97,8 @@ function parseArgs(argv: string[]): MeetingArgs {
       dialogue = true;
     } else if (a === "--deterministic") {
       deterministic = true;
+    } else if (a === "--engine") {
+      engineArg = argv[++i];
     } else {
       positional.push(a);
     }
@@ -89,11 +106,83 @@ function parseArgs(argv: string[]): MeetingArgs {
   const topic = positional.join(" ").trim();
   if (!topic) {
     console.error(
-      'Usage: bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue] [--deterministic]',
+      'Usage: bun scripts/co-newbiz/committee-deliberation.ts "topic" [--agents a,b] [--rounds N] [--dialogue] [--deterministic] [--engine turns|rounds]',
     );
     process.exit(1);
   }
-  return { topic, agents, rounds, dialogue, deterministic };
+  let engine: CommitteeEngine;
+  try {
+    // explicit flag > CO_NEWBIZ_COMMITTEE_ENGINE > rounds; an invalid value is never coerced
+    engine = engineArg !== undefined ? parseCommitteeEngine(engineArg) : committeeEngineDefault();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+  return { topic, agents, rounds, dialogue, deterministic, engine };
+}
+
+/** ADR-0204: the turn-based ad-hoc meeting. The transcript is the dialogue itself; a proposal is not a decision. */
+async function runTurnCli(args: MeetingArgs, ctx: { dateStr: string; anchorId: string }): Promise<void> {
+  const chair = "process-governance-manager";
+  const agenda = (await runChairOpeningAgenda(args.topic)).agenda;
+  const result = await runTurnMeeting(
+    { entityType: "project", entityId: ctx.anchorId },
+    {
+      committeeKey: "meeting-adhoc",
+      seats: args.agents,
+      topic: args.topic,
+      chair,
+      agenda,
+      callTurn: args.deterministic ? deterministicTurnCaller() : makeLlmTurnCaller(),
+      actor: "meeting-cli",
+      source: "cli",
+      stage: "meeting",
+    },
+  );
+  const turns = loadTurnRecords(result.processRunId);
+  const lines: string[] = [
+    `# Meeting — ${args.topic}`,
+    "",
+    "> AI 위원회 회의 기록 — 사람이 모인 회의가 아니며, 결정은 사람이 합니다.",
+    "",
+    `- Date: ${ctx.dateStr}`,
+    `- Members: ${args.agents.join(", ")}`,
+    `- Engine: turns (ADR-0204) via /meeting (ADR-0097 §7)`,
+    "",
+    "## Transcript",
+    "",
+  ];
+  let issue = 0;
+  for (const t of turns) {
+    if (t.issueIndex !== issue) {
+      issue = t.issueIndex;
+      lines.push(`### Issue ${issue} — ${agenda[issue - 1]?.title ?? ""}`, "");
+    }
+    const to = t.addressedTo ? ` → ${t.addressedTo}` : "";
+    lines.push(`- #${t.seq} **${t.speaker}** (${t.move}${to}): ${t.utterance.replace(/\s+/g, " ")}`);
+  }
+  lines.push("");
+  if (result.evaluation) {
+    lines.push(
+      "## Synthesized outcome (PROPOSAL — not a decision)",
+      "",
+      `- Recommendation: ${result.evaluation.recommendation.toUpperCase()}`,
+      "",
+    );
+    if (result.evaluation.dissentJson) {
+      const dissents = JSON.parse(result.evaluation.dissentJson) as Array<{ member_key: string; position_md: string }>;
+      lines.push("## Dissent (verbatim)", "");
+      for (const d of dissents) lines.push(`### ${d.member_key}`, "", d.position_md, "");
+    }
+  }
+  const memoryDir = join(process.cwd(), "memory");
+  mkdirSync(memoryDir, { recursive: true });
+  const outFile = join(memoryDir, `committee-${ctx.dateStr}-${slug(args.topic)}.md`);
+  writeFileSync(outFile, lines.join("\n"));
+  console.log(`Meeting transcript written: ${outFile}`);
+  console.log(
+    `Proposal: ${result.evaluation?.recommendation.toUpperCase() ?? "n/a"} (process_run ${result.processRunId})`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -122,6 +211,12 @@ async function main(): Promise<void> {
     "MEETING",
     now.toISOString(),
   ]);
+
+  if (args.engine === "turns") {
+    await runTurnCli(args, { dateStr, anchorId });
+    resetDb();
+    return;
+  }
 
   const members: CommitteeMember[] = args.agents.map((key) => ({ agentKey: key }));
   const result = await runDeliberationRounds(

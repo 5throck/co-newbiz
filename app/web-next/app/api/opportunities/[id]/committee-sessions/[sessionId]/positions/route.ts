@@ -8,7 +8,7 @@ import { authenticate, requireBusinessActor } from "../../../../../../../lib/aut
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { CommitteeError, submitHumanPosition } from "../../../../../../../lib/committee-session.ts";
+import { CommitteeError, advanceCommitteeSession, submitHumanPosition } from "../../../../../../../lib/committee-session.ts";
 
 const RECOMMENDATIONS = new Set(["go", "hold", "kill"]);
 
@@ -64,6 +64,12 @@ export async function POST(
       criteriaScores,
     });
     appendAudit(db, { actor: ctx.userId, action: "committee_position.submit", target: `${sessionId}:${result.positionId}`, now: new Date().toISOString() });
+    if (result.awaitingResume) {
+      // Turn engine: the floor is answered — the meeting continues in the background.
+      void advanceCommitteeSession(sessionId, { actor: ctx.userId, background: true }).catch((err: unknown) => {
+        console.error(`committee session ${sessionId} could not resume after the human turn:`, err);
+      });
+    }
     return ok(result, 201);
   } catch (err) {
     if (err instanceof CommitteeError) {
@@ -72,6 +78,8 @@ export async function POST(
       // repeat position in the same round is a conflict, not a bad request.
       if (err.code === "seat_not_assignable") return forbidden(err.code, err.message);
       if (err.code === "duplicate_position") return fail(409, err.code, err.message);
+      // Turn engine: the human floor is closed (not open, expired, or taken).
+      if (err.code === "floor_not_open" || err.code === "floor_expired") return fail(409, err.code, err.message);
       return badRequest(err.code, err.message);
     }
     return badRequest("submit_failed", err instanceof Error ? err.message : String(err));

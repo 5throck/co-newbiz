@@ -93,9 +93,14 @@ describe("platform parity: pm-catalog.generated.ts vs the roster (ADR-0183 D3)",
         // Dynamic entries are allowed only as the explicitly-known agent=null pairs
         // (committee.position seats the agent at call time; ADR-0196 phase B adds
         // the chair passes, which seat the process-governance-manager chair voice).
-        expect(["committee.position", "committee.agenda", "committee.minutes", "s8.business_case_prose"]).toContain(
-          promptKey,
-        );
+        expect([
+          "committee.position",
+          "committee.agenda",
+          "committee.minutes",
+          "committee.turn",
+          "committee.consensus",
+          "s8.business_case_prose",
+        ]).toContain(promptKey);
       }
     }
   });

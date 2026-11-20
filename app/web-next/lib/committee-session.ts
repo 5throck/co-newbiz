@@ -33,9 +33,35 @@ import {
   type DeliberationProgressEvent,
   type MinutesPassResult,
 } from "./deliberation.ts";
-import { failedProgress, nextProgress, type LivePosition, type MeetingProgress } from "./committee-progress.ts";
+import {
+  failedProgress,
+  nextProgress,
+  type LivePosition,
+  type MeetingAwaiting,
+  type MeetingFailedAt,
+  type MeetingProgress,
+} from "./committee-progress.ts";
+import {
+  TurnEngineError,
+  callTurnFromCallAgent,
+  discussionTurnCount,
+  isTurnText,
+  liveRecords,
+  loadTurnRecords,
+  recordHumanTurn,
+  recordPassOnBehalf,
+  runTurnMeeting,
+  type CallTurn,
+  type TurnRecord,
+  type TurnState,
+  type TurnView,
+  turnViews,
+} from "./committee-turns.ts";
+import { committeeEngineDefault, parseCommitteeEngine, type CommitteeEngine } from "./committee-flags.ts";
+import { makeLlmTurnCaller } from "./committee-llm.ts";
 import {
   runChairAgenda,
+  runChairOpeningAgenda,
   runChairMinutes,
   minutesInputHashFor,
   type ChairPositionRow,
@@ -110,6 +136,34 @@ export interface SessionMeta {
    * "done" / "failed" (with failed_at). Absent on sessions convened before
    * progress existed. */
   progress?: MeetingProgress;
+  /** Meeting engine, resolved ONCE at creation (ADR-0204) and never changed.
+   * Absent on sessions created before the turn engine = "rounds". */
+  engine?: CommitteeEngine;
+  /** Turn engine: one entry per sitting (a restart after a failure opens a new
+   * one; the stopped sitting's failed_at / error stay in its entry). */
+  attempts?: SessionAttempt[];
+  /** Turn engine, hybrid: the open human floor while the meeting is paused. */
+  awaiting?: MeetingAwaiting;
+  /** Turn engine: durable budget counters (agent compute of the sitting, total human wait). */
+  turn_state?: TurnState;
+}
+
+/** One sitting of a turn-engine meeting (§15.2 resume marking). */
+export interface SessionAttempt {
+  attempt: number;
+  started_at: string;
+  ended_at?: string;
+  /** Set on a resumed sitting: the issue it restarted from. */
+  resumed_from_issue_index?: number;
+  /** Set on a sitting that failed: where it stopped. */
+  stopped_at?: MeetingFailedAt;
+  /** The failure message of the stopped sitting (kept after convening_error is cleared). */
+  error?: string;
+}
+
+/** The engine a stored session runs on (legacy sessions have no meta.engine). */
+export function sessionEngine(meta: Pick<SessionMeta, "engine">): CommitteeEngine {
+  return meta.engine ?? "rounds";
 }
 
 let cachedRegistry: Record<string, CommitteeDef> | null = null;
@@ -313,17 +367,50 @@ function createProgressRecorder(
 
 // ── Chair passes (ADR-0196 §2.2/§2.3, phase B) ─────────────────────────────
 
-/** agent_position rows as the chair passes see them (id, seat, round, text). */
+/**
+ * agent_position rows as the chair passes see them (id, seat, round, text).
+ * Turn-engine rows (tail kind:"turn") are not round positions: chair mechanics,
+ * stored error-passes and the abandoned turns of a stopped sitting are left out,
+ * and `round` is the issue ordinal. Legacy round rows map exactly as before.
+ */
 function loadChairRows(runId: string, maxRound?: number): ChairPositionRow[] {
-  return loadPositions(runId)
+  const all = loadPositions(runId);
+  const turns = new Map<string, TurnRecord>();
+  let live: Set<string> | null = null;
+  if (all.some((p) => isTurnText(p.positionMd))) {
+    const records = loadTurnRecords(runId);
+    for (const r of records) turns.set(r.id, r);
+    const current = records.reduce((m, r) => Math.max(m, r.attempt), 1);
+    live = new Set(liveRecords(records, current).map((r) => r.id));
+    // created_at can tie and ulid() is not monotonic within a ms: seq is the order.
+    all.sort((a, b) => a.round - b.round || (turns.get(a.id)?.seq ?? 0) - (turns.get(b.id)?.seq ?? 0));
+  }
+  return all
     .filter((p) => maxRound === undefined || p.round <= maxRound)
-    .map((p) => ({
-      id: p.id,
-      seat: p.agentKey ?? p.humanUserId ?? `round-${p.round}`,
-      memberType: p.memberType,
-      round: p.round,
-      positionMd: p.positionMd,
-    }));
+    .flatMap((p): ChairPositionRow[] => {
+      const t = turns.get(p.id);
+      if (t) {
+        if (t.role === "chair" || t.error || !live?.has(t.id)) return [];
+        return [
+          {
+            id: p.id,
+            seat: t.role === "human" ? (t.humanUserId ?? t.speaker) : t.speaker,
+            memberType: p.memberType,
+            round: p.round,
+            positionMd: p.positionMd,
+          },
+        ];
+      }
+      return [
+        {
+          id: p.id,
+          seat: p.agentKey ?? p.humanUserId ?? `round-${p.round}`,
+          memberType: p.memberType,
+          round: p.round,
+          positionMd: p.positionMd,
+        },
+      ];
+    });
 }
 
 function toAgendaMeta(r: {
@@ -490,6 +577,10 @@ export interface ConveneOpts {
   briefMd?: string;
   actor: string;
   callAgent?: CallAgent;
+  /** Turn engine only: raw-text turn executor (tests / dry runs). Defaults to the LLM. */
+  callTurn?: CallTurn;
+  /** Explicit meeting engine (CLI --engine); beats CO_NEWBIZ_COMMITTEE_ENGINE. */
+  engine?: CommitteeEngine;
   source?: string;
 }
 export interface ConveneResult {
@@ -606,9 +697,20 @@ export function createCommitteeSession(entity: EntityRef, opts: ConveneOpts): Cr
       );
     }
   }
+  // ADR-0204: the engine is resolved ONCE here (explicit > env > default) and
+  // stored; it never changes later and a failing LLM never drops to the other
+  // engine. human_only sessions run no agents, so they stay on the rounds path.
+  let engine: CommitteeEngine;
+  try {
+    engine = opts.engine !== undefined ? parseCommitteeEngine(opts.engine) : committeeEngineDefault();
+  } catch (err) {
+    throw new CommitteeError("invalid_engine", err instanceof Error ? err.message : String(err));
+  }
+  if (opts.decisionMode === "human_only") engine = "rounds";
   const meta: SessionMeta = {
     committee_key: opts.committeeKey,
     decision_mode: opts.decisionMode,
+    engine,
     gate,
     ...(opts.targetRef ? { target_ref: opts.targetRef } : {}),
     ...(opts.track ? { track: opts.track } : {}),
@@ -616,12 +718,12 @@ export function createCommitteeSession(entity: EntityRef, opts: ConveneOpts): Cr
   };
   // agent_team needs agent members — validated at create time so a bad
   // request never reaches the async half.
-  if (opts.decisionMode === "agent_team") {
+  if (opts.decisionMode === "agent_team" || (engine === "turns" && opts.decisionMode === "hybrid")) {
     const agents = seatsForSession(committee, opts.track).filter((m) => m.type === "agent");
     if (agents.length === 0) {
       throw new CommitteeError(
         "no_agent_members",
-        `committee '${opts.committeeKey}' has no agent members for agent_team mode`,
+        `committee '${opts.committeeKey}' has no agent members for ${opts.decisionMode} mode`,
       );
     }
   }
@@ -653,7 +755,7 @@ export interface CreateSessionResult {
  */
 export async function runCommitteeSession(
   sessionId: string,
-  opts: { callAgent?: CallAgent } = {},
+  opts: { callAgent?: CallAgent; callTurn?: CallTurn } = {},
 ): Promise<ConveneResult> {
   const session = readMeta(sessionId);
   if (!session) throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
@@ -679,6 +781,9 @@ export async function runCommitteeSession(
     source: typeof run.source === "string" ? run.source : "web",
   };
   try {
+    if (sessionEngine(meta) === "turns") {
+      return await runTurnSession(sessionId, meta, committee, entity, convOpts, opts);
+    }
     if (meta.decision_mode === "agent_team") {
       // agent_team: agents propose through the full engine — one call, all
       // rounds, chair synthesis included (never a confirming record).
@@ -798,6 +903,157 @@ export async function runCommitteeSession(
 }
 
 /**
+ * Turn engine (ADR-0204) half of runCommitteeSession: opening agenda, then
+ * runTurnMeeting over the session shell. One call = one sitting: it ends done,
+ * yields at a human floor (awaiting_human — convening false, resumed through
+ * advanceCommitteeSession), or throws (markConveningFailed records failed_at;
+ * there is NO fallback to the round engine).
+ */
+async function runTurnSession(
+  sessionId: string,
+  meta: SessionMeta,
+  committee: CommitteeDef,
+  entity: EntityRef,
+  convOpts: ConveneOpts,
+  opts: { callAgent?: CallAgent; callTurn?: CallTurn },
+): Promise<ConveneResult> {
+  const seats = seatsForSession(committee, meta.track)
+    .filter((m) => m.type === "agent")
+    .map((m) => m.key);
+  const topic = sessionTopic(committee, convOpts);
+  const injected = opts.callTurn !== undefined || opts.callAgent !== undefined;
+  if (!injected && !committeeLlmAvailable()) throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
+  const callTurn: CallTurn =
+    opts.callTurn ?? (opts.callAgent ? callTurnFromCallAgent(opts.callAgent) : makeLlmTurnCaller());
+
+  const now = nowIso();
+  const writeProgress = (p: MeetingProgress, state?: TurnState): void => {
+    try {
+      patchMeta(sessionId, { progress: p, ...(state ? { turn_state: state } : {}) });
+    } catch (err) {
+      console.warn(
+        `[committee-session] progress write failed for ${sessionId}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  };
+
+  // Sitting bookkeeping: the first run opens sitting 1; a resume (claimTurnResume)
+  // already appended its entry.
+  let attempts = meta.attempts;
+  if (!attempts || attempts.length === 0) {
+    attempts = [{ attempt: 1, started_at: now }];
+    patchMeta(sessionId, { attempts });
+  }
+  const sitting = attempts[attempts.length - 1];
+
+  // Chair agenda BEFORE the first turn (design §4.1). A stored agenda (resume, or
+  // a human edit) is reused as is.
+  let agenda = meta.agenda;
+  if (!agenda || agenda.length === 0) {
+    writeProgress({
+      engine: "turns",
+      phase: "agenda",
+      turn_count: 0,
+      attempt: sitting.attempt,
+      started_at: sitting.started_at,
+      updated_at: now,
+    });
+    const pass = await runChairOpeningAgenda(topic);
+    agenda = pass.agenda;
+    patchMeta(sessionId, { agenda, agenda_meta: toAgendaMeta(pass) });
+  }
+
+  const result = await runTurnMeeting(entity, {
+    committeeKey: meta.committee_key,
+    seats,
+    topic,
+    chair: committee.chair,
+    agenda,
+    callTurn,
+    processRunId: sessionId,
+    gate: meta.gate as ConveneOpts["gate"],
+    hybrid: meta.decision_mode === "hybrid",
+    attempt: sitting.attempt,
+    resumedFromIssueIndex: sitting.resumed_from_issue_index,
+    startedAt: sitting.started_at,
+    turnState: meta.turn_state,
+    actor: convOpts.actor,
+    stage: meta.committee_key,
+    source: convOpts.source,
+    onProgress: writeProgress,
+    chairMinutesPass: async (ctx) => runMinutesPassForRun(ctx.processRunId, ctx.topic, ctx.agenda),
+  });
+
+  if (result.status === "awaiting_human" && result.awaiting) {
+    // Yield: the meeting waits for a person. Not convening, not failed; the
+    // human's turn (or the deadline) resumes it through advanceCommitteeSession.
+    patchMeta(sessionId, { convening: false, awaiting: result.awaiting, turn_state: result.turnState });
+    if (!injected) scheduleHumanTimeout(sessionId, result.awaiting);
+    return { sessionId, committeeKey: meta.committee_key, decisionMode: meta.decision_mode, evaluation: null };
+  }
+
+  const finished = nowIso();
+  const last = readMeta(sessionId)?.meta.progress;
+  const done: MeetingProgress = {
+    engine: "turns",
+    phase: "done",
+    ...(last?.issue_count !== undefined ? { issue_count: last.issue_count } : { issue_count: agenda.length }),
+    turn_count: discussionTurnCount(liveRecords(loadTurnRecords(sessionId), sitting.attempt)),
+    ...(last?.turn_budget !== undefined ? { turn_budget: last.turn_budget } : {}),
+    attempt: sitting.attempt,
+    ...(sitting.resumed_from_issue_index !== undefined && sitting.attempt > 1
+      ? { resumed_from_issue_index: sitting.resumed_from_issue_index }
+      : {}),
+    started_at: sitting.started_at,
+    updated_at: finished,
+  };
+  patchMeta(sessionId, {
+    convening: false,
+    synthesized: true,
+    awaiting: undefined,
+    evaluation_id: result.evaluation?.gateEvaluationId,
+    ...(result.minutesDraft ? { minutes_draft: toMinutesDraft(result.minutesDraft) } : {}),
+    turn_state: result.turnState,
+    attempts: attempts.map((a) => (a.attempt === sitting.attempt ? { ...a, ended_at: finished } : a)),
+    progress: done,
+  });
+  getDb().run("UPDATE process_run SET status = 'done', finished_at = ? WHERE id = ?", [finished, sessionId]);
+  return {
+    sessionId,
+    committeeKey: meta.committee_key,
+    decisionMode: meta.decision_mode,
+    evaluation: result.evaluation
+      ? {
+          gateEvaluationId: result.evaluation.gateEvaluationId,
+          gate: result.evaluation.gate,
+          recommendation: result.evaluation.recommendation,
+          dissentJson: result.evaluation.dissentJson,
+        }
+      : null,
+  };
+}
+
+/**
+ * Best-effort in-process deadline for a human floor: when it passes, resume the
+ * meeting through advance (which records the chair pass_on_behalf). Lost on a
+ * server restart — the panel's own advance call after `awaiting.deadline_at`
+ * is the durable path. Guarded so a stale timer can never resume a failed
+ * session or a later floor.
+ */
+function scheduleHumanTimeout(sessionId: string, awaiting: MeetingAwaiting): void {
+  const ms = Math.max(0, Date.parse(awaiting.deadline_at) - Date.now()) + 1000;
+  const timer = setTimeout(() => {
+    const cur = readMeta(sessionId)?.meta.awaiting;
+    if (!cur || cur.seq !== awaiting.seq || cur.answered_at) return;
+    void advanceCommitteeSession(sessionId, { actor: "system", background: true }).catch((err: unknown) => {
+      console.warn(`[committee-session] human-turn timeout resume failed for ${sessionId}:`, err);
+    });
+  }, ms);
+  (timer as { unref?: () => void }).unref?.();
+}
+
+/**
  * Mark a session's background deliberation as failed (meta.convening_error,
  * process_run.status 'failed'). Best-effort — never masks the original error.
  */
@@ -806,23 +1062,46 @@ function markConveningFailed(sessionId: string, err: unknown): void {
     const session = readMeta(sessionId);
     if (!session) return;
     const now = nowIso();
+    const turns = sessionEngine(session.meta) === "turns";
     // failed_at = the last progress snapshot (the engine writes it BEFORE each
     // speaker / phase starts, so it names exactly where the run stopped).
     // error_code is the code only — the message stays in convening_error.
     const errorCode =
-      err instanceof CommitteeError ? err.code : err instanceof Error && err.name ? err.name : "unknown_error";
+      err instanceof CommitteeError || err instanceof TurnEngineError
+        ? err.code
+        : err instanceof Error && err.name
+          ? err.name
+          : "unknown_error";
     const last: MeetingProgress = session.meta.progress ?? {
-      engine: "rounds",
+      engine: turns ? "turns" : "rounds",
       phase: "discussion",
       turn_count: 0,
       started_at: now,
       updated_at: now,
     };
-    patchMeta(sessionId, {
-      convening: false,
-      convening_error: err instanceof Error ? err.message : String(err),
-      progress: failedProgress(last, errorCode, countPositions(sessionId), now),
-    });
+    const message = err instanceof Error ? err.message : String(err);
+    if (turns) {
+      // The turn that failed was never stored: its seq is the next one.
+      const records = loadTurnRecords(sessionId);
+      const nextSeq = records.reduce((m, r) => Math.max(m, r.seq), 0) + 1;
+      const failed = failedProgress(last, errorCode, last.turn_count, now, nextSeq);
+      const attempts = (session.meta.attempts ?? []).map((a, idx, all) =>
+        idx === all.length - 1 ? { ...a, ended_at: now, stopped_at: failed.failed_at, error: message } : a,
+      );
+      patchMeta(sessionId, {
+        convening: false,
+        convening_error: message,
+        awaiting: undefined,
+        progress: { ...failed, awaiting: undefined },
+        ...(attempts.length > 0 ? { attempts } : {}),
+      });
+    } else {
+      patchMeta(sessionId, {
+        convening: false,
+        convening_error: message,
+        progress: failedProgress(last, errorCode, countPositions(sessionId), now),
+      });
+    }
     getDb().run("UPDATE process_run SET status = 'failed' WHERE id = ?", [sessionId]);
   } catch {
     // best effort — the original error propagates instead
@@ -874,7 +1153,69 @@ export interface HumanPositionOpts {
   criteriaScores?: Record<string, number>;
 }
 
-export function submitHumanPosition(opts: HumanPositionOpts): { positionId: string; round: number } {
+export interface HumanPositionResult {
+  positionId: string;
+  round: number;
+  /** Turn engine: the stored turn's seq (the `afterSeq` cursor). */
+  turnSeq?: number;
+  /** Turn engine: the floor is answered; the meeting resumes through advanceCommitteeSession. */
+  awaitingResume?: boolean;
+}
+
+/**
+ * Turn engine (hybrid): a human takes the floor the chair opened. The caller is
+ * the authenticated user (humanUserId comes from the session, never the body);
+ * only the open `awaiting` floor accepts a turn, once, before its deadline. The
+ * turn row and the `answered_at` mark land in ONE immediate transaction so a
+ * concurrent resume cannot interleave. The engine itself resumes through
+ * advanceCommitteeSession.
+ */
+function submitHumanTurn(opts: HumanPositionOpts): HumanPositionResult {
+  const db = getDb();
+  return db
+    .transaction((): HumanPositionResult => {
+      const session = readMeta(opts.sessionId);
+      if (!session) throw new CommitteeError("not_found", `committee session '${opts.sessionId}' does not exist`);
+      const meta = session.meta;
+      const a = meta.awaiting;
+      if (!a || a.answered_at || meta.convening === true) {
+        throw new CommitteeError(
+          "floor_not_open",
+          "this meeting has no open human turn — humans speak only when the chair gives them the floor",
+        );
+      }
+      if (Date.now() >= Date.parse(a.deadline_at)) {
+        throw new CommitteeError("floor_expired", "the human turn expired — the chair passes after the deadline");
+      }
+      if (opts.seat && opts.seat !== a.seat) {
+        throw new CommitteeError("seat_not_awaited", `the open floor is for seat '${a.seat}', not '${opts.seat}'`);
+      }
+      const records = loadTurnRecords(opts.sessionId);
+      const attempt = records.reduce((m, r) => Math.max(m, r.attempt), 1);
+      const row = recordHumanTurn(
+        {
+          runId: opts.sessionId,
+          attempt,
+          issueIndex: a.issue_index,
+          issueId: meta.agenda?.[a.issue_index - 1]?.id,
+          seat: a.seat,
+          humanUserId: opts.humanUserId,
+          utterance: opts.positionMd,
+          recommendation: opts.recommendation,
+          vetoDissent: opts.vetoDissent === true,
+          confidence: opts.confidence,
+          respondsToTurn: records.find((r) => r.seq === a.seq)?.id,
+        },
+        db,
+      );
+      const merged = { ...meta, awaiting: { ...a, answered_at: nowIso() } } as SessionMeta;
+      db.run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(merged), opts.sessionId]);
+      return { positionId: row.id, round: a.issue_index, turnSeq: row.seq, awaitingResume: true };
+    })
+    .immediate();
+}
+
+export function submitHumanPosition(opts: HumanPositionOpts): HumanPositionResult {
   const session = readMeta(opts.sessionId);
   if (!session) throw new CommitteeError("not_found", `committee session '${opts.sessionId}' does not exist`);
   if (session.meta.decision_mode === "agent_team") {
@@ -886,6 +1227,7 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
   if (session.meta.synthesized) {
     throw new CommitteeError("session_closed", "this session is already synthesized");
   }
+  if (sessionEngine(session.meta) === "turns") return submitHumanTurn(opts);
   const committee = getCommittee(session.meta.committee_key) as CommitteeDef;
   if (opts.seat) {
     const seat = committee.members.find((m) => m.key === opts.seat);
@@ -946,7 +1288,9 @@ export function submitHumanPosition(opts: HumanPositionOpts): { positionId: stri
 // ── Advance / synthesis ────────────────────────────────────────────────────
 
 export interface AdvanceResult {
-  status: "round_started" | "synthesized";
+  /** Turn engine: "turns_resumed" = the meeting was restarted (it may have paused again at the
+   * next human floor), "turns_running" = it is already running (nothing to do). */
+  status: "round_started" | "synthesized" | "turns_resumed" | "turns_running";
   round?: number;
   evaluation: { gateEvaluationId: string; gate: string; recommendation: string; dissentJson: string | null } | null;
 }
@@ -959,7 +1303,15 @@ export interface AdvanceResult {
  */
 export async function advanceCommitteeSession(
   sessionId: string,
-  opts: { actor: string; callAgent?: CallAgent; agenda?: unknown },
+  opts: {
+    actor: string;
+    callAgent?: CallAgent;
+    agenda?: unknown;
+    /** Turn engine: raw-text turn executor (tests / dry runs). */
+    callTurn?: CallTurn;
+    /** Turn engine: start the resumed meeting in the background and return at once (the routes). */
+    background?: boolean;
+  },
 ): Promise<AdvanceResult> {
   const session = readMeta(sessionId);
   if (!session) throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
@@ -969,9 +1321,15 @@ export async function advanceCommitteeSession(
   // Same policy as convene (owner decision 10): the default agent path needs
   // a configured provider; an injected callAgent is the caller's choice.
   // human_only sessions run no agent rounds and stay exempt.
-  if (meta.decision_mode !== "human_only" && opts.callAgent === undefined && !committeeLlmAvailable()) {
+  if (
+    meta.decision_mode !== "human_only" &&
+    opts.callAgent === undefined &&
+    opts.callTurn === undefined &&
+    !committeeLlmAvailable()
+  ) {
     throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
   }
+  if (sessionEngine(meta) === "turns") return advanceTurnSession(sessionId, opts);
   const callAgent = opts.callAgent ?? getCommitteeCallAgent();
   const positions = loadPositions(sessionId);
   const currentRound = positions.length === 0 ? 0 : Math.max(...positions.map((p) => p.round));
@@ -1063,6 +1421,116 @@ export async function advanceCommitteeSession(
   }
 
   return { status: "synthesized", ...(await synthesize(sessionId, meta, committee)), round: currentRound };
+}
+
+/**
+ * Turn engine resume point (ADR-0204 §15.2/§15.3). One call restarts the
+ * meeting in exactly one of two situations, decided from stored state:
+ *   - awaiting_human: the human answered, or the deadline passed (the chair then
+ *     stores a pass_on_behalf row — never words for the person);
+ *   - failed: a new sitting opens (meta.attempts), the failure moves into the
+ *     stopped sitting's entry, and the meeting continues from the issue where it
+ *     stopped (a chair `resume` turn marks it).
+ * Anything else is refused. Claiming is one immediate transaction, so two
+ * callers (panel + timer) cannot both start the engine.
+ */
+async function advanceTurnSession(
+  sessionId: string,
+  opts: { actor: string; callAgent?: CallAgent; callTurn?: CallTurn; background?: boolean },
+): Promise<AdvanceResult> {
+  const claim = claimTurnResume(sessionId, Date.now());
+  if (claim === "running") return { status: "turns_running", evaluation: null };
+  const runOpts = { callAgent: opts.callAgent, callTurn: opts.callTurn };
+  if (opts.background) {
+    void runCommitteeSession(sessionId, runOpts).catch((err: unknown) => {
+      console.error(`committee session ${sessionId} resumed deliberation failed:`, err);
+    });
+    return { status: "turns_resumed", evaluation: null };
+  }
+  const result = await runCommitteeSession(sessionId, runOpts);
+  return { status: result.evaluation ? "synthesized" : "turns_resumed", evaluation: result.evaluation };
+}
+
+function claimTurnResume(sessionId: string, nowMs: number): "resumed" | "running" {
+  const db = getDb();
+  return db
+    .transaction((): "resumed" | "running" => {
+      const run = db.query("SELECT stage, meta_json FROM process_run WHERE id = ?").get(sessionId) as
+        | { stage: string; meta_json: string | null }
+        | undefined;
+      if (!run || !isCommitteeRun(run.stage, run.meta_json))
+        throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
+      const meta = JSON.parse(run.meta_json as string) as SessionMeta;
+      if (meta.synthesized) throw new CommitteeError("session_closed", "this session is already synthesized");
+      if (meta.convening === true) return "running";
+      const committee = getCommittee(meta.committee_key) as CommitteeDef;
+      const now = new Date(nowMs).toISOString();
+      const records = loadTurnRecords(sessionId);
+      const attempt = Math.max(1, ...(meta.attempts ?? []).map((a) => a.attempt), ...records.map((r) => r.attempt));
+      const state = meta.turn_state ?? { agent_elapsed_ms: 0, human_wait_ms: 0 };
+
+      if (meta.awaiting) {
+        const a = meta.awaiting;
+        let waitedMs: number;
+        if (a.answered_at) {
+          waitedMs = Date.parse(a.answered_at) - Date.parse(a.called_at);
+        } else if (nowMs >= Date.parse(a.deadline_at)) {
+          recordPassOnBehalf(
+            {
+              runId: sessionId,
+              chair: committee.chair,
+              attempt,
+              issueIndex: a.issue_index,
+              issueId: meta.agenda?.[a.issue_index - 1]?.id,
+              forSeat: a.seat,
+              reason: "human_timeout",
+            },
+            db,
+          );
+          waitedMs = Date.parse(a.deadline_at) - Date.parse(a.called_at);
+        } else {
+          throw new CommitteeError(
+            "awaiting_human",
+            `waiting for the human turn of seat '${a.seat}' until ${a.deadline_at}`,
+          );
+        }
+        db.run("UPDATE process_run SET meta_json = ? WHERE id = ?", [
+          JSON.stringify({
+            ...meta,
+            convening: true,
+            awaiting: undefined,
+            turn_state: { ...state, human_wait_ms: state.human_wait_ms + Math.max(0, waitedMs) },
+          }),
+          sessionId,
+        ]);
+        return "resumed";
+      }
+
+      if (meta.progress?.phase === "failed" && meta.convening_error !== undefined) {
+        // Open a new sitting; the stopped one keeps its failed_at / error (markConveningFailed wrote them).
+        const stopped = meta.progress.failed_at;
+        const attempts = [...(meta.attempts ?? [{ attempt: 1, started_at: meta.progress.started_at }])];
+        attempts.push({
+          attempt: attempts[attempts.length - 1].attempt + 1,
+          started_at: now,
+          ...(stopped?.issue_index !== undefined ? { resumed_from_issue_index: stopped.issue_index } : {}),
+        });
+        db.run("UPDATE process_run SET meta_json = ?, status = 'running', finished_at = NULL WHERE id = ?", [
+          JSON.stringify({
+            ...meta,
+            convening: true,
+            convening_error: undefined,
+            attempts,
+            // Agent compute is per sitting; the human wait of the meeting carries over.
+            turn_state: { agent_elapsed_ms: 0, human_wait_ms: state.human_wait_ms },
+          }),
+          sessionId,
+        ]);
+        return "resumed";
+      }
+      throw new CommitteeError("nothing_to_advance", "this meeting is neither waiting for a human nor stopped");
+    })
+    .immediate();
 }
 
 function groupByRound(rows: SessionRow[]): DeliberationPosition[][] {
@@ -1159,7 +1627,19 @@ export interface CommitteeTranscript {
   minutesDraft: MinutesDraft | null;
   /** Live / final progress of the convening run; null on pre-progress sessions. */
   progress: MeetingProgress | null;
+  /** Meeting engine of this session ("rounds" for sessions created before the turn engine). */
+  engine: CommitteeEngine;
+  /** Turn engine: the open human floor while paused, else null. */
+  awaiting: MeetingAwaiting | null;
+  /** Turn engine: every turn in seq order (chair mechanics, seat turns, votes, human turns);
+   * `afterSeq` limits it to newer turns, max TURN_PAGE_SIZE. [] on round sessions. */
+  turns: TurnView[];
+  /** Turn engine: more turns exist after the last returned seq (page again with afterSeq). */
+  hasMoreTurns: boolean;
   committee: CommitteeDef | null;
+  /** Round sessions: positions per round. Turn sessions: a LEGACY projection (the speech turns of
+   * each issue as positions, chair mechanics and abandoned turns left out) so v1 minutes renderers
+   * keep working — new readers use `turns`. */
   rounds: Array<{
     round: number;
     positions: Array<{
@@ -1182,11 +1662,33 @@ export interface CommitteeTranscript {
   } | null;
 }
 
-export function getCommitteeSession(sessionId: string): CommitteeTranscript | null {
+/** Max turns one list / GET response returns when paging with `afterSeq`. */
+export const TURN_PAGE_SIZE = 50;
+
+/** The turn read model of a session: views after `afterSeq`, page-limited when a cursor is given. */
+function readTurns(
+  sessionId: string,
+  meta: SessionMeta,
+  afterSeq: number | undefined,
+): { turns: TurnView[]; hasMore: boolean } {
+  const records = loadTurnRecords(sessionId);
+  const current = Math.max(1, ...(meta.attempts ?? []).map((a) => a.attempt), ...records.map((r) => r.attempt));
+  let views = turnViews(records, current);
+  if (afterSeq !== undefined) views = views.filter((v) => v.seq > afterSeq);
+  const limited = afterSeq !== undefined && views.length > TURN_PAGE_SIZE;
+  return { turns: limited ? views.slice(0, TURN_PAGE_SIZE) : views, hasMore: limited };
+}
+
+export function getCommitteeSession(sessionId: string, opts: { afterSeq?: number } = {}): CommitteeTranscript | null {
   const session = readMeta(sessionId);
   if (!session) return null;
   const rounds: CommitteeTranscript["rounds"] = [];
+  const engine = sessionEngine(session.meta);
+  const turnRead =
+    engine === "turns" ? readTurns(sessionId, session.meta, opts.afterSeq) : { turns: [], hasMore: false };
+  const speech = engine === "turns" ? new Set(loadChairRows(sessionId).map((r) => r.id)) : null;
   for (const p of loadPositions(sessionId)) {
+    if (speech && !speech.has(p.id)) continue; // turn sessions: chair mechanics / abandoned / error-passes are not positions
     if (!rounds[p.round - 1]) rounds[p.round - 1] = { round: p.round, positions: [] };
     rounds[p.round - 1].positions.push({
       positionId: p.id,
@@ -1233,6 +1735,10 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
     agendaMeta: session.meta.agenda_meta ?? null,
     minutesDraft: session.meta.minutes_draft ?? null,
     progress: session.meta.progress ?? null,
+    engine,
+    awaiting: session.meta.awaiting ?? null,
+    turns: turnRead.turns,
+    hasMoreTurns: turnRead.hasMore,
     committee: getCommittee(session.meta.committee_key),
     rounds,
     evaluation,
@@ -1252,8 +1758,19 @@ export interface CommitteeSessionListItem {
   progress: MeetingProgress | null;
   /** Positions finished so far, in order. Populated ONLY while the session is
    * convening or after a failed run (so the UI can keep what was written);
-   * [] otherwise — finished sessions are read through the transcript GET. */
+   * [] otherwise — finished sessions are read through the transcript GET.
+   * Always [] on turn sessions (use `turns`). */
   positions: LivePosition[];
+  /** Meeting engine of this session ("rounds" for sessions created before the turn engine). */
+  engine: CommitteeEngine;
+  /** Turn engine: the open human floor while paused, else null. */
+  awaiting: MeetingAwaiting | null;
+  /** Turn engine: finished turns in seq order. Populated while the meeting is convening, paused
+   * (awaiting_human) or failed, and ALWAYS when the caller passes `afterSeq`; [] otherwise.
+   * With `afterSeq`: only seq > afterSeq, at most TURN_PAGE_SIZE. */
+  turns: TurnView[];
+  /** Turn engine: more turns exist after the last returned seq. */
+  hasMoreTurns: boolean;
 }
 
 function livePositions(runId: string): LivePosition[] {
@@ -1269,20 +1786,36 @@ function livePositions(runId: string): LivePosition[] {
   }));
 }
 
-/** List committee sessions for an entity (process_run rows with meta). */
+/**
+ * List committee sessions for an entity (process_run rows with meta).
+ * `sessionId` narrows the list to one session; `afterSeq` (turn engine) returns
+ * only turns newer than the cursor so a poll streams just the delta.
+ */
 export function listCommitteeSessions(
   entityId: string,
   entityType: "opportunity" | "project" = "opportunity",
+  opts: { sessionId?: string; afterSeq?: number } = {},
 ): CommitteeSessionListItem[] {
   const rows = getDb()
     .query(
-      "SELECT id, meta_json, status, started_at FROM process_run WHERE entity_type = ? AND entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC",
+      `SELECT id, meta_json, status, started_at FROM process_run WHERE entity_type = ? AND entity_id = ? AND meta_json IS NOT NULL${
+        opts.sessionId ? " AND id = ?" : ""
+      } ORDER BY started_at DESC`,
     )
-    .all(entityType, entityId) as Array<{ id: string; meta_json: string; status: string; started_at: string }>;
+    .all(entityType, entityId, ...(opts.sessionId ? [opts.sessionId] : [])) as Array<{
+    id: string;
+    meta_json: string;
+    status: string;
+    started_at: string;
+  }>;
   return rows.flatMap((r) => {
     try {
       const meta = JSON.parse(r.meta_json) as SessionMeta;
-      const wantsPositions = meta.convening === true || meta.progress?.phase === "failed";
+      const engine = sessionEngine(meta);
+      const phase = meta.progress?.phase;
+      const live = meta.convening === true || phase === "failed" || phase === "awaiting_human";
+      const wantsTurns = engine === "turns" && (live || opts.afterSeq !== undefined);
+      const turnRead = wantsTurns ? readTurns(r.id, meta, opts.afterSeq) : { turns: [], hasMore: false };
       return [
         {
           sessionId: r.id,
@@ -1292,7 +1825,11 @@ export function listCommitteeSessions(
           convening: meta.convening === true,
           conveningError: meta.convening_error ?? null,
           progress: meta.progress ?? null,
-          positions: wantsPositions ? livePositions(r.id) : [],
+          positions: engine === "rounds" && (meta.convening === true || phase === "failed") ? livePositions(r.id) : [],
+          engine,
+          awaiting: meta.awaiting ?? null,
+          turns: turnRead.turns,
+          hasMoreTurns: turnRead.hasMore,
         },
       ];
     } catch {

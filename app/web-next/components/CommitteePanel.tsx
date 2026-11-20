@@ -9,7 +9,7 @@
 // gate_evaluation_id provenance link — in agent_team mode the panel stops at
 // PROPOSED: the confirming click is always human (design boundary #2).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../lib/api.ts";
+import { api, ApiError } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { PrimaryAction } from "./ui.tsx";
@@ -17,14 +17,28 @@ import { useTranslations } from "next-intl";
 import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { formatDateTime } from "../lib/format.ts";
 import { MinutesDialog } from "./CommitteeMinutesView.tsx";
-import { CommitteeProgressView } from "./CommitteeProgress.tsx";
-import type { LivePosition, MeetingProgress } from "../lib/committee-progress.ts";
+import { CommitteeProgressView, CommitteeTurnProgressView } from "./CommitteeProgress.tsx";
+import { CommitteeTurnTranscript } from "./CommitteeTurnTranscript.tsx";
+import type { LivePosition, MeetingAwaiting, MeetingProgress } from "../lib/committee-progress.ts";
 import {
+  attemptOf,
+  buildTurnPollUrl,
   CONVENING_DEADLINE_MS,
   CONVENING_POLL_MS,
+  convenDeadlineReached,
+  type DeadlinePause,
+  lastSeq,
+  MAX_TURN_PAGES_PER_TICK,
+  mergeTurns,
+  nextDeadlinePause,
+  pickFailedTurnSession,
   pickResumableSession,
   POSITION_META_RE,
+  shouldAdvanceAwaiting,
   stripPositionMeta,
+  type TurnView,
+  turnErrorKey,
+  turnsNeedReset,
 } from "../lib/committee-progress-view.ts";
 
 interface SessionPosition {
@@ -40,6 +54,12 @@ interface SessionTranscript {
   sessionId: string;
   status: string;
   meta: { committee_key: string; decision_mode: string; gate: string; target_ref?: string; synthesized?: boolean };
+  /** Turn engine (ADR-0204): absent on sessions created before it = "rounds". */
+  engine?: "rounds" | "turns";
+  /** Turn engine: every turn in seq order (GET without afterSeq). */
+  turns?: TurnView[];
+  /** Turn engine: the stored chair agenda (titles label the issue groups). */
+  agenda?: Array<{ title: string }> | null;
   rounds: Array<{ round: number; positions: SessionPosition[] }>;
   evaluation: {
     gateEvaluationId: string;
@@ -50,6 +70,30 @@ interface SessionTranscript {
     createdAt: string;
   } | null;
 }
+/** One session of the list payload as the convening poll reads it. */
+interface PollSession {
+  sessionId: string;
+  convening?: boolean;
+  conveningError?: string | null;
+  progress?: MeetingProgress | null;
+  positions?: LivePosition[];
+  engine?: "rounds" | "turns";
+  awaiting?: MeetingAwaiting | null;
+  turns?: TurnView[];
+  hasMoreTurns?: boolean;
+  meta?: { agenda?: Array<{ title: string }> | null; synthesized?: boolean };
+}
+/** Live view of a TURN-engine session: kept after a failure so the stop location and the turns stay on screen. */
+interface TurnLive {
+  sessionId: string;
+  progress: MeetingProgress;
+  turns: TurnView[];
+  titles: string[];
+  failureMessage?: string;
+}
+
+const TURN_I18N = "common.committee.turns";
+
 interface DissentEntry {
   member_key: string;
   position_md: string;
@@ -139,6 +183,11 @@ export function CommitteePanel({
     positions: LivePosition[];
     failureMessage?: string;
   } | null>(null);
+  // Turn-engine live view (ADR-0204 phase 2): progress + the turns streamed so far.
+  const [turnLive, setTurnLive] = useState<TurnLive | null>(null);
+  // Busy flag of the turn-meeting actions (submit the human turn, retry, resume). Separate from `busy`:
+  // `busy` stays true for the whole watch, and the open human floor must stay usable while it does.
+  const [turnBusy, setTurnBusy] = useState(false);
   const [transcript, setTranscript] = useState<SessionTranscript | null>(null);
   // 아코디언 — 펼친 세션(소집 이력 행)의 id. 새로 소집한 세션은 자동 펼침.
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -170,7 +219,15 @@ export function CommitteePanel({
   const conveningRef = useRef(false); // a convene click is in flight (POST or watch)
 
   const loadSessions = useCallback((): Promise<
-    Array<{ sessionId: string; startedAt: string; convening?: boolean; progress?: MeetingProgress | null }>
+    Array<{
+      sessionId: string;
+      startedAt: string;
+      convening?: boolean;
+      progress?: MeetingProgress | null;
+      engine?: "rounds" | "turns";
+      awaiting?: MeetingAwaiting | null;
+      meta?: { synthesized?: boolean };
+    }>
   > => {
     return api
       .get<{
@@ -182,6 +239,8 @@ export function CommitteePanel({
           convening?: boolean;
           conveningError?: string | null;
           progress?: MeetingProgress | null;
+          engine?: "rounds" | "turns";
+          awaiting?: MeetingAwaiting | null;
         }>;
       }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`)
       .then((r) => {
@@ -216,7 +275,18 @@ export function CommitteePanel({
     void loadSessions().then(async (list) => {
       if (!alive || watchRef.current || conveningRef.current) return;
       const target = pickResumableSession(list, Date.now());
-      if (!target) return;
+      if (!target) {
+        // A newest turn meeting that stopped on a failure: bring back its stop location and retry button.
+        const failed = pickFailedTurnSession(list);
+        if (!failed) return;
+        setBusy(true);
+        try {
+          await watchConvening(failed.sessionId, Date.now(), true);
+        } finally {
+          setBusy(false);
+        }
+        return;
+      }
       setBusy(true);
       try {
         await watchConvening(target.sessionId, target.startedAtMs, true);
@@ -239,6 +309,7 @@ export function CommitteePanel({
   // (history row refresh + auto-expand + transcript load).
   function finalizeConvene(sessionId: string) {
     setLive(null); // the finished transcript takes over from the live view
+    setTurnLive(null);
     setNotice(`위원회 세션이 소집되었습니다 (${sessionId.slice(-6)}).`);
     loadSessions();
     loadTranscript(sessionId);
@@ -260,6 +331,19 @@ export function CommitteePanel({
     const deadline = startedAtMs + CONVENING_DEADLINE_MS;
     let settled: { ok: boolean; error?: string } | null = null;
     let stopLocated = false; // the failed run reported where it stopped
+    // Turn engine: the deadline is paused while the meeting waits for a human (design §15.2), and the
+    // turns are streamed with an `afterSeq` cursor (null = engine not known yet → the plain list URL).
+    let pause: DeadlinePause = { pausedMs: 0, since: null };
+    let pausedNow = false;
+    let turnCursor: number | null = null;
+    let heldTurns: TurnView[] = [];
+    let seenAttempt: number | null = null;
+    let advancedSeq: number | null = null; // the human floor already driven past its deadline
+    const listUrl = `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`;
+    const fetchSession = async (afterSeq: number | null): Promise<PollSession | undefined> => {
+      const list = await api.get<{ sessions: PollSession[] }>(buildTurnPollUrl(listUrl, sessionId, afterSeq));
+      return list.data.sessions.find((x) => x.sessionId === sessionId);
+    };
     try {
       let waitFirst = !immediate;
       for (;;) {
@@ -273,32 +357,70 @@ export function CommitteePanel({
         waitFirst = true;
         if (token.cancelled) return;
         try {
-          const list = await api.get<{
-            sessions: Array<{
-              sessionId: string;
-              convening?: boolean;
-              conveningError?: string | null;
-              progress?: MeetingProgress | null;
-              positions?: LivePosition[];
-            }>;
-          }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`);
+          let s = await fetchSession(turnCursor);
           if (token.cancelled) return;
-          const s = list.data.sessions.find((x) => x.sessionId === sessionId);
-          if (s?.progress) {
+          if (s?.engine === "turns") {
+            // A new sitting flips the `abandoned` flag of turns already held: re-read from the start.
+            if (turnsNeedReset(seenAttempt, attemptOf(s.progress))) {
+              heldTurns = [];
+              s = await fetchSession(0);
+              if (token.cancelled) return;
+            }
+            for (let page = 0; s && page < MAX_TURN_PAGES_PER_TICK; page++) {
+              heldTurns = mergeTurns(heldTurns, s.turns ?? []);
+              if (!s.hasMoreTurns) break;
+              s = await fetchSession(lastSeq(heldTurns));
+              if (token.cancelled) return;
+            }
+          }
+          if (s?.engine === "turns") {
+            seenAttempt = attemptOf(s.progress);
+            turnCursor = lastSeq(heldTurns);
+            pausedNow = !!s.awaiting;
+            if (s.progress) {
+              const progress = s.progress;
+              stopLocated = progress.phase === "failed" && !!progress.failed_at;
+              setTurnLive({
+                sessionId,
+                progress,
+                turns: heldTurns,
+                titles: (s.meta?.agenda ?? []).map((a) => a.title),
+                failureMessage: s.conveningError ?? undefined,
+              });
+              setNotice((prev) => (prev === progressNotice ? null : prev));
+            }
+            // The floor's deadline passed unanswered: drive the meeting on ONCE (the chair records a pass).
+            if (s.awaiting && shouldAdvanceAwaiting(s.awaiting, Date.now(), advancedSeq)) {
+              advancedSeq = s.awaiting.seq;
+              try {
+                await api.post(
+                  `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}/advance`,
+                  {},
+                );
+              } catch (err) {
+                // The clock ran ahead of the server's: try again on the next tick.
+                if (err instanceof ApiError && err.code === "awaiting_human") advancedSeq = null;
+                else setError(turnErrorText(err, `${TURN_I18N}.awaiting.submitFailed`));
+              }
+              if (token.cancelled) return;
+            }
+          } else if (s?.progress) {
             const progress = s.progress;
             stopLocated = progress.phase === "failed" && !!progress.failed_at;
             setLive({ progress, positions: s.positions ?? [] });
             // the live view replaces the generic "in progress" line
             setNotice((prev) => (prev === progressNotice ? null : prev));
           }
-          if (s && !s.convening) {
+          // A paused turn meeting (open human floor) is not convening but is not finished either.
+          if (s && !s.convening && !s.awaiting) {
             settled = s.conveningError ? { ok: false, error: s.conveningError } : { ok: true };
             break;
           }
         } catch {
           // transient poll failure — keep polling until the deadline
         }
-        if (Date.now() >= deadline) break;
+        pause = nextDeadlinePause(pause, pausedNow, Date.now());
+        if (convenDeadlineReached(deadline, pause, pausedNow, Date.now())) break;
       }
     } finally {
       if (watchRef.current === token) watchRef.current = null;
@@ -324,6 +446,7 @@ export function CommitteePanel({
     setError(null);
     setNotice(null);
     setLive(null);
+    setTurnLive(null);
     try {
       let effectiveBrief = briefMd;
       if (beforeConvene) {
@@ -378,6 +501,70 @@ export function CommitteePanel({
     } finally {
       setBusy(false);
     }
+  }
+
+  // Plain-language line for the human-turn / resume API errors; anything else keeps the server message.
+  function turnErrorText(err: unknown, fallbackKey: string): string {
+    const key = err instanceof ApiError ? turnErrorKey(err.code) : null;
+    if (key) return tr(key);
+    return err instanceof Error ? err.message : tr(fallbackKey);
+  }
+
+  // Turn engine: the ONE resume point is POST .../advance — a failed meeting restarts from the issue where it
+  // stopped, a paused one whose human deadline passed records the chair's pass. Afterwards the poll is
+  // (re)attached so the live view follows the continuing meeting.
+  async function driveTurnMeeting() {
+    const sessionId = turnLive?.sessionId;
+    if (!sessionId || turnBusy) return;
+    setTurnBusy(true);
+    setError(null);
+    try {
+      await api.post(
+        `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}/advance`,
+        {},
+      );
+    } catch (err) {
+      setError(turnErrorText(err, `${TURN_I18N}.awaiting.submitFailed`));
+      setTurnBusy(false);
+      return;
+    }
+    setTurnBusy(false);
+    await attachTurnMeeting(sessionId);
+  }
+
+  // Watch a turn meeting again (after a restart, or to open an unfinished one from the history).
+  async function attachTurnMeeting(sessionId: string) {
+    if (watchRef.current) return;
+    setBusy(true);
+    try {
+      await watchConvening(sessionId, Date.now(), true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // The human takes the floor the chair opened. The server resumes the meeting itself after the stored turn.
+  async function submitTurnPosition() {
+    const sessionId = turnLive?.sessionId;
+    if (!sessionId || turnBusy || !position.text.trim()) return;
+    setTurnBusy(true);
+    setError(null);
+    setNotice(null);
+    let recorded = false;
+    try {
+      await api.post(
+        `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}/positions`,
+        { positionMd: position.text, recommendation: position.recommendation },
+      );
+      recorded = true;
+      setPosition({ text: "", recommendation: "go" });
+      setNotice(tr(`${TURN_I18N}.awaiting.submitted`));
+    } catch (err) {
+      setError(turnErrorText(err, `${TURN_I18N}.awaiting.submitFailed`));
+    } finally {
+      setTurnBusy(false);
+    }
+    if (recorded) await attachTurnMeeting(sessionId); // no-op while the watch is still running
   }
 
   async function submitPosition() {
@@ -526,6 +713,63 @@ export function CommitteePanel({
         />
       )}
 
+      {/* Turn engine (ADR-0204): stepper, status, open human floor, retry, and the live transcript */}
+      {turnLive && (
+        <CommitteeTurnProgressView
+          progress={turnLive.progress}
+          turns={turnLive.turns}
+          titles={turnLive.titles}
+          failureMessage={turnLive.failureMessage}
+          canAct={canAct}
+          busy={turnBusy}
+          onRetry={() => void driveTurnMeeting()}
+          onResume={() => void driveTurnMeeting()}
+          humanForm={
+            <form
+              className="sizing-new-form"
+              aria-label={tr(`${TURN_I18N}.awaiting.formLabel`)}
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submitTurnPosition();
+              }}
+            >
+              <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
+                {tr(`${TURN_I18N}.awaiting.formHint`)}
+              </p>
+              <label className="block text-[length:var(--fs-caption)]">
+                <span className="block mb-1">{tr(`${TURN_I18N}.awaiting.positionLabel`)}</span>
+                <textarea
+                  value={position.text}
+                  onChange={(e) => setPosition({ ...position, text: e.target.value })}
+                  className="sizing-new-input w-full"
+                  rows={3}
+                  required
+                />
+              </label>
+              <div className="flex flex-wrap items-end gap-2 mt-2">
+                <label className="text-[length:var(--fs-caption)]">
+                  <span className="block mb-1">{tr(`${TURN_I18N}.awaiting.recommendationLabel`)}</span>
+                  <select
+                    value={position.recommendation}
+                    onChange={(e) =>
+                      setPosition({ ...position, recommendation: e.target.value as typeof position.recommendation })
+                    }
+                    className="sizing-new-input sizing-new-input-sm"
+                  >
+                    <option value="go">GO</option>
+                    <option value="hold">HOLD</option>
+                    <option value="kill">KILL</option>
+                  </select>
+                </label>
+                <button type="submit" className="btn-ghost btn-sm" disabled={turnBusy || !position.text.trim()}>
+                  {tr(`${TURN_I18N}.awaiting.submit`)}
+                </button>
+              </div>
+            </form>
+          }
+        />
+      )}
+
       {/* 위원회 소집 이력 — 기본 접힘(사용자 요청, 2026-09-17: 이력은 필요할 때만
           조회). 요약 줄에 건수를 남겨 접힌 상태에서도 이력 존재는 알 수 있다.
           행별 아코디언(2026-09-16)은 유지 — 새로 소집된 세션은 이력이 자동으로
@@ -635,38 +879,49 @@ export function CommitteePanel({
             </div>
           )}
 
+          {/* Turn engine: the finished meeting as a turn-by-turn record (the live view shows it while paused/failed). */}
+          {transcript.engine === "turns" && turnLive?.sessionId !== transcript.sessionId && (
+            <CommitteeTurnTranscript
+              turns={transcript.turns ?? []}
+              titles={(transcript.agenda ?? []).map((a) => a.title)}
+              collapsible
+            />
+          )}
+
           {/* 입장 원문 — 라운드별 상세 (감사용 원문 보존, 저장 형식 메타는 걷어냄) */}
-          <details className="mb-3">
-            <summary className="text-[length:var(--fs-caption)] font-semibold cursor-pointer">
-              입장 원문 (라운드별)
-            </summary>
-            {transcript.rounds.map((r) => (
-              <div key={r.round} className="mt-2 mb-3">
-                <p className="text-[length:var(--fs-caption)] font-semibold mb-1">라운드 {r.round}</p>
-                {r.positions.map((p) => (
-                  <div key={p.positionId} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
-                    <p className="text-[length:var(--fs-caption)] mb-1">
-                      <span
-                        className={`status-chip ${p.memberType === "human" ? "status-green" : "status-not-started"}`}
+          {transcript.engine !== "turns" && (
+            <details className="mb-3">
+              <summary className="text-[length:var(--fs-caption)] font-semibold cursor-pointer">
+                입장 원문 (라운드별)
+              </summary>
+              {transcript.rounds.map((r) => (
+                <div key={r.round} className="mt-2 mb-3">
+                  <p className="text-[length:var(--fs-caption)] font-semibold mb-1">라운드 {r.round}</p>
+                  {r.positions.map((p) => (
+                    <div key={p.positionId} className="mb-2 pl-2 border-l-2" style={{ borderColor: "var(--muted-fg)" }}>
+                      <p className="text-[length:var(--fs-caption)] mb-1">
+                        <span
+                          className={`status-chip ${p.memberType === "human" ? "status-green" : "status-not-started"}`}
+                        >
+                          {p.memberType === "human" ? "human" : "agent"}
+                        </span>{" "}
+                        <span className="tabular-nums">{p.memberType === "human" ? p.humanUserId : p.agentKey}</span>
+                        {p.confidence !== null && (
+                          <span className="text-[color:var(--muted-fg)]"> · 신뢰도 {p.confidence}</span>
+                        )}
+                      </p>
+                      <pre
+                        className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0"
+                        style={{ fontFamily: "inherit" }}
                       >
-                        {p.memberType === "human" ? "human" : "agent"}
-                      </span>{" "}
-                      <span className="tabular-nums">{p.memberType === "human" ? p.humanUserId : p.agentKey}</span>
-                      {p.confidence !== null && (
-                        <span className="text-[color:var(--muted-fg)]"> · 신뢰도 {p.confidence}</span>
-                      )}
-                    </p>
-                    <pre
-                      className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0"
-                      style={{ fontFamily: "inherit" }}
-                    >
-                      {stripMeta(p.positionMd)}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </details>
+                        {stripMeta(p.positionMd)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </details>
+          )}
 
           {/* 회의록 — 모달로 보기(포맷된 요약) + 다운로드(원문 markdown) + 확정 */}
           <section className="mt-2 mb-3" aria-label="회의록">
@@ -749,6 +1004,22 @@ export function CommitteePanel({
                 </form>
               )}
             </div>
+          ) : transcript.engine === "turns" ? (
+            // Turn sessions have no manual round advance: an unfinished one is continued through its live view.
+            canAct &&
+            turnLive?.sessionId !== transcript.sessionId &&
+            transcript.status !== "done" && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="btn-ghost btn-sm"
+                  disabled={busy}
+                  onClick={() => void attachTurnMeeting(transcript.sessionId)}
+                >
+                  {tr(`${TURN_I18N}.reopen`)}
+                </button>
+              </div>
+            )
           ) : (
             canAct && (
               <div className="mt-2">

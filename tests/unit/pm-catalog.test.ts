@@ -64,11 +64,14 @@ describe("pm catalog (ADR-0183 D1)", () => {
       .filter((e) => e.agentKey === null)
       .map((e) => e.promptKey)
       .sort();
-    // ADR-0196 phase B adds the chair agenda/minutes passes (dynamic chair voice).
+    // ADR-0196 phase B adds the chair agenda/minutes passes (dynamic chair voice);
+    // ADR-0204 adds the turn engine's committee.turn / committee.consensus.
     expect(nullAgentKeys).toEqual([
       "committee.agenda",
+      "committee.consensus",
       "committee.minutes",
       "committee.position",
+      "committee.turn",
       "s8.business_case_prose",
     ]);
     expect([...DYNAMIC_AGENT_PROMPTS].sort()).toEqual(nullAgentKeys);

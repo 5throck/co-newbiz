@@ -290,4 +290,73 @@ Every new session stores minutes as schema v2 (§4.6, dialogue form, turn-id ref
 - Cost: per meeting as §7 (≈1.5-3× tokens, 3-7 min). Fleet-wide, the increase scales with the number of convened sessions across S4, S5 auto-convene, S6/S7, entity-IC and group-IC; I could not count historical session volume, so the total monthly impact is unmeasured (Q3/Q8 input).
 - Migration: still none for phases 1-3 under storage Option A. Project-scope sessions share `process_run.meta_json`, so no new columns.
 
-- Q8. Keep the round engine as an explicit fallback (A, recommended) or remove it (B)?
+- Q8. Round engine — resolved in §13 (Option A: explicit, never-silent fallback).
+
+## 15. Phase 2 addendum (data-architect, 2026-11-20)
+
+Owner approval to start phase 2, chat 2026-11-20, verbatim: "2단계 진행". This section records the storage check for Option A (Q1), recommendations for the two items the AI-2nd review left open, and the backend checklist. Line numbers are as of `main` at `f0c2bbd5`.
+
+### 15.1 Storage verdict (Option A, `agent_position`)
+
+Schema of record: `db/migrations/0065_agent_position_human_members.sql` (rebuild of the 0045 table). Columns: `id TEXT PK`, `process_run_id TEXT NOT NULL → process_run(id)`, `member_type TEXT NOT NULL DEFAULT 'agent' CHECK IN ('human','agent')`, `agent_key TEXT NULL`, `human_user_id TEXT NULL → app_user(user_id)`, `position_md TEXT NOT NULL`, `confidence INTEGER CHECK 0..100`, `round INTEGER NOT NULL DEFAULT 1`, `created_at TEXT NOT NULL`. Index: `idx_agent_position_run (process_run_id, round)`. The exactly-one-of `agent_key | human_user_id` rule is app-layer by design (ADR-0096 §2), enforced in `insertPosition` (`lib/deliberation.ts:366`) and by construction in `writeAgentPosition` (`lib/committee-session.ts:456`) and `submitHumanPosition` (`lib/committee-session.ts:877`). No later migration touches the table.
+
+| Point | Verdict | Basis |
+|---|---|---|
+| (a) Agent and human turns fit without a schema change | **Confirmed** | Agent turn = `member_type='agent'`, `agent_key=<seat>`; human turn = `member_type='human'`, `human_user_id=<authenticated user>` (the same path `submitHumanPosition` uses today, seat carried in the tail, never in `agent_key`). Chair turns use `agent_key=<chair key>`. Turn fields (`kind, issue_id, seq, move, addressed_to, responds_to_turn, vote, attempt, error`) go in the `<!--position-meta:{...}-->` tail, which `parsePositionMeta` (`committee-session.ts:434`) already reads non-greedily with nested JSON. `confidence` stays NULL for turns (no CHECK issue). |
+| (b) Ordering by `seq` in the tail | **Confirmed, with an app-layer guard; no column or index needed** | The turn engine is the single writer while `convening` (design §4.2) and assigns `seq` itself, so `seq` is monotonic by construction. `loadPositions` (`committee-session.ts:412`) orders by `round, created_at, id`; `created_at` has ms resolution and `ulid()` is not monotonic within one ms, so parallel vote writes can tie. Readers of turn rows must therefore sort by `(round, tail.seq)` in code, not trust SQL order. The DB cannot enforce `UNIQUE(process_run_id, seq)`; the engine must compute `next seq = max(seq)+1` inside the same immediate transaction as the INSERT (one helper, 15.3). Accepted risk: a duplicate `seq` is detectable (test) but not DB-rejected. That is the Option B trigger only if a second writer ever appears. |
+| (c) Read performance at ≤40 turns/meeting | **Confirmed** | Every read is `WHERE process_run_id = ?`, served by the leading column of `idx_agent_position_run`. A meeting is at most ~40 discussion turns + chair turns + votes (≈ 40 + 4×(1 open + 1 consensus + seats votes) ≈ 70-80 rows at the cap). Per-issue and per-turn reads (`afterSeq`) load the run's rows once and filter/parse in memory: under 100 rows and well under 1 MB of text per poll every 3 s. No index on tail fields is needed or possible. |
+| (d) Legacy round rows and new turn rows coexist | **Confirmed, with a reader rule** | Readers tell them apart by `parsePositionMeta(row).kind === "turn"`; legacy rows have no `kind`. The authoritative switch per session is `meta.engine` (set at convene, design §6), so a reader picks one interpretation per session instead of mixing. Every reader that treats `round` as a deliberation round must filter turn rows out or branch on `meta.engine`: `loadChairRows` (`committee-session.ts:317`), the chair's latest-per-seat reduction (`committee-chair.ts:135`), `submitHumanPosition`'s round/duplicate check (`committee-session.ts:~914-925`), `advanceCommitteeSession` (`:960`), and the transcript in `getCommitteeSession` (`:1185`). The minutes `position_ref` check (`committee-minutes-schema.ts:6`) still resolves because turn ids are `agent_position.id`. |
+
+**Migration needed: no.** Phase 2 under Option A changes no table, column, index, or constraint, so it does not trigger the DB-schema ADR on its own (ADR-0204 already covers the semantic change). The tail extension is a contract change in a text column; record its shape in ADR-0204 or the code (`committee-progress.ts` / a `TurnMeta` zod schema) so it is not ad hoc. Option B stays the trigger if turns become queried across sessions (IC package, search), if a second concurrent writer appears, or if `seq` uniqueness must be DB-enforced.
+
+### 15.2 Open items from the AI-2nd review
+
+**Hybrid human turns vs budgets** — **Decided (owner, 2026-11-20)**: recommendation adopted as proposed ("권장안대로 진행").
+
+Recommendation: do not hold a human wait inside the background engine. When the speaker rule gives the floor to a human seat, the engine writes a chair `call` turn, sets `progress.phase = "awaiting_human"` with `awaiting = { seat, seq, deadline_at }`, sets `convening = false`, and returns (yields). The human's turn submission, or the first poll/advance after `deadline_at`, resumes the engine through `advanceCommitteeSession`. Budgets:
+- Human wait time does **not** count toward the 8-minute `wall_clock_max`; that budget measures agent compute and exists to stay under one poll cycle. Track it as `agent_elapsed_ms` that accumulates only while the engine runs.
+- Per-turn human wait: **3 minutes** default (code constant, later a `_committees.yaml` key under the Q2 rule). Separate meeting cap on total human wait: **20 minutes**. After that, the remaining human calls are skipped as `pass`.
+- On timeout the engine stores the `pass` as a **chair** row (a human row with NULL `human_user_id` would break the 0065 invariant) (`agent_key=<chair>`, `move="pass_on_behalf"`, tail `{ for_seat, reason: "human_timeout" }`). No words are put in a person's mouth, and the minutes show "응답 없음 (시간 초과)". Two timeouts on one issue skip that seat for the issue (same as rule 4.3.4).
+- A hybrid meeting **may** outlive one poll cycle. The panel's 10-minute deadline (`CommitteePanel.tsx:251-301`, counted from session start) applies only while the engine is running. While `phase = "awaiting_human"`, the panel stops the deadline and shows the human call. When polling resumes it counts the deadline from `progress.updated_at` of the latest running stretch. Phase 1's resume-on-mount covers a reload.
+
+Owner question (answered: yes, as recommended): For a hybrid meeting, may we use a 3-minute wait per human turn and a 20-minute total wait, with no answer recorded as "no response (pass)" by the chair, and allow the meeting to run beyond one 10-minute screen session?
+
+**Resume marking (Q6)** — **Decided (owner, 2026-11-20)**: recommendation adopted as proposed ("권장안대로 진행").
+
+Recommendation: make a restart visible in three places, without rewriting anything.
+- Meta: `meta.attempts[] = [{ attempt, started_at, ended_at?, resumed_from_issue_index?, stopped_at?: MeetingFailedAt }]`. `progress` gains `attempt` and `resumed_from_issue_index`. The retry clears `convening_error` only after it copies it into the closing attempt entry, so the failure is kept.
+- Turns: every turn tail carries `attempt`. `seq` continues across attempts (never reused, so `afterSeq` stays valid). The resumed issue starts again from its opening. Partial turns of the failed attempt for that issue are kept (append-only) and excluded from that issue's live transcript and consensus input. The resume writes one chair turn `move = "resume"` with a code-rendered line ("회의 재개 — 2차 시도, 안건 3부터").
+- Minutes (v2, phase 3, prepared now): `overview.sittings[] = [{ attempt, started_at, ended_at, issues }]`, and the code-rendered header adds "이 회의는 N번에 나눠 진행되었습니다" when N > 1. The appendix lists the abandoned partial turns under "중단된 시도". `how_consensus_formed` may cite only turns from the attempt that closed the issue.
+
+Owner question (answered: yes, as recommended): On a restart, may we keep the stopped attempt's partial turns as a labelled "stopped attempt" appendix and state in the minutes header that the meeting ran in N sittings, instead of hiding the restart?
+
+### 15.3 Phase 2 backend checklist
+
+Engine switch (explicit, never silent; ADR-0204, §14.2 Option A):
+- `lib/committee-flags.ts`: add `committeeEngineDefault(): "turns" | "rounds"`, which reads `CO_NEWBIZ_COMMITTEE_ENGINE` (`turns` | `rounds`; unset → `turns` once the S6/S4 live check passes; ship with unset → `rounds` until then). Any other value throws at convene time and is not coerced.
+- `createCommitteeSession` (`committee-session.ts:556`): resolve the engine once (explicit request/CLI `--engine` > env > default) and store `meta.engine`. Never change it later. An LLM failure stops convening; it never drops to rounds.
+- `SessionMeta` (`committee-session.ts:~80-115`): add `engine`, `attempts`, `awaiting`.
+
+Turn engine:
+- New `lib/committee-turns.ts`: `TurnMeta` zod schema (tail shape), `nextSpeaker()` (rules 4.3), `shouldStopIssue()` / budget checks (4.4), `classifyConsensus()`, `buildTurnTranscript()` (8k cap, current issue verbatim), `insertTurn(db, runId, turn)`, which computes `seq = max+1` and INSERTs in one immediate transaction and reuses the `insertPosition` invariant check.
+- New `runTurnMeeting(entity, opts)` beside `runDeliberationRounds` (`lib/deliberation.ts:397`). It uses the same `onProgress`, `callAgent`, and chair-pass seams and returns the same `DeliberationResult`, so gate_evaluation and dissent stay on the unchanged code path (`buildSynthesis`, `deliberation.ts:550`).
+- `committee-progress.ts`: add `"awaiting_human"` to `MeetingPhase`, plus `attempt`, `resumed_from_issue_index`, and `awaiting` to `MeetingProgress`.
+- `runCommitteeSession` (`committee-session.ts:654`): branch on `meta.engine`. Resume: when `convening_error.failed_at.issue_index` exists and engine = turns, start from that issue and append to `attempts`.
+- `advanceCommitteeSession` (`:960`): for turns, act as the resume point for `awaiting_human` (after a submission or a passed deadline).
+- `submitHumanPosition` (`:877`): for turns, accept only when `awaiting.seat` matches and the caller is the bound user. Write a human turn row (tail `kind: "turn"`), clear `awaiting`, and trigger the resume. The rounds path is unchanged.
+- Readers: filter or branch by engine in `loadChairRows` (`:317`), `loadPositions` consumers (`:412`), `committee-chair.ts:135`, and `getCommitteeSession` (`:1185`). Sort turn rows by `(round, seq)` in code.
+- Prompts: `committee.turn`, `committee.consensus` in `app/web-next/prompts/prompts.json`, then regenerate `lib/prompts.generated.ts`.
+- API: list/GET routes add `afterSeq` (max 50, same permission check). Both scopes: `app/api/opportunities/[id]/committee-sessions/**`, `app/api/projects/[id]/committee-sessions/**`.
+- CLI `scripts/co-newbiz/committee-deliberation.ts`: `--engine turns|rounds`.
+
+Tests (`tests/unit/`, injected deterministic `callAgent`):
+- `committee-turns.test.ts`: speaker rules 1-4; stop rules; budgets (`turns_total_max`, `agent_elapsed_ms`) → `unresolved/budget`; consensus classification; zod repair; two failed parses → stored `pass` with `error`; three in a row → `failed_at {issue_index, seq}`.
+- `seq` integrity: monotonic across issues and attempts; parallel votes get distinct `seq`; ordering by `(round, seq)` is stable when `created_at` ties.
+- Coexistence: a legacy rounds session fixture reads unchanged; a turns session is not miscounted by `loadChairRows` / the duplicate-position check; invariant holds for agent, human, and chair rows.
+- Hybrid: `awaiting_human` yield; human submit resumes; a wrong seat or wrong user is rejected; timeout → chair `pass_on_behalf` row; human wait excluded from the wall clock; total-wait cap.
+- Resume: a failure at issue 3 → retry starts at issue 3, `attempts` has 2 entries, the `resume` chair turn exists, earlier turns are untouched, `seq` is not reused.
+- Engine switch: env `rounds`/`turns`/invalid (throws); `meta.engine` fixed per session; no silent fallback on an LLM error (extend `committee-llm-required.test.ts`).
+- Boundary: extend `committee-boundary.test.ts` so the turn engine never writes `gate_decision` and dissent stays verbatim.
+- API: `afterSeq` respects the list permission check (non-member 403/404).
+
+Not verified here: exact line numbers inside `submitHumanPosition` for the round check (given as approximate), whether any reader outside `lib/` parses `agent_position.round` (I checked `lib/`, `components/`, and `app/api/` only), and how many rows real hybrid meetings produce (no production sample read).

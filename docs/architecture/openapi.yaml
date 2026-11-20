@@ -4991,13 +4991,35 @@ paths:
     get:
       operationId: listProjectCommitteeSessions
       summary: Committee deliberation sessions for a project — the IC committees (entity_ic / group_ic, ADR-0196 phase E). Deny-by-default via visibleProject.
+      description: >-
+        Query sessionId narrows the list to one session; afterSeq (turn engine) returns only turns newer than that cursor (max 50 per session; hasMoreTurns says to page again). Without afterSeq, turns are populated only while the meeting is convening, paused (awaiting_human) or failed.
       tags:
         - Analysis
+      parameters:
+        - $ref: '#/components/parameters/CommitteeSessionFilter'
+        - $ref: '#/components/parameters/CommitteeAfterSeq'
       responses:
         '200':
-          $ref: '#/components/responses/Ok'
+          description: Ok envelope whose data is {sessions} (CommitteeSessionListItem[]) and meta.count. Turn-engine sessions add engine, awaiting, turns and hasMoreTurns (ADR-0204 phase 2).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeSessionListItemsResponse'
+        '400':
+          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: conveneProjectCommitteeSession
       summary: Convene an IC committee session on the project (analyst+). agent_team runs the full deliberation and lands a gate_evaluation PROPOSAL — never the gate decision; refuses with llm_required when no provider is configured.
@@ -5013,37 +5035,102 @@ paths:
     get:
       operationId: getProjectCommitteeSessionTranscript
       summary: Full project committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent.
+      description: >-
+        Query afterSeq (turn engine) returns only turns newer than that cursor (max 50; hasMoreTurns says to page again); without it every turn is returned.
       tags:
         - Analysis
+      parameters:
+        - $ref: '#/components/parameters/CommitteeAfterSeq'
       responses:
         '200':
-          $ref: '#/components/responses/Ok'
+          description: Ok envelope whose data is a CommitteeSessionTranscript. Turn-engine sessions add engine, awaiting, turns and hasMoreTurns (ADR-0204 phase 2).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeSessionTranscript'
+        '400':
+          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/projects/{id}/committee-sessions/{sessionId}/positions:
     post:
       operationId: submitProjectCommitteeHumanPosition
       summary: Submit a human member's position in human_only/hybrid modes on a project session (human_user_id comes from the session, never the body).
+      description: >-
+        Turn engine (hybrid): only the open human floor accepts a turn, once, before its deadline — the response carries turnSeq and awaitingResume=true and the meeting resumes in the background; 409 floor_not_open (no open floor, or already answered) / floor_expired (past the deadline); 400 seat_not_awaited when seat differs from the awaited seat.
       tags:
         - Analysis
       responses:
-        '200':
-          $ref: '#/components/responses/Ok'
+        '201':
+          description: Created envelope whose data is a CommitteeHumanPositionResult.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeHumanPositionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: duplicate_position (round engine), or floor_not_open / floor_expired (turn engine) — error.code names which.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
 
   /api/projects/{id}/committee-sessions/{sessionId}/advance:
     post:
       operationId: advanceProjectCommitteeSession
       summary: Advance a project committee session to the next round or run the chair synthesis (gate_evaluation PROPOSAL only — the IC verdict stays human-only).
+      description: >-
+        Turn engine: resumes a paused (awaiting_human, answered or past its deadline — the chair then records a pass_on_behalf, never words for the person) or failed meeting in the background and returns status turns_resumed; turns_running when it is already running; 409 awaiting_human while the floor is open and unexpired; 400 nothing_to_advance when the meeting is neither waiting for a human nor stopped.
       tags:
         - Analysis
       responses:
         '200':
-          $ref: '#/components/responses/Ok'
+          description: Ok envelope whose data is a CommitteeAdvanceResult.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeAdvanceResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: awaiting_human (turn engine) — the human floor is still open and its deadline has not passed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
 
   /api/projects/{id}/committee-sessions/{sessionId}/minutes:
     get:
@@ -5086,13 +5173,35 @@ paths:
     get:
       operationId: listCommitteeSessions
       summary: Steering-committee deliberation sessions for an opportunity (ADR-0097).
+      description: >-
+        Query sessionId narrows the list to one session; afterSeq (turn engine) returns only turns newer than that cursor (max 50 per session; hasMoreTurns says to page again). Without afterSeq, turns are populated only while the meeting is convening, paused (awaiting_human) or failed.
       tags:
         - Analysis
+      parameters:
+        - $ref: '#/components/parameters/CommitteeSessionFilter'
+        - $ref: '#/components/parameters/CommitteeAfterSeq'
       responses:
         '200':
-          $ref: '#/components/responses/Ok'
+          description: Ok envelope whose data is {sessions} (CommitteeSessionListItem[]) and meta.count. Turn-engine sessions add engine, awaiting, turns and hasMoreTurns (ADR-0204 phase 2).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeSessionListItemsResponse'
+        '400':
+          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       operationId: conveneCommitteeSession
       summary: Convene a committee session (analyst+). agent_team runs the full deliberation and lands a gate_evaluation PROPOSAL — never a decision.
@@ -5108,37 +5217,102 @@ paths:
     get:
       operationId: getCommitteeSessionTranscript
       summary: Full committee-session transcript — per-round positions, chair PROPOSAL, verbatim dissent.
+      description: >-
+        Query afterSeq (turn engine) returns only turns newer than that cursor (max 50; hasMoreTurns says to page again); without it every turn is returned.
       tags:
         - Analysis
+      parameters:
+        - $ref: '#/components/parameters/CommitteeAfterSeq'
       responses:
         '200':
-          $ref: '#/components/responses/Ok'
+          description: Ok envelope whose data is a CommitteeSessionTranscript. Turn-engine sessions add engine, awaiting, turns and hasMoreTurns (ADR-0204 phase 2).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeSessionTranscript'
+        '400':
+          description: afterSeq is not a non-negative integer (error.code invalid_request).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/opportunities/{id}/committee-sessions/{sessionId}/positions:
     post:
       operationId: submitCommitteeHumanPosition
       summary: Submit a human member's position in human_only/hybrid modes (human_user_id comes from the session, never the body).
+      description: >-
+        Turn engine (hybrid): only the open human floor accepts a turn, once, before its deadline — the response carries turnSeq and awaitingResume=true and the meeting resumes in the background; 409 floor_not_open (no open floor, or already answered) / floor_expired (past the deadline); 400 seat_not_awaited when seat differs from the awaited seat.
       tags:
         - Analysis
       responses:
-        '200':
-          $ref: '#/components/responses/Ok'
+        '201':
+          description: Created envelope whose data is a CommitteeHumanPositionResult.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeHumanPositionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: duplicate_position (round engine), or floor_not_open / floor_expired (turn engine) — error.code names which.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
 
   /api/opportunities/{id}/committee-sessions/{sessionId}/advance:
     post:
       operationId: advanceCommitteeSession
       summary: Advance to the next round or run the chair synthesis (gate_evaluation PROPOSAL only — confirming records stay human-only).
+      description: >-
+        Turn engine: resumes a paused (awaiting_human, answered or past its deadline — the chair then records a pass_on_behalf, never words for the person) or failed meeting in the background and returns status turns_resumed; turns_running when it is already running; 409 awaiting_human while the floor is open and unexpired; 400 nothing_to_advance when the meeting is neither waiting for a human nor stopped.
       tags:
         - Analysis
       responses:
         '200':
-          $ref: '#/components/responses/Ok'
+          description: Ok envelope whose data is a CommitteeAdvanceResult.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommitteeAdvanceResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: awaiting_human (turn engine) — the human floor is still open and its deadline has not passed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
 
   /api/opportunities/{id}/factors:
     get:
@@ -10984,6 +11158,21 @@ components:
       schema:
         type: string
       description: Scheduled job key.
+    CommitteeSessionFilter:
+      name: sessionId
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Narrows the committee-session list to one session (ADR-0204 §4.7 poll).
+    CommitteeAfterSeq:
+      name: afterSeq
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+      description: Turn-engine cursor (ADR-0204 §4.7) — return only turns with seq greater than this value, at most 50 per session (hasMoreTurns = page again with the last seq). A non-integer or negative value is 400 invalid_request. Ignored on round-engine sessions.
   responses:
     Ok:
       description: Success — standard envelope; data shape is per-endpoint.
@@ -11141,6 +11330,312 @@ components:
           type: string
         message:
           type: string
+    CommitteeSessionListItemsResponse:
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommitteeSessionListItem'
+    CommitteeSessionListItem:
+      type: object
+      description: One committee session in the list (ADR-0204 phase 2 adds engine, awaiting, turns, hasMoreTurns).
+      required: [sessionId, meta, status, startedAt, convening, conveningError, progress, positions, engine, awaiting, turns, hasMoreTurns]
+      properties:
+        sessionId: { type: string }
+        meta:
+          $ref: '#/components/schemas/CommitteeSessionMeta'
+        status: { type: string }
+        startedAt: { type: string, format: date-time }
+        convening: { type: boolean, description: 'Deliberation still running in the background (async convening contract).' }
+        conveningError:
+          type: [string, 'null']
+          description: Set when the background deliberation failed (never silent).
+        progress:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CommitteeMeetingProgress'
+          description: Live / final progress; null on sessions convened before progress existed.
+        positions:
+          type: array
+          description: Round engine only, and only while convening or after a failed run; always [] on turn sessions (use turns).
+          items:
+            type: object
+            required: [positionId, round, memberType, agentKey, humanUserId, positionMd, confidence, createdAt]
+            properties:
+              positionId: { type: string }
+              round: { type: integer }
+              memberType: { type: string }
+              agentKey: { type: [string, 'null'] }
+              humanUserId: { type: [string, 'null'] }
+              positionMd: { type: string }
+              confidence: { type: [number, 'null'] }
+              createdAt: { type: string, format: date-time }
+        engine:
+          $ref: '#/components/schemas/CommitteeEngine'
+        awaiting:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CommitteeMeetingAwaiting'
+          description: Turn engine (hybrid) — the open human floor while paused, else null.
+        turns:
+          type: array
+          description: 'Turn engine: finished turns in seq order. Populated while convening, paused (awaiting_human) or failed, and ALWAYS when afterSeq is passed (then only seq > afterSeq, at most 50); [] otherwise and on round sessions.'
+          items:
+            $ref: '#/components/schemas/CommitteeTurnView'
+        hasMoreTurns:
+          type: boolean
+          description: Turn engine - more turns exist after the last returned seq; page again with afterSeq.
+    CommitteeSessionTranscript:
+      type: object
+      description: Full committee-session transcript (ADR-0204 phase 2 adds engine, awaiting, turns, hasMoreTurns).
+      required: [sessionId, status, meta, agenda, agendaMeta, minutesDraft, progress, engine, awaiting, turns, hasMoreTurns, committee, rounds, evaluation]
+      properties:
+        sessionId: { type: string }
+        status: { type: string }
+        meta:
+          $ref: '#/components/schemas/CommitteeSessionMeta'
+        agenda:
+          type: [array, 'null']
+          description: The stored chair agenda (proposal), if generated.
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: { type: string }
+              title: { type: string }
+              raisedBy: { type: array, items: { type: string } }
+              contested: { type: boolean }
+        agendaMeta:
+          type: [object, 'null']
+          description: How the agenda was produced (llm / fallback / human_edited).
+        minutesDraft:
+          type: [object, 'null']
+          description: The stored AI-drafted minutes draft, if generated.
+        progress:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CommitteeMeetingProgress'
+        engine:
+          $ref: '#/components/schemas/CommitteeEngine'
+        awaiting:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CommitteeMeetingAwaiting'
+          description: Turn engine (hybrid) — the open human floor while paused, else null.
+        turns:
+          type: array
+          description: 'Turn engine: every turn in seq order (chair mechanics, seat turns, votes, human turns); with afterSeq only seq > afterSeq, at most 50. [] on round sessions.'
+          items:
+            $ref: '#/components/schemas/CommitteeTurnView'
+        hasMoreTurns:
+          type: boolean
+          description: Turn engine - more turns exist after the last returned seq; page again with afterSeq.
+        committee:
+          type: [object, 'null']
+          description: The committee definition (key, chair, rounds, members).
+        rounds:
+          type: array
+          description: 'Round sessions: positions per round. Turn sessions: a LEGACY projection (speech turns of each issue as positions; chair mechanics, abandoned turns and error-passes left out) so v1 minutes renderers keep working - new readers use turns.'
+          items:
+            type: object
+            required: [round, positions]
+            properties:
+              round: { type: integer }
+              positions:
+                type: array
+                items:
+                  type: object
+                  required: [positionId, memberType, agentKey, humanUserId, positionMd, confidence, createdAt]
+                  properties:
+                    positionId: { type: string }
+                    memberType: { type: string }
+                    agentKey: { type: [string, 'null'] }
+                    humanUserId: { type: [string, 'null'] }
+                    positionMd: { type: string }
+                    confidence: { type: [number, 'null'] }
+                    createdAt: { type: string, format: date-time }
+        evaluation:
+          type: [object, 'null']
+          description: The chair gate_evaluation PROPOSAL (never a decision), once synthesized.
+          properties:
+            gateEvaluationId: { type: string }
+            gate: { type: string }
+            recommendation: { type: string }
+            dissentJson: { type: [string, 'null'] }
+            evaluatedBy: { type: string }
+            createdAt: { type: string, format: date-time }
+    CommitteeEngine:
+      type: string
+      enum: [turns, rounds]
+      description: Meeting engine resolved once at session creation (ADR-0204). Sessions created before the turn engine are rounds.
+    CommitteeSessionMeta:
+      type: object
+      description: The session's stored meta (process_run.meta_json). Only the fields below are contractual here; further fields exist and may be ignored.
+      additionalProperties: true
+      properties:
+        committee_key: { type: string }
+        decision_mode: { type: string }
+        gate: { type: string }
+        engine:
+          $ref: '#/components/schemas/CommitteeEngine'
+        attempts:
+          type: array
+          description: Turn engine - one entry per sitting; a restart after a failure opens a new one and the stopped sitting keeps its stopped_at.
+          items:
+            $ref: '#/components/schemas/CommitteeSessionAttempt'
+        awaiting:
+          $ref: '#/components/schemas/CommitteeMeetingAwaiting'
+        convening: { type: boolean }
+        convening_error: { type: string }
+        synthesized: { type: boolean }
+        evaluation_id: { type: string }
+    CommitteeSessionAttempt:
+      type: object
+      description: One sitting of a turn-engine meeting.
+      required: [attempt, started_at]
+      properties:
+        attempt: { type: integer, minimum: 1 }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        resumed_from_issue_index:
+          type: integer
+          description: Set on a resumed sitting - the issue it restarted from.
+        stopped_at:
+          $ref: '#/components/schemas/CommitteeMeetingFailedAt'
+    CommitteeMeetingProgress:
+      type: object
+      description: Live-progress contract of a convening committee session (ADR-0204 §4.2). Written to meta.progress and returned by the list / GET endpoints.
+      required: [engine, phase, turn_count, started_at, updated_at]
+      properties:
+        engine:
+          $ref: '#/components/schemas/CommitteeEngine'
+        phase:
+          type: string
+          enum: [agenda, discussion, consensus, minutes, awaiting_human, done, failed]
+          description: 'awaiting_human (turn engine, hybrid) is a PAUSE, not a terminal state - the engine yielded the floor to a human (see awaiting), the session is not convening, and advance resumes it. done / failed are terminal.'
+        issue_index: { type: integer, minimum: 1, description: 'Turn engine only. 1-based agenda issue.' }
+        issue_count: { type: integer }
+        issue_title: { type: string }
+        round: { type: integer, description: 'Round engine only. 1-based.' }
+        round_count: { type: integer }
+        speaker_seat: { type: string, description: 'Committee seat key (a role, never a person) currently speaking.' }
+        turn_count: { type: integer, description: 'Positions persisted so far. Turn engine - discussion turns counting toward the meeting budget (chair mechanics and votes excluded).' }
+        turn_budget: { type: integer, description: 'Positions the meeting is expected to produce. Turn engine - the meeting turn budget (default 40).' }
+        attempt: { type: integer, minimum: 1, description: 'Turn engine - 1-based sitting. Absent = 1.' }
+        resumed_from_issue_index: { type: integer, description: 'Turn engine - set on a resumed sitting.' }
+        awaiting:
+          $ref: '#/components/schemas/CommitteeMeetingAwaiting'
+        started_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        failed_at:
+          $ref: '#/components/schemas/CommitteeMeetingFailedAt'
+    CommitteeMeetingAwaiting:
+      type: object
+      description: The floor the chair offered to a human (turn engine, hybrid).
+      required: [seat, seq, issue_index, called_at, deadline_at]
+      properties:
+        seat: { type: string, description: 'Seat label the human speaks for (a registry human_role key, else "human").' }
+        seq: { type: integer, description: 'seq of the chair call turn that opened the floor.' }
+        issue_index: { type: integer, minimum: 1 }
+        called_at: { type: string, format: date-time }
+        deadline_at: { type: string, format: date-time, description: 'called_at + 3 min. After it, advance records a chair pass_on_behalf.' }
+        answered_at: { type: string, format: date-time, description: 'Set once the human turn is stored (waiting for resume).' }
+    CommitteeMeetingFailedAt:
+      type: object
+      description: Where a convening run stopped. Never carries the error message.
+      required: [phase, error_code]
+      properties:
+        phase: { type: string }
+        round: { type: integer, description: 'Round engine - the round whose speaker failed.' }
+        issue_index: { type: integer, description: 'Turn engine - the issue whose turn failed.' }
+        seq: { type: integer, description: 'Turn engine - the turn sequence number that failed.' }
+        speaker_seat: { type: string }
+        error_code: { type: string, description: 'CommitteeError.code when available, else the error name.' }
+    CommitteeTurnView:
+      type: object
+      description: One turn of a turn-engine meeting (ADR-0204 §4.7). Stored one agent_position row per turn.
+      required: [turnId, seq, attempt, issueIndex, issueId, role, speakerSeat, memberType, agentKey, humanUserId, move, addressedTo, respondsToTurn, vote, stance, recommendation, vetoDissent, outcome, votes, restsOn, reason, forSeat, error, utteranceMd, abandoned, createdAt]
+      properties:
+        turnId: { type: string, description: 'agent_position.id - what minutes refs resolve to.' }
+        seq: { type: integer, minimum: 1, description: 'Global, gapless per run, never reused - the afterSeq cursor.' }
+        attempt: { type: integer, minimum: 1, description: '1-based sitting that stored the turn.' }
+        issueIndex: { type: integer, minimum: 1, description: '1-based agenda issue ordinal.' }
+        issueId: { type: [string, 'null'] }
+        role:
+          type: string
+          enum: [seat, chair, human]
+        speakerSeat: { type: string, description: 'Seat key (a role, never a person). Humans - their seat label ("human").' }
+        memberType:
+          type: string
+          enum: [agent, human]
+        agentKey: { type: [string, 'null'] }
+        humanUserId: { type: [string, 'null'] }
+        move:
+          type: string
+          enum: [propose, ask, answer, rebut, concede, amend, pass, accept, reserve, open, call, propose_consensus, close, resume, pass_on_behalf, speak]
+        addressedTo: { type: [string, 'null'] }
+        respondsToTurn: { type: [string, 'null'], description: 'turnId of the turn this one answers.' }
+        vote:
+          type: [string, 'null']
+          enum: [accept, reserve, null]
+        stance:
+          type: [string, 'null']
+          enum: [for, against, conditional, unsure, null]
+        recommendation:
+          type: [string, 'null']
+          enum: [go, hold, kill, null]
+          description: A proposal input only - the decision stays human.
+        vetoDissent: { type: boolean }
+        outcome:
+          type: [string, 'null']
+          enum: [agreed, narrowed, unresolved, null]
+          description: close rows - how the issue ended.
+        votes:
+          type: [object, 'null']
+          description: close rows - vote tally.
+          properties:
+            accept: { type: integer }
+            reserve: { type: integer }
+            abstain: { type: integer }
+        restsOn:
+          type: array
+          description: propose_consensus rows - the turnIds the proposal rests on.
+          items: { type: string }
+        reason:
+          type: [string, 'null']
+          description: 'budget | human_timeout | human_wait_cap | consensus_failed | resume.'
+        forSeat: { type: [string, 'null'], description: 'pass_on_behalf rows - the seat the chair passed for.' }
+        error: { type: [string, 'null'], description: "Set on a pass stored because the seat's output was unusable twice." }
+        utteranceMd: { type: string, description: 'The utterance, position-meta tail stripped.' }
+        abandoned: { type: boolean, description: 'A turn of a stopped sitting whose issue was re-run - kept, but not part of the live transcript.' }
+        createdAt: { type: string, format: date-time }
+    CommitteeHumanPositionResult:
+      type: object
+      required: [positionId, round]
+      properties:
+        positionId: { type: string }
+        round: { type: integer, description: 'Round, or the agenda issue ordinal on a turn session.' }
+        turnSeq: { type: integer, description: 'Turn engine - the stored turn seq (the afterSeq cursor).' }
+        awaitingResume: { type: boolean, description: 'Turn engine - the floor is answered and the meeting resumes in the background through advance.' }
+    CommitteeAdvanceResult:
+      type: object
+      required: [status, evaluation]
+      properties:
+        status:
+          type: string
+          enum: [round_started, synthesized, turns_resumed, turns_running]
+          description: 'turns_resumed - the turn meeting was restarted (it may pause again at the next human floor); turns_running - it is already running, nothing to do.'
+        round: { type: integer }
+        evaluation:
+          type: [object, 'null']
+          description: The gate_evaluation PROPOSAL once synthesized, else null.
+          properties:
+            gateEvaluationId: { type: string }
+            gate: { type: string }
+            recommendation: { type: string }
+            dissentJson: { type: [string, 'null'] }
     PortfolioOverlapResponse:
       type: object
       description: Same-industry exposure overlap (design 2026-10-11-portfolio-view-overlap §4). Groups are keyed by md_industry.id; the name_prefix tier is a clearly-labeled fallback, never merged into exact.

@@ -17,8 +17,27 @@
  *               dissent (the gate_evaluation row)
  *   minutes     the chair minutes pass
  * `done` / `failed` are terminal.
+ *
+ * Turn engine (phase 2): the same four steps; `discussion` and `consensus`
+ * alternate per issue. `awaiting_human` (hybrid) is a PAUSE, not a terminal
+ * state: the engine yielded the floor to a human (progress.awaiting), the
+ * session is not convening, and advanceCommitteeSession resumes it.
  */
-export type MeetingPhase = "agenda" | "discussion" | "consensus" | "minutes" | "done" | "failed";
+export type MeetingPhase = "agenda" | "discussion" | "consensus" | "minutes" | "awaiting_human" | "done" | "failed";
+
+/** The floor offered to a human (hybrid turn engine). */
+export interface MeetingAwaiting {
+  /** Seat label the human speaks for (a registry human_role key, else "human"). */
+  seat: string;
+  /** seq of the chair `call` turn that opened the floor. */
+  seq: number;
+  issue_index: number;
+  called_at: string;
+  /** called_at + 3 min. After this, advance records a chair pass_on_behalf. */
+  deadline_at: string;
+  /** Set once the human's turn row is stored (waiting for resume). */
+  answered_at?: string;
+}
 
 /** Where a convening run stopped. Written next to `convening_error`. */
 export interface MeetingFailedAt {
@@ -48,10 +67,18 @@ export interface MeetingProgress {
   round_count?: number;
   /** Committee seat key (role) currently speaking; never a person. */
   speaker_seat?: string;
-  /** Positions (or turns) persisted so far. */
+  /** Positions (or turns) persisted so far. Turn engine: discussion turns that
+   * count toward the meeting budget (chair mechanics and votes excluded). */
   turn_count: number;
-  /** Positions the meeting is expected to produce (rounds x seats). */
+  /** Positions the meeting is expected to produce (rounds x seats). Turn
+   * engine: the meeting turn budget (default 40). */
   turn_budget?: number;
+  /** Turn engine: 1-based sitting. Absent = 1. */
+  attempt?: number;
+  /** Turn engine: set on a resumed sitting — the issue it restarted from. */
+  resumed_from_issue_index?: number;
+  /** Turn engine, hybrid: the open human floor while phase = "awaiting_human". */
+  awaiting?: MeetingAwaiting;
   started_at: string;
   updated_at: string;
   failed_at?: MeetingFailedAt;
@@ -110,9 +137,12 @@ export function failedProgress(
   errorCode: string,
   turnCount: number,
   now: string,
+  /** Turn engine: the sequence number of the turn that failed (never stored). */
+  seq?: number,
 ): MeetingProgress {
   const failedAt: MeetingFailedAt = {
     phase: last.phase === "failed" && last.failed_at ? last.failed_at.phase : last.phase,
+    ...(seq !== undefined ? { seq } : {}),
     ...(last.round !== undefined ? { round: last.round } : {}),
     ...(last.issue_index !== undefined ? { issue_index: last.issue_index } : {}),
     ...(last.speaker_seat !== undefined ? { speaker_seat: last.speaker_seat } : {}),
