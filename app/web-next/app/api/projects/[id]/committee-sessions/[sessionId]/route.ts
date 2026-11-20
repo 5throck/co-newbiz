@@ -22,11 +22,11 @@ export const GET = route(
     if (!committeeSessionForProject(id, sessionId)) return notFound();
     if (!visibleProject(auth.auth, id, { includeClosed: true })) return notFound();
     // Turn engine (ADR-0204 §4.7): `afterSeq` returns only turns newer than the cursor.
-  const afterRaw = new URL(request.url).searchParams.get("afterSeq");
-  if (afterRaw !== null && !/^\d+$/.test(afterRaw)) {
-    return badRequest("invalid_request", "afterSeq must be a non-negative integer.");
-  }
-  const transcript = getCommitteeSession(sessionId, { afterSeq: afterRaw === null ? undefined : Number(afterRaw) });
+    const afterRaw = new URL(request.url).searchParams.get("afterSeq");
+    if (afterRaw !== null && !/^\d+$/.test(afterRaw)) {
+      return badRequest("invalid_request", "afterSeq must be a non-negative integer.");
+    }
+    const transcript = getCommitteeSession(sessionId, { afterSeq: afterRaw === null ? undefined : Number(afterRaw) });
     if (!transcript) return notFound();
     return ok(transcript, 200);
   },

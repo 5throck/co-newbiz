@@ -8,24 +8,36 @@ import { authenticate, requireBusinessActor } from "../../../../../../../lib/aut
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { CommitteeError, advanceCommitteeSession, submitHumanPosition } from "../../../../../../../lib/committee-session.ts";
+import {
+  CommitteeError,
+  advanceCommitteeSession,
+  submitHumanPosition,
+} from "../../../../../../../lib/committee-session.ts";
 
 const RECOMMENDATIONS = new Set(["go", "hold", "kill"]);
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string; sessionId: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string; sessionId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  { const denied = requireBusinessActor(ctx, "write", { viewerMessage: "Committee position submission requires the analyst role or higher." }); if (denied) return denied; }
+  {
+    const denied = requireBusinessActor(ctx, "write", {
+      viewerMessage: "Committee position submission requires the analyst role or higher.",
+    });
+    if (denied) return denied;
+  }
   const { id, sessionId } = await params;
   const db = getDb();
   // Session binding (opportunity + committee stage + promoted-project visibility).
-  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true }))) return notFound();
+  if (!committeeSessionForOpportunity(id, sessionId, (pid) => !!visibleProject(ctx, pid, { includeClosed: true })))
+    return notFound();
   const body = (await request.json().catch(() => null)) as {
-    seat?: string; positionMd?: string; confidence?: number; recommendation?: string; vetoDissent?: boolean; criteriaScores?: Record<string, number>;
+    seat?: string;
+    positionMd?: string;
+    confidence?: number;
+    recommendation?: string;
+    vetoDissent?: boolean;
+    criteriaScores?: Record<string, number>;
   } | null;
   const positionMd = body?.positionMd?.trim();
   if (!positionMd) return badRequest("invalid_request", "positionMd (position statement) is required.");
@@ -38,17 +50,26 @@ export async function POST(
   }
   // ADR-0104 quantitative scorecard — optional, but when present all five
   // criteria must be integers 1-3 (partial scorecards break the aggregate).
-  const CRITERIA = ["control_need", "capability_criticality", "market_uncertainty", "integration_capacity", "speed_to_capability"] as const;
+  const CRITERIA = [
+    "control_need",
+    "capability_criticality",
+    "market_uncertainty",
+    "integration_capacity",
+    "speed_to_capability",
+  ] as const;
   let criteriaScores: Record<string, number> | undefined;
   if (body?.criteriaScores !== undefined) {
     const raw = body.criteriaScores;
-    if (typeof raw !== "object" || raw === null) return badRequest("invalid_request", "criteriaScores must be an object over the 5 criteria.");
+    if (typeof raw !== "object" || raw === null)
+      return badRequest("invalid_request", "criteriaScores must be an object over the 5 criteria.");
     const missing = CRITERIA.filter((c) => !(c in raw));
-    if (missing.length) return badRequest("invalid_request", `criteriaScores requires all 5 criteria — missing: ${missing.join(", ")}`);
+    if (missing.length)
+      return badRequest("invalid_request", `criteriaScores requires all 5 criteria — missing: ${missing.join(", ")}`);
     criteriaScores = {};
     for (const c of CRITERIA) {
       const v = Number((raw as Record<string, unknown>)[c]);
-      if (!Number.isInteger(v) || v < 1 || v > 3) return badRequest("invalid_request", `${c} score must be an integer between 1 and 3.`);
+      if (!Number.isInteger(v) || v < 1 || v > 3)
+        return badRequest("invalid_request", `${c} score must be an integer between 1 and 3.`);
       criteriaScores[c] = v;
     }
   }
@@ -63,7 +84,12 @@ export async function POST(
       vetoDissent: body?.vetoDissent === true,
       criteriaScores,
     });
-    appendAudit(db, { actor: ctx.userId, action: "committee_position.submit", target: `${sessionId}:${result.positionId}`, now: new Date().toISOString() });
+    appendAudit(db, {
+      actor: ctx.userId,
+      action: "committee_position.submit",
+      target: `${sessionId}:${result.positionId}`,
+      now: new Date().toISOString(),
+    });
     if (result.awaitingResume) {
       // Turn engine: the floor is answered — the meeting continues in the background.
       void advanceCommitteeSession(sessionId, { actor: ctx.userId, background: true }).catch((err: unknown) => {

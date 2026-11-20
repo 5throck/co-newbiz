@@ -7,7 +7,11 @@ import { authenticate, requireBusinessActor } from "../../../../../../../lib/aut
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
 import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
-import { CommitteeError, advanceCommitteeSession, submitHumanPosition } from "../../../../../../../lib/committee-session.ts";
+import {
+  CommitteeError,
+  advanceCommitteeSession,
+  submitHumanPosition,
+} from "../../../../../../../lib/committee-session.ts";
 
 const RECOMMENDATIONS = new Set(["go", "hold", "kill"]);
 
