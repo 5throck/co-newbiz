@@ -291,16 +291,20 @@ describe("CommitteeProgressView render", () => {
     );
   });
 
-  test("finished positions: collapsed by default, seat name + round in the summary, meta footnote stripped", () => {
+  test("finished positions: grouped by round (current round open), items collapsed, meta footnote stripped", () => {
     const html = render({
       progress: progress(),
       positions: [pos(1), pos(2, { round: 2, agentKey: "financing-agent" })],
     });
-    expect(count(html, "<details")).toBe(2);
-    expect(html).not.toMatch(/<details[^>]*\sopen/);
+    // 2 round groups + 2 positions; only the current round's group (round 2) is open.
+    expect(count(html, "<details")).toBe(4);
+    expect((html.match(/<details[^>]*\sopen/g) ?? []).length).toBe(1);
     expect(html).toContain("끝난 발언 2건");
-    expect(html).toContain("위험 점검 위원 · 라운드 1");
-    expect(html).toContain("자금 조달 위원 · 라운드 2");
+    expect(html).toContain("라운드 1 · 발언 1/4");
+    expect(html).toContain("라운드 2 · 발언 1/4");
+    expect(html.indexOf("라운드 1 · 발언")).toBeLessThan(html.indexOf("라운드 2 · 발언"));
+    expect(html).toContain("위험 점검 위원");
+    expect(html).toContain("자금 조달 위원");
     expect(html).toContain("Seat statement 1.");
     expect(html).not.toContain("position-meta");
     expect(html).toContain("신뢰도 0.7");
@@ -350,7 +354,7 @@ describe("failure display", () => {
 
   test("the kept positions stay listed and the live region is empty (the alert is the only announcement)", () => {
     const html = render({ progress: failedProgress(), positions: [pos(1)] });
-    expect(count(html, "<details")).toBe(1);
+    expect(count(html, "<details")).toBe(2); // one round group + its position
     const m = html.match(/<p[^>]*data-testid="committee-live-region"[^>]*>([^<]*)<\/p>/);
     expect(m?.[1]).toBe("");
     expect(html).not.toContain('data-testid="committee-status-line"');
@@ -412,5 +416,68 @@ describe("panel wiring and catalogs", () => {
       expect(seatKo[key]).toBeTruthy();
       expect(COMMITTEE_SEAT_LABEL_KEY[key]).toBe(`common.committee.seat.${key}`);
     }
+  });
+});
+
+describe("meeting stepper stays visible on narrow screens", () => {
+  test("the stepper carries its own modifier and the css overrides the <880px hide", () => {
+    const html = render({ progress: progress() });
+    expect(html).toContain("meeting-stepper");
+    const css = readFileSync(new URL(`${WEB}/app/styles.css`, import.meta.url), "utf8");
+    // Specificity (two classes) beats the bare `.stage-stepper { display: none }` below 880px
+    // and the nowrap/scroll rule of the page stage rail.
+    expect(css).toMatch(/\.stage-stepper\.meeting-stepper\s*\{[^}]*display:\s*flex[^}]*flex-wrap:\s*wrap/);
+  });
+});
+
+describe("groupPositionsByRound", () => {
+  const p = (round: number, n: number) => ({ round, id: `p${n}` });
+
+  test("groups ascending by round, keeping the incoming order inside a group", () => {
+    const g = view.groupPositionsByRound([p(2, 3), p(1, 1), p(2, 4), p(1, 2)]);
+    expect(g.map((x: { round: number }) => x.round)).toEqual([1, 2]);
+    expect(g[0].positions.map((x: { id: string }) => x.id)).toEqual(["p1", "p2"]);
+    expect(g[1].positions.map((x: { id: string }) => x.id)).toEqual(["p3", "p4"]);
+  });
+
+  test("counts: finished per round, total = turn budget / round count", () => {
+    const g = view.groupPositionsByRound([p(1, 1), p(1, 2), p(2, 3)], { roundCount: 2, turnBudget: 22 });
+    expect(g.map((x: { finished: number }) => x.finished)).toEqual([2, 1]);
+    expect(g.map((x: { total: number | null }) => x.total)).toEqual([11, 11]);
+  });
+
+  test("total is null when the run shape is unknown or degenerate", () => {
+    expect(view.groupPositionsByRound([p(1, 1)])[0].total).toBeNull();
+    expect(view.groupPositionsByRound([p(1, 1)], { roundCount: 0, turnBudget: 12 })[0].total).toBeNull();
+    expect(view.groupPositionsByRound([p(1, 1)], { roundCount: 2 })[0].total).toBeNull();
+  });
+
+  test("open by default: the current round when it has positions, else the latest round", () => {
+    const list = [p(1, 1), p(2, 2), p(3, 3)];
+    const open = (g: { round: number; open: boolean }[]) => g.filter((x) => x.open).map((x) => x.round);
+    expect(open(view.groupPositionsByRound(list, { currentRound: 2 }))).toEqual([2]);
+    expect(open(view.groupPositionsByRound(list))).toEqual([3]);
+    // current round has no finished position yet -> fall back to the latest finished round
+    expect(open(view.groupPositionsByRound([p(1, 1), p(2, 2)], { currentRound: 3 }))).toEqual([2]);
+  });
+
+  test("no positions: no groups", () => {
+    expect(view.groupPositionsByRound([])).toEqual([]);
+  });
+});
+
+describe("failed run keeps positions grouped by round", () => {
+  test("kept positions render in round groups, the failed round open", () => {
+    const html = render({
+      progress: progress({
+        phase: "failed",
+        failed_at: { phase: "discussion", round: 2, speaker_seat: "financing-agent", error_code: "llm_error" },
+      }),
+      positions: [pos(1), pos(2, { round: 2 })],
+      failureMessage: "boom",
+    });
+    expect(html).toContain("라운드 1 · 발언 1/4");
+    expect(html).toContain("라운드 2 · 발언 1/4");
+    expect((html.match(/<details[^>]*\sopen/g) ?? []).length).toBe(1);
   });
 });

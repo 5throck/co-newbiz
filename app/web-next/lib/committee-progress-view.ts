@@ -116,3 +116,46 @@ export function pickResumableSession(
   }
   return best;
 }
+
+/** One round's worth of finished positions, for the grouped live list. */
+export interface PositionRoundGroup<T> {
+  round: number;
+  /** Positions finished in this round, in their incoming order. */
+  positions: T[];
+  /** Finished count (= positions.length). */
+  finished: number;
+  /** Seats expected in this round (turn budget / round count); null when the run shape is unknown. */
+  total: number | null;
+  /** Open by default: only the current (latest) round. */
+  open: boolean;
+}
+
+/**
+ * Group finished positions by round, ascending. Seats per round is the turn
+ * budget split evenly across the rounds (budget = rounds x seats), null when
+ * either is missing. The group of the current round — `currentRound` when it
+ * has positions, else the latest round that does — is the only one open, so a
+ * 22-statement meeting reads as a few round headers, not 22 rows.
+ */
+export function groupPositionsByRound<T extends { round: number }>(
+  positions: readonly T[],
+  shape: { roundCount?: number; turnBudget?: number; currentRound?: number } = {},
+): PositionRoundGroup<T>[] {
+  const byRound = new Map<number, T[]>();
+  for (const p of positions) {
+    const list = byRound.get(p.round);
+    if (list) list.push(p);
+    else byRound.set(p.round, [p]);
+  }
+  const rounds = [...byRound.keys()].sort((a, b) => a - b);
+  const latest = rounds[rounds.length - 1];
+  const openRound = shape.currentRound !== undefined && byRound.has(shape.currentRound) ? shape.currentRound : latest;
+  const perRound =
+    shape.roundCount !== undefined && shape.roundCount > 0 && shape.turnBudget !== undefined && shape.turnBudget > 0
+      ? Math.round(shape.turnBudget / shape.roundCount)
+      : null;
+  return rounds.map((round) => {
+    const list = byRound.get(round) ?? [];
+    return { round, positions: list, finished: list.length, total: perRound, open: round === openRound };
+  });
+}

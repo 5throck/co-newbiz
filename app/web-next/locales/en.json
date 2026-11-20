@@ -1392,9 +1392,10 @@
         "failedTitle": "The meeting stopped partway",
         "liveLabel": "Meeting progress",
         "positionConfidence": "Confidence {value}",
-        "positionSummary": "{seat} · round {round}",
         "positionsEmpty": "No statements finished yet.",
         "positionsTitle": "{count} finished statements (select to expand)",
+        "roundGroup": "Round {round} · {finished}/{total} statements",
+        "roundGroupCount": "Round {round} · {finished} statements",
         "state": {
           "current": "In progress",
           "done": "Done",

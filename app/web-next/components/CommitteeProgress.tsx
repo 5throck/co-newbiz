@@ -4,7 +4,7 @@
 // (design 2026-11-20-committee-turn-based-meeting-design §4.8 / §8, ADR-0204).
 // Pattern P4 Execution: a four-step stepper (안건 정리 → 토의 → 합의 → 회의록)
 // built from the existing .stage-stepper classes, a status line with elapsed
-// time, the list of finished positions (collapsed per item), and — when the
+// time, the finished positions grouped by round (current round open, each item collapsed), and — when the
 // run stopped — where it stopped, in a role="alert" block.
 //
 // Accessibility (ADR-0065, WCAG 2.1 AA): every step carries an icon AND a text
@@ -20,6 +20,7 @@ import type { LivePosition, MeetingProgress } from "../lib/committee-progress.ts
 import {
   ANNOUNCE_THROTTLE_MS,
   elapsedSeconds,
+  groupPositionsByRound,
   PROGRESS_STEPS,
   type ProgressStepKey,
   type ProgressStepState,
@@ -162,6 +163,12 @@ export function CommitteeProgressView({
   const now = useNow(!failed, nowMs);
   const states = stepStates(progress);
   const statusText = progressStatusText(tr, progress);
+  // The open group follows the round the run is in; a failed run keeps the round it stopped in.
+  const rounds = groupPositionsByRound(positions, {
+    roundCount: progress.round_count,
+    turnBudget: progress.turn_budget,
+    currentRound: failed ? progress.failed_at?.round : progress.round,
+  });
   const announced = useThrottledText(statusText, ANNOUNCE_THROTTLE_MS);
 
   const { minutes, seconds } = splitElapsed(elapsedSeconds(progress.started_at, now));
@@ -170,7 +177,7 @@ export function CommitteeProgressView({
 
   return (
     <section aria-label={tr(`${P}.liveLabel`)} className="mb-3" data-testid="committee-progress">
-      <ol className="stage-stepper stage-stepper--status" aria-label={tr(`${P}.stepsLabel`)}>
+      <ol className="stage-stepper stage-stepper--status meeting-stepper" aria-label={tr(`${P}.stepsLabel`)}>
         {PROGRESS_STEPS.map((key, i) => {
           const state = states[key];
           return (
@@ -235,27 +242,37 @@ export function CommitteeProgressView({
           </p>
         ) : (
           <ul className="list-none p-0 m-0">
-            {positions.map((p) => (
-              <li key={p.positionId}>
-                <details className="mb-1">
-                  <summary className="text-[length:var(--fs-caption)] cursor-pointer">
-                    {tr(`${P}.positionSummary`, {
-                      seat: p.memberType === "human" ? (p.humanUserId ?? "") : seatName(tr, p.agentKey ?? ""),
-                      round: p.round,
-                    })}
-                    {p.confidence !== null && (
-                      <span className="text-[color:var(--muted-fg)]">
-                        {" · "}
-                        {tr(`${P}.positionConfidence`, { value: p.confidence })}
-                      </span>
-                    )}
+            {rounds.map((g) => (
+              <li key={g.round}>
+                <details className="mb-2" open={g.open}>
+                  <summary className="text-[length:var(--fs-caption)] font-semibold cursor-pointer">
+                    {g.total !== null
+                      ? tr(`${P}.roundGroup`, { round: g.round, finished: g.finished, total: g.total })
+                      : tr(`${P}.roundGroupCount`, { round: g.round, finished: g.finished })}
                   </summary>
-                  <pre
-                    className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0 pl-2"
-                    style={{ fontFamily: "inherit" }}
-                  >
-                    {stripPositionMeta(p.positionMd)}
-                  </pre>
+                  <ul className="list-none p-0 m-0 pl-2">
+                    {g.positions.map((p) => (
+                      <li key={p.positionId}>
+                        <details className="mb-1">
+                          <summary className="text-[length:var(--fs-caption)] cursor-pointer">
+                            {p.memberType === "human" ? (p.humanUserId ?? "") : seatName(tr, p.agentKey ?? "")}
+                            {p.confidence !== null && (
+                              <span className="text-[color:var(--muted-fg)]">
+                                {" · "}
+                                {tr(`${P}.positionConfidence`, { value: p.confidence })}
+                              </span>
+                            )}
+                          </summary>
+                          <pre
+                            className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0 pl-2"
+                            style={{ fontFamily: "inherit" }}
+                          >
+                            {stripPositionMeta(p.positionMd)}
+                          </pre>
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
                 </details>
               </li>
             ))}

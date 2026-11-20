@@ -1392,9 +1392,10 @@
         "failedTitle": "회의가 중간에 멈췄습니다",
         "liveLabel": "회의 진행 상황",
         "positionConfidence": "신뢰도 {value}",
-        "positionSummary": "{seat} · 라운드 {round}",
         "positionsEmpty": "아직 끝난 발언이 없습니다.",
         "positionsTitle": "끝난 발언 {count}건 (눌러서 펼침)",
+        "roundGroup": "라운드 {round} · 발언 {finished}/{total}",
+        "roundGroupCount": "라운드 {round} · 발언 {finished}건",
         "state": {
           "current": "진행 중",
           "done": "끝남",
