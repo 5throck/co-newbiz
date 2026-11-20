@@ -3144,8 +3144,8 @@
       "name": "meeting-facilitation",
       "scope": "root",
       "capability": "meeting-facilitation",
-      "content_hash": "4f69368ecb0cedd5",
-      "version": "1.5.0",
+      "content_hash": "5002c7ad0b26a7a8",
+      "version": "1.6.0",
       "mirrors": [
         "skills/meeting-facilitation/SKILL.md",
         ".claude/skills/meeting-facilitation/SKILL.md",
@@ -3731,7 +3731,7 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 2,
+        "sessions": 1,
         "last_used": "2026-11-14"
       }
     },

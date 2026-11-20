@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.3.0
+// @version 1.4.0
 /**
  * committee-deliberation.ts — ad-hoc committee-style deliberation CLI
  * (ADR-0097 §7), the executable behind the committee-deliberation skill.
@@ -23,8 +23,11 @@
  *   --engine   turns | rounds (ADR-0204). Default: CO_NEWBIZ_COMMITTEE_ENGINE,
  *              else rounds. turns runs the turn-based meeting (runTurnMeeting:
  *              one short move per turn, bounded budgets, chair consensus + votes)
- *              and writes the dialogue as the transcript; --rounds is ignored.
- *              An invalid value is refused, never coerced.
+ *              and writes minutes v2 (ADR-0204 phase 3): the same chair pass and the
+ *              same markdown as the app's .md download — per-issue participants,
+ *              consensus and votes, appendix A (full transcript), appendix B when a
+ *              sitting was abandoned. --rounds is ignored. --deterministic uses the
+ *              deterministic minutes fallback. An invalid value is refused, never coerced.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -37,7 +40,14 @@ import {
   parseCommitteeEngine,
   type CommitteeEngine,
 } from "../../app/web-next/lib/committee-flags.ts";
-import { deterministicTurnCaller, loadTurnRecords, runTurnMeeting } from "../../app/web-next/lib/committee-turns.ts";
+import {
+  deterministicTurnCaller,
+  loadTurnRecords,
+  runTurnMeeting,
+  seatDisplayName,
+  type SeatInfo,
+} from "../../app/web-next/lib/committee-turns.ts";
+import { AGENT_REGISTRY } from "../../app/web-next/lib/agent-registry.generated.ts";
 import { makeLlmTurnCaller } from "../../app/web-next/lib/committee-llm.ts";
 import {
   COMMITTEE_LLM_GUIDANCE,
@@ -49,9 +59,11 @@ import {
   runChairAgenda,
   runChairOpeningAgenda,
   runChairMinutes,
+  runChairMinutesV2,
   type AgendaMeta,
   type MinutesDraft,
 } from "../../app/web-next/lib/committee-chair.ts";
+import type { MinutesPassResult } from "../../app/web-next/lib/deliberation.ts";
 import { buildCommitteeMinutes } from "../../app/web-next/lib/committee-scorecard.ts";
 
 const DEFAULT_AGENTS = ["industry-lead", "region-lead", "market-intelligence-agent", "risk-officer"];
@@ -121,15 +133,52 @@ function parseArgs(argv: string[]): MeetingArgs {
   return { topic, agents, rounds, dialogue, deterministic, engine };
 }
 
-/** ADR-0204: the turn-based ad-hoc meeting. The transcript is the dialogue itself; a proposal is not a decision. */
+/** The seats of an ad-hoc turn meeting as the chair and the engine see them (risk-officer is always mandatory). */
+function adhocRoster(agents: readonly string[]): SeatInfo[] {
+  return agents.map((key) => ({
+    key,
+    name: seatDisplayName(key),
+    role: AGENT_REGISTRY.find((a) => a.key === key)?.role.slice(0, 110),
+    mandatory: key === "risk-officer",
+  }));
+}
+
+/**
+ * ADR-0204 phase 3 (CLI parity): the turn-based ad-hoc meeting. The minutes are minutes v2 — the same
+ * chair pass (runChairMinutesV2) and the same markdown renderer (buildCommitteeMinutes) as the app —
+ * so the written file matches the app's .md download. The full transcript is appendix A there.
+ * A proposal is not a decision.
+ */
 async function runTurnCli(args: MeetingArgs, ctx: { dateStr: string; anchorId: string }): Promise<void> {
   const chair = "process-governance-manager";
-  const agenda = (await runChairOpeningAgenda(args.topic)).agenda;
+  const roster = adhocRoster(args.agents);
+  const startedAt = new Date().toISOString();
+  const opening = await runChairOpeningAgenda(args.topic, roster);
+  const agenda = opening.agenda;
+  const attempts = [{ attempt: 1, started_at: startedAt }];
+
+  const minutesPass = async (runId: string): Promise<MinutesPassResult> => {
+    const records = loadTurnRecords(runId);
+    return runChairMinutesV2({
+      topic: args.topic,
+      agenda,
+      records,
+      currentAttempt: Math.max(1, ...records.map((r) => r.attempt)),
+      chairSeat: chair,
+      seats: args.agents,
+      attempts,
+      heldAt: startedAt,
+      deterministic: args.deterministic,
+    });
+  };
+
   const result = await runTurnMeeting(
     { entityType: "project", entityId: ctx.anchorId },
     {
       committeeKey: "meeting-adhoc",
       seats: args.agents,
+      mandatorySeats: roster.filter((r) => r.mandatory).map((r) => r.key),
+      seatInfo: roster,
       topic: args.topic,
       chair,
       agenda,
@@ -137,49 +186,76 @@ async function runTurnCli(args: MeetingArgs, ctx: { dateStr: string; anchorId: s
       actor: "meeting-cli",
       source: "cli",
       stage: "meeting",
+      startedAt,
+      chairMinutesPass: async (c) => minutesPass(c.processRunId),
     },
   );
-  const turns = loadTurnRecords(result.processRunId);
+
+  // The engine swallows a failing chair pass; the file must still carry minutes, so retry once
+  // deterministically (never an empty minutes, never a dropped dialogue).
+  let draft = result.minutesDraft;
+  if (!draft) {
+    console.warn("[committee-deliberation] chair minutes pass produced no draft — using the deterministic minutes.");
+    draft = await runChairMinutesV2({
+      topic: args.topic,
+      agenda,
+      records: loadTurnRecords(result.processRunId),
+      currentAttempt: 1,
+      chairSeat: chair,
+      seats: args.agents,
+      attempts,
+      heldAt: startedAt,
+      deterministic: true,
+    });
+  }
+
+  // Persist the meeting form the way the app does (meta_json), so buildCommitteeMinutes renders it.
+  const meta: Record<string, unknown> = {
+    committee_key: "meeting-adhoc",
+    engine: "turns",
+    gate: "meeting",
+    decision_mode: "agent_team",
+    synthesized: true,
+    agenda,
+    agenda_meta: {
+      source: opening.source,
+      ...(opening.model ? { model: opening.model } : {}),
+      prompt_version: opening.promptVersion,
+      input_hash: opening.inputHash,
+      created_at: opening.createdAt,
+      ...(opening.participantsMeta ? { participants: opening.participantsMeta } : {}),
+    },
+    attempts: [{ ...attempts[0], ended_at: new Date().toISOString() }],
+    minutes_draft: {
+      json: draft.json,
+      fallback: draft.fallback,
+      ...(draft.model ? { model: draft.model } : {}),
+      prompt_version: draft.promptVersion,
+      input_hash: draft.inputHash,
+      created_at: draft.createdAt,
+      ...(draft.fallback ? {} : { degraded_resolutions: draft.degradedResolutions ?? 0 }),
+    },
+    ...(result.evaluation ? { evaluation_id: result.evaluation.gateEvaluationId } : {}),
+    ...(result.notParticipating ? { not_participating: result.notParticipating } : {}),
+    turn_state: result.turnState,
+  };
+  getDb().run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(meta), result.processRunId]);
+
+  const minutes = buildCommitteeMinutes(getDb(), result.processRunId) ?? "";
   const lines: string[] = [
     `# Meeting — ${args.topic}`,
-    "",
-    "> AI 위원회 회의 기록 — 사람이 모인 회의가 아니며, 결정은 사람이 합니다.",
     "",
     `- Date: ${ctx.dateStr}`,
     `- Members: ${args.agents.join(", ")}`,
     `- Engine: turns (ADR-0204) via /meeting (ADR-0097 §7)`,
     "",
-    "## Transcript",
-    "",
+    ...(minutes ? [minutes, ""] : []),
   ];
-  let issue = 0;
-  for (const t of turns) {
-    if (t.issueIndex !== issue) {
-      issue = t.issueIndex;
-      lines.push(`### Issue ${issue} — ${agenda[issue - 1]?.title ?? ""}`, "");
-    }
-    const to = t.addressedTo ? ` → ${t.addressedTo}` : "";
-    lines.push(`- #${t.seq} **${t.speaker}** (${t.move}${to}): ${t.utterance.replace(/\s+/g, " ")}`);
-  }
-  lines.push("");
-  if (result.evaluation) {
-    lines.push(
-      "## Synthesized outcome (PROPOSAL — not a decision)",
-      "",
-      `- Recommendation: ${result.evaluation.recommendation.toUpperCase()}`,
-      "",
-    );
-    if (result.evaluation.dissentJson) {
-      const dissents = JSON.parse(result.evaluation.dissentJson) as Array<{ member_key: string; position_md: string }>;
-      lines.push("## Dissent (verbatim)", "");
-      for (const d of dissents) lines.push(`### ${d.member_key}`, "", d.position_md, "");
-    }
-  }
   const memoryDir = join(process.cwd(), "memory");
   mkdirSync(memoryDir, { recursive: true });
   const outFile = join(memoryDir, `committee-${ctx.dateStr}-${slug(args.topic)}.md`);
   writeFileSync(outFile, lines.join("\n"));
-  console.log(`Meeting transcript written: ${outFile}`);
+  console.log(`Meeting minutes written: ${outFile}`);
   console.log(
     `Proposal: ${result.evaluation?.recommendation.toUpperCase() ?? "n/a"} (process_run ${result.processRunId})`,
   );

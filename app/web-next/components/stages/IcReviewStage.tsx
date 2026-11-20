@@ -5,7 +5,15 @@
 // projectId에 결합되어 있어 컴포넌트가 직접 렌더링한다 — 호출자는 main 셸만 제공.
 
 import { type TranslatorFn, resolveLabels } from "../../i18n/config.ts";
-import { DD_DOMAIN_KEY, DECISION_LABEL_KEY, GATE_LABEL_KEY, RAG_DIMENSION_KEY } from "../../lib/label-keys.ts";
+import {
+  COMMITTEE_NAME_KEY,
+  DD_DOMAIN_KEY,
+  DECISION_LABEL_KEY,
+  GATE_LABEL_KEY,
+  RAG_DIMENSION_KEY,
+} from "../../lib/label-keys.ts";
+import { CommitteeMinutesRecord } from "../CommitteeMinutesRecord.tsx";
+import { CommitteeSessionRowSummary } from "../CommitteeSessionRow.tsx";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
@@ -208,6 +216,9 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const [est, setEst] = useState<EstablishmentView | null>(null);
   const { toast } = useToast();
   const [pmiForm, setPmiForm] = useState<{ owner: string; plan_note: string }>({ owner: "", plan_note: "" });
+  const [minutesSession, setMinutesSession] = useState<NonNullable<IcPackage["committee_sessions"]>[number] | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -447,21 +458,32 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
               <h4 className="text-[length:var(--fs-body)] mt-3 mb-1">{tc("committeeMinutes.sessionRefs")}</h4>
               <ul className="sizing-note-list" aria-label={tc("committeeMinutes.sessionRefs")}>
                 {(pkg?.committee_sessions ?? []).map((s) => (
-                  <li key={s.sessionId} className="text-[length:var(--fs-caption)]">
-                    <span className={`status-chip ${s.status === "done" ? "status-green" : "status-in-progress"}`}>
-                      {s.status}
-                    </span>{" "}
-                    {s.committeeKey ?? "—"} · {s.startedAt?.slice(0, 10) ?? "—"}{" "}
+                  <li key={s.sessionId} className="text-[length:var(--fs-caption)] flex flex-wrap items-center gap-2">
+                    {/* Same row look as every committee history: date + time, committee name, 제안됨 / 진행 중. */}
+                    <CommitteeSessionRowSummary
+                      session={{
+                        sessionId: s.sessionId,
+                        status: s.status,
+                        startedAt: s.startedAt ?? "",
+                        meta: { committee_key: s.committeeKey ?? undefined, synthesized: s.status === "done" },
+                      }}
+                      committeeLabel={
+                        s.committeeKey && COMMITTEE_NAME_KEY[s.committeeKey]
+                          ? tr(COMMITTEE_NAME_KEY[s.committeeKey])
+                          : ""
+                      }
+                    />
                     {s.minutesUrl && (
-                      <a
-                        className="text-[color:var(--accent)] underline"
-                        href={s.minutesUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        aria-haspopup="dialog"
+                        data-testid="ic-open-minutes"
+                        onClick={() => setMinutesSession(s)}
                       >
                         {tc("committeeMinutes.title")}
-                      </a>
-                    )}{" "}
+                      </button>
+                    )}
                     {s.minutesConfirmed ? (
                       <span className="status-chip status-green">
                         <span aria-hidden="true">✓</span> {tc("committeeMinutes.confirmed")}
@@ -730,6 +752,20 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         </div>
         {confirmDialog}
       </StageFrame>
+      {minutesSession?.minutesUrl && (
+        // The same meeting window as the committee panel's "회의록 보기" (v1 drafts fall back to the dialog).
+        // The session may be opportunity- or project-scoped: the API base comes from its own minutes URL.
+        <CommitteeMinutesRecord
+          sessionsApiBase={minutesSession.minutesUrl.replace(/\/[^/]+\/minutes$/, "")}
+          sessionId={minutesSession.sessionId}
+          committeeLabel={
+            minutesSession.committeeKey && COMMITTEE_NAME_KEY[minutesSession.committeeKey]
+              ? tr(COMMITTEE_NAME_KEY[minutesSession.committeeKey])
+              : ""
+          }
+          onClose={() => setMinutesSession(null)}
+        />
+      )}
     </>
   );
 }

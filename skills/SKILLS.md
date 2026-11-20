@@ -66,7 +66,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `k-opendata` | 1.2.3 | active | public-data-analyst | 2026-09-03 | — | — |
 | `legal-due-diligence` | 1.1.1 | active | legal-counsel | 2026-10-28 | — | ADR-0051 (PR-10 workflow concretization) — DD-grade legal workstream per chk-legal-dd; RAG findings register mapped to SPA protections |
 | `management-incentive-review` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8D — CoC-trigger executive compensation, role-based per PII discipline |
-| `meeting-facilitation` | 1.5.0 | active | pm | 2026-11-10 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
+| `meeting-facilitation` | 1.6.0 | active | pm | 2026-11-21 | — | adopted from templates/common 1.4.1 — common collaborative meeting flow; /meeting command |
 | `monte-carlo-simulation` | 1.1.0 | active | risk-officer | 2026-08-23 | — | Wave 5.8G — ADR-0026 seeded, deterministic `python/monte_carlo.py` P50/P95 NPV |
 | `org-readiness-assessment` | 1.1.0 | active | hr-integration-agent | 2026-08-23 | — | Wave 5.8A reuse layer, adapted from Projects/co-consult |
 | `partner-due-diligence` | 1.1.0 | active | partnership-agent | 2026-08-20 | — | Wave 5.8E — compliance/financial/dependency screening incl. post-transfer competitor risk |

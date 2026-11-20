@@ -10,10 +10,11 @@
 //     and the dissent verbatim (payload dissent_json, never summarized).
 //   - Provenance badge "일부 인용 자동 교정" when provenance.repaired_quotes > 0.
 //   - A fallback excerpt carries an explicit note pointing at the full transcript.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { CommitteeMinutesV2Json, MinutesV2Issue } from "../lib/committee-minutes-schema.ts";
+import { formatDateTimeHm } from "../lib/format.ts";
 import { tallyOf } from "../lib/committee-minutes-view.ts";
-import { moveLabel, OutcomeBadge, seatName } from "./CommitteeTurnTranscript.tsx";
+import { AttendeeLine, moveLabel, OutcomeBadge, seatName } from "./CommitteeTurnTranscript.tsx";
 
 const T = "common.committee.turns";
 const M = "common.committee.minutesV2";
@@ -77,12 +78,7 @@ function IssueBlock({ tr, issue }: { tr: Translator; issue: MinutesV2Issue }) {
   return (
     <section className="mb-3" data-testid="committee-minutes-issue" data-issue={issue.issue_id}>
       <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">{issue.title}</h4>
-      {issue.participants.length > 0 && (
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-          {tr(`${M}.participants`)}:{" "}
-          {issue.participants.map((p) => (p.reason ? `${p.name} (${p.reason})` : p.name)).join("; ")}
-        </p>
-      )}
+      <AttendeeLine tr={tr} items={issue.participants} testId="committee-minutes-participants" />
       {issue.sat_out.length > 0 && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
           {tr(`${M}.satOut`)}: {issue.sat_out.map((s) => s.name).join(", ")}
@@ -149,13 +145,17 @@ export function CommitteeMinutesV2View({
   dissents: Array<{ member_key: string; position_md: string }>;
 }) {
   const tr = useTranslations();
+  const locale = useLocale();
   const ov = minutes.overview;
+  // Attendees on one line; the seats that sat out every issue are named on the 불참 line instead.
+  const absent = new Set(ov.not_participating.map((s) => s.seat));
+  const attending = ov.seats.filter((s) => !absent.has(s.seat));
   return (
     <div className="committee-minutes-v2" data-testid="committee-minutes-v2">
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">{tr(`${M}.notice`)}</p>
       <p className="flex flex-wrap items-center gap-1 mb-2">
         <span className="status-chip status-not-started">
-          {tr(`${M}.heldAt`, { at: ov.held_at.slice(0, 16).replace("T", " ") })}
+          {tr(`${M}.heldAt`, { at: formatDateTimeHm(ov.held_at, locale) })}
         </span>
         {ov.sittings.length > 1 && (
           <span className="status-chip status-not-started">{tr(`${M}.sittings`, { count: ov.sittings.length })}</span>
@@ -174,9 +174,11 @@ export function CommitteeMinutesV2View({
         <li>
           {tr(`${T}.chair`)} · {tr(`${M}.recorder`)}
         </li>
-        {ov.seats.map((s) => (
-          <li key={s.seat}>{s.name}</li>
-        ))}
+        {attending.length > 0 && (
+          <li data-testid="committee-minutes-attendees">
+            {tr(`${T}.participants.summary`, { count: attending.length })}: {attending.map((s) => s.name).join(", ")}
+          </li>
+        )}
         {ov.human_participants.length > 0 && (
           <li>
             {tr(`${T}.human`)}: {ov.human_participants.map((h) => `${h.user_id} (${seatName(tr, h.seat)})`).join(", ")}

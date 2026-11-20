@@ -561,8 +561,39 @@ export interface SessionHistoryRow {
   startedAt: string;
   convening?: boolean;
   engine?: "rounds" | "turns";
-  meta?: { committee_key?: string; gate?: string; synthesized?: boolean } | null;
+  meta?: {
+    committee_key?: string;
+    gate?: string;
+    synthesized?: boolean;
+    /** Turn engine: one entry per sitting (a restart after a failure opens a new one). */
+    attempts?: HistoryAttempt[];
+  } | null;
   progress?: { phase?: string; started_at?: string; updated_at?: string } | null;
+}
+
+/** The slice of a sitting (meta.attempts[]) the duration needs. */
+export interface HistoryAttempt {
+  started_at?: string;
+  ended_at?: string;
+  stopped_at?: { error_code?: string } | null;
+  error?: string;
+}
+
+/** The runner_lost reap message embeds the last heartbeat; it is the only place it is stored. */
+const HEARTBEAT_IN_ERROR = /no heartbeat since (\d{4}-\d{2}-\d{2}T[\d:.]+Z)/;
+
+/**
+ * When a stopped sitting last showed life, in ms. A runner_lost sitting's ended_at is the REAP time
+ * (could be long after the process died), so the last heartbeat parsed from its error text is the
+ * truthful end; any other stop (or an unparseable message) falls back to ended_at. Null when unknown.
+ */
+function stoppedAttemptEndMs(a: HistoryAttempt): number | null {
+  const endedAt = Date.parse(a.ended_at ?? "");
+  if (a.stopped_at?.error_code === "runner_lost") {
+    const beat = Date.parse(HEARTBEAT_IN_ERROR.exec(a.error ?? "")?.[1] ?? "");
+    if (!Number.isNaN(beat)) return Number.isNaN(endedAt) ? beat : Math.min(beat, endedAt);
+  }
+  return Number.isNaN(endedAt) ? null : endedAt;
 }
 
 /** True when the meeting is over (synthesized, done phase, or a done status) — not convening, not failed. */
@@ -572,15 +603,31 @@ export function sessionFinished(s: SessionHistoryRow): boolean {
 }
 
 /**
- * Whole seconds the finished meeting ran: last progress write minus the process start.
- * Null while the meeting is not finished, or when either timestamp is missing/unparseable.
+ * Whole seconds the finished meeting actually ran. Single sitting: last progress write minus the
+ * process start. Several sittings (resumed after a failure): the sum of each sitting's active time —
+ * the dead gap between a stopped sitting and its restart is not meeting time. The last sitting ends
+ * at the last progress write. Null while the meeting is not finished, or when a timestamp is
+ * missing/unparseable.
  */
 export function sessionDurationSeconds(s: SessionHistoryRow): number | null {
   if (!sessionFinished(s)) return null;
-  const start = Date.parse(s.startedAt);
-  const end = Date.parse(s.progress?.updated_at ?? "");
-  if (Number.isNaN(start) || Number.isNaN(end)) return null;
-  return Math.max(0, Math.floor((end - start) / 1000));
+  const finalEnd = Date.parse(s.progress?.updated_at ?? "");
+  if (Number.isNaN(finalEnd)) return null;
+  const attempts = s.meta?.attempts;
+  if (!attempts || attempts.length === 0) {
+    const start = Date.parse(s.startedAt);
+    if (Number.isNaN(start)) return null;
+    return Math.max(0, Math.floor((finalEnd - start) / 1000));
+  }
+  let totalMs = 0;
+  for (let i = 0; i < attempts.length; i++) {
+    const start = Date.parse(attempts[i].started_at ?? "");
+    if (Number.isNaN(start)) return null;
+    const end = i === attempts.length - 1 ? finalEnd : stoppedAttemptEndMs(attempts[i]);
+    if (end === null) return null;
+    totalMs += Math.max(0, end - start);
+  }
+  return Math.floor(totalMs / 1000);
 }
 
 /**

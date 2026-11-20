@@ -7,8 +7,8 @@ description: >
   problem resolution. Use when: running agent meetings, coordinating multi-agent
   discussions, or facilitating collaborative problem-solving sessions.
 owner: pm
-version: 1.5.0
-last_reviewed: 2026-11-10
+version: 1.6.0
+last_reviewed: 2026-11-21
 prerequisites: []
 metadata:
   type: process
@@ -40,37 +40,47 @@ Invoke this skill when the user requests:
 
 ## Execution Steps
 
-The skill runs the facilitation flow directly:
-1. **Agenda setting**: state the topic, objectives, participants, and round count. The
-   round count is a meeting parameter fixed here — never reduced silently mid-meeting.
-2. **Opening round (round 1)**: each participating agent states its position and
-   supporting evidence on the topic.
-3. **Facilitator agenda pass**: after round 1, the facilitator (or PM) distills the
-   contributions into 2-5 named agenda issues reflecting where positions spread
-   (criteria and recommendations), and states the issue list before round 2.
-4. **Deliberation rounds (round 2+)**: run the remaining rounds issue by issue. For
-   each agenda issue, every participating agent MUST:
-   - address at least two named peers with an explicit agree / rebut / ask;
-   - answer every question another participant addressed to it in the previous round;
-   - state an explicit stance line: `changed: <from> → <to>` or `no change: <position>`;
-   - stay on the agenda issue — new topics go to the facilitator for the issue list.
-   The PM facilitates and keeps contributions on-agenda.
-5. **Outcome synthesis**: a cross-domain agent (or the PM) synthesizes agreements,
-   open points, and a proposed recommendation per issue.
-6. **Transcript logging**: write the transcript to `memory/meeting-YYYY-MM-DD-[slug].md`.
+<!-- LOCAL-PATCH(upstream-request: U-20261121-001) -->
+The default meeting is turn-based (dialogue form, ADR-0204): participants take short turns
+in sequence and each turn answers the transcript so far. The PM facilitates and votes nothing.
+
+1. **Agenda**: state the topic and 2-5 issues. For each issue, select 3-5 relevant
+   participants and give a one-line reason per seat. The dissent / red-team seat is always
+   included (Governance Rule 1).
+2. **Discussion, per issue**: speakers alternate; each turn is one short move (propose,
+   ask, answer, rebut, concede, amend).
+   - After a proposal, the next speaker challenges it (ask or rebut).
+   - Address peers by display name, never by agent key.
+   - Each participant amends at most once per issue, unless answering a question.
+   - Do not repeat boilerplate disclaimers.
+   - A non-participant may request the floor once per issue; the facilitator grants or
+     declines and records the decision.
+3. **Consensus, per issue**: the chair proposes; only participants vote (accept / reserve).
+   Record non-participants as "not participating" - never count them as agreement. Close
+   the issue with the outcome and the tally.
+4. **Progress**: report `issue i/n · speaker · turns used/budget` while the meeting runs.
+   The turn budget is 3 × participants per issue (max 12).
+5. **Resume**: resume an interrupted meeting from the issue where it stopped, never from
+   the start. The minutes state the number of sittings.
+6. **Outcome synthesis and logging**: the PM synthesizes agreements, open items, and a
+   proposed recommendation, then writes `memory/meeting-YYYY-MM-DD-[slug].md`.
 
 ## Output Format
 
-Meeting transcript written to `memory/meeting-YYYY-MM-DD-[slug].md` containing, in order:
-- Agenda, objectives, participants, and the issue list from the facilitator agenda pass
-- Discussion by issue: attributed exchanges (who said what to whom), round by round
-- Agreements reached per issue
-- Preserved dissent: recorded disagreements transcribed VERBATIM — never summarized,
-  never averaged into consensus (Governance Rule 3)
-- Open questions carried forward
-- Action items with owner assignments
-- Proposed recommendation per issue, explicitly labelled a PROPOSAL for the user's
-  approval — never a decision or PASS stamp (Governance Rule 2)
+Minutes written to `memory/meeting-YYYY-MM-DD-[slug].md`, in order:
+- Header: date, topic, chair, number of sittings (when more than one)
+- Body, one short section per issue:
+  - Attendees on one comma-separated line
+  - Verbatim key exchanges ("seat: utterance")
+  - Consensus proposal
+  - Outcome and tally, including who was not participating
+  - Per-seat recommendation
+  - Dissent, transcribed VERBATIM - never summarized or averaged (Governance Rule 3)
+- Open items, with owner assignments for action items
+- Proposed recommendation, explicitly labelled a PROPOSAL for the user's approval - never
+  a decision or PASS stamp (Governance Rule 2)
+- Appendix A: the full turn transcript, in order
+- Appendix B: interrupted attempts, if any
 
 ## Governance Rules
 

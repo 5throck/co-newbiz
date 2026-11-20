@@ -6,7 +6,8 @@ import { buildDecisionDetail } from "../../../lib/route-decision-history-view.ts
 import { resolveLabelTokens, SUB_TRACK_KEY } from "../../../lib/label-keys.ts";
 import { SectionToolbar } from "../../layout.tsx";
 import { ColGroup } from "../../ui.tsx";
-import { MinutesDialog } from "../../CommitteeMinutesView.tsx";
+import { CommitteeMinutesRecord } from "../../CommitteeMinutesRecord.tsx";
+import { CommitteeSessionRowSummary } from "../../CommitteeSessionRow.tsx";
 import { DECISION_COL_PCT } from "./constants.ts";
 import type { RouteDecisionStageState } from "./useRouteDecision.ts";
 import { useTranslations } from "next-intl";
@@ -27,6 +28,7 @@ export function DecisionHistory({ ctx, opportunityId }: { ctx: HistoryCtx; oppor
   const tr = useTranslations();
   const t = useTranslations("stages.s4.decisionTab");
   const tc = useTranslations("common");
+  const routeCommitteeLabel = useTranslations("stages.s4.routeDecisionStage")("s4RouteSteeringCommittee");
   const {
     decisions,
     historyYear,
@@ -267,20 +269,27 @@ export function DecisionHistory({ ctx, opportunityId }: { ctx: HistoryCtx; oppor
         {sessions.length > 0 && (
           <>
             <SectionToolbar title={t("committeeDeliberationHistory")} />
-            <ul className="text-[length:var(--fs-body)] space-y-1">
+            <ul className="list-none p-0 m-0">
               {sessions.map((s2) => (
-                <li key={s2.sessionId}>
-                  <span className={`status-chip ${s2.status === "done" ? "status-green" : "status-in-progress"}`}>
-                    {s2.status}
-                  </span>{" "}
-                  {s2.decisionMode ?? "—"} · {s2.createdAt.slice(0, 10)} ·{" "}
-                  <button
-                    type="button"
-                    className="text-[color:var(--accent)] underline cursor-pointer bg-transparent border-0 p-0"
-                    onClick={() => setMinutesSessionId(s2.sessionId)}
-                  >
-                    {t("meetingMinutes")}
-                  </button>
+                <li
+                  key={s2.sessionId}
+                  className="card w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-1"
+                >
+                  <CommitteeSessionRowSummary
+                    session={s2}
+                    committeeLabel={routeCommitteeLabel}
+                    trailing={
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm"
+                        aria-haspopup="dialog"
+                        data-testid="route-history-open-minutes"
+                        onClick={() => setMinutesSessionId(s2.sessionId)}
+                      >
+                        {t("meetingMinutes")}
+                      </button>
+                    }
+                  />
                 </li>
               ))}
             </ul>
@@ -288,10 +297,12 @@ export function DecisionHistory({ ctx, opportunityId }: { ctx: HistoryCtx; oppor
         )}
       </div>
       {minutesSessionId && (
-        <MinutesDialog
+        // The same meeting window as the committee panel's "회의록 보기": 회의록 / 전체 발언 tabs for a v2
+        // record, the legacy dialog for a v1 draft.
+        <CommitteeMinutesRecord
           opportunityId={opportunityId}
           sessionId={minutesSessionId}
-          committeeLabel={tc("committeeMinutes.title")}
+          committeeLabel={routeCommitteeLabel}
           onClose={() => setMinutesSessionId(null)}
         />
       )}

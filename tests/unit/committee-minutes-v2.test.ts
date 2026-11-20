@@ -8,7 +8,7 @@
  *   - the no-fabrication rules: an excerpt turn must resolve to a live speech turn
  *     of the same issue, a quote must be verbatim (else repaired to the whole
  *     utterance), and every reject / repair is counted, not silent;
- *   - the deterministic fallback when the model fails (consensus proposal + close row);
+ *   - the deterministic fallback when the model fails (real ask/answer exchanges, no consensus/close row);
  *   - appendix A (all non-abandoned turns, seq order) and B (abandoned attempts);
  *   - v1 sessions render exactly as before; a turn session with a v1 draft still
  *     gets the full transcript appended;
@@ -414,6 +414,40 @@ describe("minutes v2 assembled from the rows", () => {
     ]);
   });
 
+  test("markdown: attendees and per-issue participants are ONE comma-separated line, reasons in one 선정 이유 line", () => {
+    const inp = input();
+    const json = v2.assembleMinutesV2(inp, v2.collectIssueFacts(inp), null);
+    const attendees = v2.minutesV2AttendeeLines(json);
+    const absentNames = json.overview.not_participating.map((s) => s.name);
+    const attending = json.overview.seats.filter((s) => !absentNames.includes(s.name));
+    expect(attendees).toContain(`- 참석 위원 ${attending.length}명: ${attending.map((s) => s.name).join(", ")}`);
+    expect(attendees.some((l) => l.startsWith(`- 불참 ${absentNames.length}명: ${absentNames.join(", ")}`))).toBe(true);
+    // no per-seat line any more
+    for (const s of json.overview.seats) expect(attendees).not.toContain(`- ${s.name}`);
+
+    const issues = v2.minutesV2IssueLines(json);
+    const i1 = json.issues[0];
+    expect(issues).toContain(
+      `- 참석 위원 ${i1.participants.length}명: ${i1.participants.map((p) => p.name).join(", ")}`,
+    );
+    const reasonLines = issues.filter((l) => l.startsWith("- 선정 이유: "));
+    expect(reasonLines.length).toBe(json.issues.filter((i) => i.participants.some((p) => p.reason)).length);
+    expect(reasonLines[0]).toContain(`${name(FA)} — 차입 비율을 검토한다; ${name(LC)} — 담보 조건을 본다`);
+    // the old "name (reason)" semicolon list and the 참여 위원 label are gone
+    expect(issues.join("\n")).not.toContain("참여 위원:");
+    expect(issues.join("\n")).not.toContain(`${name(FA)} (차입 비율을 검토한다)`);
+  });
+
+  test("markdown times are Korea time with the zone stated, never a raw UTC ISO", () => {
+    expect(v2.formatKst("2026-11-20T12:25:00.000Z")).toBe("2026. 11. 20. 21:25 (KST)");
+    expect(v2.formatKst("garbage")).toBe("garbage");
+    const inp = input();
+    const json = v2.assembleMinutesV2(inp, v2.collectIssueFacts(inp), null);
+    const att = v2.minutesV2AttendeeLines(json).join("\n");
+    expect(att).toContain("(KST)");
+    expect(att).not.toContain("2026-11-20T10:00:00.000Z");
+  });
+
   test("sittings header: 'N번에 나눠 진행' only when the meeting was restarted", () => {
     const inp = input();
     const json = v2.assembleMinutesV2(inp, v2.collectIssueFacts(inp), null);
@@ -523,22 +557,132 @@ describe("the model only selects: references and quotes are validated against th
 });
 
 describe("deterministic fallback", () => {
-  test("no selection: the excerpt is the consensus proposal and the close row, verbatim; the draft says so", () => {
+  test("no selection: the excerpt is the real ask/answer exchange, verbatim, in seq order — never the consensus or close row", () => {
     const inp = input();
     const json = v2.assembleMinutesV2(inp, v2.collectIssueFacts(inp), null);
     expect(json.provenance).toMatchObject({ source: "fallback", fallback_issue_ids: ["I1", "I2"] });
     const [i1, i2] = json.issues;
     expect(i1.excerpt_source).toBe("fallback");
-    expect(i1.excerpt.map((e) => [e.turn_id, e.speaker_name, e.move, e.quote_full])).toEqual([
-      ["t6", CHAIR_DISPLAY_NAME, "propose_consensus", true],
-      ["t10", CHAIR_DISPLAY_NAME, "close", true],
+    // I1: the rebut (t3, legal-counsel -> financial-analyst) and the answer that follows it (t4)
+    expect(i1.excerpt.map((e) => [e.turn_id, e.move, e.quote_full])).toEqual([
+      ["t3", "rebut", true],
+      ["t4", "answer", true],
     ]);
-    expect(i1.excerpt[0].quote).toBe("차입 60% 이내로 하되 담보 조건 확인을 전제로 한다.");
-    expect(i2.excerpt.map((e) => e.turn_id)).toEqual(["t17", "t20"]);
+    expect(i1.excerpt[0].quote).toBe(U3);
+    expect(i1.excerpt[1].quote).toBe(U4);
+    // I2: the risk-officer's question (t15) and the answer (t16); the abandoned t12 never appears
+    expect(i2.excerpt.map((e) => e.turn_id)).toEqual(["t15", "t16"]);
+    expect(i2.excerpt[0].speaker_seat).toBe(RO);
+    for (const i of json.issues) {
+      expect(i.excerpt.every((e) => e.role !== "chair")).toBe(true);
+      expect(i.excerpt.some((e) => e.move === "propose_consensus" || e.move === "close")).toBe(false);
+      expect(i.excerpt.map((e) => e.seq)).toEqual([...i.excerpt.map((e) => e.seq)].sort((x, y) => x - y));
+    }
     // open items: every non-agreed issue, plus each reservation with its reason
     expect(json.open_items.map((o) => o.issue_id)).toEqual(["I1", "I1", "I2", "I2"]);
     expect(json.open_items[1].text).toContain(`유보(${name(LC)}): 약정서 확인 전에는 유보합니다.`);
     expect(json.open_items[2].text).toContain("미합의(보류)");
+  });
+
+  const speechFacts = (rows: TurnRecord[]) => {
+    const inp = { ...input(rows), currentAttempt: 1 };
+    return v2.collectIssueFacts(inp)[0];
+  };
+  const sp = (seq: number, speaker: string, move: string, utterance: string, over: Partial<TurnRecord> = {}) =>
+    mk(seq, { role: "seat", speaker, move: move as TurnRecord["move"], utterance, ...over });
+  const open1 = mk(1, {
+    role: "chair",
+    speaker: CHAIR,
+    move: "open",
+    utterance: "안건 1/2 — 차입 구조",
+    participants: [FA, LC, RO],
+  });
+  const cons = (seq: number) =>
+    mk(seq, { role: "chair", speaker: CHAIR, move: "propose_consensus", utterance: "합의안입니다." });
+
+  test("picks the risk-officer pair first, then the pair closest before the consensus; at most 2 pairs / 4 turns", () => {
+    const f = speechFacts([
+      open1,
+      sp(2, FA, "propose", "차입 60%를 제안합니다."),
+      sp(3, RO, "ask", "근거가 무엇입니까?", { addressedTo: FA }),
+      sp(4, FA, "answer", "과거 사례 기준입니다.", { addressedTo: RO, respondsToTurn: "t3" }),
+      sp(5, LC, "rebut", "담보가 없습니다.", { addressedTo: FA }),
+      sp(6, FA, "answer", "담보는 확보 중입니다.", { addressedTo: LC, respondsToTurn: "t5" }),
+      sp(7, VA, "ask", "금리 가정은 무엇입니까?", { addressedTo: FA }),
+      sp(8, FA, "answer", "연 5%입니다.", { addressedTo: VA, respondsToTurn: "t7" }),
+      cons(9),
+    ]);
+    const ex = v2.fallbackExcerpt(f);
+    expect(ex.map((e) => e.turn_id)).toEqual(["t3", "t4", "t7", "t8"]);
+  });
+
+  test("an answer is matched by respondsToTurn, else by the addressee's next answering move", () => {
+    const f = speechFacts([
+      open1,
+      sp(2, LC, "ask", "약정서는 있습니까?", { addressedTo: FA }),
+      sp(3, VA, "answer", "무관한 답변입니다.", { addressedTo: LC }),
+      sp(4, FA, "answer", "약정서는 확인했습니다.", { addressedTo: LC, respondsToTurn: "t2" }),
+      cons(5),
+    ]);
+    expect(v2.fallbackExcerpt(f).map((e) => e.turn_id)).toEqual(["t2", "t4"]);
+    const g = speechFacts([
+      open1,
+      sp(2, LC, "ask", "약정서는 있습니까?", { addressedTo: FA }),
+      sp(3, VA, "answer", "무관한 답변입니다.", { addressedTo: LC }),
+      sp(4, FA, "answer", "약정서는 확인했습니다.", { addressedTo: LC }),
+      cons(5),
+    ]);
+    expect(v2.fallbackExcerpt(g).map((e) => e.turn_id)).toEqual(["t2", "t4"]);
+  });
+
+  test("a pair after the consensus proposal is not used", () => {
+    const f = speechFacts([
+      open1,
+      sp(2, FA, "propose", "차입 60%를 제안합니다."),
+      sp(3, LC, "concede", "수긍합니다."),
+      cons(4),
+      sp(5, RO, "ask", "나중 질문입니다.", { addressedTo: FA }),
+      sp(6, FA, "answer", "나중 답변입니다.", { addressedTo: RO }),
+    ]);
+    // no pair before the consensus -> opening proposal + last speech turn before it
+    expect(v2.fallbackExcerpt(f).map((e) => e.turn_id)).toEqual(["t2", "t3"]);
+  });
+
+  test("no pairs: the opening proposal and the last speech turn; one turn when they coincide", () => {
+    const f = speechFacts([
+      open1,
+      sp(2, FA, "propose", "차입 60%를 제안합니다."),
+      sp(3, LC, "amend", "담보를 추가하자고 제안합니다."),
+      sp(4, FA, "concede", "수긍합니다."),
+      cons(5),
+    ]);
+    expect(v2.fallbackExcerpt(f).map((e) => e.turn_id)).toEqual(["t2", "t4"]);
+    const one = speechFacts([open1, sp(2, FA, "propose", "차입 60%를 제안합니다."), cons(3)]);
+    expect(v2.fallbackExcerpt(one).map((e) => e.turn_id)).toEqual(["t2"]);
+  });
+
+  test("a long utterance is cut to its first sentence with an ellipsis and stays verbatim", () => {
+    const long = `첫 문장은 짧게 끝납니다. ${"그 뒤로 이어지는 아주 긴 설명입니다. ".repeat(20)}`;
+    const f = speechFacts([
+      open1,
+      sp(2, LC, "ask", long, { addressedTo: FA }),
+      sp(3, FA, "answer", "짧은 답변입니다.", { addressedTo: LC, respondsToTurn: "t2" }),
+      cons(4),
+    ]);
+    const [q, a] = v2.fallbackExcerpt(f);
+    expect(q.quote).toBe("첫 문장은 짧게 끝납니다. …");
+    expect(q.quote_full).toBe(false);
+    expect(v2.isVerbatim(long, q.quote)).toBe(true);
+    expect(a.quote_full).toBe(true);
+  });
+
+  test("an issue with no speech turns has an empty excerpt (consensus/close are not substituted)", () => {
+    const f = speechFacts([
+      open1,
+      cons(2),
+      mk(3, { role: "chair", speaker: CHAIR, move: "close", utterance: "안건 1 마침.", outcome: "unresolved" }),
+    ]);
+    expect(v2.fallbackExcerpt(f)).toEqual([]);
   });
 
   test("a model that throws or returns junk degrades to the deterministic draft (fallback: true), dialogue kept in appendix A", async () => {

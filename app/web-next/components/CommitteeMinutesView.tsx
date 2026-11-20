@@ -11,12 +11,14 @@
 //    deterministic fallback state is visible.
 //  - The minutesConfirmed state is shown when present.
 // MinutesDialog is the shared modal wrapper (CommitteePanel M1/M2 and
-// DecisionHistory both use it); it fetches the JSON and keeps the raw
+// CommitteeMinutesRecord use it); it fetches the JSON and keeps the raw
 // markdown download link.
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { type MinutesJsonPayload, minutesJsonOf } from "../lib/committee-minutes-view.ts";
 import { useModalFocus } from "../lib/use-modal-focus.ts";
+import { CommitteeMinutesV2View } from "./CommitteeMinutesV2View.tsx";
 import { useTranslations } from "next-intl";
 
 interface AgendaIssue {
@@ -63,6 +65,8 @@ export interface CommitteeMinutesPayload {
     prompt_version?: string | null;
     created_at?: string | null;
   } | null;
+  /** 2 = turn-meeting minutes v2 (the dialogue record), 1 / absent = the v1 draft this view renders. */
+  minutesVersion?: 1 | 2 | null;
   minutesConfirmed: { by: string; at: string } | null;
   recommendation: string | null;
   dissentJson: string | Array<{ member_key: string; position_md: string }> | null;
@@ -312,29 +316,38 @@ export function CommitteeMinutesView({ payload }: { payload: CommitteeMinutesPay
   );
 }
 
+/** The v2 minutes body (dialogue excerpts, votes, dissent verbatim) for a payload that reached the legacy dialog. */
+function MinutesV2Body({ payload }: { payload: CommitteeMinutesPayload }) {
+  const v2 = minutesJsonOf(payload as unknown as MinutesJsonPayload);
+  if (!v2) return <CommitteeMinutesView payload={payload} />;
+  return <CommitteeMinutesV2View minutes={v2} dissents={parseDissent(payload.dissentJson)} />;
+}
+
 /** Shared modal wrapper — fetches ?format=json on open, keeps the raw
     markdown download link, renders CommitteeMinutesView. Used by
-    CommitteePanel (M1/M2) and DecisionHistory (M1). */
+    CommitteePanel (M1/M2) and CommitteeMinutesRecord (v1 fallback). */
 export function MinutesDialog({
   opportunityId,
+  sessionsApiBase,
   sessionId,
   committeeLabel,
   onClose,
 }: {
   opportunityId: string;
+  /** Project-scoped sessions: the `.../committee-sessions` base URL (overrides the opportunity one). */
+  sessionsApiBase?: string;
   sessionId: string;
   committeeLabel: string;
   onClose: () => void;
 }) {
   const t = useTranslations("common.committeeMinutes");
   const { panelRef, onKeyDown } = useModalFocus(onClose);
+  const sessionsRoot = sessionsApiBase ?? `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`;
   const [payload, setPayload] = useState<CommitteeMinutesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
-    fetch(
-      `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}/minutes?format=json`,
-    )
+    fetch(`${sessionsRoot}/${encodeURIComponent(sessionId)}/minutes?format=json`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         // The minutes route answers in the standard { data, meta, error } envelope (ADR-0069);
@@ -351,8 +364,8 @@ export function MinutesDialog({
     return () => {
       alive = false;
     };
-  }, [opportunityId, sessionId]);
-  const base = `/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions/${encodeURIComponent(sessionId)}/minutes`;
+  }, [sessionsRoot, sessionId]);
+  const base = `${sessionsRoot}/${encodeURIComponent(sessionId)}/minutes`;
   return createPortal(
     // biome-ignore lint/a11y/noStaticElementInteractions: shared modal-backdrop pattern (CommitteePanel modal, useModalFocus handles Escape via onKeyDown)
     <div className="modal-backdrop" onClick={onClose} role="presentation" onKeyDown={onKeyDown}>
@@ -390,7 +403,13 @@ export function MinutesDialog({
               {t("loading")}
             </p>
           )}
-          {payload && <CommitteeMinutesView payload={payload} />}
+          {/* A v2 (turn-meeting) record never renders through the v1 view: the dialogue body is the record. */}
+          {payload &&
+            (payload.minutesVersion === 2 ? (
+              <MinutesV2Body payload={payload} />
+            ) : (
+              <CommitteeMinutesView payload={payload} />
+            ))}
         </div>
       </div>
     </div>,

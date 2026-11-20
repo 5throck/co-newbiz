@@ -17,6 +17,7 @@ import type { MinutesDraft } from "./committee-chair.ts";
 import { isMinutesV2, type CommitteeMinutesJson, type CommitteeMinutesV2Json } from "./committee-minutes-schema.ts";
 import {
   buildMinutesAppendix,
+  formatKst,
   minutesAppendixLines,
   minutesV2AttendeeLines,
   minutesV2HeaderLines,
@@ -447,7 +448,7 @@ function buildMinutesV2Markdown(
   lines.push(`- 진행: ${t.meta.gate ?? "—"} · 모드: ${t.meta.decision_mode ?? "—"} · 상태: ${t.status}`);
   if (t.meta.track) lines.push(`- 트랙: ${t.meta.track}`);
   lines.push(`- 위원회: ${t.committee?.chair ? `chair ${t.committee.chair}, ` : ""}안건 ${json.issues.length}건`);
-  lines.push(`- 일시: ${json.overview.held_at}`);
+  lines.push(`- 일시: ${formatKst(json.overview.held_at)}`);
   lines.push("");
   lines.push(...minutesV2AttendeeLines(json));
   lines.push(...minutesV2IssueLines(json));

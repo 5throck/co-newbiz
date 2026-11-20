@@ -68,6 +68,31 @@ export function formatDateTime(iso: string | number | Date, locale: Locale | str
   return d ? new Intl.DateTimeFormat(intlTag(asLocale(locale))).format(d) : String(iso);
 }
 
+/**
+ * Locale date + 24h time to the minute ("2026. 11. 20. 21:25" for ko) — for records whose clock time
+ * matters (e.g. when a committee was convened). Rendered in the viewer's time zone, or `timeZone` when
+ * given (server-rendered text pins Asia/Seoul). An unparseable
+ * input renders as-is. (`formatDateTime` above renders the date only.)
+ */
+export function formatDateTimeHm(
+  iso: string | number | Date,
+  locale: Locale | string = "ko",
+  timeZone?: string,
+): string {
+  const d = parseIso(iso);
+  return d
+    ? new Intl.DateTimeFormat(intlTag(asLocale(locale)), {
+        ...(timeZone ? { timeZone } : {}),
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).format(d)
+    : String(iso);
+}
+
 /** Unit label for raw KRW-millions columns (npv_krw_m etc.); put it in the column header. */
 export const KRW_MILLIONS_UNIT = "백만 원";
 

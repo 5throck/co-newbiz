@@ -92,6 +92,11 @@ lang_reason: source-material
 3. **동적 항목 표기** — `agent: null` 프롬프트 2개(`s8.business_case_prose`, `committee.position`,
    §6.2)는 에이전트 열에 `동적 항목` 칩(status-gray) — 실행 시점 호출자 선언으로 귀속됨을
    표의 각주 문장으로 한 번 더 설명.
+   > **2026-11-21 보충**: 동적 항목은 이후 7개로 늘었다(`s8.business_case_prose`, `committee.position`,
+   > `committee.agenda`, `committee.minutes`, `committee.turn`, `committee.consensus`, `committee.minutes_turns`;
+   > 위원회 5개는 ADR-0196·ADR-0204). 위원회 프롬프트는 `activityId`가 없어 활동 행에 붙지 않으므로 행의
+   > `동적 항목` 칩은 나오지 않고, 각주의 "현재 N건" 숫자와 `/api/flows`의 `prompts` 목록에만 잡힌다.
+   > 위원회 회의를 활동 행으로 보이려면 `flow.spec.yaml`에 활동을 더하는 별도 설계가 필요하다.
 
 ### 4.2 와이어프레임 — 블루프린트 개요
 

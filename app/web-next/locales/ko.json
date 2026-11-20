@@ -1431,6 +1431,7 @@
         "ir-agent": "투자자 소통 위원",
         "legal-counsel": "법률 위원",
         "market-intelligence-agent": "시장 분석 위원",
+        "process-governance-manager": "프로세스 거버넌스 위원",
         "region-lead": "지역 위원",
         "risk-officer": "위험 점검 위원",
         "site-facility-agent": "입지·시설 위원",
@@ -1505,9 +1506,8 @@
           "unresolved": "미해결"
         },
         "participants": {
-          "listLabel": "이 안건의 참석 위원",
-          "noReason": "사유 없음",
-          "summary": "참석 위원 {count}명"
+          "summary": "참석 위원 {count}명",
+          "reasons": "선정 이유"
         },
         "passOnBehalf": "의장이 {seat} 자리의 순서를 대신 넘겼습니다.",
         "reason": {
@@ -1565,7 +1565,13 @@
           "proposed": "제안됨",
           "inProgress": "진행 중",
           "durationSeconds": "{seconds}초",
-          "durationMinutesSeconds": "{minutes}분 {seconds}초"
+          "durationMinutesSeconds": "{minutes}분 {seconds}초",
+          "proposalLine": "{committee} — {rec} 제안 (게이트: {gate}, 의장: {chair})",
+          "basisLine": "근거: {scores} · {dissent} — 확정은 사람의 진행 기록",
+          "scoreAverage": "좌석 점수 집계 {avg}/3.0",
+          "scoreNone": "좌석 점수 표 없음",
+          "dissentCount": "이견 {count}건 반영",
+          "dissentNone": "이견 0건"
         }
       },
       "minutesV2": {
@@ -1578,11 +1584,10 @@
         "recorder": "기록자",
         "notParticipating": "불참",
         "issues": "안건별 논의",
-        "participants": "참석 위원",
         "satOut": "불참",
         "keyQuotes": "핵심 발언 (의장이 고른 교환, 원문 인용)",
         "quoteRepaired": "인용 자동 교정",
-        "fallbackNote": "의장 선택을 받지 못한 안건입니다 — 합의안과 마침 기록으로 대신합니다. 전체 발언은 '전체 발언' 탭에서 보세요.",
+        "fallbackNote": "의장 선택을 받지 못한 안건입니다 — 오간 질문과 답변 가운데 규칙에 따라 골랐습니다. 전체 발언은 '전체 발언' 탭에서 보세요.",
         "consensus": "합의안 (의장 제안)",
         "tally": "표결: 찬성 {accept} · 유보 {reserve} · 기권 {abstain} · 불참 {absent}",
         "voteRec": " (권고 {rec})",
@@ -1595,6 +1600,12 @@
         "openItems": "미해결 항목",
         "noOpenItems": "기록 없음",
         "owner": "담당: {name}"
+      },
+      "name": {
+        "entity-ic-committee": "법인 투자심의위원회",
+        "group-ic-committee": "그룹 투자심의위원회",
+        "route-steering-committee": "S4 진출방식 스티어링 위원회",
+        "target-longlist-shortlist-committee": "S6/S7 최종 후보 목록 검토 위원회"
       }
     },
     "committeeMinutes": {

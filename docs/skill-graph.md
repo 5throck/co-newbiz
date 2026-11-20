@@ -69,7 +69,7 @@
 | `root/legal-risk-register` | L3 | 1.1.0 | root/process-governance-manager, root/risk-officer | — | — | — | — |
 | `root/management-incentive-review` | L3 | 1.1.0 | root/hr-integration-agent | root/phase 4 | root/compensation-harmonization-analysis (composes_with), root/customer-attrition-risk (follows), root/org-readiness-assessment (composes_with), root/stage-gate-governance (composes_with), root/technical-due-diligence (composes_with) | — | — |
 | `root/market-data-pipeline` | L3 | 1.1.0 | root/market-intelligence-agent, root/process-governance-manager | — | — | — | — |
-| `root/meeting-facilitation` | L3 | 1.5.0 | — | — | — | — | — |
+| `root/meeting-facilitation` | L3 | 1.6.0 | — | — | — | — | — |
 | `root/monte-carlo-simulation` | L3 | 1.1.0 | root/quant-methodologist, root/risk-officer, root/valuation-agent | root/phase 3 | root/investment-vehicle-structuring (follows), root/peer-benchmarking (composes_with), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/scenario-planning (follows), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/org-readiness-assessment` | L3 | 1.1.0 | root/greenfield-agent, root/hr-integration-agent, root/process-governance-manager | root/phase 4, root/phase 5 | root/compensation-harmonization-analysis (composes_with), root/compliance-monitoring (follows), root/stage-gate-governance (composes_with), root/stage-gate-governance (follows), root/technical-due-diligence (composes_with) | — | — |
 | `root/partner-due-diligence` | L3 | 1.1.0 | root/partnership-agent | root/phase 1 | root/jv-structuring (follows), root/partner-sourcing-strategy (composes_with), root/project-review (composes_with) | — | — |
@@ -629,7 +629,7 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 
 ## Skill Usage (E3)
 
-Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-20), window 90 days. Skill nodes with usage: 1.
+Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-21), window 90 days. Skill nodes with usage: 1.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (0): —
 - **unused** (0 sessions in 90 days) (108): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/humanize-polish, root/i18n-audit, root/i18n-formatting … and 68 more

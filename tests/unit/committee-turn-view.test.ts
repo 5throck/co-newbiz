@@ -627,7 +627,7 @@ describe("transcript rendering", () => {
     expect(renderTranscript({ turns: [turn(5, { move: "brand_new" as TurnView["move"] })] })).toContain("brand_new");
   });
 
-  test("per-issue participants: collapsed note with seat label and reason; absent = nothing", () => {
+  test("per-issue participants: one comma-separated line, reasons in one collapsed note; absent = nothing", () => {
     const participants = [
       [
         { seat: "risk-officer", label: null, reason: "거부권 보유" },
@@ -636,13 +636,17 @@ describe("transcript rendering", () => {
     ];
     const html = renderTranscript({ turns: [turn(1)], participants });
     expect(html).toContain('data-testid="committee-issue-participants"');
-    expect(html).toContain("참석 위원 2명");
-    expect(html).toContain("위험 점검 위원"); // seat key -> catalog label
-    expect(html).toContain("거부권 보유");
-    expect(html).toContain("자금 위원 (표시명)"); // payload label wins
-    expect(html).toContain("사유 없음");
+    // seat key -> catalog label; payload label wins; ONE line, names comma-separated, reason as title
+    expect(html).toContain(
+      '참석 위원 2명: <span title="거부권 보유">위험 점검 위원</span>, <span>자금 위원 (표시명)</span>',
+    );
+    // one 선정 이유 note, only for seats with a stated reason — no per-seat list
+    expect(html).toContain("선정 이유");
+    expect(html).toContain("위험 점검 위원 — 거부권 보유");
+    expect(html).not.toContain("사유 없음");
+    expect(html).not.toContain('<ul class="list-none p-0 m-0 mt-1 pl-2"');
     expect((html.match(/<details[^>]*\sopen/g) ?? []).length).toBe(0);
-    expect(renderTranscript({ turns: [turn(1)], participants }, "en")).toContain("Participants (2)");
+    expect(renderTranscript({ turns: [turn(1)], participants }, "en")).toContain("Participants (2): ");
     expect(renderTranscript({ turns: [turn(1)] })).not.toContain("committee-issue-participants");
     expect(renderTranscript({ turns: [turn(1)], participants: [[]] })).not.toContain("committee-issue-participants");
   });
@@ -971,9 +975,9 @@ describe("panel and window wiring (design §16.5)", () => {
   const win = normSrc(readFileSync(new URL(`${WEB}/components/CommitteeMeetingWindow.tsx`, import.meta.url), "utf8"));
 
   test("the window is opt-in: state starts closed and only the buttons open it", () => {
-    expect(panel).toContain(normSrc("useState<{ focusInput: boolean } | null>(null)"));
+    expect(panel).toContain(normSrc("useState<MeetingWindowState | null>(null)"));
     expect(panel).toContain(normSrc("onOpenWindow={setMeetingWindow}"));
-    expect(panel).toContain(normSrc("setMeetingWindow({ focusInput: false })"));
+    expect(panel).toContain(normSrc("setMeetingWindow({ focusInput: false, recordFor: sessionId })"));
     expect(panel).toContain(normSrc("{meetingWindow && windowProps && <CommitteeMeetingWindow"));
   });
 
@@ -1133,5 +1137,70 @@ describe("session history rows (소집 이력, 2026-11-20 UI revision)", () => {
     expect(view.sessionDurationSeconds(row({ convening: true }))).toBeNull();
     expect(view.sessionDurationSeconds(row({ progress: {} }))).toBeNull();
     expect(view.sessionDurationSeconds(row({ startedAt: "not-a-date" }))).toBeNull();
+  });
+
+  test("sessionDurationSeconds: resumed meeting sums sittings; runner_lost sitting ends at its last heartbeat, not the reap time", () => {
+    const beat = iso(T0 + 82_000); // 1m22s into the first sitting
+    const reaped = iso(T0 + 14 * 60_000); // reap long after the process died
+    const resumed = T0 + 14 * 60_000 + 20_000;
+    const lost = {
+      started_at: iso(T0),
+      ended_at: reaped,
+      stopped_at: { error_code: "runner_lost" },
+      error: `The meeting process was lost (no heartbeat since ${beat}); the server was probably restarted.`,
+    };
+    const r = row({
+      meta: {
+        committee_key: "c",
+        synthesized: true,
+        attempts: [lost, { started_at: iso(resumed) }],
+      },
+      progress: { phase: "done", updated_at: iso(resumed + 266_000) },
+    });
+    expect(view.sessionDurationSeconds(r)).toBe(82 + 266);
+
+    // Unparseable runner_lost message falls back to ended_at.
+    const noBeat = row({
+      meta: {
+        committee_key: "c",
+        synthesized: true,
+        attempts: [{ ...lost, error: "lost" }, { started_at: iso(resumed) }],
+      },
+      progress: { phase: "done", updated_at: iso(resumed + 10_000) },
+    });
+    expect(view.sessionDurationSeconds(noBeat)).toBe(14 * 60 + 10);
+
+    // A non-runner_lost stop ends at ended_at; the heartbeat text is ignored.
+    const failed = row({
+      meta: {
+        committee_key: "c",
+        synthesized: true,
+        attempts: [
+          {
+            started_at: iso(T0),
+            ended_at: iso(T0 + 30_000),
+            stopped_at: { error_code: "llm_timeout" },
+            error: `no heartbeat since ${beat}`,
+          },
+          { started_at: iso(T0 + 600_000) },
+        ],
+      },
+      progress: { phase: "done", updated_at: iso(T0 + 645_000) },
+    });
+    expect(view.sessionDurationSeconds(failed)).toBe(30 + 45);
+
+    // Single-attempt sessions are unchanged by an attempts array of one.
+    const one = row({ meta: { committee_key: "c", synthesized: true, attempts: [{ started_at: iso(T0) }] } });
+    expect(view.sessionDurationSeconds(one)).toBe(190);
+
+    // A stopped sitting with no end at all makes the total unknowable.
+    const open = row({
+      meta: {
+        committee_key: "c",
+        synthesized: true,
+        attempts: [{ started_at: iso(T0) }, { started_at: iso(T0 + 1000) }],
+      },
+    });
+    expect(view.sessionDurationSeconds(open)).toBeNull();
   });
 });

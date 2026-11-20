@@ -322,15 +322,28 @@ export function MeetingWindowDialog({
               </FollowScroller>
             </div>
           ) : (
-            <FollowScroller live={live} total={turns.length} label={tr(`${T}.window.transcriptLabel`)}>
-              <CommitteeTurnTranscript
-                turns={turns}
-                titles={titles}
-                participants={participants}
-                currentIssue={issueNo}
-                currentTitle={progress?.issue_title}
-              />
-            </FollowScroller>
+            <>
+              {/* Record opened before the minutes are known (loading) or when they could not be loaded. */}
+              {mode === "record" && !showTabs && minutesState === "loading" && (
+                <p role="status" className="meeting-window-note">
+                  {tr(`${T}.window.minutesLoading`)}
+                </p>
+              )}
+              {mode === "record" && !showTabs && minutesState === "error" && (
+                <p role="alert" className="meeting-window-note text-[color:var(--red-fg)]">
+                  {tr(`${T}.window.minutesLoadFailed`)}
+                </p>
+              )}
+              <FollowScroller live={live} total={turns.length} label={tr(`${T}.window.transcriptLabel`)}>
+                <CommitteeTurnTranscript
+                  turns={turns}
+                  titles={titles}
+                  participants={participants}
+                  currentIssue={issueNo}
+                  currentTitle={progress?.issue_title}
+                />
+              </FollowScroller>
+            </>
           )}
         </div>
 

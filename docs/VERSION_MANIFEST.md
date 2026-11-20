@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-20T14:59:46.011Z
+**Generated**: 2026-11-20T16:03:47.239Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -131,7 +131,7 @@
 | legal-risk-register | 1.1.0 | experimental | skills/legal-risk-register/SKILL.md | workspace | legal risk register, legal issues, risk register, IC legal risk summary | risk-officer |
 | management-incentive-review | 1.1.0 | active | skills/management-incentive-review/SKILL.md | workspace | executive compensation review, golden parachute, change of control triggers, key-person retention, non-compete enforceability | hr-integration-agent |
 | market-data-pipeline | 1.1.0 | experimental | skills/market-data-pipeline/SKILL.md | workspace | market data, data pipeline, data freshness, series provenance | market-intelligence-agent |
-| meeting-facilitation | 1.5.0 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
+| meeting-facilitation | 1.6.0 | active | skills/meeting-facilitation/SKILL.md | workspace | meeting, agent discussion, collaborative decision, multi-agent coordination, facilitate meeting | pm |
 | monte-carlo-simulation | 1.1.0 | active | skills/monte-carlo-simulation/SKILL.md | workspace | Monte Carlo simulation, seeded simulation, P50 P95 NPV, contingent liability integration | risk-officer |
 | org-readiness-assessment | 1.1.0 | active | skills/org-readiness-assessment/SKILL.md | workspace | organizational readiness, change readiness, change capacity, readiness assessment, transformation readiness | hr-integration-agent |
 | partner-due-diligence | 1.1.0 | active | skills/partner-due-diligence/SKILL.md | workspace | partner due diligence, partner compliance screening, sanctions screening for a partner, post-transfer competitor risk | partnership-agent |
@@ -232,7 +232,7 @@
 | check-wiki-nav.ts | 1.0.2 | scripts/co-newbiz/check-wiki-nav.ts | fs, path |
 | cleanup-completed-md.ts | 1.1.0 | scripts/cleanup-completed-md.ts | fs, path |
 | clear-pm-approval.ts | 1.0.0 | scripts/clear-pm-approval.ts | fs |
-| committee-deliberation.ts | 1.3.0 | scripts/co-newbiz/committee-deliberation.ts | fs, path |
+| committee-deliberation.ts | 1.4.0 | scripts/co-newbiz/committee-deliberation.ts | fs, path |
 | common.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/common.ts | N/A |
 | compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | fs, path |
 | contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | fs, path |

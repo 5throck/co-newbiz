@@ -237,8 +237,9 @@ itself (the HOLD branch of the stage walkers in \`process-flow.ts\`); any
 
 ## Steering committee system (ADR-0097, \`procedures/_committees.yaml\`)
 
-Two registered committees — \`route-steering-committee\` (S4 route decision) and
-\`target-longlist-shortlist-committee\` (S6/S7 shortlist promotion).
+Four registered committees — \`route-steering-committee\` (S4 route decision),
+\`target-longlist-shortlist-committee\` (S6/S7 shortlist promotion),
+\`entity-ic-committee\` and \`group-ic-committee\` (S11 investment committees).
 
 - **Composition**: the fixed 5-role skeleton (domain expert — the only
   track-swapping seat; industry; region; quantitative rigor; red team) plus six
@@ -251,7 +252,24 @@ Two registered committees — \`route-steering-committee\` (S4 route decision) a
   mode never changes who confirms: in \`agent_team\` mode the chair synthesis is
   recorded as a \`gate_evaluation\` **PROPOSAL — never a \`gate_decision\`**
   (design boundary #2, ADR-0053/0094).
-- \`rounds: 2\` for every member today; see the deferred list below.
+- \`rounds: 2\` for every member applies to the round engine only; see the
+  deferred list below.
+- **Meeting engine (ADR-0204)**: a meeting runs either as a turn-based
+  dialogue or as the earlier round engine, chosen once per session and stored
+  in the session meta. \`CO_NEWBIZ_COMMITTEE_ENGINE=turns\` selects the dialogue
+  engine; unset still means \`rounds\` (production default until the live
+  check flips it); any other value throws at convene time. The round engine is
+  only an explicit fallback, never a silent one. In a dialogue meeting the chair
+  picks 3-5 participants per agenda issue (the veto / mandatory seat is always
+  included), seats ask, answer and rebut by display name, and only participants
+  vote on the per-issue consensus; non-participants are recorded as absent and
+  never counted as agreement. Human seats in hybrid mode get a bounded floor
+  (3 minutes per turn, 20 minutes per meeting). Minutes are stored as schema v2
+  (dialogue form, turn-id references); earlier meetings keep the v1 shape.
+  The prompts are \`committee.agenda\` (v2), \`committee.turn\`,
+  \`committee.consensus\` and \`committee.minutes_turns\`. They carry
+  \`agent: null\` and no spec activity, so the flow console counts them as
+  dynamic items and lists them only in the \`/api/flows\` prompt list.
 
 ## End-to-end auto pipeline (ADR-0102)
 
@@ -280,11 +298,13 @@ Declared gaps, not hidden ones:
   tailoring), and the
   \`CO_NEWBIZ_LLM_PROVIDER / _MODEL / _BASE_URL / _API_KEY\` family.
   Committee deliberation (owner decision 10, ADR-0196 amendment 2026-11-09)
-  has NO mode env var: meetings run only when the LLM provider is configured
+  has NO LLM-mode env var (the meeting engine switch is
+  \`CO_NEWBIZ_COMMITTEE_ENGINE\`, see the steering committee section):
+  meetings run only when the LLM provider is configured
   (\`CO_NEWBIZ_LLM_PROVIDER / _API_KEY / _MODEL\`); without it, convening
   refuses with \`llm_required\` (the CLI \`--deterministic\` flag or an
   injected callAgent is the only deterministic path).
-- **Round-1-only functional-seat participation** — with 12 members,
+- **Round-1-only functional-seat participation (round engine)** — with 12 members,
   per-member \`rounds: 1\` for functional seats was considered and deferred;
   expressing it cleanly requires touching both the hybrid path in
   \`committee-session.ts\` and \`runDeliberationRounds\` in

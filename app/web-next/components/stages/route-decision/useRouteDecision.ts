@@ -14,7 +14,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 // @ts-ignore
 import { useConfirm } from "../../crud.tsx";
 import { api, ApiError } from "../../../lib/api.ts";
-import { CRITERIA, OVERRIDDEN_SUBS, GF_SUB, BF_SUB } from "./constants.ts";
+import { CRITERIA, OVERRIDDEN_SUBS, GF_SUB, BF_SUB, ROUTE_STEERING_COMMITTEE_KEY } from "./constants.ts";
+import type { SessionHistoryRow } from "../../../lib/committee-progress-view.ts";
 import type { OpportunityRow, RouteDecision, AdvisoryResponse, RouteRecommendation, RouteDecisionDraft } from "./types.ts";
 import { useTranslations } from "next-intl";
 
@@ -47,7 +48,7 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
   const [rationale, setRationale] = useState("");
   const [alternatives, setAlternatives] = useState("");
   const [scores, setScores] = useState<Record<string, { score: number | null; note: string }>>({});
-  const [sessions, setSessions] = useState<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>([]);
+  const [sessions, setSessions] = useState<SessionHistoryRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   // S1 시장·경쟁·역량 근거 + 결정론 어드바이저 (flow.spec v2.4.0, ADR-0104).
@@ -96,8 +97,9 @@ export function useRouteDecision({ opportunityId, rationaleParam, tabParam }: { 
       .catch((e) => setError(e instanceof Error ? e.message : t("failedToLoadTheDecision")));
   }, []);
   const loadSessions = useCallback((id: string) => {
-    api.get<Array<{ sessionId: string; status: string; decisionMode: string | null; createdAt: string }>>(`/api/opportunities/${encodeURIComponent(id)}/committee-sessions`)
-      .then((r) => setSessions(r.data)).catch(() => setSessions([]));
+    // Only this stage's committee (the list route answers { sessions } and filters by committeeKey).
+    api.get<{ sessions: SessionHistoryRow[] }>(`/api/opportunities/${encodeURIComponent(id)}/committee-sessions?committeeKey=${encodeURIComponent(ROUTE_STEERING_COMMITTEE_KEY)}`)
+      .then((r) => setSessions(r.data.sessions)).catch(() => setSessions([]));
   }, []);
   // 검토/안건은 URL로 고정된다 — 목업처럼 선택 칩 없이 바로 이 기회를 로드한다.
   // 단건 조회(GET /api/opportunities/{id})는 목록 조회와 달리 삭제 표시된

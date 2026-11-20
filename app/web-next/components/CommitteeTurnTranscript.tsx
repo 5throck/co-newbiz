@@ -10,8 +10,9 @@
 //     apart from member speech: a text chip AND a tinted left rule — never color alone.
 //   - A close row shows the outcome (icon + label) and the vote tally; seats that did not
 //     take part in the issue are counted apart ("not participating"), never as accept.
-//   - Each issue lists its chair-selected participants (seat label + reason) in a collapsed
-//     note when the agenda carries them (design §16.2); absent = nothing is shown.
+//   - Each issue lists its chair-selected participants on ONE comma-separated line (reason as a
+//     title + one collapsed "선정 이유" note) when the agenda carries them (design §16.2);
+//     absent = nothing is shown.
 //   - pass_on_behalf shows the structured fact and reason only — the chair never
 //     puts words in a person's mouth, so no utterance text is shown for it.
 //   - Abandoned turns (a stopped sitting whose issue was re-run) are left out of the
@@ -21,6 +22,7 @@
 //   - A plain ordered list; new rows never move focus.
 import { AlertTriangle, CheckCircle2, MinusCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Fragment } from "react";
 import {
   type AgendaParticipant,
   groupTurnsByIssue,
@@ -208,22 +210,64 @@ function TurnRow({ tr, t }: { tr: Translator; t: TurnView }) {
   );
 }
 
-function ParticipantsNote({ tr, issueIndex, list }: { tr: Translator; issueIndex: number; list: AgendaParticipant[] }) {
-  if (list.length === 0) return null;
+/** One attendee: display name + the chair's reason for selecting the seat (null = none stated). */
+export interface AttendeeItem {
+  seat: string;
+  name: string;
+  reason?: string | null;
+}
+
+/**
+ * Attendees on ONE line, comma-separated ("참석 위원 4명: 산업 위원, 법률 위원, …"). Each name carries its
+ * selection reason as a hover title, and a single collapsed "선정 이유" note below keeps the reasons
+ * reachable by keyboard and touch — no line per seat. Shared with the minutes v2 body.
+ */
+export function AttendeeLine({
+  tr,
+  items,
+  testId,
+  issueIndex,
+}: {
+  tr: Translator;
+  items: readonly AttendeeItem[];
+  testId?: string;
+  issueIndex?: number;
+}) {
+  if (items.length === 0) return null;
+  const withReason = items.filter((p) => p.reason);
   return (
-    <details className="mb-2" data-testid="committee-issue-participants" data-issue={issueIndex}>
-      <summary className="text-[length:var(--fs-caption)] cursor-pointer text-[color:var(--muted-fg)]">
-        {tr(`${T}.participants.summary`, { count: list.length })}
-      </summary>
-      <ul className="list-none p-0 m-0 mt-1 pl-2" aria-label={tr(`${T}.participants.listLabel`)}>
-        {list.map((p) => (
-          <li key={p.seat} className="text-[length:var(--fs-caption)] mb-1">
-            <span className="font-semibold">{p.label ?? seatName(tr, p.seat)}</span>
-            <span className="text-[color:var(--muted-fg)]"> — {p.reason ?? tr(`${T}.participants.noReason`)}</span>
-          </li>
+    <div className="mb-2" data-testid={testId} data-issue={issueIndex}>
+      <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+        {tr(`${T}.participants.summary`, { count: items.length })}:{" "}
+        {items.map((p, i) => (
+          <Fragment key={p.seat}>
+            {i > 0 && ", "}
+            <span title={p.reason || undefined}>{p.name}</span>
+          </Fragment>
         ))}
-      </ul>
-    </details>
+      </p>
+      {withReason.length > 0 && (
+        <details className="mt-1">
+          <summary className="text-[length:var(--fs-caption)] cursor-pointer text-[color:var(--muted-fg)]">
+            {tr(`${T}.participants.reasons`)}
+          </summary>
+          <p className="m-0 mt-1 pl-2 text-[length:var(--fs-caption)]">
+            {withReason.map((p) => `${p.name} — ${p.reason}`).join("; ")}
+          </p>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function ParticipantsNote({ tr, issueIndex, list }: { tr: Translator; issueIndex: number; list: AgendaParticipant[] }) {
+  return (
+    <AttendeeLine
+      tr={tr}
+      testId="committee-issue-participants"
+      issueIndex={issueIndex}
+      items={list.map((p) => ({ seat: p.seat, name: p.label ?? seatName(tr, p.seat), reason: p.reason }))}
+    />
   );
 }
 

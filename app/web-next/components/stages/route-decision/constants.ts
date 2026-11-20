@@ -1,6 +1,9 @@
 import { TranslatorFn } from "../../../i18n/config.ts";
 // Split from components/stages/RouteDecisionStage.tsx (Wave U-3 decomposition); behavior unchanged.
 
+/** The S4 route-steering committee (registry key): the committee panel and the 결정 이력 list both scope to it. */
+export const ROUTE_STEERING_COMMITTEE_KEY = "route-steering-committee";
+
 // i18n (T3-6): sub-track IDs per track (option order + validation). Display names resolve
 // common.subTrack.* via lib/label-keys.ts SUB_TRACK_KEY at render.
 export const GF_SUB = ["existing_business_rbd", "intra_venture"] as const;

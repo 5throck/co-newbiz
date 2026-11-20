@@ -15,9 +15,11 @@ import { canWriteBusiness } from "../lib/project-write-access.ts";
 import { PrimaryAction } from "./ui.tsx";
 import { useLocale, useTranslations } from "next-intl";
 import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY } from "../lib/label-keys.ts";
-import { formatDateTime } from "../lib/format.ts";
+import { formatDateTimeHm } from "../lib/format.ts";
 import { MinutesDialog } from "./CommitteeMinutesView.tsx";
-import type { MinutesJsonPayload } from "../lib/committee-minutes-view.ts";
+import { chairSummaryLines, type MinutesJsonPayload } from "../lib/committee-minutes-view.ts";
+import { seatName } from "./CommitteeTurnTranscript.tsx";
+import { CommitteeSessionRowSummary } from "./CommitteeSessionRow.tsx";
 import { CommitteeMeetingWindow, type MeetingWindowProps } from "./CommitteeMeetingWindow.tsx";
 import { CommitteeProgressView, CommitteeTurnProgressView } from "./CommitteeProgress.tsx";
 import type { LivePosition, MeetingAwaiting, MeetingProgress } from "../lib/committee-progress.ts";
@@ -26,7 +28,6 @@ import {
   attemptOf,
   buildTurnPollUrl,
   committeeKeyLabel,
-  sessionDurationSeconds,
   CONVENING_DEADLINE_MS,
   CONVENING_POLL_MS,
   convenDeadlineReached,
@@ -133,7 +134,7 @@ function parsePositionMeta(positionMd: string): PositionMeta {
 const stripMeta = stripPositionMeta;
 
 // 좌석 점수 집계 — 의장 종합 카드의 "근거" 문구용. 5criteria 점수가 있는
-// 좌석들의 평균을 다시 평균해 하나의 요약 숫자로 낸다 (없으면 "표 없음").
+// 좌석들의 평균을 다시 평균해 하나의 요약 숫자로 낸다 (없으면 null → "표 없음").
 function seatScoreAverage(transcript: SessionTranscript): number | null {
   const seatAverages = transcript.rounds
     .flatMap((r) => r.positions)
@@ -142,10 +143,6 @@ function seatScoreAverage(transcript: SessionTranscript): number | null {
     .map((v) => v.reduce((sum, n) => sum + n, 0) / v.length);
   if (!seatAverages.length) return null;
   return Math.round((seatAverages.reduce((sum, n) => sum + n, 0) / seatAverages.length) * 10) / 10;
-}
-function seatScoreSummary(transcript: SessionTranscript): string {
-  const avg = seatScoreAverage(transcript);
-  return avg !== null ? `좌석 점수 집계 ${avg}/3.0` : "좌석 점수 표 없음";
 }
 
 export function CommitteePanel({
@@ -214,8 +211,11 @@ export function CommitteePanel({
   const [turnBusy, setTurnBusy] = useState(false);
   // The optional meeting window (design §16.5): never opened by itself; closing it does not touch the
   // meeting (the poll and every piece of state live here). `focusInput` = opened from the "your turn" alert.
-  const [meetingWindow, setMeetingWindow] = useState<{ focusInput: boolean } | null>(null);
-  const meetingWindowRef = useRef<{ focusInput: boolean } | null>(null);
+  // `recordFor`: set when the window was opened from "회의록 보기" for a finished session — it then shows that
+  // session's record even while another (live) meeting runs, instead of the live view.
+  type MeetingWindowState = { focusInput: boolean; recordFor?: string };
+  const [meetingWindow, setMeetingWindow] = useState<MeetingWindowState | null>(null);
+  const meetingWindowRef = useRef<MeetingWindowState | null>(null);
   meetingWindowRef.current = meetingWindow;
   // The last live snapshot the window showed: when the meeting finishes while the window is open, it keeps
   // showing this until the finished transcript is loaded, then continues as the full record (no flicker).
@@ -363,7 +363,7 @@ export function CommitteePanel({
       return;
     }
     setMinutesRecord({ payload: null, state: "loading" });
-    setMeetingWindow({ focusInput: false });
+    setMeetingWindow({ focusInput: false, recordFor: sessionId });
     try {
       const payload = await fetchMinutesPayload(sessionId);
       if (payload.minutesVersion === 2) {
@@ -691,7 +691,9 @@ export function CommitteePanel({
           : {}),
       });
       setForm({ decision: "go", rationale: "", missing: "" });
-      setNotice(`결정이 기록되었습니다 (${transcript.evaluation.gate} · ${form.decision.toUpperCase()}).`);
+      setNotice(
+        `결정이 기록되었습니다 (${tr(GATE_LABEL_KEY[transcript.evaluation.gate] ?? transcript.evaluation.gate)} · ${form.decision.toUpperCase()}).`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "결정 기록 실패");
     } finally {
@@ -776,9 +778,11 @@ export function CommitteePanel({
 
   // The window shows the live meeting while there is one (or until its finished record arrives), else the
   // finished session's full record. `null` = nothing to show (the window then stays shut).
-  const windowLive =
-    turnLive ??
-    (lastLiveRef.current && transcript?.sessionId !== lastLiveRef.current.sessionId ? lastLiveRef.current : null);
+  const recordRequested = !!meetingWindow?.recordFor && transcript?.sessionId === meetingWindow.recordFor;
+  const windowLive = recordRequested
+    ? null
+    : (turnLive ??
+      (lastLiveRef.current && transcript?.sessionId !== lastLiveRef.current.sessionId ? lastLiveRef.current : null));
   const windowRecord =
     !windowLive && transcript?.engine === "turns"
       ? {
@@ -913,16 +917,6 @@ export function CommitteePanel({
                 expanded && transcript?.sessionId === s.sessionId
                   ? (transcript.evaluation?.recommendation ?? null)
                   : null;
-              const duration = sessionDurationSeconds(s);
-              const durationText =
-                duration !== null
-                  ? Math.floor(duration / 60) > 0
-                    ? tr(`${TURN_I18N}.history.durationMinutesSeconds`, {
-                        minutes: Math.floor(duration / 60),
-                        seconds: duration % 60,
-                      })
-                    : tr(`${TURN_I18N}.history.durationSeconds`, { seconds: duration })
-                  : null;
               return (
                 <button
                   key={s.sessionId}
@@ -938,35 +932,16 @@ export function CommitteePanel({
                     loadTranscript(s.sessionId);
                   }}
                 >
-                  <span className="flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)]">
-                    <span className="tabular-nums">{formatDateTime(s.startedAt, locale)}</span>
-                    {/* Committee + gate in plain words — never the raw "agent_team · pre_fs" pair. */}
-                    <span className="font-semibold">{committeeLabel || committeeKeyLabel(committeeKey)}</span>
-                    <span className="text-[color:var(--muted-fg)]">
-                      {tr(GATE_LABEL_KEY[s.meta.gate] ?? s.meta.gate)}
-                    </span>
-                    {durationText && (
-                      <span className="text-[color:var(--muted-fg)] tabular-nums">· {durationText}</span>
-                    )}
-                    {s.engine === "turns" && (
-                      <span className="status-chip status-info">{tr(`${TURN_I18N}.history.engineTurns`)}</span>
-                    )}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    {rec && (
-                      <span
-                        className={`status-chip ${rec === "go" ? "status-green" : rec === "hold" ? "status-amber" : "status-red"}`}
-                      >
-                        {tr(`${TURN_I18N}.history.proposal`)} {REC_LABEL[rec] ?? rec.toUpperCase()}
+                  <CommitteeSessionRowSummary
+                    session={s}
+                    committeeLabel={committeeLabel || committeeKeyLabel(committeeKey)}
+                    rec={rec}
+                    trailing={
+                      <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                        {expanded ? "▲" : "▼"}
                       </span>
-                    )}
-                    <span className={`status-chip ${s.meta.synthesized ? "status-green" : "status-in-progress"}`}>
-                      {s.meta.synthesized ? tr(`${TURN_I18N}.history.proposed`) : tr(`${TURN_I18N}.history.inProgress`)}
-                    </span>
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      {expanded ? "▲" : "▼"}
-                    </span>
-                  </span>
+                    }
+                  />
                 </button>
               );
             })}
@@ -983,7 +958,7 @@ export function CommitteePanel({
           <p className="text-[length:var(--fs-caption)] font-semibold mb-2">
             심의 결과 — {(() => {
               const s = sessions.find((x) => x.sessionId === transcript.sessionId);
-              return s ? `${formatDateTime(s.startedAt)} 소집분` : "세션";
+              return s ? `${formatDateTimeHm(s.startedAt, locale)} 소집분` : "세션";
             })()}
           </p>
           {/* 의장 종합(PROPOSAL) + 소수 의견 — 목업 grid2e 두 카드 */}
@@ -999,15 +974,24 @@ export function CommitteePanel({
                   </span>
                   {dissents.length > 0 && <span className="status-chip status-red ml-1">거부권 이견 반영</span>}
                 </h4>
-                <p className="text-[length:var(--fs-caption)] mb-1">
-                  {committeeLabel} —{" "}
-                  {REC_LABEL[transcript.evaluation.recommendation] ?? transcript.evaluation.recommendation} 제안 (진행{" "}
-                  {transcript.evaluation.gate}, {transcript.evaluation.evaluatedBy})
-                </p>
-                <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">
-                  근거: {seatScoreSummary(transcript)} · {dissents.length}건 이견{" "}
-                  {dissents.length > 0 ? "반영" : "없음"} — 확정은 사람의 진행 기록
-                </p>
+                {(() => {
+                  const ev = transcript.evaluation;
+                  // Display names only — never the raw gate id or the chair's agent key.
+                  const lines = chairSummaryLines(tr, {
+                    committee: committeeLabel,
+                    rec: REC_LABEL[ev.recommendation] ?? ev.recommendation,
+                    gate: tr(GATE_LABEL_KEY[ev.gate] ?? ev.gate),
+                    chair: seatName(tr, ev.evaluatedBy),
+                    scoreAvg: seatScoreAverage(transcript),
+                    dissentCount: dissents.length,
+                  });
+                  return (
+                    <>
+                      <p className="text-[length:var(--fs-caption)] mb-1">{lines.proposal}</p>
+                      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">{lines.basis}</p>
+                    </>
+                  );
+                })()}
               </div>
               <div className="card">
                 <h4 className="text-[length:var(--fs-body)] font-semibold mb-1">소수 의견 (원문 보존)</h4>
@@ -1020,7 +1004,7 @@ export function CommitteePanel({
                       className="whitespace-pre-wrap text-[length:var(--fs-caption)] m-0"
                       style={{ fontFamily: "inherit" }}
                     >
-                      &quot;{stripMeta(d.position_md)}&quot; — {d.member_key}
+                      &quot;{stripMeta(d.position_md)}&quot; — {seatName(tr, d.member_key)}
                     </pre>
                   ))
                 )}
