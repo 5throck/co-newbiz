@@ -1379,7 +1379,62 @@
     "committee": {
       "conveneFailed": "Committee convening failed",
       "conveningProgress": "Deliberation in progress... it will appear here automatically when done.",
-      "conveningTimeout": "Deliberation did not finish within 10 minutes — check the session history."
+      "conveningTimeout": "Deliberation did not finish within 10 minutes — check the session history.",
+      "progress": {
+        "detailCount": "({count} statements)",
+        "detailFull": "(round {round}/{roundCount}, statement {count}/{budget})",
+        "elapsedMinutes": "{minutes}m {seconds}s elapsed",
+        "elapsedSeconds": "{seconds}s elapsed",
+        "failedCode": "Error code {code}",
+        "failedKept": "The {count} statements finished so far are kept below.",
+        "failedPlace": "Stopped at — {place}",
+        "failedRound": "Round {round}",
+        "failedTitle": "The meeting stopped partway",
+        "liveLabel": "Meeting progress",
+        "positionConfidence": "Confidence {value}",
+        "positionSummary": "{seat} · round {round}",
+        "positionsEmpty": "No statements finished yet.",
+        "positionsTitle": "{count} finished statements (select to expand)",
+        "state": {
+          "current": "In progress",
+          "done": "Done",
+          "failed": "Stopped",
+          "skipped": "Skipped",
+          "todo": "Remaining"
+        },
+        "status": {
+          "agenda": "The chair is organizing the agenda…",
+          "consensus": "The chair is gathering member views into a proposal…",
+          "discussion": "{seat} is speaking…",
+          "discussionAnon": "Collecting member statements…",
+          "done": "The meeting has finished.",
+          "minutes": "The chair is writing the minutes…",
+          "starting": "Starting the meeting…"
+        },
+        "step": {
+          "agenda": "Agenda",
+          "consensus": "Consensus",
+          "discussion": "Discussion",
+          "minutes": "Minutes"
+        },
+        "stepsLabel": "Meeting progress steps"
+      },
+      "seat": {
+        "brownfield-agent": "M&A seat",
+        "financing-agent": "Financing seat",
+        "greenfield-agent": "New-build seat",
+        "group-review-agent": "Group review seat",
+        "hr-integration-agent": "HR and labor seat",
+        "industry-lead": "Industry seat",
+        "ip-agent": "IP seat",
+        "ir-agent": "Investor relations seat",
+        "legal-counsel": "Legal seat",
+        "market-intelligence-agent": "Market analysis seat",
+        "region-lead": "Region seat",
+        "risk-officer": "Risk review seat",
+        "site-facility-agent": "Site and facility seat",
+        "valuation-agent": "Valuation seat"
+      }
     },
     "committeeMinutes": {
       "actionItems": "Action items",

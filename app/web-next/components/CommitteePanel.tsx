@@ -8,7 +8,7 @@
 // the proposal pre-filled, override allowed) plus the 0066
 // gate_evaluation_id provenance link — in agent_team mode the panel stops at
 // PROPOSED: the confirming click is always human (design boundary #2).
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness } from "../lib/project-write-access.ts";
@@ -17,6 +17,15 @@ import { useTranslations } from "next-intl";
 import { DECISION_MODE_LABEL_KEY, GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { formatDateTime } from "../lib/format.ts";
 import { MinutesDialog } from "./CommitteeMinutesView.tsx";
+import { CommitteeProgressView } from "./CommitteeProgress.tsx";
+import type { LivePosition, MeetingProgress } from "../lib/committee-progress.ts";
+import {
+  CONVENING_DEADLINE_MS,
+  CONVENING_POLL_MS,
+  pickResumableSession,
+  POSITION_META_RE,
+  stripPositionMeta,
+} from "../lib/committee-progress-view.ts";
 
 interface SessionPosition {
   positionId: string;
@@ -51,7 +60,6 @@ const REC_LABEL: Record<string, string> = { go: "GO", hold: "HOLD", kill: "KILL"
 // position-meta marker — the verbatim footnote appended to every position
 // (agent and human alike). Parsed here for the per-seat scorecard table
 // (ADR-0104): recommendation / veto / confidence / 5-criteria scores.
-const POSITION_META_RE = /<!--position-meta:(\{[\s\S]*?\})-->/;
 interface PositionMeta {
   recommendation?: string;
   veto_dissent?: boolean;
@@ -70,9 +78,7 @@ function parsePositionMeta(positionMd: string): PositionMeta {
 }
 // 입장 원문 표시용 — <!--position-meta:{...}-->는 저장 형식일 뿐, 검토자가
 // 읽을 이유가 없는 raw JSON이다. 항상 걷어내고 본문만 보여준다.
-function stripMeta(positionMd: string): string {
-  return positionMd.replace(POSITION_META_RE, "").trim();
-}
+const stripMeta = stripPositionMeta;
 
 // 좌석 점수 집계 — 의장 종합 카드의 "근거" 문구용. 5criteria 점수가 있는
 // 좌석들의 평균을 다시 평균해 하나의 요약 숫자로 낸다 (없으면 "표 없음").
@@ -125,6 +131,14 @@ export function CommitteePanel({
     Array<{ sessionId: string; meta: SessionTranscript["meta"]; status: string; startedAt: string }>
   >([]);
   const [minutesOpen, setMinutesOpen] = useState(false);
+  // Live progress of the session being convened (poll payload: progress +
+  // the positions finished so far). Kept after a failure so the stop location
+  // and the kept statements stay on screen; cleared on a new convene / success.
+  const [live, setLive] = useState<{
+    progress: MeetingProgress;
+    positions: LivePosition[];
+    failureMessage?: string;
+  } | null>(null);
   const [transcript, setTranscript] = useState<SessionTranscript | null>(null);
   // 아코디언 — 펼친 세션(소집 이력 행)의 id. 새로 소집한 세션은 자동 펼침.
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
@@ -148,8 +162,17 @@ export function CommitteePanel({
     missing: "",
   });
 
-  const loadSessions = useCallback(() => {
-    api
+  // The ONE convening poll: at most one watch runs; unmount (or switching
+  // deal) cancels it and clears its timer.
+  const watchRef = useRef<{ cancelled: boolean; timer: ReturnType<typeof setTimeout> | null; wake: () => void } | null>(
+    null,
+  );
+  const conveningRef = useRef(false); // a convene click is in flight (POST or watch)
+
+  const loadSessions = useCallback((): Promise<
+    Array<{ sessionId: string; startedAt: string; convening?: boolean; progress?: MeetingProgress | null }>
+  > => {
+    return api
       .get<{
         sessions: Array<{
           sessionId: string;
@@ -158,10 +181,17 @@ export function CommitteePanel({
           startedAt: string;
           convening?: boolean;
           conveningError?: string | null;
+          progress?: MeetingProgress | null;
         }>;
       }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`)
-      .then((r) => setSessions(r.data.sessions))
-      .catch(() => setSessions([]));
+      .then((r) => {
+        setSessions(r.data.sessions);
+        return r.data.sessions;
+      })
+      .catch(() => {
+        setSessions([]);
+        return [];
+      });
   }, [opportunityId]);
 
   const loadTranscript = useCallback(
@@ -176,13 +206,39 @@ export function CommitteePanel({
     [opportunityId],
   );
 
+  // Load the history; if a session is still convening (reload / navigation
+  // mid-meeting), bring its live view back with the same poll the convene
+  // click uses. The deadline counts from the session's start, not from mount.
+  // Cleanup (unmount / deal switch) cancels the poll and clears its timer.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: watchConvening only touches refs and stable setters; the resume runs once per deal
   useEffect(() => {
-    loadSessions();
+    let alive = true;
+    void loadSessions().then(async (list) => {
+      if (!alive || watchRef.current || conveningRef.current) return;
+      const target = pickResumableSession(list, Date.now());
+      if (!target) return;
+      setBusy(true);
+      try {
+        await watchConvening(target.sessionId, target.startedAtMs, true);
+      } finally {
+        setBusy(false);
+      }
+    });
+    return () => {
+      alive = false;
+      const w = watchRef.current;
+      if (w) {
+        w.cancelled = true;
+        if (w.timer) clearTimeout(w.timer);
+        w.wake();
+      }
+    };
   }, [loadSessions]);
 
   // Post-convene refresh — the same follow-up the synchronous path always did
   // (history row refresh + auto-expand + transcript load).
   function finalizeConvene(sessionId: string) {
+    setLive(null); // the finished transcript takes over from the live view
     setNotice(`위원회 세션이 소집되었습니다 (${sessionId.slice(-6)}).`);
     loadSessions();
     loadTranscript(sessionId);
@@ -190,11 +246,84 @@ export function CommitteePanel({
     setHistoryOpen(true); // 방금 소집한 행을 바로 보여준다
   }
 
+  // Poll the session list until the session leaves the convening state (done or
+  // failed), feeding the live progress view each time (stepper, status line,
+  // finished positions), then apply the outcome. The deadline (~10 minutes) is
+  // measured from `startedAtMs`, so a resumed watch keeps the original budget.
+  // `immediate` polls once right away (resume) instead of waiting one interval.
+  async function watchConvening(sessionId: string, startedAtMs: number, immediate: boolean): Promise<void> {
+    if (watchRef.current) return; // one poll timer at a time
+    const token = { cancelled: false, timer: null as ReturnType<typeof setTimeout> | null, wake: () => {} };
+    watchRef.current = token;
+    const progressNotice = tr("common.committee.conveningProgress");
+    setNotice(progressNotice);
+    const deadline = startedAtMs + CONVENING_DEADLINE_MS;
+    let settled: { ok: boolean; error?: string } | null = null;
+    let stopLocated = false; // the failed run reported where it stopped
+    try {
+      let waitFirst = !immediate;
+      for (;;) {
+        if (waitFirst) {
+          await new Promise<void>((resolve) => {
+            token.wake = resolve;
+            token.timer = setTimeout(resolve, CONVENING_POLL_MS);
+          });
+          token.timer = null;
+        }
+        waitFirst = true;
+        if (token.cancelled) return;
+        try {
+          const list = await api.get<{
+            sessions: Array<{
+              sessionId: string;
+              convening?: boolean;
+              conveningError?: string | null;
+              progress?: MeetingProgress | null;
+              positions?: LivePosition[];
+            }>;
+          }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`);
+          if (token.cancelled) return;
+          const s = list.data.sessions.find((x) => x.sessionId === sessionId);
+          if (s?.progress) {
+            const progress = s.progress;
+            stopLocated = progress.phase === "failed" && !!progress.failed_at;
+            setLive({ progress, positions: s.positions ?? [] });
+            // the live view replaces the generic "in progress" line
+            setNotice((prev) => (prev === progressNotice ? null : prev));
+          }
+          if (s && !s.convening) {
+            settled = s.conveningError ? { ok: false, error: s.conveningError } : { ok: true };
+            break;
+          }
+        } catch {
+          // transient poll failure — keep polling until the deadline
+        }
+        if (Date.now() >= deadline) break;
+      }
+    } finally {
+      if (watchRef.current === token) watchRef.current = null;
+    }
+    if (token.cancelled) return;
+    if (settled?.ok) {
+      finalizeConvene(sessionId);
+    } else if (settled && !settled.ok) {
+      const message = settled.error ?? tr("common.committee.conveneFailed");
+      // With a stop location the live view shows it next to the message in
+      // ONE role="alert"; otherwise (older session, no progress) the plain error.
+      if (stopLocated) setLive((prev) => (prev ? { ...prev, failureMessage: message } : prev));
+      else setError(message);
+    } else {
+      setError(tr("common.committee.conveningTimeout"));
+    }
+  }
+
   async function convene() {
     if (busy) return;
+    conveningRef.current = true;
     setBusy(true);
     setError(null);
     setNotice(null);
+    setLive(null);
     try {
       let effectiveBrief = briefMd;
       if (beforeConvene) {
@@ -214,40 +343,16 @@ export function CommitteePanel({
       );
       if (r.data.status === "convening") {
         // Async convene contract (202): the deliberation runs server-side in
-        // the background — poll the session list until it leaves the convening
-        // state (done or failed), then run the same refresh the synchronous
-        // path did. Hard stop after ~10 minutes.
-        setNotice(tr("common.committee.conveningProgress"));
-        const deadline = Date.now() + 10 * 60 * 1000;
-        let settled: { ok: boolean; error?: string } | null = null;
-        while (Date.now() < deadline) {
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-          try {
-            const list = await api.get<{
-              sessions: Array<{ sessionId: string; convening?: boolean; conveningError?: string | null }>;
-            }>(`/api/opportunities/${encodeURIComponent(opportunityId)}/committee-sessions`);
-            const s = list.data.sessions.find((x) => x.sessionId === r.data.sessionId);
-            if (s && !s.convening) {
-              settled = s.conveningError ? { ok: false, error: s.conveningError } : { ok: true };
-              break;
-            }
-          } catch {
-            // transient poll failure — keep polling until the deadline
-          }
-        }
-        if (settled?.ok) {
-          finalizeConvene(r.data.sessionId);
-        } else if (settled && !settled.ok) {
-          setError(settled.error ?? tr("common.committee.conveneFailed"));
-        } else {
-          setError(tr("common.committee.conveningTimeout"));
-        }
+        // the background — watch it (poll + live view) until it leaves the
+        // convening state, then run the same refresh the synchronous path did.
+        await watchConvening(r.data.sessionId, Date.now(), false);
       } else {
         finalizeConvene(r.data.sessionId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "위원회 소집 실패");
     } finally {
+      conveningRef.current = false;
       setBusy(false);
     }
   }
@@ -410,6 +515,15 @@ export function CommitteePanel({
             </button>
           )}
         </div>
+      )}
+
+      {/* 소집 중 실시간 진행(단계 표시·현재 발언자·끝난 발언) 또는 멈춘 곳 */}
+      {live && (
+        <CommitteeProgressView
+          progress={live.progress}
+          positions={live.positions}
+          failureMessage={live.failureMessage}
+        />
       )}
 
       {/* 위원회 소집 이력 — 기본 접힘(사용자 요청, 2026-09-17: 이력은 필요할 때만
