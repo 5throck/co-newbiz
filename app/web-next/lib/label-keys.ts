@@ -46,10 +46,19 @@ export const COMMITTEE_SEAT_LABEL_KEY: Record<string, string> = {
   "ir-agent": "common.committee.seat.ir-agent",
   "legal-counsel": "common.committee.seat.legal-counsel",
   "market-intelligence-agent": "common.committee.seat.market-intelligence-agent",
+  "process-governance-manager": "common.committee.seat.process-governance-manager",
   "region-lead": "common.committee.seat.region-lead",
   "risk-officer": "common.committee.seat.risk-officer",
   "site-facility-agent": "common.committee.seat.site-facility-agent",
   "valuation-agent": "common.committee.seat.valuation-agent",
+};
+
+/** Committee display names — registry committee key -> `common.committee.name.*`. Unknown keys read as words (committeeKeyLabel). */
+export const COMMITTEE_NAME_KEY: Record<string, string> = {
+  "entity-ic-committee": "common.committee.name.entity-ic-committee",
+  "group-ic-committee": "common.committee.name.group-ic-committee",
+  "route-steering-committee": "common.committee.name.route-steering-committee",
+  "target-longlist-shortlist-committee": "common.committee.name.target-longlist-shortlist-committee",
 };
 
 /** Stage status display names — status id -> `common.*` (reuses common.done / common.inProgress where the wording matches). */

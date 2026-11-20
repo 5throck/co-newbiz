@@ -15,6 +15,7 @@ import { ReviewBuckets } from "../../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../../lib/review/stage-artifact-labels.ts";
 import { Tabs, PrimaryAction } from "../../ui.tsx";
 import { CommitteePanel } from "../../CommitteePanel.tsx";
+import { ROUTE_STEERING_COMMITTEE_KEY } from "./constants.ts";
 import { useRouteDecision } from "./useRouteDecision.ts";
 import { FactGrid } from "./FactGrid.tsx";
 import { DecisionTab } from "./DecisionTab.tsx";
@@ -179,7 +180,7 @@ export function RouteDecisionStage(props0: {
         <div className="card">
           <CommitteePanel
             opportunityId={selected.id}
-            committeeKey="route-steering-committee"
+            committeeKey={ROUTE_STEERING_COMMITTEE_KEY}
             committeeLabel={t("s4RouteSteeringCommittee")}
             gates={["pre_fs"]}
           />

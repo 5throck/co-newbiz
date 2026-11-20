@@ -6,6 +6,8 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-21]**: fix(committee): minutes window, history rows with time, dialogue fallback excerpts, resumed duration, CLI minutes v2, dialogue-form meeting skill, and docs (ADR-0204 follow-up)
+
 - **[2026-11-20]**: feat(committee): per-issue participants, seat display names, challenge turns, orphan recovery, optional meeting window, and dialogue minutes v2 (ADR-0204 phases 2.1+3)
 
 - **[2026-11-20]**: feat(committee): turn-based meeting engine behind CO_NEWBIZ_COMMITTEE_ENGINE (default rounds) with live turn transcript, human-floor hybrid turns, resume, and openapi docs (ADR-0204 phase 2)

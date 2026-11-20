@@ -1431,6 +1431,7 @@
         "ir-agent": "Investor relations seat",
         "legal-counsel": "Legal seat",
         "market-intelligence-agent": "Market analysis seat",
+        "process-governance-manager": "Process governance seat",
         "region-lead": "Region seat",
         "risk-officer": "Risk review seat",
         "site-facility-agent": "Site and facility seat",
@@ -1505,9 +1506,8 @@
           "unresolved": "Unresolved"
         },
         "participants": {
-          "listLabel": "Participants in this issue",
-          "noReason": "No reason given",
-          "summary": "Participants ({count})"
+          "summary": "Participants ({count})",
+          "reasons": "Why they were selected"
         },
         "passOnBehalf": "The chair passed the turn of the {seat}.",
         "reason": {
@@ -1565,7 +1565,13 @@
           "proposed": "Proposed",
           "inProgress": "In progress",
           "durationSeconds": "{seconds}s",
-          "durationMinutesSeconds": "{minutes}m {seconds}s"
+          "durationMinutesSeconds": "{minutes}m {seconds}s",
+          "proposalLine": "{committee} — {rec} proposed (gate: {gate}, chair: {chair})",
+          "basisLine": "Basis: {scores} · {dissent} — the decision is recorded by a person",
+          "scoreAverage": "Seat score average {avg}/3.0",
+          "scoreNone": "No seat score table",
+          "dissentCount": "{count, plural, one {# dissent} other {# dissents}} reflected",
+          "dissentNone": "0 dissents"
         }
       },
       "minutesV2": {
@@ -1578,11 +1584,10 @@
         "recorder": "Recorder",
         "notParticipating": "Not participating",
         "issues": "Discussion by issue",
-        "participants": "Participants",
         "satOut": "Not participating",
         "keyQuotes": "Key quotes (chair-selected exchanges, verbatim)",
         "quoteRepaired": "Quote auto-repaired",
-        "fallbackNote": "The chair did not select this issue — shown with the consensus proposal and the close record. See the Full transcript tab for every statement.",
+        "fallbackNote": "The chair did not select this issue — the questions and answers shown were picked by a fixed rule. See the Full transcript tab for every statement.",
         "consensus": "Consensus proposal (chair)",
         "tally": "Vote: accept {accept} · reserve {reserve} · abstain {abstain} · not participating {absent}",
         "voteRec": " (rec. {rec})",
@@ -1595,6 +1600,12 @@
         "openItems": "Open items",
         "noOpenItems": "None",
         "owner": "Owner: {name}"
+      },
+      "name": {
+        "entity-ic-committee": "Entity investment committee",
+        "group-ic-committee": "Group investment committee",
+        "route-steering-committee": "S4 route steering committee",
+        "target-longlist-shortlist-committee": "S6/S7 Final Candidate List review committee"
       }
     },
     "committeeMinutes": {

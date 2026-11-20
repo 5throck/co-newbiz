@@ -53,7 +53,19 @@ A Kill Criteria hit halts the project. It is not advisory. See `policies/group/n
 
 Per meeting M5, the six mandatory validators resolve in this order when you're assembling the valuation: (1) antitrust + HR integration cash-flow-schedule effects, (2) customer retention + incentive revenue/cost build, (3) certification transferability **last**, since a non-transferable certification can strip the entire acquisition premium and must not be computed against a valuation that already assumed it.
 
-## 7. Related Screens
+## 7. Committee Meetings (Dialogue Form)
+
+Committee deliberation runs as a **turn-based dialogue meeting** between AI seats (ADR-0204). It is not a meeting of people, and its output (a `proposal`) is not a decision. Gate approval and the investment decision stay with humans.
+
+- **Enabling**: the dialogue engine runs where the operator sets `CO_NEWBIZ_COMMITTEE_ENGINE=turns`. Until it is switched on, the production default is still the earlier round engine (one position paper per seat per round). A history row shows a "대화형" (dialogue) badge for dialogue meetings.
+- **Attendance and voting**: for each agenda issue the chair picks 3-5 seats and records a reason for each. Seats with veto or mandatory-review authority (the risk seat) are always included. Seats address each other by display name and ask, answer, and rebut. Only that issue's participants vote on the consensus proposal; a seat that did not take part is shown as "불참" (absent) and is never counted as agreement.
+- **Following progress**: after you convene, the page shows a one-line status (issue i/n, the current speaker, turn count, elapsed time). The meeting window opens only when you click "회의 보기" (view meeting). It follows the newest turn; when you scroll up it pauses and offers "최신 발언으로 (새 발언 N건)" (jump to latest, N new turns). Closing the window does not stop the meeting.
+- **Human seats**: in a hybrid meeting ("라운드별 인간 입장 포함"), a human turn shows "내 차례" (your turn) with a countdown: 3 minutes per turn and 20 minutes per meeting. A turn that times out is recorded as no response. Submitting a turn needs analyst permission or above.
+- **Interrupted meetings**: if a meeting stops (for example a server restart) the page shows "회의 진행이 도중에 끊겼습니다" with "멈춘 안건부터 다시 시작" (restart from the stopped issue). The minutes of a resumed meeting note "N번에 나눠 진행" (held in N sittings).
+- **Minutes**: a finished meeting opens through a single "회의록 보기" (view minutes) button, with "회의록" (minutes) and "전체 발언" (full transcript) tabs. The minutes list each issue's attendees and selection reasons, key exchanges quoted verbatim, the consensus proposal, the vote tally including absent seats, seat recommendations, dissent verbatim, open items, and appendices (full transcript, interrupted attempts); a `.md` download is available. A person with analyst permission or above confirms the minutes. Meetings held before the dialogue engine keep the earlier minutes format.
+- For screen-level reading steps see the in-app guide page "S4 진출방식 결정", sections "위원회 회의 진행 보기" and "위원회 회의록 읽기".
+
+## 8. Related Screens
 
 - `/flows` — stage-flow visualization with a dry-run lane (ADR-0183).
 - UI language switch — ko/en message catalogs behind cookie-based locale negotiation (ADR-0184).

@@ -14,8 +14,8 @@
 //                              used and the repair is counted), anything else is
 //                              rejected and counted — never silently dropped;
 //   * assembleMinutesV2      — the stored v2 JSON; issues the model did not cover get
-//                              the deterministic excerpt (consensus proposal + close
-//                              row) and are recorded as fallback;
+//                              the deterministic excerpt (real challenge/answer exchanges
+//                              from the speech turns) and are recorded as fallback;
 //   * verifyMinutesV2        — re-checks every reference and quote against the rows;
 //   * buildMinutesAppendix   — appendix A (full transcript, non-abandoned, seq order)
 //                              and B (abandoned attempts), deterministic;
@@ -24,6 +24,7 @@
 // The chair has NO write path to the recommendation or to dissent: the schema has
 // no field for either (ADR-0096 §6, ADR-0204).
 import type { AgendaIssue } from "./deliberation.ts";
+import { formatDateTimeHm } from "./format.ts";
 import {
   committeeMinutesV2Schema,
   MINUTES_V2_VERSION,
@@ -371,13 +372,66 @@ export function resolveMinutesV2Selection(
 
 // ── Assembly ───────────────────────────────────────────────────────────────
 
-/** Deterministic excerpt: the consensus proposal and the close row (verbatim); with neither, the last two speech turns. */
-export function fallbackExcerpt(f: IssueFacts, name: SeatNamer = seatDisplayName): MinutesV2Excerpt[] {
-  const chairRows = [f.consensus, f.close].filter(
-    (r): r is TurnRecord => r !== undefined && collapse(r.utterance) !== "",
+/** Longest utterance shown whole in a deterministic excerpt; longer ones are cut to the first sentence. */
+const FALLBACK_QUOTE_MAX = 200;
+const MAX_FALLBACK_PAIRS = 2;
+const VETO_SEAT = "risk-officer";
+const ANSWER_MOVES = new Set(["answer", "concede", "rebut", "amend"]);
+
+/** Whole utterance when short; otherwise its first sentence (verbatim — verbatimQuote adds the "…" mark). */
+function fallbackQuote(utterance: string): string | undefined {
+  const whole = collapse(utterance);
+  if (whole.length <= FALLBACK_QUOTE_MAX) return undefined;
+  const first = whole.match(/^(.+?[.!?。])(?:\s|$)/)?.[1];
+  if (first && first.length <= FALLBACK_QUOTE_MAX) return first;
+  return whole.slice(0, FALLBACK_QUOTE_MAX).trim();
+}
+
+/** The reply to a challenge: the turn that responds to it, else the addressee's next answering move. */
+function answerTo(ask: TurnRecord, pool: readonly TurnRecord[]): TurnRecord | undefined {
+  const later = pool.filter((r) => r.seq > ask.seq);
+  return (
+    later.find((r) => r.respondsToTurn === ask.id && r.id !== ask.id) ??
+    later.find((r) => r.speaker === ask.addressedTo && ANSWER_MOVES.has(r.move))
   );
-  const rows = chairRows.length > 0 ? chairRows : f.speech.slice(-2);
-  return rows.map((r) => toExcerpt(r, verbatimQuote(r.utterance, undefined), name));
+}
+
+/**
+ * Deterministic excerpt (no chair model): real exchanges from the issue's live speech turns.
+ * Prefers challenge pairs (ask/rebut + its answer) — first the pair involving the veto seat
+ * (risk-officer), then the pair closest before the consensus proposal; up to two pairs. With no
+ * pair: the opening proposal and the last speech turn. The consensus proposal and the close row are
+ * NOT part of it (they are rendered as the consensus and the vote). Quotes are verbatim.
+ */
+export function fallbackExcerpt(f: IssueFacts, name: SeatNamer = seatDisplayName): MinutesV2Excerpt[] {
+  const pool = f.consensus ? f.speech.filter((r) => r.seq < (f.consensus as TurnRecord).seq) : f.speech;
+  const pairs: Array<[TurnRecord, TurnRecord]> = [];
+  for (const r of pool) {
+    if ((r.move !== "ask" && r.move !== "rebut") || !r.addressedTo) continue;
+    const a = answerTo(r, pool);
+    if (a) pairs.push([r, a]);
+  }
+  let picked: TurnRecord[] = [];
+  if (pairs.length > 0) {
+    const chosen: Array<[TurnRecord, TurnRecord]> = [];
+    const overlaps = (p: [TurnRecord, TurnRecord]) => chosen.some((c) => c.some((t) => p.includes(t)));
+    const veto = pairs.find((p) => p.some((t) => t.speaker === VETO_SEAT));
+    if (veto) chosen.push(veto);
+    for (const p of [...pairs].reverse()) {
+      if (chosen.length >= MAX_FALLBACK_PAIRS) break;
+      if (!overlaps(p)) chosen.push(p);
+    }
+    picked = chosen.flat();
+  } else if (pool.length > 0) {
+    const opening = pool.find((r) => r.move === "propose") ?? pool[0];
+    const last = pool[pool.length - 1];
+    picked = last.id === opening.id ? [opening] : [opening, last];
+  }
+  const seen = new Set<string>();
+  return picked
+    .filter((r) => !seen.has(r.id) && seen.add(r.id))
+    .sort(bySeq)
+    .map((r) => toExcerpt(r, verbatimQuote(r.utterance, fallbackQuote(r.utterance)), name));
 }
 
 function deterministicOpenItems(
@@ -612,6 +666,12 @@ export function buildMinutesAppendix(
 
 // ── Markdown pieces ────────────────────────────────────────────────────────
 
+/** A stored UTC instant as Korea time for server-rendered text: "2026. 11. 20. 21:25 (KST)". Unparseable input is kept as-is. */
+export function formatKst(iso: string): string {
+  const out = formatDateTimeHm(iso, "ko", "Asia/Seoul");
+  return out === iso ? iso : `${out} (KST)`;
+}
+
 /** Header block: the code-rendered notice and, when restarted, the sittings line. */
 export function minutesV2HeaderLines(json: CommitteeMinutesV2Json): string[] {
   const lines = [`> ${MINUTES_V2_HEADER}`];
@@ -625,14 +685,20 @@ export function minutesV2AttendeeLines(json: CommitteeMinutesV2Json): string[] {
   const absent = new Set(ov.not_participating.map((s) => s.seat));
   const lines = ["## 참석 위원", ""];
   lines.push(`- 의장(기록자): ${CHAIR_DISPLAY_NAME}`);
-  for (const s of ov.seats)
-    lines.push(`- ${s.name}${absent.has(s.seat) ? " — 어느 안건에도 참여하지 않음 (불참, 동의로 세지 않음)" : ""}`);
+  // One line per group, comma-separated (never a line per seat); the absent seats get their own line.
+  const attending = ov.seats.filter((s) => !absent.has(s.seat));
+  const sitOut = ov.seats.filter((s) => absent.has(s.seat));
+  if (attending.length > 0) lines.push(`- 참석 위원 ${attending.length}명: ${attending.map((s) => s.name).join(", ")}`);
+  if (sitOut.length > 0)
+    lines.push(
+      `- 불참 ${sitOut.length}명: ${sitOut.map((s) => s.name).join(", ")} (어느 안건에도 참여하지 않음, 동의로 세지 않음)`,
+    );
   for (const h of ov.human_participants) lines.push(`- 사람 참석: ${h.user_id} (${h.seat})`);
   if (ov.sittings.length > 1) {
     lines.push("", "진행 회차:");
     for (const s of ov.sittings) {
       lines.push(
-        `- ${s.attempt}차${s.started_at ? ` (${s.started_at}${s.ended_at ? ` ~ ${s.ended_at}` : ""})` : ""}${s.closed_issue_ids.length > 0 ? ` — 마친 안건: ${s.closed_issue_ids.join(", ")}` : ""}`,
+        `- ${s.attempt}차${s.started_at ? ` (${formatKst(s.started_at)}${s.ended_at ? ` ~ ${formatKst(s.ended_at)}` : ""})` : ""}${s.closed_issue_ids.length > 0 ? ` — 마친 안건: ${s.closed_issue_ids.join(", ")}` : ""}`,
       );
     }
   }
@@ -651,16 +717,19 @@ export function minutesV2IssueLines(json: CommitteeMinutesV2Json): string[] {
   for (const issue of json.issues) {
     lines.push(`### ${issue.issue_id}: ${issue.title}`, "");
     if (issue.participants.length > 0) {
-      lines.push(
-        `- 참여 위원: ${issue.participants.map((p) => (p.reason ? `${p.name} (${p.reason})` : p.name)).join("; ")}`,
-      );
+      lines.push(`- 참석 위원 ${issue.participants.length}명: ${issue.participants.map((p) => p.name).join(", ")}`);
+      const reasons = issue.participants.filter((p) => p.reason);
+      if (reasons.length > 0) lines.push(`- 선정 이유: ${reasons.map((p) => `${p.name} — ${p.reason}`).join("; ")}`);
     }
     if (issue.guests.length > 0) lines.push(`- 발언권을 받은 위원: ${issue.guests.map((g) => g.name).join(", ")}`);
     if (issue.sat_out.length > 0)
       lines.push(`- 불참: ${issue.sat_out.map((s) => s.name).join(", ")} (동의로 세지 않음)`);
     lines.push("", "**핵심 발언** (의장이 고른 교환, 원문 인용)", "");
     if (issue.excerpt_source === "fallback") {
-      lines.push("> 의장 선택을 받지 못해 합의안과 마침 기록으로 대신했습니다. 전체 발언은 부록 A를 보세요.", "");
+      lines.push(
+        "> 의장 선택을 받지 못해, 오간 질문과 답변 가운데 규칙에 따라 골랐습니다. 전체 발언은 부록 A를 보세요.",
+        "",
+      );
     }
     for (const e of issue.excerpt) {
       const to = e.addressed_name ? ` → ${e.addressed_name}` : "";

@@ -570,9 +570,11 @@ export async function runChairMinutesV2(opts: {
   name?: SeatNamer;
   /** Test seam: replaces the LLM call (the real caller is used only when the chair LLM is configured). */
   call?: (material: string) => Promise<string>;
+  /** Explicit deterministic run (CLI --deterministic): never reach the chair LLM even when one is configured. */
+  deterministic?: boolean;
 }): Promise<MinutesPassResult> {
   const createdAt = new Date().toISOString();
-  const configured = llmModel();
+  const configured = opts.deterministic ? undefined : llmModel();
   const model = configured ?? (opts.call ? "injected" : undefined);
   const input: MinutesV2Input = {
     agenda: opts.agenda,
