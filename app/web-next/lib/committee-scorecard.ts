@@ -14,6 +14,17 @@ import {
   type CommitteeTranscript,
 } from "./committee-session.ts";
 import type { MinutesDraft } from "./committee-chair.ts";
+import { isMinutesV2, type CommitteeMinutesJson, type CommitteeMinutesV2Json } from "./committee-minutes-schema.ts";
+import {
+  buildMinutesAppendix,
+  minutesAppendixLines,
+  minutesV2AttendeeLines,
+  minutesV2HeaderLines,
+  minutesV2IssueLines,
+  minutesV2OpenItemLines,
+  type MinutesAppendix,
+} from "./committee-minutes-v2.ts";
+import { loadTurnRecords } from "./committee-turns.ts";
 
 export const CRITERIA = [
   "control_need",
@@ -134,6 +145,51 @@ function storedMeta(db: Database, sessionId: string): StoredMeta {
   return row?.meta_json ? (JSON.parse(row.meta_json) as StoredMeta) : {};
 }
 
+/** The sitting a turn session is on now: the highest attempt seen in meta or in any stored turn. */
+function currentAttemptOf(t: CommitteeTranscript, records: ReadonlyArray<{ attempt: number }>): number {
+  return Math.max(1, ...(t.meta.attempts ?? []).map((a) => a.attempt), ...records.map((r) => r.attempt));
+}
+
+function minutesAppendixOf(t: CommitteeTranscript): MinutesAppendix {
+  const records = loadTurnRecords(t.sessionId);
+  return buildMinutesAppendix(records, currentAttemptOf(t, records));
+}
+
+/** Preserved dissent — VERBATIM from dissent_json (ADR-0096 §6), identical for v1 and v2 minutes. */
+function dissentLines(t: CommitteeTranscript): string[] {
+  const lines: string[] = [];
+  lines.push("## 보존된 이의 (dissent)");
+  lines.push("");
+  if (t.evaluation?.dissentJson) {
+    try {
+      const dissents = JSON.parse(t.evaluation.dissentJson) as Array<{ member_key: string; position_md: string }>;
+      for (const d of dissents) lines.push(`### ${d.member_key}`, "", d.position_md, "");
+    } catch {
+      lines.push(`- ${t.evaluation.dissentJson}`);
+    }
+  } else {
+    lines.push("- 이의 기록 없음");
+  }
+  return lines;
+}
+
+/** Proposed recommendation — from gate_evaluation, labelled a proposal (v1 and v2). */
+function recommendationLines(t: CommitteeTranscript, scorecard: CommitteeScorecard): string[] {
+  const lines: string[] = [];
+  if (t.evaluation) {
+    lines.push("## 제안 권고 (proposal, not a decision)");
+    lines.push("");
+    lines.push(
+      `- 권고: **${t.evaluation.recommendation}** · 진행: ${t.evaluation.gate} · 평가자: ${t.evaluation.evaluatedBy}`,
+    );
+    lines.push(
+      `- 권고 분포: ${JSON.stringify(scorecard.aggregate.recommendations)} · veto ${scorecard.aggregate.vetoes}건`,
+    );
+    lines.push("");
+  }
+  return lines;
+}
+
 /**
  * The structured minutes payload for ?format=json (ADR-0196 phase B): the
  * stored agenda and AI-drafted draft plus the deterministic record around
@@ -155,6 +211,13 @@ export function buildCommitteeMinutesJson(db: Database, sessionId: string) {
     agenda: t.agenda,
     agendaMeta: t.agendaMeta,
     minutesDraft: t.minutesDraft,
+    // The UI branches on this: 2 = turn-meeting minutes (dialogue excerpt + appendix), 1 = round-engine
+    // minutes (or a turn session whose stored draft predates v2), null = no draft stored.
+    minutesVersion: t.minutesDraft ? (isMinutesV2(t.minutesDraft.json) ? 2 : 1) : null,
+    engine: t.engine,
+    // Appendix A (every non-abandoned turn, seq order) and B (abandoned attempts) — rebuilt from the
+    // stored turns on every read, never model text. null for round-engine sessions.
+    appendix: t.engine === "turns" ? minutesAppendixOf(t) : null,
     minutesConfirmed: meta.minutes_confirmed_by
       ? { by: meta.minutes_confirmed_by, at: meta.minutes_confirmed_at ?? "" }
       : null,
@@ -188,6 +251,9 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   const scorecard = buildCommitteeScorecard(t);
   const meta = storedMeta(db, sessionId);
   const draft = t.minutesDraft;
+  // Turn-engine minutes (v2): dialogue excerpt in the body, full transcript in the appendix.
+  if (draft && isMinutesV2(draft.json)) return buildMinutesV2Markdown(t, draft, draft.json, meta, scorecard);
+  const v1: CommitteeMinutesJson | null = draft && !isMinutesV2(draft.json) ? draft.json : null;
   const lines: string[] = [];
 
   // 1. Header + disclaimer.
@@ -237,8 +303,8 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   // 4. Discussion by issue (AI-drafted, ref-checked at generation time).
   lines.push("## 쟁점별 논의");
   lines.push("");
-  if (draft) {
-    for (const d of draft.json.discussion) {
+  if (v1) {
+    for (const d of v1.discussion) {
       const title = t.agenda?.find((a) => a.id === d.issue_id)?.title ?? d.issue_id;
       lines.push(`### ${d.issue_id}: ${title}`);
       lines.push("");
@@ -259,26 +325,15 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   // 5. Points of agreement.
   lines.push("## 합의 사항");
   lines.push("");
-  if (draft && draft.json.agreements.length > 0) {
-    for (const a of draft.json.agreements) lines.push(`- ${a.text} (${a.seats.join(", ")})`);
+  if (v1 && v1.agreements.length > 0) {
+    for (const a of v1.agreements) lines.push(`- ${a.text} (${a.seats.join(", ")})`);
   } else {
     lines.push("- 기록 없음");
   }
   lines.push("");
 
   // 6. Preserved dissent — VERBATIM from dissent_json (ADR-0096 §6).
-  lines.push("## 보존된 이의 (dissent)");
-  lines.push("");
-  if (t.evaluation?.dissentJson) {
-    try {
-      const dissents = JSON.parse(t.evaluation.dissentJson) as Array<{ member_key: string; position_md: string }>;
-      for (const d of dissents) lines.push(`### ${d.member_key}`, "", d.position_md, "");
-    } catch {
-      lines.push(`- ${t.evaluation.dissentJson}`);
-    }
-  } else {
-    lines.push("- 이의 기록 없음");
-  }
+  lines.push(...dissentLines(t));
 
   // 7. Stance changes across rounds (deterministic, from the tails).
   lines.push("## 라운드 간 입장 변화");
@@ -296,13 +351,13 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   // 8. Open questions and action items.
   lines.push("## 미해결 질문 및 실행 항목");
   lines.push("");
-  if (draft && (draft.json.open_questions.length > 0 || draft.json.action_items.length > 0)) {
-    for (const q of draft.json.open_questions) {
+  if (v1 && (v1.open_questions.length > 0 || v1.action_items.length > 0)) {
+    for (const q of v1.open_questions) {
       lines.push(
         `- 질문: ${q.text}${q.owner_seat ? ` (담당 seat: ${q.owner_seat})` : q.owner_role ? ` (담당 역할: ${q.owner_role})` : ""}${q.due_hint ? ` [기한 힌트: ${q.due_hint}]` : ""}`,
       );
     }
-    for (const a of draft.json.action_items) {
+    for (const a of v1.action_items) {
       lines.push(
         `- 실행: ${a.text}${a.owner_seat ? ` (담당 seat: ${a.owner_seat})` : a.owner_role ? ` (담당 역할: ${a.owner_role})` : ""}`,
       );
@@ -313,17 +368,7 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
   lines.push("");
 
   // 9. Proposed recommendation — from gate_evaluation, labelled a proposal.
-  if (t.evaluation) {
-    lines.push("## 제안 권고 (proposal, not a decision)");
-    lines.push("");
-    lines.push(
-      `- 권고: **${t.evaluation.recommendation}** · 진행: ${t.evaluation.gate} · 평가자: ${t.evaluation.evaluatedBy}`,
-    );
-    lines.push(
-      `- 권고 분포: ${JSON.stringify(scorecard.aggregate.recommendations)} · veto ${scorecard.aggregate.vetoes}건`,
-    );
-    lines.push("");
-  }
+  lines.push(...recommendationLines(t, scorecard));
 
   // 10. Appendix: seat scorecard + full verbatim positions with anchors.
   lines.push("## 부록 A — 좌석별 스코어카드");
@@ -360,6 +405,11 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
     }
   }
 
+  // A turn-engine session whose stored draft is v1 (or missing) still carries its full dialogue:
+  // the stored turns are appended verbatim, so the record never shows only the chair's summary.
+  if (t.engine === "turns")
+    lines.push(...minutesAppendixLines(minutesAppendixOf(t), { transcript: "C", abandoned: "D" }));
+
   // 11. Footer: AI-drafted label + confirmation line.
   lines.push("---");
   if (draft) {
@@ -367,6 +417,49 @@ export function buildCommitteeMinutes(db: Database, sessionId: string): string |
       `AI-drafted (chair minutes pass${draft.model ? `, ${draft.model}` : ""}${draft.fallback ? ", fallback" : ""}), verify against appendix.`,
     );
   }
+  lines.push(
+    `회의록 확정: ${meta.minutes_confirmed_by ? `${meta.minutes_confirmed_by} (${meta.minutes_confirmed_at})` : "미확정"}`,
+  );
+  return lines.join("\n");
+}
+
+/**
+ * Markdown of turn-meeting minutes (v2, ADR-0204 phase 3): code-rendered header (and the sittings
+ * line when the meeting was restarted), attendees, per-issue body with the chair-selected verbatim
+ * excerpt / consensus / vote tally / per-seat recommendation, preserved dissent (verbatim), open
+ * items, the proposed recommendation, appendix A (the full transcript) and appendix B (abandoned
+ * attempts, only when there are any).
+ */
+function buildMinutesV2Markdown(
+  t: CommitteeTranscript,
+  draft: MinutesDraft,
+  json: CommitteeMinutesV2Json,
+  meta: StoredMeta,
+  scorecard: CommitteeScorecard,
+): string {
+  const lines: string[] = [];
+  lines.push(`# 위원회 회의록 — ${t.sessionId}`);
+  lines.push("");
+  lines.push(...minutesV2HeaderLines(json));
+  lines.push("");
+  lines.push("> Decision support. The gate decision is recorded only by a human in gate_decision.");
+  lines.push("");
+  lines.push(`- 진행: ${t.meta.gate ?? "—"} · 모드: ${t.meta.decision_mode ?? "—"} · 상태: ${t.status}`);
+  if (t.meta.track) lines.push(`- 트랙: ${t.meta.track}`);
+  lines.push(`- 위원회: ${t.committee?.chair ? `chair ${t.committee.chair}, ` : ""}안건 ${json.issues.length}건`);
+  lines.push(`- 일시: ${json.overview.held_at}`);
+  lines.push("");
+  lines.push(...minutesV2AttendeeLines(json));
+  lines.push(...minutesV2IssueLines(json));
+  lines.push(...dissentLines(t));
+  lines.push("");
+  lines.push(...minutesV2OpenItemLines(json));
+  lines.push(...recommendationLines(t, scorecard));
+  lines.push(...minutesAppendixLines(minutesAppendixOf(t), { transcript: "A", abandoned: "B" }));
+  lines.push("---");
+  lines.push(
+    `AI-drafted (chair minutes pass${draft.model ? `, ${draft.model}` : ""}${draft.fallback ? ", fallback" : ""}${json.provenance.fallback_issue_ids.length > 0 && !draft.fallback ? `, 일부 안건 자동 대체: ${json.provenance.fallback_issue_ids.join(", ")}` : ""}), verify against appendix A.`,
+  );
   lines.push(
     `회의록 확정: ${meta.minutes_confirmed_by ? `${meta.minutes_confirmed_by} (${meta.minutes_confirmed_at})` : "미확정"}`,
   );

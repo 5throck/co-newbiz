@@ -149,7 +149,7 @@ describe("agent_team minutes (deterministic fallback, S2 storage)", () => {
     expect((meta.agenda as unknown[]).length).toBeGreaterThanOrEqual(1); // deterministic seats split kill/go
     const agendaMeta = meta.agenda_meta as { source: string; prompt_version: string; input_hash: string };
     expect(agendaMeta.source).toBe("fallback");
-    expect(agendaMeta.prompt_version).toBe("committee.agenda@1");
+    expect(agendaMeta.prompt_version).toBe("committee.agenda@2");
     expect(agendaMeta.input_hash).toMatch(/^[0-9a-f]{64}$/);
     const draft = meta.minutes_draft as {
       json: Record<string, unknown>;

@@ -44,6 +44,11 @@ import {
 import {
   TurnEngineError,
   callTurnFromCallAgent,
+  CONSENSUS_PROMPT_VERSION,
+  TURN_PROMPT_VERSION,
+  ensureAgendaParticipants,
+  seatDisplayName,
+  type SeatInfo,
   discussionTurnCount,
   isTurnText,
   liveRecords,
@@ -57,13 +62,17 @@ import {
   type TurnView,
   turnViews,
 } from "./committee-turns.ts";
+import { AGENT_REGISTRY } from "./agent-registry.generated.ts";
 import { committeeEngineDefault, parseCommitteeEngine, type CommitteeEngine } from "./committee-flags.ts";
 import { makeLlmTurnCaller } from "./committee-llm.ts";
 import {
+  AGENDA_PROMPT_VERSION,
   runChairAgenda,
   runChairOpeningAgenda,
   runChairMinutes,
+  runChairMinutesV2,
   minutesInputHashFor,
+  minutesV2InputHashFor,
   type ChairPositionRow,
   type AgendaMeta,
   type MinutesDraft,
@@ -144,6 +153,10 @@ export interface SessionMeta {
   attempts?: SessionAttempt[];
   /** Turn engine, hybrid: the open human floor while the meeting is paused. */
   awaiting?: MeetingAwaiting;
+  /** Turn engine: the prompt versions this meeting ran on. */
+  prompt_versions?: { agenda: string; turn: string; consensus: string };
+  /** Turn engine: seats that took no part in any issue (never counted as accept). */
+  not_participating?: string[];
   /** Turn engine: durable budget counters (agent compute of the sitting, total human wait). */
   turn_state?: TurnState;
 }
@@ -322,6 +335,107 @@ export function patchMeta(runId: string, patch: Partial<SessionMeta>): SessionMe
     .immediate();
 }
 
+// ── Runner liveness (orphan detection) ─────────────────────────────────────
+// A convening run lives only inside the process that started it. When that
+// process dies (dev-server restart, crash) meta.convening stays true forever
+// and advance refuses ("turns_running"). A session is ORPHANED when it claims
+// to be convening, no runner in THIS process holds it, and its heartbeat
+// (progress.updated_at) is older than RUNNER_HEARTBEAT_MS. The runner bumps the
+// heartbeat every RUNNER_HEARTBEAT_INTERVAL_MS and before each LLM call, so a
+// slow call (the minutes pass may take up to 5 min) never looks orphaned.
+
+/** Silence after which a convening session with no live in-process runner is declared lost. */
+export const RUNNER_HEARTBEAT_MS = 3 * 60_000;
+/** How often a live runner refreshes progress.updated_at. */
+export const RUNNER_HEARTBEAT_INTERVAL_MS = 30_000;
+/** error_code recorded in failed_at when a lost runner is detected. */
+export const RUNNER_LOST_CODE = "runner_lost";
+
+const LIVE_RUNNERS = new Set<string>();
+
+/** Is a runner of this process currently executing the session? */
+export function isRunnerLive(sessionId: string): boolean {
+  return LIVE_RUNNERS.has(sessionId);
+}
+
+/** Refresh progress.updated_at while the session is convening (one immediate transaction; never throws). */
+function bumpHeartbeat(sessionId: string): void {
+  try {
+    const db = getDb();
+    db.transaction((): void => {
+      const run = db.query("SELECT stage, meta_json FROM process_run WHERE id = ?").get(sessionId) as
+        | { stage: string; meta_json: string | null }
+        | undefined;
+      if (!run || !isCommitteeRun(run.stage, run.meta_json)) return;
+      const meta = JSON.parse(run.meta_json as string) as SessionMeta;
+      if (meta.convening !== true || !meta.progress) return;
+      db.run("UPDATE process_run SET meta_json = ? WHERE id = ?", [
+        JSON.stringify({ ...meta, progress: { ...meta.progress, updated_at: nowIso() } }),
+        sessionId,
+      ]);
+    }).immediate();
+  } catch {
+    // heartbeat is observability/liveness only — it never fails the run
+  }
+}
+
+/** Last sign of life of a convening session: progress heartbeat, else the open sitting, else the row start. */
+function lastBeatMs(meta: SessionMeta, startedAt: string | null | undefined): number {
+  const open = meta.attempts?.[meta.attempts.length - 1]?.started_at;
+  for (const iso of [meta.progress?.updated_at, open, startedAt]) {
+    const t = Date.parse(iso ?? "");
+    if (!Number.isNaN(t)) return t;
+  }
+  return Number.NaN;
+}
+
+function isOrphanedMeta(
+  meta: SessionMeta,
+  sessionId: string,
+  startedAt: string | null | undefined,
+  nowMs: number,
+): boolean {
+  if (meta.convening !== true || meta.synthesized) return false;
+  if (LIVE_RUNNERS.has(sessionId)) return false;
+  // A paused hybrid meeting is waiting for a person, not for a runner.
+  if (meta.progress?.phase === "awaiting_human" && meta.awaiting) return false;
+  const beat = lastBeatMs(meta, startedAt);
+  return !Number.isNaN(beat) && nowMs - beat > RUNNER_HEARTBEAT_MS;
+}
+
+/**
+ * Convert an orphaned convening session to failed (error_code runner_lost) so
+ * the panel shows the stop location and advance can resume it. One immediate
+ * transaction re-checks the condition, so concurrent readers convert once.
+ * Returns true when THIS call converted it. Never throws.
+ */
+export function reapOrphanedSession(sessionId: string, nowMs: number = Date.now()): boolean {
+  try {
+    const db = getDb();
+    return db
+      .transaction((): boolean => {
+        const run = db.query("SELECT stage, meta_json, started_at FROM process_run WHERE id = ?").get(sessionId) as
+          | { stage: string; meta_json: string | null; started_at: string | null }
+          | undefined;
+        if (!run || !isCommitteeRun(run.stage, run.meta_json)) return false;
+        const meta = JSON.parse(run.meta_json as string) as SessionMeta;
+        if (!isOrphanedMeta(meta, sessionId, run.started_at, nowMs)) return false;
+        const beat = lastBeatMs(meta, run.started_at);
+        const message = `The meeting process was lost (no heartbeat since ${new Date(beat).toISOString()}); the server was probably restarted.`;
+        const now = new Date(nowMs).toISOString();
+        const patch = buildFailurePatch(sessionId, meta, RUNNER_LOST_CODE, message, now);
+        db.run("UPDATE process_run SET meta_json = ?, status = 'failed' WHERE id = ?", [
+          JSON.stringify({ ...meta, ...patch }),
+          sessionId,
+        ]);
+        return true;
+      })
+      .immediate();
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Progress recorder for one convening run. Each event is persisted via
  * patchMeta; observability only — a failed write is logged, never thrown, so
@@ -419,6 +533,7 @@ function toAgendaMeta(r: {
   promptVersion: string;
   inputHash: string;
   createdAt: string;
+  participantsMeta?: AgendaMeta["participants"];
 }): AgendaMeta {
   return {
     source: r.source,
@@ -426,7 +541,24 @@ function toAgendaMeta(r: {
     prompt_version: r.promptVersion,
     input_hash: r.inputHash,
     created_at: r.createdAt,
+    ...(r.participantsMeta ? { participants: r.participantsMeta } : {}),
   };
+}
+
+/**
+ * Turn engine: the committee's agent seats as the chair and the engine see them —
+ * registry order, Korean display name, a one-line role, and `mandatory` for the
+ * seats holding veto / mandatory-review authority (veto_dissent in
+ * procedures/_committees.yaml; risk-officer is always mandatory, ADR-0097 §4).
+ */
+export function turnSeatRoster(committee: CommitteeDef, track?: string): SeatInfo[] {
+  const members = seatsForSession(committee, track).filter((m) => m.type === "agent");
+  return members.map((m) => ({
+    key: m.key,
+    name: seatDisplayName(m.key),
+    role: AGENT_REGISTRY.find((a) => a.key === m.key)?.role.slice(0, 110),
+    mandatory: m.veto_dissent === true || m.key === "risk-officer",
+  }));
 }
 
 function toMinutesDraft(r: {
@@ -478,7 +610,29 @@ async function runAgendaPassForRun(runId: string, topic: string, maxRound: numbe
   return runChairAgenda({ topic, rows: loadChairRows(runId, maxRound) });
 }
 
+/** The stored turn rows and roster a turn meeting's minutes (v2) are built from. */
+function turnMinutesInputs(runId: string, meta: SessionMeta) {
+  const records = loadTurnRecords(runId);
+  const currentAttempt = Math.max(1, ...(meta.attempts ?? []).map((a) => a.attempt), ...records.map((r) => r.attempt));
+  const committee = getCommittee(meta.committee_key) as CommitteeDef;
+  const seats = turnSeatRoster(committee, meta.track).map((r) => r.key);
+  return { records, currentAttempt, chairSeat: committee.chair, seats };
+}
+
 async function runMinutesPassForRun(runId: string, topic: string, agenda: AgendaIssue[]): Promise<MinutesPassResult> {
+  // Turn meetings (ADR-0204): minutes v2 — the dialogue excerpt is chosen from the stored turns, the full
+  // transcript is the appendix. Round meetings keep the v1 pass unchanged.
+  const stored = readMeta(runId);
+  if (stored && sessionEngine(stored.meta) === "turns") {
+    const inputs = turnMinutesInputs(runId, stored.meta);
+    return runChairMinutesV2({
+      topic,
+      agenda,
+      ...inputs,
+      attempts: stored.meta.attempts,
+      heldAt: stored.meta.attempts?.[0]?.started_at,
+    });
+  }
   const rows = loadChairRows(runId);
   // Design §8.4: the topic flows into the minutes material (## 심의 안건) and
   // the input hash — the pass knows what meeting it is minuting.
@@ -780,6 +934,12 @@ export async function runCommitteeSession(
     callAgent: opts.callAgent,
     source: typeof run.source === "string" ? run.source : "web",
   };
+  // Orphan detection: this process now holds the run; the heartbeat keeps a
+  // slow LLM call from looking like a lost runner to another reader/process.
+  LIVE_RUNNERS.add(sessionId);
+  bumpHeartbeat(sessionId);
+  const heartbeat = setInterval(() => bumpHeartbeat(sessionId), RUNNER_HEARTBEAT_INTERVAL_MS);
+  (heartbeat as { unref?: () => void }).unref?.();
   try {
     if (sessionEngine(meta) === "turns") {
       return await runTurnSession(sessionId, meta, committee, entity, convOpts, opts);
@@ -899,6 +1059,9 @@ export async function runCommitteeSession(
   } catch (err) {
     markConveningFailed(sessionId, err);
     throw err;
+  } finally {
+    clearInterval(heartbeat);
+    LIVE_RUNNERS.delete(sessionId);
   }
 }
 
@@ -917,14 +1080,19 @@ async function runTurnSession(
   convOpts: ConveneOpts,
   opts: { callAgent?: CallAgent; callTurn?: CallTurn },
 ): Promise<ConveneResult> {
-  const seats = seatsForSession(committee, meta.track)
-    .filter((m) => m.type === "agent")
-    .map((m) => m.key);
+  const roster = turnSeatRoster(committee, meta.track);
+  const seats = roster.map((r) => r.key);
+  const mandatorySeats = roster.filter((r) => r.mandatory).map((r) => r.key);
   const topic = sessionTopic(committee, convOpts);
   const injected = opts.callTurn !== undefined || opts.callAgent !== undefined;
   if (!injected && !committeeLlmAvailable()) throw new CommitteeError("llm_required", COMMITTEE_LLM_GUIDANCE);
-  const callTurn: CallTurn =
+  const baseCallTurn: CallTurn =
     opts.callTurn ?? (opts.callAgent ? callTurnFromCallAgent(opts.callAgent) : makeLlmTurnCaller());
+  // Heartbeat before every LLM call (and the interval in runCommitteeSession covers the call itself).
+  const callTurn: CallTurn = async (req) => {
+    bumpHeartbeat(sessionId);
+    return baseCallTurn(req);
+  };
 
   const now = nowIso();
   const writeProgress = (p: MeetingProgress, state?: TurnState): void => {
@@ -959,14 +1127,52 @@ async function runTurnSession(
       started_at: sitting.started_at,
       updated_at: now,
     });
-    const pass = await runChairOpeningAgenda(topic);
+    const pass = await runChairOpeningAgenda(topic, roster);
     agenda = pass.agenda;
-    patchMeta(sessionId, { agenda, agenda_meta: toAgendaMeta(pass) });
+    patchMeta(sessionId, {
+      agenda,
+      agenda_meta: toAgendaMeta(pass),
+    });
+  } else if (agenda.some((a) => !a.participants || a.participants.length === 0)) {
+    // A stored agenda without participants (human edit, older sitting): complete it deterministically,
+    // log it, and record the fallback in meta — never silent.
+    const info = new Map(roster.map((r) => [r.key, r] as const));
+    const completed = ensureAgendaParticipants(agenda, seats, mandatorySeats, info);
+    agenda = completed.agenda;
+    const note = {
+      source: "fallback" as const,
+      fallback_issue_ids: completed.fallbackIssueIds,
+      notes: completed.notes,
+    };
+    patchMeta(sessionId, {
+      agenda,
+      agenda_meta: meta.agenda_meta
+        ? { ...meta.agenda_meta, participants: note }
+        : {
+            source: "human_edited",
+            prompt_version: "human",
+            input_hash: "",
+            created_at: now,
+            participants: note,
+          },
+    });
+  }
+
+  if (!meta.prompt_versions) {
+    patchMeta(sessionId, {
+      prompt_versions: {
+        agenda: AGENDA_PROMPT_VERSION,
+        turn: TURN_PROMPT_VERSION,
+        consensus: CONSENSUS_PROMPT_VERSION,
+      },
+    });
   }
 
   const result = await runTurnMeeting(entity, {
     committeeKey: meta.committee_key,
     seats,
+    mandatorySeats,
+    seatInfo: roster,
     topic,
     chair: committee.chair,
     agenda,
@@ -1014,6 +1220,7 @@ async function runTurnSession(
     awaiting: undefined,
     evaluation_id: result.evaluation?.gateEvaluationId,
     ...(result.minutesDraft ? { minutes_draft: toMinutesDraft(result.minutesDraft) } : {}),
+    ...(result.notParticipating ? { not_participating: result.notParticipating } : {}),
     turn_state: result.turnState,
     attempts: attempts.map((a) => (a.attempt === sitting.attempt ? { ...a, ended_at: finished } : a)),
     progress: done,
@@ -1061,10 +1268,6 @@ function markConveningFailed(sessionId: string, err: unknown): void {
   try {
     const session = readMeta(sessionId);
     if (!session) return;
-    const now = nowIso();
-    const turns = sessionEngine(session.meta) === "turns";
-    // failed_at = the last progress snapshot (the engine writes it BEFORE each
-    // speaker / phase starts, so it names exactly where the run stopped).
     // error_code is the code only — the message stays in convening_error.
     const errorCode =
       err instanceof CommitteeError || err instanceof TurnEngineError
@@ -1072,40 +1275,56 @@ function markConveningFailed(sessionId: string, err: unknown): void {
         : err instanceof Error && err.name
           ? err.name
           : "unknown_error";
-    const last: MeetingProgress = session.meta.progress ?? {
-      engine: turns ? "turns" : "rounds",
-      phase: "discussion",
-      turn_count: 0,
-      started_at: now,
-      updated_at: now,
-    };
     const message = err instanceof Error ? err.message : String(err);
-    if (turns) {
-      // The turn that failed was never stored: its seq is the next one.
-      const records = loadTurnRecords(sessionId);
-      const nextSeq = records.reduce((m, r) => Math.max(m, r.seq), 0) + 1;
-      const failed = failedProgress(last, errorCode, last.turn_count, now, nextSeq);
-      const attempts = (session.meta.attempts ?? []).map((a, idx, all) =>
-        idx === all.length - 1 ? { ...a, ended_at: now, stopped_at: failed.failed_at, error: message } : a,
-      );
-      patchMeta(sessionId, {
-        convening: false,
-        convening_error: message,
-        awaiting: undefined,
-        progress: { ...failed, awaiting: undefined },
-        ...(attempts.length > 0 ? { attempts } : {}),
-      });
-    } else {
-      patchMeta(sessionId, {
-        convening: false,
-        convening_error: message,
-        progress: failedProgress(last, errorCode, countPositions(sessionId), now),
-      });
-    }
+    patchMeta(sessionId, buildFailurePatch(sessionId, session.meta, errorCode, message, nowIso()));
     getDb().run("UPDATE process_run SET status = 'failed' WHERE id = ?", [sessionId]);
   } catch {
     // best effort — the original error propagates instead
   }
+}
+
+/**
+ * The meta patch that records a stopped run: convening false, convening_error,
+ * the failed progress snapshot and (turn engine) the stopped sitting's entry.
+ * failed_at = the last progress snapshot (the engine writes it BEFORE each
+ * speaker / phase starts, so it names exactly where the run stopped).
+ */
+function buildFailurePatch(
+  sessionId: string,
+  meta: SessionMeta,
+  errorCode: string,
+  message: string,
+  now: string,
+): Partial<SessionMeta> {
+  const turns = sessionEngine(meta) === "turns";
+  const last: MeetingProgress = meta.progress ?? {
+    engine: turns ? "turns" : "rounds",
+    phase: "discussion",
+    turn_count: 0,
+    started_at: now,
+    updated_at: now,
+  };
+  if (turns) {
+    // The turn that failed was never stored: its seq is the next one.
+    const records = loadTurnRecords(sessionId);
+    const nextSeq = records.reduce((m, r) => Math.max(m, r.seq), 0) + 1;
+    const failed = failedProgress(last, errorCode, last.turn_count, now, nextSeq);
+    const attempts = (meta.attempts ?? []).map((a, idx, all) =>
+      idx === all.length - 1 ? { ...a, ended_at: now, stopped_at: failed.failed_at, error: message } : a,
+    );
+    return {
+      convening: false,
+      convening_error: message,
+      awaiting: undefined,
+      progress: { ...failed, awaiting: undefined },
+      ...(attempts.length > 0 ? { attempts } : {}),
+    };
+  }
+  return {
+    convening: false,
+    convening_error: message,
+    progress: failedProgress(last, errorCode, countPositions(sessionId), now),
+  };
 }
 
 function countPositions(runId: string): number {
@@ -1313,6 +1532,8 @@ export async function advanceCommitteeSession(
     background?: boolean;
   },
 ): Promise<AdvanceResult> {
+  // A run lost with its process is converted to failed first, so the resume rules below apply to it.
+  reapOrphanedSession(sessionId);
   const session = readMeta(sessionId);
   if (!session) throw new CommitteeError("not_found", `committee session '${sessionId}' does not exist`);
   const { meta } = session;
@@ -1499,6 +1720,7 @@ function claimTurnResume(sessionId: string, nowMs: number): "resumed" | "running
             ...meta,
             convening: true,
             awaiting: undefined,
+            ...(meta.progress ? { progress: { ...meta.progress, updated_at: now } } : {}),
             turn_state: { ...state, human_wait_ms: state.human_wait_ms + Math.max(0, waitedMs) },
           }),
           sessionId,
@@ -1520,6 +1742,8 @@ function claimTurnResume(sessionId: string, nowMs: number): "resumed" | "running
             ...meta,
             convening: true,
             convening_error: undefined,
+            // The stale failed snapshot must not make the resumed run look lost before its first progress write.
+            progress: { ...meta.progress, updated_at: now },
             attempts,
             // Agent compute is per sitting; the human wait of the meeting carries over.
             turn_state: { agent_elapsed_ms: 0, human_wait_ms: state.human_wait_ms },
@@ -1680,8 +1904,15 @@ function readTurns(
 }
 
 export function getCommitteeSession(sessionId: string, opts: { afterSeq?: number } = {}): CommitteeTranscript | null {
-  const session = readMeta(sessionId);
+  let session = readMeta(sessionId);
   if (!session) return null;
+  // A run lost with its process is shown as failed (runner_lost), never as convening forever.
+  if (
+    isOrphanedMeta(session.meta, sessionId, session.run.started_at as string | null, Date.now()) &&
+    reapOrphanedSession(sessionId)
+  ) {
+    session = readMeta(sessionId) ?? session;
+  }
   const rounds: CommitteeTranscript["rounds"] = [];
   const engine = sessionEngine(session.meta);
   const turnRead =
@@ -1791,10 +2022,36 @@ function livePositions(runId: string): LivePosition[] {
  * `sessionId` narrows the list to one session; `afterSeq` (turn engine) returns
  * only turns newer than the cursor so a poll streams just the delta.
  */
+/**
+ * The optional `committeeKey` / `gate` filters of the session list endpoints. Both are
+ * identifier-shaped; anything else is rejected (null) so the routes answer 400 instead of
+ * silently listing everything.
+ */
+export function sessionListFilterFromQuery(query: URLSearchParams): { committeeKey?: string; gate?: string } | null {
+  const out: { committeeKey?: string; gate?: string } = {};
+  for (const [param, key] of [
+    ["committeeKey", "committeeKey"],
+    ["gate", "gate"],
+  ] as const) {
+    const v = query.get(param);
+    if (v === null || v === "") continue;
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(v)) return null;
+    out[key] = v;
+  }
+  return out;
+}
+
 export function listCommitteeSessions(
   entityId: string,
   entityType: "opportunity" | "project" = "opportunity",
-  opts: { sessionId?: string; afterSeq?: number } = {},
+  opts: {
+    sessionId?: string;
+    afterSeq?: number;
+    /** Only sessions of this committee (meta.committee_key) — a panel lists its own committee's sessions. */
+    committeeKey?: string;
+    /** Only sessions at this gate (meta.gate). */
+    gate?: string;
+  } = {},
 ): CommitteeSessionListItem[] {
   const rows = getDb()
     .query(
@@ -1810,7 +2067,17 @@ export function listCommitteeSessions(
   }>;
   return rows.flatMap((r) => {
     try {
-      const meta = JSON.parse(r.meta_json) as SessionMeta;
+      let meta = JSON.parse(r.meta_json) as SessionMeta;
+      if (opts.committeeKey !== undefined && meta.committee_key !== opts.committeeKey) return [];
+      if (opts.gate !== undefined && meta.gate !== opts.gate) return [];
+      let status = r.status;
+      if (isOrphanedMeta(meta, r.id, r.started_at, Date.now()) && reapOrphanedSession(r.id)) {
+        const fresh = readMeta(r.id);
+        if (fresh) {
+          meta = fresh.meta;
+          status = "failed";
+        }
+      }
       const engine = sessionEngine(meta);
       const phase = meta.progress?.phase;
       const live = meta.convening === true || phase === "failed" || phase === "awaiting_human";
@@ -1820,7 +2087,7 @@ export function listCommitteeSessions(
         {
           sessionId: r.id,
           meta,
-          status: r.status,
+          status,
           startedAt: r.started_at,
           convening: meta.convening === true,
           conveningError: meta.convening_error ?? null,
@@ -1867,7 +2134,13 @@ export async function regenerateCommitteeMinutes(sessionId: string): Promise<Min
     briefMd: meta.brief_md,
     actor: "chair",
   });
-  const currentHash = minutesInputHashFor(topic, agenda, rows);
+  const currentHash =
+    sessionEngine(meta) === "turns"
+      ? (() => {
+          const i = turnMinutesInputs(sessionId, meta);
+          return minutesV2InputHashFor(topic, agenda, i.records, i.currentAttempt);
+        })()
+      : minutesInputHashFor(topic, agenda, rows);
   if (meta.minutes_draft && !meta.minutes_draft.fallback && meta.minutes_draft.input_hash === currentHash) {
     throw new CommitteeError(
       "regenerate_not_needed",

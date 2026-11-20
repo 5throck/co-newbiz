@@ -18,11 +18,34 @@
 // load ChairPositionRow[] from agent_position and persist the result into
 // process_run.meta_json (design §2.5, storage option S2 — no migration).
 import { createHash } from "node:crypto";
-import { parsePositionMeta, makeLlmChairAgenda, makeLlmChairMinutes } from "./committee-llm.ts";
+import { parsePositionMeta, makeLlmChairAgenda, makeLlmChairMinutes, makeLlmChairMinutesV2 } from "./committee-llm.ts";
 import { committeeSeatsUseLlm } from "./committee-agents.ts";
-import { isTurnText } from "./committee-turns.ts";
+import {
+  ensureAgendaParticipants,
+  isTurnText,
+  scrubSeatKeys,
+  type SeatInfo,
+  type SeatNamer,
+  type TurnRecord,
+} from "./committee-turns.ts";
+import {
+  MINUTES_V2_PROMPT_VERSION,
+  assembleMinutesV2,
+  buildMinutesV2Material,
+  collectIssueFacts,
+  liveFingerprint,
+  resolveMinutesV2Selection,
+  type MinutesV2Input,
+  type ResolvedSelection,
+} from "./committee-minutes-v2.ts";
 import { getProviderConfig } from "./llm.ts";
-import { committeeMinutesSchema, resolveMinutesDraft, type CommitteeMinutesJson } from "./committee-minutes-schema.ts";
+import {
+  committeeMinutesSchema,
+  minutesV2LlmOutputSchema,
+  resolveMinutesDraft,
+  type AnyMinutesJson,
+  type CommitteeMinutesJson,
+} from "./committee-minutes-schema.ts";
 // Design §9.2 (F2): the chair-pass result types' SSOT is deliberation.ts (the
 // lower-level engine, already upstream). This module re-exports them so the
 // existing import sites keep working; the local duplicates are gone.
@@ -31,7 +54,10 @@ import type { AgentCallResult } from "./agent-orchestrator.ts";
 
 export type { AgendaPassResult, MinutesPassResult };
 
-export const AGENDA_PROMPT_VERSION = "committee.agenda@1";
+// @2 (2026-11-21, ADR-0204): the opening agenda also names 3-5 participant seats per issue
+// (one-line reason each, veto / mandatory-review seats always included) when the user
+// message carries a seat roster; the round-engine pass (no roster) is unchanged.
+export const AGENDA_PROMPT_VERSION = "committee.agenda@2";
 // @2 (2026-11-10, design §8.5): the committee.minutes prompt gained the
 // resolution decision rule (agreed/narrowed/unresolved + dissent-orthogonality)
 // inside the existing 5-section skeleton; stored drafts are distinguishable
@@ -55,11 +81,15 @@ export interface AgendaMeta {
   prompt_version: string;
   input_hash: string;
   created_at: string;
+  /** Turn engine: how the per-issue participants were chosen. A fallback is never silent — the
+   * issues it covered and why are recorded here. */
+  participants?: { source: "llm" | "fallback" | "mixed"; fallback_issue_ids: string[]; notes: string[] };
 }
 
 /** Stored form of the minutes draft in process_run.meta_json.minutes_draft (S2). */
 export interface MinutesDraft {
-  json: CommitteeMinutesJson;
+  /** v1 (round engine, no `version`) or v2 (turn engine, `version: 2`) — readers branch on isMinutesV2. */
+  json: AnyMinutesJson;
   fallback: boolean;
   model?: string;
   prompt_version: string;
@@ -169,13 +199,13 @@ export function computeAgendaFallback(rows: ChairPositionRow[]): AgendaIssue[] {
   return issues;
 }
 
-function parseAgendaIssues(raw: unknown): AgendaIssue[] | null {
+function parseAgendaIssues(raw: unknown, withParticipants = false): AgendaIssue[] | null {
   const arr = (raw as { issues?: unknown } | null)?.issues;
   if (!Array.isArray(arr) || arr.length < 2) return null;
   const clean: AgendaIssue[] = [];
   for (const item of arr.slice(0, 5)) {
     if (!item || typeof item !== "object") continue;
-    const { id, title, raised_by, contested } = item as Record<string, unknown>;
+    const { id, title, raised_by, contested, participants } = item as Record<string, unknown>;
     if (typeof id !== "string" || !/^I\d{1,2}$/.test(id) || typeof title !== "string" || title.trim() === "") continue;
     clean.push({
       id,
@@ -184,6 +214,15 @@ function parseAgendaIssues(raw: unknown): AgendaIssue[] | null {
         ? { raisedBy: raised_by.filter((s): s is string => typeof s === "string").slice(0, 8) }
         : {}),
       ...(contested === true ? { contested: true } : {}),
+      // Raw participants (seat + reason); validated against the committee's seats by ensureAgendaParticipants.
+      ...(withParticipants && Array.isArray(participants)
+        ? {
+            participants: participants.flatMap((p) => {
+              const { seat, reason } = (p ?? {}) as Record<string, unknown>;
+              return typeof seat === "string" ? [{ seat, reason: typeof reason === "string" ? reason : "" }] : [];
+            }),
+          }
+        : {}),
     });
   }
   return clean.length >= 2 ? clean : null;
@@ -212,6 +251,8 @@ export async function runChairAgenda(opts: {
   rows: ChairPositionRow[];
   /** Turn engine (ADR-0204): the agenda is drafted BEFORE any seat speaks, from the topic alone. */
   opening?: boolean;
+  /** Turn engine: the committee's seats (registry order). With a roster the pass also names participants per issue. */
+  roster?: readonly SeatInfo[];
 }): Promise<AgendaPassResult> {
   const createdAt = new Date().toISOString();
   const model = llmModel();
@@ -225,19 +266,32 @@ export async function runChairAgenda(opts: {
         .join("\n\n");
       const text = await call(
         opts.opening
-          ? `검토/안건:\n${opts.topic}\n\n## 회의 시작 전\n\n아직 발언한 위원이 없습니다. 위 검토/안건과 판정 근거만으로, 위원회가 토의할 쟁점 2~5개를 제안하세요.`
+          ? `검토/안건:\n${opts.topic}\n\n## 회의 시작 전\n\n아직 발언한 위원이 없습니다. 위 검토/안건과 판정 근거만으로, 위원회가 토의할 쟁점 2~5개를 제안하세요.${rosterSection(opts.roster)}`
           : `검토/안건:\n${opts.topic}\n\n## 라운드 1 입장 원문\n\n${material}`,
       );
-      agenda = parseAgendaIssues(extractJson(text));
+      agenda = parseAgendaIssues(extractJson(text), (opts.roster?.length ?? 0) > 0);
+      if (agenda && (opts.roster?.length ?? 0) > 0) {
+        // The chair names participants in its own words; scrub leaked agent keys out of the reasons.
+        const keys = (opts.roster ?? []).map((r) => r.key);
+        agenda = agenda.map((a) => ({
+          ...a,
+          ...(a.participants
+            ? { participants: a.participants.map((p) => ({ seat: p.seat, reason: scrubSeatKeys(p.reason, keys) })) }
+            : {}),
+        }));
+      }
       if (agenda) source = "llm";
     } catch {
       agenda = null; // budget/rate-limit/outage → deterministic fallback
     }
   }
   agenda ??= computeAgendaFallback(opts.rows);
+  const participantsMeta = withParticipants(agenda, source, opts.roster);
+  agenda = participantsMeta?.agenda ?? agenda;
   return {
     agenda,
     source,
+    ...(participantsMeta ? { participantsMeta: participantsMeta.meta } : {}),
     ...(source === "llm" && model ? { model } : {}),
     promptVersion: AGENDA_PROMPT_VERSION,
     inputHash: chairInputHash([
@@ -245,8 +299,48 @@ export async function runChairAgenda(opts: {
       opts.topic,
       AGENDA_PROMPT_VERSION,
       model ?? null,
+      ...(opts.roster ? [opts.roster.map((r) => [r.key, r.mandatory === true])] : []),
     ]),
     createdAt,
+  };
+}
+
+/** The seat roster block of the opening-agenda message: keys for the machine output, names and roles for judgement. */
+function rosterSection(roster: readonly SeatInfo[] | undefined): string {
+  if (!roster || roster.length === 0) return "";
+  return [
+    "",
+    "",
+    "## 위원 명단 (이슈별 참여 위원 선정용)",
+    "각 쟁점마다 participants에 이 쟁점을 실제로 따져야 할 위원 3~5명을 {seat, reason}으로 적으세요. seat는 아래 키를 그대로 쓰고, reason은 그 위원이 필요한 이유 한 줄입니다 (reason에는 영문 키를 쓰지 말고 표시명을 쓰세요).",
+    "필수 표시가 있는 위원(거부권·필수 검토 권한)은 모든 쟁점에 반드시 포함하세요. 모든 위원을 매번 넣지 마세요 — 쟁점과 직접 관련된 위원만 고르세요.",
+    ...roster.map(
+      (r) => `- ${r.key} | ${r.name}${r.role ? ` | ${r.role}` : ""}${r.mandatory ? " | 필수(거부권)" : ""}`,
+    ),
+  ].join("\n");
+}
+
+/**
+ * Attach validated participants to every issue (chair's own, else the
+ * deterministic selection) and describe how they were chosen. Undefined when
+ * no roster was given (round-engine pass).
+ */
+function withParticipants(
+  agenda: AgendaIssue[],
+  agendaSource: "llm" | "fallback",
+  roster: readonly SeatInfo[] | undefined,
+): { agenda: AgendaIssue[]; meta: NonNullable<AgendaPassResult["participantsMeta"]> } | undefined {
+  if (!roster || roster.length === 0) return undefined;
+  const seats = roster.map((r) => r.key);
+  const mandatory = roster.filter((r) => r.mandatory).map((r) => r.key);
+  const info = new Map(roster.map((r) => [r.key, r] as const));
+  const name = (key: string): string => info.get(key)?.name ?? key;
+  const res = ensureAgendaParticipants(agenda, seats, mandatory, info, name);
+  const all = res.fallbackIssueIds.length;
+  const source = agendaSource === "fallback" || all === agenda.length ? "fallback" : all > 0 ? "mixed" : "llm";
+  return {
+    agenda: res.agenda,
+    meta: { source, fallback_issue_ids: res.fallbackIssueIds, notes: res.notes },
   };
 }
 
@@ -257,15 +351,17 @@ export async function runChairAgenda(opts: {
  * the provenance (source / model / prompt version) is stored like the round
  * engine's agenda.
  */
-export async function runChairOpeningAgenda(topic: string): Promise<AgendaPassResult> {
-  const pass = await runChairAgenda({ topic, rows: [], opening: true });
+export async function runChairOpeningAgenda(topic: string, roster?: readonly SeatInfo[]): Promise<AgendaPassResult> {
+  const pass = await runChairAgenda({ topic, rows: [], opening: true, roster });
   if (pass.agenda.length > 0) return pass;
   const headline =
     topic
       .split("\n")
       .map((l) => l.trim())
       .find((l) => l.length > 0) ?? "검토/안건";
-  return { ...pass, agenda: [{ id: "I1", title: headline.slice(0, 200) }] };
+  const single = [{ id: "I1", title: headline.slice(0, 200) }];
+  const wp = withParticipants(single, "fallback", roster);
+  return { ...pass, agenda: wp?.agenda ?? single, ...(wp ? { participantsMeta: wp.meta } : {}) };
 }
 
 // ── Minutes pass (§2.3) ────────────────────────────────────────────────────
@@ -337,7 +433,7 @@ export async function runChairMinutes(opts: {
   agenda: AgendaIssue[];
   rows: ChairPositionRow[];
   seats: readonly string[];
-}): Promise<MinutesPassResult> {
+}): Promise<MinutesPassResult & { json: CommitteeMinutesJson }> {
   const createdAt = new Date().toISOString();
   const model = llmModel();
   let json: CommitteeMinutesJson | null = null;
@@ -445,4 +541,117 @@ export function minutesInputHashFor(topic: string, agenda: AgendaIssue[], rows: 
     MINUTES_PROMPT_VERSION,
     llmModel() ?? null,
   ]);
+}
+
+// ── Minutes v2: turn-engine meetings (ADR-0204 phase 3) ─────────────────────
+
+export { MINUTES_V2_PROMPT_VERSION };
+
+/**
+ * The chair minutes pass of a TURN meeting. The model (committee.minutes_turns) only SELECTS
+ * the key exchanges per issue — each by turn number, optionally cut to verbatim fragments —
+ * and lists open items. Everything else (participants, consensus, votes, outcome, tally,
+ * per-seat recommendation, sittings) is read from the stored turns by code, and the full
+ * transcript is appendix A, rebuilt at read time. A reference that does not resolve is
+ * rejected and counted (logged, recorded in provenance); a quote that is not verbatim is
+ * replaced by the whole utterance; any failure of the model degrades to the deterministic
+ * draft (excerpt = consensus proposal + close row) with `fallback: true` — never an empty
+ * minutes and never a dropped dialogue.
+ */
+export async function runChairMinutesV2(opts: {
+  topic: string;
+  agenda: AgendaIssue[];
+  records: readonly TurnRecord[];
+  currentAttempt: number;
+  chairSeat: string;
+  seats: readonly string[];
+  attempts?: MinutesV2Input["attempts"];
+  heldAt?: string;
+  name?: SeatNamer;
+  /** Test seam: replaces the LLM call (the real caller is used only when the chair LLM is configured). */
+  call?: (material: string) => Promise<string>;
+}): Promise<MinutesPassResult> {
+  const createdAt = new Date().toISOString();
+  const configured = llmModel();
+  const model = configured ?? (opts.call ? "injected" : undefined);
+  const input: MinutesV2Input = {
+    agenda: opts.agenda,
+    records: opts.records,
+    currentAttempt: opts.currentAttempt,
+    chairSeat: opts.chairSeat,
+    seats: opts.seats,
+    attempts: opts.attempts,
+    heldAt: opts.heldAt,
+    name: opts.name,
+  };
+  const facts = collectIssueFacts(input);
+  let selection: ResolvedSelection | null = null;
+  const call = opts.call ?? (configured ? makeLlmChairMinutesV2() : undefined);
+  if (call) {
+    try {
+      const text = await call(buildMinutesV2Material(opts.topic, facts, opts.name));
+      const parsedDraft = extractJson(text);
+      const check = minutesV2LlmOutputSchema.safeParse(parsedDraft);
+      if (check.success) {
+        selection = resolveMinutesV2Selection(check.data, facts, input);
+        if (selection.rejectedRefs > 0 || selection.repairedQuotes > 0) {
+          console.warn(
+            `[committee-chair] minutes v2: ${selection.rejectedRefs} reference(s) rejected, ${selection.repairedQuotes} quote(s) repaired:`,
+            selection.notes.slice(0, 5).join("; "),
+          );
+        }
+      } else {
+        console.warn(
+          "[committee-chair] minutes v2 draft rejected:",
+          check.error.issues
+            .slice(0, 5)
+            .map((i) => `${i.path.join(".")}: ${i.message}`)
+            .join("; "),
+        );
+      }
+    } catch (err) {
+      console.warn(
+        "[committee-chair] minutes v2 LLM pass failed, using deterministic excerpts:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+  const json = assembleMinutesV2(input, facts, selection);
+  const fallback = json.provenance.source === "fallback";
+  return {
+    json,
+    fallback,
+    ...(fallback || !model ? {} : { model }),
+    promptVersion: MINUTES_V2_PROMPT_VERSION,
+    inputHash: minutesV2InputHash(opts.topic, opts.agenda, opts.records, opts.currentAttempt, model),
+    createdAt,
+    // v2 resolutions are read from the close rows by code: nothing is silently filled.
+    degradedResolutions: 0,
+  };
+}
+
+function minutesV2InputHash(
+  topic: string,
+  agenda: readonly AgendaIssue[],
+  records: readonly TurnRecord[],
+  currentAttempt: number,
+  model: string | undefined,
+): string {
+  return chairInputHash([
+    liveFingerprint(records, currentAttempt),
+    agenda,
+    topic,
+    MINUTES_V2_PROMPT_VERSION,
+    model ?? null,
+  ]);
+}
+
+/** The v2 input hash recomputed WITHOUT running the pass (regeneration eligibility, ADR-0196 decision 4). */
+export function minutesV2InputHashFor(
+  topic: string,
+  agenda: readonly AgendaIssue[],
+  records: readonly TurnRecord[],
+  currentAttempt: number,
+): string {
+  return minutesV2InputHash(topic, agenda, records, currentAttempt, llmModel());
 }

@@ -64,6 +64,13 @@ const {
   runTurnMeeting,
   sanitizeUtterance,
   shouldStopIssue,
+  ensureAgendaParticipants,
+  fallbackParticipants,
+  normalizeParticipants,
+  notParticipatingSeats,
+  resolveSeatName,
+  scrubSeatKeys,
+  seatDisplayName,
 } = turns;
 
 const NOW = new Date().toISOString();
@@ -324,7 +331,7 @@ describe("turn storage in agent_position (Option A, no migration)", () => {
     }
     const close = all.filter((r) => r.move === "close");
     expect(close.map((c) => c.outcome)).toEqual(["narrowed", "narrowed"]); // risk-officer reserves
-    expect(close[0].votes).toEqual({ accept: SEATS.length - 1, reserve: 1, abstain: 0 });
+    expect(close[0].votes).toEqual({ accept: SEATS.length - 1, reserve: 1, abstain: 0, not_participating: 0 });
 
     // end state: one proposal row; the engine wrote no decision record
     expect(
@@ -870,6 +877,155 @@ describe("resume from the issue where the run stopped (§15.2)", () => {
   });
 });
 
+// ── Orphaned runner (server killed mid-run) ────────────────────────────────
+
+describe("orphaned runner: convening with no live runner and a stale heartbeat", () => {
+  const STALE = (): string => new Date(Date.now() - session.RUNNER_HEARTBEAT_MS - 60_000).toISOString();
+  const oppOf = (sessionId: string): string =>
+    (db.query("SELECT entity_id FROM process_run WHERE id = ?").get(sessionId) as { entity_id: string }).entity_id;
+
+  /** A session whose process died while issue 2 was running: convening true, stale heartbeat, no live runner. */
+  async function killedMidIssue2(): Promise<string> {
+    const { sessionId } = newSession("agent_team", { agenda: ["일", "이", "삼"] });
+    const dies: CallTurn = async (req) => {
+      if (req.issueIndex === 2 && req.kind === "turn") throw new Error("process killed");
+      return det(req);
+    };
+    await expect(runCommitteeSession(sessionId, { callTurn: dies })).rejects.toThrow("process killed");
+    const m = metaOf(sessionId);
+    // Rewind the stored state to what a killed process leaves behind: the last progress snapshot, never a failure.
+    patchMeta(sessionId, {
+      convening: true,
+      convening_error: undefined,
+      progress: { ...m.progress, phase: "discussion", failed_at: undefined, updated_at: STALE() },
+      attempts: [{ attempt: 1, started_at: m.attempts[0].started_at }],
+    });
+    db.run("UPDATE process_run SET status = 'running' WHERE id = ?", [sessionId]);
+    return sessionId;
+  }
+
+  test("a read converts it to failed (runner_lost) with the stop location and the sitting entry", async () => {
+    const sessionId = await killedMidIssue2();
+    const maxSeq = Math.max(...recs(sessionId).map((r) => r.seq));
+    const listed = listCommitteeSessions(oppOf(sessionId)).find((x) => x.sessionId === sessionId)!;
+    expect(listed.convening).toBe(false);
+    expect(listed.conveningError).toMatch(/process was lost/);
+    expect(listed.status).toBe("failed");
+    expect(listed.progress?.phase).toBe("failed");
+    const meta = metaOf(sessionId);
+    expect(meta.convening).toBe(false);
+    expect(meta.progress.failed_at).toMatchObject({
+      phase: "discussion",
+      issue_index: 2,
+      seq: maxSeq + 1,
+      error_code: "runner_lost",
+    });
+    expect(meta.progress.failed_at.speaker_seat).toBeTruthy();
+    expect(meta.attempts[0].error).toMatch(/process was lost/);
+    expect(meta.attempts[0].stopped_at).toMatchObject({ issue_index: 2, error_code: "runner_lost" });
+    expect(meta.attempts[0].ended_at).toBeTruthy();
+    expect(statusOf(sessionId)).toBe("failed");
+    // converted once: a second read changes nothing
+    expect(session.reapOrphanedSession(sessionId)).toBe(false);
+    expect(getCommitteeSession(sessionId)!.progress?.phase).toBe("failed");
+  });
+
+  test("the GET reader converts it too", async () => {
+    const sessionId = await killedMidIssue2();
+    expect(getCommitteeSession(sessionId)!.meta.convening).toBe(false);
+    expect(metaOf(sessionId).progress.failed_at.error_code).toBe("runner_lost");
+  });
+
+  test("a heartbeat inside the threshold is not orphaned", async () => {
+    const sessionId = await killedMidIssue2();
+    patchMeta(sessionId, { progress: { ...metaOf(sessionId).progress, updated_at: new Date().toISOString() } });
+    const listed = listCommitteeSessions(oppOf(sessionId)).find((x) => x.sessionId === sessionId)!;
+    expect(listed.convening).toBe(true);
+    expect(metaOf(sessionId).progress.phase).toBe("discussion");
+    expect(session.reapOrphanedSession(sessionId)).toBe(false);
+  });
+
+  test("a runner alive in this process is never converted, however old the heartbeat looks", async () => {
+    const { sessionId } = newSession("agent_team", { agenda: ["안건"] });
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    let entered: () => void = () => {};
+    const inCall = new Promise<void>((r) => {
+      entered = r;
+    });
+    const slow: CallTurn = async (req) => {
+      entered();
+      await gate;
+      return det(req);
+    };
+    const running = runCommitteeSession(sessionId, { callTurn: slow });
+    await inCall;
+    expect(session.isRunnerLive(sessionId)).toBe(true);
+    patchMeta(sessionId, { progress: { ...metaOf(sessionId).progress, updated_at: STALE() } });
+    const listed = listCommitteeSessions(oppOf(sessionId)).find((x) => x.sessionId === sessionId)!;
+    expect(listed.convening).toBe(true);
+    expect(session.reapOrphanedSession(sessionId)).toBe(false);
+    // advance sees a running session, not a lost one
+    expect((await advanceCommitteeSession(sessionId, { actor: "alice", callTurn: det })).status).toBe("turns_running");
+    release();
+    await running;
+    expect(session.isRunnerLive(sessionId)).toBe(false);
+    expect(metaOf(sessionId).progress.phase).toBe("done");
+  });
+
+  test("a call bumps the heartbeat before it starts", async () => {
+    const { sessionId } = newSession("agent_team", { agenda: ["안건"] });
+    let seen = "";
+    const probe: CallTurn = async (req) => {
+      seen = metaOf(sessionId).progress.updated_at;
+      return det(req);
+    };
+    patchMeta(sessionId, { progress: undefined });
+    const before = Date.now();
+    await runCommitteeSession(sessionId, { callTurn: probe });
+    expect(Date.parse(seen)).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  test("a paused hybrid meeting (awaiting_human) is waiting for a person, never orphaned", async () => {
+    const s = newSession("hybrid", { agenda: ["첫 안건", "둘째 안건"] });
+    await runCommitteeSession(s.sessionId, { callTurn: det });
+    expect(metaOf(s.sessionId).progress.phase).toBe("awaiting_human");
+    patchMeta(s.sessionId, { progress: { ...metaOf(s.sessionId).progress, updated_at: STALE() } });
+    // the defensive case: even a (corrupt) convening flag with an open floor is a person's wait
+    patchMeta(s.sessionId, { convening: true });
+    expect(session.reapOrphanedSession(s.sessionId)).toBe(false);
+    patchMeta(s.sessionId, { convening: false });
+    const listed = listCommitteeSessions(oppOf(s.sessionId)).find((x) => x.sessionId === s.sessionId)!;
+    expect(listed.awaiting?.seat).toBe("human");
+    expect(listed.progress?.phase).toBe("awaiting_human");
+    expect(metaOf(s.sessionId).progress.failed_at).toBeUndefined();
+  });
+
+  test("advance converts the orphan and resumes it: new sitting, chair resume turn, the stopped issue restarts", async () => {
+    const sessionId = await killedMidIssue2();
+    const before12 = recs(sessionId)
+      .filter((r) => r.issueIndex === 1)
+      .map((r) => r.id);
+    const res = await advanceCommitteeSession(sessionId, { actor: "alice", callTurn: det });
+    expect(res.status).toBe("synthesized");
+    const meta = metaOf(sessionId);
+    expect(meta.attempts).toHaveLength(2);
+    expect(meta.attempts[0].stopped_at).toMatchObject({ issue_index: 2, error_code: "runner_lost" });
+    expect(meta.attempts[1]).toMatchObject({ attempt: 2, resumed_from_issue_index: 2 });
+    expect(meta.convening_error).toBeUndefined();
+    expect(meta.progress.phase).toBe("done");
+    expect(statusOf(sessionId)).toBe("done");
+    const all = recs(sessionId);
+    expect(all.filter((r) => r.issueIndex === 1).map((r) => r.id)).toEqual(before12);
+    const resume = all.filter((r) => r.move === "resume");
+    expect(resume).toHaveLength(1);
+    expect(resume[0]).toMatchObject({ attempt: 2, issueIndex: 2, role: "chair" });
+    expect(all.some((r) => r.issueIndex === 2 && r.attempt === 2 && r.move === "open")).toBe(true);
+  });
+});
+
 // ── Boundary ───────────────────────────────────────────────────────────────
 
 describe("boundary (design boundary #2)", () => {
@@ -1070,6 +1226,398 @@ describe("chair readers ignore turn rows (committee-chair.ts agenda fallback)", 
       positionMd: tail(`,"recommendation":"${i === 0 ? "go" : "kill"}"`),
     }));
     expect(computeAgendaFallback(rows)).toEqual([]); // two stated recommendations would otherwise raise a split issue
+  });
+});
+
+// ── Per-issue participants, floor requests, display names (ADR-0204 follow-up) ──
+
+const BIG = [
+  "brownfield-agent",
+  "industry-lead",
+  "risk-officer",
+  "legal-counsel",
+  "ip-agent",
+  "ir-agent",
+  "valuation-agent",
+  "region-lead",
+];
+const info = new Map<string, import("../../app/web-next/lib/committee-turns.ts").SeatInfo>(
+  BIG.map((key) => [key, { key, name: seatDisplayName(key), mandatory: key === "risk-officer" }]),
+);
+
+describe("participants: validation, mandatory seats, deterministic fallback", () => {
+  test("normalizeParticipants keeps only this committee's seats (key or display name), adds the veto seat, caps at 5", () => {
+    const got = normalizeParticipants(
+      [
+        { seat: "legal-counsel", reason: "계약 조항" },
+        { seat: "법률 위원", reason: "중복" },
+        { seat: "not-a-seat", reason: "x" },
+        { seat: "산업 위원님", reason: "산업 구조" },
+        { seat: "ip-agent", reason: "특허" },
+        { seat: "ir-agent", reason: "공시" },
+        { seat: "valuation-agent", reason: "가치" },
+        { seat: "region-lead", reason: "지역" },
+      ],
+      BIG,
+      ["risk-officer"],
+    );
+    expect(got).not.toBeNull();
+    expect(got!.length).toBeLessThanOrEqual(5);
+    expect(got!.map((p) => p.seat)).toContain("risk-officer"); // veto seat is never trimmed
+    expect(got!.some((p) => p.seat === "not-a-seat")).toBe(false);
+    expect(got!.filter((p) => p.seat === "legal-counsel")).toHaveLength(1);
+    // registry order is kept
+    const idx = got!.map((p) => BIG.indexOf(p.seat));
+    expect(idx).toEqual([...idx].sort((a, b) => a - b));
+  });
+
+  test("normalizeParticipants returns null when fewer than 3 valid seats remain", () => {
+    expect(normalizeParticipants([{ seat: "legal-counsel" }, { seat: "zzz" }], BIG, ["risk-officer"])).toBeNull();
+    expect(normalizeParticipants("nope", BIG, [])).toBeNull();
+  });
+
+  test("fallbackParticipants: veto seat always in, 4 seats, deterministic, rotates across issues; small committees all sit", () => {
+    const issue = { title: "법률 계약 조항 검토" };
+    const a1 = fallbackParticipants(issue, 1, BIG, ["risk-officer"], info);
+    expect(a1).toHaveLength(4);
+    expect(a1.map((p) => p.seat)).toContain("risk-officer");
+    expect(a1.map((p) => p.seat)).toContain("legal-counsel"); // role text overlaps the title
+    expect(fallbackParticipants(issue, 1, BIG, ["risk-officer"], info)).toEqual(a1);
+    const other = fallbackParticipants({ title: "무관한 주제" }, 2, BIG, ["risk-officer"], info);
+    expect(other.map((p) => p.seat)).toContain("risk-officer");
+    expect(fallbackParticipants({ title: "x" }, 1, ["a", "b", "c", "d"], [], new Map())).toHaveLength(4);
+  });
+
+  test("ensureAgendaParticipants: an invalid chair list falls back per issue and is reported, never silent", () => {
+    const warn = console.warn;
+    const logged: string[] = [];
+    console.warn = (...a: unknown[]) => void logged.push(a.join(" "));
+    try {
+      const res = ensureAgendaParticipants(
+        [
+          {
+            id: "I1",
+            title: "하나",
+            participants: [
+              { seat: "legal-counsel", reason: "a" },
+              { seat: "ip-agent", reason: "b" },
+              { seat: "ir-agent", reason: "c" },
+            ],
+          },
+          { id: "I2", title: "둘", participants: [{ seat: "ghost", reason: "x" }] },
+          { id: "I3", title: "셋" },
+        ],
+        BIG,
+        ["risk-officer"],
+        info,
+      );
+      expect(res.fallbackIssueIds).toEqual(["I2", "I3"]);
+      expect(res.notes).toHaveLength(2);
+      expect(logged.some((l) => l.includes("participants fallback"))).toBe(true);
+      for (const a of res.agenda) expect(a.participants!.map((p) => p.seat)).toContain("risk-officer");
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  test("the opening agenda pass without an LLM falls back and records meta.agenda_meta.participants", async () => {
+    const { runChairOpeningAgenda } = await import("../../app/web-next/lib/committee-chair.ts");
+    const pass = await runChairOpeningAgenda("테스트 안건", [...info.values()]);
+    expect(pass.participantsMeta?.source).toBe("fallback");
+    expect(pass.agenda[0].participants!.map((p) => p.seat)).toContain("risk-officer");
+    const { sessionId } = newSession("agent_team", { agenda: ["안건"] });
+    await runCommitteeSession(sessionId, { callTurn: det });
+    const m = metaOf(sessionId);
+    expect(m.agenda[0].participants.length).toBeGreaterThan(0);
+    expect(m.agenda_meta.participants.source).toBe("fallback");
+    expect(m.agenda_meta.participants.fallback_issue_ids).toEqual(["I1"]);
+    expect(m.prompt_versions).toEqual({
+      agenda: "committee.agenda@2",
+      turn: "committee.turn@2",
+      consensus: "committee.consensus@2",
+    });
+  });
+});
+
+describe("only participants take turns and vote; non-participants are never an accept", () => {
+  const entity = () => ({ entityType: "opportunity" as const, entityId: newOpportunity() });
+  const part = (...seats: string[]) => seats.map((seat) => ({ seat, reason: `${seat} 이유` }));
+
+  test("a 3-participant issue: turns and votes only by participants, close row reports the non-participants", async () => {
+    const seen: TurnRequest[] = [];
+    const callTurn: CallTurn = async (req) => {
+      seen.push(req);
+      return det(req);
+    };
+    const result = await runTurnMeeting(entity(), {
+      committeeKey: "t",
+      seats: BIG,
+      mandatorySeats: ["risk-officer"],
+      seatInfo: [...info.values()],
+      topic: "t",
+      chair: "process-governance-manager",
+      agenda: [{ id: "I1", title: "안건", participants: part("brownfield-agent", "industry-lead", "risk-officer") }],
+      callTurn,
+      actor: "alice",
+    });
+    const all = loadTurnRecords(result.processRunId);
+    const outsiders = BIG.filter((s) => !["brownfield-agent", "industry-lead", "risk-officer"].includes(s));
+    expect(all.some((r) => r.role === "seat" && outsiders.includes(r.speaker))).toBe(false);
+    expect(seen.every((r) => !outsiders.includes(r.agentKey))).toBe(true);
+    const open = all.find((r) => r.move === "open")!;
+    expect(open.participants).toEqual(["brownfield-agent", "industry-lead", "risk-officer"]);
+    const close = all.find((r) => r.move === "close")!;
+    expect(close.votes).toEqual({ accept: 2, reserve: 1, abstain: 0, not_participating: 5 });
+    expect(close.nonParticipants).toEqual(outsiders);
+    expect(all.filter((r) => r.vote)).toHaveLength(3);
+    // per-issue cap = 3 x participants
+    expect(all.filter((r) => r.role === "seat" && r.move !== "pass" && !r.vote).length).toBeLessThanOrEqual(9);
+    // seats that never took part are reported as not participating — not an accept, no stance
+    expect(result.notParticipating).toEqual(outsiders);
+    expect(notParticipatingSeats(BIG, all)).toEqual(outsiders);
+    const crit = JSON.parse(
+      (
+        db.query("SELECT criteria_json FROM gate_evaluation WHERE process_run_id = ?").get(result.processRunId) as {
+          criteria_json: string;
+        }
+      ).criteria_json,
+    );
+    expect(crit.not_participating).toEqual(outsiders);
+    expect(result.evaluation?.dissentJson).toContain("risk-officer"); // veto seat's verbatim dissent still lands
+  });
+
+  test("the veto seat is a participant even when the chair omitted it", async () => {
+    const result = await runTurnMeeting(entity(), {
+      committeeKey: "t",
+      seats: BIG,
+      mandatorySeats: ["risk-officer"],
+      topic: "t",
+      chair: "process-governance-manager",
+      agenda: [{ id: "I1", title: "안건", participants: part("brownfield-agent", "industry-lead", "legal-counsel") }],
+      callTurn: det,
+      actor: "alice",
+    });
+    const all = loadTurnRecords(result.processRunId);
+    expect(all.find((r) => r.move === "open")!.participants).toContain("risk-officer");
+    expect(all.some((r) => r.speaker === "risk-officer" && r.role === "seat")).toBe(true);
+  });
+
+  test("non-participants are never counted as accept: classifyConsensus counts voters only", () => {
+    expect(classifyConsensus({ accept: 3, reserve: 0, abstain: 0 }, 3)).toBe("agreed");
+    expect(classifyConsensus({ accept: 3, reserve: 0, abstain: 0 }, 8)).toBe("unresolved");
+  });
+});
+
+describe("floor requests: cheap, deterministic, at most once per seat and issue", () => {
+  const entity = () => ({ entityType: "opportunity" as const, entityId: newOpportunity() });
+
+  test("a participant naming a non-participant after the first proposal → request_floor, chair grants, the guest speaks once and votes", async () => {
+    const callTurn: CallTurn = async (req) => {
+      if (req.kind === "turn" && req.agentKey === "brownfield-agent" && req.seatTurnNo === 0) {
+        return JSON.stringify({
+          move: "propose",
+          utterance: "계약 조항은 법률 위원이 먼저 확인해야 합니다.",
+          stance: "conditional",
+        });
+      }
+      return det(req);
+    };
+    const result = await runTurnMeeting(entity(), {
+      committeeKey: "t",
+      seats: BIG,
+      mandatorySeats: ["risk-officer"],
+      topic: "t",
+      chair: "process-governance-manager",
+      agenda: [
+        {
+          id: "I1",
+          title: "안건",
+          participants: ["brownfield-agent", "industry-lead", "risk-officer"].map((seat) => ({ seat, reason: "r" })),
+        },
+      ],
+      callTurn,
+      actor: "alice",
+    });
+    const all = loadTurnRecords(result.processRunId);
+    const req = all.filter((r) => r.move === "request_floor");
+    expect(req).toHaveLength(1);
+    expect(req[0].speaker).toBe("legal-counsel");
+    const grant = all.find((r) => r.move === "grant_floor")!;
+    expect(grant.role).toBe("chair");
+    expect(grant.addressedTo).toBe("legal-counsel");
+    const guestTurns = all.filter(
+      (r) => r.speaker === "legal-counsel" && r.role === "seat" && r.move !== "request_floor",
+    );
+    expect(guestTurns.filter((r) => !r.vote)).toHaveLength(1); // exactly one discussion turn
+    expect(guestTurns.some((r) => r.vote)).toBe(true); // and the guest votes
+    const close = all.find((r) => r.move === "close")!;
+    expect(close.votes?.not_participating).toBe(BIG.length - 4);
+    expect(close.nonParticipants).not.toContain("legal-counsel");
+  });
+
+  test("nobody is named → no request; a third request in one issue is declined", async () => {
+    const quiet = await runTurnMeeting(entity(), {
+      committeeKey: "t",
+      seats: BIG,
+      topic: "t",
+      chair: "process-governance-manager",
+      agenda: [
+        {
+          id: "I1",
+          title: "안건",
+          participants: ["brownfield-agent", "industry-lead", "risk-officer"].map((seat) => ({ seat, reason: "r" })),
+        },
+      ],
+      callTurn: det,
+      actor: "alice",
+    });
+    expect(loadTurnRecords(quiet.processRunId).some((r) => r.move === "request_floor")).toBe(false);
+
+    const callTurn: CallTurn = async (req) =>
+      req.kind === "turn" && req.agentKey === "brownfield-agent" && req.seatTurnNo === 0
+        ? JSON.stringify({
+            move: "propose",
+            utterance: "법률 위원, 지식재산 위원, 투자자 소통 위원이 각자 확인해야 합니다.",
+            stance: "conditional",
+          })
+        : det(req);
+    const res = await runTurnMeeting(entity(), {
+      committeeKey: "t",
+      seats: BIG,
+      topic: "t",
+      chair: "process-governance-manager",
+      agenda: [
+        {
+          id: "I1",
+          title: "안건",
+          participants: ["brownfield-agent", "industry-lead", "risk-officer"].map((seat) => ({ seat, reason: "r" })),
+        },
+      ],
+      callTurn,
+      actor: "alice",
+    });
+    const all = loadTurnRecords(res.processRunId);
+    expect(all.filter((r) => r.move === "request_floor")).toHaveLength(3);
+    expect(all.filter((r) => r.move === "grant_floor")).toHaveLength(2);
+    const declined = all.filter((r) => r.move === "decline_floor");
+    expect(declined).toHaveLength(1);
+    expect(declined[0].reason).toBe("floor_limit");
+  });
+});
+
+describe("display names: prompts, addressing and leaked keys", () => {
+  test("seatDisplayName reads ko.json; unknown keys stay raw", () => {
+    expect(seatDisplayName("legal-counsel")).toBe("법률 위원");
+    expect(seatDisplayName("risk-officer")).toBe("위험 점검 위원");
+    expect(seatDisplayName("a")).toBe("a");
+  });
+
+  test("leaked '<key>님' and bare keys in an utterance are replaced with the display name", () => {
+    const keys = ["legal-counsel", "risk-officer", "process-governance-manager"];
+    expect(scrubSeatKeys("legal-counsel님의 지적에 동의하지만 risk-officer 쪽 근거가 약합니다.", keys)).toBe(
+      "법률 위원님의 지적에 동의하지만 위험 점검 위원 쪽 근거가 약합니다.",
+    );
+    expect(scrubSeatKeys("process-governance-manager가 정리", keys)).toBe("의장가 정리");
+    expect(scrubSeatKeys("xlegal-counsel-2 stays", keys)).toBe("xlegal-counsel-2 stays");
+  });
+
+  test("addressed_to accepts a display name (with or without 님) and a key", () => {
+    expect(resolveSeatName("법률 위원님", BIG)).toBe("legal-counsel");
+    expect(resolveSeatName("risk-officer", BIG)).toBe("risk-officer");
+    const p = parseTurnOutput(JSON.stringify({ move: "ask", addressed_to: "위험 점검 위원", utterance: "근거는?" }), {
+      allowed: ["ask"],
+      seats: BIG,
+      speaker: "legal-counsel",
+    });
+    expect(p.ok && p.turn.addressedTo).toBe("risk-officer");
+  });
+
+  test("turn prompts show display names only; a leaked key in a reply is stored as the display name", async () => {
+    const prompts: string[] = [];
+    const callTurn: CallTurn = async (req) => {
+      prompts.push(req.prompt);
+      if (req.kind === "turn" && req.seatTurnNo === 0) {
+        return JSON.stringify({
+          move: "propose",
+          utterance: "legal-counsel님의 검토가 먼저 필요합니다.",
+          stance: "for",
+        });
+      }
+      return det(req);
+    };
+    const result = await runTurnMeeting(
+      { entityType: "opportunity", entityId: newOpportunity() },
+      {
+        committeeKey: "t",
+        seats: ["brownfield-agent", "legal-counsel", "risk-officer"],
+        mandatorySeats: ["risk-officer"],
+        topic: "t",
+        chair: "process-governance-manager",
+        agenda: [{ id: "I1", title: "안건" }],
+        callTurn,
+        actor: "alice",
+      },
+    );
+    for (const p of prompts) {
+      expect(p).not.toContain("risk-officer");
+      expect(p).not.toContain("legal-counsel");
+      expect(p).not.toContain("process-governance-manager");
+    }
+    expect(prompts.some((p) => p.includes("법률 위원"))).toBe(true);
+    const stored = loadTurnRecords(result.processRunId).filter((r) => r.move === "propose");
+    expect(stored.length).toBeGreaterThan(0);
+    expect(stored.every((r) => !r.utterance.includes("legal-counsel"))).toBe(true);
+    expect(stored[0].utterance).toContain("법률 위원님");
+  });
+});
+
+describe("challenge-favoring speaker selection and the amend limit", () => {
+  const seats = ["a", "b", "c", "d"];
+
+  test("after a proposal the next speaker is a challenger: an unspoken veto seat first, flagged challenge", () => {
+    const next = nextSpeaker(seats, [rec(1, "a", "propose")], { mandatory: ["d"] });
+    expect(next?.seat).toBe("d");
+    expect(next?.challenge).toBe(true);
+    const plain = nextSpeaker(seats, [rec(1, "a", "propose")]);
+    expect(plain?.seat).toBe("b");
+    expect(plain?.challenge).toBe(true);
+    expect(nextSpeaker(seats, [rec(1, "a", "concede")])?.challenge).toBeUndefined();
+  });
+
+  test("a seat that already amended on the issue cannot amend again", () => {
+    const next = nextSpeaker(seats, [rec(1, "a", "propose"), rec(2, "b", "amend"), rec(3, "c", "ask", "b")]);
+    expect(next?.allowed).toEqual(["answer"]); // an ask is answered, answer only
+    const open = nextSpeaker(["b"], [rec(1, "b", "amend")]);
+    expect(open?.seat).toBe("b");
+    expect(open?.allowed).not.toContain("amend");
+    expect(open?.allowed).toContain("rebut");
+    const rebutted = nextSpeaker(seats, [rec(1, "a", "propose"), rec(2, "b", "amend"), rec(3, "c", "rebut", "b")]);
+    expect(rebutted?.seat).toBe("b");
+    expect(rebutted?.allowed).not.toContain("amend");
+  });
+
+  test("per-issue cap = 3 x participants (max 12); the stop rule counts participants only", () => {
+    expect(perIssueMax(3, DEFAULT_TURN_BUDGETS)).toBe(9);
+    expect(perIssueMax(5, DEFAULT_TURN_BUDGETS)).toBe(12);
+    const t = [rec(1, "a", "propose"), rec(2, "b", "rebut", "a"), rec(3, "c", "ask", "a")];
+    expect(shouldStopIssue(["a", "b", "c"], t, 9)).toBeNull();
+  });
+
+  test("the turn prompt discourages condition lists and names the amend limit", () => {
+    const prompt = turns.buildTurnPrompt({
+      seat: "legal-counsel",
+      topic: "t",
+      agenda: [{ id: "I1", title: "안건" }],
+      issueIndex: 1,
+      live: [],
+      allowed: ["propose", "amend"],
+      seats: ["legal-counsel", "risk-officer"],
+      challenge: true,
+    });
+    expect(prompt).toContain("덧붙이는 발언은 하지 않습니다");
+    expect(prompt).toContain("안건당 위원마다 한 번만");
+    expect(prompt).toContain("약점");
+    expect(prompt).not.toContain("risk-officer");
   });
 });
 

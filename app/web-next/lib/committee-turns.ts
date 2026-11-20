@@ -28,6 +28,8 @@
 // injected CallTurn seam; there is NO silent fallback — a call error or three
 // consecutive unusable turns stop the run (TurnEngineError → failed_at).
 import { z } from "zod";
+import ko from "../locales/ko.json";
+import { COMMITTEE_SEAT_LABEL_KEY } from "./label-keys.ts";
 import { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import {
@@ -43,6 +45,7 @@ import {
   buildSynthesis,
   estimateTokens,
   type AgendaIssue,
+  type AgendaParticipant,
   type DeliberationResult,
   type MinutesPassResult,
   type SynthesisPositionInput,
@@ -53,18 +56,35 @@ import type { MeetingAwaiting, MeetingPhase, MeetingProgress } from "./committee
 
 export const SEAT_MOVES = ["propose", "ask", "answer", "rebut", "concede", "amend", "pass"] as const;
 export const VOTE_MOVES = ["accept", "reserve"] as const;
-export const CHAIR_MOVES = ["open", "call", "propose_consensus", "close", "resume", "pass_on_behalf"] as const;
+/** A non-participant asks for the floor once per issue (the chair then grants or declines). */
+export const FLOOR_MOVES = ["request_floor"] as const;
+export const CHAIR_MOVES = [
+  "open",
+  "call",
+  "propose_consensus",
+  "close",
+  "resume",
+  "pass_on_behalf",
+  "grant_floor",
+  "decline_floor",
+] as const;
 /** A human's utterance when the chair gave them the floor (hybrid). */
 export const HUMAN_MOVES = ["speak"] as const;
 export type SeatMove = (typeof SEAT_MOVES)[number];
 export type VoteMove = (typeof VOTE_MOVES)[number];
+export type FloorMove = (typeof FLOOR_MOVES)[number];
 export type ChairMove = (typeof CHAIR_MOVES)[number];
-export type TurnMove = SeatMove | VoteMove | ChairMove | (typeof HUMAN_MOVES)[number];
+export type TurnMove = SeatMove | VoteMove | FloorMove | ChairMove | (typeof HUMAN_MOVES)[number];
 export type TurnRole = "seat" | "chair" | "human";
 export type IssueOutcome = "agreed" | "narrowed" | "unresolved";
 export type Stance = "for" | "against" | "conditional" | "unsure";
 
-const ALL_MOVES = [...SEAT_MOVES, ...VOTE_MOVES, ...CHAIR_MOVES, ...HUMAN_MOVES] as const;
+const ALL_MOVES = [...SEAT_MOVES, ...VOTE_MOVES, ...FLOOR_MOVES, ...CHAIR_MOVES, ...HUMAN_MOVES] as const;
+
+/** Prompt versions of the turn engine (stored in meta.prompt_versions of a turn session). */
+export const TURN_PROMPT_VERSION = "committee.turn@2";
+export const CONSENSUS_PROMPT_VERSION = "committee.consensus@2";
+export const FLOOR_PROMPT_VERSION = "committee.floor@1";
 
 export interface TurnBudgets {
   /** Per issue: min(perIssueCap, perIssueMultiplier x seats) discussion turns. */
@@ -128,8 +148,20 @@ export const turnMetaSchema = z.object({
   rests_on: z.array(z.string()).optional(),
   /** close: how the issue ended. */
   outcome: z.enum(["agreed", "narrowed", "unresolved"]).optional(),
-  votes: z.object({ accept: z.number(), reserve: z.number(), abstain: z.number() }).optional(),
-  /** Why: "budget" | "human_timeout" | "human_wait_cap" | "consensus_failed" | "resume". */
+  votes: z
+    .object({
+      accept: z.number(),
+      reserve: z.number(),
+      abstain: z.number(),
+      /** Seats that did not take part in the issue (never counted as accept). */
+      not_participating: z.number().optional(),
+    })
+    .optional(),
+  /** open rows: the seats (keys) that take discussion turns on the issue. */
+  participants: z.array(z.string()).optional(),
+  /** close rows: the seats (keys) that sat the issue out. */
+  non_participants: z.array(z.string()).optional(),
+  /** Why: "budget" | "human_timeout" | "human_wait_cap" | "consensus_failed" | "resume" | "mentioned" | "floor_granted" | "floor_limit" | "turn_cap". */
   reason: z.string().optional(),
   /** pass_on_behalf: the seat the chair passed for. */
   for_seat: z.string().optional(),
@@ -139,6 +171,14 @@ export const turnMetaSchema = z.object({
 export type TurnMeta = z.infer<typeof turnMetaSchema>;
 
 const POSITION_META_RE = /<!--position-meta:([\s\S]*?)-->/;
+
+export interface VoteTally {
+  accept: number;
+  reserve: number;
+  abstain: number;
+  /** Seats that did not take part in the issue; never counted as accept. */
+  not_participating?: number;
+}
 
 export interface TurnRecord {
   /** agent_position.id — the id minutes refs resolve to. */
@@ -159,7 +199,9 @@ export interface TurnRecord {
   confidence?: number;
   restsOn?: string[];
   outcome?: IssueOutcome;
-  votes?: { accept: number; reserve: number; abstain: number };
+  votes?: VoteTally;
+  participants?: string[];
+  nonParticipants?: string[];
   reason?: string;
   forSeat?: string;
   error?: string;
@@ -213,6 +255,8 @@ export function parseTurnRow(row: {
     ...(t.rests_on ? { restsOn: t.rests_on } : {}),
     ...(t.outcome ? { outcome: t.outcome } : {}),
     ...(t.votes ? { votes: t.votes } : {}),
+    ...(t.participants ? { participants: t.participants } : {}),
+    ...(t.non_participants ? { nonParticipants: t.non_participants } : {}),
     ...(t.reason ? { reason: t.reason } : {}),
     ...(t.for_seat ? { forSeat: t.for_seat } : {}),
     ...(t.error ? { error: t.error } : {}),
@@ -283,7 +327,9 @@ export interface NewTurn {
   confidence?: number;
   restsOn?: string[];
   outcome?: IssueOutcome;
-  votes?: { accept: number; reserve: number; abstain: number };
+  votes?: VoteTally;
+  participants?: string[];
+  nonParticipants?: string[];
   reason?: string;
   forSeat?: string;
   error?: string;
@@ -345,6 +391,8 @@ export function insertTurnRow(db: SqlDb, runId: string, t: NewTurn): { id: strin
     ...(t.restsOn ? { rests_on: t.restsOn } : {}),
     ...(t.outcome ? { outcome: t.outcome } : {}),
     ...(t.votes ? { votes: t.votes } : {}),
+    ...(t.participants ? { participants: t.participants } : {}),
+    ...(t.nonParticipants ? { non_participants: t.nonParticipants } : {}),
     ...(t.reason ? { reason: t.reason } : {}),
     ...(t.forSeat ? { for_seat: t.forSeat } : {}),
     ...(t.error ? { error: t.error } : {}),
@@ -415,67 +463,334 @@ export function discussionTurnCount(live: TurnRecord[]): number {
   return live.filter(isDiscussionTurn).length;
 }
 
+// ── Seat display names ─────────────────────────────────────────────────────
+
+/** Display name of the chair in transcripts and prompts. */
+export const CHAIR_DISPLAY_NAME = "의장";
+
+export type SeatNamer = (key: string) => string;
+
+/**
+ * Korean display name of a seat (locales/ko.json common.committee.seat.* via
+ * COMMITTEE_SEAT_LABEL_KEY). Unknown keys keep the raw key — it is a registry
+ * key, never a person. Prompts and utterances address colleagues by this name
+ * only; agent keys are machine identifiers.
+ */
+export const seatDisplayName: SeatNamer = (key) => {
+  const labelKey = COMMITTEE_SEAT_LABEL_KEY[key];
+  if (!labelKey) return key;
+  let node: unknown = ko;
+  for (const part of labelKey.split(".")) {
+    if (node && typeof node === "object") node = (node as Record<string, unknown>)[part];
+    else return key;
+  }
+  return typeof node === "string" && node.length > 0 ? node : key;
+};
+
+const escapeRe = (x: string): string => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Replace leaked agent keys in an utterance with the seat's display name:
+ * `legal-counsel님` → `법률 위원님`, a bare `legal-counsel` → `법률 위원`. The
+ * model is told to use display names; this is the guarantee. Only keys that
+ * have a distinct display name are touched.
+ */
+export function scrubSeatKeys(text: string, keys: readonly string[], name: SeatNamer = seatDisplayName): string {
+  let out = text;
+  const ordered = [...new Set(keys)].sort((x, y) => y.length - x.length);
+  for (const key of ordered) {
+    const label = key === "process-governance-manager" ? CHAIR_DISPLAY_NAME : name(key);
+    if (!label || label === key) continue;
+    const re = new RegExp(`(?<![A-Za-z0-9_-])${escapeRe(key)}(님)?(?![A-Za-z0-9_-])`, "gi");
+    out = out.replace(re, (_m, honorific: string | undefined) => `${label}${honorific ?? ""}`);
+  }
+  return out;
+}
+
+/** Resolve a seat the model wrote — a key, a display name, either with a trailing 님 — to its key. */
+export function resolveSeatName(
+  raw: string | null | undefined,
+  seats: readonly string[],
+  name: SeatNamer = seatDisplayName,
+): string | undefined {
+  if (!raw) return undefined;
+  const norm = (x: string): string => x.replace(/님$/, "").replace(/\s+/g, "").toLowerCase();
+  const want = norm(raw.trim());
+  if (!want) return undefined;
+  return seats.find((s) => norm(s) === want || norm(name(s)) === want);
+}
+
+// ── Participants (per-issue: who takes discussion turns) ───────────────────
+
+/** A seat the engine can name for an issue. `mandatory` = holds veto / mandatory-review authority. */
+export interface SeatInfo {
+  key: string;
+  name: string;
+  /** One line of what the seat is for (registry role), prompt context for the chair. */
+  role?: string;
+  mandatory?: boolean;
+}
+
+export const MIN_PARTICIPANTS = 3;
+export const MAX_PARTICIPANTS = 5;
+/** At most this many non-participants get the floor per issue. */
+export const MAX_FLOOR_GRANTS = 2;
+export const MANDATORY_REASON = "거부권·필수 검토 권한을 가진 위원 — 모든 안건에 참여";
+export const NAMED_REASON = "쟁점을 제기한 위원";
+
+const sortByRegistry = (items: AgendaParticipant[], seats: readonly string[]): AgendaParticipant[] =>
+  [...items].sort((x, y) => seats.indexOf(x.seat) - seats.indexOf(y.seat));
+
+/**
+ * Validate the chair's participants for ONE issue. Only seats of this committee
+ * survive (a key or a display name is accepted), duplicates drop, reasons are
+ * trimmed to one line. Returns null when fewer than min(3, seats) valid seats
+ * remain — the caller then falls back deterministically. Mandatory seats are
+ * always added; the list is capped at 5 by trimming non-mandatory seats from
+ * the end (mandatory seats are never trimmed).
+ */
+export function normalizeParticipants(
+  raw: unknown,
+  seats: readonly string[],
+  mandatory: readonly string[],
+  name: SeatNamer = seatDisplayName,
+): AgendaParticipant[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: AgendaParticipant[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const { seat, reason } = item as Record<string, unknown>;
+    const key = typeof seat === "string" ? resolveSeatName(seat, seats, name) : undefined;
+    if (!key || out.some((p) => p.seat === key)) continue;
+    out.push({
+      seat: key,
+      reason: (typeof reason === "string" ? reason : "").replace(/\s+/g, " ").trim().slice(0, 200) || "관련 전문 영역",
+    });
+  }
+  if (out.length < Math.min(MIN_PARTICIPANTS, seats.length)) return null;
+  for (const m of mandatory) {
+    if (seats.includes(m) && !out.some((p) => p.seat === m)) out.push({ seat: m, reason: MANDATORY_REASON });
+  }
+  while (out.length > MAX_PARTICIPANTS) {
+    let drop = -1;
+    for (let i = out.length - 1; i >= 0; i--) {
+      if (!mandatory.includes(out[i].seat)) {
+        drop = i;
+        break;
+      }
+    }
+    if (drop < 0) break;
+    out.splice(drop, 1);
+  }
+  return sortByRegistry(out, seats);
+}
+
+/**
+ * Deterministic participant choice for one issue (used when the chair's output
+ * is missing / invalid, and for stored agendas without participants):
+ *  - up to 5 seats → everyone takes part (nothing to select);
+ *  - otherwise mandatory seats + the seats that raised the issue + the seats
+ *    whose role text overlaps the issue title, filled to 4 seats, ties broken by
+ *    a registry rotation over the issue index so the same seats do not sit every
+ *    issue. Result is in registry order.
+ */
+export function fallbackParticipants(
+  issue: Pick<AgendaIssue, "title" | "raisedBy">,
+  issueIndex: number,
+  seats: readonly string[],
+  mandatory: readonly string[],
+  info: ReadonlyMap<string, SeatInfo> = new Map(),
+  name: SeatNamer = seatDisplayName,
+): AgendaParticipant[] {
+  const must = seats.filter((s) => mandatory.includes(s));
+  if (seats.length <= MAX_PARTICIPANTS) {
+    return seats.map((s) => ({
+      seat: s,
+      reason: must.includes(s) ? MANDATORY_REASON : "전체 위원이 참여하는 소규모 위원회",
+    }));
+  }
+  const chosen = new Map<string, string>();
+  for (const s of must) chosen.set(s, MANDATORY_REASON);
+  for (const s of issue.raisedBy ?? []) {
+    const key = resolveSeatName(s, seats, name);
+    if (key && !chosen.has(key) && chosen.size < MAX_PARTICIPANTS) chosen.set(key, NAMED_REASON);
+  }
+  const tokens = issue.title
+    .toLowerCase()
+    .split(/[^0-9a-z가-힣]+/)
+    .filter((t) => t.length >= 2);
+  const scored = seats
+    .filter((s) => !chosen.has(s))
+    .map((s, _i) => {
+      const text = `${name(s)} ${info.get(s)?.role ?? ""}`.toLowerCase();
+      const score = tokens.filter((t) => text.includes(t)).length;
+      const rot = (seats.indexOf(s) - issueIndex + seats.length * 4) % seats.length;
+      return { s, score, rot };
+    })
+    .sort((x, y) => y.score - x.score || x.rot - y.rot);
+  const target = Math.max(MIN_PARTICIPANTS, Math.min(4, seats.length));
+  for (const { s, score } of scored) {
+    if (chosen.size >= target) break;
+    chosen.set(s, score > 0 ? "쟁점과 맞닿은 전문 영역" : "논의의 폭을 위해 배정");
+  }
+  return sortByRegistry(
+    [...chosen].map(([seat, reason]) => ({ seat, reason })),
+    seats,
+  );
+}
+
+export interface ParticipantsResult {
+  agenda: AgendaIssue[];
+  /** Ids of the issues whose participants came from the deterministic fallback (empty = all from the chair). */
+  fallbackIssueIds: string[];
+  notes: string[];
+}
+
+/**
+ * Make every issue carry valid participants: keep the chair's (validated,
+ * mandatory seats added), otherwise fall back deterministically. Every fallback
+ * is recorded in `notes` / `fallbackIssueIds` for meta and logged — never silent.
+ */
+export function ensureAgendaParticipants(
+  agenda: readonly AgendaIssue[],
+  seats: readonly string[],
+  mandatory: readonly string[],
+  info: ReadonlyMap<string, SeatInfo> = new Map(),
+  name: SeatNamer = seatDisplayName,
+  quiet = false,
+): ParticipantsResult {
+  const fallbackIssueIds: string[] = [];
+  const notes: string[] = [];
+  const out = agenda.map((issue, idx) => {
+    const given = normalizeParticipants(issue.participants, seats, mandatory, name);
+    if (given) return { ...issue, participants: given };
+    fallbackIssueIds.push(issue.id);
+    notes.push(
+      issue.participants === undefined
+        ? `${issue.id}: no participants from the chair — deterministic selection`
+        : `${issue.id}: chair participants invalid — deterministic selection`,
+    );
+    return { ...issue, participants: fallbackParticipants(issue, idx + 1, seats, mandatory, info, name) };
+  });
+  if (notes.length > 0 && !quiet) console.warn(`[committee-turns] participants fallback: ${notes.join("; ")}`);
+  return { agenda: out, fallbackIssueIds, notes };
+}
+
 // ── Pure rules: speaker order, stop rule, consensus ────────────────────────
 
 export const FIRST_TURN_MOVES: SeatMove[] = ["propose", "ask"];
 export const OPEN_TURN_MOVES: SeatMove[] = ["propose", "ask", "rebut", "concede", "amend", "pass"];
 export const ANSWER_ONLY: SeatMove[] = ["answer"];
+/** A seat that was granted the floor: one substantive turn, no pass / concede. */
+export const GUEST_TURN_MOVES: SeatMove[] = ["propose", "ask", "rebut", "amend"];
 
 export interface NextSpeaker {
   seat: string;
   allowed: SeatMove[];
   /** The ask this turn must answer (agent_position.id). */
   answering?: TurnRecord;
+  /** The standing proposal was just put: this speaker is asked to test it (question / rebut), not to add to it. */
+  challenge?: boolean;
+  /** This seat was granted the floor (a non-participant): one turn on the issue. */
+  guest?: boolean;
 }
 
+export interface SpeakerOpts {
+  /** Seats with veto / mandatory-review authority: the first to test a fresh proposal. */
+  mandatory?: readonly string[];
+  /** Non-participants granted the floor: they answer asks / rebuts and take one turn, never join the rotation. */
+  guests?: readonly string[];
+}
+
+const withoutAmend = (moves: readonly SeatMove[], amended: boolean): SeatMove[] =>
+  amended ? moves.filter((m) => m !== "amend") : [...moves];
+
 /**
- * Deterministic speaker choice (design §4.3). `seats` is in registry order and
- * `issueTurns` are the live seat turns of THIS issue in seq order.
+ * Deterministic speaker choice (design §4.3). `seats` are the issue's
+ * participants in registry order and `issueTurns` are the live seat turns of
+ * THIS issue in seq order.
  *   1. a pending `ask` addressed to X → X answers (only `answer` allowed);
  *   2. otherwise the seat named by the most recent unanswered `rebut`;
- *   3. otherwise round-robin over seats that have not spoken on the issue, then
+ *   3. a granted-floor guest that has not spoken takes its one turn;
+ *   4. otherwise round-robin over seats that have not spoken on the issue, then
  *      the seat with the fewest turns (registry order breaks ties, and the last
- *      speaker is avoided while another seat is eligible);
- *   4. a seat that passed twice on this issue is skipped.
+ *      speaker is avoided while another seat is eligible). Right after a
+ *      `propose` / `amend` the next speaker is a challenger: an unspoken
+ *      mandatory seat first, and the turn is flagged `challenge`;
+ *   5. a seat that passed twice on this issue is skipped; a seat that already
+ *      amended on this issue cannot amend again.
  * Returns null when no seat is eligible (the discussion ends).
  */
-export function nextSpeaker(seats: readonly string[], issueTurns: readonly TurnRecord[]): NextSpeaker | null {
+export function nextSpeaker(
+  seats: readonly string[],
+  issueTurns: readonly TurnRecord[],
+  opts: SpeakerOpts = {},
+): NextSpeaker | null {
+  const guests = opts.guests ?? [];
   const turns = issueTurns.filter((t) => t.role === "seat" && isSeatMove(t.move));
   const passes = new Map<string, number>();
   for (const t of turns) if (t.move === "pass") passes.set(t.speaker, (passes.get(t.speaker) ?? 0) + 1);
+  const amended = new Set(turns.filter((t) => t.move === "amend").map((t) => t.speaker));
   const eligible = seats.filter((s) => (passes.get(s) ?? 0) < 2);
+  const addressable = [...eligible, ...guests.filter((g) => !seats.includes(g))];
   if (eligible.length === 0) return null;
 
   for (let i = turns.length - 1; i >= 0; i--) {
     const t = turns[i];
     if ((t.move !== "ask" && t.move !== "rebut") || !t.addressedTo) continue;
     const target = t.addressedTo;
-    if (target === t.speaker || !eligible.includes(target)) continue;
+    if (target === t.speaker || !addressable.includes(target)) continue;
     if (turns.slice(i + 1).some((x) => x.speaker === target)) continue; // already replied
     if (t.move === "ask") return { seat: target, allowed: ANSWER_ONLY, answering: t };
-    return { seat: target, allowed: OPEN_TURN_MOVES.filter((m) => m !== "answer") };
+    return {
+      seat: target,
+      allowed: withoutAmend(
+        OPEN_TURN_MOVES.filter((m) => m !== "answer"),
+        amended.has(target),
+      ),
+    };
   }
 
-  const allowed = turns.length === 0 ? FIRST_TURN_MOVES : OPEN_TURN_MOVES;
-  const spoken = new Set(turns.map((t) => t.speaker));
+  const pendingGuest = guests.find((g) => !turns.some((t) => t.speaker === g));
+  if (pendingGuest) {
+    return { seat: pendingGuest, allowed: withoutAmend(GUEST_TURN_MOVES, false), guest: true };
+  }
+
+  const participantTurns = turns.filter((t) => seats.includes(t.speaker));
+  const lastTurn = participantTurns.length > 0 ? participantTurns[participantTurns.length - 1] : undefined;
+  const afterProposal = lastTurn !== undefined && (lastTurn.move === "propose" || lastTurn.move === "amend");
+  const base = participantTurns.length === 0 ? FIRST_TURN_MOVES : OPEN_TURN_MOVES;
+  const mk = (seat: string, challenge: boolean): NextSpeaker => ({
+    seat,
+    allowed: withoutAmend(base, amended.has(seat)),
+    ...(challenge ? { challenge: true } : {}),
+  });
+  const spoken = new Set(participantTurns.map((t) => t.speaker));
+  if (afterProposal) {
+    const challenger = (opts.mandatory ?? []).find(
+      (m) => eligible.includes(m) && !spoken.has(m) && m !== lastTurn.speaker,
+    );
+    if (challenger) return mk(challenger, true);
+  }
   const unspoken = eligible.find((s) => !spoken.has(s));
-  if (unspoken) return { seat: unspoken, allowed };
+  if (unspoken) return mk(unspoken, afterProposal);
   const counts = new Map<string, number>();
-  for (const t of turns) counts.set(t.speaker, (counts.get(t.speaker) ?? 0) + 1);
-  const last = turns.length > 0 ? turns[turns.length - 1].speaker : undefined;
+  for (const t of participantTurns) counts.set(t.speaker, (counts.get(t.speaker) ?? 0) + 1);
+  const last = lastTurn?.speaker;
   const pool = eligible.length > 1 ? eligible.filter((s) => s !== last) : eligible;
   const min = Math.min(...pool.map((s) => counts.get(s) ?? 0));
   const seat = pool.find((s) => (counts.get(s) ?? 0) === min) as string;
-  return { seat, allowed };
+  return mk(seat, afterProposal);
 }
 
 export type StopReason = "turn_cap" | "converged" | "silent";
 
 /**
  * Per-issue stop rule (design §4.4); the first that holds ends the discussion:
- *  - turn_cap: perIssueMax discussion turns reached;
- *  - converged: every seat spoke and the last full cycle (one turn per seat)
- *    produced only concede / pass / amend — no new rebut, ask or proposal;
+ *  - turn_cap: perIssueMax discussion turns reached (guest turns count);
+ *  - converged: every participant spoke and the last full cycle (one turn per
+ *    participant) produced only concede / pass / amend — no new rebut, ask or
+ *    proposal;
  *  - silent: two full cycles of only pass.
  */
 export function shouldStopIssue(
@@ -483,8 +798,9 @@ export function shouldStopIssue(
   issueTurns: readonly TurnRecord[],
   perIssueMax: number,
 ): StopReason | null {
-  const turns = issueTurns.filter((t) => t.role === "seat" && isSeatMove(t.move));
-  if (turns.length >= perIssueMax) return "turn_cap";
+  const all = issueTurns.filter((t) => t.role === "seat" && isSeatMove(t.move));
+  if (all.length >= perIssueMax) return "turn_cap";
+  const turns = all.filter((t) => seats.includes(t.speaker));
   const n = seats.length;
   if (n === 0 || turns.length < n) return null;
   if (!seats.every((s) => turns.some((t) => t.speaker === s))) return null;
@@ -494,23 +810,37 @@ export function shouldStopIssue(
   return null;
 }
 
-/** perIssueMax = 3 x seats, capped at 12 (never below 1). */
-export function perIssueMax(seatCount: number, b: TurnBudgets): number {
-  return Math.max(1, Math.min(b.perIssueCap, b.perIssueMultiplier * seatCount));
+/** perIssueMax = 3 x participants, capped at 12 (never below 1). */
+export function perIssueMax(participantCount: number, b: TurnBudgets): number {
+  return Math.max(1, Math.min(b.perIssueCap, b.perIssueMultiplier * participantCount));
 }
 
 /**
- * agreed: every seat accepted. narrowed: most seats accepted and the reservations
- * stand verbatim as the narrower point. unresolved: otherwise. Abstentions
- * (a vote whose output was unusable) never count as accept.
+ * agreed: every voter accepted. narrowed: most voters accepted and the
+ * reservations stand verbatim as the narrower point. unresolved: otherwise.
+ * `voterCount` is the participants (plus granted-floor seats) — seats that sat
+ * the issue out are never voters and never count as accept. Abstentions (a vote
+ * whose output was unusable) never count as accept.
  */
 export function classifyConsensus(
   votes: { accept: number; reserve: number; abstain: number },
-  seatCount: number,
+  voterCount: number,
 ): IssueOutcome {
-  if (seatCount > 0 && votes.accept === seatCount) return "agreed";
-  if (votes.accept * 2 > seatCount) return "narrowed";
+  if (voterCount > 0 && votes.accept === voterCount) return "agreed";
+  if (votes.accept * 2 > voterCount) return "narrowed";
   return "unresolved";
+}
+
+/** Non-participants of an issue named (by display name) in an utterance, in registry order. */
+export function mentionedSeats(
+  text: string,
+  candidates: readonly string[],
+  name: SeatNamer = seatDisplayName,
+): string[] {
+  return candidates.filter((s) => {
+    const label = name(s);
+    return label !== s && text.includes(label);
+  });
 }
 
 // ── Prompts ────────────────────────────────────────────────────────────────
@@ -521,7 +851,7 @@ const MOVE_HINT: Record<string, string> = {
   answer: "answer — 답변: 받은 질문에 답한다",
   rebut: "rebut — 반박: 앞선 발언을 이유를 들어 반박한다 (addressed_to에 그 위원)",
   concede: "concede — 수긍: 앞선 발언에 동의하거나 양보한다",
-  amend: "amend — 수정: 표준 안을 고쳐 다시 내놓는다",
+  amend: "amend — 수정: 현재 안의 구체적 결함 하나를 고쳐 다시 내놓는다 (안건당 위원마다 한 번만)",
   pass: "pass — 넘김: 더할 말이 없다",
   accept: "accept — 동의: 합의안에 찬성한다",
   reserve: "reserve — 유보: 합의안에 동의하지 못한다 (이유를 한 줄로)",
@@ -533,13 +863,13 @@ export interface IssueTitle {
   title: string;
 }
 
-function labelOf(t: TurnRecord): string {
-  return t.role === "chair" ? `${t.speaker}(의장)` : t.role === "human" ? `${t.speaker}(사람)` : t.speaker;
+function labelOf(t: TurnRecord, name: SeatNamer): string {
+  return t.role === "chair" ? CHAIR_DISPLAY_NAME : t.role === "human" ? `${t.speaker}(사람)` : name(t.speaker);
 }
 
-function renderTurnLine(t: TurnRecord): string {
-  const to = t.addressedTo ? ` → ${t.addressedTo}` : "";
-  return `#${t.seq} ${labelOf(t)} [${t.move}${to}]: ${t.utterance.replace(/\s+/g, " ")}`;
+function renderTurnLine(t: TurnRecord, name: SeatNamer): string {
+  const to = t.addressedTo ? ` → ${name(t.addressedTo)}` : "";
+  return `#${t.seq} ${labelOf(t, name)} [${t.move}${to}]: ${t.utterance.replace(/\s+/g, " ")}`;
 }
 
 /**
@@ -547,16 +877,19 @@ function renderTurnLine(t: TurnRecord): string {
  * rows only — partial turns of a stopped sitting are excluded), earlier issues
  * compacted to their outcome plus the consensus text, capped at ~8k tokens by
  * dropping the oldest earlier issues first. The current issue is always whole.
+ * Speakers appear by display name, never by agent key.
  */
 export function buildTurnTranscript(opts: {
   agenda: readonly AgendaIssue[];
   issueIndex: number;
   live: readonly TurnRecord[];
   tokenCap?: number;
+  name?: SeatNamer;
 }): string {
   const cap = opts.tokenCap ?? 8000;
+  const name = opts.name ?? seatDisplayName;
   const here = opts.live.filter((r) => r.issueIndex === opts.issueIndex && r.move !== "resume");
-  const current = here.map(renderTurnLine);
+  const current = here.map((r) => renderTurnLine(r, name));
   const earlier: string[] = [];
   for (let j = 1; j < opts.issueIndex; j++) {
     const rows = opts.live.filter((r) => r.issueIndex === j);
@@ -589,6 +922,27 @@ function agendaLines(agenda: readonly AgendaIssue[], current: number): string[] 
   return agenda.map((a, i) => `- ${i + 1}. ${a.title}${i + 1 === current ? "  ← 지금 논의 중" : ""}`);
 }
 
+/** The roster block: who takes part in this issue (display names + the chair's reason), who sits it out. */
+function rosterLines(opts: {
+  participants: readonly AgendaParticipant[];
+  guests: readonly string[];
+  name: SeatNamer;
+}): string[] {
+  const lines = [
+    "참여 위원 (이 안건에서 발언하고 표결하는 위원):",
+    ...opts.participants.map((p) => `- ${opts.name(p.seat)}: ${p.reason}`),
+  ];
+  if (opts.guests.length > 0) lines.push(`발언권을 받은 위원: ${opts.guests.map(opts.name).join(", ")}`);
+  return lines;
+}
+
+const NAMING_RULE =
+  "다른 위원을 부를 때는 위 명단의 표시명만 씁니다 (예: '법률 위원'). 영문 키나 '키님' 형태의 코드 이름은 쓰지 않습니다.";
+
+/** The system states "the decision is made by a person" once, in the minutes header — never per utterance. */
+export const NO_DISCLAIMER_RULE =
+  "'최종 결정은 사람이 합니다' 같은 고지 문구를 발언에 되풀이하지 않습니다 (회의록 머리에 한 번 적힙니다). 발언은 논점 그 자체에 씁니다.";
+
 export function buildTurnPrompt(opts: {
   seat: string;
   topic: string;
@@ -597,10 +951,19 @@ export function buildTurnPrompt(opts: {
   live: readonly TurnRecord[];
   allowed: readonly TurnMove[];
   answering?: TurnRecord;
+  /** The issue's participants (display names are resolved here); defaults to `seats` without reasons. */
+  participants?: readonly AgendaParticipant[];
+  /** Participants (keys); kept for callers that have no reasons. */
   seats: readonly string[];
+  guests?: readonly string[];
+  challenge?: boolean;
+  guest?: boolean;
+  name?: SeatNamer;
 }): string {
+  const name = opts.name ?? seatDisplayName;
+  const participants = opts.participants ?? opts.seats.map((seat) => ({ seat, reason: "" }));
   const lines = [
-    `당신은 '${opts.seat}' 위원입니다. 지금은 AI 위원회 회의 중이며, 이번 차례에 행동 하나만 합니다.`,
+    `당신은 '${name(opts.seat)}' 입니다. 지금은 AI 위원회 회의 중이며, 이번 차례에 행동 하나만 합니다.`,
     "",
     "## 검토/안건",
     opts.topic,
@@ -609,23 +972,39 @@ export function buildTurnPrompt(opts: {
     ...agendaLines(opts.agenda, opts.issueIndex),
     "",
     "## 회의 진행 기록",
-    buildTurnTranscript({ agenda: opts.agenda, issueIndex: opts.issueIndex, live: opts.live }),
+    buildTurnTranscript({ agenda: opts.agenda, issueIndex: opts.issueIndex, live: opts.live, name }),
     "",
     "## 이번 차례",
-    `위원: ${opts.seats.join(", ")}`,
+    ...rosterLines({ participants, guests: opts.guests ?? [], name }),
+    NAMING_RULE,
     "가능한 행동:",
     ...opts.allowed.map((m) => `- ${MOVE_HINT[m] ?? m}`),
+    "",
+    "## 발언 방식",
+    "- 안건의 쟁점에 대해 내 전문 영역의 판단을 말하되, 앞선 발언을 시험하는 쪽을 우선합니다: 숨은 전제, 빠진 근거, 반대 사례가 보이면 질문(ask)하거나 반박(rebut)하세요.",
+    "- '저희 영역에서도 ~를 조건으로 추가해야 합니다' 식으로 내 영역의 조건을 목록에 덧붙이는 발언은 하지 않습니다. 수정(amend)은 현재 안의 구체적 결함 하나를 고칠 때만 씁니다.",
+    `- ${NO_DISCLAIMER_RULE}`,
   ];
+  if (opts.challenge) {
+    lines.push(
+      "- 방금 제안이 나왔습니다. 이번 차례는 그 제안의 약점을 확인하는 차례입니다. 약점이 보이면 질문이나 반박으로 짚고, 정말 없을 때만 수긍하세요.",
+    );
+  }
+  if (opts.guest) {
+    lines.push(
+      "- 당신은 의장에게 발언권을 받은 위원입니다. 이 안건에서 이번 한 번만 발언하며, 호명된 사안에 집중하세요.",
+    );
+  }
   if (opts.answering) {
     lines.push(
       "",
-      `${opts.answering.speaker} 위원이 #${opts.answering.seq}에서 당신에게 물었습니다. 먼저 그 질문에 답하세요.`,
+      `${labelOf(opts.answering, name)}이 #${opts.answering.seq}에서 당신에게 물었습니다. 먼저 그 질문에 답하세요.`,
     );
   }
   lines.push(
     "",
     "## 응답 형식",
-    'JSON 객체 하나만: {"move":"...","addressed_to":"위원 이름 또는 생략","responds_to_turn":"발언 번호 또는 생략","utterance":"40~120자 분량의 발언 한 가지 논점","stance":"for|against|conditional|unsure"}',
+    'JSON 객체 하나만: {"move":"...","addressed_to":"위원 표시명 또는 생략","responds_to_turn":"발언 번호 또는 생략","utterance":"40~120자 분량의 발언 한 가지 논점","stance":"for|against|conditional|unsure"}',
   );
   return lines.join("\n");
 }
@@ -636,9 +1015,11 @@ export function buildConsensusPrompt(opts: {
   agenda: readonly AgendaIssue[];
   issueIndex: number;
   live: readonly TurnRecord[];
+  name?: SeatNamer;
 }): string {
+  const name = opts.name ?? seatDisplayName;
   return [
-    `당신은 의장 '${opts.chair}' 입니다. 지금 안건의 토의가 끝났습니다. 표결에 부칠 합의안 하나를 정리하세요.`,
+    `당신은 ${CHAIR_DISPLAY_NAME}입니다. 지금 안건의 토의가 끝났습니다. 표결에 부칠 합의안 하나를 정리하세요.`,
     "",
     "## 검토/안건",
     opts.topic,
@@ -647,7 +1028,11 @@ export function buildConsensusPrompt(opts: {
     ...agendaLines(opts.agenda, opts.issueIndex),
     "",
     "## 회의 진행 기록",
-    buildTurnTranscript({ agenda: opts.agenda, issueIndex: opts.issueIndex, live: opts.live }),
+    buildTurnTranscript({ agenda: opts.agenda, issueIndex: opts.issueIndex, live: opts.live, name }),
+    "",
+    "## 정리 방식",
+    "발언한 위원은 표시명으로만 부릅니다 (영문 키나 '키님' 형태는 쓰지 않습니다). 발언하지 않은 위원의 동의를 가정하지 않습니다.",
+    NO_DISCLAIMER_RULE,
     "",
     "## 응답 형식",
     'JSON 객체 하나만: {"proposal":"합의안 2~4문장","rests_on_turns":[발언 번호, ...]}',
@@ -661,10 +1046,15 @@ export function buildVotePrompt(opts: {
   issueIndex: number;
   live: readonly TurnRecord[];
   proposal: string;
+  participants?: readonly AgendaParticipant[];
   seats: readonly string[];
+  guests?: readonly string[];
+  name?: SeatNamer;
 }): string {
+  const name = opts.name ?? seatDisplayName;
+  const participants = opts.participants ?? opts.seats.map((seat) => ({ seat, reason: "" }));
   return [
-    `당신은 '${opts.seat}' 위원입니다. 의장이 이 안건의 합의안을 표결에 부쳤습니다.`,
+    `당신은 '${name(opts.seat)}' 입니다. 의장이 이 안건의 합의안을 표결에 부쳤습니다.`,
     "",
     "## 검토/안건",
     opts.topic,
@@ -673,16 +1063,18 @@ export function buildVotePrompt(opts: {
     ...agendaLines(opts.agenda, opts.issueIndex),
     "",
     "## 회의 진행 기록",
-    buildTurnTranscript({ agenda: opts.agenda, issueIndex: opts.issueIndex, live: opts.live }),
+    buildTurnTranscript({ agenda: opts.agenda, issueIndex: opts.issueIndex, live: opts.live, name }),
     "",
     "## 합의안",
     opts.proposal,
     "",
     "## 이번 차례",
+    ...rosterLines({ participants, guests: opts.guests ?? [], name }),
+    NAMING_RULE,
     "가능한 행동 (하나만):",
     `- ${MOVE_HINT.accept}`,
     `- ${MOVE_HINT.reserve}`,
-    "최종 입장도 함께 밝히세요: recommendation(go|hold|kill), confidence(0-100), 정식 거부권 수준의 반대일 때만 veto_dissent:true. 이 값은 제안일 뿐이며 사람이 결정합니다.",
+    "최종 입장도 함께 밝히세요: recommendation(go|hold|kill), confidence(0-100), 정식 거부권 수준의 반대일 때만 veto_dissent:true. 이 값은 제안일 뿐이며 사람이 결정합니다 — 이 점을 이유 문장에 되풀이하지 않습니다.",
     "",
     "## 응답 형식",
     'JSON 객체 하나만: {"move":"accept|reserve","utterance":"이유 한 줄","recommendation":"go|hold|kill","confidence":0-100,"veto_dissent":true|false}',
@@ -806,11 +1198,13 @@ export interface ParsedTurn {
  * Validate one seat/vote reply against the allowed moves and the seat list.
  * Returns {error} when unusable: not JSON, wrong shape, a move outside
  * `allowed`, or an `ask` without a valid addressee (the speaker itself is not
- * one). An unknown `addressed_to` on other moves is dropped, not an error.
+ * one; `seats` are the seats that can be addressed — the issue's participants
+ * and granted guests). An unknown `addressed_to` on other moves is dropped,
+ * not an error.
  */
 export function parseTurnOutput(
   raw: string,
-  ctx: { allowed: readonly TurnMove[]; seats: readonly string[]; speaker: string },
+  ctx: { allowed: readonly TurnMove[]; seats: readonly string[]; speaker: string; name?: SeatNamer },
 ): { ok: true; turn: ParsedTurn } | { ok: false; error: string } {
   const json = extractJsonObject(raw);
   if (json === null) return { ok: false, error: "not_json" };
@@ -818,9 +1212,9 @@ export function parseTurnOutput(
   if (!r.success) return { ok: false, error: "invalid_shape" };
   const move = r.data.move.trim().toLowerCase() as TurnMove;
   if (!ctx.allowed.includes(move)) return { ok: false, error: "move_not_allowed" };
-  const addressed = r.data.addressed_to?.trim();
-  const validAddressee =
-    addressed && ctx.seats.includes(addressed) && addressed !== ctx.speaker ? addressed : undefined;
+  // The model is asked for a display name; a key (or either with a trailing 님) is accepted too.
+  const addressed = resolveSeatName(r.data.addressed_to, ctx.seats, ctx.name);
+  const validAddressee = addressed && addressed !== ctx.speaker ? addressed : undefined;
   if (move === "ask" && !validAddressee) return { ok: false, error: "ask_needs_addressee" };
   return {
     ok: true,
@@ -936,6 +1330,10 @@ export interface RunTurnMeetingOpts extends RunOpts {
   committeeKey: string;
   /** Speaking seats in registry order (agent seats). */
   seats: readonly string[];
+  /** Seats with veto / mandatory-review authority — always participants, first to test a proposal. */
+  mandatorySeats?: readonly string[];
+  /** Registry context per seat (role line) for the deterministic participant fallback. */
+  seatInfo?: readonly SeatInfo[];
   topic: string;
   /** The chair: facilitates and votes nothing; evaluated_by of the proposal row. */
   chair: string;
@@ -970,6 +1368,8 @@ export interface RunTurnMeetingOpts extends RunOpts {
 export interface TurnMeetingResult extends Omit<DeliberationResult, "status" | "rounds"> {
   status: "done" | "awaiting_human";
   rounds: DeliberationResult["rounds"];
+  /** Seats that took no part in any issue — reported as not participating, never as accept. */
+  notParticipating?: string[];
   /** Set when status = "awaiting_human". */
   awaiting?: MeetingAwaiting;
   turnState: TurnState;
@@ -990,7 +1390,16 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
   const humanWaitMs = opts.turnState?.human_wait_ms ?? 0;
   const elapsed = (): number => elapsedBase + (clock() - t0);
   const startedAt = opts.startedAt ?? nowIso();
-  const issueMax = perIssueMax(seats.length, budgets);
+  const mandatory = opts.mandatorySeats ?? [];
+  const infoMap = new Map((opts.seatInfo ?? []).map((x) => [x.key, x] as const));
+  // Every issue carries participants: the chair's (validated) or the deterministic selection. A stored
+  // agenda without them (resume, human edit, direct call) is completed here; the session layer logs
+  // and records the fallback in meta before this point.
+  const resolvedAgenda = ensureAgendaParticipants(agenda, seats, mandatory, infoMap, seatDisplayName, true).agenda;
+  const participantsOf = (i: number): AgendaParticipant[] => resolvedAgenda[i - 1]?.participants ?? [];
+  const rosterOf = (i: number): string[] => participantsOf(i).map((p) => p.seat);
+  const keysToScrub = [...new Set([...seats, opts.chair, ...Object.keys(COMMITTEE_SEAT_LABEL_KEY)])];
+  const scrub = (text: string): string => scrubSeatKeys(text, keysToScrub);
   let failStreak = 0;
   let budgetHit = false;
 
@@ -1070,30 +1479,95 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
     }
   };
 
+  const grantedOf = (rows: readonly TurnRecord[]): string[] =>
+    rows
+      .filter((r) => r.role === "chair" && r.move === "grant_floor" && r.addressedTo)
+      .map((r) => r.addressedTo as string);
+
+  /**
+   * Floor requests (cheap, no LLM). After the first proposal of an issue, a
+   * non-participant NAMED in a participant's utterance may ask for the floor —
+   * at most once per issue and seat. The request row is a machine line under
+   * that seat (reason "mentioned"); the chair then grants (the seat takes ONE
+   * turn and votes) or declines (reason floor_limit / turn_cap), each recorded
+   * as a chair turn. At most MAX_FLOOR_GRANTS grants per issue.
+   */
+  function handleFloorRequests(i: number, speaker: string, utterance: string, issueCap: number): void {
+    const roster = rosterOf(i);
+    if (!roster.includes(speaker)) return;
+    const rows = live().filter((r) => r.issueIndex === i);
+    const seatTurns = rows.filter((r) => r.role === "seat" && isSeatMove(r.move));
+    if (!seatTurns.some((t) => t.move === "propose")) return;
+    const asked = new Set(rows.filter((r) => r.move === "request_floor").map((r) => r.speaker));
+    const outside = seats.filter((s) => !roster.includes(s) && !asked.has(s));
+    let grants = grantedOf(rows).length;
+    for (const seat of mentionedSeats(utterance, outside)) {
+      const req = insertTurn(runId, {
+        role: "seat",
+        speaker: seat,
+        move: "request_floor",
+        issueIndex: i,
+        issueId: agenda[i - 1]?.id,
+        attempt,
+        utterance: `(자동 요청) ${seatDisplayName(seat)} — 앞선 발언에서 호명되어 이 안건의 발언권을 요청합니다.`,
+        reason: "mentioned",
+      });
+      const turnsNow = seatTurns.length + grants;
+      const budgetLeft = discussionTurnCount(live()) < budgets.turnsTotalMax && elapsed() < budgets.wallClockMs;
+      const decline =
+        grants >= MAX_FLOOR_GRANTS ? "floor_limit" : turnsNow + 1 >= issueCap || !budgetLeft ? "turn_cap" : null;
+      if (decline) {
+        chairTurn(i, "decline_floor", `${seatDisplayName(seat)}의 발언권 요청을 받아들이지 않습니다 (한도).`, {
+          addressedTo: seat,
+          respondsToTurn: req.id,
+          reason: decline,
+        });
+      } else {
+        grants += 1;
+        chairTurn(
+          i,
+          "grant_floor",
+          `${seatDisplayName(seat)}에게 발언권을 줍니다 — 이 안건에서 한 번 발언하고 표결합니다.`,
+          { addressedTo: seat, respondsToTurn: req.id, reason: "floor_granted" },
+        );
+      }
+    }
+  }
+
   async function discuss(i: number): Promise<"done" | "budget"> {
     const issue = agenda[i - 1];
+    const roster = rosterOf(i);
+    const participants = participantsOf(i);
+    const issueCap = perIssueMax(roster.length, budgets);
+    const mandatoryHere = mandatory.filter((m) => roster.includes(m));
     for (;;) {
       const lv = live();
       const here = lv.filter((r) => r.issueIndex === i);
       const issueTurns = here.filter((r) => r.role === "seat" || r.role === "human");
-      if (shouldStopIssue(seats, issueTurns, issueMax)) return "done";
+      const guests = grantedOf(here);
+      if (shouldStopIssue(roster, issueTurns, issueCap)) return "done";
       if (discussionTurnCount(lv) >= budgets.turnsTotalMax || elapsed() >= budgets.wallClockMs) return "budget";
-      const next = nextSpeaker(seats, issueTurns);
+      const next = nextSpeaker(roster, issueTurns, { mandatory: mandatoryHere, guests });
       if (!next) return "done";
       progress("discussion", { issueIndex: i, speakerSeat: next.seat });
-      const seatTurnNo = issueTurns.filter((t) => t.speaker === next.seat).length;
+      const seatTurnNo = issueTurns.filter((t) => t.speaker === next.seat && t.move !== "request_floor").length;
+      const addressable = [...roster, ...guests.filter((g) => !roster.includes(g))];
       const req: TurnRequest = {
         kind: "turn",
         agentKey: next.seat,
         prompt: buildTurnPrompt({
           seat: next.seat,
           topic: opts.topic,
-          agenda,
+          agenda: resolvedAgenda,
           issueIndex: i,
           live: lv,
           allowed: next.allowed,
           answering: next.answering,
-          seats,
+          participants,
+          seats: roster,
+          guests,
+          challenge: next.challenge,
+          guest: next.guest,
         }),
         allowedMoves: next.allowed,
         issueIndex: i,
@@ -1101,7 +1575,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
         seatTurnNo,
       };
       const res = await callParsed(req, (raw) => {
-        const p = parseTurnOutput(raw, { allowed: next.allowed, seats, speaker: next.seat });
+        const p = parseTurnOutput(raw, { allowed: next.allowed, seats: addressable, speaker: next.seat });
         return p.ok ? { ok: true, value: p.turn } : p;
       });
       if (!res.ok) {
@@ -1121,6 +1595,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
       }
       failStreak = 0;
       const t = res.value;
+      const utterance = scrub(t.utterance);
       insertTurn(runId, {
         role: "seat",
         speaker: next.seat,
@@ -1128,7 +1603,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
         issueIndex: i,
         issueId: issue.id,
         attempt,
-        utterance: t.utterance,
+        utterance,
         ...(t.addressedTo ? { addressedTo: t.addressedTo } : {}),
         // An answer always points at the ask it answers (code-decided, not the model's).
         ...(next.answering
@@ -1138,6 +1613,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
             : {}),
         ...(t.stance ? { stance: t.stance } : {}),
       });
+      handleFloorRequests(i, next.seat, utterance, issueCap);
     }
   }
 
@@ -1158,11 +1634,24 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
     progress("consensus", { issueIndex: i });
     const lv = live();
     const here = lv.filter((r) => r.issueIndex === i);
+    // Voters: the issue's participants plus seats granted the floor. Seats that sat the issue out are
+    // not asked and never counted as accept.
+    const roster = rosterOf(i);
+    const participants = participantsOf(i);
+    const guests = grantedOf(here).filter((g) => !roster.includes(g));
+    const voters = [...roster, ...guests];
+    const nonParticipants = seats.filter((s) => !voters.includes(s));
     const cres = await callParsed(
       {
         kind: "consensus",
         agentKey: opts.chair,
-        prompt: buildConsensusPrompt({ chair: opts.chair, topic: opts.topic, agenda, issueIndex: i, live: lv }),
+        prompt: buildConsensusPrompt({
+          chair: opts.chair,
+          topic: opts.topic,
+          agenda: resolvedAgenda,
+          issueIndex: i,
+          live: lv,
+        }),
         allowedMoves: ["propose_consensus"],
         issueIndex: i,
         issueId: issue.id,
@@ -1179,18 +1668,19 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
       chairTurn(i, "close", `안건 ${i}: 합의안이 없어 닫습니다 (${OUTCOME_LABEL.unresolved}).`, {
         outcome: "unresolved",
         reason: "consensus_failed",
+        nonParticipants,
       });
       return;
     }
     failStreak = 0;
-    const proposal = cres.value.proposal;
+    const proposal = scrub(cres.value.proposal);
     const refs = cres.value.refs
       .map((r) => resolveTurnRef(r, here))
       .filter((x, idx, arr): x is string => x !== undefined && arr.indexOf(x) === idx);
     chairTurn(i, "propose_consensus", proposal, { restsOn: refs });
 
     const votes = { accept: 0, reserve: 0, abstain: 0 };
-    for (const seat of seats) {
+    for (const seat of voters) {
       progress("consensus", { issueIndex: i, speakerSeat: seat });
       const vres = await callParsed(
         {
@@ -1199,11 +1689,13 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
           prompt: buildVotePrompt({
             seat,
             topic: opts.topic,
-            agenda,
+            agenda: resolvedAgenda,
             issueIndex: i,
             live: live(),
             proposal,
-            seats,
+            participants,
+            seats: roster,
+            guests,
           }),
           allowedMoves: VOTE_MOVES,
           issueIndex: i,
@@ -1211,7 +1703,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
           seatTurnNo: 0,
         },
         (raw) => {
-          const p = parseTurnOutput(raw, { allowed: VOTE_MOVES, seats, speaker: seat });
+          const p = parseTurnOutput(raw, { allowed: VOTE_MOVES, seats: voters, speaker: seat });
           return p.ok ? { ok: true, value: p.turn } : p;
         },
       );
@@ -1241,7 +1733,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
         issueIndex: i,
         issueId: issue.id,
         attempt,
-        utterance: v.utterance,
+        utterance: scrub(v.utterance),
         vote,
         ...(v.stance ? { stance: v.stance } : {}),
         ...(v.recommendation ? { recommendation: v.recommendation } : {}),
@@ -1249,12 +1741,12 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
         ...(v.vetoDissent ? { vetoDissent: true } : {}),
       });
     }
-    const outcome = classifyConsensus(votes, seats.length);
+    const outcome = classifyConsensus(votes, voters.length);
     chairTurn(
       i,
       "close",
-      `안건 ${i} 마침 — ${OUTCOME_LABEL[outcome]} (동의 ${votes.accept}, 유보 ${votes.reserve}${votes.abstain > 0 ? `, 응답 없음 ${votes.abstain}` : ""}).`,
-      { outcome, votes },
+      `안건 ${i} 마침 — ${OUTCOME_LABEL[outcome]} (동의 ${votes.accept}, 유보 ${votes.reserve}${votes.abstain > 0 ? `, 응답 없음 ${votes.abstain}` : ""}${nonParticipants.length > 0 ? `, 불참 ${nonParticipants.length}` : ""}).`,
+      { outcome, votes: { ...votes, not_participating: nonParticipants.length }, nonParticipants },
     );
   }
 
@@ -1285,7 +1777,7 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
       const issue = agenda[i - 1];
       if (!rows.some((r) => r.role === "chair" && r.move === "open")) {
         progress("discussion", { issueIndex: i });
-        chairTurn(i, "open", `안건 ${i}/${agenda.length} — ${issue.title}`);
+        chairTurn(i, "open", `안건 ${i}/${agenda.length} — ${issue.title}`, { participants: rosterOf(i) });
         rows = live().filter((r) => r.issueIndex === i);
       }
       const call = rows.find((r) => r.role === "chair" && r.move === "call");
@@ -1362,8 +1854,10 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
 
     // Synthesis: the unchanged dissent rule (ADR-0096 §6) over each speaker's latest stated stance.
     progress("consensus");
-    const finalPositions = finalStances(live());
+    const liveNow = live();
+    const finalPositions = finalStances(liveNow);
     const synthesis = buildSynthesis(finalPositions);
+    const notParticipating = notParticipatingSeats(seats, liveNow);
     const evalId = ulid();
     getDb().run(
       `INSERT INTO gate_evaluation (id, process_run_id, gate, criteria_json, score, evidence_json, recommendation, evaluated_by, created_at, dissent_json)
@@ -1372,7 +1866,13 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
         evalId,
         runId,
         opts.gate ?? "screening",
-        JSON.stringify({ committee: opts.committeeKey, engine: "turns", topic: opts.topic }),
+        JSON.stringify({
+          committee: opts.committeeKey,
+          engine: "turns",
+          topic: opts.topic,
+          // Seats that took no part in any issue: no vote, so neither an accept nor part of the recommendation.
+          not_participating: notParticipating,
+        }),
         null,
         null,
         synthesis.recommendation,
@@ -1408,12 +1908,23 @@ export async function runTurnMeeting(entity: EntityRef, opts: RunTurnMeetingOpts
       },
       ...(minutesDraft ? { minutesDraft } : {}),
       status: "done",
+      notParticipating,
       turnState: state(),
     };
   } catch (err) {
     if (!adopted) finishProcessRun(runId, "failed");
     throw err;
   }
+}
+
+/**
+ * Seats that took no part in ANY issue (no discussion turn, no vote). They are
+ * reported as not participating — never as accept, and they contribute no
+ * stance to the synthesis.
+ */
+export function notParticipatingSeats(seats: readonly string[], live: readonly TurnRecord[]): string[] {
+  const took = new Set(live.filter((r) => r.role === "seat" && r.move !== "request_floor").map((r) => r.speaker));
+  return seats.filter((s) => !took.has(s));
 }
 
 /**
@@ -1465,11 +1976,15 @@ export interface TurnView {
   vetoDissent: boolean;
   /** close rows: how the issue ended. */
   outcome: IssueOutcome | null;
-  /** close rows: vote tally. */
-  votes: { accept: number; reserve: number; abstain: number } | null;
+  /** close rows: vote tally; `not_participating` = seats that sat the issue out (never an accept). */
+  votes: VoteTally | null;
+  /** open rows: the seats (keys) that take discussion turns on the issue; null elsewhere. */
+  participants: string[] | null;
+  /** close rows: the seats (keys) that sat the issue out; null elsewhere. */
+  nonParticipants: string[] | null;
   /** propose_consensus rows: the turn ids the proposal rests on. */
   restsOn: string[];
-  /** "budget" | "human_timeout" | "human_wait_cap" | "consensus_failed" | "resume" | null. */
+  /** "budget" | "human_timeout" | "human_wait_cap" | "consensus_failed" | "resume" | "mentioned" | "floor_granted" | "floor_limit" | "turn_cap" | null. */
   reason: string | null;
   /** pass_on_behalf rows: the seat the chair passed for. */
   forSeat: string | null;
@@ -1503,6 +2018,8 @@ export function toTurnView(r: TurnRecord, abandoned: boolean): TurnView {
     vetoDissent: r.vetoDissent === true,
     outcome: r.outcome ?? null,
     votes: r.votes ?? null,
+    participants: r.participants ?? null,
+    nonParticipants: r.nonParticipants ?? null,
     restsOn: r.restsOn ?? [],
     reason: r.reason ?? null,
     forSeat: r.forSeat ?? null,

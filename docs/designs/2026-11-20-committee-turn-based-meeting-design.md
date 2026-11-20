@@ -360,3 +360,38 @@ Tests (`tests/unit/`, injected deterministic `callAgent`):
 - API: `afterSeq` respects the list permission check (non-member 403/404).
 
 Not verified here: exact line numbers inside `submitHumanPosition` for the round check (given as approximate), whether any reader outside `lib/` parses `agent_position.round` (I checked `lib/`, `components/`, and `app/api/` only), and how many rows real hybrid meetings produce (no production sample read).
+
+## 16. Phase 2.1 decisions (2026-11-20, owner)
+
+### 16.1 Measurement that triggered it
+
+Dev run, S6 `target-longlist-shortlist` committee: 3 issues, 8m06s, 36 of 40 seat turns, 78 total rows. Every seat spoke in fixed order; most turns were "amend: add my domain's condition"; every issue closed 11/11 accept. Participation was exhaustive but the discussion had no challenge, and unanimous accept from every seat carried little signal. Owner answer, chat, verbatim: "그렇게 해줘".
+
+### 16.2 Per-issue participants (amends §4.1, §4.3)
+
+- At agenda time the chair selects 3–5 relevant seats per issue and records a one-line reason for each.
+- Seats holding veto or mandatory-review authority for the gate (e.g. `risk-officer`) are always included, regardless of the chair's selection.
+- A non-participant may raise one `request_floor` per issue if its domain has a material issue. The chair accepts (seat joins the issue) or declines; either outcome is recorded as a turn with the reason.
+- The consensus vote counts participants only. Non-participants appear in the minutes as "not participating in this issue" and are never counted as accept — silence is not approval.
+- Expected rows per issue drop from ~23 to ~8–10.
+
+### 16.3 Display names (amends §4.5)
+
+Utterances address speakers by seat display name (e.g. "법률 위원"), never by agent key. The prompt contract supplies the display-name map; agent keys stay in structured fields only.
+
+### 16.4 Discussion quality (amends §4.3)
+
+- Speaker selection prioritizes pending challenge and ask moves over new amendments.
+- Each seat may make at most one amend per issue, unless the amend responds to a question addressed to it.
+- Repeated "add my condition" amendments are discouraged in the prompt contract.
+
+### 16.5 Live UI (amends §4.8; applies to all committee screens)
+
+- The page shows a one-line meeting status only. The meeting window (modal) opens when the user clicks "회의 보기"; it never auto-opens.
+- Inside the window, the view auto-follows the latest turn, pauses when the user scrolls up, and shows a "jump to latest" button.
+- When a human seat has the floor (`awaiting_human`), the page status becomes a prominent "your turn" alert.
+- §8 accessibility applies to the modal (focus trap, Escape to close, live-region announcements for the status line).
+
+### 16.6 Old session history
+
+Existing committee sessions (mostly test runs, inconsistent with the new format) will be cleaned up separately, only after the owner confirms the scope. Nothing is deleted under this design.
