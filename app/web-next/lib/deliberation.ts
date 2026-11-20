@@ -128,6 +128,34 @@ export interface RunDeliberationOpts extends RunOpts {
     agenda: AgendaIssue[];
     evaluation: { recommendation: Recommendation; dissentJson: string | null };
   }) => Promise<MinutesPassResult | null>;
+  /**
+   * Adopt an EXISTING process_run row (the committee session shell) instead of
+   * inserting an engine run of the engine's own. Positions and the
+   * gate_evaluation row are then written under that id from the first call,
+   * so a poll of the session sees finished positions while it is still
+   * convening. With this set the CALLER owns the run's status lifecycle: the
+   * engine neither finishes the run on success nor marks it failed on error.
+   */
+  processRunId?: string;
+  /**
+   * Live-progress hook (design 2026-11-20 §4.2). Fired before each member
+   * speaks and at each phase change; a throwing hook never fails the run.
+   */
+  onProgress?: (ev: DeliberationProgressEvent) => void;
+}
+
+/** Engine-level progress event; committee-session.ts maps it to MeetingProgress. */
+export interface DeliberationProgressEvent {
+  phase: "agenda" | "discussion" | "consensus" | "minutes";
+  /** discussion: 1-based round being written. */
+  round?: number;
+  roundCount: number;
+  /** discussion: the seat (member key) about to speak. */
+  speakerSeat?: string;
+  /** Positions persisted so far across all rounds. */
+  turnCount: number;
+  /** Positions the run is expected to produce (rounds x members). */
+  turnBudget: number;
 }
 
 // Single source of truth (design §9.2, F2): both chair-pass result types live
@@ -369,13 +397,26 @@ function insertPosition(processRunId: string, position: DeliberationPosition, ro
 export async function runDeliberationRounds(entity: EntityRef, opts: RunDeliberationOpts): Promise<DeliberationResult> {
   const rounds: DeliberationResult["rounds"] = [];
   const priorRounds: DeliberationPosition[][] = [];
-  const runId = insertProcessRun(entity, opts.stage ?? opts.committeeKey, opts);
+  const adopted = opts.processRunId !== undefined;
+  const runId = opts.processRunId ?? insertProcessRun(entity, opts.stage ?? opts.committeeKey, opts);
+  const roundCount = Math.max(1, opts.rounds);
+  const turnBudget = roundCount * opts.agents.length;
+  let turnCount = 0;
+  const emit = (ev: Omit<DeliberationProgressEvent, "roundCount" | "turnCount" | "turnBudget">): void => {
+    if (!opts.onProgress) return;
+    try {
+      opts.onProgress({ ...ev, roundCount, turnCount, turnBudget });
+    } catch {
+      // progress is observability only — it never fails the run
+    }
+  };
 
   try {
     let agendaResult: AgendaPassResult | undefined;
-    for (let round = 1; round <= Math.max(1, opts.rounds); round++) {
+    for (let round = 1; round <= roundCount; round++) {
       const roundPositions: DeliberationPosition[] = [];
       for (const member of opts.agents) {
+        emit({ phase: "discussion", round, speakerSeat: member.agentKey });
         const prompt = deliberationPrompt(member, opts.topic, priorRounds, round, {
           agenda: opts.agenda ?? agendaResult?.agenda,
         });
@@ -393,6 +434,7 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
           ...(out.issues !== undefined ? { issues: out.issues } : {}),
         };
         insertPosition(runId, position, round);
+        turnCount += 1;
         roundPositions.push(position);
       }
       rounds.push({ round, positions: roundPositions });
@@ -400,7 +442,8 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
       // Chair agenda pass (ADR-0196 section 2.2): once, after round 1, when
       // the committee runs 2+ rounds. A null/throwing hook skips the pass;
       // the agenda then threads into every round 2+ prompt above.
-      if (round === 1 && Math.max(1, opts.rounds) >= 2 && opts.chairAgendaPass) {
+      if (round === 1 && roundCount >= 2 && opts.chairAgendaPass) {
+        emit({ phase: "agenda", round });
         try {
           agendaResult =
             (await opts.chairAgendaPass({ processRunId: runId, topic: opts.topic, round1Positions: roundPositions })) ??
@@ -412,6 +455,7 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
     }
 
     const finalPositions = rounds[rounds.length - 1].positions;
+    emit({ phase: "consensus" });
     const synthesis = opts.synthesize
       ? await opts.synthesize(finalPositions)
       : await Promise.resolve(defaultSynthesis(finalPositions));
@@ -437,6 +481,7 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
     );
     let minutesDraft: MinutesPassResult | undefined;
     if (opts.chairMinutesPass) {
+      emit({ phase: "minutes" });
       try {
         minutesDraft =
           (await opts.chairMinutesPass({
@@ -450,7 +495,7 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
         minutesDraft = undefined; // a chair pass never fails the run
       }
     }
-    finishProcessRun(runId, "done");
+    if (!adopted) finishProcessRun(runId, "done");
     return {
       processRunId: runId,
       rounds,
@@ -465,7 +510,7 @@ export async function runDeliberationRounds(entity: EntityRef, opts: RunDelibera
       status: "done",
     };
   } catch (err) {
-    finishProcessRun(runId, "failed");
+    if (!adopted) finishProcessRun(runId, "failed");
     throw err;
   }
 }

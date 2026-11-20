@@ -4404,6 +4404,8 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .stage-stepper-wrap--static { position: static; }
 .stage-stepper--status .stage-step { min-height: 2.25rem; }
 .stage-stepper--status .stage-step-current { color: var(--fg); border-bottom: var(--border-width-strong) solid var(--primary); font-weight: 600; }
+/* Committee meeting phase stepper (CommitteeProgress): no compact replacement exists, so stay visible and wrap at every width — beats the <880px hide and the nowrap/scroll rules of the page stage rail. */
+.stage-stepper.meeting-stepper { display: flex; flex-wrap: wrap; overflow-x: visible; }
 .stage-step-icon { flex: 0 0 auto; color: var(--muted-fg); }
 .stage-step-icon-done { color: var(--green-fg); }
 .stage-step-icon-current { color: var(--primary); }

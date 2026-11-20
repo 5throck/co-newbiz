@@ -34,6 +34,24 @@ export const DECISION_MODE_LABEL_KEY: Record<string, string> = {
   human_only: "common.decisionMode.human_only",
 };
 
+/** Committee seat display names — seat (agent) key -> `common.committee.seat.*`. Unknown keys render raw. */
+export const COMMITTEE_SEAT_LABEL_KEY: Record<string, string> = {
+  "brownfield-agent": "common.committee.seat.brownfield-agent",
+  "financing-agent": "common.committee.seat.financing-agent",
+  "greenfield-agent": "common.committee.seat.greenfield-agent",
+  "group-review-agent": "common.committee.seat.group-review-agent",
+  "hr-integration-agent": "common.committee.seat.hr-integration-agent",
+  "industry-lead": "common.committee.seat.industry-lead",
+  "ip-agent": "common.committee.seat.ip-agent",
+  "ir-agent": "common.committee.seat.ir-agent",
+  "legal-counsel": "common.committee.seat.legal-counsel",
+  "market-intelligence-agent": "common.committee.seat.market-intelligence-agent",
+  "region-lead": "common.committee.seat.region-lead",
+  "risk-officer": "common.committee.seat.risk-officer",
+  "site-facility-agent": "common.committee.seat.site-facility-agent",
+  "valuation-agent": "common.committee.seat.valuation-agent",
+};
+
 /** Stage status display names — status id -> `common.*` (reuses common.done / common.inProgress where the wording matches). */
 export const STAGE_STATUS_KEY: Record<string, string> = {
   complete: "common.done",

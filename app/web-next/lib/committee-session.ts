@@ -30,8 +30,10 @@ import {
   type AgendaIssue,
   type AgendaPassResult,
   type DeliberationPosition,
+  type DeliberationProgressEvent,
   type MinutesPassResult,
 } from "./deliberation.ts";
+import { failedProgress, nextProgress, type LivePosition, type MeetingProgress } from "./committee-progress.ts";
 import {
   runChairAgenda,
   runChairMinutes,
@@ -103,6 +105,11 @@ export interface SessionMeta {
   /** Why the background deliberation failed (convening_error contract) —
    * surfaced by the list endpoint so the UI never hangs silently. */
   convening_error?: string;
+  /** Live progress while convening (design 2026-11-20 §4.2, ADR-0204) — written
+   * through patchMeta by the background engine; final snapshot is phase
+   * "done" / "failed" (with failed_at). Absent on sessions convened before
+   * progress existed. */
+  progress?: MeetingProgress;
 }
 
 let cachedRegistry: Record<string, CommitteeDef> | null = null;
@@ -234,6 +241,74 @@ function writeMeta(runId: string, meta: SessionMeta): void {
   if (!run || /^s\d+_/.test(run.stage))
     throw new CommitteeError("not_found", `committee session '${runId}' does not exist`);
   getDb().run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(meta), runId]);
+}
+
+/**
+ * Read-merge-write of meta_json in ONE immediate transaction (design §4.2
+ * "write race"). `patch` keys replace the stored top-level keys; keys the
+ * patch does not name are kept as stored NOW — so a progress write cannot
+ * drop a concurrent edit (e.g. a hybrid analyst's agenda edit), the way
+ * writeMeta of a stale in-memory copy would. A key set to `undefined` is
+ * removed (JSON.stringify drops it). Same guards as writeMeta: stage ledgers
+ * and non-committee runs are refused.
+ */
+export function patchMeta(runId: string, patch: Partial<SessionMeta>): SessionMeta {
+  const db = getDb();
+  return db
+    .transaction((): SessionMeta => {
+      const run = db.query("SELECT stage, meta_json FROM process_run WHERE id = ?").get(runId) as
+        | { stage: string; meta_json: string | null }
+        | undefined;
+      if (!run || !isCommitteeRun(run.stage, run.meta_json))
+        throw new CommitteeError("not_found", `committee session '${runId}' does not exist`);
+      const merged = { ...(JSON.parse(run.meta_json as string) as SessionMeta), ...patch } as SessionMeta;
+      db.run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify(merged), runId]);
+      return merged;
+    })
+    .immediate();
+}
+
+/**
+ * Progress recorder for one convening run. Each event is persisted via
+ * patchMeta; observability only — a failed write is logged, never thrown, so
+ * progress can never fail a meeting. markConveningFailed turns the last
+ * persisted snapshot into failed_at.
+ */
+function createProgressRecorder(
+  sessionId: string,
+  shape: { roundCount: number; turnBudget: number },
+): { record: (ev: DeliberationProgressEvent) => void; done: (turnCount: number) => MeetingProgress } {
+  const startedAt = nowIso();
+  const base = {
+    engine: "rounds" as const,
+    started_at: startedAt,
+    round_count: shape.roundCount,
+    turn_budget: shape.turnBudget,
+  };
+  let last: MeetingProgress = nextProgress(base, { phase: "discussion", round: 1, turnCount: 0 }, startedAt);
+  const write = (p: MeetingProgress): void => {
+    last = p;
+    try {
+      patchMeta(sessionId, { progress: p });
+    } catch (err) {
+      console.warn(
+        `[committee-session] progress write failed for ${sessionId}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  };
+  write(last);
+  return {
+    record: (ev) =>
+      write(
+        nextProgress(
+          base,
+          { phase: ev.phase, round: ev.round, speakerSeat: ev.speakerSeat, turnCount: ev.turnCount },
+          nowIso(),
+        ),
+      ),
+    done: (turnCount) => nextProgress(base, { phase: "done", turnCount }, nowIso()),
+  };
 }
 
 // ── Chair passes (ADR-0196 §2.2/§2.3, phase B) ─────────────────────────────
@@ -611,11 +686,20 @@ export async function runCommitteeSession(
         .filter((m) => m.type === "agent")
         .map((m) => ({ agentKey: m.key }));
       const topic = sessionTopic(committee, convOpts);
+      const progress = createProgressRecorder(sessionId, {
+        roundCount: Math.max(1, committee.rounds),
+        turnBudget: Math.max(1, committee.rounds) * agents.length,
+      });
       const result = await runDeliberationRounds(entity, {
         committeeKey: meta.committee_key,
         agents,
         rounds: committee.rounds,
         topic,
+        // Adopt the session shell as the engine run: positions and the
+        // gate_evaluation row are written under sessionId from the first
+        // call, so a poll sees finished positions while convening.
+        processRunId: sessionId,
+        onProgress: progress.record,
         callAgent: opts.callAgent ?? getCommitteeCallAgent(),
         gate: meta.gate as ConveneOpts["gate"],
         actor: convOpts.actor,
@@ -629,25 +713,32 @@ export async function runCommitteeSession(
           committee.rounds >= 2 ? async (ctx) => runAgendaPassForRun(ctx.processRunId, ctx.topic, 1) : undefined,
         chairMinutesPass: async (ctx) => runMinutesPassForRun(ctx.processRunId, ctx.topic, ctx.agenda),
       });
-      // The engine creates its OWN process_run; the async contract keeps the
-      // sessionId the client already holds stable, so migrate the engine
-      // run's rows onto the shell run and drop the engine run. agent_position
-      // and gate_evaluation are moved wholesale (created_at ordering intact),
-      // and the meta (with the chair-pass results) lands on the shell.
+      // The engine ran ON the session shell (processRunId above), so its rows
+      // are already under sessionId. The migration below only applies if an
+      // engine ever hands back a run of its own: agent_position and
+      // gate_evaluation move wholesale (created_at ordering intact) and the
+      // engine run is dropped.
       const db = getDb();
-      db.run("UPDATE agent_position SET process_run_id = ? WHERE process_run_id = ?", [sessionId, result.processRunId]);
-      db.run("UPDATE gate_evaluation SET process_run_id = ? WHERE process_run_id = ?", [
-        sessionId,
-        result.processRunId,
-      ]);
-      db.run("DELETE FROM process_run WHERE id = ?", [result.processRunId]);
-      writeMeta(sessionId, {
-        ...meta,
+      if (result.processRunId !== sessionId) {
+        db.run("UPDATE agent_position SET process_run_id = ? WHERE process_run_id = ?", [
+          sessionId,
+          result.processRunId,
+        ]);
+        db.run("UPDATE gate_evaluation SET process_run_id = ? WHERE process_run_id = ?", [
+          sessionId,
+          result.processRunId,
+        ]);
+        db.run("DELETE FROM process_run WHERE id = ?", [result.processRunId]);
+      }
+      // patchMeta, not writeMeta of the convene-time `meta`: that copy is stale
+      // by now (it would drop the progress snapshots and any concurrent edit).
+      patchMeta(sessionId, {
         convening: false,
         synthesized: true,
         evaluation_id: result.evaluation?.gateEvaluationId,
         ...(result.agenda ? { agenda: result.agenda.agenda, agenda_meta: toAgendaMeta(result.agenda) } : {}),
         ...(result.minutesDraft ? { minutes_draft: toMinutesDraft(result.minutesDraft) } : {}),
+        progress: progress.done(countPositions(sessionId)),
       });
       db.run("UPDATE process_run SET status = 'done', finished_at = ? WHERE id = ?", [nowIso(), sessionId]);
       return {
@@ -669,7 +760,19 @@ export async function runCommitteeSession(
     // per round afterwards, exactly as before the split.
     const agentSeats = seatsForSession(committee, meta.track).filter((m) => m.type === "agent");
     const topic = sessionTopic(committee, convOpts);
+    // Round 1 only runs at convene (humans join, advance() does the rest):
+    // the progress shape is one round of the agent seats.
+    const progress = createProgressRecorder(sessionId, { roundCount: 1, turnBudget: agentSeats.length });
+    let written = 0;
     for (const seat of agentSeats) {
+      progress.record({
+        phase: "discussion",
+        round: 1,
+        roundCount: 1,
+        speakerSeat: seat.key,
+        turnCount: written,
+        turnBudget: agentSeats.length,
+      });
       const member = { agentKey: seat.key };
       const out = await (opts.callAgent ?? getCommitteeCallAgent())(seat.key, deliberationPrompt(member, topic, [], 1));
       writeAgentPosition(
@@ -684,8 +787,9 @@ export async function runCommitteeSession(
         },
         1,
       );
+      written += 1;
     }
-    writeMeta(sessionId, { ...meta, convening: false });
+    patchMeta(sessionId, { convening: false, progress: progress.done(written) });
     return { sessionId, committeeKey: meta.committee_key, decisionMode: meta.decision_mode, evaluation: null };
   } catch (err) {
     markConveningFailed(sessionId, err);
@@ -701,15 +805,35 @@ function markConveningFailed(sessionId: string, err: unknown): void {
   try {
     const session = readMeta(sessionId);
     if (!session) return;
-    writeMeta(sessionId, {
-      ...session.meta,
+    const now = nowIso();
+    // failed_at = the last progress snapshot (the engine writes it BEFORE each
+    // speaker / phase starts, so it names exactly where the run stopped).
+    // error_code is the code only — the message stays in convening_error.
+    const errorCode =
+      err instanceof CommitteeError ? err.code : err instanceof Error && err.name ? err.name : "unknown_error";
+    const last: MeetingProgress = session.meta.progress ?? {
+      engine: "rounds",
+      phase: "discussion",
+      turn_count: 0,
+      started_at: now,
+      updated_at: now,
+    };
+    patchMeta(sessionId, {
       convening: false,
       convening_error: err instanceof Error ? err.message : String(err),
+      progress: failedProgress(last, errorCode, countPositions(sessionId), now),
     });
     getDb().run("UPDATE process_run SET status = 'failed' WHERE id = ?", [sessionId]);
   } catch {
     // best effort — the original error propagates instead
   }
+}
+
+function countPositions(runId: string): number {
+  const row = getDb().query("SELECT COUNT(*) AS n FROM agent_position WHERE process_run_id = ?").get(runId) as {
+    n: number;
+  };
+  return row.n;
 }
 
 /**
@@ -1033,6 +1157,8 @@ export interface CommitteeTranscript {
   agendaMeta: AgendaMeta | null;
   /** The stored AI-drafted minutes draft (S2), if generated. */
   minutesDraft: MinutesDraft | null;
+  /** Live / final progress of the convening run; null on pre-progress sessions. */
+  progress: MeetingProgress | null;
   committee: CommitteeDef | null;
   rounds: Array<{
     round: number;
@@ -1106,17 +1232,14 @@ export function getCommitteeSession(sessionId: string): CommitteeTranscript | nu
     agenda: session.meta.agenda ?? null,
     agendaMeta: session.meta.agenda_meta ?? null,
     minutesDraft: session.meta.minutes_draft ?? null,
+    progress: session.meta.progress ?? null,
     committee: getCommittee(session.meta.committee_key),
     rounds,
     evaluation,
   };
 }
 
-/** List committee sessions for an entity (process_run rows with meta). */
-export function listCommitteeSessions(
-  entityId: string,
-  entityType: "opportunity" | "project" = "opportunity",
-): Array<{
+export interface CommitteeSessionListItem {
   sessionId: string;
   meta: SessionMeta;
   status: string;
@@ -1125,7 +1248,32 @@ export function listCommitteeSessions(
   convening: boolean;
   /** Populated when the background deliberation failed (never silent). */
   conveningError: string | null;
-}> {
+  /** Live / final progress of the convening run; null on pre-progress sessions. */
+  progress: MeetingProgress | null;
+  /** Positions finished so far, in order. Populated ONLY while the session is
+   * convening or after a failed run (so the UI can keep what was written);
+   * [] otherwise — finished sessions are read through the transcript GET. */
+  positions: LivePosition[];
+}
+
+function livePositions(runId: string): LivePosition[] {
+  return loadPositions(runId).map((p) => ({
+    positionId: p.id,
+    round: p.round,
+    memberType: p.memberType,
+    agentKey: p.agentKey,
+    humanUserId: p.humanUserId,
+    positionMd: p.positionMd,
+    confidence: p.confidence,
+    createdAt: p.createdAt,
+  }));
+}
+
+/** List committee sessions for an entity (process_run rows with meta). */
+export function listCommitteeSessions(
+  entityId: string,
+  entityType: "opportunity" | "project" = "opportunity",
+): CommitteeSessionListItem[] {
   const rows = getDb()
     .query(
       "SELECT id, meta_json, status, started_at FROM process_run WHERE entity_type = ? AND entity_id = ? AND meta_json IS NOT NULL ORDER BY started_at DESC",
@@ -1134,6 +1282,7 @@ export function listCommitteeSessions(
   return rows.flatMap((r) => {
     try {
       const meta = JSON.parse(r.meta_json) as SessionMeta;
+      const wantsPositions = meta.convening === true || meta.progress?.phase === "failed";
       return [
         {
           sessionId: r.id,
@@ -1142,6 +1291,8 @@ export function listCommitteeSessions(
           startedAt: r.started_at,
           convening: meta.convening === true,
           conveningError: meta.convening_error ?? null,
+          progress: meta.progress ?? null,
+          positions: wantsPositions ? livePositions(r.id) : [],
         },
       ];
     } catch {

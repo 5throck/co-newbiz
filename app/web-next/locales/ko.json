@@ -1379,7 +1379,63 @@
     "committee": {
       "conveneFailed": "위원회 소집 실패",
       "conveningProgress": "심의 진행 중... 완료되면 자동으로 표시됩니다.",
-      "conveningTimeout": "심의가 10분 안에 끝나지 않았습니다 — 소집 이력에서 상태를 확인해 주세요."
+      "conveningTimeout": "심의가 10분 안에 끝나지 않았습니다 — 소집 이력에서 상태를 확인해 주세요.",
+      "progress": {
+        "detailCount": "(발언 {count}건)",
+        "detailFull": "(라운드 {round}/{roundCount}, 발언 {count}/{budget})",
+        "elapsedMinutes": "{minutes}분 {seconds}초 지남",
+        "elapsedSeconds": "{seconds}초 지남",
+        "failedCode": "오류 코드 {code}",
+        "failedKept": "여기까지 끝난 발언 {count}건은 아래에 남아 있습니다.",
+        "failedPlace": "멈춘 곳 — {place}",
+        "failedRound": "라운드 {round}",
+        "failedTitle": "회의가 중간에 멈췄습니다",
+        "liveLabel": "회의 진행 상황",
+        "positionConfidence": "신뢰도 {value}",
+        "positionsEmpty": "아직 끝난 발언이 없습니다.",
+        "positionsTitle": "끝난 발언 {count}건 (눌러서 펼침)",
+        "roundGroup": "라운드 {round} · 발언 {finished}/{total}",
+        "roundGroupCount": "라운드 {round} · 발언 {finished}건",
+        "state": {
+          "current": "진행 중",
+          "done": "끝남",
+          "failed": "멈춤",
+          "skipped": "건너뜀",
+          "todo": "남음"
+        },
+        "status": {
+          "agenda": "의장이 안건을 정리하는 중…",
+          "consensus": "의장이 위원 의견을 모아 제안을 만드는 중…",
+          "discussion": "{seat} 발언 중…",
+          "discussionAnon": "위원 발언을 받는 중…",
+          "done": "회의가 끝났습니다.",
+          "minutes": "의장이 회의록을 쓰는 중…",
+          "starting": "회의를 시작하는 중…"
+        },
+        "step": {
+          "agenda": "안건 정리",
+          "consensus": "합의",
+          "discussion": "토의",
+          "minutes": "회의록"
+        },
+        "stepsLabel": "회의 진행 단계"
+      },
+      "seat": {
+        "brownfield-agent": "인수합병 위원",
+        "financing-agent": "자금 조달 위원",
+        "greenfield-agent": "신규 설립 위원",
+        "group-review-agent": "그룹 검토 위원",
+        "hr-integration-agent": "인사·노무 위원",
+        "industry-lead": "산업 위원",
+        "ip-agent": "지식재산 위원",
+        "ir-agent": "투자자 소통 위원",
+        "legal-counsel": "법률 위원",
+        "market-intelligence-agent": "시장 분석 위원",
+        "region-lead": "지역 위원",
+        "risk-officer": "위험 점검 위원",
+        "site-facility-agent": "입지·시설 위원",
+        "valuation-agent": "가치 평가 위원"
+      }
     },
     "committeeMinutes": {
       "actionItems": "실행 항목",
