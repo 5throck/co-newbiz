@@ -104,7 +104,16 @@ describe("committee-deliberation CLI — turns engine writes minutes v2", () => 
 });
 
 describe("committee-deliberation CLI — engine selection", () => {
-  test("CO_NEWBIZ_COMMITTEE_ENGINE=turns is the default when --engine is absent", () => {
+  test("with no --engine and no env the CLI defaults to the turn engine; env rounds opts out", () => {
+    const def = run(ENGINE_ENV_TOPIC + " default", ["--deterministic"]);
+    expect(def.exitCode).toBe(0);
+    expect(readFileSync(def.file as string, "utf8")).toContain("## 부록 A — 전체 발언 기록");
+    const opt = run(ENGINE_ENV_TOPIC + " rounds optout", ["--deterministic"], { CO_NEWBIZ_COMMITTEE_ENGINE: "rounds" });
+    expect(opt.exitCode).toBe(0);
+    expect(readFileSync(opt.file as string, "utf8")).not.toContain("## 부록 A — 전체 발언 기록");
+  });
+
+  test("CO_NEWBIZ_COMMITTEE_ENGINE=turns is honoured when --engine is absent", () => {
     const out = run(ENGINE_ENV_TOPIC, ["--deterministic"], { CO_NEWBIZ_COMMITTEE_ENGINE: "turns" });
     expect(out.exitCode).toBe(0);
     expect(readFileSync(out.file as string, "utf8")).toContain("## 부록 A — 전체 발언 기록");

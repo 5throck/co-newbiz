@@ -22,6 +22,9 @@ const TEST_DB_PATH = join(PROJECT_ROOT, "db/data/test-committee-llm-required.sql
 // Keep the provider offline so the chair passes stay deterministic — this
 // suite must not depend on a machine's real root-.env provider.
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+// ADR-0204: these suites exercise the round engine; the default flipped to turns (2026-11-21).
+const PREV_COMMITTEE_ENGINE = process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
+process.env.CO_NEWBIZ_COMMITTEE_ENGINE = "rounds";
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -115,6 +118,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (PREV_COMMITTEE_ENGINE === undefined) delete process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
+  else process.env.CO_NEWBIZ_COMMITTEE_ENGINE = PREV_COMMITTEE_ENGINE;
   setCallAgentFactory(null);
   resetDb();
   for (let attempt = 0; attempt < 5; attempt++) {

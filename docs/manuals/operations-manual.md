@@ -40,6 +40,22 @@ The scheduled data-collection pipeline (`newbiz.ts watch:run`, `scripts/co-newbi
 
 Pipeline: fetch (cache-first) → impact detection → auto-rerun → RAG re-evaluation → notification. `job_run` is the operational audit trail for this pipeline — check it first when a scheduled run appears to have not fired.
 
+### 3.1 Committee Meeting Engine (`CO_NEWBIZ_COMMITTEE_ENGINE`)
+
+The committee pre-review engine is chosen per new session (ADR-0204). The turn-based dialogue meeting is the default since the 2026-11-21 owner decision.
+
+| Setting | Effect on new sessions |
+|---|---|
+| unset or empty (default) | `turns` - turn-based dialogue meeting |
+| `CO_NEWBIZ_COMMITTEE_ENGINE=turns` | Same as the default, stated explicitly |
+| `CO_NEWBIZ_COMMITTEE_ENGINE=rounds` | Opt-out - the earlier round engine (one position paper per seat per round) |
+| any other value | Convening is refused with an error; the value is never coerced |
+
+- **Opt out**: set `CO_NEWBIZ_COMMITTEE_ENGINE=rounds` in the server environment (see `.env.sample`) and restart. For the CLI, pass `--engine rounds` to `scripts/co-newbiz/committee-deliberation.ts`; an explicit flag beats the environment variable.
+- **Existing sessions** keep the engine stored in their session meta. Changing the variable never moves a session that is already convened, and no rows are rewritten.
+- **No silent fallback**: an LLM failure stops convening. It never drops to `rounds`. Without a configured LLM provider, convening refuses with `llm_required`.
+- **Rollback**: set `rounds` as above. Turn rows already written stay readable as history.
+
 ## 4. Access Control (Operator-Facing)
 
 The CLI, run by a human operator, still resolves to a real `project_member` context (operator account or an audited `--as-user` flag) — **there is no trusted-operator exemption from need-to-know** (meeting M7-1 D-M7-1... / M7 D-M7-1). Do not treat local CLI access as a bypass.

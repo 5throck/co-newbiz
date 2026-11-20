@@ -30,6 +30,9 @@ process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 // engine via the provider seam (injected deterministic factory); the
 // provider is forced offline so the chair passes stay deterministic.
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+// ADR-0204: these suites exercise the round engine; the default flipped to turns (2026-11-21).
+const PREV_COMMITTEE_ENGINE = process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
+process.env.CO_NEWBIZ_COMMITTEE_ENGINE = "rounds";
 process.env.CO_NEWBIZ_LLM_API_KEY = "";
 process.env.CO_NEWBIZ_LLM_MODEL = "";
 
@@ -201,6 +204,8 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  if (PREV_COMMITTEE_ENGINE === undefined) delete process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
+  else process.env.CO_NEWBIZ_COMMITTEE_ENGINE = PREV_COMMITTEE_ENGINE;
   resetDb();
   for (const s of ["", "-wal", "-shm"]) {
     try {

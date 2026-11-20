@@ -21,7 +21,7 @@
  *   --dialogue alias kept for back-compat with the stub's advertised flag —
  *              multi-round rebuttal IS the engine's only mode
  *   --engine   turns | rounds (ADR-0204). Default: CO_NEWBIZ_COMMITTEE_ENGINE,
- *              else rounds. turns runs the turn-based meeting (runTurnMeeting:
+ *              else turns (rounds is the explicit opt-out). turns runs the turn-based meeting (runTurnMeeting:
  *              one short move per turn, bounded budgets, chair consensus + votes)
  *              and writes minutes v2 (ADR-0204 phase 3): the same chair pass and the
  *              same markdown as the app's .md download — per-issue participants,
@@ -124,7 +124,7 @@ function parseArgs(argv: string[]): MeetingArgs {
   }
   let engine: CommitteeEngine;
   try {
-    // explicit flag > CO_NEWBIZ_COMMITTEE_ENGINE > rounds; an invalid value is never coerced
+    // explicit flag > CO_NEWBIZ_COMMITTEE_ENGINE > turns; an invalid value is never coerced
     engine = engineArg !== undefined ? parseCommitteeEngine(engineArg) : committeeEngineDefault();
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));

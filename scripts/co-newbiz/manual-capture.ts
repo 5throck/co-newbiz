@@ -1,7 +1,8 @@
-// @version 1.1.0
+// @version 1.2.0
 // User-manual screenshot capture. Boots the E2E harness (isolated production
 // build, throwaway SQLite DB, free port; never 7748/7749), seeds BOTH S1-S12
-// demo chains (Brown Field M&A + Green Field) into that one DB, logs in through
+// demo chains (Brown Field M&A + Green Field) into that one DB, plus finished turn-engine
+// committee meetings on the Brown Field deal (seed-committee-turn-demo.ts), logs in through
 // the UI as the harness-generated analyst (and admin for admin screens), then
 // walks docs/wiki/ko/capture-manifest.json and writes PNGs to
 // docs/wiki/ko/images/<id>.png.
@@ -24,6 +25,7 @@ import { grantProjectLead } from "../../tests/scenarios/_support/deals.ts";
 import { launchBrowser } from "../../tests/scenarios/_support/browser.ts";
 import type { BrowserContext, Page } from "../../tests/scenarios/_support/playwright.ts";
 import { seedGreenfieldS1ToS12Demo, seedS1ToS12Demo } from "./seed-s1-s12-demo.ts";
+import { seedCommitteeTurnDemo } from "./seed-committee-turn-demo.ts";
 
 const WIKI_DIR = join(REPO_ROOT, "docs", "wiki", "ko");
 const IMAGES_DIR = join(WIKI_DIR, "images");
@@ -82,13 +84,19 @@ function loadManifest(): Manifest {
 function parseArgs(argv: string[]): { list: boolean; only: string[] } {
   const only: string[] = [];
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--only" && argv[i + 1]) only.push(...argv[++i]!.split(",").map((s) => s.trim()).filter(Boolean));
+    if (argv[i] === "--only" && argv[i + 1])
+      only.push(
+        ...argv[++i]!.split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      );
   }
   return { list: argv.includes("--list"), only };
 }
 
 const WRITE_LABEL = /(저장|기록|확정|삭제|제출|승인|재분석|생성|등록|전송|적용|취소|종료)/;
-const ERROR_TEXT = /Application error|This page could not be found|Internal Server Error|문제가 발생했습니다|오류가 발생했습니다|권한이 없습니다/;
+const ERROR_TEXT =
+  /Application error|This page could not be found|Internal Server Error|문제가 발생했습니다|오류가 발생했습니다|권한이 없습니다/;
 
 /** Injected before each shot: no personal identifiers, no animations. */
 const REDACT_CSS = `
@@ -107,7 +115,9 @@ async function redact(page: Page): Promise<void> {
       if (email.test(t)) n.nodeValue = t.replace(email, "user@example.com");
       email.lastIndex = 0;
     }
-    for (const el of Array.from(document.querySelectorAll<HTMLInputElement>('input[type="email"], input[autocomplete="username"]'))) {
+    for (const el of Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[type="email"], input[autocomplete="username"]'),
+    )) {
       if (el.value) el.value = "user@example.com";
     }
   });
@@ -117,9 +127,15 @@ async function settle(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
   // Skeletons / loading text must be gone.
   await page
-    .waitForFunction(() => !document.querySelector(".skeleton, [aria-busy='true']") && !/불러오는 중|로딩 중/.test(document.body.innerText), undefined, {
-      timeout: 20_000,
-    })
+    .waitForFunction(
+      () =>
+        !document.querySelector(".skeleton, [aria-busy='true']") &&
+        !/불러오는 중|로딩 중/.test(document.body.innerText),
+      undefined,
+      {
+        timeout: 20_000,
+      },
+    )
     .catch(() => undefined);
   await page.mouse.move(0, 0);
   await page.waitForTimeout(500);
@@ -140,8 +156,14 @@ async function optimise(file: string): Promise<number> {
   const sharp = req("sharp") as (input: Buffer) => { png(o: PngOpts): { toBuffer(): Promise<Buffer> } };
   const input = readFileSync(file);
   let best = await sharp(input).png({ compressionLevel: 9, effort: 10 }).toBuffer();
-  if (best.length > MAX_BYTES) best = await sharp(input).png({ palette: true, quality: 90, compressionLevel: 9, effort: 10, colours: 256 }).toBuffer();
-  if (best.length > MAX_BYTES) best = await sharp(input).png({ palette: true, quality: 70, compressionLevel: 9, effort: 10, colours: 128 }).toBuffer();
+  if (best.length > MAX_BYTES)
+    best = await sharp(input)
+      .png({ palette: true, quality: 90, compressionLevel: 9, effort: 10, colours: 256 })
+      .toBuffer();
+  if (best.length > MAX_BYTES)
+    best = await sharp(input)
+      .png({ palette: true, quality: 70, compressionLevel: 9, effort: 10, colours: 128 })
+      .toBuffer();
   writeFileSync(file, best);
   return best.length;
 }
@@ -159,7 +181,8 @@ async function runStep(page: Page, step: Step, c: Capture): Promise<void> {
     const loc = page.locator(step.click).first();
     await loc.waitFor({ state: "visible", timeout: 15_000 });
     const label = ((await loc.innerText().catch(() => "")) || (await loc.getAttribute("aria-label")) || "").trim();
-    if (!step.openOnly && WRITE_LABEL.test(label)) throw new Error(`${c.id}: refusing to click write-looking label "${label}"`);
+    if (!step.openOnly && WRITE_LABEL.test(label))
+      throw new Error(`${c.id}: refusing to click write-looking label "${label}"`);
     await loc.click();
     await settle(page);
   }
@@ -173,7 +196,12 @@ async function runStep(page: Page, step: Step, c: Capture): Promise<void> {
 }
 
 async function newSession(browser: Awaited<ReturnType<typeof launchBrowser>>): Promise<BrowserContext> {
-  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, locale: "ko-KR", colorScheme: "light" });
+  const context = await browser.newContext({
+    viewport: VIEWPORT,
+    deviceScaleFactor: 1,
+    locale: "ko-KR",
+    colorScheme: "light",
+  });
   await context.addInitScript(() => {
     try {
       localStorage.setItem("cn-theme", "light");
@@ -225,7 +253,8 @@ async function lockReadOnly(context: BrowserContext): Promise<void> {
     const method = req.method();
     if (method === "GET" || method === "HEAD") return route.continue();
     // Opening a stage materialises the deterministic AI 1st review (POST .../reviews); it only writes the throwaway DB.
-    if (method === "POST" && /\/api\/(projects|opportunities)\/[^/]+\/reviews$/.test(new URL(req.url()).pathname)) return route.continue();
+    if (method === "POST" && /\/api\/(projects|opportunities)\/[^/]+\/reviews$/.test(new URL(req.url()).pathname))
+      return route.continue();
     return route.abort("blockedbyclient");
   });
 }
@@ -243,15 +272,30 @@ async function shoot(page: Page, c: Capture): Promise<number> {
   }
   const file = join(IMAGES_DIR, c.file);
   if (c.crop) {
-    const box = await page.locator(c.crop).first().boundingBox();
+    const target = page.locator(c.crop).first();
+    const box = await target.boundingBox();
     if (!box) throw new Error(`${c.id}: crop selector "${c.crop}" has no box`);
+    // boundingBox() is viewport-relative. A fixed overlay (dialog) is clipped in viewport coordinates;
+    // normal flow content is clipped in document coordinates (scroll offset added) on a full-page shot.
+    const overlay = await target.evaluate((el) => {
+      for (let n: Element | null = el; n; n = n.parentElement)
+        if (getComputedStyle(n).position === "fixed") return true;
+      return false;
+    });
+    const scroll = overlay ? { x: 0, y: 0 } : await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
     const pad = 16;
-    const x = Math.max(0, box.x - pad);
-    const y = Math.max(0, box.y - pad);
+    const x = Math.max(0, box.x + scroll.x - pad);
+    const y = Math.max(0, box.y + scroll.y - pad);
+    const maxH = overlay ? VIEWPORT.height - y : 4000;
     await page.screenshot({
       path: file,
-      clip: { x, y, width: Math.min(VIEWPORT.width - x, box.width + 2 * pad), height: Math.min(box.height + 2 * pad, 4000) },
-      fullPage: true,
+      clip: {
+        x,
+        y,
+        width: Math.min(VIEWPORT.width - x, box.width + 2 * pad),
+        height: Math.min(box.height + 2 * pad, maxH),
+      },
+      fullPage: !overlay,
     });
   } else {
     await page.screenshot({ path: file, fullPage: c.fullPage === true });
@@ -265,7 +309,10 @@ async function main(): Promise<void> {
   const selected = manifest.captures.filter((c) => args.only.length === 0 || args.only.some((p) => c.id.startsWith(p)));
 
   if (args.list) {
-    for (const c of selected) console.log(`${c.skip ? "SKIP" : "    "} ${c.id.padEnd(26)} ${c.as.padEnd(8)} ${c.url}${c.skip ? `  -- ${c.skip}` : ""}`);
+    for (const c of selected)
+      console.log(
+        `${c.skip ? "SKIP" : "    "} ${c.id.padEnd(26)} ${c.as.padEnd(8)} ${c.url}${c.skip ? `  -- ${c.skip}` : ""}`,
+      );
     console.log(`${selected.length} captures, ${selected.filter((c) => c.skip).length} skipped`);
     return;
   }
@@ -278,6 +325,8 @@ async function main(): Promise<void> {
     seed: async ({ dbPath, analystId }) => {
       const bf = seedS1ToS12Demo(dbPath, { humanDecisions: true, subTrackDd: true });
       grantProjectLead(dbPath, bf.projectId, analystId);
+      // Finished turn-engine committee meetings (ADR-0204): S4 route steering x2 (one resumed) + S7 shortlist, minutes v2 stored.
+      await seedCommitteeTurnDemo(dbPath, { opportunityId: bf.opportunityId });
       const gf = await seedGreenfieldS1ToS12Demo(dbPath, { humanDecisions: true });
       grantProjectLead(dbPath, gf.projectId, analystId);
       Object.assign(ids, {
@@ -353,8 +402,13 @@ async function main(): Promise<void> {
 
   const total = made.reduce((a, m) => a + m.bytes, 0);
   const over = made.filter((m) => m.bytes > MAX_BYTES);
-  console.log(`\nmade ${made.length}, failed ${failed.length}, skipped ${selected.length - todo.length}; total ${(total / 1024).toFixed(0)} KB`);
-  if (over.length) console.log(`over ${MAX_BYTES / 1024} KB: ${over.map((m) => `${m.id}=${(m.bytes / 1024).toFixed(0)}KB`).join(", ")}`);
+  console.log(
+    `\nmade ${made.length}, failed ${failed.length}, skipped ${selected.length - todo.length}; total ${(total / 1024).toFixed(0)} KB`,
+  );
+  if (over.length)
+    console.log(
+      `over ${MAX_BYTES / 1024} KB: ${over.map((m) => `${m.id}=${(m.bytes / 1024).toFixed(0)}KB`).join(", ")}`,
+    );
   if (failed.length) {
     console.error(`failed: ${failed.join(", ")}`);
     process.exit(1);

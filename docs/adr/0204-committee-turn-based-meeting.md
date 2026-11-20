@@ -76,3 +76,13 @@ Trigger: a dev measurement of the S6 `target-longlist-shortlist` committee (3 is
 3. **Discussion quality.** Speaker selection gives turns to challenge/ask moves. Repeated "add my condition" amendments are limited: at most one amend per seat per issue unless responding to a question.
 4. **Live UI.** An optional meeting window (modal) opened by the user via "회의 보기", never auto-opened. The page keeps a one-line status. Inside the window, auto-follow to the latest turn pauses when the user scrolls up and shows a "jump to latest" button. When a human has the floor, the page status becomes a prominent "your turn" alert. Applies to all committee screens.
 5. **Old session history.** Prior committee sessions (mostly test runs, inconsistent with the new format) will be cleaned up separately after the owner confirms the scope. No deletion is authorized by this ADR.
+
+## Default switched (2026-11-21, owner)
+
+Owner decision, chat, 2026-11-21: "기본값 전환". The turn-based (dialogue) meeting is now the production default for new committee sessions. This replaces the earlier rollout rule "ship with unset → `rounds` until the S6/S4 live check passes" (design §15.3).
+
+- `CO_NEWBIZ_COMMITTEE_ENGINE` unset or empty resolves to `turns`. `rounds` is an explicit opt-out: set `CO_NEWBIZ_COMMITTEE_ENGINE=rounds`, or pass the CLI flag `--engine rounds`. Any other value is refused at convene time and is never coerced.
+- Existing sessions keep the engine stored in their `meta.engine`. Nothing is rewritten or re-run.
+- The round engine stays as the explicit, never-silent fallback (Q8). An LLM failure still stops convening; it never drops to `rounds`. `human_only` sessions keep the round path (`docs/process-flow.md`, steering committee section).
+- Rollback: set `CO_NEWBIZ_COMMITTEE_ENGINE=rounds` in the environment. Turn rows stay readable as history.
+- The "measure cost and latency before default-on" condition in Consequences is now an operator follow-up, not a gate on the default.

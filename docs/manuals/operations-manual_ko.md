@@ -41,6 +41,22 @@ counterpart: operations-manual.md
 
 파이프라인: 수집(cache-first) → 영향 탐지 → 자동 재실행 → RAG 재평가 → 알림. `job_run`이 이 파이프라인의 운영 감사 기록이다 — 예약 실행이 발화하지 않은 것처럼 보이면 가장 먼저 확인할 것.
 
+### 3.1 위원회 회의 방식 (`CO_NEWBIZ_COMMITTEE_ENGINE`)
+
+위원회 사전 검토의 진행 방식은 새 회의마다 정해진다(ADR-0204). 2026-11-21 소유자 결정부터 대화형(turn 방식) 회의가 기본이다.
+
+| 설정 | 새 회의에 미치는 효과 |
+|---|---|
+| 비어 있음(기본) | `turns` - 대화형 회의 |
+| `CO_NEWBIZ_COMMITTEE_ENGINE=turns` | 기본과 같다(분명히 적은 것) |
+| `CO_NEWBIZ_COMMITTEE_ENGINE=rounds` | 이전 방식으로 되돌림 - 위원이 라운드마다 입장문을 한 편씩 쓰는 방식 |
+| 그 밖의 값 | 회의를 열 때 오류로 거부한다. 다른 값으로 바꿔 읽지 않는다 |
+
+- **이전 방식으로 되돌리기**: 서버 환경에 `CO_NEWBIZ_COMMITTEE_ENGINE=rounds`를 넣고(`.env.sample` 참조) 다시 시작한다. CLI는 `scripts/co-newbiz/committee-deliberation.ts`에 `--engine rounds`를 준다. 명시한 플래그가 환경 변수보다 앞선다.
+- **이미 연 회의**는 세션 메타에 저장된 방식 그대로다. 변수를 바꿔도 이미 연 회의는 바뀌지 않고, 저장된 행은 고쳐 쓰지 않는다.
+- **조용한 대체 없음**: LLM 호출이 실패하면 회의 열기가 멈춘다. `rounds`로 몰래 바꾸지 않는다. LLM 공급자가 설정되지 않으면 `llm_required`로 거부한다.
+- **되돌리기(롤백)**: 위처럼 `rounds`로 정한다. 이미 쌓인 turn 행은 이력으로 그대로 읽힌다.
+
 ## 4. 접근 제어 (운영자 대상)
 
 인간 운영자가 실행하는 CLI도 여전히 실제 `project_member` 컨텍스트로 해석된다(운영자 계정 또는 감사되는 `--as-user` 플래그) — **need-to-know에 면제되는 신뢰된 운영자는 존재하지 않는다**(미팅 M7-1 D-M7-1... / M7 D-M7-1). 로컬 CLI 접근을 우회로 취급하지 말 것.
