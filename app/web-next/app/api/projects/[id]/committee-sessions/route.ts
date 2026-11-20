@@ -30,7 +30,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true });
   if (!project) return notFound();
-  const sessions = listCommitteeSessions(id, "project");
+  // Turn engine poll (ADR-0204 §4.7): `sessionId` narrows to one session, `afterSeq` returns only turns newer than the cursor.
+  const query = new URL(request.url).searchParams;
+  const afterRaw = query.get("afterSeq");
+  if (afterRaw !== null && !/^\d+$/.test(afterRaw)) {
+    return badRequest("invalid_request", "afterSeq must be a non-negative integer.");
+  }
+  const sessions = listCommitteeSessions(id, "project", {
+    sessionId: query.get("sessionId") || undefined,
+    afterSeq: afterRaw === null ? undefined : Number(afterRaw),
+  });
   return ok({ sessions }, 200, { count: sessions.length });
 }
 

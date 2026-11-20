@@ -57,4 +57,12 @@ Owner answer to the open questions, verbatim: "권장안대로 확정". Each que
 | Q7 | Minutes | A short per-issue transcript in the body, with every turn in an appendix. |
 | Q8 | Round engine | Stays as an explicit, never-silent fallback. |
 
-Details still left to the implementation (not owner decisions): the length of the human-turn wait (Q5), and how a resumed run marks the restart point in progress and minutes (Q6).
+Details then left to the implementation (not owner decisions): the length of the human-turn wait (Q5), and how a resumed run marks the restart point in progress and minutes (Q6). Both were settled on 2026-11-20 below.
+
+## Phase 2 decisions (2026-11-20)
+
+Owner answer, chat, verbatim: "권장안대로 진행". Both recommendations in design §15.2 are adopted.
+
+- **Hybrid human turns.** When a human seat has the floor, the engine pauses at phase `awaiting_human` (with `awaiting = { seat, seq, deadline_at }`) and returns; the human's submission, or the first poll/advance after the deadline, resumes it via `advanceCommitteeSession`. Wait is 3 minutes per human turn and 20 minutes total per meeting. Human wait is excluded from the 8-minute engine cap (only agent compute counts). On timeout the chair records a `pass_on_behalf` row (reason `human_timeout`) and never writes content for the human. The panel's poll deadline pauses while the session is awaiting a human.
+- **Resume marking.** `meta.attempts` lists every attempt; every turn tail carries `attempt`; `seq` continues across attempts and is never reused; each restart writes exactly one chair `resume` turn. Minutes v2 add the header line "this meeting was held in N sittings" (when N > 1) and an appendix listing the turns of interrupted attempts.
+

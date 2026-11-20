@@ -17,6 +17,7 @@
 import { complete } from "./llm.ts";
 import type { AgentCallResult, PositionAct, PositionResponse, Recommendation } from "./agent-orchestrator.ts";
 import { systemMessage, promptAgent } from "./prompts.ts";
+import type { CallTurn } from "./committee-turns.ts";
 
 // Lazy up to the closing comment (not the first `}`): the tail carries nested
 // JSON (criteria_scores, responds_to) — a `[^}]*` body never matched those.
@@ -221,5 +222,25 @@ export function makeLlmCommitteeAgent(): (agentKey: string, prompt: string) => P
         positionMd: `### [degraded] ${agentKey}\n\nLLM 호출 실패로 이번 라운드 위치를 생성하지 못했다 (${msg}). 판정 미제출.`,
       };
     }
+  };
+}
+
+/**
+ * Turn-engine LLM caller (ADR-0204): committee.turn for a seat's move or vote,
+ * committee.consensus for the chair's proposal. Returns the RAW model text —
+ * the engine parses and validates it (zod) and retries once. UNLIKE the
+ * position agent above it never degrades: an LLM or transport error throws, so
+ * the meeting stops with failed_at instead of recording a fabricated "degraded"
+ * turn (no silent fallback, design §14.2). maxTokens carries >= 2x headroom over
+ * the 40-120 word utterance so Korean JSON is never cut mid-object.
+ */
+export function makeLlmTurnCaller(): CallTurn {
+  return async (req) => {
+    const key = req.kind === "consensus" ? "committee.consensus" : "committee.turn";
+    return complete([systemMessage(key), { role: "user", content: req.prompt }], {
+      temperature: req.kind === "consensus" ? 0.2 : 0.4,
+      maxTokens: req.kind === "consensus" ? 1200 : 800,
+      agent: promptAgent(key, { key: req.agentKey }),
+    });
   };
 }

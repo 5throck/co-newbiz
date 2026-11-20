@@ -47,7 +47,10 @@ const prompts = doc.prompts;
 
 const keys = prompts.map((p) => p.key);
 if (new Set(keys).size !== keys.length) {
-  console.error("duplicate prompt keys:", keys.filter((k, i) => keys.indexOf(k) !== i));
+  console.error(
+    "duplicate prompt keys:",
+    keys.filter((k, i) => keys.indexOf(k) !== i),
+  );
   process.exit(1);
 }
 for (const p of prompts) {
@@ -138,6 +141,8 @@ const JSON_OUTPUT = new Set<string>([
   "s11.report_narration",
   "s12.milestone_suggest",
   "pm.flow_suggest",
+  "committee.turn",
+  "committee.consensus",
 ]);
 
 const HANGUL_RE = /[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF]/;
@@ -177,7 +182,9 @@ function collectSentenceWarnings(key: string, system: string): void {
     for (const sentence of line.split(/(?<=[.!?])\s+/)) {
       const words = sentence.trim().split(/\s+/).filter(Boolean);
       if (words.length > 25) {
-        sentenceWarnings.push(`  ${key}: ${words.length} words — "${sentence.trim().slice(0, 90)}${sentence.trim().length > 90 ? "…" : ""}"`);
+        sentenceWarnings.push(
+          `  ${key}: ${words.length} words — "${sentence.trim().slice(0, 90)}${sentence.trim().length > 90 ? "…" : ""}"`,
+        );
       }
     }
   }
@@ -200,7 +207,10 @@ for (const p of prompts) {
   if (missing.includes(LAST_MARKER) && GATE_UNLINKED.has(p.key) === false) {
     die(`'${p.key}' omits '${LAST_MARKER}' but is not in the gate-unlinked set.`);
   }
-  const positions = SECTION_MARKERS.filter((m) => system.includes(m)).map((m) => ({ marker: m, at: system.indexOf(m) }));
+  const positions = SECTION_MARKERS.filter((m) => system.includes(m)).map((m) => ({
+    marker: m,
+    at: system.indexOf(m),
+  }));
   for (let i = 1; i < positions.length; i++) {
     if (positions[i].at <= positions[i - 1].at) {
       die(`'${p.key}' section markers are out of skeleton order at '${positions[i].marker}'.`);
@@ -212,7 +222,9 @@ for (const p of prompts) {
     if (!/^#\s+\S/.test(rawLine)) continue;
     const heading = rawLine.trim();
     if (!HEADING_VOCAB.has(heading)) {
-      die(`'${p.key}' has an undeclared section marker: "${heading}" (closed heading vocabulary — design addendum §13.6).`);
+      die(
+        `'${p.key}' has an undeclared section marker: "${heading}" (closed heading vocabulary — design addendum §13.6).`,
+      );
     }
   }
 
@@ -223,7 +235,9 @@ for (const p of prompts) {
     const hit = s.body.match(HANGUL_RE);
     if (hit) {
       const at = s.body.indexOf(hit[0]);
-      die(`'${p.key}' has Hangul outside # Language / # Output contract (section '${s.marker}'): "...${s.body.slice(Math.max(0, at - 30), at + 30)}...".`);
+      die(
+        `'${p.key}' has Hangul outside # Language / # Output contract (section '${s.marker}'): "...${s.body.slice(Math.max(0, at - 30), at + 30)}...".`,
+      );
     }
   }
   const bodyOf = (marker: string): string => slices.find((s) => s.marker === marker)?.body ?? "";
@@ -242,13 +256,14 @@ for (const p of prompts) {
   // (d) Tier A members carry the Explanation style sub-clause.
   if (PROSE_OUTPUT.has(p.key) && !STYLE_EXEMPT.has(p.key)) {
     if (!bodyOf("# Output contract").includes("Explanation style")) {
-      die(`'${p.key}' is a PROSE_OUTPUT (Tier A) member but its # Output contract lacks the 'Explanation style' sub-clause.`);
+      die(
+        `'${p.key}' is a PROSE_OUTPUT (Tier A) member but its # Output contract lacks the 'Explanation style' sub-clause.`,
+      );
     }
   }
 
   collectSentenceWarnings(p.key, system);
 }
-
 
 function tsStr(s: string): string {
   return JSON.stringify(s);
@@ -288,6 +303,8 @@ console.log(`prompt registry: ${prompts.length} entries -> ${OUT}`);
 // Advisory channel — never blocks (exit 0). Aids the AI-1st controlled-language
 // review (design Addendum §A-1, §A-5).
 if (sentenceWarnings.length > 0) {
-  console.error(`prompt-registry: advisory — ${sentenceWarnings.length} sentence(s) exceed 25 words (controlled-language review aid):`);
+  console.error(
+    `prompt-registry: advisory — ${sentenceWarnings.length} sentence(s) exceed 25 words (controlled-language review aid):`,
+  );
   for (const w of sentenceWarnings) console.error(w);
 }

@@ -6,6 +6,8 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-20]**: feat(committee): turn-based meeting engine behind CO_NEWBIZ_COMMITTEE_ENGINE (default rounds) with live turn transcript, human-floor hybrid turns, resume, and openapi docs (ADR-0204 phase 2)
+
 - **[2026-11-20]**: fix(claude): **remove the `WorktreeCreate` hook that blocked worktree sessions** — `.claude/settings.json` registered a `WorktreeCreate` hook running only `git config core.hooksPath .githooks`; a `WorktreeCreate` hook replaces Claude Code's own worktree creation, so every worktree session failed with "WorktreeCreate hook failed". The entry is deleted (the `SessionStart` hook already sets `core.hooksPath`). LOCAL-PATCH(upstream-request: U-20261120-003) — the template-managed file will be overwritten on the next upgrade until the upstream fix lands.
 
 - **[2026-11-19]**: feat(deploy): **the ghcr image publishes multi-arch (linux/amd64 + linux/arm64)** — the docker publish job gains QEMU + a `platforms` matrix, so the Apple Silicon deployment host pulls linux/arm64 natively instead of emulating amd64 (Dockerfile is arm64-safe by construction: `oven/bun` multi-arch base, `bun install --ignore-scripts`, pure-JS `prisma generate` + `next build`; proven by a native arm64 build + `/api/health` smoke locally, ~3 min). The PR gate stays single-platform amd64 for speed; the design doc records the amendment plus the arm64-proof rule (future arch-specific native deps must re-run the proof). First post-merge publish run will be slower — the arm64 leg runs under QEMU.

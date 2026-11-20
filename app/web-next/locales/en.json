@@ -1435,6 +1435,94 @@
         "risk-officer": "Risk review seat",
         "site-facility-agent": "Site and facility seat",
         "valuation-agent": "Valuation seat"
+      },
+      "turns": {
+        "addressedTo": "→ {seat}",
+        "attemptNote": "Sitting {attempt} — continuing from issue {issue}.",
+        "awaiting": {
+          "expired": "Time is up — the chair will move on shortly.",
+          "formHint": "Write your statement, pick a recommendation, and submit. The meeting continues once you do.",
+          "formLabel": "Submit a human member statement",
+          "positionLabel": "Statement",
+          "readOnly": "Waiting for a human member to speak. Statements can be submitted with analyst access or higher.",
+          "recommendationLabel": "Recommendation",
+          "remaining": "{minutes}m {seconds}s left",
+          "resume": "Resume the meeting",
+          "submit": "Submit statement",
+          "submitFailed": "The statement could not be submitted",
+          "submitted": "Statement recorded — the meeting continues.",
+          "title": "Your turn — please speak for the {seat}",
+          "waitingTitle": "Waiting for a human member — {seat}"
+        },
+        "chair": "Chair",
+        "empty": "No statements yet.",
+        "errors": {
+          "awaiting_human": "There is still time left for the human turn.",
+          "floor_expired": "The turn expired before it was submitted — the chair passes.",
+          "floor_not_open": "It is not a human member's turn right now."
+        },
+        "failed": {
+          "place": "Issue {issue}/{count}, turn {seq}",
+          "placeIssue": "Issue {issue}/{count}",
+          "retry": "Restart from the stopped issue",
+          "retryHint": "Finished issues are kept; the meeting continues from the issue where it stopped.",
+          "retrying": "Restarting..."
+        },
+        "human": "Human member",
+        "interrupted": "{count} statements from an interrupted sitting (left out of the flow)",
+        "issueHeading": "Issue {index}. {title}",
+        "issueHeadingNoTitle": "Issue {index}",
+        "issueLine": "Issue {index}/{count}: {title}",
+        "issueLineNoTitle": "Issue {index}/{count}",
+        "move": {
+          "accept": "Accept",
+          "amend": "Amendment",
+          "answer": "Answer",
+          "ask": "Question",
+          "call": "Call to speak",
+          "close": "Issue closed",
+          "concede": "Concede",
+          "open": "Issue opened",
+          "pass": "Passed",
+          "pass_on_behalf": "Passed on behalf",
+          "propose": "Proposal",
+          "propose_consensus": "Consensus proposal",
+          "rebut": "Rebuttal",
+          "reserve": "Reserve",
+          "resume": "Resumed",
+          "speak": "Statement"
+        },
+        "outcome": {
+          "agreed": "Agreed",
+          "narrowed": "Partly agreed (reservations)",
+          "unresolved": "Unresolved"
+        },
+        "passOnBehalf": "The chair passed the turn of the {seat}.",
+        "reason": {
+          "budget": "Turn limit reached",
+          "consensus_failed": "No consensus proposal could be written",
+          "human_timeout": "No response (timed out)",
+          "human_wait_cap": "Human wait limit exceeded",
+          "resume": "Resumed after an interruption"
+        },
+        "reasonLabel": "Reason: {reason}",
+        "recommendation": "Recommendation {value}",
+        "reopen": "View progress / continue",
+        "stance": {
+          "against": "Against",
+          "conditional": "Conditional",
+          "for": "For",
+          "unsure": "Unsure"
+        },
+        "status": {
+          "awaiting": "Waiting for a human member: {seat}",
+          "consensus": "The chair is gathering consensus on issue {index}…",
+          "detail": "(issue {issue}/{count}, turn {turns}/{budget})"
+        },
+        "transcriptTitle": "Discussion record, {count} statements",
+        "turnError": "The statement could not be read twice, so the turn was passed",
+        "vetoDissent": "Veto dissent",
+        "votes": "Accept {accept} · Reserve {reserve} · Abstain {abstain}"
       }
     },
     "committeeMinutes": {

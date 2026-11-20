@@ -27,7 +27,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const db = getDb();
   if (!db.query("SELECT id FROM opportunity WHERE id = ?").get(id)) return notFound();
-  const sessions = listCommitteeSessions(id);
+  // Turn engine poll (ADR-0204 §4.7): `sessionId` narrows to one session, `afterSeq` returns only turns newer than the cursor.
+  const query = new URL(request.url).searchParams;
+  const afterRaw = query.get("afterSeq");
+  if (afterRaw !== null && !/^\d+$/.test(afterRaw)) {
+    return badRequest("invalid_request", "afterSeq must be a non-negative integer.");
+  }
+  const sessions = listCommitteeSessions(id, "opportunity", {
+    sessionId: query.get("sessionId") || undefined,
+    afterSeq: afterRaw === null ? undefined : Number(afterRaw),
+  });
   return ok({ sessions }, 200, { count: sessions.length });
 }
 

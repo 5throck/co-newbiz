@@ -20,6 +20,7 @@
 import { createHash } from "node:crypto";
 import { parsePositionMeta, makeLlmChairAgenda, makeLlmChairMinutes } from "./committee-llm.ts";
 import { committeeSeatsUseLlm } from "./committee-agents.ts";
+import { isTurnText } from "./committee-turns.ts";
 import { getProviderConfig } from "./llm.ts";
 import { committeeMinutesSchema, resolveMinutesDraft, type CommitteeMinutesJson } from "./committee-minutes-schema.ts";
 // Design §9.2 (F2): the chair-pass result types' SSOT is deliberation.ts (the
@@ -132,7 +133,9 @@ const CRITERIA_LABELS: Record<(typeof CRITERIA_KEYS)[number], string> = {
  */
 export function computeAgendaFallback(rows: ChairPositionRow[]): AgendaIssue[] {
   const latest = new Map<string, ChairPositionRow>();
-  for (const r of [...rows].sort((a, b) => a.round - b.round)) latest.set(r.seat, r);
+  // Turn-engine rows (ADR-0204) are not round positions: `round` there is the issue ordinal and
+  // there is no scorecard, so they never feed the round-1 criteria fallback.
+  for (const r of [...rows].sort((a, b) => a.round - b.round)) if (!isTurnText(r.positionMd)) latest.set(r.seat, r);
   const issues: AgendaIssue[] = [];
   for (const criterion of CRITERIA_KEYS) {
     const votes: Array<{ seat: string; v: number }> = [];
@@ -204,7 +207,12 @@ function extractJson(text: string): unknown {
  * with the deterministic fallback on any failure — including no LLM
  * configured, budget/rate-limit errors, or a malformed reply.
  */
-export async function runChairAgenda(opts: { topic: string; rows: ChairPositionRow[] }): Promise<AgendaPassResult> {
+export async function runChairAgenda(opts: {
+  topic: string;
+  rows: ChairPositionRow[];
+  /** Turn engine (ADR-0204): the agenda is drafted BEFORE any seat speaks, from the topic alone. */
+  opening?: boolean;
+}): Promise<AgendaPassResult> {
   const createdAt = new Date().toISOString();
   const model = llmModel();
   let source: "llm" | "fallback" = "fallback";
@@ -215,7 +223,11 @@ export async function runChairAgenda(opts: { topic: string; rows: ChairPositionR
       const material = opts.rows
         .map((r) => `### ${r.seat} (round ${r.round}, position ${r.id})\n${r.positionMd}`)
         .join("\n\n");
-      const text = await call(`검토/안건:\n${opts.topic}\n\n## 라운드 1 입장 원문\n\n${material}`);
+      const text = await call(
+        opts.opening
+          ? `검토/안건:\n${opts.topic}\n\n## 회의 시작 전\n\n아직 발언한 위원이 없습니다. 위 검토/안건과 판정 근거만으로, 위원회가 토의할 쟁점 2~5개를 제안하세요.`
+          : `검토/안건:\n${opts.topic}\n\n## 라운드 1 입장 원문\n\n${material}`,
+      );
       agenda = parseAgendaIssues(extractJson(text));
       if (agenda) source = "llm";
     } catch {
@@ -236,6 +248,24 @@ export async function runChairAgenda(opts: { topic: string; rows: ChairPositionR
     ]),
     createdAt,
   };
+}
+
+/**
+ * Turn engine (ADR-0204): the opening agenda, drafted before the first turn.
+ * LLM when available, else a single issue taken from the topic headline — a
+ * meeting always has at least one issue to open. The result is a proposal;
+ * the provenance (source / model / prompt version) is stored like the round
+ * engine's agenda.
+ */
+export async function runChairOpeningAgenda(topic: string): Promise<AgendaPassResult> {
+  const pass = await runChairAgenda({ topic, rows: [], opening: true });
+  if (pass.agenda.length > 0) return pass;
+  const headline =
+    topic
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => l.length > 0) ?? "검토/안건";
+  return { ...pass, agenda: [{ id: "I1", title: headline.slice(0, 200) }] };
 }
 
 // ── Minutes pass (§2.3) ────────────────────────────────────────────────────
