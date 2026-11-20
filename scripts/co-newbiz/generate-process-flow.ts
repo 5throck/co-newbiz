@@ -256,10 +256,11 @@ Four registered committees — \`route-steering-committee\` (S4 route decision),
   deferred list below.
 - **Meeting engine (ADR-0204)**: a meeting runs either as a turn-based
   dialogue or as the earlier round engine, chosen once per session and stored
-  in the session meta. \`CO_NEWBIZ_COMMITTEE_ENGINE=turns\` selects the dialogue
-  engine; unset still means \`rounds\` (production default until the live
-  check flips it); any other value throws at convene time. The round engine is
-  only an explicit fallback, never a silent one. In a dialogue meeting the chair
+  in the session meta. Unset \`CO_NEWBIZ_COMMITTEE_ENGINE\` (or \`turns\`) selects the
+  dialogue engine, the default since the 2026-11-21 owner decision;
+  \`CO_NEWBIZ_COMMITTEE_ENGINE=rounds\` is the explicit opt-out; any other value
+  throws at convene time. \`human_only\` sessions stay on the round path. The
+  round engine is only an explicit fallback, never a silent one. In a dialogue meeting the chair
   picks 3-5 participants per agenda issue (the veto / mandatory seat is always
   included), seats ask, answer and rebut by display name, and only participants
   vote on the per-issue consensus; non-participants are recorded as absent and

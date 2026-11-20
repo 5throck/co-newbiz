@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-20T16:17:12.842Z
+**Generated**: 2026-11-20T16:51:32.681Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 214 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 215 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -311,7 +311,7 @@
 | llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | crypto, zod |
 | loader.ts | 1.0.0 | scripts/eval/loader.ts | fs, js-yaml, path, zod |
 | locale-jargon-lint.ts | 1.0.0 | scripts/co-newbiz/locale-jargon-lint.ts | fs, path |
-| manual-capture.ts | 1.1.0 | scripts/co-newbiz/manual-capture.ts | fs, module, path |
+| manual-capture.ts | 1.2.0 | scripts/co-newbiz/manual-capture.ts | fs, module, path |
 | mcp-coverage.ts | 1.0.0 | scripts/co-newbiz/mcp-coverage.ts | fs, js-yaml, path, url |
 | md-to-ooxml.ts | 1.2.0 | scripts/md-to-ooxml.ts | fs, path |
 | migrate-quality-gates.ts | 1.1.0 | scripts/migrate-quality-gates.ts | fs, js-yaml, path |
@@ -352,6 +352,7 @@
 | scope-impact.ts | 1.0.0 | scripts/co-newbiz/scope-impact.ts | bun:sqlite |
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite, path |
+| seed-committee-turn-demo.ts | 1.1.0 | scripts/co-newbiz/seed-committee-turn-demo.ts | N/A |
 | seed-demo-gate-contract.ts | 1.0.0 | scripts/co-newbiz/seed-demo-gate-contract.ts | bun:sqlite |
 | seed-hydraulic-breaker-matrix.ts | 1.1.0 | scripts/co-newbiz/seed-hydraulic-breaker-matrix.ts | N/A |
 | seed-s1-s12-demo.ts | 1.17.1 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |

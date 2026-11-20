@@ -22,15 +22,16 @@ export type CommitteeEngine = "turns" | "rounds";
 /**
  * CO_NEWBIZ_COMMITTEE_ENGINE — the default meeting engine for NEW sessions
  * (design 2026-11-20 §14.2 / §15.3, ADR-0204). "turns" = turn-based dialogue
- * meeting, "rounds" = the ADR-0096 round engine. Unset or empty → "rounds"
- * until the S6/S4 live check flips the default. Any other value THROWS: a
+ * meeting, "rounds" = the ADR-0096 round engine. Unset or empty → "turns"
+ * (default flipped from "rounds" by the 2026-11-21 owner decision); "rounds"
+ * stays selectable explicitly as an opt-out. Any other value THROWS: a
  * mistyped flag is never coerced into either engine. Read at call time so
  * tests and pilots can flip it without a restart. The resolved value is
  * stored once in session meta.engine and never changes afterwards.
  */
 export function committeeEngineDefault(): CommitteeEngine {
   const raw = (process.env.CO_NEWBIZ_COMMITTEE_ENGINE ?? "").trim().toLowerCase();
-  if (raw === "") return "rounds";
+  if (raw === "") return "turns";
   if (raw === "turns" || raw === "rounds") return raw;
   throw new Error(
     `CO_NEWBIZ_COMMITTEE_ENGINE must be 'turns' or 'rounds' (got '${process.env.CO_NEWBIZ_COMMITTEE_ENGINE}')`,

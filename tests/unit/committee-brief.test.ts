@@ -30,6 +30,8 @@ function setEnv(key: string, value: string): void {
   process.env[key] = value;
 }
 setEnv("CO_NEWBIZ_DB_PATH", TEST_DB_PATH);
+// ADR-0204: these suites exercise the round engine; the default flipped to turns (2026-11-21).
+setEnv("CO_NEWBIZ_COMMITTEE_ENGINE", "rounds");
 // This suite must never dial an LLM.
 setEnv("CO_NEWBIZ_LLM_PROVIDER", "none");
 

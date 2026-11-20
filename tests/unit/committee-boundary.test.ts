@@ -26,6 +26,9 @@ process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 // suite injects the deterministic agent AS the factory. The provider is
 // forced offline so the ADR-0196 chair passes stay deterministic.
 process.env.CO_NEWBIZ_LLM_PROVIDER = "none";
+// ADR-0204: these suites exercise the round engine; the default flipped to turns (2026-11-21).
+const PREV_COMMITTEE_ENGINE = process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
+process.env.CO_NEWBIZ_COMMITTEE_ENGINE = "rounds";
 
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -61,6 +64,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (PREV_COMMITTEE_ENGINE === undefined) delete process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
+  else process.env.CO_NEWBIZ_COMMITTEE_ENGINE = PREV_COMMITTEE_ENGINE;
   resetDb();
   for (let attempt = 0; attempt < 5; attempt++) {
     try {

@@ -429,9 +429,12 @@ describe("engine switch (flag resolved at creation, never silent)", () => {
       { committeeKey: COMMITTEE, decisionMode: mode, engine, actor: "alice", callAgent: deterministicCallAgent() },
     ).sessionId;
 
-  test("default is rounds; env turns|rounds applies; an explicit engine beats env; meta.engine is stored", () => {
+  test("default is turns; env turns|rounds applies; an explicit engine beats env; meta.engine is stored", () => {
     delete process.env.CO_NEWBIZ_COMMITTEE_ENGINE;
-    expect(metaOf(create()).engine).toBe("rounds");
+    expect(metaOf(create()).engine).toBe("turns");
+    expect(metaOf(create("rounds")).engine).toBe("rounds");
+    process.env.CO_NEWBIZ_COMMITTEE_ENGINE = "";
+    expect(metaOf(create()).engine).toBe("turns");
     process.env.CO_NEWBIZ_COMMITTEE_ENGINE = "turns";
     expect(metaOf(create()).engine).toBe("turns");
     expect(metaOf(create("rounds")).engine).toBe("rounds");

@@ -185,7 +185,7 @@ Phase 1 is useful without phase 2: the owner's second complaint is fixed indepen
 - Existing sessions: no `meta.progress` → the UI shows today's "소집 중" text. No `kind: "turn"` rows → minutes v1 renders as today. Nothing is rewritten.
 - `engine` per session is stored at convene time (`meta.engine`), so a session never changes engine mid-run.
 - All ADR-0196 surfaces M1-M8 move to the turn engine together (owner scope change, §14). Only sessions convened before the switch keep `engine: rounds`.
-- Rollback: set the default back to `engine: rounds` (only while the fallback exists, §14.2); turn rows stay readable as history.
+- Rollback: set `CO_NEWBIZ_COMMITTEE_ENGINE=rounds` (only while the fallback exists, §14.2); turn rows stay readable as history. The default became `turns` on 2026-11-21 (§14.2).
 
 ## 7. Cost and latency
 
@@ -278,6 +278,8 @@ Options for the round engine:
 
 Resolved as Q8 (Option A). In both options there is no silent fallback: an LLM failure stops convening as ADR-0196 decision 10 says, it does not drop to rounds.
 
+**Default switched (2026-11-21, owner).** Owner decision, chat, 2026-11-21: "기본값 전환". `CO_NEWBIZ_COMMITTEE_ENGINE` unset now resolves to `turns`; `rounds` is selectable only as an explicit opt-out (env `CO_NEWBIZ_COMMITTEE_ENGINE=rounds` or CLI `--engine rounds`), so Option A stays "explicit, non-default" and never silent. Sessions convened earlier keep their stored `meta.engine`. This supersedes the rollout rule in §15.3 ("ship with unset → `rounds` until the live check passes"). See ADR-0204, "Default switched".
+
 ### 14.3 Minutes storage for all meetings
 
 Every new session stores minutes as schema v2 (§4.6, dialogue form, turn-id refs). Existing sessions keep `minutes_draft` v1 and are **rendered in the legacy shape**, with a note "이전 방식으로 기록된 회의록입니다". **No backfill**: converting position papers into dialogue would make up an exchange that never happened, which breaks the no-fabrication rule; confirmed minutes (ADR-0104) are frozen anyway. The reader picks the renderer by `minutes_draft.json.version` (absent = 1).
@@ -333,7 +335,7 @@ Owner question (answered: yes, as recommended): On a restart, may we keep the st
 ### 15.3 Phase 2 backend checklist
 
 Engine switch (explicit, never silent; ADR-0204, §14.2 Option A):
-- `lib/committee-flags.ts`: add `committeeEngineDefault(): "turns" | "rounds"`, which reads `CO_NEWBIZ_COMMITTEE_ENGINE` (`turns` | `rounds`; unset → `turns` once the S6/S4 live check passes; ship with unset → `rounds` until then). Any other value throws at convene time and is not coerced.
+- `lib/committee-flags.ts`: add `committeeEngineDefault(): "turns" | "rounds"`, which reads `CO_NEWBIZ_COMMITTEE_ENGINE` (`turns` | `rounds`; unset → `turns` (switched on by the 2026-11-21 owner decision, see §14.2; the earlier plan shipped with unset → `rounds` until the S6/S4 live check passed). Any other value throws at convene time and is not coerced.
 - `createCommitteeSession` (`committee-session.ts:556`): resolve the engine once (explicit request/CLI `--engine` > env > default) and store `meta.engine`. Never change it later. An LLM failure stops convening; it never drops to rounds.
 - `SessionMeta` (`committee-session.ts:~80-115`): add `engine`, `attempts`, `awaiting`.
 
