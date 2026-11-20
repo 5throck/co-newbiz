@@ -81,8 +81,8 @@ call_sites:
     json_parse_migration: "Deferred: chain steps feed raw reply text to later steps; stage-reco scores schema validity of the current replies but has no LLM baseline yet."
     suites: [stage-reco]
   - file: app/web-next/lib/committee-llm.ts
-    sites: 4
-    json_parse_migration: "Deferred: output is markdown plus a position-meta tail, not a JSON value; the committee suite scores that tail. ADR-0196 phase B adds the chair agenda/minutes passes (committee-chair.ts) — same recorder-pattern seam, JSON output parsed in committee-chair, deterministic fallback when the LLM path fails. ADR-0204 adds the turn-engine caller (makeLlmTurnCaller): raw text returned and parsed + zod-validated in committee-turns.ts (retry once, then a stored pass with the error; no fallback to another engine)."
+    sites: 5
+    json_parse_migration: "Deferred: output is markdown plus a position-meta tail, not a JSON value; the committee suite scores that tail. ADR-0196 phase B adds the chair agenda/minutes passes (committee-chair.ts) — same recorder-pattern seam, JSON output parsed in committee-chair, deterministic fallback when the LLM path fails. ADR-0204 adds the turn-engine caller (makeLlmTurnCaller): raw text returned and parsed + zod-validated in committee-turns.ts (retry once, then a stored pass with the error; no fallback to another engine), and the minutes-v2 caller (makeLlmChairMinutesV2): a selection document over stored turns, validated against them in committee-minutes-v2.ts (repair or reject non-verbatim quotes; deterministic fallback when the LLM path fails)."
     suites: [committee]
   - file: app/web-next/lib/company-profile-crosscheck.ts
     sites: 1
