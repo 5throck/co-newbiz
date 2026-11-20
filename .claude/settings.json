@@ -230,19 +230,6 @@
         ]
       }
     ],
-    "WorktreeCreate": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "git config core.hooksPath .githooks",
-            "async": true,
-            "statusMessage": "Configuring git hooks in new worktree..."
-          }
-        ]
-      }
-    ],
     "UserPromptSubmit": [],
     "Stop": []
   }
