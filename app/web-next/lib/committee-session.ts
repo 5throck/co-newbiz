@@ -300,7 +300,13 @@ function createProgressRecorder(
   write(last);
   return {
     record: (ev) =>
-      write(nextProgress(base, { phase: ev.phase, round: ev.round, speakerSeat: ev.speakerSeat, turnCount: ev.turnCount }, nowIso())),
+      write(
+        nextProgress(
+          base,
+          { phase: ev.phase, round: ev.round, speakerSeat: ev.speakerSeat, turnCount: ev.turnCount },
+          nowIso(),
+        ),
+      ),
     done: (turnCount) => nextProgress(base, { phase: "done", turnCount }, nowIso()),
   };
 }

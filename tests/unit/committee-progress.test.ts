@@ -106,7 +106,10 @@ function metaOf(sessionId: string): Record<string, unknown> & { progress?: Meeti
 }
 
 /** Session shell via the real create path; the explicit callAgent skips the llm_required guard only. */
-function newSession(decisionMode: "agent_team" | "hybrid", oppId = newOpportunity()): { oppId: string; sessionId: string } {
+function newSession(
+  decisionMode: "agent_team" | "hybrid",
+  oppId = newOpportunity(),
+): { oppId: string; sessionId: string } {
   const created = createCommitteeSession(
     { entityType: "opportunity", entityId: oppId },
     { committeeKey: COMMITTEE, decisionMode, actor: "alice", callAgent: deterministicCallAgent(), source: "web" },
@@ -148,7 +151,18 @@ describe("patchMeta (design §4.2 write race)", () => {
     db.run(
       `INSERT INTO process_run (id, entity_type, entity_id, spec_version, stage, status, source, started_by, started_at, meta_json)
        VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      ["ledger-run", "opportunity", "opp-x", "v", "s8_case_adopt", "running", "web", "alice", NOW, '{"committee_key":"x"}'],
+      [
+        "ledger-run",
+        "opportunity",
+        "opp-x",
+        "v",
+        "s8_case_adopt",
+        "running",
+        "web",
+        "alice",
+        NOW,
+        '{"committee_key":"x"}',
+      ],
     );
     expect(() => patchMeta("ledger-run", { convening: false })).toThrow(CommitteeError);
   });
@@ -177,16 +191,24 @@ describe("engine progress events", () => {
     const phases = events.map((e) => e.phase);
     // round 1 (3 seats) -> agenda -> round 2 (3 seats) -> consensus -> minutes
     expect(phases).toEqual([
-      "discussion", "discussion", "discussion",
+      "discussion",
+      "discussion",
+      "discussion",
       "agenda",
-      "discussion", "discussion", "discussion",
+      "discussion",
+      "discussion",
+      "discussion",
       "consensus",
       "minutes",
     ]);
     const discussion = events.filter((e) => e.phase === "discussion");
     expect(discussion.map((e) => `${e.round}:${e.speakerSeat}:${e.turnCount}`)).toEqual([
-      "1:industry-lead:0", "1:region-lead:1", "1:risk-officer:2",
-      "2:industry-lead:3", "2:region-lead:4", "2:risk-officer:5",
+      "1:industry-lead:0",
+      "1:region-lead:1",
+      "1:risk-officer:2",
+      "2:industry-lead:3",
+      "2:region-lead:4",
+      "2:risk-officer:5",
     ]);
     expect(events.find((e) => e.phase === "agenda")?.turnCount).toBe(3);
     expect(events.find((e) => e.phase === "consensus")?.turnCount).toBe(6);
@@ -269,11 +291,12 @@ describe("agent_team session: persisted progress, live positions, end state", ()
     expect(meta.progress.started_at <= meta.progress.updated_at).toBe(true);
     expect(positionCount(sessionId)).toBe(seats.length * ROUNDS);
     expect(
-      (db.query("SELECT COUNT(*) AS n FROM gate_evaluation WHERE process_run_id = ?").get(sessionId) as { n: number }).n,
+      (db.query("SELECT COUNT(*) AS n FROM gate_evaluation WHERE process_run_id = ?").get(sessionId) as { n: number })
+        .n,
     ).toBe(1);
-    expect(
-      (db.query("SELECT COUNT(*) AS n FROM process_run WHERE entity_id = ?").get(oppId) as { n: number }).n,
-    ).toBe(1);
+    expect((db.query("SELECT COUNT(*) AS n FROM process_run WHERE entity_id = ?").get(oppId) as { n: number }).n).toBe(
+      1,
+    );
     const run = db.query("SELECT status, finished_at FROM process_run WHERE id = ?").get(sessionId) as {
       status: string;
       finished_at: string | null;
@@ -315,13 +338,13 @@ describe("agent_team session: persisted progress, live positions, end state", ()
     const listed = listCommitteeSessions(oppId)[0];
     expect(listed.positions).toHaveLength(failAt);
     expect(listed.progress?.failed_at?.speaker_seat).toBe(seats[2]);
-    expect(
-      (db.query("SELECT status FROM process_run WHERE id = ?").get(sessionId) as { status: string }).status,
-    ).toBe("failed");
+    expect((db.query("SELECT status FROM process_run WHERE id = ?").get(sessionId) as { status: string }).status).toBe(
+      "failed",
+    );
     // No stray engine run is left behind.
-    expect(
-      (db.query("SELECT COUNT(*) AS n FROM process_run WHERE entity_id = ?").get(oppId) as { n: number }).n,
-    ).toBe(1);
+    expect((db.query("SELECT COUNT(*) AS n FROM process_run WHERE entity_id = ?").get(oppId) as { n: number }).n).toBe(
+      1,
+    );
   });
 
   test("a CommitteeError keeps its code as failed_at.error_code (never the message)", async () => {
