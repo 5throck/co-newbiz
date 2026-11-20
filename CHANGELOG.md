@@ -6,6 +6,8 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-20]**: feat(committee): per-issue participants, seat display names, challenge turns, orphan recovery, optional meeting window, and dialogue minutes v2 (ADR-0204 phases 2.1+3)
+
 - **[2026-11-20]**: feat(committee): turn-based meeting engine behind CO_NEWBIZ_COMMITTEE_ENGINE (default rounds) with live turn transcript, human-floor hybrid turns, resume, and openapi docs (ADR-0204 phase 2)
 
 - **[2026-11-20]**: fix(claude): **remove the `WorktreeCreate` hook that blocked worktree sessions** — `.claude/settings.json` registered a `WorktreeCreate` hook running only `git config core.hooksPath .githooks`; a `WorktreeCreate` hook replaces Claude Code's own worktree creation, so every worktree session failed with "WorktreeCreate hook failed". The entry is deleted (the `SessionStart` hook already sets `core.hooksPath`). LOCAL-PATCH(upstream-request: U-20261120-003) — the template-managed file will be overwritten on the next upgrade until the upstream fix lands.
