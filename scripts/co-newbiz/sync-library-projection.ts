@@ -29,6 +29,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as yaml from "js-yaml";
+import type { ChecklistItemDef, LibraryDocContent, LibraryDocSummary } from "../../app/web-next/lib/library.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const OUT = join(ROOT, "app", "web-next", "lib", "library.generated.ts");
@@ -38,9 +39,9 @@ const normalize = (s: string) => s.replace(/\r\n/g, "\n");
 
 const src = readFileSync(OUT, "utf-8");
 const mod = await import(OUT);
-const DOCS: any[] = mod.LIBRARY_DOCS;
-const CONTENT: Record<string, any> = mod.LIBRARY_CONTENT;
-const ITEMS: Record<string, any[]> = mod.LIBRARY_CHECKLIST_ITEMS;
+const DOCS: LibraryDocSummary[] = mod.LIBRARY_DOCS;
+const CONTENT: Record<string, LibraryDocContent> = mod.LIBRARY_CONTENT;
+const ITEMS: Record<string, ChecklistItemDef[]> = mod.LIBRARY_CHECKLIST_ITEMS;
 
 const missing: string[] = [];
 for (const [id, entry] of Object.entries(CONTENT)) {
@@ -70,7 +71,9 @@ for (const id of Object.keys(ITEMS)) {
     ...(i.origins !== undefined ? { origins: i.origins } : {}),
     ...(i.review_status !== undefined ? { review_status: i.review_status } : {}),
     ...(i.reviewer !== undefined ? { reviewer: i.reviewer } : {}),
-    ...(i.verified_on !== undefined ? { verified_on: i.verified_on instanceof Date ? i.verified_on.toISOString().slice(0, 10) : i.verified_on } : {}),
+    ...(i.verified_on !== undefined
+      ? { verified_on: i.verified_on instanceof Date ? i.verified_on.toISOString().slice(0, 10) : i.verified_on }
+      : {}),
   }));
   ITEMS[id] = items;
   entry.version = doc.version;
