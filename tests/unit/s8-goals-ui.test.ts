@@ -33,9 +33,18 @@ const koOf = (key: string): string =>
     ) as string;
 
 describe("S8 tab order and greenfield redirect", () => {
-  test("stage tab row: goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
+  test("stage tab row: overview, goals, technical, financial, targets, decision; financial sub-tab row (ADR-0169)", () => {
     const s8 = STAGE_TAB_GROUPS.find((g) => g.stage === "S8")!;
-    expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual(["goals", "technical", "financial", "targets", "decision"]);
+    // 2026-11-21 owner decision: 개요 (the project overview page, seg "") is the FIRST S8 tab;
+    // 사업 목표 keeps only the business-case content. `?tab=` of tabs[0] is the overview deep link.
+    expect(s8.tabs.map((t) => t.query ?? t.seg)).toEqual([
+      "overview",
+      "goals",
+      "technical",
+      "financial",
+      "targets",
+      "decision",
+    ]);
     expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual([
       "overview",
       "scenarios",

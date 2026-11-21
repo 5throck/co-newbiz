@@ -11,6 +11,15 @@ export interface StageTabDef {
   /** Path segment under /projects/[id] ("" = project overview). */
   seg: string;
   label: string;
+  /**
+   * Catalog key that replaces `label` at render time (StageTabs resolves it
+   * through the translator). New tabs must not add Hangul code lines — the
+   * i18n-lint Korean baseline (design 2026-10-23-i18n-ui-adoption §3.6) only
+   * shrinks — so post-adoption tabs carry their text in ko/en.json and leave
+   * `label` empty (INTERIM-WORDING siblings keep their code literal until
+   * their own extraction batch).
+   */
+  labelKey?: string;
   /** Optional ?tab= value for tabs that live inside one page (e.g. business-case). */
   query?: string;
   /** Extra ?tab= values that highlight this tab (old deep links, aliases). */
@@ -51,19 +60,37 @@ export interface StageTabGroup {
   subtabs?: StageTabDef[];
 }
 
-export const MAX_PRIMARY_TABS = 5;
+// 2026-11-21 owner decision: S8 gains 개요 (the project overview page) as its
+// FIRST tab, so the cap moves 5 → 6. Every stage must still declare its tabs
+// here — the cap is the guard against unbounded tab rows, not a target.
+export const MAX_PRIMARY_TABS = 6;
 
 export const STAGE_TAB_GROUPS: StageTabGroup[] = [
   {
-    stage: "S8", name: "사업성 분석",
+    stage: "S8",
+    name: "사업성 분석",
     // ADR-0169: three parts (사업 목표 / 기술적 타당성 / 재무적 타당성); WACC, 재무분석 and the
     // scenario comparison are the financial sub-tab row. INTERIM-WORDING: labels are provisional.
     tabs: [
-      // extraSegs [""]: the project overview page stays an S8 page (group lookup + highlight) now that
-      // the more-menu no longer lists it.
-      { seg: "/business-case", query: "goals", label: "사업 목표", extraSegs: [""] }, // INTERIM-WORDING (ADR-0159)
+      // 2026-11-21 owner decision: the charter summary block (프로젝트 개요 헤딩 +
+      // 추진계획 요약 + 프로세스 현황 — app/projects/[id]/page.tsx) is the FIRST S8
+      // tab (개요) instead of posing as the 사업 목표 tab: before, that page
+      // highlighted 사업 목표 via extraSegs [""], so the post-promotion landing
+      // (PromotionPanel router.push(/projects/{id})) showed the charter block
+      // under the 사업 목표 highlight. Deep link: /projects/{id}?tab=overview
+      // (exact ?tab= match) and bare /projects/{id} (isDefault).
+      { seg: "", query: "overview", label: "", labelKey: "common.overview", isDefault: true },
+      { seg: "/business-case", query: "goals", label: "사업 목표" }, // INTERIM-WORDING (ADR-0159)
       { seg: "/business-case", query: "technical", label: "기술적 타당성", aliases: ["capability"], lens: "technical" },
-      { seg: "/business-case", query: "financial", label: "재무적 타당성", aliases: ["scenarios", "overview", "params", "target-costing"], extraSegs: ["/wacc", "/financial-analysis"], isDefault: true, lens: "financial" },
+      {
+        seg: "/business-case",
+        query: "financial",
+        label: "재무적 타당성",
+        aliases: ["scenarios", "overview", "params", "target-costing"],
+        extraSegs: ["/wacc", "/financial-analysis"],
+        isDefault: true,
+        lens: "financial",
+      },
       { seg: "/business-case", query: "targets", label: "대상 비교·선정" },
       { seg: "/business-case", query: "decision", label: "결정" },
     ],
@@ -81,7 +108,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     ],
   },
   {
-    stage: "S9", name: "실사·검증",
+    stage: "S9",
+    name: "실사·검증",
     tabs: [
       { seg: "/dd", label: "실사 워크스페이스" },
       { seg: "/proxy-chain", label: "가치사슬 연계" },
@@ -98,7 +126,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     ],
   },
   {
-    stage: "S10", name: "투자구조 설계",
+    stage: "S10",
+    name: "투자구조 설계",
     tabs: [
       { seg: "/deal-structure", label: "투자구조" },
       // 2026-10-21 decider: "부채·커버넌트"는 차입 및 여신관리 화면 — 용어를 현업 언어로.
@@ -111,7 +140,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     ],
   },
   {
-    stage: "S11", name: "투자심사·실행",
+    stage: "S11",
+    name: "투자심사·실행",
     tabs: [
       { seg: "/ic-review", label: "투자심의" },
       { seg: "/reports", label: "보고서" },
@@ -125,7 +155,8 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     ],
   },
   {
-    stage: "S12", name: "사후 관리",
+    stage: "S12",
+    name: "사후 관리",
     tabs: [
       { seg: "/portfolio", label: "포트폴리오" },
       { seg: "/pmi", label: "PMI" },
@@ -151,9 +182,7 @@ export function projectSegment(pathname: string): string | null {
 
 /** The stage group that owns a path segment; the overview belongs to S8. */
 export function groupForSegment(seg: string): StageTabGroup | null {
-  return (
-    STAGE_TAB_GROUPS.find((g) => allDefs(g).some((t) => t.seg === seg || t.extraSegs?.includes(seg))) ?? null
-  );
+  return STAGE_TAB_GROUPS.find((g) => allDefs(g).some((t) => t.seg === seg || t.extraSegs?.includes(seg))) ?? null;
 }
 
 /** Every destination a group exposes: primary tabs, more-menu and the sub-tab row. */
@@ -163,7 +192,13 @@ export function allDefs(group: StageTabGroup): StageTabDef[] {
 
 function matchIndex(defs: StageTabDef[], seg: string, tabParam: string | null): number {
   const param = tabParam === null ? null : tabParam.split("#")[0];
-  const exact = defs.findIndex((t) => t.seg === seg && t.query !== undefined && param !== null && (t.query === param || (t.aliases?.includes(param) ?? false)));
+  const exact = defs.findIndex(
+    (t) =>
+      t.seg === seg &&
+      t.query !== undefined &&
+      param !== null &&
+      (t.query === param || (t.aliases?.includes(param) ?? false)),
+  );
   if (exact >= 0) return exact;
   const extra = defs.findIndex((t) => t.extraSegs?.includes(seg));
   if (extra >= 0) return extra;
@@ -196,7 +231,12 @@ export function tabHref(projectId: string, t: StageTabDef): string {
 export function groupForTrack(group: StageTabGroup, track: string | null | undefined): StageTabGroup {
   if (track !== "greenfield") return group;
   const keep = (t: StageTabDef) => !(t.seg === "/business-case" && t.query === "targets");
-  return { ...group, tabs: group.tabs.filter(keep), more: group.more.filter(keep), ...(group.subtabs ? { subtabs: group.subtabs.filter(keep) } : {}) };
+  return {
+    ...group,
+    tabs: group.tabs.filter(keep),
+    more: group.more.filter(keep),
+    ...(group.subtabs ? { subtabs: group.subtabs.filter(keep) } : {}),
+  };
 }
 
 /**
@@ -205,7 +245,10 @@ export function groupForTrack(group: StageTabGroup, track: string | null | undef
  * every other tab and every group for PMI-applicable projects is returned
  * unchanged (same object identity), so brownfield M&A renders byte-identical.
  */
-export function stageTabGroupsFor(opts: { pmiApplies: boolean }, groups: StageTabGroup[] = STAGE_TAB_GROUPS): StageTabGroup[] {
+export function stageTabGroupsFor(
+  opts: { pmiApplies: boolean },
+  groups: StageTabGroup[] = STAGE_TAB_GROUPS,
+): StageTabGroup[] {
   if (opts.pmiApplies) return groups;
   return groups.map((g) =>
     g.tabs.some((t) => t.seg === "/pmi") || g.more.some((t) => t.seg === "/pmi")
