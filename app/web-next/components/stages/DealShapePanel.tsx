@@ -51,6 +51,10 @@ export interface DealShapePanelViewProps {
   /** Load failure kind, when the GET failed. */
   loadError: "viewer" | "admin" | "notFound" | "other" | null;
   canAct: boolean;
+  /** design 2026-11-21-s67-completion-visibility — S6 completion criteria unmet (S7 not reached): the AI
+   *  추천 and 기록 buttons render disabled with an adjacent reason that links to the criteria strip.
+   *  Client-side pre-emptive state only — the server write guard stays the single enforcement point. */
+  s7Blocked?: boolean;
   form: Form;
   onForm: (next: Form) => void;
   onSubmit: () => void;
@@ -58,12 +62,16 @@ export interface DealShapePanelViewProps {
   onEdit: () => void;
   /** AI recommendation (proposal only; nothing is saved by it). */
   reco: RecoState;
+  /** Error kind of `reco.error` (drives the inline #s6-criteria anchor on the notOpenStage fallback). */
+  recoErrorKind?: string | null;
   onRecommend: () => void;
   /** Copy a proposal into the form; the person still edits and records. */
   onApply: (r: DealShapeRecommendation) => void;
   busy: boolean;
   problem: FormProblem | null;
   serverError: string | null;
+  /** Error kind of `serverError` (same mapping; drives the inline anchor). */
+  serverErrorKind?: string | null;
   notice: string | null;
   loadedFromRow: boolean;
 }
@@ -91,6 +99,8 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
       shape: shape ? labels.shape(shape) : "",
     });
   })();
+  const s7Blocked = p.canAct && p.s7Blocked === true;
+  const blockedReasonId = `${uid}-s7-blocked`;
 
   return (
     <section className="card" id={DEAL_SHAPE_PANEL_ID} aria-labelledby={`${uid}-h`} data-testid="deal-shape-panel">
@@ -214,8 +224,28 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
             </>
           )}
 
+          {s7Blocked && (
+            // design 2026-11-21-s67-completion-visibility Fix ①-c — adjacent visible reason (PrimaryAction
+            // text-beside-the-button treatment) + a separate, focusable anchor to the criteria strip: keyboard
+            // users reach the cure path without the disabled buttons.
+            <p id={blockedReasonId} className="s67-blocked-reason" data-testid="deal-shape-s7-blocked">
+              <span aria-hidden="true">⛔ </span>
+              {t("blockedReasonS7")}{" "}
+              <a href="#s6-criteria">
+                {t("blockedReasonLink")} <span aria-hidden="true">→</span>
+              </a>
+            </p>
+          )}
           {p.canAct && (
-            <DealShapeRecommendCard reco={p.reco} busy={p.busy} onRecommend={p.onRecommend} onApply={p.onApply} />
+            <DealShapeRecommendCard
+              reco={p.reco}
+              busy={p.busy}
+              disabled={s7Blocked}
+              describedBy={s7Blocked ? blockedReasonId : undefined}
+              errorKind={p.recoErrorKind}
+              onRecommend={p.onRecommend}
+              onApply={p.onApply}
+            />
           )}
 
           {history.length > 0 && (
@@ -251,9 +281,12 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
               onForm={p.onForm}
               onSubmit={p.onSubmit}
               busy={p.busy}
+              s7Blocked={s7Blocked}
+              blockedReasonId={s7Blocked ? blockedReasonId : undefined}
               problem={p.problem}
               problemText={problemText}
               serverError={p.serverError}
+              serverErrorKind={p.serverErrorKind}
               notice={p.notice}
               loadedFromRow={p.loadedFromRow}
             />
@@ -272,7 +305,16 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
   );
 }
 
-export function DealShapePanel({ opportunityId, canAct }: { opportunityId: string; canAct: boolean }) {
+export function DealShapePanel({
+  opportunityId,
+  canAct,
+  s7Blocked = false,
+}: {
+  opportunityId: string;
+  canAct: boolean;
+  /** design 2026-11-21-s67-completion-visibility — S6 criteria unmet: pre-emptive disabled state for the write buttons (the server guard stays authoritative). */
+  s7Blocked?: boolean;
+}) {
   const t = useTranslations("stages.s67.dealShapePanel");
   const url = `/api/opportunities/${encodeURIComponent(opportunityId)}/deal-shapes`;
   const [data, setData] = useState<DealShapeData | null>(null);
@@ -282,8 +324,10 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<FormProblem | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [serverErrorKind, setServerErrorKind] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [reco, setReco] = useState<RecoState>(EMPTY_RECO);
+  const [recoErrorKind, setRecoErrorKind] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -293,7 +337,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
     } catch (e) {
       setData(null);
       if (e instanceof ApiError) {
-        const kind = dealShapeErrorKind(e.status, e.code);
+        const kind = dealShapeErrorKind(e.status, e.code, e.details);
         setLoadError(kind === "viewer" || kind === "admin" || kind === "notFound" ? kind : "other");
       } else setLoadError("other");
     }
@@ -302,10 +346,14 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
     void load();
   }, [load]);
 
-  const errorMessage = (e: unknown): string => {
-    if (!(e instanceof ApiError)) return t("serverError.other");
-    const kind = dealShapeErrorKind(e.status, e.code);
-    return kind === "invalid" || kind === "conflict" ? e.message : t(`serverError.${kind}` as never);
+  /** One mapping, two surfaces (design Fix ①-c): the submit serverError and the recommend error both consume the kinds. */
+  const mapError = (e: unknown): { message: string; kind: string } => {
+    if (!(e instanceof ApiError)) return { message: t("serverError.other"), kind: "other" };
+    const kind = dealShapeErrorKind(e.status, e.code, e.details);
+    return {
+      message: kind === "invalid" || kind === "conflict" ? e.message : t(`serverError.${kind}` as never),
+      kind,
+    };
   };
 
   const submit = async () => {
@@ -313,6 +361,7 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
     const found = validateDealShapeForm(form, order);
     setNotice(null);
     setServerError(null);
+    setServerErrorKind(null);
     setProblem(found);
     if (found || !data) return;
     setBusy(true);
@@ -323,9 +372,11 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
       setNotice(t("recorded"));
       await load();
     } catch (e) {
-      setServerError(errorMessage(e));
+      const mapped = mapError(e);
+      setServerError(mapped.message);
+      setServerErrorKind(mapped.kind);
       // Someone else recorded first: show the current verdict, keep the person's input (ADR-0201 §6.1).
-      if (e instanceof ApiError && dealShapeErrorKind(e.status, e.code) === "stale") await load();
+      if (mapped.kind === "stale") await load();
     } finally {
       setBusy(false);
     }
@@ -344,19 +395,24 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
         note: r.data.note ? t(`aiNote.${r.data.note}` as never) : null,
         item: r.data.recommendation,
       });
+      setRecoErrorKind(null);
     } catch (e) {
-      setReco({ ...EMPTY_RECO, error: errorMessage(e) });
+      const mapped = mapError(e);
+      setReco({ ...EMPTY_RECO, error: mapped.message });
+      setRecoErrorKind(mapped.kind);
     }
   };
 
   const clearMessages = () => {
     setProblem(null);
     setServerError(null);
+    setServerErrorKind(null);
   };
 
   return (
     <DealShapePanelView
       reco={reco}
+      recoErrorKind={recoErrorKind}
       onRecommend={() => {
         void recommend();
       }}
@@ -370,10 +426,12 @@ export function DealShapePanel({ opportunityId, canAct }: { opportunityId: strin
       data={data}
       loadError={loadError}
       canAct={canAct}
+      s7Blocked={s7Blocked}
       form={form}
       busy={busy}
       problem={problem}
       serverError={serverError}
+      serverErrorKind={serverErrorKind}
       notice={notice}
       loadedFromRow={loadedFromRow}
       onForm={(next) => {

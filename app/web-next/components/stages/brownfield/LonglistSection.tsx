@@ -6,6 +6,7 @@ import { Fragment, useState } from "react";
 import { SECTION_IDS, STATUS_LABEL } from "./constants.ts";
 import { filterTargetsByStatus, TARGET_STATUS_FILTERS, type TargetStatusFilter } from "./longlist-filter.ts";
 import { ColGroup } from "../../ui.tsx";
+import { S6CriteriaPanel, LonglistGapChip } from "./S6CriteriaPanel.tsx";
 
 // 후보 전체 목록 — 후보명·DART·재무기술 칩 2개·잠정 순위·상태·제외 사유·작업 7열.
 // 작업 열(승격·순위 조정)은 list-table 표준에 따라 마지막 sizing-actions-cell로
@@ -103,6 +104,10 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                 </>
               }
             />
+            {/* ── S6 완료기준 strip — 왜 S7에 못 들어가는지 후보 전체 목록 바로 위에서
+                답한다 (design 2026-11-21-s67-completion-visibility Fix ①-a).
+                엔진 상태는 BrownfieldStage의 useS6Gate 읽기 하나를 ctx로 공유한다. ── */}
+            <S6CriteriaPanel gate={ctx.s6Gate} targets={targets} minLongList={selected.universe?.min_long_list ?? 3} />
             {promoteNote && (
               <p role="status" className="text-[length:var(--fs-caption)] mt-0 mb-2">
                 <span aria-hidden="true">⚠ </span>
@@ -228,6 +233,15 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                     </button>
                                   </div>
                                 )}
+                                {/* design 2026-11-21-s67-completion-visibility Fix ①-b — the row that does not
+                                    count toward coverage is marked here (chip → detail edit form cure path). */}
+                                {(tgt.gaps?.length ?? 0) > 0 && (
+                                  <LonglistGapChip
+                                    targetId={tgt.id}
+                                    companyName={tgt.company_name}
+                                    gaps={tgt.gaps ?? []}
+                                  />
+                                )}
                               </td>
                               <td>
                                 <code className="dd-item-id">{tgt.dart_corp_code ?? "—"}</code>
@@ -327,6 +341,7 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
                                       companyName={tgt.company_name}
                                       targetId={tgt.id}
                                       unreviewed={unreviewedOf(es)}
+                                      gaps={tgt.gaps ?? []}
                                       busy={busy}
                                       onPromote={() => void promote(tgt.id)}
                                     />

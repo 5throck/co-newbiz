@@ -213,6 +213,8 @@ export type DealShapeErrorKind =
   | "notFound"
   | "invalid"
   | "notOpen"
+  | "notOpenStage"
+  | "notOpenTrack"
   | "stale"
   | "tooLarge"
   | "conflict"
@@ -222,14 +224,29 @@ export type DealShapeErrorKind =
  * Maps the route's error envelope to a message kind (400 invalid_request, 403 role_required / role_forbidden, 404,
  * 409 deal_shape_stale / deal_shape_not_open, 413). Any other 409 is shown with the server's own message ("conflict"),
  * so a renamed code still reads correctly.
+ *
+ * design 2026-11-21-s67-completion-visibility Fix ①-c: a 409 deal_shape_not_open carries the guard's machine
+ * reason in `details.reason` (dealShapeWriteGuard) — the UI names track vs stage instead of one generic sentence.
+ * `details` is optional and old two-arg calls keep working: a missing/unknown reason falls back to the
+ * pre-existing `notOpen` string (now the unknown-reason fallback role).
  */
-export function dealShapeErrorKind(status: number, code: string): DealShapeErrorKind {
+export function dealShapeErrorKind(
+  status: number,
+  code: string,
+  details?: { reason?: unknown } | null,
+): DealShapeErrorKind {
   if (status === 403 && code === "role_required") return "viewer";
   if (status === 403 && code === "role_forbidden") return "admin";
   if (status === 404) return "notFound";
   if (status === 413) return "tooLarge";
   if (status === 400 && code === "invalid_request") return "invalid";
-  if (status === 409)
-    return code === "deal_shape_not_open" ? "notOpen" : code === "deal_shape_stale" ? "stale" : "conflict";
+  if (status === 409) {
+    if (code === "deal_shape_not_open") {
+      if (details?.reason === "stage_not_reached") return "notOpenStage";
+      if (details?.reason === "track_not_brownfield") return "notOpenTrack";
+      return "notOpen";
+    }
+    return code === "deal_shape_stale" ? "stale" : "conflict";
+  }
   return "other";
 }

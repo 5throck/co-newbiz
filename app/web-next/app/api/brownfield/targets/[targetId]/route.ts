@@ -8,10 +8,13 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { authenticate, requireBusinessActor } from "../../../../../lib/auth.ts";
 import { fail, badRequest, notFound, ok } from "../../../../../lib/envelope.ts";
 import {
+  DISCOVERY_SOURCES,
   findPatchCollision,
+  insertTargetEvidence,
   screeningItems,
   screeningSummary,
   updateTargetFields,
+  type DiscoverySource,
   type TargetRow,
 } from "../../../../../lib/brownfield-targets.ts";
 import {
@@ -72,9 +75,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ targ
 
 const now = () => new Date().toISOString();
 
-/** PATCH — 후보 정보 수정(회사명·DART 고유번호·목표 시장 근거).
+/** PATCH — 후보 정보 수정(회사명·DART 고유번호·목표 시장 근거·발굴 출처).
  * design 2026-11-11 §5.2 (D4) — updateTargetFields 하나로 위임한다
- * (정규화 → 행 갱신 → 항상 회사 마스터 재연결 → 감사 1형태). */
+ * (정규화 → 행 갱신 → 항상 회사 마스터 재연결 → 감사 1형태).
+ * design 2026-11-21-s67-completion-visibility §API B — discovery_source 컬럼
+ * 갱신 + URL·발굴 메모 중 1개 이상이 비어 있지 않으면 discovery 근거 1행을
+ * 타임라인에 추가 적립한다(append-only — 기존 근거 행은 절대 갱신하지 않는다). */
 export async function PATCH(request: Request, { params }: { params: Promise<{ targetId: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
@@ -87,13 +93,38 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
     company_name?: string;
     dart_corp_code?: string | null;
     universe_note?: string | null;
+    discovery_source?: string;
+    discovery_source_url?: string | null;
+    discovery_note?: string | null;
   } | null;
   if (body?.company_name !== undefined && !body.company_name.trim()) {
     return badRequest("invalid_request", "company_name cannot be blank.");
   }
+  // design 2026-11-21-s67-completion-visibility §API B — discovery provenance.
+  // Validation is carry-based: absent keys mean "no source update" (identity /
+  // name-only edits are unaffected); a carried discovery_source must be in the
+  // enum; carried source_url/note must have ≥1 non-empty value after trim —
+  // exactly what longListCandidateGaps accepts for the S6 source criterion.
+  let discoverySource: DiscoverySource | undefined;
+  if (body?.discovery_source !== undefined) {
+    if (!(DISCOVERY_SOURCES as readonly string[]).includes(body.discovery_source)) {
+      return badRequest("invalid_request", `discovery_source must be one of: ${DISCOVERY_SOURCES.join(" | ")}.`);
+    }
+    discoverySource = body.discovery_source as DiscoverySource;
+  }
+  const carriesUrl = body?.discovery_source_url !== undefined;
+  const carriesNote = body?.discovery_note !== undefined;
+  const sourceUrl = carriesUrl ? (body?.discovery_source_url ?? "").trim() : undefined;
+  const sourceNote = carriesNote ? (body?.discovery_note ?? "").trim() : undefined;
+  if ((carriesUrl || carriesNote) && !sourceUrl && !sourceNote) {
+    return badRequest(
+      "invalid_request",
+      "at least one of discovery_source_url / discovery_note must be non-empty — a discovery evidence row without either does not satisfy the S6 source criterion.",
+    );
+  }
   const db = getDb();
-  const existing = db.query("SELECT id FROM brownfield_target WHERE id = ?").get(targetId) as
-    | { id: string }
+  const existing = db.query("SELECT id, discovery_source FROM brownfield_target WHERE id = ?").get(targetId) as
+    | { id: string; discovery_source: DiscoverySource }
     | undefined;
   if (!existing) return notFound();
   // design 2026-11-11 §5.1 — PATCH collision onto a sibling is a 409 with
@@ -109,7 +140,37 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
       },
     );
   }
-  return ok(updateTargetFields(db, targetId, body ?? {}, { actorUserId: auth.auth.userId }), 200);
+  // One transaction = the D4 field update (widened with discovery_source) +,
+  // when ≥1 discovery content value is non-empty, ONE appended discovery
+  // evidence row. Append-only: existing evidence rows are never mutated.
+  // The brownfield_target.update audit row written by updateTargetFields
+  // covers the whole write (evidence append is an auxiliary record).
+  const updated = db.transaction(() => {
+    const row = updateTargetFields(
+      db,
+      targetId,
+      {
+        company_name: body?.company_name,
+        dart_corp_code: body?.dart_corp_code,
+        universe_note: body?.universe_note,
+        ...(discoverySource !== undefined ? { discovery_source: discoverySource } : {}),
+      },
+      { actorUserId: auth.auth.userId },
+    );
+    if (sourceUrl || sourceNote) {
+      insertTargetEvidence(db, {
+        targetId,
+        kind: "discovery",
+        title: "발굴 출처 보완 — 직접 기록",
+        detail: sourceNote || null,
+        sourceUrl: sourceUrl || null,
+        sourceKind: discoverySource ?? existing.discovery_source,
+        createdBy: auth.auth.userId,
+      });
+    }
+    return row;
+  })();
+  return ok(updated, 200);
 }
 
 /** DELETE — 후보 삭제. 평가 판정(brownfield_target_eval_state)을 먼저 지우고

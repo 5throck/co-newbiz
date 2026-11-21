@@ -248,6 +248,22 @@ describe("view logic", () => {
     expect(V.dealShapeErrorKind(409, "anything_else")).toBe("conflict");
     expect(V.dealShapeErrorKind(500, "internal")).toBe("other");
   });
+  test("409 deal_shape_not_open names the guard reason (design 2026-11-21-s67-completion-visibility); unknown falls back to notOpen", () => {
+    // two-arg calls (pre-reason stored flows) keep the fallback role
+    expect(V.dealShapeErrorKind(409, "deal_shape_not_open", undefined)).toBe("notOpen");
+    expect(V.dealShapeErrorKind(409, "deal_shape_not_open", {})).toBe("notOpen");
+    expect(V.dealShapeErrorKind(409, "deal_shape_not_open", { reason: "mystery" })).toBe("notOpen");
+    // the guard's machine reasons surface as specific kinds
+    expect(V.dealShapeErrorKind(409, "deal_shape_not_open", { reason: "stage_not_reached" })).toBe("notOpenStage");
+    expect(V.dealShapeErrorKind(409, "deal_shape_not_open", { reason: "track_not_brownfield" })).toBe("notOpenTrack");
+    // the specific kinds exist in both locales (the catalog test below pins the fallback string)
+    for (const cat of [ko, en]) {
+      const se = (cat.stages as { s67: { dealShapePanel: { serverError: Record<string, string> } } }).s67.dealShapePanel
+        .serverError;
+      expect(se.notOpenStage).toContain("S7");
+      expect(se.notOpenTrack.length).toBeGreaterThan(0);
+    }
+  });
 });
 
 describe("status line and recorded list", () => {
@@ -432,6 +448,55 @@ describe("AI recommendation card", () => {
   });
   test("applying never saves: the card has no submit control", () => {
     expect(card(viableReco)).not.toMatch(/<form[^>]*>[\s\S]*양식에 채우기/);
+  });
+});
+
+describe("s67 blocked state (design 2026-11-21-s67-completion-visibility Fix ①-c)", () => {
+  test("S6 criteria unmet: AI 추천 and 기록 render disabled with the adjacent reason and a tabbable anchor to the strip", () => {
+    const html = view(data([]), { s7Blocked: true });
+    expect(html).toContain('data-testid="deal-shape-s7-blocked"');
+    expect(html).toContain("S6 완료기준 미충족 — 대상 선정(S7)에 들어와야 기록할 수 있습니다");
+    expect(html).toContain('href="#s6-criteria"');
+    expect(html).toContain("S6 완료기준 보기");
+    const reasonId = (html.match(/id="([^"]*s7-blocked)"/) ?? [])[1];
+    expect(reasonId).toBeTruthy();
+    // both buttons wired to the reason line via aria-describedby and disabled
+    const aiBtn = (html.match(/<button[^>]*>[\s\S]*?AI 추천<\/button>/) ?? [""])[0];
+    expect(aiBtn).toContain("disabled");
+    expect(aiBtn).toContain(`aria-describedby="${reasonId}"`);
+    const form = formOf(html);
+    expect(form).toContain("disabled");
+    expect(form).toContain(`aria-describedby="${reasonId}"`);
+    const enHtml = view(data([]), { s7Blocked: true }, "en");
+    expect(enHtml).toContain(
+      "S6 completion criteria unmet — recording unlocks once the deal reaches target selection (S7)",
+    );
+  });
+  test("criteria met: no blocked reason line, buttons stay enabled", () => {
+    const html = view(data([]));
+    expect(html).not.toContain("deal-shape-s7-blocked");
+    const aiBtn = (html.match(/<button[^>]*>[\s\S]*?AI 추천<\/button>/) ?? [""])[0];
+    expect(aiBtn).not.toContain("disabled");
+  });
+  test("the notOpenStage 409 fallback carries the inline #s6-criteria anchor on both surfaces (submit error, recommend error)", () => {
+    const submit = view(data([]), {
+      serverError: "아직 대상 선정(S7)에 들어서지 않았습니다 — S6 완료기준의 남은 요건을 먼저 충족하세요.",
+      serverErrorKind: "notOpenStage",
+    });
+    expect((submit.match(/href="#s6-criteria"/g) ?? []).length).toBe(1);
+    const reco = view(data([]), {
+      reco: {
+        busy: false,
+        error: "아직 대상 선정(S7)에 들어서지 않았습니다 — S6 완료기준의 남은 요건을 먼저 충족하세요.",
+        note: null,
+        item: null,
+      },
+      recoErrorKind: "notOpenStage",
+    });
+    expect((reco.match(/href="#s6-criteria"/g) ?? []).length).toBe(1);
+    // other kinds add no anchor
+    const plain = view(data([]), { serverError: "boom", serverErrorKind: "other" });
+    expect(plain).not.toContain('href="#s6-criteria"');
   });
 });
 

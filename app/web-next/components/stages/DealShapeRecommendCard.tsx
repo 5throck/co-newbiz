@@ -17,6 +17,12 @@ export const EMPTY_RECO: RecoState = { busy: false, error: null, note: null, ite
 export function DealShapeRecommendCard(p: {
   reco: RecoState;
   busy: boolean;
+  /** design 2026-11-21-s67-completion-visibility — S6 criteria unmet: AI 추천 pre-disables (server guard stays authoritative). */
+  disabled?: boolean;
+  /** id of the adjacent blocked-reason line, wired to the button via aria-describedby. */
+  describedBy?: string;
+  /** Error kind of `reco.error` — notOpenStage adds the inline #s6-criteria anchor. */
+  errorKind?: string | null;
   onRecommend: () => void;
   onApply: (r: DealShapeRecommendation) => void;
 }) {
@@ -26,12 +32,26 @@ export function DealShapeRecommendCard(p: {
   const item = reco.item;
   return (
     <div className="mb-3" data-testid="deal-shape-ai">
-      <button type="button" className="btn-ghost btn-sm" disabled={p.busy || reco.busy} onClick={p.onRecommend}>
+      <button
+        type="button"
+        className="btn-ghost btn-sm"
+        disabled={p.busy || reco.busy || p.disabled === true}
+        aria-describedby={p.disabled === true ? p.describedBy : undefined}
+        onClick={p.onRecommend}
+      >
         {reco.busy ? t("aiRecommending") : t("aiRecommend")}
       </button>
       {reco.error && (
         <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] mt-2 mb-0">
           <span aria-hidden="true">✕</span> {reco.error}
+          {p.errorKind === "notOpenStage" && (
+            // design 2026-11-21-s67-completion-visibility Fix ①-c — the stale-UI 409 names the remaining
+            // criteria AND links to the strip (tabbable inline anchor).
+            <>
+              {" "}
+              <a href="#s6-criteria">{t("blockedReasonLink")}</a>
+            </>
+          )}
         </p>
       )}
       {reco.note && (

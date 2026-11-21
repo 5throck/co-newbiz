@@ -28,6 +28,7 @@ export function PromoteButton({
   companyName,
   targetId,
   unreviewed,
+  gaps = [],
   busy,
   onPromote,
   label,
@@ -37,6 +38,9 @@ export function PromoteButton({
   companyName: string;
   targetId: string;
   unreviewed: UnreviewedCounts;
+  /** design 2026-11-21-s67-completion-visibility — open S6 gaps (attributes/source). Promotion is never
+   * blocked (ADR-0200 Q3), but the confirm modal warns that the row does not count toward S6 coverage. */
+  gaps?: Array<"attributes" | "source">;
   busy: boolean;
   onPromote: () => void;
   /** Button text / tooltip / class: the candidate detail screen has its own wording and primary style. */
@@ -48,6 +52,7 @@ export function PromoteButton({
   const ta = useTranslations("stages.s67.aiEval");
   const [open, setOpen] = useState(false);
   const m = unreviewed;
+  const hasGaps = gaps.length > 0;
   return (
     <>
       <button
@@ -56,7 +61,7 @@ export function PromoteButton({
         disabled={busy}
         title={title ?? t("financialAndTechnologyEvaluationComplete")}
         aria-label={t("promoteP1ToTheShortlist", { p1: companyName })}
-        onClick={() => (m.total > 0 ? setOpen(true) : onPromote())}
+        onClick={() => (m.total > 0 || hasGaps ? setOpen(true) : onPromote())}
       >
         {label ?? t("promote")}
       </button>
@@ -70,6 +75,14 @@ export function PromoteButton({
             <p className="m-0 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
               {ta("unreviewedSplit", { fin: m.financial, tech: m.technical })}
             </p>
+            {hasGaps && (
+              <p role="alert" className="m-0 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]">
+                <span aria-hidden="true">⚠ </span>
+                {ta("promoteQualificationWarning")}
+                {" — "}
+                <a href={`/brownfield/targets/${encodeURIComponent(targetId)}?edit=1`}>{ta("cureLink")}</a>
+              </p>
+            )}
             <div className="flex flex-wrap justify-end gap-2">
               <a className="btn-ghost btn-sm" href={reviewItemsHref(targetId)}>
                 {ta("reviewItems")}

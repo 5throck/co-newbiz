@@ -28,9 +28,15 @@ export function DealShapeForm(p: {
   onForm: (next: Form) => void;
   onSubmit: () => void;
   busy: boolean;
+  /** design 2026-11-21-s67-completion-visibility — S6 criteria unmet: 기록 pre-disables (server guard stays authoritative). */
+  s7Blocked?: boolean;
+  /** id of the adjacent blocked-reason line, wired to the button via aria-describedby. */
+  blockedReasonId?: string;
   problem: FormProblem | null;
   problemText: string | null;
   serverError: string | null;
+  /** Error kind of `serverError` — notOpenStage adds the inline #s6-criteria anchor. */
+  serverErrorKind?: string | null;
   notice: string | null;
   loadedFromRow: boolean;
 }) {
@@ -243,6 +249,14 @@ export function DealShapeForm(p: {
             data-testid="deal-shape-server-error"
           >
             <span aria-hidden="true">✕</span> {p.serverError}
+            {p.serverErrorKind === "notOpenStage" && (
+              // design 2026-11-21-s67-completion-visibility Fix ①-c — the stale-UI 409 for stage_not_reached
+              // names the remaining criteria AND links to the strip (tabbable inline anchor).
+              <>
+                {" "}
+                <a href="#s6-criteria">{t("blockedReasonLink")}</a>
+              </>
+            )}
           </p>
         )}
         {p.notice && (
@@ -251,7 +265,19 @@ export function DealShapeForm(p: {
           </p>
         )}
         <div className="mt-3">
-          <button type="submit" className="btn-ghost btn-sm" disabled={p.busy}>
+          <button
+            type="submit"
+            className="btn-ghost btn-sm"
+            disabled={p.busy || p.s7Blocked === true}
+            aria-describedby={
+              [
+                p.s7Blocked === true ? p.blockedReasonId : undefined,
+                p.problem === "rationale" || p.problem === "rationaleTooLong" ? problemId : undefined,
+              ]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
+          >
             {p.busy ? t("recording") : t("record")}
           </button>
         </div>

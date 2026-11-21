@@ -38,15 +38,39 @@ export function useTargetDetail() {
     "overview" | "aiprofile" | "financials" | "disclosures" | "precheck" | "eval" | "sources"
   >("overview");
   // ADR-0200: the S6 longlist's 항목 검토 button links here with ?tab=eval (read after mount so SSR markup is unchanged).
+  // design 2026-11-21-s67-completion-visibility — the Long List gap chip links here with ?edit=1: the overview
+  // tab opens straight into the edit form (the cure path), read once on mount, no router state.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("tab") === "eval") setProfileTab("eval");
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("tab") === "eval") setProfileTab("eval");
+    if (q.get("edit") === "1") {
+      setProfileTab("overview");
+      setEditing(true);
+    }
   }, []);
   // AI 분석 — 그룹/계열사 화면과 동일한 LLM 프로파일 파이프라인 재사용(일반화, 2026-09-15).
   const [companyProfile, setCompanyProfile] = useState<CompanyProfileResp | null | undefined>(undefined);
   const [analyzing, setAnalyzing] = useState(false);
   // 후보 정보 수정/삭제 — 등록 후에도 고칠 수 있어야 한다(사용자 요청).
   const [editing, setEditing] = useState(false);
-  const [editDraft, setEditDraft] = useState({ company_name: "", dart_corp_code: "", universe_note: "" });
+  // design 2026-11-21-s67-completion-visibility Fix ② — the edit draft widens with the
+  // 발굴 출처 fieldset state. URL/note start EMPTY each session (the evidence timeline is
+  // append-only; pre-filling would append a duplicate row on every unrelated save).
+  // discoveryTouched marks that the user engaged the cure fields: a save that carries
+  // engaged-but-empty discovery content is blocked client-side (discoveryError) with the
+  // same rule the server enforces (both-empty → invalid_request).
+  const [editDraft, setEditDraft] = useState({
+    company_name: "",
+    dart_corp_code: "",
+    universe_note: "",
+    discovery_source: "manual",
+    discovery_source_url: "",
+    discovery_note: "",
+  });
+  const [discoveryTouched, setDiscoveryTouched] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  // Set after a save that recorded discovery content; shown next to the qualification chips until the next edit session.
+  const [discoverySaved, setDiscoverySaved] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
   const ct = useChartTheme();
   // 재무·기술 평가
@@ -102,7 +126,12 @@ export function useTargetDetail() {
           company_name: r.data.target.company_name,
           dart_corp_code: r.data.target.dart_corp_code ?? "",
           universe_note: r.data.target.universe_note ?? "",
+          discovery_source: r.data.target.discovery_source ?? "manual",
+          discovery_source_url: "",
+          discovery_note: "",
         });
+        setDiscoveryTouched(false);
+        setDiscoveryError(null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : t("loadFailed")));
   }, [targetId]);
@@ -258,6 +287,12 @@ export function useTargetDetail() {
     detail,
     editing,
     setEditDraft,
+    discoveryTouched,
+    setDiscoveryTouched,
+    discoveryError,
+    setDiscoveryError,
+    discoverySaved,
+    setDiscoverySaved,
     ct,
     dartCode,
     discPreset,

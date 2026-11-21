@@ -11,6 +11,7 @@ import { stageArtifactTabs } from "../../../lib/review/stage-artifact-labels.ts"
 import { useBrownfieldBase } from "./useBrownfieldBase.ts";
 import { useBrownfieldUniverse } from "./useBrownfieldUniverse.tsx";
 import { useBrownfieldTargets } from "./useBrownfieldTargets.ts";
+import { useS6Gate } from "./S6CriteriaPanel.tsx";
 import { UniverseSection } from "./UniverseSection.tsx";
 import { WebDiscoveryPanel, UniverseEditModal } from "./DiscoveryPanels.tsx";
 import { LonglistSection } from "./LonglistSection.tsx";
@@ -24,7 +25,11 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
   const h0 = useBrownfieldBase(props0);
   const h1 = useBrownfieldUniverse({ ...h0 });
   const h2 = useBrownfieldTargets({ ...h0, ...h1 });
-  const ctx = { ...h0, ...h1, ...h2 };
+  // design 2026-11-21-s67-completion-visibility — ONE engine-state read for the
+  // stage (StageFrame single-read rule): the S6 criteria strip, the Long List
+  // gap chips and the deal-shape panel's blocked state all read this object.
+  const s6Gate = useS6Gate(props0.opportunityId);
+  const ctx = { ...h0, ...h1, ...h2, s6Gate };
   const { error, opportunityId, shortlistedTargets, canAct } = ctx;
   return (
     <>

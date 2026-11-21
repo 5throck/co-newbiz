@@ -14,13 +14,19 @@ import { normalizeVerdict } from "./brownfield-precheck.ts";
 // "chk-target-screening" lookup here silently returned no checklist items.
 export const SCREENING_CHECKLIST_ID = "chk-target-screening-checklist";
 
+/** Discovery provenance enum — the registration/acceptance surfaces and the
+ * PATCH edit form share this exact vocabulary (design
+ * 2026-11-21-s67-completion-visibility §API B: "the existing enum verbatim"). */
+export const DISCOVERY_SOURCES = ["manual", "master_proposal", "web_proposal"] as const;
+export type DiscoverySource = (typeof DISCOVERY_SOURCES)[number];
+
 export interface TargetRow {
   id: string;
   opportunity_id: string;
   company_name: string;
   dart_corp_code: string | null;
   universe_note: string | null;
-  discovery_source: "manual" | "master_proposal" | "web_proposal";
+  discovery_source: DiscoverySource;
   proposal_accepted_at: string | null;
   status: "pending" | "shortlisted" | "excluded";
   rank: number | null;
@@ -359,6 +365,10 @@ export interface UpdateTargetFieldsPatch {
    *  PATCH route's COALESCE inability to clear a code). */
   dart_corp_code?: string | null;
   universe_note?: string | null;
+  /** design 2026-11-21-s67-completion-visibility §API B — provenance-of-record
+   *  column. Absent key = unchanged. (The discovery EVIDENCE row is appended by
+   *  the PATCH route, not here — this function stays the one-row field update.) */
+  discovery_source?: DiscoverySource;
 }
 
 /** D4 (design §5.2) — THE single target-update path. Canonicalizes the name,
@@ -381,9 +391,10 @@ export function updateTargetFields(
     patch.company_name !== undefined ? canonicalCompanyName(patch.company_name) || row.company_name : row.company_name;
   const code = patch.dart_corp_code !== undefined ? patch.dart_corp_code?.trim() || null : row.dart_corp_code;
   const note = patch.universe_note !== undefined ? patch.universe_note?.trim() || null : row.universe_note;
+  const source = patch.discovery_source !== undefined ? patch.discovery_source : row.discovery_source;
   db.run(
-    "UPDATE brownfield_target SET company_name = ?, dart_corp_code = ?, universe_note = ?, updated_at = ? WHERE id = ?",
-    [canonicalName, code, note, new Date().toISOString(), targetId],
+    "UPDATE brownfield_target SET company_name = ?, dart_corp_code = ?, universe_note = ?, discovery_source = ?, updated_at = ? WHERE id = ?",
+    [canonicalName, code, note, source, new Date().toISOString(), targetId],
   );
   // Every write path re-links the company master (idempotent; by-code pass
   // first respects the unique md_company.dart_corp_code index).

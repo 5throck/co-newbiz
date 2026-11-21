@@ -359,6 +359,7 @@ export function ShortlistSection({
             <S7DecisionTabs
               opportunityId={selected.opportunity.id}
               canAct={canAct}
+              s7Blocked={ctx.s6Gate.s7Blocked}
               zeroCandidatesPassed={
                 selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
               }
