@@ -1709,7 +1709,9 @@ export function gateGoPrerequisiteGaps(entity: ProcessEntity, gate: GateId): str
       else if (ev.track === "brownfield") {
         // ADR-0205: S6 itself now requires the pre_fs GO, so the prerequisite is the S6 DATA blockers only.
         if (entity.type === "opportunity") {
-          const opp = getDb().query("SELECT * FROM opportunity WHERE id = ?").get(entity.id) as OpportunityRow | undefined;
+          const opp = getDb().query("SELECT * FROM opportunity WHERE id = ?").get(entity.id) as
+            | OpportunityRow
+            | undefined;
           if (opp) {
             for (const label of s6DataBlockers(opp).missing) gaps.push(`S6 대상 후보 발굴 데이터 미완료 — ${label}`);
           }

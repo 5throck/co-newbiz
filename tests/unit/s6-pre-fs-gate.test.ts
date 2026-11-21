@@ -27,8 +27,13 @@ resetDb();
 runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
-const { evaluateProcess, gateGoPrerequisiteGaps, opportunityPreFsS6Grandfathered, PRE_FS_S6_GATE_DATE, AI_DRAFT_REVIEW_GAP_PREFIX } =
-  await import("../../app/web-next/lib/process-flow.ts");
+const {
+  evaluateProcess,
+  gateGoPrerequisiteGaps,
+  opportunityPreFsS6Grandfathered,
+  PRE_FS_S6_GATE_DATE,
+  AI_DRAFT_REVIEW_GAP_PREFIX,
+} = await import("../../app/web-next/lib/process-flow.ts");
 const { blocker } = await import("../../app/web-next/lib/process-blocker-keys.ts");
 const { seedS1ToS12Demo, seedGreenfieldS1ToS12Demo } = await import("../../scripts/co-newbiz/seed-s1-s12-demo.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -73,7 +78,11 @@ beforeEach(() => {
     [NOW, bf.opportunityId],
   );
   db.run("DELETE FROM brownfield_target_eval_state");
-  db.run("UPDATE opportunity SET created_at = ?, target_universe_json = ? WHERE id = ?", [NOW, UNIVERSE, bf.opportunityId]);
+  db.run("UPDATE opportunity SET created_at = ?, target_universe_json = ? WHERE id = ?", [
+    NOW,
+    UNIVERSE,
+    bf.opportunityId,
+  ]);
 });
 
 describe("cut-off constant", () => {
@@ -114,9 +123,9 @@ describe("S6 requires a Pre-FS GO", () => {
   });
 
   test("no-Universe early return still appends the pre_fs blocker last, index-aligned", () => {
-    const before = db
-      .query("SELECT target_universe_json AS j FROM opportunity WHERE id = ?")
-      .get(bf.opportunityId) as { j: string | null };
+    const before = db.query("SELECT target_universe_json AS j FROM opportunity WHERE id = ?").get(bf.opportunityId) as {
+      j: string | null;
+    };
     db.run("UPDATE opportunity SET target_universe_json = NULL WHERE id = ?", [bf.opportunityId]);
     try {
       const s6 = stage("S6");
@@ -226,10 +235,9 @@ describe("greenfield pre_fs prerequisite is unchanged", () => {
   });
 
   test("an incomplete S5 is the gap, as before", () => {
-    const row = db.query("SELECT * FROM greenfield_assessment WHERE opportunity_id = ?").get(gf.opportunityId) as Record<
-      string,
-      unknown
-    > | null;
+    const row = db
+      .query("SELECT * FROM greenfield_assessment WHERE opportunity_id = ?")
+      .get(gf.opportunityId) as Record<string, unknown> | null;
     expect(row).toBeTruthy();
     db.run("DELETE FROM greenfield_assessment WHERE opportunity_id = ?", [gf.opportunityId]);
     try {

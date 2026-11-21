@@ -10,7 +10,15 @@ import {
   type Session,
 } from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal } from "./_support/deals.ts";
-import { recordGate, openGatePanels, recordTransition, closeProjectViaModal, see, seeNot, revealTab } from "./_support/ui.ts";
+import {
+  recordGate,
+  openGatePanels,
+  recordTransition,
+  closeProjectViaModal,
+  see,
+  seeNot,
+  revealTab,
+} from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
