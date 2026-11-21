@@ -127,6 +127,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   const moreBtn = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname/tabParam are the navigation triggers that reset the overflow menu — the body reads nothing
   useEffect(() => {
     setMoreOpen(false);
   }, [pathname, tabParam]);
@@ -164,6 +165,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
       <StageRail current={[group.stage]} />
       <div className="stage-tabs-bar">
         <nav aria-label={`${group.stage} 화면`} className="stage-tabs-wrap">
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: composite container for the roving-tabindex tab bar — keydown is delegated here for tablist items and the overflow menu (WAI-ARIA tabs pattern) */}
           <div className="stage-tabs" ref={listRef} onKeyDown={onKeyDown}>
             <div className="stage-tabs-list" role="tablist" aria-label={`${group.stage} · ${group.name}`}>
               {group.tabs.map((t, i) => {
