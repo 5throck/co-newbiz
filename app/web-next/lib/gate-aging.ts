@@ -39,8 +39,12 @@ export function listGateAging(db: Database, opts: { minAgeDays?: number } = {}):
               ) AS track
        FROM gate_decision g
        LEFT JOIN md_project p ON p.id = g.entity_id AND g.entity_type = 'project'
+       LEFT JOIN opportunity o ON o.id = g.entity_id AND g.entity_type = 'opportunity'
        WHERE g.decided_at >= datetime('now', '-90 days')
+         -- Tombstone filter, both carriers (DEC-20261121-01): deleted projects
+         -- and delete-marked opportunities must not surface as live HOLD/KILL.
          AND (g.entity_type != 'project' OR (p.status = 'open' AND p.deleted_at IS NULL))
+         AND (g.entity_type != 'opportunity' OR o.deleted_at IS NULL)
        ORDER BY g.decided_at DESC`,
     )
     .all() as Array<{

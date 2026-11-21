@@ -91,7 +91,7 @@ resolvable through the append-only version history.
 | Endpoint | Behavior |
 | --- | --- |
 | `DELETE /api/projects/[id]` | lead-only; marks project + source opportunity; writes `deal_archive` |
-| `DELETE /api/opportunities/[id]` | analyst+; marks unpromoted opportunity; 400 `opportunity_promoted` while promoted |
+| `DELETE /api/opportunities/[id]` | analyst+; delete-marks the unpromoted opportunity and writes a `deal_archive` manifest; 400 `opportunity_promoted` while promoted |
 | `DELETE /api/our-company/groups/[id]` | analyst+; marks group + members |
 | `DELETE /api/our-company/groups/[id]/members` | analyst+; marks member |
 | `DELETE /api/synergy/analyses/[id]` | analyst+; marks; 409 `synergy_basis_in_use` while deal is live |

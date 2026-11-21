@@ -36,6 +36,9 @@ export async function GET(request: Request) {
   // made the table say "no HOLD/KILL in progress" on the very page showing a
   // HOLD badge for something decided today — same data, two contradictory
   // answers depending on which endpoint field you read.
+  // DEC-20261121-01: listGateAging itself excludes tombstoned carriers (deleted
+  // projects AND delete-marked opportunities), so a deleted deal cannot linger
+  // here as a live hold.
   const currentHolds = listGateAging(db, { minAgeDays: 0 }).filter(visible);
   // D6 (B-3): one aggregate killEval field per project row, over the
   // project-scoped kill_criteria_evaluation ledger. Opportunity-type rows are
