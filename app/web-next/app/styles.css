@@ -4669,6 +4669,8 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
    (end of the reading flow in both LTR/RTL; flex mirrors under dir). */
 .oauth-actions { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
 
+/* Owner feedback 2026-11-21: strip text reads too large against the caption-sized
+   Long List table — heading and criteria name dropped to --fs-caption. */
 /* ── S6 완료기준 strip + Long List gap chips + deal-shape blocked reason
    (design 2026-11-21-s67-completion-visibility) ──
    Scoped block, tokens only: the criteria strip lives inside the Long List
@@ -4684,13 +4686,13 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
-.s67-criteria-heading { margin: 0; font-size: var(--fs-body); font-weight: 700; }
+.s67-criteria-heading { margin: 0; font-size: var(--fs-caption); font-weight: 700; }
 .s67-criteria-allmet { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--fs-body); }
 .s67-criteria-list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .s67-criteria-row { display: flex; flex-direction: column; gap: var(--space-1); }
 .s67-criteria-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .s67-criteria-head .status-chip { flex: 0 0 auto; }
-.s67-criteria-name { font-size: var(--fs-body); }
+.s67-criteria-name { font-size: var(--fs-caption); font-weight: 600; }
 .s67-criteria-sub { font-size: var(--fs-caption); color: var(--muted-fg); }
 .s67-criteria-cure { margin-top: var(--space-1); }
 /* Label-cell subline chip — the OriginBadge precedent: anchor that reads as a chip. */
