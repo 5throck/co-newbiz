@@ -137,12 +137,15 @@ describe("brownfield M&A S1 to S12", () => {
   }, 60_000);
 
   test("S7 pre_fs GO, then target screening gate GO", async () => {
-    // PR #952: the S7 approval tab hosts ONE GateDecisionPanel carrying both
-    // brownfield opportunity gates (pre_fs first, then target_screening) behind
-    // a gate select — panels.nth(1) does not exist, so each gate is picked by
-    // its panel label instead of relying on the form defaulting to gates[0].
-    // Ladder order (screening -> pre_fs -> target_screening) matches the human
-    // flow; promotion requires the pre_fs GO.
+    // Owner decision 2026-11-21 (Option A, design 2026-11-21-s67-completion-visibility Amendment):
+    // the page now hosts TWO GateDecisionPanels — the pre_fs panel sits in the S6 longlist block
+    // (DOM-first 의사결정 section, always mounted) and the approval tab holds a single-gate
+    // target_screening panel (mounted only when its tab is active). The first call targets panel
+    // 0 (the form defaults to pre_fs — single-gate panels render no gate select); the second
+    // targets panel 1, which openGatePanels reveals by clicking the 승인 기록 tab. The gateLabel
+    // arguments document intent; with one select per panel the form default decides the gate.
+    // Ladder order (screening -> pre_fs -> target_screening) matches the human flow; promotion
+    // requires the pre_fs GO.
     await recordGate(
       s.page,
       app,
@@ -158,6 +161,7 @@ describe("brownfield M&A S1 to S12", () => {
       "대상 선정",
       "go",
       "Short List 1순위 후보가 knock-out 기준을 통과함",
+      { panelIndex: 1 },
     );
     const rows = app.readDb((d) =>
       d

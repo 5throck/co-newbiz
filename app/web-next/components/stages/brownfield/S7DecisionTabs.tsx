@@ -2,9 +2,10 @@
 
 // S7 sub-tabs under the shortlist: 진출 형태 평가 (deal-shape evaluation) and 의사결정 — 승인 기록.
 // Rendered on the S7 page only; the shared S6 tab body leaves it out. Only the active tab's panel is mounted.
-// The approval tab records both brownfield opportunity gates (defect 2026-11-21: pre_fs had no recording
-// surface on this track, yet promotion requires it): pre_fs is the S6→S7 entry gate, target_screening the
-// S7 shortlist gate — array order renders pre_fs first (decide entry, then the screening gate).
+// The approval tab records target_screening, the S7 shortlist gate. pre_fs moved out to the S6
+// LonglistSection block (owner decision 2026-11-21, Option A — design 2026-11-21-s67-completion-visibility
+// Amendment): placement = judgment timing, and pre_fs is the judgment made BEFORE the longlist is
+// finalized, not a second signature after S7.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
@@ -57,14 +58,15 @@ export function S7DecisionTabs({
       {tab === "approval" && (
         <div role="tabpanel" id="s7-panel-approval" aria-labelledby="s7-tab-approval">
           {/* the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies.
+              Single gate (owner decision 2026-11-21, Option A): pre_fs lives in the S6 longlist block — this tab
+              records only the target_screening shortlist gate, so no gate select is needed.
               killHint stays target_screening-only (conditional): flow.spec's pre_fs kill criterion ("진출방식이
-              결정되지 않았다") cannot fire here — the screen renders only after the S4 route decision fixed the
-              brownfield entry route — and pre_fs's human-judged registry criteria surface via the gate snapshot
-              acknowledgements below, not a static hint (greenfield's pre_fs panel passes none either). */}
+              결정되지 않았다") belongs to the pre_fs panel now, and target_screening's own criterion
+              ("knock-out 통과 후보 0건") is what this hint carries. */}
           <div className="[&>section]:!mt-0">
             <GateDecisionPanel
               opportunityId={opportunityId}
-              gates={["pre_fs", "target_screening"]}
+              gates={["target_screening"]}
               killHint={zeroCandidatesPassed ? t("zeroCandidatesPassedTheScreening") : null}
             />
           </div>
