@@ -182,7 +182,8 @@ describe("b. ONE row marker line: partial once, unreviewed only when counts > 0"
     ).toContain("AI 평가 갱신 권장");
   });
   test("the longlist renders chips, markers and rank markers from eval_summary", () => {
-    const src = readFileSync(`${DIR}/LonglistSection.tsx`, "utf8");
+    // the table markup lives in LonglistTable.tsx (split from LonglistSection.tsx for the 400-line cap)
+    const src = readFileSync(`${DIR}/LonglistTable.tsx`, "utf8");
     expect(src).toContain("<ScoreChips summary={es} />");
     expect(src).toContain("<RowMarkers summary={es} draft={tgt.eval_draft} />");
     expect(src).toContain("<RankMarkers summary={es} />");

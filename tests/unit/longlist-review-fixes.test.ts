@@ -10,7 +10,9 @@ import {
 import type { TargetRow } from "../../app/web-next/components/stages/brownfield/types.ts";
 
 const brownfieldDir = "./app/web-next/components/stages/brownfield/";
-const longlist = readFileSync(`${brownfieldDir}LonglistSection.tsx`, "utf8");
+// The status-filter row and the candidate table live in LonglistTable.tsx (split from
+// LonglistSection.tsx for the 400-line cap); the pinned markup moved there verbatim.
+const longlist = readFileSync(`${brownfieldDir}LonglistTable.tsx`, "utf8");
 const stageFrame = readFileSync("./app/web-next/components/StageFrame.tsx", "utf8");
 const onboarding = readFileSync("./app/web-next/app/onboarding/page.tsx", "utf8");
 const css = readFileSync("./app/web-next/app/styles.css", "utf8");

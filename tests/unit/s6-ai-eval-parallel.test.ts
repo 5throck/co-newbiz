@@ -132,7 +132,9 @@ describe("rows rendered from two simultaneous runs plus an idle row", () => {
     expect(active.liveFor([], latest, "x")).toBeNull();
   });
   test("the longlist wires rowBlock / liveFor / the runs panel from useAiEval's activeRuns", () => {
-    const src = readFileSync(`${DIR}/LonglistSection.tsx`, "utf8");
+    // the table row wiring lives in LonglistTable.tsx (split from LonglistSection.tsx for the
+    // 400-line cap); the runs panel and the toolbar estimate stayed in LonglistSection.tsx.
+    const src = readFileSync(`${DIR}/LonglistSection.tsx`, "utf8") + readFileSync(`${DIR}/LonglistTable.tsx`, "utf8");
     expect(src).toContain("rowBlock(ai.activeRuns, tgt.id)");
     expect(src).toContain("liveFor(ai.activeRuns, ai.view, tgt.id)");
     expect(src).toContain("<AiEvalRunsPanel");

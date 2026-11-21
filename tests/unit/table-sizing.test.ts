@@ -135,7 +135,7 @@ const AUDITED_TABLES: Array<{ file: string; match: string }> = [
   { file: "components/stages/EstablishmentPanel.tsx", match: "establishmentExecutionStepStatus" },
   { file: "app/projects/[id]/backtest/page.tsx", match: "tableAria" },
   { file: "app/projects/[id]/charter/page.tsx", match: "kpiSectionAria" },
-  { file: "components/stages/brownfield/LonglistSection.tsx", match: "fullCandidateList2" },
+  { file: "components/stages/brownfield/LonglistTable.tsx", match: "fullCandidateList2" },
   { file: "app/strategy/page.tsx", match: "w-full border-collapse" },
 ];
 
@@ -395,7 +395,7 @@ describe("table column sizing guard", () => {
         expect: [],
       },
       {
-        file: "components/stages/brownfield/LonglistSection.tsx",
+        file: "components/stages/brownfield/LonglistTable.tsx",
         label: "fullCandidateList2",
         tmin: "tmin-32",
         expect: [],
