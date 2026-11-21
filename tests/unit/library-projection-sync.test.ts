@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.0.1
 /**
  * app/web-next/lib/library.generated.ts is a checked-in projection of the
  * governance source files (checklists, procedures, ...). No generator lives in
@@ -9,8 +9,9 @@
  */
 
 import { test, expect, describe } from "bun:test";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import * as yaml from "js-yaml";
 import { LIBRARY_CHECKLIST_ITEMS, LIBRARY_CONTENT, LIBRARY_DOCS } from "../../app/web-next/lib/library.generated.ts";
 
@@ -34,7 +35,15 @@ describe("library.generated.ts matches its source files", () => {
       expect(entry, `${id} has no LIBRARY_CONTENT entry`).toBeDefined();
       const doc = yaml.load(readFileSync(join(REPO, entry.file), "utf-8")) as {
         version: string;
-        items: Array<{ id: string; text: string; mandatory: boolean; waiver_eligible: boolean; modes?: string[]; origins?: string[]; review_status?: string }>;
+        items: Array<{
+          id: string;
+          text: string;
+          mandatory: boolean;
+          waiver_eligible: boolean;
+          modes?: string[];
+          origins?: string[];
+          review_status?: string;
+        }>;
       };
       const items = doc.items.map((i) => ({
         id: i.id,
@@ -56,7 +65,10 @@ describe("library.generated.ts matches its source files", () => {
     }
     const unexpected = stale.filter((id) => !KNOWN_STALE_ITEMS.has(id));
     const nowFresh = [...KNOWN_STALE_ITEMS].filter((id) => !stale.includes(id));
-    expect(unexpected, `items/version drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`).toEqual([]);
+    expect(
+      unexpected,
+      `items/version drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`,
+    ).toEqual([]);
     expect(nowFresh, `fresh now — remove from KNOWN_STALE_ITEMS: ${nowFresh.join(", ")}`).toEqual([]);
   });
 
@@ -68,7 +80,32 @@ describe("library.generated.ts matches its source files", () => {
     }
     const unexpected = stale.filter((id) => !KNOWN_STALE_CONTENT.has(id));
     const nowFresh = [...KNOWN_STALE_CONTENT].filter((id) => !stale.includes(id));
-    expect(unexpected, `content drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`).toEqual([]);
+    expect(unexpected, `content drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`).toEqual(
+      [],
+    );
     expect(nowFresh, `fresh now — remove from KNOWN_STALE_CONTENT: ${nowFresh.join(", ")}`).toEqual([]);
+  });
+
+  // U-20261121-002: the drift gate must not depend on checkout EOL. JSON.stringify
+  // serializes a real CRLF as the escape sequence `\r\n`, so a generator that reads
+  // sources raw embeds a byte-identical document differently on a CRLF checkout and
+  // `--check` reports it stale. This converts one projected source to CRLF, runs the
+  // real drift check as a subprocess, and restores the original bytes in `finally`.
+  test("--check is EOL-insensitive (CRLF working copy is not drift)", () => {
+    const id = Object.keys(LIBRARY_CONTENT)[0];
+    const target = join(REPO, LIBRARY_CONTENT[id].file);
+    const original = readFileSync(target);
+    try {
+      const crlf = Buffer.from(original.toString("utf-8").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"), "utf-8");
+      writeFileSync(target, crlf);
+      const proc = spawnSync("bun", ["scripts/co-newbiz/sync-library-projection.ts", "--check"], {
+        cwd: REPO,
+        stdio: "pipe",
+      });
+      const out = new TextDecoder().decode(proc.stdout) + new TextDecoder().decode(proc.stderr);
+      expect(proc.status, `--check failed on a CRLF source (${target}):\n${out}`).toBe(0);
+    } finally {
+      writeFileSync(target, original);
+    }
   });
 });
