@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * report.ts — builds report.json and the report.md rewrite note.
  *
@@ -122,6 +122,9 @@ export function renderReportMd(input: ReportInput): string {
 
   L.push("## Verified (deterministic)");
   L.push("");
+  L.push(
+    "- Deterministic gates for this run: the anchor multiset (numbers with units, dates, statute references, Latin-script tokens, glossary terms, inline code, links, headings) and the change rate. The upstream five-axis gate is not part of this integration.",
+  );
   if (input.units.length === 0) {
     L.push("- No prose unit was submitted for rewriting.");
   } else {

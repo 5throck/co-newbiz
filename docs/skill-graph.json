@@ -2748,8 +2748,8 @@
       "name": "humanize-polish",
       "scope": "root",
       "capability": "humanize-polish",
-      "content_hash": "7ce5dcef055770d9",
-      "version": "1.0.1",
+      "content_hash": "84aeb6288f0c4b76",
+      "version": "1.1.0",
       "mirrors": [
         "skills/humanize-polish/SKILL.md",
         ".claude/skills/humanize-polish/SKILL.md",

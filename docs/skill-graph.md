@@ -47,7 +47,7 @@
 | `root/handbook` | L3 | 0.6.0 | — | — | — | — | — |
 | `root/handbook-sync-audit` | L3 | 1.0.5 | — | — | — | — | — |
 | `root/historical-financial-analysis` | L3 | 1.0.1 | root/financial-analyst | root/phase 3 | root/financial-statement-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
-| `root/humanize-polish` | L3 | 1.0.1 | — | — | — | — | — |
+| `root/humanize-polish` | L3 | 1.1.0 | — | — | — | — | — |
 | `root/i18n-audit` | L3 | 1.0.2 | root/i18n-specialist | — | — | — | — |
 | `root/i18n-formatting` | L3 | 1.0.1 | root/i18n-specialist | — | — | — | — |
 | `root/i18n-layout` | L3 | 1.1.1 | root/i18n-specialist | — | — | — | — |
