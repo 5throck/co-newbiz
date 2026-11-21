@@ -163,6 +163,37 @@ ADR-0128은 "LLM 질의는 에이전트팀을 통해, PM이 주관"이라는 원
 - **등록**: 신규 스크립트를 `scripts/SCRIPTS.md`와 `scripts-snapshot.json`에
   등록한다.
 
+#### 6.4-amendment (2026-11-21) — 라이브러리·위키 프러젝션 드리프트 게이트 확대
+
+- **배경(재발 증거)**: 라이브러리 투영 원본(`docs/runbooks/**` 등)을 재생성
+  없이 편집해 `app/web-next/lib/library.generated.ts`가 어긋나는 사고가 같은
+  클래스로 3회 재발했다 — PR #913(2026-11-18), #936(2026-11-19),
+  #946(2026-11-21), 셋 모두 착지 뒤에야 RED CI 커버리지 잡으로 드러났다.
+  원본 편집 시점에는 아무 경고가 없었다.
+- **결정**: 변형 감사 훅(`scripts/co-newbiz/audit-variant.ts` v1.10.0)에
+  결합 차단 검사 1개("Generated projection drift")를 추가한다 — 생성기 세
+  개의 `--check`를 서브프로세스로 각각 돌리고, 어느 쪽이든 stale이면 어긋난
+  생성기와 재생성 명령을 이름 그대로 밝힌 뒤 실패로 지정한다:
+  `sync-library-projection.ts --check`(checklists/, procedures/, docs/ 원본 vs
+  `library.generated.ts`), `sync-wiki-projection.ts --check`(`docs/wiki/ko/`
+  vs `wiki.generated.ts`, 2026-10-23 위키 인앱 뷰어 설계 D2),
+  `generate-glossary-data.ts --check`(glossary/*.yaml vs
+  `glossary-data.generated.ts` — 이 `--check`는 glossary/_validate.ts 실패에도
+  1로 끝나는 계약이라 fail-closed). §6.4의 audit 검사 패턴과 "Skip은 Pass가
+  아니다" 원칙을 그대로 따른다(생성기 부재는 사유와 함께 가시 스킵).
+  **헤더 부패 수리**: 용어집 드리프트 게이트는 v1.8.0 헤더에 선언만 있고 본문
+  호출이 없었으나(선언-미연결 부패), 이 개정에서 처음 연결된다. 이 세 생성기는
+  손으로 갱신하는 것이 설계 계약이라(라이브러리 생성기는 문서를 절대
+  추가·삭제하지 않음) `generators.json` 자동 재생성으로 대체하지 않는다.
+- **효과**: 드리프트가 착지 후 CI가 아니라 푸시 전 dev-sync에서 차단된다.
+  추가 비용은 `--check` 서브프로세스 세 번(측정치: 약 150ms)으로 작다.
+- **회귀 고정**: `tests/unit/platform-parity.test.ts`의 "variant audit hook:
+  generated projection drift gate" 스위트 — (a) 훅이 결합 검사를 선언하고
+  호출하며 세 재생성 명령을 이름 짓는지, (b) 신선한 트리에서 세 `--check`가
+  모두 통과하는지, (c) 픽스처 임시 트리에서 원본 편집(무재생성)이 `--check`
+  실패와 재생성 명령 안내를 내는지(라이브러리 생성기 기준 — 용어집 생성기의
+  드리프트 신호는 tests/unit/glossary-data-sync.test.ts가 이미 고정).
+
 ### 6.5 D4 — 플로우 콘솔 `/flows` (읽기 전용, 벤치마크 기반 UX)
 
 - **블루프린트 뷰**: S1–S12 → 활동 → 에이전트 → 프롬프트 키 + 스킬을 생성

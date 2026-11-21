@@ -6,6 +6,8 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-21]**: feat(scripts): **the variant audit hook gains a blocking generated-projection drift gate (library, wiki, glossary)** — audit-variant 1.10.0 runs all three generators' `--check` inside dev-sync and fails with the exact refresh command before push, closing the drift-recurrence class that landed RED CI coverage three times (PRs #913/#936/#946, always `rb-deployment*` from runbook edits). The declared-but-never-wired v1.8.0 glossary gate is now actually wired (header rot fixed) and the hook regression suite covers presence, fresh-tree, and simulated drift for all three generators. Runtime ≈ 0.1s in the hook. Design doc `2026-09-15-runtime-pm-agent-orchestration-design.md` §6.4-amendment records the decision and the recurrence evidence.
+
 - **[2026-11-21]**: docs(deploy): **the deployment runbook retires the stale ghcr `docker login` prerequisite** — the container image is public (owner decision 2026-11-20; anonymous pull verified on the deployment host), so `docker login ghcr.io` with a `read:packages` PAT is no longer needed and the runbooks (en/ko) now say a PAT login would only matter if the image visibility were flipped back to private. The npm-channel `read:packages` mentions are untouched — `npm.pkg.github.com` is a different registry that still authenticates every request even for public packages.
 
 - **[2026-11-21]**: feat(committee): turn-based meetings are the default (CO_NEWBIZ_COMMITTEE_ENGINE unset = turns, rounds is opt-out); docs and refreshed wiki screenshots (ADR-0204)
