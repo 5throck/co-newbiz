@@ -1,7 +1,10 @@
 "use client";
 
-// S7 sub-tabs under the shortlist: 진출 형태 평가 (deal-shape evaluation) and 의사결정 — 승인 기록 (target_screening gate).
+// S7 sub-tabs under the shortlist: 진출 형태 평가 (deal-shape evaluation) and 의사결정 — 승인 기록.
 // Rendered on the S7 page only; the shared S6 tab body leaves it out. Only the active tab's panel is mounted.
+// The approval tab records both brownfield opportunity gates (defect 2026-11-21: pre_fs had no recording
+// surface on this track, yet promotion requires it): pre_fs is the S6→S7 entry gate, target_screening the
+// S7 shortlist gate — array order renders pre_fs first (decide entry, then the screening gate).
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
@@ -53,11 +56,15 @@ export function S7DecisionTabs({
       )}
       {tab === "approval" && (
         <div role="tabpanel" id="s7-panel-approval" aria-labelledby="s7-tab-approval">
-          {/* the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies */}
+          {/* the gate panel is a .market-section (2rem top margin); the deal-shape card has none — align the two tab bodies.
+              killHint stays target_screening-only (conditional): flow.spec's pre_fs kill criterion ("진출방식이
+              결정되지 않았다") cannot fire here — the screen renders only after the S4 route decision fixed the
+              brownfield entry route — and pre_fs's human-judged registry criteria surface via the gate snapshot
+              acknowledgements below, not a static hint (greenfield's pre_fs panel passes none either). */}
           <div className="[&>section]:!mt-0">
             <GateDecisionPanel
               opportunityId={opportunityId}
-              gates={["target_screening"]}
+              gates={["pre_fs", "target_screening"]}
               killHint={zeroCandidatesPassed ? t("zeroCandidatesPassedTheScreening") : null}
             />
           </div>
