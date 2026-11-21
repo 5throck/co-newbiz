@@ -20,7 +20,7 @@ import {
 const PROJECT_DIR = join(import.meta.dirname, "../../app/web-next/app/projects/[id]");
 
 describe("stage tabs", () => {
-  test("at most 5 primary tabs per stage; first two cover the primary job", () => {
+  test("at most MAX_PRIMARY_TABS primary tabs per stage; first two cover the primary job", () => {
     for (const g of STAGE_TAB_GROUPS) {
       expect(g.tabs.length).toBeGreaterThanOrEqual(2);
       expect(g.tabs.length).toBeLessThanOrEqual(MAX_PRIMARY_TABS);
@@ -98,8 +98,27 @@ describe("stage tabs", () => {
 
   test("greenfield drops the targets tab; unknown ?tab=targets lands on the financial lens", () => {
     const gf = groupForTrack(groupForSegment("/business-case")!, "greenfield");
-    expect(gf.tabs.map((t) => t.label)).toEqual(["사업 목표", "기술적 타당성", "재무적 타당성", "결정"]);
+    // tabs[0] is 개요 (labelKey-resolved, code label empty — see the owner-decision test below).
+    expect(gf.tabs.slice(1).map((t) => t.label)).toEqual(["사업 목표", "기술적 타당성", "재무적 타당성", "결정"]);
     expect([...gf.tabs, ...gf.more][activeTabIndex(gf, "/business-case", "targets")].label).toBe("재무적 타당성");
+  });
+
+  test("(2026-11-21 owner decision) 개요 is S8's first tab; the overview page stops posing as 사업 목표", () => {
+    const s8 = groupForSegment("")!;
+    expect(s8.stage).toBe("S8");
+    const [first] = s8.tabs;
+    expect(first).toMatchObject({ seg: "", query: "overview", labelKey: "common.overview" });
+    // The label resolves at render (StageTabs labelOf → common.overview = 개요/Overview); a new
+    // Hangul code line here would breach the i18n-lint Korean baseline.
+    expect(first.label).toBe("");
+    // Deep links: bare /projects/{id} and /projects/{id}?tab=overview both highlight 개요…
+    const all = [...s8.tabs, ...s8.more];
+    expect(all[activeTabIndex(s8, "", null)]).toBe(first);
+    expect(all[activeTabIndex(s8, "", "overview")]).toBe(first);
+    expect(tabHref("p1", first)).toBe("/projects/p1?tab=overview");
+    // …and 사업 목표 keeps only business-case content: no seg-"" claim remains.
+    expect(s8.tabs.some((t) => t.extraSegs?.includes(""))).toBe(false);
+    expect(all[activeTabIndex(s8, "/business-case", "goals")].label).toBe("사업 목표");
   });
 
   test("(2026-10-21 decider) the backtest is an S12 surface — S8 forecast vs S12 actuals, not diligence", () => {

@@ -552,10 +552,13 @@ function DealsBoard() {
   );
 }
 
-/** Opening a deal lands on the workspace of the stage it is currently in (design: "one thing to do next"). */
+/** Opening a deal lands on the workspace of the stage it is currently in (design: "one thing to do next").
+ *  S8's first tab is now 개요 (the project overview page, seg "") — the workspace still starts at the
+ *  first content tab, so the landing skips the overview seg (2026-11-21 owner decision kept the
+ *  pre-existing landing behaviour). */
 function projectStageHref(projectId: string, stage: string): string {
   const group = STAGE_TAB_GROUPS.find((g) => g.stage === stage);
-  return `/projects/${projectId}${group?.tabs[0]?.seg ?? "/process"}`;
+  return `/projects/${projectId}${group?.tabs.find((t) => t.seg !== "")?.seg ?? "/process"}`;
 }
 
 /** Entry points for routes that are not in the sidebar (orphan-route decision, design §3.6). */

@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import {
   activeSubtabIndex,
   activeTabIndex,
@@ -18,6 +19,7 @@ import {
   PROJECT_COMMON_TABS,
   stageTabGroupsFor,
   tabHref,
+  type StageTabDef,
   type StageTabGroup,
 } from "../lib/stage-tabs.ts";
 import { StageRail, useSourceOpportunity } from "./StageFrame.tsx";
@@ -62,6 +64,7 @@ function useProjectPmiApplies(projectId: string, enabled: boolean): boolean | nu
 // (hoisted there for the stage rail's S1~S7 links, T-20261022-019).
 
 function StageTabsInner({ projectId }: { projectId: string }) {
+  const tr = useTranslations();
   const pathname = usePathname();
   const tabParam = useSearchParams().get("tab");
   const seg = projectSegment(pathname);
@@ -98,6 +101,9 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   // A hidden (menu-less) page keeps its stage for the rail but highlights nothing in the bar.
   const moreActive = activeIdx >= primaryCount && !group.more[activeIdx - primaryCount]?.hidden;
   const visibleMore = group.more.filter((t) => !t.hidden);
+  // i18n: post-adoption tabs carry their text as a catalog key (StageTabDef.labelKey);
+  // INTERIM-WORDING siblings still use the code literal until their extraction batch.
+  const labelOf = (t: StageTabDef): string => (t.labelKey ? tr(t.labelKey) : t.label);
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const items = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-tab-item]") ?? []);
@@ -132,7 +138,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
               tabIndex={active || (activeIdx < 0 && i === 0) || (moreActive && i === 0) ? 0 : -1}
               className={`stage-tab${active ? " stage-tab-active" : ""}`}
             >
-              {t.label}
+              {labelOf(t)}
             </Link>
           );
         })}
@@ -172,7 +178,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
                       aria-current={active ? "page" : undefined}
                       className={`stage-tab-menu-item${active ? " stage-tab-active" : ""}`}
                     >
-                      {t.label}
+                      {labelOf(t)}
                     </Link>
                   );
                 })}
@@ -196,7 +202,7 @@ function StageTabsInner({ projectId }: { projectId: string }) {
                 className={`stage-tab${active ? " stage-tab-active" : ""}`}
                 title="프로젝트 공통 — 모든 단계에서 열 수 있습니다"
               >
-                {t.label}
+                {labelOf(t)}
                 {badge && (
                   <span className={`status-chip ml-1 ${badge.overdue > 0 ? "status-red" : "status-amber"}`} data-testid="milestone-badge">
                     {badge.overdue > 0 ? `지연 ${badge.overdue}` : ""}{badge.overdue > 0 && badge.n > badge.overdue ? " · " : ""}{badge.n > badge.overdue ? `임박 ${badge.n - badge.overdue}` : ""}
