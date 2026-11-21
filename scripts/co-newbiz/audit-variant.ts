@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.9.0
+// @version 1.10.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -38,11 +38,26 @@
  *     check-engine-spec-parity is blocking too; since v1.7.0 (ADR-0187 P4)
  *     check-review-coverage blocks as well (every check is blocking) and the
  *     review-matrix projection drift gate runs next to the registry gates.
- *   - Glossary-data drift gate (v1.8.0, ADR-0022 / FR-SYS-04): glossary/*.yaml vs
+ *   - Glossary-data drift gate (declared v1.8.0, ADR-0022 / FR-SYS-04; actually
+ *     wired only in v1.10.0 — the v1.8.0 header entry was never invoked in the
+ *     body, the header rot this bump fixes): glossary/*.yaml vs
  *     app/web-next/lib/glossary-data.generated.ts via generate-glossary-data.ts --check.
  *   - Governance-registry manifest drift gate (v1.9.0): policies/, procedures/,
  *     checklists/, templates/ vs docs/governance/governance-registry.generated.json
  *     via governance-sync.ts --check.
+ *   - Generated projection drift gate (v1.10.0): one combined blocking check
+ *     running three generators' --check as subprocesses and naming the exact
+ *     refresh command on drift — sync-library-projection.ts (checklists/,
+ *     procedures/, docs/ sources incl. docs/runbooks/** vs
+ *     app/web-next/lib/library.generated.ts), sync-wiki-projection.ts
+ *     (docs/wiki/ko/ vs app/web-next/lib/wiki.generated.ts), and
+ *     generate-glossary-data.ts (glossary/*.yaml vs
+ *     app/web-next/lib/glossary-data.generated.ts; its --check also fails on
+ *     a glossary/_validate.ts failure — fail-closed by contract). Same drift
+ *     class as the runDriftGate family, but with a recurring, late failure
+ *     mode: source edits landed without re-sync and surfaced only as a RED CI
+ *     coverage job after landing (PRs #913/#936/#946) — this gate blocks
+ *     locally at dev-sync before push instead.
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -257,6 +272,92 @@ runDriftGate(
   "scripts/co-newbiz/governance-sync.ts",
   "docs/governance/governance-registry.generated.json",
 );
+
+/**
+ * Generated projection drift gate (v1.10.0). docs/runbooks/**, the wiki, and
+ * the glossary registry are edited without re-running their sync script, so
+ * their generated projections (library.generated.ts, wiki.generated.ts,
+ * glossary-data.generated.ts) drift silently and the failure only surfaces as
+ * a RED CI coverage job after landing — three occurrences of the same class
+ * (PRs #913/#936/#946). One combined blocking check, one subprocess per
+ * generator: each generator's --check (exit 0 = fresh; silent when fresh by
+ * contract), any drift fails the audit and names the exact refresh command.
+ * Missing generator means a non-web context — skip with a visible note, never
+ * silently.
+ */
+interface ProjectionGenerator {
+  /** Generated file the gate protects (drift target, shown in output). */
+  staleTarget: string;
+  /** Repo-relative sync script whose --check is the drift signal. */
+  generator: string;
+  /** Exact refresh command surfaced on drift. */
+  refresh: string;
+  /** SSOT source area, for actionable failure context. */
+  sources: string;
+}
+
+const PROJECTION_GENERATORS: ProjectionGenerator[] = [
+  {
+    staleTarget: "app/web-next/lib/library.generated.ts",
+    generator: "scripts/co-newbiz/sync-library-projection.ts",
+    refresh: "bun scripts/co-newbiz/sync-library-projection.ts",
+    sources: "checklists/, procedures/, docs/ (incl. docs/runbooks/**)",
+  },
+  {
+    staleTarget: "app/web-next/lib/wiki.generated.ts",
+    generator: "scripts/co-newbiz/sync-wiki-projection.ts",
+    refresh: "bun scripts/co-newbiz/sync-wiki-projection.ts",
+    sources: "docs/wiki/ko/",
+  },
+  {
+    staleTarget: "app/web-next/lib/glossary-data.generated.ts",
+    generator: "scripts/co-newbiz/generate-glossary-data.ts",
+    refresh: "bun scripts/co-newbiz/generate-glossary-data.ts",
+    sources: "glossary/*.yaml",
+  },
+];
+
+function runProjectionDriftGate(): void {
+  const stale: string[] = [];
+  const fresh: string[] = [];
+  for (const g of PROJECTION_GENERATORS) {
+    if (!existsSync(join(ROOT, g.generator))) {
+      console.log(
+        `  – Generated projection drift: ${g.generator} not present — ${g.staleTarget} check skipped (non-web context)`,
+      );
+      continue;
+    }
+    const proc = Bun.spawnSync(["bun", g.generator, "--check"], {
+      cwd: ROOT,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if (proc.exitCode !== 0) {
+      const out = new TextDecoder().decode(proc.stdout).trim();
+      const err = new TextDecoder().decode(proc.stderr).trim();
+      stale.push(
+        [
+          `${g.staleTarget} drifted from ${g.sources}`,
+          ...(out ? [out] : []),
+          ...(err ? [err] : []),
+          `refresh with: ${g.refresh}, review, and commit`,
+        ].join("\n        "),
+      );
+    } else {
+      fresh.push(`${g.staleTarget} matches ${g.sources}`);
+    }
+  }
+  if (stale.length > 0) {
+    failed = true;
+    console.error(`  ✗ Generated projection drift detected (${stale.length}/${PROJECTION_GENERATORS.length} generators stale):`);
+    for (const s of stale) console.error(`      - ${s}`);
+  } else if (fresh.length === PROJECTION_GENERATORS.length) {
+    console.log(`  ✓ Generated projection drift: all ${PROJECTION_GENERATORS.length} projections fresh`);
+    for (const f of fresh) console.log(`      ✓ ${f}`);
+  }
+}
+
+runProjectionDriftGate();
 
 // ADR-0187 P2-P4: BLOCKING_CHECKS (all eight checks) fail the audit.
 const ssot = runAll();

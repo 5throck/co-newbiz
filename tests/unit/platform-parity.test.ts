@@ -17,7 +17,8 @@
 //       docs/workspace-schema.json models block (the script source is the
 //       single source — extracted by regex, never hardcoded here).
 import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { load as yamlLoad } from "js-yaml";
 import { AGENT_REGISTRY, AGENT_KEYS } from "../../app/web-next/lib/agent-registry.generated.ts";
@@ -141,6 +142,112 @@ describe("platform parity: variant audit hook wiring (ADR-0183 D3)", () => {
     );
     expect(declared.length).toBe(1);
     expect(readFileSync(join(ROOT, declared[0].path), "utf-8")).toContain("@version");
+  });
+});
+
+describe("variant audit hook: generated projection drift gate (PRs #913/#936/#946)", () => {
+  // docs/runbooks/** and the other projected sources drifted three times
+  // (PRs #913, #936, #946) because a forgotten sync run surfaced only as a
+  // RED CI coverage job after landing. The hook (audit-variant.ts v1.10.0)
+  // now carries one combined blocking check over the three projection
+  // generators' --check (library, wiki, glossary — the glossary gate was
+  // declared in the v1.8.0 header but never wired until here), so dev-sync
+  // fails locally before push. These tests pin the wiring and the drift
+  // signal itself — the hook's subprocess behavior, not its internals. The
+  // glossary generator's own drift behavior is pinned by
+  // tests/unit/glossary-data-sync.test.ts, so the fixture drift simulation
+  // stays on the library generator.
+  const HOOK_PATH = join(ROOT, "scripts", "co-newbiz", "audit-variant.ts");
+  const GENERATORS = [
+    { script: "sync-library-projection.ts", refresh: "bun scripts/co-newbiz/sync-library-projection.ts" },
+    { script: "sync-wiki-projection.ts", refresh: "bun scripts/co-newbiz/sync-wiki-projection.ts" },
+    { script: "generate-glossary-data.ts", refresh: "bun scripts/co-newbiz/generate-glossary-data.ts" },
+  ];
+
+  test("the hook declares the combined drift check, registers it, and names all refresh commands", () => {
+    const hook = readFileSync(HOOK_PATH, "utf-8");
+    expect(hook).toContain("Generated projection drift");
+    // Registered, not just declared — a gate that is documented in the header
+    // but never invoked would pass here and block nothing (exactly the
+    // v1.8.0 glossary header rot).
+    expect(hook).toContain("runProjectionDriftGate()");
+    for (const g of GENERATORS) {
+      expect(hook).toContain(`scripts/co-newbiz/${g.script}`);
+      expect(hook).toContain(`"--check"`);
+      expect(hook).toContain(g.refresh);
+    }
+  });
+
+  test("fresh tree: both projections pass --check through the gate's subprocesses", () => {
+    for (const g of GENERATORS) {
+      const proc = Bun.spawnSync(["bun", join(ROOT, "scripts", "co-newbiz", g.script), "--check"], {
+        cwd: ROOT,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      if (proc.exitCode !== 0) console.error(new TextDecoder().decode(proc.stderr));
+      expect(proc.exitCode, `${g.script} --check on a fresh tree`).toBe(0);
+    }
+  });
+
+  test("simulated drift in a fixture temp tree fails --check and names the refresh command", () => {
+    // The generators read fixed repo-relative paths, so drift is simulated in
+    // a fixture tree that mirrors the generator's layout: a copy of the REAL
+    // generator (the exact script the hook spawns) plus a projected file
+    // whose content is regenerated from a fixture source. The fixture lives
+    // outside the repo — no tracked file is touched — with node_modules
+    // symlinked so the copied generator resolves bare imports (js-yaml).
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "co-newbiz-projection-drift-"));
+    try {
+      symlinkSync(join(ROOT, "node_modules"), join(fixtureRoot, "node_modules"), "dir");
+      mkdirSync(join(fixtureRoot, "scripts", "co-newbiz"), { recursive: true });
+      mkdirSync(join(fixtureRoot, "app", "web-next", "lib"), { recursive: true });
+      mkdirSync(join(fixtureRoot, "docs"), { recursive: true });
+
+      const generatorSrc = readFileSync(join(ROOT, "scripts", "co-newbiz", "sync-library-projection.ts"), "utf-8");
+      const fixtureGenerator = join(fixtureRoot, "scripts", "co-newbiz", "sync-library-projection.ts");
+      writeFileSync(fixtureGenerator, generatorSrc);
+
+      const source = join(fixtureRoot, "docs", "drift-fixture-source.md");
+      const run = (args: string[]) =>
+        Bun.spawnSync(["bun", fixtureGenerator, ...args], { cwd: fixtureRoot, stdout: "pipe", stderr: "pipe" });
+
+      // Seed a source file and a projection that carries stale content for
+      // it, then regenerate once so the projection is canonical.
+      writeFileSync(source, "fixture source v1\n");
+      writeFileSync(
+        join(fixtureRoot, "app", "web-next", "lib", "library.generated.ts"),
+        [
+          "// fixture projection — head is preserved verbatim by the generator",
+          `export const LIBRARY_DOCS = [];`,
+          `export const LIBRARY_CONTENT = {`,
+          `  "drift-fixture-doc": { id: "drift-fixture-doc", file: "docs/drift-fixture-source.md", content: "OUTDATED\\n" },`,
+          `};`,
+          `export const LIBRARY_CHECKLIST_ITEMS = {};`,
+          ``,
+        ].join("\n"),
+      );
+      expect(run([]).exitCode).toBe(0); // regenerate → "refreshed."
+
+      // Fresh fixture: --check passes (the "fresh passes" half).
+      expect(run(["--check"]).exitCode).toBe(0);
+
+      // Edit the source WITHOUT re-syncing — exactly the PR #913/#936/#946
+      // failure mode — and the drift gate must fail naming the refresh
+      // command.
+      writeFileSync(source, "fixture source v2 — drifted\n");
+      const drifted = run(["--check"]);
+      expect(drifted.exitCode).toBe(1);
+      const err = new TextDecoder().decode(drifted.stderr);
+      expect(err).toContain("is stale");
+      expect(err).toContain(GENERATORS[0].refresh);
+
+      // Restore the source: fresh again.
+      writeFileSync(source, "fixture source v1\n");
+      expect(run(["--check"]).exitCode).toBe(0);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 });
 

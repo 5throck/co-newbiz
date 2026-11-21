@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-20T23:48:01.754Z
+**Generated**: 2026-11-21T00:21:32.746Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -204,7 +204,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
 | archive-memory.ts | 1.2.0 | scripts/archive-memory.ts | fs, path |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.9.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
+| audit-variant.ts | 1.10.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
 | audit.ts | 2.64.0 | scripts/audit.ts | bun, child_process, fs, os, path |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
