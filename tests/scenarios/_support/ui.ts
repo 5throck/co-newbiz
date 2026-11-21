@@ -80,8 +80,12 @@ export async function recordGate(
  */
 export async function openGatePanels(page: Page, index = 0): Promise<Locator> {
   const panels = page.locator('section[aria-label="의사결정"]');
+  // Check the REQUESTED panel, not the first: /deals/{id}/s7 keeps an always-mounted pre_fs
+  // panel in the longlist block (owner decision 2026-11-21, Option A) while the target_screening
+  // panel mounts only when the approval tab is active — panel 0 attached must not skip the
+  // tab-click for panel 1. For index 0 this is identical to the old first() check.
   const mounted = await panels
-    .first()
+    .nth(index)
     .waitFor({ state: "attached", timeout: 8_000 })
     .then(
       () => true,
@@ -93,7 +97,7 @@ export async function openGatePanels(page: Page, index = 0): Promise<Locator> {
       .filter({ visible: true })
       .first()
       .click();
-    await panels.first().waitFor({ state: "attached", timeout: 30_000 });
+    await panels.nth(index).waitFor({ state: "attached", timeout: 30_000 });
   }
   await revealTab(page, panels.nth(index));
   await panels.nth(index).waitFor({ state: "visible", timeout: 30_000 });

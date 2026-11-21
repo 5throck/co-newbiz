@@ -637,3 +637,44 @@ predicate and blocker-key vocabulary byte-identical.
    row chip and the criteria strip on the next s67 load — measured in the same
    moderated check; the deal from the diagnosis (`태웅`) becomes S6-complete
    without any delete-and-re-register.
+
+## Amendment (2026-11-21): pre_fs panel placement — Option A
+
+**Owner decision.** The pre_fs `GateDecisionPanel` moves out of the S7 approval
+tab into the S6 longlist block. Implementation landed the same day (frontend
+dispatch; this section records the placement rationale).
+
+**What changed.**
+
+- `LonglistSection.tsx` renders the pre_fs gate panel immediately AFTER the
+  `S6CriteriaPanel` strip (`완료기준` strip → pre_fs gate panel → longlist
+  table), mounted as a single-gate panel (`gates={["pre_fs"]}`) — no gate
+  select, per the panel's single-gate rendering path.
+- `S7DecisionTabs.tsx` reverts to `gates={["target_screening"]}` with the
+  `zeroCandidatesPassed` killHint wiring unchanged — the approval tab records
+  only the S7 shortlist gate.
+
+**Rationale (`판단 시점 정립` — establishing judgment timing).** pre_fs is the
+judgment made BEFORE the longlist is finalized: "`이 Universe로 선별작업을
+시작할 가치가 있는가?`" plus the
+stop-loss before FS resources are committed. Rendering it in the S7 approval
+tab next to target_screening meant that after completing S7 the two GOs were
+recorded back-to-back on one panel — pre_fs read as a redundant second
+signature instead of the earlier, separate judgment it is. Placement now
+matches judgment timing: the criteria strip answers whether the universe is
+workable; the pre_fs panel directly below is where that judgment is recorded;
+the longlist work follows under it.
+
+**Promoted steps unaffected.** The panel accepts a pre_fs decision wherever it
+mounts: an owner can still record the pre_fs GO on a deal that has already
+completed S7 from the same screen (the panel sits in the longlist block, which
+renders on both `/deals/{id}/s6` and `/deals/{id}/s7`), and the engine treats
+an S7-complete opportunity recording pre_fs fine — gate-sequence handling is
+untouched by this UI reposition.
+
+**Companion changes.** The E2E scenario driver now addresses the two panels by
+index (pre_fs panel = DOM-first `의사결정` section; target_screening panel =
+approval tab, mounted on demand) and `openGatePanels` checks the requested
+index's panel for mount before clicking the owning tab. No i18n keys, tokens,
+styles, or backend contracts changed — `common.gate.pre_fs` already existed,
+and the panel is a `.market-section` card in both locations.
