@@ -78,6 +78,11 @@ export interface TargetRow {
     anyKnockOutFail: boolean;
     mandatoryOpen: string[];
   };
+  // design 2026-11-21-s67-completion-visibility §API C — longListCandidateGaps
+  // output verbatim ([] = qualified; [] for every row when grandfathered).
+  // Optional: an older cached payload without the field reads as "unknown", not
+  // as qualified (chips and the coverage fraction just don't render for it).
+  gaps?: Array<"attributes" | "source">;
   // 재무·기술 평가(ADR-0139) 기반 랭킹 점수 — 서버가 계산해 붙여준다.
   // 위원회 심의(9개 항목)와 역할을 분리한다(사용자 요청, 2026-09-15).
   eval_summary?: {

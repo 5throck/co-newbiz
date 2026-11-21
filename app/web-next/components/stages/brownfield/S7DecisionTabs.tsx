@@ -10,10 +10,14 @@ import { DealShapePanel } from "../DealShapePanel.tsx";
 export function S7DecisionTabs({
   opportunityId,
   canAct,
+  s7Blocked = false,
   zeroCandidatesPassed,
 }: {
   opportunityId: string;
   canAct: boolean;
+  /** design 2026-11-21-s67-completion-visibility — S6 criteria unmet (S7 not reached): the deal-shape
+   *  buttons pre-disable client-side; the server write guard stays the single enforcement point. */
+  s7Blocked?: boolean;
   /** flow.spec target_screening kill criterion: no knock-out survivor (informational hint on the gate panel). */
   zeroCandidatesPassed: boolean;
 }) {
@@ -44,7 +48,7 @@ export function S7DecisionTabs({
       </div>
       {tab === "dealShape" && (
         <div role="tabpanel" id="s7-panel-dealShape" aria-labelledby="s7-tab-dealShape">
-          <DealShapePanel opportunityId={opportunityId} canAct={canAct} />
+          <DealShapePanel opportunityId={opportunityId} canAct={canAct} s7Blocked={s7Blocked} />
         </div>
       )}
       {tab === "approval" && (

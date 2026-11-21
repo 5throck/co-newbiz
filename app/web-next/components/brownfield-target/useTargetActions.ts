@@ -8,6 +8,9 @@ import type { EvalItem } from "./types.ts";
 
 export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
   const t = useTranslations("components.brownfieldTarget.useTargetActions");
+  // The discovery validation copy lives in the overviewTabs catalog (design 2026-11-21
+  // i18n table) — one string serves the inline fieldset error and this guard.
+  const to = useTranslations("components.brownfieldTarget.overviewTabs");
   const {
     oppId,
     setEvalBusy,
@@ -22,6 +25,9 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
     excludeReason,
     editDraft,
     setEditing,
+    discoveryTouched,
+    setDiscoveryError,
+    setDiscoverySaved,
   } = prev;
 
   async function setEvalVerdict(
@@ -160,16 +166,33 @@ export function useTargetActions(prev: ReturnType<typeof useTargetDetail>) {
   // 후보 정보 수정/삭제(사용자 요청, 2026-09-15) — 등록 후에도 회사명·DART
   // 고유번호·목표 시장 근거를 고칠 수 있어야 하고, 잘못 등록한 후보는 완전
   // 삭제할 수 있어야 한다(제외는 사유를 남기는 별도 상태 — 삭제는 레코드 자체 제거).
+  // design 2026-11-21-s67-completion-visibility §API B — discovery_source is always
+  // sent (the select reflects the row's current value); discovery_source_url /
+  // discovery_note are CARRY-BASED like the server rule: sent only when ≥1 is
+  // non-empty after trim (the server then appends ONE discovery evidence row),
+  // omitted when both are empty so identity/name-only edits stay "unchanged
+  // behaviour". Engaged-but-empty (typed then cleared) blocks the save client-side
+  // with the same rule the server enforces (400 invalid_request).
   async function saveEdit() {
     if (busy || !editDraft.company_name.trim()) return;
+    const sourceUrl = editDraft.discovery_source_url.trim();
+    const sourceNote = editDraft.discovery_note.trim();
+    if (discoveryTouched && !sourceUrl && !sourceNote) {
+      setDiscoveryError(to("discoveryBothEmpty"));
+      return;
+    }
     setBusy(true);
     setError(null);
+    setDiscoveryError(null);
     try {
       await api.patch(`/api/brownfield/targets/${encodeURIComponent(targetId)}`, {
         company_name: editDraft.company_name.trim(),
         dart_corp_code: editDraft.dart_corp_code.trim() || null,
         universe_note: editDraft.universe_note.trim() || null,
+        discovery_source: editDraft.discovery_source,
+        ...(sourceUrl || sourceNote ? { discovery_source_url: sourceUrl, discovery_note: sourceNote } : {}),
       });
+      if (sourceUrl || sourceNote) setDiscoverySaved(true);
       setEditing(false);
       loadDetail();
     } catch (err) {

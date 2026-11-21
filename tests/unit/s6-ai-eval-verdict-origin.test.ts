@@ -54,7 +54,9 @@ describe("B. promotion: warn with counts, never block", () => {
     expect(src).toContain('ta("promoteUnreviewed", { n: m.total })');
     expect(src).toContain('ta("unreviewedSplit", { fin: m.financial, tech: m.technical })');
     expect(src).toContain("reviewItemsHref(targetId)");
-    expect(src).toContain("m.total > 0 ? setOpen(true) : onPromote()"); // no dialog without unreviewed verdicts
+    // no dialog without something to warn about: unreviewed verdicts OR open S6 gaps (design
+    // 2026-11-21-s67-completion-visibility — the gap warning rides the same confirm modal)
+    expect(src).toContain("m.total > 0 || hasGaps ? setOpen(true) : onPromote()");
     expect(src).not.toMatch(/disabled=\{[^}]*unreviewed/); // never blocks on the count
   });
   test("unreviewedOf reads the counts from eval_summary", () => {

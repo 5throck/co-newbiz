@@ -2979,7 +2979,25 @@
         "syncNoCodeBanner": "DART 고유번호가 등록되지 않아 재무 자동 동기화가 시도되지 않았습니다 — 정보 수정에서 고유번호를 입력한 뒤 동기화하세요.",
         "syncRetry": "재시도",
         "syncMismatchChip": "고유번호·회사명 불일치",
-        "syncMismatchBanner": "입력된 고유번호를 기준으로 동기화했습니다 — DART 등록 법인명과 회사명이 다릅니다. 아래 내용을 확인하고 고유번호를 수정하세요."
+        "syncMismatchBanner": "입력된 고유번호를 기준으로 동기화했습니다 — DART 등록 법인명과 회사명이 다릅니다. 아래 내용을 확인하고 고유번호를 수정하세요.",
+        "qualsLabel": "S6 후보 자격",
+        "qualAttributesMet": "✓ 속성 충족",
+        "qualAttributesOpen": "✕ 속성 미충족",
+        "qualSourceMet": "✓ 출처 충족",
+        "qualSourceOpen": "✕ 출처 미충족",
+        "qualCureHint": "미충족 항목은 정보 수정에서 보완할 수 있습니다",
+        "universeNoteLabel": "Universe 적합 메모",
+        "universeNotePlaceholder": "이 후보가 Universe에 적합한 이유 (세그먼트·선정 근거)",
+        "discoveryHeading": "발굴 출처",
+        "discoverySourceLabel": "발굴 경로",
+        "discoverySourceManual": "직접 등록",
+        "discoverySourceMasterProposal": "시장·기업 마스터 제안",
+        "discoverySourceWebProposal": "웹검색 제안",
+        "discoveryUrlLabel": "출처 URL",
+        "discoveryNoteLabel": "발굴 메모",
+        "discoveryHelper": "ⓘ URL 또는 발굴 메모 중 1개 이상을 입력하면 발굴 출처 요건이 충족됩니다.",
+        "discoveryBothEmpty": "출처 URL 또는 발굴 메모 중 1개 이상을 입력하세요.",
+        "discoverySaved": "발굴 출처를 기록했습니다."
       },
       "precheckTab": {
         "precheckHeading": "사전 검토 — 대상 사전 검토 체크리스트(9개 항목)",
@@ -6350,7 +6368,11 @@
         "targetCandidateScreening": "대상 후보 스크리닝",
         "technology": "기술",
         "technologyEvaluationWeightedScoreOut": "기술 평가 100점 가중 점수(S3 필요 역량 기준)",
-        "theFinancialAndTechnologyEvaluation": "위 재무·기술 평가 종합 점수(financial·technical 평균) — 후보 전체 목록 잠정 순위(최종 후보 목록 rank와 별개)"
+        "theFinancialAndTechnologyEvaluation": "위 재무·기술 평가 종합 점수(financial·technical 평균) — 후보 전체 목록 잠정 순위(최종 후보 목록 rank와 별개)",
+        "gapAttributes": "속성 미충족",
+        "gapSource": "출처 미충족",
+        "gapAttributesSource": "속성·출처 미충족",
+        "gapChipAria": "{company}: {gap} — 후보 상세에서 보완"
       },
       "shortlistSection": {
         "acquisitionFeasibilityConcern": "인수 가능성 우려",
@@ -6596,12 +6618,16 @@
           "other": "평가를 기록하지 못했습니다. 잠시 뒤 다시 시도하세요.",
           "notOpen": "진출 형태 평가는 대상 선정(S7)에 들어선 인수합병(브라운필드) 사업 기회에서만 기록할 수 있습니다.",
           "stale": "다른 사람이 먼저 평가를 기록했습니다. 최신 기록을 불러왔으니 확인한 뒤 다시 기록하세요. 입력한 내용은 그대로 남겨 두었습니다.",
-          "tooLarge": "입력한 내용이 너무 큽니다. 근거를 줄여 다시 기록하세요."
+          "tooLarge": "입력한 내용이 너무 큽니다. 근거를 줄여 다시 기록하세요.",
+          "notOpenStage": "아직 대상 선정(S7)에 들어서지 않았습니다 — S6 완료기준의 남은 요건을 먼저 충족하세요.",
+          "notOpenTrack": "진출 형태 평가는 인수합병(브라운필드) 사업 기회에서만 기록할 수 있습니다 — 이 기회의 현재 진로 결정은 그린필드입니다."
         },
         "shape": {
           "license_in": "라이선스 도입",
           "co_development": "공동 개발"
-        }
+        },
+        "blockedReasonS7": "S6 완료기준 미충족 — 대상 선정(S7)에 들어와야 기록할 수 있습니다",
+        "blockedReasonLink": "S6 완료기준 보기"
       },
       "aiEval": {
         "action": "AI 평가",
@@ -6810,7 +6836,20 @@
             "no_company": "기업 정보 없음 {n}곳",
             "other": "기타 {n}곳"
           }
-        }
+        },
+        "promoteQualificationWarning": "필수 속성·출처가 없어 S6 커버리지에 산입되지 않습니다 — 먼저 후보 상세에서 보완할 수 있습니다.",
+        "cureLink": "후보 상세에서 보완"
+      },
+      "criteriaPanel": {
+        "heading": "S6 완료기준",
+        "allMet": "3가지 완료기준을 모두 충족했습니다",
+        "metChip": "충족",
+        "openChip": "미충족",
+        "srMet": "충족됨",
+        "srOpen": "미충족",
+        "coverageLine": "커버리지 {covered}/{min}",
+        "qualifiedNote": "필수 속성·출처를 갖춘 후보 {qualified}/{registered}건",
+        "cureHint": "미충족 후보는 후보 상세에서 Universe 적합 메모·발굴 출처를 보완하세요"
       }
     },
     "s8": {

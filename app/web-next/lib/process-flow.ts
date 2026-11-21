@@ -18,7 +18,7 @@ import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress, reopenedAfterGate } from "./establishment.ts";
 import { isFreshReviewCycle } from "./portfolio.ts";
 import { s11ConditionBlockers } from "./gate-conditions.ts";
-import { blocker } from "./process-blocker-keys.ts";
+import { blocker, blockerKeyForLabel } from "./process-blocker-keys.ts";
 import { s10M1Checks, s10M1Grandfathered } from "./s10-checks.ts";
 import { checklistStageBlockers } from "./checklist-gate-consumers.ts";
 
@@ -252,7 +252,10 @@ import { resolveTrack } from "./project-track.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
 import { resolveWaccConfirmation, type WaccMissingItem } from "../../../db/lib/wacc-confirmation.ts";
 
-function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
+/** Wave F-6 predicate cut (design 2026-11-21-s67-completion-visibility §API C
+ * reuses this exact engine rule so per-target `gaps` and the S6 predicate can
+ * never disagree about grandfathering on the same screen). */
+export function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
   return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;
 }
 
@@ -264,6 +267,20 @@ function projectGrandfathered(project: { id: string; created_at: string | null }
 }
 
 export type ProcessEntity = { type: "opportunity"; id: string } | { type: "project"; id: string };
+
+/**
+ * design 2026-11-21-s67-completion-visibility §API A — per-stage `missing` is
+ * the predicate's output translated to STABLE blocker keys (`s6.longlist_coverage`,
+ * not its Korean label): the s67 criteria strip keys row state off these keys and
+ * pairs the prose from the index-aligned `blockers`. The predicate internals stay
+ * label-based (they feed top-level `requiredArtifacts`, which stays
+ * byte-identical); every predicate and delegated module pushes through
+ * `blocker(key)`, so the label→key lookup is total — the `?? label` fallback only
+ * guards a future free-form push. Index alignment is preserved (same positions).
+ */
+function stageMissingKeys(stageId: StageId, labels: string[]): string[] {
+  return labels.map((l) => blockerKeyForLabel(l, stageId) ?? l);
+}
 
 export interface ProcessEvaluation {
   entity: ProcessEntity;
@@ -277,7 +294,23 @@ export interface ProcessEvaluation {
   track: "greenfield" | "brownfield" | null;
   subTrack: string | null;
   terminated: boolean; // KILL recorded — process ends
-  stages: Array<StageDefinition & { status: "complete" | "current" | "blocked" | "locked" | "skipped" | "terminated" }>;
+  stages: Array<
+    StageDefinition & {
+      status: "complete" | "current" | "blocked" | "locked" | "skipped" | "terminated";
+      /**
+       * design 2026-11-21-s67-completion-visibility §API A — per-stage predicate
+       * output, INDEX-ALIGNED (blockers[i] is the Korean prose for missing[i]).
+       * `missing` carries STABLE blocker keys (lib/process-blocker-keys.ts), the
+       * predicates' labels resolved via blockerKeyForLabel. Present for stages
+       * whose predicate was evaluated (`complete` | `current`); `[]` for `locked`
+       * / `skipped` / `terminated` (the sequential-entry loop does not evaluate
+       * those — this field does not change that). Top-level `blockers` stays the
+       * current-stage (plus HOLD) values, byte-identical.
+       */
+      blockers: string[];
+      missing: string[];
+    }
+  >;
   /** opportunity 전용 — 이미 프로젝트로 추진(승격)됐다면 그 project id. 승격
    * 후에는 팀 배정 등 세부 내용을 다시 노출하지 않고 이 값만으로 판단한다. */
   projectId: string | null;
@@ -1371,25 +1404,25 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     let priorComplete = true;
     for (const stage of STAGES) {
       if (terminated) {
-        stages.push({ ...stage, status: "terminated" });
+        stages.push({ ...stage, status: "terminated", blockers: [], missing: [] });
         continue;
       }
       // 트랙 비적용 단계는 skipped — 완료·차단 어느 쪽도 아니며 다음 단계 진행을 막지 않는다.
       if (track !== null && !stage.applicableTracks.includes("all") && !stage.applicableTracks.includes(track)) {
-        stages.push({ ...stage, status: "skipped" });
+        stages.push({ ...stage, status: "skipped", blockers: [], missing: [] });
         continue;
       }
       if (!priorComplete) {
         // Sequential entry: a stage cannot be current/complete before its
         // predecessors complete (entry criteria, process-flow.md §3).
         blockedStages.push(stage.id);
-        stages.push({ ...stage, status: "locked" });
+        stages.push({ ...stage, status: "locked", blockers: [], missing: [] });
         continue;
       }
       const res = evaluateOpportunityStage(stage, opp);
       if (res.complete) {
         completedStages.push(stage.id);
-        stages.push({ ...stage, status: "complete" });
+        stages.push({ ...stage, status: "complete", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
       } else {
         priorComplete = false;
         if (currentStage === null) {
@@ -1397,10 +1430,10 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
           requiredArtifacts = res.missing;
           blockers = res.blockers;
           // HOLD blocks re-evaluation of the stage's gate, not the work itself.
-          stages.push({ ...stage, status: "current" });
+          stages.push({ ...stage, status: "current", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
         } else {
           blockedStages.push(stage.id);
-          stages.push({ ...stage, status: "locked" });
+          stages.push({ ...stage, status: "locked", blockers: [], missing: [] });
         }
       }
     }
@@ -1454,43 +1487,44 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     let priorComplete = true;
     for (const stage of STAGES) {
       if (terminated) {
-        stages.push({ ...stage, status: "terminated" });
+        stages.push({ ...stage, status: "terminated", blockers: [], missing: [] });
         continue;
       }
       if (track !== null && !stage.applicableTracks.includes("all") && !stage.applicableTracks.includes(track)) {
-        stages.push({ ...stage, status: "skipped" });
+        stages.push({ ...stage, status: "skipped", blockers: [], missing: [] });
         continue;
       }
       // 선행 opportunity 캐리어 단계(S1~S7): 승격된 프로젝트에서는 완료로 단정한다.
+      // (the predicate is not re-run here — §API A carries empty arrays)
       if (stage.sequence <= 7) {
         if (!priorComplete) {
           blockedStages.push(stage.id);
-          stages.push({ ...stage, status: "locked" });
+          stages.push({ ...stage, status: "locked", blockers: [], missing: [] });
           continue;
         }
         completedStages.push(stage.id);
-        stages.push({ ...stage, status: "complete" });
+        stages.push({ ...stage, status: "complete", blockers: [], missing: [] });
         continue;
       }
       if (!priorComplete) {
         blockedStages.push(stage.id);
-        stages.push({ ...stage, status: "locked" });
+        stages.push({ ...stage, status: "locked", blockers: [], missing: [] });
         continue;
       }
       const res = evaluateProjectStage(stage, project, gateStatus);
       if (res.complete) {
         completedStages.push(stage.id);
-        stages.push({ ...stage, status: "complete" });
+        stages.push({ ...stage, status: "complete", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
       } else {
         priorComplete = false;
         if (currentStage === null) {
           currentStage = stage.id;
           requiredArtifacts = res.missing;
           blockers = res.blockers;
-          stages.push({ ...stage, status: "current" });
+          stages.push({ ...stage, status: "current", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
         } else {
           blockedStages.push(stage.id);
-          stages.push({ ...stage, status: "locked" });
+          stages.push({ ...stage, status: "locked", blockers: [], missing: [] });
         }
       }
     }

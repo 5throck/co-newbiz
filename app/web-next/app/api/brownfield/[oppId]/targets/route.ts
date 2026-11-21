@@ -8,6 +8,7 @@ import {
   createTarget,
   findDuplicateTarget,
   listTargets,
+  longListCandidateGaps,
   screeningItems,
   screeningSummary,
 } from "../../../../../lib/brownfield-targets.ts";
@@ -15,6 +16,7 @@ import { buildEvalSummary, computeEvalScore, targetEvalStates } from "../../../.
 import { promotedCarrierResponse, trackConflictResponse } from "../../../../../lib/route-track-guard.ts";
 import { directionRecordKeys } from "../../../../../lib/universe-direction.ts";
 import { evalDraftView } from "../../../../../lib/brownfield-eval-draft-view.ts";
+import { opportunityGrandfathered } from "../../../../../lib/process-flow.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ oppId: string }> }) {
   const auth = authenticate(request);
@@ -23,13 +25,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
-  const opp = db.query("SELECT id, name, target_universe_json FROM opportunity WHERE id = ?").get(oppId) as {
+  const opp = db.query("SELECT id, name, target_universe_json, created_at FROM opportunity WHERE id = ?").get(oppId) as {
     id: string;
     name: string;
     target_universe_json: string | null;
+    created_at: string | null;
   } | null;
   if (!opp) return notFound();
   const targets = listTargets(oppId);
+  // design 2026-11-21-s67-completion-visibility §API C — per-target `gaps` is
+  // longListCandidateGaps verbatim, BUT grandfathered opportunities emit [] for
+  // every row: the S6 predicate skips the per-candidate check for them (raw row
+  // count coverage), so flagging rows the engine counts as covered would put a
+  // contradiction on the same screen. One engine rule, one exported helper.
+  const grandfathered = opportunityGrandfathered(opp);
   let universe: unknown = null;
   try {
     universe = opp.target_universe_json ? JSON.parse(opp.target_universe_json) : null;
@@ -53,6 +62,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
         const evalScores = computeEvalScore(targetEvalStates(oppId, t.id, auth.auth.userId));
         return {
           ...t,
+          gaps: grandfathered ? [] : longListCandidateGaps(t),
           screening_summary: screeningSummary(t),
           // ADR-0200 §5.1/§8 A8: every origin counts; per-category `judged_by_source` + `unreviewed`, plus `unreviewed_total`.
           eval_summary: buildEvalSummary(evalScores),

@@ -249,4 +249,7 @@ export function useBrownfieldTargets(
 
 export type BrownfieldStageState = ReturnType<typeof useBrownfieldBase> &
   ReturnType<typeof useBrownfieldUniverse> &
-  ReturnType<typeof useBrownfieldTargets>;
+  ReturnType<typeof useBrownfieldTargets> & {
+    /** design 2026-11-21-s67-completion-visibility — the single process read (useS6Gate in BrownfieldStage), shared by the criteria strip, the gap chips and the deal-shape panel. */
+    s6Gate: import("./S6CriteriaPanel.tsx").S6GateState;
+  };

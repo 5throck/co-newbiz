@@ -12,6 +12,12 @@ export interface TargetDetail {
   screening_json: string | null;
   screening_evidence_json: string | null;
   company_id: string | null;
+  // design 2026-11-21-s67-completion-visibility §API B — the detail GET returns
+  // `bt.*`, so the discovery provenance columns ride along; typed optional so an
+  // older payload still type-checks (the S6 qualification helper treats a
+  // missing value as manual / not-accepted, the conservative reading).
+  discovery_source?: string | null;
+  proposal_accepted_at?: string | null;
 }
 export interface EvalItem {
   id: string;
