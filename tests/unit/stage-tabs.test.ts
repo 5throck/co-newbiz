@@ -52,7 +52,8 @@ describe("stage tabs", () => {
     const s8 = groupForSegment("/business-case")!;
     const all = [...s8.tabs, ...s8.more];
     // Moved keys highlight the financial primary tab; their own entry is in the financial sub-tab row.
-    for (const k of ["overview", "params", "target-costing"]) expect(all[activeTabIndex(s8, "/business-case", k)].label).toBe("재무적 타당성");
+    for (const k of ["overview", "params", "target-costing"])
+      expect(all[activeTabIndex(s8, "/business-case", k)].label).toBe("재무적 타당성");
     expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
     // ADR-0169: the default analysis view (no or unknown ?tab=) highlights 재무적 타당성.
     expect(all[activeTabIndex(s8, "/business-case", null)].label).toBe("재무적 타당성");
@@ -65,7 +66,9 @@ describe("stage tabs", () => {
     expect(all[activeTabIndex(s8, "/business-case", "capability")].label).toBe("기술적 타당성");
     expect(all[activeTabIndex(s8, "/business-case", "targets")].label).toBe("대상 비교·선정");
     expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
-    expect(tabHref("p1", { seg: "/business-case", query: "target-costing", label: "x" })).toBe("/projects/p1/business-case?tab=target-costing");
+    expect(tabHref("p1", { seg: "/business-case", query: "target-costing", label: "x" })).toBe(
+      "/projects/p1/business-case?tab=target-costing",
+    );
   });
 
   test("financial sub-tab row shows only under the financial lens (ADR-0169)", () => {
@@ -79,12 +82,21 @@ describe("stage tabs", () => {
     expect(sub("/business-case", "overview")).toBe("설명·생성·권고");
     expect(sub("/business-case", "params")).toBe("파라미터·스냅샷");
     expect(sub("/business-case", "target-costing")).toBe("타겟코스팅");
-    for (const t of ["goals", "technical", "targets", "decision"]) expect(activeSubtabIndex(s8, "/business-case", t)).toBe(-1);
+    for (const t of ["goals", "technical", "targets", "decision"])
+      expect(activeSubtabIndex(s8, "/business-case", t)).toBe(-1);
   });
 
   test("S8 sub-tab and more-menu membership; deep links stay reachable", () => {
     const s8 = groupForSegment("/business-case")!;
-    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual(["overview", "scenarios", "/wacc", "/financial-analysis", "bep", "params", "target-costing"]);
+    expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual([
+      "overview",
+      "scenarios",
+      "/wacc",
+      "/financial-analysis",
+      "bep",
+      "params",
+      "target-costing",
+    ]);
     expect(s8.more).toEqual([]); // 2026-10-20 decider: no 더보기 on S8 (the lone 요약 entry was dropped)
     expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
   });

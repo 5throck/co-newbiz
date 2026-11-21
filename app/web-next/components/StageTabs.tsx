@@ -32,12 +32,23 @@ const trackCache = new Map<string, string | null>();
 function useProjectTrack(projectId: string, enabled: boolean): string | null {
   const [track, setTrack] = useState<string | null>(trackCache.get(projectId) ?? null);
   useEffect(() => {
-    if (!enabled || trackCache.has(projectId)) { if (enabled) setTrack(trackCache.get(projectId) ?? null); return; }
+    if (!enabled || trackCache.has(projectId)) {
+      if (enabled) setTrack(trackCache.get(projectId) ?? null);
+      return;
+    }
     let live = true;
-    api.get<{ track: string | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
-      .then((r) => { trackCache.set(projectId, r.data.track ?? null); if (live) setTrack(r.data.track ?? null); })
-      .catch(() => { /* unknown track: keep every tab */ });
-    return () => { live = false; };
+    api
+      .get<{ track: string | null }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => {
+        trackCache.set(projectId, r.data.track ?? null);
+        if (live) setTrack(r.data.track ?? null);
+      })
+      .catch(() => {
+        /* unknown track: keep every tab */
+      });
+    return () => {
+      live = false;
+    };
   }, [projectId, enabled]);
   return track;
 }
@@ -50,12 +61,25 @@ function useProjectPmiApplies(projectId: string, enabled: boolean): boolean | nu
   const [applies, setApplies] = useState<boolean | null>(pmiCache.get(projectId) ?? null);
   useEffect(() => {
     if (!enabled) return;
-    if (pmiCache.has(projectId)) { setApplies(pmiCache.get(projectId) ?? null); return; }
+    if (pmiCache.has(projectId)) {
+      setApplies(pmiCache.get(projectId) ?? null);
+      return;
+    }
     let live = true;
-    api.get<{ applicability: { pmi_applies: boolean } }>(`/api/projects/${encodeURIComponent(projectId)}/post-management`)
-      .then((r) => { pmiCache.set(projectId, r.data.applicability.pmi_applies); if (live) setApplies(r.data.applicability.pmi_applies); })
-      .catch(() => { /* unknown applicability: keep every tab */ });
-    return () => { live = false; };
+    api
+      .get<{ applicability: { pmi_applies: boolean } }>(
+        `/api/projects/${encodeURIComponent(projectId)}/post-management`,
+      )
+      .then((r) => {
+        pmiCache.set(projectId, r.data.applicability.pmi_applies);
+        if (live) setApplies(r.data.applicability.pmi_applies);
+      })
+      .catch(() => {
+        /* unknown applicability: keep every tab */
+      });
+    return () => {
+      live = false;
+    };
   }, [projectId, enabled]);
   return applies;
 }
@@ -73,25 +97,39 @@ function StageTabsInner({ projectId }: { projectId: string }) {
   const pmiApplies = useProjectPmiApplies(projectId, baseGroup?.stage === "S12");
   // Milestone badge for the common link (2026-10-21 decider: the schedule is
   // managed from the sidebar). Summary-only fetch; failures leave the badge off.
-  const [milestoneBadge, setMilestoneBadge] = useState<{ due_soon: number; overdue: number; total: number } | null>(null);
+  const [milestoneBadge, setMilestoneBadge] = useState<{ due_soon: number; overdue: number; total: number } | null>(
+    null,
+  );
   useEffect(() => {
     let alive = true;
-    api.get<{ summary: { due_soon: number; overdue: number; total: number } }>(`/api/projects/${encodeURIComponent(projectId)}/milestones?summary=1`)
-      .then((r) => { if (alive) setMilestoneBadge(r.data.summary); })
-      .catch(() => { if (alive) setMilestoneBadge({ due_soon: 0, overdue: 0, total: 0 }); });
-    return () => { alive = false; };
+    api
+      .get<{ summary: { due_soon: number; overdue: number; total: number } }>(
+        `/api/projects/${encodeURIComponent(projectId)}/milestones?summary=1`,
+      )
+      .then((r) => {
+        if (alive) setMilestoneBadge(r.data.summary);
+      })
+      .catch(() => {
+        if (alive) setMilestoneBadge({ due_soon: 0, overdue: 0, total: 0 });
+      });
+    return () => {
+      alive = false;
+    };
   }, [projectId]);
   // The PMI tab is removed from the DOM when PMI does not apply; PMI-applicable projects get the same group object.
-  const pmiGroup: StageTabGroup | null = baseGroup && pmiApplies === false
-    ? (stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === baseGroup.stage) ?? baseGroup)
-    : baseGroup;
+  const pmiGroup: StageTabGroup | null =
+    baseGroup && pmiApplies === false
+      ? (stageTabGroupsFor({ pmiApplies: false }).find((g) => g.stage === baseGroup.stage) ?? baseGroup)
+      : baseGroup;
   const group: StageTabGroup | null = pmiGroup ? groupForTrack(pmiGroup, track) : null;
   const sourceOppId = useSourceOpportunity(projectId);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setMoreOpen(false); }, [pathname, tabParam]);
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname, tabParam]);
 
   if (!group || seg === null) return null;
   const activeIdx = activeTabIndex(group, seg, tabParam);
@@ -114,136 +152,157 @@ function StageTabsInner({ projectId }: { projectId: string }) {
     else if (e.key === "ArrowLeft") next = (i - 1 + items.length) % items.length;
     else if (e.key === "Home") next = 0;
     else if (e.key === "End") next = items.length - 1;
-    if (next >= 0) { e.preventDefault(); items[next].focus(); }
+    if (next >= 0) {
+      e.preventDefault();
+      items[next].focus();
+    }
   }
 
   return (
     <>
-    {/* Layer 2 for every project page — StageFrame skips its own rail under /projects/ so it is never doubled. */}
-    <StageRail current={[group.stage]} />
-    <div className="stage-tabs-bar">
-    <nav aria-label={`${group.stage} 화면`} className="stage-tabs-wrap">
-      <div className="stage-tabs" ref={listRef} onKeyDown={onKeyDown}>
-        <div className="stage-tabs-list" role="tablist" aria-label={`${group.stage} · ${group.name}`}>
-        {group.tabs.map((t, i) => {
-          const active = i === activeIdx;
-          return (
-            <Link
-              key={`${t.seg}|${t.query ?? ""}`}
-              href={tabHref(projectId, t)}
-              role="tab"
-              data-tab-item
-              aria-selected={active}
-              aria-current={active ? "page" : undefined}
-              tabIndex={active || (activeIdx < 0 && i === 0) || (moreActive && i === 0) ? 0 : -1}
-              className={`stage-tab${active ? " stage-tab-active" : ""}`}
-            >
-              {labelOf(t)}
-            </Link>
-          );
-        })}
-        </div>
-        {visibleMore.length > 0 && (
-          <span className="stage-tab-more" role="presentation">
-            <button
-              ref={moreBtn}
-              type="button"
-              data-tab-item
-              className={`stage-tab${moreActive ? " stage-tab-active" : ""}`}
-              aria-haspopup="menu"
-              aria-expanded={moreOpen}
-              tabIndex={-1}
-              onClick={() => setMoreOpen((v) => !v)}
-              onKeyDown={(e) => { if (e.key === "Escape") { setMoreOpen(false); } }}
-            >
-              더보기 <span aria-hidden="true">▾</span>
-            </button>
-            {moreOpen && (
-              <div
-                role="menu"
-                aria-label={`${group.stage} 더보기`}
-                className="stage-tab-menu"
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") { setMoreOpen(false); moreBtn.current?.focus(); }
-                }}
-              >
-                {group.more.map((t, j) => {
-                  if (t.hidden) return null;
-                  const active = primaryCount + j === activeIdx;
-                  return (
-                    <Link
-                      key={`${t.seg}|${t.query ?? ""}`}
-                      href={tabHref(projectId, t)}
-                      role="menuitem"
-                      aria-current={active ? "page" : undefined}
-                      className={`stage-tab-menu-item${active ? " stage-tab-active" : ""}`}
-                    >
-                      {labelOf(t)}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </span>
-        )}
-        {/* Project-common destinations (2026-10-21 decider) — one click from every stage. */}
-        <span className="stage-tab-more ml-auto" role="presentation" data-testid="project-common-tabs">
-          {PROJECT_COMMON_TABS.map((t) => {
-            const active = seg === t.seg;
-            const badge = t.seg === "/milestones" && milestoneBadge && milestoneBadge.due_soon + milestoneBadge.overdue > 0
-              ? { n: milestoneBadge.due_soon + milestoneBadge.overdue, overdue: milestoneBadge.overdue }
-              : null;
-            return (
-              <Link
-                key={t.seg}
-                href={tabHref(projectId, t)}
-                data-tab-item
-                aria-current={active ? "page" : undefined}
-                className={`stage-tab${active ? " stage-tab-active" : ""}`}
-                title="프로젝트 공통 — 모든 단계에서 열 수 있습니다"
-              >
-                {labelOf(t)}
-                {badge && (
-                  <span className={`status-chip ml-1 ${badge.overdue > 0 ? "status-red" : "status-amber"}`} data-testid="milestone-badge">
-                    {badge.overdue > 0 ? `지연 ${badge.overdue}` : ""}{badge.overdue > 0 && badge.n > badge.overdue ? " · " : ""}{badge.n > badge.overdue ? `임박 ${badge.n - badge.overdue}` : ""}
-                  </span>
+      {/* Layer 2 for every project page — StageFrame skips its own rail under /projects/ so it is never doubled. */}
+      <StageRail current={[group.stage]} />
+      <div className="stage-tabs-bar">
+        <nav aria-label={`${group.stage} 화면`} className="stage-tabs-wrap">
+          <div className="stage-tabs" ref={listRef} onKeyDown={onKeyDown}>
+            <div className="stage-tabs-list" role="tablist" aria-label={`${group.stage} · ${group.name}`}>
+              {group.tabs.map((t, i) => {
+                const active = i === activeIdx;
+                return (
+                  <Link
+                    key={`${t.seg}|${t.query ?? ""}`}
+                    href={tabHref(projectId, t)}
+                    role="tab"
+                    data-tab-item
+                    aria-selected={active}
+                    aria-current={active ? "page" : undefined}
+                    tabIndex={active || (activeIdx < 0 && i === 0) || (moreActive && i === 0) ? 0 : -1}
+                    className={`stage-tab${active ? " stage-tab-active" : ""}`}
+                  >
+                    {labelOf(t)}
+                  </Link>
+                );
+              })}
+            </div>
+            {visibleMore.length > 0 && (
+              <span className="stage-tab-more" role="presentation">
+                <button
+                  ref={moreBtn}
+                  type="button"
+                  data-tab-item
+                  className={`stage-tab${moreActive ? " stage-tab-active" : ""}`}
+                  aria-haspopup="menu"
+                  aria-expanded={moreOpen}
+                  tabIndex={-1}
+                  onClick={() => setMoreOpen((v) => !v)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setMoreOpen(false);
+                    }
+                  }}
+                >
+                  더보기 <span aria-hidden="true">▾</span>
+                </button>
+                {moreOpen && (
+                  <div
+                    role="menu"
+                    aria-label={`${group.stage} 더보기`}
+                    className="stage-tab-menu"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setMoreOpen(false);
+                        moreBtn.current?.focus();
+                      }
+                    }}
+                  >
+                    {group.more.map((t, j) => {
+                      if (t.hidden) return null;
+                      const active = primaryCount + j === activeIdx;
+                      return (
+                        <Link
+                          key={`${t.seg}|${t.query ?? ""}`}
+                          href={tabHref(projectId, t)}
+                          role="menuitem"
+                          aria-current={active ? "page" : undefined}
+                          className={`stage-tab-menu-item${active ? " stage-tab-active" : ""}`}
+                        >
+                          {labelOf(t)}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              </Link>
-            );
-          })}
-        </span>
-      </div>
-    </nav>
-    {/* The screen's Primary Action slot moved to the StageFrame head (2026-10-22 사용자
+              </span>
+            )}
+            {/* Project-common destinations (2026-10-21 decider) — one click from every stage. */}
+            <span className="stage-tab-more ml-auto" role="presentation" data-testid="project-common-tabs">
+              {PROJECT_COMMON_TABS.map((t) => {
+                const active = seg === t.seg;
+                const badge =
+                  t.seg === "/milestones" && milestoneBadge && milestoneBadge.due_soon + milestoneBadge.overdue > 0
+                    ? { n: milestoneBadge.due_soon + milestoneBadge.overdue, overdue: milestoneBadge.overdue }
+                    : null;
+                return (
+                  <Link
+                    key={t.seg}
+                    href={tabHref(projectId, t)}
+                    data-tab-item
+                    aria-current={active ? "page" : undefined}
+                    className={`stage-tab${active ? " stage-tab-active" : ""}`}
+                    title="프로젝트 공통 — 모든 단계에서 열 수 있습니다"
+                  >
+                    {labelOf(t)}
+                    {badge && (
+                      <span
+                        className={`status-chip ml-1 ${badge.overdue > 0 ? "status-red" : "status-amber"}`}
+                        data-testid="milestone-badge"
+                      >
+                        {badge.overdue > 0 ? `지연 ${badge.overdue}` : ""}
+                        {badge.overdue > 0 && badge.n > badge.overdue ? " · " : ""}
+                        {badge.n > badge.overdue ? `임박 ${badge.n - badge.overdue}` : ""}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </span>
+          </div>
+        </nav>
+        {/* The screen's Primary Action slot moved to the StageFrame head (2026-10-22 사용자
         리포트: S2처럼 h1 행 우상단 하나로 통일 — 이 중복 슬롯은 탭 행 아래 버튼을 만들었다). */}
-    </div>
-    {subIdx >= 0 && (
-      <nav aria-label="재무적 타당성 하위 화면" className="stage-tabs-wrap">
-        <div className="stage-tabs-list" role="tablist" aria-label="재무적 타당성 · 하위 탭">
-          {subtabs.map((t, i) => (
-            <Link
-              key={`${t.seg}|${t.query ?? ""}`}
-              href={tabHref(projectId, t)}
-              role="tab"
-              aria-selected={i === subIdx}
-              aria-current={i === subIdx ? "page" : undefined}
-              className={`stage-tab${i === subIdx ? " stage-tab-active" : ""}`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
-    )}
-    {group.stage === "S8" && (seg === "/wacc" || seg === "/financial-analysis") && <S8PartHeader part="financial" />}
-    {sourceOppId && (
-      // F12: the link lands on S4 only — say so instead of implying S1~S4 (S1~S3
-      // are reached through the stage rail's 이동 메뉴 above).
-      <p className="mb-2 text-[length:var(--fs-caption)]">
-        <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">사업 기회 보기</Link>
-        <span className="text-[color:var(--muted-fg)]"> — S4 진출방식 결정 화면으로 이동합니다 (S1~S3는 단계 이동 메뉴에서).</span>
-      </p>
-    )}
+      </div>
+      {subIdx >= 0 && (
+        <nav aria-label="재무적 타당성 하위 화면" className="stage-tabs-wrap">
+          <div className="stage-tabs-list" role="tablist" aria-label="재무적 타당성 · 하위 탭">
+            {subtabs.map((t, i) => (
+              <Link
+                key={`${t.seg}|${t.query ?? ""}`}
+                href={tabHref(projectId, t)}
+                role="tab"
+                aria-selected={i === subIdx}
+                aria-current={i === subIdx ? "page" : undefined}
+                className={`stage-tab${i === subIdx ? " stage-tab-active" : ""}`}
+              >
+                {t.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
+      {group.stage === "S8" && (seg === "/wacc" || seg === "/financial-analysis") && <S8PartHeader part="financial" />}
+      {sourceOppId && (
+        // F12: the link lands on S4 only — say so instead of implying S1~S4 (S1~S3
+        // are reached through the stage rail's 이동 메뉴 above).
+        <p className="mb-2 text-[length:var(--fs-caption)]">
+          <Link href={`/deals/${encodeURIComponent(sourceOppId)}/s4`} className="text-[color:var(--accent)] font-bold">
+            사업 기회 보기
+          </Link>
+          <span className="text-[color:var(--muted-fg)]">
+            {" "}
+            — S4 진출방식 결정 화면으로 이동합니다 (S1~S3는 단계 이동 메뉴에서).
+          </span>
+        </p>
+      )}
     </>
   );
 }
