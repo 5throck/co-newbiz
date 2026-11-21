@@ -9,6 +9,18 @@ spec: humanize-polish
 
 # Design — Humanize KR Korean Polishing Integration
 
+> **SUPERSEDED (2026-11-21)** — by owner decision, the external dependency is now
+> **5throck/Humanize** (pinned v1.0.0); **epoko77-ai/im-not-ai was never installed as this
+> project's dependency** and the im-not-ai clone this design shipped has been removed. The
+> pipeline was reworked onto the Humanize server's HTTP interface:
+> [`docs/designs/2026-11-21-humanize-server-migration-design.md`](2026-11-21-humanize-server-migration-design.md)
+> (spec `humanize-server-migration`). The eligibility, segmentation, and anchor rulings of
+> this design carry over unchanged; the pipeline mechanics below (Python shim, monolith
+> agent file, quick-rules file, restore helpers, verify_gates five-axis gate) are superseded —
+> the deterministic gate set is narrowed to the anchor multiset + change rate, and the
+> post-processing restores are delegated to the server prompt's self-check and the server's
+> rules-only auto-fix subset.
+
 ## Problem
 
 Korean deliverables that agents draft (reports, summaries, Korean-counterpart manuals and wiki pages) carry recognizable machine-writing tells: translationese, stacked hedges, mechanical parallelism, formulaic openers. Readers and approvers notice, and it erodes trust in otherwise sound analysis. The upstream project Humanize KR (https://github.com/epoko77-ai/im-not-ai, MIT, Korean-only) rewrites style and rhythm without changing content, and ships deterministic gates (change rate, number and quotation preservation, modality restoration).
