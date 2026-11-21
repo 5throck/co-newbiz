@@ -1,5 +1,5 @@
-// design 2026-11-21-s67-completion-visibility Fix ① — the S6 완료기준 strip
-// (S6CriteriaPanel) render pins: three criteria rows keyed off the stage's
+// design 2026-11-21-s67-completion-visibility Fix ① + Amendment 2 (ADR-0205) — the S6 완료기준 strip
+// (S6CriteriaPanel) render pins: four criteria rows (the 4th = the human-recorded Pre-FS GO) keyed off the stage's
 // `missing` keys with the index-aligned engine prose, the coverage fraction,
 // the all-met collapse, the fail-quiet hides, and the Long List chip text
 // mapping (s6GapChipKey). ko/en parity follows the i18n table of the design.
@@ -47,6 +47,7 @@ const gate = (over: Record<string, unknown> = {}) => ({
   s6Status: "current",
   s6Missing: [],
   s6Blockers: [],
+  s6Exempt: false,
   s7Blocked: true,
   ...over,
 });
@@ -91,9 +92,10 @@ describe("S6CriteriaPanel", () => {
     expect(html).toContain('id="s6-criteria"');
     expect(html).toContain('data-testid="s6-criteria-panel"');
     expect(html).toContain("S6 완료기준");
-    // two open (amber ✕), one met (green ✓)
+    // two open (amber ✕), two met (green ✓: universe + the Pre-FS GO row, whose key is not missing)
     expect(html.match(/status-amber/g)?.length).toBe(2);
-    expect(html.match(/status-green/g)?.length).toBe(1);
+    expect(html.match(/status-green/g)?.length).toBe(2);
+    expect(html).toContain("Pre-FS 게이트 GO 결정");
     expect(html).toContain("Long List 후보 필수 속성·출처");
     expect(html).toContain("Long List 최소 커버리지");
     expect(html).toContain("평가 대상 방향성(Target Universe)");
@@ -121,9 +123,109 @@ describe("S6CriteriaPanel", () => {
   test("all met: the strip collapses to one green line and keeps the anchor", () => {
     const html = render({ gate: gate({ s6Status: "complete" }), targets: [target("a"), target("b")], minLongList: 3 });
     expect(html).toContain('data-all-met="true"');
-    expect(html).toContain("3가지 완료기준을 모두 충족했습니다");
+    expect(html).toContain("4가지 완료기준을 모두 충족했습니다");
+    expect(html).not.toContain("3가지");
     expect(html).not.toContain("s67-criteria-list");
     expect(html).toContain('id="s6-criteria"');
+  });
+
+  describe("row 4 — Pre-FS GO (s6.pre_fs_go)", () => {
+    const PROSE = "Pre-FS 게이트 GO 결정이 필요합니다 (사람이 기록)";
+    const row4 = (html: string) => html.slice(html.indexOf('data-criterion="s6.pre_fs_go"'));
+
+    test("data criteria open + no GO: open chip, prerequisite hint, NO link", () => {
+      const html = render({
+        gate: gate({
+          s6Missing: ["s6.longlist_coverage", "s6.pre_fs_go"],
+          s6Blockers: ["Long List 커버리지 부족 (1/3 — 필수 속성·출처를 갖춘 후보만 산입)", PROSE],
+        }),
+        targets: [target("a")],
+        minLongList: 3,
+      });
+      const r = row4(html);
+      expect(r).toContain('data-open="true"');
+      expect(r).toContain("위 세 가지 기준을 먼저 충족해야 Pre-FS 결정을 기록할 수 있습니다");
+      expect(r).not.toContain("s6-pre-fs-link");
+      expect(r).not.toContain(PROSE);
+    });
+
+    test("data criteria met + no GO: engine prose + link to the in-page panel on S6 (relative cross-route link on S7)", () => {
+      const props = {
+        gate: gate({ s6Missing: ["s6.pre_fs_go"], s6Blockers: [PROSE] }),
+        targets: [target("a"), target("b"), target("c")],
+        minLongList: 3,
+      };
+      const s6 = row4(render({ ...props, stage: "S6" }));
+      expect(s6).toContain(PROSE);
+      expect(s6).toContain('href="#gate-decision-pre_fs"');
+      expect(s6).toContain("Pre-FS 결정 기록으로 이동");
+      expect(s6).toContain("↓");
+      const s7 = row4(render({ ...props, stage: "S7" }));
+      expect(s7).toContain('href="s6#gate-decision-pre_fs"');
+      expect(s7).toContain("S6에서 Pre-FS 결정 기록");
+      // the strip stays on S7 as a criterion row — still no Pre-FS panel markup
+      expect(render({ ...props, stage: "S7" })).not.toContain('id="gate-decision-pre_fs"');
+    });
+
+    test("HOLD revoked: same open state with the engine HOLD prose and the link", () => {
+      const hold = "Pre-FS 게이트의 최근 결정이 HOLD입니다 — GO가 다시 기록되어야 S7이 열립니다";
+      const html = render({
+        gate: gate({ s6Missing: ["s6.pre_fs_go"], s6Blockers: [hold] }),
+        targets: [target("a")],
+        minLongList: 1,
+      });
+      expect(row4(html)).toContain(hold);
+      expect(row4(html)).toContain('href="#gate-decision-pre_fs"');
+    });
+
+    test("met: all four green — collapses to the all-met line", () => {
+      const html = render({ gate: gate({ s6Status: "complete" }), targets: [target("a")], minLongList: 1 });
+      expect(html).toContain('data-all-met="true"');
+    });
+
+    test("exempt (server-decided stages[].exempt): neutral '면제' chip, never a false '충족'", () => {
+      const html = render({
+        gate: gate({
+          s6Missing: ["s6.longlist_coverage"],
+          s6Blockers: ["Long List 커버리지 부족 (1/3)"],
+          s6Exempt: true,
+        }),
+        targets: [target("a")],
+        minLongList: 3,
+      });
+      const r = row4(html);
+      expect(r).toContain('data-exempt="true"');
+      expect(r).toContain("status-not-started");
+      expect(r).toContain("면제");
+      expect(r).toContain("면제됨"); // sr-only state word
+      expect(r).toContain("기존 사업 기회 — Pre-FS GO 요건 면제");
+      expect(r).not.toContain("충족됨");
+      expect(r).not.toContain("s6-pre-fs-link");
+    });
+
+    test("exempt counts as met for the collapsed line", () => {
+      const html = render({
+        gate: gate({ s6Status: "complete", s6Exempt: true }),
+        targets: [target("a")],
+        minLongList: 1,
+      });
+      expect(html).toContain('data-all-met="true"');
+      expect(html).toContain("4가지 완료기준을 모두 충족했습니다");
+    });
+
+    test("en locale carries row-4 copy with parity", () => {
+      const html = render(
+        {
+          gate: gate({ s6Missing: ["s6.pre_fs_go"], s6Blockers: [PROSE] }),
+          targets: [target("a")],
+          minLongList: 1,
+          stage: "S7",
+        },
+        "en",
+      );
+      expect(html).toContain("Pre-FS gate GO decision");
+      expect(html).toContain("Record the Pre-FS decision on S6");
+    });
   });
 
   test("fail-quiet: no engine read, a terminated process, or an unevaluated (locked) stage renders nothing", () => {
@@ -143,5 +245,6 @@ describe("S6CriteriaPanel", () => {
     expect(html).toContain("1/2 candidates carry the required attributes and source");
     expect(html).toContain("Open candidates can be cured on their detail screen");
     expect(html).toContain("Long List candidate required attributes and sources");
+    expect(html).toContain("Pre-FS gate GO decision");
   });
 });

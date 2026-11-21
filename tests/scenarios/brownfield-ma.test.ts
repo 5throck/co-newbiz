@@ -10,7 +10,7 @@ import {
   type Session,
 } from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal } from "./_support/deals.ts";
-import { recordGate, recordTransition, closeProjectViaModal, see, seeNot, revealTab } from "./_support/ui.ts";
+import { recordGate, openGatePanels, recordTransition, closeProjectViaModal, see, seeNot, revealTab } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
 
 let app: TestApp;
@@ -136,24 +136,24 @@ describe("brownfield M&A S1 to S12", () => {
     removeSecondTarget(app);
   }, 60_000);
 
-  test("S7 pre_fs GO, then target screening gate GO", async () => {
-    // Owner decision 2026-11-21 (Option A, design 2026-11-21-s67-completion-visibility Amendment):
-    // the page now hosts TWO GateDecisionPanels — the pre_fs panel sits in the S6 longlist block
-    // (DOM-first 의사결정 section, always mounted) and the approval tab holds a single-gate
-    // target_screening panel (mounted only when its tab is active). The first call targets panel
-    // 0 (the form defaults to pre_fs — single-gate panels render no gate select); the second
-    // targets panel 1, which openGatePanels reveals by clicking the 승인 기록 tab. The gateLabel
-    // arguments document intent; with one select per panel the form default decides the gate.
-    // Ladder order (screening -> pre_fs -> target_screening) matches the human flow; promotion
-    // requires the pre_fs GO.
+  test("S6 pre_fs GO is recorded on the S6 screen, then S7 target screening gate GO", async () => {
+    // ADR-0205 / design 2026-11-21-s67-completion-visibility Amendments 2-3: brownfield S6 is not
+    // complete until a human records the pre_fs GO, and the Pre-FS GateDecisionPanel renders ONLY
+    // on the S6 screen (bottom, after the long list) — never on S7. So pre_fs is recorded from
+    // /s6 first (single panel, form defaults to pre_fs); S7 then hosts exactly one gate panel,
+    // target_screening, on its approval tab (panel 0). Ladder order matches the human flow.
     await recordGate(
       s.page,
       app,
-      `/deals/${O}/s7`,
+      `/deals/${O}/s6`,
       "예비타당성 검토(Pre-FS)",
       "go",
       "S6 진출 형태 평가와 역량 격차 분석이 예비타당성 기준을 충족함",
     );
+    await visit(s.page, app, `/deals/${O}/s7`);
+    // S7 never renders the Pre-FS panel: its only gate panel is target_screening, on the approval tab.
+    await openGatePanels(s.page);
+    expect(await s.page.locator('section[aria-label="의사결정"]').count()).toBe(1);
     await recordGate(
       s.page,
       app,
@@ -161,7 +161,6 @@ describe("brownfield M&A S1 to S12", () => {
       "대상 선정",
       "go",
       "Short List 1순위 후보가 knock-out 기준을 통과함",
-      { panelIndex: 1 },
     );
     const rows = app.readDb((d) =>
       d

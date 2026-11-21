@@ -399,11 +399,13 @@ S1 시장분석 → S2 기회 발굴 → S3 시너지·전략적 적합성 → S
 - 후보 Universe의 정의·선정 기준이 기록되었다
 - 최소 커버리지 기준을 충족하는 Long List가 존재한다
 - Long List 후보에 필수 속성과 출처/근거가 기록되었다
+- pre_fs 게이트 GO 결정이 기록되었다
 
 **엔진 차단 키** (필수 산출물·완료 기준 번호는 1부터)
 - `s6.target_universe` — 산출물 1 · 완료 기준 1
 - `s6.longlist_attributes` — 완료 기준 3
 - `s6.longlist_coverage` — 산출물 2 · 완료 기준 2
+- `s6.pre_fs_go` — 완료 기준 4
 
 **적용 트랙**: brownfield
 

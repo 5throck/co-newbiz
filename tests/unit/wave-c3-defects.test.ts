@@ -38,6 +38,12 @@ resetDb();
 const demo = seedS1ToS12Demo(TEST_DB_PATH, { humanDecisions: false });
 const db = getDb(TEST_DB_PATH);
 const NOW = new Date().toISOString();
+// ADR-0205: humanDecisions:false leaves every human gate act out, but a fresh brownfield S6 is complete only with a
+// recorded pre_fs GO — record it (the human act the S6 screen ends with) so S7+ are evaluable for the prerequisite checks.
+db.run(
+  "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+  [ulid(), "opportunity", demo.opportunityId, "pre_fs", "go", "S6 Pre-FS GO fixture (ADR-0205)", "c3-analyst", NOW],
+);
 let cookie = "";
 
 beforeAll(async () => {

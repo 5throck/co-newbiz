@@ -1,9 +1,10 @@
 ---
 lang: en
 date: 2026-11-21
-status: implemented
+status: approved (Amendment 2 — Design Gate Row 0a passed 2026-11-21); Amendment 3 owner-requested 2026-11-21 (ReviewBuckets scope ruled by owner 2026-11-21; S7 hint proposed, not implemented, awaiting owner confirmation)
 owner: ux-designer-agent (design), pm (dispatch)
-related: docs/designs/2026-11-08-deal-shape-to-s7-design.md (s67 screen design of record), ADR-0195, ADR-0201, ADR-0202, docs/designs/2026-11-11-target-identity-resolution-design.md (PATCH D4 single-update-path of record), docs/designs/2026-11-17-deal-shape-viability-first-design.md, docs/design-system/design-tokens.md, docs/design-system/design-components.md, docs/design-system/design-screens.md
+amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; S7 back-link hint proposed, NOT implemented, awaiting owner confirmation)
+related: docs/designs/2026-11-08-deal-shape-to-s7-design.md (s67 screen design of record), ADR-0195, ADR-0201, ADR-0202, docs/designs/2026-11-11-target-identity-resolution-design.md (PATCH D4 single-update-path of record), docs/designs/2026-11-17-deal-shape-viability-first-design.md, docs/design-system/design-tokens.md, docs/design-system/design-components.md, docs/design-system/design-screens.md, process/flow.spec.yaml (S6 blockers — Amendment 2), app/web-next/lib/process-flow.ts (S6 predicate, gateGoPrerequisiteGaps), workspace ADR-0065 (accessibility standard), workspace ADR-0070 (UI preview verification), ADR for the S6 pre_fs blocker (pending — plan Row 1, process-governance-manager)
 spec: s67-completion-visibility
 ---
 
@@ -43,7 +44,8 @@ panel's form/verdict model (ADR-0201 shape is untouched).
 ## Screen-type judgment (explicit)
 
 Both surfaces are existing screens; no new screen is added. The s67 combined area
-(`/deals/{id}/s6`·`s7`, `/brownfield`) is a **P1 Registry** composite (per
+(`/deals/{id}/s6`·`s7`; `BrownfieldStage`'s sole caller is
+`app/deals/[id]/[stage]/page.tsx`) is a **P1 Registry** composite (per
 design-screens.md) that already stacks Universe (P1 write) → Long List (P1) →
 Short List + gate (P3) top-to-bottom. This design adds one **criteria strip**
 inside the Long List section and one **field group** inside the existing detail
@@ -640,13 +642,19 @@ predicate and blocker-key vocabulary byte-identical.
 
 ## Amendment (2026-11-21): pre_fs panel placement — Option A
 
+> **Superseded in part by Amendment 2 (2026-11-21).** The placement (pre_fs
+> panel directly under the criteria strip, rendered on both `/s6` and `/s7`)
+> and the "record pre_fs from the S7 screen" statement below are replaced.
+> The `S7DecisionTabs` → `gates={["target_screening"]}` change stands.
+
 **Owner decision.** The pre_fs `GateDecisionPanel` moves out of the S7 approval
 tab into the S6 longlist block. Implementation landed the same day (frontend
 dispatch; this section records the placement rationale).
 
 **What changed.**
 
-- `LonglistSection.tsx` renders the pre_fs gate panel immediately AFTER the
+- *(Superseded by Amendment 2 — Pre-FS now renders last in the S6 body and
+  never on S7.)* `LonglistSection.tsx` renders the pre_fs gate panel immediately AFTER the
   `S6CriteriaPanel` strip (`완료기준` strip → pre_fs gate panel → longlist
   table), mounted as a single-gate panel (`gates={["pre_fs"]}`) — no gate
   select, per the panel's single-gate rendering path.
@@ -665,7 +673,9 @@ matches judgment timing: the criteria strip answers whether the universe is
 workable; the pre_fs panel directly below is where that judgment is recorded;
 the longlist work follows under it.
 
-**Promoted steps unaffected.** The panel accepts a pre_fs decision wherever it
+**Promoted steps unaffected.** *(Superseded by Amendment 2 — the panel no
+longer mounts on `/deals/{id}/s7`; a pre_fs decision is recorded only from the
+S6 view, which remains reachable for any opportunity.)* The panel accepts a pre_fs decision wherever it
 mounts: an owner can still record the pre_fs GO on a deal that has already
 completed S7 from the same screen (the panel sits in the longlist block, which
 renders on both `/deals/{id}/s6` and `/deals/{id}/s7`), and the engine treats
@@ -678,3 +688,536 @@ approval tab, mounted on demand) and `openGatePanels` checks the requested
 index's panel for mount before clicking the owning tab. No i18n keys, tokens,
 styles, or backend contracts changed — `common.gate.pre_fs` already existed,
 and the panel is a `.market-section` card in both locations.
+
+## Amendment 2 (2026-11-21): S6-only Pre-FS, stage-scoped S6/S7 panels, S6 gated on Pre-FS GO
+
+**Status**: approved — Design Gate Row 0a passed 2026-11-21 (plan
+`agile-jingling-pillow`); owner rulings recorded at the end of this amendment. Supersedes the Amendment 1 placement. Design only;
+backend (engine/spec/keys), ADR (process-governance-manager) and frontend are
+separate rows.
+
+### Owner decisions (approved, 2026-11-21)
+
+1. **Pre-FS is S6-only.** The `pre_fs` `GateDecisionPanel` (`gates={["pre_fs"]}`)
+   renders at the very bottom of the S6 body, after the Long List table. It
+   does NOT render on S7 — no recording panel, no notice.
+2. **Checklist and promotion are S7-only.** The 9-item pre-check section
+   (`사전 검토 · 위원회 추천`, in `ShortlistSection`) and `PromotionPanel`
+   (`프로젝트로 추진`, S7→S8) render only on S7.
+3. **S6 is not complete until a human records a Pre-FS GO.** S7 stays locked
+   until then. New blocker key `s6.pre_fs_go`; `S6CriteriaPanel` gains a 4th
+   criterion row.
+4. **Circularity fix.** The brownfield `pre_fs` GO prerequisite becomes "S6 data
+   blockers clear" instead of "S6 complete".
+5. **Prop change.** `BrownfieldStage`'s `dealShapePanel?: boolean` becomes
+   `stage: "S6" | "S7"`.
+6. **Disabled-state consistency.** The S7 blocked reason keeps the
+   `S6 완료기준 미충족` wording; the Pre-FS GO is named as an open criterion with
+   an anchor to the Pre-FS panel on S6.
+
+### JTBD (delta)
+
+**Persona**: deal analyst (owner/analyst role) on a brownfield opportunity;
+the **decider** who records the Pre-FS gate is a human with gate rights (the
+non-negotiable: gate approval belongs to humans).
+
+**Job**: *when I have a workable Universe and a covered Long List, let me
+record the Pre-FS stop-loss judgment ("is it worth starting the screening and
+committing FS resources?") as the last act of S6, so S7 opens only after a
+person said GO — and when I am on S7, show me only S7 work.*
+
+Input → output: S6 data (Universe definition, qualified Long List) → a human
+`pre_fs` decision (GO / HOLD / KILL) → S6 complete → S7 opens (checklist,
+committee, approval tab, promotion).
+
+### Why bottom-of-S6 replaces Option A
+
+Option A put the panel above the Long List table, i.e. *before* the work it
+judges. With S6 completion now *depending* on the GO, the decision is the
+closing act of the stage: you read the criteria, finish the Long List, then
+decide. Bottom placement makes reading order = work order = focus order, and
+removes the S7 copy that made the same gate recordable from two routes.
+
+### Screen layout (after)
+
+```
+/deals/{id}/s6  — StageFrame (h1 S6, handoff strip, rail)
+┌────────────────────────────────────────────────────────────────────┐
+│ UniverseSection (목표 시장 정의)                                     │
+│ ── LonglistSection ─────────────────────────────────────────────── │
+│ │ SectionToolbar                                                   │
+│ │ S6CriteriaPanel [id=s6-criteria]                                 │
+│ │   ✓ Target Universe 정의                     [충족]              │
+│ │   ✓ Long List 후보 필수 속성·출처             [충족]              │
+│ │   ✓ Long List 최소 커버리지                   [충족]              │
+│ │   ✕ Pre-FS 게이트 GO 결정                     [미충족]            │
+│ │      Pre-FS 게이트 GO 결정이 필요합니다 (사람이 기록)  ← engine     │
+│ │      [Pre-FS 결정 기록으로 이동 ↓]  (href=#gate-decision-pre_fs)    │
+│ │ [status filter row] · data-table (Long List)                     │
+│ ── Pre-FS GateDecisionPanel [id=gate-decision-pre_fs] ── LAST ──── │
+│ │ 의사결정 — Pre-FS     (GO / HOLD / KILL, rationale, history)      │
+└────────────────────────────────────────────────────────────────────┘
+(no 사전 검토 checklist, no committee, no S7DecisionTabs, no PromotionPanel)
+
+/deals/{id}/s7  — StageFrame (h1 S7)
+┌────────────────────────────────────────────────────────────────────┐
+│ UniverseSection (read context, as today)                            │
+│ LonglistSection (read context; criteria strip incl. row 4 — a       │
+│   criterion row, not a Pre-FS panel or notice; Owner ruling 2)    │
+│ ShortlistSection: 사전 검토 · 위원회 추천 (9 items) → CommitteePanel │
+│   → S7DecisionTabs [진출 형태 평가][의사결정 — target_screening]     │
+│   → PromotionPanel (프로젝트로 추진)                                  │
+│ NO Pre-FS GateDecisionPanel, NO Pre-FS notice                       │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+Component-level placement (frontend implements):
+
+| Piece | S6 | S7 | Where it moves |
+|---|---|---|---|
+| `GateDecisionPanel gates={["pre_fs"]}` | yes, last child of the S6 body | **no** | out of `LonglistSection.tsx` (Amendment 1 mount) to the end of `BrownfieldStage` under `stage === "S6"` (after `LonglistSection`) |
+| `S6CriteriaPanel` (4 rows) | yes | yes (read context) | unchanged location |
+| `사전 검토 · 위원회 추천` section + `CommitteePanel` | **no** | yes | gated by `stage === "S7"` in `ShortlistSection.tsx` |
+| `S7DecisionTabs` | no | yes | was `dealShapePanel`, now `stage === "S7"` |
+| `PromotionPanel` | **no** | yes | gated by `stage === "S7"` in `ShortlistSection.tsx` |
+| Shortlist helper notes (eval-incomplete note, "target selection gate above…" caption) | no | yes | travel with the S7 block they describe |
+
+### Prop contract
+
+```ts
+// components/stages/brownfield/BrownfieldStage.tsx
+export function BrownfieldStage(props: {
+  opportunityId: string;
+  onSaved?: () => void;
+  stage: "S6" | "S7"; // replaces dealShapePanel?: boolean
+}): JSX.Element;
+// ShortlistSection receives the same `stage` (replaces its dealShapePanel prop).
+```
+
+Callers: `app/deals/[id]/[stage]/page.tsx:292` passes `stage={stageId}`
+(`stageId` is already narrowed to S6/S7 on that branch).
+
+`stage` is **required**, with exactly the values `"S6" | "S7"` — there is no
+`"combined"` value (Owner ruling 1). `app/brownfield/page.tsx` never renders
+`BrownfieldStage`; `app/deals/[id]/[stage]/page.tsx` is its sole caller.
+
+### Engine contract notes (backend implements; ADR records)
+
+1. **New blocker `s6.pre_fs_go`** (`lib/process-blocker-keys.ts`, catalog
+   `processBlockers.s6_pre_fs_go`). Pushed when the latest `pre_fs` row for the
+   opportunity (`latestGateDecisions("opportunity", id).get("pre_fs")`) is not
+   `go`. **Ordering and totality**: it is always the LAST entry, and it is
+   evaluated in every non-grandfathered S6 branch, including the
+   "no Universe" early return — so `blockers[]`/`missing[]` stay index-aligned
+   (§ API A) and row 4 never renders "met" just because an earlier branch
+   returned early.
+2. **Split the S6 predicate**: `s6DataComplete(opp)` (target_universe,
+   longlist_attributes, longlist_coverage — today's body) and the S6 predicate
+   = data + `s6.pre_fs_go`.
+3. **Circularity fix — `gateGoPrerequisiteGaps` case `"pre_fs"`, brownfield**:
+   replace `need(["S6"])` with "`s6DataComplete` has no missing keys" (gap text
+   per open data blocker, e.g. `S6 대상 후보 발굴 데이터 미완료 — <criterion>`).
+   `need(["S4"])` and `pushAiDraftReviewGap` stay unchanged. Greenfield path
+   (`need(["S5"])`) unchanged. Without this, a GO can never be recorded
+   (S6 needs GO; GO needs S6).
+4. **Revocation — latest decision wins**: a HOLD recorded after a GO makes the
+   latest row HOLD → `s6.pre_fs_go` reopens → S6 regresses to `current` → S7
+   relocks (S7 work already recorded is kept, only locked). A KILL terminates
+   the process (`evaluateProcess` already marks every stage `terminated`), so
+   the strip hides per the existing terminated rule and the StageFrame shows
+   the terminated state.
+5. **Engine prose** (Korean, push order): open with no row →
+   `Pre-FS 게이트 GO 결정이 필요합니다 (사람이 기록)`; latest is HOLD →
+   `Pre-FS 게이트의 최근 결정이 HOLD입니다 — GO가 다시 기록되어야 S7이 열립니다`.
+   Both map to the one key `s6.pre_fs_go`.
+6. **Grandfathering**: opportunities with `created_at` before a NEW cut-off
+   constant (in `lib/wave-f-date.ts` style) never get `s6.pre_fs_go`. The
+   cut-off is the **release date of this change** — every opportunity existing
+   at release is exempt; backend sets the constant to that date (Owner
+   ruling 4). `WAVE_F_PREDICATE_DATE` is not reused (already past).
+7. **Exempt signal for the strip (needed for honest UI)**: so that row 4 can
+   say `면제` instead of a false `충족` on a grandfathered opportunity with no
+   GO, each `stages[]` entry of `GET /api/opportunities/[id]/process` gains an
+   additive `exempt: boolean` (Owner ruling 3). It is **server-decided**: the
+   engine sets it `true` on the S6 entry when grandfathering skipped
+   `s6.pre_fs_go`, `false` otherwise (and `false` on every other stage).
+   Additive only — every existing consumer is unaffected. The client cannot
+   tell "met" from "exempt" from `missing` alone, and it performs **no**
+   client-side `created_at` vs cut-off comparison — the engine field is the
+   single source of truth.
+8. **flow.spec / generated files**: S6 blocker
+   `{ key: s6.pre_fs_go, artifacts: [], criteria: [3] }` + completion criterion
+   `pre_fs 게이트 GO 결정이 기록되었다`; `meta.version` bump; regenerate via
+   `scripts/co-newbiz/generate-process-flow.ts`; `process-ssot-check` green.
+   This is a policy/procedure change → ADR (plan Row 1).
+
+### Criteria strip — 4th row (`S6CriteriaPanel`)
+
+- `S6_CRITERIA` gains
+  `{ key: "s6.pre_fs_go", catalogKey: "processBlockers.s6_pre_fs_go" }` as the
+  last entry. Row state follows the existing rule (key present in `missing` →
+  `미충족` with the index-paired engine prose; S6 `exempt === true` → `면제`;
+  otherwise absent → `충족`).
+- **Row 4 states and secondary line**:
+
+  | State | Glyph + chip | Secondary line | Action element |
+  |---|---|---|---|
+  | Data criteria still open, no GO | ✕ `미충족` | `위 세 가지 기준을 먼저 충족해야 Pre-FS 결정을 기록할 수 있습니다` | none on S6 (the panel below shows its own prerequisite gaps) |
+  | Data criteria met, no GO | ✕ `미충족` | engine prose | link `Pre-FS 결정 기록으로 이동 ↓` → `#gate-decision-pre_fs` |
+  | Latest = HOLD (revoked) | ✕ `미충족` | engine HOLD prose | same link |
+  | Latest = GO | ✓ `충족` | — | — |
+  | Grandfathered | – `면제` (`status-not-started`) | `기존 사업 기회 — Pre-FS GO 요건 면제` | — |
+
+  On S7 the link target is cross-route: `/deals/{id}/s6#gate-decision-pre_fs`
+  with label `S6에서 Pre-FS 결정 기록 →`.
+- **All-met copy**: `criteriaPanel.allMet` changes from `3가지` to `4가지`
+  (an exempt row counts as met for the collapsed line).
+- The anchor target is the panel's existing section id
+  `gate-decision-pre_fs` (`GateDecisionPanel` already emits
+  `id={`gate-decision-${panelKey}`}`) — no new wrapper markup; frontend adds
+  `scroll-margin-top` via the existing `SECTION_IDS` convention.
+
+### Disabled states and reasons
+
+- **Deal-shape buttons on S7** (`AI 추천`, `기록`): unchanged rule
+  (`s7Blocked` = S6 not complete), unchanged `blockedReasonS7` text. The
+  adjacent link becomes specific: when `s6Missing` is exactly
+  `["s6.pre_fs_go"]`, the link reads `Pre-FS GO 기록 (S6) →` and points to
+  `/deals/{id}/s6#gate-decision-pre_fs`; otherwise it keeps
+  `S6 완료기준 보기 →` (`#s6-criteria`). Same `aria-describedby` wiring.
+- **`PromotionPanel` on S7**: no new client logic — its existing
+  engine-derived readiness already reflects the S6 regression (S7 cannot be
+  complete when S6 is not). No change to its copy.
+- **Pre-FS panel on S6 with data criteria open**: the panel's existing
+  prerequisite-gap rendering (driven by `gateGoPrerequisiteGaps`) shows the
+  data gaps — after the circularity fix it never shows `S6 미완료`. No new
+  copy inside the panel.
+- **HOLD-after-GO UX implication**: recording HOLD is the only in-app path
+  that relocks a stage that was already open. The panel's existing
+  confirmation step must state the consequence. One new caption key, shown in
+  the pre_fs panel's confirm step only when the latest decision is GO and the
+  new choice is HOLD (`common.gate.preFsHoldRevokesGo`, exact string in the
+  i18n table). KILL already carries its own learning-required
+  confirm and terminates; no extra copy. This is the panel's existing
+  `onRecorded` path — no new component.
+
+### i18n — new and changed keys (Amendment 2)
+
+| Key | ko | en |
+|---|---|---|
+| `processBlockers.s6_pre_fs_go` (new; backend) | `Pre-FS 게이트 GO 결정` | Pre-FS gate GO decision |
+| `stages.s67.criteriaPanel.allMet` (changed) | `4가지 완료기준을 모두 충족했습니다` | All four completion criteria are met |
+| `stages.s67.criteriaPanel.exemptChip` (new) | `면제` | Exempt |
+| `stages.s67.criteriaPanel.srExempt` (new) | `면제됨` | exempt |
+| `stages.s67.criteriaPanel.preFsExemptNote` (new) | `기존 사업 기회 — Pre-FS GO 요건 면제` | Existing opportunity — Pre-FS GO requirement waived by cut-off |
+| `stages.s67.criteriaPanel.preFsPrereq` (new) | `위 세 가지 기준을 먼저 충족해야 Pre-FS 결정을 기록할 수 있습니다` | Meet the three criteria above before recording the Pre-FS decision |
+| `stages.s67.criteriaPanel.preFsLink` (new) | `Pre-FS 결정 기록으로 이동` | Go to the Pre-FS decision |
+| `stages.s67.criteriaPanel.preFsLinkS7` (new) | `S6에서 Pre-FS 결정 기록` | Record the Pre-FS decision on S6 |
+| `stages.s67.dealShapePanel.blockedReasonPreFsLink` (new) | `Pre-FS GO 기록 (S6)` | Record the Pre-FS GO (S6) |
+| `common.gate.preFsHoldRevokesGo` (new) | `HOLD를 기록하면 기존 GO가 무효가 되고 S6이 미완료로 돌아가 S7이 잠깁니다. 이미 기록된 S7 작업은 보존됩니다.` | Recording HOLD revokes the earlier GO: S6 becomes incomplete again and S7 locks. S7 work already recorded is kept. |
+
+Reused unchanged: `blockedReasonS7`, `blockedReasonLink`, `common.gate.pre_fs`,
+`criteriaPanel.metChip/openChip/srMet/srOpen`. Engine prose (Korean) is
+localized through `localizeBlocker` as for the other three rows.
+
+### Components and tokens consumed
+
+Existing only: `GateDecisionPanel`, `S6CriteriaPanel`, `PrimaryAction`
+reason-contract treatment (adjacent reason + `aria-describedby`, as in the base
+design), `status-chip status-green / status-amber / status-not-started`,
+`.market-section`, `SectionToolbar`, `--space-*`, `--fs-caption`. No new
+component, token, pattern, or icon. Primary-action discipline: on S6 the Pre-FS
+record is the stage's single decisive human act (the panel's own primary); on
+S7 the committee review stays primary. No escalation to `design-system-agent`
+beyond the three already listed.
+
+### Accessibility (WCAG 2.1 AA — workspace ADR-0065)
+
+- **Not colour-only (1.4.1)**: row 4 uses glyph (✓/✕/–, `aria-hidden`) +
+  visible chip text + sr-only state word (`충족됨`/`미충족`/`면제됨`).
+- **Focus/reading order (1.3.2, 2.4.3)** on S6: Universe → Long List toolbar →
+  criteria strip (row 4 link) → status filters → Long List table (scroll
+  region `tabIndex=0`) → **Pre-FS panel last** (decision radios → rationale →
+  record button → history). DOM order = visual order; no positive `tabindex`.
+- **Anchor navigation (2.4.1, 2.4.7)**: `#gate-decision-pre_fs` targets the
+  panel section with `scroll-margin-top`; frontend moves focus to the panel
+  heading on hash arrival (heading gets `tabIndex={-1}`) so keyboard and
+  screen-reader users land on the decision, not at the top of the page.
+- **Disabled reasons (4.1.2)**: the deal-shape buttons keep `disabled` +
+  adjacent visible reason + `aria-describedby`; the Pre-FS link is a separate
+  focusable element.
+- **Consequence disclosure (3.3.4)**: the HOLD-revokes-GO caption sits in the
+  confirm step before submission and is referenced by `aria-describedby` from
+  the record button.
+- **Stage scoping**: S7 removes the Pre-FS panel from the DOM (not
+  `hidden`/`display:none`-only), so assistive tech never reaches a non-actionable
+  copy. Both themes via token pairs; captions ≥ `--fs-caption` (13px).
+
+### Preview verification (workspace ADR-0070)
+
+Frontend must attach preview evidence for:
+
+- **Breakpoints (≥2)**: desktop 1440 and narrow 390 (plus 768 recommended),
+  both themes at 1440. S6 shows Pre-FS as the last section and no checklist/
+  promotion; S7 shows checklist + committee + approval tab + `프로젝트로 추진`
+  and no Pre-FS panel or notice.
+- **Interactions (≥1, recommended 3)**: (a) row-4 link on S6 scrolls and
+  focuses the Pre-FS panel; (b) record GO on a data-complete deal → strip
+  collapses to the all-met line and S7 unlocks; (c) record HOLD after GO →
+  revoke caption visible in confirm, S6 reopens, S7 deal-shape buttons show
+  the `Pre-FS GO 기록 (S6)` link.
+
+### Measurable success criteria
+
+1. **Placement correctness (render tests, 100%)**: on `stage="S6"` the DOM
+   contains exactly one `#gate-decision-pre_fs` and it is the last
+   `.market-section` of the stage body; it contains no checklist section and
+   no `PromotionPanel`. On `stage="S7"` the DOM contains zero pre_fs panels and
+   zero elements whose text names a Pre-FS panel other than the criteria row.
+2. **Gate correctness (engine tests, 100%)**: S6 incomplete without GO;
+   complete with GO; HOLD after GO → incomplete; grandfathered → complete
+   without GO; pre_fs GO accepted when only data blockers are clear
+   (circularity regression).
+3. **Name-the-blocker (moderated, n ≥ 5, ko UI)**: on a data-complete deal
+   without GO, ≥ 90% answer "why is S7 locked?" with "Pre-FS GO not recorded"
+   from the screen alone in ≤ 20 s, and ≥ 90% reach the Pre-FS panel from the
+   S7 screen in ≤ 2 clicks.
+4. **No double recording**: zero pre_fs rows recorded from a `/s7` URL
+   (audit-log route field) in the first 30 days after release.
+
+### Owner rulings (2026-11-21)
+
+The owner approved Amendment 2 and ruled on its four open questions:
+
+1. **`stage` prop**: `stage: "S6" | "S7"` is **required**; there is no
+   `"combined"` value. `app/brownfield/page.tsx` never renders
+   `BrownfieldStage`; its sole caller is `app/deals/[id]/[stage]/page.tsx`.
+2. **Row 4 on S7**: the S6 criteria strip stays on S7, and its 4th row names
+   the Pre-FS GO and links to `/deals/{id}/s6#gate-decision-pre_fs`. This is a
+   criterion row, **not** a Pre-FS panel or notice, so it does not violate
+   "no Pre-FS panel on S7" (owner decision 1).
+3. **Exempt signal**: add the additive `stages[].exempt` **boolean** to the
+   process API (`GET /api/opportunities/[id]/process`). It is server-decided;
+   the client does no `created_at` comparison (the fallback is dropped).
+4. **Grandfather cut-off**: the release date of this change — every
+   opportunity existing at release is exempt. Backend sets the constant to the
+   release date.
+
+## Amendment 3 (2026-11-21): S6-only Universe and candidate-discovery authoring sections
+
+**Status**: owner request, recorded during preview verification of Amendment 2
+(2026-11-21). It extends Amendment 2's stage scoping and changes no engine,
+API, or process-spec contract. The `ReviewBuckets` scope is settled by the
+owner ruling at the end of this amendment. The S7 back-link hint was **not**
+requested by the owner; it is recorded only as a proposal, **NOT implemented,
+awaiting owner confirmation**. Design only; frontend implements in a separate
+row.
+
+### Owner request (2026-11-21)
+
+While checking the Amendment 2 preview, the owner asked that the **S7 screen
+(`stage === "S7"`) not render the S6-only authoring sections**:
+
+1. The **`평가 대상 방향성` Target Universe card**: `UniverseSection`'s
+   Universe card (read view plus the `수정` entry point) and its edit modal
+   `UniverseEditModal`.
+2. The **`후보 발굴 — 후보 전체 목록 채우기` discovery/registration card**: the
+   second card inside `UniverseSection` (market/company master proposals,
+   web search, the `후보 등록` form with filing-company lookup) and the web
+   search result modal `WebDiscoveryPanel`.
+
+S7 keeps the **Long List table** (judgment, ranking, and building the final
+candidate list are S7 work), the **S6 criteria strip** (including the row-4
+link to `/deals/{id}/s6#gate-decision-pre_fs`), the **9-item checklist**,
+**committee**, **approval tabs**, the **deal-shape panel**, and
+**`PromotionPanel`**. S6 keeps everything it has today (Amendment 2 layout).
+
+### JTBD (delta)
+
+*When I am on S7, I am choosing among candidates that S6 already defined and
+collected. Show me the list I judge and the decisions I record, not the forms
+for redefining the market or adding candidates. Those are S6 jobs, and doing
+them changes the S6 completion state.*
+
+S6 is the authoring stage for the Universe and the Long List population, and
+S7 is the judging stage. Amendment 2 already applied this split to the Pre-FS
+panel, the checklist, and promotion. Amendment 3 applies it to the two
+remaining S6 write surfaces.
+
+### Component-per-stage table (supersedes Amendment 2's table for these rows)
+
+| Piece | S6 | S7 | Where it is gated |
+|---|---|---|---|
+| `UniverseSection`: Universe card (`평가 대상 방향성`, read view + `수정`) | yes | **no** (new) | `BrownfieldStage.tsx`: render `<UniverseSection>` only when `stage === "S6"` |
+| `UniverseSection`: discovery card (`후보 발굴 — 후보 전체 목록 채우기`, master/web search, `후보 등록` form) | yes | **no** (new) | same gate (both cards live in `UniverseSection` under the `s6s7-universe` wrapper) |
+| `UniverseEditModal` | yes | **no** (new) | `stage === "S6"` in `BrownfieldStage.tsx` |
+| `WebDiscoveryPanel` (web search result modal) | yes | **no** (new) | `stage === "S6"` in `BrownfieldStage.tsx` |
+| S7 back-link hint (`후보 추가·Universe 수정은 S6에서` + `S6로 이동 →`) | no | **Proposed — NOT implemented, awaiting owner confirmation** | would sit in `BrownfieldStage.tsx`, S7 only, directly above `LonglistSection`; not rendered today |
+| `LonglistSection` (toolbar, AI bulk eval, Long List table, judgment/ranking) | yes | yes | unchanged |
+| `S6CriteriaPanel` (4 rows, row-4 cross-route link on S7) | yes | yes | unchanged (Amendment 2) |
+| `GateDecisionPanel gates={["pre_fs"]}` | yes, last | no | unchanged (Amendment 2) |
+| `사전 검토 · 위원회 추천` (9 items) + `CommitteePanel` | no | yes | unchanged (Amendment 2) |
+| `S7DecisionTabs` (deal shape, `target_screening` approval) | no | yes | unchanged (Amendment 2) |
+| `PromotionPanel` | no | yes | unchanged (Amendment 2) |
+| `ReviewBuckets` (`stageArtifactTabs(stage)`) | S6 tabs only | S7 tabs only | `BrownfieldStage.tsx`: `artifacts={stageArtifactTabs(stage)}` (owner ruling 2026-11-21, see below); the S6 Universe bucket is no longer shown on S7 |
+
+The gate removes the pieces from the S7 DOM. It is not a `hidden` attribute
+or a `display:none` rule. On S7 the `useBrownfieldTargets` hooks may still
+load Universe data (the criteria strip needs `min_long_list`). Only rendering
+changes, not data loading. The `stage` prop contract from Amendment 2 is
+unchanged.
+
+### S7 layout (after)
+
+```
+/deals/{id}/s7  — StageFrame (h1 S7)
+┌────────────────────────────────────────────────────────────────────┐
+│ [disabled 위원회 추천 검토 실행 + reason]  (when applicable, as today) │
+│ ReviewBuckets — stageArtifactTabs("S7") only (no S6 buckets)        │
+│ [Proposed — NOT implemented, awaiting owner confirmation:           │
+│  one-line hint 후보 추가·Universe 수정은 S6에서 · S6로 이동 →]        │
+│ LonglistSection: toolbar · S6CriteriaPanel · filters · Long List    │
+│ ShortlistSection: 사전 검토 · 위원회 추천 (9) → CommitteePanel        │
+│   → S7DecisionTabs → PromotionPanel                                 │
+│ NO Universe card, NO 후보 발굴 card, NO edit/web-search modals,      │
+│ NO Pre-FS panel                                                     │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### No write surface for Universe and candidate registration on S7
+
+After this change S7 has **no** way to edit the Universe definition or add a
+candidate. Analysts go back to S6 for both. This is intended:
+
+- **Both actions are S6 data.** They feed `target_universe`,
+  `longlist_attributes`, and `longlist_coverage`. An edit made "from S7" is
+  really an S6 edit, and it can reopen S6 (for example, a new candidate without
+  its required attributes and source reopens `longlist_attributes` → S6
+  regresses → S7 relocks, the same rule as Amendment 2 revocation). That
+  consequence belongs on the screen that shows the S6 criteria with their
+  fixes, which is S6.
+- **Per-candidate fixes stay reachable.** The criteria strip on S7 keeps its
+  per-candidate `수정` links to `/brownfield/targets/{id}?edit=1` (Fix ①-b,
+  Fix ②). Completing a listed candidate's `발굴 출처` or attributes does not
+  require S6.
+
+**Proposed — NOT implemented, awaiting owner confirmation: a one-line S7
+hint.** The owner did not request this hint. It is a ux-designer proposal
+only. It is not shipped behavior, frontend must not build it until the owner
+confirms, and the S7 screen today renders no hint. Rationale for the proposal:
+
+1. **Stage linkage (doctrine) and orphaned jobs.** Analysts often notice a
+   missing candidate during S7 ranking. Without a pointer, the place where
+   they used to do this job simply disappears with nothing to tell them where
+   it went. One line closes that gap at the moment it occurs.
+2. **The S7 screen loses its only Universe read view.** The proposed hint
+   would also be the path for *reading* the Universe definition while judging candidates.
+3. **Low cost.** One caption line with a link. It adds no new component,
+   modal, or action, and the primary action stays the committee review.
+
+Proposed spec (applies only if the owner confirms):
+
+- Placement: S7 only, immediately above `LonglistSection` (after
+  `ReviewBuckets`), as a `<p>` caption (`--fs-caption`, `--muted-fg`), not a
+  card or alert.
+- Copy: `후보 추가·Universe 수정은 S6에서` + link `S6로 이동 →`.
+- Link: `s6#s6s7-universe` (relative, the same convention as the row-4 link in
+  `S6CriteriaPanel`, because the route id may be a carrier id). Target is the
+  existing `SECTION_IDS.universe` wrapper, which already has
+  `scroll-margin-top`.
+- Shown to every role. Viewers use it to read the Universe, and S6 then
+  applies its own `canAct` rules.
+- i18n (proposed keys — NOT implemented, awaiting owner confirmation; do not
+  add them to the ko/en catalogs until confirmed, then keep ko/en parity):
+
+  | Key | ko | en |
+  |---|---|---|
+  | `stages.s67.s7AuthoringHint.text` | `후보 추가·Universe 수정은 S6에서` | Add candidates or edit the Universe on S6 |
+  | `stages.s67.s7AuthoringHint.link` | `S6로 이동` | Go to S6 |
+
+### Accessibility (WCAG 2.1 AA, workspace ADR-0065)
+
+- **DOM removal (4.1.2, 1.3.1)**: on S7 the DOM contains no
+  `#s6s7-universe`, no `aria-label` sections for `목표 시장 정의` /
+  `후보 발굴`, no `후보 등록` form controls, and no `UniverseEditModal` /
+  `WebDiscoveryPanel` dialog roots. Assistive tech never reaches a write
+  surface that does not belong to the stage.
+- **Heading order (1.3.1, 2.4.6)** on S7: `h1` (StageFrame) → ReviewBuckets
+  heading (if rendered) → Long List `SectionToolbar` `h2` → Shortlist / committee
+  / decision `h2`s. The removed Universe and discovery toolbars were `h2`
+  siblings of the Long List toolbar, so removing them leaves no level skip. The
+  first `h2` after the stage chrome is now the Long List title. (Proposed hint,
+  NOT implemented, awaiting owner confirmation: it would be a paragraph, not a
+  heading.)
+- **Focus order (2.4.3)** on S7: stage chrome → ReviewBuckets (S7 tabs only) →
+  Long List toolbar (AI bulk eval, criteria dialog) → criteria strip (row-4 S6
+  link, per-candidate `수정` links) → filters → table → checklist → committee →
+  decision tabs → promotion. DOM order matches visual order, with no positive
+  `tabindex`. (Proposed hint, NOT implemented, awaiting owner confirmation: its
+  link would sit between ReviewBuckets and the Long List toolbar.)
+- **Link purpose (2.4.4)** — Proposed, NOT implemented, awaiting owner
+  confirmation: if built, the hint link's accessible name is the sentence plus
+  `S6로 이동` (one text run, not `here`).
+- S6 accessibility is unchanged from Amendment 2.
+
+### Preview verification (workspace ADR-0070), delta
+
+Add the following to Amendment 2's preview evidence:
+
+- **Breakpoints**: at 1440 (both themes) and 390, S7 shows no `평가 대상
+  방향성` card and no `후보 발굴` card, and the first section under
+  `ReviewBuckets` is the Long List. S6 still shows both cards above the Long
+  List, and Pre-FS is last.
+- **ReviewBuckets (owner ruling)**: S7 shows only S7 artifact tabs (no `S6
+  평가 대상 방향성(Target Universe)` or `S6 대상 기업 롱리스트` bucket); S6
+  shows only S6 artifact tabs.
+- **DOM check (S7)**: `document.querySelector("#s6s7-universe") === null`, no
+  `후보 등록` input, and no web search or Universe edit dialog in the tree.
+- **Interaction** — Proposed, NOT implemented, awaiting owner confirmation:
+  if the hint is built, clicking its link opens `/deals/{id}/s6` scrolled to
+  the Universe card. Not a check for the current build.
+- **Render tests**: extend `tests/unit/s67-stage-scoping.test.ts` so that with
+  `stage="S7"` none of the four removed pieces renders and `ReviewBuckets`
+  receives only `stageArtifactTabs("S7")`, and with `stage="S6"` all four
+  render and `ReviewBuckets` receives only `stageArtifactTabs("S6")`. (Hint
+  assertions are added only if the owner confirms the proposal.)
+
+### Measurable success criteria (delta)
+
+1. **Scoping correctness (render tests, 100%)**: as in the render-test bullet
+   above.
+2. **No orphaned job (moderated, n ≥ 5, ko UI)** — applies only if the
+   proposed hint is confirmed and built (Proposed — NOT implemented, awaiting
+   owner confirmation): given "you noticed a missing candidate while ranking
+   on S7", ≥ 90% reach the S6 `후보 등록` form in ≤ 2 clicks from S7.
+
+### Owner ruling (2026-11-21): `ReviewBuckets` scope
+
+**Ruling**: on the s67 screen, `ReviewBuckets` shows **only the current
+stage's artifact tabs**, `artifacts={stageArtifactTabs(stage)}`. The S6 screen
+shows the S6 tabs (`stage:S6:1–2`) and the S7 screen shows the S7 tabs
+(`stage:S7:1–4`). The `3단계 검토 — S6 평가 대상 방향성(Target Universe)`
+bucket (and `S6 대상 기업 롱리스트`) is no longer shown on S7. This replaces
+the earlier combined `stageArtifactTabs("S6", "S7")` call on both routes;
+frontend implements it in `BrownfieldStage.tsx`.
+
+Background (previous behavior): the combined call made S7 show the S6
+Universe bucket even though, after Amendment 3, S7 no longer shows the
+Universe artifact that bucket reviews. Reasons supporting the ruling:
+
+1. **Review needs the artifact in view.** The review model asks the human to
+   separate *verified* / *could not verify* / *needs judgment*. Reviewing the
+   Universe from a screen that no longer shows it pushes reviewers toward
+   "could not verify" or, worse, a blind pass.
+2. **S6 review belongs to S6 completion.** S6 artifacts are reviewed before the
+   Pre-FS GO, which is already S6-only (Amendment 2). Keeping their review
+   buckets on S7 recreates the "same act from two routes" pattern that
+   Amendment 2 removed for Pre-FS.
+3. **Consistency.** Every other stage screen passes a single stage
+   (`stageArtifactTabs("S2")`, `("S8")`). The combined S6+S7 call is a holdover
+   from the old combined s67 screen.
+
+Trade-off considered and closed by the ruling: the Long List table remains on
+S7, so the `S6 대상 기업 롱리스트` bucket could arguably have stayed there too.
+The owner ruled for strict per-stage scoping, so no S6 bucket is carried onto
+S7.

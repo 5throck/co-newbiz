@@ -244,8 +244,8 @@ export const ADR_0192_PREDICATE_DATE = "2026-11-06";
  *    the project was pinned to when it entered the pipeline), falling back to
  *    md_project.created_at when it has no pin.
  */
-export { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
-import { WAVE_F_PREDICATE_DATE } from "./wave-f-date.ts";
+export { WAVE_F_PREDICATE_DATE, PRE_FS_S6_GATE_DATE } from "./wave-f-date.ts";
+import { WAVE_F_PREDICATE_DATE, PRE_FS_S6_GATE_DATE } from "./wave-f-date.ts";
 import { readTargetScope } from "../../../db/repositories/entry-market.repository.ts";
 import { cleanList, holdBlockerText } from "./review/review-display.ts";
 import { resolveTrack } from "./project-track.ts";
@@ -257,6 +257,13 @@ import { resolveWaccConfirmation, type WaccMissingItem } from "../../../db/lib/w
  * never disagree about grandfathering on the same screen). */
 export function opportunityGrandfathered(opp: { created_at: string | null }): boolean {
   return (opp.created_at ?? "") < WAVE_F_PREDICATE_DATE;
+}
+
+/** ADR-0205: opportunities created before PRE_FS_S6_GATE_DATE never get the
+ * `s6.pre_fs_go` blocker. Same comparison semantics as opportunityGrandfathered,
+ * against its own cut-off (WAVE_F_PREDICATE_DATE is already past). */
+export function opportunityPreFsS6Grandfathered(opp: { created_at: string | null }): boolean {
+  return (opp.created_at ?? "") < PRE_FS_S6_GATE_DATE;
 }
 
 function projectGrandfathered(project: { id: string; created_at: string | null }): boolean {
@@ -309,6 +316,10 @@ export interface ProcessEvaluation {
        */
       blockers: string[];
       missing: string[];
+      /** ADR-0205 — true only when grandfathering skipped a blocker for this stage (S6 `s6.pre_fs_go`
+       * on an opportunity created before PRE_FS_S6_GATE_DATE); false elsewhere. Server-decided: clients
+       * must not compare created_at themselves, so "exempt" is never confused with "met". */
+      exempt?: boolean;
     }
   >;
   /** opportunity 전용 — 이미 프로젝트로 추진(승격)됐다면 그 project id. 승격
@@ -450,13 +461,98 @@ export function latestRouteDecision(
 // documented default for unmapped stages) — the engine body stays untouched.
 // Entries return the full evaluation (blockers/missing included) so early
 // returns behave identically to the original inline branches.
-type StageEvaluation = { complete: boolean; blockers: string[]; missing: string[] };
+type StageEvaluation = {
+  complete: boolean;
+  blockers: string[];
+  missing: string[];
+  /** True when a grandfathering rule skipped a blocker the stage would otherwise carry (S6 `s6.pre_fs_go`, ADR-0205). */
+  exempt?: boolean;
+};
 interface OpportunityStageArgs {
   opp: OpportunityRow;
 }
 interface ProjectStageArgs {
   project: ProjectRowLite;
   gateStatus: Partial<Record<GateId, GateVerdict>>;
+}
+
+function s6DataEvaluation(opp: OpportunityRow): { blockers: string[]; missing: string[] } {
+  const blockers: string[] = [];
+  const missing: string[] = [];
+  // flow.spec S6 (brownfield only): Target Universe 정의 + Long List 최소 커버리지.
+  let universe: { min_long_list?: number } | null = null;
+  try {
+    universe = opp.target_universe_json ? (JSON.parse(opp.target_universe_json) as { min_long_list?: number }) : null;
+  } catch {
+    /* treat as undefined */
+  }
+  if (!universe) {
+    blockers.push("Target Universe 정의가 필요합니다 (선정 기준·커버리지·최소 후보 수)");
+    missing.push(blocker("s6.target_universe"));
+    return { blockers, missing };
+  }
+  const minLongList =
+    typeof universe.min_long_list === "number" && universe.min_long_list > 0 ? universe.min_long_list : 3;
+  // Coverage measures how many candidates the Long List DISCOVERED — all
+  // registered rows regardless of status. Exclusions are the legitimate
+  // OUTCOME of S7 screening; counting only non-excluded made every
+  // post-screening exclusion retroactively regress S6 and re-lock S7+.
+  const longList = (
+    getDb().query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ?").get(opp.id) as { c: number }
+  ).c;
+  // Wave F-6: only candidates that carry the required attributes AND a source
+  // count toward coverage (brownfield-target-identification procedure).
+  // Grandfathered opportunities keep the raw row count.
+  let covered = longList;
+  if (!opportunityGrandfathered(opp)) {
+    const candidates = listTargets(opp.id);
+    const incomplete = candidates.filter((t) => longListCandidateGaps(t).length > 0);
+    covered = candidates.length - incomplete.length;
+    if (incomplete.length > 0) {
+      blockers.push(
+        `필수 속성·출처가 없는 Long List 후보 ${incomplete.length}건 — ${incomplete
+          .slice(0, 3)
+          .map((t) => t.company_name)
+          .join(", ")}${incomplete.length > 3 ? " 외" : ""} (식별자·Universe 적합 메모·발굴 출처 기록 필요)`,
+      );
+      missing.push(blocker("s6.longlist_attributes"));
+    }
+  }
+  if (covered < minLongList) {
+    blockers.push(
+      `Long List 커버리지 부족 (${covered}/${minLongList}${covered !== longList ? " — 필수 속성·출처를 갖춘 후보만 산입" : ""})`,
+    );
+    missing.push(blocker("s6.longlist_coverage"));
+  }
+  return { blockers, missing };
+}
+
+/** S6 data blockers (target_universe, longlist_attributes, longlist_coverage) - the part of S6 a person can
+ * satisfy before the Pre-FS gate. gateGoPrerequisiteGaps("pre_fs") uses this (ADR-0205 circularity fix). */
+export function s6DataBlockers(opp: OpportunityRow): { blockers: string[]; missing: string[] } {
+  return s6DataEvaluation(opp);
+}
+
+/** S6 = data blockers + `s6.pre_fs_go`, always LAST, also after the no-Universe early return, so
+ * blockers[] and missing[] stay index-aligned (ADR-0205). The effective verdict is read (not raw), and the
+ * blocker is skipped for opportunities created before PRE_FS_S6_GATE_DATE. */
+function evaluateS6(opp: OpportunityRow): StageEvaluation {
+  const { blockers, missing } = s6DataEvaluation(opp);
+  let exempt = false;
+  if (opportunityPreFsS6Grandfathered(opp)) {
+    exempt = true;
+  } else {
+    const latest = latestGateDecisions("opportunity", opp.id).get("pre_fs");
+    if (latest?.decision !== "go") {
+      blockers.push(
+        latest?.decision === "hold"
+          ? "Pre-FS 게이트의 최근 결정이 HOLD입니다 — GO가 다시 기록되어야 S7이 열립니다"
+          : "Pre-FS 게이트 GO 결정이 필요합니다 (사람이 기록)",
+      );
+      missing.push(blocker("s6.pre_fs_go"));
+    }
+  }
+  return { complete: missing.length === 0, blockers, missing, exempt };
 }
 
 const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunityStageArgs) => StageEvaluation>> = {
@@ -711,58 +807,7 @@ const OPPORTUNITY_STAGE_COMPLETION: Partial<Record<StageId, (args: OpportunitySt
     complete = missing.length === 0;
     return { complete, blockers, missing };
   },
-  S6: ({ opp }) => {
-    const blockers: string[] = [];
-    const missing: string[] = [];
-    let complete = false;
-    // flow.spec S6 (brownfield only): Target Universe 정의 + Long List 최소 커버리지.
-    let universe: { min_long_list?: number } | null = null;
-    try {
-      universe = opp.target_universe_json ? (JSON.parse(opp.target_universe_json) as { min_long_list?: number }) : null;
-    } catch {
-      /* treat as undefined */
-    }
-    if (!universe) {
-      blockers.push("Target Universe 정의가 필요합니다 (선정 기준·커버리지·최소 후보 수)");
-      missing.push(blocker("s6.target_universe"));
-      return { complete, blockers, missing };
-    }
-    const minLongList =
-      typeof universe.min_long_list === "number" && universe.min_long_list > 0 ? universe.min_long_list : 3;
-    // Coverage measures how many candidates the Long List DISCOVERED — all
-    // registered rows regardless of status. Exclusions are the legitimate
-    // OUTCOME of S7 screening; counting only non-excluded made every
-    // post-screening exclusion retroactively regress S6 and re-lock S7+.
-    const longList = (
-      getDb().query("SELECT COUNT(*) c FROM brownfield_target WHERE opportunity_id = ?").get(opp.id) as { c: number }
-    ).c;
-    // Wave F-6: only candidates that carry the required attributes AND a source
-    // count toward coverage (brownfield-target-identification procedure).
-    // Grandfathered opportunities keep the raw row count.
-    let covered = longList;
-    if (!opportunityGrandfathered(opp)) {
-      const candidates = listTargets(opp.id);
-      const incomplete = candidates.filter((t) => longListCandidateGaps(t).length > 0);
-      covered = candidates.length - incomplete.length;
-      if (incomplete.length > 0) {
-        blockers.push(
-          `필수 속성·출처가 없는 Long List 후보 ${incomplete.length}건 — ${incomplete
-            .slice(0, 3)
-            .map((t) => t.company_name)
-            .join(", ")}${incomplete.length > 3 ? " 외" : ""} (식별자·Universe 적합 메모·발굴 출처 기록 필요)`,
-        );
-        missing.push(blocker("s6.longlist_attributes"));
-      }
-    }
-    if (covered < minLongList) {
-      blockers.push(
-        `Long List 커버리지 부족 (${covered}/${minLongList}${covered !== longList ? " — 필수 속성·출처를 갖춘 후보만 산입" : ""})`,
-      );
-      missing.push(blocker("s6.longlist_coverage"));
-    }
-    complete = missing.length === 0;
-    return { complete, blockers, missing };
-  },
+  S6: ({ opp }) => evaluateS6(opp),
   S7: ({ opp }) => {
     const blockers: string[] = [];
     const missing: string[] = [];
@@ -1427,6 +1472,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
           status: "complete",
           blockers: res.blockers,
           missing: stageMissingKeys(stage.id, res.missing),
+          exempt: res.exempt === true,
         });
       } else {
         priorComplete = false;
@@ -1440,6 +1486,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
             status: "current",
             blockers: res.blockers,
             missing: stageMissingKeys(stage.id, res.missing),
+            exempt: res.exempt === true,
           });
         } else {
           blockedStages.push(stage.id);
@@ -1590,7 +1637,7 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
     track,
     subTrack,
     terminated,
-    stages,
+    stages: stages.map((st) => ({ ...st, exempt: st.exempt === true })),
     projectId,
     carrierScopeFinished,
     ...(entity.type === "project"
@@ -1660,7 +1707,13 @@ export function gateGoPrerequisiteGaps(entity: ProcessEntity, gate: GateId): str
       need(["S4"]);
       if (ev.track === "greenfield") need(["S5"]);
       else if (ev.track === "brownfield") {
-        need(["S6"]);
+        // ADR-0205: S6 itself now requires the pre_fs GO, so the prerequisite is the S6 DATA blockers only.
+        if (entity.type === "opportunity") {
+          const opp = getDb().query("SELECT * FROM opportunity WHERE id = ?").get(entity.id) as OpportunityRow | undefined;
+          if (opp) {
+            for (const label of s6DataBlockers(opp).missing) gaps.push(`S6 대상 후보 발굴 데이터 미완료 — ${label}`);
+          }
+        } else need(["S6"]);
         // ADR-0202: live AI-draft verdicts a person has not reviewed are INCOMPLETE review items.
         // auto_rule verdicts are deterministic checks and never block (ADR-0200 §4.1).
         pushAiDraftReviewGap(entity.id, gaps);

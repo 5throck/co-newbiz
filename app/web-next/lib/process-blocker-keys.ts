@@ -50,6 +50,7 @@ export const BLOCKER_LABELS = {
   "s6.target_universe": "Target Universe 정의",
   "s6.longlist_attributes": "Long List 후보 필수 속성·출처",
   "s6.longlist_coverage": "Long List 최소 커버리지",
+  "s6.pre_fs_go": "Pre-FS 게이트 GO 결정",
   // S7 target selection
   "s7.candidate_screening": "대상 후보 스크리닝",
   "s7.candidate_verdict": "후보별 스크리닝 판정",

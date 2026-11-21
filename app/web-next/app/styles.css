@@ -4695,6 +4695,8 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .s67-criteria-name { font-size: var(--fs-caption); font-weight: 600; }
 .s67-criteria-sub { font-size: var(--fs-caption); color: var(--muted-fg); }
 .s67-criteria-cure { margin-top: var(--space-1); }
+/* ADR-0205 — the criteria strip links to the S6 Pre-FS gate panel (focusable section, tabIndex -1); keep it clear of the sticky chrome on arrival. */
+#gate-decision-pre_fs { scroll-margin-top: 1rem; }
 /* Label-cell subline chip — the OriginBadge precedent: anchor that reads as a chip. */
 .longlist-gap-chip {
   display: inline-flex;

@@ -1863,7 +1863,8 @@
       "transition": "S12 transition",
       "markerTitle": "{gate} gate — several stages share this gate review. Shows the gate verdict (Go/Hold/Kill) the current stage belongs to.",
       "markerLabel": "Gate {gate}",
-      "lockedReason": "A {p1} GO must be recorded before the {p2} decision can be recorded."
+      "lockedReason": "A {p1} GO must be recorded before the {p2} decision can be recorded.",
+      "preFsHoldRevokesGo": "Recording HOLD revokes the earlier GO: S6 becomes incomplete again and S7 locks. S7 work already recorded is kept."
     },
     "decisionLabel": {
       "go": "Proceed (GO)",
@@ -6627,7 +6628,8 @@
           "co_development": "Co-development"
         },
         "blockedReasonS7": "S6 completion criteria unmet — recording unlocks once the deal reaches target selection (S7)",
-        "blockedReasonLink": "View the S6 completion criteria"
+        "blockedReasonLink": "View the S6 completion criteria",
+        "blockedReasonPreFsLink": "Record the Pre-FS GO (S6)"
       },
       "aiEval": {
         "action": "AI evaluation",
@@ -6842,14 +6844,20 @@
       },
       "criteriaPanel": {
         "heading": "S6 completion criteria",
-        "allMet": "All three completion criteria are met",
+        "allMet": "All four completion criteria are met",
         "metChip": "Met",
         "openChip": "Open",
         "srMet": "met",
         "srOpen": "not met",
         "coverageLine": "Coverage {covered}/{min}",
         "qualifiedNote": "{qualified}/{registered} candidates carry the required attributes and source",
-        "cureHint": "Open candidates can be cured on their detail screen — complete the Universe-fit note and discovery source"
+        "cureHint": "Open candidates can be cured on their detail screen — complete the Universe-fit note and discovery source",
+        "exemptChip": "Exempt",
+        "srExempt": "exempt",
+        "preFsExemptNote": "Existing opportunity — Pre-FS GO requirement waived by cut-off",
+        "preFsPrereq": "Meet the three criteria above before recording the Pre-FS decision",
+        "preFsLink": "Go to the Pre-FS decision",
+        "preFsLinkS7": "Record the Pre-FS decision on S6"
       }
     },
     "s8": {
@@ -10524,6 +10532,7 @@
     "s6_target_universe": "Evaluation target direction (Target Universe)",
     "s6_longlist_attributes": "Long List candidate required attributes and sources",
     "s6_longlist_coverage": "Long List minimum coverage",
+    "s6_pre_fs_go": "Pre-FS gate GO decision",
     "s7_candidate_screening": "Candidate screening",
     "s7_candidate_verdict": "Per-candidate screening verdict",
     "s7_candidate_evidence": "Per-candidate screening evidence",
