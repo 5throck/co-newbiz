@@ -59,7 +59,7 @@ for (const [id, entry] of Object.entries(CONTENT)) {
 for (const id of Object.keys(ITEMS)) {
   const entry = CONTENT[id];
   if (!entry || !existsSync(join(ROOT, entry.file))) continue;
-  const doc = yaml.load(entry.content) as { version: string; items: Array<Record<string, unknown>> };
+  const doc = yaml.load(entry.content) as { version: string; items: Array<Record<string, any>> };
   const items = doc.items.map((i) => ({
     id: i.id,
     text: i.text,
