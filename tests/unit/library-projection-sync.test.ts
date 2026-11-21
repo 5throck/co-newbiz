@@ -35,7 +35,15 @@ describe("library.generated.ts matches its source files", () => {
       expect(entry, `${id} has no LIBRARY_CONTENT entry`).toBeDefined();
       const doc = yaml.load(readFileSync(join(REPO, entry.file), "utf-8")) as {
         version: string;
-        items: Array<{ id: string; text: string; mandatory: boolean; waiver_eligible: boolean; modes?: string[]; origins?: string[]; review_status?: string }>;
+        items: Array<{
+          id: string;
+          text: string;
+          mandatory: boolean;
+          waiver_eligible: boolean;
+          modes?: string[];
+          origins?: string[];
+          review_status?: string;
+        }>;
       };
       const items = doc.items.map((i) => ({
         id: i.id,
@@ -57,7 +65,10 @@ describe("library.generated.ts matches its source files", () => {
     }
     const unexpected = stale.filter((id) => !KNOWN_STALE_ITEMS.has(id));
     const nowFresh = [...KNOWN_STALE_ITEMS].filter((id) => !stale.includes(id));
-    expect(unexpected, `items/version drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`).toEqual([]);
+    expect(
+      unexpected,
+      `items/version drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`,
+    ).toEqual([]);
     expect(nowFresh, `fresh now — remove from KNOWN_STALE_ITEMS: ${nowFresh.join(", ")}`).toEqual([]);
   });
 
@@ -69,7 +80,9 @@ describe("library.generated.ts matches its source files", () => {
     }
     const unexpected = stale.filter((id) => !KNOWN_STALE_CONTENT.has(id));
     const nowFresh = [...KNOWN_STALE_CONTENT].filter((id) => !stale.includes(id));
-    expect(unexpected, `content drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`).toEqual([]);
+    expect(unexpected, `content drifted from source — refresh library.generated.ts: ${unexpected.join(", ")}`).toEqual(
+      [],
+    );
     expect(nowFresh, `fresh now — remove from KNOWN_STALE_CONTENT: ${nowFresh.join(", ")}`).toEqual([]);
   });
 
@@ -83,10 +96,7 @@ describe("library.generated.ts matches its source files", () => {
     const target = join(REPO, LIBRARY_CONTENT[id].file);
     const original = readFileSync(target);
     try {
-      const crlf = Buffer.from(
-        original.toString("utf-8").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"),
-        "utf-8",
-      );
+      const crlf = Buffer.from(original.toString("utf-8").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n"), "utf-8");
       writeFileSync(target, crlf);
       const proc = spawnSync("bun", ["scripts/co-newbiz/sync-library-projection.ts", "--check"], {
         cwd: REPO,
