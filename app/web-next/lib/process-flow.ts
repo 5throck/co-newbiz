@@ -1422,7 +1422,12 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
       const res = evaluateOpportunityStage(stage, opp);
       if (res.complete) {
         completedStages.push(stage.id);
-        stages.push({ ...stage, status: "complete", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
+        stages.push({
+          ...stage,
+          status: "complete",
+          blockers: res.blockers,
+          missing: stageMissingKeys(stage.id, res.missing),
+        });
       } else {
         priorComplete = false;
         if (currentStage === null) {
@@ -1430,7 +1435,12 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
           requiredArtifacts = res.missing;
           blockers = res.blockers;
           // HOLD blocks re-evaluation of the stage's gate, not the work itself.
-          stages.push({ ...stage, status: "current", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
+          stages.push({
+            ...stage,
+            status: "current",
+            blockers: res.blockers,
+            missing: stageMissingKeys(stage.id, res.missing),
+          });
         } else {
           blockedStages.push(stage.id);
           stages.push({ ...stage, status: "locked", blockers: [], missing: [] });
@@ -1514,14 +1524,24 @@ export function evaluateProcess(entity: ProcessEntity): ProcessEvaluation {
       const res = evaluateProjectStage(stage, project, gateStatus);
       if (res.complete) {
         completedStages.push(stage.id);
-        stages.push({ ...stage, status: "complete", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
+        stages.push({
+          ...stage,
+          status: "complete",
+          blockers: res.blockers,
+          missing: stageMissingKeys(stage.id, res.missing),
+        });
       } else {
         priorComplete = false;
         if (currentStage === null) {
           currentStage = stage.id;
           requiredArtifacts = res.missing;
           blockers = res.blockers;
-          stages.push({ ...stage, status: "current", blockers: res.blockers, missing: stageMissingKeys(stage.id, res.missing) });
+          stages.push({
+            ...stage,
+            status: "current",
+            blockers: res.blockers,
+            missing: stageMissingKeys(stage.id, res.missing),
+          });
         } else {
           blockedStages.push(stage.id);
           stages.push({ ...stage, status: "locked", blockers: [], missing: [] });

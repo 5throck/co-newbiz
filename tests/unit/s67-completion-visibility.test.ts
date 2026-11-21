@@ -211,7 +211,10 @@ test("API B: a note-only cure works; source_kind follows the carried discovery_s
   const res = await req(`/api/brownfield/targets/${targetId}`, {
     method: "PATCH",
     headers: { cookie },
-    body: JSON.stringify({ discovery_source: "web_proposal", discovery_note: "2026-11 업계 기사에서 확인한 인수 후보" }),
+    body: JSON.stringify({
+      discovery_source: "web_proposal",
+      discovery_note: "2026-11 업계 기사에서 확인한 인수 후보",
+    }),
   });
   expect(res.status).toBe(200);
   const after = discoveryEvidence(targetId);

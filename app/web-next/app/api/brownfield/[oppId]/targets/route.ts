@@ -25,7 +25,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ oppI
   if (denied) return denied;
   const { oppId } = await params;
   const db = getDb();
-  const opp = db.query("SELECT id, name, target_universe_json, created_at FROM opportunity WHERE id = ?").get(oppId) as {
+  const opp = db
+    .query("SELECT id, name, target_universe_json, created_at FROM opportunity WHERE id = ?")
+    .get(oppId) as {
     id: string;
     name: string;
     target_universe_json: string | null;

@@ -108,10 +108,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ta
   let discoverySource: DiscoverySource | undefined;
   if (body?.discovery_source !== undefined) {
     if (!(DISCOVERY_SOURCES as readonly string[]).includes(body.discovery_source)) {
-      return badRequest(
-        "invalid_request",
-        `discovery_source must be one of: ${DISCOVERY_SOURCES.join(" | ")}.`,
-      );
+      return badRequest("invalid_request", `discovery_source must be one of: ${DISCOVERY_SOURCES.join(" | ")}.`);
     }
     discoverySource = body.discovery_source as DiscoverySource;
   }
