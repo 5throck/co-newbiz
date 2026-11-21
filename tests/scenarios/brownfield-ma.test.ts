@@ -114,12 +114,18 @@ describe("brownfield M&A S1 to S12", () => {
     removeSecondTarget(app);
   }, 60_000);
 
-  test("S7 target screening gate GO", async () => {
-    await recordGate(s.page, app, `/deals/${O}/s7`, null, "go", "Short List 1순위 후보가 knock-out 기준을 통과함");
-    const row = app.readDb((d) => d.query("SELECT decision, decided_by FROM gate_decision WHERE gate='target_screening'").get()) as { decision: string; decided_by: string };
-    expect(row.decision).toBe("go");
-    expect(row.decided_by).toBe("analyst");
-  }, 60_000);
+  test("S7 pre_fs GO, then target screening gate GO", async () => {
+    // PR #952: the S7 approval tab hosts ONE GateDecisionPanel carrying both
+    // brownfield opportunity gates (pre_fs first, then target_screening) behind
+    // a gate select — panels.nth(1) does not exist, so each gate is picked by
+    // its panel label instead of relying on the form defaulting to gates[0].
+    // Ladder order (screening -> pre_fs -> target_screening) matches the human
+    // flow; promotion requires the pre_fs GO.
+    await recordGate(s.page, app, `/deals/${O}/s7`, "예비타당성 검토(Pre-FS)", "go", "S6 진출 형태 평가와 역량 격차 분석이 예비타당성 기준을 충족함");
+    await recordGate(s.page, app, `/deals/${O}/s7`, "대상 선정", "go", "Short List 1순위 후보가 knock-out 기준을 통과함");
+    const rows = app.readDb((d) => d.query("SELECT gate, decision, decided_by FROM gate_decision WHERE gate IN ('pre_fs','target_screening') ORDER BY gate").all()) as Array<{ gate: string; decision: string; decided_by: string }>;
+    expect(rows.map((r) => `${r.gate}:${r.decision}:${r.decided_by}`)).toEqual(["pre_fs:go:analyst", "target_screening:go:analyst"]);
+  }, 90_000);
 
   test("S8 shows the legacy unassigned-model notice (R2-E item 1)", async () => {
     // A pre-ADR-0143 brownfield carries business_case_model rows with target_id
