@@ -38,7 +38,8 @@ export const BLOCKER_LABELS = {
   "s4.brownfield_sub_track": "brownfield sub_track",
   "s4.five_criteria_scores": "5-criteria 채점",
   "s4.alternatives_considered": "검토한 대안",
-  "s4.legal_regulatory_screening": "법무·규제 스크리닝 판정 (chk-legal-regulatory lr-01~lr-07 — regulatory-screening 활동)",
+  "s4.legal_regulatory_screening":
+    "법무·규제 스크리닝 판정 (chk-legal-regulatory lr-01~lr-07 — regulatory-screening 활동)",
   // S5 greenfield self-entry
   "s5.capability_gap_register": "역량 격차·해소 방식",
   "s5.capability_assessment": "역량 격차 평가",
@@ -50,6 +51,7 @@ export const BLOCKER_LABELS = {
   "s6.target_universe": "Target Universe 정의",
   "s6.longlist_attributes": "Long List 후보 필수 속성·출처",
   "s6.longlist_coverage": "Long List 최소 커버리지",
+  "s6.pre_fs_go": "Pre-FS 게이트 GO 결정",
   // S7 target selection
   "s7.candidate_screening": "대상 후보 스크리닝",
   "s7.candidate_verdict": "후보별 스크리닝 판정",

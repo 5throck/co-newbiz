@@ -6,7 +6,6 @@
 import { SectionToolbar } from "../../layout.tsx";
 import { useState } from "react";
 import { SECTION_IDS } from "./constants.ts";
-import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
 import { S6CriteriaPanel } from "./S6CriteriaPanel.tsx";
 
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
@@ -87,15 +86,12 @@ export function LonglistSection({ ctx }: { ctx: BrownfieldStageState }) {
             {/* ── S6 완료기준 strip — 왜 S7에 못 들어가는지 후보 전체 목록 바로 위에서
                 답한다 (design 2026-11-21-s67-completion-visibility Fix ①-a).
                 엔진 상태는 BrownfieldStage의 useS6Gate 읽기 하나를 ctx로 공유한다. ── */}
-            <S6CriteriaPanel gate={ctx.s6Gate} targets={targets} minLongList={selected.universe?.min_long_list ?? 3} />
-            {/* ── pre_fs 게이트 패널 — 완료기준 strip 바로 아래 (owner decision 2026-11-21, Option A;
-                design 2026-11-21-s67-completion-visibility Amendment). 배치 = 판단 시점 정립:
-                pre_fs는 롱리스트 확정 "이전"의 판단("이 Universe로 선별작업을 시작할 가치가 있는가?" +
-                FS 자원 약속 전 stop-loss)이므로 S7 승인 탭(이제 target_screening 단독)에서 GO를
-                연달아 기록하는 것처럼 보이던 위치에서 여기로 옮겼다. 단일 게이트라 진행 select 없이
-                렌더된다. S7 완료 사업 기회에도 이 패널로 pre_fs GO를 기록할 수 있다(엔진은 S7 완료를
-                문제 삼지 않는다). ── */}
-            <GateDecisionPanel opportunityId={selected.opportunity.id} gates={["pre_fs"]} />
+            <S6CriteriaPanel
+              gate={ctx.s6Gate}
+              targets={targets}
+              minLongList={selected.universe?.min_long_list ?? 3}
+              stage={ctx.stage}
+            />
             {promoteNote && (
               <p role="status" className="text-[length:var(--fs-caption)] mt-0 mb-2">
                 <span aria-hidden="true">⚠ </span>

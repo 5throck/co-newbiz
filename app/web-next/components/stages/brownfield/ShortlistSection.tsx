@@ -18,13 +18,9 @@ import { S7DecisionTabs } from "./S7DecisionTabs.tsx";
 import type { BrownfieldStageState } from "./useBrownfieldTargets.ts";
 import { useTranslations } from "next-intl";
 
-export function ShortlistSection({
-  ctx,
-  dealShapePanel = false,
-}: {
-  ctx: BrownfieldStageState;
-  dealShapePanel?: boolean;
-}) {
+/** S7-only (ADR-0205): the 9-item pre-check + committee, the deal-shape / approval tabs and the S7→S8 promotion.
+ * On S6 this renders nothing — the S6 body ends with the Pre-FS gate decision panel (BrownfieldStage). */
+export function ShortlistSection({ ctx, stage }: { ctx: BrownfieldStageState; stage: "S6" | "S7" }) {
   const tr = useTranslations();
   const t = useTranslations("stages.s67.shortlistSection");
   const tc = useTranslations("common");
@@ -47,6 +43,7 @@ export function ShortlistSection({
     savePrecheck,
     runCommitteePrecheck,
   } = ctx;
+  if (stage !== "S7") return null;
   return (
     <>
       {selected && (
@@ -355,16 +352,13 @@ export function ShortlistSection({
               the old proxy ("evaluation complete = every item judged") fired the kill language whenever
               later-seeded criteria stayed pending — evaluation completeness is informational, not a kill.
               The approval record belongs to S7 (flow.spec gate); the shared S6 tab does not show it. */}
-          {dealShapePanel && (
-            <S7DecisionTabs
-              opportunityId={selected.opportunity.id}
-              canAct={canAct}
-              s7Blocked={ctx.s6Gate.s7Blocked}
-              zeroCandidatesPassed={
-                selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")
-              }
-            />
-          )}
+          <S7DecisionTabs
+            opportunityId={selected.opportunity.id}
+            canAct={canAct}
+            s7Blocked={ctx.s6Gate.s7Blocked}
+            preFsOnly={ctx.s6Gate.s6Missing.length === 1 && ctx.s6Gate.s6Missing[0] === "s6.pre_fs_go"}
+            zeroCandidatesPassed={selected.targets.length > 0 && !selected.targets.some((t) => t.status !== "excluded")}
+          />
           {(() => {
             const incomplete = selected.targets.filter(
               (t) => t.status !== "excluded" && t.eval_summary && !t.eval_summary.complete,

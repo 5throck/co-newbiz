@@ -1863,7 +1863,8 @@
       "transition": "S12 전환",
       "markerTitle": "{gate} 게이트 — 여러 단계가 같은 게이트 심사를 공유합니다. 현재 단계가 속한 게이트 판정(Go/Hold/Kill)을 보여주는 표시입니다.",
       "markerLabel": "게이트 {gate}",
-      "lockedReason": "{p1} GO가 기록된 뒤에 {p2} 결정을 기록할 수 있습니다."
+      "lockedReason": "{p1} GO가 기록된 뒤에 {p2} 결정을 기록할 수 있습니다.",
+      "preFsHoldRevokesGo": "HOLD를 기록하면 기존 GO가 무효가 되고 S6이 미완료로 돌아가 S7이 잠깁니다. 이미 기록된 S7 작업은 보존됩니다."
     },
     "decisionLabel": {
       "go": "진행(GO)",
@@ -6627,7 +6628,8 @@
           "co_development": "공동 개발"
         },
         "blockedReasonS7": "S6 완료기준 미충족 — 대상 선정(S7)에 들어와야 기록할 수 있습니다",
-        "blockedReasonLink": "S6 완료기준 보기"
+        "blockedReasonLink": "S6 완료기준 보기",
+        "blockedReasonPreFsLink": "Pre-FS GO 기록 (S6)"
       },
       "aiEval": {
         "action": "AI 평가",
@@ -6842,14 +6844,20 @@
       },
       "criteriaPanel": {
         "heading": "S6 완료기준",
-        "allMet": "3가지 완료기준을 모두 충족했습니다",
+        "allMet": "4가지 완료기준을 모두 충족했습니다",
         "metChip": "충족",
         "openChip": "미충족",
         "srMet": "충족됨",
         "srOpen": "미충족",
         "coverageLine": "커버리지 {covered}/{min}",
         "qualifiedNote": "필수 속성·출처를 갖춘 후보 {qualified}/{registered}건",
-        "cureHint": "미충족 후보는 후보 상세에서 Universe 적합 메모·발굴 출처를 보완하세요"
+        "cureHint": "미충족 후보는 후보 상세에서 Universe 적합 메모·발굴 출처를 보완하세요",
+        "exemptChip": "면제",
+        "srExempt": "면제됨",
+        "preFsExemptNote": "기존 사업 기회 — Pre-FS GO 요건 면제",
+        "preFsPrereq": "위 세 가지 기준을 먼저 충족해야 Pre-FS 결정을 기록할 수 있습니다",
+        "preFsLink": "Pre-FS 결정 기록으로 이동",
+        "preFsLinkS7": "S6에서 Pre-FS 결정 기록"
       }
     },
     "s8": {
@@ -10524,6 +10532,7 @@
     "s6_target_universe": "평가 대상 방향성(Target Universe)",
     "s6_longlist_attributes": "Long List 후보 필수 속성·출처",
     "s6_longlist_coverage": "Long List 최소 커버리지",
+    "s6_pre_fs_go": "Pre-FS 게이트 GO 결정",
     "s7_candidate_screening": "대상 후보 스크리닝",
     "s7_candidate_verdict": "후보별 스크리닝 판정",
     "s7_candidate_evidence": "후보별 스크리닝 근거",

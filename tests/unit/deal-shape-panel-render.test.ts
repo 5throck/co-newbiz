@@ -472,6 +472,15 @@ describe("s67 blocked state (design 2026-11-21-s67-completion-visibility Fix ①
       "S6 completion criteria unmet — recording unlocks once the deal reaches target selection (S7)",
     );
   });
+  test("only the Pre-FS GO open (ADR-0205): the reason link names it and jumps to the S6 Pre-FS panel", () => {
+    const html = view(data([]), { s7Blocked: true, preFsOnly: true });
+    expect(html).toContain('data-testid="deal-shape-s7-blocked"');
+    expect(html).toContain("S6 완료기준 미충족 — 대상 선정(S7)에 들어와야 기록할 수 있습니다");
+    expect(html).toContain('href="s6#gate-decision-pre_fs"');
+    expect(html).toContain("Pre-FS GO 기록 (S6)");
+    expect(html).not.toContain('href="#s6-criteria"');
+    expect(view(data([]), { s7Blocked: true, preFsOnly: true }, "en")).toContain("Record the Pre-FS GO (S6)");
+  });
   test("criteria met: no blocked reason line, buttons stay enabled", () => {
     const html = view(data([]));
     expect(html).not.toContain("deal-shape-s7-blocked");
@@ -630,17 +639,18 @@ describe("mount points (source pins)", () => {
   test("S4 route decision no longer mounts the panel", () => {
     expect(src("components/stages/route-decision/RouteDecisionStage.tsx")).not.toContain("DealShapePanel");
   });
-  test("S7 mounts it in the shortlist section before the gate decision, only when asked (S7 tab, not S6)", () => {
+  test('S7 mounts it in the shortlist section before the gate decision, only on stage === "S7" (ADR-0205)', () => {
     const section = src("components/stages/brownfield/ShortlistSection.tsx");
     expect(section).toContain("<S7DecisionTabs");
-    expect(section).toContain("dealShapePanel &&");
+    expect(section).toContain('if (stage !== "S7") return null;');
+    expect(section).not.toContain("dealShapePanel");
     const tabs = src("components/stages/brownfield/S7DecisionTabs.tsx");
     const at = tabs.indexOf("<DealShapePanel");
     expect(at).toBeGreaterThan(-1);
     expect(at).toBeLessThan(tabs.indexOf("<GateDecisionPanel"));
-    expect(src("app/deals/[id]/[stage]/page.tsx")).toContain('dealShapePanel={stageId === "S7"}');
+    expect(src("app/deals/[id]/[stage]/page.tsx")).toContain("stage={stageId}");
     expect(src("components/stages/brownfield/BrownfieldStage.tsx")).toContain(
-      "dealShapePanel={props0.dealShapePanel === true}",
+      "<ShortlistSection ctx={ctx} stage={stage} />",
     );
   });
 });

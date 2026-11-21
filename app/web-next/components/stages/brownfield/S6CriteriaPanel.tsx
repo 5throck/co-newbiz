@@ -22,6 +22,8 @@ interface ProcessStageEntry {
   blockers?: string[];
   /** Stable blocker keys (lib/process-blocker-keys.ts), index-aligned with `blockers`. */
   missing?: string[];
+  /** Server-decided (ADR-0205): grandfathering skipped `s6.pre_fs_go` — row 4 reads "exempt", never a false "met". */
+  exempt?: boolean;
 }
 
 interface ProcessResponse {
@@ -38,6 +40,8 @@ export interface S6GateState {
   s6Status: string | null;
   s6Missing: string[];
   s6Blockers: string[];
+  /** Engine `stages[].exempt` of S6 — the Pre-FS GO requirement is waived for this (pre-cut-off) opportunity. */
+  s6Exempt: boolean;
   /** S7 not reached (S6 not complete) — the deal-shape buttons pre-disable. Stale state is still caught by the server guard. */
   s7Blocked: boolean;
 }
@@ -48,6 +52,7 @@ export const EMPTY_S6_GATE: S6GateState = {
   s6Status: null,
   s6Missing: [],
   s6Blockers: [],
+  s6Exempt: false,
   s7Blocked: false,
 };
 
@@ -60,6 +65,7 @@ function gateFromProcess(data: ProcessResponse): S6GateState {
     s6Status: s6?.status ?? null,
     s6Missing: s6?.missing ?? [],
     s6Blockers: s6?.blockers ?? [],
+    s6Exempt: s6?.exempt === true,
     s7Blocked: !terminated && (s6?.status ?? null) !== "complete",
   };
 }
@@ -86,14 +92,18 @@ export function useS6Gate(opportunityId: string): S6GateState {
   return gate;
 }
 
-// The three S6 criteria, in engine push order (lib/process-flow.ts S6 branch).
+// The four S6 criteria (ADR-0205 added s6.pre_fs_go as the last, human-recorded one), in engine push order (lib/process-flow.ts S6 branch).
 // Row state comes from the stage's `missing` keys; the criterion NAME resolves
 // through the same processBlockers catalog localizeBlocker uses (single source).
 const S6_CRITERIA = [
   { key: "s6.target_universe", catalogKey: "processBlockers.s6_target_universe" },
   { key: "s6.longlist_attributes", catalogKey: "processBlockers.s6_longlist_attributes" },
   { key: "s6.longlist_coverage", catalogKey: "processBlockers.s6_longlist_coverage" },
+  { key: "s6.pre_fs_go", catalogKey: "processBlockers.s6_pre_fs_go" },
 ] as const;
+
+const PRE_FS_KEY = "s6.pre_fs_go";
+const PRE_FS_ANCHOR = "gate-decision-pre_fs";
 
 /** Coverage = candidates with no gaps (longListCandidateGaps output verbatim); grandfathered rows carry `[]`, so the fraction degrades to the registered count, matching the engine. */
 export const s6Coverage = (
@@ -145,10 +155,13 @@ export function S6CriteriaPanel({
   gate,
   targets,
   minLongList,
+  stage = "S6",
 }: {
   gate: S6GateState;
   targets: TargetRow[];
   minLongList: number;
+  /** Which route renders the strip: the Pre-FS panel lives on S6 only, so on S7 the row links across routes. */
+  stage?: "S6" | "S7";
 }) {
   const tr = useTranslations();
   const t = useTranslations("stages.s67.criteriaPanel");
@@ -160,6 +173,7 @@ export function S6CriteriaPanel({
     return null;
   }
   const missing = new Set(gate.s6Missing);
+  const dataOpen = S6_CRITERIA.some((c) => c.key !== PRE_FS_KEY && missing.has(c.key));
   const allMet = gate.s6Missing.length === 0;
   const coverage = s6Coverage(targets, minLongList);
   const anyGaps = coverage.qualified < coverage.registered;
@@ -186,26 +200,48 @@ export function S6CriteriaPanel({
       ) : (
         <ul className="s67-criteria-list">
           {S6_CRITERIA.map((criterion) => {
+            const isPreFs = criterion.key === PRE_FS_KEY;
             const open = missing.has(criterion.key);
+            const exempt = isPreFs && !open && gate.s6Exempt;
             // Pair the engine prose by index (§ API A pins blockers[i] ↔ missing[i]) — never parse prose to find state.
             const proseIdx = open ? gate.s6Missing.indexOf(criterion.key) : -1;
             const prose = proseIdx >= 0 ? gate.s6Blockers[proseIdx] : undefined;
+            const chipClass = exempt ? "status-not-started" : open ? "status-amber" : "status-green";
+            const glyph = exempt ? "–" : open ? "✕" : "✓";
+            const srWord = exempt ? t("srExempt") : open ? t("srOpen") : t("srMet");
+            const chipText = exempt ? t("exemptChip") : open ? t("openChip") : t("metChip");
+            // Row 4 secondary line: data criteria still open → prerequisite hint (the panel below shows its own gaps);
+            // otherwise the engine prose. The link only appears once the Pre-FS decision is actually recordable.
+            const preFsPrereq = isPreFs && open && dataOpen;
             return (
               <li
                 key={criterion.key}
                 className="s67-criteria-row"
                 data-criterion={criterion.key}
                 data-open={open ? "true" : "false"}
+                data-exempt={exempt ? "true" : undefined}
               >
                 <div className="s67-criteria-head">
-                  <span className={`status-chip ${open ? "status-amber" : "status-green"}`}>
-                    <span aria-hidden="true">{open ? "✕" : "✓"}</span>
-                    <span className="sr-only">{open ? t("srOpen") : t("srMet")}</span>{" "}
-                    {open ? t("openChip") : t("metChip")}
+                  <span className={`status-chip ${chipClass}`}>
+                    <span aria-hidden="true">{glyph}</span>
+                    <span className="sr-only">{srWord}</span> {chipText}
                   </span>
                   <span className="s67-criteria-name">{tr(criterion.catalogKey)}</span>
                 </div>
-                {prose && <p className="s67-criteria-sub mb-0">{localizeBlocker((k) => tr(k), prose, "S6")}</p>}
+                {preFsPrereq && <p className="s67-criteria-sub mb-0">{t("preFsPrereq")}</p>}
+                {prose && !preFsPrereq && (
+                  <p className="s67-criteria-sub mb-0">{localizeBlocker((k) => tr(k), prose, "S6")}</p>
+                )}
+                {exempt && <p className="s67-criteria-sub mb-0">{t("preFsExemptNote")}</p>}
+                {isPreFs && open && !dataOpen && (
+                  <p className="s67-criteria-sub mb-0">
+                    {/* Relative href on S7 resolves to the sibling /deals/{routeId}/s6 route (the route id may be a carrier id, not the opportunity id). */}
+                    <a href={stage === "S6" ? `#${PRE_FS_ANCHOR}` : `s6#${PRE_FS_ANCHOR}`} data-testid="s6-pre-fs-link">
+                      {stage === "S6" ? t("preFsLink") : t("preFsLinkS7")}{" "}
+                      <span aria-hidden="true">{stage === "S6" ? "↓" : "→"}</span>
+                    </a>
+                  </p>
+                )}
                 {criterion.key === "s6.longlist_coverage" && (
                   <p className="s67-criteria-sub mb-0">
                     {t("coverageLine", { covered: coverage.covered, min: coverage.min })}

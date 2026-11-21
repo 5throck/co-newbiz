@@ -2,6 +2,12 @@
 // without an import cycle). See process-flow.ts for the grandfathering rule.
 export const WAVE_F_PREDICATE_DATE = "2026-10-08";
 
+// ADR-0205 S6 Pre-FS GO requirement cut-over: opportunities created before this
+// date (the release date of the change) are exempt from the s6.pre_fs_go blocker.
+// Separate from WAVE_F_PREDICATE_DATE, which is already past and would regress
+// deals created after it that sit at S7+ without a pre_fs GO.
+export const PRE_FS_S6_GATE_DATE = "2026-11-21";
+
 // ADR-0160 greenfield sub-track selection cut-over (same grandfathering rule as
 // WAVE_F_PREDICATE_DATE): projects whose earliest project_policy_pin predates
 // it keep the greenfield-dd 1.0.0 selection unless a human opts them in.

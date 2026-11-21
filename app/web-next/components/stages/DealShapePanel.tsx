@@ -55,6 +55,8 @@ export interface DealShapePanelViewProps {
    *  추천 and 기록 buttons render disabled with an adjacent reason that links to the criteria strip.
    *  Client-side pre-emptive state only — the server write guard stays the single enforcement point. */
   s7Blocked?: boolean;
+  /** ADR-0205 — the Pre-FS GO is the only open S6 criterion: the blocked-reason link names it and jumps to the S6 Pre-FS panel. */
+  preFsOnly?: boolean;
   form: Form;
   onForm: (next: Form) => void;
   onSubmit: () => void;
@@ -231,8 +233,10 @@ export function DealShapePanelView(p: DealShapePanelViewProps) {
             <p id={blockedReasonId} className="s67-blocked-reason" data-testid="deal-shape-s7-blocked">
               <span aria-hidden="true">⛔ </span>
               {t("blockedReasonS7")}{" "}
-              <a href="#s6-criteria">
-                {t("blockedReasonLink")} <span aria-hidden="true">→</span>
+              {/* Pre-FS panel lives on S6 only: the relative href resolves to the sibling /deals/{routeId}/s6 route. */}
+              <a href={p.preFsOnly === true ? "s6#gate-decision-pre_fs" : "#s6-criteria"}>
+                {p.preFsOnly === true ? t("blockedReasonPreFsLink") : t("blockedReasonLink")}{" "}
+                <span aria-hidden="true">→</span>
               </a>
             </p>
           )}
@@ -309,11 +313,14 @@ export function DealShapePanel({
   opportunityId,
   canAct,
   s7Blocked = false,
+  preFsOnly = false,
 }: {
   opportunityId: string;
   canAct: boolean;
   /** design 2026-11-21-s67-completion-visibility — S6 criteria unmet: pre-emptive disabled state for the write buttons (the server guard stays authoritative). */
   s7Blocked?: boolean;
+  /** ADR-0205 — the Pre-FS GO is the only open S6 criterion (specific link target in the blocked reason). */
+  preFsOnly?: boolean;
 }) {
   const t = useTranslations("stages.s67.dealShapePanel");
   const url = `/api/opportunities/${encodeURIComponent(opportunityId)}/deal-shapes`;
@@ -427,6 +434,7 @@ export function DealShapePanel({
       loadError={loadError}
       canAct={canAct}
       s7Blocked={s7Blocked}
+      preFsOnly={preFsOnly}
       form={form}
       busy={busy}
       problem={problem}

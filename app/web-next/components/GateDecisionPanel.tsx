@@ -609,7 +609,15 @@ export function GateDecisionPanel({
       t("recordTheP1P2Decision", { p1: tr(GATE_LABEL_KEY[form.gate] ?? form.gate), p2: verb }),
       () => void record(),
       {
-        body: t("evidenceP1TheDecisionIs", { p1: form.rationale.trim() }),
+        // ADR-0205 §4 consequence disclosure: HOLD after a recorded Pre-FS GO revokes it (S6 reopens, S7 relocks) — state it before submit.
+        body: `${t("evidenceP1TheDecisionIs", { p1: form.rationale.trim() })}${
+          entityType === "opportunity" &&
+          form.gate === "pre_fs" &&
+          form.decision === "hold" &&
+          gateState(latest, "pre_fs") === "go"
+            ? ` ${tc("gate.preFsHoldRevokesGo")}`
+            : ""
+        }`,
         confirmLabel: tc("record"),
         tone: form.decision === "kill" ? "danger" : "neutral",
       },

@@ -21,7 +21,16 @@
 meta:
   id: co-newbiz-main-flow
   name: 신규사업 검토 메인 플로우
-  version: "2.21.3"
+  version: "2.22.0"
+  # v2.22.0 - ADR-0205 (owner decision 2026-11-21; design 2026-11-21-s67-completion-visibility
+  #   Amendment 2): brownfield S6 completes only when a person has recorded a pre_fs GO.
+  #   S6 gains blocker s6.pre_fs_go (always the last blocker; artifacts [], criteria [3]) and the
+  #   completion criterion "pre_fs 게이트 GO 결정이 기록되었다". The latest opportunity-scope pre_fs
+  #   decision wins (a later HOLD reopens the blocker). The brownfield pre_fs GO prerequisite changes
+  #   from "S6 complete" to "S6 data blockers clear" (target_universe, longlist_attributes,
+  #   longlist_coverage) to avoid a circular dependency; greenfield (S5) is unchanged. Opportunities
+  #   created before 2026-11-21 are grandfathered (engine marks stages[].exempt). No stage, gate,
+  #   track or kill-criteria change.
   # v2.21.3 - short-list terminology unification (owner decision 2026-11-17, N3; patch, no stage, gate,
   #   kill-criteria key, track or blocker-key change): prose labels "Short List" become "최종 후보 목록"
   #   and shortlist "promotion" wording becomes "심사 종료" throughout comments, objectives, gate
@@ -863,6 +872,7 @@ stages:
       - 후보 Universe의 정의·선정 기준이 기록되었다
       - 최소 커버리지 기준을 충족하는 Long List가 존재한다
       - Long List 후보에 필수 속성과 출처/근거가 기록되었다
+      - pre_fs 게이트 GO 결정이 기록되었다
     # v2.16.0 (ADR-0187 P3, finding H8): stable engine blocker keys. Each key is
     # emitted by lib/process-flow.ts (via lib/process-blocker-keys.ts) and
     # covers the requiredArtifacts / completionCriteria it enforces (0-based
@@ -873,6 +883,7 @@ stages:
       - { key: s6.target_universe, artifacts: [0], criteria: [0] }
       - { key: s6.longlist_attributes, artifacts: [], criteria: [2] }
       - { key: s6.longlist_coverage, artifacts: [1], criteria: [1] }
+      - { key: s6.pre_fs_go, artifacts: [], criteria: [3] }
     applicableTracks: [brownfield]
     stateTransitions: { onComplete: S7, onHold: S6, onKill: terminal }
     gates: [pre_fs]

@@ -4,7 +4,7 @@
 // prompts and flowspec:// resources (ADR-0154, Wave M M-3).
 import type { StageGuideSpec } from "./stage-guides.ts";
 
-export const GUIDE_SPEC_VERSION = "2.21.3";
+export const GUIDE_SPEC_VERSION = "2.22.0";
 export const GUIDE_STAGES: StageGuideSpec[] = [
   {
     "id": "S1",
@@ -319,7 +319,8 @@ export const GUIDE_STAGES: StageGuideSpec[] = [
     "completionCriteria": [
       "후보 Universe의 정의·선정 기준이 기록되었다",
       "최소 커버리지 기준을 충족하는 Long List가 존재한다",
-      "Long List 후보에 필수 속성과 출처/근거가 기록되었다"
+      "Long List 후보에 필수 속성과 출처/근거가 기록되었다",
+      "pre_fs 게이트 GO 결정이 기록되었다"
     ]
   },
   {
