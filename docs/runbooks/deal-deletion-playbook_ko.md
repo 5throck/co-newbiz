@@ -84,7 +84,7 @@ append-only 버전 이력을 통해 당시 버전 열람이 보장됩니다.
 | 엔드포인트 | 동작 |
 | --- | --- |
 | `DELETE /api/projects/[id]` | 리드 전용, 프로젝트+기회 마킹, manifest 기록, 감사 |
-| `DELETE /api/opportunities/[id]` | analyst+, 미승격 기회 마킹, manifest 기록, 감사 |
+| `DELETE /api/opportunities/[id]` | analyst+, 미승격 기회 delete-mark, `deal_archive` manifest 기록, 감사 |
 | `DELETE /api/our-company/groups/[id]` | analyst+, 그룹+멤버 마킹 |
 | `DELETE /api/our-company/groups/[id]/members` | analyst+, 멤버 마킹 |
 | `DELETE /api/synergy/analyses/[id]` | analyst+, 마킹, 딜 생존 중 409 |
