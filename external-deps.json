@@ -4,13 +4,13 @@
   "dependencies": [
     {
       "id": "humanize",
-      "repo": "https://github.com/epoko77-ai/im-not-ai",
-      "pin": "v2.4.7",
+      "repo": "https://github.com/5throck/Humanize",
+      "pin": "v1.0.0",
       "install": "git clone --depth 1 --branch {pin} {repo} {dir}",
       "install_dir": "external/humanize",
       "propagation": "never",
-      "commit": "c07df14d9f68da482ff5183591808a7d132d4a71",
-      "consumer": "Korean polishing (scripts/humanize/humanize-adapter.ts)",
+      "commit": "4860b0ec45a68d1be031f120e6d3fd5219569bc9",
+      "consumer": "Korean polishing via the Humanize lint/polish server (scripts/humanize/humanize-adapter.ts)",
       "compatibility_test": "bun test scripts/humanize/tests/humanize-contract.test.ts",
       "license": "MIT",
       "usage": "as-is",

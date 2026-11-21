@@ -47,7 +47,7 @@
 | `root/handbook` | L3 | 0.6.0 | — | — | — | — | — |
 | `root/handbook-sync-audit` | L3 | 1.0.5 | — | — | — | — | — |
 | `root/historical-financial-analysis` | L3 | 1.0.1 | root/financial-analyst | root/phase 3 | root/financial-statement-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
-| `root/humanize-polish` | L3 | 1.0.1 | — | — | — | — | — |
+| `root/humanize-polish` | L3 | 1.1.0 | — | — | — | — | — |
 | `root/i18n-audit` | L3 | 1.0.2 | root/i18n-specialist | — | — | — | — |
 | `root/i18n-formatting` | L3 | 1.0.1 | root/i18n-specialist | — | — | — | — |
 | `root/i18n-layout` | L3 | 1.1.1 | root/i18n-specialist | — | — | — | — |
@@ -458,6 +458,26 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | Term | Layer | Referencing skills |
 |------|-------|--------------------|
 | `100대 통계지표` | L3 | `root/k-ecos` |
+| `balPayments` | L3 | `root/k-opendata` |
+| `ELW 일별매매정보` | L3 | `root/k-krx` |
+| `ESG` | L3 | `root/k-krx` |
+| `ESG 증권상품` | L3 | `root/k-krx` |
+| `ESG 지수` | L3 | `root/k-krx` |
+| `ETF 일별매매정보` | L3 | `root/k-krx` |
+| `ETN 일별매매정보` | L3 | `root/k-krx` |
+| `expDlr` | L3 | `root/k-opendata` |
+| `expWgt` | L3 | `root/k-opendata` |
+| `hsCd` | L3 | `root/k-opendata` |
+| `hsCode` | L3 | `root/k-opendata` |
+| `impDlr` | L3 | `root/k-opendata` |
+| `impWgt` | L3 | `root/k-opendata` |
+| `KOSDAQ 시리즈 일별시세정보` | L3 | `root/k-krx` |
+| `KOSPI 시리즈 일별시세정보` | L3 | `root/k-krx` |
+| `KRX 시리즈 일별시세정보` | L3 | `root/k-krx` |
+| `SERVICE_KEY_IS_NOT_REGISTERED_ERROR` | L3 | `root/k-opendata` |
+| `SERVICE_KEY_IS_NULL` | L3 | `root/k-opendata` |
+| `statCd` | L3 | `root/k-opendata` |
+| `statKor` | L3 | `root/k-opendata` |
 | `가구당월평균소득` | L3 | `root/k-ecos` |
 | `감사의견` | L3 | `root/k-dart` |
 | `감자` | L3 | `root/k-dart` |
@@ -479,11 +499,11 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `반년` | L3 | `root/k-ecos` |
 | `반월` | L3 | `root/k-ecos` |
 | `배출권 시장 일별매매정보` | L3 | `root/k-krx` |
+| `법령ID` | L3 | `root/k-law` |
 | `법령명한글` | L3 | `root/k-law` |
 | `법령용어` | L3 | `root/k-law` |
 | `법령일련번호` | L3 | `root/k-law` |
 | `법령해석례` | L3 | `root/k-law` |
-| `법령ID` | L3 | `root/k-law` |
 | `법원명` | L3 | `root/k-law` |
 | `별표` | L3 | `root/k-law` |
 | `별표서식` | L3 | `root/k-law` |
@@ -586,26 +606,6 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `헌재결정례` | L3 | `root/k-law` |
 | `현행법령` | L3 | `root/k-law` |
 | `활용신청` | L3 | `root/k-opendata` |
-| `balPayments` | L3 | `root/k-opendata` |
-| `ELW 일별매매정보` | L3 | `root/k-krx` |
-| `ESG` | L3 | `root/k-krx` |
-| `ESG 증권상품` | L3 | `root/k-krx` |
-| `ESG 지수` | L3 | `root/k-krx` |
-| `ETF 일별매매정보` | L3 | `root/k-krx` |
-| `ETN 일별매매정보` | L3 | `root/k-krx` |
-| `expDlr` | L3 | `root/k-opendata` |
-| `expWgt` | L3 | `root/k-opendata` |
-| `hsCd` | L3 | `root/k-opendata` |
-| `hsCode` | L3 | `root/k-opendata` |
-| `impDlr` | L3 | `root/k-opendata` |
-| `impWgt` | L3 | `root/k-opendata` |
-| `KOSDAQ 시리즈 일별시세정보` | L3 | `root/k-krx` |
-| `KOSPI 시리즈 일별시세정보` | L3 | `root/k-krx` |
-| `KRX 시리즈 일별시세정보` | L3 | `root/k-krx` |
-| `SERVICE_KEY_IS_NOT_REGISTERED_ERROR` | L3 | `root/k-opendata` |
-| `SERVICE_KEY_IS_NULL` | L3 | `root/k-opendata` |
-| `statCd` | L3 | `root/k-opendata` |
-| `statKor` | L3 | `root/k-opendata` |
 
 ## Same-Name Divergence (E2)
 

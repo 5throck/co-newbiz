@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-21T01:46:40.549Z
+**Generated**: 2026-11-21T02:29:18.075Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -109,7 +109,7 @@
 | handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
 | handbook-sync-audit | 1.0.5 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | pm |
 | historical-financial-analysis | 1.0.1 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
-| humanize-polish | 1.0.1 | active | skills/humanize-polish/SKILL.md | workspace | polish Korean, humanize, humanize Korean, Korean polishing, Korean deliverable polish, before output of Korean deliverables | docs-writer |
+| humanize-polish | 1.1.0 | active | skills/humanize-polish/SKILL.md | workspace | polish Korean, humanize, humanize Korean, Korean polishing, Korean deliverable polish, before output of Korean deliverables | docs-writer |
 | i18n-audit | 1.0.2 | active | skills/i18n-audit/SKILL.md | workspace | i18n audit, locale parity, translation parity, glossary audit, L10N parity | i18n-specialist |
 | i18n-formatting | 1.0.1 | active | skills/i18n-formatting/SKILL.md | workspace | date format, number format, currency format, unit conversion, paper size, korean numerals | i18n-specialist |
 | i18n-layout | 1.1.1 | active | skills/i18n-layout/SKILL.md | workspace | character encoding, RTL, bidi, font selection, CRLF, BOM | i18n-specialist |
@@ -190,7 +190,7 @@
 
 | Name | Version | Location | Dependencies |
 |------|---------|----------|--------------|
-| adapter-gates.test.ts | 1.0.0 | scripts/humanize/tests/adapter-gates.test.ts | bun:test, fs, os, path |
+| adapter-gates.test.ts | 2.0.0 | scripts/humanize/tests/adapter-gates.test.ts | bun:test, fs, os, path |
 | adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | fs, path |
 | agent-create.ts | 1.0.2 | scripts/agent-create.ts | fs, path |
 | agent-delete.ts | 1.0.2 | scripts/agent-delete.ts | fs, path |
@@ -291,8 +291,8 @@
 | graph.ts | 0.6.0 | scripts/co-newbiz/graph.ts | fs, js-yaml, path |
 | handbook-doctor.ts | 1.0.0 | scripts/handbook/handbook-doctor.ts | fs, path |
 | handbook-sync-audit.ts | 1.0.0 | scripts/handbook/handbook-sync-audit.ts | fs, path |
-| humanize-adapter.ts | 1.0.0 | scripts/humanize/humanize-adapter.ts | child_process, crypto, fs, os, path |
-| humanize-contract.test.ts | 1.0.0 | scripts/humanize/tests/humanize-contract.test.ts | bun:test, child_process, fs, os, path |
+| humanize-adapter.ts | 2.0.0 | scripts/humanize/humanize-adapter.ts | child_process, crypto, fs, os, path |
+| humanize-contract.test.ts | 2.0.0 | scripts/humanize/tests/humanize-contract.test.ts | bun:test, fs, path, url |
 | hwp-extract.ts | 1.0.0 | scripts/co-newbiz/hwp-extract.ts | child_process, fs, path |
 | i18n-lint.ts | 1.2.0 | scripts/co-newbiz/i18n-lint.ts | fs, path |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | fs |
