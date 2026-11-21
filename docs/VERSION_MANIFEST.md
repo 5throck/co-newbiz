@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-21T11:51:42.308Z
+**Generated**: 2026-11-21T15:05:47.659Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -366,7 +366,7 @@
 | spec-register.ts | 1.6.0 | scripts/spec-register.ts | fs, path |
 | sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | fs, js-yaml, path, url |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | fs, path |
-| sync-library-projection.ts | 1.3.0 | scripts/co-newbiz/sync-library-projection.ts | fs, js-yaml, path |
+| sync-library-projection.ts | 1.3.1 | scripts/co-newbiz/sync-library-projection.ts | fs, js-yaml, path |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
 | sync-skill-status.ts | 1.1.0 | scripts/sync-skill-status.ts | child_process, fs, path, process |
 | sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | fs, path |

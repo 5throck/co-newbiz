@@ -3734,11 +3734,7 @@
         ".agents/skills/sync/SKILL.md",
         ".codex/skills/sync/SKILL.md",
         ".hermes/skills/sync/SKILL.md"
-      ],
-      "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-14"
-      }
+      ]
     },
     {
       "id": "skill:root/systematic-market-sizing",
