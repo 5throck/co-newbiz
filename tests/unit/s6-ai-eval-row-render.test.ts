@@ -82,8 +82,9 @@ describe("scoped dialog + body", () => {
 });
 
 describe("longlist table fits the pane (no horizontal scroll at about 730px)", () => {
+  // the table markup lives in LonglistTable.tsx (split from LonglistSection.tsx for the 400-line cap)
   const src = readFileSync(
-    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistSection.tsx`,
+    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistTable.tsx`,
     "utf8",
   );
   test("six column shares sum to 100, small min width, exclusion reason moved into the name cell", () => {
@@ -105,8 +106,9 @@ test("ko/en parity for row keys", () => {
 });
 
 describe("row actions (ADR-0200): [AI 평가][항목 검토][버전 비교], no confirm", () => {
+  // the table markup lives in LonglistTable.tsx (split from LonglistSection.tsx for the 400-line cap)
   const src = readFileSync(
-    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistSection.tsx`,
+    `${import.meta.dir}/../../app/web-next/components/stages/brownfield/LonglistTable.tsx`,
     "utf8",
   );
   test("order in the longlist: AI 평가, 항목 검토 (link to the detail evaluation tab), 버전 비교 on one nowrap group", () => {

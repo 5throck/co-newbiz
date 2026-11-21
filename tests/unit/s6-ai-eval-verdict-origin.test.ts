@@ -71,7 +71,9 @@ describe("B. promotion: warn with counts, never block", () => {
   });
   test("the shortlist call reports the response's unreviewed count; the longlist and the detail page both use PromoteButton", () => {
     expect(read("components/stages/brownfield/useBrownfieldTargets.ts")).toContain("return r.data.unreviewed ?? 0;");
-    expect(read("components/stages/brownfield/LonglistSection.tsx")).toContain("<PromoteButton");
+    // PromoteButton lives in the table markup (LonglistTable.tsx, split from LonglistSection.tsx
+    // for the 400-line cap); the unreviewed-count note stayed in LonglistSection.tsx.
+    expect(read("components/stages/brownfield/LonglistTable.tsx")).toContain("<PromoteButton");
     expect(read("components/stages/brownfield/LonglistSection.tsx")).toContain('ta("promotedWithUnreviewed", { n })');
     expect(read("app/brownfield/targets/[targetId]/page.tsx")).toContain("<PromoteButton");
   });
@@ -157,6 +159,7 @@ describe("D. removed usage and parity", () => {
       "components/stages/brownfield/AiEvalChips.tsx",
       "components/stages/brownfield/AiEvalCoverage.tsx",
       "components/stages/brownfield/LonglistSection.tsx",
+      "components/stages/brownfield/LonglistTable.tsx",
       "components/stages/brownfield/types.ts",
     ];
     for (const f of files) {

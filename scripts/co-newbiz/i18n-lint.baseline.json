@@ -115,7 +115,7 @@
   "app/web-next/components/SketchCanvas.tsx": 17,
   "app/web-next/components/SourceTooltip.tsx": 8,
   "app/web-next/components/StageFrame.tsx": 23,
-  "app/web-next/components/StageTabs.tsx": 9,
+  "app/web-next/components/StageTabs.tsx": 10,
   "app/web-next/components/TargetCheckPanel.tsx": 21,
   "app/web-next/components/TargetSelector.tsx": 2,
   "app/web-next/components/layout.tsx": 1,

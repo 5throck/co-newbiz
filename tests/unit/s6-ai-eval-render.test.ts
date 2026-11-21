@@ -278,6 +278,8 @@ describe("version panel is a read-only audit history (no confirm path)", () => {
     const vp = src("AiEvalVersionPanel.tsx");
     expect(vp).not.toMatch(/\/confirm|confirmVersion|AiEvalConfirmBody|buildConfirmPlan|onConfirmed|<button/);
     expect(src("LonglistSection.tsx")).not.toContain("/confirm");
+    // the table markup moved to LonglistTable.tsx (split for the 400-line cap) — the guard follows it
+    expect(src("LonglistTable.tsx")).not.toContain("/confirm");
     expect(existsSync(new URL(`${WEB}/components/stages/brownfield/AiEvalRowConfirm.tsx`, import.meta.url))).toBe(
       false,
     );
@@ -299,7 +301,8 @@ describe("version panel is a read-only audit history (no confirm path)", () => {
     expect(JSON.stringify(en.stages.s67.aiEval)).not.toContain("provisional draft");
   });
   test("the longlist drives promotion from the explicit complete flag, never from AI verdicts alone", () => {
-    expect(src("LonglistSection.tsx")).toContain(
+    // the table markup lives in LonglistTable.tsx (split from LonglistSection.tsx for the 400-line cap)
+    expect(src("LonglistTable.tsx")).toContain(
       'canPromote = tgt.status === "pending" && tgt.eval_summary?.complete === true',
     );
   });
