@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * @version 1.3.0
+ * @version 1.3.1
  */
 // sync-library-projection.ts — refreshes app/web-next/lib/library.generated.ts from
 // its source files. SSOT is the source documents (checklists/, procedures/, docs/);
@@ -14,6 +14,14 @@
 // v1.2.0 also embeds the brownfield overlay (ADR-0162,
 // checklists/_overlays/brownfield-workspace-scope.yaml) as
 // LIBRARY_BROWNFIELD_WORKSPACE_OVERLAY under the same drift check.
+//
+// v1.3.1 (U-20261121-002): normalize each source read to LF before embedding.
+// JSON.stringify serializes a real CRLF as the two-character escape sequence
+// `\r\n`, so the file-level `normalize()` below (which only rewrites CR bytes
+// in the emitted text) could never match a Windows working copy whose sources
+// carried CRLF — the gate reported 283 git-clean files as drift. Sources are
+// now normalized at read time, and the emitted projection is therefore
+// identical for LF and CRLF checkouts.
 //
 // Usage:
 //   bun scripts/co-newbiz/sync-library-projection.ts           # rewrite the projection
@@ -41,7 +49,10 @@ for (const [id, entry] of Object.entries(CONTENT)) {
     missing.push(`${id} (${entry.file})`);
     continue;
   }
-  entry.content = readFileSync(path, "utf-8");
+  // Normalize EOL at read time (v1.3.1, U-20261121-002): the content is later
+  // JSON.stringify-embedded, and an escaped `\r\n` is invisible to the
+  // file-level normalize() below — a CRLF checkout would read as stale.
+  entry.content = normalize(readFileSync(path, "utf-8"));
 }
 
 for (const id of Object.keys(ITEMS)) {
