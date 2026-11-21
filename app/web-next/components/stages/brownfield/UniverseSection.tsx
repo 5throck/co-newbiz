@@ -35,6 +35,7 @@ export function UniverseSection({ ctx }: { ctx: BrownfieldStageState }) {
       {selected && (
         <div
           id={SECTION_IDS.universe}
+          tabIndex={-1}
           className="grid gap-3 items-stretch md:grid-cols-[3fr_2fr]"
           style={{ scrollMarginTop: "1rem" }}
         >

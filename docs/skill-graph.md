@@ -364,6 +364,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0202` | adr | — | — | — |
 | `adr:0203` | adr | — | — | — |
 | `adr:0204` | adr | — | — | — |
+| `adr:0205` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -615,7 +616,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 192 | (expected until docs `references` edges are mined) |
+| adr | 193 | (expected until docs `references` edges are mined) |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 7 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer |
 

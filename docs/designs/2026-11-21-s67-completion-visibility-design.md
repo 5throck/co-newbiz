@@ -1,9 +1,9 @@
 ---
 lang: en
 date: 2026-11-21
-status: approved (Amendment 2 — Design Gate Row 0a passed 2026-11-21); Amendment 3 owner-requested 2026-11-21 (ReviewBuckets scope ruled by owner 2026-11-21; S7 hint proposed, not implemented, awaiting owner confirmation)
+status: approved (Amendment 2 — Design Gate Row 0a passed 2026-11-21); Amendment 3 owner-requested 2026-11-21 (ReviewBuckets scope ruled by owner 2026-11-21); Amendments 2 and 3 shipped in PR #959 (merged 2026-11-21) without the S7 hint; S7 hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959
 owner: ux-designer-agent (design), pm (dispatch)
-amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; S7 back-link hint proposed, NOT implemented, awaiting owner confirmation)
+amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; shipped in PR #959, merged 2026-11-21, without the hint; S7 back-link hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959)
 related: docs/designs/2026-11-08-deal-shape-to-s7-design.md (s67 screen design of record), ADR-0195, ADR-0201, ADR-0202, docs/designs/2026-11-11-target-identity-resolution-design.md (PATCH D4 single-update-path of record), docs/designs/2026-11-17-deal-shape-viability-first-design.md, docs/design-system/design-tokens.md, docs/design-system/design-components.md, docs/design-system/design-screens.md, process/flow.spec.yaml (S6 blockers — Amendment 2), app/web-next/lib/process-flow.ts (S6 predicate, gateGoPrerequisiteGaps), workspace ADR-0065 (accessibility standard), workspace ADR-0070 (UI preview verification), ADR for the S6 pre_fs blocker (pending — plan Row 1, process-governance-manager)
 spec: s67-completion-visibility
 ---
@@ -1008,10 +1008,13 @@ The owner approved Amendment 2 and ruled on its four open questions:
 **Status**: owner request, recorded during preview verification of Amendment 2
 (2026-11-21). It extends Amendment 2's stage scoping and changes no engine,
 API, or process-spec contract. The `ReviewBuckets` scope is settled by the
-owner ruling at the end of this amendment. The S7 back-link hint was **not**
-requested by the owner; it is recorded only as a proposal, **NOT implemented,
-awaiting owner confirmation**. Design only; frontend implements in a separate
-row.
+owner ruling at the end of this amendment. The S7 back-link hint was not in
+the owner's original request; it was proposed by ux-designer and is now
+**Owner-approved (2026-11-21) — being implemented in the follow-up PR after
+#959**. Design only; frontend implements in a separate row.
+
+**Shipped**: PR #959 (merged 2026-11-21) shipped Amendments 2 and 3 **without**
+the S7 hint. The hint, its i18n keys, and its tests land in the follow-up PR.
 
 ### Owner request (2026-11-21)
 
@@ -1052,7 +1055,7 @@ remaining S6 write surfaces.
 | `UniverseSection`: discovery card (`후보 발굴 — 후보 전체 목록 채우기`, master/web search, `후보 등록` form) | yes | **no** (new) | same gate (both cards live in `UniverseSection` under the `s6s7-universe` wrapper) |
 | `UniverseEditModal` | yes | **no** (new) | `stage === "S6"` in `BrownfieldStage.tsx` |
 | `WebDiscoveryPanel` (web search result modal) | yes | **no** (new) | `stage === "S6"` in `BrownfieldStage.tsx` |
-| S7 back-link hint (`후보 추가·Universe 수정은 S6에서` + `S6로 이동 →`) | no | **Proposed — NOT implemented, awaiting owner confirmation** | would sit in `BrownfieldStage.tsx`, S7 only, directly above `LonglistSection`; not rendered today |
+| S7 back-link hint (`후보 추가·Universe 수정은 S6에서` + `S6로 이동 →`) | no | **yes — Owner-approved (2026-11-21) — being implemented in the follow-up PR after #959** | `BrownfieldStage.tsx`, S7 only, directly above `LonglistSection`; not in PR #959 |
 | `LonglistSection` (toolbar, AI bulk eval, Long List table, judgment/ranking) | yes | yes | unchanged |
 | `S6CriteriaPanel` (4 rows, row-4 cross-route link on S7) | yes | yes | unchanged (Amendment 2) |
 | `GateDecisionPanel gates={["pre_fs"]}` | yes, last | no | unchanged (Amendment 2) |
@@ -1074,8 +1077,9 @@ unchanged.
 ┌────────────────────────────────────────────────────────────────────┐
 │ [disabled 위원회 추천 검토 실행 + reason]  (when applicable, as today) │
 │ ReviewBuckets — stageArtifactTabs("S7") only (no S6 buckets)        │
-│ [Proposed — NOT implemented, awaiting owner confirmation:           │
-│  one-line hint 후보 추가·Universe 수정은 S6에서 · S6로 이동 →]        │
+│ [Owner-approved (2026-11-21) — being implemented in the follow-up   │
+│  PR after #959: one-line hint 후보 추가·Universe 수정은 S6에서 ·      │
+│  S6로 이동 →]                                                       │
 │ LonglistSection: toolbar · S6CriteriaPanel · filters · Long List    │
 │ ShortlistSection: 사전 검토 · 위원회 추천 (9) → CommitteePanel        │
 │   → S7DecisionTabs → PromotionPanel                                 │
@@ -1101,21 +1105,22 @@ candidate. Analysts go back to S6 for both. This is intended:
   Fix ②). Completing a listed candidate's `발굴 출처` or attributes does not
   require S6.
 
-**Proposed — NOT implemented, awaiting owner confirmation: a one-line S7
-hint.** The owner did not request this hint. It is a ux-designer proposal
-only. It is not shipped behavior, frontend must not build it until the owner
-confirms, and the S7 screen today renders no hint. Rationale for the proposal:
+**Owner-approved (2026-11-21) — being implemented in the follow-up PR after
+#959: a one-line S7 hint.** The owner did not originally request this hint;
+ux-designer proposed it and the owner approved it at the Design Gate on
+2026-11-21. It was not part of PR #959, so the S7 screen as merged renders no
+hint until the follow-up PR lands. Rationale:
 
 1. **Stage linkage (doctrine) and orphaned jobs.** Analysts often notice a
    missing candidate during S7 ranking. Without a pointer, the place where
    they used to do this job simply disappears with nothing to tell them where
    it went. One line closes that gap at the moment it occurs.
-2. **The S7 screen loses its only Universe read view.** The proposed hint
-   would also be the path for *reading* the Universe definition while judging candidates.
+2. **The S7 screen loses its only Universe read view.** The hint is also
+   the path for *reading* the Universe definition while judging candidates.
 3. **Low cost.** One caption line with a link. It adds no new component,
    modal, or action, and the primary action stays the committee review.
 
-Proposed spec (applies only if the owner confirms):
+Spec (Owner-approved (2026-11-21) — being implemented in the follow-up PR after #959):
 
 - Placement: S7 only, immediately above `LonglistSection` (after
   `ReviewBuckets`), as a `<p>` caption (`--fs-caption`, `--muted-fg`), not a
@@ -1127,8 +1132,9 @@ Proposed spec (applies only if the owner confirms):
   `scroll-margin-top`.
 - Shown to every role. Viewers use it to read the Universe, and S6 then
   applies its own `canAct` rules.
-- i18n (proposed keys — NOT implemented, awaiting owner confirmation; do not
-  add them to the ko/en catalogs until confirmed, then keep ko/en parity):
+- i18n (Owner-approved (2026-11-21) — being implemented in the follow-up PR
+  after #959; add both keys to the ko/en catalogs in that PR, keeping ko/en
+  parity):
 
   | Key | ko | en |
   |---|---|---|
@@ -1146,17 +1152,18 @@ Proposed spec (applies only if the owner confirms):
   heading (if rendered) → Long List `SectionToolbar` `h2` → Shortlist / committee
   / decision `h2`s. The removed Universe and discovery toolbars were `h2`
   siblings of the Long List toolbar, so removing them leaves no level skip. The
-  first `h2` after the stage chrome is now the Long List title. (Proposed hint,
-  NOT implemented, awaiting owner confirmation: it would be a paragraph, not a
-  heading.)
+  first `h2` after the stage chrome is now the Long List title. (Hint,
+  Owner-approved (2026-11-21) — being implemented in the follow-up PR after
+  #959: it is a paragraph, not a heading.)
 - **Focus order (2.4.3)** on S7: stage chrome → ReviewBuckets (S7 tabs only) →
   Long List toolbar (AI bulk eval, criteria dialog) → criteria strip (row-4 S6
   link, per-candidate `수정` links) → filters → table → checklist → committee →
   decision tabs → promotion. DOM order matches visual order, with no positive
-  `tabindex`. (Proposed hint, NOT implemented, awaiting owner confirmation: its
-  link would sit between ReviewBuckets and the Long List toolbar.)
-- **Link purpose (2.4.4)** — Proposed, NOT implemented, awaiting owner
-  confirmation: if built, the hint link's accessible name is the sentence plus
+  `tabindex`. (Hint, Owner-approved (2026-11-21) — being implemented in the
+  follow-up PR after #959: its link sits between ReviewBuckets and the Long
+  List toolbar.)
+- **Link purpose (2.4.4)** — Owner-approved (2026-11-21) — being implemented
+  in the follow-up PR after #959: the hint link's accessible name is the sentence plus
   `S6로 이동` (one text run, not `here`).
 - S6 accessibility is unchanged from Amendment 2.
 
@@ -1173,22 +1180,25 @@ Add the following to Amendment 2's preview evidence:
   shows only S6 artifact tabs.
 - **DOM check (S7)**: `document.querySelector("#s6s7-universe") === null`, no
   `후보 등록` input, and no web search or Universe edit dialog in the tree.
-- **Interaction** — Proposed, NOT implemented, awaiting owner confirmation:
-  if the hint is built, clicking its link opens `/deals/{id}/s6` scrolled to
-  the Universe card. Not a check for the current build.
+- **Interaction** — Owner-approved (2026-11-21) — being implemented in the
+  follow-up PR after #959: clicking the hint link opens `/deals/{id}/s6`
+  scrolled to the Universe card. Checked in the follow-up PR (not applicable
+  to the PR #959 build).
 - **Render tests**: extend `tests/unit/s67-stage-scoping.test.ts` so that with
   `stage="S7"` none of the four removed pieces renders and `ReviewBuckets`
   receives only `stageArtifactTabs("S7")`, and with `stage="S6"` all four
   render and `ReviewBuckets` receives only `stageArtifactTabs("S6")`. (Hint
-  assertions are added only if the owner confirms the proposal.)
+  assertions — Owner-approved (2026-11-21) — being implemented in the
+  follow-up PR after #959: with `stage="S7"` the hint renders with a link to
+  `s6#s6s7-universe`; with `stage="S6"` it does not render.)
 
 ### Measurable success criteria (delta)
 
 1. **Scoping correctness (render tests, 100%)**: as in the render-test bullet
    above.
-2. **No orphaned job (moderated, n ≥ 5, ko UI)** — applies only if the
-   proposed hint is confirmed and built (Proposed — NOT implemented, awaiting
-   owner confirmation): given "you noticed a missing candidate while ranking
+2. **No orphaned job (moderated, n ≥ 5, ko UI)** — measured once the
+   hint ships (Owner-approved (2026-11-21) — being implemented in the
+   follow-up PR after #959): given "you noticed a missing candidate while ranking
    on S7", ≥ 90% reach the S6 `후보 등록` form in ≤ 2 clicks from S7.
 
 ### Owner ruling (2026-11-21): `ReviewBuckets` scope
@@ -1221,3 +1231,14 @@ Trade-off considered and closed by the ruling: the Long List table remains on
 S7, so the `S6 대상 기업 롱리스트` bucket could arguably have stayed there too.
 The owner ruled for strict per-stage scoping, so no S6 bucket is carried onto
 S7.
+
+### Owner rulings (Amendment 3, 2026-11-21)
+
+1. **`ReviewBuckets` scope**: current stage only (see the ruling above).
+2. **S7 back-link hint**: approved at the Design Gate on 2026-11-21 (owner
+   answer: `"넣는다"`, i.e. include it). The spec above
+   (`stages.s67.s7AuthoringHint.text` / `.link`, S7 only, above
+   `LonglistSection`, link `s6#s6s7-universe`) is unchanged and is being
+   implemented in the follow-up PR after #959.
+3. **Delivery record**: PR #959 (merged 2026-11-21) shipped Amendments 2 and 3
+   without the hint.

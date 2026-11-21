@@ -33,6 +33,10 @@ const { S6CriteriaPanel } = (await import(`${WEB}/components/stages/brownfield/S
   S6CriteriaPanel: unknown;
 };
 
+const { S7AuthoringHint } = (await import(`${WEB}/components/stages/brownfield/S7AuthoringHint.tsx`)) as {
+  S7AuthoringHint: unknown;
+};
+
 const noop = () => {};
 const render = (el: unknown, locale: "ko" | "en" = "ko") =>
   renderToStaticMarkup(
@@ -216,5 +220,76 @@ describe("BrownfieldStage composition (source-pinned)", () => {
   test("the Pre-FS panel no longer mounts inside LonglistSection or the S7 decision tabs", () => {
     expect(read("LonglistSection.tsx")).not.toContain("GateDecisionPanel");
     expect(read("S7DecisionTabs.tsx")).not.toContain('"pre_fs"]');
+  });
+});
+
+describe("S7 authoring hint (Amendment 3)", () => {
+  const stageSrc = readFileSync(
+    new URL(`${WEB}/components/stages/brownfield/BrownfieldStage.tsx`, import.meta.url),
+    "utf-8",
+  );
+
+  test("renders the one-line hint with the relative S6 Universe link (ko + en)", () => {
+    const koHtml = render(createElement(S7AuthoringHint, null));
+    expect(koHtml).toContain("후보 추가·Universe 수정은 S6에서");
+    expect(koHtml).toContain('href="s6#s6s7-universe"');
+    expect(koHtml).toContain("S6로 이동");
+    const enHtml = render(createElement(S7AuthoringHint, null), "en");
+    expect(enHtml).toContain("Add candidates or edit the Universe on S6");
+    expect(enHtml).toContain("Go to S6");
+  });
+
+  test("is mounted on S7 only, directly above the Long List", () => {
+    const iHint = stageSrc.indexOf("<S7AuthoringHint");
+    const iLong = stageSrc.indexOf("<LonglistSection");
+    expect(iHint).toBeGreaterThan(0);
+    expect(iHint).toBeLessThan(iLong);
+    expect(stageSrc.slice(stageSrc.lastIndexOf("{", iHint), iHint)).toContain('stage === "S7"');
+    expect(stageSrc.match(/<S7AuthoringHint/g)?.length).toBe(1);
+  });
+
+  test("the link target anchor exists on S6 with scroll margin; ko/en key parity", () => {
+    const uni = readFileSync(
+      new URL(`${WEB}/components/stages/brownfield/UniverseSection.tsx`, import.meta.url),
+      "utf-8",
+    );
+    expect(uni).toContain("id={SECTION_IDS.universe}");
+    expect(uni).toContain('scrollMarginTop: "1rem"');
+    const keys = (m: Record<string, unknown>) => {
+      const h = ((m.stages as { s67: { s7AuthoringHint?: unknown } }).s67.s7AuthoringHint ?? {}) as Record<
+        string,
+        string
+      >;
+      return Object.keys(h).sort();
+    };
+    expect(keys(ko)).toEqual(["link", "text"]);
+    expect(keys(en)).toEqual(keys(ko));
+  });
+  test("hash-anchor landing: hook gated on a known anchor, mounted once in the stage body", () => {
+    const read = (f: string) => readFileSync(new URL(`${WEB}/${f}`, import.meta.url), "utf-8");
+    const hook = read("components/stages/brownfield/useHashAnchorLanding.ts");
+    expect(hook).toContain("window.location.hash");
+    expect(hook).toMatch(/if \(!id \|\| !\(LANDING_ANCHORS as readonly string\[\]\)\.includes\(id\)\) return;/);
+    for (const a of ['"gate-decision-pre_fs"', "SECTION_IDS.universe", '"s6-criteria"']) expect(hook).toContain(a);
+    expect(hook).toContain("scrollIntoView");
+    expect(hook).toContain('behavior: "auto"');
+    expect(hook).not.toContain("smooth");
+    expect(hook).toContain("el.focus(");
+    expect(hook).toContain("MutationObserver");
+    expect(hook).toContain("SETTLE_MS");
+    expect(hook).toContain("wheel");
+    expect(stageSrc.match(/useHashAnchorLanding\(\)/g)?.length).toBe(1);
+    expect(read("components/stages/brownfield/UniverseSection.tsx")).toMatch(
+      /id=\{SECTION_IDS\.universe\}\s+tabIndex=\{-1\}/,
+    );
+  });
+
+  test("hint link and strip links get the in-text link style (token classes only)", () => {
+    const css = readFileSync(new URL(`${WEB}/app/styles.css`, import.meta.url), "utf-8");
+    expect(css).toMatch(/\.s67-criteria-sub a \{[^}]*color: var\(--accent\);[^}]*text-decoration: underline/);
+    expect(css).toContain(".s67-criteria-sub a:focus-visible");
+    // The hint is a .s67-criteria-sub paragraph, so its anchor is covered by the rule above.
+    const html = render(createElement(S7AuthoringHint, null));
+    expect(html).toMatch(/<p class="s67-criteria-sub[^"]*"[^>]*>[\s\S]*<a href="s6#s6s7-universe"/);
   });
 });

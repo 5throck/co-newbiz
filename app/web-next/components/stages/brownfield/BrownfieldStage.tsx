@@ -14,6 +14,8 @@ import { useBrownfieldTargets } from "./useBrownfieldTargets.ts";
 import { useS6Gate } from "./S6CriteriaPanel.tsx";
 import { UniverseSection } from "./UniverseSection.tsx";
 import { WebDiscoveryPanel, UniverseEditModal } from "./DiscoveryPanels.tsx";
+import { S7AuthoringHint } from "./S7AuthoringHint.tsx";
+import { useHashAnchorLanding } from "./useHashAnchorLanding.ts";
 import { LonglistSection } from "./LonglistSection.tsx";
 import { ShortlistSection } from "./ShortlistSection.tsx";
 import { GateDecisionPanel } from "../../GateDecisionPanel.tsx";
@@ -33,6 +35,7 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
   // stage (StageFrame single-read rule): the S6 criteria strip, the Long List
   // gap chips and the deal-shape panel's blocked state all read this object.
   const s6Gate = useS6Gate(props0.opportunityId);
+  useHashAnchorLanding();
   const { stage } = props0;
   const ctx = { ...h0, ...h1, ...h2, s6Gate, stage };
   const { error, opportunityId, shortlistedTargets, canAct, selected } = ctx;
@@ -70,6 +73,9 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
           <UniverseEditModal ctx={ctx} />
         </>
       )}
+
+      {/* S7 전용: 후보 추가·Universe 수정은 S6에서 하므로 되돌아가는 길을 한 줄로 안내한다(Amendment 3). */}
+      {stage === "S7" && <S7AuthoringHint />}
 
       <LonglistSection ctx={ctx} />
 

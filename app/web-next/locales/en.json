@@ -6858,6 +6858,10 @@
         "preFsPrereq": "Meet the three criteria above before recording the Pre-FS decision",
         "preFsLink": "Go to the Pre-FS decision",
         "preFsLinkS7": "Record the Pre-FS decision on S6"
+      },
+      "s7AuthoringHint": {
+        "text": "Add candidates or edit the Universe on S6",
+        "link": "Go to S6"
       }
     },
     "s8": {
