@@ -4697,6 +4697,14 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .s67-criteria-cure { margin-top: var(--space-1); }
 /* ADR-0205 — the criteria strip links to the S6 Pre-FS gate panel (focusable section, tabIndex -1); keep it clear of the sticky chrome on arrival. */
 #gate-decision-pre_fs { scroll-margin-top: 1rem; }
+/* Hash-landing focus targets (useHashAnchorLanding) — visible ring, no ring on the large wrappers for mouse focus. */
+#gate-decision-pre_fs:focus-visible, #s6s7-universe:focus-visible, #s6-criteria:focus-visible {
+  outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset);
+}
+/* In-text links inside criteria strip / S7 hint lines — preflight resets a, so restore accent + underline (.guide-link precedent). */
+.s67-criteria-sub a { color: var(--accent); text-decoration: underline; text-underline-offset: var(--link-underline-offset); }
+.s67-criteria-sub a:hover { color: var(--primary-strong); }
+.s67-criteria-sub a:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); border-radius: var(--radius-sm); }
 /* Label-cell subline chip — the OriginBadge precedent: anchor that reads as a chip. */
 .longlist-gap-chip {
   display: inline-flex;

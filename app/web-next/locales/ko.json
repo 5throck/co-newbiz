@@ -6858,6 +6858,10 @@
         "preFsPrereq": "위 세 가지 기준을 먼저 충족해야 Pre-FS 결정을 기록할 수 있습니다",
         "preFsLink": "Pre-FS 결정 기록으로 이동",
         "preFsLinkS7": "S6에서 Pre-FS 결정 기록"
+      },
+      "s7AuthoringHint": {
+        "text": "후보 추가·Universe 수정은 S6에서",
+        "link": "S6로 이동"
       }
     },
     "s8": {
