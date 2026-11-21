@@ -238,11 +238,16 @@ function runDriftGate(label: string, generator: string, staleTarget: string): vo
 
 const routeAudit = scanRouteAudit();
 if (routeAudit.unaudited.length === 0 && routeAudit.allowlistErrors.length === 0) {
-  console.log(`  ✓ Route audit scan: ${routeAudit.writeRoutes} state-changing routes reach an audit write (or carry a reasoned exemption)`);
+  console.log(
+    `  ✓ Route audit scan: ${routeAudit.writeRoutes} state-changing routes reach an audit write (or carry a reasoned exemption)`,
+  );
 } else {
   failed = true;
   console.error(`  ✗ Route audit scan failed (${routeAudit.unaudited.length + routeAudit.allowlistErrors.length}):`);
-  for (const u of routeAudit.unaudited) console.error(`      - ${u}: state-changing handler with no audit write (appendAudit) — add one or a reasoned entry in scripts/co-newbiz/route-audit-allowlist.json`);
+  for (const u of routeAudit.unaudited)
+    console.error(
+      `      - ${u}: state-changing handler with no audit write (appendAudit) — add one or a reasoned entry in scripts/co-newbiz/route-audit-allowlist.json`,
+    );
   for (const e of routeAudit.allowlistErrors) console.error(`      - ${e}`);
 }
 
@@ -251,11 +256,7 @@ runDriftGate(
   "scripts/co-newbiz/generate-agent-registry.ts",
   "app/web-next/lib/agent-registry.generated.ts",
 );
-runDriftGate(
-  "PM-catalog",
-  "scripts/co-newbiz/generate-pm-catalog.ts",
-  "app/web-next/lib/pm-catalog.generated.ts",
-);
+runDriftGate("PM-catalog", "scripts/co-newbiz/generate-pm-catalog.ts", "app/web-next/lib/pm-catalog.generated.ts");
 
 runDriftGate(
   "Review-matrix",
@@ -349,7 +350,9 @@ function runProjectionDriftGate(): void {
   }
   if (stale.length > 0) {
     failed = true;
-    console.error(`  ✗ Generated projection drift detected (${stale.length}/${PROJECTION_GENERATORS.length} generators stale):`);
+    console.error(
+      `  ✗ Generated projection drift detected (${stale.length}/${PROJECTION_GENERATORS.length} generators stale):`,
+    );
     for (const s of stale) console.error(`      - ${s}`);
   } else if (fresh.length === PROJECTION_GENERATORS.length) {
     console.log(`  ✓ Generated projection drift: all ${PROJECTION_GENERATORS.length} projections fresh`);
@@ -365,11 +368,15 @@ const ssotCounts = summarize(ssot);
 const ssotBlocking = ssot.filter(isBlocking);
 const fmt = (ids: readonly string[]) => ids.map((c) => `${c}=${ssotCounts[c as keyof typeof ssotCounts]}`).join(", ");
 if (ssotBlocking.length > 0) {
-  console.log(`  ❌ Process SSOT validators (blocking, ADR-0187 P2-P4): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`);
+  console.log(
+    `  ❌ Process SSOT validators (blocking, ADR-0187 P2-P4): ${ssotBlocking.length} finding(s) — ${fmt([...BLOCKING_CHECKS])}; details: bun run process:ssot-check`,
+  );
   failed = true;
 } else console.log(`  ✓ Process SSOT validators (blocking, ADR-0187 P2-P4): 0 findings — ${fmt([...BLOCKING_CHECKS])}`);
 const ssotWarn = CHECK_IDS.filter((c) => !BLOCKING_CHECKS.has(c));
 if (ssot.length > ssotBlocking.length)
-  console.log(`  ⚠ [WARN] Process SSOT validators (report-only): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`);
+  console.log(
+    `  ⚠ [WARN] Process SSOT validators (report-only): ${ssot.length - ssotBlocking.length} finding(s) — ${fmt(ssotWarn)}`,
+  );
 
 process.exit(failed ? 1 : 0);
