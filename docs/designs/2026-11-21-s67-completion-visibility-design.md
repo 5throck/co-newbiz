@@ -3,7 +3,7 @@ lang: en
 date: 2026-11-21
 status: approved (Amendment 2 — Design Gate Row 0a passed 2026-11-21); Amendment 3 owner-requested 2026-11-21 (ReviewBuckets scope ruled by owner 2026-11-21); Amendments 2 and 3 shipped in PR #959 (merged 2026-11-21) without the S7 hint; S7 hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959
 owner: ux-designer-agent (design), pm (dispatch)
-amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; shipped in PR #959, merged 2026-11-21, without the hint; S7 back-link hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959)
+amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; shipped in PR #959, merged 2026-11-21, without the hint; S7 back-link hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959), Defect Remediation 2026-11-22 (four user-reported defects on the shipped s67 gate surfaces — implemented 2026-11-22, review-passed with adjudications; see § Defect Remediation — 2026-11-22)
 related: docs/designs/2026-11-08-deal-shape-to-s7-design.md (s67 screen design of record), ADR-0195, ADR-0201, ADR-0202, docs/designs/2026-11-11-target-identity-resolution-design.md (PATCH D4 single-update-path of record), docs/designs/2026-11-17-deal-shape-viability-first-design.md, docs/design-system/design-tokens.md, docs/design-system/design-components.md, docs/design-system/design-screens.md, process/flow.spec.yaml (S6 blockers — Amendment 2), app/web-next/lib/process-flow.ts (S6 predicate, gateGoPrerequisiteGaps), workspace ADR-0065 (accessibility standard), workspace ADR-0070 (UI preview verification), ADR for the S6 pre_fs blocker (pending — plan Row 1, process-governance-manager)
 spec: s67-completion-visibility
 ---
@@ -1242,3 +1242,311 @@ S7.
    implemented in the follow-up PR after #959.
 3. **Delivery record**: PR #959 (merged 2026-11-21) shipped Amendments 2 and 3
    without the hint.
+
+## Defect Remediation — 2026-11-22
+
+**Status**: implemented 2026-11-22 — AI 1st-formal and AI 2nd-cross-domain
+review passed with adjudications (recorded in the Landing record below). Four
+defects in this feature area, user-reported 2026-11-21 and confirmed
+reproducible, all pre-existing in the shipped surfaces. They are numbered
+**U1–U4** (the doc's D1–D8 are the design-time defects, already fixed). Each
+entry states the current behavior, the intended behavior traced to this doc
+(no new doctrine), the fix approach at component/key level, and the
+acceptance criteria a reviewer must see. Frontend implementation landed
+2026-11-22; the spec registry entry
+(`docs/specs/entries/2026-11-21-s67-completion-visibility-design.json`) carries
+no defect-list field in the registry schema, so it stays untouched.
+
+### U1 — Raw gate identifier `pre_fs` in the brief-mismatch caption
+
+**Current behavior (observed)**. When the AI progress brief shown in a gate
+panel was generated for a gate other than the form's currently selected gate,
+the caption renders the internal gate id verbatim in visible copy:
+`브리프는 pre_fs 기준입니다 — 진행을 바꾸면 재생성하세요.` — lowercase with
+underscore, in the middle of a sentence. Every other gate surface on this
+screen resolves the id through the catalog (`common.gate.pre_fs` =
+`예비타당성 검토(Pre-FS)`; e.g. `blockedReasonPreFsLink` renders
+`Pre-FS GO 기록 (S6)` correctly), so this caption is the one remaining raw-key
+leak. It is also the surface whose entire job is to NAME the other gate — the
+raw key renders exactly when the caption is on screen.
+
+**Anchor**: `app/web-next/components/GateDecisionPanel.tsx:237-240` —
+`GateBriefBody` renders `{t("theBrief")} {briefData.gate}
+{t("isTheBasisRegenerateAfter")}` under the condition
+`briefData.gate !== currentGate` (line 237). The trigger: the form's gate
+select changed after the brief was generated (seq panels,
+`GateDecisionPanel.tsx:1192-1205`) or the shared component is mounted with a
+different `currentGate` (`AiJudgementSupport.tsx:126`). The brief block inside
+the Pre-FS panel consumes it at `GateDecisionPanel.tsx:1075-1082`.
+
+**Intended behavior (design intent)**. Internal identifiers never render;
+every gate reference resolves through the label catalog — the single-source
+rule this doc already pins for the criteria strip (§ Fix ①-a: "Criterion
+names reuse the existing `processBlockers.s6_*` catalog keys … single
+source"), applied to gate labels through `GATE_LABEL_KEY`
+(`lib/label-keys.ts:13`, `pre_fs → common.gate.pre_fs`). The review surface's
+own rule states it in plain words (`CommitteeSessionRow.tsx:9`): never the raw
+gate id in user-visible text.
+
+**Fix approach (component/key level)**. In `GateBriefBody`, resolve the label
+with the `labelOf` pattern the panel itself already uses
+(`GateDecisionPanel.tsx:405`: `tr(GATE_LABEL_KEY[g] ?? g)`; `GateBriefBody`
+currently holds only the panel/common translators, `GateDecisionPanel.tsx:233-234`,
+so it adds the root translator). Replace the three-node concatenation with one
+keyed message carrying a `{gate}` param so both languages read naturally —
+one new key, both catalogs, ko/en parity as pinned throughout this doc:
+
+| Key | ko | en |
+|---|---|---|
+| `components.gateDecision.panel.briefGateMismatch` (new) | `이 브리프는 {gate} 기준입니다 — 진행을 바꾸면 재생성하세요.` | This brief targets {gate} — regenerate it after changing the gate. |
+
+with `{gate}` = the catalog label (ko `예비타당성 검토(Pre-FS)`, en
+`Preliminary feasibility study (Pre-FS)`), never the raw id. The two existing
+keys (`theBrief`, `isTheBasisRegenerateAfter`) become unused and are removed
+with the same change. The shared-component fix covers `AiJudgementSupport`
+automatically.
+
+**Acceptance criteria**.
+
+1. A render test sweeps every id in `GATE_LABEL_KEY` and asserts the rendered
+   caption contains the catalog label and never the raw id (no
+   `pre_fs`/`target_screening`/`entity_ic` substrings), for ko and en.
+2. On the Pre-FS panel: generate a brief, switch the form gate, regenerate the
+   mismatch state — the caption reads
+   `이 브리프는 예비타당성 검토(Pre-FS) 기준입니다 — 진행을 바꾸면 재생성하세요.`
+3. i18n parity green (the new key present in both catalogs; old keys removed
+   in the same change so the catalogs do not drift).
+
+### U2 — Collapsed `3단계 검토` card ignores the recorded gate state
+
+**Current behavior (observed)**. After a Pre-FS GO is recorded, the collapsed
+`3단계 검토` card on the S6 screen still counts the Pre-FS judgment as open —
+the user reads its `판단 필요 1건` (and the absence of the `✓ 종결` chip) as
+`Pre-FS GO 필요` — contradicting the criteria strip's row 4 (`✓ 충족`) and the
+panel's own recorded summary on the same screen. Mechanism: the collapsed
+strip (`ReviewBuckets.tsx:451-479`, summary variant mounted at
+`BrownfieldStage.tsx:57`) shows bucket counts; the `판단 필요` count
+subtracts only manual `사람 확인` acks (`displayCounts`,
+`ReviewBuckets.tsx:419-427`; `resolvedClaims` = `confirmedJudgements`,
+`GateDecisionPanel.tsx:471-477`). A recorded gate decision resolves nothing:
+the pre_fs gate-verdict claim (`lib/review/ai-first.ts:103-111`, "The pre_fs
+gate verdict (go / hold / kill)" → `Pre-FS 게이트 판정 (진행 / 보류 / 중단)`)
+and the S6-incomplete claims whose reason carries the engine's GO prose
+(`Pre-FS 게이트 GO 결정이 필요합니다 (사람이 기록)`, `ai-first.ts:63-77`) stay
+counted indefinitely.
+
+**Intended behavior (design intent)**. Screen state must agree with the
+recorded gate state everywhere it appears — the same rule that drives this
+doc's revocation design (Amendment 2: "latest decision wins"; the strip's
+row-4 GO state) and the collapse rule (§ Fix ①-a: "All-met state: the strip
+collapses to one line ✓ …"). ADR-0153's three-tier review reports *review*
+state; the gate decision is *human* state — once the person recorded GO, the
+collapsed summary must not present that judgment as still pending.
+
+**Fix approach (component/key level)**. Both parents already hold the gate
+state — no new fetch (StageFrame single-read rule). `GateDecisionPanel`
+derives per-gate decisions from `latest` (it already calls
+`gateState(latest, g)` at `GateDecisionPanel.tsx:893`) and passes a new
+optional prop `gateStates` to its `ReviewBuckets` (line 1035);
+`BrownfieldStage` passes the existing `s6Gate` (`BrownfieldStage.tsx:37-40`)
+to the stage-level `ReviewBuckets` (line 57). In `ReviewBuckets`, claims
+resolved by the recorded decision leave the counts (GO and KILL are
+terminal), and the collapsed strip renders a state-aware chip. Where a HOLD
+state is resolvable, the count is replaced by the amber HOLD line per the
+copy table below (the IC strips, `IcReviewStage`); where it is not — the S6
+stage-level strip — the honest pending count renders instead: `evaluateS6`
+re-emits `s6.pre_fs_go` as missing after a HOLD
+(`lib/process-flow.ts:544-558`), so the count correctly reads as pending
+re-decisions (D-b, Landing record). Designed collapsed copy (new keys under
+`review.strip`; `{gate}` = the catalog label via the existing `gateLabelKey`
+path, `ReviewBuckets.tsx:53-54`; glyph + text, never colour-only —
+status-green/amber/red pairs):
+
+| State | Key | ko | en |
+|---|---|---|---|
+| no decision recorded | — (unchanged) | `판단 필요 {count}건` (existing) | existing |
+| latest = GO | `review.strip.gateGoRecorded` (new) | `✓ {gate} GO 기록됨` | ✓ {gate} GO recorded |
+| latest = HOLD | `review.strip.gateHoldRecorded` (new) | `◐ {gate} HOLD 기록됨 — 재결정 필요` | ◐ {gate} HOLD recorded — re-decision needed |
+| latest = KILL | `review.strip.gateKillRecorded` (new) | `✕ {gate} KILL 기록됨 — 프로세스가 종료되었습니다` | ✕ {gate} KILL recorded — the process is terminated |
+
+The none-state copy is unchanged — with no decision recorded the count is
+honest. KILL terminates the process (Amendment 2 revocation rule). The
+criteria strip hides per the terminated rule (§ Fix ①-a —
+`S6CriteriaPanel.tsx:172`); the review strip itself renders unconditionally
+on terminated deals (`BrownfieldStage.tsx:71-76`), so the KILL chip is live
+on the s67 screen's collapsed strip as well as on the panel's other mounts
+(inbox, route decision) — see D-c in the Landing record for the
+attributed-gate caveat and the recorded follow-up.
+
+**Acceptance criteria**.
+
+1. Record Pre-FS GO on a data-complete deal → the collapsed card shows
+   `✓ 예비타당성 검토(Pre-FS) GO 기록됨`, the gate-verdict claim leaves the
+   `판단 필요` count, and the card's state agrees with `S6CriteriaPanel`
+   row 4 (`✓ 충족`) in the same render.
+2. Record HOLD after GO → where the HOLD state is resolvable the card shows
+   the amber HOLD line; on the S6 stage-level strip the count reads as
+   pending re-decision (D-b). S6 regresses per Amendment 2 and the card
+   stays consistent with row 4 (`✕ 미충족`).
+3. No decision recorded → the collapsed card is byte-identical to today
+   (regression-pinned by a render test).
+4. Render tests pin all four states; the chip is glyph + text (1.4.1) and the
+   state word is available to assistive tech.
+
+### U3 — Double `현재` in the stage rail on the s67 routes
+
+**Current behavior (observed)**. On `/deals/{id}/s6`, BOTH the S6 and the S7
+step render `현재` (`stage-step-state` in the full rail, ` (현재)` in the
+compact disclosure list) and both carry the filled-circle current styling;
+both also carry `aria-current="step"`. The current-step marker — a singular
+concept — is duplicated.
+
+**Anchors**: the caller passes the combined array —
+`app/web-next/app/deals/[id]/[stage]/page.tsx:279`
+(`<StageFrame stageId={["S6", "S7"]} …>`), a holdover from the pre-Amendment-2
+combined screen (Amendment 2 made the routes stage-specific but not this
+prop). `StageFrame.tsx:191` (`ids = Array.isArray(stageId) ? stageId :
+[stageId]`) → `StageFrame.tsx:284` (`<StageRail current={ids} …>`) →
+`StageFrame.tsx:639` (`isCurrent = current.includes(s.id)`), `:656`
+(`{!status && isCurrent && <span className="stage-step-state">현재</span>}`),
+`:616-624` (compact list `aria-current` + `isCurrent ? " (현재)" : ""`), and
+`:672` (`aria-current={isCurrent ? "step" : undefined}`).
+
+**Intended behavior (design intent)**. Exactly one stage is `현재` — the
+viewed stage. Amendment 2's split made `/s6` S6 work and `/s7` S7 work
+("reading order = work order"; the same-act-from-two-routes removal), and the
+rail's own contract is singular (`StageFrame.tsx:488-492`: one stepper,
+`aria-current="step"`). The project-side caller already honours it —
+`StageTabs.tsx:165` passes exactly one stage
+(`current={[group.stage]}`) — the s67 call is the only outlier. `StageRail`
+itself is correct: marking every id in `current` is its multi-stage contract
+(overview pages use it legitimately); the defect is the data the s67 route
+feeds it.
+
+**Fix approach (component/key level)**. `StageFrame` already computes the
+viewed stage — `pathStageId` (`StageFrame.tsx:200-204`,
+`navSource = pathStageId ?? primary`, line 205). Narrow the rail's input at
+line 284: `StageRail current={pathStageId ? [pathStageId] : [primary]}` (the
+h1 at line 219 already narrows through `stageLabelOf(ids, pathStageId)`; the
+rail is the only remaining consumer of the raw array). No `StageRail` change,
+no locale change: the non-viewed stage simply shows its plain state — on
+`/s6` the S7 step loses the marker (locked/pending rendering, no `현재`), on
+`/s7` the S6 step loses it. Marking the completed stage `완료` (the `status`
+prop) is a separate enhancement and stays out of scope here.
+
+**Acceptance criteria**.
+
+1. On `/deals/{id}/s6`: exactly one element with `aria-current="step"` (S6);
+   zero `현재` strings attached to S7 (full rail and compact list both).
+2. On `/deals/{id}/s7`: the mirror — S7 marked once, S6 unmarked.
+3. Render tests pin both routes; ADR-0070 preview evidence at 1440 and 390
+   shows one marker per rail.
+
+### U4 — 390px horizontal overflow (~3px) on the Pre-FS decision form inputs
+
+**Current behavior (observed)**. Inputs styled `.sizing-new-input` /
+`.sizing-new-input-sm` in `GateDecisionPanel.tsx` — line 177 (gap-ask modal
+textarea), 1198 (gate select), 1213 (decision select), 1233-1244 (rationale
+input, `sizing-new-input w-full`), 1259-1265 (HOLD textarea), 1271-1277
+(KILL textarea) — exceed the card's content box by ~3px at a 390px viewport
+on certain deals (where the decision form renders), producing a horizontal
+scroll on the stage screen.
+
+**Mechanism**. The base layer already fixed this exact defect class for plain
+controls: `input, select, textarea { min-width: 0; max-width: 100% }`
+(`app/web-next/app/styles.css:279-303` — its comment documents the same
+390px overflow, "OVERFLOW-390", and the axe-sweep remediation reused it at
+styles.css:3231). `.sizing-new-input` re-declares
+`min-width: 8rem` (styles.css:3604) and `.sizing-new-input-sm`
+`min-width: 5rem` (styles.css:3613); the class rules come later in the
+cascade, so these inputs lose the containment. Inside the decision-form row
+(`GateDecisionPanel.tsx:1188`, `flex flex-wrap items-end gap-2`) whose
+rationale wrapper carries its own `min-w-[14rem]` floor (line 1220), a
+wrapped item whose floor exceeds the line width overflows by the residual
+few pixels.
+
+**Intended behavior (design intent)**. This doc consumes these classes by
+name (§ Components and tokens consumed: `sizing-new-input`,
+`sizing-new-input-sm`, "the new form fields reuse the exact
+registration-form styling so the two surfaces read as one system") and binds
+the responsive minimum (§ Accessibility checklist; workspace ADR-0065) plus
+the ADR-0070 preview condition at 390 — an overflow fails that condition
+before any moderated check runs. Amendment 2's preview verification already
+demands a 390px pass for this exact screen.
+
+**Fix approach (right CSS layer — the token/component rule, not per-input
+hacks)**. In `app/web-next/app/styles.css`, contain the two classes where
+they are defined: `.sizing-new-input` gains `max-width: 100%` and a clamped
+floor `min-width: min(8rem, 100%)` (lines 3597-3605); `.sizing-new-input-sm`
+likewise (`min-width: min(5rem, 100%)`, line 3613). This mirrors the
+codebase's own precedents — `.form-input` (styles.css:4200:
+`min-width: 0; max-width: 100%; box-sizing: border-box`) and `.invest-ctl`
+(styles.css:3616: `box-sizing: border-box; width: 100%; min-width: 0`) — and
+re-derives what the base layer already established for every other input.
+The floors keep their desktop meaning (inputs never collapse below 8rem/5rem
+where space allows) and degrade to the container at narrow widths. No TSX
+change: every consumer of the two classes (this panel, the Long List
+registration form, the admin KPI gate select
+`GateIntegrityKpiSection.tsx:314`) is fixed at once, and the two surfaces
+stay one system per this doc's token rule.
+
+**Acceptance criteria**.
+
+1. At a 390px viewport on `/deals/{id}/s6` with the Pre-FS decision form
+   rendered — including the HOLD-textarea and KILL-textarea states and the
+   gap-ask modal open — `document.documentElement.scrollWidth ===
+   document.documentElement.clientWidth` (no horizontal scroll), and the
+   panel section's own `scrollWidth === clientWidth`.
+2. At 1440 the layout is unchanged (the floors still bind above the clamp) —
+   desktop renders byte-identical.
+3. ADR-0070 preview evidence at 390, both themes, attached for the panel in
+   all three form states; the fix lands in `styles.css` only (no per-input
+   Tailwind overrides in TSX).
+
+### Traceability and scope
+
+- U1 → § Fix ①-a single-source catalog rule (and the review surface's own
+  no-raw-ids rule). U2 → Amendment 2 revocation ("latest decision wins") +
+  § Fix ①-a collapse rule. U3 → Amendment 2 stage split + the rail's singular
+  `aria-current` contract. U4 → § Components and tokens consumed (token-only
+  styling, one system) + § Accessibility checklist + ADR-0070 390 preview.
+  No new doctrine is introduced by this section.
+- Out of scope, unchanged from § Out of scope: guard logic, predicates,
+  engine prose, evidence append-only model, and the S6CriteriaPanel row
+  states (U2 changes only the review card's summary, not the strip).
+- Implementation order suggestion for the dispatching row: U3 and U4 are
+  single-file, no-copy changes (U3 one line in `StageFrame`, U4 one rule in
+  `styles.css`); U1 and U2 add keys and props (ko/en parity tests each).
+  U2 touches `ReviewBuckets`' prop surface — its other callers (inbox,
+  proposal confirm, other stage screens) receive the new prop as optional
+  and render unchanged, which is the regression surface to test.
+
+### Landing record — 2026-11-22
+
+The U1–U4 implementation passed AI 1st-formal and AI 2nd-cross-domain review
+on 2026-11-22 with three adjudications, recorded here as the landing
+conditions of this section.
+
+- **D-a — accepted-as-noted.** The `GateDecisionPanel` expanded review-head
+  mount (`ReviewBuckets.tsx:549`) is intentionally not threaded with
+  `gateStates`: it is the expanded variant with no chip slot, as are the
+  inbox (`app/inbox/page.tsx:156`) and `RouteDecisionStage.tsx:116` mounts
+  per this section's own rendering spec; threading there would be dead
+  wiring. The chip ships on the collapsed strip only (`BrownfieldStage`,
+  `IcReviewStage` parents).
+- **D-b — accepted-as-noted.** On the S6 stage-level strip the amber HOLD
+  line is superseded by the engine-honest count: `evaluateS6` re-emits
+  `s6.pre_fs_go` as missing after a HOLD (`lib/process-flow.ts:544-558`), so
+  the strip correctly shows the pending re-decision count — consistent with
+  this section's "HOLD keeps the count" rule for the stage-level strip; the
+  HOLD copy itself stays live on the IC strips (`IcReviewStage`).
+- **D-c — accepted with caveat (non-blocking follow-up).** The review strip
+  renders unconditionally on terminated deals (`BrownfieldStage.tsx:71-76`);
+  the earlier sentence claiming the strip hides per the terminated rule was
+  wrong for this strip (only `S6CriteriaPanel.tsx:172` hides). A deal killed
+  at an earlier gate therefore shows the KILL chip attributed to Pre-FS.
+  Accepted because it strictly improves the stale-count status quo and the
+  process-terminated tail is factually true. Follow-up (recorded, not in
+  this batch): resolve the killed gate from decision history for the chip
+  label, or use gate-neutral terminated copy when the kill came from another
+  gate.

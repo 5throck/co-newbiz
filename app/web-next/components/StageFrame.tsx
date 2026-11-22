@@ -281,7 +281,15 @@ export function StageFrame({
       {/* 스트립은 목적선 바로 다음 — S1~S12 모든 화면에서 같은 머리 순서(h1 → 목적 → 스트립 →
           레일/탭)를 유지한다(2026-10-22 사용자 리포트: S2와 S11의 스트립 위치 불일치). */}
       <StageHandoffStrip primary={navSource} track={trackNow} linkFor={linkFor} outputOpen={gateOpen} />
-      {railSlot !== undefined ? railSlot : !stepperOwnedByTabs && <StageRail current={ids} track={track} />}
+      {/* U3 (design 2026-11-21-s67-completion-visibility § Defect Remediation) — exactly one
+          stage is 현재: the viewed stage. The s67 routes pass the combined [S6, S7] array (a
+          holdover from the pre-Amendment-2 combined screen), but the rail's current-step marker
+          is singular (one aria-current per rail); the h1 already narrows through
+          stageLabelOf(ids, pathStageId). StageRail's multi-stage contract itself is untouched —
+          overview pages marking several stages legitimately keep passing arrays. */}
+      {railSlot !== undefined
+        ? railSlot
+        : !stepperOwnedByTabs && <StageRail current={pathStageId ? [pathStageId] : [primary]} track={track} />}
       {/* ADR-0181 slice 5 — S8~S12 operate on the S2-decided entry market; the subject-market line
           sits in the head (inside main), resolved from the project's source opportunity. */}
       {gatedProjectStage && projectId && <DealEntryMarketStrip routeId={projectId} />}

@@ -232,11 +232,15 @@ export function GateBriefBody({
 }) {
   const t = useTranslations("components.gateDecision.panel");
   const tc = useTranslations("common");
+  // U1 (design 2026-11-21-s67-completion-visibility § Defect Remediation): the brief-mismatch
+  // caption names the OTHER gate through the label catalog — the raw id never renders
+  // (GATE_LABEL_KEY via the root translator, the same resolution as labelOf below).
+  const tr = useTranslations();
   return (
     <>
       {briefData.gate !== currentGate && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--amber-fg, var(--accent))] mt-1 mb-0">
-          {t("theBrief")} {briefData.gate} {t("isTheBasisRegenerateAfter")}
+          {t("briefGateMismatch", { gate: tr(GATE_LABEL_KEY[briefData.gate] ?? briefData.gate) })}
         </p>
       )}
       <p className="mt-2 mb-1 flex flex-wrap items-center gap-1">
