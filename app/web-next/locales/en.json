@@ -10588,6 +10588,7 @@
       "gateGoRecorded": "✓ {gate} GO recorded",
       "gateHoldRecorded": "◐ {gate} HOLD recorded — re-decision needed",
       "gateKillRecorded": "✕ {gate} KILL recorded — the process is terminated",
+      "processTerminated": "Process terminated — see the record",
       "loadFailed": "Failed to load",
       "loading": "Loading…",
       "closed": "Closed"

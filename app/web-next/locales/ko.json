@@ -10588,6 +10588,7 @@
       "gateGoRecorded": "✓ {gate} GO 기록됨",
       "gateHoldRecorded": "◐ {gate} HOLD 기록됨 — 재결정 필요",
       "gateKillRecorded": "✕ {gate} KILL 기록됨 — 프로세스가 종료되었습니다",
+      "processTerminated": "프로세스가 종료되었습니다 — 기록을 확인하세요",
       "loadFailed": "불러오지 못함",
       "loading": "불러오는 중…",
       "closed": "종결"

@@ -28,6 +28,26 @@ export function gateIndex(gate: string): number {
   return GATE_ORDER.indexOf(gate);
 }
 
+/**
+ * D-c follow-up (design 2026-11-21-s67-completion-visibility § Defect Remediation, 2026-11-22):
+ * the gate whose recorded decision killed the process, or null when no kill decision is resolvable
+ * from the given history. Accepts either the process read's `gateStatus` map (gate -> latest
+ * non-stale decision) or a latest-decisions row array (`{gate, decision}`). A healthy lineage has at
+ * most one kill (the first kill ends the process); if pathological data carries several, the
+ * EARLIEST gate in GATE_ORDER wins — the one that actually stopped the engine. Pure; client-safe.
+ */
+export function killedGateOf(
+  /** Mutable array member so `Array.isArray`'s false branch narrows cleanly for TS7053-free indexing. */
+  decisions: Record<string, string> | Array<{ gate: string; decision: string | null }> | null | undefined,
+): string | null {
+  if (!decisions) return null;
+  const killed = (gate: string): boolean =>
+    Array.isArray(decisions)
+      ? decisions.some((d) => d.gate === gate && d.decision === "kill")
+      : decisions[gate] === "kill";
+  return GATE_ORDER.find(killed) ?? null;
+}
+
 /** Last stage hosting each gate (flow.spec `gates:` of stages); the fallback current stage when the process engine cannot say. */
 export const GATE_LAST_STAGE: Readonly<Record<string, string>> = {
   screening: "S4",

@@ -16,6 +16,7 @@ import { CommitteeMinutesRecord } from "../CommitteeMinutesRecord.tsx";
 import { CommitteeSessionRowSummary } from "../CommitteeSessionRow.tsx";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { killedGateOf } from "../../lib/gate-kill-scope.ts";
 import { gateState } from "../../lib/gate-sequence-view.ts";
 import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
 import { KillCarriesPanel, type KillCarriesView } from "../KillCarriesPanel.tsx";
@@ -286,6 +287,13 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
   const bothGatesGo = ["entity_ic", "group_ic"].every(
     (g) => pkg?.gates.latest.find((x) => x.gate === g)?.decision === "go",
   );
+  // D-c follow-up (design 2026-11-21-s67-completion-visibility, 2026-11-22) — the IC shape already
+  // carries decision history (pkg.gates.latest), so the killed gate resolves from it: the killed
+  // gate's tab keeps its gate-attributed KILL chip (gateState above), while the sibling tab — whose
+  // gate has no terminal decision — renders the gate-neutral terminated copy (processTerminated
+  // below) instead of the stale 판단 필요 count. IC-local history only: a kill recorded outside the
+  // IC gates is invisible to this package, and the strips keep their honest per-gate state there.
+  const icKilledGate = killedGateOf(pkg?.gates.latest);
   const awaitingGates = (pkg?.gates.latest ?? []).filter((x) => x.awaiting_countersign).map((x) => x.gate);
   const estComplete = pkg?.establishment.complete ?? false;
   const origin = est?.project.origin;
@@ -319,6 +327,7 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
                 }
               : undefined
           }
+          processTerminated={icKilledGate !== null}
         />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           {t("entityAndGroupInvestmentCommittee")}

@@ -42,12 +42,18 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
   // U2 (design 2026-11-22 defect remediation) — the collapsed review strip reflects the recorded
   // Pre-FS decision (latest decision wins, Amendment 2), derived from the one engine read this
   // stage already holds. GO: S6 complete or the pre_fs_go key left `missing` on an evaluated
-  // stage (exempt ≠ GO). KILL: the process is terminated. HOLD/pending keep the honest
-  // 판단 필요 count (after a HOLD the re-decision IS pending — engine puts s6.pre_fs_go back).
+  // stage (exempt ≠ GO). KILL: the process is terminated AND the kill was recorded at pre_fs
+  // itself (D-c follow-up: the killed gate resolves from the same read's decision history —
+  // a kill at screening/target_screening/… must not wear the Pre-FS label). HOLD/pending keep
+  // the honest 판단 필요 count (after a HOLD the re-decision IS pending — engine puts
+  // s6.pre_fs_go back); on a cross-gate kill the gate-neutral terminated copy renders instead
+  // (review.strip.processTerminated, via the processTerminated prop below).
   const preFsGateState = !s6Gate.ready
     ? undefined
     : s6Gate.terminated
-      ? ("kill" as const)
+      ? s6Gate.killedGate === "pre_fs"
+        ? ("kill" as const)
+        : undefined
       : !s6Gate.s6Exempt &&
           (s6Gate.s6Status === "complete" || s6Gate.s6Status === "current") &&
           !s6Gate.s6Missing.includes("s6.pre_fs_go")
@@ -73,6 +79,7 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
         entityId={opportunityId}
         artifacts={stageArtifactTabs(stage)}
         gateStates={preFsGateState ? { pre_fs: preFsGateState } : undefined}
+        processTerminated={s6Gate.ready && s6Gate.terminated && s6Gate.killedGate !== "pre_fs"}
       />
 
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
