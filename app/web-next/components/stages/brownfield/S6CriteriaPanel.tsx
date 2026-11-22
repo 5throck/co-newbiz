@@ -11,6 +11,7 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "../../../lib/api.ts";
+import { killedGateOf } from "../../../lib/gate-kill-scope.ts";
 import { localizeBlocker } from "../../../lib/labels.ts";
 import type { TargetRow } from "./types.ts";
 
@@ -28,6 +29,8 @@ interface ProcessStageEntry {
 
 interface ProcessResponse {
   terminated?: boolean;
+  /** D-c follow-up — the engine's decision history: latest non-stale decision per gate (gate -> "go"|"hold"|"kill"|"pending"). */
+  gateStatus?: Record<string, string>;
   stages: ProcessStageEntry[];
 }
 
@@ -44,6 +47,13 @@ export interface S6GateState {
   s6Exempt: boolean;
   /** S7 not reached (S6 not complete) — the deal-shape buttons pre-disable. Stale state is still caught by the server guard. */
   s7Blocked: boolean;
+  /**
+   * D-c follow-up (design 2026-11-21-s67-completion-visibility § Defect Remediation, 2026-11-22) —
+   * the gate whose recorded decision killed the process, resolved from the SAME read's decision
+   * history (`gateStatus`); null when no kill decision is resolvable. A terminated process whose
+   * kill came from a gate other than pre_fs must not render the Pre-FS KILL chip on the review strip.
+   */
+  killedGate: string | null;
 }
 
 export const EMPTY_S6_GATE: S6GateState = {
@@ -54,6 +64,7 @@ export const EMPTY_S6_GATE: S6GateState = {
   s6Blockers: [],
   s6Exempt: false,
   s7Blocked: false,
+  killedGate: null,
 };
 
 function gateFromProcess(data: ProcessResponse): S6GateState {
@@ -67,6 +78,7 @@ function gateFromProcess(data: ProcessResponse): S6GateState {
     s6Blockers: s6?.blockers ?? [],
     s6Exempt: s6?.exempt === true,
     s7Blocked: !terminated && (s6?.status ?? null) !== "complete",
+    killedGate: terminated ? killedGateOf(data.gateStatus ?? {}) : null,
   };
 }
 

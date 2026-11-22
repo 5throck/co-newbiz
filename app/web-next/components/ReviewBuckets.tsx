@@ -172,6 +172,7 @@ export function CountStrip({
   label,
   recordedState,
   recordedGateLabel,
+  terminated = false,
 }: {
   counts: ReturnType<typeof bucketCounts>;
   notReached?: number;
@@ -180,6 +181,15 @@ export function CountStrip({
   recordedState?: "go" | "hold" | "kill";
   /** Catalog label of that gate ({gate} in the state copy) — never the raw id. */
   recordedGateLabel?: string;
+  /**
+   * D-c follow-up (design 2026-11-21-s67-completion-visibility § Defect Remediation, 2026-11-22) —
+   * the parent's engine read says the process is terminated, but no terminal decision resolves for
+   * THIS strip's gate (the kill was recorded at a different gate, or none is resolvable): a
+   * gate-neutral terminated copy replaces the stale 판단 필요 count instead of a misattributed
+   * KILL chip. The gate-attributed chip (recordedState) wins when it resolves — a kill at this
+   * gate keeps its label. Summary strip only.
+   */
+  terminated?: boolean;
 }) {
   const tr = useTranslations();
   const warn = counts.could_not_verify > 0;
@@ -220,6 +230,16 @@ export function CountStrip({
             { gate: recordedGateLabel },
           )}
         </span>
+      ) : terminated ? (
+        // D-c follow-up — gate-neutral terminated copy: neutral end glyph + no gate word (the ✕
+        // KILL glyph would attribute the termination to this gate). Icon + text, never colour-only.
+        <span
+          className="review-count review-count-state status-chip status-red"
+          title={BUCKET_TITLE.needs_judgement.en}
+          data-gate-state="terminated"
+        >
+          <span aria-hidden="true">■</span> {tr("review.strip.processTerminated")}
+        </span>
       ) : (
         <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
           {tr("review.counts.needsJudgement", { count: counts.needs_judgement })}
@@ -244,6 +264,7 @@ export function ReviewBuckets({
   confirmedJudgements,
   carrierStage,
   gateStates,
+  processTerminated,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
@@ -279,6 +300,12 @@ export function ReviewBuckets({
    *  terminal decision on the summary strip's gate, the state copy replaces the stale
    *  판단 필요 count. Omitted (or all-pending) = none-state, byte-identical to before. */
   gateStates?: Record<string, GateState>;
+  /** D-c follow-up (design 2026-11-21-s67-completion-visibility, 2026-11-22) — the parent's engine
+   *  read says the process is terminated. When no gate-attributed terminal decision resolves for
+   *  the strip's gate (cross-gate kill, or none resolvable), the gate-neutral terminated copy
+   *  renders instead of the stale 판단 필요 count; the gate-attributed chip still wins when it
+   *  resolves. Summary strip only. */
+  processTerminated?: boolean;
 }) {
   const tr = useTranslations();
   const locale = useLocale();
@@ -531,6 +558,7 @@ export function ReviewBuckets({
                 label={tabs.length > 1 ? activeLabel : undefined}
                 recordedState={stripGate?.state}
                 recordedGateLabel={stripGateLabel}
+                terminated={processTerminated}
               />
             ) : (
               <span className="review-counts-target">

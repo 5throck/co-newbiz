@@ -1549,4 +1549,6 @@ conditions of this section.
   process-terminated tail is factually true. Follow-up (recorded, not in
   this batch): resolve the killed gate from decision history for the chip
   label, or use gate-neutral terminated copy when the kill came from another
-  gate.
+  gate. Implemented 2026-11-22: killed gate resolved from decision history;
+  cross-gate kills render the gate-neutral `review.strip.processTerminated`
+  copy.
