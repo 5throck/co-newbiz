@@ -2091,6 +2091,11 @@
   flex-direction: column;
   gap: 0.3rem;
 }
+/* Global list-item overflow guard — moved above .library-doc-body li (0,1,1)
+   (biome noDescendingSpecificity). Cascade outcome unchanged: the doc-body rule
+   shares no property with this one, so no element's computed style depends on
+   their relative order. */
+main li { overflow-wrap: anywhere; }
 .library-doc-body li {
   line-height: 1.6;
   color: color-mix(in oklab, var(--fg) 88%, var(--muted-fg));
@@ -2117,6 +2122,14 @@
   border-radius: var(--radius-xs);
   background: var(--surface-2);
 }
+/* Component inline-code conventions (glossary cards, S6 token tables, review
+   disclosures). Moved above .library-doc-body pre code (0,1,2) — biome
+   noDescendingSpecificity reorder. Cascade outcome unchanged: these component
+   scopes never nest inside .library-doc-body, and where declarations overlap
+   (.library-doc-body code) source order between them is preserved. */
+.glossary-card code, .glossary-detail code { overflow-wrap: anywhere; }
+.pat-token-table code, .list-table code { font-family: var(--font-mono); font-size: var(--fs-caption); }
+.review-dev code { font-family: var(--font-mono); overflow-wrap: anywhere; }
 .library-doc-body pre {
   margin: 0.6rem 0;
   padding: 0.9rem 1rem;
@@ -2170,9 +2183,6 @@
   border-radius: var(--radius-sm, 0.5rem);
   background: var(--muted-bg);
   color: var(--muted-fg);
-}
-.library-doc-body blockquote p {
-  margin: 0.25rem 0;
 }
 .library-doc-body hr {
   border: none;
@@ -2409,59 +2419,13 @@
 .wiki-footer-note .library-doc-body {
   font-size: inherit;
 }
-.wiki-content-pane .library-doc-body h1,
-.wiki-content-pane .library-doc-body h2,
-.wiki-content-pane .library-doc-body h3,
-.wiki-content-pane .library-doc-body h4,
-.wiki-content-pane .library-doc-body p,
-.wiki-content-pane .library-doc-body ul,
-.wiki-content-pane .library-doc-body ol,
-.wiki-content-pane .library-doc-body blockquote,
-.wiki-home-body .library-doc-body h1,
-.wiki-home-body .library-doc-body h2,
-.wiki-home-body .library-doc-body h3,
-.wiki-home-body .library-doc-body h4,
-.wiki-home-body .library-doc-body p,
-.wiki-home-body .library-doc-body ul,
-.wiki-home-body .library-doc-body ol,
-.wiki-home-body .library-doc-body blockquote {
-  max-width: 48rem;
-}
-/* 한국어 산문 리듬 — 행간 1.7, 어절 단위 줄바꿈(keep-all). 자간·justify는
-   산문에 어디에도 걸려 있지 않음을 확인했고, 스크린샷의 이간 문제는 keep-all
-   부재로 인한 어중 줄바꿈이다. 표 셀의 ADR-0088 규약과 같은 조합이며, 긴
-   URL·코드 토큰은 overflow-wrap으로 잘라 넘침을 막는다. */
-.wiki-content-pane .library-doc-body p,
-.wiki-content-pane .library-doc-body li,
-.wiki-home-body .library-doc-body p,
-.wiki-home-body .library-doc-body li {
-  line-height: 1.7;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-}
-/* 문서 제목 h1 — 컨테이너가 14px로 내려오면(Tailwind preflight가 제목 크기를
-   상속으로 되돌림) 제목이 본문과 같아져 위계가 무너지므로, 앱의 콘텐츠 문서
-   제목 선례(.deal-header h1)에 맞춘다. h1 19.2px > h2 16.8px(/library 공유
-   1.05rem) > 본문 14px 위계가 유지된다. */
-.wiki-content-pane .library-doc-body h1,
-.wiki-home-body .library-doc-body h1 {
-  font-size: 1.2rem;
-}
-/* 절 전환 리듬 — h2 위 여백을 넓혀 절이 문단 사이에서 읽히게 한다.
-   글자 크기는 /library 공유 규약(--fs 스케일)을 그대로 둔다. */
-.wiki-content-pane .library-doc-body h2 {
-  margin: 2rem 0 0.6rem;
-}
-.wiki-content-pane .library-doc-body ul,
-.wiki-content-pane .library-doc-body ol,
-.wiki-home-body .library-doc-body ul,
-.wiki-home-body .library-doc-body ol {
-  margin: 0.5rem 0;
-  padding-left: 1.3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
+/* 위키 산문 블록 규칙(h1–h4·p·목록·인용의 measure·행간·제목 위계)은 본 파일
+   끝부분의 재배치 구역으로 옮겨졌다 — biome noDescendingSpecificity 정렬
+   (0,2,1) 선택자를 더 낮은 컴포넌트 산문 규칙보다 앞에 둘 수 없어서다. 재배치는
+   순서 이동만이고 스코프가 겹치는 규칙이 없어 계단식 결과는 동일하다.
+   The wiki prose block rules (measure/line-height/heading scale for h1–h4, p,
+   lists, quotes) were relocated to the relocation block near the end of this
+   file — pure source-order move, no cascade outcome change. */
 /* 콘텐츠 SVG 다이어그램 — 판 너비를 넘지 않고 종횡비를 유지하며 반응형으로
    줄어든다. 색상은 CSS 변수라 라이트/다크 테마 대응은 추가 작업이 없다.
    (main svg로 넓히면 앱 전역 인라인 아이콘이 함께 영향받으므로 판 범위로
@@ -2746,6 +2710,11 @@
    지표·작업 열이 오른쪽 끝으로 밀려나는" 문제를 막고, 모든 열이 헤더(th)를
    갖도록 design-lint가 강제한다. 긴 칩은 열 안에서 줄바꿈된다(nowrap 해제). */
 .list-table { table-layout: fixed; max-width: 64rem; }
+/* Generic chip nowrap — moved above .list-table .status-chip (biome
+   noDescendingSpecificity). Cascade outcome unchanged: the (0,2,0) descendant
+   rule wins by specificity regardless of source order, and no equal-specificity
+   white-space rule matches the same elements in between. */
+.status-chip { white-space: nowrap; }
 .list-table .status-chip { white-space: normal; }
 /* Column sizing system (design 2026-10-11-table-column-sizing-system): a <ColGroup> of percentages
    keeps every column's share stable; below --table-min the .table-scroll wrapper scrolls instead
@@ -2898,11 +2867,6 @@ a.funnel-card:hover { border-color: var(--primary); }
   .login-hero-bg.is-active { animation: none; }
   .login-hero-bg { transition: none; }
 }
-.login-page-rich > .login-hero,
-.login-page-rich > .login-panel {
-  position: relative;
-  z-index: 2;
-}
 .login-hero {
   align-self: center;
   max-width: 34rem;
@@ -2930,6 +2894,15 @@ a.funnel-card:hover { border-color: var(--primary); }
   background: var(--surface);
   box-shadow: var(--shadow-xl);
   backdrop-filter: blur(12px); /* design-token-exempt: one-off backdrop-blur strength */
+}
+/* Rich login layout lift (hero/panel above the background imagery) — moved below
+   the base .login-hero/.login-panel rules (biome noDescendingSpecificity).
+   Cascade outcome unchanged: (0,2,0) beats (0,1,0) by specificity regardless of
+   order, and no rule here shares position/z-index with these elements. */
+.login-page-rich > .login-hero,
+.login-page-rich > .login-panel {
+  position: relative;
+  z-index: 2;
 }
 .login-panel h1 {
   margin: 0 0 1rem;
@@ -3134,10 +3107,17 @@ a.funnel-card:hover { border-color: var(--primary); }
   opacity: 1;
   pointer-events: auto;
 }
+/* Reduced motion kills the drawer/backdrop transitions without !important:
+   this unlayered rule sits later in source order than every competing
+   transition declaration for these two elements — the layered ones
+   (.app-sidebar base, the mobile drawer state variants) lose to unlayered
+   author declarations anyway, and the equally unlayered .drawer-backdrop
+   fade above loses by plain source order — so `none` wins here exactly as
+   the former !important did. Keep this rule unlayered. */
 @media (prefers-reduced-motion: reduce) {
   .drawer-backdrop,
   .app-sidebar {
-    transition: none !important;
+    transition: none;
   }
 }
 .modal-head {
@@ -3224,14 +3204,13 @@ a.funnel-card:hover { border-color: var(--primary); }
 /* ── Glossary split + detail panel ── */
 .glossary-split { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(280px, 380px); gap: 1.25rem; align-items: start; } /* design-token-exempt: layout-tuned grid column minimum */
 .glossary-card-open { display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left; background: transparent; border: none; padding: 0; color: inherit; cursor: pointer; font: inherit; }
-.glossary-card-open:hover .glossary-card-head strong { color: var(--accent); }
-.glossary-card-active { border-color: var(--primary) !important; }
+.glossary-card-active { border-color: var(--primary); }
 /* A card's widest unbreakable run (term key in <code>) otherwise sets the card's
    min-content; under font stacks with wider fallback metrics (CI linux) that pushed
    scrollWidth past the 390px viewport (e2e axe-sweep OVERFLOW-390). `anywhere` —
    not `break-word` — also shrinks min-content, so a long token can wrap instead of
    widening its container. */
-.glossary-card code, .glossary-detail code, .glossary-preview { overflow-wrap: anywhere; }
+.glossary-preview { overflow-wrap: anywhere; }
 .glossary-preview { margin: 0.25rem 0 0; font-size: var(--fs-caption); color: var(--muted-fg); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .glossary-detail {
   position: sticky; top: 5.2rem;
@@ -3490,6 +3469,11 @@ a.funnel-card:hover { border-color: var(--primary); }
 
 /* 섹션 헤더 표준 (ADR-0083) — 제목 그룹(좌) / 필터 / 우측 액션 단일 구조.
    페이지는 이 구조 밖에서 헤더를 구성하지 않는다. */
+/* Inbox detail heading — moved above .section-toolbar > .section-title h2
+   (0,2,1) (biome noDescendingSpecificity). Cascade outcome unchanged: the
+   (0,2,1) rule wins by specificity regardless of order, and no equal-specificity
+   h2 rule between them matches the same elements. */
+.inbox-detail h2 { margin: 0; font-size: 1.125rem; }
 .section-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -3529,7 +3513,6 @@ a.funnel-card:hover { border-color: var(--primary); }
 /* 넓은 표 눌림 방지 래퍼 — 4열 이상·장문 셀 표는 반드시 이 래퍼 안에 둔다. */
 /* position: relative keeps absolutely positioned descendants (e.g. .sr-only header text) inside the scroll box. */
 .table-scroll { position: relative; overflow-x: auto; max-width: 100%; min-width: 0; }
-main li { overflow-wrap: anywhere; }
 /* 표 셀의 한국어 어간 분리 금지(keep-all) — 긴 영문 토큰은 단어 경계에서만 개행 */
 .data-table th, .data-table td { word-break: keep-all; overflow-wrap: break-word; }
 .report-table { min-width: 48rem; }
@@ -3753,7 +3736,6 @@ main li { overflow-wrap: anywhere; }
 .sizing-insight-table td:last-child { width: 55%; }
 .sizing-axes-table td:first-child { white-space: nowrap; min-width: 11rem; }
 .sizing-actions-cell { white-space: nowrap; }
-.status-chip { white-space: nowrap; }
 
 /* 단계 연계(핸드오프) 스트립 — StageFrame이 모든 S1~S12 화면에 렌더링하는
    "입력 ←/출력 →" 표시. 지금까지 이 4개 클래스에 스타일이 전혀 없어 화면마다
@@ -4144,7 +4126,6 @@ a.stage-step:focus-visible, .stage-tab:focus-visible, .stage-tab-menu-item:focus
 .inbox-row-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: var(--fs-caption); color: var(--muted-fg); }
 .inbox-chip { padding: 0.05rem 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-full); }
 .inbox-detail { padding: 1rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: grid; gap: 1rem; }
-.inbox-detail h2 { margin: 0; font-size: 1.125rem; }
 .inbox-back { display: none; justify-self: start; }
 .inbox-facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0; font-size: var(--fs-body); }
 .inbox-facts > div { display: inline-flex; gap: 0.4rem; align-items: baseline; }
@@ -4226,7 +4207,6 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
    레이아웃(.table-fixed-pct + ColGroup TOKEN_COL_PCT)으로 이전. 좁은 화면에서는
    .table-scroll 안에서 가로 스크롤된다(tmin-64). */
 .pat-token-table th, .pat-token-table td { padding-inline: var(--space-1, 0.25rem) var(--space-2, 0.5rem); white-space: nowrap; }
-.pat-token-table code, .list-table code { font-family: var(--font-mono); font-size: var(--fs-caption); }
 .pat-token-table .status-chip { white-space: nowrap; }
 .pat-help { margin: 0; font-size: var(--fs-caption); color: var(--muted-fg); }
 .pat-submit { padding-top: calc(var(--fs-caption) * 1.5 + var(--space-1, 0.25rem)); display: flex; flex-direction: column; gap: var(--space-1, 0.25rem); align-items: flex-start; }
@@ -4287,7 +4267,6 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .review-dev > summary:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); }
 @media (prefers-reduced-motion: reduce) { .review-dev > summary::before { transition: none; } }
 .review-dev ul { margin: 0.25rem 0; padding-left: 1.1rem; }
-.review-dev code { font-family: var(--font-mono); overflow-wrap: anywhere; }
 .review-dev-note { margin: 0.25rem 0; }
 
 /* Stepper: one row, horizontal scroll, current stage scrolled into view; gate marker is separate. */
@@ -4501,16 +4480,11 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 /* 투자비 요약 tables (S5 투자비 tab): right-aligned tabular numbers, emphasised totals row,
    muted inflow rows, and a sticky row-header column inside .table-scroll on narrow widths. */
 .invest-summary-table { width: max-content; min-width: 100%; margin: 0; }
-.invest-summary-table th[scope="row"] { font-weight: 600; white-space: nowrap; }
-.invest-summary-table .col-num { font-variant-numeric: tabular-nums; }
-.invest-summary-table tr.invest-total-row th,
-.invest-summary-table tr.invest-total-row td { font-weight: 700; border-top: var(--border-width-strong) solid var(--border); background: var(--surface-2); }
-.invest-summary-table tr.invest-inflow-row th,
-.invest-summary-table tr.invest-inflow-row td { color: var(--muted-fg); }
-.invest-sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
-.invest-sticky-first tr.invest-total-row th:first-child { background: var(--surface-2); }
-/* Sub-category label indent inside the sticky first column (category rows stay flush). */
-.invest-sticky-first th.invest-sub-row-label { padding-inline-start: 1.5rem; font-weight: 400; }
+/* Cell-level invest rules (th/td rightmost) moved to the relocation block near
+   the end of this file — biome noDescendingSpecificity: the (0,2,2) total/inflow
+   row selectors must come after the lower-specificity .longlist-table th/td
+   rules. Source-order move only; the invest and longlist table scopes never
+   nest, so the cascade outcome is identical. */
 
 /* ── Dry-run session detail + list (2026-10-26 dry-run UX design §3/§5/§6) ──
    Sticky summary bar (top matches .process-header: under the sticky topbar), single proposal-only
@@ -4588,6 +4562,11 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .longlist-table .sizing-actions-cell { white-space: normal; }
 .longlist-table td { min-width: 0; }
 .longlist-table .ai-draft-chip { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+/* Criteria-strip chip flex rule (S6 완료기준 strip) — moved above the
+   .table-scroll .longlist-table .status-chip rules (biome
+   noDescendingSpecificity). Cascade outcome unchanged: the strip never nests
+   inside a longlist table, and no rule crossed sets flex on chips. */
+.s67-criteria-head .status-chip { flex: 0 0 auto; }
 /* Progress / coverage wording must never be cut (2026-11-16 user report): chips wrap fully even under the <=640px
    nowrap rule for table chips, and the run progress panel has no fixed height or ellipsis. */
 .table-scroll .longlist-table .status-chip, .table-scroll .longlist-table .ai-draft-chip { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
@@ -4599,6 +4578,81 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 /* The 심사 확정 button stays on the row-action line, set apart from the three evaluation buttons (2026-11-17 user report). */
 .longlist-table .ai-row-actions + * { margin-inline-start: var(--space-3, 0.75rem); }
 .longlist-table .ai-row-actions > .btn-ghost { white-space: nowrap; padding-inline: var(--space-1, 0.25rem); }
+
+/* ── Relocation block (biome noDescendingSpecificity, 2026-11-22) ──────────
+   Higher-specificity prose/table rules that must order AFTER the lower-specificity
+   component rules above. Pure source-order moves from their home sections (pointers
+   left in place): no selector, declaration, or property changed. Cascade outcome is
+   byte-equivalent — every pair reordered here is either specificity-separated (the
+   higher rule wins regardless of order) or scope-disjoint (the two selectors never
+   match the same element in this app). ──────────────────────────────────────────── */
+.invest-summary-table th[scope="row"] { font-weight: 600; white-space: nowrap; }
+.invest-summary-table .col-num { font-variant-numeric: tabular-nums; }
+.invest-summary-table tr.invest-total-row th,
+.invest-summary-table tr.invest-total-row td { font-weight: 700; border-top: var(--border-width-strong) solid var(--border); background: var(--surface-2); }
+.invest-summary-table tr.invest-inflow-row th,
+.invest-summary-table tr.invest-inflow-row td { color: var(--muted-fg); }
+.invest-sticky-first th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+.invest-sticky-first tr.invest-total-row th:first-child { background: var(--surface-2); }
+/* Sub-category label indent inside the sticky first column (category rows stay flush). */
+.invest-sticky-first th.invest-sub-row-label { padding-inline-start: 1.5rem; font-weight: 400; }
+.glossary-card-open:hover .glossary-card-head strong { color: var(--accent); }
+.library-doc-body blockquote p {
+  margin: 0.25rem 0;
+}
+.wiki-content-pane .library-doc-body h1,
+.wiki-content-pane .library-doc-body h2,
+.wiki-content-pane .library-doc-body h3,
+.wiki-content-pane .library-doc-body h4,
+.wiki-content-pane .library-doc-body p,
+.wiki-content-pane .library-doc-body ul,
+.wiki-content-pane .library-doc-body ol,
+.wiki-content-pane .library-doc-body blockquote,
+.wiki-home-body .library-doc-body h1,
+.wiki-home-body .library-doc-body h2,
+.wiki-home-body .library-doc-body h3,
+.wiki-home-body .library-doc-body h4,
+.wiki-home-body .library-doc-body p,
+.wiki-home-body .library-doc-body ul,
+.wiki-home-body .library-doc-body ol,
+.wiki-home-body .library-doc-body blockquote {
+  max-width: 48rem;
+}
+/* 한국어 산문 리듬 — 행간 1.7, 어절 단위 줄바꿈(keep-all). 자간·justify는
+   산문에 어디에도 걸려 있지 않음을 확인했고, 스크린샷의 이간 문제는 keep-all
+   부재로 인한 어중 줄바꿈이다. 표 셀의 ADR-0088 규약과 같은 조합이며, 긴
+   URL·코드 토큰은 overflow-wrap으로 잘라 넘침을 막는다. */
+.wiki-content-pane .library-doc-body p,
+.wiki-content-pane .library-doc-body li,
+.wiki-home-body .library-doc-body p,
+.wiki-home-body .library-doc-body li {
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+/* 문서 제목 h1 — 컨테이너가 14px로 내려오면(Tailwind preflight가 제목 크기를
+   상속으로 되돌림) 제목이 본문과 같아져 위계가 무너지므로, 앱의 콘텐츠 문서
+   제목 선례(.deal-header h1)에 맞춘다. h1 19.2px > h2 16.8px(/library 공유
+   1.05rem) > 본문 14px 위계가 유지된다. */
+.wiki-content-pane .library-doc-body h1,
+.wiki-home-body .library-doc-body h1 {
+  font-size: 1.2rem;
+}
+/* 절 전환 리듬 — h2 위 여백을 넓혀 절이 문단 사이에서 읽히게 한다.
+   글자 크기는 /library 공유 규약(--fs 스케일)을 그대로 둔다. */
+.wiki-content-pane .library-doc-body h2 {
+  margin: 2rem 0 0.6rem;
+}
+.wiki-content-pane .library-doc-body ul,
+.wiki-content-pane .library-doc-body ol,
+.wiki-home-body .library-doc-body ul,
+.wiki-home-body .library-doc-body ol {
+  margin: 0.5rem 0;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
 
 /* ── OAuth consent (chromeless trust decision, design 2026-11-19-oauth-consent-screen-redesign) ──
    /oauth/* renders bare (AppShell bare-path branch): no sidebar/topbar, the
@@ -4697,7 +4751,6 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .s67-criteria-list { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .s67-criteria-row { display: flex; flex-direction: column; gap: var(--space-1); }
 .s67-criteria-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.s67-criteria-head .status-chip { flex: 0 0 auto; }
 .s67-criteria-name { font-size: var(--fs-caption); font-weight: 600; }
 .s67-criteria-sub { font-size: var(--fs-caption); color: var(--muted-fg); }
 .s67-criteria-cure { margin-top: var(--space-1); }
