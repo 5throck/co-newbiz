@@ -1,5 +1,9 @@
 // Generated from procedures/_committees.yaml for Next/Turbopack static server bundling.
-// Do not edit by hand; update procedures/_committees.yaml and regenerate this projection.
+// Do not edit by hand; update procedures/_committees.yaml and regenerate this
+// projection with: bun scripts/co-newbiz/generate-committee-registry.ts
+// (--check exits 1 on drift; the drift gate lives in the audit-variant
+// PROJECTION_GENERATORS family; tests/unit/committee-registry-projection.test.ts
+// pins generated-vs-YAML equality.)
 import type { CommitteeDef } from "./committee-session.ts";
 
 export const COMMITTEE_REGISTRY: Record<string, CommitteeDef> = {
@@ -81,7 +85,7 @@ export const COMMITTEE_REGISTRY: Record<string, CommitteeDef> = {
   },
   "target-longlist-shortlist-committee": {
     applies_to: "brownfield_target",
-    description: "S6/S7 committee (Long List -> Short List). Deliberates target screening and shortlist promotion before the human records the outcome.",
+    description: "S6/S7 committee (Long List -> 최종 후보 목록). Deliberates target screening and 심사 종료 (finalization into the 최종 후보 목록) before the human records the outcome.",
     chair: "process-governance-manager",
     rounds: 2,
     decision_modes_allowed: [

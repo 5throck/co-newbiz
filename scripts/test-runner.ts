@@ -1,6 +1,18 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.11.0
+ * @version 1.12.0
+ *
+ * v1.12.0 (2026-11-22, review F-36 / DEC-20261122-02): the permanently-empty
+ * `integration` suite definition is REMOVED — tests/*.test.ts has held zero
+ * files (its entire existence was justified by --allow-empty), so it was a
+ * configured gate that always passed. The suite name remains valid CLI input
+ * no longer: `bun scripts/test-runner.ts integration` now prints
+ * "Suite not found: integration" with the available suites, and the
+ * package.json `test:integration` alias is gone. The --allow-empty mechanism
+ * itself is UNTOUCHED — any other suite that legitimately resolves empty
+ * (a tree without, say, scenario tests) can still opt out explicitly.
+ * runTests(suiteName) takes no default anymore; the CLI errors on a missing
+ * suite name instead of silently defaulting to a now-nonexistent suite.
  *
  * v1.11.0 (2026-11-04, review 2026-11-04 H1 — spec
  *         docs/designs/2026-11-04-review-hardening-design.md):
@@ -165,7 +177,10 @@ interface TestFileResult {
 
 const suites: TestSuite[] = [
   { name: "unit", pattern: "*.test.ts", timeout: 120000, dir: "tests/unit", ext: ".test.ts" },
-  { name: "integration", pattern: "*.test.ts", timeout: 120000, dir: "tests", ext: ".test.ts" },
+  // The former `integration` suite (tests/*.test.ts) was removed in v1.12.0
+  // (review F-36): zero files for its entire existence, kept green only by
+  // --allow-empty — a configured gate that always passes. Reintroduce it as
+  // a REAL suite when the first integration test file lands under tests/.
   { name: "scenarios", pattern: "*", timeout: 300000, dir: "tests/scenarios", ext: "" },
   // sequential: members stage transient fixture dirs under the real templates/
   // tree (test-l3promo-*, co-e2eguard-*, co-e2p2*) and race concurrent
@@ -448,7 +463,7 @@ function verifyHygiene(snap: HygieneSnapshot): string[] {
   return violations;
 }
 
-export async function runTests(suiteName: string = "integration", options: RunOptions = {}): Promise<boolean> {
+export async function runTests(suiteName: string, options: RunOptions = {}): Promise<boolean> {
   const suite = suites.find((s) => s.name === suiteName);
   if (!suite) {
     console.error(`Available suites: ${suites.map((s) => s.name).join(", ")}`);
@@ -598,7 +613,9 @@ export async function runTests(suiteName: string = "integration", options: RunOp
 }
 
 function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
-  let suiteName = "integration";
+  // No default suite (v1.12.0, F-36): an omitted name must be a usage error,
+  // not a silent fallback to a suite that may not exist.
+  let suiteName = "";
   let parallel: boolean | undefined;
   let concurrency: number | undefined;
   let timeout: number | undefined;
@@ -629,6 +646,12 @@ function parseArgs(args: string[]): { suiteName: string; options: RunOptions } {
 // CLI entrypoint
 if (import.meta.main) {
   const { suiteName, options } = parseArgs(process.argv.slice(2));
+  if (suiteName === "") {
+    console.error(
+      `Usage: bun scripts/test-runner.ts <suite> [--parallel|--sequential] [--concurrency <n>] [--timeout <ms>] [--allow-empty]\nAvailable suites: ${suites.map((s) => s.name).join(", ")}`,
+    );
+    process.exit(1);
+  }
   runTests(suiteName, options)
     .then((success) => {
       process.exit(success ? 0 : 1);

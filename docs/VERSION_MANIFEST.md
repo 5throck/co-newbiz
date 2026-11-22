@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-22T14:52:35.048Z
+**Generated**: 2026-11-22T14:56:54.548Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 215 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 216 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -273,6 +273,7 @@
 | gen-pk-notnull-rebuild.ts | 1.0.0 | scripts/co-newbiz/gen-pk-notnull-rebuild.ts | bun:sqlite |
 | gen-pr-body.ts | 1.2.1 | scripts/gen-pr-body.ts | bun, fs |
 | generate-agent-registry.ts | 1.1.0 | scripts/co-newbiz/generate-agent-registry.ts | fs, path |
+| generate-committee-registry.ts | 1.0.0 | scripts/co-newbiz/generate-committee-registry.ts | fs, js-yaml |
 | generate-glossary-data.ts | 1.1.0 | scripts/co-newbiz/generate-glossary-data.ts | fs, js-yaml, path |
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | fs, path |
 | generate-pm-catalog.ts | 1.4.1 | scripts/co-newbiz/generate-pm-catalog.ts | crypto, fs, js-yaml, path |

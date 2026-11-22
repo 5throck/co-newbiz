@@ -4165,3 +4165,4 @@ if (errors === 0) {
 
 // LOCAL-PATCH(upstream-request: U-20261108-001): biome.json overrides relax 4 lint rules (noAssignInExpressions, noImplicitAnyLet,
 // noControlCharactersInRegex, useIterableCallbackReturn) for this template-delivered file; remove with the override when upstream is lint-clean.
+// LOCAL-PATCH(upstream-request: U-20261122-011): this patch site is filed upstream for promotion alongside the dev-sync.ts U-20261107-003 site (review F-5).

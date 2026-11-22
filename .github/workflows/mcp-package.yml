@@ -32,6 +32,7 @@ jobs:
   guard:
     name: Guard — tag matches manifest and tarball stays in the subtree
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # review F-31: CI-timeout convention (was the 360m GitHub default)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
 
@@ -79,6 +80,7 @@ jobs:
     name: Publish to npm.pkg.github.com (secondary)
     needs: guard
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # review F-31: CI-timeout convention
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
 
@@ -107,6 +109,7 @@ jobs:
     name: Publish to registry.npmjs.org (primary)
     needs: guard
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # review F-31: CI-timeout convention
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
 
@@ -132,6 +135,7 @@ jobs:
     name: Smoke — install tarball, stdio initialize + tools/list
     needs: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # review F-31: bun init + install + stdio handshake
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
 

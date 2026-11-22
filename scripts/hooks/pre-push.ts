@@ -240,7 +240,9 @@ async function main() {
   // sanctioned audit mode (the same gate the pre-commit hook runs). When
   // running via /sync (SYNC_ACTIVE=1), dev-sync.ts already ran the full audit
   // before commit — skip here to avoid duplicate execution. The full
-  // workspace audit runs in CI (test.yml "Workspace audit").
+  // workspace audit runs in CI (ci.yml "Documentation Audit" job; review
+  // F-34, 2026-11-22: the comment previously named test.yml "Workspace
+  // audit", a workflow that no longer exists).
   const auditAlreadyRan = process.env.SYNC_ACTIVE === "1";
   if (!auditAlreadyRan) {
     try {
@@ -253,10 +255,13 @@ async function main() {
     console.log("  [audit skipped — already ran in dev-sync pipeline]");
   }
 
-  // Changed-path tests (T-20260910-025): the full integration suite moved to
-  // CI (test.yml "Run integration tests" runs `bun run test` on every
-  // push/PR). Locally, only re-run the test files touched by the pushed
-  // commits; when the push touches no test files, skip tests entirely.
+  // Changed-path tests (T-20260910-025): CI runs the suites on every
+  // push/PR — ci.yml "Script Tests" (bun run test:scripts) and quality.yml's
+  // coverage job (bun run test:coverage over tests/unit; review F-34,
+  // 2026-11-22: the comment previously named test.yml "Run integration
+  // tests", a workflow that no longer exists). Locally, only re-run the test
+  // files touched by the pushed commits; when the push touches no test
+  // files, skip tests entirely.
   console.log("=== pre-push changed-path tests ===");
   const changedTestFiles = (await collectPushedChangedFiles(refUpdates))
     .map((f) => f.replace(/\\/g, "/"))

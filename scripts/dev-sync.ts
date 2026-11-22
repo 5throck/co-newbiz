@@ -1679,6 +1679,7 @@ const pipelineOutputs = new Set([...s1Paths].filter((p) => !s0Paths.has(p)));
 // LOCAL-PATCH(upstream-request: U-20261107-003): step 4.7 always regenerates the
 // manifest from SSOT, so a copy left dirty by an earlier run (already in S0) must
 // still join the commit. Otherwise main keeps a stale manifest and CI audit fails.
+// LOCAL-PATCH(upstream-request: U-20261122-011): this patch site is filed upstream for promotion (review F-5) — retire the local copy when an upstream release carrying the fix is adopted.
 const ALWAYS_REGENERATED = ["docs/VERSION_MANIFEST.md"];
 for (const p of ALWAYS_REGENERATED) if (s1Paths.has(p)) pipelineOutputs.add(p);
 const committable = new Set([...taskStaged, ...pipelineOutputs]);

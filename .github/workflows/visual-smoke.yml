@@ -4,14 +4,23 @@ name: Visual Smoke
 # real login, live-shaped demo data, head/strip/primary geometry invariants and
 # opt-in screenshot aHash diffs (tests/e2e-visual).
 #
-# Maturing job, deliberately NOT merge-blocking:
-#   - it never runs on pull_request/push (manual dispatch and a weekly schedule
-#     only), and
-#   - the job itself carries continue-on-error so screenshot drift (font raster,
-#     chart jitter) cannot fail the workflow while the baselines mature.
-# The geometry assertions inside the spec are the durable gate; the screenshot
-# diff activates once baselines are committed under tests/e2e-visual/__screenshots__
-# (generate locally with `E2E_VISUAL_DIFF=update bun run test:visual`).
+# Review F-13 (2026-11-22) split the former single continue-on-error job into
+# two steps with different severities:
+#   - GEOMETRY ASSERTIONS are the durable gate and now BLOCK: the step runs
+#     with E2E_VISUAL_DIFF unset (the test suite only throws screenshot-diff
+#     findings in `check` mode), carries no continue-on-error, and a failure
+#     turns the workflow red with ::error annotations. The previous
+#     job-level continue-on-error painted a scheduled-run geometry failure
+#     (run 43860220505: 0 pass / 1 fail) green — a red gate structurally
+#     indistinguishable from green.
+#   - SCREENSHOT aHash DIFF stays advisory: the step runs with
+#     E2E_VISUAL_DIFF=check under continue-on-error so font-raster/chart
+#     jitter cannot fail the workflow while the baselines mature. It runs
+#     `if: always()` so a geometry failure still produces the advisory
+#     evidence rather than being skipped.
+# The screenshot diff activates once baselines are committed under
+# tests/e2e-visual/__screenshots__ (generate locally with
+# `E2E_VISUAL_DIFF=update bun run test:visual`).
 
 on:
   workflow_dispatch:
@@ -28,8 +37,9 @@ jobs:
     # macos-latest matches the committed aHash baseline provenance (generated on
     # macOS; ubuntu font rasterization drifts the 64-bit hashes past tolerance).
     runs-on: macos-latest
-    timeout-minutes: 30
-    continue-on-error: true
+    # Two full suite runs (geometry + diff check); the suite's own internal
+    # ceiling is 900s per run, so 45 keeps headroom over the doubled wall time.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,7 +62,34 @@ jobs:
         run: bunx --bun playwright-core install --with-deps chromium
         working-directory: app/web-next
 
-      - name: Run visual smoke (geometry + screenshot aHash diff)
+      # Blocking gate (F-13): geometry invariants only — E2E_VISUAL_DIFF unset
+      # means the suite never throws screenshot-diff findings, so every failure
+      # here is a real layout regression. pipefail keeps the tee'd log honest.
+      - name: Run visual smoke (geometry assertions — blocking)
+        id: geometry
+        shell: bash
+        env:
+          E2E_VISUAL_DIFF: ""
+        run: |
+          set -o pipefail
+          bun run test:visual 2>&1 | tee /tmp/visual-geometry.log
+
+      - name: Annotate geometry failures
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "\((fail|error)\)" /tmp/visual-geometry.log | head -20 | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          echo "::error::visual smoke GEOMETRY assertions failed — layout invariants are merge-grade (see the 'geometry assertions — blocking' step; screenshots/geometry.json below carry the evidence)"
+
+      # Advisory (F-13): screenshot aHash diff — continue-on-error is scoped to
+      # THIS step only, and it still runs after a geometry failure (if: always)
+      # so both signals land in one scheduled run.
+      - name: Run visual smoke (screenshot aHash diff — advisory)
+        if: always()
+        continue-on-error: true
+        shell: bash
         env:
           E2E_VISUAL_DIFF: check
         run: bun run test:visual

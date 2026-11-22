@@ -2008,6 +2008,16 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261122-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261122-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -3712,8 +3722,8 @@
       "name": "strategic-fit-screening",
       "scope": "root",
       "capability": "strategic-fit-screening",
-      "content_hash": "4ae7ceec8bde84ac",
-      "version": "1.1.0",
+      "content_hash": "f3325a2e816bdc09",
+      "version": "1.2.0",
       "mirrors": [
         "skills/strategic-fit-screening/SKILL.md",
         ".claude/skills/strategic-fit-screening/SKILL.md",
@@ -6577,6 +6587,18 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261121-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261122-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261122-02",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },
@@ -15421,7 +15443,7 @@
       "provenance": {
         "file": "skills/strategic-fit-screening/SKILL.md",
         "field": "relates_to",
-        "index": 7
+        "index": 6
       }
     },
     {

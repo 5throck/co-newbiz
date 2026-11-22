@@ -14,6 +14,12 @@ on:
 permissions:
   contents: read
 
+# Same shape as quality.yml's block (review F-32): one run per ref — pushes to
+# an open PR's branch were triggering redundant full CI passes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   audit:
     name: Documentation Audit
@@ -111,61 +117,13 @@ jobs:
         with:
           args: detect --source=/github/workspace --config=/github/workspace/.gitleaks.toml --redact --verbose --no-banner
 
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-24.04 # LOCAL-PATCH(upstream-request: U-20261108-002)
-    # Release 2 (T-20260930-026, ADR-0094): default-on. Set the repository
-    # variable CI_SKIP_DEFAULT_UNIT_TESTS to "true" to opt out. (Release 1 used
-    # the inverse opt-in CI_ENABLE_DEFAULT_UNIT_TESTS and was verified live on
-    # co-newbiz: green run, job correctly skipped without the variable.)
-    if: ${{ vars.CI_SKIP_DEFAULT_UNIT_TESTS != 'true' }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
-        with:
-          # Depth 1 is enough for tests; full history is only needed by the
-          # VERSION_MANIFEST gate in the audit job above.
-          fetch-depth: 1
-          persist-credentials: false
-
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          # Pinned minor line — `latest` is intentionally avoided here; bump this
-          # deliberately so unit tests track a known Bun release.
-          bun-version: "1.4.x"
-
-      # The detect step (not the job-level if) is the real gate: it is the only
-      # way to check package.json for a test:unit script, since hashFiles() is
-      # unavailable in job-level conditions.
-      - name: Detect test:unit script
-        id: detect
-        run: |
-          if [ -f package.json ] && grep -q '"test:unit"' package.json; then
-            echo "has_unit=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_unit=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::unit-tests skipped: no test:unit script in package.json"
-          fi
-
-      - name: Install dependencies
-        if: steps.detect.outputs.has_unit == 'true'
-        # Root install first, then every nested project directory that carries
-        # its own bun.lock — projects commonly host an app workspace (e.g.
-        # app/web-next, projects/<game>) outside the root lockfile, and unit
-        # tests import from those packages (U-20261002-001: co-newbiz failed
-        # with "Cannot find module 'next/server'" before this step existed).
-        # frozen-lockfile keeps every install reproducible.
-        run: |
-          bun install --frozen-lockfile
-          find . -mindepth 2 -maxdepth 4 \( -name 'bun.lock' -o -name 'bun.lockb' \) \
-            -not -path '*/node_modules/*' | while read -r lock; do
-              (cd "$(dirname "$lock")" && bun install --frozen-lockfile)
-            done
-
-      - name: Run unit tests
-        if: steps.detect.outputs.has_unit == 'true'
-        run: bun run test:unit
-
+  # The former `unit-tests` job (review F-15, removed 2026-11-22) ran the unit
+  # suite only behind the CI_SKIP_DEFAULT_UNIT_TESTS opt-out, which has been
+  # the repository's steady state since 2026-10-01 — a dead job with a
+  # misleading sibling name. The 7000+-test unit suite's CI leg is the
+  # quality.yml `coverage` job (bun run test:coverage, per-file budgets via
+  # scripts/test-runner.ts); this workflow runs the scripts suite only.
+  #
   # PROJECT-JOBS-BEGIN
   # Real test battery (re-added 2026-09-30 — the 2026-09-22 configuration was
   # lost in the 2026-09-23 fleet resync; watch for recurrence, template reset
@@ -173,7 +131,7 @@ jobs:
   # venv-first Python analysis path (python/requirements.txt into repo-root
   # .venv).
   test:
-    name: Unit + Script Tests
+    name: Script Tests
     runs-on: ubuntu-24.04 # LOCAL-PATCH(upstream-request: U-20261108-002)
     timeout-minutes: 15
     steps:
@@ -197,8 +155,8 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -r python/requirements.txt
 
-      # A dedicated unit-tests job already runs the unit suite; re-running it
-      # here doubled every push's unit time for no added coverage.
+      # Script tests only: the unit suite's CI leg is quality.yml's coverage
+      # job (see the comment above the `test` job definition).
       - name: Run script tests
         run: bun run test:scripts
 

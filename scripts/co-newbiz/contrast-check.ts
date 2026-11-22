@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 // contrast-check — automated WCAG AA token-pair contrast gate
 // (docs/design-system/design-accessibility.md rule 6: "verify contrast in
 // both themes"). Parses the runtime token SSOT (app/web-next/app/styles.css),
@@ -10,7 +10,14 @@
 // follow-ups — the bar is never silently lowered; promote a pair from
 // ADVISORY to ENFORCED only together with the token fix.
 //
-// Usage: bun scripts/co-newbiz/contrast-check.ts
+// v1.1.0 (2026-11-22, review F-16 / DEC-20261122-02): wired as a blocking
+// gate in the variant audit hook (scripts/co-newbiz/audit-variant.ts v1.12.0
+// runs `contrast-check.ts --check`) — until then the SCRIPTS.md "CI-wired"
+// claim was false and nothing invoked this script. --check is accepted for
+// uniformity with the other audit gates; the script is read-only by
+// construction and its default mode already IS the check.
+//
+// Usage: bun scripts/co-newbiz/contrast-check.ts [--check]
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -22,7 +29,13 @@ type Rgb = { r: number; g: number; b: number; a: number };
 
 function hexToRgb(hex: string): Rgb {
   const h = hex.replace("#", "");
-  const full = h.length === 3 || h.length === 4 ? h.split("").map((c) => c + c).join("") : h;
+  const full =
+    h.length === 3 || h.length === 4
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   return {
     r: parseInt(full.slice(0, 2), 16),
     g: parseInt(full.slice(2, 4), 16),
@@ -42,7 +55,9 @@ function parseColor(raw: string): Rgb | null {
   }
   const hsl = s.match(/^hsla?\(\s*([\d.]+)(?:deg)?[,\s]+([\d.]+)%[,\s]+([\d.]+)%(?:[,\s/]+([\d.%]+))?\s*\)$/);
   if (hsl) {
-    const h = +hsl[1] / 360, sat = +hsl[2] / 100, lig = +hsl[3] / 100;
+    const h = +hsl[1] / 360,
+      sat = +hsl[2] / 100,
+      lig = +hsl[3] / 100;
     const a = hsl[4] === undefined ? 1 : hsl[4].endsWith("%") ? parseFloat(hsl[4]) / 100 : parseFloat(hsl[4]);
     // hsl → rgb (no hue-wrap edge cases expected for our tokens)
     const q = lig < 0.5 ? lig * (1 + sat) : lig + sat - lig * sat;
@@ -67,7 +82,8 @@ function extractBlock(css: string, selector: string): Map<string, string> {
   const idx = css.indexOf(selector);
   if (idx === -1) return tokens;
   const open = css.indexOf("{", idx);
-  let depth = 1, i = open + 1;
+  let depth = 1,
+    i = open + 1;
   while (i < css.length && depth > 0) {
     if (css[i] === "{") depth++;
     else if (css[i] === "}") depth--;
@@ -105,13 +121,14 @@ function composite(fg: Rgb, base: Rgb): Rgb {
 
 function channel(c: number): number {
   const s = c / 255;
-  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 }
 function luminance({ r, g, b }: Rgb): number {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
 }
 function contrast(a: Rgb, b: Rgb): number {
-  const l1 = luminance(a), l2 = luminance(b);
+  const l1 = luminance(a),
+    l2 = luminance(b);
   const [hi, lo] = l1 >= l2 ? [l1, l2] : [l2, l1];
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -147,6 +164,10 @@ const ENFORCED: Pair[] = [
 const ADVISORY: Pair[] = [];
 
 // ── Main ────────────────────────────────────────────────────────────────────
+// v1.1.0: --check is the audit gate's invocation form. It is accepted (and
+// ignored) deliberately — the script is read-only by construction, so the
+// default run already IS the check; there is no write mode to branch away
+// from. Documented here rather than via an unused-flag no-op in code.
 
 const css = readFileSync(CSS, "utf8");
 const themes: Array<[string, Map<string, string>]> = [

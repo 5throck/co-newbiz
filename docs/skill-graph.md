@@ -100,7 +100,7 @@
 | `root/source-command-commit-push-pr` | L3 | 1.0.3 | — | — | — | — | — |
 | `root/stage-gate-governance` | L3 | 1.4.3 | root/process-governance-manager | root/phase 1, root/phase 2, root/phase 3, root/phase 4, root/phase 5, root/phase 6 | root/decision-record, root/evidence-ledger, root/strategic-fit-screening (composes_with), root/talent-pipeline-planning (composes_with), root/technical-due-diligence (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/standup-synthesizer` | L3 | 1.1.0 | — | — | — | — | — |
-| `root/strategic-fit-screening` | L3 | 1.1.0 | root/brownfield-agent, root/process-governance-manager | root/phase 1 | root/antitrust-screening (follows), root/insight-synthesis (composes_with), root/project-review (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (follows) | — | — |
+| `root/strategic-fit-screening` | L3 | 1.2.0 | root/brownfield-agent, root/process-governance-manager | root/phase 1 | root/antitrust-screening (follows), root/insight-synthesis (composes_with), root/project-review (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (follows) | — | — |
 | `root/sync` | L3 | 1.10.0 | root/automation-engineer | — | — | — | — |
 | `root/systematic-market-sizing` | L3 | 1.5.0 | root/market-intelligence-agent, root/quant-methodologist | root/phase 2, root/phase 3 | root/evidence-ledger (enables), root/proxy-industry-chain (follows), root/scenario-planning (composes_with) | — | — |
 | `root/talent-pipeline-planning` | L3 | 1.1.0 | root/greenfield-agent, root/hr-integration-agent | root/phase 4 | root/community-partnership-planning (follows), root/greenfield-feasibility (composes_with), root/regional-incentive-sourcing (composes_with), root/site-infrastructure-assessment (composes_with) | — | — |
@@ -444,6 +444,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261114-02` | decision | `root/decision-record`, `root/systematic-market-sizing` | — | — |
 | `dec:DEC-20261119-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261121-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261122-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261122-02` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
