@@ -7,28 +7,22 @@
 - **Skill**: script-lifecycle-manager
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-05-29
+- **Created**: 2026-05-30
 
 ## Description
 
 Manages the creation, versioning, deprecation, and maintenance of automation scripts across the workspace and templates. Use when: creating new scripts, updating script versions, deprecating scripts, or managing script dependencies in SCRIPTS.md.
 
-## Dependencies
-
-- automation-engineer (owner agent)
-- lifecycle-manager (governance)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-05-29 | - | production | Initial skill established for script lifecycle management | lifecycle-manager |
+| 2026-05-30 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
 ### Production Phase
 
-- [x] Skill purpose clearly defined: Script (.ps1, .sh) lifecycle management
-- [x] Trigger conditions: When scripts are created, modified, or deprecated
-- [x] Examples provided: Script validation, cross-platform compatibility checks
-- [x] Successfully tested in script management operations
+- [x] Skill SKILL.md exists at `skills/script-lifecycle-manager/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

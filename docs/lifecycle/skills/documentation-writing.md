@@ -7,21 +7,17 @@
 - **Skill**: documentation-writing
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-28
+- **Created**: 2026-07-19
 
 ## Description
 
-Creates clear, accessible documentation and communications for diverse audiences — guides, manuals, tutorials, technical and non-technical writing.
-
-## Dependencies
-
-- None (knowledge/process skill)
+Creates clear, accessible documentation and communications for diverse audiences. Use when: writing guides, creating documentation, drafting communications, or synthesizing complex information for technical and non-technical audiences.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-28 | - | production | Promoted from duplicate variant-local copies to workspace common layer | pm |
+| 2026-07-19 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -29,5 +25,4 @@ Creates clear, accessible documentation and communications for diverse audiences
 
 - [x] Skill SKILL.md exists at `skills/documentation-writing/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: pm

@@ -6,7 +6,7 @@
 
 - **Skill**: k-law
 - **Status**: active
-- **Owner**: public-data-analyst
+- **Owner**: legal-counsel
 - **Created**: 2026-09-21
 
 ## Description
@@ -17,9 +17,12 @@ Queries the Korean Ministry of Government Legislation (`법제처`) National Law
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-21 | - | production | Record backfill — active skill without a lifecycle record (Check LC) | pm |
+| 2026-09-21 | - | production | Initial record derived from SKILL.md frontmatter | legal-counsel |
 
 ## Acceptance Criteria
 
-- [x] Skill directory exists in L1 with valid frontmatter.
-- [x] Delivered to projects through the standard upgrade path.
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/k-law/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: legal-counsel

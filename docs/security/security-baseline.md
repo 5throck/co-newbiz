@@ -31,6 +31,20 @@ counterpart: security-baseline_ko.md
 - Dependency updates tracked via the workspace's `update-bun-packages` tooling, applied on the weekly cadence above.
 - A Critical/High CVE with no available patch triggers an immediate risk-acceptance decision by security-engineer, recorded (not silently deferred).
 
+### 3.1 Dependency freshness: no Dependabot (explicit decision, 2026-11-22)
+
+Dependabot is deliberately **not** enabled on this repository (owner decision, review finding F-30).
+Dependency freshness is owned by the CI `dependency-audit` job (`.github/workflows/ci.yml`,
+`scripts/dependency-audit.ts`): it runs on every push/PR, is waiver-aware
+(`.github/dependency-waivers.toml` — per-advisory REVIEWED waivers carrying a mandatory
+revisit-by date), and is fail-closed (a stale waiver or a dropped advisory re-fails the job, so a
+waiver can never decay into a silent ignore). Cadence: dependency-freshness review is
+**monthly**, run alongside the waiver-expiry review by security-engineer — the weekly row above
+covers the vulnerability scan; the monthly pass checks that versions are actually moving
+(bump opportunities, stale pins) rather than only that no CVE is open. GitHub-side automated
+update PRs (Dependabot) would duplicate this pipeline while bypassing the waiver discipline;
+revisit this decision if the repo gains external contributors.
+
 ## 4. Access Control Review
 
 - Monthly: every active `project_member` row cross-checked against whether the person still has an active need — stale memberships revoked, not left to expire passively.

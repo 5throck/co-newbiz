@@ -7,29 +7,22 @@
 - **Skill**: security-scan
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-05-29
+- **Created**: 2026-11-04
 
 ## Description
 
 Runs static analysis, secret detection (via gitleaks), dependency vulnerability auditing (via bun audit), and auth-surface auditing (unauthenticated signup endpoints) across the workspace.
 
-## Dependencies
-
-- pm (owner agent)
-- gitleaks (prerequisite tooling)
-- security-expert (domain expertise for triage)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-05-29 | - | production | Initial skill established for security scanning | lifecycle-manager |
+| 2026-11-04 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
 ### Production Phase
 
-- [x] Skill purpose clearly defined: Security vulnerability scanning
-- [x] Trigger conditions: Daily scans, pre-PR validation, manual requests
-- [x] Examples provided: Advisory scan, CVE checking
-- [x] Successfully tested in security scan operations
+- [x] Skill SKILL.md exists at `skills/security-scan/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

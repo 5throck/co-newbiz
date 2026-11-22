@@ -7,29 +7,22 @@
 - **Skill**: finishing-a-development-branch
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-09-04
+- **Created**: 2026-11-08
 
 ## Description
 
-Guides clean completion of a development branch: verify tests/audits, update
-docs, merge or open a PR, and clean up local/remote branches. Adapted from the
-Superpowers finishing-a-development-branch workflow for this workspace's
-PR-based flow.
-
-## Dependencies
-
-- Composes with `sync` (PR pipeline)
-- Relates to `finishing-a-development-branch` conventions from superpowers
+Workspace override — redirects all branch completion to /sync pipeline which enforces CHANGELOG, memlog, audit, and PR creation gates.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-04 | - | production | Imported pre-validated from superpowers; registered in VERSION_MANIFEST | pm |
+| 2026-11-08 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/finishing-a-development-branch/SKILL.md`
-- [x] Frontmatter valid; registered in docs/VERSION_MANIFEST.md
-- [x] Workflow matches workspace PR-based branch flow
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/finishing-a-development-branch/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

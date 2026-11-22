@@ -7,28 +7,22 @@
 - **Skill**: accessibility-audit
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-06
+- **Created**: 2026-09-06
 
 ## Description
 
-Automated WCAG 2.1 Level AA accessibility evaluation rules, DOM audit patterns, and
-remediation guidance using axe-core for UI components, templates, and web applications.
-Promoted from the co-design variant (L2-as-basis decision, unified design/a11y/UD plan;
-user-confirmed) so every scaffolded project receives it via L0→L1 propagation.
-
-## Dependencies
-
-- None (procedural skill); composed with `design-foundation` and `token-usage-lint`
+Defines automated WCAG 2.1 Level AA accessibility evaluation rules, DOM audit patterns, and remediation guidance using axe-core for UI components, templates, and web applications.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-06 | - | production | Initial production record | pm |
+| 2026-09-06 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/accessibility-audit/SKILL.md`
-- [x] Frontmatter valid; scope: common
-- [x] Registered in skills/SKILLS.md and docs/VERSION_MANIFEST.md
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/accessibility-audit/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

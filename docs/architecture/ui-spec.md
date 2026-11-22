@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # UI Specification — co-newbiz
 
 > **⚠ Status note (2026-09-08)**: this spec's as-built markers were recorded

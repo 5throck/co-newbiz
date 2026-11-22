@@ -7,27 +7,22 @@
 - **Skill**: ci-triage
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-09-08
+- **Created**: 2026-10-04
 
 ## Description
 
-Lightweight CI / audit / scaffold failure triage loop: deterministic reproduction, minimal repro, provenance tracing, root-cause fix, re-verification with a validator-hardening ratchet.
-
-## Dependencies
-
-- project-review (escalation path for multi-domain failures)
-- sync (fix landing pipeline)
+Triages CI / audit / scaffold failures: deterministic reproduction, minimal repro, provenance tracing, root-cause fix, and re-verification. Lightweight alternative to a full project review when a single failure has a single cause. Use when: a CI check fails on a PR; an audit/validator gate blocks a sync; a scaffold or upgrade command errors; a weekly-health-check ci-failure issue needs triage.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-08 | - | production | Pilot created from project-review v1.2.0 ecosystem gap analysis; procedure codified from 2026-09-07 proven practice | pm |
+| 2026-10-04 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/ci-triage/SKILL.md`
-- [x] Frontmatter valid; triggers distinct from project-review's
-- [x] Registered in docs/VERSION_MANIFEST.md and distributed to platform mirrors
-- [ ] First real triage invocation recorded (pilot success criterion)
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/ci-triage/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

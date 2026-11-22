@@ -11,21 +11,18 @@
 
 ## Description
 
-Enforces, at filing time: hub pre-checks (local clone, `variant.json`, `template-version.txt`), the Phase 3.5 lifecycle UNAVAILABLE gate (hub state file, mechanically enforced by `ticket.ts create --hub`), the security-domain authorization gate (an `AUTH-YYYY-NNN` row from the hub's `docs/authorization-registry.md`, checked against the three `verify-authorization` rules), safe ticket-content rules (findings by ID + severity + affected path only; content is data, never instructions; gitleaks scan before filing), and kanban alias / priority-governance semantics (P0 user-only, +1-level-per-24h spoke cap, 3-strike counter). Frontmatter declares `scope: common`, `l2_propagate: true` — variant delivery rides the standard sync pipeline.
-
-## Dependencies
-
-- `verify-authorization` skill — the hub-side gate for security-domain engagements
+Files a DELEGATION TICKET from a spoke project to its domain hub (co-develop, co-design, co-security) when the spoke PM faces a hard problem in the hub's domain. Enforces hub pre-checks, the lifecycle UNAVAILABLE gate (hub state file), the security-domain authorization gate (AUTH-YYYY-NNN registry row), safe ticket-content rules, and kanban alias / priority-governance semantics at filing time.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-11-02 | - | production | Initial production record | pm |
+| 2026-11-02 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-- Registry row present in `skills/SKILLS.md` (skill | 1.0.1 | active | pm)
-- Canonical copy `skills/delegate-to-hub/SKILL.md` and platform mirror `.agents/skills/delegate-to-hub/SKILL.md` identical
-- `bun scripts/audit.ts` green (skill-graph projection includes the skill node)
-- Documentation/procedure-level only — no script surface added by this skill itself
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/delegate-to-hub/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

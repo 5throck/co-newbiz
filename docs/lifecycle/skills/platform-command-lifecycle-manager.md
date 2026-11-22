@@ -7,29 +7,22 @@
 - **Skill**: platform-command-lifecycle-manager
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-09-04
+- **Created**: 2026-09-25
 
 ## Description
 
-Guides creation and lifecycle management of platform commands
-(`.claude/commands/*.md`, `.gemini/commands/*.md`): frontmatter standards,
-L0↔L1 propagation rules, parity validation via `scripts/validate-templates.ts`,
-and AGENTS.md §8 lifecycle trigger bookkeeping.
-
-## Dependencies
-
-- `scripts/validate-templates.ts` (parity checks)
-- `scripts/sync-skills.ts` (distribution)
+Manages the creation, registration, and propagation of platform commands in .claude/commands/ and .gemini/commands/ directories. Use when: adding new commands, ensuring parity between Claude and Gemini command directories, or propagating commands to templates/common/.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-04 | - | production | Created and validated in same cycle | pm |
+| 2026-09-25 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/platform-command-lifecycle-manager/SKILL.md`
-- [x] Frontmatter valid; registered in docs/VERSION_MANIFEST.md
-- [x] Command parity procedure verified against validate-templates.ts
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/platform-command-lifecycle-manager/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

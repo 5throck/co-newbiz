@@ -7,7 +7,7 @@
 - **Skill**: k-ecos
 - **Status**: active
 - **Owner**: public-data-analyst
-- **Created**: 2026-09-21
+- **Created**: 2026-09-11
 
 ## Description
 
@@ -17,10 +17,12 @@ Queries the Bank of Korea Economic Statistics System (`한국은행 경제통계
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-21 | - | production | Record backfill — active skill without a lifecycle record (2026-09-21 project review H-9) | pm |
+| 2026-09-11 | - | production | Initial record derived from SKILL.md frontmatter | public-data-analyst |
 
 ## Acceptance Criteria
 
-- [x] Skill directory exists in L1 (`templates/common/skills/k-ecos/`) with valid frontmatter.
-- [x] Registered as KR-scoped under `country_scoped_assets` in `docs/workspace-schema.json`.
-- [x] Delivered to matching-country projects through the standard scaffold/upgrade path.
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/k-ecos/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: public-data-analyst

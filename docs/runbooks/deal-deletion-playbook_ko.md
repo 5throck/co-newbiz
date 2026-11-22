@@ -36,6 +36,16 @@ ADR-0056 retire convention과 동일한 철학).
 
 ## 절차
 
+**시스템 모드 사전 조건 (ADR-0133).** 시스템 모드가 `production`인 동안에는 삭제
+표시가 차단됩니다 — `system_setting` 저장소의 시드 기본값이자 fail-closed 기본
+상태입니다. production 모드에서의 삭제 시도는 행을 건드리기 전에
+`403 production_mode_delete_blocked`로 거부됩니다. 모드 전환은 관리자만
+`/admin/system-mode`(`GET/POST /api/admin/system-mode`, `requireAdmin` 게이트)에서
+할 수 있으며, 모든 전환은 `system_mode_set`으로 감사 기록됩니다. `development`
+전환에는 위험(테스트 데이터 전용, 삭제 재허용)을 명시하는 인라인 확인이 필요합니다.
+삭제 재허용은 테스트 데이터에 한해서만 하고, 작업 후에는 반드시 모드를
+`production`으로 되돌립니다.
+
 1. **딜 삭제** — `/projects` 목록 → 행 액션 삭제(리드). 한 번의 액션으로
    프로젝트+기회 체인 전체가 삭제 표시되고 `deal_archive` manifest가 기록됩니다.
 2. **활성 화면 확인** — 파이프라인, 진출방식 결정, 기회 발굴, 시너지 목록은
@@ -83,8 +93,8 @@ append-only 버전 이력을 통해 당시 버전 열람이 보장됩니다.
 
 | 엔드포인트 | 동작 |
 | --- | --- |
-| `DELETE /api/projects/[id]` | 리드 전용, 프로젝트+기회 마킹, manifest 기록, 감사 |
-| `DELETE /api/opportunities/[id]` | analyst+, 미승격 기회 delete-mark, `deal_archive` manifest 기록, 감사 |
+| `DELETE /api/projects/[id]` | 리드 전용, 프로젝트+기회 마킹, manifest 기록, 감사, 시스템 모드 `production` 중 403 `production_mode_delete_blocked` (ADR-0133) |
+| `DELETE /api/opportunities/[id]` | analyst+, 미승격 기회 delete-mark, `deal_archive` manifest 기록, 감사, 승격 상태면 400, 시스템 모드 `production` 중 403 `production_mode_delete_blocked` (ADR-0133) |
 | `DELETE /api/our-company/groups/[id]` | analyst+, 그룹+멤버 마킹 |
 | `DELETE /api/our-company/groups/[id]/members` | analyst+, 멤버 마킹 |
 | `DELETE /api/synergy/analyses/[id]` | analyst+, 마킹, 딜 생존 중 409 |

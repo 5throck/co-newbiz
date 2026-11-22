@@ -7,21 +7,17 @@
 - **Skill**: api-documentation
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-28
+- **Created**: 2026-07-19
 
 ## Description
 
-Creates comprehensive API documentation: endpoints, parameters, authentication, request/response schemas, and code examples.
-
-## Dependencies
-
-- None (knowledge/process skill)
+Creates comprehensive API documentation including endpoints, parameters, authentication, request/response schemas, and code examples. Use when: documenting REST APIs, GraphQL interfaces, SDKs, or developer-facing technical specifications.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-28 | - | production | Promoted from duplicate variant-local copies to workspace common layer | pm |
+| 2026-07-19 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -29,5 +25,4 @@ Creates comprehensive API documentation: endpoints, parameters, authentication, 
 
 - [x] Skill SKILL.md exists at `skills/api-documentation/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: pm

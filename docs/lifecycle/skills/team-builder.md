@@ -7,24 +7,17 @@
 - **Skill**: team-builder
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-07-03
+- **Created**: 2026-10-26
 
 ## Description
 
 Guides the Engagement Leader through building a new AI agent team for any consulting domain. Covers requirements interview, web benchmarking, current team diagnosis, proposal generation, and user approval gate. Outputs an approved proposal JSON for scripts/team-builder.ts to execute. Triggered by: "build new agent team".
 
-## Dependencies
-
-- pm (owner agent)
-- scripts/team-builder.ts (script layer execution)
-- agent-lifecycle-manager (individual agent lifecycle operations)
-- skill-lifecycle-manager (individual skill lifecycle operations)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-07-03 | - | production | Backfilled lifecycle record for existing production skill | pm |
+| 2026-10-26 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -32,5 +25,4 @@ Guides the Engagement Leader through building a new AI agent team for any consul
 
 - [x] Skill SKILL.md exists at `skills/team-builder/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Triggers defined: build new agent team
-- [x] Successfully tested in team building operations
+- [x] Owner assigned: pm

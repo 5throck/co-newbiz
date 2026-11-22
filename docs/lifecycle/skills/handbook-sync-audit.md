@@ -7,7 +7,7 @@
 - **Skill**: handbook-sync-audit
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-09-21
+- **Created**: 2026-08-29
 
 ## Description
 
@@ -17,9 +17,12 @@ Handbook Sync Audit — verifies that generated handbooks stay aligned with thei
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-21 | - | production | Record backfill — active skill without a lifecycle record (Check LC) | pm |
+| 2026-08-29 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-- [x] Skill directory exists in L1 with valid frontmatter.
-- [x] Delivered to projects through the standard upgrade path.
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/handbook-sync-audit/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

@@ -21,7 +21,7 @@ See `docs/governance/process-map.md` for the authoritative deliverable/approver/
 | Gate | If you are an analyst | If you are an IC reviewer |
 |---|---|---|
 | Screening | Build the initial deliverable (site shortlist or target longlist) | Not yet involved |
-| Pre-FS | Confirm WACC/hurdle IRR inputs with the deal sponsor | Not yet involved |
+| Pre-FS | Confirm WACC/hurdle IRR inputs with the deal sponsor; then record the human `pre_fs` GO decision at opportunity scope (ADR-0205) — a person with gate rights records GO/HOLD, agents only propose. No GO → S6 cannot complete and S7 stays locked; a HOLD recorded after a GO relocks S7 (recorded S7 work is kept); unreviewed `ai_draft` verdicts block the GO (ADR-0202) | Not yet involved |
 | FS | Complete the valuation, growth projection, and (BF) start the six-validator cross-check | Not yet involved |
 | DD | Land every DD finding as a `dd_finding` with `value_impact` (INTEGER, unit = KRW millions — ADR-0061) — never leave a finding as prose only | Not yet involved |
 | (S10 deal structuring — between DD and Entity IC) | Record the deal-structure hypothesis (vehicle incl. SPC), complete the four-axis review (tax / liability isolation / financing leverage / exit), and balance the financing plan (sources & uses) — ADR-0106. S11 cannot open without it | Not yet involved — the structure the IC reviews is this stage's output |

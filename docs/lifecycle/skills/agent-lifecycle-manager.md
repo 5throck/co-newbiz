@@ -7,28 +7,22 @@
 - **Skill**: agent-lifecycle-manager
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-05-29
+- **Created**: 2026-11-06
 
 ## Description
 
 Manages the creation, validation, and maintenance of AI agent files across the project, including PM-led hiring (creation) and firing (deprecation/removal) of agents with their skill packages. Use when: creating new agents, hiring or firing agents, updating agent metadata/frontmatter, validating agent structures, attaching or detaching skills to agents, or managing agent roles and 3-tier configurations.
 
-## Dependencies
-
-- lifecycle-manager (owner agent)
-- doc/lifecycle/README.md (governance reference)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-05-29 | - | production | Initial skill established for agent lifecycle management | lifecycle-manager |
+| 2026-11-06 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
 ### Production Phase
 
-- [x] Skill purpose clearly defined: Agent lifecycle management
-- [x] Trigger conditions: When agent status/tier changes
-- [x] Examples provided: Agent creation, modification, deprecation workflows
-- [x] Successfully tested in agent lifecycle operations
+- [x] Skill SKILL.md exists at `skills/agent-lifecycle-manager/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

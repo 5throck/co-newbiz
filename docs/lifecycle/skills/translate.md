@@ -7,24 +7,17 @@
 - **Skill**: translate
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-07-03
+- **Created**: 2026-08-24
 
 ## Description
 
 Translation helper for README and documentation files with diff preview and guidance
 
-## Dependencies
-
-- pm (owner agent)
-- scripts/translate-readme.ts (underlying translation script)
-- scripts/verify-readme-sync.ts (hash verification)
-- scripts/readme-lifecycle-audit.ts (lifecycle audit)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-07-03 | - | production | Backfilled lifecycle record for existing production skill | pm |
+| 2026-08-24 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -32,5 +25,4 @@ Translation helper for README and documentation files with diff preview and guid
 
 - [x] Skill SKILL.md exists at `skills/translate/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Triggers defined: translate, translation, localize, Korean translation
-- [x] Successfully tested in translation operations
+- [x] Owner assigned: pm
