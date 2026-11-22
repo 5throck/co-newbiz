@@ -4,57 +4,58 @@
 // StageFrame now narrows the rail's input to the viewed stage (pathStageId ?? primary), so
 // exactly one step per rail carries the current marker (aria-current="step" + 현재) — in the
 // full rail AND the compact disclosure list. StageRail's multi-stage contract is untouched.
-// Render pins mount StageFrame with the next/navigation context stubs (Pathname/PathParams);
-// renderToStaticMarkup emits class= (not className=), so the region markers below use class=.
-import { describe, expect, test } from "bun:test";
+// Render pins mount StageFrame under AuthProvider + NextIntlClientProvider (patterns:
+// calibration-panel-render / stage-screen-dom-contract — useAuth throws outside AuthProvider)
+// with next/navigation mocked at its resolved file path: the mock reads a mutable route
+// binding set per test, so the render is independent of which process-global navigation
+// mock a sibling test file left installed in single-process runs (bun test --coverage).
+// renderToStaticMarkup emits class= (not className=), so the region markers use class=.
+import { describe, expect, mock, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const WEB = "../../app/web-next";
-const { renderToStaticMarkup } = (await import(`${WEB}/node_modules/react-dom/server.js`)) as {
+const PROJECT_ROOT = join(import.meta.dirname, "../..");
+const WEB = join(PROJECT_ROOT, "app/web-next");
+
+// ── next/navigation mock (resolved file path — intercepts every importer) ───
+// Same shape as stage-screen-dom-contract.test.ts's mock; registering it here (before the
+// runtime imports) makes this file's render immune to mock/file-ordering in the
+// single-process coverage run instead of depending on the real module's contexts.
+let route: { path: string; params: Record<string, string> } = { path: "/", params: {} };
+mock.module(join(WEB, "node_modules/next/navigation.js"), () => ({
+  useParams: () => route.params,
+  usePathname: () => route.path,
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push() {}, replace() {}, back() {}, prefetch() {} }),
+}));
+
+const { renderToStaticMarkup } = (await import(join(WEB, "node_modules/react-dom/server.js"))) as {
   renderToStaticMarkup: (el: unknown) => string;
 };
-const { createElement } = (await import(`${WEB}/node_modules/react/index.js`)) as {
+const { createElement } = (await import(join(WEB, "node_modules/react/index.js"))) as {
   createElement: (type: unknown, props: unknown, ...c: unknown[]) => unknown;
 };
-const { NextIntlClientProvider } = (await import(`${WEB}/node_modules/next-intl`)) as {
+const { NextIntlClientProvider } = (await import(join(WEB, "node_modules/next-intl"))) as {
   NextIntlClientProvider: unknown;
 };
-const ko = (await import(`${WEB}/locales/ko.json`)).default as Record<string, unknown>;
-const { AppRouterContext } = (await import(
-  `${WEB}/node_modules/next/dist/shared/lib/app-router-context.shared-runtime.js`
-)) as { AppRouterContext: { Provider: unknown } };
-const { PathnameContext, PathParamsContext } = (await import(
-  `${WEB}/node_modules/next/dist/shared/lib/hooks-client-context.shared-runtime.js`
-)) as { PathnameContext: { Provider: unknown }; PathParamsContext: { Provider: unknown } };
-const { StageFrame } = (await import(`${WEB}/components/StageFrame.tsx`)) as { StageFrame: unknown };
+const { AuthProvider } = (await import(join(WEB, "lib/auth-client.tsx"))) as { AuthProvider: unknown };
+const ko = (await import(join(WEB, "locales/ko.json"))).default as Record<string, unknown>;
+const { StageFrame } = (await import(join(WEB, "components/StageFrame.tsx"))) as { StageFrame: unknown };
 
-const noop = () => {};
-const routerStub = { push: noop, replace: noop, refresh: noop, back: noop, forward: noop, prefetch: noop };
-
-const renderFrame = (pathname: string) =>
-  renderToStaticMarkup(
+const renderFrame = (pathname: string) => {
+  route = { path: pathname, params: { id: "d1" } };
+  return renderToStaticMarkup(
     createElement(
       NextIntlClientProvider,
       { locale: "ko", messages: ko, now: new Date(), timeZone: "Asia/Seoul" },
       createElement(
-        AppRouterContext.Provider,
-        { value: routerStub },
-        createElement(
-          PathnameContext.Provider,
-          { value: pathname },
-          createElement(
-            PathParamsContext.Provider,
-            { value: { id: "d1" } },
-            createElement(StageFrame, {
-              stageId: ["S6", "S7"],
-              track: "brownfield",
-              subtitle: "s67",
-            }),
-          ),
-        ),
+        AuthProvider,
+        null,
+        createElement(StageFrame, { stageId: ["S6", "S7"], track: "brownfield", subtitle: "s67" }),
       ),
     ),
   );
+};
 
 /** The compact list and the full rail render one anchor per stage; slice out the given stage's anchor. */
 const stepAnchor = (html: string, stage: "s6" | "s7"): string => {
