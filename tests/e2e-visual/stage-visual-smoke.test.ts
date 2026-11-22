@@ -16,7 +16,9 @@
  *   - the strip starts at the content's left edge (aligned with the h1),
  *   - project paths carry the StageTabs bar in the rail slot, deal paths do not,
  *   - the head primary action (다음: …) is right-aligned on the h1 row,
- *     vertically centred with it, and absent only on the terminal stage (S12).
+ *     vertically centred with it, and absent only on the terminal stage (S12)
+ *     and on the stage the track skips (ADR-0094/0095: brownfield S5,
+ *     greenfield S6/S7 — the TrackGate not-applicable notice hosts the action).
  *
  * Screenshots are written to tests/e2e-visual/screenshots/ (gitignored) with a
  * geometry snapshot JSON next to them. Screenshot pixel diffs are opt-in via
@@ -57,6 +59,14 @@ const PROJECT_SEGMENTS: Array<[stage: string, seg: string]> = [
 ];
 /** S12 is the terminal stage — the head next-action is hidden there by design. */
 const TERMINAL_STAGES = new Set(["S12"]);
+/** ADR-0094/0095 applicableTracks — the track-skipped stage (brownfield skips S5,
+ *  greenfield skips S6/S7) shows the TrackGate not-applicable notice instead of the
+ *  working screen; the notice hosts the single primary action (go to the stage that
+ *  applies), so the stage head shows none (the gf-06 pattern). */
+const TRACK_SKIPPED_STAGES: Record<string, Set<string>> = {
+  brownfield: new Set(["S5"]),
+  greenfield: new Set(["S6", "S7"]),
+};
 
 let app: TestApp;
 let browser: Browser;
@@ -106,6 +116,7 @@ interface Geometry {
   tabsBar: Box | null;
   cta: Box | null;
   stripSummary: string | null;
+  notice: string | null;
 }
 
 /** All invariants are evaluated inside the page in one pass. */
@@ -123,6 +134,9 @@ const GEO_SNIPPET = `(() => {
   const rail = main ? main.querySelector('nav[aria-label="Stages"]') : null;
   const tabsBar = main ? main.querySelector(".stage-tabs-bar") : null;
   const cta = head ? head.querySelector("a.btn-primary") : null;
+  // TrackGate not-applicable notice (deal paths only): the working screen is replaced
+  // by a .card[role=note] hosting the go-to-the-stage-that-applies action.
+  const notice = main ? main.querySelector('div.card[role="note"]') : null;
   return {
     firstH1IsFrameH1: !!h1 && !!head && head.contains(h1),
     head: box(head),
@@ -133,6 +147,7 @@ const GEO_SNIPPET = `(() => {
     tabsBar: box(tabsBar),
     cta: box(cta),
     stripSummary: strip ? (strip.querySelector("summary")?.textContent ?? "").trim() : null,
+    notice: notice ? (notice.textContent ?? "").trim() : null,
   };
 })()`;
 
@@ -161,9 +176,15 @@ function expectGeometry(track: string, stage: string, geo: Geometry, slot: "deal
     expect(geo.tabsBar).toBeNull();
   }
   // Head primary action: right-aligned on the h1 row, centred with it;
-  // absent exactly on the terminal stage.
+  // absent exactly on the terminal stage and on the other track's stage —
+  // there the TrackGate not-applicable notice hosts the single primary action.
   if (TERMINAL_STAGES.has(stage)) {
     expect(geo.cta).toBeNull();
+  } else if (TRACK_SKIPPED_STAGES[track]?.has(stage)) {
+    expect(geo.cta).toBeNull();
+    if (!(geo.notice ?? "").includes("적용되지 않는 단계"))
+      throw new Error(`${label}: TrackGate not-applicable notice missing`);
+    expect(geo.notice ?? "").toContain("트랙의 다음 단계");
   } else {
     if (!geo.cta) throw new Error(`${label}: head primary action missing`);
     expect(Math.abs(geo.cta.y + geo.cta.h / 2 - (h1.y + h1.h / 2))).toBeLessThanOrEqual(24);
@@ -188,10 +209,7 @@ describe("stage-path visual/layout smoke (both tracks, 12 paths each)", () => {
     const bf = rows.find((r) => r.track === "brownfield");
     const gf = rows.find((r) => r.track === "greenfield");
     if (!bf || !gf) throw new Error(`seed fixture incomplete: ${JSON.stringify(rows)}`);
-    return [
-      { ...bf },
-      { ...gf },
-    ];
+    return [{ ...bf }, { ...gf }];
   };
 
   test("both tracks: 12 stage paths each keep the head/strip/primary geometry", async () => {
