@@ -1,5 +1,14 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
+ * v1.1.0 (2026-11-23, F-33 dispatch family / DEC-20261123-01 ruling 4): TRACK_SKIPPED_STAGES
+ * is now DERIVED from STAGE_META.applicableTracks (app/web-next/lib/stage-meta.ts)
+ * instead of a hand-copied static map. The static copy could go stale after an
+ * applicableTracks amendment (ADR-0094/0095 class): the walk would either false-fail
+ * on the old skip set or silently assert geometry the spec no longer declares. The
+ * derived map always exercises the live spec, and a stage-id union assertion pins
+ * the walked paths (7 deal + 5 project segments) to exactly the 12 STAGE_META ids —
+ * an id change fails loudly instead of walking ghost paths. Same assertions as v1.0.0.
+ *
  * Visual/layout smoke over the 12 stage paths, both tracks (T-20261022-050).
  *
  * Boots the production Next server against a scratch SQLite seeded with the
@@ -39,6 +48,7 @@ import { launchBrowser, loginThroughUi, visit, type Session } from "../scenarios
 import type { Browser } from "../scenarios/_support/playwright.ts";
 import { getDb } from "../../db/client.ts";
 import { seedS1ToS12Demo, seedGreenfieldS1ToS12Demo } from "../../scripts/co-newbiz/seed-s1-s12-demo.ts";
+import { STAGE_META, type TrackId } from "../../app/web-next/lib/stage-meta.ts";
 import { ahash, decodePngRgba, hamming } from "./_support/ahash.ts";
 
 const OUT_DIR = join(import.meta.dirname, "screenshots");
@@ -62,11 +72,20 @@ const TERMINAL_STAGES = new Set(["S12"]);
 /** ADR-0094/0095 applicableTracks — the track-skipped stage (brownfield skips S5,
  *  greenfield skips S6/S7) shows the TrackGate not-applicable notice instead of the
  *  working screen; the notice hosts the single primary action (go to the stage that
- *  applies), so the stage head shows none (the gf-06 pattern). */
-const TRACK_SKIPPED_STAGES: Record<string, Set<string>> = {
-  brownfield: new Set(["S5"]),
-  greenfield: new Set(["S6", "S7"]),
-};
+ *  applies), so the stage head shows none (the gf-06 pattern).
+ *  v1.1.0: derived from the SSOT (STAGE_META.applicableTracks) rather than a static
+ *  copy — an applicableTracks amendment flows into these assertions on the next run
+ *  instead of the walk exercising a stale skip set. Each track must still skip at
+ *  least one stage (asserted below): the two-track branching contract of
+ *  ADR-0094/0095 says the S5..S7 spine is partitioned, and an empty skip set means
+ *  that contract changed — which must fail here, not silently re-shape the walk. */
+const TRACKS: TrackId[] = ["greenfield", "brownfield"];
+const TRACK_SKIPPED_STAGES: Record<string, Set<string>> = Object.fromEntries(
+  TRACKS.map((track) => [
+    track,
+    new Set(STAGE_META.filter((s) => !s.applicableTracks.includes(track)).map((s) => s.id)),
+  ]),
+);
 
 let app: TestApp;
 let browser: Browser;
@@ -219,6 +238,24 @@ describe("stage-path visual/layout smoke (both tracks, 12 paths each)", () => {
     // Diff-mode findings are collected across the whole walk so the geometry
     // gate always runs to completion before the diff summary fails.
     const diffIssues: string[] = [];
+
+    // Spec-tie (v1.1.0): the walked stage ids must be exactly the 12 STAGE_META
+    // ids — a stage-id or path-table change fails here instead of the walk
+    // silently skipping (or double-covering) a stage.
+    const walkedStageIds = [
+      ...DEAL_STAGES.map((s) => s.toUpperCase()),
+      ...PROJECT_SEGMENTS.map(([stage]) => stage),
+    ].sort();
+    expect(walkedStageIds).toEqual(STAGE_META.map((s) => s.id).sort());
+    // Two-track branching contract (ADR-0094/0095): every track skips at least
+    // one spine stage; an applicableTracks edit that empties a skip set must
+    // fail loudly (see TRACK_SKIPPED_STAGES).
+    for (const track of TRACKS) {
+      expect(
+        TRACK_SKIPPED_STAGES[track].size,
+        `${track} skips no stage — applicableTracks contract changed`,
+      ).toBeGreaterThan(0);
+    }
 
     for (const { track, opp, proj } of trackIds()) {
       const paths: Array<{ stage: string; path: string; slot: "deal" | "project" }> = [

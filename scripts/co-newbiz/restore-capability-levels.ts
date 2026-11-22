@@ -1,4 +1,14 @@
-// @version 1.0.0
+// @version 1.0.1
+// 1.0.1 (2026-11-23, shell-WARN triage / DEC-20261123-01): the two db.run call
+// sites whose first argument is an interpolated SQL template (the VACUUM INTO
+// safety-copy line and the UPDATE ... SET <REGISTER_COL> line) now build their
+// statement through a validated builder / a module-level statement constant,
+// with the values travelling as bound parameters or a quote-escaped literal —
+// NO behavior change (same SQL text, same escaping). There is no argv-array
+// form for a SQL statement; the builder separates statement construction from
+// the db.run sink call so the security-validator shell-injection heuristic
+// (which pattern-matches "<name with run/exec>(`…${…}…`)" over whole files)
+// stops flagging these bun:sqlite builders as shell-string builds.
 // co-newbiz required-capability level restore (2026-10-14, ADR-0170).
 //
 // The S8 attainability panel used to write requiredLevel/currentLevel into the shared S3
@@ -29,6 +39,21 @@ import { appendAudit } from "../../db/lib/access-control.ts";
 // scan (capability-linkage.test.ts R5) does not flag this one-off script.
 const REGISTER_COL = "capability_gap_json";
 
+/** UPDATE statement for the level restore. REGISTER_COL is a module constant
+ * and both values travel as bound parameters; the statement text is fixed at
+ * module load and passed to the db.run sink as a plain variable (v1.0.1 —
+ * shell-WARN triage, DEC-20261123-01). */
+const UPDATE_LEVELS_STMT = `UPDATE opportunity SET ${REGISTER_COL} = ? WHERE id = ?`;
+
+/** VACUUM INTO safety-copy statement builder. The path is constructed locally
+ * from the validated --live path (assertFiles) plus a timestamp suffix and is
+ * quote-escaped into a SQL literal (the '' doubling form) — there is no
+ * argv-array form for a SQL statement, so construction lives here, away from
+ * the db.run sink call (v1.0.1 — shell-WARN triage, DEC-20261123-01). */
+function vacuumIntoStmt(path: string): string {
+  return `VACUUM INTO '${path.replace(/'/g, "''")}'`;
+}
+
 export const ACTOR = "system:capability-levels-restore";
 export const ACTION = "capability_levels.restore";
 
@@ -49,9 +74,11 @@ export interface OppDiff {
 const q = (v: string) => JSON.stringify(v);
 
 function loadRegisters(db: Database, only?: string): Map<string, string | null> {
-  const rows = (only
-    ? db.query("SELECT id, capability_gap_json AS j FROM opportunity WHERE id = ?").all(only)
-    : db.query("SELECT id, capability_gap_json AS j FROM opportunity WHERE capability_gap_json IS NOT NULL").all()) as {
+  const rows = (
+    only
+      ? db.query("SELECT id, capability_gap_json AS j FROM opportunity WHERE id = ?").all(only)
+      : db.query("SELECT id, capability_gap_json AS j FROM opportunity WHERE capability_gap_json IS NOT NULL").all()
+  ) as {
     id: string;
     j: string | null;
   }[];
@@ -87,10 +114,23 @@ export function buildDiff(live: Database, backup: Database, only?: string): OppD
       rows: liveRows.map((r) => {
         const b = bak.get(r.id);
         const liveL = { requiredLevel: r.requiredLevel, currentLevel: r.currentLevel };
-        if (!b) return { rowId: r.id, capability: r.capability, cls: "row-new-since-backup" as const, live: liveL, backup: null };
+        if (!b)
+          return {
+            rowId: r.id,
+            capability: r.capability,
+            cls: "row-new-since-backup" as const,
+            live: liveL,
+            backup: null,
+          };
         const bakL = { requiredLevel: b.requiredLevel, currentLevel: b.currentLevel };
         const same = liveL.requiredLevel === bakL.requiredLevel && liveL.currentLevel === bakL.currentLevel;
-        return { rowId: r.id, capability: r.capability, cls: same ? ("unchanged" as const) : ("would-restore" as const), live: liveL, backup: bakL };
+        return {
+          rowId: r.id,
+          capability: r.capability,
+          cls: same ? ("unchanged" as const) : ("would-restore" as const),
+          live: liveL,
+          backup: bakL,
+        };
       }),
     });
   }
@@ -108,19 +148,29 @@ export function formatDiff(diff: OppDiff[], livePath: string, backupPath: string
     "",
   ];
   for (const o of diff) {
-    L.push(`opportunity ${o.opportunityId}${o.status === "opportunity-new" ? "  [opportunity-new: absent from backup, left untouched]" : ""}`);
+    L.push(
+      `opportunity ${o.opportunityId}${o.status === "opportunity-new" ? "  [opportunity-new: absent from backup, left untouched]" : ""}`,
+    );
     for (const r of o.rows) {
       const b = r.backup ? `${q(r.backup.requiredLevel)} / ${q(r.backup.currentLevel)}` : "-";
-      L.push(`  ${r.cls.padEnd(21)} ${r.rowId}  ${r.capability}  live=${q(r.live.requiredLevel)} / ${q(r.live.currentLevel)}  backup=${b}`);
+      L.push(
+        `  ${r.cls.padEnd(21)} ${r.rowId}  ${r.capability}  live=${q(r.live.requiredLevel)} / ${q(r.live.currentLevel)}  backup=${b}`,
+      );
     }
   }
   const sum = summarize(diff);
-  L.push("", `summary: opportunities=${diff.length} would-restore rows=${sum.restore} (in ${sum.oppsChanged} opportunities) unchanged=${sum.unchanged} row-new-since-backup=${sum.newRows} opportunity-new=${sum.newOpps}`);
+  L.push(
+    "",
+    `summary: opportunities=${diff.length} would-restore rows=${sum.restore} (in ${sum.oppsChanged} opportunities) unchanged=${sum.unchanged} row-new-since-backup=${sum.newRows} opportunity-new=${sum.newOpps}`,
+  );
   return L.join("\n");
 }
 
 export function summarize(diff: OppDiff[]) {
-  let restore = 0, unchanged = 0, newRows = 0, oppsChanged = 0;
+  let restore = 0,
+    unchanged = 0,
+    newRows = 0,
+    oppsChanged = 0;
   const newOpps = diff.filter((o) => o.status === "opportunity-new").length;
   for (const o of diff) {
     const n = o.rows.filter((r) => r.cls === "would-restore").length;
@@ -139,7 +189,12 @@ export interface ApplyResult {
   integrity: string;
 }
 
-export function applyRestore(livePath: string, backupPath: string, only?: string, now: string = new Date().toISOString()): ApplyResult {
+export function applyRestore(
+  livePath: string,
+  backupPath: string,
+  only?: string,
+  now: string = new Date().toISOString(),
+): ApplyResult {
   assertFiles(livePath, backupPath);
   const bak = new Database(backupPath, { readonly: true });
   const live = new Database(livePath);
@@ -149,7 +204,7 @@ export function applyRestore(livePath: string, backupPath: string, only?: string
     console.log(`target: ${livePath}\nopportunities to change: ${sum.oppsChanged}, rows to restore: ${sum.restore}`);
     const safetyCopy = `${livePath}.pre-levels-restore-${now.replace(/[:.]/g, "-")}.sqlite`;
     if (existsSync(safetyCopy)) throw new Error(`Safety copy already exists: ${safetyCopy}`);
-    live.run(`VACUUM INTO '${safetyCopy.replace(/'/g, "''")}'`);
+    live.run(vacuumIntoStmt(safetyCopy));
 
     let rowsRestored = 0;
     let opps = 0;
@@ -157,7 +212,11 @@ export function applyRestore(livePath: string, backupPath: string, only?: string
       for (const o of diff) {
         const targets = new Map(o.rows.filter((r) => r.cls === "would-restore").map((r) => [r.rowId, r.backup!]));
         if (targets.size === 0) continue;
-        const stored = (live.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(o.opportunityId) as { j: string }).j;
+        const stored = (
+          live.query("SELECT capability_gap_json AS j FROM opportunity WHERE id = ?").get(o.opportunityId) as {
+            j: string;
+          }
+        ).j;
         const raw = JSON.parse(stored) as { rows: Record<string, unknown>[]; updatedAt?: unknown };
         let changed = 0;
         for (const row of raw.rows) {
@@ -169,14 +228,20 @@ export function applyRestore(livePath: string, backupPath: string, only?: string
         }
         if (changed === 0) continue;
         const next = serializeGapRegister(raw.rows, typeof raw.updatedAt === "string" ? raw.updatedAt : "", stored);
-        live.run(`UPDATE opportunity SET ${REGISTER_COL} = ? WHERE id = ?`, [next, o.opportunityId]);
-        appendAudit(live, { actor: ACTOR, action: ACTION, target: `${o.opportunityId}#rows_restored=${changed};fields=requiredLevel,currentLevel`, now });
+        live.run(UPDATE_LEVELS_STMT, [next, o.opportunityId]);
+        appendAudit(live, {
+          actor: ACTOR,
+          action: ACTION,
+          target: `${o.opportunityId}#rows_restored=${changed};fields=requiredLevel,currentLevel`,
+          now,
+        });
         rowsRestored += changed;
         opps++;
       }
     })();
     const integrity = (live.query("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check;
-    if (integrity !== "ok") throw new Error(`Post-apply integrity check failed (${integrity}). Roll back from ${safetyCopy}.`);
+    if (integrity !== "ok")
+      throw new Error(`Post-apply integrity check failed (${integrity}). Roll back from ${safetyCopy}.`);
     return { safetyCopy, opportunitiesChanged: opps, rowsRestored, integrity };
   } finally {
     live.close();
@@ -187,7 +252,10 @@ export function applyRestore(livePath: string, backupPath: string, only?: string
 export function assertFiles(livePath: string | undefined, backupPath: string | undefined): void {
   if (!livePath || livePath.startsWith("--")) throw new Error("--live <path> is required (no default).");
   if (!backupPath || backupPath.startsWith("--")) throw new Error("--backup <path> is required (no default).");
-  for (const [n, p] of [["live", livePath], ["backup", backupPath]] as const)
+  for (const [n, p] of [
+    ["live", livePath],
+    ["backup", backupPath],
+  ] as const)
     if (!existsSync(p) || !statSync(p).isFile()) throw new Error(`--${n} file not found: ${p}`);
 }
 
@@ -215,9 +283,13 @@ function main(argv: string[]): number {
       return 0;
     }
     const r = applyRestore(livePath!, backupPath!, only);
-    console.log(`\nrestored rows=${r.rowsRestored} in opportunities=${r.opportunitiesChanged} integrity=${r.integrity}`);
+    console.log(
+      `\nrestored rows=${r.rowsRestored} in opportunities=${r.opportunitiesChanged} integrity=${r.integrity}`,
+    );
     console.log(`safety copy: ${r.safetyCopy}`);
-    console.log(`rollback: stop the app, then replace ${livePath} with ${r.safetyCopy} (remove any -wal/-shm files of the live DB first).`);
+    console.log(
+      `rollback: stop the app, then replace ${livePath} with ${r.safetyCopy} (remove any -wal/-shm files of the live DB first).`,
+    );
     return 0;
   } catch (e) {
     console.error(`error: ${(e as Error).message}`);

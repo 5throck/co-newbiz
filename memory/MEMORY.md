@@ -89,11 +89,6 @@
 | 2026-09-11 | chore: update |
 | 2026-09-11 | fix(web-next): WACC input rows no longer overlap on md–lg viewports |
 | 2026-09-10 | fix(market): KSIC search falls back to the industry name when the code field is empty |
-| [2026-09-09](2026-09-09.md) | --help |
-| [2026-09-08](2026-09-08.md) | test: make unit tests CWD-independent (PROJECT_ROOT-based reads) |
-| [2026-09-06](2026-09-06.md) | docs: unify documentation surface — retire knowledge-hub/handbook portals, extend /library to 8 categories, restructure docs/ into topic folders (ADR-0108) |
-| [2026-09-05](2026-09-05.md) | chore: update |
-| [2026-09-04](2026-09-04.md) | chore: update |
 | 2026-09-04 | feat: standing functional-expert committee seats (ADR-0097 amendment) - financing, site-facility, IR, IP agents |
 | 2026-09-03 | chore: update |
 | 2026-09-02 | chore: update |
@@ -208,4 +203,4 @@
 
 > Index generated from `docs/adr/*.md` front matter on 2026-08-24. Long
 > statuses are abbreviated here; the ADR file is authoritative.
-- [Autonomous execution until done](autonomous-until-done.md) — 2026-11-08: user said 진행해줘 without per-step approvals; proceed through ADR-0196 phases A–E merging each PR, no approval requests until all done or blocked
+- Autonomous execution until done (recorded 2026-11-08; session file removed) — user said 진행해줘 without per-step approvals; proceed through ADR-0196 phases A–E merging each PR, no approval requests until all done or blocked
