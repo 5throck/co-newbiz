@@ -96,7 +96,7 @@ function parseArgs(argv: string[]): { list: boolean; only: string[] } {
 
 const WRITE_LABEL = /(저장|기록|확정|삭제|제출|승인|재분석|생성|등록|전송|적용|취소|종료)/;
 const ERROR_TEXT =
-  /Application error|This page could not be found|Internal Server Error|문제가 발생했습니다|오류가 발생했습니다|권한이 없습니다/;
+  /Application error|This page could not be found|Internal Server Error|Failed to fetch|문제가 발생했습니다|오류가 발생했습니다|권한이 없습니다/;
 
 /** Injected before each shot: no personal identifiers, no animations. */
 const REDACT_CSS = `

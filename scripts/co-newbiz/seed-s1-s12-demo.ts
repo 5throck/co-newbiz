@@ -451,7 +451,11 @@ export function seedS1ToS12Demo(dbPath?: string, opts: SeedOptions = {}): { oppo
           `demo-s1-s12-target-${i}`,
           DEMO.oppId,
           i === 1 ? "S1-S12 데모 대상회사" : `S1-S12 대체 후보 ${i - 1}`,
-          `DEMO000${i}`,
+          // 데모 대상(1번)에 가짜 DART 고유번호를 심지 않는다 — 코드가 있으면 상세
+          // 화면의 DART 재무 자동동기화 POST가 발사되는데, 캡처 하네스의 읽기전용
+          // 락(manual-capture.ts)이 이를 abort해 "Failed to fetch" 배너가 캡처에
+          // 남는다(bf-01). 회사 연결은 상세 라우트의 이름 매치 폴백으로 유지된다.
+          i === 1 ? null : `DEMO000${i}`,
           "Target Universe 기준 충족",
           i === 1 ? "shortlisted" : "excluded",
           i === 1 ? 1 : null,
