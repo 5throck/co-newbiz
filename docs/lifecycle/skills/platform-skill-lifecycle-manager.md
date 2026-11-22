@@ -7,29 +7,22 @@
 - **Skill**: platform-skill-lifecycle-manager
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-09-04
+- **Created**: 2026-11-08
 
 ## Description
 
-Guides creation and lifecycle management of platform skills
-(`.claude/skills/`, `.gemini/skills/`, `.agents/skills/`): SSOT-first flow
-(create in `skills/`, distribute via `scripts/sync-skills.ts`), shortcut-skill
-back-sync rules, version pinning, and AGENTS.md §8 lifecycle triggers.
-
-## Dependencies
-
-- `scripts/sync-skills.ts` (distribution and back-sync)
-- `scripts/validate-skills.ts` (frontmatter validation)
+Manages the creation, versioning, and propagation of platform skills in .claude/skills/ and .gemini/skills/ directories. Use when: creating new platform skills, updating platform skill versions, or ensuring propagation to templates/common/.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-04 | - | production | Created and validated in same cycle | pm |
+| 2026-11-08 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/platform-skill-lifecycle-manager/SKILL.md`
-- [x] Frontmatter valid; registered in docs/VERSION_MANIFEST.md
-- [x] SSOT-first distribution flow documented
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/platform-skill-lifecycle-manager/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

@@ -7,27 +7,22 @@
 - **Skill**: service-design
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-07-19
+- **Created**: 2026-09-27
 
 ## Description
 
 Designs end-to-end service experiences including customer journeys, service blueprints, and operational processes. Use when: mapping customer experiences, optimizing touchpoints, aligning frontstage and backstage operations, or improving service delivery.
 
-## Dependencies
-
-- Composes with `ui-ux-design-intelligence` (follows), `accessibility-audit`
-  embedded as a mandatory journey-mapping step
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-07-19 | - | production | Created in co-design variant | pm |
+| 2026-09-27 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- SKILL.md frontmatter: scope common, l2_propagate true, English-only body
-- Registry lockstep: SKILLS.md row, this record, VERSION_MANIFEST, skill-graph,
-  L1 mirror (templates/common/skills/), platform mirrors — all regenerated this batch
-- Validators: verify-skills / validate-skills / verify-skill-graph pass
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/service-design/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

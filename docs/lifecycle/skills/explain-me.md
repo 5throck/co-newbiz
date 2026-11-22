@@ -7,22 +7,17 @@
 - **Skill**: explain-me
 - **Status**: experimental
 - **Owner**: pm
-- **Created**: 2026-08-16
+- **Created**: 2026-08-03
 
 ## Description
 
-Turn a topic or your own materials into a single self-contained, interactive HTML report with top tabs, clickable reference drawers, dense tables, comparison heatmaps, inline SVG, in-page search, a light/dark theme toggle, and multilingual support. Inspired by beret21/reportme.
-
-## Dependencies
-
-- Python 3 (for validate_report.py)
-- git + gh (for optional publish)
+Turn a topic or your own materials into a single self-contained, interactive HTML report — top tabs, clickable reference drawers, dense tables, comparison heatmaps, inline SVG, in-page search, a light/dark theme toggle, and multilingual support. Use when: user says "/explain-me", "/reportme", "make a report", "create report", "explain this topic". Inspired by beret21/reportme.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-16 | - | experimental | Backfilled lifecycle document from existing SKILL.md | lifecycle-manager |
+| 2026-08-03 | - | experimental | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -30,6 +25,4 @@ Turn a topic or your own materials into a single self-contained, interactive HTM
 
 - [x] Skill SKILL.md exists at `skills/explain-me/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
-- [x] Attribution: MIT, inspired by beret21/reportme
+- [x] Owner assigned: pm

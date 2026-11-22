@@ -28,6 +28,7 @@ jobs:
     # locally on Apple Silicon — see docs/designs/2026-10-11-port-swap-and-public-domain-access-design.md §8).
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
+    timeout-minutes: 20 # review F-31: CI-timeout convention (was the 360m GitHub default)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -45,6 +46,7 @@ jobs:
     name: Publish image to ghcr.io
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
+    timeout-minutes: 30 # review F-31: multi-arch (amd64 + QEMU arm64) build is the slow leg
     permissions:
       contents: read
       packages: write

@@ -7,22 +7,17 @@
 - **Skill**: zod-contract-gate
 - **Status**: active
 - **Owner**: contract-gate-engineer
-- **Created**: 2026-08-16
+- **Created**: 2026-11-12
 
 ## Description
 
 Defines Zod runtime schema validation patterns, interface boundaries, and contract safety rules for multi-agent architecture, IPC channels, and API endpoints.
 
-## Dependencies
-
-- Bun runtime
-- Zod library (^3.25 || ^4.0)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-16 | - | production | Backfilled lifecycle document from existing SKILL.md | lifecycle-manager |
+| 2026-11-12 | - | production | Initial record derived from SKILL.md frontmatter | contract-gate-engineer |
 
 ## Acceptance Criteria
 
@@ -30,5 +25,4 @@ Defines Zod runtime schema validation patterns, interface boundaries, and contra
 
 - [x] Skill SKILL.md exists at `skills/zod-contract-gate/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: contract-gate-engineer

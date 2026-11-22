@@ -36,6 +36,16 @@ deletion with `409 synergy_basis_in_use`. Remove (mark) the deal first.
 
 ## Procedure
 
+**System-mode prerequisite (ADR-0133).** Deletion marks are blocked while the
+system mode is `production` — the seeded, fail-closed default of the
+`system_setting` store. A deletion attempt in production mode is refused with
+`403 production_mode_delete_blocked` before any row is touched. An admin flips
+the mode via `/admin/system-mode` (`GET/POST /api/admin/system-mode`,
+`requireAdmin`-gated; every switch is audited as `system_mode_set`); switching
+to `development` requires an inline confirmation naming the risk (test-data
+only, deletion re-enabled). Re-enable deletion only for test data, and return
+the mode to `production` afterwards.
+
 1. **Delete the deal** — `/projects` list → row action 삭제 (lead only), or the
    archive screen for already-closed/archived projects. One action covers the
    whole chain.
@@ -90,8 +100,8 @@ resolvable through the append-only version history.
 
 | Endpoint | Behavior |
 | --- | --- |
-| `DELETE /api/projects/[id]` | lead-only; marks project + source opportunity; writes `deal_archive` |
-| `DELETE /api/opportunities/[id]` | analyst+; delete-marks the unpromoted opportunity and writes a `deal_archive` manifest; 400 `opportunity_promoted` while promoted |
+| `DELETE /api/projects/[id]` | lead-only; marks project + source opportunity; writes `deal_archive`; 403 `production_mode_delete_blocked` while system mode is `production` (ADR-0133) |
+| `DELETE /api/opportunities/[id]` | analyst+; delete-marks the unpromoted opportunity and writes a `deal_archive` manifest; 400 `opportunity_promoted` while promoted; 403 `production_mode_delete_blocked` while system mode is `production` (ADR-0133) |
 | `DELETE /api/our-company/groups/[id]` | analyst+; marks group + members |
 | `DELETE /api/our-company/groups/[id]/members` | analyst+; marks member |
 | `DELETE /api/synergy/analyses/[id]` | analyst+; marks; 409 `synergy_basis_in_use` while deal is live |

@@ -7,22 +7,17 @@
 - **Skill**: gateguard
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-16
+- **Created**: 2026-08-01
 
 ## Description
 
-Pre-edit fact-forcing quality gate. Ensures agents investigate a file's importers, schemas, and scope constraints before making changes. Part of the 3-layer enforcement model (Hook -> Prompt -> Skill).
-
-## Dependencies
-
-- Bun runtime
-- `scripts/hooks/gateguard-fact-force.ts` — Hook layer implementation
+Pre-edit fact-forcing quality gate. Ensures agents investigate a file's importers, schemas, and scope constraints before making changes. Part of the 3-layer enforcement model (Hook → Prompt → Skill).
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-16 | - | production | Backfilled lifecycle document from existing SKILL.md | lifecycle-manager |
+| 2026-08-01 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -30,5 +25,4 @@ Pre-edit fact-forcing quality gate. Ensures agents investigate a file's importer
 
 - [x] Skill SKILL.md exists at `skills/gateguard/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: pm

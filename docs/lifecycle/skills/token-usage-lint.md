@@ -7,28 +7,22 @@
 - **Skill**: token-usage-lint
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-25
+- **Created**: 2026-09-06
 
 ## Description
 
-Token SSOT compliance lint: scans UI source for hardcoded design values (raw hex,
-rgb()/hsl() literals, raw px) bypassing the project token source. Runnable companion
-`scripts/design-lint.ts` (L0+L1) implements the detection/exemption/classification
-scheme; this skill documents the workflow and remediation loop.
-
-## Dependencies
-
-- Composes with `design-foundation`; follows `ui-ux-design-intelligence`
+Lint procedure that scans project UI code for hardcoded design values (raw hex colors, rgb()/hsl() literals, raw px spacing) that bypass the tokens.json SSOT. Use when: reviewing generated UI code, auditing for hardcoded design values, or checking design token compliance in playground demos and handoff artifacts.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-25 | - | production | Initial production record | pm |
+| 2026-09-06 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/token-usage-lint/SKILL.md`
-- [x] Frontmatter valid; scope: common
-- [x] Registered in skills/SKILLS.md and docs/VERSION_MANIFEST.md
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/token-usage-lint/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

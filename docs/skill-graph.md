@@ -100,7 +100,7 @@
 | `root/source-command-commit-push-pr` | L3 | 1.0.3 | — | — | — | — | — |
 | `root/stage-gate-governance` | L3 | 1.4.3 | root/process-governance-manager | root/phase 1, root/phase 2, root/phase 3, root/phase 4, root/phase 5, root/phase 6 | root/decision-record, root/evidence-ledger, root/strategic-fit-screening (composes_with), root/talent-pipeline-planning (composes_with), root/technical-due-diligence (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (composes_with), root/wacc-input-session (composes_with) | — | — |
 | `root/standup-synthesizer` | L3 | 1.1.0 | — | — | — | — | — |
-| `root/strategic-fit-screening` | L3 | 1.1.0 | root/brownfield-agent, root/process-governance-manager | root/phase 1 | root/antitrust-screening (follows), root/insight-synthesis (composes_with), root/project-review (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (follows) | — | — |
+| `root/strategic-fit-screening` | L3 | 1.2.0 | root/brownfield-agent, root/process-governance-manager | root/phase 1 | root/antitrust-screening (follows), root/insight-synthesis (composes_with), root/project-review (composes_with), root/rag-scoring-framework (composes_with), root/stage-gate-governance (composes_with), root/two-tier-approval-chain (composes_with), root/value-chain-linkage-analysis (follows) | — | — |
 | `root/sync` | L3 | 1.10.0 | root/automation-engineer | — | — | — | — |
 | `root/systematic-market-sizing` | L3 | 1.5.0 | root/market-intelligence-agent, root/quant-methodologist | root/phase 2, root/phase 3 | root/evidence-ledger (enables), root/proxy-industry-chain (follows), root/scenario-planning (composes_with) | — | — |
 | `root/talent-pipeline-planning` | L3 | 1.1.0 | root/greenfield-agent, root/hr-integration-agent | root/phase 4 | root/community-partnership-planning (follows), root/greenfield-feasibility (composes_with), root/regional-incentive-sourcing (composes_with), root/site-infrastructure-assessment (composes_with) | — | — |
@@ -444,6 +444,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261114-02` | decision | `root/decision-record`, `root/systematic-market-sizing` | — | — |
 | `dec:DEC-20261119-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261121-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261122-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261122-02` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |
@@ -631,7 +633,7 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 
 ## Skill Usage (E3)
 
-Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-22), window 90 days. Skill nodes with usage: 1.
+Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-23), window 90 days. Skill nodes with usage: 1.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (0): —
 - **unused** (0 sessions in 90 days) (108): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/gateguard, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/humanize-polish, root/i18n-audit, root/i18n-formatting … and 68 more

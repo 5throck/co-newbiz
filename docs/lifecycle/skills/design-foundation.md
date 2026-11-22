@@ -7,34 +7,22 @@
 - **Skill**: design-foundation
 - **Status**: active
 - **Owner**: design-system-lead
-- **Created**: 2026-08-30
+- **Created**: 2026-11-12
 
 ## Description
 
-Style-neutral procedure for deriving a project's own design system: domain evidence → design
-principles → recorded design decisions (`design_decisions` YAML in the project's `docs/design.md`)
-→ 3-layer token architecture (Primitive → Semantic ← `[data-theme]` mapping → Component) →
-validation contract. Companion artifacts: `templates/common/docs/design-foundation.md` (spec) and
-`templates/common/docs/design-tokens.template.css` (scaffold). Extracted from the proven methods of
-Projects/co-price (Onyx 2.0) and Projects/co-newbiz (Onyx 3.0) without prescribing their styles.
-
-## Dependencies
-
-- None (procedural skill); composes with `token-usage-lint` and `accessibility-audit`; enables
-  `ui-ux-design-intelligence`
+Style-neutral procedure for deriving a project's own design system. Walks a project from domain evidence to design principles, recorded design decisions, and a 3-layer token architecture (Primitive → Semantic ← [data-theme] → Component). Use when: establishing design principles for a new project, creating a project design guide (docs/design.md), setting up a design token system, or reviewing a project's design foundation completeness. Does NOT prescribe colors, fonts, spacing, or trends — those are project decisions.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-30 | - | production | Initial release with Design Foundation framework | pm |
+| 2026-11-12 | - | production | Initial record derived from SKILL.md frontmatter | design-system-lead |
 
 ## Acceptance Criteria
 
-### Active Phase
+### Production Phase
 
-- [x] SKILL.md exists at `skills/design-foundation/SKILL.md`
+- [x] Skill SKILL.md exists at `skills/design-foundation/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in skills/SKILLS.md and docs/VERSION_MANIFEST.md
-- [x] Scope: common (propagates L0 → L1); `l2_propagate: false` (autonomous per-project adoption)
-- [x] Triggers avoid co-design `ui-ux-design-intelligence` overlap ("design system" excluded)
+- [x] Owner assigned: design-system-lead

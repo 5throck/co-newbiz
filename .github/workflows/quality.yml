@@ -15,6 +15,7 @@ concurrency:
 jobs:
   typecheck-core:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -27,6 +28,7 @@ jobs:
 
   typecheck-baseline:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -39,6 +41,7 @@ jobs:
 
   typecheck-web:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -51,6 +54,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,6 +79,7 @@ jobs:
 
   coverage:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -100,8 +105,9 @@ jobs:
           path: coverage/lcov.info
 
   # Wave C-1: Playwright golden paths + axe gate (spec 2026-10-08-wave-c-e2e-proof-design).
-  # Offline by construction (LLM/DART env blanked by the harness). Hosted runs are
-  # blocked by billing for now; the job is verified locally with `bun run test:e2e`.
+  # Offline by construction (LLM/DART env blanked by the harness). Runs hosted
+  # on the standard ubuntu runner (review F-35, 2026-11-22: the stale
+  # "blocked by billing" note deleted — e2e has been green on hosted runners).
   e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

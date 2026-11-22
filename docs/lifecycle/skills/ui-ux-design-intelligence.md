@@ -7,27 +7,22 @@
 - **Skill**: ui-ux-design-intelligence
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-06
+- **Created**: 2026-09-06
 
 ## Description
 
-Comprehensive UI/UX design methodology: token architecture, component design (state
-matrices, variants), visual hierarchy (grid + breakpoints), WCAG 2.1 AA checklist,
-documentation/handoff structure, and quality-gate validation. Style-neutral method.
-
-## Dependencies
-
-- Enabled by `design-foundation`; composes with `accessibility-audit`
+Provides comprehensive UI/UX design capabilities including design system creation, component design, visual hierarchy, and user-centered design principles. Use when: building design systems, creating visual designs, designing UI components, or establishing design specifications.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-06 | - | production | Initial production record | pm |
+| 2026-09-06 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/ui-ux-design-intelligence/SKILL.md`
-- [x] Frontmatter valid; scope: common
-- [x] Registered in skills/SKILLS.md and docs/VERSION_MANIFEST.md
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/ui-ux-design-intelligence/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

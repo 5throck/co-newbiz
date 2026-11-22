@@ -7,21 +7,17 @@
 - **Skill**: update-bun-packages
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-16
+- **Created**: 2026-09-09
 
 ## Description
 
-Scans, updates, and upgrades Bun dependencies and packages across the AI workspace (L0) or standalone project (L2/L3) while ensuring lockfile consistency, package.json version bumps, and security compliance.
-
-## Dependencies
-
-- Bun runtime
+Scans, updates, and upgrades Bun dependencies and packages across the AI workspace (L0) or standalone project (L2/L3) while ensuring lockfile consistency, package.json version bumps, and security compliance. Use when: updating bun dependencies, upgrading packages to @latest, checking outdated packages in workspace or templates.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-16 | - | production | Backfilled lifecycle document from existing SKILL.md | lifecycle-manager |
+| 2026-09-09 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -29,5 +25,4 @@ Scans, updates, and upgrades Bun dependencies and packages across the AI workspa
 
 - [x] Skill SKILL.md exists at `skills/update-bun-packages/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: pm

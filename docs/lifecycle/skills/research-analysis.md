@@ -7,21 +7,17 @@
 - **Skill**: research-analysis
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-28
+- **Created**: 2026-07-19
 
 ## Description
 
-Conducts systematic research, data synthesis, and evidence-based analysis to support decision-making and documentation.
-
-## Dependencies
-
-- None (knowledge/process skill)
+Conducts systematic research, data synthesis, and evidence-based analysis to support decision-making and documentation. Use when: analyzing topics, synthesizing research, gathering evidence, or investigating questions for documentation or strategy.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-28 | - | production | Promoted from duplicate variant-local copies to workspace common layer | pm |
+| 2026-07-19 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -29,5 +25,4 @@ Conducts systematic research, data synthesis, and evidence-based analysis to sup
 
 - [x] Skill SKILL.md exists at `skills/research-analysis/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: pm

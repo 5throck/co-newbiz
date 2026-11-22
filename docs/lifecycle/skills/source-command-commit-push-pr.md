@@ -7,29 +7,22 @@
 - **Skill**: source-command-commit-push-pr
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-09-04
+- **Created**: unrecorded
 
 ## Description
 
-Shortcut skill for `/commit-push-pr` registered in `.agents/skills/` and
-back-synced to `.claude/skills/` and `.gemini/skills/`: stages workspace
-changes, writes an English conventional commit message, pushes the branch, and
-opens a PR — the lightweight alternative to the full `sync` pipeline.
-
-## Dependencies
-
-- Composes with (lighter than) `sync`
-- Back-synced via `scripts/sync-skills.ts` (Phase 2)
+Redirects commit+push+PR requests to the /sync pipeline (workspace enforcement)
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-04 | - | production | Created and validated in same cycle | pm |
+| unrecorded | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
-### Active Phase
-- [x] SKILL.md exists at `skills/source-command-commit-push-pr/SKILL.md`
-- [x] Frontmatter valid; registered in docs/VERSION_MANIFEST.md
-- [x] Registered in `.agents/skills.json` shortcut table (AGENTS.md §6)
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/source-command-commit-push-pr/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

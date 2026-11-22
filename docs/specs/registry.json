@@ -146,6 +146,15 @@
       "last_updated": "2026-09-12"
     },
     {
+      "id": "2026-09-12-mockup-v3-data-contract",
+      "title": "mockup v3 data contract",
+      "file": "docs/designs/2026-09-12-mockup-v3-data-contract.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
       "id": "2026-09-12-pipeline-alignment-p2-design",
       "title": "pipeline alignment p2 design",
       "file": "docs/designs/2026-09-12-pipeline-alignment-p2-design.md",
@@ -641,6 +650,15 @@
       "last_updated": "2026-09-28"
     },
     {
+      "id": "2026-10-01-agents-md-read-first-directive-design",
+      "title": "agents md read first directive design",
+      "file": "docs/designs/2026-10-01-agents-md-read-first-directive-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
       "id": "2026-10-01-s1-s12-process-alignment-design",
       "title": "s1 s12 process alignment design",
       "file": "docs/designs/2026-10-01-s1-s12-process-alignment-design.md",
@@ -650,6 +668,15 @@
       "last_updated": "2026-10-25"
     },
     {
+      "id": "2026-10-01-template-upgrade-083-design",
+      "title": "template upgrade 083 design",
+      "file": "docs/designs/2026-10-01-template-upgrade-083-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
       "id": "2026-10-02-adr-0149-0150-implementation-design",
       "title": "adr 0149 0150 implementation design",
       "file": "docs/designs/2026-10-02-adr-0149-0150-implementation-design.md",
@@ -657,6 +684,15 @@
       "source": "manual",
       "created": "2026-10-01",
       "last_updated": "2026-10-25"
+    },
+    {
+      "id": "2026-10-02-fleet-rollout-090-design",
+      "title": "fleet rollout 090 design",
+      "file": "docs/designs/2026-10-02-fleet-rollout-090-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
     },
     {
       "id": "2026-10-02-followup-batch-design",
@@ -1057,6 +1093,15 @@
       "last_updated": "2026-10-11"
     },
     {
+      "id": "2026-10-13-establishment-step-assignee-reopen-design",
+      "title": "establishment step assignee reopen design",
+      "file": "docs/designs/2026-10-13-establishment-step-assignee-reopen-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
       "id": "2026-10-13-user-manual-wiki-design",
       "title": "user manual wiki design",
       "file": "docs/designs/2026-10-13-user-manual-wiki-design.md",
@@ -1064,6 +1109,132 @@
       "source": "manual",
       "created": "2026-10-22",
       "last_updated": "2026-10-22"
+    },
+    {
+      "id": "2026-10-14-capability-check-at-s5-s7-design",
+      "title": "capability check at s5 s7 design",
+      "file": "docs/designs/2026-10-14-capability-check-at-s5-s7-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-14-greenfield-business-unit-vs-new-entity-design",
+      "title": "greenfield business unit vs new entity design",
+      "file": "docs/designs/2026-10-14-greenfield-business-unit-vs-new-entity-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-14-holding-assessment-unification-design",
+      "title": "holding assessment unification design",
+      "file": "docs/designs/2026-10-14-holding-assessment-unification-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-14-s3-s8-capability-linkage-design",
+      "title": "s3 s8 capability linkage design",
+      "file": "docs/designs/2026-10-14-s3-s8-capability-linkage-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-14-s8-capability-attainability-design",
+      "title": "s8 capability attainability design",
+      "file": "docs/designs/2026-10-14-s8-capability-attainability-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-14-s8-technical-financial-lens-design",
+      "title": "s8 technical financial lens design",
+      "file": "docs/designs/2026-10-14-s8-technical-financial-lens-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-15-capability-cost-and-milestone-linkage-design",
+      "title": "capability cost and milestone linkage design",
+      "file": "docs/designs/2026-10-15-capability-cost-and-milestone-linkage-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-15-investment-account-subcategories-design",
+      "title": "investment account subcategories design",
+      "file": "docs/designs/2026-10-15-investment-account-subcategories-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-15-investment-simulation-and-s8-evaluation-design",
+      "title": "investment simulation and s8 evaluation design",
+      "file": "docs/designs/2026-10-15-investment-simulation-and-s8-evaluation-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-15-s8-valuation-method-pnl-volatility-prelaunch-design",
+      "title": "s8 valuation method pnl volatility prelaunch design",
+      "file": "docs/designs/2026-10-15-s8-valuation-method-pnl-volatility-prelaunch-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-15-staffing-plan-and-labor-cost-design",
+      "title": "staffing plan and labor cost design",
+      "file": "docs/designs/2026-10-15-staffing-plan-and-labor-cost-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-15-total-investment-and-s8-handoff-design",
+      "title": "total investment and s8 handoff design",
+      "file": "docs/designs/2026-10-15-total-investment-and-s8-handoff-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-16-market-anchor-scope-compatibility-design",
+      "title": "market anchor scope compatibility design",
+      "file": "docs/designs/2026-10-16-market-anchor-scope-compatibility-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
+      "id": "2026-10-17-entry-market-flow-redesign-design",
+      "title": "entry market flow redesign design",
+      "file": "docs/designs/2026-10-17-entry-market-flow-redesign-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
     },
     {
       "id": "2026-10-17-entry-market-s2-promotion-s3-linkage-design",
@@ -1271,6 +1442,15 @@
       "source": "manual",
       "created": "2026-10-24",
       "last_updated": "2026-10-24"
+    },
+    {
+      "id": "2026-10-24-flow-console-screen-design",
+      "title": "flow console screen design",
+      "file": "docs/designs/2026-10-24-flow-console-screen-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
     },
     {
       "id": "2026-10-25-agent-and-context-ssot-upgrade-design",
@@ -1525,6 +1705,15 @@
       "last_updated": "2026-11-05"
     },
     {
+      "id": "2026-11-07-kill-criteria-stage-scoping-design",
+      "title": "kill criteria stage scoping design",
+      "file": "docs/designs/2026-11-07-kill-criteria-stage-scoping-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
+    },
+    {
       "id": "2026-11-07-kill-data-sources",
       "title": "kill data sources design",
       "file": "docs/designs/2026-11-07-kill-data-sources-design.md",
@@ -1541,6 +1730,15 @@
       "source": "manual",
       "created": "2026-11-07",
       "last_updated": "2026-11-07"
+    },
+    {
+      "id": "2026-11-07-s3-completion-into-decision-tab",
+      "title": "s3 completion into decision tab",
+      "file": "docs/designs/2026-11-07-s3-completion-into-decision-tab.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
     },
     {
       "id": "2026-11-08-committee-minutes-as-meeting-design",
@@ -1884,6 +2082,15 @@
       "source": "manual",
       "created": "2026-11-21",
       "last_updated": "2026-11-21"
+    },
+    {
+      "id": "2026-11-22-security-control-remediation-design",
+      "title": "security control remediation design",
+      "file": "docs/designs/2026-11-22-security-control-remediation-design.md",
+      "status": "implemented",
+      "source": "manual",
+      "created": "2026-11-22",
+      "last_updated": "2026-11-22"
     },
     {
       "id": "design-checklist",

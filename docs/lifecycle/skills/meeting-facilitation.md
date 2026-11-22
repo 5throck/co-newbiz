@@ -7,28 +7,22 @@
 - **Skill**: meeting-facilitation
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-05-29
+- **Created**: 2026-11-21
 
 ## Description
 
 Facilitates structured multi-agent meetings for collaborative decision-making and problem resolution. Use when: running agent meetings, coordinating multi-agent discussions, or facilitating collaborative problem-solving sessions.
 
-## Dependencies
-
-- pm (facilitator agent)
-- All agents (meeting participants)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-05-29 | - | production | Initial skill established for multi-agent meeting facilitation | lifecycle-manager |
+| 2026-11-21 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
 ### Production Phase
 
-- [x] Skill purpose clearly defined: Multi-agent meeting facilitation
-- [x] Trigger conditions: When user requests collaborative decision making
-- [x] Examples provided: Meeting workflows, action item generation
-- [x] Successfully tested in meeting scenarios
+- [x] Skill SKILL.md exists at `skills/meeting-facilitation/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

@@ -7,27 +7,22 @@
 - **Skill**: skill-lifecycle-manager
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-05-29
+- **Created**: 2026-09-21
 
 ## Description
 
 Manages the creation, validation, and maintenance of skill files across the project. Use when: creating new skills, updating skill metadata, validating skill structure, managing skill-agent mappings, triaging agent skill requests, or deprecating/removing skills.
 
-## Dependencies
-
-- lifecycle-manager (owner agent)
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-05-29 | - | production | Initial skill established for skill lifecycle management | lifecycle-manager |
+| 2026-09-21 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
 ### Production Phase
 
-- [x] Skill purpose clearly defined: Skill lifecycle management
-- [x] Trigger conditions: When skill is created, modified, or deprecated
-- [x] Examples provided: Skill creation, validation, deprecation workflows
-- [x] Successfully tested in skill lifecycle operations
+- [x] Skill SKILL.md exists at `skills/skill-lifecycle-manager/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: pm

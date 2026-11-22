@@ -7,7 +7,7 @@
 - **Skill**: k-kosis
 - **Status**: active
 - **Owner**: public-data-analyst
-- **Created**: 2026-09-21
+- **Created**: 2026-08-23
 
 ## Description
 
@@ -17,9 +17,12 @@ Queries the Korean Statistical Information Service (`통계청 KOSIS`, `국가�
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-09-21 | - | production | Record backfill — active skill without a lifecycle record (Check LC) | pm |
+| 2026-08-23 | - | production | Initial record derived from SKILL.md frontmatter | public-data-analyst |
 
 ## Acceptance Criteria
 
-- [x] Skill directory exists in L1 with valid frontmatter.
-- [x] Delivered to projects through the standard upgrade path.
+### Production Phase
+
+- [x] Skill SKILL.md exists at `skills/k-kosis/SKILL.md`
+- [x] Frontmatter valid: name, description, status, scope, version, owner populated
+- [x] Owner assigned: public-data-analyst

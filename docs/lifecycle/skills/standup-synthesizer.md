@@ -7,22 +7,17 @@
 - **Skill**: standup-synthesizer
 - **Status**: active
 - **Owner**: pm
-- **Created**: 2026-08-16
+- **Created**: 2026-11-06
 
 ## Description
 
 Automated daily standup digest synthesizer aggregating git commit logs, issue status updates, pull request reviews, and ticket queue events over a 24-hour window.
 
-## Dependencies
-
-- Bun runtime
-- git
-
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-08-16 | - | production | Backfilled lifecycle document from existing SKILL.md | lifecycle-manager |
+| 2026-11-06 | - | production | Initial record derived from SKILL.md frontmatter | pm |
 
 ## Acceptance Criteria
 
@@ -30,5 +25,4 @@ Automated daily standup digest synthesizer aggregating git commit logs, issue st
 
 - [x] Skill SKILL.md exists at `skills/standup-synthesizer/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Skill is registered in VERSION_MANIFEST.md
-- [x] Scope: common
+- [x] Owner assigned: pm

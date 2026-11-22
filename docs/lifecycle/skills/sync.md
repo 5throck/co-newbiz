@@ -7,24 +7,17 @@
 - **Skill**: sync
 - **Status**: active
 - **Owner**: automation-engineer
-- **Created**: 2026-07-08
+- **Created**: 2026-11-18
 
 ## Description
 
-Full project sync pipeline covering lifecycle update, audit, L0→L1 publish, commit, push, and PR creation.
-
-## Dependencies
-
-- `scripts/dev-sync.ts` — main pipeline implementation
-- `scripts/sync-skills.ts` — platform skill distribution
-- `scripts/audit.ts` — audit gate
-- `scripts/lifecycle-sync-audit.ts` — lifecycle drift detection
+Runs the full project sync pipeline — lifecycle update, audit, L0→L1 publish, commit, push, and PR creation.
 
 ## Phase History
 
 | Date | From | To | Reason | Approver |
 |------|------|----|--------|----------|
-| 2026-07-08 | - | production | Skill extracted from inline /sync command to standalone SKILL.md | pm |
+| 2026-11-18 | - | production | Initial record derived from SKILL.md frontmatter | automation-engineer |
 
 ## Acceptance Criteria
 
@@ -32,5 +25,4 @@ Full project sync pipeline covering lifecycle update, audit, L0→L1 publish, co
 
 - [x] Skill SKILL.md exists at `skills/sync/SKILL.md`
 - [x] Frontmatter valid: name, description, status, scope, version, owner populated
-- [x] Full pipeline sync tests pass via `dev-sync.ts`
-- [x] Idempotent PR update verified
+- [x] Owner assigned: automation-engineer
