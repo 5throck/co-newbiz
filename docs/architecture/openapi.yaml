@@ -8526,7 +8526,7 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       operationId: createProjectShareLink
-      summary: Create an expiring watermarked share link (analyst+, <=30 days).
+      summary: Create an expiring watermarked share link (analyst+, <=30 days; MNPI projects 403 mnpi_share_blocked — F-11).
       tags:
         - Reference
       responses:
@@ -8536,6 +8536,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '201':

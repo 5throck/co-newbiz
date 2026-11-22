@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.10.0
+// @version 1.12.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -58,6 +58,41 @@
  *     mode: source edits landed without re-sync and surfaced only as a RED CI
  *     coverage job after landing (PRs #913/#936/#946) — this gate blocks
  *     locally at dev-sync before push instead.
+ *   - ADR-0070 server-boundary gate (v1.11.0, review F-1 / DEC-20261122-01):
+ *     lint-server-boundary.ts as a blocking subprocess — Rule 1 ("use server"
+ *     + data access) stays an absolute violation; Rule 2 is ALLOWLIST mode,
+ *     sanctioning exactly the five carrier flat-route pages within the frozen
+ *     module set {db/client.ts, lib/carrier-resolve.ts, lib/rsc-session.ts}
+ *     and read-only SQL shapes. The original audit.ts 2.15.0 wiring was
+ *     silently destroyed by the 2026-08-29 upgrade wave (4d6793e6); this
+ *     variant-owned placement is upgrade-proof (Core Script Standardization
+ *     keeps audit.ts identical to templates/common). Growing the allowlist
+ *     requires a recorded DEC.
+ *   - Projection-generator expansion + lint-family gates (v1.12.0, review
+ *     F-3/F-4/F-16/F-18/F-20 / DEC-20261122-02): three generators join
+ *     PROJECTION_GENERATORS — generate-committee-registry.ts (NEW; the
+ *     committee projection previously had no generator at all, and
+ *     regenerating surfaced real drift: the ADR-0202 description rewording
+ *     in 05424622 never reached the projection), generate-spec-activities.ts
+ *     (spec-activities.generated.ts + mcp stage-guides.generated.ts), and
+ *     generate-process-flow.ts (docs/process-flow.md) — stale projections
+ *     previously passed /sync locally and failed only in the CI unit job.
+ *     Two new blocking lint gates: contrast-check.ts --check (WCAG AA token
+ *     pairs; the SCRIPTS.md "CI-wired" claim was false — nothing invoked it)
+ *     and design-lint.ts (the Onyx 3.0 mechanical scanner, previously
+ *     alias-only via `bun run design:lint`). F-18's alternative mechanism —
+ *     a variant.json `designLint` override naming app/web-next roots to
+ *     activate audit.ts's core design-lint gate — was REJECTED on evidence:
+ *     scripts/design-lint.ts --dir app/web-next/app --dir app/web-next/
+ *     components exits 1 with 197 pre-existing should-be-token findings, so
+ *     enabling it fail-closed would halt every audit; the variant-owned
+ *     scanner (clean on the real tree) is the enforcement, and the DEC
+ *     records the posture.
+ *   - Generator mechanism governance (F-20): adding a generated projection
+ *     REQUIRES BOTH the generators.json entry (regeneration: dev-sync 3.86)
+ *     AND a PROJECTION_GENERATORS entry here (enforcement). One without the
+ *     other is the exact seam the 2026-11-22 review found: a projection that
+ *     regenerates but never blocks, or blocks but cannot be refreshed.
  */
 
 import { existsSync, readdirSync } from "node:fs";
@@ -316,6 +351,30 @@ const PROJECTION_GENERATORS: ProjectionGenerator[] = [
     refresh: "bun scripts/co-newbiz/generate-glossary-data.ts",
     sources: "glossary/*.yaml",
   },
+  // v1.12.0 (F-3): the committee projection's own "regenerate" instruction was
+  // unfulfillable until this generator existed; its first run also surfaced
+  // real drift (the ADR-0202 description rewording had never been projected).
+  {
+    staleTarget: "app/web-next/lib/committee-registry.generated.ts",
+    generator: "scripts/co-newbiz/generate-committee-registry.ts",
+    refresh: "bun scripts/co-newbiz/generate-committee-registry.ts",
+    sources: "procedures/_committees.yaml",
+  },
+  // v1.12.0 (F-4): these two had --check modes but no blocking caller — stale
+  // projections passed /sync locally and failed only in the CI unit job (the
+  // exact late-failure class v1.10.0 exists to kill).
+  {
+    staleTarget: "app/web-next/lib/spec-activities.generated.ts + mcp/co-newbiz/stage-guides.generated.ts",
+    generator: "scripts/co-newbiz/generate-spec-activities.ts",
+    refresh: "bun scripts/co-newbiz/generate-spec-activities.ts",
+    sources: "process/flow.spec.yaml",
+  },
+  {
+    staleTarget: "docs/process-flow.md",
+    generator: "scripts/co-newbiz/generate-process-flow.ts",
+    refresh: "bun scripts/co-newbiz/generate-process-flow.ts",
+    sources: "process/flow.spec.yaml",
+  },
 ];
 
 function runProjectionDriftGate(): void {
@@ -361,6 +420,121 @@ function runProjectionDriftGate(): void {
 }
 
 runProjectionDriftGate();
+
+/**
+ * ADR-0070 server-boundary gate (v1.11.0, DEC-20261122-01). The lint exits
+ * non-zero on any violation (Rule 1 absolute; Rule 2 allowlist mode) — same
+ * subprocess pattern as the route-audit scan: missing script = non-web
+ * context, skip with a visible note, never silently.
+ */
+function runServerBoundaryGate(): void {
+  const lintPath = join(ROOT, "scripts", "co-newbiz", "lint-server-boundary.ts");
+  if (!existsSync(lintPath)) {
+    console.log("  – ADR-0070 server-boundary gate skipped: lint-server-boundary.ts not present (non-web context)");
+    return;
+  }
+  const proc = Bun.spawnSync(["bun", lintPath], {
+    cwd: ROOT,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode !== 0) {
+    failed = true;
+    console.error("  ✗ ADR-0070 server-boundary gate failed:");
+    const out = new TextDecoder().decode(proc.stdout);
+    const err = new TextDecoder().decode(proc.stderr);
+    if (out) console.error(out);
+    if (err) console.error(err);
+    console.error(
+      "      remediation: move the data access behind app/api/**, or record a DEC before touching the allowlist (docs/decisions/DEC-20261122-01.md)",
+    );
+  } else {
+    const out = new TextDecoder().decode(proc.stdout).trim();
+    console.log(`  ✓ ADR-0070 server-boundary gate: ${out || "0 violations"}`);
+  }
+}
+
+runServerBoundaryGate();
+
+/**
+ * WCAG AA contrast gate (v1.12.0, review F-16 / DEC-20261122-02). The
+ * SCRIPTS.md row claimed "CI-wired" but nothing invoked contrast-check.ts —
+ * a styles.css token regression below 4.5:1 would land silently. Same
+ * subprocess pattern as the server-boundary gate: the script is read-only
+ * (--check is accepted for gate uniformity; default mode is already the
+ * check), exits non-zero on any enforced pair below 4.5:1, and a missing
+ * script means a non-web context — skip with a visible note, never silently.
+ */
+function runContrastGate(): void {
+  const scriptPath = join(ROOT, "scripts", "co-newbiz", "contrast-check.ts");
+  if (!existsSync(scriptPath)) {
+    console.log("  – WCAG AA contrast gate skipped: contrast-check.ts not present (non-web context)");
+    return;
+  }
+  const proc = Bun.spawnSync(["bun", scriptPath, "--check"], {
+    cwd: ROOT,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode !== 0) {
+    failed = true;
+    console.error("  ✗ WCAG AA contrast gate failed:");
+    const out = new TextDecoder().decode(proc.stdout);
+    const err = new TextDecoder().decode(proc.stderr);
+    if (out) console.error(out);
+    if (err) console.error(err);
+    console.error(
+      "      remediation: fix the failing token pair in app/web-next/app/styles.css (ENFORCED pairs must reach 4.5:1 in both themes) — never remove a pair to go green",
+    );
+  } else {
+    const out = new TextDecoder().decode(proc.stdout).trim();
+    console.log(`  ✓ WCAG AA contrast gate: ${out.split("\n").pop() || "all enforced pairs >= 4.5:1"}`);
+  }
+}
+
+runContrastGate();
+
+/**
+ * Onyx 3.0 design-lint gate (v1.12.0, review F-18 / DEC-20261122-02). The
+ * variant's real design scanner (scripts/co-newbiz/design-lint.ts — hardcoded
+ * colors, onInput, nested <main>, icon-only buttons, font floors, list-table
+ * standard) previously had no automated caller beyond the manual
+ * `bun run design:lint` alias. audit.ts's core design-lint gate was NOT
+ * activated via a variant.json designLint override: its engine
+ * (scripts/design-lint.ts --dir over app/web-next roots) exits 1 with 197
+ * pre-existing should-be-token findings today, so enabling it fail-closed
+ * would halt every audit — the posture is recorded in DEC-20261122-02 and the
+ * token burn-down is a separate design-system wave. Same subprocess pattern;
+ * missing script = non-web context, skip with a visible note.
+ */
+function runDesignLintGate(): void {
+  const scriptPath = join(ROOT, "scripts", "co-newbiz", "design-lint.ts");
+  if (!existsSync(scriptPath)) {
+    console.log("  – Onyx design-lint gate skipped: co-newbiz/design-lint.ts not present (non-web context)");
+    return;
+  }
+  const proc = Bun.spawnSync(["bun", scriptPath], {
+    cwd: ROOT,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode !== 0) {
+    failed = true;
+    console.error("  ✗ Onyx design-lint gate failed:");
+    const out = new TextDecoder().decode(proc.stdout);
+    const err = new TextDecoder().decode(proc.stderr);
+    if (out) console.error(out);
+    if (err) console.error(err);
+    console.error(
+      "      remediation: fix the violations (CSS variables from styles.css, onChange over onInput, design classes on buttons, 14px font floor) — docs/design-system/design-guide.md",
+    );
+  } else {
+    const out = new TextDecoder().decode(proc.stdout).trim();
+    console.log(`  ✓ Onyx design-lint gate: ${out || "no violations"}`);
+  }
+}
+
+runDesignLintGate();
 
 // ADR-0187 P2-P4: BLOCKING_CHECKS (all eight checks) fail the audit.
 const ssot = runAll();

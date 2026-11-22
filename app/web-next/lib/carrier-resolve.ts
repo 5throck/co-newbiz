@@ -107,6 +107,11 @@ export type CarrierServerPlan =
  *   2. Auto-resolution — otherwise, when the session is valid AND the query is
  *      not exempt (new=1 on market/opportunities, known_target=1 on
  *      opportunities): exactly one carrier → redirect with moved=<route>.
+ *      CR-1 (DEC-20261122-01, FR-SEC-02 role parity): an `admin` session
+ *      never resolves server-side — the carrier APIs deny admin with
+ *      requireBusinessActor(auth, "read") (role_forbidden), so the page layer
+ *      must not serve rows the API would deny. rows=null sends the admin to
+ *      the client picker, whose fetch receives the same denial as before #862.
  *   3. Zero/many carriers, any exemption, or no valid session → the client
  *      picker (rows passed through when the server resolved them, null when it
  *      did not — a session-less visit renders the picker, never a server error).
@@ -127,7 +132,7 @@ export function planCarrierPage(opts: {
   const startsKnownTarget = opts.route === "opportunities" && firstParam(opts.query.known_target) === "1";
   const startsNew = firstParam(opts.query.new) === "1" && (opts.route === "market" || opts.route === "opportunities");
 
-  if (opts.session && !startsKnownTarget && !startsNew) {
+  if (opts.session && opts.session.role !== "admin" && !startsKnownTarget && !startsNew) {
     const rows = opts.resolve();
     if (rows.length === 1) {
       return { kind: "redirect", href: carrierRedirectHref(opts.route, rows[0].id, opts.query, { moved: true }) };

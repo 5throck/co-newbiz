@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-22T08:40:11.954Z
+**Generated**: 2026-11-22T14:52:35.048Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -162,7 +162,7 @@
 | source-command-commit-push-pr | 1.0.3 | active | skills/source-command-commit-push-pr/SKILL.md | workspace | commit-push-pr, commit and push, create PR | pm |
 | stage-gate-governance | 1.4.3 | active | skills/stage-gate-governance/SKILL.md | workspace | stage gate, kill criteria, gate sequence, halt the project, does this trigger a kill criterion | process-governance-manager |
 | standup-synthesizer | 1.1.0 | active | skills/standup-synthesizer/SKILL.md | workspace | standup digest, daily standup, synthesize standup, work summary | pm |
-| strategic-fit-screening | 1.1.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
+| strategic-fit-screening | 1.2.0 | active | skills/strategic-fit-screening/SKILL.md | workspace | strategic fit screen, knock-out criteria, hunt zone fit | process-governance-manager |
 | sync | 1.10.0 | active | skills/sync/SKILL.md | workspace | sync, /sync, commit and push, create PR | automation-engineer |
 | systematic-market-sizing | 1.5.0 | active | skills/systematic-market-sizing/SKILL.md | workspace | market sizing, TAM SAM SOM, market matrix, region segment demand estimate, market cross-validation, scenario bands | market-intelligence-agent |
 | talent-pipeline-planning | 1.1.0 | active | skills/talent-pipeline-planning/SKILL.md | workspace | talent pipeline, labor market assessment, hiring ramp-up plan, workforce availability | hr-integration-agent |
@@ -204,7 +204,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
 | archive-memory.ts | 1.2.0 | scripts/archive-memory.ts | fs, path |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.10.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
+| audit-variant.ts | 1.12.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
 | audit.ts | 2.64.0 | scripts/audit.ts | bun, child_process, fs, os, path |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
@@ -235,7 +235,7 @@
 | committee-deliberation.ts | 1.4.0 | scripts/co-newbiz/committee-deliberation.ts | fs, path |
 | common.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/common.ts | N/A |
 | compile-tokens.ts | 1.3.0 | scripts/compile-tokens.ts | fs, path |
-| contrast-check.ts | 1.0.0 | scripts/co-newbiz/contrast-check.ts | fs, path |
+| contrast-check.ts | 1.1.0 | scripts/co-newbiz/contrast-check.ts | fs, path |
 | convert.ts | 1.1.0 | scripts/co-newbiz/convert.ts | N/A |
 | copy-legacy-bf-capability-judgements.ts | 1.0.0 | scripts/co-newbiz/copy-legacy-bf-capability-judgements.ts | bun:sqlite |
 | coverage-baseline.ts | 1.0.0 | scripts/coverage-baseline.ts | fs, path |
@@ -307,7 +307,7 @@
 | law.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/law.ts | N/A |
 | lifecycle-sync-audit.ts | 1.21.0 | scripts/lifecycle-sync-audit.ts | crypto, fs, js-yaml, path, process |
 | lint-instructions.ts | 1.0.0 | scripts/lint-instructions.ts | fs, path |
-| lint-server-boundary.ts | 1.0.0 | scripts/co-newbiz/lint-server-boundary.ts | fs, path |
+| lint-server-boundary.ts | 1.1.0 | scripts/co-newbiz/lint-server-boundary.ts | fs, path |
 | llm-suites.ts | 1.0.0 | scripts/eval/llm-suites.ts | crypto, zod |
 | loader.ts | 1.0.0 | scripts/eval/loader.ts | fs, js-yaml, path, zod |
 | locale-jargon-lint.ts | 1.0.0 | scripts/co-newbiz/locale-jargon-lint.ts | fs, path |
@@ -372,7 +372,7 @@
 | sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | fs, path |
 | sync-wiki-projection.ts | 1.0.0 | scripts/co-newbiz/sync-wiki-projection.ts | fs, js-yaml, path |
 | team-builder.ts | 1.5.0 | scripts/team-builder.ts | fs, path |
-| test-runner.ts | 1.11.0 | scripts/test-runner.ts | fs, os, path |
+| test-runner.ts | 1.12.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, crypto, fs, path, url |
 | typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | fs, path |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | fs, path |
@@ -400,7 +400,7 @@
 | verify-memory.ts | 1.3.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.1 | scripts/verify-platform-lifecycle.ts | fs, path |
 | verify-readme-sync.ts | 1.5.0 | scripts/verify-readme-sync.ts | bun, crypto, fs, path |
-| verify-scripts.ts | 1.14.0 | scripts/verify-scripts.ts | crypto, fs, path |
+| verify-scripts.ts | 1.15.0 | scripts/verify-scripts.ts | crypto, fs, path |
 | verify-skill-graph.ts | 2.0.0 | scripts/verify-skill-graph.ts | fs, path, url |
 | verify-skills.ts | 1.5.2 | scripts/verify-skills.ts | fs, path |
 | watch-evaluate.ts | 1.0.0 | scripts/co-newbiz/jobs/watch-evaluate.ts | N/A |

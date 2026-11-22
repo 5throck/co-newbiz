@@ -5,15 +5,16 @@
 // rows:
 //   * opportunities: status != 'dropped', deleted_at IS NULL, project_id IS
 //     NULL (promotion dedup §3 — promoted cases count on the project side),
-//   * projects: listVisibleProjects (deny-by-default, no admin bypass —
-//     lib/project-visibility.ts), non-archived; closed projects stay (they
+//   * projects: listVisibleProjectsFor (deny-by-default, no admin bypass —
+//     lib/project-visibility.ts; MNPI excluded for machine principals per
+//     FR-SYS-02), non-archived; closed projects stay (they
 //     still carry deployed exposure; only deleted ones drop out),
 //   * live project_industry rows restricted to those visible ids.
 // Read-only, analyst+ (requireBusinessActor(ctx, "read") — admins are kept
 // out of deal content per ADR-0091).
 import { getDb } from "../../../../../../db/client.ts";
 import { authenticate, requireBusinessActor } from "../../../../lib/auth.ts";
-import { listVisibleProjects } from "../../../../../../db/repositories/project.repository.ts";
+import { listVisibleProjectsFor } from "../../../../lib/project-visibility.ts";
 import { ok } from "../../../../lib/envelope.ts";
 import {
   buildPortfolioOverlap,
@@ -29,9 +30,9 @@ export async function GET(request: Request) {
   if (denied) return denied;
   const db = getDb();
 
-  const projects = listVisibleProjects(ctx.userId, {
-    excludeMnpi: false,
+  const projects = listVisibleProjectsFor(ctx, {
     includeClosed: true,
+    // MNPI는 원칙대로: 머신 호출자(bearer/MCP)에게는 기본 제외(FR-SYS-02, F-2).
     // 삭제(아카이브) 표시는 /api/archive/deals 전용 — 이 읽기에는 나오지 않는다.
   });
   const projectIds = projects.map((p) => p.id);
