@@ -1,4 +1,14 @@
-// @version 1.1.0
+// @version 1.1.1
+// 1.1.1 (2026-11-23, shell-WARN triage / DEC-20261123-01): markRow builds its
+// UPDATE statement through buildMarkRowStmt — column keys validated against
+// the MARK_ROW_COLUMNS allowlist (exactly the file's own call-site keys:
+// status/last_error/next_attempt_at/attempt/sent_at/provider_message_id), values as bound parameters. NO
+// behavior change for existing calls (same SQL text, same parameters). There
+// is no argv-array form for a SQL statement; the builder separates statement
+// construction from the db.run sink call so the security-validator
+// shell-injection heuristic (which pattern-matches "<name with
+// run/exec>(`…${…}…`)" over whole files) stops flagging this bun:sqlite
+// builder as a shell-string build.
 // 1.1.0: channel-level is_test webhook expansion for admin test sends (design section 13.7) — testWebhookTargetKey() honors the admin-requested notify_webhook_target key carried on a trigger_type='test' notification's payload; the severity→target mapping (webhookTargetKeyFor) still applies to real traffic.
 /**
  * notify.deliver - the delivery worker for immediate notifications (ADR-0189/0190, scheduled-jobs design section 13.2,
@@ -354,11 +364,33 @@ export function isDedupeSuppressed(db: any, row: DeliveryDueRow, now: Date): boo
   return dupe != null;
 }
 
-function markRow(db: any, id: string, fields: Record<string, string | number | null>): void {
-  const sets = Object.keys(fields)
+/** The columns markRow may write — the file's own call sites below pass only
+ * these keys (status / last_error / next_attempt_at / attempt / sent_at /
+ * provider_message_id). */
+const MARK_ROW_COLUMNS: ReadonlySet<string> = new Set([
+  "status",
+  "last_error",
+  "next_attempt_at",
+  "attempt",
+  "sent_at",
+  "provider_message_id",
+]);
+
+/** UPDATE statement builder for markRow: column names are validated against
+ * MARK_ROW_COLUMNS (an unknown key dies instead of reaching the SQL text) and
+ * every value travels as a bound parameter. Construction lives here, away
+ * from the db.run sink call (v1.1.1 — shell-WARN triage, DEC-20261123-01). */
+function buildMarkRowStmt(fields: Record<string, string | number | null>): string {
+  for (const k of Object.keys(fields)) {
+    if (!MARK_ROW_COLUMNS.has(k)) throw new Error(`notify-deliver: markRow column not allowlisted: ${k}`);
+  }
+  return `UPDATE notification_delivery SET ${Object.keys(fields)
     .map((k) => `${k} = ?`)
-    .join(", ");
-  db.run(`UPDATE notification_delivery SET ${sets} WHERE id = ?`, [...Object.values(fields), id]);
+    .join(", ")} WHERE id = ?`;
+}
+
+function markRow(db: any, id: string, fields: Record<string, string | number | null>): void {
+  db.run(buildMarkRowStmt(fields), [...Object.values(fields), id]);
 }
 
 /** Terminal failure of an URGENT delivery: one ops notification for admins, in-app only (loop guard, design 13.2). */

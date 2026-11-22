@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.12.0
+// @version 1.13.0
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -93,9 +93,26 @@
  *     AND a PROJECTION_GENERATORS entry here (enforcement). One without the
  *     other is the exact seam the 2026-11-22 review found: a projection that
  *     regenerates but never blocks, or blocks but cannot be refreshed.
+ *   - Prompt-registry projection gate + three completeness gates (v1.13.0,
+ *     review F-19/F-7/F-8/F-10 residual / DEC-20261123-01):
+ *     generate-prompt-registry.ts joins PROJECTION_GENERATORS (7 entries) —
+ *     its --check mode is new in the script's v2.2.0; until then the
+ *     deep-equality unit test was the only net and ran CI-unit-only. Three
+ *     in-process completeness gates close the Action-Wiring deferred rows of
+ *     the 2026-11-22 review: (F-7) every docs/adr/NNNN-*.md has an [NNNN] row
+ *     in docs/adr/README.md (the index backfill closed a 23-row gap incl.
+ *     amendment targets of indexed ADRs; 205/205 today); (F-8) every
+ *     docs/designs/*.md is registered in docs/specs/registry.json, with an
+ *     in-gate allowlist of exactly the three standing non-design documents
+ *     (quality-review minutes, flow-console UX benchmark, implementation
+ *     matrix) and the mockups/ directory exempt (233 registered + 3 allowlist
+ *     = 236 today); (F-10) every active skill (a Workspace Skills row in
+ *     skills/SKILLS.md) has a lifecycle record at docs/lifecycle/skills/<name>.md
+ *     (the Wave 5.8 cohort drifted record-less; 109/109 today). Growing the
+ *     F-8 allowlist requires a recorded DEC.
  */
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runCoverage } from "./mcp-coverage.ts";
@@ -375,6 +392,17 @@ const PROJECTION_GENERATORS: ProjectionGenerator[] = [
     refresh: "bun scripts/co-newbiz/generate-process-flow.ts",
     sources: "process/flow.spec.yaml",
   },
+  // v1.13.0 (F-19): the prompt registry's only net was the deep-equality unit
+  // test (CI-unit only) — a prompts.json edit that skipped regeneration passed
+  // /sync locally and failed late. The script's --check is new in v2.2.0;
+  // equality is additionally pinned by
+  // tests/unit/prompt-registry-projection.test.ts.
+  {
+    staleTarget: "app/web-next/lib/prompts.generated.ts",
+    generator: "scripts/co-newbiz/generate-prompt-registry.ts",
+    refresh: "bun scripts/co-newbiz/generate-prompt-registry.ts",
+    sources: "app/web-next/prompts/prompts.json",
+  },
 ];
 
 function runProjectionDriftGate(): void {
@@ -535,6 +563,164 @@ function runDesignLintGate(): void {
 }
 
 runDesignLintGate();
+
+/**
+ * ADR-index completeness gate (v1.13.0, review F-7 / DEC-20261123-01). Every
+ * docs/adr/NNNN-*.md must have a [NNNN] row in docs/adr/README.md. The index
+ * is the ADR navigation surface, and it rotted invisibly: the 2026-11-22
+ * review found 23 of 206 ADRs missing from it, including amendment targets of
+ * indexed ADRs (ADR-0114←ADR-0191, ADR-0154←ADR-0203). The backfill closed
+ * the gap at 205/205; this gate proves it stays true. In-process check (the
+ * data is two static files — a subprocess would be ceremony). Missing dir =
+ * non-web context, skip with a visible note.
+ */
+function runAdrIndexGate(): void {
+  const adrDir = join(ROOT, "docs", "adr");
+  const readmePath = join(adrDir, "README.md");
+  if (!existsSync(readmePath)) {
+    console.log("  – ADR-index completeness gate skipped: docs/adr/README.md not present (non-web context)");
+    return;
+  }
+  const readme = readFileSync(readmePath, "utf8");
+  const adrFiles = readdirSync(adrDir, { withFileTypes: true })
+    .filter((e) => e.isFile() && /^\d{4}-.*\.md$/.test(e.name))
+    .map((e) => e.name);
+  const missing = adrFiles.filter((f) => !readme.includes(`[${f.slice(0, 4)}]`)).sort();
+  if (missing.length > 0) {
+    failed = true;
+    console.error(`  ✗ ADR-index completeness gate failed (${missing.length} of ${adrFiles.length} ADRs unindexed):`);
+    for (const f of missing) console.error(`      - docs/adr/${f} has no [${f.slice(0, 4)}] row in docs/adr/README.md`);
+    console.error("      remediation: add the [NNNN](NNNN-….md) rows to docs/adr/README.md");
+  } else {
+    console.log(
+      `  ✓ ADR-index completeness gate: ${adrFiles.length}/${adrFiles.length} ADR files indexed in README.md`,
+    );
+  }
+}
+
+runAdrIndexGate();
+
+/**
+ * Design-registry completeness gate (v1.13.0, review F-8 / DEC-20261123-01).
+ * Every docs/designs/*.md must be registered in docs/specs/registry.json —
+ * landing-time registration is a manual PM step (DEC-20261113-04/06) with no
+ * machine check, and 25 designs had drifted out before the 2026-11-22 backfill
+ * (incl. designs of record for Accepted ADRs ADR-0168…0172, ADR-0193). In-gate
+ * allowlist: EXACTLY the three standing non-design documents (quality-review
+ * minutes, flow-console UX benchmark, implementation matrix); the mockups/
+ * directory is not a design document and is exempt by construction (only
+ * top-level *.md files are scanned). Growing the allowlist requires a recorded
+ * DEC; allowlist entries whose file disappeared are reported as rot.
+ */
+const DESIGN_REGISTRY_ALLOWLIST: ReadonlySet<string> = new Set([
+  "2026-09-12-quality-review-minutes.md",
+  "2026-10-24-flow-console-ux-benchmark.md",
+  "2026-09-12-implementation-matrix.md",
+]);
+
+function runDesignRegistryGate(): void {
+  const designsDir = join(ROOT, "docs", "designs");
+  const registryPath = join(ROOT, "docs", "specs", "registry.json");
+  if (!existsSync(designsDir) || !existsSync(registryPath)) {
+    console.log("  – Design-registry completeness gate skipped: docs/designs/ or docs/specs/registry.json not present");
+    return;
+  }
+  const designFiles = readdirSync(designsDir, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .map((e) => e.name);
+  const registered = new Set<string>();
+  const walk = (node: unknown): void => {
+    if (typeof node === "string") {
+      if (node.endsWith(".md")) registered.add(node.split("/").pop() ?? node);
+      return;
+    }
+    if (Array.isArray(node)) {
+      for (const v of node) walk(v);
+      return;
+    }
+    if (node && typeof node === "object") {
+      for (const v of Object.values(node as Record<string, unknown>)) walk(v);
+    }
+  };
+  walk(JSON.parse(readFileSync(registryPath, "utf8")));
+  const unregistered = designFiles.filter((f) => !registered.has(f) && !DESIGN_REGISTRY_ALLOWLIST.has(f)).sort();
+  const staleAllowlist = [...DESIGN_REGISTRY_ALLOWLIST].filter((f) => !designFiles.includes(f)).sort();
+  if (unregistered.length > 0 || staleAllowlist.length > 0) {
+    failed = true;
+    if (unregistered.length > 0) {
+      console.error(
+        `  ✗ Design-registry completeness gate failed (${unregistered.length} of ${designFiles.length} design docs unregistered):`,
+      );
+      for (const f of unregistered)
+        console.error(`      - docs/designs/${f} is not registered in docs/specs/registry.json`);
+      console.error(
+        "      remediation: bun scripts/spec-register.ts --file docs/designs/<name>.md --source manual --status implemented",
+      );
+    }
+    if (staleAllowlist.length > 0) {
+      console.error(`  ✗ Design-registry allowlist rot (${staleAllowlist.length} entries point at no file):`);
+      for (const f of staleAllowlist)
+        console.error(`      - docs/designs/${f} no longer exists — prune the allowlist via a DEC`);
+    }
+  } else {
+    console.log(
+      `  ✓ Design-registry completeness gate: ${designFiles.length} design docs = ${designFiles.length - DESIGN_REGISTRY_ALLOWLIST.size} registered + ${DESIGN_REGISTRY_ALLOWLIST.size} allowlisted`,
+    );
+  }
+}
+
+runDesignRegistryGate();
+
+/**
+ * Skill-lifecycle completeness gate (v1.13.0, review F-10 / DEC-20261123-01).
+ * Every active skill — a Workspace Skills row in skills/SKILLS.md — must have
+ * a lifecycle record at docs/lifecycle/skills/<name>.md. The record
+ * generator's own gate only hooks common/template-delivered skills, so the
+ * variant-own Wave 5.8 pipeline cohort (S3-S12 spine) drifted record-less
+ * until the 2026-11-22 backfill closed it at 109/109; this gate keeps it
+ * closed. Variant-Exclusive rows are workspace-shared skills tracked by the
+ * workspace's own lifecycle records — out of scope, matching the finding's
+ * 109/109 denominator. Reuses the registry parser of the SKILLS.md parity
+ * gate above.
+ */
+function runSkillLifecycleGate(): void {
+  const recordsDir = join(ROOT, "docs", "lifecycle", "skills");
+  if (!existsSync(recordsDir)) {
+    console.log("  – Skill-lifecycle completeness gate skipped: docs/lifecycle/skills/ not present (non-web context)");
+    return;
+  }
+  const content = readFileSync(join(ROOT, "skills", "SKILLS.md"), "utf8");
+  const activeSkills = sectionRows(content.split("\n"), "### Workspace Skills");
+  if (activeSkills.length === 0) {
+    failed = true;
+    console.error(
+      "  ✗ Skill-lifecycle completeness gate failed: the Workspace Skills table parsed to zero rows (registry structure changed?)",
+    );
+    return;
+  }
+  const haveRecords = new Set(
+    readdirSync(recordsDir, { withFileTypes: true })
+      .filter((e) => e.isFile() && e.name.endsWith(".md"))
+      .map((e) => e.name.replace(/\.md$/, "")),
+  );
+  const missing = activeSkills.filter((n) => !haveRecords.has(n)).sort();
+  if (missing.length > 0) {
+    failed = true;
+    console.error(
+      `  ✗ Skill-lifecycle completeness gate failed (${missing.length} of ${activeSkills.length} active skills without a lifecycle record):`,
+    );
+    for (const n of missing) console.error(`      - docs/lifecycle/skills/${n}.md missing`);
+    console.error(
+      "      remediation: bun scripts/generate-skill-lifecycle-records.ts --project . --write, review, and commit",
+    );
+  } else {
+    console.log(
+      `  ✓ Skill-lifecycle completeness gate: ${activeSkills.length}/${activeSkills.length} active skills have lifecycle records`,
+    );
+  }
+}
+
+runSkillLifecycleGate();
 
 // ADR-0187 P2-P4: BLOCKING_CHECKS (all eight checks) fail the audit.
 const ssot = runAll();

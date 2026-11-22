@@ -1,6 +1,20 @@
 /**
  * test-runner.ts — Test Runner for TypeScript Test Suites
- * @version 1.12.0
+ * @version 1.13.0
+ *
+ * v1.13.0 (2026-11-23, review F-33 / DEC-20261123-01): the `visual` suite joins
+ * the runner — `bun run test:visual` previously shelled `bun test tests/e2e-visual`
+ * directly: no runner kill budget, no per-file budgets, invisible to the suite
+ * machinery (the review's "CI kill shape matches the missing ceiling" — the
+ * visual-smoke CI job was the one suite without a wall). The suite scans
+ * tests/e2e-visual/*.test.ts, runs SEQUENTIAL (each member boots its own Next
+ * server + browser against a scratch SQLite; parallel members would contend
+ * ports, browsers and the dev-server build cache) and carries a
+ * FILE_TIME_BUDGETS row for stage-visual-smoke.test.ts (the 24-path walk:
+ * darwin first observation 66.6s wall / 37.6s test, 1 pass / 269 expects; suite
+ * 900s keeps >6x headroom over the ~2x-slower CI projection, per-test ceiling
+ * 900s matches the file's own beforeAll/test declarations). No other suite,
+ * flag, or exit-code contract changed.
  *
  * v1.12.0 (2026-11-22, review F-36 / DEC-20261122-02): the permanently-empty
  * `integration` suite definition is REMOVED — tests/*.test.ts has held zero
@@ -186,6 +200,11 @@ const suites: TestSuite[] = [
   // tree (test-l3promo-*, co-e2eguard-*, co-e2p2*) and race concurrent
   // validators when run in parallel — T-20260916-001.
   { name: "scripts", pattern: "*.test.ts", timeout: 120000, dir: "scripts/tests", ext: ".test.ts", sequential: true },
+  // v1.13.0 (F-33): the visual suite runs under the runner — sequential (each
+  // member boots its own Next server + browser against a scratch SQLite;
+  // parallel members contend ports/browsers), generous budgets via the
+  // FILE_TIME_BUDGETS row below. `bun run test:visual` now routes here.
+  { name: "visual", pattern: "*.test.ts", timeout: 900000, dir: "tests/e2e-visual", ext: ".test.ts", sequential: true },
 ];
 
 /** Bun per-test ceiling passed as `bun test --timeout` (ms). bun's implicit
@@ -228,6 +247,13 @@ const FILE_TIME_BUDGETS: Record<string, { suite: number; test: number }> = {
   // ~2x headroom over the observed kill point; suite stays at the unit
   // default. Same documented win32 spawn-heavy family as mcp-upstream-server.
   "business-case-revenue-anchor.test.ts": { suite: 120000, test: 30000 },
+  // v1.13.0 (F-33): the 24-path visual walk (both tracks x 12 stage paths, real
+  // login + per-path screenshot + geometry assertions). New-row evidence: darwin
+  // first observation 66.6s wall / 37.6s test (1 pass / 269 expects,
+  // DEC-20261123-01); hosted-CI projection ~1.6-2x → 110-135s, so suite 900s
+  // keeps ~6.7-8x headroom. Per-test ceiling 900s matches the file's own
+  // beforeAll/test declarations (server boot + login + 24-path walk).
+  "stage-visual-smoke.test.ts": { suite: 900000, test: 900000 },
 };
 
 function getTestFiles(suite: TestSuite): string[] {

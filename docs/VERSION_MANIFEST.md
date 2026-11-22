@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-22T15:05:38.277Z
+**Generated**: 2026-11-22T19:50:36.329Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -197,14 +197,14 @@
 | agent-lifecycle-audit.ts | 1.9.1 | scripts/agent-lifecycle-audit.ts | child_process, fs, path, process |
 | agent-list.ts | 1.1.0 | scripts/agent-list.ts | fs, path |
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | fs, path |
-| align-existing-projects.ts | 1.1.0 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite, fs, path, url |
+| align-existing-projects.ts | 1.1.1 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite, fs, path, url |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
 | anchors.test.ts | 1.0.0 | scripts/humanize/tests/anchors.test.ts | bun:test |
 | apply-handbook-theme.test.ts | 1.0.1 | scripts/tests/apply-handbook-theme.test.ts | bun:test, child_process, fs, os, path |
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
 | archive-memory.ts | 1.2.0 | scripts/archive-memory.ts | fs, path |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.12.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
+| audit-variant.ts | 1.13.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
 | audit.ts | 2.64.0 | scripts/audit.ts | bun, child_process, fs, os, path |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
@@ -278,7 +278,7 @@
 | generate-ide-rules.ts | 1.0.0 | scripts/generate-ide-rules.ts | fs, path |
 | generate-pm-catalog.ts | 1.4.1 | scripts/co-newbiz/generate-pm-catalog.ts | crypto, fs, js-yaml, path |
 | generate-process-flow.ts | 1.5.1 | scripts/co-newbiz/generate-process-flow.ts | fs, js-yaml |
-| generate-prompt-registry.ts | 2.1.1 | scripts/co-newbiz/generate-prompt-registry.ts | fs, path |
+| generate-prompt-registry.ts | 2.2.0 | scripts/co-newbiz/generate-prompt-registry.ts | fs, path |
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | fs, js-yaml, path |
 | generate-review-matrix.ts | 1.0.0 | scripts/co-newbiz/generate-review-matrix.ts | fs, js-yaml |
 | generate-skill-graph.ts | 2.0.1 | scripts/generate-skill-graph.ts | child_process, fs, js-yaml, path, url |
@@ -320,7 +320,7 @@
 | nav-utils.ts | 1.0.0 | scripts/handbook/nav-utils.ts | fs, path |
 | newbiz.ts | 1.26.0 | scripts/co-newbiz/newbiz.ts | path |
 | normalize-registry-provenance.ts | 1.1.0 | scripts/normalize-registry-provenance.ts | fs, path |
-| notify-deliver.ts | 1.1.0 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
+| notify-deliver.ts | 1.1.1 | scripts/co-newbiz/jobs/notify-deliver.ts | N/A |
 | notify-digest.ts | 1.0.0 | scripts/co-newbiz/jobs/notify-digest.ts | N/A |
 | orphan-memberships.ts | 1.0.0 | scripts/co-newbiz/orphan-memberships.ts | N/A |
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | fs, path |
@@ -336,9 +336,9 @@
 | render-pdf-deck.ts | 1.0.1 | scripts/render-pdf-deck.ts | fs, path, url |
 | report.ts | 1.0.0 | scripts/co-newbiz/report.ts | child_process, fs, path |
 | resolve-variants.ts | 1.0.3 | scripts/resolve-variants.ts | fs, js-yaml, path |
-| restore-capability-levels.ts | 1.0.0 | scripts/co-newbiz/restore-capability-levels.ts | bun:sqlite, fs |
+| restore-capability-levels.ts | 1.0.1 | scripts/co-newbiz/restore-capability-levels.ts | bun:sqlite, fs |
 | restore.ts | 1.0.0 | scripts/co-newbiz/restore.ts | fs |
-| retention-cleanup.ts | 1.2.0 | scripts/co-newbiz/jobs/retention-cleanup.ts | bun:sqlite, fs, path, zlib |
+| retention-cleanup.ts | 1.2.1 | scripts/co-newbiz/jobs/retention-cleanup.ts | bun:sqlite, fs, path, zlib |
 | retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | path |
 | route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | fs, path |
 | route-audit-scan.ts | 1.0.1 | scripts/route-audit-scan.ts | fs, path |
@@ -373,7 +373,7 @@
 | sync-skills.ts | 1.11.0 | scripts/sync-skills.ts | fs, path |
 | sync-wiki-projection.ts | 1.0.0 | scripts/co-newbiz/sync-wiki-projection.ts | fs, js-yaml, path |
 | team-builder.ts | 1.5.0 | scripts/team-builder.ts | fs, path |
-| test-runner.ts | 1.12.0 | scripts/test-runner.ts | fs, os, path |
+| test-runner.ts | 1.13.0 | scripts/test-runner.ts | fs, os, path |
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, crypto, fs, path, url |
 | typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | fs, path |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | fs, path |
