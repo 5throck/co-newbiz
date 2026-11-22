@@ -416,17 +416,16 @@
   {
    "id": "s5-02-scope-panel",
    "file": "s5-02-scope-panel.png",
-   "url": "/deals/{gfOpp}/s5",
+   "url": "/deals/{gfOpp}/s5?tab=capability",
    "as": "analyst",
    "state": "격리 시드(브라운필드 S1-S12 + 그린필드 S1-S12 데모)",
    "steps": [
     {
-     "scrollTo": "text=필요 역량 (S3) 확인"
+     "scrollTo": "text=필요 역량 (S3) 확인 · 달성 가능성 판정"
     }
    ],
    "page": "40-그린필드-S5-자체-진출.md",
-   "caption": "S5 범위 패널",
-   "skip": "스크롤 대상 문구(필요 역량 (S3) 확인)가 현재 화면에 없어 촬영할 수 없다(2026-11-22 확인). 대상 패널의 현재 문구를 확인해 다시 설정한다."
+   "caption": "S5 범위 패널"
   },
   {
    "id": "s5-03-recommendation",
