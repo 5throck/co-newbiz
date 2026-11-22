@@ -39,6 +39,20 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
   const { stage } = props0;
   const ctx = { ...h0, ...h1, ...h2, s6Gate, stage };
   const { error, opportunityId, shortlistedTargets, canAct, selected } = ctx;
+  // U2 (design 2026-11-22 defect remediation) — the collapsed review strip reflects the recorded
+  // Pre-FS decision (latest decision wins, Amendment 2), derived from the one engine read this
+  // stage already holds. GO: S6 complete or the pre_fs_go key left `missing` on an evaluated
+  // stage (exempt ≠ GO). KILL: the process is terminated. HOLD/pending keep the honest
+  // 판단 필요 count (after a HOLD the re-decision IS pending — engine puts s6.pre_fs_go back).
+  const preFsGateState = !s6Gate.ready
+    ? undefined
+    : s6Gate.terminated
+      ? ("kill" as const)
+      : !s6Gate.s6Exempt &&
+          (s6Gate.s6Status === "complete" || s6Gate.s6Status === "current") &&
+          !s6Gate.s6Missing.includes("s6.pre_fs_go")
+        ? ("go" as const)
+        : undefined;
   return (
     <>
       {stage === "S7" && (shortlistedTargets.length === 0 || !canAct) && (
@@ -54,7 +68,12 @@ export function BrownfieldStage(props0: { opportunityId: string; onSaved?: () =>
           {error}
         </p>
       )}
-      <ReviewBuckets entityType="opportunity" entityId={opportunityId} artifacts={stageArtifactTabs(stage)} />
+      <ReviewBuckets
+        entityType="opportunity"
+        entityId={opportunityId}
+        artifacts={stageArtifactTabs(stage)}
+        gateStates={preFsGateState ? { pre_fs: preFsGateState } : undefined}
+      />
 
       {/* ── 목표 시장 정의 (S6) — 보기(읽기 전용) / 수정(모달) 분리. mockup처럼
           탭 없이 항상 렌더링, 흐름 배너에서 스크롤로만 이동한다. ── */}

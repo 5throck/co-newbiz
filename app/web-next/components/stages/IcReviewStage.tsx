@@ -16,6 +16,7 @@ import { CommitteeMinutesRecord } from "../CommitteeMinutesRecord.tsx";
 import { CommitteeSessionRowSummary } from "../CommitteeSessionRow.tsx";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { gateState } from "../../lib/gate-sequence-view.ts";
 import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
 import { KillCarriesPanel, type KillCarriesView } from "../KillCarriesPanel.tsx";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
@@ -302,12 +303,22 @@ export function IcReviewStage({ projectId }: { projectId: string }) {
         {/* 게이트 결정은 "의사결정 · 승인 기록" 내부 탭에 있다 — 점프 전에 탭을
             열어 포커스 대상이 실제로 보이게 한다(F6, BusinessCaseStage와 동일 패턴). */}
         <GateDecisionJump inline gate={entityGo ? "group_ic" : "entity_ic"} beforeJump={() => setIcView("decision")} />
-        {/* One review block for both IC gates (the panels below do not repeat it). */}
+        {/* One review block for both IC gates (the panels below do not repeat it).
+            U2 (design 2026-11-22 defect remediation) — the strip reflects the recorded IC
+            decision per gate (latest decision wins); pending gates keep the none-state count. */}
         <ReviewBuckets
           entityType="project"
           entityId={projectId}
           gates={["entity_ic", "group_ic"]}
           artifacts={stageArtifactTabs("S11")}
+          gateStates={
+            pkg
+              ? {
+                  entity_ic: gateState(pkg.gates.latest, "entity_ic"),
+                  group_ic: gateState(pkg.gates.latest, "group_ic"),
+                }
+              : undefined
+          }
         />
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
           {t("entityAndGroupInvestmentCommittee")}

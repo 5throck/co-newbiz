@@ -3601,7 +3601,13 @@ main li { overflow-wrap: anywhere; }
   background: var(--surface);
   color: var(--fg);
   font-size: var(--fs-caption);
-  min-width: 8rem;
+  /* U4 (design 2026-11-21-s67-completion-visibility § Defect Remediation) — the class rule
+     comes after the base input containment (input,select,textarea OVERFLOW-390 rule above),
+     so the 8rem floor re-introduced the 390px overflow inside the decision-form flex row.
+     Clamp the floor to the container: desktop keeps 8rem, narrow widths degrade to 100% —
+     the .form-input / .invest-ctl containment precedent. */
+  min-width: min(8rem, 100%);
+  max-width: 100%;
 }
 .sizing-new-input:focus {
   outline: none;
@@ -3610,7 +3616,7 @@ main li { overflow-wrap: anywhere; }
      visible on the sizing inputs (WCAG 2.4.7). */
   box-shadow: var(--focus-ring);
 }
-.sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: var(--fs-caption); min-width: 5rem; }
+.sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: var(--fs-caption); min-width: min(5rem, 100%); max-width: 100%; }
 /* S5 unified investment table: one control box for manual and capability rows (same colgroup, same cell structure). */
 .invest-item-table td { vertical-align: top; padding-block: 0.35rem; }
 .invest-ctl { box-sizing: border-box; width: 100%; min-width: 0; height: 2rem; line-height: 1.2; }

@@ -21,6 +21,7 @@ import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-client.tsx";
 import { canWriteBusiness, canWriteProject } from "../lib/project-write-access.ts";
 import type { GateMetaId } from "../lib/stage-meta.ts";
+import type { GateState } from "../lib/gate-sequence-view.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import {
   BUCKET_TITLE,
@@ -52,6 +53,30 @@ const REVIEW_GATE_IDS: ReadonlySet<string> = new Set([
 ]);
 /** Gate tab label — catalog key resolved with the ROOT translator; the review-lib Korean name stays the fallback. */
 const gateLabelKey = (g: string): string => (g === "transition" ? "" : (GATE_LABEL_KEY[g] ?? ""));
+
+/**
+ * U2 (design 2026-11-21-s67-completion-visibility § Defect Remediation) — the recorded decision
+ * that governs the collapsed strip. The strip shows the active gate tab's review counts; a
+ * terminal decision recorded for that gate is human state the counts must not contradict, so
+ * the state copy replaces the stale 판단 필요 count (latest decision wins, Amendment 2).
+ * Resolution: the active gate tab names its own gate; with no gate tab active, a single-entry
+ * `gateStates` map (stage screens scope one gate, e.g. pre_fs on S6) still names it. `pending`
+ * or an unresolvable gate leaves the none-state — the count is honest with no decision recorded.
+ */
+export function stripGateStateOf(
+  gateStates: Record<string, GateState> | undefined,
+  active: string,
+): { gate: string; state: Exclude<GateState, "pending"> } | undefined {
+  if (!gateStates) return undefined;
+  const gate = active.startsWith("gate:")
+    ? active.slice(5)
+    : Object.keys(gateStates).length === 1
+      ? Object.keys(gateStates)[0]
+      : undefined;
+  if (!gate) return undefined;
+  const state = gateStates[gate];
+  return state === "go" || state === "hold" || state === "kill" ? { gate, state } : undefined;
+}
 
 /** A stage artifact tab (stage:S#:N) the caller offers, with a short Korean label. */
 export interface ReviewArtifactTab {
@@ -140,14 +165,21 @@ function localizedItemText(tr: ReturnType<typeof useTranslations>, it: ReviewIte
  *  - "summary": stage screens - content first; a non-dismissible strip with the three counts that expands to the buckets. */
 export type ReviewVariant = "expanded" | "summary";
 
-function CountStrip({
+/** Exported for the U2 render pins (tests/unit/s67-review-strip.test.ts) — the strip markup itself. */
+export function CountStrip({
   counts,
   notReached = 0,
   label,
+  recordedState,
+  recordedGateLabel,
 }: {
   counts: ReturnType<typeof bucketCounts>;
   notReached?: number;
   label?: string;
+  /** U2 — a terminal decision recorded for the strip's gate (undefined = none-state, unchanged). */
+  recordedState?: "go" | "hold" | "kill";
+  /** Catalog label of that gate ({gate} in the state copy) — never the raw id. */
+  recordedGateLabel?: string;
 }) {
   const tr = useTranslations();
   const warn = counts.could_not_verify > 0;
@@ -172,9 +204,27 @@ function CountStrip({
           {tr("review.counts.notReached", { count: notReached })}
         </span>
       )}
-      <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
-        {tr("review.counts.needsJudgement", { count: counts.needs_judgement })}
-      </span>
+      {recordedState && recordedGateLabel ? (
+        // Glyph + state word are in the message text itself — never colour-only (WCAG 1.4.1).
+        <span
+          className={`review-count review-count-state status-chip ${recordedState === "go" ? "status-green" : recordedState === "hold" ? "status-amber" : "status-red"}`}
+          title={BUCKET_TITLE.needs_judgement.en}
+          data-gate-state={recordedState}
+        >
+          {tr(
+            recordedState === "go"
+              ? "review.strip.gateGoRecorded"
+              : recordedState === "hold"
+                ? "review.strip.gateHoldRecorded"
+                : "review.strip.gateKillRecorded",
+            { gate: recordedGateLabel },
+          )}
+        </span>
+      ) : (
+        <span className="review-count" title={BUCKET_TITLE.needs_judgement.en}>
+          {tr("review.counts.needsJudgement", { count: counts.needs_judgement })}
+        </span>
+      )}
     </span>
   );
 }
@@ -193,6 +243,7 @@ export function ReviewBuckets({
   onDecisionJump,
   confirmedJudgements,
   carrierStage,
+  gateStates,
 }: {
   entityType: "opportunity" | "project";
   entityId: string;
@@ -223,6 +274,11 @@ export function ReviewBuckets({
   confirmedJudgements?: ReadonlySet<string>;
   /** The stage screen hosting this block (e.g. "S3" on the synergy screen). Gate reviews scope the unfinished stages AFTER it out (AI 1st reports them as info, AI 2nd skips them). Omitted = whole gate span (inbox, proposal confirm). */
   carrierStage?: string;
+  /** U2 (design 2026-11-22 defect remediation) — recorded decision per gate id, derived by the
+   *  parent from state it already holds (no new fetch: StageFrame single-read rule). With a
+   *  terminal decision on the summary strip's gate, the state copy replaces the stale
+   *  판단 필요 count. Omitted (or all-pending) = none-state, byte-identical to before. */
+  gateStates?: Record<string, GateState>;
 }) {
   const tr = useTranslations();
   const locale = useLocale();
@@ -438,6 +494,14 @@ export function ReviewBuckets({
   const metaFor = ackMeta ?? selfAckMeta;
   const toggleFor = onToggleJudgement ?? toggleSelf;
   const activeLabel = tabs.find((t) => t.key === active)?.label;
+  // U2 — the recorded decision governing the collapsed strip (go/hold/kill), with the catalog
+  // label ({gate}); undefined = none-state, the counts render exactly as before.
+  const stripGate = stripGateStateOf(gateStates, active);
+  const stripGateLabel = stripGate
+    ? gateLabelKey(stripGate.gate)
+      ? tr(gateLabelKey(stripGate.gate))
+      : gateDisplayName(stripGate.gate)
+    : undefined;
   const panelId = `${uid}-panel`;
   const summaryMode = variant === "summary";
   const showBody = !summaryMode || open;
@@ -465,6 +529,8 @@ export function ReviewBuckets({
                 counts={displayCounts}
                 notReached={notReachedCount}
                 label={tabs.length > 1 ? activeLabel : undefined}
+                recordedState={stripGate?.state}
+                recordedGateLabel={stripGateLabel}
               />
             ) : (
               <span className="review-counts-target">
