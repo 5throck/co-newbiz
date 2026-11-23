@@ -193,7 +193,10 @@ describe("brownfield M&A S1 to S12", () => {
       ),
     );
     try {
-      await visit(s.page, app, `/projects/${P}/business-case`);
+      // explicit ?tab= — the bare /business-case URL redirects to the project 개요 since the
+      // 2026-11-23 defect remediation (design 2026-11-21-s8-overview-tab); the financial lens
+      // is the business-case working screen these assertions read.
+      await visit(s.page, app, `/projects/${P}/business-case?tab=financial`);
       await see(s.page, "대상 미지정 모델 1건");
       await see(s.page, "재생성이 필요합니다");
     } finally {
@@ -235,7 +238,10 @@ describe("brownfield M&A S1 to S12", () => {
       );
     });
     try {
-      await visit(s.page, app, `/projects/${P}/business-case`);
+      // explicit ?tab= — the bare /business-case URL redirects to the project 개요 since the
+      // 2026-11-23 defect remediation (design 2026-11-21-s8-overview-tab); the financial lens
+      // is the business-case working screen these assertions read.
+      await visit(s.page, app, `/projects/${P}/business-case?tab=financial`);
       await see(s.page, "대상 미지정 모델 2건");
       await see(s.page, "참조됨 — 보관");
       await see(s.page, "미참조 — 삭제");
@@ -294,7 +300,10 @@ describe("brownfield M&A S1 to S12", () => {
       );
     });
     try {
-      await visit(s.page, app, `/projects/${P}/business-case`);
+      // explicit ?tab= — the bare /business-case URL redirects to the project 개요 since the
+      // 2026-11-23 defect remediation (design 2026-11-21-s8-overview-tab); the financial lens
+      // is the business-case working screen these assertions read.
+      await visit(s.page, app, `/projects/${P}/business-case?tab=financial`);
       await see(s.page, "대상별 재생성");
       const done = s.page.waitForResponse(
         (r) => r.request().method() === "POST" && /business-case\/generate$/.test(r.url()),

@@ -92,6 +92,16 @@ export function resolveS8Tab(tabParam: string | null | undefined, opts: { greenf
   return known;
 }
 
+/** Defect remediation 2026-11-23 (design 2026-11-21-s8-overview-tab § Defect Remediation):
+ * the ABSENT `?tab=` on the page-mode route redirects to the 개요 tab's canonical URL — the
+ * project page itself. Keyed on the raw param being null (absent), never on the resolved
+ * value: every explicit `?tab=` (including `overview`, the financial sub-tab alias above)
+ * resolves exactly as before and returns null here. Embedded mode never reaches this (the
+ * caller guards with urlSync). */
+export function s8BareTabRedirect(projectId: string, tabParam: string | null): string | null {
+  return tabParam === null ? `/projects/${projectId}` : null;
+}
+
 /** True when the URL's tab must be rewritten (greenfield + ?tab=targets). */
 export function shouldRedirectTargetsTab(tabParam: string | null | undefined, greenfield: boolean): boolean {
   return greenfield && tabParam === "targets";

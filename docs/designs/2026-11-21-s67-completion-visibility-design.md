@@ -1,9 +1,9 @@
 ---
 lang: en
 date: 2026-11-21
-status: approved (Amendment 2 — Design Gate Row 0a passed 2026-11-21); Amendment 3 owner-requested 2026-11-21 (ReviewBuckets scope ruled by owner 2026-11-21); Amendments 2 and 3 shipped in PR #959 (merged 2026-11-21) without the S7 hint; S7 hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959
+status: approved (Amendment 2 — Design Gate Row 0a passed 2026-11-21); Amendment 3 owner-requested 2026-11-21 (ReviewBuckets scope ruled by owner 2026-11-21); Amendments 2 and 3 shipped in PR #959 (merged 2026-11-21) without the S7 hint; S7 hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959; Amendment 4 recorded 2026-11-23 (Design Gate Row 0 ruling — target-detail back link stage-awareness, awaiting implementation)
 owner: ux-designer-agent (design), pm (dispatch)
-amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; shipped in PR #959, merged 2026-11-21, without the hint; S7 back-link hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959), Defect Remediation 2026-11-22 (four user-reported defects on the shipped s67 gate surfaces — implemented 2026-11-22, review-passed with adjudications; see § Defect Remediation — 2026-11-22)
+amendments: Amendment 1 (2026-11-21, pre_fs placement Option A — superseded in part), Amendment 2 (2026-11-21, S6-only Pre-FS at the bottom of S6, stage-scoped S6/S7 panels, new S6 blocker s6.pre_fs_go), Amendment 3 (2026-11-21, S6-only Universe and candidate-discovery authoring sections — not rendered on S7; ReviewBuckets scoped to the current stage per owner ruling 2026-11-21; shipped in PR #959, merged 2026-11-21, without the hint; S7 back-link hint owner-approved 2026-11-21, being implemented in the follow-up PR after #959), Defect Remediation 2026-11-22 (four user-reported defects on the shipped s67 gate surfaces — implemented 2026-11-22, review-passed with adjudications; see § Defect Remediation — 2026-11-22), Amendment 4 (2026-11-23, the target-detail back link becomes stage-aware — Design Gate Row 0 ruling, awaiting implementation; see § Amendment 4 — Target-detail back link is stage-aware)
 related: docs/designs/2026-11-08-deal-shape-to-s7-design.md (s67 screen design of record), ADR-0195, ADR-0201, ADR-0202, docs/designs/2026-11-11-target-identity-resolution-design.md (PATCH D4 single-update-path of record), docs/designs/2026-11-17-deal-shape-viability-first-design.md, docs/design-system/design-tokens.md, docs/design-system/design-components.md, docs/design-system/design-screens.md, process/flow.spec.yaml (S6 blockers — Amendment 2), app/web-next/lib/process-flow.ts (S6 predicate, gateGoPrerequisiteGaps), workspace ADR-0065 (accessibility standard), workspace ADR-0070 (UI preview verification), ADR for the S6 pre_fs blocker (pending — plan Row 1, process-governance-manager)
 spec: s67-completion-visibility
 ---
@@ -1552,3 +1552,139 @@ conditions of this section.
   gate. Implemented 2026-11-22: killed gate resolved from decision history;
   cross-gate kills render the gate-neutral `review.strip.processTerminated`
   copy.
+
+## Amendment 4 — Target-detail back link is stage-aware
+
+**Status**: user-reported 2026-11-23, ruled at Design Gate Row 0 on the same
+day (design ruling only — no code in this batch). The defect is pre-existing:
+it was harmless before Amendment 2 split S6/S7 into two routes, and became
+wrong the moment `/deals/{id}/s6` and `/deals/{id}/s7` became distinct
+workspaces (ADR-0205). The target detail (`/brownfield/targets/{targetId}`)
+serves both routes, but its single return link hard-codes one of them.
+
+### Current behavior (observed)
+
+On `/brownfield/targets/{targetId}` the header card's return link reads
+`← 후보 전체 목록 목록으로` (note the doubled word) and always lands on the
+**S6** route, including when the user arrived from the S7 short-list context.
+
+- **Anchor — the link**: `app/web-next/app/brownfield/targets/[targetId]/page.tsx:136-139`
+  renders one `<ListBackButton href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`}
+  label={tr("backToListLabel")} />`. `ListBackButton` (`app/web-next/components/ListBackButton.tsx`)
+  prepends `← ` to the label — the single list-return pattern (ADR-0105
+  follow-up convention, stated in the component header).
+- **Anchor — the doubled word**: `app/web-next/locales/ko.json:10006`,
+  `pages.brownfieldTargetDetail.backToListLabel` = `후보 전체 목록 목록으로`.
+  The English value (`en.json:10006`, "Back to the full target list") is
+  correct; only the Korean string doubled `목록`.
+- **Anchor — why it always lands on S6**: `/brownfield?opportunity=X` is a
+  flat carrier route. `planCarrierPage` rule 1 (`app/web-next/lib/carrier-resolve.ts:126-127`)
+  redirects a query-carrier straight through via `carrierRedirectHref`
+  (`:78-86`), which appends `FLAT_ROUTE_STAGE[route]` — and `brownfield` maps
+  to `"s6"` (`carrier-resolve.ts:26`). So the href resolves deterministically
+  to `/deals/{carrierId}/s6` regardless of which list the user came from.
+- **Why it is reachable from both stages**: the same `BrownfieldStage` body
+  renders on `/deals/{id}/s6` and `/deals/{id}/s7` (`app/deals/[id]/[stage]/page.tsx:272-292`,
+  `stage` prop per Amendment 2). The Long List table — including shortlisted
+  rows, which keep their provisional rank there (`useBrownfieldTargets.ts:206-211`)
+  — renders on both routes, and its company-name cell links to the detail
+  (`LonglistTable.tsx:148-154`); the eval/cure paths link with `?tab=eval`
+  (`AiEvalPromote.tsx:25`) and `?edit=1` (`S6CriteriaPanel.tsx:155`). The
+  detail is genuinely a two-stage surface; only its way back is stage-blind.
+
+### Derivation rule — existing data, no contract change
+
+Stage membership is already a column on the row, and the detail payload
+already carries it: `brownfield_target.status` ∈ `pending | shortlisted |
+excluded` (`db/migrations/0055_brownfield_target.sql:14-15`;
+`lib/brownfield-targets.ts:31`). S7's own list is derived from exactly this
+value — `shortlistedTargets = targets.filter((t) => t.status === "shortlisted")`
+(`useBrownfieldTargets.ts:200`) — and the detail page already branches on it
+three times (`page.tsx:130, 159, 195`), alongside `t.rank` for the `#N` chip
+(`page.tsx:133`). The back link derives from the same read; no API change, no
+referrer sniffing.
+
+### Intended behavior (ruling)
+
+The back link is **stage-aware via target state** — one link, one
+deterministic destination, derived from `t.status`:
+
+| `t.status` | Label (ko) | Label (en) | href |
+|---|---|---|---|
+| `shortlisted` | `← 최종 후보 목록으로` | `← Back to the short list` | `/deals/{opportunity.id}/s7` |
+| `pending` or `excluded` | `← 후보 전체 목록으로` (grammar fixed) | `← Back to the full target list` (unchanged) | `/deals/{opportunity.id}/s6` |
+
+Rulings, in screen-flow terms:
+
+1. **The both-lists case resolves to S7, not to two links.** Every shortlisted
+   target also sits on the Long List table (it renders all rows; shortlisted
+   rows keep their provisional rank — `useBrownfieldTargets.ts:206-211`), so
+   "on both lists" is not a third state — it IS the `shortlisted` state. The
+   link follows the deeper stage: a shortlisted target's *active* work
+   (`사전 검토 판정`, `위원회 추천`, `최종 후보 목록 게이트·승격`) lives on S7, while its
+   S6 row is a completed reference row (status chip + rank, work done there).
+   Showing both links would fork the single list-return affordance into two
+   equal-weight destinations and force the user to read a fork the data can
+   decide for them — against the one-pattern rule `ListBackButton` exists to
+   enforce. S6 stays one hop away via the stage rail and the S7 → S6 authoring
+   hint (Amendment 3).
+2. **Direct deal-stage hrefs replace the carrier hop.** The pending case links
+   `/deals/{opportunity.id}/s6` directly instead of `/brownfield?opportunity=…`.
+   The carrier route's rule-1 redirect resolves to exactly this URL
+   (`carrier-resolve.ts:26`), so the destination is identical today — the
+   direct href only removes the redirect hop and makes the stage explicit in
+   the markup. `opportunity.id` is already in scope at the call site
+   (`page.tsx:137`).
+3. **`excluded` keeps the S6 link.** Excluded rows remain visible and
+   filterable in the Long List table (`LonglistTable.tsx` status filter), so
+   the full-candidate list is where an excluded target's record is read. No
+   `excluded_from_stage` distinction exists in the schema and this ruling does
+   not invent one.
+4. **The detail page's own rail follows the same derivation.** The page mounts
+   `StageFrame stageId={["S6", "S7"]}` (`page.tsx:72, 104`); on this route
+   `pathStageId` is null (the pathname has no `/s{n}` tail — `StageFrame.tsx:200-204`),
+   so the rail marks S6 `현재` even for a shortlisted target whose back link
+   now says S7. The caller narrows the rail's current stage to the same
+   derived stage as the link, extending U3's singular-`현재` rule to this
+   surface (the rail input narrowing of U3, `StageFrame.tsx:284`, made the
+   mechanism available; this is its second consumer).
+
+New and changed keys (`pages.brownfieldTargetDetail`; ko/en parity as pinned
+in § i18n):
+
+| Key | ko | en |
+|---|---|---|
+| `backToListLabel` (changed) | `후보 전체 목록으로` | Back to the full target list (unchanged) |
+| `backToShortlistLabel` (new) | `최종 후보 목록으로` | Back to the short list |
+
+The `← ` prefix is the component's own (ListBackButton), not part of the key.
+
+### Acceptance criteria
+
+1. A target with `status: "shortlisted"` (chip `최종 후보 #rank`) shows the
+   back link `← 최종 후보 목록으로`; activating it lands on
+   `/deals/{opportunity.id}/s7`, where the stage rail marks S7 as the single
+   `현재` (U3 behavior on the landing route).
+2. A `pending` target shows `← 후보 전체 목록으로` and lands on
+   `/deals/{opportunity.id}/s6`; the landing rail marks S6 as the single `현재`.
+3. No rendered label contains the doubled word — a render test asserts the
+   Korean label equals `후보 전체 목록으로` exactly (and never matches
+   `목록 목록`), for ko and en.
+4. On the detail page itself the rail marks exactly one stage `현재`, and it is
+   the same stage the back link targets.
+5. No entry path changes the link: the same target renders the same back link
+   whether reached from the s6 route, the s7 route, or a `?tab=` deep link
+   (`?tab=eval`, `?edit=1`) — the derivation reads target state only.
+
+### Traceability and scope
+
+- Amendment 2 (stage split) + ADR-0205 made the single hardcoded return wrong;
+  U3's singular-`현재` fix is the mechanism this amendment reuses for the
+  detail page's rail. No new doctrine: `ListBackButton` remains the one
+  list-return pattern; the derivation reads the existing `status` column.
+- Out of scope: any schema change (no excluded-stage provenance column), any
+  referrer/history-based logic, changes to `carrier-resolve.ts` routing rules,
+  and the Short List table's own in-row links (unchanged).
+- Spec registry entry (`docs/specs/entries/2026-11-21-s67-completion-visibility-design.json`)
+  carries no amendment/defect field in the registry schema — it stays
+  untouched, as recorded for the Defect Remediation section.

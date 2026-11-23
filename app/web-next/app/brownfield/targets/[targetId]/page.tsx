@@ -29,6 +29,7 @@ import { PromoteButton } from "../../../../components/stages/brownfield/AiEvalPr
 import { TargetEvalTab } from "../../../../components/brownfield-target/TargetEvalTab.tsx";
 import { STATUS_KEY, PROFILE_TABS } from "../../../../components/brownfield-target/constants.ts";
 import type { ScreeningItemEvidence } from "../../../../components/brownfield-target/types.ts";
+import type { StageMetaId } from "../../../../lib/stage-meta.ts";
 
 export default function BrownfieldTargetPage() {
   return (
@@ -69,6 +70,8 @@ export function TargetDetailView() {
   if (!detail) {
     return (
       <main>
+        {/* 단계 미확정(로딩·오류) 분기는 결정 근거(status)가 없어 합성 배열을 유지한다 —
+            U3 narrow(pathStageId ?? primary)가 여기서도 현재 표시를 하나로 좁힌다. */}
         <StageFrame stageId={["S6", "S7"]} track="brownfield" subtitle={tr("detailHeading")} />
         {error ? (
           <p role="alert" className="text-[color:var(--red-fg)]">
@@ -82,6 +85,14 @@ export function TargetDetailView() {
   }
 
   const { target: t, opportunity, evalItems, scores, checklist, screening_summary, evidence } = detail;
+
+  // Amendment 4 (design 2026-11-21-s67-completion-visibility) — the back link and the
+  // rail's 현재 both derive from the target's own status: shortlisted → the S7 short
+  // list, pending/excluded → the S6 full list. Direct deal-stage hrefs replace the
+  // /brownfield?opportunity= carrier hop (whose rule-1 redirect resolved to S6
+  // regardless of origin — carrier-resolve.ts FLAT_ROUTE_STAGE).
+  const shortlisted = t.status === "shortlisted";
+  const railStageId: StageMetaId[] = shortlisted ? ["S7"] : ["S6"];
 
   // 사전 검토 확정 판정 + 항목별 근거(위원회 추천 검토에서 수집·저장된 것).
   const savedVerdicts = t.screening_json ? (JSON.parse(t.screening_json) as Record<string, string>) : {};
@@ -101,7 +112,9 @@ export function TargetDetailView() {
   );
   return (
     <main>
-      <StageFrame stageId={["S6", "S7"]} track="brownfield" subtitle={tr("detailHeading")}>
+      {/* Amendment 4 — 파생 단계 하나만 현재로: 되돌리기 링크의 목적지 단계와 동일
+          (U3 단수-현재 규칙을 이 화면으로 확장, StageFrame narrow는 그대로 유효) */}
+      <StageFrame stageId={railStageId} track="brownfield" subtitle={tr("detailHeading")}>
         {opportunity.name} · {t.company_name}
         {t.dart_corp_code ? (
           <>
@@ -134,8 +147,8 @@ export function TargetDetailView() {
               </span>
             </div>
             <ListBackButton
-              href={`/brownfield?opportunity=${encodeURIComponent(opportunity.id)}`}
-              label={tr("backToListLabel")}
+              href={`/deals/${encodeURIComponent(opportunity.id)}/${shortlisted ? "s7" : "s6"}`}
+              label={shortlisted ? tr("backToShortlistLabel") : tr("backToListLabel")}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">

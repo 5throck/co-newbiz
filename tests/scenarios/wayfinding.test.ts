@@ -122,7 +122,10 @@ describe("R2-A wayfinding", () => {
     const link = s.page.locator(".stage-stepper a.stage-step", { hasText: "사업성 분석" });
     await link.waitFor({ state: "visible", timeout: 30_000 });
     await link.click();
-    await s.page.waitForURL(new RegExp(`/projects/${P}/business-case`), { timeout: 30_000 });
+    // The rail href is /projects/{P}/business-case, whose bare (no ?tab=) landing redirects
+    // to the 개요 page (2026-11-23 defect remediation, design 2026-11-21-s8-overview-tab —
+    // deals-landing consequence 4): the settled URL is the project page itself.
+    await s.page.waitForURL(new RegExp(`/projects/${P}(\\?|#|$)`), { timeout: 30_000 });
     expect(await s.page.getByText("Not found.").count()).toBe(0);
   }, 60_000);
 

@@ -1878,6 +1878,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261028-06",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "dec:DEC-20261031-01",
       "type": "decision",
       "layer": "L3"
@@ -6398,6 +6403,12 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261028-03",
       "to": "skill:root/policy-and-procedure-governance",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261028-06",
+      "to": "skill:root/decision-record",
       "source": "skills_used"
     },
     {

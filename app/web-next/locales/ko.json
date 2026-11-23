@@ -10003,7 +10003,8 @@
     "brownfieldTargetDetail": {
       "detailHeading": "후보 상세",
       "summarySectionAria": "후보 요약",
-      "backToListLabel": "후보 전체 목록 목록으로",
+      "backToListLabel": "후보 전체 목록으로",
+      "backToShortlistLabel": "최종 후보 목록으로",
       "financialScoreTitle": "재무 평가 100점 가중 점수",
       "financialScore": "재무 {p1}",
       "technicalScoreTitle": "기술 평가 100점 가중 점수(S3 필요 역량 기준)",

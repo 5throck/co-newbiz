@@ -4,7 +4,15 @@
 // rationale without blocking, and the S9 inline waiver action with Korean checklist text.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { startApp, type TestApp } from "./_support/harness.ts";
-import { axeScan, formatAxe, launchBrowser, loginThroughUi, visit, type AxeResult, type Session } from "./_support/browser.ts";
+import {
+  axeScan,
+  formatAxe,
+  launchBrowser,
+  loginThroughUi,
+  visit,
+  type AxeResult,
+  type Session,
+} from "./_support/browser.ts";
 import { BROWNFIELD, seedBrownfieldDeal } from "./_support/deals.ts";
 import { recordGate, see } from "./_support/ui.ts";
 import type { Browser } from "./_support/playwright.ts";
@@ -15,26 +23,42 @@ let s: Session;
 const P = BROWNFIELD.projectId;
 const axe: AxeResult[] = [];
 const gateCount = (gate: string): number =>
-  (app.readDb((d) => d.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id=? AND gate=?").get(P, gate)) as { c: number }).c;
+  (
+    app.readDb((d) => d.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id=? AND gate=?").get(P, gate)) as {
+      c: number;
+    }
+  ).c;
 
 beforeAll(async () => {
-  app = await startApp("gate-flow", { seed: ({ dbPath, analystId }) => { seedBrownfieldDeal(dbPath, analystId); } });
+  app = await startApp("gate-flow", {
+    seed: ({ dbPath, analystId }) => {
+      seedBrownfieldDeal(dbPath, analystId);
+    },
+  });
   browser = await launchBrowser();
   s = await loginThroughUi(browser, app);
 }, 120_000);
-afterAll(async () => { await browser?.close(); await app?.stop(); });
+afterAll(async () => {
+  await browser?.close();
+  await app?.stop();
+});
 
 describe("R2-B shared gate-recording flow (S8)", () => {
   test("the stage primary jumps to the decision tab and focuses the form; the form is not under every tab", async () => {
-    await visit(s.page, app, `/projects/${P}/business-case`);
-    await s.page.locator('main').first().waitFor({ state: "visible" });
+    // explicit ?tab= — the bare /business-case URL redirects to the project 개요 since the
+    // 2026-11-23 defect remediation (design 2026-11-21-s8-overview-tab); the financial lens
+    // is the screen this flow exercised before that landing change.
+    await visit(s.page, app, `/projects/${P}/business-case?tab=financial`);
+    await s.page.locator("main").first().waitFor({ state: "visible" });
     expect(await s.page.locator('section[aria-label="의사결정"]').count()).toBe(0);
     // One tab row: WACC and 대상회사 live in the stage sub-row only (shown on the analysis tabs), not repeated in the in-page tabs.
     expect(await s.page.getByRole("tab", { name: "WACC" }).count()).toBe(1);
     expect(await s.page.getByRole("tab", { name: "대상회사" }).count()).toBe(1);
     await s.page.getByRole("button", { name: "결정 기록 (사람)" }).click();
     await s.page.locator('section[aria-label="의사결정"]').waitFor({ state: "visible", timeout: 20_000 });
-    await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form="fs"] form'), undefined, { timeout: 10_000 });
+    await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form="fs"] form'), undefined, {
+      timeout: 10_000,
+    });
   }, 60_000);
 
   test("confirm -> toast -> recorded summary -> no resubmission -> next-stage link", async () => {
@@ -52,11 +76,16 @@ describe("R2-B shared gate-recording flow (S8)", () => {
     await dialog.getByRole("button", { name: "취소" }).click();
     expect(gateCount("fs")).toBe(0);
     await form.locator('button[type="submit"]').last().click();
-    const posted = s.page.waitForResponse((r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+    const posted = s.page.waitForResponse(
+      (r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+    );
     await s.page.getByRole("alertdialog").getByRole("button", { name: "기록", exact: true }).click();
     expect((await posted).status()).toBe(201);
     // Step 2-4 - toast, summary instead of the form, next-stage prompt.
-    await s.page.locator(".toast").filter({ hasText: "GO 결정을 기록했습니다" }).waitFor({ state: "visible", timeout: 10_000 });
+    await s.page
+      .locator(".toast")
+      .filter({ hasText: "GO 결정을 기록했습니다" })
+      .waitFor({ state: "visible", timeout: 10_000 });
     const summary = panel.locator('[aria-label="기록된 결정"]');
     await summary.waitFor({ state: "visible", timeout: 10_000 });
     expect(await summary.innerText()).toContain("GO 기록됨");
@@ -88,11 +117,19 @@ describe("R2-B S9 inline waiver and Korean checklist", () => {
     await dialog.locator("select").first().selectOption({ index: 1 });
     await dialog.locator("textarea").fill("대상 기업의 임원 보상 자료가 데이터룸에 없어 면제를 요청함");
     await dialog.locator('input[type="date"]').fill("2030-12-31");
-    const posted = s.page.waitForResponse((r) => /\/waivers$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+    const posted = s.page.waitForResponse(
+      (r) => /\/waivers$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+    );
     await dialog.getByRole("button", { name: "요청", exact: true }).click();
     expect((await posted).status()).toBe(201);
-    await s.page.locator(".toast").filter({ hasText: "면제 요청을 등록했습니다" }).waitFor({ state: "visible", timeout: 10_000 });
-    const w = app.readDb((d) => d.query("SELECT clause_ref, status FROM waiver WHERE project_id=?").get(P)) as { clause_ref: string; status: string } | null;
+    await s.page
+      .locator(".toast")
+      .filter({ hasText: "면제 요청을 등록했습니다" })
+      .waitFor({ state: "visible", timeout: 10_000 });
+    const w = app.readDb((d) => d.query("SELECT clause_ref, status FROM waiver WHERE project_id=?").get(P)) as {
+      clause_ref: string;
+      status: string;
+    } | null;
     expect(w?.clause_ref).toContain("bf-04");
   }, 90_000);
 });
@@ -107,13 +144,17 @@ describe("R2-B IC GO with missing artifacts", () => {
     expect(await s.page.locator('section[aria-label="3단계 검토"]').count()).toBe(1);
     const gaps = await s.page.evaluate(async (pid) => {
       const r = await fetch(`/api/projects/${pid}/ic-package`);
-      return ((await r.json()).data.gates.go_gaps as string[]);
+      return (await r.json()).data.gates.go_gaps as string[];
     }, P);
     expect(gaps.length).toBeGreaterThan(0); // the demo deal has no graded RAG
     // The stage primary reaches the form from the top.
     await s.page.getByRole("button", { name: "결정 기록 (사람)" }).click();
     await s.page.locator('section[aria-label="의사결정"]').first().waitFor({ state: "visible", timeout: 20_000 });
-    await s.page.waitForFunction(() => !!document.activeElement?.closest('[data-gate-form~="entity_ic"] form'), undefined, { timeout: 10_000 });
+    await s.page.waitForFunction(
+      () => !!document.activeElement?.closest('[data-gate-form~="entity_ic"] form'),
+      undefined,
+      { timeout: 10_000 },
+    );
     const panel = s.page.locator('section[aria-label="의사결정"]').first();
     const form = panel.locator('form[aria-label="의사결정 기록"]');
     await form.locator("select").last().selectOption("go");
@@ -129,14 +170,21 @@ describe("R2-B IC GO with missing artifacts", () => {
     axe.push(await axeScan(s.page, "IC warning dialog"));
     await dialog.locator("textarea").fill("RAG 산정 전이지만 위원회가 정성 판단으로 진행하기로 함");
     expect(await go.isDisabled()).toBe(false);
-    const posted = s.page.waitForResponse((r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST");
+    const posted = s.page.waitForResponse(
+      (r) => /gate-decisions$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+    );
     await go.click();
     expect((await posted).status()).toBe(201); // the human is not blocked
-    const stored = app.readDb((d) => d.query("SELECT rationale FROM gate_decision WHERE entity_id=? AND gate='entity_ic'").get(P)) as { rationale: string };
+    const stored = app.readDb((d) =>
+      d.query("SELECT rationale FROM gate_decision WHERE entity_id=? AND gate='entity_ic'").get(P),
+    ) as { rationale: string };
     expect(stored.rationale).toContain("RAG 산정 전이지만 위원회가 정성 판단으로 진행하기로 함");
     await panel.locator('[aria-label="기록된 결정"]').waitFor({ state: "visible", timeout: 10_000 });
     // ADR-0165: the sequenced panel names the next due committee turn (Group IC) right under the recorded Entity IC.
-    await panel.getByRole("status", { name: "기록된 결정" }).getByText(/다음 차례:\s*그룹 투자심의위원회/).waitFor({ state: "visible" });
+    await panel
+      .getByRole("status", { name: "기록된 결정" })
+      .getByText(/다음 차례:\s*그룹 투자심의위원회/)
+      .waitFor({ state: "visible" });
     // Shown in the IC package after a reload.
     await visit(s.page, app, `/projects/${P}/ic-review`);
     await see(s.page, "누락 산출물 예외 근거 (진행 기록 시 작성)");
