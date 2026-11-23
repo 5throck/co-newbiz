@@ -91,8 +91,8 @@ function main(): void {
   const db = getDb();
 
   const run = runId
-    ? db.query("SELECT id FROM run WHERE id = ?").get(runId) as { id: string } | null
-    : db.query("SELECT id FROM run WHERE label = ? ORDER BY created_at DESC").get(RUN_LABEL) as { id: string } | null;
+    ? (db.query("SELECT id FROM run WHERE id = ?").get(runId) as { id: string } | null)
+    : (db.query("SELECT id FROM run WHERE label = ? ORDER BY created_at DESC").get(RUN_LABEL) as { id: string } | null);
   if (!run) {
     console.error(`No run found${runId ? ` with id '${runId}'` : ` with label '${RUN_LABEL}'`}. Seed it first.`);
     process.exit(1);
@@ -126,9 +126,11 @@ function main(): void {
     }
 
     for (const row of rows) {
-      const latest = db.query(
-        "SELECT value FROM assumption WHERE run_id = ? AND assumption_key = ? ORDER BY as_of DESC, rowid DESC LIMIT 1",
-      ).get(run.id, row.key) as { value: number } | null;
+      const latest = db
+        .query(
+          "SELECT value FROM assumption WHERE run_id = ? AND assumption_key = ? ORDER BY as_of DESC, rowid DESC LIMIT 1",
+        )
+        .get(run.id, row.key) as { value: number } | null;
       if (latest && Math.abs(latest.value - row.value) < 1e-9) {
         skipped++;
         continue;

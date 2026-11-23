@@ -1,357 +1,126 @@
 {
   "schemaVersion": 2,
-  "timestamp": "2026-11-18T21:51:49.649Z",
+  "timestamp": "2026-11-23T05:35:53.876Z",
   "project": "co-newbiz",
   "templateVersion": "0.30.0",
-  "templateSha": "ccc7adcc86b60c5c3faf931febececb29de32225",
-  "baseSha": "88b48089153944fc12b8b6b9326fd4744caa1b32",
+  "templateSha": "98b895dc679f72917445015902e66734a418b42d",
+  "baseSha": "c63d6d7c21669899c0fd88b18867339398281107",
   "files": [
-    ".agents/skills/design-foundation/SKILL.md",
-    ".agents/skills/explain-me/SKILL.md",
-    ".agents/skills/explain-me/references/PLATFORM_HARNESS.md",
-    ".agents/skills/finishing-a-development-branch/SKILL.md",
-    ".agents/skills/i18n-audit/SKILL.md",
-    ".agents/skills/i18n-formatting/SKILL.md",
-    ".agents/skills/i18n-layout/SKILL.md",
-    ".agents/skills/i18n-locale-config/SKILL.md",
-    ".agents/skills/k-dart/SKILL.md",
-    ".agents/skills/k-dart/references/terms-ko.json",
-    ".agents/skills/k-ecos/SKILL.md",
-    ".agents/skills/k-ecos/references/terms-ko.json",
-    ".agents/skills/k-kosis/SKILL.md",
-    ".agents/skills/k-kosis/references/terms-ko.json",
-    ".agents/skills/k-krx/SKILL.md",
-    ".agents/skills/k-krx/references/terms-ko.json",
-    ".agents/skills/k-opendata/SKILL.md",
-    ".agents/skills/k-opendata/references/terms-ko.json",
-    ".agents/skills/meeting-facilitation/SKILL.md",
-    ".agents/skills/platform-skill-lifecycle-manager/SKILL.md",
-    ".agents/skills/sync/SKILL.md",
-    ".agents/skills/zod-contract-gate/SKILL.md",
+    ".agents/skills/handbook/SKILL.md",
+    ".agents/skills/handbook/assets/css/handbook-variables.css",
+    ".agents/skills/handbook/references/AUTHORING_GUIDELINES.md",
+    ".agents/skills/handbook/references/BUILD_GUIDE.md",
+    ".agents/skills/handbook/references/QUALITY_CHECKLIST.md",
+    ".agents/skills/handbook/templates/base.html",
+    ".agents/skills/handbook/templates/chapter.html",
+    ".agents/skills/handbook/templates/course-overview.html",
+    ".agents/skills/handbook/templates/examples.html",
+    ".agents/skills/handbook/templates/index.html",
+    ".agents/skills/handbook/templates/instructor-guide.html",
+    ".agents/skills/handbook/templates/manual.html",
+    ".agents/skills/handbook/templates/quiz.html",
     ".claude/settings.json",
-    ".claude/skills/design-foundation/SKILL.md",
-    ".claude/skills/explain-me/SKILL.md",
-    ".claude/skills/explain-me/references/PLATFORM_HARNESS.md",
-    ".claude/skills/finishing-a-development-branch/SKILL.md",
-    ".claude/skills/i18n-audit/SKILL.md",
-    ".claude/skills/i18n-formatting/SKILL.md",
-    ".claude/skills/i18n-layout/SKILL.md",
-    ".claude/skills/i18n-locale-config/SKILL.md",
-    ".claude/skills/k-dart/SKILL.md",
-    ".claude/skills/k-dart/references/terms-ko.json",
-    ".claude/skills/k-ecos/SKILL.md",
-    ".claude/skills/k-ecos/references/terms-ko.json",
-    ".claude/skills/k-kosis/SKILL.md",
-    ".claude/skills/k-kosis/references/terms-ko.json",
-    ".claude/skills/k-krx/SKILL.md",
-    ".claude/skills/k-krx/references/terms-ko.json",
-    ".claude/skills/k-opendata/SKILL.md",
-    ".claude/skills/k-opendata/references/terms-ko.json",
-    ".claude/skills/meeting-facilitation/SKILL.md",
-    ".claude/skills/platform-skill-lifecycle-manager/SKILL.md",
-    ".claude/skills/sync/SKILL.md",
-    ".claude/skills/zod-contract-gate/SKILL.md",
-    ".codex/skills/design-foundation/SKILL.md",
-    ".codex/skills/explain-me/SKILL.md",
-    ".codex/skills/explain-me/references/PLATFORM_HARNESS.md",
-    ".codex/skills/finishing-a-development-branch/SKILL.md",
-    ".codex/skills/i18n-audit/SKILL.md",
-    ".codex/skills/i18n-formatting/SKILL.md",
-    ".codex/skills/i18n-layout/SKILL.md",
-    ".codex/skills/i18n-locale-config/SKILL.md",
-    ".codex/skills/k-dart/SKILL.md",
-    ".codex/skills/k-dart/references/terms-ko.json",
-    ".codex/skills/k-ecos/SKILL.md",
-    ".codex/skills/k-ecos/references/terms-ko.json",
-    ".codex/skills/k-kosis/SKILL.md",
-    ".codex/skills/k-kosis/references/terms-ko.json",
-    ".codex/skills/k-krx/SKILL.md",
-    ".codex/skills/k-krx/references/terms-ko.json",
-    ".codex/skills/k-opendata/SKILL.md",
-    ".codex/skills/k-opendata/references/terms-ko.json",
-    ".codex/skills/meeting-facilitation/SKILL.md",
-    ".codex/skills/platform-skill-lifecycle-manager/SKILL.md",
-    ".codex/skills/sync/SKILL.md",
-    ".codex/skills/zod-contract-gate/SKILL.md",
-    ".gemini/skills/design-foundation/SKILL.md",
-    ".gemini/skills/explain-me/SKILL.md",
-    ".gemini/skills/explain-me/references/PLATFORM_HARNESS.md",
-    ".gemini/skills/finishing-a-development-branch/SKILL.md",
-    ".gemini/skills/i18n-audit/SKILL.md",
-    ".gemini/skills/i18n-formatting/SKILL.md",
-    ".gemini/skills/i18n-layout/SKILL.md",
-    ".gemini/skills/i18n-locale-config/SKILL.md",
-    ".gemini/skills/k-dart/SKILL.md",
-    ".gemini/skills/k-dart/references/terms-ko.json",
-    ".gemini/skills/k-ecos/SKILL.md",
-    ".gemini/skills/k-ecos/references/terms-ko.json",
-    ".gemini/skills/k-kosis/SKILL.md",
-    ".gemini/skills/k-kosis/references/terms-ko.json",
-    ".gemini/skills/k-krx/SKILL.md",
-    ".gemini/skills/k-krx/references/terms-ko.json",
-    ".gemini/skills/k-opendata/SKILL.md",
-    ".gemini/skills/k-opendata/references/terms-ko.json",
-    ".gemini/skills/meeting-facilitation/SKILL.md",
-    ".gemini/skills/platform-skill-lifecycle-manager/SKILL.md",
-    ".gemini/skills/sync/SKILL.md",
-    ".gemini/skills/zod-contract-gate/SKILL.md",
+    ".claude/skills/handbook/SKILL.md",
+    ".claude/skills/handbook/assets/css/handbook-variables.css",
+    ".claude/skills/handbook/references/AUTHORING_GUIDELINES.md",
+    ".claude/skills/handbook/references/BUILD_GUIDE.md",
+    ".claude/skills/handbook/references/QUALITY_CHECKLIST.md",
+    ".claude/skills/handbook/templates/base.html",
+    ".claude/skills/handbook/templates/chapter.html",
+    ".claude/skills/handbook/templates/course-overview.html",
+    ".claude/skills/handbook/templates/examples.html",
+    ".claude/skills/handbook/templates/index.html",
+    ".claude/skills/handbook/templates/instructor-guide.html",
+    ".claude/skills/handbook/templates/manual.html",
+    ".claude/skills/handbook/templates/quiz.html",
+    ".codex/skills/handbook/SKILL.md",
+    ".codex/skills/handbook/assets/css/handbook-variables.css",
+    ".codex/skills/handbook/references/AUTHORING_GUIDELINES.md",
+    ".codex/skills/handbook/references/BUILD_GUIDE.md",
+    ".codex/skills/handbook/references/QUALITY_CHECKLIST.md",
+    ".codex/skills/handbook/templates/base.html",
+    ".codex/skills/handbook/templates/chapter.html",
+    ".codex/skills/handbook/templates/course-overview.html",
+    ".codex/skills/handbook/templates/examples.html",
+    ".codex/skills/handbook/templates/index.html",
+    ".codex/skills/handbook/templates/instructor-guide.html",
+    ".codex/skills/handbook/templates/manual.html",
+    ".codex/skills/handbook/templates/quiz.html",
+    ".gemini/skills/handbook/SKILL.md",
+    ".gemini/skills/handbook/assets/css/handbook-variables.css",
+    ".gemini/skills/handbook/references/AUTHORING_GUIDELINES.md",
+    ".gemini/skills/handbook/references/BUILD_GUIDE.md",
+    ".gemini/skills/handbook/references/QUALITY_CHECKLIST.md",
+    ".gemini/skills/handbook/templates/base.html",
+    ".gemini/skills/handbook/templates/chapter.html",
+    ".gemini/skills/handbook/templates/course-overview.html",
+    ".gemini/skills/handbook/templates/examples.html",
+    ".gemini/skills/handbook/templates/index.html",
+    ".gemini/skills/handbook/templates/instructor-guide.html",
+    ".gemini/skills/handbook/templates/manual.html",
+    ".gemini/skills/handbook/templates/quiz.html",
+    ".gitattributes",
     ".githooks/commit-msg",
-    ".hermes/skills/design-foundation/SKILL.md",
-    ".hermes/skills/explain-me/SKILL.md",
-    ".hermes/skills/explain-me/references/PLATFORM_HARNESS.md",
-    ".hermes/skills/finishing-a-development-branch/SKILL.md",
-    ".hermes/skills/i18n-audit/SKILL.md",
-    ".hermes/skills/i18n-formatting/SKILL.md",
-    ".hermes/skills/i18n-layout/SKILL.md",
-    ".hermes/skills/i18n-locale-config/SKILL.md",
-    ".hermes/skills/k-dart/SKILL.md",
-    ".hermes/skills/k-dart/references/terms-ko.json",
-    ".hermes/skills/k-ecos/SKILL.md",
-    ".hermes/skills/k-ecos/references/terms-ko.json",
-    ".hermes/skills/k-kosis/SKILL.md",
-    ".hermes/skills/k-kosis/references/terms-ko.json",
-    ".hermes/skills/k-krx/SKILL.md",
-    ".hermes/skills/k-krx/references/terms-ko.json",
-    ".hermes/skills/k-opendata/SKILL.md",
-    ".hermes/skills/k-opendata/references/terms-ko.json",
-    ".hermes/skills/meeting-facilitation/SKILL.md",
-    ".hermes/skills/platform-skill-lifecycle-manager/SKILL.md",
-    ".hermes/skills/sync/SKILL.md",
-    ".hermes/skills/zod-contract-gate/SKILL.md",
-    ".mcp.json",
+    ".hermes/skills/handbook/SKILL.md",
+    ".hermes/skills/handbook/assets/css/handbook-variables.css",
+    ".hermes/skills/handbook/references/AUTHORING_GUIDELINES.md",
+    ".hermes/skills/handbook/references/BUILD_GUIDE.md",
+    ".hermes/skills/handbook/references/QUALITY_CHECKLIST.md",
+    ".hermes/skills/handbook/templates/base.html",
+    ".hermes/skills/handbook/templates/chapter.html",
+    ".hermes/skills/handbook/templates/course-overview.html",
+    ".hermes/skills/handbook/templates/examples.html",
+    ".hermes/skills/handbook/templates/index.html",
+    ".hermes/skills/handbook/templates/instructor-guide.html",
+    ".hermes/skills/handbook/templates/manual.html",
+    ".hermes/skills/handbook/templates/quiz.html",
     "AGENTS.md",
-    "CHANGELOG.md",
     "CLAUDE.md",
-    "CODEX.md",
-    "HERMES.md",
-    "agents/pm.md",
-    "docs/README.template.md",
-    "docs/README_ko.template.md",
-    "docs/context.md",
-    "docs/governance/agents/execution-plan-templates.md",
-    "docs/governance/agents/workflows.md",
-    "docs/phase-definitions.md",
+    "docs/lifecycle/skills/handbook.md",
     "docs/workspace-schema.json",
     "scripts/SCRIPTS.md",
-    "scripts/agent-create.ts",
-    "scripts/agent-delete.ts",
     "scripts/agent-lifecycle-audit.ts",
-    "scripts/agent-list.ts",
-    "scripts/agent-verify.ts",
-    "scripts/analyze-git-history.ts",
-    "scripts/archive-memory.ts",
-    "scripts/bootstrap-stages.ts",
-    "scripts/changelog-normalize.ts",
-    "scripts/cleanup-completed-md.ts",
-    "scripts/clear-pm-approval.ts",
-    "scripts/compile-tokens.ts",
-    "scripts/dependency-audit.ts",
+    "scripts/audit.ts",
     "scripts/design-lint.ts",
-    "scripts/dispatch-parallel.ts",
-    "scripts/dispatch-serial.ts",
-    "scripts/dispatch.ts",
-    "scripts/gen-pr-body.ts",
-    "scripts/generate-ide-rules.ts",
-    "scripts/generate-raci.ts",
-    "scripts/generate-version-manifest.ts",
-    "scripts/graph-delta-log.ts",
+    "scripts/detect-backport.ts",
+    "scripts/dev-sync.ts",
+    "scripts/generate-skill-lifecycle-records.ts",
     "scripts/handbook/apply-handbook-theme.ts",
-    "scripts/handbook/check-a11y.ts",
     "scripts/handbook/check-external-links.ts",
-    "scripts/handbook/check-i18n-parity.ts",
-    "scripts/handbook/check-labels.ts",
-    "scripts/handbook/check-links.ts",
-    "scripts/handbook/check-lint.ts",
-    "scripts/handbook/check-search.ts",
-    "scripts/handbook/check-spell.ts",
-    "scripts/handbook/check-structure.ts",
-    "scripts/handbook/check-tables.ts",
-    "scripts/handbook/deploy-handbook.ts",
-    "scripts/handbook/extract-copycode.ts",
-    "scripts/handbook/handbook-doctor.ts",
-    "scripts/handbook/handbook-sync-audit.ts",
-    "scripts/handbook/nav-utils.ts",
     "scripts/handbook/scaffold-handbook.ts",
     "scripts/handbook/update-footers.ts",
-    "scripts/handbook/validate-handbook.ts",
-    "scripts/helpers/changelog-duplicates.ts",
-    "scripts/helpers/commit-message.ts",
-    "scripts/helpers/context-sections.ts",
-    "scripts/helpers/design-lint-roots.ts",
-    "scripts/helpers/extends-validator.ts",
-    "scripts/helpers/gitleaks-merge.ts",
-    "scripts/helpers/golden-reference-loader.ts",
-    "scripts/helpers/ignored-tooling.ts",
-    "scripts/helpers/l0-ref-policy.ts",
-    "scripts/helpers/layer-filter.ts",
-    "scripts/helpers/local-patch-scan.ts",
-    "scripts/helpers/markers.ts",
-    "scripts/helpers/merge-frontmatter.ts",
-    "scripts/helpers/merge-state.ts",
-    "scripts/helpers/mirror-hygiene.ts",
-    "scripts/helpers/pm-md-parser.ts",
-    "scripts/helpers/registries/capability-registry.ts",
-    "scripts/helpers/registries/validation-policy.ts",
-    "scripts/helpers/registries/variant-type-registry.ts",
-    "scripts/helpers/registry-append.ts",
-    "scripts/helpers/resolve-pm-stub.ts",
-    "scripts/helpers/rollback-partial-project.ts",
     "scripts/helpers/scaffold-markers.ts",
-    "scripts/helpers/skills-registry.ts",
-    "scripts/helpers/spec-header-consistency.ts",
-    "scripts/helpers/substitute-placeholders.ts",
-    "scripts/helpers/template-utils.ts",
-    "scripts/helpers/upgrade-versions.ts",
-    "scripts/helpers/variant-context.ts",
-    "scripts/helpers/version-bump.ts",
-    "scripts/hooks/agent-model-gate.ts",
-    "scripts/hooks/codex-user-prompt-gate.ts",
-    "scripts/hooks/gateguard-fact-force.ts",
     "scripts/hooks/pm-dispatch-gate.ts",
-    "scripts/hooks/pm-role-bootstrap.ts",
-    "scripts/hooks/post-write-lifecycle-check.ts",
-    "scripts/lib/auth.ts",
-    "scripts/lib/ci-workflow-merge.ts",
-    "scripts/lib/constitution-scrub.ts",
-    "scripts/lib/context-md-schema.ts",
-    "scripts/lib/dependency-guard.ts",
-    "scripts/lib/encoding-utils.ts",
-    "scripts/lib/env-sample.ts",
-    "scripts/lib/error-handling.ts",
-    "scripts/lib/generator-manifest.ts",
-    "scripts/lib/git-status.ts",
     "scripts/lib/hook-dedupe.ts",
-    "scripts/lib/language-guard.ts",
-    "scripts/lib/local-date.ts",
-    "scripts/lib/managed-block-merge.ts",
-    "scripts/lib/managed-block-parity.ts",
-    "scripts/lib/model-literal-patterns.ts",
-    "scripts/lib/package-merge.ts",
-    "scripts/lib/pipeline-state.ts",
-    "scripts/lib/platform-context.ts",
-    "scripts/lib/platform-delivery.ts",
-    "scripts/lib/platform-mirror-freshness.ts",
-    "scripts/lib/platform-skeleton-merge.ts",
-    "scripts/lib/platforms.ts",
-    "scripts/lib/propagation-map-schema.ts",
-    "scripts/lib/skill-graph-compat.ts",
-    "scripts/lib/skills-used.ts",
-    "scripts/lib/variant-overlay-guard.ts",
-    "scripts/lint-instructions.ts",
-    "scripts/md-to-ooxml.ts",
-    "scripts/migrate-quality-gates.ts",
-    "scripts/normalize-registry-provenance.ts",
-    "scripts/qa-gate.ts",
-    "scripts/readme-lifecycle-audit.ts",
-    "scripts/regenerate-agents-md.ts",
-    "scripts/render-commands.ts",
-    "scripts/render-pdf-deck.ts",
-    "scripts/resolve-variants.ts",
-    "scripts/retry-handler.ts",
-    "scripts/route-audit-scan.ts",
-    "scripts/setup-github-branch-protection.ts",
-    "scripts/skill-session-review.ts",
     "scripts/spec-register.ts",
     "scripts/sync-agent-mirrors.ts",
-    "scripts/sync-md.ts",
-    "scripts/sync-skill-status.ts",
-    "scripts/sync-skills.ts",
-    "scripts/team-builder.ts",
-    "scripts/translate-readme.ts",
-    "scripts/typecheck.ts",
-    "scripts/validate-agents.ts",
     "scripts/validate-decisions.ts",
-    "scripts/validate-docs-links.ts",
-    "scripts/validate-md-language.ts",
-    "scripts/validate-model-registry.ts",
-    "scripts/validate-pm-extends.ts",
-    "scripts/validate-procedures.ts",
-    "scripts/validate-process.ts",
-    "scripts/validate-raci.ts",
-    "scripts/validate-skills.ts",
-    "scripts/validate-surface-registry.ts",
     "scripts/validate-variant-readiness.ts",
-    "scripts/verify-agent-deliverables.ts",
-    "scripts/verify-memory.ts",
-    "scripts/verify-platform-lifecycle.ts",
-    "scripts/verify-readme-sync.ts",
-    "scripts/verify-skill-graph.ts",
-    "scripts/verify-skills.ts",
     "skills/SKILLS.md",
-    "skills/design-foundation/SKILL.md",
-    "skills/explain-me/SKILL.md",
-    "skills/explain-me/references/PLATFORM_HARNESS.md",
-    "skills/finishing-a-development-branch/SKILL.md",
-    "skills/i18n-audit/SKILL.md",
-    "skills/i18n-formatting/SKILL.md",
-    "skills/i18n-layout/SKILL.md",
-    "skills/i18n-locale-config/SKILL.md",
-    "skills/k-dart/SKILL.md",
-    "skills/k-dart/references/terms-ko.json",
-    "skills/k-ecos/SKILL.md",
-    "skills/k-ecos/references/terms-ko.json",
-    "skills/k-kosis/SKILL.md",
-    "skills/k-kosis/references/terms-ko.json",
-    "skills/k-krx/SKILL.md",
-    "skills/k-krx/references/terms-ko.json",
-    "skills/k-opendata/SKILL.md",
-    "skills/k-opendata/references/terms-ko.json",
-    "skills/meeting-facilitation/SKILL.md",
-    "skills/platform-skill-lifecycle-manager/SKILL.md",
-    "skills/sync/SKILL.md",
-    "skills/zod-contract-gate/SKILL.md",
+    "skills/handbook/SKILL.md",
+    "skills/handbook/assets/css/handbook-variables.css",
+    "skills/handbook/references/AUTHORING_GUIDELINES.md",
+    "skills/handbook/references/BUILD_GUIDE.md",
+    "skills/handbook/references/QUALITY_CHECKLIST.md",
+    "skills/handbook/templates/base.html",
+    "skills/handbook/templates/chapter.html",
+    "skills/handbook/templates/course-overview.html",
+    "skills/handbook/templates/examples.html",
+    "skills/handbook/templates/index.html",
+    "skills/handbook/templates/instructor-guide.html",
+    "skills/handbook/templates/manual.html",
+    "skills/handbook/templates/quiz.html",
     "template-version.txt",
-    "docs/lifecycle/skills/accessibility-audit.md",
-    "docs/lifecycle/skills/agent-lifecycle-manager.md",
-    "docs/lifecycle/skills/api-documentation.md",
-    "docs/lifecycle/skills/ci-triage.md",
-    "docs/lifecycle/skills/delegate-to-hub.md",
-    "docs/lifecycle/skills/design-foundation.md",
-    "docs/lifecycle/skills/documentation-writing.md",
-    "docs/lifecycle/skills/explain-me.md",
-    "docs/lifecycle/skills/finishing-a-development-branch.md",
-    "docs/lifecycle/skills/gateguard.md",
-    "docs/lifecycle/skills/handbook-sync-audit.md",
-    "docs/lifecycle/skills/k-dart.md",
-    "docs/lifecycle/skills/k-ecos.md",
-    "docs/lifecycle/skills/k-kosis.md",
-    "docs/lifecycle/skills/k-krx.md",
-    "docs/lifecycle/skills/k-law.md",
-    "docs/lifecycle/skills/k-opendata.md",
-    "docs/lifecycle/skills/meeting-facilitation.md",
-    "docs/lifecycle/skills/platform-command-lifecycle-manager.md",
-    "docs/lifecycle/skills/platform-skill-lifecycle-manager.md",
-    "docs/lifecycle/skills/project-review.md",
-    "docs/lifecycle/skills/research-analysis.md",
-    "docs/lifecycle/skills/script-lifecycle-manager.md",
-    "docs/lifecycle/skills/security-scan.md",
-    "docs/lifecycle/skills/service-design.md",
-    "docs/lifecycle/skills/skill-lifecycle-manager.md",
-    "docs/lifecycle/skills/source-command-commit-push-pr.md",
-    "docs/lifecycle/skills/standup-synthesizer.md",
-    "docs/lifecycle/skills/sync.md",
-    "docs/lifecycle/skills/team-builder.md",
-    "docs/lifecycle/skills/token-usage-lint.md",
-    "docs/lifecycle/skills/translate.md",
-    "docs/lifecycle/skills/ui-ux-design-intelligence.md",
-    "docs/lifecycle/skills/update-bun-packages.md",
-    "docs/lifecycle/skills/zod-contract-gate.md",
-    "scripts/detect-backport.ts",
-    "scripts/generate-skill-lifecycle-records.ts",
-    "scripts/lib/country-scoped-agents.ts",
-    "scripts/lib/git-env.ts",
-    "scripts/lib/hermetic-test-roots.ts",
-    "scripts/lib/post-delivery-verify.ts",
-    "scripts/lib/repo-integrity.ts",
-    "scripts/lib/spec-landing.ts",
-    "scripts/lib/template-vintage.ts",
-    "scripts/lib/workspace-hygiene.ts"
+    "scripts/handbook/check-generated-content.ts",
+    "scripts/helpers/adoption-provenance.ts",
+    "scripts/helpers/delivery-riding.ts",
+    "scripts/lib/audit-fail-hint.ts"
   ],
   "baselines": {
     ".claude/settings.json": {
-      "hash": "872b52795a420e5705c9891218a79047078019c9f115da01fd579b98fa0ca1c3",
+      "hash": "3452c64c8f822aa91376e1a8e1c1e67d05b7c1d3b986b739a2a5975badc6fd50",
       "templateVersion": "0.30.0",
-      "blob": "6cc99eaa2277b4bc552c631ce755fa73c273682b"
+      "blob": "f3525df2558c5014964d70b7223483a729f20d38"
     },
     ".githooks/commit-msg": {
       "hash": "6375ca75a1fa6cf1547835b64f2b36c549b4faf4aa4aab0fccc4e88e06451f54",
@@ -378,20 +147,15 @@
       "templateVersion": "0.30.0",
       "blob": "33e6efac6aef611705b461350bf07d2713d0609e"
     },
-    ".mcp.json": {
-      "hash": "3eeeb200037df17e0782e4293b8d82eda4382c898d35e8883fee19e835aec1c3",
-      "templateVersion": "0.30.0",
-      "blob": "0027f140b890e4b5d3e3fabbf8517cd9aa107dce"
-    },
     "AGENTS.md": {
-      "hash": "a162df9ff250f9b57d8ee85c319a16ef97b5386942bdeb0ba299c8acd4f2cb55",
+      "hash": "757a36bb747a4eec779cf72c3b1de2a364d76960103d6d682faabb90d60d8ae6",
       "templateVersion": "0.30.0",
-      "blob": "63176977e1ed7939d251877594f2ea1e1ad5f7bc"
+      "blob": "9a0c6849523c4e171205f17aece77eac1564a3dd"
     },
     "CLAUDE.md": {
-      "hash": "cb363fcb8546e7f46e67cf557955c7eec8ecc95bfa44275a225052ffa9e9cca5",
+      "hash": "ce09047b7449b80348ff8911a77fa869255142358f36a07bba0fd5da9d7bdb8a",
       "templateVersion": "0.30.0",
-      "blob": "be09c2b438a6c9ef99d24ed051733415b0a47b48"
+      "blob": "0b58d03b4e13729710c72860c1f6ff104450cc9a"
     },
     "CODEX.md": {
       "hash": "71d44dadfb44ec9ceee3fac890a132d101ae5f8aacb11afd2977e9ba5a2ee0cc",
@@ -412,6 +176,317 @@
       "hash": "21bcd7673ea1400782fb7e99489505b40c5269475200dccda168cdfbef5f219c",
       "templateVersion": "0.30.0",
       "blob": "945a5a33d37c775126cc3ed689182765858f8320"
+    },
+    "docs/phase-definitions.md": {
+      "hash": "d6e399430e05290eb1cf59193de5369382d04ff749f5d9f4340c73c4b2c933f4",
+      "templateVersion": "0.30.0",
+      "blob": "4f09f63bf4b8113131f3a78f3eef9d96d8ecc34a"
+    },
+    "docs/security.md": {
+      "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
+      "templateVersion": "0.30.0",
+      "blob": "dc6dd2e84dd1ad63b77bbdde06e6ff63eeb2151e"
+    },
+    "docs/workspace-schema.json": {
+      "hash": "4aeda90dedbe9f357664192fc6c10008c3326717d854579246a7a335bd28d505",
+      "templateVersion": "0.30.0",
+      "blob": "9c809d8c0109d59f41fba68804af8a488d7a6cb8"
+    },
+    "scripts/agent-lifecycle-audit.ts": {
+      "hash": "0994ed6845648cbcb308c8d969152b2d72f7d646255b235c16be197d29fdc461",
+      "templateVersion": "0.30.0",
+      "blob": "5e634bf2b4ea25af129ae6eb96b2852325d9254c"
+    },
+    "scripts/audit.ts": {
+      "hash": "e15925c7174b069b91c5132cb95d8ed733bd153e59954463d4b85791c6efa0a1",
+      "templateVersion": "0.30.0",
+      "blob": "b7ceb7bb26f02f1f09be46830ab1a4153a7be191"
+    },
+    "scripts/design-lint.ts": {
+      "hash": "6bcffca03745f40aa3bdea2729c1dbf930da891142c8e67d39b0eba6e9b95bae",
+      "templateVersion": "0.30.0",
+      "blob": "82b2cbc0f4aabf275a29465033b50cd0c6f0f04d"
+    },
+    "scripts/detect-backport.ts": {
+      "hash": "0bc5f30f63d483283b5e9d8f6bedb05d70c41c5d0362786a70466a2b5bb1cc3b",
+      "templateVersion": "0.30.0",
+      "blob": "dbebab93ec1b6f97d6e73b54037d102a3faac519"
+    },
+    "scripts/dev-sync.ts": {
+      "hash": "0b9276b4e3d5aa5d71867123fa2217e849de0389e48550d960a6e797695c1938",
+      "templateVersion": "0.30.0",
+      "blob": "5ed2416bab3b775cfd9fc1bdb7cfef089d50be35"
+    },
+    "scripts/generate-skill-lifecycle-records.ts": {
+      "hash": "f96a95a15df8ee4dc022a56c1579e846c18ddb5e2192ff815c370689055ab382",
+      "templateVersion": "0.30.0",
+      "blob": "81f24cae480b67d6d1ffd44f7738c4d3c06958c6"
+    },
+    "scripts/handbook/apply-handbook-theme.ts": {
+      "hash": "9f8675bcb9dc925172486d4f15bbc34edfd2a96a015044c7aaa4aa46ec30dbdd",
+      "templateVersion": "0.30.0",
+      "blob": "b3aea5f85384d657e5bf1425588aa00162cf97aa"
+    },
+    "scripts/handbook/check-external-links.ts": {
+      "hash": "7d9b37349a794e85e6eb295d8b4b3009f440027a4f9c45d5dabec7d5f0b8ce38",
+      "templateVersion": "0.30.0",
+      "blob": "15ff87853f28c1a2e452da1b49ff0928938b6343"
+    },
+    "scripts/handbook/check-generated-content.ts": {
+      "hash": "515fcc503f44834104e119206f6910e53dccaa06baa3269255c71954f4250842",
+      "templateVersion": "0.30.0",
+      "blob": "fbdd74892a88e7a1d1f5f52823b62f80d06d36d4"
+    },
+    "scripts/handbook/scaffold-handbook.ts": {
+      "hash": "b1e0c7fbf0c95750f08ebc068c942a4394b3c6e3788d79f4fecc44b7ce4fb815",
+      "templateVersion": "0.30.0",
+      "blob": "4d0240f13c4a0af3446303e3a573464fad65768d"
+    },
+    "scripts/handbook/update-footers.ts": {
+      "hash": "d6aaf5d2b80e75bcca6b40ed4ee221a753bfe4bac279ac506b5aec3995cfa88b",
+      "templateVersion": "0.30.0",
+      "blob": "354d3c9f6dac755376a6dfcec921539668e578d8"
+    },
+    "scripts/helpers/adoption-provenance.ts": {
+      "hash": "0bc4f52ab132de3cbec4c6faad17ff36956d15ef7dffb1f2322fe3a1d4af2e40",
+      "templateVersion": "0.30.0",
+      "blob": "0f81bc15d39f952bf7968ca7ac0e4b61f8b0de71"
+    },
+    "scripts/helpers/delivery-riding.ts": {
+      "hash": "19f2b3b2cc7b6093604ef86d93b2c8fc8f4d9b70364c5c89f9b60ca0d3e47d91",
+      "templateVersion": "0.30.0",
+      "blob": "599fa6b1c5edd4329dadb6efdbe256cc92f1acc3"
+    },
+    "scripts/helpers/scaffold-markers.ts": {
+      "hash": "6a6636833d35bb2dd62e9d7b65f7d268be21c39a9bbdc5b0fba25b8540490070",
+      "templateVersion": "0.30.0",
+      "blob": "06a6ce727845c46e9d958e2b30e070bec77aa415"
+    },
+    "scripts/hooks/pm-dispatch-gate.ts": {
+      "hash": "0aca71a27ac3c4a4832d6c419e534659a77b7597ba68400c852fc0ec8396592e",
+      "templateVersion": "0.30.0",
+      "blob": "1274b5f549fdf8a1333fd7aa027e6f5a9962b87b"
+    },
+    "scripts/lib/audit-fail-hint.ts": {
+      "hash": "7884cf2a23f0ec2a602ac4c4404a0638b3750b64e1368a57b5cc7a90993da30e",
+      "templateVersion": "0.30.0",
+      "blob": "e48ed844b5a2ad8c9337b462dea4c2d991c47f3b"
+    },
+    "scripts/lib/hook-dedupe.ts": {
+      "hash": "7ddd04198a167c913dcd287bd65c6d50ba75ca6f079923ff3c869ffa2fc75d60",
+      "templateVersion": "0.30.0",
+      "blob": "1d6e5bae2d7ec4b96ad455142fd151bef82de767"
+    },
+    "scripts/spec-register.ts": {
+      "hash": "281cdf8283ee3f1760f9268e0a006f7191149e047dbb5fe3d0ccd0bc8000785a",
+      "templateVersion": "0.30.0",
+      "blob": "706a9062bb5b80cb81c18cf49731407c94349cfd"
+    },
+    "scripts/sync-agent-mirrors.ts": {
+      "hash": "57a20647756efad430ed1815cfb4e282ac7e80e9e137e4131c474daa19f3f872",
+      "templateVersion": "0.30.0",
+      "blob": "274bcdcda9dad76a2bb42ed61d7b17931caeafb4"
+    },
+    "scripts/validate-decisions.ts": {
+      "hash": "10dac486fdda9f497a6cb501bda4619105a4983fc29c7969ff1a60b1eee60983",
+      "templateVersion": "0.30.0",
+      "blob": "ad5196a8d5a49e0892e8b323e593ebd4a4cde7df"
+    },
+    "scripts/validate-variant-readiness.ts": {
+      "hash": "7f5e8ec3620e2b416fc432d803192436a78e720538c33eddfa6ef6ef4a01495f",
+      "templateVersion": "0.30.0",
+      "blob": "d2f42ff6418a6242696288d985989a49ef11e78c"
+    },
+    "skills/handbook/references/AUTHORING_GUIDELINES.md": {
+      "hash": "6d186f3b9532ed6ee4a54d7c9647ef141154ef411460d4a44d9b9d5d610c1fa6",
+      "templateVersion": "0.30.0",
+      "blob": "198976ed38eaf1ec289d6625cec642666dec3793"
+    },
+    "skills/handbook/references/I18N_PARITY_PLAYBOOK.md": {
+      "hash": "b1b8a83ea82c8c94aeddc402541fe0ea08afaeae1c9745d5fd5bc855dc3f4a02",
+      "templateVersion": "0.30.0",
+      "blob": "5773c67d359096cbe116567fa92902a4407c9b54"
+    },
+    "skills/handbook/references/SECTION_TYPES.md": {
+      "hash": "40492530f9f1583b519f97c23c55b486398880703056f8525a3e103c92c3cba8",
+      "templateVersion": "0.30.0",
+      "blob": "3d0ab3e266403b83fd8cfa169f96dec90db37581"
+    },
+    "skills/handbook/references/MAINTENANCE_PLAYBOOK.md": {
+      "hash": "046bf26ecfc1becd90d822e1b4b7f3ed026cad53579f2b97c4f344e395c6778f",
+      "templateVersion": "0.30.0",
+      "blob": "037b1c7a4a9f38361a294a49c80298bff466fd66"
+    },
+    "skills/handbook/references/BUILD_GUIDE.md": {
+      "hash": "c48fd72db5d4913d8053396d7dab6f921d1f48e3a36b820f954cee8bc14b140a",
+      "templateVersion": "0.30.0",
+      "blob": "6ba077c28aada88517c2cae26bf8a9224f4fd3a6"
+    },
+    "skills/handbook/references/KOREAN_LANGUAGE.md": {
+      "hash": "e216fb4711bf55b0ea3e651160e6b55360924fdf0bcb62e6c6adf7afe79069e6",
+      "templateVersion": "0.30.0",
+      "blob": "0102a1ce1ab0ef831125b405f9a6beb04ab77ef1"
+    },
+    "skills/handbook/references/validation/NAV_VALIDATION.md": {
+      "hash": "632f65882b1070ccb63650f2008b207b77471c0f94f049d7f80316a97cc5cb2f",
+      "templateVersion": "0.30.0",
+      "blob": "5afa8189ddef6491e658ec383b9b2e615502385b"
+    },
+    "skills/handbook/references/QUALITY_CHECKLIST.md": {
+      "hash": "23572d297452fe70d24a7817da0a47bcf3f9b046714620b4ea61f4cc801acca1",
+      "templateVersion": "0.30.0",
+      "blob": "f5b93f08b1ad202b4faa1295d0a1f95e50505a49"
+    },
+    "skills/handbook/examples/course/index.html": {
+      "hash": "ff1643e5e7e77806d3071067a66f4d92ff8da4fff9266ecfaacb28bb6a81986b",
+      "templateVersion": "0.30.0",
+      "blob": "be2f2c8b2aa333a4819fc497dd60bdc4638c053b"
+    },
+    "skills/handbook/examples/course/chapter_01.html": {
+      "hash": "2af9210e33af1e01df7b0375e115b16bb991f1d83d1dfeb82c3d4a3fba9d4bf3",
+      "templateVersion": "0.30.0",
+      "blob": "51f1ca7ee9a6336ed3641ec8b2511d721fa21851"
+    },
+    "skills/handbook/examples/course/chapter_02.html": {
+      "hash": "caee96546ffea073d6aedf9fb399d9af2b189fb53a977314984b05d962e429db",
+      "templateVersion": "0.30.0",
+      "blob": "5b48d6b9f90a7407daf67fcd44c423f3106bfff9"
+    },
+    "skills/handbook/examples/course/course-overview.html": {
+      "hash": "fda85a30b4af73abf3df81fd6348e724365224c60b39b88ea57bdd02199d8e70",
+      "templateVersion": "0.30.0",
+      "blob": "cfdb55122f0f690f28e125627c87c86ae6769a14"
+    },
+    "skills/handbook/examples/course/instructor-guide.html": {
+      "hash": "9b3bc51abc2ad21cd74cb8604169091b6f5f2b0fcd46e8a31c15333325aab53e",
+      "templateVersion": "0.30.0",
+      "blob": "74da21f17d5b96ea1f4be154503b772512e174fe"
+    },
+    "skills/handbook/examples/minimal/index.html": {
+      "hash": "e29e951a85029d859c50026f30d8a3a429fcd02b136b950f289ce8c9ca5ae269",
+      "templateVersion": "0.30.0",
+      "blob": "744f950a515fc78b13675020c566bc623d076d0d"
+    },
+    "skills/handbook/examples/minimal/chapter_01.html": {
+      "hash": "b7e6385699bc1426f557dc5770920d7993d0ce42106739c28675e168080e2f7f",
+      "templateVersion": "0.30.0",
+      "blob": "1ba3758f5fa67b04feaa0516bfe89f4ee29a76a9"
+    },
+    "skills/handbook/examples/handbook/index.html": {
+      "hash": "ba99aaa5ef4a9f81009eb5a20cedf01efbf60512d5dee95e70fd103d164d237d",
+      "templateVersion": "0.30.0",
+      "blob": "750ac4898deb24b93a1357f0aa96456a77c5e88f"
+    },
+    "skills/handbook/examples/handbook/chapter_01.html": {
+      "hash": "d7648f6bd0674a17c55ed0b8ce9cad3723121bde41d407c805e1f4be0118af0a",
+      "templateVersion": "0.30.0",
+      "blob": "e2be5f892b7640a86de75363508d197d24915382"
+    },
+    "skills/handbook/examples/handbook/chapter_03.html": {
+      "hash": "e61b0abb21a9176331c0b802d8951e0277f36f1a5920b73926c66eb99c18a510",
+      "templateVersion": "0.30.0",
+      "blob": "473496fc74b41d8cc47af7be558d6efdb22fa568"
+    },
+    "skills/handbook/examples/handbook/chapter_02.html": {
+      "hash": "daa763184233b1ad6ab7de333e4bdfa01d8d7a60e8d2ae3640ea48dd3c55be41",
+      "templateVersion": "0.30.0",
+      "blob": "faaaf99746817bf41aaccf9c7cf64b775cc348d0"
+    },
+    "skills/handbook/SKILL.md": {
+      "hash": "bbf5ebad3440be533666e53f12365bfcb2e77d111b9f2889aab7421c0764d400",
+      "templateVersion": "0.30.0",
+      "provenance": "vintage",
+      "blob": "cfcc5f1165a8979fd81c40da6d2cf8987b1b0b2e"
+    },
+    "skills/handbook/templates/index.html": {
+      "hash": "b1e2ecb7158123070a13ebe7e898547c23c9393eea944f7190d1dfd02c5da916",
+      "templateVersion": "0.30.0",
+      "blob": "e25b24b2a960f34f7dbf6f81a42722be83294980"
+    },
+    "skills/handbook/templates/base.html": {
+      "hash": "c7f2ca317444f738a2c66672c0d4b309889ab1b393c37b130822d42ae996a385",
+      "templateVersion": "0.30.0",
+      "blob": "f8916e188a5ba2b17c132b0b8f7a64f906478b9a"
+    },
+    "skills/handbook/templates/quiz.html": {
+      "hash": "c1024539a04d4f072728268db56a72555a25bb596d5f26a08d4fd650daa7153b",
+      "templateVersion": "0.30.0",
+      "blob": "82fb43a350d744c5593b5b917c1b569e01c65648"
+    },
+    "skills/handbook/templates/.nojekyll": {
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "templateVersion": "0.30.0",
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    "skills/handbook/templates/.gitignore": {
+      "hash": "dbb63f63739e94be5081a54ee5b7ffd94022a657eec20f1f7ede0a702f06d576",
+      "templateVersion": "0.30.0",
+      "blob": "32162624c233c151a6564280c93069fd3b9c4ba1"
+    },
+    "skills/handbook/templates/chapter.html": {
+      "hash": "5de0b605fbaa002dd8f61ec5a15102a13e1f3063ada3a8936b907a603c97fb88",
+      "templateVersion": "0.30.0",
+      "blob": "52a239e9c8ed9ff994ef584ad900c6bd3bf37f05"
+    },
+    "skills/handbook/templates/examples.html": {
+      "hash": "2fd9354a06beb8fd5f6ab4febd2c1f927a4625b7598259ea9de783e99dae4802",
+      "templateVersion": "0.30.0",
+      "blob": "e6c8495253f06299f197724744acc6939c1ac643"
+    },
+    "skills/handbook/templates/manual.html": {
+      "hash": "bc823d550164e7a60a6ed612c33bfa92e11e2f3b84dc3482bc01c3870bf7be21",
+      "templateVersion": "0.30.0",
+      "blob": "7065303d09d153ef95243de35098027b5a6aaaea"
+    },
+    "skills/handbook/templates/course-overview.html": {
+      "hash": "69bb4e5c959a0d671e30a750f333df1a3e684a58888ef3a4b1a9ee1f0b2b39c1",
+      "templateVersion": "0.30.0",
+      "blob": "22bf364b956de4f61e914c9f440c18d0857e117d"
+    },
+    "skills/handbook/templates/instructor-guide.html": {
+      "hash": "c49a4f397c0b00bf62cd70a7dd04357bdbf356d936cdcea65ecf2aa903fb3c4b",
+      "templateVersion": "0.30.0",
+      "blob": "8afc90d1305bf71fbaa2e978431562e6ba367b27"
+    },
+    "skills/handbook/assets/css/handbook-variables.css": {
+      "hash": "17683cf03777d9d479c3d4ce6460d1fb3ad63a55fa627f6a7900c7f22dcde38f",
+      "templateVersion": "0.30.0",
+      "blob": "36e2e50a344e27e15885238ff8c0a548efd192c1"
+    },
+    "skills/handbook/assets/css/handbook-components.css": {
+      "hash": "7b390a59bc71332ce2e9c4e3bec50ff7ef71be5de33132e1f02a972276e92a5b",
+      "templateVersion": "0.30.0",
+      "blob": "8150e9011e59e305c88b1b6a1c7d04e43ea6ea1b"
+    },
+    "skills/handbook/assets/js/dark-mode-toggle.js": {
+      "hash": "08ee757324a6519a3ba6f6e2e6bc535d65fa3f26fcc4c1c9f67582d84907880f",
+      "templateVersion": "0.30.0",
+      "blob": "ff62c3904d1b2fc0ca5e13a67b902754cebb9ba1"
+    },
+    "skills/handbook/assets/js/inpage-search.js": {
+      "hash": "1af5418de135957ec85699eb95e0162d080e9959b86398ee6715797c0d690729",
+      "templateVersion": "0.30.0",
+      "blob": "4fd957704d8729966bbbe4de654ee31a36af4252"
+    },
+    "skills/handbook/assets/js/site-search.js": {
+      "hash": "4f941335064c8b406391a8a9577c5b934ec5ca43e06df8cfdcbe1668eba43ed9",
+      "templateVersion": "0.30.0",
+      "blob": "be48c08d1b9d6c26d50481e1ec1350c85d042129"
+    },
+    "skills/handbook/assets/js/copy-code.js": {
+      "hash": "703cdad2d3c3ae87623dfa173df9ced4b24e56d5078d6d7c2e5768f17fb865c5",
+      "templateVersion": "0.30.0",
+      "blob": "1b318498021a8a492d6888946e40971e986889da"
+    },
+    "skills/handbook/assets/js/lang-switcher.js": {
+      "hash": "4ce261d32d8c93894fabdba292075b15c92c8243f52cec96ec1f6100a3da5134",
+      "templateVersion": "0.30.0",
+      "blob": "8e4afa206a70116fd58807a73c3347dba6365654"
+    },
+    ".mcp.json": {
+      "hash": "3eeeb200037df17e0782e4293b8d82eda4382c898d35e8883fee19e835aec1c3",
+      "templateVersion": "0.30.0",
+      "blob": "0027f140b890e4b5d3e3fabbf8517cd9aa107dce"
     },
     "docs/README.template.md": {
       "hash": "fa89d4dc399f0c60a1e42ed9d3d2a2f513312f52db435dbcac15c843fce18403",
@@ -615,21 +690,6 @@
       "templateVersion": "0.30.0",
       "blob": "7d3436769ad39d0f560a926cde0fa2ef519f2dbb"
     },
-    "docs/phase-definitions.md": {
-      "hash": "d6e399430e05290eb1cf59193de5369382d04ff749f5d9f4340c73c4b2c933f4",
-      "templateVersion": "0.30.0",
-      "blob": "4f09f63bf4b8113131f3a78f3eef9d96d8ecc34a"
-    },
-    "docs/security.md": {
-      "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
-      "templateVersion": "0.30.0",
-      "blob": "dc6dd2e84dd1ad63b77bbdde06e6ff63eeb2151e"
-    },
-    "docs/workspace-schema.json": {
-      "hash": "9e7221a2e6af37c8cb5b5a6a50bf740bfe01d13573e4d369eed9ef0d6c4d02d3",
-      "templateVersion": "0.30.0",
-      "blob": "d87424ecae842304a0ec5aab763cff7f71f4a88e"
-    },
     "scripts/agent-create.ts": {
       "hash": "8cc7cefe53585b0ccf860e412a1224c76e58d1119db51bb64f8b06dc35ed3223",
       "templateVersion": "0.30.0",
@@ -641,11 +701,6 @@
       "templateVersion": "0.30.0",
       "provenance": "vintage",
       "blob": "eb9d21f235d234e3b99e10c8b563ba5ddd5e432d"
-    },
-    "scripts/agent-lifecycle-audit.ts": {
-      "hash": "b0a9d981e59d7382b6e38e0d49670ad74b6eef22aa3d0a9f541e1d66645ec76b",
-      "templateVersion": "0.30.0",
-      "blob": "3019c3648a54dfe83a0c7200fb4787b2c97fdd8e"
     },
     "scripts/agent-list.ts": {
       "hash": "d35a2e8276145a77922dc2c51652d422f22881c0ddcfd3ad8c9e03557cbb37a3",
@@ -705,16 +760,6 @@
       "provenance": "vintage",
       "blob": "f2add55c49adb01d4d57988923600e23d2c65f2a"
     },
-    "scripts/design-lint.ts": {
-      "hash": "9d86e65987ce0e44df5df5507de6d6ebc9007ec5689f125b5593f6ecb585d65e",
-      "templateVersion": "0.30.0",
-      "blob": "0e6926ad69a5c4e9cf1984572316a880710e9424"
-    },
-    "scripts/detect-backport.ts": {
-      "hash": "e940856c88d8c0a83cd5825b9f99aa0823316d053c174a2ef3cdfc16d4392a4e",
-      "templateVersion": "0.30.0",
-      "blob": "a10b491213a5dfadf3a6f083333a50fbc1056d83"
-    },
     "scripts/dispatch-parallel.ts": {
       "hash": "ef03879cd06ddb8c1dd55e3e9ba7cb32d2982afffa82a9bc54dabb4e397746dc",
       "templateVersion": "0.30.0",
@@ -751,11 +796,6 @@
       "provenance": "vintage",
       "blob": "9870dff24b883661afaaeeb876aacb4753ee128c"
     },
-    "scripts/generate-skill-lifecycle-records.ts": {
-      "hash": "0a9a63c1b71c820e99b3f714c021f1f25d5ae0f23c62e71250f7c3687bf516d2",
-      "templateVersion": "0.30.0",
-      "blob": "ea053eb2a0a92c455f0be313a3c85981bf3d1fea"
-    },
     "scripts/generate-version-manifest.ts": {
       "hash": "4010cdd534140b454c508c3280f9b1cd89f072e54d633ffe0bb472d0404c4206",
       "templateVersion": "0.30.0",
@@ -767,23 +807,11 @@
       "provenance": "vintage",
       "blob": "307581716efcfde0b53a9cd03a826aec8d882d6a"
     },
-    "scripts/handbook/apply-handbook-theme.ts": {
-      "hash": "1ff0e11a137267a3572b113a45d0aa5810ce0d81a21a242408a4df921d67dc41",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "ea22dc8fdbe6be71011105b57a3181bb94fbe48b"
-    },
     "scripts/handbook/check-a11y.ts": {
       "hash": "3b2ea624a1f86ce7b08549ad97db672617e2543686dc1d026e81d62610b6b925",
       "templateVersion": "0.30.0",
       "provenance": "vintage",
       "blob": "629f5767127e9520f94338d3004764c902519575"
-    },
-    "scripts/handbook/check-external-links.ts": {
-      "hash": "f6985468d04d951a01d1627ea6747e46ae0ffe55364d31613ffcc5a7a040c8c3",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "a3ec4e70e540a62e9db5d59310446ecea2cba861"
     },
     "scripts/handbook/check-i18n-parity.ts": {
       "hash": "5d81655c735edc4af28b61d7cd9935482cf3fb55b8e96e1eb25ec9de58cd82c7",
@@ -862,18 +890,6 @@
       "templateVersion": "0.30.0",
       "provenance": "vintage",
       "blob": "f42efbc91a390e26c7a6a9e41c8568937b0dd2df"
-    },
-    "scripts/handbook/scaffold-handbook.ts": {
-      "hash": "c49bbbe20be31403e44597986fc2c69f00b6036a3a7e42c04c6320579eb6581c",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "24145e96a1f0defc67b4cfb50d9e92e7766ee9f5"
-    },
-    "scripts/handbook/update-footers.ts": {
-      "hash": "059532c27690aa18c1c1fbd1740640ca3d25c19cae715f676a75c8f8612618a1",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "97e402694c9cb956a34a7310a7d3bf5e483883c3"
     },
     "scripts/handbook/validate-handbook.ts": {
       "hash": "0da10af442f8b7ccd898494a91de123a7ff3024bebbcb39c8f913bf40187d545",
@@ -1009,11 +1025,6 @@
       "provenance": "vintage",
       "blob": "631c1ec25d92515c4a0357f0b0f62b9e2083773e"
     },
-    "scripts/helpers/scaffold-markers.ts": {
-      "hash": "7ec8169c1db9161455f9e242887bbab624cf33622d3ae2d729ed118d855a3e7b",
-      "templateVersion": "0.30.0",
-      "blob": "24e0c835da3456310443c9c37f93b77a282c2766"
-    },
     "scripts/helpers/skills-registry.ts": {
       "hash": "c11e77bf9e3691fd6f2fa8e379feaf5f20700f664504844c759bdc3e3be3eda8",
       "templateVersion": "0.30.0",
@@ -1068,12 +1079,6 @@
       "hash": "490a80284a7a5e6a459a27571bf2251af4c75a0658f61f94eacf235cb000cc31",
       "templateVersion": "0.30.0",
       "blob": "6f931dd41e8113a6adf579ab7f818c2c58cd63fa"
-    },
-    "scripts/hooks/pm-dispatch-gate.ts": {
-      "hash": "54f8f53e72c706b2cd4d15dface3627a820e5873e483cb6258964983a8cbfc32",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "307b2026e996f9f621b8c9e26aacd7f43b0a4bdf"
     },
     "scripts/hooks/pm-role-bootstrap.ts": {
       "hash": "bed3f174d76c8d332eb634d04aaac3282cf22598da205f69c7981aedad274f54",
@@ -1160,11 +1165,6 @@
       "hash": "1ab505efc512fc8f0907c16fc0b4700316aac6cf6fe030d084732b8f86c12ec0",
       "templateVersion": "0.30.0",
       "blob": "040673f577300cea9a80ccd9f17a9758d93e1ed6"
-    },
-    "scripts/lib/hook-dedupe.ts": {
-      "hash": "0432d75d48c47000ce53ad57d900b73ea3e36a1bdffbd943f532880a504b8d18",
-      "templateVersion": "0.30.0",
-      "blob": "275335152ae871149ff02f78eb1d2806ef596903"
     },
     "scripts/lib/language-guard.ts": {
       "hash": "b4face7e6be0d3a06b2ce3ba3d84355de22c8b2f58cb17eb13a24e2b4041192f",
@@ -1364,17 +1364,6 @@
       "templateVersion": "0.30.0",
       "blob": "beab66c3d7c64931cabf9809e3a68fc4ad609b10"
     },
-    "scripts/spec-register.ts": {
-      "hash": "7eb57269b162dc4a77bfab18b17cea1f085b5cf50db41e9b252a35ece7a46e41",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "f7fb53bb1f15d3bc41965b1b2294909b10fdc820"
-    },
-    "scripts/sync-agent-mirrors.ts": {
-      "hash": "b2d598d626dc0c03d0d98601dc66d06ef30afb8453271cdd115743684477b86e",
-      "templateVersion": "0.30.0",
-      "blob": "b7894ee559b20a8481bfc203d564dcedf26c8627"
-    },
     "scripts/sync-md.ts": {
       "hash": "0f96612215f44cd9d53714ccf97b737112b824417e2906fe15113059cd408e7f",
       "templateVersion": "0.30.0",
@@ -1416,12 +1405,6 @@
       "templateVersion": "0.30.0",
       "provenance": "vintage",
       "blob": "de8605cb5b58a65dccb66735009dca9851860ec1"
-    },
-    "scripts/validate-decisions.ts": {
-      "hash": "488604fe552e42a5c1e2bad2ffc0318e78a38cc54f5c44efe5e66589522df856",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "239b94d8ac79a38d7f272cab2d50c0ee57db3349"
     },
     "scripts/validate-docs-links.ts": {
       "hash": "16c39374ed43b08c7f2363bef20dee613e878340658badcbcd180061840777ce",
@@ -1474,12 +1457,6 @@
       "templateVersion": "0.30.0",
       "provenance": "vintage",
       "blob": "76dd3e1f71c262fff31d1db1dbb70c08b1f7560d"
-    },
-    "scripts/validate-variant-readiness.ts": {
-      "hash": "dede9c6cdfe7fcd09214d1b2a3134bc16c74246373f82056bae77c3510ec465c",
-      "templateVersion": "0.30.0",
-      "provenance": "vintage",
-      "blob": "37f1a6dcf824c86f1c70b089d1c56aec1bedc661"
     },
     "scripts/verify-agent-deliverables.ts": {
       "hash": "a016299e7d721597a06333a56530efb82ad0225f7ab31d27574e50e77b51895f",
@@ -1691,10 +1668,6 @@
       "hash": "a1a0539fbc2d361bb2044879df8aa666b4986a2994989dd780556f64c843e6ca",
       "templateVersion": "0.30.0"
     },
-    "scripts/audit.ts": {
-      "hash": "b923f5ba586393399ecaa6607285cec41b594aa45a9dc94b89fccd0d63b3e1c9",
-      "templateVersion": "0.30.0"
-    },
     "scripts/evidence-backport-scan.ts": {
       "hash": "091755cb85604ffeec6a4b324eb3ebdbaabab76c468e0eaf964767f4ea99c5bb",
       "templateVersion": "0.30.0"
@@ -1822,10 +1795,6 @@
     "skills/delegate-to-hub/SKILL.md": {
       "hash": "b244598189110854f922b52a0a6466f6515b251c4ead200fce076acb1f7f0f5c",
       "templateVersion": "0.28.0"
-    },
-    "scripts/dev-sync.ts": {
-      "hash": "642a0086240b4aa578706c4452dc1910832519b80883b8330c0640727cc1445b",
-      "templateVersion": "0.25.0"
     },
     "scripts/test-runner.ts": {
       "hash": "8bf65f5b805237c34b710c1e98946ad89530f98373d98a2aae2087d30e31926f",
@@ -2192,15 +2161,7 @@
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
       "verdict": "TEMPLATE_DELTA",
-      "detail": "template-authoritative managed block restamped (template wins): COMMON-CLAUDE — project block diverged from the template and was restamped (9 line(s) → 9 line(s))",
-      "severity": "INFO"
-    },
-    {
-      "path": "CLAUDE.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_DELTA",
-      "detail": "template-authoritative managed block restamped (template wins): COMMON-CLAUDE — project block diverged from the template and was restamped (30 line(s) → 30 line(s))",
+      "detail": "template-authoritative managed block restamped (template wins): COMMON-CLAUDE — project block diverged from the template and was restamped (9 line(s) → 10 line(s))",
       "severity": "INFO"
     },
     {
@@ -2432,7 +2393,7 @@
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
       "verdict": "REGION_IN_SYNC",
-      "detail": "68 of 94 out-of-zone lines byte-equal — in-sync regions carry no write channel; 34 divergent block(s) below",
+      "detail": "80 of 94 out-of-zone lines byte-equal — in-sync regions carry no write channel; 14 divergent block(s) below",
       "severity": "INFO"
     },
     {
@@ -2551,176 +2512,8 @@
       "path": "CODEX.md",
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (3 line(s)) after '### 4. MCP Configurations' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (3 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
-      "severity": "INFO"
-    },
-    {
-      "path": "CODEX.md",
-      "policy": "TOOL_ERA_SWAP",
-      "pass": "MERGE",
-      "verdict": "ADOPT",
-      "detail": "graft-era tool-owned doc block swapped for the template trail block (block sits outside every managed zone — the MERGE pass cannot see it; trail init wires hooks but never rewrites doc blocks)",
       "severity": "INFO"
     },
     {
@@ -2728,7 +2521,7 @@
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
       "verdict": "REGION_IN_SYNC",
-      "detail": "38 of 52 out-of-zone lines byte-equal — in-sync regions carry no write channel; 24 divergent block(s) below",
+      "detail": "50 of 52 out-of-zone lines byte-equal — in-sync regions carry no write channel; 4 divergent block(s) below",
       "severity": "INFO"
     },
     {
@@ -2767,176 +2560,8 @@
       "path": "HERMES.md",
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (3 line(s)) after '## Hermes Platform Mechanics' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (3 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "EVOLVED_REGION",
-      "detail": "project-authored line-block (1 line(s)) after '## Graft — repo context graph' — preserved (WARN — port candidate: land it template-side inside a managed zone or skeleton-registry section per the adjudicated-port procedure (sync-overwrite-policy §6))",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "TEMPLATE_AHEAD_REGION",
-      "detail": "template line-block (1 line(s)) absent from the project copy after '## Graft — repo context graph' — template content the project never received, or a deliberate project deletion (WARN — never silently reverted; ERROR only when a write channel targets the span)",
-      "severity": "WARN"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
-      "severity": "INFO"
-    },
-    {
-      "path": "HERMES.md",
-      "policy": "TOOL_ERA_SWAP",
-      "pass": "MERGE",
-      "verdict": "ADOPT",
-      "detail": "graft-era tool-owned doc block swapped for the template trail block (block sits outside every managed zone — the MERGE pass cannot see it; trail init wires hooks but never rewrites doc blocks)",
       "severity": "INFO"
     },
     {
@@ -2952,7 +2577,7 @@
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
       "verdict": "MARKER_LOSS",
-      "detail": "delivery would lower the LOCAL-PATCH marker count 1 → 0 (1 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk)",
+      "detail": "delivery would lower the LOCAL-PATCH marker count 1 → 0 (1 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk); lost LOCAL-PATCH ids: U-20261119-001",
       "baseline": {
         "hash": "b1a1ceafb6d19f9aa7f01b3ffbac6816acc873b47713adfdd14ff327d5bfb985",
         "templateVersion": "0.30.0"
@@ -2963,25 +2588,9 @@
       "path": "agents/pm.md",
       "policy": "MERGE_MANAGED",
       "pass": "MERGE",
-      "verdict": "TEMPLATE_DELTA",
-      "detail": "template-authoritative managed block restamped (template wins): WORKSPACE-MANAGED:PM agent body. Content outside this block is preserved during project upgrades. — project block diverged from the template and was restamped (333 line(s) → 333 line(s))",
-      "severity": "INFO"
-    },
-    {
-      "path": "agents/pm.md",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
       "verdict": "MERGE",
       "detail": "managed-zone merge delivered (non-destructive union/insert)",
       "severity": "INFO"
-    },
-    {
-      "path": ".github/workflows/ci.yml",
-      "policy": "MERGE_MANAGED",
-      "pass": "MERGE",
-      "verdict": "MARKER_LOSS",
-      "detail": "delivery would lower the LOCAL-PATCH marker count 14 → 6 (8 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk)",
-      "severity": "ERROR"
     },
     {
       "path": "AGENTS.md",
@@ -3220,7 +2829,7 @@
       "policy": "MERGE_MANAGED",
       "pass": "DOCS_MERGE",
       "verdict": "TEMPLATE_DELTA",
-      "detail": "template-authoritative managed block restamped (template wins): COMMON-AGENTS — project block diverged from the template and was restamped (35 line(s) → 35 line(s))",
+      "detail": "template-authoritative managed block restamped (template wins): COMMON-AGENTS — project block diverged from the template and was restamped (35 line(s) → 36 line(s))",
       "severity": "INFO"
     },
     {
@@ -3236,10 +2845,11 @@
       "policy": "OVERWRITE",
       "pass": "DOCS_OVERWRITE",
       "verdict": "ADOPT",
-      "detail": "template copy delivered over the delivered baseline (version-gated)",
+      "detail": "project copy already matches the template (in sync)",
       "baseline": {
-        "hash": "242ee30b580d6669f8fe173aefd34564be4f84ef9af8c464e10f1c1f99b64405",
-        "templateVersion": "0.30.0"
+        "hash": "d6e399430e05290eb1cf59193de5369382d04ff749f5d9f4340c73c4b2c933f4",
+        "templateVersion": "0.30.0",
+        "blob": "4f09f63bf4b8113131f3a78f3eef9d96d8ecc34a"
       },
       "severity": "INFO"
     },
@@ -3260,166 +2870,66 @@
       "severity": "INFO"
     },
     {
-      "path": "scripts/agent-create.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/agent-create.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.0.1 → 1.0.2 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/agent-delete.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/agent-delete.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.0.1 → 1.0.2 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/agent-lifecycle-audit.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.9.0 → 1.9.1 — version-gated delivery over the delivered baseline",
+      "detail": "1.9.1 → 1.9.2 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "8a95c2ff8e447fedfdd7deb4d164adcdc27ea1b1db7c3ea549bf02b46b4ad463",
-        "templateVersion": "0.25.0"
+        "hash": "b0a9d981e59d7382b6e38e0d49670ad74b6eef22aa3d0a9f541e1d66645ec76b",
+        "templateVersion": "0.30.0",
+        "blob": "3019c3648a54dfe83a0c7200fb4787b2c97fdd8e"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/agent-list.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/agent-verify.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/analyze-git-history.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/archive-memory.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/archive-memory.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.1.0 → 1.2.0 — version-gated delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
       "path": "scripts/audit.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "CONFLICT",
-      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "verdict": "ADOPT",
+      "detail": "LOCAL-PATCH marker count 3 → 0 (3 lost) overridden by explicit --disposition adopt-template (decision recorded); superseded by the template copy; lost ids: U-20261108-001, U-20261122-011; EVICTED: 51 project-authored line(s) discarded vs the delivered baseline (design §5.2):\n      · import { parsePmMd } from \"./helpers/pm-md-parser.ts\";\n      · import { detectEncoding, detectHomoglyphs, detectZeroWidthChars, readUTF8File } from \"./lib/encoding-utils.ts\";\n      ·   let match;\n      ·   while ((match = regex.exec(content)) !== null) {\n      ·       let match;\n      ·       while ((match = urlRegex.exec(content)) !== null) {\n      ·       const relPath = `docs/decisions/${f}`;\n      ·       if (fm.id !== undefined && fm.id !== f.replace(/\\.md$/, \"\")) {\n      ·       const status = fm.status ?? \"\";\n      ·   let bomErrors = 0;\n      · (+41 more line(s) truncated)",
       "baseline": {
         "hash": "b923f5ba586393399ecaa6607285cec41b594aa45a9dc94b89fccd0d63b3e1c9",
         "templateVersion": "0.30.0"
       },
-      "severity": "ERROR"
-    },
-    {
-      "path": "scripts/bootstrap-stages.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "grant": "adopt-template",
       "severity": "INFO"
     },
     {
-      "path": "scripts/changelog-normalize.ts",
+      "path": "scripts/audit.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "verdict": "ADOPT",
+      "detail": "project-evolved + template changed — delivered via explicit --disposition adopt-template (decision recorded) [grant: adopt-template=scripts/audit.ts]",
       "baseline": {
-        "hash": "fc8116c186b893c6a596dde5b3dc02ca71465284bb1e0ee47f1575429d9c5eb5",
-        "templateVersion": "0.25.0"
+        "hash": "b923f5ba586393399ecaa6607285cec41b594aa45a9dc94b89fccd0d63b3e1c9",
+        "templateVersion": "0.30.0"
       },
+      "grant": "adopt-template",
       "severity": "INFO"
     },
     {
-      "path": "scripts/cleanup-completed-md.ts",
+      "path": "scripts/audit.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/clear-pm-approval.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/compile-tokens.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "verdict": "ADOPT",
+      "detail": "2.64.0 → 2.70.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "ed08b09a92ff8044ccb4503c79219d3090cd7cbc35d60845fcb812875f257057",
-        "templateVersion": "0.22.0"
+        "hash": "b923f5ba586393399ecaa6607285cec41b594aa45a9dc94b89fccd0d63b3e1c9",
+        "templateVersion": "0.30.0"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/dependency-audit.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
       "severity": "INFO"
     },
     {
       "path": "scripts/design-lint.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "2.5.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "verdict": "ADOPT",
+      "detail": "2.5.0 → 2.6.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "ba06050ebd53edb7991af5615c74a95ec40855cfc4b48010fbcc4fd947efccc7",
-        "templateVersion": "0.25.0"
+        "hash": "9d86e65987ce0e44df5df5507de6d6ebc9007ec5689f125b5593f6ecb585d65e",
+        "templateVersion": "0.30.0",
+        "blob": "0e6926ad69a5c4e9cf1984572316a880710e9424"
       },
       "severity": "INFO"
     },
@@ -3427,44 +2937,51 @@
       "path": "scripts/detect-backport.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
+      "verdict": "DRIFT_RESTORED",
+      "detail": "1.0.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "baseline": {
+        "hash": "e940856c88d8c0a83cd5825b9f99aa0823316d053c174a2ef3cdfc16d4392a4e",
+        "templateVersion": "0.30.0",
+        "blob": "a10b491213a5dfadf3a6f083333a50fbc1056d83"
+      },
       "severity": "INFO"
     },
     {
       "path": "scripts/dev-sync.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "CONFLICT",
-      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "verdict": "ADOPT",
+      "detail": "LOCAL-PATCH marker count 5 → 2 (3 lost) overridden by explicit --disposition adopt-template (decision recorded); superseded by the template copy; lost ids: U-20261107-003, U-20261122-011; EVICTED: 39 project-authored line(s) discarded vs the delivered baseline (design §5.2):\n      · // @version 1.37.1\n      · // v1.37.1 (2026-11-07, LOCAL-PATCH U-20261107-003): scoped staging always commits the regenerated docs/VERSION_MANIFEST.md even when it was dirty at S0; for…\n      · import { parseCachedNameStatus, parseStatusPorcelain } from \"./lib/git-status.ts\";\n      · import { composeCommitMessage, deriveCommitMessage, isWeakCommitMessage } from \"./helpers/commit-message.ts\";\n      · let msg =\n      ·   (msgArgs.join(\" \") || \"chore: update\")\n      ·     // Collapse newlines/control chars — safe for git -m and gh --title arguments\n      ·     .replace(/[\\r\\n\\t]+/g, \" \")\n      ·     .replace(/\\s+/g, \" \")\n      ·     .trim() || \"chore: update\";\n      · (+29 more line(s) truncated)",
       "baseline": {
         "hash": "642a0086240b4aa578706c4452dc1910832519b80883b8330c0640727cc1445b",
         "templateVersion": "0.25.0"
       },
-      "severity": "ERROR"
-    },
-    {
-      "path": "scripts/dispatch-parallel.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "grant": "adopt-template",
       "severity": "INFO"
     },
     {
-      "path": "scripts/dispatch-serial.ts",
+      "path": "scripts/dev-sync.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "project-evolved + template changed — delivered via explicit --disposition adopt-template (decision recorded) [grant: adopt-template=scripts/dev-sync.ts]",
+      "baseline": {
+        "hash": "642a0086240b4aa578706c4452dc1910832519b80883b8330c0640727cc1445b",
+        "templateVersion": "0.25.0"
+      },
+      "grant": "adopt-template",
       "severity": "INFO"
     },
     {
-      "path": "scripts/dispatch.ts",
+      "path": "scripts/dev-sync.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.37.1 → 1.53.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "642a0086240b4aa578706c4452dc1910832519b80883b8330c0640727cc1445b",
+        "templateVersion": "0.25.0"
+      },
       "severity": "INFO"
     },
     {
@@ -3492,43 +3009,25 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/gen-pr-body.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/gen-pr-body.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.2.1 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/generate-ide-rules.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/generate-raci.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
+      "verdict": "CONFLICT",
+      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "baseline": {
+        "hash": "387dc9b8c0cd6c12c80ece06895c6e2ec5a36bb26a21c564c2274aafaf7aa0a7",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "9870dff24b883661afaaeeb876aacb4753ee128c"
+      },
+      "severity": "ERROR"
     },
     {
       "path": "scripts/generate-skill-graph.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "MARKER_LOSS",
-      "detail": "delivery would lower the LOCAL-PATCH marker count 2 → 0 (2 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk)",
+      "detail": "delivery would lower the LOCAL-PATCH marker count 2 → 0 (2 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk); lost LOCAL-PATCH ids: U-20261108-001",
       "baseline": {
         "hash": "f956ae6e07c0119ee2f30eb30d225ae1571d2426772d55d6058f2e6b2a14499d",
         "templateVersion": "0.30.0"
@@ -3539,52 +3038,35 @@
       "path": "scripts/generate-skill-lifecycle-records.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.3.1",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/generate-version-manifest.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.11.0 → 1.12.1 — version-gated delivery over the delivered baseline",
+      "detail": "1.3.1 → 1.4.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "70067ba1f51b867d361c22825e4acc171bbe910829cb4e29d9b4affeb897f2a0",
-        "templateVersion": "0.23.0"
+        "hash": "0a9a63c1b71c820e99b3f714c021f1f25d5ae0f23c62e71250f7c3687bf516d2",
+        "templateVersion": "0.30.0",
+        "blob": "ea053eb2a0a92c455f0be313a3c85981bf3d1fea"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/graph-delta-log.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
       "severity": "INFO"
     },
     {
       "path": "scripts/handbook/apply-handbook-theme.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-a11y.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.0.0 → 1.2.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "1ff0e11a137267a3572b113a45d0aa5810ce0d81a21a242408a4df921d67dc41",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "ea22dc8fdbe6be71011105b57a3181bb94fbe48b"
+      },
       "severity": "INFO"
     },
     {
       "path": "scripts/handbook/check-authoring.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "MARKER_LOSS",
-      "detail": "delivery would lower the LOCAL-PATCH marker count 2 → 0 (2 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk)",
+      "verdict": "CONFLICT",
+      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
       "baseline": {
         "hash": "e6672b6a2104d47fa47a3a07431ca7d93197c69ce6a55d632190d7572121449a",
         "templateVersion": "0.30.0"
@@ -3595,208 +3077,66 @@
       "path": "scripts/handbook/check-external-links.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "f6985468d04d951a01d1627ea6747e46ae0ffe55364d31613ffcc5a7a040c8c3",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "a3ec4e70e540a62e9db5d59310446ecea2cba861"
+      },
       "severity": "INFO"
     },
     {
-      "path": "scripts/handbook/check-i18n-parity.ts",
+      "path": "scripts/handbook/check-generated-content.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-labels.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-links.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-lint.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-search.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "2.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-spell.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-structure.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/check-tables.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/deploy-handbook.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/extract-copycode.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/handbook-doctor.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/handbook-sync-audit.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/nav-utils.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
       "severity": "INFO"
     },
     {
       "path": "scripts/handbook/scaffold-handbook.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.2.0 → 1.3.1 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "c49bbbe20be31403e44597986fc2c69f00b6036a3a7e42c04c6320579eb6581c",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "24145e96a1f0defc67b4cfb50d9e92e7766ee9f5"
+      },
       "severity": "INFO"
     },
     {
       "path": "scripts/handbook/update-footers.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/handbook/validate-handbook.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/changelog-duplicates.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
       "detail": "1.0.0 → 1.1.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "050b053201347c16b2df9f2a4a2af9ca2ac56c62276de620f4e913d6632f13eb",
-        "templateVersion": "0.25.0"
+        "hash": "059532c27690aa18c1c1fbd1740640ca3d25c19cae715f676a75c8f8612618a1",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "97e402694c9cb956a34a7310a7d3bf5e483883c3"
       },
       "severity": "INFO"
     },
     {
-      "path": "scripts/helpers/commit-message.ts",
+      "path": "scripts/helpers/adoption-provenance.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.1.1 → 1.2.0 — version-gated delivery over the delivered baseline",
-      "baseline": {
-        "hash": "9afb42c476535f74a2ee6fa802c61c554d1ebd4d3968a05265f5ffa8b97fee42",
-        "templateVersion": "0.22.1"
-      },
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
       "severity": "INFO"
     },
     {
-      "path": "scripts/helpers/context-sections.ts",
+      "path": "scripts/helpers/delivery-riding.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.8.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/design-lint-roots.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "43bee8fc3e5ee44e50b6e7b3d8d655fbda415e14736765b4af56781d56b6ece0",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/extends-validator.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/gitleaks-merge.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "68cb9d5455c2a7ab6e7f2af4662fad70a076fd149ae0f9e44672ff408d90e3f9",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/golden-reference-loader.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "NEW",
+      "detail": "delivered (none) → 1.0.0",
       "severity": "INFO"
     },
     {
@@ -3812,54 +3152,6 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/helpers/ignored-tooling.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/l0-ref-policy.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/l0-ref-policy.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.1.0 → 1.3.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/layer-filter.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.5.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/local-patch-scan.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/markers.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/helpers/memory-union-verify.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
@@ -3872,118 +3164,15 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/helpers/merge-frontmatter.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/merge-frontmatter.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.8.6 → 1.8.7 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/merge-state.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/mirror-hygiene.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/pm-md-parser.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/registries/capability-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/registries/validation-policy.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/registries/validation-policy.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.3.0 → 1.4.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/registries/variant-type-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/registries/variant-type-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/registry-append.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/resolve-pm-stub.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/rollback-partial-project.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/helpers/scaffold-markers.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.9.0 → 1.10.3 — version-gated delivery over the delivered baseline",
+      "detail": "1.10.3 → 1.10.4 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "0eb65f02a8cf751f9bced64e828595099b0c969616622c701be5a5fa38c8df55",
-        "templateVersion": "0.22.1"
+        "hash": "7ec8169c1db9161455f9e242887bbab624cf33622d3ae2d729ed118d855a3e7b",
+        "templateVersion": "0.30.0",
+        "blob": "24e0c835da3456310443c9c37f93b77a282c2766"
       },
       "severity": "INFO"
     },
@@ -3992,7 +3181,7 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "MARKER_LOSS",
-      "detail": "delivery would lower the LOCAL-PATCH marker count 1 → 0 (1 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk)",
+      "detail": "delivery would lower the LOCAL-PATCH marker count 1 → 0 (1 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk); lost LOCAL-PATCH ids: U-20261108-001",
       "baseline": {
         "hash": "26e051ca661c3cebac70593517f164e5ef7a99fc8be78c7f7bb3fa8e59c6c858",
         "templateVersion": "0.30.0"
@@ -4000,104 +3189,16 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/helpers/skills-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/spec-header-consistency.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "2a834f18b0e5c40a9ad0980611ccec4995acf697993bef3caf9afdf577feae9a",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/substitute-placeholders.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/template-utils.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.3.0 → 1.4.0 — version-gated delivery over the delivered baseline",
-      "baseline": {
-        "hash": "8fdd0cbcab7968ba2e402475c5380ab06387bd4ab37be6dc190c50dedff8bff1",
-        "templateVersion": "0.28.0"
-      },
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/helpers/ticket-drift.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "MARKER_LOSS",
-      "detail": "delivery would lower the LOCAL-PATCH marker count 1 → 0 (1 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk)",
+      "detail": "delivery would lower the LOCAL-PATCH marker count 1 → 0 (1 marker(s) lost) — MARKER_LOSS: write SKIPPED, project copy preserved (re-run with --disposition adopt-template[=glob] only once the template carries the patch hunk); lost LOCAL-PATCH ids: U-20261108-001",
       "baseline": {
         "hash": "d1a289ac770c55f1d0017c3ef941ed6f3f8c61c78f6ea939dab0e166fa7294ed",
         "templateVersion": "0.30.0"
       },
       "severity": "ERROR"
-    },
-    {
-      "path": "scripts/helpers/upgrade-versions.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "66a58c9a7719435626068ee67e40a48efba6b5f4737d1dcdfaafec250d1f308c",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/variant-context.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/helpers/version-bump.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/hooks/agent-model-gate.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "ce804f62f9f4c99c528c0f3bdea35ec895269d849c45cc2e29ba802bbdc14fcd",
-        "templateVersion": "0.28.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/hooks/codex-user-prompt-gate.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
     },
     {
       "path": "scripts/hooks/delete-guard.ts",
@@ -4112,39 +3213,17 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/hooks/gateguard-fact-force.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.2 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "c9de7f0bf96308d78fa02332d505aa95357062d60c34d35b0bbc3eaf5e9a3b47",
-        "templateVersion": "0.28.0"
-      },
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/hooks/pm-dispatch-gate.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/hooks/pm-role-bootstrap.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/hooks/post-write-lifecycle-check.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.1.1 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "54f8f53e72c706b2cd4d15dface3627a820e5873e483cb6258964983a8cbfc32",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "307b2026e996f9f621b8c9e26aacd7f43b0a4bdf"
+      },
       "severity": "INFO"
     },
     {
@@ -4172,92 +3251,26 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/lib/auth.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/ci-workflow-merge.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/constitution-scrub.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/constitution-scrub.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/context-md-schema.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/country-scoped-agents.ts",
+      "path": "scripts/lib/audit-fail-hint.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "NEW",
-      "detail": "delivered (none) → 1.1.0",
+      "detail": "delivered (none) → 1.0.0",
       "severity": "INFO"
     },
     {
-      "path": "scripts/lib/dependency-guard.ts",
+      "path": "scripts/lib/constitution-scrub.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/encoding-utils.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/encoding-utils.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.4.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/env-sample.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/error-handling.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
+      "verdict": "CONFLICT",
+      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "baseline": {
+        "hash": "3ae81a52d3c253730e79040e6635fb9bf46a2eb46ac17102e6fa4534f6135d13",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "a0509854a1da3edd5c1a36bca848662d234ab99e"
+      },
+      "severity": "ERROR"
     },
     {
       "path": "scripts/lib/external-deps.ts",
@@ -4284,18 +3297,6 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/lib/generator-manifest.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "4aab4568df02565690b8425cd7f9e58816f41604b3376ec751d207bf669b8fad",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/lib/git-aware-scan.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
@@ -4308,184 +3309,30 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/lib/git-env.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.2.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/git-status.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/git-status.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.1.0 → 1.2.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/hermetic-test-roots.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/lib/hook-dedupe.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "1.1.0 → 1.3.0 — version-gated delivery over the delivered baseline",
+      "detail": "1.3.0 → 1.4.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "bd5e5d48f5b701990fe08820f31bd043035e20b3060ffc969e29cffab99296f4",
-        "templateVersion": "0.26.0"
+        "hash": "0432d75d48c47000ce53ad57d900b73ea3e36a1bdffbd943f532880a504b8d18",
+        "templateVersion": "0.30.0",
+        "blob": "275335152ae871149ff02f78eb1d2806ef596903"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/language-guard.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "051aa526380b7b455296a300e312483fc32530e822b8e8c20b8b121a79de8312",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/local-date.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/managed-block-merge.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.6.0 → 1.7.0 — version-gated delivery over the delivered baseline",
-      "baseline": {
-        "hash": "c3c06058ae743bf4fe66e4e8498c3a603a6dcc4bf25ca6960d0adbfd464b8b82",
-        "templateVersion": "0.28.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/managed-block-parity.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/model-literal-patterns.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "eccdd716d13f915d856b1aa13619b71ffd7e0cb493c059277d028c714bbd3851",
-        "templateVersion": "0.28.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/package-merge.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/pipeline-state.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/platform-context.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/platform-delivery.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/platform-mirror-freshness.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
       "severity": "INFO"
     },
     {
       "path": "scripts/lib/platform-skeleton-merge.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "verdict": "CONFLICT",
+      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
       "baseline": {
-        "hash": "09cf74ab4f1aed0bebb68294957c0c50afd326e1e4539abee586e5fdba00f45d",
-        "templateVersion": "0.22.1"
+        "hash": "663b958250d0464339b79779486e5f545b0c45e51b25c13ec37cd832e9ada383",
+        "templateVersion": "0.30.0",
+        "blob": "f87780fbe33a66e37527a7128af4117cf1a7a66c"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/platforms.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/post-delivery-verify.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/propagation-map-schema.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/repo-integrity.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.1.0",
-      "severity": "INFO"
+      "severity": "ERROR"
     },
     {
       "path": "scripts/lib/self-managed-tools.ts",
@@ -4500,44 +3347,12 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/lib/skill-graph-compat.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/skills-used.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/spec-landing.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/lib/ssrf.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "PROJECT_AHEAD",
       "detail": "project version 1.1.2 is ahead of the template 1.1.1 — never delivered over a newer project copy; port the content template-side (pendingBackport)",
       "severity": "WARN"
-    },
-    {
-      "path": "scripts/lib/template-vintage.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
     },
     {
       "path": "scripts/lib/trail-block-parity.ts",
@@ -4564,22 +3379,6 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/lib/variant-overlay-guard.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/lib/workspace-hygiene.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "NEW",
-      "detail": "delivered (none) → 1.0.0",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/lifecycle-sync-audit.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
@@ -4590,118 +3389,6 @@
         "templateVersion": "0.30.0"
       },
       "severity": "ERROR"
-    },
-    {
-      "path": "scripts/lint-instructions.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/md-to-ooxml.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/migrate-quality-gates.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/normalize-registry-provenance.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/qa-gate.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/readme-lifecycle-audit.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/regenerate-agents-md.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.4.0 → 1.5.0 — version-gated delivery over the delivered baseline",
-      "baseline": {
-        "hash": "613fa7e885cff1a55f43eb07909428fd121663ff08d7c3a3430f79a293e4f28a",
-        "templateVersion": "0.23.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/render-commands.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/render-pdf-deck.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/resolve-variants.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.3 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/retry-handler.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/route-audit-scan.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.1 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "986d34fefb6dc9d14342d04be6f3a37b86b69fbe70ec8769aeb7458cd27ae5c9",
-        "templateVersion": "0.25.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/setup-github-branch-protection.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
     },
     {
       "path": "scripts/skill-lifecycle-audit.ts",
@@ -4716,67 +3403,30 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/skill-session-review.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "8462f6fc550c4aa7ce8d967e4170dbe92cf5735016c4ade4c3c94f719c945667",
-        "templateVersion": "0.26.0"
-      },
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/spec-register.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.6.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.6.0 → 1.6.1 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "7eb57269b162dc4a77bfab18b17cea1f085b5cf50db41e9b252a35ece7a46e41",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "f7fb53bb1f15d3bc41965b1b2294909b10fdc820"
+      },
       "severity": "INFO"
     },
     {
       "path": "scripts/sync-agent-mirrors.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.3.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "verdict": "ADOPT",
+      "detail": "1.3.0 → 1.3.1 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "d80fdc790e830802998b221195979ef4ca4548d00c8a937c61e540e0bb8a1c30",
-        "templateVersion": "0.25.0"
+        "hash": "b2d598d626dc0c03d0d98601dc66d06ef30afb8453271cdd115743684477b86e",
+        "templateVersion": "0.30.0",
+        "blob": "b7894ee559b20a8481bfc203d564dcedf26c8627"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/sync-md.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.4.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/sync-skill-status.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/sync-skills.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.11.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/team-builder.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.5.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
       "severity": "INFO"
     },
     {
@@ -4792,35 +3442,17 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/translate-readme.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/typecheck.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-agents.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.4.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/validate-decisions.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
+      "verdict": "ADOPT",
+      "detail": "1.1.0 → 1.2.1 — version-gated delivery over the delivered baseline",
+      "baseline": {
+        "hash": "488604fe552e42a5c1e2bad2ffc0318e78a38cc54f5c44efe5e66589522df856",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "239b94d8ac79a38d7f272cab2d50c0ee57db3349"
+      },
       "severity": "INFO"
     },
     {
@@ -4836,92 +3468,31 @@
       "severity": "ERROR"
     },
     {
-      "path": "scripts/validate-docs-links.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.6.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
       "path": "scripts/validate-md-language.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.16.1 → 1.16.2 — version-gated delivery over the delivered baseline",
+      "verdict": "PROJECT_AHEAD",
+      "detail": "project version 1.17.0 is ahead of the template 1.16.2 — never delivered over a newer project copy; port the content template-side (pendingBackport)",
       "baseline": {
-        "hash": "379410cb3906e009d4e3722c9beedd036749a904da5a84a59137aa433b93a859",
-        "templateVersion": "0.22.1"
+        "hash": "6e7cf6d14ab1b327838c843dd95ca873b97a271dd43750ac0f98e240a3da3eac",
+        "templateVersion": "0.30.0",
+        "blob": "6ea62eb264e42d0d4408ab8c1311c72fd26e8b8e"
       },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-model-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "2.3.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
-      "baseline": {
-        "hash": "8cdf12e08d2711da15cd861510965e2aaba7a55b6c7735b285973c48a80ffe3a",
-        "templateVersion": "0.26.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-pm-extends.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "0.3.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-procedures.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-process.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
+      "severity": "WARN"
     },
     {
       "path": "scripts/validate-raci.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.2.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-skills.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.5.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-surface-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/validate-surface-registry.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.1.1 → 1.1.2 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
+      "verdict": "CONFLICT",
+      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "baseline": {
+        "hash": "520520c9bb8bd339aa5a01ad6064e3f3df013211637529f931fee74747a2c3d0",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "1eb6b6da27a99fc83c07b9fbbbe43e1b8d62aeee"
+      },
+      "severity": "ERROR"
     },
     {
       "path": "scripts/validate-templates.ts",
@@ -4939,51 +3510,13 @@
       "path": "scripts/validate-variant-readiness.ts",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.1.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-agent-deliverables.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.0.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-memory.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-memory.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "ADOPT",
-      "detail": "1.2.0 → 1.3.0 — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-platform-lifecycle.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.6.1 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-readme-sync.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.5.0 equal-version content drift on a baseline-untouched file — restored to the template copy (no project-authored content)",
+      "detail": "1.1.0 → 1.2.0 — version-gated delivery over the delivered baseline",
       "baseline": {
-        "hash": "e13115800a29891e598a24e053801e41d8539a0f023199be3ece6cb383e01ab6",
-        "templateVersion": "0.22.0"
+        "hash": "dede9c6cdfe7fcd09214d1b2a3134bc16c74246373f82056bae77c3510ec465c",
+        "templateVersion": "0.30.0",
+        "provenance": "vintage",
+        "blob": "37f1a6dcf824c86f1c70b089d1c56aec1bedc661"
       },
       "severity": "INFO"
     },
@@ -4992,28 +3525,12 @@
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: scripts/",
       "verdict": "CONFLICT",
-      "detail": "project-evolved since the last delivery AND template changed — CONFLICT disposition: delivery SKIPPED, project copy preserved",
+      "detail": "equal-version drift with no provenance (project-evolved since the last delivery) — CONFLICT disposition: restore SKIPPED, project copy preserved (a content change must bump the version template-side; re-run with --disposition adopt-template[=glob] to take the template copy)",
       "baseline": {
         "hash": "1a9c9cdf20c5ffc6a3345ebf0858de4ebe322b5b1b6eaafce49665e86c82b0f1",
         "templateVersion": "0.30.0"
       },
       "severity": "ERROR"
-    },
-    {
-      "path": "scripts/verify-skill-graph.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "2.0.0 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
-    },
-    {
-      "path": "scripts/verify-skills.ts",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: scripts/",
-      "verdict": "DRIFT_RESTORED",
-      "detail": "1.5.2 equal-version content drift; project bytes equal a historical template revision (vintage-proven) — restored to the template copy",
-      "severity": "INFO"
     },
     {
       "path": "agents/pm.md",
@@ -5368,76 +3885,12 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/explain-me/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/explain-me/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.0 → 1.0.1 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/k-opendata/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "UNBASELINED_OVERWRITE",
-      "detail": "no delivery baseline + project content differs (unmarked — usually pre-policy template vintage) — delivered over the project copy; review the diff (pre-upgrade stash covers rollback)",
-      "severity": "WARN"
-    },
-    {
-      "path": "skills/k-opendata/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.2.2 → 1.2.3 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "skills/team-builder/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
       "verdict": "DRIFT_PRESERVE",
       "detail": "same-version content drift — project copy PRESERVED (ADR-0085 D3)",
       "severity": "WARN"
-    },
-    {
-      "path": "skills/zod-contract-gate/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "UNBASELINED_OVERWRITE",
-      "detail": "no delivery baseline + project content differs (unmarked — usually pre-policy template vintage) — delivered over the project copy; review the diff (pre-upgrade stash covers rollback)",
-      "severity": "WARN"
-    },
-    {
-      "path": "skills/zod-contract-gate/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.2 → 1.0.3 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/i18n-formatting/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/i18n-formatting/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.0 → 1.0.1 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
     },
     {
       "path": "skills/project-review/SKILL.md",
@@ -5448,44 +3901,12 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/k-kosis/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/k-kosis/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.2 → 1.0.3 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "skills/translate/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
       "verdict": "DRIFT_PRESERVE",
       "detail": "same-version content drift — project copy PRESERVED (ADR-0085 D3)",
       "severity": "WARN"
-    },
-    {
-      "path": "skills/k-krx/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/k-krx/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.2 → 1.0.3 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
     },
     {
       "path": "skills/gateguard/SKILL.md",
@@ -5496,38 +3917,6 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/finishing-a-development-branch/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/finishing-a-development-branch/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.1 → 1.0.2 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/i18n-audit/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/i18n-audit/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.0 → 1.0.2 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "skills/api-documentation/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
@@ -5536,7 +3925,7 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/k-ecos/SKILL.md",
+      "path": "skills/handbook/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
       "verdict": "ADOPT",
@@ -5544,43 +3933,19 @@
       "severity": "INFO"
     },
     {
-      "path": "skills/k-ecos/SKILL.md",
+      "path": "skills/handbook/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
       "verdict": "ADOPT",
-      "detail": "1.0.0 → 1.0.1 — version-gated whole-directory delivery over the delivered baseline",
+      "detail": "0.6.0 → 0.6.2 — version-gated whole-directory delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
-      "path": "skills/k-dart/SKILL.md",
+      "path": "docs/lifecycle/skills/handbook.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "UNBASELINED_OVERWRITE",
-      "detail": "no delivery baseline + project content differs (unmarked — usually pre-policy template vintage) — delivered over the project copy; review the diff (pre-upgrade stash covers rollback)",
-      "severity": "WARN"
-    },
-    {
-      "path": "skills/k-dart/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "2.1.2 → 2.1.3 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/i18n-locale-config/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/i18n-locale-config/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.0 → 1.0.1 — version-gated whole-directory delivery over the delivered baseline",
+      "verdict": "RECORD_BUMP",
+      "detail": "hand-authored record metadata aligned to the delivered SKILL.md: Version line inserted (0.6.2 — record carried none)",
       "severity": "INFO"
     },
     {
@@ -5603,33 +3968,14 @@
       "path": "skills/meeting-facilitation/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "UNBASELINED_OVERWRITE",
-      "detail": "no delivery baseline + project content differs (unmarked — usually pre-policy template vintage) — delivered over the project copy; review the diff (pre-upgrade stash covers rollback)",
+      "verdict": "DRIFT_PRESERVE",
+      "detail": "same-version content drift — project copy PRESERVED (ADR-0085 D3)",
+      "baseline": {
+        "hash": "9e51bb7a7b1fdc8a4eabd739eb2f887ee6b1a65d5ad04132693bb2e9998b53bc",
+        "templateVersion": "0.30.0",
+        "blob": "1eaa5395a9a7ef0370db07ed5396fa05867e7790"
+      },
       "severity": "WARN"
-    },
-    {
-      "path": "skills/meeting-facilitation/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.4.4 → 1.5.0 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/platform-skill-lifecycle-manager/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "skills/platform-skill-lifecycle-manager/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.0.2 → 1.0.3 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
     },
     {
       "path": "skills/research-analysis/SKILL.md",
@@ -5648,22 +3994,6 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/design-foundation/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "UNBASELINED_OVERWRITE",
-      "detail": "no delivery baseline + project content differs (unmarked — usually pre-policy template vintage) — delivered over the project copy; review the diff (pre-upgrade stash covers rollback)",
-      "severity": "WARN"
-    },
-    {
-      "path": "skills/design-foundation/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.1.0 → 1.1.1 — version-gated whole-directory delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
       "path": "skills/k-law/references/terms-ko.json",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
@@ -5680,36 +4010,12 @@
       "severity": "WARN"
     },
     {
-      "path": "skills/sync/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.9.0 → 1.10.0 — version-gated whole-directory delivery over the delivered baseline",
-      "baseline": {
-        "hash": "a3e60e77d70f3d558be8605ffd7394559a386d17b1bbfbde764aa03ae93c1d7b",
-        "templateVersion": "0.30.0"
-      },
-      "severity": "INFO"
-    },
-    {
       "path": "skills/documentation-writing/SKILL.md",
       "policy": "SYNC",
       "pass": "SYNC_IF_NEWER: skills/",
       "verdict": "DRIFT_PRESERVE",
       "detail": "same-version content drift — project copy PRESERVED (ADR-0085 D3)",
       "severity": "WARN"
-    },
-    {
-      "path": "skills/i18n-layout/SKILL.md",
-      "policy": "SYNC",
-      "pass": "SYNC_IF_NEWER: skills/",
-      "verdict": "ADOPT",
-      "detail": "1.1.0 → 1.1.1 — version-gated whole-directory delivery over the delivered baseline",
-      "baseline": {
-        "hash": "a107e19ec7baf5f66993ea2ed613aa35aa4c7f1129dc227b3d8d8f99499f7a74",
-        "templateVersion": "0.30.0"
-      },
-      "severity": "INFO"
     },
     {
       "path": "skills/evidence-ledger/SKILL.md",
@@ -6280,35 +4586,11 @@
       "severity": "INFO"
     },
     {
-      "path": ".mcp.json",
-      "policy": "JSON_MERGE",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "MERGE",
-      "detail": "settings deep-merged — project-only entries preserved: mcpServers.co-newbiz",
-      "severity": "INFO"
-    },
-    {
       "path": ".claude/settings.json",
       "policy": "JSON_MERGE",
       "pass": "TEMPLATE TREE SYNC",
       "verdict": "MERGE",
       "detail": "settings deep-merged — project-only entries preserved: permissions.allow[], permissions.allow[], hooks.PreToolUse[], hooks.PreToolUse[], hooks.PreToolUse[], hooks.PreToolUse[], hooks.PostToolUse[], hooks.SessionStart[], hooks.TeammateIdle[]",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/context.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "UNBASELINED_OVERWRITE",
-      "detail": "no delivery baseline + project content differs (unmarked — usually pre-policy template vintage) — delivered over the project copy; review the diff (pre-upgrade stash covers rollback)",
-      "severity": "WARN"
-    },
-    {
-      "path": "docs/context.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "v2.14 → v2.16 — version-gated delivery over the delivered baseline",
       "severity": "INFO"
     },
     {
@@ -6384,6 +4666,14 @@
       "severity": "INFO"
     },
     {
+      "path": "docs/lifecycle/agents/execution-plan-templates.md",
+      "policy": "WORKSPACE",
+      "pass": "TEMPLATE TREE SYNC",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
+      "severity": "INFO"
+    },
+    {
       "path": "docs/lifecycle/agents/pm.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
@@ -6395,40 +4685,40 @@
       "path": "docs/lifecycle/skills/k-law.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/zod-contract-gate.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/accessibility-audit.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/meeting-facilitation.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/skill-lifecycle-manager.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6443,96 +4733,96 @@
       "path": "docs/lifecycle/skills/security-scan.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/agent-lifecycle-manager.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/handbook-sync-audit.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/delegate-to-hub.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/k-krx.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/finishing-a-development-branch.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/token-usage-lint.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/platform-skill-lifecycle-manager.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/api-documentation.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/research-analysis.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/service-design.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/k-ecos.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6547,32 +4837,32 @@
       "path": "docs/lifecycle/skills/script-lifecycle-manager.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/explain-me.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/update-bun-packages.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/source-command-commit-push-pr.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6587,24 +4877,24 @@
       "path": "docs/lifecycle/skills/sync.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/project-review.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/translate.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6619,8 +4909,8 @@
       "path": "docs/lifecycle/skills/k-opendata.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6635,16 +4925,16 @@
       "path": "docs/lifecycle/skills/ci-triage.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/gateguard.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6659,56 +4949,56 @@
       "path": "docs/lifecycle/skills/k-kosis.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/platform-command-lifecycle-manager.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/k-dart.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/team-builder.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/documentation-writing.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/design-foundation.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
       "path": "docs/lifecycle/skills/ui-ux-design-intelligence.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6723,64 +5013,8 @@
       "path": "docs/lifecycle/skills/standup-synthesizer.md",
       "policy": "WORKSPACE",
       "pass": "TEMPLATE TREE SYNC",
-      "verdict": "NEW",
-      "detail": "workspace seed delivered (absent from the project)",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/README.template.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/README.template.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "(content changed) — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/README_ko.template.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "no delivery baseline; project bytes equal a historical revision of the template (vintage-proven — no project-authored content) — delivered",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/README_ko.template.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "(content changed) — version-gated delivery over the delivered baseline",
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/governance/agents/workflows.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "(content changed) — version-gated delivery over the delivered baseline",
-      "baseline": {
-        "hash": "00b2137ca57a2e7afd0a9537fa25287b565530a2b8730fc18bc5a977415b14c3",
-        "templateVersion": "0.22.0"
-      },
-      "severity": "INFO"
-    },
-    {
-      "path": "docs/governance/agents/execution-plan-templates.md",
-      "policy": "SYNC",
-      "pass": "TEMPLATE TREE SYNC",
-      "verdict": "ADOPT",
-      "detail": "(content changed) — version-gated delivery over the delivered baseline",
-      "baseline": {
-        "hash": "f77438aeda9acd0b1f52da881dfcc8e7a1f601d517b7c2543c3b9242985a6c42",
-        "templateVersion": "0.30.0"
-      },
+      "verdict": "SEED_SKIP",
+      "detail": "project workspace file exists — seed-only claim withheld (never overwritten, never pruned)",
       "severity": "INFO"
     },
     {
@@ -6872,7 +5106,7 @@
       "policy": "PROJECT_STATE",
       "pass": "EXTERNAL DEPS",
       "verdict": "SKIP",
-      "detail": "dep humanize: upstream check — pin v2.4.7 is current (latest of 20 upstream tags) — hold, no-op",
+      "detail": "dep humanize: upstream check — pin v1.0.0 is current (latest of 1 upstream tags) — hold, no-op",
       "severity": "INFO"
     },
     {
@@ -6883,7 +5117,8 @@
       "detail": "template copy delivered over the delivered baseline (version-gated)",
       "baseline": {
         "hash": "6424d80604638ae56523d66a6a3447b3bb14ec249afb20d2fe70f75bca30f87d",
-        "templateVersion": "0.30.0"
+        "templateVersion": "0.30.0",
+        "blob": "dc6dd2e84dd1ad63b77bbdde06e6ff63eeb2151e"
       },
       "severity": "INFO"
     },
@@ -6923,14 +5158,6 @@
   "tombstones": {},
   "pendingBackport": [
     {
-      "path": ".github/workflows/ci.yml",
-      "kind": "MARKER_LOSS",
-      "projectHash": "ecfa6f59ba298a3126e6e44965d48cae99a5a12848dfbf7f4655e2ff55c40491",
-      "deliverableHash": "ed5184bbf6069da940aee27076191ba28eba411bf66d282511c0dad3e075d783",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
       "path": ".github/workflows/delete-merged-branches.yml",
       "kind": "EVOLVED_PRESERVE",
       "projectHash": "96ad0d9f1a15c44abb0b1b15481b239acc5fc0ad9bdafb9a7b7aafcd6fb4f1db",
@@ -6941,32 +5168,8 @@
     {
       "path": ".gitignore",
       "kind": "MARKER_LOSS",
-      "projectHash": "594e5d9b56ac92b8831a9f495d7f48a5f172dcae14844d1ffc212d864f435ec3",
+      "projectHash": "09c95ad5f95bea46441ed6b3b63bfe660cb3ff319809f7bfecb8085254b6eeab",
       "deliverableHash": "c0eb79086663fb102e00e9c99b307323ee36c536be0057d9703b24d512c8e97e",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "docs/context.md",
-      "kind": "UNBASELINED",
-      "projectHash": "739a7601a5de323318fb85387328f87714254ccea01a23a18c3f4638118105fe",
-      "deliverableHash": "3cd70a8ec0203e3138adc69dd58dd3605574f69d82bd006e97bb930b1ece0510",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "scripts/audit.ts",
-      "kind": "CONFLICT",
-      "projectHash": "60ff73566b402128a3be650fed397e6e3adaa7c2eca41cf4dc8c3cd5cd3ccc20",
-      "deliverableHash": "e15925c7174b069b91c5132cb95d8ed733bd153e59954463d4b85791c6efa0a1",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "scripts/dev-sync.ts",
-      "kind": "CONFLICT",
-      "projectHash": "52cdd99a868cc111ef3b3cead1efffb8a54e9fe81aad647dfe5eb468e35222f0",
-      "deliverableHash": "48577c0fef211329985e37f74a9b6161484a8d21402abd97d4ffa64609ba15e3",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -6989,6 +5192,14 @@
       "firstSeenTemplateVersion": "0.30.0"
     },
     {
+      "path": "scripts/generate-raci.ts",
+      "kind": "CONFLICT",
+      "projectHash": "5b58f5dd49c146835271c5d7a1887698e8cc6f40450bc76530e175d100429458",
+      "deliverableHash": "064c6c449fd2c6059c9aacbe12d84359c85312bb611d6688037aecd9f717d2e7",
+      "firstSeen": "2026-11-23",
+      "firstSeenTemplateVersion": "0.30.0"
+    },
+    {
       "path": "scripts/generate-skill-graph.ts",
       "kind": "MARKER_LOSS",
       "projectHash": "086239e4e453623abb025aaa06e1f7ff2fbb64a0e84f631db812b8f4d2f32f7c",
@@ -6998,9 +5209,9 @@
     },
     {
       "path": "scripts/handbook/check-authoring.ts",
-      "kind": "MARKER_LOSS",
+      "kind": "CONFLICT",
       "projectHash": "63b4c27a1f42890b31a237291c5d659a56ed2cf4071dc69e1146f4836f702d48",
-      "deliverableHash": "5e54c6e68c9d9b814726f7dfeec153e9b3af9f180fa745c615e7ea4d006362a5",
+      "deliverableHash": "d5f18c5541d0a80b6158c902b92d78e59b43cb3fddda2a2c1db6885fa4237e82",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -7018,7 +5229,7 @@
       "path": "scripts/helpers/memory-union-verify.ts",
       "kind": "CONFLICT",
       "projectHash": "90dd7775ebc33a1cc842f71190e1c38c83e2ac1d2068365f3ecb4f4177486ed3",
-      "deliverableHash": "637ad87d9b202a1d940ab8da733926b60a1f42ad884378472922da4f9fb73f5e",
+      "deliverableHash": "319dca5d1f919533ced253e7c82146ebb31daa26577aa78241af1db8bf3b4ca2",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -7061,16 +5272,24 @@
     {
       "path": "scripts/hooks/pre-push.ts",
       "kind": "CONFLICT",
-      "projectHash": "3805d633b3f0c0247337e13933828dca2bb2cf61a434e1fb60de7035e9d414b6",
+      "projectHash": "e19a47e25ef33cdf8df149ad8e37395ea0df8b8db50a93776a31d2885522c41a",
       "deliverableHash": "e18dbfb2ac9db4bed7be7b986e0f953290a45ab0c7d904aa0464e129de48a360",
       "firstSeen": "2026-11-18",
+      "firstSeenTemplateVersion": "0.30.0"
+    },
+    {
+      "path": "scripts/lib/constitution-scrub.ts",
+      "kind": "CONFLICT",
+      "projectHash": "7476bbb0259b3fcd0de75b88813b8b9c5ae2858e06c2af775d12e051ee8f62f1",
+      "deliverableHash": "0b24285273d0f74c88ea920ce92a995ba9048f9160fd09f3d8d56e544244be03",
+      "firstSeen": "2026-11-23",
       "firstSeenTemplateVersion": "0.30.0"
     },
     {
       "path": "scripts/lib/external-deps.ts",
       "kind": "CONFLICT",
       "projectHash": "218f44519342e746509a0bd3438e9fc132c33b039446b293b9ffd666ce642165",
-      "deliverableHash": "952377ae40fb15b1599ee378a5961a2bc6caea991e9e41597bc914134c6a5e8a",
+      "deliverableHash": "a7ccf1fced563ed3be7df0985a430a98ba602f6d36687a2f8490829d7fa560e1",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -7088,6 +5307,14 @@
       "projectHash": "49441e3bef2ca5a1ecefc0a1e110d620350a8ad9be0663b1e165360680cf1960",
       "deliverableHash": "3e8d922c30b0498853409efc0b5d8defb43667701120230bc2c35d72d6ba9083",
       "firstSeen": "2026-11-18",
+      "firstSeenTemplateVersion": "0.30.0"
+    },
+    {
+      "path": "scripts/lib/platform-skeleton-merge.ts",
+      "kind": "CONFLICT",
+      "projectHash": "30a0c98791abe2d8bd9d1a098972022524ab050fe29bfffba1ce01331e156cfb",
+      "deliverableHash": "a234033c5bb02102873cbbcbe0a276f27e890752c5ee8583ea9f684a76050b13",
+      "firstSeen": "2026-11-23",
       "firstSeenTemplateVersion": "0.30.0"
     },
     {
@@ -7120,7 +5347,7 @@
       "path": "scripts/lib/upgrade-policy.ts",
       "kind": "CONFLICT",
       "projectHash": "8a268e7d02b12c472f609c14bb6daa9a55407a0473ba08487498ff0bf62ae9a1",
-      "deliverableHash": "73b19b13d1be90bf8edce154a50c869e217f755c65881c76d808f2f7346e2980",
+      "deliverableHash": "efe33c6ee70a267da1021c5e99704b8774b58f9e08a7fe864e1f64c8b6ec368b",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -7143,8 +5370,8 @@
     {
       "path": "scripts/test-runner.ts",
       "kind": "CONFLICT",
-      "projectHash": "f780fe2921becd7141355b74c7b1f6a24c3c11158a5e716936c4675ad4135648",
-      "deliverableHash": "e447d7896c0f945eafeaabc37cd104a149fb96f85774570134476e32cd1f4506",
+      "projectHash": "555203946be858013a17a28cf896da4c1508b4774941aee17bb46f16401ce97b",
+      "deliverableHash": "708b9431ceef554289c69892065025865aad000ee1a282a847979fdbd6155154",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -7152,23 +5379,43 @@
       "path": "scripts/validate-doc-folder.ts",
       "kind": "CONFLICT",
       "projectHash": "f494073e19728ecd2e82ea2de15e63175d0d683234bf16647d0bc68e98596f59",
-      "deliverableHash": "bf898e30825782eaeb2ae906289a5f29890b59af7195effe76ef0d704775de19",
+      "deliverableHash": "8f3c9659194f4ccc77726b352503a1b2f702d8d02a6fcca46b956a4db3c84067",
       "firstSeen": "2026-11-18",
+      "firstSeenTemplateVersion": "0.30.0"
+    },
+    {
+      "path": "scripts/validate-md-language.ts",
+      "kind": "PROJECT_AHEAD",
+      "projectHash": "db56bba1b5d1ca79af754f82be66c4f0d2416706bfdc3c1efd836edda42951fe",
+      "deliverableHash": "6e7cf6d14ab1b327838c843dd95ca873b97a271dd43750ac0f98e240a3da3eac",
+      "projectVersion": "1.17.0",
+      "templateVersion": "1.16.2",
+      "firstSeen": "2026-11-23",
+      "firstSeenTemplateVersion": "0.30.0"
+    },
+    {
+      "path": "scripts/validate-raci.ts",
+      "kind": "CONFLICT",
+      "projectHash": "b33bd87b624239edf55ad24480f8ec8619bb2bea4f1d69e1c17564d2c7400f18",
+      "deliverableHash": "d6c1f86190e5b07e8a24e59c4ffe9c3aa7a93fec93fe08b01db4cd365e9e3606",
+      "firstSeen": "2026-11-23",
       "firstSeenTemplateVersion": "0.30.0"
     },
     {
       "path": "scripts/validate-templates.ts",
       "kind": "CONFLICT",
       "projectHash": "d46047909499f9b210e2bb731f6b545a60e677130426e69ec06a9dd8f01140d5",
-      "deliverableHash": "7f1cd5bce71454aa9dfff47252e02e846324fdc13c0e36b714df2f0f06a1360f",
+      "deliverableHash": "597309c0fb220cee662d9aaec49e0a9e6e5172af53d86ec373d55f3808dfe963",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
     {
       "path": "scripts/verify-scripts.ts",
       "kind": "CONFLICT",
-      "projectHash": "2b81a643d5ba82ab74c3f6f274fa68bf4604a7d233eac3d02ce647ed40f4c44d",
+      "projectHash": "2d720002874f9ecab1db8e18ab3f47c74cdc197a797c598ded7fc090de0bcf7e",
       "deliverableHash": "830204f015cb7e241712f44c978cd701bd62d8f5156d27e3f20e3970bd922c42",
+      "projectVersion": "1.15.0",
+      "templateVersion": "1.15.0",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
     },
@@ -7183,14 +5430,6 @@
       "firstSeenTemplateVersion": "0.30.0"
     },
     {
-      "path": "skills/design-foundation/SKILL.md",
-      "kind": "UNBASELINED",
-      "projectHash": "bcae85795ad331fe54abbeb804d063349d4d457c9744b3c6f3468e7e467593a9",
-      "deliverableHash": "ab31d7ae8572cd76afeb101750f679ee0c643d8ca07f2fe60b266e198b0314f5",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
       "path": "skills/evidence-ledger/SKILL.md",
       "kind": "PROJECT_AHEAD",
       "projectHash": "ae3ee346b7c4c3372d6ccabf96f9ecb18f349ad786c48217052089e4c7c5d16e",
@@ -7199,40 +5438,8 @@
       "templateVersion": "1.1.0",
       "firstSeen": "2026-11-18",
       "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "skills/k-dart/SKILL.md",
-      "kind": "UNBASELINED",
-      "projectHash": "aa961eb6535747b26119007fb189cf68ddf4ae3dee49c3d829f907a5ccf44ef0",
-      "deliverableHash": "49df65882c70d039155fafd63c04caf75448eb517ce91a7acbb802d11217c9ee",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "skills/k-opendata/SKILL.md",
-      "kind": "UNBASELINED",
-      "projectHash": "508169a3ee8cd38f3bfd02efca7db44b6367622688b2491fb1bacb93e5e887f1",
-      "deliverableHash": "9ee0acc021a48c82917920721d405093f33ba2d69157c23508dde243a419ad66",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "skills/meeting-facilitation/SKILL.md",
-      "kind": "UNBASELINED",
-      "projectHash": "9caf08eb9360d53ac2b478ce47e833b3c3a767e0e45f2372bd5052a4493f942f",
-      "deliverableHash": "9e51bb7a7b1fdc8a4eabd739eb2f887ee6b1a65d5ad04132693bb2e9998b53bc",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
-    },
-    {
-      "path": "skills/zod-contract-gate/SKILL.md",
-      "kind": "UNBASELINED",
-      "projectHash": "4e455624cff33dc7e5e72f3e7df79f6fde245e8153b0ddd06d3c112803688484",
-      "deliverableHash": "d2dabc6fb4f65c5e0f7c6dc278a9c9e114211e77c608f0cce77a505af195e91b",
-      "firstSeen": "2026-11-18",
-      "firstSeenTemplateVersion": "0.30.0"
     }
   ],
   "templateDirty": true,
-  "engineVersion": "1.111.0"
+  "engineVersion": "1.116.0"
 }

@@ -16,7 +16,11 @@
 import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { GATE_INTEGRITY_FAMILIES, gateIntegrityMode, type GateIntegrityFamily } from "../../db/lib/gate-integrity-flags.ts";
+import {
+  GATE_INTEGRITY_FAMILIES,
+  gateIntegrityMode,
+  type GateIntegrityFamily,
+} from "../../db/lib/gate-integrity-flags.ts";
 import { evaluateValidatorCompleteness } from "../../db/lib/validator-completeness.ts";
 import { resolveWaccConfirmation } from "../../db/lib/wacc-confirmation.ts";
 import { readdirSync } from "node:fs";
@@ -49,8 +53,16 @@ export const CODE_FAMILY: Record<string, GateIntegrityFamily | "infrastructure" 
 };
 
 /** A schema element a section needs, and the migration that introduces it (gate-integrity range 0173-0179). */
-export interface SchemaNeed { table: string; column?: string; migration: string }
-export interface MigrationPending { section: string; missing: string[]; migrations: string[] }
+export interface SchemaNeed {
+  table: string;
+  column?: string;
+  migration: string;
+}
+export interface MigrationPending {
+  section: string;
+  missing: string[];
+  migrations: string[];
+}
 
 export function schemaHas(db: Database, n: SchemaNeed): boolean {
   if (!db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(n.table)) return false;
@@ -62,15 +74,25 @@ export function missingNeeds(db: Database, needs: readonly SchemaNeed[]): Schema
   return needs.filter((n) => !schemaHas(db, n));
 }
 export function pendingEntry(section: string, missing: readonly SchemaNeed[]): MigrationPending {
-  return { section, missing: missing.map((m) => (m.column ? `${m.table}.${m.column}` : m.table)), migrations: [...new Set(missing.map((m) => m.migration))].sort() };
+  return {
+    section,
+    missing: missing.map((m) => (m.column ? `${m.table}.${m.column}` : m.table)),
+    migrations: [...new Set(missing.map((m) => m.migration))].sort(),
+  };
 }
 /** Migration files of the gate-integrity range (0173+) that the database has not applied yet (empty when unknowable). */
 export function unappliedGateIntegrityMigrations(db: Database): string[] {
   if (!db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'").get()) return [];
   try {
-    const applied = new Set((db.query("SELECT filename FROM schema_migrations").all() as Array<{ filename: string }>).map((r) => r.filename));
-    return readdirSync(join(import.meta.dirname, "../../db/migrations")).filter((f) => /^\d{4}_.*\.sql$/.test(f) && f >= "0173" && !applied.has(f)).sort();
-  } catch { return []; }
+    const applied = new Set(
+      (db.query("SELECT filename FROM schema_migrations").all() as Array<{ filename: string }>).map((r) => r.filename),
+    );
+    return readdirSync(join(import.meta.dirname, "../../db/migrations"))
+      .filter((f) => /^\d{4}_.*\.sql$/.test(f) && f >= "0173" && !applied.has(f))
+      .sort();
+  } catch {
+    return [];
+  }
 }
 export const NEED = {
   snapshot: { table: "gate_decision_snapshot", migration: "0173_gate_decision_snapshot" },
@@ -82,7 +104,15 @@ export const NEED = {
   chainDecision: { table: "approval_chain", column: "gate_decision_id", migration: "0175_condition_precedent" },
 } as const satisfies Record<string, SchemaNeed>;
 
-export interface ShadowRow { family: string; code: string; kind: "would_block" | "refused"; day: string; entity: string; actor: string; count: number }
+export interface ShadowRow {
+  family: string;
+  code: string;
+  kind: "would_block" | "refused";
+  day: string;
+  entity: string;
+  actor: string;
+  count: number;
+}
 export interface ShadowReport {
   generated_at: string;
   window: { from: string; to: string };
@@ -120,15 +150,30 @@ export function buildShadowReport(db: Database, opts: { from: string; to: string
     const isWould = a.action.startsWith("gate_integrity.would_block:");
     const code = a.action.slice(a.action.indexOf(":") + 1);
     const family = CODE_FAMILY[code] ?? "other";
-    const entity = isWould ? entityOf(a.target) : `${a.action.slice(0, a.action.indexOf(".refused"))}:${entityOf(a.target)}`;
+    const entity = isWould
+      ? entityOf(a.target)
+      : `${a.action.slice(0, a.action.indexOf(".refused"))}:${entityOf(a.target)}`;
     const key = [isWould ? "w" : "r", family, code, a.day, entity, a.actor].join("|");
-    const row = agg.get(key) ?? { family, code, kind: isWould ? "would_block" : "refused", day: a.day, entity, actor: a.actor, count: 0 };
+    const row = agg.get(key) ?? {
+      family,
+      code,
+      kind: isWould ? "would_block" : "refused",
+      day: a.day,
+      entity,
+      actor: a.actor,
+      count: 0,
+    };
     row.count += 1;
     agg.set(key, row);
   }
-  const rows = [...agg.values()].sort((x, y) => (x.day + x.family + x.code + x.entity).localeCompare(y.day + y.family + y.code + y.entity));
+  const rows = [...agg.values()].sort((x, y) =>
+    (x.day + x.family + x.code + x.entity).localeCompare(y.day + y.family + y.code + y.entity),
+  );
 
-  const familyMap = new Map<string, { family: string; would_block: number; refused: number; codes: Record<string, number> }>();
+  const familyMap = new Map<
+    string,
+    { family: string; would_block: number; refused: number; codes: Record<string, number> }
+  >();
   const dayMap = new Map<string, { day: string; would_block: number; refused: number }>();
   for (const r of rows) {
     const f = familyMap.get(r.family) ?? { family: r.family, would_block: 0, refused: 0, codes: {} };
@@ -154,11 +199,16 @@ export function buildShadowReport(db: Database, opts: { from: string; to: string
       )
       .all() as Array<{ role_key: string; user_id: string }>;
     holders = { "entity-ic-reviewer": [], "group-ic-reviewer": [] };
-    for (const g of grants) (holders[g.role_key] ??= []).push(g.user_id);
+    for (const g of grants) {
+      if (!holders[g.role_key]) holders[g.role_key] = [];
+      holders[g.role_key].push(g.user_id);
+    }
     distinctCount = new Set(grants.map((g) => g.user_id)).size;
   }
 
-  const openProjects = db.query("SELECT id, track FROM md_project WHERE status = 'open' AND deleted_at IS NULL ORDER BY id").all() as Array<{ id: string; track: string | null }>;
+  const openProjects = db
+    .query("SELECT id, track FROM md_project WHERE status = 'open' AND deleted_at IS NULL ORDER BY id")
+    .all() as Array<{ id: string; track: string | null }>;
   let naResult: ShadowReport["readiness"]["legacy_unconfirmed_mandatory_na"] = null;
   const noNa = missingNeeds(db, [NEED.naConfirm]);
   if (noNa.length > 0) pending.push(pendingEntry("readiness.legacy_unconfirmed_mandatory_na", noNa));
@@ -170,21 +220,32 @@ export function buildShadowReport(db: Database, opts: { from: string; to: string
       )
       .all() as Array<{ project_id: string; checklist_id: string; item_id: string }>;
     const naByProject = new Map<string, number>();
-    for (const r of naRows) if (isMandatoryChecklistItem(r.checklist_id, r.item_id)) naByProject.set(r.project_id, (naByProject.get(r.project_id) ?? 0) + 1);
-    naResult = { rows: [...naByProject.values()].reduce((a, b) => a + b, 0), projects: [...naByProject].map(([project_id, rows]) => ({ project_id, rows })).sort((a, b) => a.project_id.localeCompare(b.project_id)) };
+    for (const r of naRows)
+      if (isMandatoryChecklistItem(r.checklist_id, r.item_id))
+        naByProject.set(r.project_id, (naByProject.get(r.project_id) ?? 0) + 1);
+    naResult = {
+      rows: [...naByProject.values()].reduce((a, b) => a + b, 0),
+      projects: [...naByProject]
+        .map(([project_id, rows]) => ({ project_id, rows }))
+        .sort((a, b) => a.project_id.localeCompare(b.project_id)),
+    };
   }
 
   let missingValidators: ShadowReport["readiness"]["brownfield_missing_validators"] = [];
   let provisional: ShadowReport["readiness"]["s8_provisional_wacc"] = [];
   try {
-    const hasFs = db.prepare("SELECT 1 FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate = 'fs' AND decision = 'go' LIMIT 1");
+    const hasFs = db.prepare(
+      "SELECT 1 FROM gate_decision WHERE entity_type = 'project' AND entity_id = ? AND gate = 'fs' AND decision = 'go' LIMIT 1",
+    );
     const hasCase = db.prepare("SELECT 1 FROM business_case_model WHERE project_id = ? LIMIT 1");
     for (const p of openProjects) {
       if (p.track === "brownfield" && hasFs.get(p.id)) {
         try {
           const v = evaluateValidatorCompleteness(p.id, null, db);
           if (v.halt.missing.length > 0) missingValidators.push({ project_id: p.id, missing: [...v.halt.missing] });
-        } catch { /* a project the engine cannot read is not counted */ }
+        } catch {
+          /* a project the engine cannot read is not counted */
+        }
       }
       if (hasCase.get(p.id)) {
         const w = resolveWaccConfirmation(db, p.id);
@@ -193,8 +254,16 @@ export function buildShadowReport(db: Database, opts: { from: string; to: string
     }
   } catch {
     // an older schema lacks tables these readers need: report the sections as pending, never throw
-    pending.push({ section: "readiness.brownfield_missing_validators", missing: ["validator or WACC tables"], migrations: unappliedGateIntegrityMigrations(db) });
-    pending.push({ section: "readiness.s8_provisional_wacc", missing: ["validator or WACC tables"], migrations: unappliedGateIntegrityMigrations(db) });
+    pending.push({
+      section: "readiness.brownfield_missing_validators",
+      missing: ["validator or WACC tables"],
+      migrations: unappliedGateIntegrityMigrations(db),
+    });
+    pending.push({
+      section: "readiness.s8_provisional_wacc",
+      missing: ["validator or WACC tables"],
+      migrations: unappliedGateIntegrityMigrations(db),
+    });
     missingValidators = null as never;
     provisional = null as never;
   }
@@ -206,7 +275,10 @@ export function buildShadowReport(db: Database, opts: { from: string; to: string
     generated_at: now,
     window: { from: opts.from, to: opts.to },
     flags,
-    totals: { would_block: rows.filter((r) => r.kind === "would_block").reduce((n, r) => n + r.count, 0), refused: rows.filter((r) => r.kind === "refused").reduce((n, r) => n + r.count, 0) },
+    totals: {
+      would_block: rows.filter((r) => r.kind === "would_block").reduce((n, r) => n + r.count, 0),
+      refused: rows.filter((r) => r.kind === "refused").reduce((n, r) => n + r.count, 0),
+    },
     migration_pending: pending,
     unapplied_migrations: unappliedGateIntegrityMigrations(db),
     by_family: [...familyMap.values()].sort((a, b) => a.family.localeCompare(b.family)),
@@ -224,25 +296,53 @@ export function buildShadowReport(db: Database, opts: { from: string; to: string
 
 export function renderHuman(r: ShadowReport): string {
   const L: string[] = [];
-  L.push(`Gate-integrity shadow report  ${r.window.from.slice(0, 10)} .. ${r.window.to.slice(0, 10)}  (generated ${r.generated_at})`);
-  L.push(`Flags (this process environment, not the running server): ${Object.entries(r.flags).map(([k, v]) => `${k}=${v}`).join("  ")}`);
+  L.push(
+    `Gate-integrity shadow report  ${r.window.from.slice(0, 10)} .. ${r.window.to.slice(0, 10)}  (generated ${r.generated_at})`,
+  );
+  L.push(
+    `Flags (this process environment, not the running server): ${Object.entries(r.flags)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("  ")}`,
+  );
   L.push(`Totals: would_block=${r.totals.would_block}  refused=${r.totals.refused}`);
   L.push("", "By family");
   if (r.by_family.length === 0) L.push("  (no shadow or refusal events in the window)");
-  for (const f of r.by_family) L.push(`  ${f.family.padEnd(14)} would_block=${String(f.would_block).padStart(4)} refused=${String(f.refused).padStart(4)}  ${Object.entries(f.codes).map(([c, n]) => `${c}:${n}`).join(", ")}`);
+  for (const f of r.by_family)
+    L.push(
+      `  ${f.family.padEnd(14)} would_block=${String(f.would_block).padStart(4)} refused=${String(f.refused).padStart(4)}  ${Object.entries(
+        f.codes,
+      )
+        .map(([c, n]) => `${c}:${n}`)
+        .join(", ")}`,
+    );
   L.push("", "By day");
   for (const d of r.by_day) L.push(`  ${d.day}  would_block=${d.would_block} refused=${d.refused}`);
   L.push("", "Events (family / code / day / entity / actor / count)");
-  for (const x of r.rows) L.push(`  [${x.kind === "would_block" ? "W" : "R"}] ${x.family} / ${x.code} / ${x.day} / ${x.entity} / ${x.actor} x${x.count}`);
+  for (const x of r.rows)
+    L.push(
+      `  [${x.kind === "would_block" ? "W" : "R"}] ${x.family} / ${x.code} / ${x.day} / ${x.entity} / ${x.actor} x${x.count}`,
+    );
   const g = r.readiness;
   const pend = (section: string) => r.migration_pending.find((x) => x.section === section);
-  const pendTxt = (section: string) => { const x = pend(section); return x ? `MIGRATION PENDING (${x.migrations.join(", ") || "unknown"})` : null; };
+  const pendTxt = (section: string) => {
+    const x = pend(section);
+    return x ? `MIGRATION PENDING (${x.migrations.join(", ") || "unknown"})` : null;
+  };
   L.push("", "Readiness");
-  L.push(`  Grant holders: ${g.grant_holders ? `entity-ic-reviewer=${g.grant_holders["entity-ic-reviewer"]?.join(",") || "(none)"}  group-ic-reviewer=${g.grant_holders["group-ic-reviewer"]?.join(",") || "(none)"}  second holder ready: ${g.second_grant_holder_ready ? "yes" : "NO"}` : pendTxt("readiness.grant_holders")}`);
-  L.push(`  Legacy unconfirmed mandatory na rows: ${g.legacy_unconfirmed_mandatory_na ? `${g.legacy_unconfirmed_mandatory_na.rows}${g.legacy_unconfirmed_mandatory_na.projects.map((p) => ` ${p.project_id}=${p.rows}`).join("")}` : pendTxt("readiness.legacy_unconfirmed_mandatory_na")}`);
-  L.push(`  Brownfield projects past fs missing validators: ${g.brownfield_missing_validators ? `${g.brownfield_missing_validators.length}${g.brownfield_missing_validators.map((p) => ` ${p.project_id}[${p.missing.join(",")}]`).join("")}` : pendTxt("readiness.brownfield_missing_validators")}`);
-  L.push(`  S8+ projects with provisional WACC: ${g.s8_provisional_wacc ? `${g.s8_provisional_wacc.length}${g.s8_provisional_wacc.map((p) => ` ${p.project_id}[${p.missing.join(",")}]`).join("")}` : pendTxt("readiness.s8_provisional_wacc")}`);
-  if (r.unapplied_migrations.length > 0) L.push("", `Unapplied gate-integrity migrations: ${r.unapplied_migrations.join(", ")}`);
+  L.push(
+    `  Grant holders: ${g.grant_holders ? `entity-ic-reviewer=${g.grant_holders["entity-ic-reviewer"]?.join(",") || "(none)"}  group-ic-reviewer=${g.grant_holders["group-ic-reviewer"]?.join(",") || "(none)"}  second holder ready: ${g.second_grant_holder_ready ? "yes" : "NO"}` : pendTxt("readiness.grant_holders")}`,
+  );
+  L.push(
+    `  Legacy unconfirmed mandatory na rows: ${g.legacy_unconfirmed_mandatory_na ? `${g.legacy_unconfirmed_mandatory_na.rows}${g.legacy_unconfirmed_mandatory_na.projects.map((p) => ` ${p.project_id}=${p.rows}`).join("")}` : pendTxt("readiness.legacy_unconfirmed_mandatory_na")}`,
+  );
+  L.push(
+    `  Brownfield projects past fs missing validators: ${g.brownfield_missing_validators ? `${g.brownfield_missing_validators.length}${g.brownfield_missing_validators.map((p) => ` ${p.project_id}[${p.missing.join(",")}]`).join("")}` : pendTxt("readiness.brownfield_missing_validators")}`,
+  );
+  L.push(
+    `  S8+ projects with provisional WACC: ${g.s8_provisional_wacc ? `${g.s8_provisional_wacc.length}${g.s8_provisional_wacc.map((p) => ` ${p.project_id}[${p.missing.join(",")}]`).join("")}` : pendTxt("readiness.s8_provisional_wacc")}`,
+  );
+  if (r.unapplied_migrations.length > 0)
+    L.push("", `Unapplied gate-integrity migrations: ${r.unapplied_migrations.join(", ")}`);
   return L.join("\n");
 }
 
@@ -252,7 +352,8 @@ function arg(name: string): string | undefined {
 }
 
 if (import.meta.main) {
-  const dbPath = arg("--db-path") ?? process.env.CO_NEWBIZ_DB_PATH ?? join(import.meta.dirname, "../../db/data/co-newbiz.sqlite");
+  const dbPath =
+    arg("--db-path") ?? process.env.CO_NEWBIZ_DB_PATH ?? join(import.meta.dirname, "../../db/data/co-newbiz.sqlite");
   if (!existsSync(dbPath)) {
     console.error(`database not found: ${dbPath}`);
     process.exit(2);

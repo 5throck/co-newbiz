@@ -117,5 +117,7 @@ console.error(`[deploy] FAILED: health check did not pass within ${TIMEOUT_SECON
 if (prevImage) {
   console.error(`[deploy] code rollback:  docker tag ${prevImage} ${IMAGE} && docker compose up -d ${SERVICE}`);
 }
-console.error("[deploy] db rollback:    restore the newest backups/pre-deploy-*.db per docs/runbooks/backup-restore.md §3, then redeploy.");
+console.error(
+  "[deploy] db rollback:    restore the newest backups/pre-deploy-*.db per docs/runbooks/backup-restore.md §3, then redeploy.",
+);
 process.exit(1);

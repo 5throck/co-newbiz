@@ -198,7 +198,7 @@ function buildHandoffGraph(procedures: Map<string, Procedure>): Map<string, Grap
     procP.relations.forEach((rel) => {
       if (rel.type === "follows" || rel.type === "enables") {
         // Extract procedure id from target
-        const targetMatch = rel.target.match(/procedure\.([a-z0-9\-]+)\.([a-z0-9\-]+)/);
+        const targetMatch = rel.target.match(/procedure\.([a-z0-9-]+)\.([a-z0-9-]+)/);
         if (targetMatch) {
           const variant = targetMatch[1];
           const procedureKey = targetMatch[2];

@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-23T02:08:22.949Z
+**Generated**: 2026-11-23T13:12:55.890Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 216 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 217 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -106,7 +106,7 @@
 | greenfield-feasibility | 1.2.0 | active | skills/greenfield-feasibility/SKILL.md | workspace | green field feasibility, new plant feasibility, new establishment review, greenfield screening | greenfield-agent |
 | group-level-review | 1.1.0 | experimental | skills/group-level-review/SKILL.md | workspace | group review, group IC, proposal ranking, capital allocation priority | group-review-agent |
 | growth-projection-modeling | 1.2.0 | active | skills/growth-projection-modeling/SKILL.md | workspace | growth projection, revenue forecast, base rate warning, anchor_ref, hockey stick check | financial-analyst |
-| handbook | 0.6.0 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
+| handbook | 0.6.2 | active | skills/handbook/SKILL.md | workspace | make handbook, create handbook, build course site, companion handbook, update handbook, handbook sync, handbook maintenance | pm |
 | handbook-sync-audit | 1.0.5 | active | skills/handbook-sync-audit/SKILL.md | workspace | audit handbook, handbook parity check, handbook sync audit, textbook drift check | pm |
 | historical-financial-analysis | 1.0.1 | active | skills/historical-financial-analysis/SKILL.md | workspace | historical financial trend, historical volatility, base rate distribution, multi-year trajectory analysis | financial-analyst |
 | humanize-polish | 1.1.0 | active | skills/humanize-polish/SKILL.md | workspace | polish Korean, humanize, humanize Korean, Korean polishing, Korean deliverable polish, before output of Korean deliverables | docs-writer |
@@ -194,18 +194,18 @@
 | adr-new.ts | 1.0.0 | scripts/co-newbiz/adr-new.ts | fs, path |
 | agent-create.ts | 1.0.2 | scripts/agent-create.ts | fs, path |
 | agent-delete.ts | 1.0.2 | scripts/agent-delete.ts | fs, path |
-| agent-lifecycle-audit.ts | 1.9.1 | scripts/agent-lifecycle-audit.ts | child_process, fs, path, process |
+| agent-lifecycle-audit.ts | 1.9.2 | scripts/agent-lifecycle-audit.ts | child_process, fs, path, process |
 | agent-list.ts | 1.1.0 | scripts/agent-list.ts | fs, path |
 | agent-verify.ts | 1.0.2 | scripts/agent-verify.ts | fs, path |
 | align-existing-projects.ts | 1.1.1 | scripts/co-newbiz/align-existing-projects.ts | bun:sqlite, fs, path, url |
 | analyze-git-history.ts | 1.0.2 | scripts/analyze-git-history.ts | child_process |
 | anchors.test.ts | 1.0.0 | scripts/humanize/tests/anchors.test.ts | bun:test |
 | apply-handbook-theme.test.ts | 1.0.1 | scripts/tests/apply-handbook-theme.test.ts | bun:test, child_process, fs, os, path |
-| apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
+| apply-handbook-theme.ts | 1.2.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
 | archive-memory.ts | 1.2.0 | scripts/archive-memory.ts | fs, path |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
 | audit-variant.ts | 1.13.1 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
-| audit.ts | 2.64.0 | scripts/audit.ts | bun, child_process, fs, os, path |
+| audit.ts | 2.70.0 | scripts/audit.ts | bun, child_process, crypto, fs, os, path, url |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
@@ -218,7 +218,8 @@
 | changelog-normalize.ts | 1.0.0 | scripts/changelog-normalize.ts | fs |
 | check-a11y.ts | 1.0.0 | scripts/handbook/check-a11y.ts | path |
 | check-authoring.ts | 1.3.0 | scripts/handbook/check-authoring.ts | fs, path |
-| check-external-links.ts | 1.2.0 | scripts/handbook/check-external-links.ts | http, https, path, url |
+| check-external-links.ts | 1.3.0 | scripts/handbook/check-external-links.ts | http, https, path, url |
+| check-generated-content.ts | 1.0.0 | scripts/handbook/check-generated-content.ts | path |
 | check-i18n-parity.ts | 1.0.0 | scripts/handbook/check-i18n-parity.ts | fs, path |
 | check-labels.ts | 1.0.0 | scripts/handbook/check-labels.ts | path |
 | check-links.ts | 1.0.0 | scripts/handbook/check-links.ts | path |
@@ -249,10 +250,10 @@
 | deploy-readme-patch.test.ts | 1.0.0 | scripts/tests/deploy-readme-patch.test.ts | bun:test, fs, os, path |
 | deploy-web.ts | 1.1.0 | scripts/deploy-web.ts | child_process, path |
 | design-lint.ts | 1.5.0 | scripts/co-newbiz/design-lint.ts | fs, path |
-| design-lint.ts | 2.5.0 | scripts/design-lint.ts | fs, js-yaml, path |
+| design-lint.ts | 2.6.0 | scripts/design-lint.ts | fs, js-yaml, path |
 | detect-backport.ts | 1.0.0 | scripts/detect-backport.ts | child_process, crypto, fs, path |
 | deterministic.ts | 1.1.0 | scripts/eval/deterministic.ts | fs, path |
-| dev-sync.ts | 1.37.1 | scripts/dev-sync.ts | bun, crypto, fs, path |
+| dev-sync.ts | 1.53.0 | scripts/dev-sync.ts | bun, crypto, fs, path |
 | dispatch-parallel.ts | 1.1.1 | scripts/dispatch-parallel.ts | N/A |
 | dispatch-serial.ts | 1.1.2 | scripts/dispatch-serial.ts | url |
 | dispatch.ts | 1.1.1 | scripts/dispatch.ts | path |
@@ -282,7 +283,7 @@
 | generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | fs, js-yaml, path |
 | generate-review-matrix.ts | 1.0.0 | scripts/co-newbiz/generate-review-matrix.ts | fs, js-yaml |
 | generate-skill-graph.ts | 2.0.1 | scripts/generate-skill-graph.ts | child_process, fs, js-yaml, path, url |
-| generate-skill-lifecycle-records.ts | 1.3.1 | scripts/generate-skill-lifecycle-records.ts | fs, js-yaml, path, url |
+| generate-skill-lifecycle-records.ts | 1.4.0 | scripts/generate-skill-lifecycle-records.ts | fs, js-yaml, path, url |
 | generate-spec-activities.ts | 1.2.0 | scripts/co-newbiz/generate-spec-activities.ts | fs, js-yaml |
 | generate-version-manifest.ts | 1.12.1 | scripts/generate-version-manifest.ts | bun, child_process, fs, js-yaml, module, path |
 | glossary-lint.ts | 1.1.1 | scripts/co-newbiz/glossary-lint.ts | fs, js-yaml, path |
@@ -345,7 +346,7 @@
 | run-job.ts | 1.0.0 | scripts/co-newbiz/run-job.ts | path |
 | run.ts | 1.1.0 | scripts/eval/run.ts | child_process, fs, path |
 | runbook-validate.ts | 1.0.0 | scripts/co-newbiz/runbook-validate.ts | fs, js-yaml, path |
-| scaffold-handbook.ts | 1.2.0 | scripts/handbook/scaffold-handbook.ts | fs, path |
+| scaffold-handbook.ts | 1.3.1 | scripts/handbook/scaffold-handbook.ts | fs, path |
 | schedule-seed.ts | 1.1.0 | scripts/co-newbiz/schedule-seed.ts | bun:sqlite |
 | schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | path |
 | scheduler-core.ts | 1.0.0 | scripts/co-newbiz/scheduler-core.ts | N/A |
@@ -364,8 +365,8 @@
 | skill-lifecycle-audit.ts | 1.11.0 | scripts/skill-lifecycle-audit.ts | fs, path, process |
 | skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun, fs, path |
 | source-adapters.ts | 1.5.1 | scripts/co-newbiz/source-adapters.ts | bun:sqlite |
-| spec-register.ts | 1.6.0 | scripts/spec-register.ts | fs, path |
-| sync-agent-mirrors.ts | 1.3.0 | scripts/sync-agent-mirrors.ts | fs, js-yaml, path, url |
+| spec-register.ts | 1.6.1 | scripts/spec-register.ts | fs, path |
+| sync-agent-mirrors.ts | 1.3.1 | scripts/sync-agent-mirrors.ts | fs, js-yaml, path, url |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | fs, path |
 | sync-library-projection.ts | 1.3.1 | scripts/co-newbiz/sync-library-projection.ts | fs, js-yaml, path |
 | sync-md.ts | 1.4.0 | scripts/sync-md.ts | N/A |
@@ -379,10 +380,10 @@
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | fs, path |
 | types.ts | 1.0.0 | scripts/co-newbiz/jobs/types.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
-| update-footers.ts | 1.0.0 | scripts/handbook/update-footers.ts | fs, path |
+| update-footers.ts | 1.1.0 | scripts/handbook/update-footers.ts | fs, path |
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | fs |
 | validate-agents.ts | 1.4.1 | scripts/validate-agents.ts | fs, path, process |
-| validate-decisions.ts | 1.1.0 | scripts/validate-decisions.ts | fs, js-yaml, path, process |
+| validate-decisions.ts | 1.2.1 | scripts/validate-decisions.ts | fs, js-yaml, path, process |
 | validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | child_process, path |
@@ -396,7 +397,7 @@
 | validate-skills.ts | 1.5.2 | scripts/validate-skills.ts | fs, path, process |
 | validate-surface-registry.ts | 1.1.2 | scripts/validate-surface-registry.ts | fs, path |
 | validate-templates.ts | 1.75.0 | scripts/validate-templates.ts | child_process, fs, js-yaml, path, url |
-| validate-variant-readiness.ts | 1.1.0 | scripts/validate-variant-readiness.ts | fs, path |
+| validate-variant-readiness.ts | 1.2.0 | scripts/validate-variant-readiness.ts | fs, path |
 | verify-agent-deliverables.ts | 1.0.1 | scripts/verify-agent-deliverables.ts | fs |
 | verify-memory.ts | 1.3.0 | scripts/verify-memory.ts | fs, path |
 | verify-platform-lifecycle.ts | 1.6.1 | scripts/verify-platform-lifecycle.ts | fs, path |

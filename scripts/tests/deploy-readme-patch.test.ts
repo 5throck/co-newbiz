@@ -20,16 +20,17 @@ function detectReadmeLang(filename: string): string {
   return match ? match[1] : "en";
 }
 
-function patchReadmePagesUrl(content: string, filename: string, url: string, title: string): { result: string; changed: boolean } {
+function patchReadmePagesUrl(
+  content: string,
+  filename: string,
+  url: string,
+  title: string,
+): { result: string; changed: boolean } {
   const lang = detectReadmeLang(filename);
   const isKo = lang === "ko";
 
-  const sectionHeading = isKo
-    ? "## 🌐 교육 프로그램 바로가기 (웹사이트)"
-    : "## 🌐 Read the Handbook Live";
-  const linkText = isKo
-    ? `${title} 교육 사이트 보기`
-    : "Online Handbook & Educational Program";
+  const sectionHeading = isKo ? "## 🌐 교육 프로그램 바로가기 (웹사이트)" : "## 🌐 Read the Handbook Live";
+  const linkText = isKo ? `${title} 교육 사이트 보기` : "Online Handbook & Educational Program";
   const newSection = `${sectionHeading}\n👉 **[${linkText}](${url})**`;
 
   // Case 2/3: 🌐 section already exists
@@ -52,11 +53,7 @@ function patchReadmePagesUrl(content: string, filename: string, url: string, tit
   }
 
   // Case 1: No 🌐 section — insert before 🎯 or 📜
-  const insertBefore = content.includes("## 🎯")
-    ? "## 🎯"
-    : content.includes("## 📜")
-      ? "## 📜"
-      : null;
+  const insertBefore = content.includes("## 🎯") ? "## 🎯" : content.includes("## 📜") ? "## 📜" : null;
 
   if (insertBefore) {
     content = content.replace(insertBefore, `${newSection}\n\n${insertBefore}`);

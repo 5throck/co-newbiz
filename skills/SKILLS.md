@@ -45,7 +45,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `gateguard` | 1.0.2 | active | pm | 2026-08-01 | — | — |
 | `greenfield-feasibility` | 1.2.0 | active | greenfield-agent | 2026-10-01 | — | Wave 5.8C — Green Field Screening/Pre-FS |
 | `growth-projection-modeling` | 1.2.0 | active | financial-analyst | 2026-10-28 | — | Wave 5.8G — ADR-0018 anchor_ref + top-decile base-rate warning, feeds the Kill Criterion |
-| `handbook` | 0.6.0 | active | pm | 2026-09-20 | — | — |
+| `handbook` | 0.6.2 | active | pm | 2026-09-20 | — | — |
 | `historical-financial-analysis` | 1.0.1 | active | financial-analyst | 2026-10-28 | — | Wave 5.8G (design §9.3 financial/simulation group) — historical distribution feeding the growth-projection anchor |
 | `humanize-polish` | 1.1.0 | active | docs-writer | 2026-11-21 | — | Spec humanize-server-migration — pre-output Korean polishing via the pinned Humanize server (external-deps entry `humanize`, 5throck/Humanize v1.0.0), default-deny eligibility, deterministic gates (anchor multiset + change rate); polished text stays a proposal |
 | `i18n-audit` | 1.0.2 | active | i18n-specialist | 2026-11-19 | — | — |

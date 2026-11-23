@@ -44,7 +44,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
-import { buildGraph, SkillGraph, GraphNode, GraphEdge } from "./generate-skill-graph.ts";
+import { buildGraph, type SkillGraph, type GraphNode, type GraphEdge } from "./generate-skill-graph.ts";
 import { upgradeSkillGraph } from "./lib/skill-graph-compat.ts";
 
 const __filename = fileURLToPath(import.meta.url);

@@ -36,7 +36,9 @@ const MAX_FIRES_SCANNED = 5000;
 
 export function resolveSchedulerEnv(raw: string | undefined = process.env.CO_NEWBIZ_SCHEDULER_ENV): SchedulerEnv {
   if (raw === "prod" || raw === "dev") return raw;
-  throw new Error("CO_NEWBIZ_SCHEDULER_ENV must be set to 'prod' or 'dev' (refusing to run the scheduler without an explicit environment)");
+  throw new Error(
+    "CO_NEWBIZ_SCHEDULER_ENV must be set to 'prod' or 'dev' (refusing to run the scheduler without an explicit environment)",
+  );
 }
 
 // ── Due-job computation ────────────────────────────────────────────────────
@@ -69,10 +71,18 @@ export function collectDueJobs(db: Db, now: Date, policyFor: (jobKey: string) =>
   const out: DueScan = { due: [], skippedMissed: [], invalid: [] };
   const nowMin = floorToMinute(now);
   const rows = db
-    .query("SELECT job_key, cron_expr, last_fire_minute, timeout_sec, max_retries FROM schedule_job WHERE enabled = 1 ORDER BY job_key")
-    .all() as Array<{ job_key: string; cron_expr: string; last_fire_minute: string | null; timeout_sec: number; max_retries: number }>;
+    .query(
+      "SELECT job_key, cron_expr, last_fire_minute, timeout_sec, max_retries FROM schedule_job WHERE enabled = 1 ORDER BY job_key",
+    )
+    .all() as Array<{
+    job_key: string;
+    cron_expr: string;
+    last_fire_minute: string | null;
+    timeout_sec: number;
+    max_retries: number;
+  }>;
   for (const r of rows) {
-    let spec;
+    let spec: ReturnType<typeof parseCron>;
     try {
       spec = parseCron(r.cron_expr);
     } catch (e) {
@@ -98,13 +108,25 @@ export function collectDueJobs(db: Db, now: Date, policyFor: (jobKey: string) =>
     if (res.changes !== 1) continue;
     const lateMs = nowMin.getTime() - latest.getTime();
     if (lateMs <= ON_TIME_MS) {
-      out.due.push({ jobKey: r.job_key, fireMinute: fire, trigger: "schedule", timeoutSec: r.timeout_sec, maxRetries: r.max_retries });
+      out.due.push({
+        jobKey: r.job_key,
+        fireMinute: fire,
+        trigger: "schedule",
+        timeoutSec: r.timeout_sec,
+        maxRetries: r.max_retries,
+      });
       continue;
     }
     const policy = policyFor(r.job_key);
     const maxAgeMs = (policy.maxAgeHours ?? 24) * 3_600_000;
     if (policy.mode === "once" && lateMs <= maxAgeMs) {
-      out.due.push({ jobKey: r.job_key, fireMinute: fire, trigger: "catchup", timeoutSec: r.timeout_sec, maxRetries: r.max_retries });
+      out.due.push({
+        jobKey: r.job_key,
+        fireMinute: fire,
+        trigger: "catchup",
+        timeoutSec: r.timeout_sec,
+        maxRetries: r.max_retries,
+      });
     } else {
       out.skippedMissed.push({ jobKey: r.job_key, fireMinute: fire });
     }
@@ -186,7 +208,10 @@ export function finishJobRun(db: Db, id: string, f: JobRunFinish): void {
  * Mark runs still 'running' past their lease as failed ('timeout_or_crash') and drop expired locks. A killed
  * run-job cannot update its own row, so the next tick repairs it (same pattern as reclaimStaleJobs in job-worker).
  */
-export function sweepStaleRuns(db: Db, now: Date): { reclaimed: number; locksCleared: number; requestsAbandoned: number } {
+export function sweepStaleRuns(
+  db: Db,
+  now: Date,
+): { reclaimed: number; locksCleared: number; requestsAbandoned: number } {
   // Scheduler-owned rows only (env IS NOT NULL): legacy/watch-run rows are never touched by the scheduler sweep.
   const running = db
     .query(
@@ -214,8 +239,12 @@ export function sweepStaleRuns(db: Db, now: Date): { reclaimed: number; locksCle
     .all() as Array<{ id: string; requested_at: string; timeout_sec: number; max_retries: number; job_key: string }>;
   for (const q of claimed) {
     if (Date.parse(q.requested_at) + leaseSeconds(q.timeout_sec, q.max_retries) * 1000 >= now.getTime()) continue;
-    if (db.query("SELECT 1 FROM job_run WHERE job_key = ? AND status = 'running' AND env IS NOT NULL").get(q.job_key)) continue;
-    requestsAbandoned += db.run("UPDATE schedule_job_request SET status = 'abandoned' WHERE id = ? AND status = 'claimed'", [q.id]).changes;
+    if (db.query("SELECT 1 FROM job_run WHERE job_key = ? AND status = 'running' AND env IS NOT NULL").get(q.job_key))
+      continue;
+    requestsAbandoned += db.run(
+      "UPDATE schedule_job_request SET status = 'abandoned' WHERE id = ? AND status = 'claimed'",
+      [q.id],
+    ).changes;
   }
   const cleared = db.run("DELETE FROM schedule_job_lock WHERE lease_until < ?", [now.toISOString()]);
   return { reclaimed, locksCleared: cleared.changes, requestsAbandoned };
@@ -245,12 +274,10 @@ export function consecutiveFailures(db: Db, jobKey: string, limit = 5): number {
 
 export function enqueueRequest(db: Db, jobKey: string, requestedBy: string, now: Date): string {
   const id = ulid();
-  db.run("INSERT INTO schedule_job_request (id, job_key, requested_by, requested_at, status) VALUES (?, ?, ?, ?, 'queued')", [
-    id,
-    jobKey,
-    requestedBy,
-    now.toISOString(),
-  ]);
+  db.run(
+    "INSERT INTO schedule_job_request (id, job_key, requested_by, requested_at, status) VALUES (?, ?, ?, ?, 'queued')",
+    [id, jobKey, requestedBy, now.toISOString()],
+  );
   return id;
 }
 
@@ -263,7 +290,9 @@ export interface JobRequest {
 /** Claim every queued request (compare-and-set per row, safe against a concurrent tick). */
 export function claimQueuedRequests(db: Db): JobRequest[] {
   const rows = db
-    .query("SELECT id, job_key, requested_by FROM schedule_job_request WHERE status = 'queued' ORDER BY requested_at, id")
+    .query(
+      "SELECT id, job_key, requested_by FROM schedule_job_request WHERE status = 'queued' ORDER BY requested_at, id",
+    )
     .all() as Array<{ id: string; job_key: string; requested_by: string }>;
   const claimed: JobRequest[] = [];
   for (const r of rows) {
@@ -273,7 +302,12 @@ export function claimQueuedRequests(db: Db): JobRequest[] {
   return claimed;
 }
 
-export function completeRequest(db: Db, id: string, status: "done" | "rejected_locked", jobRunId?: string | null): void {
+export function completeRequest(
+  db: Db,
+  id: string,
+  status: "done" | "rejected_locked",
+  jobRunId?: string | null,
+): void {
   db.run("UPDATE schedule_job_request SET status = ?, job_run_id = ? WHERE id = ?", [status, jobRunId ?? null, id]);
 }
 

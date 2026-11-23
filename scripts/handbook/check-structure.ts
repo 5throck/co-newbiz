@@ -113,7 +113,7 @@ function tokenize(html: string): TagToken[] {
     // and NOT be allowed to swallow up to the next ">" — that would skip
     // real tags (like "</pre>") that live inside the heredoc body.
     const nextChar = html[lt + 1] || "";
-    if (!/[a-zA-Z\/!?]/.test(nextChar)) {
+    if (!/[a-zA-Z/!?]/.test(nextChar)) {
       i = lt + 1;
       continue;
     }

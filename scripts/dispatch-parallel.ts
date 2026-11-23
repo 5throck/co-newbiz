@@ -221,4 +221,4 @@ if (import.meta.main) {
   main();
 }
 
-export { dispatchParallel as default, ParallelAgentTask, DispatchResult, DispatchOptions };
+export { dispatchParallel as default, type ParallelAgentTask, type DispatchResult, type DispatchOptions };

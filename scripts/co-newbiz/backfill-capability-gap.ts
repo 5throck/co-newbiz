@@ -34,7 +34,9 @@ const dryRun = process.argv.includes("--dry-run");
 const db = getDb();
 
 const rows = db
-  .query("SELECT opportunity_id, capability_gaps_json FROM greenfield_assessment WHERE capability_gaps_json IS NOT NULL")
+  .query(
+    "SELECT opportunity_id, capability_gaps_json FROM greenfield_assessment WHERE capability_gaps_json IS NOT NULL",
+  )
   .all() as Array<{ opportunity_id: string; capability_gaps_json: string }>;
 
 let oppsTouched = 0;
@@ -61,7 +63,8 @@ for (const row of rows) {
       const patch: Partial<CapabilityGapRow> = {};
       if (!existing.requiredLevel && legacy.required_level) patch.requiredLevel = legacy.required_level;
       if (!existing.currentLevel && legacy.current_level) patch.currentLevel = legacy.current_level;
-      if (!existing.resolution && legacy.resolution) patch.resolution = legacy.resolution as CapabilityGapRow["resolution"];
+      if (!existing.resolution && legacy.resolution)
+        patch.resolution = legacy.resolution as CapabilityGapRow["resolution"];
       if (!existing.note && legacy.note) patch.note = legacy.note;
       if (Object.keys(patch).length > 0) {
         Object.assign(existing, patch);

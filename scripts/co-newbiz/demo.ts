@@ -82,7 +82,10 @@ async function capture(app: TestApp, ids: DemoIds): Promise<string[]> {
 
 async function main(): Promise<void> {
   const captureMode = process.argv.includes("--capture");
-  let ids: DemoIds = { brownfield: { opportunityId: "", projectId: "" }, greenfield: { opportunityId: "", projectId: "" } };
+  let ids: DemoIds = {
+    brownfield: { opportunityId: "", projectId: "" },
+    greenfield: { opportunityId: "", projectId: "" },
+  };
   const app = await startApp("demo", {
     seed: async (ctx) => {
       ids = await seed(ctx);
@@ -101,8 +104,12 @@ async function main(): Promise<void> {
   console.log(`  analyst (deal work)  user: ${app.analystId}  first-login password: ${app.analystPassword}`);
   console.log(`  admin (no deal data) user: ${app.adminId}  first-login password: ${app.adminPassword}`);
   console.log("  passwords are generated for this run only; the first login forces a change.");
-  console.log(`  brownfield (M&A)      deal: ${app.baseUrl}/deals/${ids.brownfield.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.brownfield.projectId}/process`);
-  console.log(`  greenfield (신설)      deal: ${app.baseUrl}/deals/${ids.greenfield.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.greenfield.projectId}/process`);
+  console.log(
+    `  brownfield (M&A)      deal: ${app.baseUrl}/deals/${ids.brownfield.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.brownfield.projectId}/process`,
+  );
+  console.log(
+    `  greenfield (신설)      deal: ${app.baseUrl}/deals/${ids.greenfield.opportunityId}  ·  project: ${app.baseUrl}/projects/${ids.greenfield.projectId}/process`,
+  );
   // The harness's own SIGINT/SIGTERM handlers kill the server and delete the temp directory.
   console.log("Ctrl-C stops the server and deletes the temporary database.");
   await new Promise<never>(() => undefined);

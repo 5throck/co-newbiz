@@ -70,13 +70,16 @@ export async function runCoverage(): Promise<CoverageReport> {
   const artifacts = new Set<string>();
   for (const stage of spec.stages) {
     for (const a of stage.activities ?? []) activities.add(a.id);
-    (stage.requiredArtifacts ?? []).forEach((_name, i) => artifacts.add(`stage:${stage.id}:${i + 1}`));
+    (stage.requiredArtifacts ?? []).forEach((_name, i) => {
+      artifacts.add(`stage:${stage.id}:${i + 1}`);
+    });
   }
 
   const excludedActivities = new Set<string>();
   for (const ex of exclusionFile.exclusions) {
     if (ex.kind === "activity") {
-      if (!ex.ref || !activities.has(ex.ref)) errors.push(`Exclusion '${ex.id}': activity '${ex.ref}' is not in flow.spec (stale exclusion).`);
+      if (!ex.ref || !activities.has(ex.ref))
+        errors.push(`Exclusion '${ex.id}': activity '${ex.ref}' is not in flow.spec (stale exclusion).`);
       else excludedActivities.add(ex.ref);
     }
   }
@@ -94,16 +97,20 @@ export async function runCoverage(): Promise<CoverageReport> {
     }
     // Scope/kind invariants: a propose tool can only create a proposal.
     const expectedScope = tool.kind === "read" ? "read" : tool.kind === "propose" ? "propose" : "write";
-    if (tool.scope !== expectedScope) errors.push(`Tool '${tool.name}': kind '${tool.kind}' requires scope '${expectedScope}', found '${tool.scope}'.`);
+    if (tool.scope !== expectedScope)
+      errors.push(`Tool '${tool.name}': kind '${tool.kind}' requires scope '${expectedScope}', found '${tool.scope}'.`);
     if (tool.kind === "propose" && tool.routes.some((r) => r !== "POST /api/proposals")) {
-      errors.push(`Propose tool '${tool.name}' declares a route other than POST /api/proposals: ${tool.routes.join(", ")}.`);
+      errors.push(
+        `Propose tool '${tool.name}' declares a route other than POST /api/proposals: ${tool.routes.join(", ")}.`,
+      );
     }
     if (tool.kind !== "read" && tool.routes.length === 0) errors.push(`Tool '${tool.name}' declares no REST route.`);
   }
 
   for (const a of activities) {
     if (excludedActivities.has(a)) continue;
-    if (!coveredActivities.has(a)) errors.push(`Activity '${a}' has no MCP tool (add stageActivities to a tool or exclude it as human-only).`);
+    if (!coveredActivities.has(a))
+      errors.push(`Activity '${a}' has no MCP tool (add stageActivities to a tool or exclude it as human-only).`);
   }
   for (const a of artifacts) {
     if (!coveredArtifacts.has(a)) errors.push(`Artifact '${a}' has no MCP tool (add stageArtifacts to a tool).`);
@@ -113,13 +120,16 @@ export async function runCoverage(): Promise<CoverageReport> {
     switch (ex.kind) {
       case "activity": {
         for (const tool of REGISTRY) {
-          if (ref(ex) && tool.stageActivities.includes(ref(ex))) errors.push(`Excluded activity '${ex.ref}' gained a tool: '${tool.name}'.`);
+          if (ref(ex) && tool.stageActivities.includes(ref(ex)))
+            errors.push(`Excluded activity '${ex.ref}' gained a tool: '${tool.name}'.`);
         }
         break;
       }
       case "tool_pattern": {
         const re = new RegExp(ex.pattern ?? "$^");
-        for (const tool of REGISTRY) if (re.test(tool.name)) errors.push(`Tool '${tool.name}' matches forbidden pattern '${ex.pattern}' (${ex.id}).`);
+        for (const tool of REGISTRY)
+          if (re.test(tool.name))
+            errors.push(`Tool '${tool.name}' matches forbidden pattern '${ex.pattern}' (${ex.id}).`);
         break;
       }
       case "route":
@@ -131,24 +141,48 @@ export async function runCoverage(): Promise<CoverageReport> {
               errors.push(`Tool '${tool.name}' declares human-only route '${ex.route}' (${ex.id}).`);
             } else {
               const marker = `${tool.routes.find((r) => wildcard(r) === route)}#${ex.field}=`;
-              const guarded = (tool.blockedBodyValues ?? []).some((b) => wildcard(b.split("#")[0]) === route && b.includes(`#${ex.field}=`) && b.slice(b.indexOf("#")).split("=")[1]?.split("|").includes(ex.value ?? ""));
-              if (!guarded) errors.push(`Tool '${tool.name}' wraps '${ex.route}' without refusing ${ex.field}=${ex.value} (${ex.id}; expected blockedBodyValues ${marker}...).`);
+              const guarded = (tool.blockedBodyValues ?? []).some(
+                (b) =>
+                  wildcard(b.split("#")[0]) === route &&
+                  b.includes(`#${ex.field}=`) &&
+                  b
+                    .slice(b.indexOf("#"))
+                    .split("=")[1]
+                    ?.split("|")
+                    .includes(ex.value ?? ""),
+              );
+              if (!guarded)
+                errors.push(
+                  `Tool '${tool.name}' wraps '${ex.route}' without refusing ${ex.field}=${ex.value} (${ex.id}; expected blockedBodyValues ${marker}...).`,
+                );
             }
           }
         }
         if (ex.inprocess !== false) {
           const [method] = (ex.route ?? "").split(" ");
           const guarded = HUMAN_ONLY_ROUTES.some(
-            (r) => r.method === method && wildcard(`${r.method} ${r.pattern}`) === route && (ex.kind === "route" ? !r.bodyField : r.bodyField?.field === ex.field && r.bodyField?.value === ex.value),
+            (r) =>
+              r.method === method &&
+              wildcard(`${r.method} ${r.pattern}`) === route &&
+              (ex.kind === "route" ? !r.bodyField : r.bodyField?.field === ex.field && r.bodyField?.value === ex.value),
           );
-          if (!guarded) errors.push(`Exclusion '${ex.id}': the in-process route guard (HUMAN_ONLY_ROUTES) does not refuse '${ex.route}'.`);
+          if (!guarded)
+            errors.push(
+              `Exclusion '${ex.id}': the in-process route guard (HUMAN_ONLY_ROUTES) does not refuse '${ex.route}'.`,
+            );
         }
         break;
       }
     }
   }
 
-  return { errors, activities: activities.size, artifacts: artifacts.size, tools: REGISTRY.length, excluded: exclusionFile.exclusions.length };
+  return {
+    errors,
+    activities: activities.size,
+    artifacts: artifacts.size,
+    tools: REGISTRY.length,
+    excluded: exclusionFile.exclusions.length,
+  };
 }
 
 function ref(ex: Exclusion): string {
@@ -160,7 +194,9 @@ if (import.meta.main) {
   if (process.argv.includes("--json")) {
     console.log(JSON.stringify(report, null, 2));
   } else if (report.errors.length === 0) {
-    console.log(`mcp-coverage: OK — ${report.tools} tools cover ${report.activities} activities and ${report.artifacts} artifacts (${report.excluded} human-only exclusions enforced).`);
+    console.log(
+      `mcp-coverage: OK — ${report.tools} tools cover ${report.activities} activities and ${report.artifacts} artifacts (${report.excluded} human-only exclusions enforced).`,
+    );
   } else {
     console.error(`mcp-coverage: FAILED (${report.errors.length})`);
     for (const e of report.errors) console.error(`  - ${e}`);

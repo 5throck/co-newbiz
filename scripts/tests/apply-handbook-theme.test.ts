@@ -165,8 +165,8 @@ describe("apply-handbook-theme.ts", () => {
     const css = readFileSync(join(tmpDir, "docs", "assets", "css", "handbook-variables.css"), "utf-8");
 
     // Native theme uses lighter callout backgrounds than Azure
-    expect(css).toContain("--bg-info: #f0f7ff");   // Azure uses #ddf4ff
-    expect(css).toContain("--bg-warn: #fff8f8");   // Azure uses #fff1c5
+    expect(css).toContain("--bg-info: #f0f7ff"); // Azure uses #ddf4ff
+    expect(css).toContain("--bg-warn: #fff8f8"); // Azure uses #fff1c5
     expect(css).toContain("--bg-success: #f0fff4"); // Azure uses #dafbe1
   });
 

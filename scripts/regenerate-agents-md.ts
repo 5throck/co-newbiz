@@ -154,7 +154,7 @@ function readAgentMeta(variantDir: string, agentName: string): AgentMeta {
   const tier = resolveTier(fm);
   const phasesRaw = fm["phases"] || "";
   // Convert [1, 2] → "1, 2"
-  const phases = phasesRaw.replace(/[\[\]]/g, "").replace(/,\s*/g, ", ");
+  const phases = phasesRaw.replace(/[[\]]/g, "").replace(/,\s*/g, ", ");
   const role = resolveRole(fm, agentName);
   const description = cleanDescription(fm["description"]) || role;
 

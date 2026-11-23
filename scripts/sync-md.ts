@@ -42,7 +42,7 @@ const INIT_CONTENT = `# Memory Index
 
 // ── Initialize MEMORY.md with 3-section structure if missing ─────────────────
 const file = Bun.file(MEMORY_FILE);
-let exists = await file.exists();
+const exists = await file.exists();
 if (!exists) {
   await Bun.write(MEMORY_FILE, INIT_CONTENT);
 }

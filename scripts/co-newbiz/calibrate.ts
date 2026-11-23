@@ -89,7 +89,9 @@ export async function runCalibrate(opts: CalibrateOptions): Promise<CalibrateRes
   const from = seriesPoints(db, opts.fromSeriesId, opts.periodFrom, opts.periodTo);
   const to = seriesPoints(db, opts.toSeriesId, opts.periodFrom, opts.periodTo);
   if (from.length < 8 || to.length < 8) {
-    throw new Error(`calibrate: need >= 8 aligned observations per series (got ${from.length} / ${to.length}) — fetch more history first.`);
+    throw new Error(
+      `calibrate: need >= 8 aligned observations per series (got ${from.length} / ${to.length}) — fetch more history first.`,
+    );
   }
 
   // Spawn the methodology owner (args array, never shell) — same discipline
@@ -97,10 +99,25 @@ export async function runCalibrate(opts: CalibrateOptions): Promise<CalibrateRes
   const tempDir = mkdtempSync(join(tmpdir(), "co-newbiz-calibrate-"));
   const inputPath = join(tempDir, `calibrate-${ulid().toLowerCase()}.json`);
   const { writeFileSync } = await import("node:fs");
-  writeFileSync(inputPath, JSON.stringify({ from_series: from, to_series: to, max_lag_months: opts.maxLagMonths ?? 6 }));
-  let result: { beta: number; r2: number; lag_months: number; ci_low: number; ci_high: number; grade_eligible: boolean; grade_note: string };
+  writeFileSync(
+    inputPath,
+    JSON.stringify({ from_series: from, to_series: to, max_lag_months: opts.maxLagMonths ?? 6 }),
+  );
+  let result: {
+    beta: number;
+    r2: number;
+    lag_months: number;
+    ci_low: number;
+    ci_high: number;
+    grade_eligible: boolean;
+    grade_note: string;
+  };
   try {
-    const proc = Bun.spawnSync([resolvePythonBin(), resolve(import.meta.dirname, "..", "..", "python", "correlation.py"), inputPath]);
+    const proc = Bun.spawnSync([
+      resolvePythonBin(),
+      resolve(import.meta.dirname, "..", "..", "python", "correlation.py"),
+      inputPath,
+    ]);
     const out = proc.stdout.toString();
     if (proc.exitCode !== 0) {
       throw new Error(`correlation.py exited ${proc.exitCode}: ${proc.stderr.toString().slice(0, 300)}`);
@@ -115,12 +132,25 @@ export async function runCalibrate(opts: CalibrateOptions): Promise<CalibrateRes
     opts.fromIndustryId,
     opts.toIndustryId,
   ]);
-  const evidenceRef = opts.evidenceRef ?? `correlation.py ${opts.fromSeriesId}→${opts.toSeriesId} ${opts.periodFrom}..${opts.periodTo}`;
+  const evidenceRef =
+    opts.evidenceRef ?? `correlation.py ${opts.fromSeriesId}→${opts.toSeriesId} ${opts.periodFrom}..${opts.periodTo}`;
   const linkId = ulid();
   db.run(
     `INSERT INTO proxy_link (id, from_industry_id, to_industry_id, hop_type, beta, r2, lag_months, ci_low, ci_high, evidence_ref, calibrated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [linkId, opts.fromIndustryId, opts.toIndustryId, "statistical", result.beta, result.r2, result.lag_months, result.ci_low, result.ci_high, evidenceRef, new Date().toISOString()],
+    [
+      linkId,
+      opts.fromIndustryId,
+      opts.toIndustryId,
+      "statistical",
+      result.beta,
+      result.r2,
+      result.lag_months,
+      result.ci_low,
+      result.ci_high,
+      evidenceRef,
+      new Date().toISOString(),
+    ],
   );
 
   // Single-hop chain grade (proxy-industry-chain skill rule 4): the hop's own
@@ -131,7 +161,16 @@ export async function runCalibrate(opts: CalibrateOptions): Promise<CalibrateRes
   db.run(
     `INSERT INTO proxy_chain (id, target_industry_id, hop_ids, reliability_grade, grade_rationale, compounded_ci_low, compounded_ci_high, calibrated_at)
      VALUES (?,?,?,?,?,?,?,?)`,
-    [chainId, opts.toIndustryId, JSON.stringify([linkId]), grade, gradeRationale, result.ci_low, result.ci_high, new Date().toISOString()],
+    [
+      chainId,
+      opts.toIndustryId,
+      JSON.stringify([linkId]),
+      grade,
+      gradeRationale,
+      result.ci_low,
+      result.ci_high,
+      new Date().toISOString(),
+    ],
   );
 
   return {

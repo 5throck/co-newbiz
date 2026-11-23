@@ -17,7 +17,11 @@ const GLOSSARY_DIR = join(ROOT, "glossary");
 const OUT = join(ROOT, "app/web-next/lib/glossary-data.generated.ts");
 const OUT_REL = "app/web-next/lib/glossary-data.generated.ts";
 
-const validation = Bun.spawnSync(["bun", join(GLOSSARY_DIR, "_validate.ts")], { cwd: ROOT, stdout: "pipe", stderr: "pipe" });
+const validation = Bun.spawnSync(["bun", join(GLOSSARY_DIR, "_validate.ts")], {
+  cwd: ROOT,
+  stdout: "pipe",
+  stderr: "pipe",
+});
 if (validation.exitCode !== 0) {
   console.error(new TextDecoder().decode(validation.stdout));
   console.error(new TextDecoder().decode(validation.stderr));
@@ -49,7 +53,9 @@ if (process.argv.includes("--check")) {
     /* missing = stale */
   }
   if (norm(current) !== norm(generated)) {
-    console.error(`${OUT_REL} stale - regenerate with: bun scripts/co-newbiz/generate-glossary-data.ts (or: bun run glossary:generate)`);
+    console.error(
+      `${OUT_REL} stale - regenerate with: bun scripts/co-newbiz/generate-glossary-data.ts (or: bun run glossary:generate)`,
+    );
     process.exit(1);
   }
   console.log("glossary-data.generated.ts is up to date.");

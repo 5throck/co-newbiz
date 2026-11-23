@@ -29,7 +29,11 @@ const CASES: CaseSeed[] = [
     deal_size_krw_m: 2000000,
     summary_ko:
       "240,000L 규모의 바이오 의약품 CDMO 5공장 신설. 수주 잔고 기반 수요 확정 상태에서 착수해 2023년 가동 — 수요 선확보 후 증설하는 그린필드 표준 사례.",
-    key_metrics_json: JSON.stringify({ capacity_l: 240000, construction_years: 3, anchor_customer: "Pfizer 등 글로벌 빅파마" }),
+    key_metrics_json: JSON.stringify({
+      capacity_l: 240000,
+      construction_years: 3,
+      anchor_customer: "Pfizer 등 글로벌 빅파마",
+    }),
     source_ref: "삼성바이오로직스 공시·보도자료(2020)",
   },
   {
@@ -77,7 +81,10 @@ const CASES: CaseSeed[] = [
     deal_size_krw_m: null,
     summary_ko:
       "자체 개발 바이오시밀러 후보의 글로벌 권한을 지역별 아웃라이선스. 계약금+마일스톤+로열티 구조의 라이선싱 수익화 참고 사례.",
-    key_metrics_json: JSON.stringify({ structure: "upfront + milestone + royalty", partners: ["Pfizer(merck bio)', 'MBK 등"] }),
+    key_metrics_json: JSON.stringify({
+      structure: "upfront + milestone + royalty",
+      partners: ["Pfizer(merck bio)', 'MBK 등"],
+    }),
     source_ref: "공시(2011~)",
   },
   {
@@ -111,8 +118,7 @@ const CASES: CaseSeed[] = [
     deal_type: "partnership",
     deal_year: 2022,
     deal_size_krw_m: null,
-    summary_ko:
-      "완성차 그룹과 셀 업체 간 공급망 협력 강화. JV까지 가지 않는 전략적 공급 파트너십 구조의 참고 사례.",
+    summary_ko: "완성차 그룹과 셀 업체 간 공급망 협력 강화. JV까지 가지 않는 전략적 공급 파트너십 구조의 참고 사례.",
     key_metrics_json: JSON.stringify({ structure: "장기공급계약 + 협의체" }),
     source_ref: "언론 보도(2022~)",
   },
@@ -131,7 +137,19 @@ const insert = db.query(
    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
 );
 for (const c of CASES) {
-  insert.run(ulid(), c.title, c.industry, c.region, c.deal_type, c.deal_year, c.deal_size_krw_m,
-    c.summary_ko, c.key_metrics_json, c.source_ref, "seed:benchmark", now);
+  insert.run(
+    ulid(),
+    c.title,
+    c.industry,
+    c.region,
+    c.deal_type,
+    c.deal_year,
+    c.deal_size_krw_m,
+    c.summary_ko,
+    c.key_metrics_json,
+    c.source_ref,
+    "seed:benchmark",
+    now,
+  );
 }
 console.log(`Seeded ${CASES.length} benchmark cases.`);

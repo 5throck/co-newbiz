@@ -104,7 +104,10 @@ function normalizeForCheck(text: string): string {
 
 if (process.argv.includes("--check")) {
   const stale: string[] = [];
-  for (const [path, text] of [[OUT_PATH, generated], [GUIDES_OUT_PATH, guidesGenerated]] as const) {
+  for (const [path, text] of [
+    [OUT_PATH, generated],
+    [GUIDES_OUT_PATH, guidesGenerated],
+  ] as const) {
     if (normalizeForCheck(readFileSync(path, "utf8")) !== normalizeForCheck(text)) stale.push(path);
   }
   if (stale.length > 0) {

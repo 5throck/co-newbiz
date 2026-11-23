@@ -18,7 +18,8 @@ import { runCollectSource } from "./common.ts";
 export const collectKrx: JobHandler = {
   key: "collect.krx",
   displayName: "KRX daily collection",
-  description: "Collects KRX daily closes (index and per-deal stock series) into fact_market_observation after market close.",
+  description:
+    "Collects KRX daily closes (index and per-deal stock series) into fact_market_observation after market close.",
   defaultCron: "30 18 * * 1-5",
   timeoutSec: 1200,
   maxRetries: 2,

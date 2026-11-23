@@ -72,8 +72,15 @@ function literal(v: unknown): string {
   if (typeof v === "bigint") return v.toString();
   if (v instanceof Uint8Array) return `X'${Buffer.from(v).toString("hex")}'`;
   const s = String(v);
-  if (/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(s)) {
-    return "E'" + s.replace(/\\/g, "\\\\").replace(/'/g, "''").replace(/[\x00-\x1f]/g, (ch) => `\\${ch.charCodeAt(0).toString(8).padStart(3, "0")}`) + "'";
+  if (new RegExp("[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f]").test(s)) {
+    return (
+      "E'" +
+      s
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "''")
+        .replace(new RegExp("[\\x00-\\x1f]", "g"), (ch) => `\\${ch.charCodeAt(0).toString(8).padStart(3, "0")}`) +
+      "'"
+    );
   }
   return `'${s.replace(/'/g, "''")}'`;
 }
@@ -82,13 +89,20 @@ export function runDbExport(options: ExportOptions = {}): ExportResult {
   const db = getDb(options.dbPath);
   const warnings: string[] = [];
 
-  interface MasterRow { type: string; name: string; tbl_name: string; sql: string | null }
-  const objects = db.query(
-    "SELECT type, name, tbl_name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid",
-  ).all() as MasterRow[];
+  interface MasterRow {
+    type: string;
+    name: string;
+    tbl_name: string;
+    sql: string | null;
+  }
+  const objects = db
+    .query("SELECT type, name, tbl_name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY rowid")
+    .all() as MasterRow[];
 
   const tables = objects.filter((o) => o.type === "table" && !o.name.startsWith("sqlite_") && !SKIP_TABLES.has(o.name));
-  const indexes = objects.filter((o) => o.type === "index" && !o.name.startsWith("sqlite_autoindex_") && !SKIP_TABLES.has(o.tbl_name));
+  const indexes = objects.filter(
+    (o) => o.type === "index" && !o.name.startsWith("sqlite_autoindex_") && !SKIP_TABLES.has(o.tbl_name),
+  );
 
   const parts: string[] = [];
   parts.push(`-- co-newbiz database export — generated ${new Date().toISOString()}`);
@@ -109,16 +123,28 @@ export function runDbExport(options: ExportOptions = {}): ExportResult {
   );
   for (const w of warnings) parts.push(`-- WARNING: ${w}`);
 
-  parts.push("", "-- ---------------------------------------------------------------------------", "-- Schema", "-- ---------------------------------------------------------------------------");
+  parts.push(
+    "",
+    "-- ---------------------------------------------------------------------------",
+    "-- Schema",
+    "-- ---------------------------------------------------------------------------",
+  );
   for (const t of tables) {
     parts.push(translateCreateTable(t.sql!) + ";");
   }
 
-  parts.push("", "-- ---------------------------------------------------------------------------", "-- Data", "-- ---------------------------------------------------------------------------");
+  parts.push(
+    "",
+    "-- ---------------------------------------------------------------------------",
+    "-- Data",
+    "-- ---------------------------------------------------------------------------",
+  );
   parts.push("SET session_replication_role = replica;");
   let rowCount = 0;
   for (const t of tables) {
-    const cols = (db.query(`PRAGMA table_info(${JSON.stringify(t.name)})`).all() as { name: string }[]).map((c) => JSON.stringify(c.name));
+    const cols = (db.query(`PRAGMA table_info(${JSON.stringify(t.name)})`).all() as { name: string }[]).map((c) =>
+      JSON.stringify(c.name),
+    );
     if (cols.length === 0) continue;
     const rows = db.query(`SELECT * FROM ${JSON.stringify(t.name)}`).all() as Record<string, unknown>[];
     if (rows.length === 0) continue;
@@ -131,7 +157,12 @@ export function runDbExport(options: ExportOptions = {}): ExportResult {
   }
   parts.push("RESET session_replication_role;");
 
-  parts.push("", "-- ---------------------------------------------------------------------------", "-- Indexes", "-- ---------------------------------------------------------------------------");
+  parts.push(
+    "",
+    "-- ---------------------------------------------------------------------------",
+    "-- Indexes",
+    "-- ---------------------------------------------------------------------------",
+  );
   for (const idx of indexes) {
     parts.push(idx.sql!.replace(/\s+;?\s*$/, ";"));
   }

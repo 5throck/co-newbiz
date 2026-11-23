@@ -140,7 +140,12 @@ function fromMarkdown(root: string, abs: string, layer: GovernanceLayer): RawMet
     id: str(meta.governance_doc_id),
     key: str(meta.governance_doc_id),
     title,
-    scope: ps.scope !== "shared" ? ps.scope : declaredScope === "entity" || declaredScope === "region" ? declaredScope : "shared",
+    scope:
+      ps.scope !== "shared"
+        ? ps.scope
+        : declaredScope === "entity" || declaredScope === "region"
+          ? declaredScope
+          : "shared",
     entityCode: ps.entityCode,
     regionCode: ps.regionCode,
     version: str(meta.version),
@@ -258,7 +263,12 @@ export function scanGovernanceDocs(root: string = ROOT): ScanResult {
     }
     const dupKey = `${r.layer}\u0000${r.key}`;
     if (seen.has(dupKey)) {
-      findings.push({ path: r.path, layer: r.layer, severity: "error", missing: [`key(duplicate of ${seen.get(dupKey)})`] });
+      findings.push({
+        path: r.path,
+        layer: r.layer,
+        severity: "error",
+        missing: [`key(duplicate of ${seen.get(dupKey)})`],
+      });
       continue;
     }
     seen.set(dupKey, r.path);
@@ -320,20 +330,41 @@ export interface DriftReport {
 export function checkManifestDrift(root: string = ROOT): DriftReport {
   const fresh = serializeManifest(buildManifest(scanGovernanceDocs(root)));
   const path = join(root, MANIFEST_REL);
-  if (!existsSync(path)) return { drift: true, message: `${MANIFEST_REL} is missing — run: bun scripts/co-newbiz/newbiz.ts governance:sync` };
+  if (!existsSync(path))
+    return {
+      drift: true,
+      message: `${MANIFEST_REL} is missing — run: bun scripts/co-newbiz/newbiz.ts governance:sync`,
+    };
   const committed = readFileSync(path, "utf8");
-  if (committed === fresh) return { drift: false, message: `governance registry manifest is current (${JSON.parse(fresh).counts.docs} documents).` };
+  if (committed === fresh)
+    return {
+      drift: false,
+      message: `governance registry manifest is current (${JSON.parse(fresh).counts.docs} documents).`,
+    };
   let detail = "";
   try {
-    const a = new Map((JSON.parse(committed) as GovernanceManifest).docs.map((d) => [`${d.layer}/${d.key}`, `${d.version}|${d.title}|${d.enforceability}|${d.owner_agent}|${d.effective_from}|${d.review_cycle_months}|${d.doc_path}`]));
-    const b = new Map((JSON.parse(fresh) as GovernanceManifest).docs.map((d) => [`${d.layer}/${d.key}`, `${d.version}|${d.title}|${d.enforceability}|${d.owner_agent}|${d.effective_from}|${d.review_cycle_months}|${d.doc_path}`]));
+    const a = new Map(
+      (JSON.parse(committed) as GovernanceManifest).docs.map((d) => [
+        `${d.layer}/${d.key}`,
+        `${d.version}|${d.title}|${d.enforceability}|${d.owner_agent}|${d.effective_from}|${d.review_cycle_months}|${d.doc_path}`,
+      ]),
+    );
+    const b = new Map(
+      (JSON.parse(fresh) as GovernanceManifest).docs.map((d) => [
+        `${d.layer}/${d.key}`,
+        `${d.version}|${d.title}|${d.enforceability}|${d.owner_agent}|${d.effective_from}|${d.review_cycle_months}|${d.doc_path}`,
+      ]),
+    );
     const changed = [...b.keys()].filter((k) => a.get(k) !== b.get(k));
     const removed = [...a.keys()].filter((k) => !b.has(k));
     detail = ` (changed/new: ${changed.slice(0, 8).join(", ") || "none"}${changed.length > 8 ? ", ..." : ""}; removed: ${removed.slice(0, 8).join(", ") || "none"})`;
   } catch {
     detail = " (committed manifest is unreadable)";
   }
-  return { drift: true, message: `governance registry manifest is stale${detail} — run: bun scripts/co-newbiz/newbiz.ts governance:sync` };
+  return {
+    drift: true,
+    message: `governance registry manifest is stale${detail} — run: bun scripts/co-newbiz/newbiz.ts governance:sync`,
+  };
 }
 
 export function writeManifest(root: string = ROOT): GovernanceManifest {
@@ -373,12 +404,17 @@ export async function runGovernanceSync(args: string[]): Promise<number> {
   console.log(
     `governance:sync${dryRun ? " (dry run — nothing written)" : ""} — ${result.inserted} inserted, ${result.superseded} superseded, ${result.updated} updated, ${result.unchanged} unchanged.`,
   );
-  console.log(`  scanned: ${GOVERNANCE_LAYERS.map((l) => `${l}=${manifest.counts.by_layer[l]}`).join(" ")} (${manifest.counts.docs} registrable)`);
+  console.log(
+    `  scanned: ${GOVERNANCE_LAYERS.map((l) => `${l}=${manifest.counts.by_layer[l]}`).join(" ")} (${manifest.counts.docs} registrable)`,
+  );
   for (const d of result.docs.filter((x) => x.action !== "unchanged")) {
-    console.log(`  ${d.action.padEnd(10)} ${d.layer}/${d.key} ${d.fromVersion ? `${d.fromVersion} -> ` : ""}${d.toVersion}`);
+    console.log(
+      `  ${d.action.padEnd(10)} ${d.layer}/${d.key} ${d.fromVersion ? `${d.fromVersion} -> ` : ""}${d.toVersion}`,
+    );
   }
   for (const f of result.findings) console.log(`  [${f.severity}] ${f.path}: missing ${f.missing.join(", ")}`);
-  for (const o of result.orphans) console.log(`  [orphan] ${o.layer}/${o.key} (${o.doc_path}) is registered but no longer in the repo — kept.`);
+  for (const o of result.orphans)
+    console.log(`  [orphan] ${o.layer}/${o.key} (${o.doc_path}) is registered but no longer in the repo — kept.`);
   return 0;
 }
 
@@ -390,5 +426,7 @@ if (import.meta.main) {
     process.exit(await runGovernanceSync(argv));
   }
   const m = writeManifest();
-  console.log(`wrote ${MANIFEST_REL} — ${m.counts.docs} documents, ${m.counts.findings_error} errors, ${m.counts.findings_warn} warnings.`);
+  console.log(
+    `wrote ${MANIFEST_REL} — ${m.counts.docs} documents, ${m.counts.findings_error} errors, ${m.counts.findings_warn} warnings.`,
+  );
 }

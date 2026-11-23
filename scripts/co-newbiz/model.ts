@@ -101,7 +101,9 @@ if (import.meta.main) {
       }
       console.log(JSON.stringify(runModelDiff(runA, runB, dbPath), null, 2));
     } else {
-      console.error("Usage: bun scripts/co-newbiz/model.ts model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>]");
+      console.error(
+        "Usage: bun scripts/co-newbiz/model.ts model --project <id> --label <label> [--from-run <id>] [--set key=value ...] [--db-path <path>]",
+      );
       console.error("       bun scripts/co-newbiz/model.ts diff <runA> <runB> [--db-path <path>]");
       process.exit(1);
     }

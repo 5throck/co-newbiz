@@ -56,10 +56,10 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 
 | script | source | version | status | removal-date | security-advisory | layer | pair |
 |--------|--------|---------|--------|--------------|-------------------|-------|------|
-| `sync-agent-mirrors.ts` | L0 | 1.3.0 | active | —| —| L2-only | —|
+| `sync-agent-mirrors.ts` | L0 | 1.3.1 | active | —| —| L2-only | —|
 | `agent-create.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `skill-session-review.ts` | L0 | 1.3.0 | active | — | —| L0+L1 | —|
-| `design-lint.ts` | L0 | 2.5.0 | active | —| —| L0+L1 | —|
+| `design-lint.ts` | L0 | 2.6.0 | active | —| —| L0+L1 | —|
 | `co-newbiz/beta-series.ts` | co-newbiz | 1.3.1 | active | 2026-11-03 | — | L3-only (project-local; registers KRX index + per-company daily-close beta series for a brownfield project (`--project <id>`, optional `--ticker 이름=코드` pin) and collects them via the krx adapter `listDailyRows` hook through ensure_fresh; 단축코드 resolution cached in db/data/krx-stock-code-cache.json; manual cadence — runbook rb-beta-series; v1.1.0 adds `--budget N` request cap, basDd-based stock-master resolution via the shared krx adapter, and fail-fast on missing KRX_API_KEY; v1.2.0 persists the listing market (raw_payload `krx:stock-master:<companyId>`) for the beta-series route index default and adds idempotent `--backfill-market` (cache-only, no KRX calls)); v1.3.0 (owner decision 2026-11-02, option 1) persists each registration to the stock_series table (migration 0187, upsert by company_id via db/repositories/stock-series.repository.ts, registered_by 'beta-series') in addition to the in-process registration — from then on the nightly collect.krx collects the company's closes in every process (re-registration updates and re-enables, identical rows are a no-op); main is exported as betaSeriesMain behind an import.meta.main guard with a test-only pacing parameter (production defaults unchanged); v1.3.1 (2026-11-03) is lint-gate cleanup only — useTemplate string concat → template literal, `let rows: KrxDailyRow[]` instead of an implicit-any let, biome format drift; no behavior change | —|
 | `co-newbiz/scope-impact.ts` | co-newbiz | 1.0.0 | active | 2026-10-13 | —| L3-only (read-only operator helper: `--db <path>` opened readonly; lists projects whose effective date is on/after 2026-07-01 with track, dd decision, later gate rows and whether the by-date S9 scope is pinned off by a valid dd decision; DEC-20261013-05) | —|
 | `co-newbiz/copy-legacy-bf-capability-judgements.ts` | co-newbiz | 1.0.0 | active | 2026-10-15 | —| L3-only (person-run operator script, dry-run by default and writes only with `--apply`; copies legacy Brown Field capability judgements stored on S3 register rows to each project's selected target as unconfirmed judgements in `brownfield_target_capability_judgement`, one audit row per copy, idempotent, skips existing judgements and rows with no seeded S7 criterion; ADR-0171 slice 3) | —|
@@ -180,16 +180,16 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `eval/types.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local, Wave B-2 AI evaluation harness — shared result types for the eval harness (library module)) | —|
 | `eval/calibration.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local, Wave B-3 RAG calibration suite — grade-to-probability mapping, Brier score, per-grade reliability table with fixed-seed bootstrap intervals, with and without the data-confidence cap; method in docs/methodology/rag-calibration.md; never retunes weights) | —|
 | `agent-delete.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
-| `agent-lifecycle-audit.ts` | L0 | 1.9.1 | active | — | —| L0+L1 | —|
+| `agent-lifecycle-audit.ts` | L0 | 1.9.2 | active | — | —| L0+L1 | —|
 | `agent-list.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `agent-verify.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `analyze-git-history.ts` | L0 | 1.0.2 | active | —| —| L0+L1 | —|
 | `archive-memory.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
-| `audit.ts` | L0 | 2.64.0 | active | —| —| L0+L1 | —|
+| `audit.ts` | L0 | 2.70.0 | active | —| —| L0+L1 | —|
 | `cleanup-completed-md.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `clear-pm-approval.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `compile-tokens.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
-| `dev-sync.ts` | L0 | 1.37.1 | active | — | —| L0+L1 | —|
+| `dev-sync.ts` | L0 | 1.53.0 | active | — | —| L0+L1 | —|
 | `dispatch-parallel.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
 | `dispatch-serial.ts` | L0 | 1.1.2 | active | —| —| L0+L1 | —|
 | `dispatch.ts` | L0 | 1.1.1 | active | —| —| L0+L1 | —|
@@ -224,7 +224,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `retry-handler.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `setup-github-branch-protection.ts` | L0 | 1.0.1 | active | — | —| L0+L1 | —|
 | `skill-lifecycle-audit.ts` | L0 | 1.11.0 | active | —| —| L0+L1 | —|
-| `spec-register.ts` | L0 | 1.6.0 | active | — | —| L0+L1 | —|
+| `spec-register.ts` | L0 | 1.6.1 | active | — | —| L0+L1 | —|
 | `lib/local-date.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `typecheck.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `sync-md.ts` | L0 | 1.4.0 | active | —| —| L0+L1 | —|
@@ -247,15 +247,15 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `verify-scripts.ts` | L0 | 1.15.0 | active | — | —| L0+L1 | —|
 | `verify-skills.ts` | L0 | 1.5.2 | active | —| —| L0+L1 | —|
 | `validate-pm-extends.ts` | L0 | 0.3.1 | active | —| —| L0+L1 | —|
-| `validate-decisions.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `validate-decisions.ts` | L0 | 1.2.1 | active | —| —| L0+L1 | —|
 | `validate-procedures.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `helpers/context-sections.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
 | `lib/context-md-schema.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
-| `handbook/apply-handbook-theme.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — applies the shared CSS theme to every HTML page under a handbook's docs/ directory) | —|
+| `handbook/apply-handbook-theme.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local handbook toolkit — applies the shared CSS theme to every HTML page under a handbook's docs/ directory) | —|
 | `handbook/build-search-index.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — reads docs/search-manifest.json and generates docs/assets/search-data.js for client-side search) | —|
 | `handbook/check-a11y.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — accessibility checks for handbook HTML: alt text, heading hierarchy, empty links, lang attributes) | —|
 | `handbook/check-authoring.ts` | co-newbiz | 1.3.0 | active | —| —| L3-only (project-local handbook toolkit — AUTHORING_GUIDELINES compliance checker for handbook sources) | —|
-| `handbook/check-external-links.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local handbook toolkit — external link validation for handbook HTML files) | —|
+| `handbook/check-external-links.ts` | co-newbiz | 1.3.0 | active | —| —| L3-only (project-local handbook toolkit — external link validation for handbook HTML files) | —|
 | `handbook/check-i18n-parity.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — cross-language content parity check for localized handbook pages) | —|
 | `handbook/check-labels.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — chapter-nav link labels must match the target file's title or h1) | —|
 | `handbook/check-links.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — verifies all internal a href targets resolve to existing files) | —|
@@ -270,15 +270,15 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `handbook/handbook-doctor.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — enhanced static analyzer for handbook HTML files) | —|
 | `handbook/handbook-sync-audit.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — three audit modes for co-deck generated handbooks) | —|
 | `handbook/nav-utils.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — HTML parsing helpers for handbook validation, zero external deps; imported by the check scripts, also runnable standalone) | —|
-| `handbook/scaffold-handbook.ts` | co-newbiz | 1.2.0 | active | —| —| L3-only (project-local handbook toolkit — generates handbook project scaffold from skill templates + assets) | —|
-| `handbook/update-footers.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — syncs the localized site footer into every HTML page under docs/) | —|
+| `handbook/scaffold-handbook.ts` | co-newbiz | 1.3.1 | active | —| —| L3-only (project-local handbook toolkit — generates handbook project scaffold from skill templates + assets) | —|
+| `handbook/update-footers.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local handbook toolkit — syncs the localized site footer into every HTML page under docs/) | —|
 | `handbook/validate-handbook.ts` | co-newbiz | 1.1.0 | active | —| —| L3-only (project-local handbook toolkit — unified validator and single entry point: aggregates all read-only checks) | —|
 | `handbook/validate-nav.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local handbook toolkit — navigation integrity validator: runs all 4 nav checks, exit 1 on failure) | —|
 | `tests/apply-handbook-theme.test.ts` | co-newbiz | 1.0.1 | active | —| —| L3-only (project-local bun:test unit tests for handbook/apply-handbook-theme.ts) | —|
 | `tests/check-structure.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test regression tests for handbook/check-structure.ts, fixtures mirror real production bugs) | —|
 | `tests/deploy-readme-patch.test.ts` | co-newbiz | 1.0.0 | active | —| —| L3-only (project-local bun:test unit tests for patchReadmePagesUrl() in handbook/deploy-handbook.ts) | —|
 | `resolve-variants.ts` | L0 | 1.0.3 | active | —| —| L0+L1 | —|
-| `validate-variant-readiness.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
+| `validate-variant-readiness.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
 | `validate-templates.ts` | L0 | 1.75.0 | active | — | —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
@@ -292,7 +292,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/variant-overlay-guard.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `lib/platform-mirror-freshness.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `helpers/rollback-partial-project.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `helpers/scaffold-markers.ts` | L0 | 1.10.3 | active | — | —| L0+L1 | —|
+| `helpers/scaffold-markers.ts` | L0 | 1.10.4 | active | — | —| L0+L1 | —|
 | `lint-instructions.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `helpers/merge-state.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `bootstrap-stages.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
@@ -333,7 +333,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/gitleaks-merge.ts` | L0+L1 | 1.1.0 | active | — | — | L0+L1 | — |
 | `helpers/registry-append.ts` | L0+L1 | 1.2.0 | active | — | — | L0+L1 | — |
 | `hooks/codex-user-prompt-gate.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `hooks/pm-dispatch-gate.ts` | L0 | 1.1.1 | active | — | —| L0+L1 | —|
+| `hooks/pm-dispatch-gate.ts` | L0 | 1.3.0 | active | — | —| L0+L1 | —|
 | `render-commands.ts` | L0+L1 | 1.1.0 | active | — | — | L0+L1 | — |
 | `helpers/variant-context.ts` | L0+L1 | 1.0.0 | active | — | — | L0+L1 | — |
 | `lib/platform-skeleton-merge.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
@@ -345,21 +345,21 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `helpers/spec-header-consistency.ts` | L0+L1 | 1.0.0 | active | — | —| L0+L1 | —|
 | `lib/generator-manifest.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `route-audit-scan.ts` | L0 | 1.0.1 | active | — | —| L0+L1 | —|
-| `lib/hook-dedupe.ts` | L0 | 1.3.0 | active | — | —| L0+L1 | —|
+| `lib/hook-dedupe.ts` | L0 | 1.4.0 | active | — | —| L0+L1 | —|
 | `helpers/hub-topology.ts` | L0+L1 | 1.2.0 | active | — | —| L0+L1 | —|
 | `hooks/agent-model-gate.ts` | L0 | 1.3.0 | active | — | —| L0+L1 | —|
 | `external-deps.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `helpers/agent-mechanical-date-bump.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `helpers/audit-hook-sweep.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `helpers/memory-union-verify.ts` | L0+L1 | 1.2.0 | active | — | —| L0+L1 | —|
+| `helpers/memory-union-verify.ts` | L0+L1 | 1.6.0 | active | — | —| L0+L1 | —|
 | `helpers/ticket-drift.ts` | L0+L1 | 1.0.0 | active | — | —| L0+L1 | —|
 | `hooks/delete-guard.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
 | `lib/external-deps.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
 | `lib/fleet.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `lib/git-aware-scan.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `lib/trail-block-parity.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `detect-backport.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `generate-skill-lifecycle-records.ts` | L0 | 1.3.1 | active | — | —| L0+L1 | —|
+| `detect-backport.ts` | L0 | 1.0.1 | active | — | —| L0+L1 | —|
+| `generate-skill-lifecycle-records.ts` | L0 | 1.4.0 | active | — | —| L0+L1 | —|
 | `lib/country-scoped-agents.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `lib/git-env.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
 | `lib/hermetic-test-roots.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
@@ -368,6 +368,10 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/spec-landing.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `lib/template-vintage.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `lib/workspace-hygiene.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
+| `handbook/check-generated-content.ts` | L0 | 1.0.0 | active | — | — | common | — |
+| `helpers/adoption-provenance.ts` | L0+L1 | 1.0.0 | active | v1.0.0 (2026-11-20, T-20261120-001 — design docs/designs/2026-11-20-adoption-gaps-batch-design.md): source-variant adoption-residue detection for the re-base prune — loadAdoptionProvenance reads the adopt-project decisions file (.claude/adopt-project-decisions.json, the provenance carrier that survives the settling variant.json removal), isAdoptionIdentityFlipped gates on the variant.json identity, declaredSkillNames parses a variant template skill set, selectSourceVariantPruneCandidates applies the fail-safe six-way conjunction (never guesses — every filter independently blocks), listSkillDirNames resolves template/project skill sets; pure + fs-guarded, unit-pinned by tests/unit/adoption-provenance.test.ts | — | L0+L1 | — |
+| `helpers/delivery-riding.ts` | L0+L1 | 1.0.0 | active | v1.0.0 (2026-11-19, T-20261119-005 residual + T-20261119-009 — spec docs/designs/2026-11-19-delivery-riding-records-design.md): pure delivery-riding helpers consumed by upgrade-project v1.112.0 — isSubRegistryGoverned (scripts/<variant>/ sub-registry governance scope), variantSubRegistryRowFor (unique bare-basename variant-sub-registry row lookup; ambiguous and absent are fail-closed upstream), buildMainRegistryRow (8-column deck-precedent main-registry row synthesis, cell-sanitized), synchronizeRecordMetadata (surgical hand-authored record Version/Owner alignment with deterministic Status/Skill/Metadata insertion anchoring, CRLF-preserving), recordBumpPlan (R1 arm decision among noop / refresh-template / derive / derive-failed / metadata-align), loadSkillOwnerMap (workspace skill-owner-map loader; generate-skill-lifecycle-records' loadOwnerMap is module-private). Unit-pinned in tests/unit/delivery-riding.test.ts (30 cases incl. the verdict-contract pins) | —| L0+L1 | —|
+| `lib/audit-fail-hint.ts` | L0 | 1.0.0 | active | v1.0.0 (2026-11-22, T-20261122-004 / U-20261122-010 — design docs/designs/2026-11-22-dev-sync-skill-graph-preconvergence-design.md D2): pure audit.ts FAIL-line parser for dev-sync step 3.9's failing-sub-check hint — stripAnsi (audit's colors are unconditional constants), parseAuditFailLines (stderr lines, `[FAIL] ` prefix — the stable FAIL channel by audit's construction; stdout's [PASS]/[WARN] rows are not failures), failSubCheckName (text before the first " — "/": " separator — presentation only, the full message is always printed alongside), formatSpecCheckHint (`- <name>` + indented full message per FAIL, cap 10 + `… +N more`). audit.ts's output contract is consumed as-is; if audit.ts ever changes its FAIL shape only this parser needs a follow-up. Side-effect-free, no fs/spawn; unit-pinned by tests/unit/audit-fail-hint.test.ts (delivered: imported by the L0+L1 dev-sync.ts, so the L1 mirror rides the same propagation path — one derivation, two callers) | —| L0+L1 | —|
 
 ---
 

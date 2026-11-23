@@ -58,9 +58,7 @@ export function parseEnvValue(raw: string, keyName?: string): string {
   // silent: an operator who meant the `#` must quote the value. Name the key
   // only — the value may be a secret.
   if (keyName) {
-    console.warn(
-      `[env-value] ${keyName}: value truncated at "#" — quote the value to keep it verbatim`,
-    );
+    console.warn(`[env-value] ${keyName}: value truncated at "#" — quote the value to keep it verbatim`);
   }
   return value.slice(0, hash).trim();
 }

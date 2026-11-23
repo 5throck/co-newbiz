@@ -26,7 +26,17 @@
 // Usage: bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|systemd|schtasks]
 //                  [--uninstall] [--dry-run] [--print]
 // Exit codes: 0 ok, 2 usage error, 1 failure.
-import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -301,7 +311,9 @@ function installLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
   const uid = currentUid();
   const r = Bun.spawnSync([LAUNCHCTL, "bootstrap", `gui/${uid}`, plistPath]);
   if ((r.exitCode ?? 1) !== 0) {
-    console.error(`scheduler-install: launchctl bootstrap failed: ${(r.stderr.toString() || r.stdout.toString()).trim()}`);
+    console.error(
+      `scheduler-install: launchctl bootstrap failed: ${(r.stderr.toString() || r.stdout.toString()).trim()}`,
+    );
     console.error("  (if the label is already loaded, run --uninstall first)");
     process.exit(1);
   }
@@ -338,7 +350,9 @@ function installSystemd(env: SchedulerEnv, { dryRun, print }: Mode): void {
   if (dryRun) {
     console.log(`[dry-run] would write: ${servicePath}`);
     console.log(`[dry-run] would write: ${timerPath}`);
-    console.log(`[dry-run] then run (systemctl is never executed by this installer):\n${enableCmds.map((c) => `[dry-run]   ${c}`).join("\n")}`);
+    console.log(
+      `[dry-run] then run (systemctl is never executed by this installer):\n${enableCmds.map((c) => `[dry-run]   ${c}`).join("\n")}`,
+    );
     return;
   }
   mkdirSync(dir, { recursive: true });
@@ -375,7 +389,9 @@ function installSchtasks(env: SchedulerEnv, { print }: Mode): void {
     return;
   }
   // Documented-only platform: never writes, never executes. The user saves the XML and runs the command on Windows.
-  console.log(`Task Scheduler is a documented template on this platform. Save the rendered XML below to a file, then run:`);
+  console.log(
+    `Task Scheduler is a documented template on this platform. Save the rendered XML below to a file, then run:`,
+  );
   console.log(`  schtasks /Create /TN "${schtasksTaskName(env)}" /XML "<path-to-saved-xml>" /F`);
   console.log(`(this installer never executes schtasks)`);
   console.log(`--- begin ${schtasksTaskName(env)}.xml ---`);
@@ -404,7 +420,9 @@ if (import.meta.main) {
   const uninstall = argv.includes("--uninstall");
   const envArg = argValue(argv, "--env");
   if (envArg !== "prod" && envArg !== "dev") {
-    console.error(`scheduler-install: --env must be 'prod' or 'dev' (got ${envArg === undefined ? "nothing" : `'${envArg}'`})\n${USAGE}`);
+    console.error(
+      `scheduler-install: --env must be 'prod' or 'dev' (got ${envArg === undefined ? "nothing" : `'${envArg}'`})\n${USAGE}`,
+    );
     process.exit(2);
   }
   const env = envArg;

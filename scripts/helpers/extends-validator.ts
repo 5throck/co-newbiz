@@ -24,7 +24,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { validateExtendsSecurity, SecurityValidationResult } from "./security-validator.ts";
+import { validateExtendsSecurity, type SecurityValidationResult } from "./security-validator.ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants (ADR-0033 Security Limits)

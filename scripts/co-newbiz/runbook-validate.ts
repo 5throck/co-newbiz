@@ -77,7 +77,10 @@ export function validateRunbookRegistry(root: string = ROOT): string[] {
   for (const e of entries) {
     const en = e.files?.en;
     const ko = e.files?.ko;
-    for (const [lang, file] of [["en", en], ["ko", ko]] as const) {
+    for (const [lang, file] of [
+      ["en", en],
+      ["ko", ko],
+    ] as const) {
       if (!file) {
         issues.push(`${e.id}: missing ${lang} file`);
         continue;
@@ -102,8 +105,10 @@ export function validateRunbookRegistry(root: string = ROOT): string[] {
       const koFm = readFrontmatter(join(root, ko));
       // verify only when declared — translation-zone files derive the pair
       // from the registry instead of a counterpart field
-      if (enFm?.counterpart && enFm.counterpart !== koName) issues.push(`${en}: counterpart '${enFm.counterpart}' != ${koName}`);
-      if (koFm?.counterpart && koFm.counterpart !== enName) issues.push(`${ko}: counterpart '${koFm.counterpart}' != ${enName}`);
+      if (enFm?.counterpart && enFm.counterpart !== koName)
+        issues.push(`${en}: counterpart '${enFm.counterpart}' != ${koName}`);
+      if (koFm?.counterpart && koFm.counterpart !== enName)
+        issues.push(`${ko}: counterpart '${koFm.counterpart}' != ${enName}`);
     }
   }
 
@@ -124,7 +129,9 @@ export function validateRunbookRegistry(root: string = ROOT): string[] {
     const gen = readFileSync(genPath, "utf8");
     for (const file of registered) {
       if (!gen.includes(`"file": "${file}"`)) {
-        issues.push(`library projection has no entry for ${file} — regenerate/update app/web-next/lib/library.generated.ts`);
+        issues.push(
+          `library projection has no entry for ${file} — regenerate/update app/web-next/lib/library.generated.ts`,
+        );
       }
     }
   }
@@ -134,7 +141,9 @@ export function validateRunbookRegistry(root: string = ROOT): string[] {
 
 if (import.meta.main) {
   const issues = validateRunbookRegistry();
-  const entries = (yaml.load(readFileSync(join(ROOT, "docs", "runbooks", "registry.yaml"), "utf8")) as { entries: unknown[] }).entries.length;
+  const entries = (
+    yaml.load(readFileSync(join(ROOT, "docs", "runbooks", "registry.yaml"), "utf8")) as { entries: unknown[] }
+  ).entries.length;
   if (issues.length > 0) {
     for (const issue of issues) console.error("✗", issue);
     console.error(`runbook registry: FAILED (${entries} entries, ${issues.length} issue(s))`);

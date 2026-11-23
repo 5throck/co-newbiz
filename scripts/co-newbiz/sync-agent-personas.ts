@@ -30,7 +30,12 @@ if (!CHECK) mkdirSync(OUT, { recursive: true });
 // name → model parameter mapping").
 const TIER_MODEL: Record<string, string> = { high: "opus", medium: "sonnet", low: "haiku" };
 
-interface Frontmatter { name: string; description: string; tierClaude?: string; status: string }
+interface Frontmatter {
+  name: string;
+  description: string;
+  tierClaude?: string;
+  status: string;
+}
 
 function parseAgent(file: string): { key: string; fm: Frontmatter; body: string } | null {
   const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -51,7 +56,10 @@ function parseAgent(file: string): { key: string; fm: Frontmatter; body: string 
       const start = lines.findIndex((l) => /^description:/.test(l));
       const block: string[] = [];
       for (let i = start + 1; i < lines.length; i++) {
-        if (lines[i].trim() === "") { block.push(""); continue; }
+        if (lines[i].trim() === "") {
+          block.push("");
+          continue;
+        }
         if (!/^\s{2,}/.test(lines[i])) break;
         block.push(lines[i].replace(/^\s{2}/, ""));
       }
@@ -96,20 +104,32 @@ for (const [agent, domain] of domainsFromAgentsMd()) {
   const text = readFileSync(file, "utf8");
   const existing = text.match(/^domain:\s*(.+)$/m)?.[1]?.trim();
   if (existing === domain) continue;
-  if (CHECK) { domainDrift.push(`domain: agents/${agent}.md has ${existing ?? "none"}, AGENTS.md says ${domain}`); continue; }
+  if (CHECK) {
+    domainDrift.push(`domain: agents/${agent}.md has ${existing ?? "none"}, AGENTS.md says ${domain}`);
+    continue;
+  }
   const next = existing
     ? text.replace(/^domain:\s*.+$/m, `domain: ${domain}`)
     : text.replace(/^(status:\s*.+)$/m, `$1\ndomain: ${domain}`);
-  if (next !== text) { writeFileSync(file, next); domainsWritten++; }
+  if (next !== text) {
+    writeFileSync(file, next);
+    domainsWritten++;
+  }
 }
 
-let created = 0, updated = 0, unchanged = 0, skipped = 0;
+let created = 0,
+  updated = 0,
+  unchanged = 0,
+  skipped = 0;
 const drift: string[] = [];
 
 for (const entry of readdirSync(SRC).sort()) {
   if (!entry.endsWith(".md") || entry === "README.md") continue;
   const parsed = parseAgent(join(SRC, entry));
-  if (!parsed) { skipped++; continue; }
+  if (!parsed) {
+    skipped++;
+    continue;
+  }
   const { key, fm, body } = parsed;
   const model = fm.tierClaude ? TIER_MODEL[fm.tierClaude] : undefined;
   const out = [
@@ -127,11 +147,17 @@ for (const entry of readdirSync(SRC).sort()) {
 
   const target = join(OUT, `${key}.md`);
   if (!existsSync(target)) {
-    if (CHECK) { drift.push(`missing: .claude/agents/${key}.md`); continue; }
+    if (CHECK) {
+      drift.push(`missing: .claude/agents/${key}.md`);
+      continue;
+    }
     writeFileSync(target, out);
     created++;
   } else if (readFileSync(target, "utf8") !== out) {
-    if (CHECK) { drift.push(`drifted: .claude/agents/${key}.md`); continue; }
+    if (CHECK) {
+      drift.push(`drifted: .claude/agents/${key}.md`);
+      continue;
+    }
     writeFileSync(target, out);
     updated++;
   } else {
@@ -159,5 +185,7 @@ if (CHECK) {
   }
   console.log(`sync-agent-personas --check: in sync (${unchanged} files).`);
 } else {
-  console.log(`sync-agent-personas: ${created} created, ${updated} updated, ${unchanged} unchanged, ${skipped} skipped; ${domainsWritten} domain field(s) synced.`);
+  console.log(
+    `sync-agent-personas: ${created} created, ${updated} updated, ${unchanged} unchanged, ${skipped} skipped; ${domainsWritten} domain field(s) synced.`,
+  );
 }

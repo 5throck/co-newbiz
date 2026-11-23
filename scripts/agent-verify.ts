@@ -249,4 +249,4 @@ if (import.meta.main) {
   });
 }
 
-export { verifyAgents, VerificationResult, VerificationIssue };
+export { verifyAgents, type VerificationResult, type VerificationIssue };

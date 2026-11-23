@@ -18,15 +18,31 @@ import { runOpportunityEvaluationChain } from "../../app/web-next/lib/agent-chai
 import { parsePositionMeta } from "../../app/web-next/lib/committee-llm.ts";
 import { parseDrafts } from "../../app/web-next/lib/llm-executors.ts";
 import { promptSystem, systemMessage } from "../../app/web-next/lib/prompts.ts";
-import { completeDetailed, completeStructured, type AgentCallMeta, type LlmMessage, type StructuredResult, type SynthesisResult } from "../../app/web-next/lib/llm.ts";
+import {
+  completeDetailed,
+  completeStructured,
+  type AgentCallMeta,
+  type LlmMessage,
+  type StructuredResult,
+  type SynthesisResult,
+} from "../../app/web-next/lib/llm.ts";
 import { costUsd, type LlmUsage } from "../../app/web-next/lib/llm-usage.ts";
 import type { LoadedCase } from "./loader.ts";
 import type { GoldenSet } from "./loader.ts";
 import type { CaseScore, CouldNotEvaluate, SuiteResult } from "./types.ts";
 
 export interface EvalLlm {
-  completeDetailed(messages: LlmMessage[], opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta }): Promise<{ text: string; usage: LlmUsage }>;
-  completeStructured<T>(opts: { messages: LlmMessage[]; schema: z.ZodType<T>; schemaName: string; maxTokens?: number; agent: AgentCallMeta }): Promise<StructuredResult<T> | SynthesisResult>;
+  completeDetailed(
+    messages: LlmMessage[],
+    opts: { temperature?: number; maxTokens?: number; agent: AgentCallMeta },
+  ): Promise<{ text: string; usage: LlmUsage }>;
+  completeStructured<T>(opts: {
+    messages: LlmMessage[];
+    schema: z.ZodType<T>;
+    schemaName: string;
+    maxTokens?: number;
+    agent: AgentCallMeta;
+  }): Promise<StructuredResult<T> | SynthesisResult>;
 }
 
 export const realEvalLlm: EvalLlm = {
@@ -56,9 +72,12 @@ export class RunLedger {
 
   /** Throws before a call that could exceed the budget (assumes the next call costs as much as the largest so far). */
   guard(): void {
-    if (this.unpriced) throw new BudgetExceeded("model has no price in config/llm-pricing.yaml; cost cannot be bounded, stopping");
+    if (this.unpriced)
+      throw new BudgetExceeded("model has no price in config/llm-pricing.yaml; cost cannot be bounded, stopping");
     if (this.costUsd + this.lastCallCost > this.maxCostUsd) {
-      throw new BudgetExceeded(`budget $${this.maxCostUsd.toFixed(2)} would be exceeded (spent $${this.costUsd.toFixed(4)}, last call $${this.lastCallCost.toFixed(4)})`);
+      throw new BudgetExceeded(
+        `budget $${this.maxCostUsd.toFixed(2)} would be exceeded (spent $${this.costUsd.toFixed(4)}, last call $${this.lastCallCost.toFixed(4)})`,
+      );
     }
   }
 
@@ -115,7 +134,11 @@ export function promptHashes(): Record<string, string> {
 // agent-chains builds its system prompts inline; the hash covers the chain's step schemas used for scoring.
 const STAGE_RECO_PROMPT_SALT = "agent-chains.runOpportunityEvaluationChain/v1";
 
-const words = (key: string): string[] => key.split("_").filter((w) => w.length >= 3).map((w) => w.slice(0, 5));
+const words = (key: string): string[] =>
+  key
+    .split("_")
+    .filter((w) => w.length >= 3)
+    .map((w) => w.slice(0, 5));
 
 /** Finding-key match without an LLM judge: every significant word stem of the key appears in one item's claim+reason. */
 export function raisesKey(items: Array<{ claim: string; reason: string }>, key: string): boolean {
@@ -147,7 +170,14 @@ const caseName = (lc: LoadedCase): string => String(factsOf(lc).target ?? factsO
 /** Golden expects "not go": a red overall grade or a kill-criteria hit. null = no direction labelled. */
 export function expectedNotGo(lc: LoadedCase): boolean | null {
   const exp = lc.case.expectations;
-  if (exp.some((e) => (e.function === "rag_overall" && e.expected.overall === "red") || (e.function === "kill_criteria" && e.expected.hits.length > 0))) return true;
+  if (
+    exp.some(
+      (e) =>
+        (e.function === "rag_overall" && e.expected.overall === "red") ||
+        (e.function === "kill_criteria" && e.expected.hits.length > 0),
+    )
+  )
+    return true;
   return null;
 }
 
@@ -169,19 +199,46 @@ export async function runReviewAi2Suite(set: GoldenSet, llm: EvalLlm): Promise<S
     }
     attempted++;
     const messages = buildAi2ndMessages(art, sel.reviewerAgent, sel.reviewerDomain, sel.authorDomain);
-    const r = await llm.completeStructured({ messages, schema: Ai2ndOutputSchema, schemaName: "ai_second_review", maxTokens: 1500, agent: { key: sel.reviewerAgent, purpose: "eval review_findings", functionName: "eval.review_ai2" } });
+    const r = await llm.completeStructured({
+      messages,
+      schema: Ai2ndOutputSchema,
+      schemaName: "ai_second_review",
+      maxTokens: 1500,
+      agent: { key: sel.reviewerAgent, purpose: "eval review_findings", functionName: "eval.review_ai2" },
+    });
     if (r.source !== "llm") {
-      cases.push({ caseId: lc.case.case_id, stage: exp.stage, fn: "review_findings", score: 0, failures: [`no valid structured output (${"reason" in r ? String(r.reason) : "synthesis"})`] });
+      cases.push({
+        caseId: lc.case.case_id,
+        stage: exp.stage,
+        fn: "review_findings",
+        score: 0,
+        failures: [`no valid structured output (${"reason" in r ? String(r.reason) : "synthesis"})`],
+      });
       continue;
     }
     valid++;
     const items = [...r.value.verified, ...r.value.could_not_verify, ...r.value.needs_judgement];
     const missed = exp.expected.must_raise.filter((k) => !raisesKey(items, k));
     const declared = r.value.could_not_verify.length > 0;
-    const failures = [...missed.map((k) => `finding not raised: ${k}`), ...(exp.expected.must_declare_could_not_verify && !declared ? ["no could_not_verify declared"] : [])];
-    cases.push({ caseId: lc.case.case_id, stage: exp.stage, fn: "review_findings", score: (exp.expected.must_raise.length - missed.length) / exp.expected.must_raise.length, failures });
+    const failures = [
+      ...missed.map((k) => `finding not raised: ${k}`),
+      ...(exp.expected.must_declare_could_not_verify && !declared ? ["no could_not_verify declared"] : []),
+    ];
+    cases.push({
+      caseId: lc.case.case_id,
+      stage: exp.stage,
+      fn: "review_findings",
+      score: (exp.expected.must_raise.length - missed.length) / exp.expected.must_raise.length,
+      failures,
+    });
   }
-  return { name: "review-ai2", kind: "llm", cases, couldNotEvaluate: cne, metrics: { schema_valid_rate: attempted ? valid / attempted : 0 } };
+  return {
+    name: "review-ai2",
+    kind: "llm",
+    cases,
+    couldNotEvaluate: cne,
+    metrics: { schema_valid_rate: attempted ? valid / attempted : 0 },
+  };
 }
 
 const FactorsOut = z.object({ opportunity: z.array(z.string()), risk: z.array(z.string()) });
@@ -210,9 +267,25 @@ export async function runStageRecoSuite(set: GoldenSet, llm: EvalLlm): Promise<S
   for (const lc of set.cases) {
     const f = factsOf(lc);
     const texts = new Map<string, string>();
-    const ask: Parameters<typeof runOpportunityEvaluationChain>[1] = async (agent, system, user, fallback, maxTokens) => {
+    const ask: Parameters<typeof runOpportunityEvaluationChain>[1] = async (
+      agent,
+      system,
+      user,
+      fallback,
+      maxTokens,
+    ) => {
       try {
-        const r = await llm.completeDetailed([{ role: "system", content: system }, { role: "user", content: user }], { temperature: 0, maxTokens, agent: { key: agent.key, purpose: `eval stage-reco: ${agent.key}`, functionName: "eval.stage_reco" } });
+        const r = await llm.completeDetailed(
+          [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          {
+            temperature: 0,
+            maxTokens,
+            agent: { key: agent.key, purpose: `eval stage-reco: ${agent.key}`, functionName: "eval.stage_reco" },
+          },
+        );
         texts.set(agent.key, r.text);
         return { text: r.text, source: "llm" };
       } catch (err) {
@@ -252,7 +325,13 @@ export async function runStageRecoSuite(set: GoldenSet, llm: EvalLlm): Promise<S
     }
     cases.push({ caseId: lc.case.case_id, stage: "S3", fn: "stage_reco", score, failures });
   }
-  return { name: "stage-reco", kind: "llm", cases, couldNotEvaluate: [], metrics: { schema_valid_rate: steps ? validSteps / steps : 0 } };
+  return {
+    name: "stage-reco",
+    kind: "llm",
+    cases,
+    couldNotEvaluate: [],
+    metrics: { schema_valid_rate: steps ? validSteps / steps : 0 },
+  };
 }
 
 export async function runCommitteeSuite(set: GoldenSet, llm: EvalLlm): Promise<SuiteResult> {
@@ -261,7 +340,14 @@ export async function runCommitteeSuite(set: GoldenSet, llm: EvalLlm): Promise<S
   for (const lc of set.cases) {
     const agentKey = "risk-officer";
     const prompt = `Deal: ${caseName(lc)}\nFacts (public, pre-decision): ${JSON.stringify(factsOf(lc)).slice(0, 1500)}\nGive your position.`;
-    const r = await llm.completeDetailed([systemMessage("committee.position"), { role: "user", content: `당신은 ${agentKey} 입니다.\n\n${prompt}` }], { temperature: 0, maxTokens: 900, agent: { key: agentKey, purpose: "eval committee position", functionName: "eval.committee" } });
+    const r = await llm.completeDetailed(
+      [systemMessage("committee.position"), { role: "user", content: `당신은 ${agentKey} 입니다.\n\n${prompt}` }],
+      {
+        temperature: 0,
+        maxTokens: 900,
+        agent: { key: agentKey, purpose: "eval committee position", functionName: "eval.committee" },
+      },
+    );
     const meta = parsePositionMeta(r.text);
     const failures: string[] = [];
     let score = 1;
@@ -277,7 +363,22 @@ export async function runCommitteeSuite(set: GoldenSet, llm: EvalLlm): Promise<S
     }
     cases.push({ caseId: lc.case.case_id, stage: "S7", fn: "committee_position", score, failures });
   }
-  return { name: "committee", kind: "llm", cases, couldNotEvaluate: set.cases.length ? [{ caseId: "*", fn: "committee.dissent", reason: "golden set has no committee-vote expectation type; only schema validity and not-go direction are scored" }] : [], metrics: { schema_valid_rate: set.cases.length ? valid / set.cases.length : 0 } };
+  return {
+    name: "committee",
+    kind: "llm",
+    cases,
+    couldNotEvaluate: set.cases.length
+      ? [
+          {
+            caseId: "*",
+            fn: "committee.dissent",
+            reason:
+              "golden set has no committee-vote expectation type; only schema validity and not-go direction are scored",
+          },
+        ]
+      : [],
+    metrics: { schema_valid_rate: set.cases.length ? valid / set.cases.length : 0 },
+  };
 }
 
 export async function runDdTailorSuite(set: GoldenSet, llm: EvalLlm): Promise<SuiteResult> {
@@ -289,16 +390,48 @@ export async function runDdTailorSuite(set: GoldenSet, llm: EvalLlm): Promise<Su
     const exp = lc.case.expectations.find((e) => e.function === "dd_tailoring");
     if (!exp) continue;
     n++;
-    const r = await llm.completeDetailed([systemMessage("s9.dd_tailor"), { role: "user", content: `도메인: legal\n산업: ${String(factsOf(lc).relevant_market ?? caseName(lc))}\n프로젝트: ${lc.case.case_id}` }], { temperature: 0, maxTokens: 1400, agent: { key: "technical-dd-agent", purpose: "eval dd_tailoring", functionName: "eval.dd_tailor" } });
+    const r = await llm.completeDetailed(
+      [
+        systemMessage("s9.dd_tailor"),
+        {
+          role: "user",
+          content: `도메인: legal\n산업: ${String(factsOf(lc).relevant_market ?? caseName(lc))}\n프로젝트: ${lc.case.case_id}`,
+        },
+      ],
+      {
+        temperature: 0,
+        maxTokens: 1400,
+        agent: { key: "technical-dd-agent", purpose: "eval dd_tailoring", functionName: "eval.dd_tailor" },
+      },
+    );
     const drafts = parseDrafts(r.text);
     const failures: string[] = [];
     if (drafts.length === 0) failures.push("no parseable tailored items");
     else valid++;
-    if (drafts.some((d) => d.sourceUrl !== null || d.sourceReliability !== "C")) failures.push("tailor cited a source (ADR-0099 6 forbids)");
-    cases.push({ caseId: lc.case.case_id, stage: exp.stage, fn: "dd_tailoring", score: failures.length === 0 ? 1 : 0, failures });
+    if (drafts.some((d) => d.sourceUrl !== null || d.sourceReliability !== "C"))
+      failures.push("tailor cited a source (ADR-0099 6 forbids)");
+    cases.push({
+      caseId: lc.case.case_id,
+      stage: exp.stage,
+      fn: "dd_tailoring",
+      score: failures.length === 0 ? 1 : 0,
+      failures,
+    });
   }
-  if (n > 0) cne.push({ caseId: "*", fn: "dd_tailoring.required_items", reason: "the tailor executor proposes additional items and does not take the base checklist, so retention of required items cannot be measured yet" });
-  return { name: "dd-tailor", kind: "llm", cases, couldNotEvaluate: cne, metrics: { schema_valid_rate: n ? valid / n : 0 } };
+  if (n > 0)
+    cne.push({
+      caseId: "*",
+      fn: "dd_tailoring.required_items",
+      reason:
+        "the tailor executor proposes additional items and does not take the base checklist, so retention of required items cannot be measured yet",
+    });
+  return {
+    name: "dd-tailor",
+    kind: "llm",
+    cases,
+    couldNotEvaluate: cne,
+    metrics: { schema_valid_rate: n ? valid / n : 0 },
+  };
 }
 
 const NUM_RE = /\d[\d,]*(?:\.\d+)?/g;
@@ -312,21 +445,50 @@ export async function runBusinessCaseSuite(set: GoldenSet, llm: EvalLlm): Promis
       .filter(([, v]) => typeof v === "number" || typeof v === "string")
       .map(([k, v]) => `- ${k}: ${String(v)}`)
       .join("\n");
-    const r = await llm.completeDetailed([systemMessage("s8.business_case_prose"), { role: "user", content: `단계/역할: valuation-agent\n시나리오: base\n\n[확정 수치 블록]\n${block}` }], { temperature: 0, maxTokens: 800, agent: { key: "valuation-agent", purpose: "eval business_case_prose", functionName: "eval.business_case" } });
+    const r = await llm.completeDetailed(
+      [
+        systemMessage("s8.business_case_prose"),
+        { role: "user", content: `단계/역할: valuation-agent\n시나리오: base\n\n[확정 수치 블록]\n${block}` },
+      ],
+      {
+        temperature: 0,
+        maxTokens: 800,
+        agent: { key: "valuation-agent", purpose: "eval business_case_prose", functionName: "eval.business_case" },
+      },
+    );
     const text = r.text.trim();
     const failures: string[] = [];
     if (!text) {
-      cases.push({ caseId: lc.case.case_id, stage: "S8", fn: "business_case_prose", score: 0, failures: ["empty prose"] });
+      cases.push({
+        caseId: lc.case.case_id,
+        stage: "S8",
+        fn: "business_case_prose",
+        score: 0,
+        failures: ["empty prose"],
+      });
       continue;
     }
     valid++;
     const allowed = new Set(normNums(block));
     const out = normNums(text);
     const untraced = out.filter((x) => !allowed.has(x));
-    if (untraced.length > 0) failures.push(`numbers not in input block: ${[...new Set(untraced)].slice(0, 6).join(", ")}`);
-    cases.push({ caseId: lc.case.case_id, stage: "S8", fn: "business_case_prose", score: out.length === 0 ? 1 : (out.length - untraced.length) / out.length, failures });
+    if (untraced.length > 0)
+      failures.push(`numbers not in input block: ${[...new Set(untraced)].slice(0, 6).join(", ")}`);
+    cases.push({
+      caseId: lc.case.case_id,
+      stage: "S8",
+      fn: "business_case_prose",
+      score: out.length === 0 ? 1 : (out.length - untraced.length) / out.length,
+      failures,
+    });
   }
-  return { name: "business-case", kind: "llm", cases, couldNotEvaluate: [], metrics: { schema_valid_rate: set.cases.length ? valid / set.cases.length : 0 } };
+  return {
+    name: "business-case",
+    kind: "llm",
+    cases,
+    couldNotEvaluate: [],
+    metrics: { schema_valid_rate: set.cases.length ? valid / set.cases.length : 0 },
+  };
 }
 
 export const LLM_SUITES = {

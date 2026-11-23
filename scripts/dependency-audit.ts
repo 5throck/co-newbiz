@@ -287,7 +287,7 @@ export function scopeContradictions(waivers: Waiver[], packageJson: Record<strin
   const deps = (packageJson["dependencies"] ?? {}) as Record<string, unknown>;
   const contradictions: string[] = [];
   for (const w of waivers) {
-    if (w.scope === "dev-only" && Object.prototype.hasOwnProperty.call(deps, w.package)) {
+    if (w.scope === "dev-only" && Object.hasOwn(deps, w.package)) {
       contradictions.push(
         `${w.advisory} (${w.package}) is waived as dev-only but is declared in package.json "dependencies" (production)`,
       );

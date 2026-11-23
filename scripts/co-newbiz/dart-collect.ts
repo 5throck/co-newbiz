@@ -20,15 +20,22 @@
 import { getDb } from "../../db/client.ts";
 
 const METRIC_BY_ACCOUNT: Record<string, string> = {
-  "매출액": "revenue",
-  "영업이익": "operating_income",
-  "당기순이익": "net_income",
+  매출액: "revenue",
+  영업이익: "operating_income",
+  당기순이익: "net_income",
 };
 
-export async function collectFromDart(opts: { corpCode: string; industryId: string; years?: number; dbPath?: string }): Promise<{ inserted: number }> {
+export async function collectFromDart(opts: {
+  corpCode: string;
+  industryId: string;
+  years?: number;
+  dbPath?: string;
+}): Promise<{ inserted: number }> {
   const apiKey = process.env.DART_API_KEY;
   if (!apiKey) {
-    throw new Error("DART_API_KEY is not set — configure it, or use POST /api/projects/:id/financial-imports to provide data directly.");
+    throw new Error(
+      "DART_API_KEY is not set — configure it, or use POST /api/projects/:id/financial-imports to provide data directly.",
+    );
   }
   const db = getDb(opts.dbPath);
   const years = opts.years ?? 5;
@@ -40,14 +47,23 @@ export async function collectFromDart(opts: { corpCode: string; industryId: stri
     const url = `https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json?corp_code=${encodeURIComponent(opts.corpCode)}&bsns_year=${y}&reprt_code=11011&api_key=${encodeURIComponent(apiKey)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`DART request failed for ${y}: HTTP ${res.status}`);
-    const payload = await res.json() as { status?: string; list?: Array<{ sj_nm?: string; account_nm?: string; thstrm_amount?: string; currency?: string }> };
+    const payload = (await res.json()) as {
+      status?: string;
+      list?: Array<{ sj_nm?: string; account_nm?: string; thstrm_amount?: string; currency?: string }>;
+    };
     if (payload.status !== "000" || !Array.isArray(payload.list)) continue; // '013' = no data for year
 
-    let periodId = (db.query("SELECT id FROM md_period WHERE period_type='year' AND fiscal_year=?").get(y) as { id: string } | undefined)?.id;
+    let periodId = (
+      db.query("SELECT id FROM md_period WHERE period_type='year' AND fiscal_year=?").get(y) as
+        | { id: string }
+        | undefined
+    )?.id;
     if (!periodId) {
       periodId = ulid();
-      db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
-        [periodId, "year", `${y}-01-01`, `${y}-12-31`, y, new Date().toISOString()]);
+      db.run(
+        "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+        [periodId, "year", `${y}-01-01`, `${y}-12-31`, y, new Date().toISOString()],
+      );
     }
 
     for (const entry of payload.list) {
@@ -66,7 +82,10 @@ export async function collectFromDart(opts: { corpCode: string; industryId: stri
 
 const args = process.argv.slice(2);
 if (import.meta.main) {
-  const get = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
+  const get = (name: string) => {
+    const i = args.indexOf(name);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
   const corpCode = get("--corp-code");
   const industryId = get("--industry-id");
   if (!corpCode || !industryId) {
@@ -74,7 +93,12 @@ if (import.meta.main) {
     process.exit(1);
   }
   try {
-    const result = await collectFromDart({ corpCode, industryId, years: Number(get("--years") ?? 5), dbPath: get("--db-path") });
+    const result = await collectFromDart({
+      corpCode,
+      industryId,
+      years: Number(get("--years") ?? 5),
+      dbPath: get("--db-path"),
+    });
     console.log(`✅ DART collection complete: ${result.inserted} fact row(s).`);
   } catch (err) {
     console.error(`❌ ${(err as Error).message}`);

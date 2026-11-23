@@ -2728,8 +2728,8 @@
       "name": "handbook",
       "scope": "root",
       "capability": "handbook",
-      "content_hash": "a9bd82eded8b1661",
-      "version": "0.6.0",
+      "content_hash": "a4891293c4fc4ba5",
+      "version": "0.6.2",
       "mirrors": [
         "skills/handbook/SKILL.md",
         ".claude/skills/handbook/SKILL.md",

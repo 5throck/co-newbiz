@@ -10,7 +10,11 @@ import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 
-export interface HwpExtractOptions { input: string; output?: string; timeoutMs?: number }
+export interface HwpExtractOptions {
+  input: string;
+  output?: string;
+  timeoutMs?: number;
+}
 
 const PYTHON_BIN = process.platform === "win32" ? "python" : "python3";
 const SCRIPT = resolve(dirname(import.meta.path), "..", "..", "python", "extract_hwp.py");
@@ -19,14 +23,28 @@ export function extractHwpText(opts: HwpExtractOptions): Promise<string> {
   const input = resolve(opts.input);
   if (!existsSync(input)) return Promise.reject(new Error(`HWP file not found: ${input}`));
   return new Promise((resolveFn, reject) => {
-    const proc = spawn(PYTHON_BIN, [SCRIPT, input], { stdio: ["ignore", "pipe", "pipe"], shell: false, env: { ...process.env } });
+    const proc = spawn(PYTHON_BIN, [SCRIPT, input], {
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: false,
+      env: { ...process.env },
+    });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; proc.kill(); }, opts.timeoutMs ?? 60_000);
-    proc.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-    proc.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
-    proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+    const timer = setTimeout(() => {
+      timedOut = true;
+      proc.kill();
+    }, opts.timeoutMs ?? 60_000);
+    proc.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+    proc.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    proc.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
     proc.on("close", (code) => {
       clearTimeout(timer);
       if (timedOut) return reject(new Error(`hwp-extract timed out after ${opts.timeoutMs ?? 60_000}ms`));

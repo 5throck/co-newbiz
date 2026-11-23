@@ -35,13 +35,7 @@
  */
 
 import * as yaml from "js-yaml";
-import {
-  readdirSync,
-  readFileSync,
-  existsSync,
-  mkdirSync,
-  writeFileSync,
-} from "node:fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
 const GENERATOR_VERSION = "0.5.0";
@@ -65,17 +59,7 @@ interface GraphNode {
   [key: string]: unknown;
 }
 
-type NodeType =
-  | "agent"
-  | "artifact"
-  | "adr"
-  | "decision"
-  | "procedure"
-  | "rule"
-  | "skill"
-  | "stage"
-  | "step"
-  | "var";
+type NodeType = "agent" | "artifact" | "adr" | "decision" | "procedure" | "rule" | "skill" | "stage" | "step" | "var";
 
 interface GraphEdge {
   type: EdgeType;
@@ -183,10 +167,7 @@ function parseFrontmatter(raw: string): Record<string, unknown> {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
   if (!m) return {};
   try {
-    return ((yaml.load(m[1]) as Record<string, unknown>) ?? {}) as Record<
-      string,
-      unknown
-    >;
+    return ((yaml.load(m[1]) as Record<string, unknown>) ?? {}) as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -294,9 +275,7 @@ function extractHumanRoles(): Set<string> {
   const roles = new Set<string>();
   if (!existsSync(HUMAN_ROLES_PATH)) return roles;
   try {
-    const doc = yaml.load(readFileSync(HUMAN_ROLES_PATH, "utf-8")) as
-      | Record<string, unknown>
-      | undefined;
+    const doc = yaml.load(readFileSync(HUMAN_ROLES_PATH, "utf-8")) as Record<string, unknown> | undefined;
     const hr = doc?.["human_roles"];
     if (hr && typeof hr === "object") {
       for (const key of Object.keys(hr as Record<string, unknown>)) {
@@ -342,9 +321,7 @@ function loadStageAliases(): StageAliases | null {
     return null;
   }
   try {
-    const stagesDoc = yaml.load(readFileSync(STAGES_PATH, "utf-8")) as
-      | Record<string, unknown>
-      | undefined;
+    const stagesDoc = yaml.load(readFileSync(STAGES_PATH, "utf-8")) as Record<string, unknown> | undefined;
     const stagesRaw = (stagesDoc?.["stages"] as unknown[]) ?? [];
     const stages: StageDef[] = [];
     for (const s of stagesRaw) {
@@ -357,9 +334,7 @@ function loadStageAliases(): StageAliases | null {
       }
     }
 
-    const aliasesDoc = yaml.load(readFileSync(STAGE_ALIASES_PATH, "utf-8")) as
-      | Record<string, unknown>
-      | undefined;
+    const aliasesDoc = yaml.load(readFileSync(STAGE_ALIASES_PATH, "utf-8")) as Record<string, unknown> | undefined;
     const aliasesRaw = (aliasesDoc?.["aliases"] as Record<string, unknown>) ?? {};
     const aliasOf = new Map<string, string>();
     for (const [gate, entry] of Object.entries(aliasesRaw)) {
@@ -384,8 +359,7 @@ function extractProcedures(): Map<string, ProcedureInfo> {
     if (!existsSync(schemaPath)) continue;
     let doc: Record<string, unknown>;
     try {
-      doc = (yaml.load(readFileSync(schemaPath, "utf-8")) ??
-        {}) as Record<string, unknown>;
+      doc = (yaml.load(readFileSync(schemaPath, "utf-8")) ?? {}) as Record<string, unknown>;
     } catch {
       continue;
     }
@@ -425,9 +399,7 @@ function extractRules(): Map<string, RuleInfo> {
   for (const f of readdirSync(RULES_DIR)) {
     if (!f.endsWith(".json")) continue;
     try {
-      const entry = JSON.parse(
-        readFileSync(join(RULES_DIR, f), "utf-8"),
-      ) as Record<string, unknown>;
+      const entry = JSON.parse(readFileSync(join(RULES_DIR, f), "utf-8")) as Record<string, unknown>;
       const procedure = asString(entry["procedure"]) ?? "";
       const criterionId = asString(entry["criterion_id"]) ?? "";
       const notes = asString(entry["notes"]) ?? "";
@@ -518,12 +490,7 @@ function buildGraph(includeConsumes: boolean): Graph {
     return stripped.replaceAll("\\", "/");
   }
 
-  function addEdge(
-    type: EdgeType,
-    from: string,
-    to: string,
-    sourceRef: string,
-  ): void {
+  function addEdge(type: EdgeType, from: string, to: string, sourceRef: string): void {
     const key = `${type}|${from}|${to}`;
     if (edgeKeys.has(key)) return;
     edgeKeys.add(key);
@@ -574,9 +541,7 @@ function buildGraph(includeConsumes: boolean): Graph {
   // --- procedures / steps / artifacts ---
   const declaredProcKeys = new Set<string>();
   for (const name of skillOrder) declaredKeysInto(declaredProcKeys, skills.get(name)!);
-  for (const [key, proc] of [...procs.entries()].sort(([a], [b]) =>
-    a.localeCompare(b),
-  )) {
+  for (const [key, proc] of [...procs.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     addNode({
       id: `proc:${key}`,
       type: "procedure",
@@ -683,7 +648,9 @@ function buildGraph(includeConsumes: boolean): Graph {
       if (!procGate) continue;
       const stageId = stageAliases.aliasOf.get(procGate);
       if (!stageId) {
-        warnings.unaliased_gates.push(`${procKey}: gate '${procGate}' has no alias entry in process/stage-aliases.yaml`);
+        warnings.unaliased_gates.push(
+          `${procKey}: gate '${procGate}' has no alias entry in process/stage-aliases.yaml`,
+        );
         continue;
       }
       addEdge(
@@ -719,9 +686,7 @@ function buildGraph(includeConsumes: boolean): Graph {
   }
 
   // --- rules ---
-  for (const [stem, rule] of [...rules.entries()].sort(([a], [b]) =>
-    a.localeCompare(b),
-  )) {
+  for (const [stem, rule] of [...rules.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     addNode({
       id: `rule:${stem}`,
       type: "rule",
@@ -797,20 +762,13 @@ function buildGraph(includeConsumes: boolean): Graph {
   // Report policy ids that never resolved to any document.
   for (const [, rule] of rules) {
     if (!rule.policyId) continue;
-    const resolved = edges.some(
-      (e) => e.type === "anchored_by" && e.from === `rule:${rule.stem}`,
-    );
+    const resolved = edges.some((e) => e.type === "anchored_by" && e.from === `rule:${rule.stem}`);
     if (!resolved) warnings.unanchored_policy_ids.push(`${rule.stem}: ${rule.policyId}`);
   }
 
-  const nodeList = [...nodes.values()].sort(
-    (a, b) => a.type.localeCompare(b.type) || a.id.localeCompare(b.id),
-  );
+  const nodeList = [...nodes.values()].sort((a, b) => a.type.localeCompare(b.type) || a.id.localeCompare(b.id));
   const edgeList = edges.sort(
-    (a, b) =>
-      a.type.localeCompare(b.type) ||
-      a.from.localeCompare(b.from) ||
-      a.to.localeCompare(b.to),
+    (a, b) => a.type.localeCompare(b.type) || a.from.localeCompare(b.from) || a.to.localeCompare(b.to),
   );
   return { nodes: nodeList, edges: edgeList, warnings };
 }
@@ -829,8 +787,7 @@ function renderJson(g: Graph): string {
         meta: {
           generator: "scripts/co-newbiz/graph.ts",
           generator_version: GENERATOR_VERSION,
-          design_doc:
-            "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
+          design_doc: "docs/designs/2026-08-24-multi-element-skill-graph-pilot-design.md",
           node_count: g.nodes.length,
           edge_count: g.edges.length,
         },
@@ -861,7 +818,10 @@ function renderMarkdown(g: Graph, includeConsumes: boolean): string {
   lines.push("> All edges advisory; every edge carries `source_ref` back to its SSOT.");
   lines.push("");
   lines.push(
-    `Nodes: ${g.nodes.length} (${[...nodesByType.keys()].sort().map((t) => `${t} ${nodesByType.get(t)!.length}`).join(", ")}) · Edges: ${g.edges.length}`,
+    `Nodes: ${g.nodes.length} (${[...nodesByType.keys()]
+      .sort()
+      .map((t) => `${t} ${nodesByType.get(t)!.length}`)
+      .join(", ")}) · Edges: ${g.edges.length}`,
   );
   lines.push("");
 
@@ -870,9 +830,7 @@ function renderMarkdown(g: Graph, includeConsumes: boolean): string {
   lines.push("");
   for (const n of nodesByType.get("procedure") ?? []) {
     lines.push(`### ${n.label} (\`${n.id}\`)`);
-    const steps = (nodesByType.get("step") ?? []).filter((s) =>
-      s.id.startsWith(`${n.id}#`),
-    );
+    const steps = (nodesByType.get("step") ?? []).filter((s) => s.id.startsWith(`${n.id}#`));
     if (steps.length === 0) {
       lines.push("");
       lines.push("_No shared-layer steps parsed._");
@@ -883,15 +841,9 @@ function renderMarkdown(g: Graph, includeConsumes: boolean): string {
     lines.push("| Step | Gate | Agent | Skill | Output |");
     lines.push("|---|---|---|---|---|");
     for (const s of steps) {
-      const agentE = g.edges.find(
-        (e) => e.type === "step_by_agent" && e.from === s.id,
-      );
-      const skillE = g.edges.find(
-        (e) => e.type === "step_uses_skill" && e.from === s.id,
-      );
-      const prodE = g.edges.find(
-        (e) => e.type === "produces" && e.from === s.id,
-      );
+      const agentE = g.edges.find((e) => e.type === "step_by_agent" && e.from === s.id);
+      const skillE = g.edges.find((e) => e.type === "step_uses_skill" && e.from === s.id);
+      const prodE = g.edges.find((e) => e.type === "produces" && e.from === s.id);
       lines.push(
         `| ${s.id.split("#")[1]} | ${s.gate ?? ""} | ${agentE?.to.replace("agent:", "") ?? ""} | ${skillE?.to.replace("skill:", "") ?? ""} | ${prodE?.to.replace("artifact:", "") ?? ""} |`,
       );
@@ -939,9 +891,7 @@ function renderMarkdown(g: Graph, includeConsumes: boolean): string {
   // Decision chains
   lines.push("## Decision relations");
   lines.push("");
-  const rel = g.edges.filter(
-    (e) => e.type === "supersedes" || e.type === "amends" || e.type === "activates_reverses",
-  );
+  const rel = g.edges.filter((e) => e.type === "supersedes" || e.type === "amends" || e.type === "activates_reverses");
   if (rel.length === 0) lines.push("_None extracted._");
   for (const e of rel) {
     lines.push(`- \`${e.from}\` —${e.type}→ \`${e.to}\``);
@@ -1008,9 +958,7 @@ export function runGraphCommand(args: string[]): void {
       for (const p of problems) console.error(`  - ${p}`);
       process.exit(1);
     }
-    console.log(
-      `[PASS] graph in sync (${graph.nodes.length} nodes, ${graph.edges.length} edges)`,
-    );
+    console.log(`[PASS] graph in sync (${graph.nodes.length} nodes, ${graph.edges.length} edges)`);
     return;
   }
 
@@ -1029,9 +977,7 @@ export function runGraphCommand(args: string[]): void {
     w.undeclared_procedures.length +
     w.unanchored_policy_ids.length +
     w.decisions_citing_unknown_rules.length;
-  console.log(
-    `   warnings: ${totalWarn} item(s) — see docs/graph/graph.md "Orphans & warnings"`,
-  );
+  console.log(`   warnings: ${totalWarn} item(s) — see docs/graph/graph.md "Orphans & warnings"`);
 }
 
 /**
@@ -1039,13 +985,9 @@ export function runGraphCommand(args: string[]): void {
  * variant audit hook (scripts/audit-variant.ts). Returns problem strings —
  * empty means the committed files match the SSOT-derived projection.
  */
-export function checkGraphDrift(
-  json?: string,
-  md?: string,
-  includeConsumes = true,
-): string[] {
-  const jsonPath = join(OUT_DIR, 'graph.json');
-  const mdPath = join(OUT_DIR, 'graph.md');
+export function checkGraphDrift(json?: string, md?: string, includeConsumes = true): string[] {
+  const jsonPath = join(OUT_DIR, "graph.json");
+  const mdPath = join(OUT_DIR, "graph.md");
   if (json === undefined || md === undefined) {
     ({ json, md } = generateAll(includeConsumes));
   }
@@ -1062,7 +1004,6 @@ export function checkGraphDrift(
   }
   return problems;
 }
-
 
 export function runContextCommand(args: string[]): void {
   const skillIdx = args.indexOf("--skill");
@@ -1102,15 +1043,11 @@ function printSkillBundle(g: Graph, name: string): void {
   const lines: string[] = [];
   lines.push(`## Context bundle — skill \`${name}\``);
   lines.push("");
-  lines.push(
-    `- Version/status: ${node.version ?? "?"} / ${node.status ?? "?"}`,
-  );
+  lines.push(`- Version/status: ${node.version ?? "?"} / ${node.status ?? "?"}`);
   const owner = g.edges.find((e) => e.type === "owns" && e.to === skillId);
   lines.push(`- Owner agent: ${owner ? owner.from.replace("agent:", "") : "—"}`);
 
-  const memberEdges = g.edges.filter(
-    (e) => e.type === "member_of" && e.from === skillId,
-  );
+  const memberEdges = g.edges.filter((e) => e.type === "member_of" && e.from === skillId);
   if (memberEdges.length === 0) {
     lines.push("- Member of: — (no procedure_keys declared)");
   }
@@ -1126,21 +1063,20 @@ function printSkillBundle(g: Graph, name: string): void {
       `- Procedure: ${procNode?.label ?? procId} — steps ${steps.map((s) => "#" + s.split("#")[1]).join(", ") || "(none)"}`,
     );
     for (const sid of steps) {
-      const prod = g.edges.find(
-        (e) => e.type === "produces" && e.from === sid,
-      );
+      const prod = g.edges.find((e) => e.type === "produces" && e.from === sid);
       if (prod) producedArtifacts.add(prod.to);
     }
   }
 
   if (producedArtifacts.size > 0) {
     lines.push(
-      `- Produces: ${[...producedArtifacts].sort().map((a) => `\`${a.replace("artifact:", "")}\``).join(", ")}`,
+      `- Produces: ${[...producedArtifacts]
+        .sort()
+        .map((a) => `\`${a.replace("artifact:", "")}\``)
+        .join(", ")}`,
     );
     const downstream: string[] = [];
-    for (const e of g.edges.filter(
-      (x) => x.type === "consumes" && producedArtifacts.has(x.to),
-    )) {
+    for (const e of g.edges.filter((x) => x.type === "consumes" && producedArtifacts.has(x.to))) {
       downstream.push(`${e.from} ← ${e.to.replace("artifact:", "")}`);
     }
     if (downstream.length > 0) {
@@ -1152,19 +1088,13 @@ function printSkillBundle(g: Graph, name: string): void {
   const memberProcIds = new Set(memberEdges.map((e) => e.to));
   const rulesForProcs = g.nodes
     .filter((n) => n.type === "rule")
-    .filter((rn) =>
-      memberProcIds.has(`proc:${String(rn.id).replace("rule:", "").split("__")[0]}`),
-    );
+    .filter((rn) => memberProcIds.has(`proc:${String(rn.id).replace("rule:", "").split("__")[0]}`));
   if (rulesForProcs.length > 0) {
     const enabled = rulesForProcs.filter((r) => r.enabled === true);
     const dormant = rulesForProcs.filter((r) => r.enabled !== true);
-    lines.push(
-      `- Governing rules: ${enabled.length} enabled, ${dormant.length} dormant/premise-locked`,
-    );
+    lines.push(`- Governing rules: ${enabled.length} enabled, ${dormant.length} dormant/premise-locked`);
     for (const r of enabled.slice(0, 8)) {
-      const anchor = g.edges.find(
-        (e) => e.type === "anchored_by" && e.from === r.id,
-      );
+      const anchor = g.edges.find((e) => e.type === "anchored_by" && e.from === r.id);
       lines.push(
         `  - \`${String(r.id).replace("rule:", "")}\` action=${r.action}${anchor ? ` anchor=${anchor.to}` : ""}`,
       );

@@ -64,7 +64,7 @@ const isReferenceDoc = (rel: string) =>
 for (const file of htmlFiles) {
   const html = readHtml(file);
   const rel = relFile(file);
-  if (/^index(?:_[a-z]{2})?\.html$/.test(rel) || /[Cc]ourse[_\-][Oo]verview/.test(rel)) continue;
+  if (/^index(?:_[a-z]{2})?\.html$/.test(rel) || /[Cc]ourse[_-][Oo]verview/.test(rel)) continue;
   if (!/<nav[^>]*>/.test(html)) {
     allIssues.push({ file: rel, check: "sidebar-nav", detail: "No sidebar navigation", severity: "error" });
   }
@@ -79,8 +79,8 @@ for (const file of htmlFiles) {
   const rel = relFile(file);
   if (
     /^index(?:_[a-z]{2})?\.html$/.test(rel) ||
-    /[Cc]ourse[_\-][Oo]verview/.test(rel) ||
-    /[Ll]ecture[_\-][Gg]uide/.test(rel)
+    /[Cc]ourse[_-][Oo]verview/.test(rel) ||
+    /[Ll]ecture[_-][Gg]uide/.test(rel)
   )
     continue;
   if (isReferenceDoc(rel)) continue;

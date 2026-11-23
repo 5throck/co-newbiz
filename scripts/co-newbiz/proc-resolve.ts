@@ -43,7 +43,9 @@ function findProceduresRoot(): string {
     if (parent === dir) break;
     dir = parent;
   }
-  throw new Error(`Could not locate the procedures/ directory by walking up from cwd=${process.cwd()} (import.meta.dirname was unavailable).`);
+  throw new Error(
+    `Could not locate the procedures/ directory by walking up from cwd=${process.cwd()} (import.meta.dirname was unavailable).`,
+  );
 }
 
 const PROCEDURES_ROOT = findProceduresRoot();
@@ -99,12 +101,8 @@ function loadProcedure(dir: string): ProcedureDoc {
   return yaml.load(readFileSync(file, "utf-8"), { schema: yaml.JSON_SCHEMA }) as ProcedureDoc;
 }
 
-function applyOverrides(
-  baseSteps: Step[],
-  overrides: Overrides | undefined,
-  source: "region" | "entity"
-): Step[] {
-  let steps = [...baseSteps];
+function applyOverrides(baseSteps: Step[], overrides: Overrides | undefined, source: "region" | "entity"): Step[] {
+  const steps = [...baseSteps];
 
   if (overrides?.replace_steps) {
     for (const r of overrides.replace_steps) {
@@ -171,7 +169,7 @@ export interface ResolveResult {
 
 export function resolveProcedure(
   procedureName: string,
-  opts: { entity?: string; region?: string } = {}
+  opts: { entity?: string; region?: string } = {},
 ): ResolveResult {
   const sharedDir = join(PROCEDURES_ROOT, "_shared", procedureName);
   const shared = loadProcedure(sharedDir);
@@ -240,7 +238,9 @@ if (import.meta.main) {
 
   const procedureName = procedureIdx >= 0 ? args[procedureIdx + 1] : undefined;
   if (!procedureName) {
-    console.error("Usage: bun scripts/co-newbiz/proc-resolve.ts --procedure <name> [--entity <code>] [--region <code>] [--json]");
+    console.error(
+      "Usage: bun scripts/co-newbiz/proc-resolve.ts --procedure <name> [--entity <code>] [--region <code>] [--json]",
+    );
     process.exit(1);
   }
 

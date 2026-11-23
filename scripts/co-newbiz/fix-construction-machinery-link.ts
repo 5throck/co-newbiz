@@ -39,7 +39,8 @@ const placeholder = db
   )
   .all() as Array<{ id: string; relation: string | null; status: string; evidence_ref: string }>;
 console.log(`placeholder-evidence active rows: ${placeholder.length}`);
-for (const r of placeholder) console.log(`  - ${r.id} relation=${r.relation} evidence=${JSON.stringify(r.evidence_ref)}`);
+for (const r of placeholder)
+  console.log(`  - ${r.id} relation=${r.relation} evidence=${JSON.stringify(r.evidence_ref)}`);
 
 // 2) find the wrong row: breaker -> machinery-operator, relation='전방'
 const wrong = db
@@ -60,7 +61,11 @@ if (!wrong) {
 }
 
 // 3) retire (soft-delete + audit — ADR-0129 contract)
-db.run("UPDATE proxy_link SET status = 'retired', retired_at = ?, retired_by = ? WHERE id = ?", [now, "fix-construction-machinery-link", wrong.id]);
+db.run("UPDATE proxy_link SET status = 'retired', retired_at = ?, retired_by = ? WHERE id = ?", [
+  now,
+  "fix-construction-machinery-link",
+  wrong.id,
+]);
 appendAudit(db, {
   actor: "fix-construction-machinery-link",
   action: "proxy_link_retire",

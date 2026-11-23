@@ -13,7 +13,13 @@
  *  - reference: the grade the pilot record states (the golden label).
  * Results are evidence for people. They never retune weights (design §7).
  */
-import { computeOverall, evaluateRag, type RagDimension, type RagGrade, type StageGate } from "../../db/lib/rag-engine.ts";
+import {
+  computeOverall,
+  evaluateRag,
+  type RagDimension,
+  type RagGrade,
+  type StageGate,
+} from "../../db/lib/rag-engine.ts";
 import { killHitsFor, ragInputFromFacts } from "./deterministic.ts";
 import type { GoldenSet } from "./loader.ts";
 import type { CouldNotEvaluate, SuiteResult } from "./types.ts";
@@ -72,7 +78,12 @@ function percentile(sorted: number[], q: number): number {
 }
 
 /** Percentile bootstrap (resample with replacement) of a statistic. */
-export function bootstrapCi<T>(items: T[], stat: (s: T[]) => number, b = 2000, seed = 20261008): [number, number] | null {
+export function bootstrapCi<T>(
+  items: T[],
+  stat: (s: T[]) => number,
+  b = 2000,
+  seed = 20261008,
+): [number, number] | null {
   if (items.length === 0) return null;
   const rnd = mulberry32(seed);
   const vals: number[] = [];
@@ -89,7 +100,13 @@ export function calibrate(points: CalibrationPoint[], b = 2000): CalibrationRepo
   const reliability: ReliabilityRow[] = (["green", "amber", "red"] as const).map((grade) => {
     const bin = points.filter((p) => p.grade === grade);
     const rate = (s: CalibrationPoint[]) => s.filter((p) => p.favourable).length / s.length;
-    return { grade, n: bin.length, predicted: GRADE_PROBABILITY[grade], observed: bin.length ? rate(bin) : null, ci: bootstrapCi(bin, rate, b) };
+    return {
+      grade,
+      n: bin.length,
+      predicted: GRADE_PROBABILITY[grade],
+      observed: bin.length ? rate(bin) : null,
+      ci: bootstrapCi(bin, rate, b),
+    };
   });
   return {
     n: points.length,
@@ -101,11 +118,17 @@ export function calibrate(points: CalibrationPoint[], b = 2000): CalibrationRepo
 }
 
 /** The same grade with the data-confidence cap removed: data_confidence is treated as Green. */
-export function uncappedGrade(dimensions: Array<{ dimension: string; grade: RagGrade; assessed: boolean }>, killHit: boolean, capped: RagGrade): RagGrade {
+export function uncappedGrade(
+  dimensions: Array<{ dimension: string; grade: RagGrade; assessed: boolean }>,
+  killHit: boolean,
+  capped: RagGrade,
+): RagGrade {
   const all = dimensions.filter((d) => d.dimension !== "overall");
   if (killHit || all.some((d) => d.assessed && d.grade === "red")) return capped;
   if (!all.every((d) => d.assessed)) return capped;
-  const grades = Object.fromEntries(all.map((d) => [d.dimension, d.dimension === "data_confidence" ? "green" : d.grade])) as Record<RagDimension, RagGrade>;
+  const grades = Object.fromEntries(
+    all.map((d) => [d.dimension, d.dimension === "data_confidence" ? "green" : d.grade]),
+  ) as Record<RagDimension, RagGrade>;
   return computeOverall(grades, false).grade;
 }
 
@@ -122,25 +145,45 @@ export function collectPoints(set: GoldenSet): CalibrationTracks {
     const outcome = lc.case.public_outcome;
     if (!outcome) continue;
     const id = lc.case.case_id;
-    const eligible = lc.case.expectations.filter((e) => e.function === "rag_overall" && e.input_basis === "pre_decision");
+    const eligible = lc.case.expectations.filter(
+      (e) => e.function === "rag_overall" && e.input_basis === "pre_decision",
+    );
     if (eligible.length === 0) {
-      out.couldNotEvaluate.push({ caseId: id, fn: "calibration", reason: "outcome-labelled, but no pre-decision rag_overall expectation" });
+      out.couldNotEvaluate.push({
+        caseId: id,
+        fn: "calibration",
+        reason: "outcome-labelled, but no pre-decision rag_overall expectation",
+      });
       continue;
     }
     for (const e of eligible) {
       if (e.function !== "rag_overall") continue;
-      if (e.expected.overall !== "not_graded") out.reference.push({ caseId: id, grade: e.expected.overall, favourable: outcome.favourable });
-      else out.couldNotEvaluate.push({ caseId: id, fn: "calibration.reference", reason: `pilot record gives no overall grade at ${e.gate} (not_graded)` });
+      if (e.expected.overall !== "not_graded")
+        out.reference.push({ caseId: id, grade: e.expected.overall, favourable: outcome.favourable });
+      else
+        out.couldNotEvaluate.push({
+          caseId: id,
+          fn: "calibration.reference",
+          reason: `pilot record gives no overall grade at ${e.gate} (not_graded)`,
+        });
       const { input } = ragInputFromFacts(e.gate as StageGate, lc.inputs.facts);
       const killHit = killHitsFor(lc, e.gate, lc.inputs.facts).hits.length > 0;
       if (killHit) input.killCriteriaTriggered = true;
       const ev = evaluateRag(input);
       if (!ev.overall) {
-        out.couldNotEvaluate.push({ caseId: id, fn: "calibration.engine", reason: `engine produces no overall grade from the pre-decision fixture at ${e.gate}` });
+        out.couldNotEvaluate.push({
+          caseId: id,
+          fn: "calibration.engine",
+          reason: `engine produces no overall grade from the pre-decision fixture at ${e.gate}`,
+        });
         continue;
       }
       out.engineCapped.push({ caseId: id, grade: ev.overall.grade, favourable: outcome.favourable });
-      out.engineUncapped.push({ caseId: id, grade: uncappedGrade(ev.dimensions, killHit, ev.overall.grade), favourable: outcome.favourable });
+      out.engineUncapped.push({
+        caseId: id,
+        grade: uncappedGrade(ev.dimensions, killHit, ev.overall.grade),
+        favourable: outcome.favourable,
+      });
     }
   }
   return out;
@@ -150,8 +193,14 @@ const f3 = (n: number | null): string => (n === null ? "n/a" : n.toFixed(3));
 const ci = (c: [number, number] | null): string => (c ? `[${c[0].toFixed(3)}, ${c[1].toFixed(3)}]` : "n/a");
 
 export function renderReport(label: string, r: CalibrationReport): string[] {
-  const l = [`**${label}** — n = ${r.n}, Brier ${f3(r.brier)} (95% bootstrap ${ci(r.brierCi)}), Green on unfavourable: ${r.greenOnUnfavourable}`, "", "| Grade | n | Predicted P(fav) | Observed | 95% bootstrap |", "|---|---|---|---|---|"];
-  for (const row of r.reliability) l.push(`| ${row.grade} | ${row.n} | ${row.predicted.toFixed(2)} | ${f3(row.observed)} | ${ci(row.ci)} |`);
+  const l = [
+    `**${label}** — n = ${r.n}, Brier ${f3(r.brier)} (95% bootstrap ${ci(r.brierCi)}), Green on unfavourable: ${r.greenOnUnfavourable}`,
+    "",
+    "| Grade | n | Predicted P(fav) | Observed | 95% bootstrap |",
+    "|---|---|---|---|---|",
+  ];
+  for (const row of r.reliability)
+    l.push(`| ${row.grade} | ${row.n} | ${row.predicted.toFixed(2)} | ${f3(row.observed)} | ${ci(row.ci)} |`);
   l.push("");
   return l;
 }
@@ -176,5 +225,12 @@ export function runCalibrationSuite(set: GoldenSet): SuiteResult {
     ...renderReport("Reference (pilot-record grade)", reference),
     "Insufficient for weight changes: n is far below what a calibration claim needs. Results never retune RAG weights; any change goes through the policy path with an ADR.",
   ];
-  return { name: "calibration", kind: "deterministic", cases: [], couldNotEvaluate: t.couldNotEvaluate, metrics, detail };
+  return {
+    name: "calibration",
+    kind: "deterministic",
+    cases: [],
+    couldNotEvaluate: t.couldNotEvaluate,
+    metrics,
+    detail,
+  };
 }

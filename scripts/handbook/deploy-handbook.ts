@@ -197,7 +197,7 @@ const scanPatterns = [
   "credentials",
 ];
 try {
-  const scanPattern = `(${scanPatterns.join("|")})\\s*[=:]\\s*['\"]?[^'\"\\s]{8,}`;
+  const scanPattern = `(${scanPatterns.join("|")})\\s*[=:]\\s*['"]?[^'"\\s]{8,}`;
   runArgs("grep", ["-rniE", scanPattern, "docs/"], { cwd: handbookDir, silent: true });
   fatal("Potential secrets detected in docs/ — aborting deployment. Review and remove before retry.");
 } catch (e: unknown) {

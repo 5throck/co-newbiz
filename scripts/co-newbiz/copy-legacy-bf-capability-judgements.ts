@@ -14,7 +14,11 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../db/client.ts";
 import { selectedTargetId } from "../../app/web-next/lib/dd-target.ts";
-import { copyLegacyJudgementsToTarget, targetScope, type LegacyCopyItem } from "../../app/web-next/lib/brownfield-capability-judgement.ts";
+import {
+  copyLegacyJudgementsToTarget,
+  targetScope,
+  type LegacyCopyItem,
+} from "../../app/web-next/lib/brownfield-capability-judgement.ts";
 
 export interface LegacyCopyReport {
   projectId: string;
@@ -25,13 +29,20 @@ export interface LegacyCopyReport {
 
 export function runLegacyCopy(db: Database, opts: { apply: boolean; now?: string }): LegacyCopyReport[] {
   const at = opts.now ?? new Date().toISOString();
-  const projects = db.query("SELECT id FROM md_project WHERE track = 'brownfield' AND source_opportunity_id IS NOT NULL ORDER BY id").all() as Array<{ id: string }>;
+  const projects = db
+    .query("SELECT id FROM md_project WHERE track = 'brownfield' AND source_opportunity_id IS NOT NULL ORDER BY id")
+    .all() as Array<{ id: string }>;
   return projects.map(({ id }) => {
     const tid = selectedTargetId(id, db);
     if (!tid) return { projectId: id, targetId: null, skipped: "no selected target", items: [] };
     const scope = targetScope(db, tid);
     if (!scope.ok) return { projectId: id, targetId: tid, skipped: scope.message, items: [] };
-    return { projectId: id, targetId: tid, skipped: null, items: copyLegacyJudgementsToTarget(db, scope.target, { apply: opts.apply, actor: "script:legacy-copy", at }) };
+    return {
+      projectId: id,
+      targetId: tid,
+      skipped: null,
+      items: copyLegacyJudgementsToTarget(db, scope.target, { apply: opts.apply, actor: "script:legacy-copy", at }),
+    };
   });
 }
 
@@ -43,5 +54,7 @@ if (import.meta.main) {
     for (const i of r.items) console.log(`  ${i.outcome.padEnd(18)} ${i.rowId} ${i.capability}`);
   }
   const copied = report.reduce((n, r) => n + r.items.filter((i) => i.outcome === "copied").length, 0);
-  console.log(`${apply ? "APPLIED" : "DRY-RUN (no changes; pass --apply to write)"}: ${copied} judgement(s) ${apply ? "copied" : "would be copied"}.`);
+  console.log(
+    `${apply ? "APPLIED" : "DRY-RUN (no changes; pass --apply to write)"}: ${copied} judgement(s) ${apply ? "copied" : "would be copied"}.`,
+  );
 }
