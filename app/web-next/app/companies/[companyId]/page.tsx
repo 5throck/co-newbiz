@@ -91,7 +91,7 @@ export default function CompanyFinancialsPage() {
       <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-body)] mb-3">{t("intro")}</p>
 
       {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {error}</p>}
-      {message && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--success)]">✓ {message}</p>}
+      {message && <p role="status" className="text-[length:var(--fs-caption)] text-[color:var(--green-fg)]">✓ {message}</p>}
       {!view ? (
         <p className="text-[color:var(--muted-fg)]">{tc("loading")}</p>
       ) : (
@@ -105,20 +105,20 @@ export default function CompanyFinancialsPage() {
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{c.label}</div>
                   <div className="font-extrabold text-[1.3rem] tabular-nums tracking-tight">{fmtCard(c)}</div>
                   {c.trendText && (
-                    <div className={`text-[length:var(--fs-caption)] font-bold ${c.trend === "up" ? "text-[color:var(--success)]" : c.trend === "down" ? "text-[color:var(--red-fg)]" : "text-[color:var(--muted-fg)]"}`}>{c.trendText}</div>
+                    <div className={`text-[length:var(--fs-caption)] font-bold ${c.trend === "up" ? "text-[color:var(--green-fg)]" : c.trend === "down" ? "text-[color:var(--red-fg)]" : "text-[color:var(--muted-fg)]"}`}>{c.trendText}</div>
                   )}
                   <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-0.5">{c.say}</div>
                 </div>
               ))}
             </div>
             {view.commentary.callouts.map((c, i) => (
-              <p key={i} className={`mt-2 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] ${c.tone === "warn" ? "bg-[color:var(--warning-bg)] text-[color:var(--amber-fg)]" : c.tone === "good" ? "bg-[color:var(--success-bg)] text-[color:var(--success)]" : "bg-[color:var(--primary-bg)] text-[color:var(--primary-dim)]"}`}>{c.text}</p>
+              <p key={i} className={`mt-2 rounded-lg px-3 py-2 text-[length:var(--fs-caption)] ${c.tone === "warn" ? "bg-[color:var(--warning-bg)] text-[color:var(--amber-fg)]" : c.tone === "good" ? "bg-[color:var(--success-bg)] text-[color:var(--green-fg)]" : "bg-[color:var(--primary-bg)] text-[color:var(--primary-dim)]"}`}>{c.text}</p>
             ))}
           </section>
 
           {/* ② 재무실적 */}
           <section className="market-section sizing-step mt-3">
-            <h3 className="sizing-step-title">{t("finHeading")} <span className="inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--success)]">{t("finBadge")}</span> <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{t("finUnit")}</span></h3>
+            <h3 className="sizing-step-title">{t("finHeading")} <span className="inline-block rounded-full px-2 py-0.5 text-[length:var(--fs-caption)] font-bold whitespace-nowrap bg-[color:var(--success-bg)] text-[color:var(--green-fg)]">{t("finBadge")}</span> <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">{t("finUnit")}</span></h3>
             {accounts.length === 0 ? (
               <div>
                 <p className="text-[color:var(--muted-fg)]">{canAct ? t("noFactCanWrite") : t("noFactViewer")}</p>

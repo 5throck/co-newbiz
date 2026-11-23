@@ -274,7 +274,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     return (
       <section className="market-section sizing-step mt-3" aria-label={tc("newExecutionBaseline")} data-testid="gx-classification-conflict">
         <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> {tc("newExecutionBaseline")}</h3>
-        <div role="alert" className="text-[length:var(--fs-caption)] border border-[color:var(--amber-border,var(--primary-border))] rounded-lg px-3 py-2">
+        <div role="alert" className="text-[length:var(--fs-caption)] border border-[color:var(--amber-border)] rounded-lg px-3 py-2">
           <span className={`status-chip ${cc.cls}`}>{tx(cc.chip)}</span>
           <span className="block mt-1 font-semibold">{tx(cc.text)}</span>
           {status.warning && <span className="block mt-1 text-[color:var(--muted-fg)]">{status.warning}</span>}

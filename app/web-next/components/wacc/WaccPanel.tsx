@@ -95,7 +95,7 @@ function KindChip({ kind }: { kind: "live" | "user" | "derived" }) {const t = us
     derived: t("derivedComputed"),
   } as const;
   const cls = {
-    live: "bg-[color:var(--success-bg)] text-[color:var(--success)]",
+    live: "bg-[color:var(--success-bg)] text-[color:var(--green-fg)]",
     user: "bg-[color:var(--primary-bg)] text-[color:var(--accent)]",
     derived: "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]",
   } as const;
@@ -875,7 +875,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {const tr = useT
                     {t("computedValue")} {pct(computedWacc)} {t("confirmedValue")} {pct(nOr(waccFinal))} {t("varianceEvidenceMustBeNoted")}
                   </p>
                 ) : (
-                  <p role="status" className="text-[color:var(--success)] bg-[color:var(--success-bg)] rounded-md px-3 py-2 text-[length:var(--fs-caption)] mt-2">
+                  <p role="status" className="text-[color:var(--green-fg)] bg-[color:var(--success-bg)] rounded-md px-3 py-2 text-[length:var(--fs-caption)] mt-2">
                     {t("confirmedValue2")} {pct(nOr(waccFinal))} {t("matchesTheCapmValue")}
                   </p>
                 )

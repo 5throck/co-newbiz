@@ -286,7 +286,7 @@
     min-width: 0;
     /* 폼 컨트롤이 컨테이너를 벗어나지 않게 — CSS width가 없는 <input>의 내재 폭은
        size 속성 × 글꼴 평균 자폭인데, 폭이 넓은 CJK 폴백 폰트(CI linux)에서는 그 값이
-       뷰포트(390px)를 넘긴다(OVERFLOW-390 /glossary +6px). max-width는 폰트 계량과
+       뷰포트(390px)를 넘긴다(OVERFLOW-390 /glossary +6px). max-width는 폰트 계량과 design-token-exempt: prose
        무관하게 상자 모델을 부모 폭 안에 묶는다. */
     max-width: 100%;
     background: var(--input-bg);
@@ -679,7 +679,7 @@
     padding: 0 0.3rem;
     border-radius: var(--radius-full);
     background: var(--accent);
-    color: var(--bg);
+    color: var(--accent-fg);
     font-size: var(--fs-caption);
     font-weight: 700;
   }
@@ -2032,8 +2032,8 @@
 }
 /* 마크다운 본문 위계 — Tailwind preflight가 h1–h6의 크기·굵기를 상속으로
    되돌려 문서 제목이 본문과 같아지므로 여기서 복원한다. 스케일은 기존 선례
-   (h2 1.05rem / h3 --fs-body)에 h1·h4–h6를 맞춘 것이고, Wave U-2 14px
-   바닥값 아래로 내려가지 않는다(--fs-caption 13px는 본문에 쓰지 않는다). */
+   (h2 1.05rem / h3 --fs-body)에 h1·h4–h6를 맞춘 것이고, Wave U-2 14px design-token-exempt: prose
+   바닥값 아래로 내려가지 않는다(--fs-caption 13px는 본문에 쓰지 않는다). design-token-exempt: prose */
 .library-doc-body h1 {
   margin: 1.6rem 0 0.6rem;
   font-size: 1.35rem;
@@ -2114,7 +2114,7 @@ main li { overflow-wrap: anywhere; }
 /* 코드 — 인라인 코드는 surface-2 배경으로 본문과 구분하고, 펜스 블록(pre)은
    같은 면에 판 테두리를 두른 뒤 내부 code의 인라인 장식을 되돌린다.
    preflight가 code/pre의 font-family를 되돌리므로 --font-mono를 명시한다.
-   본문 코드는 캡션 예외(13px) 없이 --fs-body(14px)를 유지한다. */
+   본문 코드는 캡션 예외(13px) 없이 --fs-body(14px)를 유지한다. design-token-exempt: prose */
 .library-doc-body code {
   font-family: var(--font-mono);
   font-size: var(--fs-body);
@@ -2156,7 +2156,7 @@ main li { overflow-wrap: anywhere; }
   overflow-x: auto;
   border-collapse: collapse;
   margin: 0.75rem 0;
-  font-size: var(--fs-body); /* 0.88rem → --fs-body: 0.88rem은 넓은 화면(루트 15px)에서 13.2px로 Wave U-2 바닥값을 깬다 */
+  font-size: var(--fs-body); /* 0.88rem → --fs-body: 0.88rem은 넓은 화면(루트 15px)에서 13.2px로 Wave U-2 바닥값을 깬다 design-token-exempt: prose */
 }
 .library-doc-body th,
 .library-doc-body td {
@@ -2202,7 +2202,7 @@ main li { overflow-wrap: anywhere; }
   padding-left: 0.75rem;
   color: var(--muted-fg);
 }
-/* 마크다운 이미지(위키 캡처) — 본문 열 폭을 넘지 않고 최대 40rem(약 640px)으로 가운데
+/* 마크다운 이미지(위키 캡처) — 본문 열 폭을 넘지 않고 최대 40rem(약 640px)으로 가운데 design-token-exempt: prose
    정렬한다. 최대 폭은 전용 토큰이 없어 컴포넌트 규칙 안에서 한 번만 선언한 지역
    변수다(전역 토큰 아님). 이미지는 새 탭 원본 링크 안에 있고 alt는 figcaption으로 쓴다
    (2026-10-26 드라이런 UX·위키 이미지 설계 §2). */
@@ -2409,13 +2409,13 @@ main li { overflow-wrap: anywhere; }
 .wiki-content-pane .library-doc-body,
 .wiki-home-body .library-doc-body {
   max-width: none;
-  /* 본문 산문을 앱 표준 14px(--fs-body)로 — 위키만 루트 16px를 상속해 메인
+  /* 본문 산문을 앱 표준 14px(--fs-body)로 — 위키만 루트 16px를 상속해 메인 design-token-exempt: prose
      UI 글자보다 크게 보이던 문제(2026-10-25, "위키 폰트가 메인과 다르다")를
      닫는다. /library의 doc-body 규약은 그대로 둔다. */
   font-size: var(--fs-body);
 }
 /* 푸터 노트는 캡션 크기가 설계 의도(.wiki-footer-note의 --fs-caption) —
-   위 컨테이너 규칙이 내부 doc-body까지 14px로 끌어올리지 않게 되돌린다. */
+   위 컨테이너 규칙이 내부 doc-body까지 14px로 끌어올리지 않게 되돌린다. design-token-exempt: prose */
 .wiki-footer-note .library-doc-body {
   font-size: inherit;
 }
@@ -2985,7 +2985,7 @@ a.funnel-card:hover { border-color: var(--primary); }
   background: var(--surface); color: var(--fg); font-size: var(--fs-caption); cursor: pointer;
   transition: border-color 0.2s ease;
 }
-.topbar-logout:hover { border-color: var(--danger); color: var(--danger); }
+.topbar-logout:hover { border-color: var(--danger); color: var(--red-fg); }
 .theme-toggle-compact {
   display: inline-flex; align-items: center; gap: 0.3rem;
   height: 2rem; padding: 0 0.7rem; border-radius: var(--radius-full);
@@ -3184,12 +3184,12 @@ a.funnel-card:hover { border-color: var(--primary); }
 .committee-minutes-v2 .minutes-quote {
   margin: 0 0 var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-left: var(--border-width-strong, 2px) solid var(--primary);
+  border-left: var(--border-width-strong) solid var(--primary);
   background: var(--primary-bg);
   border-radius: var(--radius-sm);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px) { /* design-token-exempt: breakpoint (media-query conditions cannot resolve CSS custom properties) */
   .meeting-window-backdrop { padding: 0; }
   .modal-panel.meeting-window { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
 }
@@ -3207,7 +3207,7 @@ a.funnel-card:hover { border-color: var(--primary); }
 .glossary-card-active { border-color: var(--primary); }
 /* A card's widest unbreakable run (term key in <code>) otherwise sets the card's
    min-content; under font stacks with wider fallback metrics (CI linux) that pushed
-   scrollWidth past the 390px viewport (e2e axe-sweep OVERFLOW-390). `anywhere` —
+   scrollWidth past the 390px viewport (e2e axe-sweep OVERFLOW-390). `anywhere` — design-token-exempt: prose
    not `break-word` — also shrinks min-content, so a long token can wrap instead of
    widening its container. */
 .glossary-preview { overflow-wrap: anywhere; }
@@ -3375,7 +3375,7 @@ a.funnel-card:hover { border-color: var(--primary); }
 .market-stats-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
 
 .market-sub-section { margin: 1.25rem 0; }
-.market-sub-section h3 { font-size: var(--fs-body); margin: 0 0 0.5rem; } /* U-2 잔여(2026-10-23): 0.92rem은 15px 루트 단계에서 13.8px — 폰트 토큰으로 접음(스케일에 제목 토큰 없음) */
+.market-sub-section h3 { font-size: var(--fs-body); margin: 0 0 0.5rem; } /* U-2 잔여(2026-10-23): 0.92rem은 15px 루트 단계에서 13.8px — 폰트 토큰으로 접음(스케일에 제목 토큰 없음) design-token-exempt: prose */
 .market-industry-btn {
   display: flex; flex-direction: column; gap: 0.15rem; width: 100%; text-align: left;
   padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-radius: var(--radius-lg);
@@ -3554,9 +3554,9 @@ a.funnel-card:hover { border-color: var(--primary); }
 /* 사이드바 하위 메뉴 (시너지 정합성 하위: 그룹/계열사 분석 · 시너지·전략적 적합성) */
 .side-nav-parent { cursor: default; }
 .side-nav-children { display: flex; flex-direction: column; }
-/* U-2 잔여(2026-10-23) — 0.86em은 부모 상대값이라 바닥 검증이 불가능하고 15px 루트
-   단계에서 14px 미만으로 떨어진다. 내비 위계 텍스트는 부가 정보(캡션)가 아니므로
-   :3836 내비 규준(14px floor)에 따라 --fs-body 로 접는다. */
+/* U-2 잔여(2026-10-23) — 0.86em은 부모 상대값이라 바닥 검증이 불가능하고 15px 루트 design-token-exempt: prose
+   단계에서 14px 미만으로 떨어진다. 내비 위계 텍스트는 부가 정보(캡션)가 아니므로 design-token-exempt: prose
+   :3836 내비 규준(14px floor)에 따라 --fs-body 로 접는다. design-token-exempt: prose */
 .side-nav-child { padding-left: 2.4rem; font-size: var(--fs-body); }
 
 /* 행 액션 셀 — td는 table-cell을 유지해야 행 배경·경계가 이어진다.
@@ -3586,7 +3586,7 @@ a.funnel-card:hover { border-color: var(--primary); }
   font-size: var(--fs-caption);
   /* U4 (design 2026-11-21-s67-completion-visibility § Defect Remediation) — the class rule
      comes after the base input containment (input,select,textarea OVERFLOW-390 rule above),
-     so the 8rem floor re-introduced the 390px overflow inside the decision-form flex row.
+     so the 8rem floor re-introduced the 390px overflow inside the decision-form flex row. design-token-exempt: prose
      Clamp the floor to the container: desktop keeps 8rem, narrow widths degrade to 100% —
      the .form-input / .invest-ctl containment precedent. */
   min-width: min(8rem, 100%);
@@ -4464,7 +4464,7 @@ form.grid { grid-template-columns: minmax(0, 1fr); }
 .stage-stepper-wrap--static { position: static; }
 .stage-stepper--status .stage-step { min-height: 2.25rem; }
 .stage-stepper--status .stage-step-current { color: var(--fg); border-bottom: var(--border-width-strong) solid var(--primary); font-weight: 600; }
-/* Committee meeting phase stepper (CommitteeProgress): no compact replacement exists, so stay visible and wrap at every width — beats the <880px hide and the nowrap/scroll rules of the page stage rail. */
+/* Committee meeting phase stepper (CommitteeProgress): no compact replacement exists, so stay visible and wrap at every width — beats the <880px hide and the nowrap/scroll rules of the page stage rail. design-token-exempt: prose */
 .stage-stepper.meeting-stepper { display: flex; flex-wrap: wrap; overflow-x: visible; }
 .stage-step-icon { flex: 0 0 auto; color: var(--muted-fg); }
 .stage-step-icon-done { color: var(--green-fg); }
@@ -4509,7 +4509,7 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .dry-run-info > summary:focus-visible, .agent-combobox-option:focus-visible { outline: var(--border-width-strong) solid var(--primary); outline-offset: var(--focus-ring-offset); }
 .dry-run-edit-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
 .dry-run-ab-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
-@media (min-width: 1024px) {
+@media (min-width: 1024px) { /* design-token-exempt: breakpoint (media-query conditions cannot resolve CSS custom properties) */
   .dry-run-edit-grid, .dry-run-ab-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .dry-run-rationale {
@@ -4555,7 +4555,7 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
 .ai-changed-mark { font-weight: 600; white-space: nowrap; }
 .ai-eval-progress progress { height: 0.5rem; }
 
-/* S6 longlist at pane width (~730px): no horizontal scroll; cells and actions wrap (ADR-0199). */
+/* S6 longlist at pane width (~730px): no horizontal scroll; cells and actions wrap (ADR-0199). design-token-exempt: prose */
 .longlist-table th, .longlist-table td { padding-inline: var(--space-2); }
 .longlist-table .cell-primary { white-space: normal; overflow-wrap: anywhere; }
 .longlist-table .cell-reason-toggle { max-width: 100%; }
@@ -4567,7 +4567,7 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
    noDescendingSpecificity). Cascade outcome unchanged: the strip never nests
    inside a longlist table, and no rule crossed sets flex on chips. */
 .s67-criteria-head .status-chip { flex: 0 0 auto; }
-/* Progress / coverage wording must never be cut (2026-11-16 user report): chips wrap fully even under the <=640px
+/* Progress / coverage wording must never be cut (2026-11-16 user report): chips wrap fully even under the <=640px design-token-exempt: prose
    nowrap rule for table chips, and the run progress panel has no fixed height or ellipsis. */
 .table-scroll .longlist-table .status-chip, .table-scroll .longlist-table .ai-draft-chip { white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
 /* The row status chip stays on one line (2026-11-17 user report); progress / coverage chips above still wrap fully. */
@@ -4630,10 +4630,10 @@ html:has(.dry-run-summary-bar) { scroll-padding-top: 9rem; } /* design-token-exe
   word-break: keep-all;
   overflow-wrap: break-word;
 }
-/* 문서 제목 h1 — 컨테이너가 14px로 내려오면(Tailwind preflight가 제목 크기를
+/* 문서 제목 h1 — 컨테이너가 14px로 내려오면(Tailwind preflight가 제목 크기를 design-token-exempt: prose
    상속으로 되돌림) 제목이 본문과 같아져 위계가 무너지므로, 앱의 콘텐츠 문서
-   제목 선례(.deal-header h1)에 맞춘다. h1 19.2px > h2 16.8px(/library 공유
-   1.05rem) > 본문 14px 위계가 유지된다. */
+   제목 선례(.deal-header h1)에 맞춘다. h1 19.2px > h2 16.8px(/library 공유 design-token-exempt: prose
+   1.05rem) > 본문 14px 위계가 유지된다. design-token-exempt: prose */
 .wiki-content-pane .library-doc-body h1,
 .wiki-home-body .library-doc-body h1 {
   font-size: 1.2rem;

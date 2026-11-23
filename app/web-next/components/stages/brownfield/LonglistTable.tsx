@@ -152,7 +152,7 @@ export function LonglistTable({
                         >
                           {tgt.company_name}
                         </a>
-                        {/* 제외 사유는 좁은 폭(≈730px)에서 가로 스크롤이 생기지 않도록 별도 컬럼 대신
+                        {/* 제외 사유는 좁은 폭(≈730px)에서 가로 스크롤이 생기지 않도록 별도 컬럼 대신 design-token-exempt: prose
                       후보명 아래 줄에 둔다(발굴 근거 universe_note는 계속 표시하지 않는다). */}
                         {tgt.exclusion_reason && (
                           <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">

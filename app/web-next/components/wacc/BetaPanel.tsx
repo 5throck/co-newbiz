@@ -315,7 +315,7 @@ export function BetaPanel({
                     <td className="px-1.5">
                       <button
                         type="button"
-                        className="text-[color:var(--muted-fg)] hover:text-[color:var(--danger)] px-1"
+                        className="text-[color:var(--muted-fg)] hover:text-[color:var(--red-fg)] px-1"
                         aria-label={t("deleteP1Row", { p1: p.name || t("peerP1", { p1: i + 1 }) })}
                         onClick={() => onPeers(peers.filter((_, j) => j !== i))}
                       >
@@ -409,7 +409,7 @@ export function BetaPanel({
                   {collection && (
                     <div className="border border-[color:var(--border)] rounded-lg p-2 bg-[color:var(--muted-bg)] text-[length:var(--fs-caption)]">
                       <p
-                        className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))]" : "text-[color:var(--red-fg,var(--danger))]"}`}
+                        className={`font-semibold ${statusTone(collection.status) === "ok" ? "text-[color:var(--accent)]" : statusTone(collection.status) === "warn" ? "text-[color:var(--amber-fg)]" : "text-[color:var(--red-fg)]"}`}
                       >
                         {statusTone(collection.status) === "ok"
                           ? "✓"
@@ -490,7 +490,7 @@ export function BetaPanel({
               </div>
             )}
             {loadError && (
-              <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">
+              <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">
                 ✕ {loadError}
               </p>
             )}
@@ -531,7 +531,7 @@ export function BetaPanel({
             </div>
           </section>
           {regressionError && (
-            <p role="alert" className="text-[color:var(--red-fg,var(--danger))] text-[length:var(--fs-caption)] mt-2">
+            <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">
               ✕ {regressionError}
             </p>
           )}

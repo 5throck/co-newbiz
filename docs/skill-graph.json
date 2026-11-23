@@ -2656,7 +2656,11 @@
         ".agents/skills/gateguard/SKILL.md",
         ".codex/skills/gateguard/SKILL.md",
         ".hermes/skills/gateguard/SKILL.md"
-      ]
+      ],
+      "usage": {
+        "sessions": 1,
+        "last_used": "2026-11-23"
+      }
     },
     {
       "id": "skill:root/greenfield-feasibility",
@@ -3756,8 +3760,8 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 2,
-        "last_used": "2026-11-22"
+        "sessions": 3,
+        "last_used": "2026-11-23"
       }
     },
     {

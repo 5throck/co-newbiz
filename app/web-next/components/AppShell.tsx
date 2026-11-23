@@ -566,7 +566,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const inboxCount = countOpenDecisions(inbox.result?.items ?? []);
 
   // /register는 로그인 전 접근 가능해야 한다(계정 신청 → 관리자 승인 플로우).
-  // /oauth/* 동의 화면도 크롬 없이 렌더한다 — 호스트 팝업(400~600px)에서 도킹
+  // /oauth/* 동의 화면도 크롬 없이 렌더한다 — 호스트 팝업(400~600px)에서 도킹 design-token-exempt: prose
   // 사이드바가 폭을 짓누르는 것을 막고 신뢰 결정 화면임을 구분한다(design
   // 2026-11-19-oauth-consent-screen-redesign D6). 언인증 로그인 우회는 그대로다:
   // 위 useEffect가 bare early-return과 무관하게 /oauth/에서도 /login?next=
