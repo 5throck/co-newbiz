@@ -1664,7 +1664,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                       <span
                                         className={
                                           deltaP50 >= 0
-                                            ? "text-[color:var(--success)] font-bold"
+                                            ? "text-[color:var(--green-fg)] font-bold"
                                             : "text-[color:var(--red-fg)] font-bold"
                                         }
                                       >

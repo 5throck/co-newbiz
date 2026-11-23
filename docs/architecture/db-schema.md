@@ -23,7 +23,7 @@ v_*           → query-optimized views, derived, never a source of truth
 | `md_country` | ISO 3166-1 alpha-3 | `id`, `iso_code` | — |
 | `md_period` | date/year/quarter/month + `fiscal_year` | `id`, `period_type`, `start_date`, `end_date`, `fiscal_year` | Handles fiscal-year misalignment across entities/regions |
 | `md_source` | Internal source code + reliability grade | `id`, `code`, `reliability_grade` | Provenance anchor for every observation |
-| `md_statute` | 법제처 statute ID + foreign framework key | `id`, `korea_statute_id`, `foreign_framework_key` | Anchors regulatory requirements to a real legal-text reference |
+| `md_statute` | `법제처` statute ID + foreign framework key | `id`, `korea_statute_id`, `foreign_framework_key` | Anchors regulatory requirements to a real legal-text reference |
 | `md_account` | IFRS canonical (reused from co-consult `ifrs_general.json`) | `id`, `ifrs_code`, `name_ko`, `name_en` | Financial-statement normalization |
 | `md_entity` | Group internal entity code | `id`, `entity_code`, `name_ko` | Anchor for entity-scoped procedure overrides |
 | `md_project` | Internal project number | `id`, `project_no`, `current_stage_gate` (`screening`\|`pre_fs`\|`fs`\|`dd`\|`entity_ic`\|`group_ic`, nullable pre-backfill — migration 0013, 2026-08-22 design Decision 5c) | Owner of every `run`/`dd_finding`/`document` |
@@ -114,7 +114,7 @@ Scenario inputs ride run-versioning as exact `drv.rate_bp` / `drv.fx_pct` / `drv
 
 > **Money-unit convention (migration 0028, ADR-0061 EXECUTED 2026-08-24)**:
 > monetary quantities are stored as **INTEGER, unit = KRW millions** ("KRW
-> 백만원 기준" — user decision). FX-exposed amounts normalize via `fx_policy`
+> `백만원 기준`" — user decision). FX-exposed amounts normalize via `fx_policy`
 > upstream before storage. Ratio/index/score columns stay REAL by design.
 > Unit boundaries: the snapshot filler multiplies storage ×1e6 into raw-won
 > snapshot vars (pinned rule constants untouched); the simulation engine
@@ -175,12 +175,12 @@ The S2 entry-market inputs (ADR-0179 amendment §B storage superseded by the ERD
 
 | Table | Purpose | Key Fields |
 |---|---|---|
-| `opportunity_target_scope` | 기회 대상 범위 — 링크 없이도 저장 가능(기존 PUT 시맨틱) | `opportunity_id` (UNIQUE FK), `unit_basis`, `set_by/at` |
-| `target_scope_region` / `target_scope_segment` | 범위의 지역·세그먼트 코드(어휘 개방 — S1 매트릭스 코드 ∪ 고정 enum, `worldwide` 배타) | `scope_id` (FK CASCADE), `code`, `position`, UNIQUE(scope_id, code) |
-| `entry_market` | 진입시장 aggregate — S1 앵커에 대한 배율 사슬·시장정보·앵커 통화·진입시장 성장률 | `opportunity_id` (UNIQUE FK), `sizing_version_id` (NOT NULL FK), `market_brief`, `currency` (CHECK 3자 대문), `growth_rate` (CHECK 0..1 RATIO), `set_by/at` |
-| `entry_market_fx` | 다통화 기준 환율·변동폭 — 개산과 몬테카를로 환 리스크의 기준 (USD만 문서화 기본값 1400; 미설정 통화는 무변환+정직 표시) | `entry_market_id` (FK CASCADE), `currency`, `rate` (CHECK >0 ≤1e6), `volatility` (CHECK 0..0.5), UNIQUE(entry_market_id, currency) |
-| `entry_market_step` | 배율 인자 사슬 — 지역 비중 → 세그먼트 비율(고정 2단계 + AI 초안 확장) | `entry_market_id` (FK CASCADE), `seq`, `base`, `factor` (CHECK 0..1), `source`, `as_of`, `note/origin` (해시 안정성), `region_tags_json/segment_tags_json` (레거시 백필 전용), UNIQUE(entry_market_id, seq) |
-| `entry_market_competitive` | 선택 지역·세그먼트 스코프 경쟁 재분석 결과(사람 확정분; S1에는 기록하지 않음) | `entry_market_id` (FK CASCADE), `player`, `tier`, `region`, `source`, `set_by/at` |
+| `opportunity_target_scope` | `기회 대상 범위` — `링크 없이도 저장 가능`(`기존` PUT `시맨틱`) | `opportunity_id` (UNIQUE FK), `unit_basis`, `set_by/at` |
+| `target_scope_region` / `target_scope_segment` | `범위의 지역·세그먼트 코드`(`어휘 개방` — S1 `매트릭스 코드` ∪ `고정` enum, `worldwide` `배타`) | `scope_id` (FK CASCADE), `code`, `position`, UNIQUE(scope_id, code) |
+| `entry_market` | `진입시장` aggregate — S1 `앵커에 대한 배율 사슬·시장정보·앵커 통화·진입시장 성장률` | `opportunity_id` (UNIQUE FK), `sizing_version_id` (NOT NULL FK), `market_brief`, `currency` (CHECK 3`자 대문`), `growth_rate` (CHECK 0..1 RATIO), `set_by/at` |
+| `entry_market_fx` | `다통화 기준 환율·변동폭` — `개산과 몬테카를로 환 리스크의 기준` (USD`만 문서화 기본값` 1400; `미설정 통화는 무변환`+`정직 표시`) | `entry_market_id` (FK CASCADE), `currency`, `rate` (CHECK >0 ≤1e6), `volatility` (CHECK 0..0.5), UNIQUE(entry_market_id, currency) |
+| `entry_market_step` | `배율 인자 사슬` — `지역 비중` → `세그먼트 비율`(`고정` 2`단계` + AI `초안 확장`) | `entry_market_id` (FK CASCADE), `seq`, `base`, `factor` (CHECK 0..1), `source`, `as_of`, `note/origin` (`해시 안정성`), `region_tags_json/segment_tags_json` (`레거시 백필 전용`), UNIQUE(entry_market_id, seq) |
+| `entry_market_competitive` | `선택 지역·세그먼트 스코프 경쟁 재분석 결과`(`사람 확정분`; S1`에는 기록하지 않음`) | `entry_market_id` (FK CASCADE), `player`, `tier`, `region`, `source`, `set_by/at` |
 
 All access through `db/repositories/entry-market.repository.ts` (fallback reads cover the frozen JSON columns).
 
@@ -188,10 +188,10 @@ All access through `db/repositories/entry-market.repository.ts` (fallback reads 
 
 | Table | Purpose | Key Fields |
 |---|---|---|
-| `synergy_linkage_item` | S3 연계 시너지 — 사람이 추가한 영역 (ADR-0125; origin은 항상 human, payload는 append-only라 직접 수정 불가) | `analysis_id`, `area`, `synergy_type`, `rationale`, `opportunity`, `risk`, `sources_json`, `created_by` |
-| `synergy_shortlist_curation` | S3 우선 시너지 영역 — 사람의 판정·사유 오버라이드 + 신규 영역 (ADR-0125; `origin`='llm'\|'human'이 제안 출처와 사람 편집을 동시에 보존) | `analysis_id`, `area` (UNIQUE), `origin`, `verdict`, `reason`, `updated_by/at` |
-| `opportunity_sketch_version` | 비즈니스 모델 검토 버전 이력 (ADR-0127; append-only — `opportunity.sketch_json`은 "현재 버전" 포인터) | `opportunity_id`, `version_no` (UNIQUE), `sketch_json`, `source`, `created_by` |
-| `llm_call_log` | 런타임 LLM 호출 런 장부 (ADR-0128; append-only — 모든 completeOrFallback 호출이 에이전트 키·목적·출처·latency와 함께 기록됨) | `agent_key`, `purpose`, `context_type/id`, `source` ('llm'\|'synthesis'), `provider`, `model`, `ok`, `latency_ms` |
+| `synergy_linkage_item` | S3 `연계 시너지` — `사람이 추가한 영역` (ADR-0125; origin`은 항상` human, payload`는` append-only`라 직접 수정 불가`) | `analysis_id`, `area`, `synergy_type`, `rationale`, `opportunity`, `risk`, `sources_json`, `created_by` |
+| `synergy_shortlist_curation` | S3 `우선 시너지 영역` — `사람의 판정·사유 오버라이드` + `신규 영역` (ADR-0125; `origin`='llm'\|'human'`이 제안 출처와 사람 편집을 동시에 보존`) | `analysis_id`, `area` (UNIQUE), `origin`, `verdict`, `reason`, `updated_by/at` |
+| `opportunity_sketch_version` | `비즈니스 모델 검토 버전 이력` (ADR-0127; append-only — `opportunity.sketch_json` `은 "현재 버전" 포인터`) | `opportunity_id`, `version_no` (UNIQUE), `sketch_json`, `source`, `created_by` |
+| `llm_call_log` | `런타임` LLM `호출 런 장부` (ADR-0128; append-only — `모든` completeOrFallback `호출이 에이전트 키·목적·출처`·latency`와 함께 기록됨`) | `agent_key`, `purpose`, `context_type/id`, `source` ('llm'\|'synthesis'), `provider`, `model`, `ok`, `latency_ms` |
 | `oauth_client` | RFC 7591 dynamically registered public MCP OAuth clients (migration 0128, ADR-0154). Clients start unverified | `client_id`, `name`, `redirect_uris` (JSON), `registered_by_user_id`, `verified` |
 | `oauth_code` | Single-use authorization codes, valid for 60 seconds or less, bound to client, redirect URI, PKCE S256 challenge, and resource (migration 0128). A replay revokes `family_id` | `code_hash`, `user_id`, `client_id`, `pkce_challenge`, `scopes`, `expires_at`, `consumed_at`, `family_id` |
 | `api_token` (0128 columns) | `kind` (`personal`\|`oauth_access`\|`oauth_refresh`), `client_id`, `family_id`, `audience`, `expires_at`. Only `personal` tokens are accepted by the REST API; OAuth access tokens are audience-bound to `/api/mcp` | `kind`, `family_id`, `audience`, `expires_at` |

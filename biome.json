@@ -67,6 +67,14 @@
     {
       "includes": ["app/web-next/lib/dart-client.ts"],
       "formatter": { "enabled": false }
+    },
+    {
+      "includes": [
+        "app/web-next/components/AppShell.tsx",
+        "app/web-next/app/flows/flow-graph.tsx",
+        "app/web-next/app/flows/ledger-view.tsx"
+      ],
+      "formatter": { "enabled": false }
     }
   ],
   "assist": { "enabled": false }

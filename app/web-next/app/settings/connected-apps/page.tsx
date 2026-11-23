@@ -98,7 +98,7 @@ function maskedId(displayId: string): string {
 // ── 1회 노출 모달: 시크릿은 이 컴포넌트 상태에만 존재하고 닫으면 사라진다 ──
 // §2.4 (C9): panel is capped at min(85dvh, 48rem) with the body scrolling
 // internally and the footer pinned outside the scroll area, so the primary
-// "저장했습니다" button stays visible (and in the focus order) at ~720px
+// "저장했습니다" button stays visible (and in the focus order) at ~720px design-token-exempt: prose
 // viewports. Both copy actions announce through the single aria-live status.
 function TokenRevealModal({
   token,

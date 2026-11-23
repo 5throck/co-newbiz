@@ -532,6 +532,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // 경로 이동 시 드로어를 닫는다 — 메뉴 항목 클릭 후 오버레이가 남지 않게.
   // pathname에는 조회 파라미터가 없으므로 상세 뷰 전환(/market?industry=…)엔
   // 반응하지 않는다.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname은 본문이 읽는 값이 아니라 재실행 트리거다 — 제거하면 경로 이동 시 드로어가 닫히지 않는다.
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
@@ -566,7 +567,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const inboxCount = countOpenDecisions(inbox.result?.items ?? []);
 
   // /register는 로그인 전 접근 가능해야 한다(계정 신청 → 관리자 승인 플로우).
-  // /oauth/* 동의 화면도 크롬 없이 렌더한다 — 호스트 팝업(400~600px)에서 도킹
+  // /oauth/* 동의 화면도 크롬 없이 렌더한다 — 호스트 팝업(400~600px)에서 도킹 design-token-exempt: prose
   // 사이드바가 폭을 짓누르는 것을 막고 신뢰 결정 화면임을 구분한다(design
   // 2026-11-19-oauth-consent-screen-redesign D6). 언인증 로그인 우회는 그대로다:
   // 위 useEffect가 bare early-return과 무관하게 /oauth/에서도 /login?next=

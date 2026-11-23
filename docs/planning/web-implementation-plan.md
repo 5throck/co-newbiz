@@ -21,7 +21,7 @@
 
 1. **CSS token compatibility** (review finding 1 — critical): the 21 ported component files consume `var(--bg)`, `var(--green-bg)`, `text-[color:var(--red-fg)]` etc. as *complete color values*. The Onyx migration therefore **keeps every existing custom-property name and swaps only the values** to dark-only complete colors (no HSL triplets in existing names). New Onyx tokens (`--primary`, `--surface`, `--shadow-glow`, …) are added alongside. No component rewrite is required for the theme cutover.
 2. **Dark-only changes a ui-spec rule** (finding 2): ui-spec §1 currently says "Dark mode supported" via `prefers-color-scheme`. Phase 1 updates that sentence (dark-only, `color-scheme: dark`) in the same changeset as the stylesheet — never after the fact.
-3. **No empty-shell features** (findings 3, 9, 10): every new UI surface lands together with its backend route, or renders the established explicit "아직 API가 없습니다" note (the admin Database section pattern) — never placeholder data.
+3. **No empty-shell features** (findings 3, 9, 10): every new UI surface lands together with its backend route, or renders the established explicit "`아직` API`가 없습니다`" note (the admin Database section pattern) — never placeholder data.
 4. **Charts obey FR-SYS-05** (finding 6): icon/label + color together in every ECharts legend, tooltip, and axis; WCAG 2.1 AA contrast palette baked into the shared theme module.
 5. **Governance sync per phase** (finding 5): each phase's definition-of-done includes ui-spec.md as-built marker updates, CHANGELOG `[Unreleased]` entries, and the `/sync` pipeline (memlog → audit → PR).
 6. **Verification per phase** (finding 11): `bun run build` in `app/web-next/` (typecheck included) must pass before a phase closes.

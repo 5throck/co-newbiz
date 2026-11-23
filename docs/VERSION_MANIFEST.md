@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-22T19:56:31.514Z
+**Generated**: 2026-11-23T02:08:22.949Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -204,7 +204,7 @@
 | apply-handbook-theme.ts | 1.0.0 | scripts/handbook/apply-handbook-theme.ts | fs, path |
 | archive-memory.ts | 1.2.0 | scripts/archive-memory.ts | fs, path |
 | assume.ts | 1.0.0 | scripts/co-newbiz/assume.ts | N/A |
-| audit-variant.ts | 1.13.0 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
+| audit-variant.ts | 1.13.1 | scripts/co-newbiz/audit-variant.ts | fs, path, url |
 | audit.ts | 2.64.0 | scripts/audit.ts | bun, child_process, fs, os, path |
 | backfill-brownfield-financial-criteria.ts | 1.0.0 | scripts/co-newbiz/backfill-brownfield-financial-criteria.ts | N/A |
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
@@ -386,7 +386,7 @@
 | validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | child_process, path |
-| validate-md-language.ts | 1.16.2 | scripts/validate-md-language.ts | child_process, fs, path |
+| validate-md-language.ts | 1.17.0 | scripts/validate-md-language.ts | child_process, fs, path |
 | validate-model-registry.ts | 2.3.0 | scripts/validate-model-registry.ts | fs, path, url |
 | validate-nav.ts | 1.0.0 | scripts/handbook/validate-nav.ts | N/A |
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | child_process, fs, path |

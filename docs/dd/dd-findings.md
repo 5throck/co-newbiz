@@ -35,6 +35,6 @@ Yes, it is. In industry M&A due diligence too, the final purchase price is deter
 
 | Claim | Basis |
 |---|---|
-| value_impact unit and obligation | ADR-0061, business-manual_ko §"DD 발견사항" |
+| value_impact unit and obligation | ADR-0061, business-manual_ko §"DD `발견사항`" |
 | Inclusion in the IC package | ADR-0100, ic-package route |
 | Quantification principle | docs/research/dd-findings-quantification.md |

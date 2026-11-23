@@ -2023,6 +2023,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261123-02",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "doc:AGENTS.md",
       "type": "doc",
       "layer": "L3"
@@ -2656,7 +2661,11 @@
         ".agents/skills/gateguard/SKILL.md",
         ".codex/skills/gateguard/SKILL.md",
         ".hermes/skills/gateguard/SKILL.md"
-      ]
+      ],
+      "usage": {
+        "sessions": 1,
+        "last_used": "2026-11-23"
+      }
     },
     {
       "id": "skill:root/greenfield-feasibility",
@@ -3756,8 +3765,8 @@
         ".hermes/skills/sync/SKILL.md"
       ],
       "usage": {
-        "sessions": 2,
-        "last_used": "2026-11-22"
+        "sessions": 3,
+        "last_used": "2026-11-23"
       }
     },
     {
@@ -6610,6 +6619,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261123-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261123-02",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

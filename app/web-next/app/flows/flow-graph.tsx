@@ -19,13 +19,13 @@
 // 0이 된다(밴드 내 진행 방향은 화살촉이 유도한다). svg는 width 100% + height
 // auto로 컨테이너 폭을 따라 늘어난다(넓은 화면에서 왼쪽 뭉침 없음).
 // minWidth(74rem)는 FU-A(2026-10-26 PM 승인 후속)의 축소 금지 하한이다: 뷰박스
-// 자연폭 VIEW_W 1184px = 74rem과 정확히 일치해 그래프가 항상 1:1 이상(절대 축소
-// 없음)으로 렌더되고, 14px/12px 읽기 하한이 어떤 뷰포트에서도 속성값 그대로
+// 자연폭 VIEW_W 1184px = 74rem과 정확히 일치해 그래프가 항상 1:1 이상(절대 축소 design-token-exempt: prose
+// 없음)으로 렌더되고, 14px/12px 읽기 하한이 어떤 뷰포트에서도 속성값 그대로 design-token-exempt: prose
 // 유지된다. 컨테이너가 그보다 좁으면 축소 대신 기존 overflow-x 스크롤 + 에지
-// 페이드 힌트(F5)가 대신한다. (1920px 이상 루트 폰트 스텝 15px 구간은 뷰포트
+// 페이드 힌트(F5)가 대신한다. (1920px 이상 루트 폰트 스텝 15px 구간은 뷰포트 design-token-exempt: prose
 // 자체가 그래프 자연폭보다 넓어 minWidth가 묶일 일이 없다.)
 //
-// 폰트 상향(2026-10-26 UX 리뷰 F1 — SVG 텍스트가 14px 읽기 하한 아래였다):
+// 폰트 상향(2026-10-26 UX 리뷰 F1 — SVG 텍스트가 14px 읽기 하한 아래였다): design-token-exempt: prose
 // 단계 id·이름 12→14, 활동 수·마커 거터 라벨 9.5→12, 트랙 배지 10→12. 카드
 // 기하도 함께 커서(§F1) 최장 문자열이 무축약으로 들어간다 — 머신체크는
 // tests/unit/flows-console-view.test.ts v1.7.0이 상수와 한 몸으로 재고정한다.
@@ -35,7 +35,7 @@
 // 리뷰 F4 amend(append-only — 이 단락이 이전 §6.4 규칙을 대체한다): 도움말이
 // "포인터 또는 키보드" 필터링을 약속하므로 노드 <g>가 직접 오퍼러블해진다 —
 // role="button" + tabIndex=0 + Enter/Space(클릭과 동일 핸들러). 포커스 표시는
-// CSS outline 대신 상태 기반 <rect>(accent 2px, offset 2, radius 10)다 — SVG
+// CSS outline 대신 상태 기반 <rect>(accent 2px, offset 2, radius 10)다 — SVG design-token-exempt: prose
 // 내부 요소의 CSS outline은 브라우저별 편차가 커서 명시 링이 규약이다. AT 경로는
 // 그대로 활동 표가 완전 대체한다(role=img의 요약 이미지 규약 유지).
 // 색 단독 정보 없음: 도트 색은 범례 텍스트(도메인명)와 병행, 전문가 마커는 링 +
@@ -47,10 +47,10 @@ import { stageDisplayName, truncateToWidth } from "./flows-view-lib.ts";
 
 // ── 기하 상수(3줄 감기 — 단계 추가는 해당 줄에 한 칸 x 이동, §9 위험 완화) ──
 // 노드 크기(F1 폰트 상향 동반 — 2026-10-26): NODE_W 264는 최장 단계명
-// "시너지·전략적 적합성"(약 141px @ fontSize 14)이 가용폭 240에 무축약으로
-// 들어가고, 활동 도트 행(최다 9개)·활동 수 라벨(12px)·트랙 배지(12px)와도
+// "시너지·전략적 적합성"(약 141px @ fontSize 14)이 가용폭 240에 무축약으로 design-token-exempt: prose
+// 들어가고, 활동 도트 행(최다 9개)·활동 수 라벨(12px)·트랙 배지(12px)와도 design-token-exempt: prose
 // 겹치지 않는 크기. 마커 거터 라벨은 카드 하단 좌측(행 사이 여백) — 라벨 상한
-// NODE_W−8(=256px)은 최장 실측 라벨(약 233px @12px)을 무축약으로 수용한다.
+// NODE_W−8(=256px)은 최장 실측 라벨(약 233px @12px)을 무축약으로 수용한다. design-token-exempt: prose
 const NODE_W = 264;
 const NODE_H = 80;
 const COL_GAP = 32; // 같은 행 인접 카드 간 최소 간격(열 피치 = NODE_W + COL_GAP = 296)
@@ -60,7 +60,7 @@ const BF_Y = 240; // 분기 밴드 아래 라인 — brownfield S6→S7
 const MERGE_Y = 184; // S8 재합류 — 두 라인 카드 세로 중앙(168/280)의 중간 지점
 const R3_Y = 352; // 셋째 줄 — 공통 S9→S12 (좌→우)
 const VIEW_W = 1184; // 좌측 여백 16 + 열 피치 296×3 + NODE_W + 우측 여백 16(트렁크 x=1176 포함)
-const VIEW_H = 460; // 셋째 줄 카드 하단(432) + 마커 거터 라벨(444 baseline, 12px) + 하단 여백
+const VIEW_H = 460; // 셋째 줄 카드 하단(432) + 마커 거터 라벨(444 baseline, 12px) + 하단 여백 design-token-exempt: prose
 const ENTRY_GAP = 4; // 화살촉이 노드 변에 닿을 여백
 
 /** 단계 좌표표 — 3줄 감기. 첫째 줄 S1→S4(좌→우), 둘째 줄 분기 밴드(S5 위 라인·
@@ -84,7 +84,7 @@ const ROW_Y: Record<string, { x: number; y: number }> = {
 /** spec stateTransitions.onComplete 체인의 기하 반영(§6.2) — d는 절대좌표.
  *  같은 줄 변은 from 노드 변+ENTRY_GAP → to 노드 변−ENTRY_GAP. 분기: S4 우변에서
  *  우측 여백(x=1176)의 트렁크로 나와 GF/BF 라인 중심높이(168/280)로 갈라져 각
- *  카드 우변으로 진입한다(S4 카드 하단의 마커 거터 라벨 최대폭 256px·x 904..1160과
+ *  카드 우변으로 진입한다(S4 카드 하단의 마커 거터 라벨 최대폭 256px·x 904..1160과 design-token-exempt: prose
  *  만나지 않는다). 밴드는 우→좌: S6→S7 좌향 화살표, S5·S7은 S8 우변에 위(208)·
  *  아래(240)로 나뉘 진입해 화살촉이 겹치지 않는다. 줄 환승 2곳은 모두 같은 열의
  *  짧은 수직선 — S4→트렁크(우측), S8 하변→S9 상변(좌측). 엣지 교차는 0이다.
@@ -239,7 +239,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
           (표의 tmin 규약과 같은 판단). svg는 width 100% + height auto로 컨테이너
           폭을 따라 늘어난다(2026-10-25 보고: 한 주행 7.9:1 뷰박스가 폭 대비
           높이를 얇게 만들어 카드가 축소 렌더·왼쪽 뭉침으로 보였다 — 3줄 감기
-          뷰박스 + 명시적 height auto로 해소). minWidth 74rem(=VIEW_W 1184px)은
+          뷰박스 + 명시적 height auto로 해소). minWidth 74rem(=VIEW_W 1184px)은 design-token-exempt: prose
           FU-A의 1:1 하한 — 그 아래 컨테이너 폭에서 축소 대신 스크롤이 동작한다.
           F5: 스크롤이 실제로 있을 때만 우측 에지 페이드 베일이 잘린 단서를 준다
           (토큰 색 그라디언트 + 네이티브 title 힌트). */}
@@ -268,7 +268,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
               <path key={d} d={d} fill="none" stroke="var(--border)" strokeWidth="1.6" markerEnd="url(#flows-graph-arrow)" />
             ))}
 
-            {/* F5 — 분기 밴드 방향 라벨(12px, muted-fg — 방향 자체는 화살촉이 운반한다,
+            {/* F5 — 분기 밴드 방향 라벨(12px, muted-fg — 방향 자체는 화살촉이 운반한다, design-token-exempt: prose
                 라벨 문자열에 화살 기호를 넣지 않는다). greenfield: S5 라인(S5→S8 재합류선
                 아래, S5 카드 좌측), brownfield: S6→S7 라인(S6 카드 직상단 거터). 배치는
                 서빙 데이터의 마커 거터 라벨(S4·S5는 마커 없음/있음 기준)과 겹치지 않는
@@ -292,6 +292,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
                 // F4(2026-10-26 amend) — 노드가 포인터와 키보드 모두로 오퍼러블하다:
                 // 클릭/Enter/Space가 같은 onSelectStage로 귀결한다. AT 요약 경로는
                 // svg role="img"와 활동 표가 담당한다(파일 헤더 §6.4 단락).
+                // biome-ignore lint/a11y/useSemanticElements: SVG g 노드 — SVG 내부에는 네이티브 HTML button 요소가 존재하지 않는다. role="button"+키보드 핸들러가 SVG 인터랙션의 올바른 접근 패턴이다(F4 2026-10-26 amend).
                 <g
                   key={s.id}
                   role="button"
@@ -311,7 +312,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
                   onBlur={() => setFocusRingStage((prev) => (prev === s.id ? null : prev))}
                 >
                   <title>{nodeAria}</title>
-                  {/* F4 — 키보드 포커스 링(accent 2px, offset 2, radius 10) — CSS
+                  {/* F4 — 키보드 포커스 링(accent 2px, offset 2, radius 10) — CSS design-token-exempt: prose
                       outline 대신 명시 rect(SVG 내부 outline은 브라우저 편차). */}
                   {focusRingStage === s.id && (
                     <rect

@@ -129,15 +129,16 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
     [router],
   );
 
-  // 필터 변화 → 전체 재조회 (커서 누적도 리셋).
-  const filterKey = JSON.stringify(filters);
+  // 필터 변화 → 전체 재조회 (커서 누적도 리셋). 트리거는 조회 문자열 자체 —
+  // 내용이 같은 setState(오류 재시도의 {...f} 스프레드)는 재조회하지 않는다.
+  const runsQuery = buildParams(filters, null);
   useEffect(() => {
     let alive = true;
     setStatus("loading");
     setForbidden(false);
     setErrorText(null);
     api
-      .get<RunsPayload>(`/api/flows/runs?${buildParams(filters, null)}`)
+      .get<RunsPayload>(`/api/flows/runs?${runsQuery}`)
       .then((r) => {
         if (!alive) return;
         setRuns(r.data.processRuns ?? []);
@@ -161,8 +162,7 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterKey 직렬화가 의존성 대신 안정성을 보장
-  }, [filterKey]);
+  }, [runsQuery, t]);
 
   /** 커서 페이지네이션 — "이전 기록 불러오기"(§5.3, 버튼 1개씩). 두 섹션이 같은
    *  before 파라미터를 공유하므로 각각 자기 섹션만 소비한다. */
@@ -217,6 +217,7 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
         <SectionToolbar
           title={t("summaryTitle")}
           filters={
+            // biome-ignore lint/a11y/useSemanticElements: rule이 제안하는 fieldset은 flow 콘텐츠라 phrasing 콘텐츠 조상(span.toolbar-filters) 안에서는 무효한 HTML 중첩이 된다 — role="group"이 동일한 의미를 전달한다.
             <span className="flex flex-wrap items-center gap-1" role="group" aria-label={t("windowGroup")}>
               <FilterChip selected={filters.window === "24h"} onClick={() => applyFilters({ window: "24h" })}>{t("window24h")}</FilterChip>
               <FilterChip selected={filters.window === "7d"} onClick={() => applyFilters({ window: "7d" })}>{t("window7d")}</FilterChip>
@@ -262,6 +263,8 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
           />
           <details className="mt-1">
             <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">{t("viewAsTable")}</summary>
+            {/* biome-ignore lint/a11y/useSemanticElements: region 역할은 flows A3 소스 계약 핀이 요구한다(div 고정) — section 전환은 noRedundantRoles와 충돌한다. */}
+            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: 포커스 가능 스크롤 영역(WCAG 2.1/axe scrollable-region-focusable) — 키보드 사용자가 표 영역을 스크롤하려면 tabIndex가 필요하다. */}
             <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
               <table className="data-table table-fixed-pct tmin-40 mt-1" aria-label={t("chartTableAria")}>
                 <caption className="sr-only">{t("chartTableCaption")}</caption>
@@ -302,6 +305,8 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
             <PageState state="empty" emptyText={t("emptyRuns")} />
           )
         ) : (
+          // biome-ignore lint/a11y/useSemanticElements: region 역할은 flows A3 소스 계약 핀이 요구한다(div 고정) — section 전환은 noRedundantRoles와 충돌한다.
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: 포커스 가능 스크롤 영역(WCAG 2.1/axe scrollable-region-focusable) — 키보드 사용자가 표 영역을 스크롤하려면 tabIndex가 필요하다.
           <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
             <table className="data-table table-fixed-pct tmin-48" aria-label={t("runsTableAria")}>
               <caption className="sr-only">{t("runsTableCaption")}</caption>
@@ -362,6 +367,8 @@ export function LedgerView({ agents }: { agents: BlueprintAgent[] }) {
             <PageState state="empty" emptyText={t("emptyLlm")} />
           )
         ) : (
+          // biome-ignore lint/a11y/useSemanticElements: region 역할은 flows A3 소스 계약 핀이 요구한다(div 고정) — section 전환은 noRedundantRoles와 충돌한다.
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: 포커스 가능 스크롤 영역(WCAG 2.1/axe scrollable-region-focusable) — 키보드 사용자가 표 영역을 스크롤하려면 tabIndex가 필요하다.
           <div className="table-scroll" role="region" aria-label={t("tableScrollRegion")} tabIndex={0}>
             <table className="data-table table-fixed-pct tmin-64" aria-label={t("llmTableAria")}>
               <caption className="sr-only">{t("llmTableCaption")}</caption>
@@ -490,6 +497,7 @@ function FilterBar({
           />
         </span>
       </label>
+      {/* biome-ignore lint/a11y/useSemanticElements: rule이 제안하는 fieldset은 flow 콘텐츠라 phrasing 콘텐츠 조상(FilterBar 루트 span) 안에서는 무효한 HTML 중첩이 된다 — role="group"이 동일한 의미를 전달한다. */}
       <span role="group" aria-label={t("okFilterGroup")} className="flex items-center gap-1">
         <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{tc("status")}</span>
         <FilterChip selected={filters.ok === "all"} onClick={() => onChange({ ok: "all" })}>{tc("all")}</FilterChip>
@@ -515,7 +523,7 @@ function FilterBar({
 /** §5.2 — 호출 수(막대, 성공/실패 분해) + 비용(선, 보조축).
  *  2026-10-23 사용자 보고 대응: (1) 범례를 상단 고정 + grid.top 여백으로 x축·자기
  *  마커와의 겹침을 없애고 containLabel로 축 라벨 잘림을 막는다. (2) barMaxWidth
- *  상한(32px) — 불러온 행이 하루에 몰려 버킷 1개일 때 막대가 그리드 전폭으로
+ *  상한(32px) — 불러온 행이 하루에 몰려 버킷 1개일 때 막대가 그리드 전폭으로 design-token-exempt: prose
  *  부풀지 않고 정상 폭 막대로 렌더된다. 비용 보조축(우측)은 유지.
  *  2026-10-25 사용자 보고 대응(축 맞춤): 주축을 ECharts 자동 스케일에 맡기면
  *  최대 버킷이 보기 좋은 눈금과 일치할 때(예: 25 → 0–25축) 최고 막대가 축 전체
