@@ -14,7 +14,8 @@ import type { JobHandler } from "./types.ts";
 export const watchEvaluate: JobHandler = {
   key: "watch.evaluate",
   displayName: "Watch rule evaluation",
-  description: "Evaluates watch rules against new data, records deterioration/opportunity notifications, resumes paused pipelines.",
+  description:
+    "Evaluates watch rules against new data, records deterioration/opportunity notifications, resumes paused pipelines.",
   defaultCron: "*/30 * * * *",
   timeoutSec: 600,
   maxRetries: 0,

@@ -45,7 +45,10 @@ export function withEnforcedContract<T>(fn: () => T): T {
   try {
     return fn();
   } finally {
-    names.forEach((n, i) => { if (saved[i] === undefined) delete process.env[n]; else process.env[n] = saved[i]; });
+    names.forEach((n, i) => {
+      if (saved[i] === undefined) delete process.env[n];
+      else process.env[n] = saved[i];
+    });
     clearSnapshotCache();
   }
 }
@@ -59,7 +62,10 @@ export function ensureDemoReviewers(db: Database, now: string): void {
       [ulid(), userId, `${userId} (demo, no login)`, userId === DEMO_ADMIN ? "admin" : "analyst", now],
     );
   }
-  for (const [userId, role] of [[DEMO_ENTITY_REVIEWER, "entity-ic-reviewer"], [DEMO_GROUP_REVIEWER, "group-ic-reviewer"]] as const) {
+  for (const [userId, role] of [
+    [DEMO_ENTITY_REVIEWER, "entity-ic-reviewer"],
+    [DEMO_GROUP_REVIEWER, "group-ic-reviewer"],
+  ] as const) {
     if (!hasHumanRole(db, userId, [role])) {
       const id = issueHumanRoleGrant(db, { userId, roleKey: role, grantedBy: DEMO_ADMIN, now });
       appendAudit(db, { actor: DEMO_ADMIN, action: "grant.issue", target: `${userId}:${role}:${id}`, now });
@@ -69,7 +75,11 @@ export function ensureDemoReviewers(db: Database, now: string): void {
 
 /** The maker leads the demo project; the two reviewers are members so they can see (and countersign) it. */
 export function ensureDemoMembers(db: Database, projectId: string, now: string): void {
-  for (const [userId, role] of [[DEMO_MAKER, "lead"], [DEMO_ENTITY_REVIEWER, "member"], [DEMO_GROUP_REVIEWER, "member"]] as const) {
+  for (const [userId, role] of [
+    [DEMO_MAKER, "lead"],
+    [DEMO_ENTITY_REVIEWER, "member"],
+    [DEMO_GROUP_REVIEWER, "member"],
+  ] as const) {
     db.run(
       "INSERT OR IGNORE INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
       [projectId, userId, role, DEMO_ADMIN, now, "S1-S12 demo gate contract"],
@@ -80,7 +90,10 @@ export function ensureDemoMembers(db: Database, projectId: string, now: string):
 /** Timestamps that strictly increase so "latest decision" is unambiguous inside one seed run. */
 export function makeClock(): () => string {
   let t = Date.now();
-  return () => new Date((t += 5)).toISOString();
+  return () => {
+    t += 5;
+    return new Date(t).toISOString();
+  };
 }
 
 export interface DecisionStep {
@@ -116,20 +129,38 @@ export function recordStep(db: Database, step: DecisionStep, clock: () => string
     briefId = ulid();
     db.run(
       "INSERT INTO gate_brief_record (id, entity_type, entity_id, gate, recommended, confidence, source, generated_by, generated_at) VALUES (?,?,?,?,?,?,?,?,?)",
-      [briefId, step.entityType, step.entityId, step.gate, step.briefRecommended, "medium", "synthesis", DEMO_MAKER, clock()],
+      [
+        briefId,
+        step.entityType,
+        step.entityId,
+        step.gate,
+        step.briefRecommended,
+        "medium",
+        "synthesis",
+        DEMO_MAKER,
+        clock(),
+      ],
     );
   }
   if (step.entityType === "project") ensureDemoMembers(db, step.entityId, clock());
   clearSnapshotCache();
-  const preview = previewGateSnapshot({ entityType: step.entityType, entityId: step.entityId, gate: step.gate, actor: DEMO_MAKER, briefId, db }, { fresh: true });
-  const acks: ProvidedAck[] = preview.snapshot.required_acks.map((a) => ({ key: a.key, kind: a.kind, reason: ACK_REASON }));
+  const preview = previewGateSnapshot(
+    { entityType: step.entityType, entityId: step.entityId, gate: step.gate, actor: DEMO_MAKER, briefId, db },
+    { fresh: true },
+  );
+  const acks: ProvidedAck[] = preview.snapshot.required_acks.map((a) => ({
+    key: a.key,
+    kind: a.kind,
+    reason: ACK_REASON,
+  }));
   const result = recordGateDecisionRow(db, {
     entityType: step.entityType,
     entityId: step.entityId,
     gate: step.gate,
     decision: step.decision,
     storedRationale: step.rationale,
-    missingArtifactsJson: step.decision === "hold" ? JSON.stringify(step.missing ?? ["데모: 보완이 필요한 산출물"]) : null,
+    missingArtifactsJson:
+      step.decision === "hold" ? JSON.stringify(step.missing ?? ["데모: 보완이 필요한 산출물"]) : null,
     actor: DEMO_MAKER,
     gateEvaluationId: null,
     learningCapture: step.decision === "kill" ? (step.learning ?? null) : null,
@@ -145,36 +176,84 @@ export function recordStep(db: Database, step: DecisionStep, clock: () => string
     now: clock(),
   });
   if (!result.ok) {
-    throw new Error(`demo seed: ${step.entityType} ${step.entityId} ${step.gate} ${step.decision} refused by the gate contract - ${result.failure.code}: ${result.failure.message} ${JSON.stringify(result.failure.details ?? {}).slice(0, 600)}`);
+    throw new Error(
+      `demo seed: ${step.entityType} ${step.entityId} ${step.gate} ${step.decision} refused by the gate contract - ${result.failure.code}: ${result.failure.message} ${JSON.stringify(result.failure.details ?? {}).slice(0, 600)}`,
+    );
   }
   return result.id;
 }
 
 /** The checker's act on an IC GO (idempotent). */
-export function countersign(db: Database, projectId: string, decisionId: string, checker: string, reason: string, clock: () => string): void {
-  const done = db.query("SELECT 1 FROM approval_chain WHERE gate_decision_id = ? AND decided_by = ? AND status IN ('approved','conditional')").get(decisionId, checker);
+export function countersign(
+  db: Database,
+  projectId: string,
+  decisionId: string,
+  checker: string,
+  reason: string,
+  clock: () => string,
+): void {
+  const done = db
+    .query(
+      "SELECT 1 FROM approval_chain WHERE gate_decision_id = ? AND decided_by = ? AND status IN ('approved','conditional')",
+    )
+    .get(decisionId, checker);
   if (done) return;
-  const r = countersignDecision(db, { projectId, decisionId, checkerId: checker, decision: "approved", reason, conditions: [], now: clock() });
+  const r = countersignDecision(db, {
+    projectId,
+    decisionId,
+    checkerId: checker,
+    decision: "approved",
+    reason,
+    conditions: [],
+    now: clock(),
+  });
   if (!r.ok) throw new Error(`demo seed: countersign refused - ${r.failure.code}: ${r.failure.message}`);
 }
 
 /** Clear every open group_ic condition of the project (the clearer is neither the creator nor the recorder). */
 export function clearGroupIcConditions(db: Database, projectId: string, clearer: string, clock: () => string): void {
   for (const c of openConditions(db, projectId, ["group_ic"])) {
-    closeCondition(db, { projectId, id: c.id, to: "cleared", by: clearer, note: "데모 시드: 그룹 심의 전에 조건 이행 여부를 확인하고 해제함", now: clock() });
-    appendAudit(db, { actor: clearer, action: "condition.clear", target: `${projectId}:${c.gate}:${c.id}`, now: clock() });
+    closeCondition(db, {
+      projectId,
+      id: c.id,
+      to: "cleared",
+      by: clearer,
+      note: "데모 시드: 그룹 심의 전에 조건 이행 여부를 확인하고 해제함",
+      now: clock(),
+    });
+    appendAudit(db, {
+      actor: clearer,
+      action: "condition.clear",
+      target: `${projectId}:${c.gate}:${c.id}`,
+      now: clock(),
+    });
   }
 }
 
 /** WACC session through the same service the WACC route uses: subject confirmed, WACC and hurdle recorded kind=user. */
-export function recordDemoWacc(db: Database, projectId: string, opts: { subject: "target" | "project_newco" | "promoter"; subjectCompanyId: string | null; clock: () => string }): void {
-  const has = db.query("SELECT 1 FROM assumption a JOIN run r ON r.id = a.run_id WHERE r.project_id = ? AND a.assumption_key = 'wacc' AND a.kind = 'user' AND r.subject_company_id IS ?").get(projectId, opts.subjectCompanyId);
+export function recordDemoWacc(
+  db: Database,
+  projectId: string,
+  opts: { subject: "target" | "project_newco" | "promoter"; subjectCompanyId: string | null; clock: () => string },
+): void {
+  const has = db
+    .query(
+      "SELECT 1 FROM assumption a JOIN run r ON r.id = a.run_id WHERE r.project_id = ? AND a.assumption_key = 'wacc' AND a.kind = 'user' AND r.subject_company_id IS ?",
+    )
+    .get(projectId, opts.subjectCompanyId);
   if (has) return;
   const now = opts.clock();
   setProjectWaccSubject(db, projectId, opts.subject, "데모 시드: WACC 적용 주체를 사람이 확정함", DEMO_MAKER, now);
   recordWaccSession(db, {
-    projectId, wacc: 0.09, hurdleIrr: 0.12, mode: "direct", rationale: "데모 시드: 사람이 확정한 할인율과 허들 IRR", anchorRef: "demo:wacc-session",
-    subjectCompanyId: opts.subjectCompanyId, actor: DEMO_MAKER, now,
+    projectId,
+    wacc: 0.09,
+    hurdleIrr: 0.12,
+    mode: "direct",
+    rationale: "데모 시드: 사람이 확정한 할인율과 허들 IRR",
+    anchorRef: "demo:wacc-session",
+    subjectCompanyId: opts.subjectCompanyId,
+    actor: DEMO_MAKER,
+    now,
   });
 }
 
@@ -183,7 +262,12 @@ export function recordDemoValidators(db: Database, projectId: string, clock: () 
   for (const row of MA_VALIDATOR_APPLICABILITY) {
     if (!row.in_core) continue;
     const rule = maValidatorRuleKey(row.key);
-    if (db.query("SELECT 1 FROM compliance_check WHERE project_id = ? AND gate = 'DD' AND rule_key = ?").get(projectId, rule)) continue;
+    if (
+      db
+        .query("SELECT 1 FROM compliance_check WHERE project_id = ? AND gate = 'DD' AND rule_key = ?")
+        .get(projectId, rule)
+    )
+      continue;
     db.run(
       "INSERT INTO compliance_check (id, project_id, gate, rule_key, layer, result, detail, detected_at) VALUES (?,?,?,?,?,?,?,?)",
       [ulid(), projectId, "DD", rule, "procedure", "pass", `${row.key} validator recorded (demo seed)`, clock()],
@@ -195,11 +279,18 @@ export function recordDemoValidators(db: Database, projectId: string, clock: () 
  * Waiver path: one waiver-eligible mandatory DD item is `waived` instead of `pass`. The waiver is requested by the maker and
  * approved by a different grant holder (decideWaiver), exactly the D5 shape. Returns the checklist/item judged.
  */
-export function recordDemoWaiver(db: Database, projectId: string, checklistId: string, clock: () => string): { itemId: string; waiverId: string } | null {
+export function recordDemoWaiver(
+  db: Database,
+  projectId: string,
+  checklistId: string,
+  clock: () => string,
+): { itemId: string; waiverId: string } | null {
   const item = (getChecklistItems(checklistId) ?? []).find((i) => i.mandatory && i.waiver_eligible);
   if (!item) return null;
   const clauseRef = `${checklistId} ${item.id}`;
-  const existing = db.query("SELECT id FROM waiver WHERE project_id = ? AND clause_ref = ?").get(projectId, clauseRef) as { id: string } | null;
+  const existing = db
+    .query("SELECT id FROM waiver WHERE project_id = ? AND clause_ref = ?")
+    .get(projectId, clauseRef) as { id: string } | null;
   let doc = db.query("SELECT id FROM governance_doc WHERE key = 'neb-policy' LIMIT 1").get() as { id: string } | null;
   if (!doc) {
     db.run(
@@ -214,14 +305,33 @@ export function recordDemoWaiver(db: Database, projectId: string, checklistId: s
   if (!waiverId) {
     const expires = new Date(Date.parse(now) + 60 * 86_400_000).toISOString();
     waiverId = issueWaiver(db, {
-      projectId, governanceDocId: doc.id, clauseRef, reason: "데모 시드: 이 항목은 근거 자료가 입수되기 전까지 기한부로 면제함",
-      requestedBy: DEMO_MAKER, approverRole: "entity-ic-reviewer", expiresAt: expires, now,
+      projectId,
+      governanceDocId: doc.id,
+      clauseRef,
+      reason: "데모 시드: 이 항목은 근거 자료가 입수되기 전까지 기한부로 면제함",
+      requestedBy: DEMO_MAKER,
+      approverRole: "entity-ic-reviewer",
+      expiresAt: expires,
+      now,
     });
-    appendAudit(db, { actor: DEMO_MAKER, action: "waiver.request", target: `${projectId}:${doc.id}:${clauseRef}:${waiverId}`, now });
+    appendAudit(db, {
+      actor: DEMO_MAKER,
+      action: "waiver.request",
+      target: `${projectId}:${doc.id}:${clauseRef}:${waiverId}`,
+      now,
+    });
     decideWaiver(db, { id: waiverId, decision: "approve", decidedBy: DEMO_ENTITY_REVIEWER, now: clock() });
-    appendAudit(db, { actor: DEMO_ENTITY_REVIEWER, action: "waiver.approve", target: `${projectId}:${waiverId}`, now: clock() });
+    appendAudit(db, {
+      actor: DEMO_ENTITY_REVIEWER,
+      action: "waiver.approve",
+      target: `${projectId}:${waiverId}`,
+      now: clock(),
+    });
   }
-  upsertChecklistState(projectId, checklistId, item.id, "waived", DEMO_MAKER, { note: "면제(데모): 승인된 기한부 면제", waiverId });
+  upsertChecklistState(projectId, checklistId, item.id, "waived", DEMO_MAKER, {
+    note: "면제(데모): 승인된 기한부 면제",
+    waiverId,
+  });
   return { itemId: item.id, waiverId };
 }
 
@@ -241,7 +351,10 @@ export function recordHonestFeasibilityRows(db: Database, projectId: string, clo
     ["bf-03", "Certification transferability recorded; confirmed against the certifying body's rules (demo seed)."],
   ];
   for (const [itemId, note] of rows) {
-    upsertChecklistState(projectId, BF_FEASIBILITY_CHECKLIST_ID, itemId, "pass", DEMO_MAKER, { note, evidenceRef: "demo:gate-contract" });
+    upsertChecklistState(projectId, BF_FEASIBILITY_CHECKLIST_ID, itemId, "pass", DEMO_MAKER, {
+      note,
+      evidenceRef: "demo:gate-contract",
+    });
   }
   void clock;
 }

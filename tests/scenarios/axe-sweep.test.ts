@@ -25,7 +25,10 @@ const P = BROWNFIELD.projectId;
 const PROJECT_PAGES = [
   "",
   "/process",
-  "/business-case",
+  // explicit tab: the bare /business-case URL redirects to the project 개요 (2026-11-23
+  // defect remediation, design 2026-11-21-s8-overview-tab) and 개요 is already the ""
+  // entry — this row must keep scanning the S8 business-case workspace itself
+  "/business-case?tab=financial",
   "/charter",
   "/dd",
   "/ic-review",

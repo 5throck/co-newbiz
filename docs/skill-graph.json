@@ -1878,6 +1878,11 @@
       "layer": "L3"
     },
     {
+      "id": "dec:DEC-20261028-06",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
       "id": "dec:DEC-20261031-01",
       "type": "decision",
       "layer": "L3"
@@ -2728,8 +2733,8 @@
       "name": "handbook",
       "scope": "root",
       "capability": "handbook",
-      "content_hash": "a9bd82eded8b1661",
-      "version": "0.6.0",
+      "content_hash": "a4891293c4fc4ba5",
+      "version": "0.6.2",
       "mirrors": [
         "skills/handbook/SKILL.md",
         ".claude/skills/handbook/SKILL.md",
@@ -6398,6 +6403,12 @@
       "type": "cites_skill",
       "from": "dec:DEC-20261028-03",
       "to": "skill:root/policy-and-procedure-governance",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261028-06",
+      "to": "skill:root/decision-record",
       "source": "skills_used"
     },
     {

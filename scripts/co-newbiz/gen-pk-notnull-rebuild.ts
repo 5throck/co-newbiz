@@ -34,7 +34,9 @@ interface TableRow {
 }
 
 const rawTables = db
-  .query<TableRow, []>("SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+  .query<TableRow, []>(
+    "SELECT name, sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+  )
   .all();
 
 // db/migrate.ts always wraps a migration file in db.transaction(...), and
@@ -54,9 +56,10 @@ const deps = new Map<string, Set<string>>(); // table -> set of tables it refere
 for (const t of rawTables) {
   const refs = new Set<string>();
   const re = /REFERENCES\s+"?(\w+)"?\s*\(/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(t.sql))) {
+  let m: RegExpExecArray | null = re.exec(t.sql);
+  while (m !== null) {
     if (nameSet.has(m[1]) && m[1] !== t.name) refs.add(m[1]);
+    m = re.exec(t.sql);
   }
   deps.set(t.name, refs);
 }
@@ -155,7 +158,8 @@ for (const t of tables) {
     continue;
   }
   const pkCol = m[1];
-  const nullCount = (db.query(`SELECT COUNT(*) AS c FROM "${t.name}" WHERE "${pkCol}" IS NULL`).get() as { c: number }).c;
+  const nullCount = (db.query(`SELECT COUNT(*) AS c FROM "${t.name}" WHERE "${pkCol}" IS NULL`).get() as { c: number })
+    .c;
   if (nullCount > 0) {
     console.error(`REFUSED: ${t.name}.${pkCol} has ${nullCount} NULL value(s) — cannot add NOT NULL. Fix data first.`);
     nullPkFound = true;
@@ -198,7 +202,9 @@ for (const t of tables) {
 }
 
 if (nullPkFound) {
-  console.error("\nAborted: one or more tables have NULL primary keys already — see REFUSED lines above. No SQL emitted.");
+  console.error(
+    "\nAborted: one or more tables have NULL primary keys already — see REFUSED lines above. No SQL emitted.",
+  );
   process.exit(1);
 }
 
@@ -212,7 +218,9 @@ out.push(`-- own test harness for the automated version of this check).`);
 out.push(`PRAGMA foreign_keys = ON;`);
 out.push(`PRAGMA foreign_key_check;`);
 
-console.error(`\n${changed.length} table(s) rebuilt with NOT NULL PK, ${skipped.length} table(s) unchanged (composite PK or already NOT NULL).`);
+console.error(
+  `\n${changed.length} table(s) rebuilt with NOT NULL PK, ${skipped.length} table(s) unchanged (composite PK or already NOT NULL).`,
+);
 console.error(`Unchanged: ${skipped.join(", ")}`);
 
 console.log(out.join("\n"));

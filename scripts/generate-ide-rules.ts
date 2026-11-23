@@ -180,7 +180,7 @@ async function discoverAgents(targetDir: string): Promise<AgentInfo[]> {
 async function discoverWorkspaceContext(targetDir: string): Promise<WorkspaceContext> {
   let projectName = path.basename(targetDir);
   let description = "TypeScript Multi-Agent Development Environment";
-  let variantName: string | undefined = undefined;
+  let variantName: string | undefined;
 
   const pkgPath = path.join(targetDir, "package.json");
   if (existsSync(pkgPath)) {

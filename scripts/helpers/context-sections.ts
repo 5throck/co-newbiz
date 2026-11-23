@@ -350,7 +350,7 @@ function contentTokens(text: string): Set<string> {
     text
       .toLowerCase()
       .replace(/[*`_>#[\]()|]/g, " ")
-      .split(/[^a-z0-9§.\/_-]+/)
+      .split(/[^a-z0-9§./_-]+/)
       .map((w) => w.replace(/^[.\-_]+|[.\-_]+$/g, ""))
       .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
       .map(stemToken),

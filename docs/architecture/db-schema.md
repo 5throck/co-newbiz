@@ -1,3 +1,8 @@
+---
+lang: ko
+lang_reason: source-material
+---
+
 # Database Schema (ERD) — co-newbiz
 
 **Owner**: data-architect
@@ -190,7 +195,7 @@ All access through `db/repositories/entry-market.repository.ts` (fallback reads 
 |---|---|---|
 | `synergy_linkage_item` | S3 `연계 시너지` — `사람이 추가한 영역` (ADR-0125; origin`은 항상` human, payload`는` append-only`라 직접 수정 불가`) | `analysis_id`, `area`, `synergy_type`, `rationale`, `opportunity`, `risk`, `sources_json`, `created_by` |
 | `synergy_shortlist_curation` | S3 `우선 시너지 영역` — `사람의 판정·사유 오버라이드` + `신규 영역` (ADR-0125; `origin`='llm'\|'human'`이 제안 출처와 사람 편집을 동시에 보존`) | `analysis_id`, `area` (UNIQUE), `origin`, `verdict`, `reason`, `updated_by/at` |
-| `opportunity_sketch_version` | `비즈니스 모델 검토 버전 이력` (ADR-0127; append-only — `opportunity.sketch_json` `은 "현재 버전" 포인터`) | `opportunity_id`, `version_no` (UNIQUE), `sketch_json`, `source`, `created_by` |
+| `opportunity_sketch_version` | `비즈니스 모델 검토 버전 이력` (ADR-0127; append-only — `opportunity.sketch_json`은 "현재 버전" 포인터) | `opportunity_id`, `version_no` (UNIQUE), `sketch_json`, `source`, `created_by` |
 | `llm_call_log` | `런타임` LLM `호출 런 장부` (ADR-0128; append-only — `모든` completeOrFallback `호출이 에이전트 키·목적·출처`·latency`와 함께 기록됨`) | `agent_key`, `purpose`, `context_type/id`, `source` ('llm'\|'synthesis'), `provider`, `model`, `ok`, `latency_ms` |
 | `oauth_client` | RFC 7591 dynamically registered public MCP OAuth clients (migration 0128, ADR-0154). Clients start unverified | `client_id`, `name`, `redirect_uris` (JSON), `registered_by_user_id`, `verified` |
 | `oauth_code` | Single-use authorization codes, valid for 60 seconds or less, bound to client, redirect URI, PKCE S256 challenge, and resource (migration 0128). A replay revokes `family_id` | `code_hash`, `user_id`, `client_id`, `pkce_challenge`, `scopes`, `expires_at`, `consumed_at`, `family_id` |

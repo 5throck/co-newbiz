@@ -296,7 +296,7 @@ function validateSyntax(filePath: string): ValidationError[] {
       if (line.startsWith("extends:")) {
         const validFormats = [
           /^extends:\s*\[.+\]$/, // Array format
-          /^extends:\s*[a-zA-Z0-9_\/\-\.]+$/, // Single value
+          /^extends:\s*[a-zA-Z0-9_/\-.]+$/, // Single value
         ];
 
         const isValid = validFormats.some((regex) => regex.test(line));
@@ -529,7 +529,7 @@ function autoFixErrors(filePath: string, errors: ValidationError[]): boolean {
 
   let fixed = false;
   const content = readFileSync(filePath, "utf-8");
-  let newContent = content;
+  const newContent = content;
 
   for (const error of errors) {
     if (error.fixable && error.type === "syntax") {

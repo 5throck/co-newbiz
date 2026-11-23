@@ -57,18 +57,30 @@ export function loadGoldenSet(dir: string = GOLDEN_DIR): GoldenSet {
   const errors: string[] = [];
   const version = readFileSync(join(dir, "VERSION"), "utf-8").trim();
   const cases: LoadedCase[] = [];
-  const files = readdirSync(join(dir, "cases")).filter((f) => f.endsWith(".yaml")).sort();
+  const files = readdirSync(join(dir, "cases"))
+    .filter((f) => f.endsWith(".yaml"))
+    .sort();
   for (const f of files) {
     const where = `cases/${f}`;
     const parsed = GoldenCase.safeParse(yamlLoad(readFileSync(join(dir, "cases", f), "utf-8")));
     if (!parsed.success) {
-      errors.push(`${where}: ${parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+      errors.push(
+        `${where}: ${parsed.error.issues
+          .slice(0, 5)
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; ")}`,
+      );
       continue;
     }
     const c = parsed.data;
     if (c.golden_version !== version) errors.push(`${where}: golden_version ${c.golden_version} != VERSION ${version}`);
-    for (const [i, e] of c.expectations.entries()) e.citation.forEach((ct) => checkCitation(ct, `${where} expectations[${i}]`, errors));
-    c.public_outcome?.citation.forEach((ct) => checkCitation(ct, `${where} public_outcome`, errors));
+    for (const [i, e] of c.expectations.entries())
+      e.citation.forEach((ct) => {
+        checkCitation(ct, `${where} expectations[${i}]`, errors);
+      });
+    c.public_outcome?.citation.forEach((ct) => {
+      checkCitation(ct, `${where} public_outcome`, errors);
+    });
 
     const readFixture = (ref: string): InputFixtureT | null => {
       const p = join(dir, ref);
@@ -86,7 +98,8 @@ export function loadGoldenSet(dir: string = GOLDEN_DIR): GoldenSet {
     const inputs = readFixture(c.inputs_ref);
     if (inputs) {
       const leaked = findLeakage(inputs);
-      if (leaked.length > 0) errors.push(`${where}: LEAKAGE in ${c.inputs_ref}: outcome keyword(s) ${leaked.join(", ")}`);
+      if (leaked.length > 0)
+        errors.push(`${where}: LEAKAGE in ${c.inputs_ref}: outcome keyword(s) ${leaked.join(", ")}`);
     }
     const post = c.post_decision_inputs_ref ? readFixture(c.post_decision_inputs_ref) : null;
     if (inputs) cases.push({ case: c, inputs, postDecision: post ?? undefined });

@@ -30,14 +30,22 @@ const projects = db
             (SELECT MIN(pinned_at) FROM project_policy_pin WHERE project_id = p.id AND policy_doc_id NOT IN (${OVERLAY_DOCS.map(() => "?").join(",")})) AS first_pin
      FROM md_project p ORDER BY p.created_at`,
   )
-  .all(...OVERLAY_DOCS) as Array<{ id: string; project_no: string; track: string | null; created_at: string | null; first_pin: string | null }>;
+  .all(...OVERLAY_DOCS) as Array<{
+  id: string;
+  project_no: string;
+  track: string | null;
+  created_at: string | null;
+  first_pin: string | null;
+}>;
 
 const gates = db.query(
   `SELECT g.gate, g.decision, g.decided_at, (s.decision_id IS NOT NULL) AS stale
    FROM gate_decision g LEFT JOIN gate_decision_stale s ON s.decision_id = g.id
    WHERE g.entity_type = 'project' AND g.entity_id = ? ORDER BY g.decided_at, g.id`,
 );
-const optIn = db.query("SELECT 1 FROM project_policy_pin WHERE project_id = ? AND policy_doc_id IN (?, ?) AND superseded_by IS NULL LIMIT 1");
+const optIn = db.query(
+  "SELECT 1 FROM project_policy_pin WHERE project_id = ? AND policy_doc_id IN (?, ?) AND superseded_by IS NULL LIMIT 1",
+);
 
 let shown = 0;
 for (const p of projects) {
@@ -49,7 +57,9 @@ for (const p of projects) {
   const dd = rows.filter((r) => r.gate === "dd");
   const validDd = dd.filter((r) => !r.stale);
   const latestDd = validDd[validDd.length - 1];
-  const later = rows.filter((r) => LATER.includes(r.gate)).map((r) => `${r.gate}:${r.decision}${r.stale ? "(stale)" : ""}`);
+  const later = rows
+    .filter((r) => LATER.includes(r.gate))
+    .map((r) => `${r.gate}:${r.decision}${r.stale ? "(stale)" : ""}`);
   const pinned = validDd.length > 0;
   const opted = !!optIn.get(p.id, ...OVERLAY_DOCS);
   console.log(

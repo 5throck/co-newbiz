@@ -190,10 +190,12 @@ export function verifyPageBody(slug: string, body: string, ctx: VerifyContext): 
   const errors: string[] = [];
   const report = classifyPageLinks(body);
   for (const target of report.internalMd) {
-    if (!ctx.slugs.has(target)) errors.push(`docs/wiki/ko/${slug}.md — 폴더 안 링크가 투영 페이지가 아닙니다: ${target}.md`);
+    if (!ctx.slugs.has(target))
+      errors.push(`docs/wiki/ko/${slug}.md — 폴더 안 링크가 투영 페이지가 아닙니다: ${target}.md`);
   }
   for (const file of report.images) {
-    if (!ctx.imageFiles.has(file)) errors.push(`docs/wiki/ko/${slug}.md — 이미지 참조가 파일 목록에 없습니다: images/${file}`);
+    if (!ctx.imageFiles.has(file))
+      errors.push(`docs/wiki/ko/${slug}.md — 이미지 참조가 파일 목록에 없습니다: images/${file}`);
   }
   const own = ctx.headingSlugs.get(slug) ?? [];
   for (const { anchor, line } of report.anchors) {
@@ -206,18 +208,23 @@ export function verifyPageBody(slug: string, body: string, ctx: VerifyContext): 
   for (const { target, anchor, line } of report.crossAnchors) {
     const targetSlugs = ctx.headingSlugs.get(target) ?? [];
     if (targetSlugs.length > 0 && !targetSlugs.includes(anchor)) {
-      errors.push(`docs/wiki/ko/${slug}.md:${line} — 교차 페이지 앵커 ${target}.md#${anchor} 이(가) 대상 문서의 헤딩 슬러그가 아닙니다`);
+      errors.push(
+        `docs/wiki/ko/${slug}.md:${line} — 교차 페이지 앵커 ${target}.md#${anchor} 이(가) 대상 문서의 헤딩 슬러그가 아닙니다`,
+      );
     }
   }
   return errors;
 }
 
 /** 폴더 밖 링크 대상 → library.generated.ts의 LIBRARY_DOCS file 경로 매칭(id, 없으면 null). */
-export function buildLibraryLinks(outsideTargets: string[], libraryDocs: ReadonlyArray<{ id: string; file: string }>): Record<string, string | null> {
+export function buildLibraryLinks(
+  outsideTargets: string[],
+  libraryDocs: ReadonlyArray<{ id: string; file: string }>,
+): Record<string, string | null> {
   const out: Record<string, string | null> = {};
   for (const target of [...outsideTargets].sort()) {
     // 대상은 docs/wiki/ko/ 기준 상대경로(../../manuals/…) — 세그먼트 순회로 실제 파일 경로로 환산한다.
-    const segs = (`docs/wiki/ko/${target}`).split("/");
+    const segs = `docs/wiki/ko/${target}`.split("/");
     const stack: string[] = [];
     for (const seg of segs) {
       if (seg === "" || seg === ".") continue;
@@ -242,7 +249,9 @@ async function buildProjection(): Promise<string> {
   const mod = await import(join(ROOT, "app", "web-next", "lib", "library.generated.ts"));
   const LIBRARY_DOCS: Array<{ id: string; file: string }> = mod.LIBRARY_DOCS;
 
-  const allFiles = readdirSync(WIKI_DIR).filter((f) => f.endsWith(".md")).sort();
+  const allFiles = readdirSync(WIKI_DIR)
+    .filter((f) => f.endsWith(".md"))
+    .sort();
   const pageFiles = allFiles.filter((f) => !f.startsWith("_"));
   const imageFiles = readdirSync(IMAGES_DIR).sort();
 
@@ -265,7 +274,9 @@ async function buildProjection(): Promise<string> {
       title: titleMatch[1],
       order: pageOrder(slug),
       doc_type: head(attrs.doc_type as string | undefined) ?? "explanation",
-      ...(head(attrs.stage as string | undefined) !== undefined ? { stage: head(attrs.stage as string | undefined) } : {}),
+      ...(head(attrs.stage as string | undefined) !== undefined
+        ? { stage: head(attrs.stage as string | undefined) }
+        : {}),
       ...(tracks !== undefined ? { tracks } : {}),
       ...(personas !== undefined ? { personas } : {}),
       verified_on: head(attrs.verified_on as string | undefined) ?? "",
@@ -291,14 +302,22 @@ async function buildProjection(): Promise<string> {
   const sidebar = parseSidebarGroups(sidebarRaw, slugs);
   errors.push(...sidebar.errors);
   if (sidebar.orphans.length > 0) {
-    sidebar.groups.push({ group: "기타", items: sidebar.orphans.map((slug) => ({ slug, title: pages.find((p) => p.summary.slug === slug)?.summary.title ?? slug })) });
+    sidebar.groups.push({
+      group: "기타",
+      items: sidebar.orphans.map((slug) => ({
+        slug,
+        title: pages.find((p) => p.summary.slug === slug)?.summary.title ?? slug,
+      })),
+    });
   }
 
   const footerRaw = parseFrontmatter(readFileSync(join(WIKI_DIR, "_Footer.md"), "utf-8")).body;
   const libraryLinks = buildLibraryLinks(outsideTargets, LIBRARY_DOCS);
 
   if (errors.length > 0) {
-    console.error(`[sync-wiki-projection] 위키 원본 링크 검증 실패 ${errors.length}건 — 원본(docs/wiki/ko/)을 고친 뒤 다시 실행하세요:`);
+    console.error(
+      `[sync-wiki-projection] 위키 원본 링크 검증 실패 ${errors.length}건 — 원본(docs/wiki/ko/)을 고친 뒤 다시 실행하세요:`,
+    );
     for (const e of errors) console.error(`  - ${e}`);
     process.exit(1);
   }
@@ -310,7 +329,11 @@ async function buildProjection(): Promise<string> {
     `// Generated from docs/wiki/ko/ by scripts/co-newbiz/sync-wiki-projection.ts (full regeneration).\n` +
     `// Do not edit by hand; fix the wiki source and re-run the generator (--check guards drift).\n` +
     `import type { WikiPageContent, WikiPageSummary, WikiSidebarGroup } from "./wiki.ts";\n\n` +
-    `export const WIKI_PAGES: WikiPageSummary[] = ${JSON.stringify(pages.map((p) => p.summary), null, 2)};\n\n` +
+    `export const WIKI_PAGES: WikiPageSummary[] = ${JSON.stringify(
+      pages.map((p) => p.summary),
+      null,
+      2,
+    )};\n\n` +
     `export const WIKI_CONTENT: Record<string, WikiPageContent> = ${JSON.stringify(content, null, 2)};\n\n` +
     `export const WIKI_SIDEBAR_GROUPS: WikiSidebarGroup[] = ${JSON.stringify(sidebar.groups, null, 2)};\n\n` +
     `export const WIKI_FOOTER: string = ${JSON.stringify(footerRaw)};\n\n` +

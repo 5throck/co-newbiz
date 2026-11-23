@@ -31,7 +31,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname, normalize } from "node:path";
 import { load, dump } from "js-yaml";
-import { safeValidateExtends, ExtendsValidationResult } from "./extends-validator.ts";
+import { safeValidateExtends, type ExtendsValidationResult } from "./extends-validator.ts";
 
 /**
  * Error type classification for error recovery strategy
@@ -605,7 +605,7 @@ function cleanSectionName(str: string): string {
 function extractSection(content: string, headingTitle: string): string {
   const lines = content.split("\n");
   const headingRegex = /^(#{1,6})\s+(.+)$/;
-  let sectionLines: string[] = [];
+  const sectionLines: string[] = [];
   let found = false;
   let startLevel = 0;
 
@@ -647,9 +647,9 @@ function extractSection(content: string, headingTitle: string): string {
  */
 function parseConstraintSubPoints(constraintsContent: string): { plan: string; version: string; strategy: string } {
   const lines = constraintsContent.split("\n");
-  let planLines: string[] = [];
-  let versionLines: string[] = [];
-  let strategyLines: string[] = [];
+  const planLines: string[] = [];
+  const versionLines: string[] = [];
+  const strategyLines: string[] = [];
 
   let current: "plan" | "version" | "strategy" | "none" = "none";
 
@@ -1354,7 +1354,7 @@ ${substituteAgentNames(subpoints.strategy, map)}`;
     // Remove L0-only content from L2 variants
     const variantLevel = determineVariantLevel(filePath, explicitVariantLevel);
     console.log(`🔍 Variant Level: ${variantLevel}, File: ${filePath}`);
-    let processedFinalBody = removeL0OnlyContent(finalBody, variantLevel);
+    const processedFinalBody = removeL0OnlyContent(finalBody, variantLevel);
 
     // Debug: Check if context.md was removed
     if (variantLevel === "L2" && processedFinalBody.includes("CONSTITUTION.md")) {
@@ -1730,7 +1730,7 @@ function removeL0OnlyContent(content: string, variantLevel: string): string {
   let processed = content;
 
   // Remove lines containing context.md or docs/constitution/ path references
-  processed = processed.replace(/^.*(CONSTITUTION\.md|docs[\/\\]constitution[\/\\]).*$/gim, "");
+  processed = processed.replace(/^.*(CONSTITUTION\.md|docs[/\\]constitution[/\\]).*$/gim, "");
 
   // Remove Platform Note about Platform column
   processed = processed.replace(

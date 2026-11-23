@@ -17,7 +17,12 @@
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
 import { KOSIS_UNITS } from "./kosis-units.ts";
-import { applyProxyChain, convertBetweenUnits, hopFactor, type ProxyHopFactor } from "../../packages/core-scoring/src/unit-conversion.ts";
+import {
+  applyProxyChain,
+  convertBetweenUnits,
+  hopFactor,
+  type ProxyHopFactor,
+} from "../../packages/core-scoring/src/unit-conversion.ts";
 
 export interface UnitConversionResult {
   value: number;
@@ -37,14 +42,20 @@ export function convertUnits(value: number, fromUnit: string, toUnit: string): U
     // demand so convert works on a fresh database without a prior fetch.
     const known = Object.values(KOSIS_UNITS).find((u) => u.unitCode === code);
     if (!known) return;
-    getDb().run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)",
-      [ulid(), known.unitCode, known.dimension, known.siCoefficient, new Date().toISOString()]);
+    getDb().run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [
+      ulid(),
+      known.unitCode,
+      known.dimension,
+      known.siCoefficient,
+      new Date().toISOString(),
+    ]);
   };
   if (!load(fromUnit)) seedKnown(fromUnit);
   if (!load(toUnit)) seedKnown(toUnit);
   const from = load(fromUnit);
   const to = load(toUnit);
-  if (!from || !to) throw new Error(`convert: unknown unit '${!from ? fromUnit : toUnit}' — md:sync/fetch seeds md_unit rows.`);
+  if (!from || !to)
+    throw new Error(`convert: unknown unit '${!from ? fromUnit : toUnit}' — md:sync/fetch seeds md_unit rows.`);
   // value × from.si → SI base → ÷ to.si (pure math in packages/core-scoring).
   const converted = convertBetweenUnits(
     value,
@@ -67,16 +78,26 @@ export interface ProxyConversionResult {
 export function convertViaProxyChain(value: number, chainId: string): ProxyConversionResult {
   const db = getDb();
   const chain = db
-    .query("SELECT id, target_industry_id, hop_ids, reliability_grade, grade_rationale, compounded_ci_low, compounded_ci_high FROM proxy_chain WHERE id = ?")
+    .query(
+      "SELECT id, target_industry_id, hop_ids, reliability_grade, grade_rationale, compounded_ci_low, compounded_ci_high FROM proxy_chain WHERE id = ?",
+    )
     .get(chainId) as
-    | { id: string; target_industry_id: string; hop_ids: string; reliability_grade: string; grade_rationale: string; compounded_ci_low: number | null; compounded_ci_high: number | null; }
+    | {
+        id: string;
+        target_industry_id: string;
+        hop_ids: string;
+        reliability_grade: string;
+        grade_rationale: string;
+        compounded_ci_low: number | null;
+        compounded_ci_high: number | null;
+      }
     | undefined;
   if (!chain) throw new Error(`convert: proxy_chain '${chainId}' not found.`);
   const hopIds = JSON.parse(chain.hop_ids) as string[];
   const hops: ProxyHopFactor[] = hopIds.map((hopId) => {
-    const hop = db
-      .query("SELECT id, hop_type, beta, coefficient FROM proxy_link WHERE id = ?")
-      .get(hopId) as { id: string; hop_type: string; beta: number | null; coefficient: number | null } | undefined;
+    const hop = db.query("SELECT id, hop_type, beta, coefficient FROM proxy_link WHERE id = ?").get(hopId) as
+      | { id: string; hop_type: string; beta: number | null; coefficient: number | null }
+      | undefined;
     if (!hop) throw new Error(`convert: proxy_link '${hopId}' missing.`);
     const factor: ProxyHopFactor = { id: hop.id, hopType: hop.hop_type, beta: hop.beta, coefficient: hop.coefficient };
     hopFactor(factor); // same per-hop error order as before: missing / unusable checked hop by hop

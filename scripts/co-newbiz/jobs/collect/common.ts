@@ -37,7 +37,7 @@ export async function runCollectSource(ctx: JobContext, source: CollectSourceCod
     return { skipped: "credential_missing", detail: { source, credentialEnv: adapter.credentialEnv } };
   }
 
-  let result;
+  let result: Awaited<ReturnType<typeof fetchSource>>;
   try {
     result = await fetchSource(ctx.db, source, { signal: ctx.signal });
   } catch (err) {

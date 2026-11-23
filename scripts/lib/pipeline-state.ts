@@ -20,7 +20,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { ErrorPhase } from "./error-handling";
+import type { ErrorPhase } from "./error-handling";
 
 // ============================================================================
 // TYPES

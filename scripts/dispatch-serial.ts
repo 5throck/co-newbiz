@@ -281,4 +281,4 @@ export async function runDispatcher(options?: SerialExecutionOptions): Promise<S
   return dispatchSerial(defaultPipeline, options);
 }
 
-export { dispatchSerial as default, SerialAgentTask, SerialPipelineResult };
+export { dispatchSerial as default, type SerialAgentTask, type SerialPipelineResult };

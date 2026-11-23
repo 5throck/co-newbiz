@@ -4,12 +4,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   GOALS_ACK_REQUIRED_CODE,
+  S8_FINANCIAL_SUBTABS,
   STARTER_METRIC_KEYS,
   attainmentView,
   bannerText,
   goalsBannerState,
   primaryTabKeys,
   resolveS8Tab,
+  s8BareTabRedirect,
   shouldRedirectTargetsTab,
   summarizeAttainment,
 } from "../../app/web-next/lib/business-goals-view.ts";
@@ -78,6 +80,51 @@ describe("S8 tab order and greenfield redirect", () => {
     expect(resolveS8Tab(null, { greenfield: false })).toBe("overview");
     expect(resolveS8Tab(undefined, { greenfield: true })).toBe("overview");
     expect(resolveS8Tab("bogus", { greenfield: false })).toBe("overview");
+  });
+});
+
+describe("bare /business-case lands on 개요 (defect remediation 2026-11-23)", () => {
+  test("the ABSENT ?tab= redirects to the project page (the 개요 tab's canonical URL)", () => {
+    expect(s8BareTabRedirect("p1", null)).toBe("/projects/p1");
+    expect(s8BareTabRedirect("abc", null)).toBe("/projects/abc");
+  });
+  test("every explicit ?tab= is byte-identical to today — no redirect", () => {
+    for (const v of [
+      "goals",
+      "technical",
+      "financial",
+      "scenarios",
+      "targets",
+      "params",
+      "target-costing",
+      "decision",
+      "capability",
+      "bogus",
+      "",
+    ]) {
+      expect(s8BareTabRedirect("p1", v)).toBeNull();
+    }
+    // `?tab=` present-but-empty is an explicit value (URLSearchParams.get → ""), not absent
+    expect(s8BareTabRedirect("p1", "")).toBeNull();
+  });
+  test("?tab=overview keeps resolving to the financial-lens sub-tab 설명·생성·권고 (alias untouched)", () => {
+    expect(resolveS8Tab("overview", { greenfield: false })).toBe("overview");
+    expect(resolveS8Tab("overview", { greenfield: true })).toBe("overview");
+    expect(S8_FINANCIAL_SUBTABS[0]).toBe("overview");
+    expect(resolveS8Tab("financial", { greenfield: false })).toBe("overview");
+    expect(resolveS8Tab(null, { greenfield: false })).toBe("overview"); // fallback, not the absent-param ruling
+  });
+  test("the redirect wires into the page-mode wrapper only (source pin — replace called with the canonical URL)", () => {
+    const src = read("components/stages/BusinessCaseStage.tsx");
+    // one decision helper, fed the RAW searchParams value; embedded mode exits first
+    expect(src).toContain('const dest = s8BareTabRedirect(projectId, searchParams.get("tab"));');
+    expect(src).toContain("if (dest) router.replace(dest, { scroll: false });");
+    expect(src).toContain("if (!urlSync) return;");
+    expect(src).toContain("s8BareTabRedirect,");
+    // the legacy wacc/financial-analysis and greenfield-targets redirects stay untouched
+    // (needles are escaped template literals so noTemplateCurlyInString stays silent)
+    expect(src).toContain(`router.replace(\`/projects/\${projectId}/wacc\`)`);
+    expect(src).toContain(`router.replace(\`/projects/\${projectId}/business-case?tab=overview\`, { scroll: false })`);
   });
 });
 

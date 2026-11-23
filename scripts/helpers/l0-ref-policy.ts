@@ -43,7 +43,7 @@
  *          "l0-functional:" is a functional L0 reference (root detection, existsSync guards) exempt
  *          from the leak scan; same occurrence-scoped mechanics as intentional-duplicate.
  */
-export const L0_REF_PATTERN = /CONSTITUTION\.md|docs[\/\\]constitution[\/\\]/i;
+export const L0_REF_PATTERN = /CONSTITUTION\.md|docs[/\\]constitution[/\\]/i;
 
 /** v1.? (2026-11-14, consult-output-destination-and-constitution-refs-ruling §6.1 item 4):
  *  line-scoped exemption marker — a line carrying this marker is a FUNCTIONAL
@@ -57,10 +57,10 @@ export const L0_FUNCTIONAL_MARKER = "l0-functional:";
  * design/decision/adr/report paths, tickets/ and memory/<date> — plus the L0_REF_PATTERN forms.
  */
 export const L0_INTERNAL_REF_PATTERN =
-  /\bADR-\d+|\bDEC-\d{8}|\b[TU]-\d{8}-\d+|docs[\/\\](?:designs|decisions|adr|reports)[\/\\]|\btickets[\/\\]|\bmemory[\/\\]\d|CONSTITUTION\.md|docs[\/\\]constitution[\/\\]/i;
+  /\bADR-\d+|\bDEC-\d{8}|\b[TU]-\d{8}-\d+|docs[/\\](?:designs|decisions|adr|reports)[/\\]|\btickets[/\\]|\bmemory[/\\]\d|CONSTITUTION\.md|docs[/\\]constitution[/\\]/i;
 
 /** Global-flag twin of {@link L0_REF_PATTERN} for `.replace()` use (never `.test()` — lastIndex trap). */
-export const L0_REF_PATTERN_GLOBAL = /CONSTITUTION\.md|docs[\/\\]constitution[\/\\]/gi;
+export const L0_REF_PATTERN_GLOBAL = /CONSTITUTION\.md|docs[/\\]constitution[/\\]/gi;
 
 /** Marker annotation that marks an intentional, locally-maintained duplicate of L0 content. */
 export const INTENTIONAL_DUPLICATE_MARKER = "intentional-duplicate";

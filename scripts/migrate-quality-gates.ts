@@ -561,7 +561,7 @@ function updateProcedures(ctx: VariantContext): number {
   const gatesByProc = new Map<string, string[]>();
 
   // Map procedures to their gates (simple: first gate per procedure)
-  let gateIdx = 0;
+  const gateIdx = 0;
   for (const gate of ctx.gates) {
     for (const [procId, proc] of ctx.procedures.entries()) {
       if (proc.stage === gate.stage && proc.owner_agent === gate.decider_agent && !gatesByProc.has(procId)) {

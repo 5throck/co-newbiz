@@ -39,37 +39,43 @@ export function findGateDecisionReferenceIssues(db: Db): GateDecisionReferenceIs
 
   if (tableExists(db, "opportunity")) {
     issues.push(
-      ...(db.query(`
+      ...(db
+        .query(`
         SELECT gd.id, gd.entity_type, gd.entity_id, gd.gate, gd.decision, 'missing_opportunity' AS reason
           FROM gate_decision gd
           LEFT JOIN opportunity o ON o.id = gd.entity_id
          WHERE gd.entity_type = 'opportunity'
            AND o.id IS NULL
          ORDER BY gd.decided_at, gd.id
-      `).all() as GateDecisionReferenceIssue[]),
+      `)
+        .all() as GateDecisionReferenceIssue[]),
     );
   }
 
   if (tableExists(db, "md_project")) {
     issues.push(
-      ...(db.query(`
+      ...(db
+        .query(`
         SELECT gd.id, gd.entity_type, gd.entity_id, gd.gate, gd.decision, 'missing_project' AS reason
           FROM gate_decision gd
           LEFT JOIN md_project p ON p.id = gd.entity_id
          WHERE gd.entity_type = 'project'
            AND p.id IS NULL
          ORDER BY gd.decided_at, gd.id
-      `).all() as GateDecisionReferenceIssue[]),
+      `)
+        .all() as GateDecisionReferenceIssue[]),
     );
   }
 
   issues.push(
-    ...(db.query(`
+    ...(db
+      .query(`
       SELECT id, entity_type, entity_id, gate, decision, 'unknown_entity_type' AS reason
         FROM gate_decision
        WHERE entity_type NOT IN ('opportunity', 'project')
        ORDER BY decided_at, id
-    `).all() as GateDecisionReferenceIssue[]),
+    `)
+      .all() as GateDecisionReferenceIssue[]),
   );
 
   return issues.sort((a, b) => a.id.localeCompare(b.id));
@@ -80,15 +86,25 @@ export function deleteOrphanGateDecisions(db: Db): number {
   // legacy cutoff, which is a rowid mark). Report instead of delete; the database refuses the DELETE anyway.
   if (db.query("SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = 'trg_gate_decision_no_delete'").get()) {
     const reported = findGateDecisionReferenceIssues(db).filter((i) => i.reason !== "unknown_entity_type").length;
-    if (reported > 0) console.warn(`db-integrity: ${reported} orphan gate_decision row(s) are reported only - gate decisions are never deleted (ADR-0186).`);
+    if (reported > 0)
+      console.warn(
+        `db-integrity: ${reported} orphan gate_decision row(s) are reported only - gate decisions are never deleted (ADR-0186).`,
+      );
     return 0;
   }
   // ADR-0186: a decision with a gate_decision_snapshot is append-only evidence - never orphan-deleted (reported, skipped).
-  const hasSnapshotTable = db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'gate_decision_snapshot'").get() !== null;
+  const hasSnapshotTable =
+    db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'gate_decision_snapshot'").get() !== null;
   const withSnapshot = new Set(
-    hasSnapshotTable ? (db.query("SELECT decision_id FROM gate_decision_snapshot").all() as Array<{ decision_id: string }>).map((r) => r.decision_id) : [],
+    hasSnapshotTable
+      ? (db.query("SELECT decision_id FROM gate_decision_snapshot").all() as Array<{ decision_id: string }>).map(
+          (r) => r.decision_id,
+        )
+      : [],
   );
-  const issues = findGateDecisionReferenceIssues(db).filter((i) => i.reason !== "unknown_entity_type" && !withSnapshot.has(i.id));
+  const issues = findGateDecisionReferenceIssues(db).filter(
+    (i) => i.reason !== "unknown_entity_type" && !withSnapshot.has(i.id),
+  );
   if (issues.length === 0) return 0;
   const deleteOne = db.prepare("DELETE FROM gate_decision WHERE id = ?");
   db.transaction(() => {
@@ -126,7 +142,9 @@ export function runDbIntegrity(args = process.argv.slice(2)): number {
   if (remainingGateIssues.length > 0) {
     console.error(`db-integrity: gate_decision has ${remainingGateIssues.length} polymorphic reference issue(s).`);
     for (const issue of remainingGateIssues) {
-      console.error(`  - ${issue.id}: ${issue.entity_type}:${issue.entity_id} ${issue.gate}/${issue.decision} (${issue.reason})`);
+      console.error(
+        `  - ${issue.id}: ${issue.entity_type}:${issue.entity_id} ${issue.gate}/${issue.decision} (${issue.reason})`,
+      );
     }
     if (!fix) console.error("  Fix local demo data with: bun scripts/co-newbiz/db-integrity.ts --fix");
   }

@@ -25,12 +25,16 @@
  *   the path's method set.
  * - Path params: doc `:id` form normalizes to openapi `{id}` form.
  *
- * Deliberately NOT checked here (reported separately, 2026-11-23 batch):
- * paths documented as-built but absent from openapi.yaml entirely (the §4
- * engine-1 runs rows, §5 governance rows, §7 watch/report rows — routes that
- * predate the Next.js handler cutover), and the full path-coverage direction
- * (api-spec.md is a human-readable index covering ~135 of 384 paths, not an
- * exhaustive catalog). Path-level rot is a follow-up ruling, not this gate.
+ * Path-set gate (2026-11-23 as-built purge follow-up): every path this parser
+ * sees (i.e. every as-built claim — forward-design-only, removed and
+ * annotation rows are skipped upstream) must exist in openapi.yaml. A doc-only
+ * path (documented as-built, no handler surface) fails with a purge-or-align
+ * message; the doc-only class that motivated this gate (engine-1 runs rows,
+ * governance reads, watch/report rows — routes that predate the Next.js
+ * handler cutover) was purged from api-spec.md on 2026-11-23. The REVERSE
+ * direction is deliberately NOT checked: api-spec.md is a human-readable
+ * index (~112 of 380+ paths), not an exhaustive catalog, so openapi paths
+ * without a doc row are the expected steady state.
  */
 
 import { test, expect, describe } from "bun:test";
@@ -128,6 +132,17 @@ const docMap = parseApiSpecMethods(readFileSync(join(PROJECT_ROOT, "docs/archite
 describe("docs/architecture/api-spec.md method-set drift gate (F-26 residual)", () => {
   test("the doc parser still sees a sane catalog (non-vacuous)", () => {
     expect(docMap.size).toBeGreaterThanOrEqual(100);
+  });
+
+  test("every as-built doc path exists in openapi.yaml (no doc-only paths — the 2026-11-23 purge class)", () => {
+    const failures: string[] = [];
+    for (const path of docMap.keys()) {
+      if (!spec.paths?.[path])
+        failures.push(
+          `${path}: documented as-built but absent from openapi.yaml (no handler surface) — purge the row or align it to the built path`,
+        );
+    }
+    expect(failures).toEqual([]);
   });
 
   test("doc method sets equal openapi.yaml for every documented path (no doc-only methods)", () => {

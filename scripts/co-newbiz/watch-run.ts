@@ -82,7 +82,12 @@ function jobRunStart(db: Database, now: string): string {
 }
 
 function jobRunFinish(db: Database, jobRunId: string, now: string, status: "success" | "failed", error?: string): void {
-  db.run("UPDATE job_run SET finished_at = ?, status = ?, error = ? WHERE id = ?", [now, status, error ?? null, jobRunId]);
+  db.run("UPDATE job_run SET finished_at = ?, status = ?, error = ? WHERE id = ?", [
+    now,
+    status,
+    error ?? null,
+    jobRunId,
+  ]);
 }
 
 /**
@@ -95,17 +100,20 @@ export function runWatchCycle(db: Database, options: RunWatchCycleOptions): Watc
   const projects: WatchCycleProjectResult[] = [];
 
   try {
-    const watchedProjectIds = (
-      db.query("SELECT DISTINCT project_id FROM watch").all() as { project_id: string }[]
-    ).map((r) => r.project_id);
+    const watchedProjectIds = (db.query("SELECT DISTINCT project_id FROM watch").all() as { project_id: string }[]).map(
+      (r) => r.project_id,
+    );
 
     for (const projectId of watchedProjectIds) {
-      const project = db.query("SELECT project_no FROM md_project WHERE id = ?").get(projectId) as { project_no: string } | null;
+      const project = db.query("SELECT project_no FROM md_project WHERE id = ?").get(projectId) as {
+        project_no: string;
+      } | null;
       if (!project) continue; // dangling watch row — nothing to report against.
 
-      const watches = db
-        .query("SELECT id, last_checked_at FROM watch WHERE project_id = ?")
-        .all(projectId) as { id: string; last_checked_at: string | null }[];
+      const watches = db.query("SELECT id, last_checked_at FROM watch WHERE project_id = ?").all(projectId) as {
+        id: string;
+        last_checked_at: string | null;
+      }[];
       // Use the earliest watermark among this project's watches so a newer
       // watch never misses a change an older watch already consumed.
       const watermark = watches.reduce<string>((min, w) => {
@@ -114,13 +122,19 @@ export function runWatchCycle(db: Database, options: RunWatchCycleOptions): Watc
       }, watches[0]?.last_checked_at ?? "");
 
       const latestRun = db
-        .query("SELECT id FROM run WHERE project_id = ? AND COALESCE(label, '') NOT LIKE 'gate_integrity_eval:%' ORDER BY created_at DESC LIMIT 1")
+        .query(
+          "SELECT id FROM run WHERE project_id = ? AND COALESCE(label, '') NOT LIKE 'gate_integrity_eval:%' ORDER BY created_at DESC LIMIT 1",
+        )
         .get(projectId) as { id: string } | null;
 
       const anchorRefs = latestRun
-        ? ((db
-            .query("SELECT DISTINCT anchor_ref FROM assumption WHERE run_id = ? AND kind = 'live' AND anchor_ref IS NOT NULL")
-            .all(latestRun.id) as { anchor_ref: string }[]).map((r) => r.anchor_ref))
+        ? (
+            db
+              .query(
+                "SELECT DISTINCT anchor_ref FROM assumption WHERE run_id = ? AND kind = 'live' AND anchor_ref IS NOT NULL",
+              )
+              .all(latestRun.id) as { anchor_ref: string }[]
+          ).map((r) => r.anchor_ref)
         : [];
 
       let changed = false;
@@ -160,7 +174,11 @@ export function runWatchCycle(db: Database, options: RunWatchCycleOptions): Watc
           result.notificationsSuppressed += notif.suppressedByCooldown.length;
         }
         if (rescenario.kill_criteria) {
-          const killNotif = evaluateKillCriteriaNotifications(db, { projectId, runId: ragResult.run_id, now: options.now });
+          const killNotif = evaluateKillCriteriaNotifications(db, {
+            projectId,
+            runId: ragResult.run_id,
+            now: options.now,
+          });
           result.killCriteriaNotifications = killNotif.length;
         }
       }
@@ -180,9 +198,13 @@ export function runWatchCycle(db: Database, options: RunWatchCycleOptions): Watc
 }
 
 function findTransitionId(db: Database, runId: string): string {
-  const row = db.query("SELECT id FROM rag_transition WHERE run_id = ? ORDER BY at DESC LIMIT 1").get(runId) as { id: string } | null;
+  const row = db.query("SELECT id FROM rag_transition WHERE run_id = ? ORDER BY at DESC LIMIT 1").get(runId) as {
+    id: string;
+  } | null;
   if (!row) {
-    throw new Error(`assessScenario reported a transition but no rag_transition row exists for run ${runId} — invariant violation.`);
+    throw new Error(
+      `assessScenario reported a transition but no rag_transition row exists for run ${runId} — invariant violation.`,
+    );
   }
   return row.id;
 }
@@ -236,7 +258,10 @@ export interface MarketSizingQueuePassResult {
   started: string[];
 }
 
-export async function runMarketSizingQueuePass(db: Database, options: { now: string }): Promise<MarketSizingQueuePassResult> {
+export async function runMarketSizingQueuePass(
+  db: Database,
+  options: { now: string },
+): Promise<MarketSizingQueuePassResult> {
   const jobRunId = jobRunStart(db, options.now);
   try {
     const result = recoverQueuePass(db);
@@ -260,7 +285,17 @@ if (import.meta.main) {
     const result = runWatchCycle(db, { now, rescenarios });
     const pipelinePass = await runPipelineResumePass(db, { now });
     const queuePass = await runMarketSizingQueuePass(db, { now });
-    console.log(JSON.stringify({ ...result, pipelineResume: pipelinePass.outcomes, marketSizingQueue: { healed: queuePass.healed, started: queuePass.started } }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ...result,
+          pipelineResume: pipelinePass.outcomes,
+          marketSizingQueue: { healed: queuePass.healed, started: queuePass.started },
+        },
+        null,
+        2,
+      ),
+    );
   } catch (err) {
     console.error(`watch:run failed: ${(err as Error).message}`);
     process.exit(1);

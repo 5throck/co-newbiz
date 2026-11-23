@@ -40,7 +40,8 @@ for (const width of [1024, 1280, 390]) {
     const res = await page.evaluate(() => {
       const side = document.querySelector(".app-sidebar") as HTMLElement | null;
       const sr = side?.getBoundingClientRect();
-      const sideVisible = !!side && getComputedStyle(side).visibility !== "hidden" && !!sr && sr.right > 0 && sr.width > 0;
+      const sideVisible =
+        !!side && getComputedStyle(side).visibility !== "hidden" && !!sr && sr.right > 0 && sr.width > 0;
       const hits: string[] = [];
       if (sideVisible && sr) {
         for (const el of document.querySelectorAll<HTMLElement>("body *")) {
@@ -48,15 +49,19 @@ for (const width of [1024, 1280, 390]) {
           if (cs.position !== "fixed" || el === side || side!.contains(el) || el.contains(side)) continue;
           const r = el.getBoundingClientRect();
           if (r.width === 0 || r.height === 0) continue;
-          if (r.left < sr.right && r.right > sr.left && r.top < sr.bottom && r.bottom > sr.top) hits.push(`${el.tagName}.${el.className}`);
+          if (r.left < sr.right && r.right > sr.left && r.top < sr.bottom && r.bottom > sr.top)
+            hits.push(`${el.tagName}.${el.className}`);
         }
       }
       return { hits, hscroll: document.documentElement.scrollWidth > window.innerWidth + 1, sideVisible };
     });
     const bad = res.hits.length > 0 || res.hscroll;
     if (bad) failures++;
-    console.log(`${width}px ${p.name}: sidebarVisible=${res.sideVisible} fixedOverlaps=${res.hits.length} hscroll=${res.hscroll} ${bad ? "FAIL" : "ok"}`);
-    if (shots && (width === 1280 || width === 390)) await page.screenshot({ path: `${shots}/u1-${p.name}-${width}.png` });
+    console.log(
+      `${width}px ${p.name}: sidebarVisible=${res.sideVisible} fixedOverlaps=${res.hits.length} hscroll=${res.hscroll} ${bad ? "FAIL" : "ok"}`,
+    );
+    if (shots && (width === 1280 || width === 390))
+      await page.screenshot({ path: `${shots}/u1-${p.name}-${width}.png` });
   }
   await ctx.close();
 }

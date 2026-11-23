@@ -87,7 +87,7 @@ export function getScriptWrapper(context: PlatformContext, scriptPath: string): 
 
   switch (context.shell) {
     case "powershell":
-      return `.\scripts\\${baseScript}.ps1`;
+      return `.scripts\\${baseScript}.ps1`;
     case "bash":
       return `./scripts/${baseScript}.sh`;
     case "cmd":

@@ -396,8 +396,8 @@ function checkFile(mdPath: string): void {
         const correctedFragment = fragment.replace(/§/g, "");
         const msg = `  ${rel}: anchor contains '§', which GitHub strips from slugs; use #${correctedFragment} instead → ${hrefClean}#${correctedFragment}`;
         if (isVariantDocs) {
-          templateDocWarnings.push(`  WARN${msg.replace(/^  /, " ")}`);
-          if (verbose) console.error(`  WARN${msg.replace(/^  /, " ")}`);
+          templateDocWarnings.push(`  WARN${msg.replace(/^ {2}/, " ")}`);
+          if (verbose) console.error(`  WARN${msg.replace(/^ {2}/, " ")}`);
         } else {
           brokenLinks++;
           errors.push(msg);
@@ -414,8 +414,8 @@ function checkFile(mdPath: string): void {
         const rel = mdPath.replace(WORKSPACE_ROOT + "\\", "").replace(WORKSPACE_ROOT + "/", "");
         const msg = `  ${rel}: broken anchor → ${hrefClean}#${fragment} (no matching heading in target)`;
         if (isVariantDocs) {
-          templateDocWarnings.push(`  WARN${msg.replace(/^  /, " ")}`);
-          if (verbose) console.error(`  WARN${msg.replace(/^  /, " ")}`);
+          templateDocWarnings.push(`  WARN${msg.replace(/^ {2}/, " ")}`);
+          if (verbose) console.error(`  WARN${msg.replace(/^ {2}/, " ")}`);
         } else {
           brokenLinks++;
           errors.push(msg);

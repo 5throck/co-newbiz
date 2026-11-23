@@ -207,7 +207,7 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
   work = work.replace(/`docs\/constitution\/`,\s*/g, "");
   work = work.replace(/,\s*`docs\/constitution\/`/g, "");
   work = work.replace(/`docs\/constitution\/`/g, "`docs/`");
-  work = work.replace(/(^|[^\/\w.-])docs\/constitution\/(?![\w.-])/gi, "$1docs/");
+  work = work.replace(/(^|[^/\w.-])docs\/constitution\/(?![\w.-])/gi, "$1docs/");
   // A-6. Target-aware: every ](docs/context.md) the rules above emit is
   // root-depth-shaped, which only resolves from the project root. Rewrite the
   // target to the path relative to the TARGET file's own directory — a

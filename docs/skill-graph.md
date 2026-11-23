@@ -44,7 +44,7 @@
 | `root/greenfield-feasibility` | L3 | 1.2.0 | root/greenfield-agent | root/phase 2 | root/community-partnership-planning (composes_with), root/permit-pathway-mapping (composes_with), root/regional-incentive-sourcing (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/talent-pipeline-planning (composes_with), root/wacc-input-session (follows) | — | — |
 | `root/group-level-review` | L3 | 1.1.0 | root/group-review-agent, root/process-governance-manager | — | — | — | — |
 | `root/growth-projection-modeling` | L3 | 1.2.0 | root/financial-analyst | root/phase 3 | root/financial-statement-analysis (composes_with), root/historical-financial-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (composes_with), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (follows), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
-| `root/handbook` | L3 | 0.6.0 | — | — | — | — | — |
+| `root/handbook` | L3 | 0.6.2 | — | — | — | — | — |
 | `root/handbook-sync-audit` | L3 | 1.0.5 | — | — | — | — | — |
 | `root/historical-financial-analysis` | L3 | 1.0.1 | root/financial-analyst | root/phase 3 | root/financial-statement-analysis (composes_with), root/investment-feasibility-modeling (composes_with), root/monte-carlo-simulation (composes_with), root/peer-benchmarking (follows), root/proxy-industry-chain (composes_with), root/quality-of-earnings (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (composes_with), root/stage-gate-governance (composes_with), root/unit-conversion-calibration (composes_with) | — | — |
 | `root/humanize-polish` | L3 | 1.1.0 | — | — | — | — | — |
@@ -418,6 +418,7 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261028-01` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261028-02` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
 | `dec:DEC-20261028-03` | decision | `root/decision-record`, `root/policy-and-procedure-governance` | — | — |
+| `dec:DEC-20261028-06` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261031-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261031-02` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261104-01` | decision | `root/decision-record`, `root/project-review` | — | — |

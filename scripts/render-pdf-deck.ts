@@ -112,7 +112,7 @@ function inspectHtmlDeck(htmlContent: string): DeckInspection {
 
   const pageRuleMatch = htmlContent.match(/@page\s*\{([^}]+)\}/i);
   const hasPageRules = !!pageRuleMatch;
-  let pageSizeRule: string | undefined = undefined;
+  let pageSizeRule: string | undefined;
 
   if (pageRuleMatch) {
     const sizeMatch = pageRuleMatch[1].match(/size:\s*([^;}]+)/i);

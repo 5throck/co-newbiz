@@ -78,7 +78,9 @@ export function nextAdrNumber(dir: string): number {
  */
 export function existingSlugFiles(dir: string, slug: string): string[] {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((name) => new RegExp(`^\\d{4}-${slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.md$`).test(name));
+  return readdirSync(dir).filter((name) =>
+    new RegExp(`^\\d{4}-${slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.md$`).test(name),
+  );
 }
 
 function adrTemplate(number: number, title: string, status: string, date: string): string {
@@ -138,7 +140,12 @@ if (import.meta.main) {
       console.error('adr:new requires --title "..."  (--status and --date default to Proposed / today)');
       process.exit(1);
     }
-    const result = scaffoldAdr({ title, status: flag(args, "--status"), date: flag(args, "--date"), dir: flag(args, "--dir") });
+    const result = scaffoldAdr({
+      title,
+      status: flag(args, "--status"),
+      date: flag(args, "--date"),
+      dir: flag(args, "--dir"),
+    });
     console.log(`Created ${result.file} (ADR-${String(result.number).padStart(4, "0")})`);
     console.log("Reminder: add the entry to docs/adr/README.md once the ADR content is written.");
   } catch (err) {

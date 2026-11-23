@@ -40,7 +40,19 @@ import { join, resolve } from "node:path";
  * Pre-FS's FS...) do NOT belong here — they belong in glossary/*.yaml.
  */
 export const GLOSSARY_LINT_ALLOWLIST = new Set([
-  "API", "CI", "DB", "HTTP", "HTTPS", "JSON", "MCP", "PR", "REST", "SSR", "UI", "URL", "YAML",
+  "API",
+  "CI",
+  "DB",
+  "HTTP",
+  "HTTPS",
+  "JSON",
+  "MCP",
+  "PR",
+  "REST",
+  "SSR",
+  "UI",
+  "URL",
+  "YAML",
 ]);
 
 export interface GlossaryLintOptions {
@@ -95,10 +107,7 @@ function markdownFiles(root: string): string[] {
  * jargon. Returns [token, line] pairs for matches outside the allowlist
  * plus the set of all matched (registered) tokens for the info report.
  */
-export function scanLine(
-  line: string,
-  registered: Set<string>,
-): { known: string[]; undefined: string[] } {
+export function scanLine(line: string, registered: Set<string>): { known: string[]; undefined: string[] } {
   const known: string[] = [];
   const undefinedTokens: string[] = [];
   const prose = line.replace(/`[^`]*`/g, " ");
@@ -131,9 +140,10 @@ function findProjectRoot(): string {
 /** Report paths relative to the project root when inside it (shorter lines), with / separators. */
 function displayPath(file: string): string {
   const PROJECT_ROOT = findProjectRoot();
-  const rel = file.startsWith(PROJECT_ROOT + "\\") || file.startsWith(PROJECT_ROOT + "/")
-    ? file.slice(PROJECT_ROOT.length + 1)
-    : file;
+  const rel =
+    file.startsWith(PROJECT_ROOT + "\\") || file.startsWith(PROJECT_ROOT + "/")
+      ? file.slice(PROJECT_ROOT.length + 1)
+      : file;
   return rel.split("\\").join("/");
 }
 
@@ -179,8 +189,8 @@ export function lintGlossaryUsage(options: GlossaryLintOptions = {}): GlossaryLi
   // Frequency-first ordering: the curator triages the loudest token first.
   const byToken = [...undefinedByToken.entries()].sort(
     (a, b) =>
-      [...b[1].values()].reduce((sum, e) => sum + e.count, 0) - [...a[1].values()].reduce((sum, e) => sum + e.count, 0) ||
-      a[0].localeCompare(b[0]),
+      [...b[1].values()].reduce((sum, e) => sum + e.count, 0) -
+        [...a[1].values()].reduce((sum, e) => sum + e.count, 0) || a[0].localeCompare(b[0]),
   );
   for (const [token, files] of byToken) {
     for (const [file, e] of [...files.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
@@ -197,7 +207,9 @@ export function printGlossaryLintReport(result: GlossaryLintResult, options: { q
     for (const k of result.known) console.log(`  ${k.term} — ${k.mentions} mention(s) across ${k.files} file(s)`);
   }
   if (result.undefined.length > 0) {
-    console.log(`\n[warn] acronym-like tokens not in glossary/*.yaml (${result.undefined.length} finding(s)) — candidates for the glossary, not for the allowlist:`);
+    console.log(
+      `\n[warn] acronym-like tokens not in glossary/*.yaml (${result.undefined.length} finding(s)) — candidates for the glossary, not for the allowlist:`,
+    );
     for (const u of result.undefined) console.log(`  ${u.token} — ${u.file}:${u.line} (${u.count} occurrence(s))`);
   }
   console.log(

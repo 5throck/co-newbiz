@@ -18,5 +18,8 @@ if (argv.includes("--json")) {
   console.log("No orphaned active memberships.");
 } else {
   console.log(`${rows.length} orphaned active membership(s):`);
-  for (const r of rows) console.log(`${r.reason}\t${r.user_id}\t${r.project_id}\t${r.project_role}${r.has_active_insider_entry ? "\t(insider)" : ""}`);
+  for (const r of rows)
+    console.log(
+      `${r.reason}\t${r.user_id}\t${r.project_id}\t${r.project_role}${r.has_active_insider_entry ? "\t(insider)" : ""}`,
+    );
 }

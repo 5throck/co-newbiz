@@ -63,9 +63,9 @@ import {
   buildScopeGraph,
   parseFrontmatter,
   parseRelatesTo,
-  SkillGraph,
-  GraphNode,
-  GraphEdge,
+  type SkillGraph,
+  type GraphNode,
+  type GraphEdge,
 } from "./generate-skill-graph.ts";
 import { findCapabilityDivergence } from "./lib/skill-graph-compat.ts";
 import type { SkillGraphV2 } from "./lib/skill-graph-compat.ts";

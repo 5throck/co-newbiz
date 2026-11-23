@@ -49,29 +49,23 @@ describe("check-structure.ts", () => {
 
   test("catches extra </div> that closes outer tags (layout/article)", () => {
     // The exact defect that broke ch09/ch11 in intro-to-ai-harness.
-    writeHtml(
-      "index.html",
-      CLEAN.replace("</div>\n  </article>", "</div>\n  </div>\n  </article>"),
-    );
+    writeHtml("index.html", CLEAN.replace("</div>\n  </article>", "</div>\n  </div>\n  </article>"));
     const errors = checkStructure(join(tmpDir, "docs"));
     expect(errors.some((e) => e.detail.includes("closes an outer tag"))).toBe(true);
   });
 
-  test("catches nested <div class=\"code-block\">", () => {
+  test('catches nested <div class="code-block">', () => {
     writeHtml(
       "index.html",
       CLEAN.replace('<div class="code-block">\n<pre>', '<div class="code-block">\n<div class="code-block">\n<pre>'),
     );
     const errors = checkStructure(join(tmpDir, "docs"));
-    expect(errors.some((e) => e.detail.includes("nested <div class=\"code-block\">"))).toBe(true);
+    expect(errors.some((e) => e.detail.includes('nested <div class="code-block">'))).toBe(true);
   });
 
   test("catches stray characters after closing tag (</div>d>)", () => {
     // The exact defect found in ch02_en.
-    writeHtml(
-      "index.html",
-      CLEAN.replace("</div>\n  </article>", "</div>d>\n  </article>"),
-    );
+    writeHtml("index.html", CLEAN.replace("</div>\n  </article>", "</div>d>\n  </article>"));
     const errors = checkStructure(join(tmpDir, "docs"));
     expect(errors.some((e) => e.detail.includes("stray characters after closing tag"))).toBe(true);
   });

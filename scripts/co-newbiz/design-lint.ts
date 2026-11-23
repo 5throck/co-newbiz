@@ -69,17 +69,23 @@ const BODY_REM = 0.875;
     for (const d of m[3].matchAll(/(?:^|[;\s])font-size:\s*(\d*\.?\d+)(rem|px|em)\b/g)) {
       const literal = `${d[1]}${d[2]}`;
       if (d[2] === "em") {
-        emNotes.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is em-relative (scales with the parent) — fold to var(--fs-body)/var(--fs-caption) when possible`);
+        emNotes.push(
+          `app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is em-relative (scales with the parent) — fold to var(--fs-body)/var(--fs-caption) when possible`,
+        );
         continue;
       }
       const px = d[2] === "rem" ? Number(d[1]) * REM_PX : Number(d[1]);
       if (px < FONT_FLOOR_PX) {
         if (isCaption) continue; // design §6: .caption is the sanctioned sub-floor case
-        violations.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is below the 14px floor — use var(--fs-body) or var(--fs-caption)`);
+        violations.push(
+          `app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is below the 14px floor — use var(--fs-body) or var(--fs-caption)`,
+        );
       } else if (d[2] === "rem" && Number(d[1]) > BODY_REM && Number(d[1]) < 1) {
         // band (b) is rem-only: px literals do not scale with the root, so the
         // 15px-root dip that motivates the band cannot occur for them.
-        violations.push(`app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is a body-range non-token literal (below 14px at the 15px root step) — token-fold to var(--fs-body) or var(--fs-caption)`);
+        violations.push(
+          `app/styles.css: "${selector.slice(0, 60)}" font-size ${literal} is a body-range non-token literal (below 14px at the 15px root step) — token-fold to var(--fs-body) or var(--fs-caption)`,
+        );
       }
     }
   }
@@ -91,7 +97,8 @@ const targets = [...walk(join(WEB, "components")), ...walk(join(WEB, "app"))];
 for (const file of targets) {
   const src = readFileSync(file, "utf8");
   const rel = relative(WEB, file);
-  if (/onInput=/.test(src)) violations.push(`${rel}: onInput= — use onChange (Korean IME composition breaks with onInput)`);
+  if (/onInput=/.test(src))
+    violations.push(`${rel}: onInput= — use onChange (Korean IME composition breaks with onInput)`);
 
   // 3. nested <main> — a <main> opened while another is still open (textual
   //    depth scan; separate JSX branches that each render one <main> pass,
@@ -143,7 +150,9 @@ for (const file of targets) {
     const attrs = src.slice(open.index ?? 0, i);
     if (!/className\s*=/.test(attrs) && !/\{\s*\.\.\./.test(attrs)) {
       const line = src.slice(0, open.index ?? 0).split("\n").length;
-      violations.push(`${rel}:${line}: <button> without a design class — add className (btn-primary / btn-ghost / btn-danger / control-chip / …)`);
+      violations.push(
+        `${rel}:${line}: <button> without a design class — add className (btn-primary / btn-ghost / btn-danger / control-chip / …)`,
+      );
     }
   }
 
@@ -160,24 +169,37 @@ for (const file of targets) {
   for (const m of src.matchAll(tableRe)) {
     const t = m[0];
     if (!/data-table/.test(t) || !/sizing-actions-cell/.test(t)) continue;
-    if (!/list-table/.test(t)) violations.push(`${rel}: row-action table without .list-table — apply the list-table standard (design-components.md)`);
+    if (!/list-table/.test(t))
+      violations.push(
+        `${rel}: row-action table without .list-table — apply the list-table standard (design-components.md)`,
+      );
     const head = t.match(/<thead[\s\S]*?<\/thead>/)?.[0] ?? "";
-    if (!/작업/.test(head) && !/\(\s*["']actions["']\s*\)/.test(head)) violations.push(`${rel}: actions column without 작업 header — every list-table column must be headed`);
+    if (!/작업/.test(head) && !/\(\s*["']actions["']\s*\)/.test(head))
+      violations.push(`${rel}: actions column without 작업 header — every list-table column must be headed`);
   }
 
   // 1. hardcoded colors in tsx — 3/4/6/8-digit hex, rgba(), hsl()
   const hexHits = src.match(/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b/g) ?? [];
-  if (hexHits.length > 0) violations.push(`${rel}: hardcoded hex color(s) (${hexHits.length}) — use CSS variables from styles.css`);
+  if (hexHits.length > 0)
+    violations.push(`${rel}: hardcoded hex color(s) (${hexHits.length}) — use CSS variables from styles.css`);
   if (/rgba?\(\s*\d/.test(src)) violations.push(`${rel}: hardcoded rgba() color — use CSS variables from styles.css`);
   if (/hsl\(\s*\d/.test(src)) violations.push(`${rel}: hardcoded hsl() color — use CSS variables from styles.css`);
   // 6. font-size floor — Tailwind arbitrary text-[<n>rem|px] below 0.875rem
   for (const m of src.matchAll(/text-\[(\d*\.?\d+)(rem|px)\]/g)) {
     const px = m[2] === "rem" ? Number(m[1]) * 16 : Number(m[1]);
-    if (px < FONT_FLOOR_PX) violations.push(`${rel}: text-[${m[1]}${m[2]}] is below the 14px floor — use var(--fs-body), or var(--fs-caption) for captions`);
+    if (px < FONT_FLOOR_PX)
+      violations.push(
+        `${rel}: text-[${m[1]}${m[2]}] is below the 14px floor — use var(--fs-body), or var(--fs-caption) for captions`,
+      );
   }
-  const semanticColorUtilities = src.match(/\b(?:bg|text|border)-(?:red|amber|yellow|orange|green|emerald|blue|sky|cyan|slate|gray|zinc|neutral|stone|purple|violet|pink|rose)-\d{2,3}(?:\/\d{1,3})?\b/g) ?? [];
+  const semanticColorUtilities =
+    src.match(
+      /\b(?:bg|text|border)-(?:red|amber|yellow|orange|green|emerald|blue|sky|cyan|slate|gray|zinc|neutral|stone|purple|violet|pink|rose)-\d{2,3}(?:\/\d{1,3})?\b/g,
+    ) ?? [];
   if (semanticColorUtilities.length > 0) {
-    violations.push(`${rel}: Tailwind semantic color utility/ies (${[...new Set(semanticColorUtilities)].join(", ")}) — use CSS variables from styles.css`);
+    violations.push(
+      `${rel}: Tailwind semantic color utility/ies (${[...new Set(semanticColorUtilities)].join(", ")}) — use CSS variables from styles.css`,
+    );
   }
 }
 

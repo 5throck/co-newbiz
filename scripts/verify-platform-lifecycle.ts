@@ -328,7 +328,6 @@ export function checkG(): void {
           `.agents/commands/ ↔ .claude/commands/: lockstep holds (${claudeFiles.length - AGENTS_COMMANDS_EXCLUDED.size} governed file(s), ${AGENTS_COMMANDS_ADAPTED.size} adapted, ${AGENTS_COMMANDS_EXCLUDED.size} excluded)`,
         );
       }
-      continue;
     }
   }
 }

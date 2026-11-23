@@ -99,12 +99,21 @@ function main(): void {
 
   db.transaction(() => {
     // industry_driver
-    let driver = db.query("SELECT id FROM industry_driver WHERE code = ?").get("hydraulic-breaker-demand") as { id: string } | null;
+    let driver = db.query("SELECT id FROM industry_driver WHERE code = ?").get("hydraulic-breaker-demand") as {
+      id: string;
+    } | null;
     if (!driver) {
       const id = ulid();
       db.run(
         "INSERT INTO industry_driver (id, code, label_ko, description, source_series_id, created_at) VALUES (?,?,?,?,?,?)",
-        [id, "hydraulic-breaker-demand", "유압브레이커 수요", `Region×segment×scenario demand matrix, see ${SOURCE_DOC} §4`, null, now],
+        [
+          id,
+          "hydraulic-breaker-demand",
+          "유압브레이커 수요",
+          `Region×segment×scenario demand matrix, see ${SOURCE_DOC} §4`,
+          null,
+          now,
+        ],
       );
       driver = { id };
     }
@@ -112,7 +121,9 @@ function main(): void {
     // md_industry row for hydraulic breaker — real KSIC 29241 (건설 및 채광용
     // 기계장비 제조업, DART-verified via Soosan group affiliates). The legacy
     // 'HYD-BRK' sentinel was retired in ADR-0112; migrate it if encountered.
-    let industry = db.query("SELECT id FROM md_industry WHERE ksic_code IN (?, ?)").get("29241", "HYD-BRK") as { id: string } | null;
+    let industry = db.query("SELECT id FROM md_industry WHERE ksic_code IN (?, ?)").get("29241", "HYD-BRK") as {
+      id: string;
+    } | null;
     if (!industry) {
       const id = ulid();
       db.run(
@@ -128,13 +139,19 @@ function main(): void {
     // across re-runs (not recreated each time) so the result rows' UNIQUE
     // key (run_id, scenario, industry_id, metric, region_code, segment_code)
     // actually collapses duplicates on re-run, keeping this script idempotent.
-    let run = db.query("SELECT id FROM run WHERE project_id = ? AND label = ?").get(projectId, "hydraulic-breaker-matrix-seed") as { id: string } | null;
+    let run = db
+      .query("SELECT id FROM run WHERE project_id = ? AND label = ?")
+      .get(projectId, "hydraulic-breaker-matrix-seed") as { id: string } | null;
     if (!run) {
       const runId = ulid();
-      db.run(
-        "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
-        [runId, projectId, "hydraulic-breaker-matrix-seed", "seed-script-no-input-hash", "seed-hydraulic-breaker-matrix.ts", now],
-      );
+      db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+        runId,
+        projectId,
+        "hydraulic-breaker-matrix-seed",
+        "seed-script-no-input-hash",
+        "seed-hydraulic-breaker-matrix.ts",
+        now,
+      ]);
       run = { id: runId };
     }
     const runId = run.id;
@@ -171,7 +188,9 @@ function main(): void {
     }
   })();
 
-  console.log(`Seeded hydraulic-breaker matrix for project '${projectId}': ${MATRIX.length} region×segment nodes, ${MATRIX.length * 3} scenario results.`);
+  console.log(
+    `Seeded hydraulic-breaker matrix for project '${projectId}': ${MATRIX.length} region×segment nodes, ${MATRIX.length * 3} scenario results.`,
+  );
 }
 
 main();

@@ -105,7 +105,11 @@ export async function renderReport(
   }
 
   const outDir = options.outDir ? resolve(options.outDir) : dirname(absInput);
-  const baseName = markdownPath.replace(/[\\/]/g, "/").split("/").pop()!.replace(/\.[^.]+$/, "");
+  const baseName = markdownPath
+    .replace(/[\\/]/g, "/")
+    .split("/")
+    .pop()!
+    .replace(/\.[^.]+$/, "");
 
   const results: RenderResult[] = [];
   for (const fmt of formats) {
@@ -116,7 +120,11 @@ export async function renderReport(
     }
     const stdout = await runPythonRenderer(RENDER_SCRIPTS[fmt], args);
     // The renderer prints exactly one JSON summary line on stdout.
-    const jsonLine = stdout.trim().split("\n").filter((l) => l.startsWith("{")).pop();
+    const jsonLine = stdout
+      .trim()
+      .split("\n")
+      .filter((l) => l.startsWith("{"))
+      .pop();
     if (!jsonLine) {
       throw new Error(`${RENDER_SCRIPTS[fmt]} produced no JSON summary: ${stdout}`);
     }
@@ -128,14 +136,14 @@ export async function renderReport(
 if (import.meta.main) {
   const [markdownPath, ...rest] = process.argv.slice(2);
   if (!markdownPath) {
-    console.error("Usage: bun scripts/co-newbiz/report.ts <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary]");
+    console.error(
+      "Usage: bun scripts/co-newbiz/report.ts <markdown-path> [--format docx,pdf,hwpx] [--out-dir <dir>] [--no-glossary]",
+    );
     process.exit(1);
   }
   const fmtIdx = rest.indexOf("--format");
   const outDirIdx = rest.indexOf("--out-dir");
-  const formats = (fmtIdx >= 0 ? rest[fmtIdx + 1] : "docx,pdf,hwpx")
-    .split(",")
-    .map((s) => s.trim()) as ReportFormat[];
+  const formats = (fmtIdx >= 0 ? rest[fmtIdx + 1] : "docx,pdf,hwpx").split(",").map((s) => s.trim()) as ReportFormat[];
   const outDir = outDirIdx >= 0 ? rest[outDirIdx + 1] : undefined;
   const noGlossary = rest.includes("--no-glossary");
 

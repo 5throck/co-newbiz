@@ -39,7 +39,8 @@ export function runRestore(backupFile: string, dbPath?: string): RestoreVerifica
   const manifestFile = `${backupFile}.manifest.json`;
 
   if (!existsSync(backupFile)) throw new Error(`Backup file not found: ${backupFile}`);
-  if (!existsSync(manifestFile)) throw new Error(`Backup manifest not found: ${manifestFile} — cannot verify restore without it.`);
+  if (!existsSync(manifestFile))
+    throw new Error(`Backup manifest not found: ${manifestFile} — cannot verify restore without it.`);
 
   const manifest = JSON.parse(readFileSync(manifestFile, "utf-8")) as { tableRowCounts: Record<string, number> };
 

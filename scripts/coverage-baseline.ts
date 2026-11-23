@@ -35,7 +35,6 @@ export function parseLcov(text: string): Coverage {
       const file = line.slice(3).replaceAll("\\", "/");
       skip = file.startsWith("tests/") || file.includes("/tests/");
     } else if (skip) {
-      continue;
     } else if (line.startsWith("LF:")) lf += Number(line.slice(3));
     else if (line.startsWith("LH:")) lh += Number(line.slice(3));
     else if (line.startsWith("FNF:")) fnf += Number(line.slice(4));

@@ -273,7 +273,10 @@ function hasUnresolvedKeyLiteral(body: string): boolean {
   for (let i = 0; i < body.length; i++) {
     const c = body[i];
     if (c === "(") {
-      stack.push(TRANSLATOR_CALL_BEFORE.test(body.slice(Math.max(0, i - 12), i)) || TRANSLATOR_FIRST_ARG.test(body.slice(i + 1, i + 16)));
+      stack.push(
+        TRANSLATOR_CALL_BEFORE.test(body.slice(Math.max(0, i - 12), i)) ||
+          TRANSLATOR_FIRST_ARG.test(body.slice(i + 1, i + 16)),
+      );
     } else if (c === ")") stack.pop();
     else if (c === '"' || c === "'" || c === "`") {
       const m = DOTTED_KEY_LITERAL.exec(body.slice(i, i + 200));
@@ -292,7 +295,8 @@ function hasUnresolvedKeyLiteral(body: string): boolean {
 export function findLabelKeyMaps(src: string): string[] {
   const code = stripCommentsAndStringsKeepStructure(src);
   const names: string[] = [];
-  const re = /(?:\bconst\s+|\bfunction\s+)([A-Za-z_$][\w$]*)\s*(?::[^=]*?)?(?:=\s*)?(?:async\s*)?\(\s*[A-Za-z_]\w*\s*:\s*TranslatorFn\b/g;
+  const re =
+    /(?:\bconst\s+|\bfunction\s+)([A-Za-z_$][\w$]*)\s*(?::[^=]*?)?(?:=\s*)?(?:async\s*)?\(\s*[A-Za-z_]\w*\s*:\s*TranslatorFn\b/g;
   for (let m = re.exec(code); m; m = re.exec(code)) {
     const closeParen = code.indexOf(")", m.index + m[0].length);
     if (closeParen < 0) continue;
@@ -338,10 +342,15 @@ export function findRawMapUsages(src: string, mapName: string): number[] {
     if (ln < 0) ln = 0;
     const line = lines[ln];
     // Skip the definition itself.
-    if (/(?:\bconst|\bfunction|\bexport\s+const)\s+[A-Za-z_$][\w$]*\s*(?::[^=]*)?=?\s*\(?\s*$/.test(line.slice(0, m.index - lineStart[ln]) + "")) continue;
+    if (
+      /(?:\bconst|\bfunction|\bexport\s+const)\s+[A-Za-z_$][\w$]*\s*(?::[^=]*)?=?\s*\(?\s*$/.test(
+        line.slice(0, m.index - lineStart[ln]) + "",
+      )
+    )
+      continue;
     if (new RegExp(`(?:const|function)\\s+${mapName}\\b`).test(line)) continue;
     // Inside a translator call?
-    let depth = 0;
+    const depth = 0;
     let wrapped = false;
     const stack: boolean[] = [];
     for (let i = Math.max(0, m.index - 400); i < m.index; i++) {
@@ -393,8 +402,18 @@ export interface DynamicKeyFamily {
 
 /** Families shipped today, all sourced from the retention registry SSOT. */
 export const DYNAMIC_KEY_FAMILIES: readonly DynamicKeyFamily[] = [
-  { prefix: "handling_", namespace: "admin.ops", valuesSource: "db/lib/retention-registry.ts", typeName: "RetentionHandling" },
-  { prefix: "handlingHint_", namespace: "admin.ops", valuesSource: "db/lib/retention-registry.ts", typeName: "RetentionHandling" },
+  {
+    prefix: "handling_",
+    namespace: "admin.ops",
+    valuesSource: "db/lib/retention-registry.ts",
+    typeName: "RetentionHandling",
+  },
+  {
+    prefix: "handlingHint_",
+    namespace: "admin.ops",
+    valuesSource: "db/lib/retention-registry.ts",
+    typeName: "RetentionHandling",
+  },
 ];
 
 /**
@@ -435,7 +454,10 @@ export interface DynamicKeyCoverageViolation {
 }
 
 function loadLocaleCatalog(projectRoot: string, locale: string): Record<string, unknown> {
-  return JSON.parse(readFileSync(join(projectRoot, "app/web-next/locales", `${locale}.json`), "utf8")) as Record<string, unknown>;
+  return JSON.parse(readFileSync(join(projectRoot, "app/web-next/locales", `${locale}.json`), "utf8")) as Record<
+    string,
+    unknown
+  >;
 }
 
 /**
@@ -583,13 +605,21 @@ if (import.meta.main) {
     } else {
       printResult(result);
       for (const d of dotted) {
-        console.log(`i18n-lint  ${d.file}:${d.line}  ${d.map}() (keys defined in ${d.definedIn}) rendered without a translator call`);
+        console.log(
+          `i18n-lint  ${d.file}:${d.line}  ${d.map}() (keys defined in ${d.definedIn}) rendered without a translator call`,
+        );
       }
-      console.log(`i18n-lint dotted-keys: ${dotted.length === 0 ? "PASS" : "FAIL"} — ${dotted.length} unresolved key(s).`);
+      console.log(
+        `i18n-lint dotted-keys: ${dotted.length === 0 ? "PASS" : "FAIL"} — ${dotted.length} unresolved key(s).`,
+      );
       for (const v of dynamic) {
-        console.log(`i18n-lint  ${v.locale}  ${v.key}  (values: ${v.valuesSource} ${v.typeName}) missing from the locale catalog`);
+        console.log(
+          `i18n-lint  ${v.locale}  ${v.key}  (values: ${v.valuesSource} ${v.typeName}) missing from the locale catalog`,
+        );
       }
-      console.log(`i18n-lint dynamic-keys: ${dynamic.length === 0 ? "PASS" : "FAIL"} — ${dynamic.length} missing catalog key(s).`);
+      console.log(
+        `i18n-lint dynamic-keys: ${dynamic.length === 0 ? "PASS" : "FAIL"} — ${dynamic.length} missing catalog key(s).`,
+      );
     }
     process.exit(result.violations.length === 0 && dotted.length === 0 && dynamic.length === 0 ? 0 : 1);
   }

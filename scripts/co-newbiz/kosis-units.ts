@@ -19,19 +19,19 @@ export interface KosisUnitMapping {
 }
 
 export const KOSIS_UNITS: Record<string, KosisUnitMapping> = {
-  "명": { unitCode: "persons", dimension: "count", siCoefficient: 1 },
-  "개소": { unitCode: "count", dimension: "count", siCoefficient: 1 },
-  "억원": { unitCode: "krw_100m", dimension: "krw", siCoefficient: 1e8 },
-  "조원": { unitCode: "krw_1t", dimension: "krw", siCoefficient: 1e12 },
-  "백만원": { unitCode: "krw_1m", dimension: "krw", siCoefficient: 1e6 },
+  명: { unitCode: "persons", dimension: "count", siCoefficient: 1 },
+  개소: { unitCode: "count", dimension: "count", siCoefficient: 1 },
+  억원: { unitCode: "krw_100m", dimension: "krw", siCoefficient: 1e8 },
+  조원: { unitCode: "krw_1t", dimension: "krw", siCoefficient: 1e12 },
+  백만원: { unitCode: "krw_1m", dimension: "krw", siCoefficient: 1e6 },
   "%": { unitCode: "percent", dimension: "ratio", siCoefficient: 0.01 },
-  "원": { unitCode: "krw", dimension: "krw", siCoefficient: 1 },
-  "지수": { unitCode: "index", dimension: "index", siCoefficient: 1 },
+  원: { unitCode: "krw", dimension: "krw", siCoefficient: 1 },
+  지수: { unitCode: "index", dimension: "index", siCoefficient: 1 },
   "2020=100": { unitCode: "index", dimension: "index", siCoefficient: 1 },
-  "톤": { unitCode: "ton", dimension: "mass", siCoefficient: 1000 },
-  "kW": { unitCode: "kw", dimension: "power", siCoefficient: 1000 },
-  "MW": { unitCode: "mw", dimension: "power", siCoefficient: 1e6 },
-  "GWh": { unitCode: "gwh", dimension: "energy", siCoefficient: 3.6e12 },
+  톤: { unitCode: "ton", dimension: "mass", siCoefficient: 1000 },
+  kW: { unitCode: "kw", dimension: "power", siCoefficient: 1000 },
+  MW: { unitCode: "mw", dimension: "power", siCoefficient: 1e6 },
+  GWh: { unitCode: "gwh", dimension: "energy", siCoefficient: 3.6e12 },
 };
 
 /** Resolve a KOSIS unit string; null means quarantine (unknown unit). */

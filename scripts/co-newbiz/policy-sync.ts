@@ -42,7 +42,10 @@ function titleFrom(markdown: string, fallback: string): string {
 
 async function hashAsync(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).slice(0, 8).join("");
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .slice(0, 8)
+    .join("");
 }
 
 export function scanPolicyDocs(): PolicyDoc[] {
@@ -127,11 +130,23 @@ function insertPolicy(db: ReturnType<typeof getDb>, doc: PolicyDoc, supersededBy
   const id = ulid();
   let entityId: string | null = null;
   if (doc.entityCode) {
-    entityId = (db.query("SELECT id FROM md_entity WHERE entity_code = ?").get(doc.entityCode) as { id: string } | undefined)?.id ?? null;
+    entityId =
+      (db.query("SELECT id FROM md_entity WHERE entity_code = ?").get(doc.entityCode) as { id: string } | undefined)
+        ?.id ?? null;
   }
   db.run(
     "INSERT INTO policy (id, scope, entity_id, region_code, name, version, effective_from, superseded_by, doc_path) VALUES (?,?,?,?,?,?,?,?,?)",
-    [id, doc.scope, entityId, null, doc.name, doc.contentHash, new Date().toISOString().slice(0, 10), supersededBy, doc.path],
+    [
+      id,
+      doc.scope,
+      entityId,
+      null,
+      doc.name,
+      doc.contentHash,
+      new Date().toISOString().slice(0, 10),
+      supersededBy,
+      doc.path,
+    ],
   );
   return id;
 }

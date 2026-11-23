@@ -64,6 +64,7 @@ import {
   partOfS8Tab,
   primaryKeyOfS8Tab,
   resolveS8Tab,
+  s8BareTabRedirect,
   shouldRedirectTargetsTab,
   type CaseAttainmentEntry,
 } from "../../lib/business-goals-view.ts";
@@ -263,6 +264,17 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     if (urlSync && shouldRedirectTargetsTab(tabParam, greenfield))
       router.replace(`/projects/${projectId}/business-case?tab=overview`, { scroll: false });
   }, [urlSync, tabParam, greenfield, projectId, router]);
+  // Defect remediation 2026-11-23 (design 2026-11-21-s8-overview-tab) — the ABSENT `?tab=` on
+  // the page-mode route lands on 개요: that tab's canonical URL is the project page itself
+  // (seg ""), so bare /projects/{id}/business-case redirects there. The decision lives in
+  // lib/business-goals-view.ts (s8BareTabRedirect) and keys on the raw param being null —
+  // every explicit value (including `?tab=overview`, the financial sub-tab alias) resolves
+  // exactly as before.
+  useEffect(() => {
+    if (!urlSync) return;
+    const dest = s8BareTabRedirect(projectId, searchParams.get("tab"));
+    if (dest) router.replace(dest, { scroll: false });
+  }, [urlSync, searchParams, projectId, router]);
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   const readOnlyAdmin = isReadOnlyAdmin(me?.role);

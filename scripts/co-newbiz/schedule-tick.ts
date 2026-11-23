@@ -97,7 +97,11 @@ export function runTick(db: any, opts: { env: SchedulerEnv; now: Date; spawn: Sp
       return null;
     } catch (e) {
       const id = startJobRun(db, { jobKey: req.jobKey, env, trigger: req.trigger, actor: req.actor, now });
-      finishJobRun(db, id, { status: "skipped", now, detail: { reason: "spawn_failed", error: scrubSecrets(e, { maxLen: 300 }) } });
+      finishJobRun(db, id, {
+        status: "skipped",
+        now,
+        detail: { reason: "spawn_failed", error: scrubSecrets(e, { maxLen: 300 }) },
+      });
       return id;
     }
   };
@@ -106,8 +110,16 @@ export function runTick(db: any, opts: { env: SchedulerEnv; now: Date; spawn: Sp
     summary.dispatched.push({ jobKey: d.jobKey, trigger: d.trigger, fireMinute: d.fireMinute });
   }
   for (const r of claimQueuedRequests(db)) {
-    const row = db.query("SELECT timeout_sec FROM schedule_job WHERE job_key = ?").get(r.jobKey) as { timeout_sec: number } | null;
-    const failedRun = safeSpawn({ jobKey: r.jobKey, trigger: "manual", actor: r.requestedBy, requestId: r.id, timeoutSec: row?.timeout_sec ?? getJobHandler(r.jobKey)?.timeoutSec ?? 600 });
+    const row = db.query("SELECT timeout_sec FROM schedule_job WHERE job_key = ?").get(r.jobKey) as {
+      timeout_sec: number;
+    } | null;
+    const failedRun = safeSpawn({
+      jobKey: r.jobKey,
+      trigger: "manual",
+      actor: r.requestedBy,
+      requestId: r.id,
+      timeoutSec: row?.timeout_sec ?? getJobHandler(r.jobKey)?.timeoutSec ?? 600,
+    });
     if (failedRun) completeRequest(db, r.id, "done", failedRun);
     summary.dispatched.push({ jobKey: r.jobKey, trigger: "manual", requestId: r.id });
   }
@@ -134,7 +146,9 @@ if (import.meta.main) {
     loadRootEnvPipelineKeys();
     const db = getDb(dbPath);
     if (!schedulerSchemaReady(db)) {
-      console.error("schedule-tick: scheduler schema missing (migration 0183 not applied) - run `bun db/migrate.ts` first");
+      console.error(
+        "schedule-tick: scheduler schema missing (migration 0183 not applied) - run `bun db/migrate.ts` first",
+      );
       process.exit(2);
     }
     const dry = argv.includes("--dry-run");

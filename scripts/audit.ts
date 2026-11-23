@@ -1,4 +1,79 @@
-// @version 2.64.0
+// @version 2.70.0
+// v2.70.0 (2026-11-18, design docs/designs/2026-11-18-subfile-mirror-drift-gate-design.md,
+//          T-20261118-002): new check arm — L0↔L1 mirror parity EARLY SIGNAL
+//          (workspace root only, placed after the VERSION_MANIFEST gate). Calls the
+//          already-exported pure collector qa-gate.ts collectMirrorParityFailures
+//          (T-20260912-021) and reports each failure as an audit [FAIL] row — the
+//          comparison semantics are unchanged (recursive content compare + one-sided
+//          detection over scripts/ and L0+L1 skill dirs, CRLF/CONSTITUTION-scrub
+//          tolerant). Motivation (T-20261117-011 chain): skill SUBFILES have no
+//          propagation path (propagation-map.json include_pattern "*/SKILL.md" never
+//          crosses a slash) and qa-gate step 4 was the only detector, short-circuited
+//          behind audit step 1 — drift surfaced only at full qa-gate runs. Import
+//          safety: qa-gate.ts is mirrored to L1 alongside audit.ts, so the edge
+//          survives delivery in both layers (no layer-filter.ts dangle).
+// v2.69.0 (2026-11-18, DEC-20261118-01 direct fix — no ticket): Fail-then-increment
+//          double-count sweep across 5 check sites (same class as the v2.68.0 §3.5
+//          accounting fix): §3.7 homoglyph, §3.8 zero-width, agent-state sync,
+//          variant-skill-sections, agent Required Tools. Each kept an
+//          `errors += <counter>` epilogue after reporting via Fail() — which already
+//          increments — so N failures were counted 2N in the summary. The epilogues
+//          are deleted; Fail() is the sole increment everywhere. §3.7/§3.8 overflow
+//          lines (`... and N more`) are one Fail() call each, so their gate counters
+//          now count calls, not occurrences; the counters keep their Pass-gate role
+//          (=== 0) only. No detection semantics changed. Pinned by
+//          tests/unit/audit-fail-count-accounting.test.ts.
+// v2.68.0 (2026-11-17, spec docs/designs/2026-11-17-audit-external-scan-fix-design.md):
+//          §3.5 UTF-8 BOM check — two fixes. (1) Scan scope: in a scaffolded project
+//          (docs/context.md present → searchDirs=["."]) the whole tree was walked with
+//          no external/ skip, so BOM-bearing .md files inside a gitignored
+//          external-dependency clone (install_dir external/<id>, external-deps
+//          machinery D5 — never workspace content) failed the workspace UTF-8 gate
+//          (QuickDL: 5 upstream BOM files). The census now lives in
+//          lib/encoding-utils.ts v1.4.0 scanMarkdownBomFiles() (extracted verbatim for
+//          unit-testability, audit-hook-sweep precedent) with `external` in its skip
+//          set. (2) Accounting: the `errors += bomErrors` epilogue double-counted —
+//          Fail() already increments, so N BOM files reported as 2N failed checks;
+//          the epilogue is deleted and Fail() is the sole increment (pinned by
+//          tests/unit/encoding-utils-bom-scan.test.ts).
+// v2.67.0 (2026-11-14, spec docs/designs/2026-11-14-consult-output-destination-and-constitution-refs-ruling.md
+//          §5-item4, U-20261113-010): L0 Leakage scan-scope extension — .ts and .json under templates/
+//          join the sweep at WARN severity (soak-before-FAIL). .ts lines carrying the l0-functional:
+//          marker are exempt (functional root-detection guards); .json files in the functional-registry
+//          exemption set (workspace-schema.json, propagation-map.json) are skipped. The .md arm keeps
+//          ERROR severity unchanged.
+// v2.66.1 (2026-11-12, U-20261112-007): the --spec-exempt comment and the invalid-code error message
+//          cited "AGENTS.md §5.1.1"; the Design Gate exemption categories now live in
+//          docs/governance/agents/execution-plan-templates.md §5.1.1. Strings only, no behavior change.
+// v2.66.0 (2026-11-11, T-20261110-012 Scope C-C — DEC-20261110-04 PR-3, design
+//          docs/designs/2026-11-10-delivery-gating-hardening-design.md §4 C-C): new
+//          WARN arm `hermetic-test-roots` (workspace root only) — flags
+//          `const <root-like name> = process.cwd()` in tests/unit/**/*.test.ts and
+//          templates/**/tests/**/*.test.ts. A cwd-derived workspace root makes a
+//          test pass at the root and fail with a project as cwd (the
+//          security-validator.test.ts landmine). Detector:
+//          scripts/lib/hermetic-test-roots.ts. WARN-only; generalization is a
+//          follow-up.
+// v2.65.0 (2026-11-10, design docs/designs/2026-11-09-delivered-scripts-strict-profile-design.md
+//          §4.5, U-20261108-001 / DEC-20261109-01): new check arm — Biome strict-profile
+//          gate. When @biomejs/biome resolves in the invoking tree, runs `biome check`
+//          over the audit's script roots (scripts/ + templates/common/scripts/handbook/)
+//          and Fails on any report; when it does not resolve, emits a [SKIP] line
+//          (typecheck.ts v1.2.0 convention — a self-skipped gate never reads as a pass;
+//          skip is exit-0). Config discovery stays implicit (the invoking tree's own
+//          biome.json), so the arm is profile-agnostic: at L0 it enforces L0's profile,
+//          in a delivered project that project's. The scoped package's JS entrypoint is
+//          spawned through bun — bare `bunx biome` resolves an unrelated stray package
+//          (design §4.2 tooling note). No new dev-sync step number consumed (audit runs
+//          in dev-sync 4.9 / CI / pre-commit already). Same bump also carries the design's
+//          other audit.ts changes: (§4.1) the `'> nul'` redirect ban's Fail/Pass
+//          diagnostics now interpolate NUL_REDIRECT_DISPLAY (['>', 'nul'].join(' ')) —
+//          no source line contains a matchable literal, so the same-line
+//          trailing ignore-marker invariant is DELETED (formatter-robust by
+//          construction; the skip mechanism itself stays as the sanctioned escape hatch;
+//          pinned by tests/unit/nul-lint-invariant.test.ts) — and the two
+//          while-((match=re.exec())) loops (:434/:481 class) rewritten to the typed-let
+//          separate-assignment shape (noAssignInExpressions/noImplicitAnyLet).
 // v2.64.0 (2026-11-07, spec docs/designs/2026-11-07-fleet-membership-ssot-design.md
 //          §5, DEC-20261107-01): fleet membership SSOT —
 //          checkProjectDocMarkerDrift (A6) derives fleet members from
@@ -297,8 +372,9 @@ import { $ } from "bun";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import * as crypto from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { parsePmMd } from "./helpers/pm-md-parser.ts";
+import { parsePmMd, extractVariantOverrides } from "./helpers/pm-md-parser.ts";
 import { canonicalOrderViolation } from "./spec-register.ts";
 import { AGENT_LAYER1_SECTIONS } from "./helpers/golden-reference-loader.ts";
 import { composeResolvedAgentContent } from "./helpers/resolve-pm-stub.ts";
@@ -307,9 +383,22 @@ import { collectTemplateAuditHooks } from "./helpers/audit-hook-sweep.ts";
 import { splitIntoSections, getContentLines, stripMarkerZones } from "./helpers/context-sections.ts";
 import { findL0LeakLines } from "./helpers/l0-ref-policy.ts";
 import { classifySpecHeader } from "./helpers/spec-header-consistency.ts";
+import * as url from "node:url";
 import { safeFetch } from "./lib/ssrf.ts";
 import { listFleetProjects } from "./lib/fleet.ts";
-import { detectEncoding, detectHomoglyphs, detectZeroWidthChars, readUTF8File } from "./lib/encoding-utils.ts";
+// v2.70.0 (T-20261118-002): the L0↔L1 mirror parity early signal reuses qa-gate's
+// exported pure collector — audit-time and qa-gate-time verdicts share one
+// implementation and can never disagree. qa-gate.ts is itself mirrored to L1
+// alongside audit.ts, so this import survives delivery in both layers.
+import { collectMirrorParityFailures } from "./qa-gate.ts";
+import { findCwdRootAssignments, isContractTestPath } from "./lib/hermetic-test-roots.ts";
+import {
+  detectEncoding,
+  detectHomoglyphs,
+  detectZeroWidthChars,
+  readUTF8File,
+  scanMarkdownBomFiles,
+} from "./lib/encoding-utils.ts";
 import { variantContextPlacement } from "./helpers/variant-context.ts";
 import {
   resolveDesignLintRoots,
@@ -351,7 +440,7 @@ const SPEC_CHECK = process.argv.includes("--spec-check");
 const GOVERNANCE_CHECK = process.argv.includes("--governance-check");
 
 // ADR-0055 Stage 2: spec-relevance exemption escape hatch (--spec-exempt=E3[,E5] or SYNC_SPEC_EXEMPT env).
-// Valid codes map 1:1 to the AGENTS.md §5.1.1 Design Gate exemption categories.
+// Valid codes map 1:1 to the docs/governance/agents/execution-plan-templates.md §5.1.1 Design Gate exemption categories.
 const SPEC_EXEMPT_CATEGORIES: Record<string, string> = {
   E1: "memory-log",
   E2: "changelog",
@@ -440,8 +529,8 @@ if (isWorkspaceRoot) {
 if (fs.existsSync("CONSTITUTION.md") && fs.existsSync("docs/constitution")) {
   const content = readUTF8File("CONSTITUTION.md");
   const regex = /docs\/constitution\/([\w.-]+\.md)/g;
-  let match;
-  while ((match = regex.exec(content)) !== null) {
+  let match: RegExpExecArray | null = regex.exec(content);
+  while (match !== null) {
     const ref = match[1];
     const filePath = path.join("docs", "constitution", ref);
     if (fs.existsSync(filePath) && fs.statSync(filePath).size > 0) {
@@ -449,6 +538,7 @@ if (fs.existsSync("CONSTITUTION.md") && fs.existsSync("docs/constitution")) {
     } else {
       Fail(`constitution section missing or empty: ${filePath}`);
     }
+    match = regex.exec(content);
   }
 }
 
@@ -488,8 +578,8 @@ if (!LIFECYCLE_ONLY) {
 
     for (const filePath of urlCheckFiles) {
       const content = readUTF8File(filePath);
-      let match;
-      while ((match = urlRegex.exec(content)) !== null) {
+      let match: RegExpExecArray | null = urlRegex.exec(content);
+      while (match !== null) {
         const url = match[0];
         try {
           // Route through the repo's SSRF guard (safeFetch) — a bare
@@ -502,6 +592,7 @@ if (!LIFECYCLE_ONLY) {
           errors++;
           console.log(`${RED}FAIL${RESET} Dead link detected in ${filePath}: ${url}`);
         }
+        match = urlRegex.exec(content);
       }
       urlRegex.lastIndex = 0;
     }
@@ -537,7 +628,7 @@ if (fs.existsSync("docs/decisions") && fs.statSync("docs/decisions").isDirectory
     let decWarns = 0;
     const REQUIRED_DEC_FIELDS = ["id", "date", "agent", "decision", "alternatives", "status"];
     for (const f of decFiles) {
-      const relPath = `docs/decisions/${f}`;
+      const relPath = "docs/decisions/" + f;
       const raw = readUTF8File(relPath);
       const fmMatch = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
       if (!fmMatch) {
@@ -562,11 +653,11 @@ if (fs.existsSync("docs/decisions") && fs.statSync("docs/decisions").isDirectory
           decWarns++;
         }
       }
-      if (fm.id !== undefined && fm.id !== f.replace(/\.md$/, "")) {
+      if (fm["id"] !== undefined && fm["id"] !== f.replace(/\.md$/, "")) {
         Warn(`Decision record ${f}: frontmatter id does not match filename`);
         decWarns++;
       }
-      const status = fm.status ?? "";
+      const status = fm["status"] ?? "";
       if (status && !["proposed", "accepted", "superseded"].includes(status)) {
         Warn(`Decision record ${f}: status '${status}' outside proposed|accepted|superseded`);
         decWarns++;
@@ -580,25 +671,28 @@ if (fs.existsSync("docs/decisions") && fs.statSync("docs/decisions").isDirectory
 
 // 3.5. UTF-8 BOM check for Markdown files
 if (!LIFECYCLE_ONLY) {
-  let bomErrors = 0;
   let searchDirs = ["."];
+  let rootMdScan = false;
   if (!fs.existsSync(projectCtxPath) && fs.existsSync("templates")) {
-    // Zero-width/homoglyph scan covers the .agents and .codex platform trees
+    // Zero-width/homoglyph scan dirs gain the .agents and .codex platform trees
     // too — whole-tree by design: .codex/prompts/*.md is as much an injection
     // surface as a skill mirror (spec 2026-09-25-verifier-platform-expansion-design
     // site 2c; .json/.toml files are outside the Markdown/YAML scan filter).
     searchDirs = ["agents", "docs", "memory", "scripts", "skills", "templates", ".claude", ".agents", ".codex"];
-    if (fs.existsSync(".")) {
-      for (const file of fs.readdirSync(".")) {
-        if (file.endsWith(".md")) {
-          const buf = fs.readFileSync(file);
-          if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
-            Fail(`UTF-8 BOM found in ${file} - files must be UTF-8 without BOM`);
-            bomErrors++;
-          }
-        }
-      }
-    }
+    rootMdScan = true;
+  }
+  // Census extracted to lib/encoding-utils.ts v1.4.0 (spec
+  // 2026-11-17-audit-external-scan-fix): unit-testable, skips gitignored
+  // external-dependency install trees (D5 — external/<id> is never workspace
+  // content), and counts each BOM file exactly once — Fail() is the sole
+  // increment; the old `errors += bomErrors` epilogue double-counted.
+  const { bomFiles, skipped: bomSkipped } = scanMarkdownBomFiles({ searchDirs, rootMdScan });
+  for (const s of bomSkipped) recordSkippedFile(s.path, s.reason);
+  for (const file of bomFiles) {
+    Fail(`UTF-8 BOM found in ${file} - files must be UTF-8 without BOM`);
+  }
+  if (bomFiles.length === 0) {
+    Pass("UTF-8 BOM check: all markdown files are clean");
   }
 
   function walkDir(dir: string, callback: (fPath: string) => void, depth = 0) {
@@ -625,26 +719,6 @@ if (!LIFECYCLE_ONLY) {
         recordSkippedFile(dirPath, e?.code || e?.message || "stat/read error");
       }
     }
-  }
-
-  for (const dir of searchDirs) {
-    if (fs.existsSync(dir)) {
-      walkDir(dir, (filePath) => {
-        if (filePath.replace(/\\/g, "/").includes("memory/archive/")) return;
-        if (filePath.endsWith(".md") && !filePath.includes("node_modules") && !filePath.includes(".git")) {
-          const buf = fs.readFileSync(filePath);
-          if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
-            Fail(`UTF-8 BOM found in ${filePath} - files must be UTF-8 without BOM`);
-            bomErrors++;
-          }
-        }
-      });
-    }
-  }
-  if (bomErrors === 0) {
-    Pass("UTF-8 BOM check: all markdown files are clean");
-  } else {
-    errors += bomErrors;
   }
 
   // 3.6. CRLF line ending check for source files
@@ -726,7 +800,10 @@ if (!LIFECYCLE_ONLY) {
             if (matches.length > 5) {
               Fail(`... and ${matches.length - 5} more homoglyph(s) in ${filePath}`);
             }
-            homoglyphErrors += matches.length;
+            // Gate counter only (Pass iff every file was clean) — Fail() is the
+            // sole increment for the error summary (v2.69.0 double-count sweep);
+            // the overflow line above is one Fail() call, not N.
+            homoglyphErrors++;
           }
         } catch {
           /* skip unreadable files */
@@ -737,7 +814,6 @@ if (!LIFECYCLE_ONLY) {
     if (homoglyphErrors === 0) {
       Pass("Homoglyph check: no confusable Unicode characters found");
     }
-    errors += homoglyphErrors;
   }
 
   // 3.8. Zero-width character detection
@@ -778,7 +854,7 @@ if (!LIFECYCLE_ONLY) {
             }
             if (matches.length > 5) {
               Fail(`... and ${matches.length - 5} more zero-width char(s) in ${filePath}`);
-              zwErrors += matches.length - 5;
+              zwErrors++;
             }
           }
         } catch {
@@ -790,7 +866,8 @@ if (!LIFECYCLE_ONLY) {
     if (zwErrors === 0) {
       Pass("Zero-width character check: no invisible Unicode characters found");
     }
-    errors += zwErrors;
+    // Fail() is the sole increment for the error summary (v2.69.0 double-count
+    // sweep); zwErrors stays a Pass-gate counter only.
   }
 }
 
@@ -1137,7 +1214,7 @@ if (hasBun) {
   if (fs.existsSync(path.join("scripts", "verify-memory.ts")) && !SKIP_MEMORY) {
     if (fs.existsSync("CONSTITUTION.md") || fs.existsSync(path.join("memory", "MEMORY.md"))) {
       // explicitly skip any files located in memory/archive/
-      const _memoryFiles = fs
+      const memoryFiles = fs
         .readdirSync("memory")
         .filter((f) => f.endsWith(".md") && fs.statSync(path.join("memory", f)).isFile())
         .map((f) => path.join("memory", f));
@@ -1294,9 +1371,9 @@ if (!LIFECYCLE_ONLY && fs.existsSync("AGENTS.md") && fs.existsSync("agents")) {
 
   if (syncErrors === 0) {
     Pass("Agent state synchronization: all agents in sync");
-  } else {
-    errors += syncErrors;
   }
+  // Fail() is the sole increment for the error summary (v2.69.0 double-count
+  // sweep); the old `errors += syncErrors` epilogue double-counted.
 }
 
 // Cross-Platform Command Parity Check
@@ -1601,8 +1678,9 @@ function checkVariantSkillSections() {
   if (allFailures.length === 0) {
     Pass("Variant skill sections: all skills have required sections and frontmatter");
   } else {
+    // Fail() is the sole increment for the error summary (v2.69.0 double-count
+    // sweep); the old `errors += allFailures.length` epilogue double-counted.
     allFailures.forEach((f) => Fail(`Variant skill sections: ${f}`));
-    errors += allFailures.length;
   }
 }
 
@@ -1819,18 +1897,22 @@ if (!LIFECYCLE_ONLY) {
         // A line is an example if the pattern only appears inside backticks
         const strippedLine = line.replace(/`[^`]*`/g, "");
         const re = /(?:bash|node)\s+scripts\/([\w.-]+\.(sh|ps1|ts))/g;
-        let match: RegExpExecArray | null;
-        while ((match = re.exec(strippedLine)) !== null) {
+        let match: RegExpExecArray | null = re.exec(strippedLine);
+        while (match !== null) {
           const refFile = match[1];
           const refExt = match[2];
           // For .ts files, only flag when invoked with 'node' (bun is fine)
           const runner = match[0].split(" ")[0];
-          if (refExt === "ts" && runner !== "node") continue;
+          if (refExt === "ts" && runner !== "node") {
+            match = re.exec(strippedLine);
+            continue;
+          }
           const scriptPath = path.join("scripts", refFile);
           if (!fs.existsSync(scriptPath)) {
             Fail(`Stale shell reference: ${filePath}:${idx + 1} references non-existent scripts/${refFile}`);
             staleErrors++;
           }
+          match = re.exec(strippedLine);
         }
       });
     }
@@ -2029,6 +2111,40 @@ if (!LIFECYCLE_ONLY) {
     }
   }
   checkDesignLint();
+
+  // Biome strict-profile gate (design 2026-11-09-delivered-scripts-strict-profile-design
+  // §4.5, U-20261108-001 / DEC-20261109-01): the producer's own battery enforces the
+  // strict profile every delivered project measures. Config discovery stays implicit —
+  // biome reads the invoking tree's own biome.json, so at L0 the arm enforces L0's
+  // profile and in a delivered project it enforces that project's (profile-agnostic
+  // by construction). When @biomejs/biome is absent the arm degrades to a [SKIP]
+  // line (scripts/typecheck.ts v1.2.0 convention: a self-skipped gate must never
+  // read as a pass; skip is exit-0). The scoped package's JS entrypoint is spawned
+  // through bun directly — never the bare `biome`/`bunx biome` name (that resolves
+  // an unrelated stray package, verified 2026-11-09, design §4.2 tooling note).
+  function checkBiomeProfile() {
+    const biomeEntry = path.join("node_modules", "@biomejs", "biome", "bin", "biome");
+    if (!fs.existsSync(biomeEntry)) {
+      Skip("Biome profile gate: @biomejs/biome not installed in this tree — skipped");
+      return;
+    }
+    const roots = ["scripts", path.join("templates", "common", "scripts", "handbook")].filter((r) => fs.existsSync(r));
+    if (roots.length === 0) {
+      Skip("Biome profile gate: no script roots in this tree — skipped");
+      return;
+    }
+    const result = spawnSync("bun", [biomeEntry, "check", ...roots], { encoding: "utf-8" });
+    if (result.status !== 0) {
+      if (result.stdout) console.log(result.stdout);
+      if (result.stderr) console.error(result.stderr);
+      Fail(
+        "Biome profile gate: biome check reported violations — run bun run format:scripts (safe fixes) and repair any remaining lint errors",
+      );
+    } else {
+      Pass(`Biome profile gate: biome check clean over ${roots.join(", ")}`);
+    }
+  }
+  checkBiomeProfile();
 
   // T-20261026-002 (upstream U-20261026-002): the variant context file carries the PM
   // workflow table — a silent relocation (co-newbiz moved it to docs/meta/ for 9 days)
@@ -2525,7 +2641,7 @@ if (!LIFECYCLE_ONLY) {
     const byHeading = new Map<string, Section[]>();
     for (const s of sections) {
       if (!byHeading.has(s.heading)) byHeading.set(s.heading, []);
-      byHeading.get(s.heading)?.push(s);
+      byHeading.get(s.heading)!.push(s);
     }
 
     // Aggregate per heading rather than reporting every pair — a heading shared across
@@ -2686,6 +2802,33 @@ const IS_WORKSPACE_ROOT = fs.existsSync("CONSTITUTION.md") && !fs.existsSync("va
   }
 }
 
+// ── hermetic-test-roots (v2.66.0; T-20261110-012 Scope C-C) ──────────────────
+// Workspace root only, WARN-only: tests must not derive the workspace root from
+// process.cwd(). Tracked files only (git ls-files), so scratch trees never warn.
+if (IS_WORKSPACE_ROOT) {
+  const ls = Bun.spawnSync(["git", "ls-files", "--", "tests", "templates"], { stdout: "pipe", stderr: "pipe" });
+  if (ls.exitCode === 0) {
+    const files = new TextDecoder().decode(ls.stdout).split("\n").filter(isContractTestPath);
+    const hits: string[] = [];
+    for (const rel of files) {
+      try {
+        for (const line of findCwdRootAssignments(fs.readFileSync(rel, "utf8"))) hits.push(`${rel}:${line}`);
+      } catch {
+        // unreadable (deleted in the worktree) — not a contract violation
+      }
+    }
+    if (hits.length > 0) {
+      Warn(
+        `hermetic-test-roots: ${hits.length} cwd-derived workspace root(s) in tests — ${hits.slice(0, 5).join(", ")}${hits.length > 5 ? " …" : ""} — derive the root from the test file location (import.meta.dir), not process.cwd()`,
+      );
+    } else {
+      Pass(`hermetic-test-roots: clean (${files.length} test file(s) scanned)`);
+    }
+  } else {
+    Warn("hermetic-test-roots skipped (git ls-files failed — not a git worktree?)");
+  }
+}
+
 // ── Hub-resolve checker (v2.61.0; hub-consolidation design §2.4 leg 3 / §7.3) ─
 // Workspace root only (the registry lives in docs/workspace-schema.json, which
 // project contexts do not carry at this path). For each variant template
@@ -2788,7 +2931,8 @@ if (IS_WORKSPACE_ROOT && fs.existsSync("agents")) {
   if (missingSection === 0 && emptySection === 0) {
     Pass("Agent Required Tools sections: all present");
   }
-  errors += missingSection;
+  // Fail() is the sole increment for the error summary (v2.69.0 double-count
+  // sweep); the old `errors += missingSection` epilogue double-counted.
 }
 
 // Check: AGENTS.md PM Direct Execution Scope synced to templates/co-*/AGENTS.md (workspace root only)
@@ -2798,7 +2942,7 @@ if (IS_WORKSPACE_ROOT && fs.existsSync("AGENTS.md")) {
   if (hasPmScope) {
     const templatesDir = "templates";
     let syncWarnings = 0;
-    let _checkedVariants = 0;
+    let checkedVariants = 0;
     if (fs.existsSync(templatesDir)) {
       for (const entry of fs.readdirSync(templatesDir)) {
         if (!entry.startsWith("co-") || !isCoVariantTracked(entry)) continue;
@@ -2809,7 +2953,7 @@ if (IS_WORKSPACE_ROOT && fs.existsSync("AGENTS.md")) {
         const hasPmEntry =
           /\|\s*pm\s*\|/.test(variantContent) || /pm\.md/.test(variantContent) || /\*\*pm\*\*/.test(variantContent);
         if (!hasPmEntry) continue;
-        _checkedVariants++;
+        checkedVariants++;
         if (!variantContent.includes("### PM Direct Execution Scope")) {
           Warn(`AGENTS.md PM Direct Execution Scope not synced to: templates/${entry}/AGENTS.md`);
           syncWarnings++;
@@ -3076,6 +3220,11 @@ if (IS_WORKSPACE_ROOT) {
 // discuss `> nul` at length).
 if (!LIFECYCLE_ONLY) {
   const NUL_REDIRECT = /(?:^|[^\w/])(?:[12]|&)?>\s*nul(?![\w./\\-])/i;
+  /** Display form of the banned redirect, constructed so no line of this file contains
+   *  the contiguous sequence — the lint must never match its own diagnostic (design
+   *  2026-11-09-delivered-scripts-strict-profile-design §4.1). Correctness no longer
+   *  depends on any ignore marker's line position. */
+  const NUL_REDIRECT_DISPLAY = [">", "nul"].join(" ");
   // .bat/.cmd are excluded: cmd.exe `>nul` redirects to the NUL *device* and
   // can never materialize a file named `nul` — the hazard this lint targets
   // only exists in POSIX shells (bash creates a literal file). Flagging the
@@ -3131,14 +3280,12 @@ if (!LIFECYCLE_ONLY) {
       }
       nulLintScanned++;
       content.split("\n").forEach((line, i) => {
-        // Escape hatch for lines that must contain the literal pattern — e.g. this check's
-        // own diagnostic strings below, which quote what they forbid.
+        // Escape hatch for lines that must quote shell syntax containing the
+        // banned pattern (sanctioned marker; this file itself no longer needs it).
         if (line.includes("nul-lint-ignore")) return;
         if (NUL_REDIRECT.test(stripComment(line))) {
-          // LOCAL-PATCH(upstream-request: U-20261108-001) — the biome reformat wraps this call, which moved
-          // the trailing ignore marker off the line carrying the quoted pattern; keep the marker on that line.
           Fail(
-            `Banned '> nul' redirect at ${entryPath}:${i + 1} — creates an undeletable Windows device-name file. Use '> /dev/null 2>&1' (Bash) or '$null' / 'Out-Null' (PowerShell).`, // nul-lint-ignore
+            `Banned '${NUL_REDIRECT_DISPLAY}' redirect at ${entryPath}:${i + 1} — creates an undeletable Windows device-name file. Use '> /dev/null 2>&1' (Bash) or '$null' / 'Out-Null' (PowerShell).`,
           );
           nulLintHits++;
         }
@@ -3149,7 +3296,7 @@ if (!LIFECYCLE_ONLY) {
     if (fs.existsSync(root)) lintDir(root, 1);
   }
   if (nulLintHits === 0) {
-    Pass(`'> nul' redirect check: no banned redirects found (${nulLintScanned} files scanned)`); // nul-lint-ignore
+    Pass(`'${NUL_REDIRECT_DISPLAY}' redirect check: no banned redirects found (${nulLintScanned} files scanned)`);
   }
 }
 
@@ -3255,6 +3402,49 @@ if (!LIFECYCLE_ONLY && fs.existsSync("templates")) {
   if (leakageErrors === 0) {
     Pass("L0 Leakage check: no unauthorized CONSTITUTION references in templates");
   }
+
+  // v1.107.0 (2026-11-14, spec docs/designs/2026-11-14-consult-output-destination-and-constitution-refs-ruling.md
+  //          §5-item4, U-20261113-010): scan-scope extension — .ts and .json under templates/ join the
+  //          L0 Leakage sweep (WARN severity first per the ruling's soak-before-FAIL posture). .ts lines
+  //          carrying the l0-functional: marker are exempt (functional root-detection guards);
+  //          .json files in the functional-registry exemption set are skipped (their context.md
+  //          values are read by code). The .md arm above keeps its ERROR severity.
+  const codeLeakWarn = (msg: string) => {
+    Warn(`L0 Leakage (code/json scan): ${msg}`);
+  };
+  const CODE_SKIP_DIRS = new Set(["node_modules", ".git", ".bun"]);
+  const JSON_FILE_EXEMPT = new Set(["workspace-schema.json", "propagation-map.json"]);
+  const functionalMarker = /\/\/ l0-functional:/;
+  let codeLeakWarns = 0;
+  const walkCodeLeak = (dir: string): void => {
+    for (const item of fs.readdirSync(dir)) {
+      const itemPath = path.join(dir, item);
+      const stat = fs.statSync(itemPath);
+      if (stat.isDirectory()) {
+        if (CODE_SKIP_DIRS.has(item)) continue;
+        const dirName = path.basename(itemPath);
+        if (dirName.startsWith("co-") && !isCoVariantTracked(dirName)) continue;
+        walkCodeLeak(itemPath);
+      } else if (stat.isFile() && (itemPath.endsWith(".ts") || itemPath.endsWith(".json"))) {
+        const content = readUTF8File(itemPath);
+        const isJson = itemPath.endsWith(".json");
+        for (const { lineNo, line } of findL0LeakLines(content)) {
+          if (isJson && JSON_FILE_EXEMPT.has(path.basename(itemPath))) continue;
+          if (functionalMarker.test(line)) continue;
+          codeLeakWarn(
+            `${itemPath}:${lineNo} carries an unannotated CONSTITUTION reference (WARN soak — annotate with // l0-functional: if functional, or remove the reference)`,
+          );
+          codeLeakWarns++;
+        }
+      }
+    }
+  };
+  for (const root of ["templates"]) {
+    if (fs.existsSync(root)) walkCodeLeak(root);
+  }
+  if (codeLeakWarns === 0) {
+    Pass("L0 Leakage code/json extension: no unannotated CONSTITUTION references under templates");
+  }
 }
 
 // Check: GitHub Actions workflow permission hygiene (workspace root and templates)
@@ -3337,7 +3527,7 @@ if (fs.existsSync("templates")) {
               Fail(`Template script lost executable bit: ${itemPath}`);
               executableErrors++;
             }
-          } catch (_e) {
+          } catch (e) {
             // Ignore if file is untracked or git command fails
           }
         }
@@ -3425,7 +3615,7 @@ if (!LIFECYCLE_ONLY && IS_WORKSPACE_ROOT) {
     const l1Content = readUTF8File(l1PmPath);
 
     // Extract YAML frontmatter sections
-    const _extractYamlSection = (content: string, sectionStart: string, sectionEnd: string): string => {
+    const extractYamlSection = (content: string, sectionStart: string, sectionEnd: string): string => {
       const startIdx = content.indexOf(sectionStart);
       if (startIdx === -1) return "";
       const endIdx = content.indexOf(sectionEnd, startIdx);
@@ -3439,7 +3629,7 @@ if (!LIFECYCLE_ONLY && IS_WORKSPACE_ROOT) {
       Fail("L0 pm.md: missing YAML frontmatter");
       return false;
     }
-    const _l0Yaml = l0YamlMatch[1];
+    const l0Yaml = l0YamlMatch[1];
 
     // L1 YAML should have L1-only fields: formal_name, multi-line description
     const l1YamlMatch = l1Content.match(/^---\n([\s\S]+?)\n---/);
@@ -3635,7 +3825,7 @@ if (variantAuditPath) {
   try {
     execFileSync("bun", [variantAuditPath], { stdio: "inherit" });
     Pass("Variant-specific audit checks passed");
-  } catch (_e) {
+  } catch (e) {
     Fail("Variant-specific audit checks failed");
   }
 } else if (variantDeclaresAuditHook) {
@@ -3775,7 +3965,7 @@ if (SPEC_CHECK) {
     const invalidCodes = SPEC_EXEMPT_CODES.filter((c) => !SPEC_EXEMPT_CATEGORIES[c]);
     if (invalidCodes.length > 0) {
       Fail(
-        `Invalid --spec-exempt code(s): ${invalidCodes.join(", ")} — valid codes: E1 (memory-log), E2 (changelog), E3 (hotfix-typo), E4 (pure-readme), E5 (sync-only) (AGENTS.md §5.1.1)`,
+        `Invalid --spec-exempt code(s): ${invalidCodes.join(", ")} — valid codes: E1 (memory-log), E2 (changelog), E3 (hotfix-typo), E4 (pure-readme), E5 (sync-only) (docs/governance/agents/execution-plan-templates.md §5.1.1)`,
       );
       // Skip the rest of spec-check on invalid codes (the Fail alone produces exit 1)
       // Note: we must exit the SPEC_CHECK block early here
@@ -3825,7 +4015,7 @@ if (SPEC_CHECK) {
         const recentActiveSpec = registry.specs.some((s) => {
           if (s.status !== "approved" && s.status !== "implemented") return false;
           const updated = Date.parse(s.last_updated);
-          return !Number.isNaN(updated) && now - updated <= RECENT_DAYS * 86400 * 1000;
+          return !isNaN(updated) && now - updated <= RECENT_DAYS * 86400 * 1000;
         });
         // Relevance is diff-recency-based, not true per-file spec-to-code mapping
         // (out of scope for this pass — see docs/designs/2026-08-16-spec-registry-enforcement-design.md).
@@ -3849,7 +4039,7 @@ if (SPEC_CHECK) {
       const staleSpecs = registry.specs.filter((s) => {
         if (s.status !== "approved") return false;
         const created = Date.parse(s.created);
-        return !Number.isNaN(created) && now - created > STALE_DAYS * 86400 * 1000;
+        return !isNaN(created) && now - created > STALE_DAYS * 86400 * 1000;
       });
       if (staleSpecs.length > 0) {
         for (const s of staleSpecs) {
@@ -4108,7 +4298,7 @@ if (fs.existsSync(path.join("scripts", "sync-agent-mirrors.ts"))) {
     // T-20261029-008: surface the out-of-root WARN degrade on the green path
     // too — a CI checkout cannot verify mirror parity, and a silent Pass
     // would hide that from the audit log.
-    if (stdout?.includes("WARN:")) console.log(stdout.trim());
+    if (stdout && stdout.includes("WARN:")) console.log(stdout.trim());
     Pass("Agent-mirror parity gate: generated mirrors match the agents/ SSOT (or root is mirror-less by design)");
   }
 }
@@ -4133,6 +4323,45 @@ if (fs.existsSync(path.join("scripts", "generate-version-manifest.ts"))) {
     );
   } else {
     Pass("VERSION_MANIFEST gate: committed manifest matches regenerated output");
+  }
+}
+
+// ── L0↔L1 mirror parity EARLY SIGNAL (v2.70.0, T-20261118-002; design
+//    docs/designs/2026-11-18-subfile-mirror-drift-gate-design.md) ──
+// Same collector as qa-gate step 4 (collectMirrorParityFailures, T-20260912-021):
+// recursive content comparison + one-sided detection over scripts/ vs
+// templates/common/scripts/ and, per L0+L1 skill, skills/<skill>/** vs
+// templates/common/skills/<skill>/** — including the non-SKILL.md SUBFILES that
+// have no automated propagation path (propagation-map.json's skills
+// include_pattern "*/SKILL.md" is segment-bound, never crosses a slash).
+// Surfacing the same verdict at audit time removes the short-circuit mask
+// (qa-gate step 4 never ran when audit step 1 failed — the T-20261117-011
+// masking history). Workspace-root scoping follows the IS_WORKSPACE_ROOT
+// convention; in L2/L3 contexts the gate self-skips and the audit verdict there
+// is unchanged. Comparison semantics are qa-gate's, byte for byte.
+if (IS_WORKSPACE_ROOT) {
+  const l0ScriptsDir = "scripts";
+  const l1ScriptsDir = path.join("templates", "common", "scripts");
+  const l0SkillsDir = "skills";
+  const l1SkillsDir = path.join("templates", "common", "skills");
+  if (
+    fs.existsSync(l0ScriptsDir) &&
+    fs.existsSync(l1ScriptsDir) &&
+    fs.existsSync(l0SkillsDir) &&
+    fs.existsSync(l1SkillsDir)
+  ) {
+    const mirrorFailures = collectMirrorParityFailures(l0ScriptsDir, l1ScriptsDir, l0SkillsDir, l1SkillsDir);
+    for (const failure of mirrorFailures) {
+      // One Fail() call per failure — the sole-increment accounting rule (v2.69.0).
+      Fail(failure);
+    }
+    if (mirrorFailures.length === 0) {
+      Pass(
+        "L0↔L1 mirror parity early signal: scripts tree + L0+L1 skill dirs (incl. subfiles) match templates/common/",
+      );
+    }
+  } else {
+    Skip("L0↔L1 mirror parity early signal skipped (scripts/ or skills/ mirror trees not present in this checkout)");
   }
 }
 
@@ -4162,7 +4391,3 @@ if (errors === 0) {
     process.exit(1);
   }
 }
-
-// LOCAL-PATCH(upstream-request: U-20261108-001): biome.json overrides relax 4 lint rules (noAssignInExpressions, noImplicitAnyLet,
-// noControlCharactersInRegex, useIterableCallbackReturn) for this template-delivered file; remove with the override when upstream is lint-clean.
-// LOCAL-PATCH(upstream-request: U-20261122-011): this patch site is filed upstream for promotion alongside the dev-sync.ts U-20261107-003 site (review F-5).

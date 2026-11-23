@@ -94,9 +94,9 @@ function findImporters(moduleName: string): string[] {
   // git grep uses POSIX extended regex by default with -E.
   // Allow optional .ts/.js/.tsx extension between module name and closing quote.
   const extRegex =
-    `from ['\"].*${moduleName}(\\.[tj]sx?)?['\"]` +
-    `|require\\(['\"].*${moduleName}(\\.[tj]sx?)?['\"]\\)` +
-    `|import ['\"].*${moduleName}(\\.[tj]sx?)?['\"]`;
+    `from ['"].*${moduleName}(\\.[tj]sx?)?['"]` +
+    `|require\\(['"].*${moduleName}(\\.[tj]sx?)?['"]\\)` +
+    `|import ['"].*${moduleName}(\\.[tj]sx?)?['"]`;
 
   const args: string[] = ["grep", "-l", "-E", extRegex];
   for (const glob of GIT_GREP_GLOBS) {

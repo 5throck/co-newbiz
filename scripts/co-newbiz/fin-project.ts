@@ -63,22 +63,23 @@ export function projectFinancialRollup(projectId: string): ProjectFinancialRollu
 
   const latestModel = rolledModels[0]?.id;
   const simulations = latestModel
-    ? (db
-        .query(
-          `SELECT scenario, percentile, npv_krw_m FROM valuation_simulation WHERE model_id = ? ORDER BY scenario, percentile`,
-        )
-        .all(latestModel) as Array<{ scenario: string; percentile: string; npv_krw_m: number }>)
-        .reduce<Array<{ scenario: string; p05: number | null; p50: number | null; p95: number | null }>>((acc, row) => {
-          let bucket = acc.find((b) => b.scenario === row.scenario);
-          if (!bucket) {
-            bucket = { scenario: row.scenario, p05: null, p50: null, p95: null };
-            acc.push(bucket);
-          }
-          if (row.percentile === "p05") bucket.p05 = row.npv_krw_m;
-          if (row.percentile === "p50") bucket.p50 = row.npv_krw_m;
-          if (row.percentile === "p95") bucket.p95 = row.npv_krw_m;
-          return acc;
-        }, [])
+    ? (
+        db
+          .query(
+            `SELECT scenario, percentile, npv_krw_m FROM valuation_simulation WHERE model_id = ? ORDER BY scenario, percentile`,
+          )
+          .all(latestModel) as Array<{ scenario: string; percentile: string; npv_krw_m: number }>
+      ).reduce<Array<{ scenario: string; p05: number | null; p50: number | null; p95: number | null }>>((acc, row) => {
+        let bucket = acc.find((b) => b.scenario === row.scenario);
+        if (!bucket) {
+          bucket = { scenario: row.scenario, p05: null, p50: null, p95: null };
+          acc.push(bucket);
+        }
+        if (row.percentile === "p05") bucket.p05 = row.npv_krw_m;
+        if (row.percentile === "p50") bucket.p50 = row.npv_krw_m;
+        if (row.percentile === "p95") bucket.p95 = row.npv_krw_m;
+        return acc;
+      }, [])
     : [];
 
   let charterKpis: ProjectFinancialRollup["charterKpis"] = null;

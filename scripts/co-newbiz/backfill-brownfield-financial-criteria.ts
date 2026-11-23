@@ -30,14 +30,17 @@ const RELABEL: Record<string, { label: string; description: string; data_ref: st
   },
   debt_ratio: {
     label: "부채 규모·5개년 추이(부채비율 포함)",
-    description: "5개년 부채총계와 부채비율(참고). 영업부문(사업부문별 실적)은 DART 세그먼트 데이터 미지원으로 v1 범위 밖 — 필요 시 커스텀 항목으로 수기 기록.",
+    description:
+      "5개년 부채총계와 부채비율(참고). 영업부문(사업부문별 실적)은 DART 세그먼트 데이터 미지원으로 v1 범위 밖 — 필요 시 커스텀 항목으로 수기 기록.",
     data_ref: "debt_5y",
   },
 };
 const RETIRE_DATA_REFS = new Set(["net_margin", "segment_manual"]);
 
 const rows = db
-  .query("SELECT id, data_ref FROM brownfield_eval_criterion WHERE category = 'financial' AND source = 'builtin' AND deleted_at IS NULL")
+  .query(
+    "SELECT id, data_ref FROM brownfield_eval_criterion WHERE category = 'financial' AND source = 'builtin' AND deleted_at IS NULL",
+  )
   .all() as Array<{ id: string; data_ref: string | null }>;
 
 let relabeled = 0;
@@ -48,7 +51,12 @@ for (const row of rows) {
   const patch = RELABEL[row.data_ref];
   if (patch) {
     if (!dryRun) {
-      db.run("UPDATE brownfield_eval_criterion SET label = ?, description = ?, data_ref = ? WHERE id = ?", [patch.label, patch.description, patch.data_ref, row.id]);
+      db.run("UPDATE brownfield_eval_criterion SET label = ?, description = ?, data_ref = ? WHERE id = ?", [
+        patch.label,
+        patch.description,
+        patch.data_ref,
+        row.id,
+      ]);
     }
     relabeled++;
   } else if (RETIRE_DATA_REFS.has(row.data_ref)) {

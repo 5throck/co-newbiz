@@ -39,8 +39,10 @@
     {
       "includes": [
         "scripts/audit.ts",
+        "scripts/dev-sync.ts",
         "scripts/generate-skill-graph.ts",
         "scripts/handbook/check-authoring.ts",
+        "scripts/lib/audit-fail-hint.ts",
         "scripts/helpers/security-validator.ts",
         "scripts/lib/upgrade-policy.ts",
         "scripts/validate-templates.ts"
@@ -72,7 +74,8 @@
       "includes": [
         "app/web-next/components/AppShell.tsx",
         "app/web-next/app/flows/flow-graph.tsx",
-        "app/web-next/app/flows/ledger-view.tsx"
+        "app/web-next/app/flows/ledger-view.tsx",
+        "app/web-next/lib/business-goals-view.ts"
       ],
       "formatter": { "enabled": false }
     }

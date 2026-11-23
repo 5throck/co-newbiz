@@ -155,7 +155,7 @@ const SUPPORTED_LOCALES: string[] = loadSupportedLocales();
 const KOREAN_PATTERN = /[가-힯ᄀ-ᇿ]/;
 
 // English sentence pattern (requires letters, spaces, and sentence punctuation)
-const ENGLISH_SENTENCE_PATTERN = /[A-Za-z][A-Za-z\s,;\.!\?]{10,}/;
+const ENGLISH_SENTENCE_PATTERN = /[A-Za-z][A-Za-z\s,;.!?]{10,}/;
 
 // Permitted lang_reason values for Korean exception declarations
 const ALLOWED_LANG_REASONS = ["legal", "source-material", "proper-noun"] as const;
@@ -360,7 +360,7 @@ function suffixLocaleOfFile(filePath: string): string | null {
 export function evaluateSuffixLocaleGate(filePath: string, content: string | null): Violation | null {
   const suffixLocale = suffixLocaleOfFile(filePath);
   if (!suffixLocale) return null;
-  let declared: string | null | undefined = undefined;
+  let declared: string | null | undefined;
   if (content !== null) {
     declared = parseLangDeclaration(content, /\.ya?ml$/.test(filePath)).lang;
   }
@@ -479,7 +479,7 @@ async function validateMarkdownLanguage(): Promise<void> {
 
   // Find all .md and .yaml/.yml files using Bun's built-in Glob API
   const globPatterns = ["**/*.md", "**/*.{yaml,yml}"];
-  let allFiles: string[] = [];
+  const allFiles: string[] = [];
   try {
     for (const pattern of globPatterns) {
       const globber = new Bun.Glob(pattern);

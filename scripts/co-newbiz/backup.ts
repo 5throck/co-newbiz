@@ -30,7 +30,10 @@ function parseArgs(argv: string[]) {
   return opts;
 }
 
-export function runBackup(dbPath?: string, backupDir?: string): { backupFile: string; manifestFile: string; tableRowCounts: Record<string, number> } {
+export function runBackup(
+  dbPath?: string,
+  backupDir?: string,
+): { backupFile: string; manifestFile: string; tableRowCounts: Record<string, number> } {
   const resolvedDbPath = dbPath ?? process.env.CO_NEWBIZ_DB_PATH ?? "db/data/co-newbiz.sqlite";
   const resolvedBackupDir = backupDir ?? "db/backups";
 
@@ -45,9 +48,9 @@ export function runBackup(dbPath?: string, backupDir?: string): { backupFile: st
   // resets the WAL to empty — the main file alone is then self-contained.
   db.run("PRAGMA wal_checkpoint(TRUNCATE)");
 
-  const tables = db
-    .query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
-    .all() as { name: string }[];
+  const tables = db.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all() as {
+    name: string;
+  }[];
   const tableRowCounts: Record<string, number> = {};
   for (const { name } of tables) {
     const row = db.query(`SELECT COUNT(*) AS n FROM "${name}"`).get() as { n: number };

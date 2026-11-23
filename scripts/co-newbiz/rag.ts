@@ -44,12 +44,7 @@ import { existsSync, readFileSync } from "node:fs";
 import type { Database } from "bun:sqlite";
 import { getDb } from "../../db/client.ts";
 import { ulid } from "../../db/lib/ulid.ts";
-import {
-  assessRun,
-  type RagEvaluationInput,
-  type RagGrade,
-  type StageGate,
-} from "../../db/lib/rag-engine.ts";
+import { assessRun, type RagEvaluationInput, type RagGrade, type StageGate } from "../../db/lib/rag-engine.ts";
 import { recomputeRag } from "../../db/lib/rag-service.ts";
 
 export interface RagScenario {
@@ -60,7 +55,11 @@ export interface RagScenario {
   kill_criteria?: boolean;
   financial?: { irr: number; hurdle: number; dscr_downside: number };
   market_grade?: RagGrade;
-  regulatory?: { remedy_type: "none" | "behavioral" | "structural" | "prohibited"; obligation_active?: boolean; discharge_confirmed_at?: string | null };
+  regulatory?: {
+    remedy_type: "none" | "behavioral" | "structural" | "prohibited";
+    obligation_active?: boolean;
+    discharge_confirmed_at?: string | null;
+  };
   technical_grade?: RagGrade;
   risk_grade?: RagGrade;
   irr_over_hurdle_pp?: number;
@@ -97,11 +96,13 @@ export function assessScenario(
     throw new Error("Scenario is missing 'stage_gate'.");
   }
 
-  const project = db
-    .query("SELECT id FROM md_project WHERE project_no = ?")
-    .get(scenario.project_no) as { id: string } | null;
+  const project = db.query("SELECT id FROM md_project WHERE project_no = ?").get(scenario.project_no) as {
+    id: string;
+  } | null;
   if (!project) {
-    throw new Error(`Project '${scenario.project_no}' not found in md_project — create it before assessing (FR-DATA-04: no silent auto-creation of master data).`);
+    throw new Error(
+      `Project '${scenario.project_no}' not found in md_project — create it before assessing (FR-DATA-04: no silent auto-creation of master data).`,
+    );
   }
 
   const now = scenario.now ?? new Date().toISOString();
@@ -112,24 +113,25 @@ export function assessScenario(
   // The run row anchors the assessment in run-based versioning: same
   // scenario -> same hash, and every RAG row cites the run that produced it.
   const runId = ulid();
-  db.run(
-    "INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [
-      runId,
-      project.id,
-      `${options?.runLabelPrefix ?? "rag"} ${scenario.stage_gate} ${now}`,
-      inputHash,
-      options?.createdBy ?? "cli",
-      now,
-    ],
-  );
+  db.run("INSERT INTO run (id, project_id, label, input_hash, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    runId,
+    project.id,
+    `${options?.runLabelPrefix ?? "rag"} ${scenario.stage_gate} ${now}`,
+    inputHash,
+    options?.createdBy ?? "cli",
+    now,
+  ]);
 
   const input: RagEvaluationInput = {
     stageGate: scenario.stage_gate,
     chainGrade: scenario.chain_grade,
     stalenessViolated: scenario.staleness_violated,
     financial: scenario.financial
-      ? { irr: scenario.financial.irr, hurdle: scenario.financial.hurdle, dscrDownside: scenario.financial.dscr_downside }
+      ? {
+          irr: scenario.financial.irr,
+          hurdle: scenario.financial.hurdle,
+          dscrDownside: scenario.financial.dscr_downside,
+        }
       : undefined,
     regulatory: scenario.regulatory
       ? {
@@ -148,7 +150,9 @@ export function assessScenario(
     projectId: project.id,
     runId,
     input,
-    irrOverHurdlePp: scenario.irr_over_hurdle_pp ?? (scenario.financial ? (scenario.financial.irr - scenario.financial.hurdle) * 100 : 0),
+    irrOverHurdlePp:
+      scenario.irr_over_hurdle_pp ??
+      (scenario.financial ? (scenario.financial.irr - scenario.financial.hurdle) * 100 : 0),
     previousIrrOverHurdlePp: scenario.previous_irr_over_hurdle_pp ?? null,
     now,
   });
@@ -190,7 +194,10 @@ if (import.meta.main) {
     if (argv.includes("--stale")) {
       // Host-scheduler watch cycle: idempotent recompute for every project.
       const db = getDb(dbPath);
-      const projects = db.query("SELECT id, project_no FROM md_project ORDER BY project_no").all() as Array<{ id: string; project_no: string }>;
+      const projects = db.query("SELECT id, project_no FROM md_project ORDER BY project_no").all() as Array<{
+        id: string;
+        project_no: string;
+      }>;
       const results = projects.map((p) => {
         try {
           return { project_no: p.project_no, ...recomputeRag(db, p.id, "stale_read", { actor: "cli:watch-cycle" }) };

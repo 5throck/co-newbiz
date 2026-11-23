@@ -152,7 +152,7 @@ export const MANAGED_PATTERNS: ManagedPattern[] = [
   { open: /<!-- COMMON-GEMINI:START -->/, close: "<!-- COMMON-GEMINI:END -->", label: "COMMON-GEMINI" },
   { open: /<!-- COMMON-CODEX:START -->/, close: "<!-- COMMON-CODEX:END -->", label: "COMMON-CODEX" },
   { open: /<!-- COMMON-HERMES:START -->/, close: "<!-- COMMON-HERMES:END -->", label: "COMMON-HERMES" },
-  { open: /<!-- VARIANT-INJECT(?::[^\-]*?)? -->/, close: "<!-- END VARIANT-INJECT -->", label: "VARIANT-INJECT" },
+  { open: /<!-- VARIANT-INJECT(?::[^-]*?)? -->/, close: "<!-- END VARIANT-INJECT -->", label: "VARIANT-INJECT" },
   { open: /<!-- COMMON-AGENTS:START -->/, close: "<!-- COMMON-AGENTS:END -->", label: "COMMON-AGENTS" },
   { open: /<!-- COMMON-CONTEXT:START -->/, close: "<!-- COMMON-CONTEXT:END -->", label: "COMMON-CONTEXT" },
   { open: /<!-- DYNAMIC_SKILLS_START -->/, close: "<!-- DYNAMIC_SKILLS_END -->", label: "DYNAMIC_SKILLS" },

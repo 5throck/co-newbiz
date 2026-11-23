@@ -183,8 +183,7 @@ export function changeRate(before: string, after: string): number {
 
 // ── Server lifecycle: probe, spawn, wait, stop ────────────────────────────────
 
-export const serverUrl = (cfg: AdapterConfig): string =>
-  `http://${SERVER.host}:${SERVER.port}`;
+export const serverUrl = (cfg: AdapterConfig): string => `http://${SERVER.host}:${SERVER.port}`;
 
 interface AnalyzeResponse {
   findings: unknown[];
@@ -271,7 +270,16 @@ export async function ensureServer(cfg: AdapterConfig): Promise<ServerHandle> {
       );
     }
   }
-  return { stop: () => { try { child.kill(); } catch { /* already gone */ } }, spawned: true };
+  return {
+    stop: () => {
+      try {
+        child.kill();
+      } catch {
+        /* already gone */
+      }
+    },
+    spawned: true,
+  };
 }
 
 /** Register server shutdown on process exit (CLI runs). */
@@ -417,7 +425,9 @@ async function prepareRunInner(opts: PrepareOptions): Promise<PrepareResult> {
       `FATAL: humanize tooling unusable — ${doc.checks
         .filter((c) => !c.ok)
         .map((c) => `${c.name} (${c.detail})`)
-        .join("; ")}. Fix the tooling or start the server manually ('bun serve.ts' in ${cfg.cloneDir}); the deliverable is NOT continued unpolished.`,
+        .join(
+          "; ",
+        )}. Fix the tooling or start the server manually ('bun serve.ts' in ${cfg.cloneDir}); the deliverable is NOT continued unpolished.`,
     );
   }
   const serverGenre = GENRE_MAP[genre]!;
@@ -587,7 +597,9 @@ export function finalizeRun(opts: FinalizeOptions): FinalizeResult {
     } catch (e) {
       rep.status = "rolled_back";
       rep.reasons.push("gate-cannot-judge");
-      extra.push(`Unit ${id}: the change-rate gate could not run (${(e as Error).message}); the unit was left in the original wording.`);
+      extra.push(
+        `Unit ${id}: the change-rate gate could not run (${(e as Error).message}); the unit was left in the original wording.`,
+      );
       continue;
     }
     rep.changeRate = rate;

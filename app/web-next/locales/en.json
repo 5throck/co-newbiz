@@ -10004,6 +10004,7 @@
       "detailHeading": "Target detail",
       "summarySectionAria": "Target summary",
       "backToListLabel": "Back to the full target list",
+      "backToShortlistLabel": "Back to the short list",
       "financialScoreTitle": "Financial evaluation weighted score out of 100",
       "financialScore": "Financial {p1}",
       "technicalScoreTitle": "Technical evaluation weighted score out of 100 (per S3 required capabilities)",

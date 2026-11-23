@@ -48,7 +48,8 @@ export function pageType(slug: string): PageType | null {
   if ((n >= 20 && n <= 23) || (n >= 30 && n <= 34) || (n >= 40 && n <= 45) || (n >= 50 && n <= 56)) return "전형";
   if (n === 10 || n === 11) return "서사";
   if (n === 1 || n === 90 || n === 91) return "연습";
-  if (n === 2 || n === 3 || n === 4 || n === 12 || n === 60 || n === 70 || n === 80 || n === 81 || n === 82) return "참조";
+  if (n === 2 || n === 3 || n === 4 || n === 12 || n === 60 || n === 70 || n === 80 || n === 81 || n === 82)
+    return "참조";
   return null;
 }
 
@@ -111,7 +112,9 @@ export function deriveChainFromSidebar(sidebarRaw: string, existingSlugs: Readon
     }
   });
   if (laneIdx[0] >= 0 && laneIdx[1] >= 0 && laneIdx[1] !== laneIdx[0] + 1) {
-    errors.push(`_Sidebar.md — 두 길 그룹(${LANE_GROUP_TITLES.join(", ")})이 사이드바에서 연속하지 않다(R2·R3의 평행 구조 전제)`);
+    errors.push(
+      `_Sidebar.md — 두 길 그룹(${LANE_GROUP_TITLES.join(", ")})이 사이드바에서 연속하지 않다(R2·R3의 평행 구조 전제)`,
+    );
   }
 
   if (laneIdx[0] >= 0 && laneIdx[1] === laneIdx[0] + 1) {
@@ -126,7 +129,9 @@ export function deriveChainFromSidebar(sidebarRaw: string, existingSlugs: Readon
     if (!fork || !join || entrances.some((e) => !e) || !exit1 || !exit2) {
       errors.push("_Sidebar.md — 갈림길 구조(R2·R3)를 유도하기에 그룹 항목이 비어 있다");
     } else if (new Set([fork, ...entrances, exit1, exit2, join]).size !== 6) {
-      errors.push(`_Sidebar.md — 갈림길 구조 앵커가 서로 겹친다(R2·R3 유도 불가): 갈림길=${fork} 입구=${entrances.join("/")} 끝=${exit1}/${exit2} 합류=${join}`);
+      errors.push(
+        `_Sidebar.md — 갈림길 구조 앵커가 서로 겹친다(R2·R3 유도 불가): 갈림길=${fork} 입구=${entrances.join("/")} 끝=${exit1}/${exit2} 합류=${join}`,
+      );
     } else {
       // R2: 직선 유도에 생긴 "길1 끝 → 길2 입구" 간선을 끊고, 갈림길 → 길2 입구를 얹는다
       // (갈림길 → 길1 입구는 직선 유도에 이미 있다).
@@ -184,7 +189,7 @@ export interface NavRow {
 
 const NAV_SEGMENT_RE = /^(이전|다음|처음):\s*(.+)$/;
 const NAV_LINK_RE = /^\[([^\]]+)\]\(([^)]+\.md)\)$/;
-const KIND_RANK: Record<NavSegment["kind"], number> = { "이전": 0, "다음": 1, "처음": 2 };
+const KIND_RANK: Record<NavSegment["kind"], number> = { 이전: 0, 다음: 1, 처음: 2 };
 
 /** 내비 행 한 줄을 설계 §2.4 문법(`이전: [s](s.md) | 다음: [s](s.md) · [s](s.md)`)대로 해석. 아니면 null. */
 export function parseNavRow(line: string): NavRow | null {
@@ -329,14 +334,21 @@ const TYPE_H2: Record<PageType, H2Spec> = {
 };
 
 /** 유형별 필수 H2 존재·고정 순서·선택 절 슬롯을 검사한다(at = 본문 줄번호 → 보고용 위치). */
-export function checkH2Vocabulary(slug: string, type: PageType, sections: H2Section[], at: (bodyLine: number) => string): string[] {
+export function checkH2Vocabulary(
+  slug: string,
+  type: PageType,
+  sections: H2Section[],
+  at: (bodyLine: number) => string,
+): string[] {
   const findings: string[] = [];
   const spec = TYPE_H2[type];
 
   const lineOf = (text: string): number | null => {
     const hits = sections.filter((s) => s.text === text);
     if (hits.length > 1) {
-      findings.push(`${at(hits[1].lineNo)} — H2 "${text}" 절이 여러 개다(절 어휘는 쪽마다 하나, 변형 금지 — 설계 §2.2)`);
+      findings.push(
+        `${at(hits[1].lineNo)} — H2 "${text}" 절이 여러 개다(절 어휘는 쪽마다 하나, 변형 금지 — 설계 §2.2)`,
+      );
     }
     return hits.length > 0 ? hits[0].lineNo : null;
   };
@@ -351,7 +363,9 @@ export function checkH2Vocabulary(slug: string, type: PageType, sections: H2Sect
     }
     anchors.set(text, ln);
     if (lastFound !== null && ln <= lastFound) {
-      findings.push(`${at(ln)} — H2 "${text}" 절의 순서가 어긋났다(고정 순서: ${spec.required.join(" → ")} — 설계 §2.2)`);
+      findings.push(
+        `${at(ln)} — H2 "${text}" 절의 순서가 어긋났다(고정 순서: ${spec.required.join(" → ")} — 설계 §2.2)`,
+      );
     }
     lastFound = ln;
   }
@@ -368,7 +382,9 @@ export function checkH2Vocabulary(slug: string, type: PageType, sections: H2Sect
       if (loLine !== undefined && hiLine !== undefined) {
         const ln = slotHits[0].lineNo;
         if (!(ln > loLine && ln < hiLine)) {
-          findings.push(`${at(ln)} — H2 "${spec.slotted}" 절은 "${lo}"와 "${hi}" 사이에 와야 한다(절 순서 고정 — 설계 §2.2)`);
+          findings.push(
+            `${at(ln)} — H2 "${spec.slotted}" 절은 "${lo}"와 "${hi}" 사이에 와야 한다(절 순서 고정 — 설계 §2.2)`,
+          );
         }
       }
     }
@@ -454,7 +470,9 @@ export function runChecks(dirAbs: string, displayDir: string): string[] {
       for (const link of seg.links) {
         const targetSlug = link.target.replace(/\.md$/, "");
         if (link.label !== targetSlug) {
-          findings.push(`${atLine(navLineNo)} — 내비 링크 문구가 대상 슬러그와 다르다: "${link.label}" ≠ ${link.target}(설계 §2.4)`);
+          findings.push(
+            `${atLine(navLineNo)} — 내비 링크 문구가 대상 슬러그와 다르다: "${link.label}" ≠ ${link.target}(설계 §2.4)`,
+          );
         }
         if (!slugs.has(targetSlug)) {
           findings.push(`${atLine(navLineNo)} — 내비 링크 대상이 이 위키의 쪽이 아니다: ${link.target}`);
@@ -477,16 +495,22 @@ export function runChecks(dirAbs: string, displayDir: string): string[] {
     const exp = chain.expect.get(slug);
     if (exp) {
       if (JSON.stringify(prevTargets) !== JSON.stringify(exp.prev)) {
-        findings.push(`${atLine(navLineNo)} — 이전 사슬이 사이드바 유도와 다르다: 기대 [${exp.prev.join(", ")}] 실제 [${prevTargets.join(", ")}](R1~R3 — 설계 §2.4)`);
+        findings.push(
+          `${atLine(navLineNo)} — 이전 사슬이 사이드바 유도와 다르다: 기대 [${exp.prev.join(", ")}] 실제 [${prevTargets.join(", ")}](R1~R3 — 설계 §2.4)`,
+        );
       }
       if (JSON.stringify(nextTargets) !== JSON.stringify(exp.next)) {
-        findings.push(`${atLine(navLineNo)} — 다음 사슬이 사이드바 유도와 다르다: 기대 [${exp.next.join(", ")}] 실제 [${nextTargets.join(", ")}](R1~R3 — 설계 §2.4)`);
+        findings.push(
+          `${atLine(navLineNo)} — 다음 사슬이 사이드바 유도와 다르다: 기대 [${exp.next.join(", ")}] 실제 [${nextTargets.join(", ")}](R1~R3 — 설계 §2.4)`,
+        );
       }
       // R4 끝 규칙
       const firstTargets = segmentTargets(row, "처음");
       if (exp.first) {
         if (!(firstTargets.length === 1 && firstTargets[0] === exp.first)) {
-          findings.push(`${atLine(navLineNo)} — 끝 쪽은 다음 대신 처음: [${exp.first}](${exp.first}.md) 내비 행을 둬야 한다(R4 — 설계 §2.4)`);
+          findings.push(
+            `${atLine(navLineNo)} — 끝 쪽은 다음 대신 처음: [${exp.first}](${exp.first}.md) 내비 행을 둬야 한다(R4 — 설계 §2.4)`,
+          );
         }
       } else if (firstTargets.length > 0) {
         findings.push(`${atLine(navLineNo)} — "처음:" 세그먼트는 사슬의 끝 쪽에만 둔다(R4 — 설계 §2.4)`);
@@ -496,20 +520,26 @@ export function runChecks(dirAbs: string, displayDir: string): string[] {
     // (e) 유형별 필수 H2(§2.1~2.2) — 끝 쪽의 `## 마무리`(검증 계획 (d))도 여기서 커버된다.
     const type = pageType(slug);
     if (!type) {
-      findings.push(`${displayDir}/${file} — 설계 §2.1 유형 표에 없는 쪽이다(전형/서사/연습/참조 판정 불가 — 숫자 접두를 확인한다)`);
+      findings.push(
+        `${displayDir}/${file} — 설계 §2.1 유형 표에 없는 쪽이다(전형/서사/연습/참조 판정 불가 — 숫자 접두를 확인한다)`,
+      );
     } else {
       findings.push(...checkH2Vocabulary(slug, type, h2Sections(body), atLine));
     }
 
     // (e) E1~E3 줄표 게이트 — backtick 밖 본문 0
     for (const v of findEmDashViolations(body)) {
-      findings.push(`${atLine(v.lineNo)} — backtick 밖 본문에 줄표가 남아 있다: …${v.snippet}…(${v.rule}~E3: 문장 분리나 콜론으로 대체, backtick 안 화면 표기는 보존)`);
+      findings.push(
+        `${atLine(v.lineNo)} — backtick 밖 본문에 줄표가 남아 있다: …${v.snippet}…(${v.rule}~E3: 문장 분리나 콜론으로 대체, backtick 안 화면 표기는 보존)`,
+      );
     }
 
     // (e) D1 날짜 게이트 — 예외: 82-변경-이력 표(파일 전체), _Footer(애초에 검사 대상 밖)
     if (slug !== "82-변경-이력") {
       for (const v of findDateViolations(body)) {
-        findings.push(`${atLine(v.lineNo)} — backtick 밖 본문에 달력 날짜가 있다: ${v.snippet}(D1: 본문 날짜 각인 금지, 예외는 backtick 화면 값·82-변경-이력·_Footer)`);
+        findings.push(
+          `${atLine(v.lineNo)} — backtick 밖 본문에 달력 날짜가 있다: ${v.snippet}(D1: 본문 날짜 각인 금지, 예외는 backtick 화면 값·82-변경-이력·_Footer)`,
+        );
       }
     }
   }
@@ -518,14 +548,18 @@ export function runChecks(dirAbs: string, displayDir: string): string[] {
   for (const [a, nexts] of actualNext) {
     for (const b of nexts) {
       if (!actualPrev.get(b)?.has(a)) {
-        findings.push(`${displayDir}/${a}.md — R5 상호성 위반: 다음에 ${b}가 있지만 ${b}의 이전에 ${a}가 없다(설계 §2.4 R5)`);
+        findings.push(
+          `${displayDir}/${a}.md — R5 상호성 위반: 다음에 ${b}가 있지만 ${b}의 이전에 ${a}가 없다(설계 §2.4 R5)`,
+        );
       }
     }
   }
   for (const [b, prevs] of actualPrev) {
     for (const a of prevs) {
       if (!actualNext.get(a)?.has(b)) {
-        findings.push(`${displayDir}/${b}.md — R5 상호성 위반: 이전에 ${a}가 있지만 ${a}의 다음에 ${b}가 없다(설계 §2.4 R5)`);
+        findings.push(
+          `${displayDir}/${b}.md — R5 상호성 위반: 이전에 ${a}가 있지만 ${a}의 다음에 ${b}가 없다(설계 §2.4 R5)`,
+        );
       }
     }
   }
@@ -570,11 +604,15 @@ async function main() {
     die(`위키 폴더를 검사할 수 없다: ${dirAbs} — ${e instanceof Error ? e.message : String(e)}`);
   }
   if (findings.length > 0) {
-    console.error(`[check-wiki-nav] 위키 내비·문장 규범 검증 실패 ${findings.length}건 — 원본(${dirArg}/)을 고친 뒤 다시 실행하세요:`);
+    console.error(
+      `[check-wiki-nav] 위키 내비·문장 규범 검증 실패 ${findings.length}건 — 원본(${dirArg}/)을 고친 뒤 다시 실행하세요:`,
+    );
     for (const f of findings) console.error(`  - ${f}`);
     die(`검증 실패 ${findings.length}건 — 위의 파일:줄을 고친다(검사기를 느슨하게 하지 않는다)`);
   }
-  console.log(`[check-wiki-nav] 통과 — 내비 사슬(R1~R5)·문구=슬러그·마무리·줄표(E1~E3)·날짜(D1)·필수 H2 게이트 전부 통과`);
+  console.log(
+    `[check-wiki-nav] 통과 — 내비 사슬(R1~R5)·문구=슬러그·마무리·줄표(E1~E3)·날짜(D1)·필수 H2 게이트 전부 통과`,
+  );
 }
 
 if (import.meta.main) {

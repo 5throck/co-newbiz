@@ -64,9 +64,9 @@ const GRAPH_JSON_FILE = join(PROJECT_ROOT, "docs", "graph", "graph.json");
  */
 export function loadHumanRoles(): Set<string> {
   try {
-    const doc = yaml.load(readFileSync(HUMAN_ROLES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as
-      | { human_roles?: Record<string, unknown> }
-      | null;
+    const doc = yaml.load(readFileSync(HUMAN_ROLES_FILE, "utf-8"), { schema: yaml.JSON_SCHEMA }) as {
+      human_roles?: Record<string, unknown>;
+    } | null;
     return new Set(Object.keys(doc?.human_roles ?? {}));
   } catch {
     return new Set();
@@ -172,7 +172,7 @@ export function checkAiAgentAuthority(
   where: string,
   step: { id: number | string; agent_key?: unknown; decision_authority?: unknown },
   humanRoles: Set<string>,
-  agentExists: (key: string) => boolean
+  agentExists: (key: string) => boolean,
 ): string | null {
   const key = step.agent_key;
   if (step.decision_authority !== "human" || typeof key !== "string" || key.trim() === "") return null;
@@ -194,7 +194,7 @@ export function buildGraphMap(): GraphMap {
 
   for (const name of sharedProcedures) {
     for (const combo of combosFor(name, regions, entities)) {
-      let result;
+      let result: ReturnType<typeof resolveProcedure>;
       try {
         result = resolveProcedure(name, combo.opts);
       } catch (e) {
@@ -208,7 +208,13 @@ export function buildGraphMap(): GraphMap {
         combo: combo.label,
         layers_applied: result.layersApplied,
         steps: result.steps.map((s) => {
-          const step = s as unknown as Record<string, unknown> & { id: number | string; gate: string; agent_key: string; skill_key: string; output_type: string };
+          const step = s as unknown as Record<string, unknown> & {
+            id: number | string;
+            gate: string;
+            agent_key: string;
+            skill_key: string;
+            output_type: string;
+          };
           return {
             id: step.id,
             gate: step.gate,
@@ -226,14 +232,11 @@ export function buildGraphMap(): GraphMap {
         // ADR-0053 consistency: a registry key used WITHOUT the marking.
         if (humanRoles.has(s.agent_key) && (s as Record<string, unknown>).decision_authority !== "human") {
           errors.push(
-            `${name} @ ${combo.label} step ${s.id}: agent_key '${s.agent_key}' is a registered human role (procedures/_human-roles.yaml) but the step lacks decision_authority: human`
+            `${name} @ ${combo.label} step ${s.id}: agent_key '${s.agent_key}' is a registered human role (procedures/_human-roles.yaml) but the step lacks decision_authority: human`,
           );
         }
-        const aiAuthErr = checkAiAgentAuthority(
-          `${name} @ ${combo.label}`,
-          s as never,
-          humanRoles,
-          (k) => existsSync(join(AGENTS_DIR, `${k}.md`))
+        const aiAuthErr = checkAiAgentAuthority(`${name} @ ${combo.label}`, s as never, humanRoles, (k) =>
+          existsSync(join(AGENTS_DIR, `${k}.md`)),
         );
         if (aiAuthErr) errors.push(aiAuthErr);
       }
@@ -246,7 +249,7 @@ export function buildGraphMap(): GraphMap {
   for (const role of humanRoles) {
     if (existsSync(join(AGENTS_DIR, `${role}.md`))) {
       errors.push(
-        `human role '${role}' must not have an agents/${role}.md — remove the file or the registry entry (procedures/_human-roles.yaml, ADR-0053)`
+        `human role '${role}' must not have an agents/${role}.md — remove the file or the registry entry (procedures/_human-roles.yaml, ADR-0053)`,
       );
     }
   }
@@ -306,7 +309,7 @@ export function checkSkillMetadata(
   skill: string,
   meta: Record<string, unknown>,
   knownProcedures: Set<string>,
-  knownSkills: Set<string>
+  knownSkills: Set<string>,
 ): string[] {
   const errors: string[] = [];
   for (const key of stringList(meta, "procedure_keys", skill, errors)) {
@@ -364,7 +367,7 @@ export function checkSkillGraph(map: GraphMap): string[] {
     const declared = declaredBy.get(skill);
     if (declared !== undefined && !declared.has(procedure)) {
       errors.push(
-        `procedure '${procedure}' references skill '${skill}' but the skill's metadata.procedure_keys does not include '${procedure}' — the graph edge and the skill's self-description have drifted (add '${procedure}' to skills/${skill}/SKILL.md metadata.procedure_keys)`
+        `procedure '${procedure}' references skill '${skill}' but the skill's metadata.procedure_keys does not include '${procedure}' — the graph edge and the skill's self-description have drifted (add '${procedure}' to skills/${skill}/SKILL.md metadata.procedure_keys)`,
       );
     }
   }
@@ -450,16 +453,16 @@ function printCounts(title: string, counts: Map<string, number>): void {
 }
 
 function printSummary(map: GraphMap): void {
-  console.log(`Procedure graph map — ${map.generated_from.procedures} procedure(s), ${map.generated_from.combos} combo(s)\n`);
+  console.log(
+    `Procedure graph map — ${map.generated_from.procedures} procedure(s), ${map.generated_from.combos} combo(s)\n`,
+  );
   const wProc = Math.max("Procedure".length, ...map.procedures.map((p) => p.procedure.length));
   const wCombo = Math.max("Combo".length, ...map.procedures.map((p) => p.combo.length));
-  console.log(
-    `${"Procedure".padEnd(wProc)}  ${"Combo".padEnd(wCombo)}  Steps  shared  region  entity`
-  );
+  console.log(`${"Procedure".padEnd(wProc)}  ${"Combo".padEnd(wCombo)}  Steps  shared  region  entity`);
   for (const p of map.procedures) {
     const by = (src: string) => p.steps.filter((s) => s.source === src).length;
     console.log(
-      `${p.procedure.padEnd(wProc)}  ${p.combo.padEnd(wCombo)}  ${String(p.steps.length).padStart(5)}  ${String(by("shared")).padStart(6)}  ${String(by("region")).padStart(6)}  ${String(by("entity")).padStart(6)}`
+      `${p.procedure.padEnd(wProc)}  ${p.combo.padEnd(wCombo)}  ${String(p.steps.length).padStart(5)}  ${String(by("shared")).padStart(6)}  ${String(by("region")).padStart(6)}  ${String(by("entity")).padStart(6)}`,
     );
   }
 
@@ -481,21 +484,28 @@ function runCheck(map: GraphMap): void {
 
   if (map.missing.agents.length === 0 && map.missing.skills.length === 0 && allErrors.length === 0) {
     const totalSteps = map.procedures.reduce((n, p) => n + p.steps.length, 0);
-    const humanMarked = map.procedures.reduce((n, p) => n + p.steps.filter((s) => s.decision_authority === "human").length, 0);
+    const humanMarked = map.procedures.reduce(
+      (n, p) => n + p.steps.filter((s) => s.decision_authority === "human").length,
+      0,
+    );
     console.log(
-      `✅ graph-map --check passed: ${map.generated_from.procedures} procedure(s), ${map.generated_from.combos} combo(s), ${totalSteps} merged step(s), ${humanMarked} human-authority step(s) — every agent_key and skill_key resolves, skill-graph metadata consistent, SA-5 projection-level validation passed.`
+      `✅ graph-map --check passed: ${map.generated_from.procedures} procedure(s), ${map.generated_from.combos} combo(s), ${totalSteps} merged step(s), ${humanMarked} human-authority step(s) — every agent_key and skill_key resolves, skill-graph metadata consistent, SA-5 projection-level validation passed.`,
     );
     return;
   }
   console.error(
-    `❌ graph-map --check failed: ${map.missing.agents.length} missing agent file(s), ${map.missing.skills.length} missing skill file(s), ${allErrors.length} graph error(s)`
+    `❌ graph-map --check failed: ${map.missing.agents.length} missing agent file(s), ${map.missing.skills.length} missing skill file(s), ${allErrors.length} graph error(s)`,
   );
   for (const key of map.missing.agents) {
-    const referrers = [...new Set(map.procedures.filter((p) => p.steps.some((s) => s.agent_key === key)).map((p) => p.procedure))];
+    const referrers = [
+      ...new Set(map.procedures.filter((p) => p.steps.some((s) => s.agent_key === key)).map((p) => p.procedure)),
+    ];
     console.error(`  [agent] ${key} — no agents/${key}.md (referenced by ${referrers.join(", ")})`);
   }
   for (const key of map.missing.skills) {
-    const referrers = [...new Set(map.procedures.filter((p) => p.steps.some((s) => s.skill_key === key)).map((p) => p.procedure))];
+    const referrers = [
+      ...new Set(map.procedures.filter((p) => p.steps.some((s) => s.skill_key === key)).map((p) => p.procedure)),
+    ];
     console.error(`  [skill] ${key} — no skills/${key}/SKILL.md (referenced by ${referrers.join(", ")})`);
   }
   for (const err of allErrors) {
@@ -510,7 +520,9 @@ if (import.meta.main) {
   const checkMode = args.includes("--check");
   const unknown = args.filter((a) => a !== "--json" && a !== "--check");
   if (unknown.length > 0 || (jsonMode && checkMode)) {
-    console.error(`Usage: bun scripts/co-newbiz/graph-map.ts [--json | --check]${unknown.length > 0 ? ` (unknown argument(s): ${unknown.join(" ")})` : " (--json and --check are mutually exclusive)"}`);
+    console.error(
+      `Usage: bun scripts/co-newbiz/graph-map.ts [--json | --check]${unknown.length > 0 ? ` (unknown argument(s): ${unknown.join(" ")})` : " (--json and --check are mutually exclusive)"}`,
+    );
     process.exit(1);
   }
 

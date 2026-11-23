@@ -60,8 +60,12 @@ const ROLE = (process.env.E2E_VISUAL_ROLE ?? "analyst") as "analyst" | "admin";
 const MAX_HAMMING = 12;
 
 const DEAL_STAGES = ["s1", "s2", "s3", "s4", "s5", "s6", "s7"] as const;
+// S8 carries the explicit `?tab=financial` (design 2026-11-21-s8-overview-tab § Defect
+// Remediation 2026-11-23): the bare /business-case URL now redirects to the project 개요
+// page, which has no `main .stage-head h1` — the explicit tab keeps this walk on the S8
+// business-case workspace (the exact screen the bare URL rendered before the ruling).
 const PROJECT_SEGMENTS: Array<[stage: string, seg: string]> = [
-  ["S8", "business-case"],
+  ["S8", "business-case?tab=financial"],
   ["S9", "dd"],
   ["S10", "deal-structure"],
   ["S11", "ic-review"],

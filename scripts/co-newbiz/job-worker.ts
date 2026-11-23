@@ -68,7 +68,9 @@ async function main(): Promise<number> {
     console.info(`[job-worker] claimed ${job.id} kind=${job.kind} attempt=${job.attempt}`);
     if (!handler) {
       // 핸들러 부재는 결정적 설정 오류 — 재시도하지 않고 확정 실패.
-      failJob(db, job.id, `등록된 핸들러가 없음: ${job.kind} (--handlers로 확장 모듈을 로드했는지 확인)`, { noRetry: true });
+      failJob(db, job.id, `등록된 핸들러가 없음: ${job.kind} (--handlers로 확장 모듈을 로드했는지 확인)`, {
+        noRetry: true,
+      });
       console.error(`[job-worker] failed ${job.id}: no handler for kind=${job.kind}`);
       return 1;
     }
@@ -91,7 +93,9 @@ async function main(): Promise<number> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const { requeued } = failJob(db, job.id, timedOut ? `timeout: ${msg}` : msg);
-      console.error(`[job-worker] failed ${job.id} attempt=${job.attempt} (${requeued ? "requeued" : "final"}): ${msg}`);
+      console.error(
+        `[job-worker] failed ${job.id} attempt=${job.attempt} (${requeued ? "requeued" : "final"}): ${msg}`,
+      );
       finalExit = 1;
       if (!requeued) return 1;
     } finally {

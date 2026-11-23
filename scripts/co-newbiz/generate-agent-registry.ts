@@ -12,7 +12,12 @@ const ROOT = join(import.meta.dir, "..", "..");
 const AGENTS_DIR = join(ROOT, "agents");
 const OUT = join(ROOT, "app", "web-next", "lib", "agent-registry.generated.ts");
 
-interface Entry { key: string; name: string; role: string; domain: string | null }
+interface Entry {
+  key: string;
+  name: string;
+  role: string;
+  domain: string | null;
+}
 
 function parseFrontmatter(text: string): Record<string, string> {
   const normalized = text.replace(/\r\n/g, "\n");
@@ -26,7 +31,9 @@ function parseFrontmatter(text: string): Record<string, string> {
   return fm;
 }
 
-const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md")).sort();
+const files = readdirSync(AGENTS_DIR)
+  .filter((f) => f.endsWith(".md"))
+  .sort();
 const entries: Entry[] = [];
 for (const f of files) {
   const fm = parseFrontmatter(readFileSync(join(AGENTS_DIR, f), "utf-8"));

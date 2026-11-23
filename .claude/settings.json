@@ -232,5 +232,9 @@
     ],
     "UserPromptSubmit": [],
     "Stop": []
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }

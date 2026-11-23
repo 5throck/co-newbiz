@@ -89,7 +89,8 @@ export function validateAllowlist(entries: AllowlistEntry[]): string[] {
     const id = `allowlist[${i}]`;
     if (!e.locale || !e.path) errors.push(`${id}: locale and path are required`);
     if (e.path?.includes("*")) errors.push(`${id}: wildcard paths are not allowed (${e.path})`);
-    if (!e.reason || e.reason.trim().length < 10) errors.push(`${id}: a reason (>= 10 chars) is required for ${e.locale}:${e.path}`);
+    if (!e.reason || e.reason.trim().length < 10)
+      errors.push(`${id}: a reason (>= 10 chars) is required for ${e.locale}:${e.path}`);
     const key = `${e.locale}:${e.path}`;
     if (seen.has(key)) errors.push(`${id}: duplicate entry ${key}`);
     seen.add(key);
@@ -130,10 +131,14 @@ export function lintLocaleJargon(): JargonLintResult {
   const rules = buildRules();
   const findings: JargonFinding[] = [];
   const scannedLocales: string[] = [];
-  for (const f of readdirSync(LOCALES_DIR).filter((n) => n.endsWith(".json")).sort()) {
+  for (const f of readdirSync(LOCALES_DIR)
+    .filter((n) => n.endsWith(".json"))
+    .sort()) {
     const locale = f.slice(0, -5);
     scannedLocales.push(locale);
-    findings.push(...scanLocaleDocument(locale, JSON.parse(readFileSync(join(LOCALES_DIR, f), "utf8")), rules, allowlist));
+    findings.push(
+      ...scanLocaleDocument(locale, JSON.parse(readFileSync(join(LOCALES_DIR, f), "utf8")), rules, allowlist),
+    );
   }
   return { findings, allowlistErrors: validateAllowlist(allowlist), scannedLocales };
 }

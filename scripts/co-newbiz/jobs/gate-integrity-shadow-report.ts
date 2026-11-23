@@ -24,7 +24,8 @@ const WINDOW_DAYS = 7;
 export const gateIntegrityShadowReport: JobHandler = {
   key: "gate_integrity.shadow_report",
   displayName: "Gate integrity shadow report",
-  description: "Weekly read-only summary of gate-integrity shadow-mode would-block/refusal audit rows and enforce-flip readiness.",
+  description:
+    "Weekly read-only summary of gate-integrity shadow-mode would-block/refusal audit rows and enforce-flip readiness.",
   defaultCron: "0 8 * * 1",
   timeoutSec: 900,
   maxRetries: 1,
@@ -41,7 +42,12 @@ export const gateIntegrityShadowReport: JobHandler = {
       rowsRead: total,
       rowsWritten: 1,
       rowsChanged: 0,
-      detail: { report_path: file, window: report.window, totals: report.totals, migration_pending: report.migration_pending.length },
+      detail: {
+        report_path: file,
+        window: report.window,
+        totals: report.totals,
+        migration_pending: report.migration_pending.length,
+      },
     };
   },
 };
