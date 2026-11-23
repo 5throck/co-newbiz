@@ -495,10 +495,7 @@ export function BetaPanel({
               </p>
             )}
             {insufficientRows && collectedRowCount < 63 && (
-              <p
-                role="status"
-                className="text-[color:var(--warning,var(--warning-fg,var(--muted-fg)))] text-[length:var(--fs-caption)] mt-2"
-              >
+              <p role="status" className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)] mt-2">
                 {t("regressionNeedsAboutThreeMonths")} {collectedRowCount}
                 {tc("countUnit")}
               </p>

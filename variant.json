@@ -36,6 +36,13 @@
     ],
     "external": []
   },
+  "designLint": {
+    "enabled": true,
+    "scanRoots": [
+      "app/web-next/app",
+      "app/web-next/components"
+    ]
+  },
   "skill_manifest": {
     "variant_specific": [
       {
