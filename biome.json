@@ -74,7 +74,8 @@
       "includes": [
         "app/web-next/components/AppShell.tsx",
         "app/web-next/app/flows/flow-graph.tsx",
-        "app/web-next/app/flows/ledger-view.tsx"
+        "app/web-next/app/flows/ledger-view.tsx",
+        "app/web-next/lib/business-goals-view.ts"
       ],
       "formatter": { "enabled": false }
     }

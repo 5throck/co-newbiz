@@ -27,35 +27,14 @@ export interface CaseAttainmentEntry {
 
 /** Tab keys that live inside the business-case page (?tab=). `technical` and `financial`
  * are the two lens tabs (ADR-0169); the former five analysis tabs are financial sub-tabs. */
-export const S8_TAB_KEYS = [
-  "technical",
-  "financial",
-  "goals",
-  "scenarios",
-  "targets",
-  "wacc",
-  "financial-analysis",
-  "bep",
-  "overview",
-  "params",
-  "target-costing",
-  "decision",
-] as const;
+export const S8_TAB_KEYS = ["technical", "financial", "goals", "scenarios", "targets", "wacc", "financial-analysis", "bep", "overview", "params", "target-costing", "decision"] as const;
 export type S8TabKey = (typeof S8_TAB_KEYS)[number];
 
 /** Stage-level tab order (INTERIM-WORDING labels live in lib/stage-tabs.ts). */
 export const S8_PRIMARY_TAB_ORDER: readonly S8TabKey[] = ["goals", "technical", "financial", "targets", "decision"];
 
 /** Sub-tabs inside the financial part (goals and targets are primary tabs; the more-menu holds only 요약 and the risk heatmap). */
-export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = [
-  "overview",
-  "scenarios",
-  "wacc",
-  "financial-analysis",
-  "bep",
-  "params",
-  "target-costing",
-];
+export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["overview", "scenarios", "wacc", "financial-analysis", "bep", "params", "target-costing"];
 
 /** Alias ?tab= values that land on an existing tab key. */
 export const S8_TAB_ALIASES: Readonly<Record<string, S8TabKey>> = {
@@ -134,15 +113,10 @@ export type BannerState =
   | { kind: "none"; standardsApply: boolean }
   | { kind: "applied"; total: number; counts: GoalCountBySource; standardsApply: boolean };
 
-export function goalsBannerState(
-  counts: GoalCountBySource | null | undefined,
-  standardsResolvable: boolean,
-): BannerState {
+export function goalsBannerState(counts: GoalCountBySource | null | undefined, standardsResolvable: boolean): BannerState {
   const c = counts ?? { project: 0, affiliate: 0, group: 0 };
   const total = c.project + c.affiliate + c.group;
-  return total === 0
-    ? { kind: "none", standardsApply: standardsResolvable }
-    : { kind: "applied", total, counts: c, standardsApply: standardsResolvable };
+  return total === 0 ? { kind: "none", standardsApply: standardsResolvable } : { kind: "applied", total, counts: c, standardsApply: standardsResolvable };
 }
 
 // INTERIM-WORDING: all Korean strings below are provisional pending glossary review.
@@ -184,18 +158,12 @@ export const ATTAINMENT_VIEW: Record<AttainmentStatus | "not_set", { icon: strin
   not_set: { icon: "–", label: "목표 미설정", cls: "status-not-started" }, // INTERIM-WORDING
 };
 
-export function attainmentView(status: AttainmentStatus | null | undefined): {
-  icon: string;
-  label: string;
-  cls: string;
-} {
+export function attainmentView(status: AttainmentStatus | null | undefined): { icon: string; label: string; cls: string } {
   return ATTAINMENT_VIEW[status ?? "not_set"] ?? ATTAINMENT_VIEW.not_set;
 }
 
 /** Count statuses for a case's attainment entries (empty = no goals). */
-export function summarizeAttainment(
-  entries: CaseAttainmentEntry[] | null | undefined,
-): Record<AttainmentStatus, number> {
+export function summarizeAttainment(entries: CaseAttainmentEntry[] | null | undefined): Record<AttainmentStatus, number> {
   const out: Record<AttainmentStatus, number> = { met: 0, missed: 0, indeterminate: 0, manual: 0 };
   for (const e of entries ?? []) out[e.status] += 1;
   return out;
