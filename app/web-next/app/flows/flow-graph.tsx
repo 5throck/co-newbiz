@@ -292,6 +292,7 @@ export function FlowGraph({ stages, agentsByKey, markers, selectedStage, onSelec
                 // F4(2026-10-26 amend) — 노드가 포인터와 키보드 모두로 오퍼러블하다:
                 // 클릭/Enter/Space가 같은 onSelectStage로 귀결한다. AT 요약 경로는
                 // svg role="img"와 활동 표가 담당한다(파일 헤더 §6.4 단락).
+                // biome-ignore lint/a11y/useSemanticElements: SVG g 노드 — SVG 내부에는 네이티브 HTML button 요소가 존재하지 않는다. role="button"+키보드 핸들러가 SVG 인터랙션의 올바른 접근 패턴이다(F4 2026-10-26 amend).
                 <g
                   key={s.id}
                   role="button"

@@ -65,6 +65,11 @@ const ENTRY_COL_PCT_READONLY = [34, 22, 16, 28] as const;
 /** Column shares (%): no, amount, currency, release condition, status. */
 const TRANCHE_RECON_COL_PCT = [8, 18, 10, 44, 20] as const;
 
+/** 행 셀 3열(수치 열)만 tabular-nums — 인허가·인증 마일스톤 표는 날짜/문자열이라 제외. */
+function entryCellClass(j: number, kind: EntryKind): string | undefined {
+  return j === 2 && kind !== "permit_milestones" && kind !== "certification_milestones" ? "tabular-nums" : undefined;
+}
+
 /** Capex tranche status chip → catalog key (ko master wording mirrors labels.ts TRANCHE_STATUS_LABEL). */
 const TRANCHE_STATUS_KEY: Record<string, string> = {
   planned: "stages.s11.executionBaseline.tranchePlanned",
@@ -72,9 +77,20 @@ const TRANCHE_STATUS_KEY: Record<string, string> = {
   withheld: "stages.s11.executionBaseline.trancheWithheld",
 };
 
-interface SourceOption { value: string; label: string }
+interface SourceOption {
+  value: string;
+  label: string;
+}
 
-function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRemove }: {
+function EntrySection({
+  kind,
+  entries,
+  canAct,
+  busy,
+  sourceOptions,
+  onSave,
+  onRemove,
+}: {
   kind: EntryKind;
   entries: BaselineEntries;
   canAct: boolean;
@@ -82,9 +98,12 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
   sourceOptions: SourceOption[];
   onSave: (next: BaselineEntries) => Promise<boolean>;
   onRemove: (kind: EntryKind, index: number) => void;
-}) {const t = useTranslations("stages.s11.executionBaseline"); const tc = useTranslations("common"); const tr = useTranslations();
+}) {
+  const t = useTranslations("stages.s11.executionBaseline");
+  const tc = useTranslations("common");
+  const tr = useTranslations();
   /** Resolve a lib-emitted render reference: catalog key + params, or raw server text passthrough. */
-  const tx = (m: I18nText): string => (m.key ? tr(m.key, m.params) : m.text ?? "");
+  const tx = (m: I18nText): string => (m.key ? tr(m.key, m.params) : (m.text ?? ""));
   /** Resolve a structured form-validation failure into a message (label refs resolved from the spec). */
   const FORMAT_ERR_KEY: Record<string, string> = {
     target_date: "errFormatTargetDate",
@@ -96,8 +115,13 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
     deadline: "errFormatDeadline",
   };
   const entryErrorText = (err: EntryError): string => {
-    if (err.kind === "required") return t("errRequired", { p1: tx(ENTRY_SPECS[kind].fields.find((f) => f.key === err.field)!.label) });
-    if (err.kind === "maxLength") return t("errMaxLength", { p1: tx(ENTRY_SPECS[kind].fields.find((f) => f.key === err.field)!.label), p2: String(err.max) });
+    if (err.kind === "required")
+      return t("errRequired", { p1: tx(ENTRY_SPECS[kind].fields.find((f) => f.key === err.field)!.label) });
+    if (err.kind === "maxLength")
+      return t("errMaxLength", {
+        p1: tx(ENTRY_SPECS[kind].fields.find((f) => f.key === err.field)!.label),
+        p2: String(err.max),
+      });
     return t(FORMAT_ERR_KEY[err.code]);
   };
   const spec = ENTRY_SPECS[kind];
@@ -108,7 +132,7 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
   const [formError, setFormError] = useState<string | null>(null);
   const rows = entries[kind] as object[];
   const cumulative = kind === "hiring_plan" ? cumulativeHeadcounts(entries.hiring_plan as HiringRow[]) : [];
-  const labelOf = (id: string | null) => (id ? sourceOptions.find((o) => o.value === id)?.label ?? id : null);
+  const labelOf = (id: string | null) => (id ? (sourceOptions.find((o) => o.value === id)?.label ?? id) : null);
 
   useEffect(() => {
     if (editing !== null) formRef.current?.querySelector<HTMLElement>("input, select")?.focus();
@@ -118,9 +142,15 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
     const built = buildEntry(kind, values);
     setFormError(built.ok ? null : entryErrorText(built.error));
     if (!built.ok) return;
-    if (editing === null && !canAddEntry(entries, kind)) { setFormError(t("atMost100ItemsCan")); return; }
+    if (editing === null && !canAddEntry(entries, kind)) {
+      setFormError(t("atMost100ItemsCan"));
+      return;
+    }
     const saved = await onSave(withEntry(entries, kind, editing, built.value));
-    if (saved) { setValues(emptyValues(kind)); setEditing(null); }
+    if (saved) {
+      setValues(emptyValues(kind));
+      setEditing(null);
+    }
   }
 
   /** Render one row cell: plain data text or a catalog reference resolved at render. */
@@ -128,35 +158,71 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
 
   return (
     <div className="mt-3" id={`gx-${kind}`} tabIndex={-1} data-testid={`gx-${kind}`}>
-      <h4 className="text-[length:var(--fs-body)] mb-1">{tx(spec.title)} ({rows.length}{tc("countSuffixParen")}</h4>
+      <h4 className="text-[length:var(--fs-body)] mb-1">
+        {tx(spec.title)} ({rows.length}
+        {tc("countSuffixParen")}
+      </h4>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{tx(spec.description)}</p>
-      <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+      {/* biome-ignore lint/a11y/noNoninteractiveTabindex: 포커스 가능 스크롤 영역(WCAG 2.1/axe scrollable-region-focusable) — 키보드 사용자가 표 영역을 스크롤하려면 tabIndex가 필요하다. */}
+      <section className="table-scroll" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
         <table className="data-table table-fixed-pct tmin-48" aria-label={tx(spec.title)}>
-          <caption className="sr-only">{tx(spec.title)} {t("list")}</caption>
+          <caption className="sr-only">
+            {tx(spec.title)} {t("list")}
+          </caption>
           <ColGroup widths={canAct ? ENTRY_COL_PCT_ACT : ENTRY_COL_PCT_READONLY} />
           <thead>
             <tr>
-              <th scope="col">{tx(spec.headers[0])}</th><th scope="col">{tx(spec.headers[1])}</th>
-              <th scope="col">{tx(spec.headers[2])}</th><th scope="col">{tx(spec.headers[3])}</th>
+              <th scope="col">{tx(spec.headers[0])}</th>
+              <th scope="col">{tx(spec.headers[1])}</th>
+              <th scope="col">{tx(spec.headers[2])}</th>
+              <th scope="col">{tx(spec.headers[3])}</th>
               {canAct && <th scope="col">{tc("manage")}</th>}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={canAct ? 5 : 4} className="text-[color:var(--muted-fg)]">{t("nothingRecordedYet")}</td></tr>
+              <tr>
+                <td colSpan={canAct ? 5 : 4} className="text-[color:var(--muted-fg)]">
+                  {t("nothingRecordedYet")}
+                </td>
+              </tr>
             )}
             {rows.map((row, i) => {
               const cells = rowCells(kind, row, { cumulativeHeadcount: cumulative[i], sourceLabel: labelOf });
               return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 행의 정체성은 위치다 — 편집(setEditing(i))·삭제(onRemove(kind, i))가 인덱스로 주소되고 항목에 안정적 id가 없다.
                 <tr key={`${kind}-${i}`}>
-                  {cells.map((c, j) => <td key={j} className={j === 2 && kind !== "permit_milestones" && kind !== "certification_milestones" ? "tabular-nums" : undefined}>{renderCell(c)}</td>)}
+                  {cells.map((c, j) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: 열 위치는 spec.fields 고정 레이아웃이라 재정렬이 없고, EntryCell에 안정적 id가 없다.
+                    <td key={j} className={entryCellClass(j, kind)}>
+                      {renderCell(c)}
+                    </td>
+                  ))}
                   {canAct && (
                     <td>
                       <span className="flex gap-1">
-                        <button type="button" className="btn-ghost btn-sm" disabled={busy} aria-label={t("p1ModificationP2", { p1: tx(spec.title), p2: i + 1 })}
-                          onClick={() => { setEditing(i); setValues(valuesOf(kind, row)); setFormError(null); }}>{tc("edit")}</button>
-                        <button type="button" className="btn-ghost btn-sm" disabled={busy} aria-label={t("p1DeletionP2", { p1: tx(spec.title), p2: i + 1 })}
-                          onClick={() => onRemove(kind, i)}>{tc("delete")}</button>
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          disabled={busy}
+                          aria-label={t("p1ModificationP2", { p1: tx(spec.title), p2: i + 1 })}
+                          onClick={() => {
+                            setEditing(i);
+                            setValues(valuesOf(kind, row));
+                            setFormError(null);
+                          }}
+                        >
+                          {tc("edit")}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          disabled={busy}
+                          aria-label={t("p1DeletionP2", { p1: tx(spec.title), p2: i + 1 })}
+                          onClick={() => onRemove(kind, i)}
+                        >
+                          {tc("delete")}
+                        </button>
                       </span>
                     </td>
                   )}
@@ -165,24 +231,44 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
             })}
           </tbody>
         </table>
-      </div>
+      </section>
 
       {canAct && (
         <form
           ref={formRef}
           className="sizing-new-form mt-2"
-          aria-label={editing === null ? tx(spec.addLabel) : t("p1ModificationP22", { p1: tx(spec.title), p2: editing + 1 })}
-          onSubmit={(e) => { e.preventDefault(); void submit(); }}
+          aria-label={
+            editing === null ? tx(spec.addLabel) : t("p1ModificationP22", { p1: tx(spec.title), p2: editing + 1 })
+          }
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
         >
           <div className="flex flex-wrap items-end gap-2">
             {spec.fields.map((f) => (
-              <label key={f.key} className="text-[length:var(--fs-caption)] min-w-[9rem] flex-1" htmlFor={`${uid}-${f.key}`}>
-                <span className="block mb-1">{tx(f.label)}{f.required ? tc("requiredSuffix") : ""}</span>
+              <label
+                key={f.key}
+                className="text-[length:var(--fs-caption)] min-w-[9rem] flex-1"
+                htmlFor={`${uid}-${f.key}`}
+              >
+                <span className="block mb-1">
+                  {tx(f.label)}
+                  {f.required ? tc("requiredSuffix") : ""}
+                </span>
                 {f.kind === "select" ? (
-                  <select id={`${uid}-${f.key}`} className="sizing-new-input w-full" value={values[f.key] ?? ""}
-                    onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
+                  <select
+                    id={`${uid}-${f.key}`}
+                    className="sizing-new-input w-full"
+                    value={values[f.key] ?? ""}
+                    onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
+                  >
                     <option value="">{t("doNotSelect")}</option>
-                    {sourceOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {sourceOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
                   </select>
                 ) : (
                   <input
@@ -200,14 +286,28 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
               </label>
             ))}
           </div>
-          {formError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">✕ {formError}</p>}
+          {formError && (
+            <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-1">
+              ✕ {formError}
+            </p>
+          )}
           <div className="flex gap-2 mt-2">
             <button type="submit" className="btn-ghost btn-sm" disabled={busy}>
               {busy ? tc("recording") : editing === null ? tx(spec.addLabel) : t("saveChanges")}
             </button>
             {editing !== null && (
-              <button type="button" className="btn-ghost btn-sm" disabled={busy}
-                onClick={() => { setEditing(null); setValues(emptyValues(kind)); setFormError(null); }}>{t("cancelEdit")}</button>
+              <button
+                type="button"
+                className="btn-ghost btn-sm"
+                disabled={busy}
+                onClick={() => {
+                  setEditing(null);
+                  setValues(emptyValues(kind));
+                  setFormError(null);
+                }}
+              >
+                {t("cancelEdit")}
+              </button>
             )}
           </div>
         </form>
@@ -216,9 +316,12 @@ function EntrySection({ kind, entries, canAct, busy, sourceOptions, onSave, onRe
   );
 }
 
-export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: string; canAct: boolean }) {const t = useTranslations("stages.s11.executionBaseline"); const tc = useTranslations("common"); const tr = useTranslations();
+export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: string; canAct: boolean }) {
+  const t = useTranslations("stages.s11.executionBaseline");
+  const tc = useTranslations("common");
+  const tr = useTranslations();
   /** Resolve a lib-emitted render reference: catalog key + params, or raw server text passthrough. */
-  const tx = (m: I18nText): string => (m.key ? tr(m.key, m.params) : m.text ?? "");
+  const tx = useCallback((m: I18nText): string => (m.key ? tr(m.key, m.params) : (m.text ?? "")), [tr]);
   const { confirm, confirmDialog } = useConfirm();
   const [status, setStatus] = useState<ExecutionBaselineStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -235,34 +338,76 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   const isLead = useIsProjectLead(projectId);
   const base = `/api/projects/${encodeURIComponent(projectId)}/execution-baseline`;
 
-  const load = useCallback((): Promise<void> =>
-    api.get<ExecutionBaselineStatus>(base)
-      .then((r) => { setStatus(r.data); setLoadError(null); })
-      .catch((e) => setLoadError(tx(baselineErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : t("failedToLoadTheExecution"))))),
-  [base]);
-  useEffect(() => { void load(); }, [load]);
+  const load = useCallback(
+    (): Promise<void> =>
+      api
+        .get<ExecutionBaselineStatus>(base)
+        .then((r) => {
+          setStatus(r.data);
+          setLoadError(null);
+        })
+        .catch((e) =>
+          setLoadError(
+            tx(
+              baselineErrorText(
+                (e as { code?: string } | null)?.code,
+                e instanceof Error ? e.message : t("failedToLoadTheExecution"),
+              ),
+            ),
+          ),
+        ),
+    [base, t, tx],
+  );
+  useEffect(() => {
+    void load();
+  }, [load]);
   // reconfirm_required blocks S11 only while S11 is not complete (the GET reports the rule as if the other criteria hold).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: status?.record?.id은 본문이 읽는 값이 아니라 재확인 트리거다 — 기준선 기록이 바뀔 때마다(저장 후) S11 완료 여부를 다시 조회한다.
   useEffect(() => {
     let live = true;
-    api.get<{ stages?: Array<{ id: string; status: string }> }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
-      .then((r) => { if (live) setS11Complete(r.data?.stages?.find((st) => st.id === "S11")?.status === "complete"); })
-      .catch(() => { /* unknown: assume not complete (the conservative reading) */ });
-    return () => { live = false; };
+    api
+      .get<{ stages?: Array<{ id: string; status: string }> }>(`/api/projects/${encodeURIComponent(projectId)}/process`)
+      .then((r) => {
+        if (live) setS11Complete(r.data?.stages?.find((st) => st.id === "S11")?.status === "complete");
+      })
+      .catch(() => {
+        /* unknown: assume not complete (the conservative reading) */
+      });
+    return () => {
+      live = false;
+    };
   }, [projectId, status?.record?.id]);
 
   // 2026-10-21 decider 2차: 이 패널이 전용 탭(실행 기준선)을 지게 되어 무음(null)
   // 대신 로딩·적용 대상 아님을 명시한다 — 빈 탭처럼 보이지 않게.
-  if (loadError) return <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-3">✕ {loadError}</p>;
-  if (!status) return <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="status">{t("loadingTheExecution")}</p>;
+  if (loadError)
+    return (
+      <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-3">
+        ✕ {loadError}
+      </p>
+    );
+  if (!status)
+    return (
+      <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3" role="status">
+        {t("loadingTheExecution")}
+      </p>
+    );
   if (status.applicability.state === "not_applicable") {
     return (
-      <section className="market-section sizing-step mt-3" aria-label={tc("newExecutionBaseline")} data-testid="gx-not-applicable">
-        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> {tc("newExecutionBaseline")}</h3>
+      <section
+        className="market-section sizing-step mt-3"
+        aria-label={tc("newExecutionBaseline")}
+        data-testid="gx-not-applicable"
+      >
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+          <span className="sizing-step-badge" aria-hidden="true">
+            📋
+          </span>{" "}
+          {tc("newExecutionBaseline")}
+        </h3>
         <p className="text-[length:var(--fs-caption)] mb-0" role="note">
           <span className="status-chip status-not-started">{t("notApplicable")}</span>
-          <span className="block mt-1 text-[color:var(--muted-fg)]">
-            {t("thisProjectDoesNotFollow")}
-          </span>
+          <span className="block mt-1 text-[color:var(--muted-fg)]">{t("thisProjectDoesNotFollow")}</span>
         </p>
       </section>
     );
@@ -272,9 +417,21 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     // Conflicting case_type vs route track: a human must reconcile them first; no form is offered.
     const cc = requirementView("classification_conflict");
     return (
-      <section className="market-section sizing-step mt-3" aria-label={tc("newExecutionBaseline")} data-testid="gx-classification-conflict">
-        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> {tc("newExecutionBaseline")}</h3>
-        <div role="alert" className="text-[length:var(--fs-caption)] border border-[color:var(--amber-border)] rounded-lg px-3 py-2">
+      <section
+        className="market-section sizing-step mt-3"
+        aria-label={tc("newExecutionBaseline")}
+        data-testid="gx-classification-conflict"
+      >
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+          <span className="sizing-step-badge" aria-hidden="true">
+            📋
+          </span>{" "}
+          {tc("newExecutionBaseline")}
+        </h3>
+        <div
+          role="alert"
+          className="text-[length:var(--fs-caption)] border border-[color:var(--amber-border)] rounded-lg px-3 py-2"
+        >
           <span className={`status-chip ${cc.cls}`}>{tx(cc.chip)}</span>
           <span className="block mt-1 font-semibold">{tx(cc.text)}</span>
           {status.warning && <span className="block mt-1 text-[color:var(--muted-fg)]">{status.warning}</span>}
@@ -285,12 +442,25 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   }
   if (status.applicability.state === "needs_classification") {
     return (
-      <section className="market-section sizing-step mt-3" aria-label={tc("newExecutionBaseline")} data-testid="gx-needs-classification">
-        <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> {tc("newExecutionBaseline")}</h3>
+      <section
+        className="market-section sizing-step mt-3"
+        aria-label={tc("newExecutionBaseline")}
+        data-testid="gx-needs-classification"
+      >
+        <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+          <span className="sizing-step-badge" aria-hidden="true">
+            📋
+          </span>{" "}
+          {tc("newExecutionBaseline")}
+        </h3>
         <p className="text-[length:var(--fs-caption)]" role="note">
           <span className="status-chip status-not-started">{t("trackClassificationNeeded")}</span>
           <span className="block mt-1 text-[color:var(--muted-fg)]">{tr(NEEDS_CLASSIFICATION_KEY)}</span>
-          {status.warning && <span className="block mt-1 text-[color:var(--muted-fg)]" data-testid="gx-warning">{t("note")} {status.warning}</span>}
+          {status.warning && (
+            <span className="block mt-1 text-[color:var(--muted-fg)]" data-testid="gx-warning">
+              {t("note")} {status.warning}
+            </span>
+          )}
         </p>
       </section>
     );
@@ -309,8 +479,10 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
     const s = status.sources;
     if (!s) return [];
     if (kind === "permit_milestones") return s.permits.map((p) => ({ value: p.id, label: sourceOptionLabel(p) }));
-    if (kind === "certification_milestones") return s.certifications.map((c) => ({ value: c.id, label: sourceOptionLabel(c) }));
-    if (kind === "incentive_obligations") return s.incentives.map((i) => ({ value: i.id, label: sourceOptionLabel(i) }));
+    if (kind === "certification_milestones")
+      return s.certifications.map((c) => ({ value: c.id, label: sourceOptionLabel(c) }));
+    if (kind === "incentive_obligations")
+      return s.incentives.map((i) => ({ value: i.id, label: sourceOptionLabel(i) }));
     return [];
   };
   const permitNote = permitStepNote(status.applicability.permit_step_applies);
@@ -319,14 +491,17 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   async function saveEntries(next: BaselineEntries): Promise<boolean> {
     if (busy) return false;
     const hadConfirmation = entriesClearConfirmation(record);
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await api.post(base, { action: "record_entries", entries: next });
       await load();
       setAnnounce(hadConfirmation ? t("recordedThePreviousConfirmationWas") : t("recorded")); // INTERIM-WORDING
       return true;
     } catch (e) {
-      const msg = tx(baselineErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : undefined));
+      const msg = tx(
+        baselineErrorText((e as { code?: string } | null)?.code, e instanceof Error ? e.message : undefined),
+      );
       setError(msg);
       setAnnounce(t("failedToRecordP1", { p1: msg })); // INTERIM-WORDING
       return false;
@@ -337,10 +512,20 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
 
   function removeEntry(kind: EntryKind, index: number) {
     const label = tx(ENTRY_SPECS[kind].title);
-    confirm(t("deleteP1Item", { p1: label }), () => { void saveEntries(withEntry(entries, kind, index, null)); }, {
-      body: t("removesItemP2OfP1", { p1: label, p2: index + 1, p3: entriesClearConfirmation(record) ? t("thePreviousConfirmationIsCleared") : "" }), // INTERIM-WORDING
-      confirmLabel: tc("delete"),
-    });
+    confirm(
+      t("deleteP1Item", { p1: label }),
+      () => {
+        void saveEntries(withEntry(entries, kind, index, null));
+      },
+      {
+        body: t("removesItemP2OfP1", {
+          p1: label,
+          p2: index + 1,
+          p3: entriesClearConfirmation(record) ? t("thePreviousConfirmationIsCleared") : "",
+        }), // INTERIM-WORDING
+        confirmLabel: tc("delete"),
+      },
+    );
   }
 
   /** Validate the rationale, refuse early on missing sections, then open the acknowledgement dialog. */
@@ -359,7 +544,8 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
 
   async function submitConfirm(acknowledged: AcknowledgedFinding[]) {
     if (busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       const body: Record<string, unknown> = { action: "confirm", rationale: rationale.trim() };
       if (acknowledged.length > 0) body.acknowledged_findings = acknowledged;
@@ -376,7 +562,7 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
       let msg = tx(confirmErrorText(code, e instanceof Error ? e.message : undefined));
       if (code === "findings_open") {
         // The server's open list wins: reopen the dialog with exactly those findings.
-        const open = acknowledgeableFindings(((meta.open_findings as Finding[] | undefined) ?? []));
+        const open = acknowledgeableFindings((meta.open_findings as Finding[] | undefined) ?? []);
         setAckFindings(open.length > 0 ? open : null);
         msg = t("p1P2ItemS", { p1: msg, p2: open.length });
       } else {
@@ -385,7 +571,12 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
       if (code === "baseline_empty") {
         const missing = (meta.missing_sections as string[] | undefined) ?? [];
         setServerMissing(missing);
-        msg = t("p1EmptyItemsP2", { p1: msg, p2: missingSectionViews(missing).map((m) => tx(m.label)).join(", ") });
+        msg = t("p1EmptyItemsP2", {
+          p1: msg,
+          p2: missingSectionViews(missing)
+            .map((m) => tx(m.label))
+            .join(", "),
+        });
       }
       if (code === "lead_required") await load();
       setError(msg);
@@ -396,42 +587,72 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
   }
 
   return (
-    <section className="market-section sizing-step mt-3" aria-label={tc("newExecutionBaseline")} data-testid="gx-baseline">
-      <h3 className="sizing-step-title text-[length:var(--fs-body)]"><span className="sizing-step-badge" aria-hidden="true">📋</span> {t("newBusinessExecutionBaselineTranches")}</h3>
+    <section
+      className="market-section sizing-step mt-3"
+      aria-label={tc("newExecutionBaseline")}
+      data-testid="gx-baseline"
+    >
+      <h3 className="sizing-step-title text-[length:var(--fs-body)]">
+        <span className="sizing-step-badge" aria-hidden="true">
+          📋
+        </span>{" "}
+        {t("newBusinessExecutionBaselineTranches")}
+      </h3>
       <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
         {t("fixesTheExecutionPlanIn")}
       </p>
-      <p className="sr-only" role="status" aria-live="polite">{announce}</p>
+      <p className="sr-only" role="status" aria-live="polite">
+        {announce}
+      </p>
 
       {/* 상태 칩: 필수 여부(차단/권장) + 확정 여부 */}
       <p className="flex flex-wrap items-center gap-2 text-[length:var(--fs-caption)]">
-        <span className={`status-chip ${req.cls}`} title={status.requirement_label ?? undefined}>{tx(req.chip)}</span>
+        <span className={`status-chip ${req.cls}`} title={status.requirement_label ?? undefined}>
+          {tx(req.chip)}
+        </span>
         <span className={`status-chip ${conf.cls}`}>{tx(conf.chip)}</span>
         {status.requirement === "reconfirm_required" && <span className="status-chip status-amber">{t("needed")}</span>}
-        {conf.detail && <span className="text-[color:var(--muted-fg)]">{t("confirmedByAndDate")} {conf.detail}{conf.recordedBy ? t("itemRecordedByP1", { p1: conf.recordedBy }) : ""}</span>}
+        {conf.detail && (
+          <span className="text-[color:var(--muted-fg)]">
+            {t("confirmedByAndDate")} {conf.detail}
+            {conf.recordedBy ? t("itemRecordedByP1", { p1: conf.recordedBy }) : ""}
+          </span>
+        )}
       </p>
       <p className="text-[length:var(--fs-caption)] mt-1">{tx(req.text)}</p>
-      {status.requirement_label && <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{status.requirement_label}</p>}
+      {status.requirement_label && (
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{status.requirement_label}</p>
+      )}
       {status.warning && status.requirement !== "recommended" && (
-        <p className="text-[length:var(--fs-caption)] mt-1" data-testid="gx-warning"><span aria-hidden="true">▲ </span>{status.warning}</p>
+        <p className="text-[length:var(--fs-caption)] mt-1" data-testid="gx-warning">
+          <span aria-hidden="true">▲ </span>
+          {status.warning}
+        </p>
       )}
       {confirmedRecord?.confirmation && (
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           {t("confirmationEvidence")} {confirmedRecord.confirmation.rationale}
-          {(confirmedRecord.confirmation.acknowledged_findings?.length ?? 0) > 0 && t("evidenceLeftForP1Item", { p1: confirmedRecord.confirmation.acknowledged_findings!.length })}
+          {(confirmedRecord.confirmation.acknowledged_findings?.length ?? 0) > 0 &&
+            t("evidenceLeftForP1Item", { p1: confirmedRecord.confirmation.acknowledged_findings!.length })}
         </p>
       )}
-      {error && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">✕ {error}</p>}
+      {error && (
+        <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)] mt-2">
+          ✕ {error}
+        </p>
+      )}
 
       {/* 서브탭 — 2026-10-21 decider: 트랜치 / 인허가·인증 / 인력·조직 / 가동 KPI / 인센티브 의무 구분 */}
       <div role="tablist" aria-label={t("executionBaseline")} className="flex flex-wrap gap-1 mb-2">
-        {([
-          { key: "all", label: tc("all") },
-          { key: "tranches", label: t("executionStageTranche") },
-          { key: "permits_certs", label: t("permitsAndCertifications") },
-          { key: "hiring_kpi", label: t("staffingAndOrganizationOperatingKpis") },
-          { key: "incentives", label: t("incentiveObligations") },
-        ] as Array<{ key: typeof gxTab; label: string }>).map((t) => (
+        {(
+          [
+            { key: "all", label: tc("all") },
+            { key: "tranches", label: t("executionStageTranche") },
+            { key: "permits_certs", label: t("permitsAndCertifications") },
+            { key: "hiring_kpi", label: t("staffingAndOrganizationOperatingKpis") },
+            { key: "incentives", label: t("incentiveObligations") },
+          ] as Array<{ key: typeof gxTab; label: string }>
+        ).map((t) => (
           <button
             key={t.key}
             type="button"
@@ -446,9 +667,18 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
       </div>
       {status.findings.length > 0 && (
         <div className="mt-2" data-testid="gx-findings">
-          <h4 className="text-[length:var(--fs-body)] mb-1">{t("itemsNeedingConfirmation")}{status.findings.length}{tc("countSuffixParen")}</h4>
+          <h4 className="text-[length:var(--fs-body)] mb-1">
+            {t("itemsNeedingConfirmation")}
+            {status.findings.length}
+            {tc("countSuffixParen")}
+          </h4>
           <ul className="sizing-note-list" aria-label={t("itemsNeedingConfirmation2")}>
-            {status.findings.map((f, i) => <li key={`${f.code}-${i}`}><span aria-hidden="true">▲ </span>{tx(findingText(f))}</li>)}
+            {status.findings.map((f) => (
+              <li key={`${f.code}-${f.message}`}>
+                <span aria-hidden="true">▲ </span>
+                {tx(findingText(f))}
+              </li>
+            ))}
           </ul>
         </div>
       )}
@@ -458,34 +688,66 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
         <h4 className="text-[length:var(--fs-body)] mb-1">{t("capexTrancheComparisonS10Execution")}</h4>
         {rec && (
           <>
-            <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
+            {/* biome-ignore lint/a11y/noNoninteractiveTabindex: 포커스 가능 스크롤 영역(WCAG 2.1/axe scrollable-region-focusable) — 키보드 사용자가 표 영역을 스크롤하려면 tabIndex가 필요하다. */}
+            <section className="table-scroll" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
               <table className="data-table table-fixed-pct tmin-48" aria-label={t("capexExecutionStageComparison")}>
                 <caption className="sr-only">{t("amountCurrencyExecutionConditionsAnd")}</caption>
                 <ColGroup widths={TRANCHE_RECON_COL_PCT} />
                 <thead>
-                  <tr><th scope="col">{tc("rowNumber")}</th><th scope="col">{tc("amount")}</th><th scope="col">{tc("currency")}</th><th scope="col">{t("executionCondition")}</th><th scope="col">{tc("status")}</th></tr>
+                  <tr>
+                    <th scope="col">{tc("rowNumber")}</th>
+                    <th scope="col">{tc("amount")}</th>
+                    <th scope="col">{tc("currency")}</th>
+                    <th scope="col">{t("executionCondition")}</th>
+                    <th scope="col">{tc("status")}</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {rec.tranches.length === 0 && <tr><td colSpan={5} className="text-[color:var(--muted-fg)]">{t("noTranchesRecordedInS10")}</td></tr>}
+                  {rec.tranches.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-[color:var(--muted-fg)]">
+                        {t("noTranchesRecordedInS10")}
+                      </td>
+                    </tr>
+                  )}
                   {rec.tranches.map((row) => (
-                    <tr key={row.id} className={isExcludedTranche(row) ? "text-[color:var(--muted-fg)] opacity-70" : undefined} data-excluded={isExcludedTranche(row) ? "true" : undefined}>
+                    <tr
+                      key={row.id}
+                      className={isExcludedTranche(row) ? "text-[color:var(--muted-fg)] opacity-70" : undefined}
+                      data-excluded={isExcludedTranche(row) ? "true" : undefined}
+                    >
                       <td className="tabular-nums">{row.tranche_no}</td>
                       <td className="tabular-nums">{fmtMoney(row.amount, row.currency)}</td>
                       <td>{row.currency}</td>
                       <td className="text-[length:var(--fs-caption)]">{row.release_condition || "—"}</td>
                       <td>
                         {TRANCHE_STATUS_KEY[row.status] ? tr(TRANCHE_STATUS_KEY[row.status]) : row.status}
-                        {isExcludedTranche(row) && <span className="block text-[length:var(--fs-caption)]">{tr(EXCLUDED_TRANCHE_KEY)}</span>}
-                        {row.pending_release && <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("awaitingExecutionApproval")}</span>}
+                        {isExcludedTranche(row) && (
+                          <span className="block text-[length:var(--fs-caption)]">{tr(EXCLUDED_TRANCHE_KEY)}</span>
+                        )}
+                        {row.pending_release && (
+                          <span className="block text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                            {t("awaitingExecutionApproval")}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </section>
             <p className="text-[length:var(--fs-caption)] mt-1">
-              {t("trancheTotalHoldRowsExcluded")} <span className="tabular-nums">{fmtMoney(rec.tranche_total, rec.tranche_currencies.length === 1 ? rec.tranche_currencies[0] : "KRW")}</span>
-              {rec.case.capex_total_krw_m !== null && <> {t("s8Capex")} <span className="tabular-nums">{fmtMoney(rec.case.capex_total_krw_m)}</span> {tc("krwMillionKrw")}</>}
+              {t("trancheTotalHoldRowsExcluded")}{" "}
+              <span className="tabular-nums">
+                {fmtMoney(rec.tranche_total, rec.tranche_currencies.length === 1 ? rec.tranche_currencies[0] : "KRW")}
+              </span>
+              {rec.case.capex_total_krw_m !== null && (
+                <>
+                  {" "}
+                  {t("s8Capex")} <span className="tabular-nums">{fmtMoney(rec.case.capex_total_krw_m)}</span>{" "}
+                  {tc("krwMillionKrw")}
+                </>
+              )}
             </p>
             {verdict && (
               <p className="text-[length:var(--fs-caption)] mt-1">
@@ -497,21 +759,28 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
         )}
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-1">
           {t("trancheExecutionIsAProcedure")}{" "}
-          <Link href={`/projects/${encodeURIComponent(projectId)}/deal-structure?tab=capex`} className="underline">{t("executeInTheS10Capex")}</Link>
+          <Link href={`/projects/${encodeURIComponent(projectId)}/deal-structure?tab=capex`} className="underline">
+            {t("executeInTheS10Capex")}
+          </Link>
         </p>
       </div>
 
       {/* 2-5. 기록 항목 */}
-      {permitNote && <p className="text-[length:var(--fs-caption)] mt-3" role="note"><span className="status-chip status-not-started">{t("reference")}</span> {tx(permitNote)}</p>}
+      {permitNote && (
+        <p className="text-[length:var(--fs-caption)] mt-3" role="note">
+          <span className="status-chip status-not-started">{t("reference")}</span> {tx(permitNote)}
+        </p>
+      )}
       {ENTRY_KINDS.map((kind) => {
         // 2026-10-21 decider: 하위탭 필터 — 전체 / 트랜치 / 인허가·인증 / 인력·조직 / 가동 KPI / 인센티브 의무
-        const show = gxTab === "all" || gxTab === "tranches"
-          ? true
-          : gxTab === "permits_certs"
-            ? kind === "permit_milestones" || kind === "certification_milestones"
-            : gxTab === "hiring_kpi"
-              ? kind === "hiring_plan" || kind === "kpi_targets"
-              : kind === "incentive_obligations";
+        const show =
+          gxTab === "all" || gxTab === "tranches"
+            ? true
+            : gxTab === "permits_certs"
+              ? kind === "permit_milestones" || kind === "certification_milestones"
+              : gxTab === "hiring_kpi"
+                ? kind === "hiring_plan" || kind === "kpi_targets"
+                : kind === "incentive_obligations";
         if (!show) return null;
         return (
           <EntrySection
@@ -536,7 +805,10 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
           </p>
           <ul className="sizing-note-list">
             {status.sources!.goals_reference_only.map((g) => (
-              <li key={g.id}><span className="tabular-nums">goal:{g.metric_key}</span> — {g.label ?? g.metric_key}: {fmtNumber(g.target_value)} {g.direction === "gte" ? t("orMore") : t("orLess")} {t("reference2")}</li>
+              <li key={g.id}>
+                <span className="tabular-nums">goal:{g.metric_key}</span> — {g.label ?? g.metric_key}:{" "}
+                {fmtNumber(g.target_value)} {g.direction === "gte" ? t("orMore") : t("orLess")} {t("reference2")}
+              </li>
             ))}
           </ul>
         </div>
@@ -545,28 +817,44 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
       {/* 사람의 확인 — 프로젝트 리드만 */}
       <div className="mt-4" data-testid="gx-confirm">
         <h4 className="text-[length:var(--fs-body)] mb-1">{t("projectLeadConfirmationExecutionBaseline")}</h4>
-        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-          {t("recordingANewItemOr")}
-        </p>
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">{t("recordingANewItemOr")}</p>
         {missingViews.length > 0 && (
           <div className="text-[length:var(--fs-caption)] mb-2" role="note" data-testid="gx-missing-sections">
             <span className="status-chip status-amber">{t("requiredItemsAreEmpty")}</span>
             <ul className="sizing-note-list mt-1" aria-label={t("emptyRequiredItems")}>
               {missingViews.map((m) => (
                 <li key={m.key}>
-                  <a href={`#${m.anchor}`} className="underline"
-                    onClick={(e) => { e.preventDefault(); const el = document.getElementById(m.anchor); el?.scrollIntoView({ block: "center" }); el?.focus({ preventScroll: true }); }}>
+                  <a
+                    href={`#${m.anchor}`}
+                    className="underline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const el = document.getElementById(m.anchor);
+                      el?.scrollIntoView({ block: "center" });
+                      el?.focus({ preventScroll: true });
+                    }}
+                  >
                     {tx(m.label)}
-                  </a>{t("recordItFirst")}
+                  </a>
+                  {t("recordItFirst")}
                 </li>
               ))}
             </ul>
           </div>
         )}
         {canAct && isLead ? (
-          <form aria-label={tc("confirmExecutionBaseline")} onSubmit={(e) => { e.preventDefault(); confirmBaseline(); }}>
+          <form
+            aria-label={tc("confirmExecutionBaseline")}
+            onSubmit={(e) => {
+              e.preventDefault();
+              confirmBaseline();
+            }}
+          >
             <label className="text-[length:var(--fs-caption)] block">
-              <span className="block mb-1">{t("confirmationEvidenceRequired")} {MAX_RATIONALE_LEN}{t("charsOrFewer")}</span>
+              <span className="block mb-1">
+                {t("confirmationEvidenceRequired")} {MAX_RATIONALE_LEN}
+                {t("charsOrFewer")}
+              </span>
               <textarea
                 className="sizing-new-input w-full"
                 rows={3}
@@ -574,19 +862,42 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
                 value={rationale}
                 aria-required="true"
                 aria-invalid={rationaleError ? true : undefined}
-                onChange={(e) => { setRationale(e.target.value); if (rationaleError) setRationaleError(null); }}
+                onChange={(e) => {
+                  setRationale(e.target.value);
+                  if (rationaleError) setRationaleError(null);
+                }}
               />
-              <span className="block text-[color:var(--muted-fg)] tabular-nums">{rationale.trim().length}/{MAX_RATIONALE_LEN}</span>
+              <span className="block text-[color:var(--muted-fg)] tabular-nums">
+                {rationale.trim().length}/{MAX_RATIONALE_LEN}
+              </span>
             </label>
-            {rationaleError && <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">✕ {rationaleError}</p>}
-            <button type="submit" className="btn-ghost btn-sm mt-2" disabled={busy} aria-describedby={!check.allowed && check.reason ? "gx-confirm-reason" : undefined}>
-              {busy ? tc("recording") : status.requirement === "reconfirm_required" ? t("executionBaselineConfirmationNeeded") : t("confirmExecutionBaselineConfirmationNeeded")}
+            {rationaleError && (
+              <p role="alert" className="text-[color:var(--red-fg)] text-[length:var(--fs-caption)]">
+                ✕ {rationaleError}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="btn-ghost btn-sm mt-2"
+              disabled={busy}
+              aria-describedby={!check.allowed && check.reason ? "gx-confirm-reason" : undefined}
+            >
+              {busy
+                ? tc("recording")
+                : status.requirement === "reconfirm_required"
+                  ? t("executionBaselineConfirmationNeeded")
+                  : t("confirmExecutionBaselineConfirmationNeeded")}
             </button>
-            {!check.allowed && rationale.length > 0 && check.reason && <span id="gx-confirm-reason" className="sr-only">{tx(check.reason)}</span>}
+            {!check.allowed && rationale.length > 0 && check.reason && (
+              <span id="gx-confirm-reason" className="sr-only">
+                {tx(check.reason)}
+              </span>
+            )}
           </form>
         ) : (
           <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]" data-testid="gx-lead-only">
-            {!canAct ? t("recordingRequiresTheAnalystRole") : ""}{tr(LEAD_ONLY_KEY)}.
+            {!canAct ? t("recordingRequiresTheAnalystRole") : ""}
+            {tr(LEAD_ONLY_KEY)}.
           </p>
         )}
       </div>
@@ -595,7 +906,9 @@ export function ExecutionBaselinePanel({ projectId, canAct }: { projectId: strin
           findings={ackFindings}
           busy={busy}
           onCancel={() => setAckFindings(null)}
-          onConfirm={(acks) => { void submitConfirm(acks); }}
+          onConfirm={(acks) => {
+            void submitConfirm(acks);
+          }}
         />
       )}
       {confirmDialog}

@@ -532,6 +532,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // 경로 이동 시 드로어를 닫는다 — 메뉴 항목 클릭 후 오버레이가 남지 않게.
   // pathname에는 조회 파라미터가 없으므로 상세 뷰 전환(/market?industry=…)엔
   // 반응하지 않는다.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname은 본문이 읽는 값이 아니라 재실행 트리거다 — 제거하면 경로 이동 시 드로어가 닫히지 않는다.
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
