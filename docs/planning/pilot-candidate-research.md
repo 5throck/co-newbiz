@@ -12,18 +12,18 @@
 
 1. **Directly in the design's own worked example industry.** The design's flagship proxy-chain illustration is literally crankshaft → marine engine → ship. This deal *is* a crankshaft/marine-engine-market transaction — not an analogy, the actual industry.
 2. **Region match**: Korea (KR profile, already drafted in `region-profiles/KR.yaml`) — no additional region profile work needed to run the pilot.
-3. **Real regulatory outcome to test against, not just financials.** The Korea Fair Trade Commission (공정거래위원회) issued a **conditional approval** with concrete behavioral remedies — this is exactly the kind of real regulatory finding the antitrust-agent and the M&A special-topics checklist (`checklists/ma-special-topics-checklist.yaml`, items ma-01 through ma-03) are built to process, and no synthetic case would produce a realistic remedies package.
+3. **Real regulatory outcome to test against, not just financials.** The Korea Fair Trade Commission (`공정거래위원회`) issued a **conditional approval** with concrete behavioral remedies — this is exactly the kind of real regulatory finding the antitrust-agent and the M&A special-topics checklist (`checklists/ma-special-topics-checklist.yaml`, items ma-01 through ma-03) are built to process, and no synthetic case would produce a realistic remedies package.
 4. **Sufficient public disclosure to build a working case file**: deal structure, price, market-share findings, and remedies are all publicly reported.
 
 ### Deal Facts (from public sources)
 
 | Field | Value |
 |---|---|
-| Acquirer | HD Hyundai (HD한국조선해양, HD Korea Shipbuilding & Offshore Engineering) |
-| Target | STX Heavy Industries (STX중공업) |
+| Acquirer | HD Hyundai (HD`한국조선해양`, HD Korea Shipbuilding & Offshore Engineering) |
+| Target | STX Heavy Industries (STX`중공업`) |
 | Stake acquired | 35.05% |
-| Deal value | KRW 81.3 billion (813억원) |
-| Regulatory decision | Korea Fair Trade Commission (공정거래위원회), conditional approval, decided 2024-07-15 |
+| Deal value | KRW 81.3 billion (813`억원`) |
+| Regulatory decision | Korea Fair Trade Commission (`공정거래위원회`), conditional approval, decided 2024-07-15 |
 | Market impact found | Combined entity reaches ~80% of the domestic marine-engine-parts (crankshaft) market and ~70% of the marine engine market |
 | Remedies (3-year behavioral) | No refusal to supply crankshafts to competing engine makers (Hanwha Engine, STX Engine); minimum volume guarantee; price-increase cap; no delivery delay |
 | Remedy target | KMCS (a crankshaft producer that becomes an HD Hyundai affiliate through the deal) |
@@ -44,10 +44,10 @@ Found during the same research pass — also real, also in the identical industr
 
 | Field | Value |
 |---|---|
-| Acquirer | Hanwha Impact (한화임팩트) |
+| Acquirer | Hanwha Impact (`한화임팩트`) |
 | Target | HSD Engine (renamed Hanwha Engine on completion) |
 | Stake acquired | 32.77% |
-| Deal value | KRW 226.9 billion (2,269억원) |
+| Deal value | KRW 226.9 billion (2,269`억원`) |
 | Completion | 2024-02-28 |
 | Post-acquisition performance (public) | 9-month cumulative operating profit of KRW 82.7 billion vs. full-year 2023 operating profit of KRW 8.7 billion pre-acquisition (>9x) |
 
@@ -64,7 +64,7 @@ Pilots 001/002 (both crankshaft/marine-engine, Korea) validated the antitrust-sc
 3. **Real minority-shareholder-protection and valuation-fairness dispute** — directly exercises what a human Entity IC reviewer is supposed to catch: a swap ratio that undervalues the more profitable entity relative to the less profitable one. `docs/manuals/business-manual.md` §3's instruction that a reviewer must "correct the AI-proposed RAG grade with a reason if you correct it" has a real, checkable test case here.
 4. **Real regulatory back-and-forth to test revision cycles against** — two filing rejections plus a full withdrawal-and-restart is a genuine test of how the procedure should handle a deal that fails a gate and comes back, not just a single clean pass.
 
-**Caveat**: as of the last confirmed public reporting, the restructuring was **suspended following the December 2024 martial-law situation** (계엄 사태) and a planned extraordinary shareholder meeting was cancelled — the case's real-world outcome is unresolved/paused, not closed. This pilot would test the process up through the suspension point, not a completed cycle — itself a realistic scenario (real reviews do stall) worth exercising.
+**Caveat**: as of the last confirmed public reporting, the restructuring was **suspended following the December 2024 martial-law situation** (`계엄 사태`) and a planned extraordinary shareholder meeting was cancelled — the case's real-world outcome is unresolved/paused, not closed. This pilot would test the process up through the suspension point, not a completed cycle — itself a realistic scenario (real reviews do stall) worth exercising.
 
 ### Candidate B: SK Group Cross-Subsidiary Capital Rebalancing (2023-2025)
 
@@ -112,4 +112,4 @@ Use **HD Hyundai / STX Heavy Industries** as the primary Stage 3.5 pilot case �
 - [Restructurings in Korea test the limits of CG reform — ACGA](https://www.acga-asia.org/blog-detail.php?id=89)
 - [반도체로 흥한 SK, 쌈짓돈 모아 계열사 밸류업 — 아시아타임](https://www.asiatime.co.kr/article/20260507500316)
 - [SK그룹, 반도체 수혜 제한...'배터리·화학' 회복 열쇠 — 블로터](https://www.bloter.net/news/articleView.html?idxno=661048)
-- [\[SK 리밸런싱 그 후\] 반도체 호황 '에너지·화학' 수익성 개선 과제 — 블로터](https://www.bloter.net/news/articleView.html?idxno=661503)
+- [\[SK `리밸런싱 그 후`\] `반도체 호황` '`에너지·화학`' `수익성 개선 과제` — `블로터`](https://www.bloter.net/news/articleView.html?idxno=661503)

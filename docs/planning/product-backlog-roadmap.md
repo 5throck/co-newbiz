@@ -14,7 +14,7 @@ The data collection engine is a **pluggable source-adapter framework mapped 1:1 
 | `dart` | k-dart | DART OpenAPI / `DART_API_KEY` | company financials & filings (generalizes `dart-collect.ts`) |
 | `kosis` | k-kosis | KOSIS stats API / `KOSIS_API_KEY` | industry/economic time series (S1 workhorse) |
 | `opendata` | k-opendata | data.go.kr / `DATA_GO_KR_API_KEY` | government open data |
-| `law` | k-law | 법제처 법령 OpenAPI / `LAW_API_OC` | `md_statute` sync (`law:sync` foundation) |
+| `law` | k-law | `법제처 법령` OpenAPI / `LAW_API_OC` | `md_statute` sync (`law:sync` foundation) |
 
 Adapters share the already-built revision-preserving ingest core (`ensure_fresh` in
 `db/repositories/observation.repository.ts`), the SSRF guard (`scripts/lib/ssrf.ts`), and

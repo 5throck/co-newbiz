@@ -46,33 +46,33 @@ to `development` requires an inline confirmation naming the risk (test-data
 only, deletion re-enabled). Re-enable deletion only for test data, and return
 the mode to `production` afterwards.
 
-1. **Delete the deal** — `/projects` list → row action 삭제 (lead only), or the
+1. **Delete the deal** — `/projects` list → row action `삭제` (lead only), or the
    archive screen for already-closed/archived projects. One action covers the
    whole chain.
 2. **Verify leftovers are gone from active surfaces** — pipeline, route
    decision, opportunity funnel, synergy list all filter marks automatically.
 3. **Master data** — once deals referencing a group/member are marked, the
-   group/member can be marked from 그룹/계열사 분석. Marked master data stays
+   group/member can be marked from `그룹`/`계열사 분석`. Marked master data stays
    referenced by preserved analyses without any FK conflict.
 
 ## Which screen clears when
 
 | Screen | Clears when |
 | --- | --- |
-| 프로젝트 파이프라인 (/pipeline) | project delete-mark |
-| 진출방식 결정 (/route-decision) | opportunity delete-mark (chips list `selected` opportunities) |
-| 브라운필드 대상 스크리닝 (/brownfield) | opportunity delete-mark |
-| 기회 발굴 (/opportunities) | opportunity delete-mark |
-| 시너지·전략적 적합성 (/synergy) | synergy delete-mark (refused while the deal is live) |
-| 그룹/계열사 (/our-company) | group/member mark |
+| `프로젝트 파이프라인` (/pipeline) | project delete-mark |
+| `진출방식 결정` (/route-decision) | opportunity delete-mark (chips list `selected` opportunities) |
+| `브라운필드 대상 스크리닝` (/brownfield) | opportunity delete-mark |
+| `기회 발굴` (/opportunities) | opportunity delete-mark |
+| `시너지·전략적 적합성` (/synergy) | synergy delete-mark (refused while the deal is live) |
+| `그룹`/`계열사` (/our-company) | group/member mark |
 
 ## Archive
 
-`/projects/archives` (프로젝트 → 아카이브) lists:
+`/projects/archives` (`프로젝트` → `아카이브`) lists:
 
-- **보관 프로젝트** — closed/archived projects. Originals are intact; 개요 opens
+- **`보관 프로젝트`** — closed/archived projects. Originals are intact; `개요` opens
   the frozen data (reads allow closed/archived access; writes stay blocked).
-- **삭제된 딜** — delete-marked deals. Originals remain in place; 원본 열람 opens
+- **`삭제된 딜`** — delete-marked deals. Originals remain in place; `원본 열람` opens
   the retained data.
 
 ### Point-in-time guarantee

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.13.0
+// @version 1.13.1
 /**
  * co-newbiz variant audit hook — executed by scripts/audit.ts §27 (the
  * pluggable variant-specific audit checks; declared in variant.json
@@ -110,6 +110,12 @@
  *     skills/SKILLS.md) has a lifecycle record at docs/lifecycle/skills/<name>.md
  *     (the Wave 5.8 cohort drifted record-less; 109/109 today). Growing the
  *     F-8 allowlist requires a recorded DEC.
+ *   - Comment-only pointer edit (v1.13.1, 2026-11-23): the design-lint gate's
+ *     header note now cites the Wave-1 ruling of record DEC-20261123-02
+ *     (category mapping, transforms, exception list; the variant.json
+ *     designLint override remains the post-burn-down activation step). No
+ *     behavior change — version bump applied under the bump-on-modify
+ *     convention.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -532,7 +538,10 @@ runContrastGate();
  * (scripts/design-lint.ts --dir over app/web-next roots) exits 1 with 197
  * pre-existing should-be-token findings today, so enabling it fail-closed
  * would halt every audit — the posture is recorded in DEC-20261122-02 and the
- * token burn-down is a separate design-system wave. Same subprocess pattern;
+ * token burn-down is a separate design-system wave (ruling of record:
+ * DEC-20261123-02 — category mapping, transforms, exception list; the
+ * variant.json designLint override is the post-burn-down activation step).
+ * Same subprocess pattern;
  * missing script = non-web context, skip with a visible note.
  */
 function runDesignLintGate(): void {

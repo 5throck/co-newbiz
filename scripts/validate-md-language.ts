@@ -1,5 +1,14 @@
 #!/usr/bin/env bun
-// @version 1.16.2
+// @version 1.17.0
+// v1.17.0 (2026-11-23, F-27 review item — token burn-down batch): perimeter
+//           extension — the six remaining official-docs zones join the scan:
+//           docs/architecture/, docs/manuals/, docs/runbooks/, docs/security/,
+//           docs/dd/, docs/planning/ (same .md/.yaml form as the other docs
+//           zones). No detector change: declared lang: ko files pass by
+//           declaration (api-spec.md/ui-spec.md), suffix-locale _ko twins are
+//           declaration-gated as before, and stray Korean in the EN originals
+//           is remedied with inline-code spans (the established backtick
+//           remedy). Scan count rises ~753 → ~790.
 // v1.16.1 (2026-10-28, T-20261028-003): whitespace-only — the two-statement line at isOfficialDocument reflowed (dev-sync script-registry gate requires a version bump for any modified script; no behavior change).
 // v1.16.0 (2026-10-27, U-20261027-007): perimeter hardening — (a) the
 //           `/^Hermes\.md$/` official-pattern was case-SENSITIVE and never
@@ -50,7 +59,9 @@
  * Policy: Official documents and governance files must contain English sentences.
  * Validates only allowlisted paths: agents/, AGENTS.md, CLAUDE.md, GEMINI.md, CODEX.md, HERMES.md,
  * context.md, CHANGELOG.md, docs/constitution/, docs/governance/, docs/designs/,
- * docs/adr/, docs/decisions/, docs/reports/, docs/guides/, docs/standards/, docs/VERSION_MANIFEST.md, skills/,
+ * docs/adr/, docs/decisions/, docs/reports/, docs/guides/, docs/standards/,
+ * docs/architecture/, docs/manuals/, docs/runbooks/, docs/security/, docs/dd/, docs/planning/ (F-27),
+ * docs/VERSION_MANIFEST.md, skills/,
  * .claude/skills/, .gemini/skills/, .claude/commands/, .gemini/commands/,
  * templates/, and SECURITY.md — plus, since v1.16.0, the bilingual twins'
  * EN originals (README.md, docs/README.md, docs/user-guide.md — stray Korean
@@ -254,6 +265,20 @@ export function isOfficialDocument(filePath: string): boolean {
     /^docs\/reports\/.*\.(md|ya?ml)$/,
     /^docs\/guides\/.*\.(md|ya?ml)$/,
     /^docs\/standards\/.*\.(md|ya?ml)$/,
+    // F-27 (2026-11-23 token burn-down batch): the remaining official-docs
+    // zones join the perimeter — architecture/manuals/runbooks/security/dd/
+    // planning carry official prose (specs, bilingual manuals, runbooks,
+    // security records, DD guidance, planning documents). Declared lang: ko
+    // files (api-spec.md, ui-spec.md, the manuals/runbooks _ko twins) stay
+    // exempt via the existing declaration mechanism; suffix-locale twins are
+    // declaration-gated; stray Korean in the EN originals gets the
+    // established inline-code remedy.
+    /^docs\/architecture\/.*\.(md|ya?ml)$/,
+    /^docs\/manuals\/.*\.(md|ya?ml)$/,
+    /^docs\/runbooks\/.*\.(md|ya?ml)$/,
+    /^docs\/security\/.*\.(md|ya?ml)$/,
+    /^docs\/dd\/.*\.(md|ya?ml)$/,
+    /^docs\/planning\/.*\.(md|ya?ml)$/,
     /^docs\/VERSION_MANIFEST\.md$/,
     /^skills\/.*\.(md|ya?ml)$/,
     /^\.claude\/skills\/.*\.(md|ya?ml)$/,

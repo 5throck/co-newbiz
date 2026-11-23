@@ -9,7 +9,7 @@ counterpart: beta-series-collection_ko.md
 
 ## Purpose
 
-Daily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel ("수집 데이터 불러오기"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.
+Daily-close time series (KOSPI/KOSDAQ index + subject/target company closes) feed the WACC beta regression panel ("`수집 데이터 불러오기`"). Series are collected with `scripts/co-newbiz/beta-series.ts` into `fact_market_observation` via the same ensure_fresh path as `newbiz fetch`.
 
 ## Scheduling story
 
@@ -27,10 +27,10 @@ bun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   
 ## Index choice (listing market)
 
 The beta regression pairs the stock with the index of its **listing market**
-by default: a KOSDAQ-listed company (e.g. 로보티즈 108490, 레인보우로보틱스
+by default: a KOSDAQ-listed company (e.g. `로보티즈` 108490, `레인보우로보틱스`
 277810) is regressed against the KOSDAQ index, a KOSPI-listed one against
-KOSPI. The other index stays selectable in the panel ("시장 지수" select next
-to "수집 데이터 불러오기") and through `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`.
+KOSPI. The other index stays selectable in the panel ("`시장 지수`" select next
+to "`수집 데이터 불러오기`") and through `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`.
 
 - The collector records the resolved short code and market in the DB raw
   layer (`raw_payload`, id `krx:stock-master:<md_company.id>`); the web route
@@ -53,10 +53,10 @@ bun scripts/co-newbiz/beta-series.ts --project <md_project.id> --backfill-market
 
 The KRX Data Marketplace key must have the six services approved
 (idx/kospi_dd_trd, idx/kosdaq_dd_trd, sto/stk_bydd_trd, sto/ksq_bydd_trd, sto/stk_isu_base_info, sto/ksq_isu_base_info —
-re-apply via portal 마이페이지 → API 사용 신청).
+re-apply via portal `마이페이지` → API `사용 신청`).
 Until then every call returns `respCode 401 — Unauthorized API Call` and the
 script exits 1 with 0 observations. Re-apply, wait for approval, and rerun;
-resolved 단축코드 are cached in `db/data/krx-stock-code-cache.json`.
+resolved `단축코드` are cached in `db/data/krx-stock-code-cache.json`.
 
 ## Request shape: one call per (service, weekday)
 
@@ -92,7 +92,7 @@ hits, and empty-day counts.
 | Symptom | Meaning | Action |
 |---|---|---|
 | `0 observations` and "every KRX payload was empty" | wrong params (range instead of `basDd`) or only non-trading days in range | check the script version; widen `--from/--to` |
-| `respCode 401 ... re-apply` | key valid but service not approved/expired | re-apply at portal 마이페이지 → API 사용 신청 |
+| `respCode 401 ... re-apply` | key valid but service not approved/expired | re-apply at portal `마이페이지` → API `사용 신청` |
 | `HTTP 403` / `5xx` / timeout after retry | KRX burst throttling (seen at concurrency 4) or outage | wait and rerun (reruns are cache hits) |
 | `not found in KOSDAQ master` / `ambiguous` | name does not match the listed abbreviation | pin with `--ticker 회사명=<6-digit code>` |
 | `call budget exhausted` | range too large for the budget | raise `--budget` or narrow the range |
