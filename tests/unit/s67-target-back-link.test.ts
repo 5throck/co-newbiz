@@ -160,7 +160,7 @@ const renderDetail = (status: TargetStatus, locale: "ko" | "en" = "ko") => {
     createElement(
       NextIntlClientProvider,
       { locale, messages: locale === "ko" ? ko : en, now: new Date(), timeZone: "Asia/Seoul" },
-      createElement(AuthProvider, null, createElement(TargetDetailView)),
+      createElement(AuthProvider, null, createElement(TargetDetailView, null)),
     ),
   );
 };
