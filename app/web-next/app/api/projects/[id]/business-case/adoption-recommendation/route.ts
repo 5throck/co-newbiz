@@ -4,7 +4,7 @@
 // 1차 기준)를 그대로 echo한다 — 위조가 아니라 기존 산출물의 인용.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { listBusinessCases, latestAdoption } from "../../../../../../lib/business-case.ts";
+import { listBusinessCases, activeTargetCases, shortlistedTargetIds } from "../../../../../../lib/business-case.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
@@ -24,11 +24,25 @@ interface RecoPayload {
 function normalize(raw: Record<string, unknown>, validIds: Set<string>): RecoPayload {
   const id = String(raw.recommended_model_id ?? "").trim();
   const strList = (arr: unknown, max: number) =>
-    Array.isArray(arr) ? arr.map((s) => String(s ?? "").trim().slice(0, 300)).filter(Boolean).slice(0, max) : [];
+    Array.isArray(arr)
+      ? arr
+          .map((s) =>
+            String(s ?? "")
+              .trim()
+              .slice(0, 300),
+          )
+          .filter(Boolean)
+          .slice(0, max)
+      : [];
   return {
     recommended_model_id: validIds.has(id) ? id : null,
-    rationale_draft: String(raw.rationale_draft ?? "").trim().slice(0, 1500),
-    what_would_change: String(raw.what_would_change ?? "").trim().slice(0, 1000) || null,
+    rationale_draft: String(raw.rationale_draft ?? "")
+      .trim()
+      .slice(0, 1500),
+    what_would_change:
+      String(raw.what_would_change ?? "")
+        .trim()
+        .slice(0, 1000) || null,
     key_evidence: strList(raw.key_evidence, 8),
     cautions: strList(raw.cautions, 8),
   };
@@ -38,13 +52,17 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Adoption-recommendation generation requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Adoption-recommendation generation requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
 
   // 매니페스트 (자기 단계): 6개 case + 킬크라이어리아 상태
-  const { cases, adoption } = listBusinessCases(id);
+  // Excluded-target cases (dropped from the Short List) never reach the LLM prompt,
+  // the deterministic echo, or the recommended_model_id validation set.
+  const { cases: allCases, adoption } = listBusinessCases(id);
+  const cases = activeTargetCases(allCases, shortlistedTargetIds(id));
   if (cases.length === 0) return notFound();
   const adoptionRow = adoption;
   const kills = db
@@ -58,13 +76,20 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     .all(id) as Array<{ criterion_id: string; action: string; outcome: string }>;
   const caseLines = cases.slice(0, 8).map((c) => {
     const sims = c.simulations?.slice(0, 3) ?? [];
-    const npv = sims.map((s) => `${s.percentile ?? "?"}: ${s.npv_krw_m != null ? Math.round(s.npv_krw_m) : "?"}`).join(", ");
-    return `- ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.recommended ? " [결정론 RECOMMENDED]" : ""}${c.adopted ? " [채택됨]" : ""}${npv ? ` NPV ${npv}` : ""}`;
+    const npv = sims
+      .map((s) => `${s.percentile ?? "?"}: ${s.npv_krw_m != null ? Math.round(s.npv_krw_m) : "?"}`)
+      .join(", ");
+    return `- id=${c.id} ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.recommended ? " [결정론 RECOMMENDED]" : ""}${c.adopted ? " [채택됨]" : ""}${npv ? ` NPV ${npv}` : ""}`;
   });
+  // biome-ignore format: keep the manifest on one line — i18n-lint counts Korean lines
   const manifest = ["Business Case 6종(variant·시나리오·NPV/IRR)", "킬크라이어리아 상태", "채택 현황", "투자 불확실성(S5 시뮬레이션 산출물, 참고)"];
 
   let investLine: string;
-  try { investLine = investUncertaintyBriefText(buildInvestUncertainty(db, id)); } catch { investLine = "투자 불확실성: 요약 실패"; }
+  try {
+    investLine = investUncertaintyBriefText(buildInvestUncertainty(db, id));
+  } catch {
+    investLine = "투자 불확실성: 요약 실패";
+  }
 
   let payload: RecoPayload;
   let source: "llm" | "synthesis" = "synthesis";
@@ -90,7 +115,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       const end = res.text.lastIndexOf("}");
       let raw: unknown = null;
       if (start !== -1 && end > start) {
-        try { raw = JSON.parse(res.text.slice(start, end + 1)) as unknown; } catch { raw = null; }
+        try {
+          raw = JSON.parse(res.text.slice(start, end + 1)) as unknown;
+        } catch {
+          raw = null;
+        }
       }
       if (raw) {
         payload = normalize(raw as Record<string, unknown>, new Set(cases.map((c) => c.id)));
@@ -110,11 +139,19 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     note = "LLM 미구성 — 결정론 RECOMMENDED(market_forward 진행 1차 기준)를 권고합니다.";
   }
 
-  appendAudit(db, { actor: ctx.userId, action: "adoption_recommendation.generate", target: `${id}:${source}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: ctx.userId,
+    action: "adoption_recommendation.generate",
+    target: `${id}:${source}`,
+    now: new Date().toISOString(),
+  });
   return ok({ source, provider, note, manifest, recommendation: payload }, 200);
 });
 
-function echoRecommended(recommendedCase: { id: string; name: string; scenario: string | null; variant: string } | undefined, adoptionRow: { modelId: string; adoptedBy: string } | null): RecoPayload {
+function echoRecommended(
+  recommendedCase: { id: string; name: string; scenario: string | null; variant: string } | undefined,
+  adoptionRow: { modelId: string; adoptedBy: string } | null,
+): RecoPayload {
   return {
     recommended_model_id: recommendedCase?.id ?? null,
     rationale_draft: recommendedCase
