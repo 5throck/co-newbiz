@@ -81,12 +81,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       .join(", ");
     return `- id=${c.id} ${c.name} (${c.kind}${c.scenario ? `, ${c.scenario}` : ""}${c.variant ? `, ${c.variant}` : ""})${c.recommended ? " [결정론 RECOMMENDED]" : ""}${c.adopted ? " [채택됨]" : ""}${npv ? ` NPV ${npv}` : ""}`;
   });
-  const manifest = [
-    "Business Case 6종(variant·시나리오·NPV/IRR)",
-    "킬크라이어리아 상태",
-    "채택 현황",
-    "투자 불확실성(S5 시뮬레이션 산출물, 참고)",
-  ];
+  // biome-ignore format: keep the manifest on one line — i18n-lint counts Korean lines
+  const manifest = ["Business Case 6종(variant·시나리오·NPV/IRR)", "킬크라이어리아 상태", "채택 현황", "투자 불확실성(S5 시뮬레이션 산출물, 참고)"];
 
   let investLine: string;
   try {
