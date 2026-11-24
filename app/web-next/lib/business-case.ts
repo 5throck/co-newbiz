@@ -13,7 +13,19 @@ import { ulid } from "../../../db/lib/ulid.ts";
 import { appendAudit } from "../../../db/lib/access-control.ts";
 import { uncertaintyScopeForCase, type UncertaintyScope } from "./uncertainty-scope.ts";
 import { hideHistoricalForGreenfield } from "./business-case-legacy.ts";
-import { SCENARIOS, recommendedFromDb, recommendTargetsFromDb, enginesMixedAcrossTargets, methodsMixedAcrossTargets, resolveConfirmedEvBand, evRevenueBandPayload, type EvRevenueBandPayload, type Scenario, type TargetComparisonRow } from "./business-case-generator.ts";
+import {
+  SCENARIOS,
+  recommendedFromDb,
+  recommendTargetsFromDb,
+  enginesMixedAcrossTargets,
+  methodsMixedAcrossTargets,
+  resolveConfirmedEvBand,
+  evRevenueBandPayload,
+  type EvRevenueBandPayload,
+  type Scenario,
+  type TargetComparisonRow,
+} from "./business-case-generator.ts";
+import { listShortlistSubjects } from "./business-case-generator.ts";
 import { evaluateTargets, resolveProjectTargets } from "./business-targets.ts";
 import { resolveOrCreateCompany } from "./brownfield-targets.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
@@ -125,7 +137,12 @@ export function latestTargetSelection(projectId: string): TargetSelectionRecord 
   try {
     const meta = JSON.parse(row.meta_json) as { target_id?: string; rationale?: string };
     if (!meta.target_id) return null;
-    return { targetId: meta.target_id, rationale: meta.rationale ?? "", selectedBy: row.started_by, selectedAt: row.started_at };
+    return {
+      targetId: meta.target_id,
+      rationale: meta.rationale ?? "",
+      selectedBy: row.started_by,
+      selectedAt: row.started_at,
+    };
   } catch {
     return null;
   }
@@ -136,19 +153,28 @@ export function latestTargetSelection(projectId: string): TargetSelectionRecord 
  * md_project.company_id (the rank-1 binding at promotion was provisional).
  * Re-selection is allowed — the latest record wins and the audit trail keeps
  * every earlier one. */
-export function selectTarget(projectId: string, targetId: string, rationale: string, selectedBy: string): TargetSelectionRecord {
+export function selectTarget(
+  projectId: string,
+  targetId: string,
+  rationale: string,
+  selectedBy: string,
+): TargetSelectionRecord {
   const db = getDb();
-  const project = db
-    .query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?")
-    .get(projectId) as { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
+  const project = db.query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { id: string; track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null }
+    | undefined;
   if (!project) throw new NotFoundError(`project '${projectId}' not found`);
   // T-20261022-036: same single live resolver as the engine predicates — the
   // promotion-time md_project.track snapshot must not decide selection.
-  if (resolveTrack(projectId, db).track !== "brownfield") throw new Error("target selection applies to brownfield projects only");
+  if (resolveTrack(projectId, db).track !== "brownfield")
+    throw new Error("target selection applies to brownfield projects only");
   const target = db
     .query("SELECT id, company_name, dart_corp_code, status FROM brownfield_target WHERE id = ? AND opportunity_id = ?")
-    .get(targetId, project.source_opportunity_id ?? "") as { id: string; company_name: string; dart_corp_code: string | null; status: string } | undefined;
-  if (!target || target.status !== "shortlisted") throw new Error(`target '${targetId}' is not on this project's Short List`);
+    .get(targetId, project.source_opportunity_id ?? "") as
+    | { id: string; company_name: string; dart_corp_code: string | null; status: string }
+    | undefined;
+  if (!target || target.status !== "shortlisted")
+    throw new Error(`target '${targetId}' is not on this project's Short List`);
   if (!rationale?.trim()) throw new Error("rationale is mandatory for a target selection record (ADR-0053)");
   if (rationale.length > 4000) throw new Error("선정 근거는 4,000자 이내여야 합니다.");
   const now = new Date().toISOString();
@@ -157,7 +183,20 @@ export function selectTarget(projectId: string, targetId: string, rationale: str
     db.run(
       `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [ulid(), "project", projectId, projectId, SPEC_VERSION, "s8_target_select", "done", "web", selectedBy, now, now, JSON.stringify({ target_id: targetId, rationale: rationale.trim() })],
+      [
+        ulid(),
+        "project",
+        projectId,
+        projectId,
+        SPEC_VERSION,
+        "s8_target_select",
+        "done",
+        "web",
+        selectedBy,
+        now,
+        now,
+        JSON.stringify({ target_id: targetId, rationale: rationale.trim() }),
+      ],
     );
     const companyId = resolveOrCreateCompany(db, target.company_name, target.dart_corp_code);
     db.run("UPDATE md_project SET company_id = ? WHERE id = ?", [companyId, projectId]);
@@ -199,7 +238,20 @@ export function listBusinessCases(projectId: string): {
        FROM business_case_model m LEFT JOIN brownfield_target bt ON bt.id = m.target_id
        WHERE m.project_id = ? ORDER BY m.created_at, m.id`,
     )
-    .all(projectId) as Array<{ id: string; kind: string; name: string; horizon_years: number; created_by: string; created_at: string; variant: "market_forward" | "historical"; inputs_json: string | null; target_id: string | null; archived_at: string | null; archived_by: string | null; target_name: string | null }>;
+    .all(projectId) as Array<{
+    id: string;
+    kind: string;
+    name: string;
+    horizon_years: number;
+    created_by: string;
+    created_at: string;
+    variant: "market_forward" | "historical";
+    inputs_json: string | null;
+    target_id: string | null;
+    archived_at: string | null;
+    archived_by: string | null;
+    target_name: string | null;
+  }>;
   const lines = db
     .query(
       `SELECT id, model_id, category, name, annual_amount_krw_m, unit, sales_volume, unit_price_krw, start_year, end_year, growth_rate, note
@@ -209,7 +261,9 @@ export function listBusinessCases(projectId: string): {
     )
     .all(projectId) as unknown as Array<LineRow & { model_id: string }>;
   const sims = db
-    .query("SELECT id, model_id, scenario, percentile, npv_krw_m, irr, note FROM valuation_simulation WHERE project_id = ? ORDER BY scenario, percentile")
+    .query(
+      "SELECT id, model_id, scenario, percentile, npv_krw_m, irr, note FROM valuation_simulation WHERE project_id = ? ORDER BY scenario, percentile",
+    )
     .all(projectId) as unknown as SimulationRow[];
   const recommended = recommendedFromDb(projectId);
   const adoption = latestAdoption(projectId);
@@ -229,7 +283,8 @@ export function listBusinessCases(projectId: string): {
       target_name: m.target_name,
       source: m.created_by === "business-case-generator" || scenario !== null ? "generated" : "manual",
       // ADR-0117: the RECOMMENDED badge belongs to the gate-primary variant only.
-      recommended: scenario !== null && scenario === recommended && m.variant === "market_forward" && m.target_id === null,
+      recommended:
+        scenario !== null && scenario === recommended && m.variant === "market_forward" && m.target_id === null,
       adopted: adoption?.modelId === m.id,
       created_by: m.created_by,
       created_at: m.created_at,
@@ -241,29 +296,75 @@ export function listBusinessCases(projectId: string): {
       simulations: modelSims,
     };
   });
-  const isGreenfield = (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | undefined)?.track === "greenfield";
+  const isGreenfield =
+    (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | undefined)
+      ?.track === "greenfield";
   const visible = hideHistoricalForGreenfield(cases, isGreenfield);
-  return { cases: visible.filter((c) => c.archived_at === null), archived: visible.filter((c) => c.archived_at !== null), recommendedScenario: recommended, adoption, targetSelection, targets, enginesMixed: enginesMixedAcrossTargets(targets), methodsMixed: methodsMixedAcrossTargets(targets), evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)) };
+  return {
+    cases: visible.filter((c) => c.archived_at === null),
+    archived: visible.filter((c) => c.archived_at !== null),
+    recommendedScenario: recommended,
+    adoption,
+    targetSelection,
+    targets,
+    enginesMixed: enginesMixedAcrossTargets(targets),
+    methodsMixed: methodsMixedAcrossTargets(targets),
+    evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)),
+  };
 }
 
 /** D4 (2026-10-28): the case the project's GOALS are judged on - the case the person adopted;
  * before any adoption, the base-scenario market_forward case (of the selected target when a
  * brownfield selection exists; with several targets and no selection there is nothing to judge).
  * Never the engine-recommended scenario. The S8 lens summary judges the adopted case the same way. */
-export function goalJudgedCase(list: { cases: BusinessCaseView[]; archived: BusinessCaseView[]; targetSelection?: TargetSelectionRecord | null }): { caseView: BusinessCaseView | null; basis: "adopted" | "base_fallback" } {
+export function goalJudgedCase(list: {
+  cases: BusinessCaseView[];
+  archived: BusinessCaseView[];
+  targetSelection?: TargetSelectionRecord | null;
+}): { caseView: BusinessCaseView | null; basis: "adopted" | "base_fallback" } {
   const adopted = findAdoptedCase(list);
   if (adopted) return { caseView: adopted, basis: "adopted" };
   const bases = list.cases.filter((c) => c.scenario === "base" && c.variant === "market_forward");
   const selected = list.targetSelection?.targetId ?? null;
-  const pick = selected ? bases.find((c) => c.target_id === selected) : bases.every((c) => c.target_id === null) ? bases[0] : undefined;
+  const pick = selected
+    ? bases.find((c) => c.target_id === selected)
+    : bases.every((c) => c.target_id === null)
+      ? bases[0]
+      : undefined;
   return { caseView: pick ?? null, basis: "base_fallback" };
 }
 
 /** The adopted case for history views (adoption / IC package / report): looks in
  * the active set first, then in the archived one (ADR-0158 — an archived legacy
  * model that a human adopted must still resolve). */
-export function findAdoptedCase(list: { cases: BusinessCaseView[]; archived: BusinessCaseView[] }): BusinessCaseView | null {
+export function findAdoptedCase(list: {
+  cases: BusinessCaseView[];
+  archived: BusinessCaseView[];
+}): BusinessCaseView | null {
   return list.cases.find((c) => c.adopted) ?? list.archived.find((c) => c.adopted) ?? null;
+}
+
+/** Ids of the targets currently on the project's Short List — the same rule the
+ * target comparison uses (recommendTargetsFromDb → listShortlistSubjects:
+ * brownfield_target.status = 'shortlisted' under the project's source
+ * opportunity). A project with no source opportunity has no Short List. */
+export function shortlistedTargetIds(projectId: string): Set<string> {
+  const db = getDb();
+  const row = db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { source_opportunity_id: string | null }
+    | undefined;
+  if (!row?.source_opportunity_id) return new Set();
+  return new Set(listShortlistSubjects(db, row.source_opportunity_id).map((t) => t.id));
+}
+
+/** Decision-support input filter: drop cases that belong to a target no longer
+ * on the Short List (excluded / dropped after generation). Target-less cases
+ * (greenfield, legacy) always stay. Pure — pass `shortlistedTargetIds(projectId)`. */
+export function activeTargetCases<T extends { target_id: string | null }>(
+  cases: readonly T[],
+  shortlistedIds: ReadonlySet<string>,
+): T[] {
+  return cases.filter((c) => c.target_id === null || c.target_id === undefined || shortlistedIds.has(c.target_id));
 }
 
 /** Human-only adoption (boundary #2): record WHICH case feeds the fs gate.
@@ -295,16 +396,21 @@ export interface GoalsAckInput {
   note?: string;
 }
 
-export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy: string, opts: { goalsAck?: GoalsAckInput } = {}): AdoptionRecord {
+export function adoptBusinessCase(
+  projectId: string,
+  modelId: string,
+  adoptedBy: string,
+  opts: { goalsAck?: GoalsAckInput } = {},
+): AdoptionRecord {
   const db = getDb();
-  const model = db.query("SELECT id, target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?").get(modelId, projectId) as
-    | { id: string; target_id: string | null; archived_at: string | null }
-    | undefined;
+  const model = db
+    .query("SELECT id, target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?")
+    .get(modelId, projectId) as { id: string; target_id: string | null; archived_at: string | null } | undefined;
   if (!model) throw new NotFoundError(`business case '${modelId}' not found for project '${projectId}'`);
   if (model.archived_at) throw new Error("보관된 모델은 채택할 수 없습니다 (ADR-0158)");
-  const project = db
-    .query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?")
-    .get(projectId) as { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null } | undefined;
+  const project = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
+    | { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null }
+    | undefined;
   if (project?.track === "brownfield") {
     if (!model.target_id) {
       throw new Error("레거시(대상 미귀속) 케이스는 채택할 수 없습니다 — 대상별 분석을 재생성하세요 (ADR-0143)");
@@ -323,7 +429,7 @@ export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy:
   // ADR-0159: no schema change — the goal context rides in meta_json.
   const { scope, resolved } = resolveProjectTargets(projectId);
   const meta: Record<string, unknown> = { model_id: modelId };
-  const ackNote = opts.goalsAck?.acknowledged === true ? opts.goalsAck.note?.trim() ?? "" : null;
+  const ackNote = opts.goalsAck?.acknowledged === true ? (opts.goalsAck.note?.trim() ?? "") : null;
   const recordAck = (goalCount: number, reason: "no_goals" | "no_evaluable_goals") => {
     if (ackNote === null) throw new GoalsAckRequiredError(reason);
     if (!ackNote) throw new GoalsAckNoteRequiredError();
@@ -345,7 +451,20 @@ export function adoptBusinessCase(projectId: string, modelId: string, adoptedBy:
   db.run(
     `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [ulid(), "project", projectId, projectId, SPEC_VERSION, "s8_case_adopt", "done", "web", adoptedBy, now, now, JSON.stringify(meta)],
+    [
+      ulid(),
+      "project",
+      projectId,
+      projectId,
+      SPEC_VERSION,
+      "s8_case_adopt",
+      "done",
+      "web",
+      adoptedBy,
+      now,
+      now,
+      JSON.stringify(meta),
+    ],
   );
   appendAudit(db, { actor: adoptedBy, action: "business_case_adopted", target: `${projectId}:${modelId}`, now });
   return { modelId, adoptedBy, adoptedAt: now };
