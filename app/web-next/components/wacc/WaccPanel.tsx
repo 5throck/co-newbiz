@@ -131,7 +131,7 @@ function CitedRow({
   const tc = useTranslations("common");
   const kind: "live" | "user" = forceKind ?? (field.source.trim() !== "" ? "live" : "user");
   return (
-    <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_1fr_7.5rem_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+    <div className="grid md:grid-cols-[9.5rem_7rem_1fr_1fr] lg:grid-cols-[9.5rem_7rem_1fr_1fr_7.5rem_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
       <div>
         <div className="text-[length:var(--fs-body)] font-semibold">{name}</div>
         {sub && <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{sub}</div>}
@@ -162,7 +162,7 @@ function CitedRow({
           onChange={(e) => onChange({ ...field, url: e.target.value })}
         />
       </label>
-      <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+      <label className="grid gap-1 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] md:col-start-3 lg:col-start-auto">
         {tc("asOfDate")}
         <input
           className="form-input"
@@ -1111,7 +1111,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   {t("basedOnTheTargetCapital")}
                 </span>
               </h3>
-              <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+              <div className="grid md:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
                 <div>
                   <div className="text-[length:var(--fs-body)] font-semibold">{t("targetDE2")}</div>
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("debtEquity")}</div>
@@ -1138,7 +1138,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   <KindChip kind="user" />
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 xl:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
+              <div className="grid md:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">
                 <div>
                   <div className="text-[length:var(--fs-body)] font-semibold">{t("marginalTaxRate2")}</div>
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">

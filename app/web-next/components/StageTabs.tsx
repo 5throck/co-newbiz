@@ -24,7 +24,6 @@ import {
 } from "../lib/stage-tabs.ts";
 import { StageRail, useSourceOpportunity } from "./StageFrame.tsx";
 import { api } from "../lib/api.ts";
-import { S8PartHeader } from "./stages/S8PartHeader.tsx";
 
 // Track per project, cached for the session: only S8 needs it (greenfield hides the target tab).
 const trackCache = new Map<string, string | null>();
@@ -291,7 +290,6 @@ function StageTabsInner({ projectId }: { projectId: string }) {
           </div>
         </nav>
       )}
-      {group.stage === "S8" && (seg === "/wacc" || seg === "/financial-analysis") && <S8PartHeader part="financial" />}
       {sourceOppId && (
         // F12: the link lands on S4 only — say so instead of implying S1~S4 (S1~S3
         // are reached through the stage rail's 이동 메뉴 above).

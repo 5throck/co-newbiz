@@ -134,7 +134,7 @@ export function useSourceOpportunity(projectId: string | undefined): string | nu
 // "미적용" for the other track's stages on every screen, not only on the track-fixed ones.
 // (The cache map itself is declared next to sourceOppCache, above — invalidateCarrierCaches clears both.)
 
-function useCarrierTrack(enabled: boolean): TrackId | null {
+export function useCarrierTrack(enabled: boolean): TrackId | null {
   const params = useParams<{ id?: string }>();
   const routeId = params?.id;
   const underProjects = (usePathname() ?? "").startsWith("/projects/");
