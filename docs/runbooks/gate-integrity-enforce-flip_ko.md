@@ -12,7 +12,7 @@ counterpart: gate-integrity-enforce-flip.md
 
 ## 1. 계열
 
-각 계열은 `CO_NEWBIZ_GATE_INTEGRITY_<FAMILY>`(값 `off | shadow | enforce`)로 제어한다. 운영 기본값은 `shadow`이며 변경하려면 재시작이 필요하다.
+각 계열은 `CO_NEWBIZ_GATE_INTEGRITY_<FAMILY>`(값 `off | shadow | enforce`)로 제어한다. 운영 기본값은 `shadow`이며, 다만 `target` 계열은 모든 환경에서 `enforce`로 나간다(ADR-0206). 변경하려면 재시작이 필요하다.
 
 | 계열 | 변수 | 근거와 enforce 시 동작 | 선행 조건(모두 증빙) |
 |---|---|---|---|
@@ -25,10 +25,11 @@ counterpart: gate-integrity-enforce-flip.md
 | kill_binding | `CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING` | 발동된 `halt` 기준은 `group-ic-reviewer`의 예외가 없으면 GO를 차단(409 `kill_binding_unoverridden`). | `group-ic-reviewer` 권한 보유자가 있고 비운영 시나리오에서 시험 예외를 발급함. 모든 `halt` 기준의 근거 변수에 TRUE와 UNASSESSED 시험 존재. G5에서 모든 곳에서 미평가인 halt 계열 기준 없음. `snapshot_ack`와 함께 전환. |
 | divergence | `CO_NEWBIZ_GATE_INTEGRITY_DIVERGENCE` | 저장된 AI 권고와 다른 결정은 실질적인 `divergence_reason` 필요(422 `divergence_reason_required`), D9. | KPI G3 부족분 설명. MCP 포함 모든 관문 경로에서 브리프 저장(`brief_id`) 확인. |
 | maker_checker | `CO_NEWBIZ_GATE_INTEGRITY_MAKER_CHECKER` | IC GO는 해당 역할의 다른 사람이 연서하기 전까지 `pending_countersign`(D6, O-1). | `GET /api/admin/human-roles/readiness`에서 `entity-ic-reviewer`와 `group-ic-reviewer` 각각 서로 다른 보유자 2명 이상. 두 보유자가 예행연습에서 각각 연서 수행. 소유자가 두 번째 사람에게 기대 역할을 안내. 멈춰 선 IC 결정 없음(G7). |
+| target | `CO_NEWBIZ_GATE_INTEGRITY_TARGET` | 가장 최근의 대상 선택이나 채택된 사업성 분석안이 더 이상 Short List에 없는 대상을 가리키는 동안 `fs`, `dd`, `entity_ic`, `group_ic`의 프로젝트 GO를 차단(409 `target_not_shortlisted`). `goStaleTargetCheck`가 검사(ADR-0206). HOLD와 KILL은 늘 허용되고 기존 행은 건드리지 않는다. 사람이 대상을 다시 선택하고 사업성 분석안을 다시 채택하면 풀린다. | 없음. 모든 환경에서 shadow 출시 없이 `enforce`로 나가므로 2절과 3절은 적용되지 않는다. `off`와 `shadow`는 운영자의 비상 수단으로만 남으며 6절 롤백 절차로만 쓴다. |
 
 ## 2. shadow 보고서 수용 기준
 
-다음이 모두 성립하면 계열을 전환할 수 있다.
+다음이 모두 성립하면 계열을 전환할 수 있다(`target` 계열은 shadow 출시 없이 `enforce`로 나가므로 제외, ADR-0206).
 
 1. `shadow`로 연속 14일 이상 운영했고, **그리고** 관련 관문 기록이 10건 이상 관찰됨(또는 고정 시험 자료로 모든 코드 경로를 점검한 문서가 있음). 한산한 시스템이 쓰이지 않아서 통과하는 일을 막기 위함이다.
 2. `compliance-officer`가 주간으로 검토한 해당 계열의 `gate_integrity.would_block:<code>` 이벤트가 **14일 동안 설명되지 않은 차단 예정 0건**. 보고서 입력은 `bun scripts/co-newbiz/gate-integrity-shadow-report.ts [--days 14] [--json] [--db-path <path>]`로 만든다(읽기 전용, 계열별 차단 예정 이벤트와 관문 기록 10건 최소 요건을 뒷받침하는 기록량을 보여준다). "설명됨"은 각 이벤트가 고정 시험 자료, 알려진 옛 기록, 이미 고친 결함 중 하나로 귀속되어 그렇게 기록된 것을 뜻한다.
@@ -50,6 +51,8 @@ process-governance-manager의 이 기준 해석은 소유자에게 올리는 제
 7. **divergence** - 브리프 저장과 사용자의 확인 흐름 이해에 달려 있다.
 8. **maker_checker** - 두 번째 사람의 확보(O-1)에 달려 있고 GO가 유효해지는 주체를 바꾸므로 마지막이다.
 
+`target` 계열은 이미 `enforce`로 나가므로 이 순서에 들지 않는다.
+
 새 차단을 귀속시킬 수 있도록 한 번에 한 계열씩, 전환 사이에 영업일 3일 이상 둔다.
 
 ## 4. Docker 운영 스택(포트 7749) 단계 - 소유자가 실행
@@ -70,7 +73,7 @@ process-governance-manager의 이 기준 해석은 소유자에게 올리는 제
 
 ## 6. 롤백
 
-`.env.prod`에서 해당 계열을 `shadow`(검사 자체가 오작동하면 `off`)로 되돌리고 `docker compose up -d --force-recreate`를 실행한 뒤 상태를 확인하고 사유를 기록한다. 스키마는 추가형이라 동작 때문에 마이그레이션을 되돌릴 필요가 없다. 기존 행은 전환이나 롤백으로 고쳐 쓰지 않는다. 롤백 뒤 계열은 카운터를 초기화하고 2절 수용 기준으로 돌아간다.
+`.env.prod`에서 해당 계열을 `shadow`(검사 자체가 오작동하면 `off`)로 되돌리고 `docker compose up -d --force-recreate`를 실행한 뒤 상태를 확인하고 사유를 기록한다. 스키마는 추가형이라 동작 때문에 마이그레이션을 되돌릴 필요가 없다. 기존 행은 전환이나 롤백으로 고쳐 쓰지 않는다. 롤백 뒤 계열은 카운터를 초기화하고 2절 수용 기준으로 돌아간다. `target` 계열은 예외다. 운영자가 `off`나 `shadow`로 바꾸면 사유를 기록하고 원인을 고친 뒤 `enforce`로 되돌리며, 2절 카운터는 없다.
 
 ## 7. 사용자 안내
 

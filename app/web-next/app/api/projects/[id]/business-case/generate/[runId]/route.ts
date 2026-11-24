@@ -32,10 +32,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id, runId } = await params;
-if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
+  if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
   const run = db
-    .query("SELECT id, status, stage, started_at, finished_at, meta_json FROM process_run WHERE id = ? AND entity_type = 'project' AND entity_id = ? AND stage <> 's11_execution_baseline'")
+    .query(
+      "SELECT id, status, stage, started_at, finished_at, meta_json FROM process_run WHERE id = ? AND entity_type = 'project' AND entity_id = ? AND stage <> 's11_execution_baseline'",
+    )
     .get(runId, id) as RunRow | undefined;
   if (!run) return notFound();
 
@@ -50,12 +52,13 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   let recommendedScenario: string | null = null;
   if (run.meta_json) {
     try {
-      recommendedScenario = (JSON.parse(run.meta_json) as { recommended_scenario?: string }).recommended_scenario ?? null;
+      recommendedScenario =
+        (JSON.parse(run.meta_json) as { recommended_scenario?: string }).recommended_scenario ?? null;
     } catch {
       // unparseable meta — treat as no recommendation recorded
     }
   }
-  const { cases, recommendedScenario: latestRecommended, adoption } = listBusinessCases(id);
+  const { cases, recommendedScenario: latestRecommended, adoption, staleness } = listBusinessCases(id);
   return ok(
     {
       runId: run.id,
@@ -74,6 +77,7 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
       })),
       cases,
       adoption,
+      staleness,
       wacc_status: waccStatusView(id, db),
     },
     200,

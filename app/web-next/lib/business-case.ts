@@ -74,6 +74,9 @@ export interface BusinessCaseView {
    *  analyzes. NULL for greenfield/project-level cases. */
   target_id: string | null;
   target_name: string | null;
+  /** Only set for `includeExcludedTargets` callers (history views): true when the case's
+   *  target is no longer on the Short List. Absent on the default (filtered) read. */
+  target_excluded?: boolean;
   source: "generated" | "manual";
   recommended: boolean;
   adopted: boolean;
@@ -96,6 +99,9 @@ export interface AdoptionRecord {
   modelId: string;
   adoptedBy: string;
   adoptedAt: string;
+  /** ADR-0206: why the adoption no longer matches the Short List / selection (null = current).
+   *  Filled by `listBusinessCases`; the human record itself is never altered. */
+  stale?: StaleReason | null;
 }
 
 /** The human target-selection record (ADR-0143): a process_run row
@@ -208,10 +214,99 @@ export function selectTarget(
   return { targetId, rationale: rationale.trim(), selectedBy, selectedAt: now };
 }
 
+/** ADR-0206 — `includeExcludedTargets: true` keeps cases of targets that left the Short List in the
+ *  result (each flagged `target_excluded`). Default `false`. Only history callers may pass it
+ *  (audit / archive / export views and `adoptBusinessCase`'s own lookup); every call site comments why. */
+export interface ListBusinessCasesOptions {
+  includeExcludedTargets?: boolean;
+}
+
+/** ADR-0206 — why the latest human selection / adoption no longer matches the live Short List. */
+export type StaleReason = "selected_target_excluded" | "adopted_target_excluded" | "adopted_target_mismatch";
+
+/** Pure stale-state rule (no DB access). Records are never altered; only reported.
+ *  - selection is stale when its target is no longer on the Short List;
+ *  - adoption is stale when the adopted case's target left the Short List, or (both records
+ *    present) when the adopted case belongs to a different target than the current selection;
+ *  - a target-less adoption (greenfield, legacy) is never stale. */
+export function staleS8Records(input: {
+  selection: { target_id: string } | null;
+  adoptedCase: { target_id: string | null } | null;
+  shortlistedIds: ReadonlySet<string>;
+}): { selection: StaleReason | null; adoption: StaleReason | null; any: boolean } {
+  const { selection, adoptedCase, shortlistedIds } = input;
+  const selectionStale: StaleReason | null =
+    selection && !shortlistedIds.has(selection.target_id) ? "selected_target_excluded" : null;
+  let adoptionStale: StaleReason | null = null;
+  const adoptedTarget = adoptedCase?.target_id ?? null;
+  if (adoptedTarget !== null) {
+    if (!shortlistedIds.has(adoptedTarget)) adoptionStale = "adopted_target_excluded";
+    else if (selection && selection.target_id !== adoptedTarget) adoptionStale = "adopted_target_mismatch";
+  }
+  return { selection: selectionStale, adoption: adoptionStale, any: selectionStale !== null || adoptionStale !== null };
+}
+
+/** The stale state plus what the UI/gate need to name it. `selected_target` / `adopted_target` are
+ *  present whenever the record exists (also when current), `target_ids` lists the ids behind stale records. */
+export interface S8Staleness {
+  selection: StaleReason | null;
+  adoption: StaleReason | null;
+  any: boolean;
+  selected_target: { id: string; name: string | null } | null;
+  adopted_target: { id: string; name: string | null } | null;
+  target_ids: string[];
+}
+
+function buildS8Staleness(
+  db: ReturnType<typeof getDb>,
+  selection: TargetSelectionRecord | null,
+  adoptedCase: { target_id: string | null } | null,
+  shortlistedIds: ReadonlySet<string>,
+): S8Staleness {
+  const r = staleS8Records({
+    selection: selection ? { target_id: selection.targetId } : null,
+    adoptedCase,
+    shortlistedIds,
+  });
+  const nameOf = (id: string): string | null =>
+    (
+      db.query("SELECT company_name FROM brownfield_target WHERE id = ?").get(id) as
+        | { company_name: string }
+        | undefined
+    )?.company_name ?? null;
+  const adoptedTargetId = adoptedCase?.target_id ?? null;
+  const ids: string[] = [];
+  if (r.selection && selection) ids.push(selection.targetId);
+  if (r.adoption && adoptedTargetId && !ids.includes(adoptedTargetId)) ids.push(adoptedTargetId);
+  return {
+    ...r,
+    selected_target: selection ? { id: selection.targetId, name: nameOf(selection.targetId) } : null,
+    adopted_target: adoptedTargetId ? { id: adoptedTargetId, name: nameOf(adoptedTargetId) } : null,
+    target_ids: ids,
+  };
+}
+
+/** DB wrapper of `staleS8Records` for server consumers that do not need the case list: loads the latest
+ *  selection, the latest adoption, the adopted case behind it (UNFILTERED - it may be excluded) and the
+ *  live Short List. Older rows are history and are not evaluated. */
+export function resolveS8Staleness(projectId: string): S8Staleness {
+  const db = getDb();
+  const latest = latestAdoption(projectId);
+  const adoptedCase = latest
+    ? ((db
+        .query("SELECT target_id FROM business_case_model WHERE id = ? AND project_id = ?")
+        .get(latest.modelId, projectId) as { target_id: string | null } | undefined) ?? null)
+    : null;
+  return buildS8Staleness(db, latestTargetSelection(projectId), adoptedCase, shortlistedTargetIds(projectId));
+}
+
 /** Full S8 read model: every case for the project with lines, simulations,
  * the engine's RECOMMENDED flag, the human adoption marker, and — for
  * brownfield — the target comparison rows and the selection record. */
-export function listBusinessCases(projectId: string): {
+export function listBusinessCases(
+  projectId: string,
+  opts: ListBusinessCasesOptions = {},
+): {
   cases: BusinessCaseView[];
   /** ADR-0158: archived legacy models — excluded from `cases` (list, comparison,
    *  predicates) but kept resolvable for the adoption / IC-package history views. */
@@ -228,6 +323,8 @@ export function listBusinessCases(projectId: string): {
   methodsMixed: boolean;
   /** Project EV/Revenue band: human-confirmed (or null) beside the unsourced global reference. */
   evRevenueBand: EvRevenueBandPayload;
+  /** ADR-0206: stale selection/adoption state against the live Short List (see `staleS8Records`). */
+  staleness: S8Staleness;
 } {
   const db = getDb();
   const models = db
@@ -266,9 +363,14 @@ export function listBusinessCases(projectId: string): {
     )
     .all(projectId) as unknown as SimulationRow[];
   const recommended = recommendedFromDb(projectId);
-  const adoption = latestAdoption(projectId);
+  const latest = latestAdoption(projectId);
   const targetSelection = latestTargetSelection(projectId);
   const targets = recommendTargetsFromDb(projectId);
+  const shortlisted = shortlistedTargetIds(projectId);
+  // Unfiltered lookup: the adopted case may belong to an excluded target (it is filtered out of `cases` below).
+  const adoptedModel = latest ? (models.find((m) => m.id === latest.modelId) ?? null) : null;
+  const staleness = buildS8Staleness(db, targetSelection, adoptedModel, shortlisted);
+  const adoption: AdoptionRecord | null = latest ? { ...latest, stale: staleness.adoption } : null;
   const cases: BusinessCaseView[] = models.map((m) => {
     const modelSims = sims.filter((s) => s.model_id === m.id);
     const scenario = SCENARIOS.find((s) => modelSims.some((sim) => sim.scenario === s)) ?? null;
@@ -299,7 +401,14 @@ export function listBusinessCases(projectId: string): {
   const isGreenfield =
     (db.query("SELECT track FROM md_project WHERE id = ?").get(projectId) as { track: string | null } | undefined)
       ?.track === "greenfield";
-  const visible = hideHistoricalForGreenfield(cases, isGreenfield);
+  const historyFiltered = hideHistoricalForGreenfield(cases, isGreenfield);
+  // ADR-0206: cases of targets that left the Short List are hidden by default; history callers opt out.
+  const visible = opts.includeExcludedTargets
+    ? historyFiltered.map((c) => ({
+        ...c,
+        target_excluded: c.target_id !== null && !shortlisted.has(c.target_id),
+      }))
+    : activeTargetCases(historyFiltered, shortlisted);
   return {
     cases: visible.filter((c) => c.archived_at === null),
     archived: visible.filter((c) => c.archived_at !== null),
@@ -310,6 +419,7 @@ export function listBusinessCases(projectId: string): {
     enginesMixed: enginesMixedAcrossTargets(targets),
     methodsMixed: methodsMixedAcrossTargets(targets),
     evRevenueBand: evRevenueBandPayload(resolveConfirmedEvBand(db, projectId)),
+    staleness,
   };
 }
 
@@ -439,7 +549,9 @@ export function adoptBusinessCase(
     recordAck(0, "no_goals");
   } else {
     // D4: judge on the case being adopted (its own scenario), not the engine-recommended one.
-    const { cases } = listBusinessCases(projectId);
+    // History opt-out (ADR-0206): the case being adopted must be found even if its target left the
+    // Short List, so the write-time rejection above stays the precise answer, never a silent miss.
+    const { cases } = listBusinessCases(projectId, { includeExcludedTargets: true });
     const view = cases.find((c) => c.id === modelId);
     const counts = { met: 0, missed: 0, indeterminate: 0, manual: 0 };
     for (const e of evaluateTargets(resolved, scope, view ?? null, "adopted")) counts[e.status] += 1;

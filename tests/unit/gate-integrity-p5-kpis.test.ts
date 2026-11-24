@@ -42,11 +42,19 @@ async function login(userId: string, role: "analyst" | "admin"): Promise<string>
   await createUser(db, { userId, role, password: `pw-${userId}-123456`, createdBy: "test", now: S.NOW });
   approveUser(db, { userId, approvedBy: "test", now: S.NOW });
   db.run("UPDATE app_user SET must_change_password = 0 WHERE user_id = ?", [userId]);
-  const res = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId, password: `pw-${userId}-123456` }) });
+  const res = await nextRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ userId, password: `pw-${userId}-123456` }),
+  });
   return (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 }
 beforeAll(async () => {
-  for (const [u, r] of [[ADMIN, "admin"], [MAKER, "analyst"], [CHECKER, "analyst"]] as const) cookies[u] = await login(u, r);
+  for (const [u, r] of [
+    [ADMIN, "admin"],
+    [MAKER, "analyst"],
+    [CHECKER, "analyst"],
+  ] as const)
+    cookies[u] = await login(u, r);
   await S.grantRole(db, CHECKER, "entity-ic-reviewer", ADMIN);
 });
 afterAll(() => {
@@ -55,35 +63,101 @@ afterAll(() => {
 });
 
 /** A decision row with optional snapshot / AI recommendation / divergence reason at a chosen time. */
-function decide(o: { entity?: string; entityType?: "opportunity" | "project"; gate: string; decision: "go" | "hold" | "kill"; when: string; ai?: string | null; reason?: string | null; snapshot?: Record<string, unknown>; acks?: unknown[] }): string {
+function decide(o: {
+  entity?: string;
+  entityType?: "opportunity" | "project";
+  gate: string;
+  decision: "go" | "hold" | "kill";
+  when: string;
+  ai?: string | null;
+  reason?: string | null;
+  snapshot?: Record<string, unknown>;
+  acks?: unknown[];
+}): string {
   const id = ulid();
-  db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at, ai_recommended_decision, divergence_reason) VALUES (?,?,?,?,?,?,?,?,?,?)",
-    [id, o.entityType ?? "opportunity", o.entity ?? `e-${id}`, o.gate, o.decision, "seed", MAKER, o.when, o.ai ?? null, o.reason ?? null]);
+  db.run(
+    "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at, ai_recommended_decision, divergence_reason) VALUES (?,?,?,?,?,?,?,?,?,?)",
+    [
+      id,
+      o.entityType ?? "opportunity",
+      o.entity ?? `e-${id}`,
+      o.gate,
+      o.decision,
+      "seed",
+      MAKER,
+      o.when,
+      o.ai ?? null,
+      o.reason ?? null,
+    ],
+  );
   if (o.snapshot || o.acks) {
-    db.run("INSERT INTO gate_decision_snapshot (decision_id, schema_version, snapshot_json, snapshot_hash, acknowledgements_json, computed_at, engine_versions_json) VALUES (?,?,?,?,?,?,?)",
-      [id, 1, JSON.stringify(o.snapshot ?? {}), "h", JSON.stringify(o.acks ?? []), o.when, "{}"]);
+    db.run(
+      "INSERT INTO gate_decision_snapshot (decision_id, schema_version, snapshot_json, snapshot_hash, acknowledgements_json, computed_at, engine_versions_json) VALUES (?,?,?,?,?,?,?)",
+      [id, 1, JSON.stringify(o.snapshot ?? {}), "h", JSON.stringify(o.acks ?? []), o.when, "{}"],
+    );
   }
   return id;
 }
-const kpi = (id: string, extra: Record<string, unknown> = {}) => buildGateIntegrityKpis(db, { ...W, ...extra }).kpis.find((k) => k.id === id)!;
+const kpi = (id: string, extra: Record<string, unknown> = {}) =>
+  buildGateIntegrityKpis(db, { ...W, ...extra }).kpis.find((k) => k.id === id)!;
 
 describe("KPI response contract", () => {
   test("families: every rule family carries its server-resolved mode and a readiness verdict, aggregate only", () => {
-    const r = buildGateIntegrityKpis(db, { ...W, env: { CO_NEWBIZ_GATE_INTEGRITY_WAIVER: "enforce", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "shadow" } });
-    expect(r.families.map((f) => f.family).sort()).toEqual(["divergence", "kill_binding", "ladder", "maker_checker", "rationale", "snapshot_ack", "validators", "waiver", "wacc"].sort());
+    const r = buildGateIntegrityKpis(db, {
+      ...W,
+      env: { CO_NEWBIZ_GATE_INTEGRITY_WAIVER: "enforce", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "shadow" },
+    });
+    expect(r.families.map((f) => f.family).sort()).toEqual(
+      [
+        "divergence",
+        "kill_binding",
+        "ladder",
+        "maker_checker",
+        "rationale",
+        "snapshot_ack",
+        "validators",
+        "waiver",
+        "wacc",
+        "target",
+      ].sort(),
+    );
     expect(r.families.find((f) => f.family === "waiver")?.mode).toBe("enforce");
     expect(r.families.find((f) => f.family === "waiver")?.verdict.state).toBe("enforcing");
     expect(r.families.find((f) => f.family === "ladder")?.mode).toBe("shadow");
     expect(r.families.find((f) => f.family === "rationale")?.mode).toBe("off");
     // only counts, modes and verdict codes: no free text, no ids
-    for (const f of r.families) expect(Object.keys(f).sort()).toEqual(["clean_days", "decisions", "family", "mode", "verdict", "would_blocks_14d"]);
+    for (const f of r.families)
+      expect(Object.keys(f).sort()).toEqual([
+        "clean_days",
+        "decisions",
+        "family",
+        "mode",
+        "verdict",
+        "would_blocks_14d",
+      ]);
     // structured breach params are numbers, or short gate / role codes - never reason text or project ids
-    for (const k of r.kpis) for (const i of k.breach.items) for (const v of Object.values(i.params)) expect(typeof v === "number" || /^[a-z_-]+$/.test(String(v))).toBe(true);
+    for (const k of r.kpis)
+      for (const i of k.breach.items)
+        for (const v of Object.values(i.params))
+          expect(typeof v === "number" || /^[a-z_-]+$/.test(String(v))).toBe(true);
   });
 
   test("twelve KPIs in order, each with period / value / numerator / denominator / rate / breach / status", () => {
     const r = buildGateIntegrityKpis(db, W);
-    expect(r.kpis.map((k) => k.id)).toEqual(["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"]);
+    expect(r.kpis.map((k) => k.id)).toEqual([
+      "G1",
+      "G2",
+      "G3",
+      "G4",
+      "G5",
+      "G6",
+      "G7",
+      "G8",
+      "G9",
+      "G10",
+      "G11",
+      "G12",
+    ]);
     for (const k of r.kpis) {
       expect(k.status).toBe("ok");
       expect(k.period).toEqual({ from: W.from, to: W.to });
@@ -121,32 +195,64 @@ describe("G1-G5 (decision based)", () => {
     const zero = kpi("G2", { gate: "dd" });
     expect(zero).toMatchObject({ numerator: 0, denominator: 10, rate: 0 });
     expect(zero.breach.breached).toBe(true);
-    for (let i = 0; i < 6; i += 1) decide({ gate: "entity_ic", decision: "go", ai: i < 5 ? "hold" : "go", when: at("2026-09-09") });
+    for (let i = 0; i < 6; i += 1)
+      decide({ gate: "entity_ic", decision: "go", ai: i < 5 ? "hold" : "go", when: at("2026-09-09") });
     const hi = kpi("G2", { gate: "entity_ic" });
     expect(hi).toMatchObject({ numerator: 5, denominator: 6 });
     expect(hi.breach.breached).toBe(false); // fewer than 10 decisions
   });
   test("G3: divergent GO decisions with a passing reason / divergent GO; shortfall and would-block events breach", () => {
-    decide({ gate: "fs", decision: "go", ai: "hold", reason: "허용 가능한 위험이며 확정된 할인율 기준으로 수익성이 허들을 넘음", when: at("2026-09-09") });
+    decide({
+      gate: "fs",
+      decision: "go",
+      ai: "hold",
+      reason: "허용 가능한 위험이며 확정된 할인율 기준으로 수익성이 허들을 넘음",
+      when: at("2026-09-09"),
+    });
     decide({ gate: "fs", decision: "go", ai: "hold", reason: "ok", when: at("2026-09-09") });
     decide({ gate: "fs", decision: "hold", ai: "go", reason: null, when: at("2026-09-09") }); // HOLD: not counted
     const k = kpi("G3", { gate: "fs" });
     expect(k).toMatchObject({ numerator: 1, denominator: 2, rate: 0.5 });
     expect((k.value as any).shortfall).toBe(1);
     expect(k.breach.breached).toBe(true);
-    appendAudit(db, { actor: MAKER, action: "gate_integrity.would_block:divergence_reason_required", target: "project:P:fs", now: at("2026-09-09") });
+    appendAudit(db, {
+      actor: MAKER,
+      action: "gate_integrity.would_block:divergence_reason_required",
+      target: "project:P:fs",
+      now: at("2026-09-09"),
+    });
     expect((kpi("G3", { gate: "fs" }).value as any).would_block_divergence_reason_required).toBe(1);
   });
   test("G4: acknowledgements per gate and kind; a reason reused across more than 5 decisions breaches", () => {
-    for (let i = 0; i < 6; i += 1) decide({ gate: "group_ic", decision: "go", when: at("2026-09-10"), snapshot: {}, acks: [{ key: `k${i}`, kind: "kill_unassessed", reason: "같은 사유 문장을 반복해서 사용함" }, { key: `r${i}`, kind: "rag_red", reason: `서로 다른 사유 ${i}번 검토 기록` }] });
+    for (let i = 0; i < 6; i += 1)
+      decide({
+        gate: "group_ic",
+        decision: "go",
+        when: at("2026-09-10"),
+        snapshot: {},
+        acks: [
+          { key: `k${i}`, kind: "kill_unassessed", reason: "같은 사유 문장을 반복해서 사용함" },
+          { key: `r${i}`, kind: "rag_red", reason: `서로 다른 사유 ${i}번 검토 기록` },
+        ],
+      });
     const k = kpi("G4", { gate: "group_ic" });
     expect((k.value as any).by_gate_and_kind.group_ic).toEqual({ kill_unassessed: 6, rag_red: 6 });
     expect(k.denominator).toBe(12);
     expect(k.breach.reasons.join(" ")).toContain("reused across more than 5 decisions");
   });
   test("G5: unassessed / evaluated criteria in GO snapshots per gate; above 25% breaches", () => {
-    decide({ gate: "fs", decision: "go", when: at("2026-09-11"), snapshot: { kill: { evaluated: 4, unassessed: [{}, {}] } } });
-    decide({ gate: "fs", decision: "kill", when: at("2026-09-11"), snapshot: { kill: { evaluated: 10, unassessed: [{}, {}, {}] } } }); // not a GO
+    decide({
+      gate: "fs",
+      decision: "go",
+      when: at("2026-09-11"),
+      snapshot: { kill: { evaluated: 4, unassessed: [{}, {}] } },
+    });
+    decide({
+      gate: "fs",
+      decision: "kill",
+      when: at("2026-09-11"),
+      snapshot: { kill: { evaluated: 10, unassessed: [{}, {}, {}] } },
+    }); // not a GO
     const k = kpi("G5", { gate: "fs" });
     expect(k).toMatchObject({ numerator: 2, denominator: 4, rate: 0.5 });
     expect((k.value as any).by_gate.fs.share).toBe(0.5);
@@ -156,9 +262,24 @@ describe("G1-G5 (decision based)", () => {
 
 describe("G6-G12 (state based)", () => {
   test("G6 / G12: would-block events per family, code and week; the streak resets on an event and needs the write volume", () => {
-    appendAudit(db, { actor: MAKER, action: "gate_integrity.would_block:ack_required", target: "project:PRJ-1:dd", now: at("2026-09-08") });
-    appendAudit(db, { actor: MAKER, action: "gate_integrity.would_block:ack_required", target: "project:PRJ-2:dd", now: at("2026-09-09") });
-    appendAudit(db, { actor: MAKER, action: "gate_integrity.would_block:wacc_unconfirmed", target: "project:PRJ-1:fs", now: at("2026-09-16") });
+    appendAudit(db, {
+      actor: MAKER,
+      action: "gate_integrity.would_block:ack_required",
+      target: "project:PRJ-1:dd",
+      now: at("2026-09-08"),
+    });
+    appendAudit(db, {
+      actor: MAKER,
+      action: "gate_integrity.would_block:ack_required",
+      target: "project:PRJ-2:dd",
+      now: at("2026-09-09"),
+    });
+    appendAudit(db, {
+      actor: MAKER,
+      action: "gate_integrity.would_block:wacc_unconfirmed",
+      target: "project:PRJ-1:fs",
+      now: at("2026-09-16"),
+    });
     const g6 = kpi("G6");
     expect((g6.value as any).by_family_code_week.snapshot_ack.ack_required).toEqual({ "2026-09-07": 2 });
     expect(g6.numerator).toBe(3); // 2 ack_required + the divergence event of G3; the wacc event is outside [from, to)
@@ -166,12 +287,20 @@ describe("G6-G12 (state based)", () => {
     const wide = kpi("G6", { to: "2026-09-30T00:00:00.000Z" });
     expect(wide.numerator).toBe(4);
     // G12: for `to` = 2026-09-30 the last would-block of snapshot_ack was 2026-09-09 -> 20 clear days (09-10..09-29), wacc 2026-09-16 -> 13 days
-    const g12 = (buildGateIntegrityKpis(db, { ...W, to: "2026-09-30T00:00:00.000Z", minWrites: 1 }).kpis.find((k) => k.id === "G12")!.value as any).by_family;
+    const g12 = (
+      buildGateIntegrityKpis(db, { ...W, to: "2026-09-30T00:00:00.000Z", minWrites: 1 }).kpis.find(
+        (k) => k.id === "G12",
+      )!.value as any
+    ).by_family;
     expect(g12.snapshot_ack.streak_days).toBe(20);
     expect(g12.snapshot_ack.qualifies_14_days).toBe(true);
     expect(g12.wacc.streak_days).toBe(13);
     expect(g12.wacc.qualifies_14_days).toBe(false);
-    const strict = (buildGateIntegrityKpis(db, { ...W, to: "2026-09-30T00:00:00.000Z", minWrites: 100000 }).kpis.find((k) => k.id === "G12")!.value as any).by_family;
+    const strict = (
+      buildGateIntegrityKpis(db, { ...W, to: "2026-09-30T00:00:00.000Z", minWrites: 100000 }).kpis.find(
+        (k) => k.id === "G12",
+      )!.value as any
+    ).by_family;
     expect(strict.snapshot_ack.qualifies_14_days).toBe(false); // a quiet system does not pass by being unused
   });
 
@@ -180,12 +309,34 @@ describe("G6-G12 (state based)", () => {
     const a = S.seedIcReadyProject(db, MAKER).projectId;
     const b = S.seedIcReadyProject(db, MAKER).projectId;
     for (const p of [a, b]) S.addMember(db, p, MAKER, "lead");
-    const rec = (pid: string, when: string) => recordGateDecisionRow(db, { entityType: "project", entityId: pid, gate: "entity_ic", decision: "go", storedRationale: S.IC_RATIONALE, missingArtifactsJson: null, actor: MAKER, gateEvaluationId: null, learningCapture: null, judgementConfirmationsJson: null, extras: null, now: when });
+    const rec = (pid: string, when: string) =>
+      recordGateDecisionRow(db, {
+        entityType: "project",
+        entityId: pid,
+        gate: "entity_ic",
+        decision: "go",
+        storedRationale: S.IC_RATIONALE,
+        missingArtifactsJson: null,
+        actor: MAKER,
+        gateEvaluationId: null,
+        learningCapture: null,
+        judgementConfirmationsJson: null,
+        extras: null,
+        now: when,
+      });
     const signed = rec(a, "2026-09-08T09:00:00.000Z");
     const pending = rec(b, "2026-09-08T09:00:00.000Z");
     expect(signed.ok && pending.ok).toBe(true);
     if (!signed.ok) return;
-    const cs = countersignDecision(db, { projectId: a, decisionId: signed.id, checkerId: CHECKER, decision: "approved", reason: "법인 심의 기록과 근거를 확인하고 승인함", conditions: [], now: "2026-09-10T09:00:00.000Z" });
+    const cs = countersignDecision(db, {
+      projectId: a,
+      decisionId: signed.id,
+      checkerId: CHECKER,
+      decision: "approved",
+      reason: "법인 심의 기록과 근거를 확인하고 승인함",
+      conditions: [],
+      now: "2026-09-10T09:00:00.000Z",
+    });
     expect(cs.ok).toBe(true);
     const k = kpi("G7", { from: "2026-09-01T00:00:00.000Z", to: "2026-09-30T00:00:00.000Z" });
     const v = k.value as any;
@@ -195,15 +346,23 @@ describe("G6-G12 (state based)", () => {
     expect(k.breach.reasons.join(" ")).toContain("fewer than 2 active holders");
     // structured codes run parallel to the English fallback text
     expect(k.breach.items).toHaveLength(k.breach.reasons.length);
-    expect(k.breach.items.map((i) => i.code)).toEqual(expect.arrayContaining(["countersign_pending_old", "reviewer_holders_low"]));
+    expect(k.breach.items.map((i) => i.code)).toEqual(
+      expect.arrayContaining(["countersign_pending_old", "reviewer_holders_low"]),
+    );
     expect(k.breach.items.find((i) => i.code === "reviewer_holders_low")?.params.role).toMatch(/-ic-reviewer$/);
   });
 
   test("G8: open conditions, older than 30 days, open at a reached group_ic gate", () => {
     const pid = S.seedIcReadyProject(db, MAKER).projectId;
     const d = S.insertGate(db, "project", pid, "entity_ic", "go");
-    db.run("INSERT INTO condition_precedent (id, project_id, source_decision_id, gate, text, clear_by, origin, status, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)", [ulid(), pid, d, "entity_ic", "old", "group_ic", "recorder", "open", MAKER, "2026-08-01T00:00:00.000Z"]);
-    db.run("INSERT INTO condition_precedent (id, project_id, source_decision_id, gate, text, clear_by, origin, status, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)", [ulid(), pid, d, "entity_ic", "new", "closing", "recorder", "open", MAKER, "2026-10-26T00:00:00.000Z"]);
+    db.run(
+      "INSERT INTO condition_precedent (id, project_id, source_decision_id, gate, text, clear_by, origin, status, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), pid, d, "entity_ic", "old", "group_ic", "recorder", "open", MAKER, "2026-08-01T00:00:00.000Z"],
+    );
+    db.run(
+      "INSERT INTO condition_precedent (id, project_id, source_decision_id, gate, text, clear_by, origin, status, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      [ulid(), pid, d, "entity_ic", "new", "closing", "recorder", "open", MAKER, "2026-10-26T00:00:00.000Z"],
+    );
     const before = (kpi("G8").value as any).past_clear_by_gate;
     S.insertGate(db, "project", pid, "group_ic", "go");
     const k = kpi("G8");
@@ -216,7 +375,24 @@ describe("G6-G12 (state based)", () => {
   test("G9: active / expired / expiring waivers, mean age, concentration by clause, active over 90 days breaches", () => {
     const pid = S.insertProject(db, null);
     const doc = S.insertGovernanceDoc(db);
-    const w = (clause: string, status: string, approved: string | null, expires: string) => db.run("INSERT INTO waiver (id, project_id, governance_doc_id, clause_ref, reason, requested_by, approver_role, approved_by, approved_at, expires_at, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [ulid(), pid, doc, clause, "r", MAKER, "entity-ic-reviewer", approved ? CHECKER : null, approved, expires, status, "2026-07-01T00:00:00.000Z"]);
+    const w = (clause: string, status: string, approved: string | null, expires: string) =>
+      db.run(
+        "INSERT INTO waiver (id, project_id, governance_doc_id, clause_ref, reason, requested_by, approver_role, approved_by, approved_at, expires_at, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+          ulid(),
+          pid,
+          doc,
+          clause,
+          "r",
+          MAKER,
+          "entity-ic-reviewer",
+          approved ? CHECKER : null,
+          approved,
+          expires,
+          status,
+          "2026-07-01T00:00:00.000Z",
+        ],
+      );
     w("c1", "active", "2026-10-20T00:00:00.000Z", "2026-11-05T00:00:00.000Z"); // active, expiring in 9 days
     w("c1", "active", "2026-06-01T00:00:00.000Z", "2026-12-30T00:00:00.000Z"); // active, > 90 days old
     w("c2", "active", "2026-09-01T00:00:00.000Z", "2026-10-01T00:00:00.000Z"); // expired
@@ -230,9 +406,19 @@ describe("G6-G12 (state based)", () => {
 
   test("G10: unconfirmed mandatory na rows, backlog over 14 days, median days to confirmation", () => {
     const pid = S.seedIcReadyProject(db, MAKER).projectId;
-    const rows = db.query("SELECT id FROM project_checklist_item_state WHERE project_id = ? AND checklist_id = 'chk-commercial-dd-checklist' LIMIT 2").all(pid) as Array<{ id: string }>;
-    db.run("UPDATE project_checklist_item_state SET status = 'na', assessed_at = '2026-10-01T00:00:00.000Z', na_confirmed_by = NULL WHERE id = ?", [rows[0].id]);
-    db.run("UPDATE project_checklist_item_state SET status = 'na', assessed_at = '2026-10-10T00:00:00.000Z', na_confirmed_by = ?, na_confirmed_at = '2026-10-14T00:00:00.000Z' WHERE id = ?", [CHECKER, rows[1].id]);
+    const rows = db
+      .query(
+        "SELECT id FROM project_checklist_item_state WHERE project_id = ? AND checklist_id = 'chk-commercial-dd-checklist' LIMIT 2",
+      )
+      .all(pid) as Array<{ id: string }>;
+    db.run(
+      "UPDATE project_checklist_item_state SET status = 'na', assessed_at = '2026-10-01T00:00:00.000Z', na_confirmed_by = NULL WHERE id = ?",
+      [rows[0].id],
+    );
+    db.run(
+      "UPDATE project_checklist_item_state SET status = 'na', assessed_at = '2026-10-10T00:00:00.000Z', na_confirmed_by = ?, na_confirmed_at = '2026-10-14T00:00:00.000Z' WHERE id = ?",
+      [CHECKER, rows[1].id],
+    );
     const k = kpi("G10");
     const v = k.value as any;
     expect(v.unconfirmed).toBeGreaterThanOrEqual(1);
@@ -253,7 +439,8 @@ describe("G6-G12 (state based)", () => {
 
 describe("route", () => {
   test("admin only, aggregate only, validated parameters, default period", async () => {
-    const get = (q: string, who: string) => nextRequest(`/api/admin/gate-integrity/kpis${q}`, { headers: { cookie: cookies[who] } });
+    const get = (q: string, who: string) =>
+      nextRequest(`/api/admin/gate-integrity/kpis${q}`, { headers: { cookie: cookies[who] } });
     expect((await get("", MAKER)).status).toBe(403);
     expect((await nextRequest("/api/admin/gate-integrity/kpis")).status).toBe(401);
     const res = await get(`?from=${W.from}&to=${W.to}`, ADMIN);
@@ -275,9 +462,13 @@ describe("a database migrated only to 0172", () => {
   function oldDb(): { path: string; dir: string; handle: InstanceType<typeof Database> } {
     const dir = mkdtempSync(join(tmpdir(), "co-newbiz-p5k-old-"));
     const path = join(dir, "old.sqlite");
-    const late = readdirSync(join(PROJECT_ROOT, "db/migrations")).filter((f) => /^\d{4}_.*\.sql$/.test(f) && f >= "0173");
+    const late = readdirSync(join(PROJECT_ROOT, "db/migrations")).filter(
+      (f) => /^\d{4}_.*\.sql$/.test(f) && f >= "0173",
+    );
     const seed = new Database(path);
-    seed.run("CREATE TABLE schema_migrations (id TEXT PRIMARY KEY NOT NULL, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)");
+    seed.run(
+      "CREATE TABLE schema_migrations (id TEXT PRIMARY KEY NOT NULL, filename TEXT NOT NULL UNIQUE, applied_at TEXT NOT NULL)",
+    );
     for (const f of late) seed.run("INSERT INTO schema_migrations VALUES (?,?,?)", [f, f, "2026-01-01T00:00:00Z"]);
     seed.close();
     resetDb();
@@ -304,13 +495,20 @@ describe("a database migrated only to 0172", () => {
       expect(r.unapplied_migrations).toContain("0173_gate_decision_snapshot.sql");
       expect(r.unapplied_migrations).toContain("0179_project_reconfirm_requirement.sql");
     } finally {
-      resetDb(); getDb(TEST_DB_PATH); rmSync(o.dir, { recursive: true, force: true });
+      resetDb();
+      getDb(TEST_DB_PATH);
+      rmSync(o.dir, { recursive: true, force: true });
     }
   });
   test("shadow report: no throw; grant holders and the na backlog are migration_pending, would-block rows still summarised; human output says so", () => {
     const o = oldDb();
     try {
-      appendAudit(o.handle, { actor: "x", action: "gate_integrity.would_block:ack_required", target: "project:P:dd", now: at("2026-09-08") });
+      appendAudit(o.handle, {
+        actor: "x",
+        action: "gate_integrity.would_block:ack_required",
+        target: "project:P:dd",
+        now: at("2026-09-08"),
+      });
       const ro = new Database(o.path, { readonly: true });
       const rep = buildShadowReport(ro, { from: W.from, to: W.to });
       ro.close();
@@ -321,16 +519,30 @@ describe("a database migrated only to 0172", () => {
       const sections = rep.migration_pending.map((p) => p.section);
       expect(sections).toContain("readiness.grant_holders");
       expect(sections).toContain("readiness.legacy_unconfirmed_mandatory_na");
-      expect(rep.migration_pending.find((p) => p.section === "readiness.grant_holders")!.migrations).toEqual(["0176_human_role_grant"]);
+      expect(rep.migration_pending.find((p) => p.section === "readiness.grant_holders")!.migrations).toEqual([
+        "0176_human_role_grant",
+      ]);
       expect(rep.unapplied_migrations.length).toBeGreaterThan(0);
       const text = renderHuman(rep);
       expect(text).toContain("MIGRATION PENDING (0176_human_role_grant)");
       expect(text).toContain("Unapplied gate-integrity migrations");
-      const cli = Bun.spawnSync(["bun", join(PROJECT_ROOT, "scripts/co-newbiz/gate-integrity-shadow-report.ts"), "--db-path", o.path, "--json", "--from", W.from, "--to", W.to]);
+      const cli = Bun.spawnSync([
+        "bun",
+        join(PROJECT_ROOT, "scripts/co-newbiz/gate-integrity-shadow-report.ts"),
+        "--db-path",
+        o.path,
+        "--json",
+        "--from",
+        W.from,
+        "--to",
+        W.to,
+      ]);
       expect(cli.exitCode).toBe(0);
       expect(JSON.parse(cli.stdout.toString()).migration_pending.length).toBeGreaterThan(0);
     } finally {
-      resetDb(); getDb(TEST_DB_PATH); rmSync(o.dir, { recursive: true, force: true });
+      resetDb();
+      getDb(TEST_DB_PATH);
+      rmSync(o.dir, { recursive: true, force: true });
     }
   });
 });

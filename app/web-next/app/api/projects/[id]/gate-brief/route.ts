@@ -5,6 +5,7 @@
 // nothing persisted.
 import { reconfirmNotice } from "../../../../../lib/reconfirm.ts";
 import { waccStatusView } from "../../../../../lib/wacc-status.ts";
+import { resolveS8Staleness } from "../../../../../lib/business-case.ts";
 import { getDb } from "../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
@@ -21,13 +22,19 @@ import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
-import { KILL_MANIFEST_ENTRY, briefKillEvaluation, killContextBlock, persistBriefRecord } from "../../../../../lib/gate-brief-integrity.ts";
+import {
+  KILL_MANIFEST_ENTRY,
+  briefKillEvaluation,
+  killContextBlock,
+  persistBriefRecord,
+} from "../../../../../lib/gate-brief-integrity.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Gate-brief generation requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Gate-brief generation requires the analyst role or higher.");
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as { gate?: string } | null;
   const gate = body?.gate?.trim() ?? "";
@@ -52,7 +59,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
   const context = buildGateContext(db, "project", id, gate) + (killEval ? killContextBlock(killEval.kill) : "");
 
-  let brief;
+  let brief: ReturnType<typeof normalizeGateBrief>;
   let source: "llm" | "synthesis" = "synthesis";
   let provider: string | null = null;
   let note: string;
@@ -75,7 +82,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       const end = res.text.lastIndexOf("}");
       let raw: unknown = null;
       if (start !== -1 && end > start) {
-        try { raw = JSON.parse(res.text.slice(start, end + 1)) as unknown; } catch { raw = null; }
+        try {
+          raw = JSON.parse(res.text.slice(start, end + 1)) as unknown;
+        } catch {
+          raw = null;
+        }
       }
       if (raw) {
         brief = normalizeGateBrief(raw);
@@ -96,7 +107,36 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   }
 
   // ADR-0186 D9: the recommendation is stored beside the later human decision (brief_id travels with the decision).
-  const briefId = persistBriefRecord(db, { entityType: "project", entityId: id, gate, actor: ctx.userId, brief, source, provider, evalRunId: killEval?.evalRunId ?? null });
-  appendAudit(db, { actor: ctx.userId, action: "gate_brief.generate", target: `${id}:${gate}:${source}`, now: new Date().toISOString() });
-  return ok({ source, provider, note, manifest, gate, brief, brief_id: briefId, kill: killEval?.kill ?? null, wacc_status: waccStatusView(id, db), reconfirmation: reconfirmNotice(db, id) }, 200);
+  const briefId = persistBriefRecord(db, {
+    entityType: "project",
+    entityId: id,
+    gate,
+    actor: ctx.userId,
+    brief,
+    source,
+    provider,
+    evalRunId: killEval?.evalRunId ?? null,
+  });
+  appendAudit(db, {
+    actor: ctx.userId,
+    action: "gate_brief.generate",
+    target: `${id}:${gate}:${source}`,
+    now: new Date().toISOString(),
+  });
+  return ok(
+    {
+      source,
+      provider,
+      note,
+      manifest,
+      gate,
+      brief,
+      brief_id: briefId,
+      kill: killEval?.kill ?? null,
+      wacc_status: waccStatusView(id, db),
+      staleness: resolveS8Staleness(id),
+      reconfirmation: reconfirmNotice(db, id),
+    },
+    200,
+  );
 });

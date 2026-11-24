@@ -26,10 +26,14 @@ const db = getDb(TEST_DB_PATH);
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
-const { gateIntegrityMode, gateIntegrityEnvName, GATE_INTEGRITY_FAMILIES } = await import("../../app/web-next/lib/gate-integrity-flags.ts");
+const { gateIntegrityMode, gateIntegrityEnvName, GATE_INTEGRITY_FAMILIES } = await import(
+  "../../app/web-next/lib/gate-integrity-flags.ts"
+);
 const { recordWouldBlock } = await import("../../app/web-next/lib/gate-integrity.ts");
 const { ladderBlock } = await import("../../app/web-next/lib/gate-ladder.ts");
-const { ladderFor, projectLadderSegment, lastOpportunityGate, gateSequenceBlocker } = await import("../../app/web-next/lib/gate-sequence-view.ts");
+const { ladderFor, projectLadderSegment, lastOpportunityGate, gateSequenceBlocker } = await import(
+  "../../app/web-next/lib/gate-sequence-view.ts"
+);
 const { goRationaleCheck } = await import("../../app/web-next/lib/gate-write-checks.ts");
 const S = await import("./_gate-integrity-support.ts");
 
@@ -37,19 +41,33 @@ const ANALYST = "gi-analyst";
 let cookie = "";
 
 const flagNames = GATE_INTEGRITY_FAMILIES.map(gateIntegrityEnvName);
-function setFlags(mode: "off" | "shadow" | "enforce" | null, ...families: Array<(typeof GATE_INTEGRITY_FAMILIES)[number]>) {
+function setFlags(
+  mode: "off" | "shadow" | "enforce" | null,
+  ...families: Array<(typeof GATE_INTEGRITY_FAMILIES)[number]>
+) {
   for (const f of families) {
     if (mode === null) delete process.env[gateIntegrityEnvName(f)];
     else process.env[gateIntegrityEnvName(f)] = mode;
   }
 }
-afterEach(() => { for (const n of flagNames) delete process.env[n]; });
+afterEach(() => {
+  for (const n of flagNames) delete process.env[n];
+});
 
 beforeAll(async () => {
-  await createUser(db, { userId: ANALYST, role: "analyst", password: "pw-gi-analyst-123", createdBy: "test", now: S.NOW });
+  await createUser(db, {
+    userId: ANALYST,
+    role: "analyst",
+    password: "pw-gi-analyst-123",
+    createdBy: "test",
+    now: S.NOW,
+  });
   approveUser(db, { userId: ANALYST, approvedBy: "test", now: S.NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
-  const res = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId: ANALYST, password: "pw-gi-analyst-123" }) });
+  const res = await nextRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ userId: ANALYST, password: "pw-gi-analyst-123" }),
+  });
   cookie = (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 });
 
@@ -59,25 +77,59 @@ afterAll(() => {
 });
 
 const postProject = (pid: string, body: Record<string, unknown>) =>
-  nextRequest(`/api/projects/${pid}/gate-decisions`, { method: "POST", headers: { cookie }, body: JSON.stringify(body) });
+  nextRequest(`/api/projects/${pid}/gate-decisions`, {
+    method: "POST",
+    headers: { cookie },
+    body: JSON.stringify(body),
+  });
 const postOpp = (oid: string, body: Record<string, unknown>) =>
-  nextRequest(`/api/opportunities/${oid}/gate-decisions`, { method: "POST", headers: { cookie }, body: JSON.stringify(body) });
-const errOf = async (res: Response) => ((await res.json()) as { error: { code: string; details?: Record<string, unknown> } }).error;
-const wouldBlockRows = (code: string) => db.query("SELECT * FROM audit_log WHERE action = ?").all(`gate_integrity.would_block:${code}`) as Array<{ target: string }>;
+  nextRequest(`/api/opportunities/${oid}/gate-decisions`, {
+    method: "POST",
+    headers: { cookie },
+    body: JSON.stringify(body),
+  });
+const errOf = async (res: Response) =>
+  ((await res.json()) as { error: { code: string; details?: Record<string, unknown> } }).error;
+const wouldBlockRows = (code: string) =>
+  db.query("SELECT * FROM audit_log WHERE action = ?").all(`gate_integrity.would_block:${code}`) as Array<{
+    target: string;
+  }>;
 
 describe("flag modes", () => {
   test("defaults: unit/dev = off, production = shadow; explicit values win; junk falls back to the default", () => {
     expect(gateIntegrityMode("rationale", {})).toBe("off");
     expect(gateIntegrityMode("rationale", { NODE_ENV: "test" })).toBe("off");
     expect(gateIntegrityMode("rationale", { NODE_ENV: "production" })).toBe("shadow");
-    expect(gateIntegrityMode("ladder", { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "enforce" })).toBe("enforce");
-    expect(gateIntegrityMode("ladder", { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_LADDER: " OFF " })).toBe("off");
-    expect(gateIntegrityMode("ladder", { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "maybe" })).toBe("shadow");
-    expect(GATE_INTEGRITY_FAMILIES).toEqual(["rationale", "snapshot_ack", "kill_binding", "validators", "wacc", "ladder", "maker_checker", "waiver", "divergence"]);
+    expect(gateIntegrityMode("ladder", { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "enforce" })).toBe(
+      "enforce",
+    );
+    expect(gateIntegrityMode("ladder", { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_LADDER: " OFF " })).toBe(
+      "off",
+    );
+    expect(gateIntegrityMode("ladder", { NODE_ENV: "production", CO_NEWBIZ_GATE_INTEGRITY_LADDER: "maybe" })).toBe(
+      "shadow",
+    );
+    expect(GATE_INTEGRITY_FAMILIES).toEqual([
+      "rationale",
+      "snapshot_ack",
+      "kill_binding",
+      "validators",
+      "wacc",
+      "ladder",
+      "maker_checker",
+      "waiver",
+      "divergence",
+      "target",
+    ]);
+    // ADR-0206: family `target` defaults to enforce in every environment; the variable is the escape hatch.
+    expect(gateIntegrityMode("target", {})).toBe("enforce");
+    expect(gateIntegrityMode("target", { NODE_ENV: "production" })).toBe("enforce");
+    expect(gateIntegrityMode("target", { CO_NEWBIZ_GATE_INTEGRITY_TARGET: "shadow" })).toBe("shadow");
+    expect(gateIntegrityMode("target", { CO_NEWBIZ_GATE_INTEGRITY_TARGET: "off" })).toBe("off");
   });
 
-  test("the unit environment has every family off", () => {
-    for (const f of GATE_INTEGRITY_FAMILIES) expect(gateIntegrityMode(f)).toBe("off");
+  test("the unit environment has every family off except `target` (default enforce, ADR-0206)", () => {
+    for (const f of GATE_INTEGRITY_FAMILIES) expect(gateIntegrityMode(f)).toBe(f === "target" ? "enforce" : "off");
   });
 
   test("shadow audit rows are de-duplicated per (entity, gate, code, day)", () => {
@@ -96,7 +148,15 @@ describe("flag modes", () => {
 describe("gate ladder - ladderFor and the shared rule", () => {
   test("greenfield and brownfield ladders", () => {
     expect([...ladderFor("greenfield")]).toEqual(["screening", "pre_fs", "fs", "dd", "entity_ic", "group_ic"]);
-    expect([...ladderFor("brownfield")]).toEqual(["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"]);
+    expect([...ladderFor("brownfield")]).toEqual([
+      "screening",
+      "pre_fs",
+      "target_screening",
+      "fs",
+      "dd",
+      "entity_ic",
+      "group_ic",
+    ]);
     expect([...ladderFor(null)]).toEqual(["screening", "pre_fs"]);
     expect([...projectLadderSegment("brownfield")]).toEqual(["fs", "dd", "entity_ic", "group_ic"]);
     expect(lastOpportunityGate("greenfield")).toBe("pre_fs");
@@ -104,10 +164,18 @@ describe("gate ladder - ladderFor and the shared rule", () => {
   });
 
   test("gateSequenceBlocker over the full brownfield ladder names the first missing GO", () => {
-    const latest = [{ gate: "screening", decision: "go" }, { gate: "pre_fs", decision: "hold" }];
+    const latest = [
+      { gate: "screening", decision: "go" },
+      { gate: "pre_fs", decision: "hold" },
+    ];
     expect(gateSequenceBlocker(ladderFor("brownfield"), "target_screening", latest)).toBe("pre_fs");
     expect(gateSequenceBlocker(ladderFor("brownfield"), "screening", latest)).toBeNull();
-    expect(gateSequenceBlocker(ladderFor("greenfield"), "fs", [{ gate: "screening", decision: "go" }, { gate: "pre_fs", decision: "go" }])).toBeNull();
+    expect(
+      gateSequenceBlocker(ladderFor("greenfield"), "fs", [
+        { gate: "screening", decision: "go" },
+        { gate: "pre_fs", decision: "go" },
+      ]),
+    ).toBeNull();
   });
 
   test("opportunity carrier: greenfield pre_fs needs screening GO; HOLD and KILL do not satisfy", () => {
@@ -142,7 +210,11 @@ describe("gate ladder - ladderFor and the shared rule", () => {
     const o = S.insertOpportunity(db, "greenfield");
     const g = S.insertGate(db, "opportunity", o, "screening", "go");
     expect(ladderBlock("opportunity", o, "pre_fs")).toBeNull();
-    db.run("INSERT INTO gate_decision_stale (decision_id, stale_at, stale_reason) VALUES (?,?,?)", [g, S.NOW, "selection changed"]);
+    db.run("INSERT INTO gate_decision_stale (decision_id, stale_at, stale_reason) VALUES (?,?,?)", [
+      g,
+      S.NOW,
+      "selection changed",
+    ]);
     expect(ladderBlock("opportunity", o, "pre_fs")?.blocker).toBe("screening");
   });
 
@@ -201,10 +273,14 @@ describe("POST gate-decisions - ladder family on the real routes", () => {
     setFlags("shadow", "ladder");
     res = await postOpp(o, { gate: "pre_fs", decision: "go", rationale: S.GENUINE });
     expect((await errOf(res)).code).toBe("gate_prerequisites_incomplete"); // shadow: not blocked by the ladder
-    expect(wouldBlockRows("ladder_prerequisite_missing").some((r) => r.target === `opportunity:${o}:pre_fs`)).toBe(true);
+    expect(wouldBlockRows("ladder_prerequisite_missing").some((r) => r.target === `opportunity:${o}:pre_fs`)).toBe(
+      true,
+    );
     // a repeat the same day does not add a second row
     await postOpp(o, { gate: "pre_fs", decision: "go", rationale: S.GENUINE });
-    expect(wouldBlockRows("ladder_prerequisite_missing").filter((r) => r.target === `opportunity:${o}:pre_fs`)).toHaveLength(1);
+    expect(
+      wouldBlockRows("ladder_prerequisite_missing").filter((r) => r.target === `opportunity:${o}:pre_fs`),
+    ).toHaveLength(1);
 
     setFlags("enforce", "ladder");
     res = await postOpp(o, { gate: "pre_fs", decision: "go", rationale: S.GENUINE });
@@ -212,13 +288,20 @@ describe("POST gate-decisions - ladder family on the real routes", () => {
     const e = await errOf(res);
     expect(e.code).toBe("ladder_prerequisite_missing");
     expect(e.details).toMatchObject({ blocker: "screening", carrier: "opportunity" });
-    expect(db.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ? AND gate = 'pre_fs'").get(o)).toEqual({ c: 0 });
+    expect(db.query("SELECT COUNT(*) c FROM gate_decision WHERE entity_id = ? AND gate = 'pre_fs'").get(o)).toEqual({
+      c: 0,
+    });
   });
 
   test("HOLD and KILL are never ladder-blocked, even in enforce", async () => {
     setFlags("enforce", "ladder", "rationale");
     const o = S.insertOpportunity(db, "greenfield", ANALYST);
-    const hold = await postOpp(o, { gate: "pre_fs", decision: "hold", rationale: "x", missing_artifacts: ["S5 deliverable"] });
+    const hold = await postOpp(o, {
+      gate: "pre_fs",
+      decision: "hold",
+      rationale: "x",
+      missing_artifacts: ["S5 deliverable"],
+    });
     expect(hold.status).toBe(201);
     const kill = await postOpp(o, { gate: "pre_fs", decision: "kill", rationale: "x", learning_capture: "lesson" });
     expect(kill.status).toBe(201);
@@ -247,7 +330,12 @@ describe("POST gate-decisions - ladder family on the real routes", () => {
 
   test("the existing entity_ic -> group_ic rule keeps its code and is not flag-gated", async () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
-    const res = await postProject(projectId, { gate: "group_ic", decision: "go", rationale: S.GENUINE, gap_rationale: S.GENUINE_2 });
+    const res = await postProject(projectId, {
+      gate: "group_ic",
+      decision: "go",
+      rationale: S.GENUINE,
+      gap_rationale: S.GENUINE_2,
+    });
     expect(res.status).toBe(409);
     expect((await errOf(res)).code).toBe("gate_prerequisites_incomplete");
   });
@@ -278,7 +366,9 @@ describe("POST gate-decisions - rationale family (GO only)", () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
     const res = await postProject(projectId, { gate: "fs", decision: "go", rationale: "ok" });
     expect(res.status).toBe(201);
-    expect(wouldBlockRows("rationale_insufficient").filter((r) => r.target === `project:${projectId}:fs`)).toHaveLength(1);
+    expect(wouldBlockRows("rationale_insufficient").filter((r) => r.target === `project:${projectId}:fs`)).toHaveLength(
+      1,
+    );
   });
 
   test("enforce: genuine Korean and English rationales are accepted", async () => {
@@ -286,7 +376,11 @@ describe("POST gate-decisions - rationale family (GO only)", () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
     const ko = await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE });
     expect(ko.status).toBe(201);
-    const en = await postProject(projectId, { gate: "dd", decision: "go", rationale: "Commercial and technical diligence found no unmitigated deal breakers." });
+    const en = await postProject(projectId, {
+      gate: "dd",
+      decision: "go",
+      rationale: "Commercial and technical diligence found no unmitigated deal breakers.",
+    });
     expect(en.status).toBe(201);
   });
 
@@ -304,7 +398,12 @@ describe("POST gate-decisions - rationale family (GO only)", () => {
     const { projectId } = S.seedReadyProject(db, ANALYST);
     expect((await postProject(projectId, { gate: "fs", decision: "go", rationale: S.GENUINE })).status).toBe(201);
     expect((await postProject(projectId, { gate: "dd", decision: "go", rationale: S.GENUINE_2 })).status).toBe(201);
-    const res = await postProject(projectId, { gate: "entity_ic", decision: "go", rationale: "Entity IC reviewed the package and agrees to proceed.", gap_rationale: "ok" });
+    const res = await postProject(projectId, {
+      gate: "entity_ic",
+      decision: "go",
+      rationale: "Entity IC reviewed the package and agrees to proceed.",
+      gap_rationale: "ok",
+    });
     expect(res.status).toBe(422);
     expect((await errOf(res)).details).toMatchObject({ field: "gap_rationale" });
   });
@@ -312,11 +411,26 @@ describe("POST gate-decisions - rationale family (GO only)", () => {
   test("HOLD and KILL are never rationale-blocked (they keep their existing requirements)", async () => {
     setFlags("enforce", "rationale");
     const { projectId } = S.seedReadyProject(db, ANALYST);
-    const hold = await postProject(projectId, { gate: "fs", decision: "hold", rationale: "x", missing_artifacts: ["Business case adoption"] });
+    const hold = await postProject(projectId, {
+      gate: "fs",
+      decision: "hold",
+      rationale: "x",
+      missing_artifacts: ["Business case adoption"],
+    });
     expect(hold.status).toBe(201);
-    const kill = await postProject(projectId, { gate: "fs", decision: "kill", rationale: "x", learning_capture: "What we learned" });
+    const kill = await postProject(projectId, {
+      gate: "fs",
+      decision: "kill",
+      rationale: "x",
+      learning_capture: "What we learned",
+    });
     expect(kill.status).toBe(201);
-    const noReason = await postProject(projectId, { gate: "dd", decision: "hold", rationale: "", missing_artifacts: ["a"] });
+    const noReason = await postProject(projectId, {
+      gate: "dd",
+      decision: "hold",
+      rationale: "",
+      missing_artifacts: ["a"],
+    });
     expect(noReason.status).toBe(400); // an empty rationale is still the old 400
   });
 
@@ -338,10 +452,15 @@ describe("goRationaleCheck on the opportunity carrier (the route reaches it afte
     expect(weak?.status).toBe(422);
     expect(((await weak!.json()) as { error: { code: string } }).error.code).toBe("rationale_insufficient");
     expect(goRationaleCheck(ctx, S.GENUINE)).toBeNull();
-    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", o, "screening", "go", S.GENUINE, ANALYST, S.NOW]);
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "opportunity", o, "screening", "go", S.GENUINE, ANALYST, S.NOW],
+    );
     const dup = goRationaleCheck(ctx, S.GENUINE);
     expect(dup?.status).toBe(422);
-    expect(((await dup!.json()) as { error: { details: { reason: string } } }).error.details.reason).toBe("duplicate_of_other_gate");
+    expect(((await dup!.json()) as { error: { details: { reason: string } } }).error.details.reason).toBe(
+      "duplicate_of_other_gate",
+    );
   });
 
   test("off: the check does not run; shadow: returns null and audits", () => {
@@ -357,11 +476,22 @@ describe("goRationaleCheck on the opportunity carrier (the route reaches it afte
 
 describe("shadow audit flood protection", () => {
   test("1,000 distinct entities by one actor write at most the per-actor daily cap; targets are length-bounded", async () => {
-    const { WOULD_BLOCK_PER_ACTOR_PER_DAY, WOULD_BLOCK_TARGET_MAX } = await import("../../app/web-next/lib/gate-integrity.ts");
-    const before = (db.query("SELECT COUNT(*) c FROM audit_log WHERE actor_user_id = 'flooder'").get() as { c: number }).c;
+    const { WOULD_BLOCK_PER_ACTOR_PER_DAY, WOULD_BLOCK_TARGET_MAX } = await import(
+      "../../app/web-next/lib/gate-integrity.ts"
+    );
+    const before = (db.query("SELECT COUNT(*) c FROM audit_log WHERE actor_user_id = 'flooder'").get() as { c: number })
+      .c;
     const now = new Date("2026-11-02T10:00:00Z");
-    for (let i = 0; i < 1000; i++) recordWouldBlock(db, { entityType: "project", entityId: `fake-${i}-${"x".repeat(500)}`, gate: "fs", actor: "flooder" }, "flood_code", now);
-    const rows = db.query("SELECT target FROM audit_log WHERE actor_user_id = 'flooder'").all() as Array<{ target: string }>;
+    for (let i = 0; i < 1000; i++)
+      recordWouldBlock(
+        db,
+        { entityType: "project", entityId: `fake-${i}-${"x".repeat(500)}`, gate: "fs", actor: "flooder" },
+        "flood_code",
+        now,
+      );
+    const rows = db.query("SELECT target FROM audit_log WHERE actor_user_id = 'flooder'").all() as Array<{
+      target: string;
+    }>;
     expect(rows.length - before).toBe(WOULD_BLOCK_PER_ACTOR_PER_DAY);
     expect(rows.every((r) => r.target.length <= WOULD_BLOCK_TARGET_MAX)).toBe(true);
   });
@@ -369,12 +499,17 @@ describe("shadow audit flood protection", () => {
   test("an invalid flag value logs a warning once and falls back to the default", () => {
     const warns: string[] = [];
     const orig = console.warn;
-    console.warn = (m: string) => { warns.push(String(m)); };
+    console.warn = (m: string) => {
+      warns.push(String(m));
+    };
     try {
       process.env.CO_NEWBIZ_GATE_INTEGRITY_DIVERGENCE = "enfroce";
       expect(gateIntegrityMode("divergence")).toBe("off");
       expect(gateIntegrityMode("divergence")).toBe("off");
-    } finally { console.warn = orig; delete process.env.CO_NEWBIZ_GATE_INTEGRITY_DIVERGENCE; }
+    } finally {
+      console.warn = orig;
+      delete process.env.CO_NEWBIZ_GATE_INTEGRITY_DIVERGENCE;
+    }
     expect(warns).toHaveLength(1);
     expect(warns[0]).toContain("CO_NEWBIZ_GATE_INTEGRITY_DIVERGENCE");
   });

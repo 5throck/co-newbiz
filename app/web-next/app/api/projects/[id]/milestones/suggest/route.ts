@@ -15,11 +15,14 @@ import { completeOrFallback } from "../../../../../../lib/llm.ts";
 import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 import { findAdoptedCase, listBusinessCases } from "../../../../../../lib/business-case.ts";
 import { route } from "../../../../../../lib/route.ts";
+import { staleTargetDenied } from "../../../../../../lib/s8-stale-target.ts";
 
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  const denied = requireBusinessActor(auth.auth, "write", { viewerMessage: "Milestone recommendation requires the analyst role or higher." });
+  const denied = requireBusinessActor(auth.auth, "write", {
+    viewerMessage: "Milestone recommendation requires the analyst role or higher.",
+  });
   if (denied) return denied;
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
@@ -29,8 +32,13 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     | undefined;
   if (!project) return notFound();
 
+  // ADR-0206: milestones are not suggested from a stale adopted case.
+  const staleDenied = staleTargetDenied(id);
+  if (staleDenied) return staleDenied;
   const adopted = findAdoptedCase(listBusinessCases(id));
-  const existing = listMilestones(db, id).filter((m) => m.status !== "done").map((m) => m.title);
+  const existing = listMilestones(db, id)
+    .filter((m) => m.status !== "done")
+    .map((m) => m.title);
   const track = project.track ?? "unknown";
   const context = [
     `트랙: ${track}${track === "greenfield" ? " (연구개발 기반 사업화 — 기술 검증·인허가·사업화 관점)" : track === "brownfield" ? " (M&A 실사·거래 종결 관점 — 실사 종결·종결 조건·승인 관점)" : ""}`,
@@ -55,29 +63,51 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         suggestions:
           track === "greenfield"
             ? [
+                // biome-ignore format: keep on one line — i18n-lint counts Korean lines
                 { title: "기술 검증(TRL) 목표 달성", category: "custom", due_in_days: 180, reason: "연구개발 기반 사업화의 선행 검증점" },
+                // biome-ignore format: keep on one line — i18n-lint counts Korean lines
                 { title: "주요 인허가 착수 완료", category: "permit", due_in_days: 270, reason: "사업화 리드타임의 병목" },
+                // biome-ignore format: keep on one line — i18n-lint counts Korean lines
                 { title: "초기 판매/파일럿 고객 확보", category: "contract", due_in_days: 365, reason: "사업화 신호 확인" },
               ]
             : [
+                // biome-ignore format: keep on one line — i18n-lint counts Korean lines
                 { title: "실사(DD) 종결 조건 충족", category: "custom", due_in_days: 120, reason: "M&A 실행 선행 조건" },
               ],
       }),
     { maxTokens: 1200, agent: promptAgent("s12.milestone_suggest") },
   );
 
-  let suggestions: Array<{ title: string; category: MilestoneCategory; due_date: string; due_in_days: number; reason: string }> = [];
-  let source: "llm" | "synthesis" = res.source;
+  let suggestions: Array<{
+    title: string;
+    category: MilestoneCategory;
+    due_date: string;
+    due_in_days: number;
+    reason: string;
+  }> = [];
+  const source: "llm" | "synthesis" = res.source;
   let note = "LLM 추천 — 추가 버튼으로 등록하면 감사 로그가 남습니다 (경계 #2).";
   const today = Date.now();
   const build = (raw: Array<Record<string, unknown>>) =>
     (Array.isArray(raw) ? raw : [])
       .map((it) => {
-        const title = String(it.title ?? "").trim().slice(0, 200);
+        const title = String(it.title ?? "")
+          .trim()
+          .slice(0, 200);
         const days = Math.min(Math.max(Number(it.due_in_days ?? 180) || 180, 30), 730);
         const rawCategory = String(it.category ?? "custom");
-        const category = (MILESTONE_CATEGORIES as readonly string[]).includes(rawCategory) ? (rawCategory as MilestoneCategory) : "custom";
-        return { title, category, due_date: new Date(today + days * 86_400_000).toISOString().slice(0, 10), due_in_days: days, reason: String(it.reason ?? "").trim().slice(0, 300) };
+        const category = (MILESTONE_CATEGORIES as readonly string[]).includes(rawCategory)
+          ? (rawCategory as MilestoneCategory)
+          : "custom";
+        return {
+          title,
+          category,
+          due_date: new Date(today + days * 86_400_000).toISOString().slice(0, 10),
+          due_in_days: days,
+          reason: String(it.reason ?? "")
+            .trim()
+            .slice(0, 300),
+        };
       })
       .filter((it) => it.title);
   try {
@@ -87,11 +117,18 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       const raw = JSON.parse(res.text.slice(start, end + 1)) as { suggestions?: unknown };
       suggestions = build((raw.suggestions ?? []) as Array<Record<string, unknown>>);
     }
-  } catch { /* fall through to fallback suggestions */ }
+  } catch {
+    /* fall through to fallback suggestions */
+  }
   if (suggestions.length === 0) {
     suggestions = build((JSON.parse(res.text) as { suggestions?: Array<Record<string, unknown>> }).suggestions ?? []);
     note = "LLM 응답 파싱 실패 — 결정론 폴백 추천입니다.";
   }
-  appendAudit(db, { actor: auth.auth.userId, action: "project_milestone.suggested", target: `${id}:${source}:${suggestions.length}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: auth.auth.userId,
+    action: "project_milestone.suggested",
+    target: `${id}:${source}:${suggestions.length}`,
+    now: new Date().toISOString(),
+  });
   return ok({ source, note, suggestions }, 200);
 });

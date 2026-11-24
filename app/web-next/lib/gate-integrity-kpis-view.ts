@@ -3,10 +3,26 @@
 
 import type { BreachCode, BreachItem, FamilyStatus, NotReadyReason } from "./gate-integrity-readiness.ts";
 
-export const KPI_GATE_OPTIONS = ["screening", "pre_fs", "target_screening", "fs", "dd", "entity_ic", "group_ic"] as const;
+export const KPI_GATE_OPTIONS = [
+  "screening",
+  "pre_fs",
+  "target_screening",
+  "fs",
+  "dd",
+  "entity_ic",
+  "group_ic",
+] as const;
 
-export interface KpiBreach { breached: boolean; reasons: string[]; items?: BreachItem[] }
-export interface KpiMigrationPending { section: string; missing: string[]; migrations: string[] }
+export interface KpiBreach {
+  breached: boolean;
+  reasons: string[];
+  items?: BreachItem[];
+}
+export interface KpiMigrationPending {
+  section: string;
+  missing: string[];
+  migrations: string[];
+}
 export interface Kpi {
   id: string;
   name: string;
@@ -41,7 +57,12 @@ export function todayDate(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
-export interface KpiQuery { from: string; to: string; gate: string; minWrites: string }
+export interface KpiQuery {
+  from: string;
+  to: string;
+  gate: string;
+  minWrites: string;
+}
 
 /** Query string for the KPI route; `to` is the END of the picked day (the API treats `to` as exclusive). */
 export function kpiQueryString(q: KpiQuery): string {
@@ -65,32 +86,56 @@ export function formatRate(rate: number | null): string {
 }
 
 export type CellValue = string | number | boolean | null;
-export interface FlatRow { key: string; value: CellValue }
+export interface FlatRow {
+  key: string;
+  value: CellValue;
+}
 
 /** Flatten a nested value object into dotted-key rows (arrays are summarised by length). */
 export function flattenValue(v: unknown, prefix = ""): FlatRow[] {
   if (v === null || v === undefined) return prefix ? [{ key: prefix, value: null }] : [];
   if (typeof v !== "object") return [{ key: prefix, value: v as CellValue }];
   if (Array.isArray(v)) return [{ key: prefix, value: v.length }];
-  return Object.entries(v as Record<string, unknown>).flatMap(([k, x]) => flattenValue(x, prefix ? `${prefix}.${k}` : k));
+  return Object.entries(v as Record<string, unknown>).flatMap(([k, x]) =>
+    flattenValue(x, prefix ? `${prefix}.${k}` : k),
+  );
 }
 
-export interface MixRow { gate: string; total: number; go: number; hold: number; kill: number; goShare: number | null; priorTotal: number | null; priorGoShare: number | null }
+export interface MixRow {
+  gate: string;
+  total: number;
+  go: number;
+  hold: number;
+  kill: number;
+  goShare: number | null;
+  priorTotal: number | null;
+  priorGoShare: number | null;
+}
 
 /** G1 `by_gate` + `prior_4_weeks_by_gate` into one row per gate. */
 export function mixRows(value: Record<string, unknown> | null): MixRow[] {
   const cur = (value?.by_gate ?? {}) as Record<string, Record<string, number | null>>;
   const prior = (value?.prior_4_weeks_by_gate ?? {}) as Record<string, Record<string, number | null>>;
-  return Object.keys(cur).sort().map((gate) => ({
-    gate,
-    total: Number(cur[gate]?.total ?? 0), go: Number(cur[gate]?.go ?? 0), hold: Number(cur[gate]?.hold ?? 0), kill: Number(cur[gate]?.kill ?? 0),
-    goShare: (cur[gate]?.go_share as number | null | undefined) ?? null,
-    priorTotal: prior[gate] ? Number(prior[gate].total ?? 0) : null,
-    priorGoShare: (prior[gate]?.go_share as number | null | undefined) ?? null,
-  }));
+  return Object.keys(cur)
+    .sort()
+    .map((gate) => ({
+      gate,
+      total: Number(cur[gate]?.total ?? 0),
+      go: Number(cur[gate]?.go ?? 0),
+      hold: Number(cur[gate]?.hold ?? 0),
+      kill: Number(cur[gate]?.kill ?? 0),
+      goShare: (cur[gate]?.go_share as number | null | undefined) ?? null,
+      priorTotal: prior[gate] ? Number(prior[gate].total ?? 0) : null,
+      priorGoShare: (prior[gate]?.go_share as number | null | undefined) ?? null,
+    }));
 }
 
-export interface WeekCountRow { family: string; code: string; week: string; count: number }
+export interface WeekCountRow {
+  family: string;
+  code: string;
+  week: string;
+  count: number;
+}
 
 /** G6 `by_family_code_week` into flat rows sorted by family, code, week. */
 export function weekCountRows(value: Record<string, unknown> | null): WeekCountRow[] {
@@ -98,18 +143,34 @@ export function weekCountRows(value: Record<string, unknown> | null): WeekCountR
   const out: WeekCountRow[] = [];
   for (const family of Object.keys(src).sort()) {
     for (const code of Object.keys(src[family]).sort()) {
-      for (const week of Object.keys(src[family][code]).sort()) out.push({ family, code, week, count: Number(src[family][code][week]) });
+      for (const week of Object.keys(src[family][code]).sort())
+        out.push({ family, code, week, count: Number(src[family][code][week]) });
     }
   }
   return out;
 }
 
-export interface StreakRow { family: string; streakDays: number; writes: number; qualifies: boolean }
+export interface StreakRow {
+  family: string;
+  streakDays: number;
+  writes: number;
+  qualifies: boolean;
+}
 
 /** G12 `by_family` into rows. */
 export function streakRows(value: Record<string, unknown> | null): StreakRow[] {
-  const src = (value?.by_family ?? {}) as Record<string, { streak_days: number; writes_in_streak: number; qualifies_14_days: boolean }>;
-  return Object.keys(src).sort().map((family) => ({ family, streakDays: src[family].streak_days, writes: src[family].writes_in_streak, qualifies: !!src[family].qualifies_14_days }));
+  const src = (value?.by_family ?? {}) as Record<
+    string,
+    { streak_days: number; writes_in_streak: number; qualifies_14_days: boolean }
+  >;
+  return Object.keys(src)
+    .sort()
+    .map((family) => ({
+      family,
+      streakDays: src[family].streak_days,
+      writes: src[family].writes_in_streak,
+      qualifies: !!src[family].qualifies_14_days,
+    }));
 }
 
 export const KPI_IDS = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"] as const;
@@ -124,15 +185,31 @@ export const KPI_GROUPS: ReadonlyArray<{ id: KpiGroupId; ids: readonly string[] 
 ];
 
 /** Rule families in the order the enforce-flip runbook recommends flipping them. */
-export const FAMILY_ORDER = ["rationale", "waiver", "ladder", "validators", "wacc", "snapshot_ack", "kill_binding", "divergence", "maker_checker"] as const;
+export const FAMILY_ORDER = [
+  "rationale",
+  "waiver",
+  "ladder",
+  "validators",
+  "wacc",
+  "snapshot_ack",
+  "kill_binding",
+  "divergence",
+  "maker_checker",
+  "target",
+] as const;
 
 export function sortFamilies(rows: readonly FamilyStatus[]): FamilyStatus[] {
-  const rank = (f: string) => { const i = (FAMILY_ORDER as readonly string[]).indexOf(f); return i < 0 ? 99 : i; };
+  const rank = (f: string) => {
+    const i = (FAMILY_ORDER as readonly string[]).indexOf(f);
+    return i < 0 ? 99 : i;
+  };
   return [...rows].sort((a, b) => rank(a.family) - rank(b.family));
 }
 
 /** Catalog key (under admin.gateIntegrity.family) of a family; unknown families fall back to the raw key at the call site. */
-export function isKnownFamily(f: string): boolean { return (FAMILY_ORDER as readonly string[]).includes(f); }
+export function isKnownFamily(f: string): boolean {
+  return (FAMILY_ORDER as readonly string[]).includes(f);
+}
 
 /** A KPI that computed fine but has nothing to show for the period: no breach, no denominator, every figure zero. */
 export function isEmptyKpi(k: Kpi): boolean {
@@ -141,7 +218,14 @@ export function isEmptyKpi(k: Kpi): boolean {
   return flattenValue(k.value).every((r) => r.value === null || r.value === 0 || r.value === false);
 }
 
-export interface ActionItem { key: string; kpiId: string; code: BreachCode | "unknown"; params: Record<string, string | number>; href: string; fallback: string }
+export interface ActionItem {
+  key: string;
+  kpiId: string;
+  code: BreachCode | "unknown";
+  params: Record<string, string | number>;
+  href: string;
+  fallback: string;
+}
 
 const ACTION_HREF: Partial<Record<BreachCode, string>> = {
   reviewer_holders_low: "/admin/users",
@@ -152,7 +236,15 @@ const ACTION_HREF: Partial<Record<BreachCode, string>> = {
   group_ic_conditions_open: "/projects",
   waivers_old: "/projects",
 };
-const ACTION_ORDER: BreachCode[] = ["reviewer_holders_low", "wacc_provisional", "na_unconfirmed_old", "countersign_pending_old", "conditions_old", "group_ic_conditions_open", "waivers_old"];
+const ACTION_ORDER: BreachCode[] = [
+  "reviewer_holders_low",
+  "wacc_provisional",
+  "na_unconfirmed_old",
+  "countersign_pending_old",
+  "conditions_old",
+  "group_ic_conditions_open",
+  "waivers_old",
+];
 
 /** The "what to do now" list: one entry per breach finding, with a link to where it is fixed (or to its indicator card). */
 export function breachActions(kpis: readonly Kpi[]): ActionItem[] {
@@ -163,20 +255,34 @@ export function breachActions(kpis: readonly Kpi[]): ActionItem[] {
     k.breach.reasons.forEach((fallback, i) => {
       const it = items[i];
       const code = it?.code ?? "unknown";
-      out.push({ key: `${k.id}:${i}`, kpiId: k.id, code, params: it?.params ?? {}, href: (it && ACTION_HREF[it.code]) || `#kpi-${k.id}`, fallback });
+      out.push({
+        key: `${k.id}:${i}`,
+        kpiId: k.id,
+        code,
+        params: it?.params ?? {},
+        href: (it && ACTION_HREF[it.code]) || `#kpi-${k.id}`,
+        fallback,
+      });
     });
   }
-  const rank = (c: string) => { const i = ACTION_ORDER.indexOf(c as BreachCode); return i < 0 ? 99 : i; };
+  const rank = (c: string) => {
+    const i = ACTION_ORDER.indexOf(c as BreachCode);
+    return i < 0 ? 99 : i;
+  };
   return out.sort((a, b) => rank(a.code) - rank(b.code));
 }
 
 /** Catalog keys for a not-ready reason, with its interpolation params. */
 export function notReadyText(r: NotReadyReason): { key: string; params: Record<string, number> } {
   switch (r.code) {
-    case "mode_off": return { key: "readiness.reason.modeOff", params: {} };
-    case "would_blocks_open": return { key: "readiness.reason.wouldBlocks", params: { count: r.count } };
-    case "clean_days_short": return { key: "readiness.reason.cleanDays", params: { days: r.days, need: r.need } };
-    case "decisions_few": return { key: "readiness.reason.decisions", params: { count: r.count, need: r.need } };
+    case "mode_off":
+      return { key: "readiness.reason.modeOff", params: {} };
+    case "would_blocks_open":
+      return { key: "readiness.reason.wouldBlocks", params: { count: r.count } };
+    case "clean_days_short":
+      return { key: "readiness.reason.cleanDays", params: { days: r.days, need: r.need } };
+    case "decisions_few":
+      return { key: "readiness.reason.decisions", params: { count: r.count, need: r.need } };
   }
 }
 

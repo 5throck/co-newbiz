@@ -1,11 +1,12 @@
 // GO-side integrity checks shared by both gate-decision routes (ADR-0186 P1).
-// Families: ladder (D7) and rationale (D2). HOLD and KILL never reach here.
+// Families: ladder (D7), rationale (D2), validators (D4), wacc (D8) and target (ADR-0206). HOLD and KILL never reach here.
 // Each check runs through applyFamily so off / shadow / enforce behave the
 // same on the opportunity and project carriers.
 import { getDb } from "../../../db/client.ts";
 import { evaluateValidatorCompleteness } from "../../../db/lib/validator-completeness.ts";
 import { resolveWaccConfirmation } from "../../../db/lib/wacc-confirmation.ts";
-import { waccUnconfirmedFailure } from "./gate-decision-contract.ts";
+import { TARGET_GO_GATES, targetNotShortlistedFailure, waccUnconfirmedFailure } from "./gate-decision-contract.ts";
+import { resolveS8Staleness } from "./business-case.ts";
 import { resolveTrack } from "./project-track.ts";
 import { applyFamily, recordWouldBlock, type IntegrityContext, type IntegrityFailure } from "./gate-integrity.ts";
 import { gateIntegrityMode } from "./gate-integrity-flags.ts";
@@ -34,7 +35,13 @@ function otherGateRationales(ctx: IntegrityContext): string[] {
   return rows.map((r) => parseRationale(r.rationale).rationale);
 }
 
-function rationaleFailure(ctx: IntegrityContext, field: string, text: string, profile: RationaleProfile, withDuplicates: boolean): IntegrityFailure | null {
+function rationaleFailure(
+  ctx: IntegrityContext,
+  field: string,
+  text: string,
+  profile: RationaleProfile,
+  withDuplicates: boolean,
+): IntegrityFailure | null {
   const result = validateRationale(text, profile, withDuplicates ? { otherRationales: otherGateRationales(ctx) } : {});
   if (result.ok) return null;
   return {
@@ -49,17 +56,29 @@ export function goLadderCheck(ctx: IntegrityContext): Response | null {
   const denied = applyFamily("ladder", ctx, () => ladderFailure(ctx));
   // ADR-0186 D6, family `maker_checker` in shadow: the recorded-but-uncountersigned predecessor counts as GO today;
   // audit the would-block (de-duplicated per entity, gate, code, day) so the flip to enforce is informed.
-  if (!denied && ctx.entityType === "project" && gateIntegrityMode("maker_checker") === "shadow" && gateIntegrityMode("ladder") !== "off") {
-    if (ladderBlock(ctx.entityType, ctx.entityId, ctx.gate, { strict: true })) recordWouldBlock(getDb(), ctx, "countersign_pending");
+  if (
+    !denied &&
+    ctx.entityType === "project" &&
+    gateIntegrityMode("maker_checker") === "shadow" &&
+    gateIntegrityMode("ladder") !== "off"
+  ) {
+    if (ladderBlock(ctx.entityType, ctx.entityId, ctx.gate, { strict: true }))
+      recordWouldBlock(getDb(), ctx, "countersign_pending");
   }
   return denied;
 }
 
 /** Decision rationale (decision profile, with the cross-gate duplicate rule) and, when present, the gap rationale. */
-export function goRationaleCheck(ctx: IntegrityContext, rationale: string, gapRationale?: string | null): Response | null {
+export function goRationaleCheck(
+  ctx: IntegrityContext,
+  rationale: string,
+  gapRationale?: string | null,
+): Response | null {
   return (
     applyFamily("rationale", ctx, () => rationaleFailure(ctx, "rationale", rationale, "decision", true)) ??
-    (gapRationale ? applyFamily("rationale", ctx, () => rationaleFailure(ctx, "gap_rationale", gapRationale, "decision", false)) : null)
+    (gapRationale
+      ? applyFamily("rationale", ctx, () => rationaleFailure(ctx, "gap_rationale", gapRationale, "decision", false))
+      : null)
   );
 }
 
@@ -102,3 +121,15 @@ export function goWaccCheck(ctx: IntegrityContext): Response | null {
   });
 }
 const WACC_GO_GATES: ReadonlySet<string> = new Set(["fs", "dd", "entity_ic", "group_ic"]);
+
+/**
+ * ADR-0206 (family `target`, default enforce): a project GO at fs / dd / entity_ic / group_ic is refused (409
+ * target_not_shortlisted) while the latest target selection or the latest adoption points at a target that is no
+ * longer on the Short List (or the adopted case belongs to a different target than the selection). The records are
+ * never altered; a human re-selects the target and re-adopts a case. Run BEFORE the stage-prerequisite gaps, which
+ * the S8 completion rule would otherwise answer with a generic code; the decision write re-checks it in its transaction.
+ */
+export function goStaleTargetCheck(ctx: IntegrityContext): Response | null {
+  if (ctx.entityType !== "project" || !TARGET_GO_GATES.has(ctx.gate)) return null;
+  return applyFamily("target", ctx, () => targetNotShortlistedFailure(resolveS8Staleness(ctx.entityId)));
+}

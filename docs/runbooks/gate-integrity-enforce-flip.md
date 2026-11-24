@@ -11,7 +11,7 @@ Audience: the system owner and operators executing; `compliance-officer` operati
 
 ## 1. Families
 
-Each family is controlled by `CO_NEWBIZ_GATE_INTEGRITY_<FAMILY>` with values `off | shadow | enforce`. Production default is `shadow`; a change needs a restart.
+Each family is controlled by `CO_NEWBIZ_GATE_INTEGRITY_<FAMILY>` with values `off | shadow | enforce`. Production default is `shadow`, except the `target` family, which ships as `enforce` in every environment (ADR-0206); a change needs a restart.
 
 | Family | Variable | Rationale and what enforce does | Preconditions (all evidenced) |
 |---|---|---|---|
@@ -24,10 +24,11 @@ Each family is controlled by `CO_NEWBIZ_GATE_INTEGRITY_<FAMILY>` with values `of
 | kill_binding | `CO_NEWBIZ_GATE_INTEGRITY_KILL_BINDING` | A triggered `halt` criterion blocks GO unless a `group-ic-reviewer` override exists (409 `kill_binding_unoverridden`). | A grant holder for `group-ic-reviewer` exists and has issued a test override in a non-production scenario; every `halt` criterion's evidence variable has a TRUE and an UNASSESSED test; G5 shows no halt-class criterion unassessed everywhere. Flip together with `snapshot_ack`. |
 | divergence | `CO_NEWBIZ_GATE_INTEGRITY_DIVERGENCE` | A decision that differs from the stored AI recommendation requires a substantive `divergence_reason` (422 `divergence_reason_required`), D9. | KPI G3 shortfall explained; brief persistence (`brief_id`) verified on every gate path including MCP. |
 | maker_checker | `CO_NEWBIZ_GATE_INTEGRITY_MAKER_CHECKER` | IC GO is `pending_countersign` until a different human with the matching role countersigns (D6, O-1). | `GET /api/admin/human-roles/readiness` shows at least 2 distinct holders for each of `entity-ic-reviewer` and `group-ic-reviewer`; the two holders have each done a countersign in a rehearsal; the owner has told the second person what is expected of them; no pending IC decisions are stranded (G7). |
+| target | `CO_NEWBIZ_GATE_INTEGRITY_TARGET` | A project GO at `fs`, `dd`, `entity_ic` and `group_ic` is blocked (409 `target_not_shortlisted`) while the latest target selection or adopted business case points at a target no longer on the Short List; checked by `goStaleTargetCheck` (ADR-0206). HOLD and KILL are always allowed, and existing rows are untouched. Recovery is a human re-selecting the target and re-adopting a case. | None: ships as `enforce` in every environment with no shadow release, so sections 2 and 3 do not apply to it. `off` and `shadow` remain operator escape hatches only; use them only through the rollback in section 6. |
 
 ## 2. Shadow-report acceptance criterion
 
-A family may flip when all hold:
+A family may flip when all hold (the `target` family is exempt: it ships as `enforce` with no shadow release, ADR-0206):
 
 1. It has run in `shadow` for at least 14 consecutive days, **and** at least 10 relevant gate writes (or a documented walk-through of every code path with fixtures) were observed, so a quiet system does not pass by being unused.
 2. Weekly review by `compliance-officer` of `gate_integrity.would_block:<code>` events for the family shows **zero unexplained would-blocks over those 14 days**. Produce the review input with the shadow report: `bun scripts/co-newbiz/gate-integrity-shadow-report.ts [--days 14] [--json] [--db-path <path>]` (read-only; it lists would-block events per family and the gate-write volume that supports the 10-write minimum). "Explained" means each event is attributed to a fixture, a known legacy record, or a defect already fixed, and recorded as such.
@@ -49,6 +50,8 @@ Per design section 7, with rationale:
 7. **divergence** - depends on briefs being persisted and on users knowing the acknowledgement flow.
 8. **maker_checker** - last because it depends on a second human being provisioned (O-1) and changes who can make a GO effective.
 
+The `target` family is not part of this order: it already ships as `enforce`.
+
 Flip one family at a time with at least 3 business days between flips, so a new block is attributable.
 
 ## 4. Steps on the Docker production stack (port 7749) - owner executes
@@ -69,7 +72,7 @@ Do not run any of this as an agent. Reference: `docs/runbooks/deployment.md` (co
 
 ## 6. Rollback
 
-Set the family back to `shadow` (or `off` if the check itself misbehaves) in `.env.prod`, run `docker compose up -d --force-recreate`, confirm health, and record the reason. The schema is additive, so no migration rollback is needed for behavior. Existing rows are never rewritten by a flip or a rollback. After rollback the family returns to the acceptance criterion in section 2 with the counter reset.
+Set the family back to `shadow` (or `off` if the check itself misbehaves) in `.env.prod`, run `docker compose up -d --force-recreate`, confirm health, and record the reason. The schema is additive, so no migration rollback is needed for behavior. Existing rows are never rewritten by a flip or a rollback. After rollback the family returns to the acceptance criterion in section 2 with the counter reset. The `target` family is the exception: an operator who sets it to `off` or `shadow` records the reason and restores `enforce` once the cause is fixed, with no section 2 counter.
 
 ## 7. Communication to users
 

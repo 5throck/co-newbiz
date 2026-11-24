@@ -33,6 +33,8 @@ import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
 import { StageTabs } from "../StageTabs.tsx";
 import { S8LensStrip } from "./S8LensStrip.tsx";
+import { StaleTargetBanner } from "./StaleTargetBanner.tsx";
+import type { S8Staleness } from "../../lib/business-case.ts";
 import { S8PartHeader } from "./S8PartHeader.tsx";
 import { TechnicalLensPanel } from "./TechnicalLensPanel.tsx";
 import { api, ApiError } from "../../lib/api.ts";
@@ -169,6 +171,8 @@ interface CasesResponse {
   adoption: { modelId: string; adoptedBy: string; adoptedAt: string } | null;
   target_selection: { targetId: string; rationale: string; selectedBy: string; selectedAt: string } | null;
   targets: TargetComparisonRow[];
+  /** ADR-0206: the selected/adopted target left the Short List (server-computed; the UI never recomputes it). */
+  staleness?: S8Staleness;
   /** 2026-10-16: the S5 plan in force carries no capex line at all (drives the IRR no-flow chip; Green Field only). */
   s5_plan_capex_zero?: boolean;
   evRevenueBand?: EvRevenueBandPayload;
@@ -254,6 +258,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     if (urlSync) router.replace(`/projects/${projectId}/business-case?tab=${key}`, { scroll: false });
     else setLocalTab(key);
   };
+  const openTargetsTab = () => setTab("targets");
   // Legacy deep links: the project page's stage row owns these two tabs now.
   useEffect(() => {
     if (!urlSync) return;
@@ -919,6 +924,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               </span>
               <DevRef refs="flow.spec S8 subjectScope: shortlist · ADR-0143" />
             </h3>
+            <StaleTargetBanner staleness={data?.staleness} />
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-2">
               {t("comparesEachTargetSLatest")}
             </p>
@@ -2024,7 +2030,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
         {/* ── 결정 탭: fs 게이트 진행 근거(대상 점검) → 게이트 결정 — IA cleanup 2026-10-14 ── */}
         {tab === "decision" && (
           <div role="tabpanel" id="s8-panel-decision" aria-labelledby="s8-tab-decision" className="mt-4">
-            <S8LensStrip projectId={projectId} />
+            <S8LensStrip projectId={projectId} onOpenSelection={openTargetsTab} />
             <TargetCheckPanel projectId={projectId} />
             <AiJudgementSupport
               projectId={projectId}

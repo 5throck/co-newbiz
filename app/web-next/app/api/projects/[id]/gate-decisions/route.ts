@@ -16,6 +16,7 @@ import { IC_SEQUENCE, IC_STEP_LABEL, gateSequenceBlocker } from "../../../../../
 import {
   goLadderCheck,
   goRationaleCheck,
+  goStaleTargetCheck,
   goValidatorsCheck,
   goWaccCheck,
 } from "../../../../../lib/gate-write-checks.ts";
@@ -259,6 +260,14 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     // ADR-0186 D8 (family `wacc`): the discount rate must be human-confirmed before the fs GO (bf-02).
     const waccDenied = goWaccCheck({ entityType: "project", entityId: id, gate: body.gate, actor: ctx.userId });
     if (waccDenied) return waccDenied;
+    // ADR-0206 (family `target`): a selected/adopted target that left the Short List refuses the GO until a human re-selects and re-adopts.
+    const targetDenied = goStaleTargetCheck({
+      entityType: "project",
+      entityId: id,
+      gate: body.gate,
+      actor: ctx.userId,
+    });
+    if (targetDenied) return targetDenied;
     const gaps = gateGoPrerequisiteGaps({ type: "project", id }, body.gate as GateId);
     if (gaps.length > 0) {
       return fail(
