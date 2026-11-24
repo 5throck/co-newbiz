@@ -122,9 +122,8 @@ describe("R2-A wayfinding", () => {
     const link = s.page.locator(".stage-stepper a.stage-step", { hasText: "사업성 분석" });
     await link.waitFor({ state: "visible", timeout: 30_000 });
     await link.click();
-    // The rail href is /projects/{P}/business-case, whose bare (no ?tab=) landing redirects
-    // to the 개요 page (2026-11-23 defect remediation, design 2026-11-21-s8-overview-tab —
-    // deals-landing consequence 4): the settled URL is the project page itself.
+    // The rail href is /projects/{P} directly (2026-11-24 remediation 2, DEC-20261124-01 — the
+    // bare /business-case route is only a fallback for bookmarks): the 개요 page, no redirect hop.
     await s.page.waitForURL(new RegExp(`/projects/${P}(\\?|#|$)`), { timeout: 30_000 });
     expect(await s.page.getByText("Not found.").count()).toBe(0);
   }, 60_000);

@@ -52,7 +52,7 @@ describe("stage tabs", () => {
     const s8 = groupForSegment("/business-case")!;
     const all = [...s8.tabs, ...s8.more];
     // Moved keys highlight the financial primary tab; their own entry is in the financial sub-tab row.
-    for (const k of ["overview", "params", "target-costing"])
+    for (const k of ["financial-model", "params", "target-costing"])
       expect(all[activeTabIndex(s8, "/business-case", k)].label).toBe("재무적 타당성");
     expect(all[activeTabIndex(s8, "/business-case", "decision")].label).toBe("결정");
     // ADR-0169: the default analysis view (no or unknown ?tab=) highlights 재무적 타당성.
@@ -79,7 +79,7 @@ describe("stage tabs", () => {
     expect(sub("/business-case", "scenarios")).toBe("시나리오 비교");
     expect(sub("/wacc", null)).toBe("WACC");
     expect(sub("/financial-analysis", null)).toBe("대상회사");
-    expect(sub("/business-case", "overview")).toBe("설명·생성·권고");
+    expect(sub("/business-case", "financial-model")).toBe("설명·생성·권고");
     expect(sub("/business-case", "params")).toBe("파라미터·스냅샷");
     expect(sub("/business-case", "target-costing")).toBe("타겟코스팅");
     for (const t of ["goals", "technical", "targets", "decision"])
@@ -89,7 +89,7 @@ describe("stage tabs", () => {
   test("S8 sub-tab and more-menu membership; deep links stay reachable", () => {
     const s8 = groupForSegment("/business-case")!;
     expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual([
-      "overview",
+      "financial-model",
       "scenarios",
       "/wacc",
       "/financial-analysis",
@@ -98,7 +98,7 @@ describe("stage tabs", () => {
       "target-costing",
     ]);
     expect(s8.more).toEqual([]); // 2026-10-20 decider: no 더보기 on S8 (the lone 요약 entry was dropped)
-    expect(allDefs(s8).some((t) => t.query === "overview")).toBe(true);
+    expect(allDefs(s8).some((t) => t.query === "financial-model")).toBe(true);
   });
 
   test("the risk heatmap moved to the S9 more-menu, next to the diligence inputs it aggregates (2026-10-17 round 2)", () => {

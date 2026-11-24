@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "../../lib/api.ts";
+import { s8EntryHref } from "../../lib/project-stage-entry.ts";
 import { useConfirm } from "../../components/crud.tsx";
 import { ClosureModal } from "../../components/ClosureModal.tsx";
 import { ColGroup } from "../../components/ui.tsx";
@@ -55,6 +56,7 @@ export function ProjectsView() {
       .catch((err) => setError(err instanceof Error ? err.message : tc("errors.loadFailed")));
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only load; loadProjects is recreated each render, so listing it would refetch on every render
   useEffect(() => {
     loadProjects();
   }, []);
@@ -79,9 +81,7 @@ export function ProjectsView() {
   return (
     <main>
       <h1>{t("heading")}</h1>
-      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-        {t("intro")}
-      </p>
+      <p className="mt-[0.15rem] mb-3 text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">{t("intro")}</p>
       {error && (
         <p role="alert" className="text-[color:var(--red-fg)]">
           {error}
@@ -92,6 +92,8 @@ export function ProjectsView() {
       ) : rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)]">{t("empty")}</p>
       ) : (
+        // biome-ignore lint/a11y/useSemanticElements: keyboard-scroll affordance shared by every table-scroll region
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region must be keyboard-focusable
         <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
           <table className="data-table table-fixed-pct tmin-56">
             <caption className="sr-only">{t("caption")}</caption>
@@ -112,8 +114,12 @@ export function ProjectsView() {
                   <td className="font-semibold">{p.project_no}</td>
                   <td>
                     {p.project_name ? (
-                      <Link href={`/projects/${p.id}`} className="text-[color:var(--accent)] font-semibold">{p.project_name}</Link>
-                    ) : "—"}
+                      <Link href={`/projects/${p.id}`} className="text-[color:var(--accent)] font-semibold">
+                        {p.project_name}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td>
                     {p.track ? (
@@ -126,9 +132,16 @@ export function ProjectsView() {
                   </td>
                   <td>
                     {p.is_stale ? (
-                      <span className="status-chip status-amber" title={(p.stale_reasons ?? []).join(" · ") || t("staleTitleFallback")}>{t("staleChip")}</span>
+                      <span
+                        className="status-chip status-amber"
+                        title={(p.stale_reasons ?? []).join(" · ") || t("staleTitleFallback")}
+                      >
+                        {t("staleChip")}
+                      </span>
                     ) : (
-                      <span className="status-chip status-green" title={t("freshTitle")}>{t("freshChip")}</span>
+                      <span className="status-chip status-green" title={t("freshTitle")}>
+                        {t("freshChip")}
+                      </span>
                     )}
                   </td>
                   <td className="col-num whitespace-nowrap px-1">{fmtDate(p.created_at)}</td>
@@ -138,7 +151,7 @@ export function ProjectsView() {
                         종료·삭제도 같은 줄에 나란히 둔다(3차 리포트). */}
                     <div className="flex flex-nowrap gap-1.5 items-start">
                       <span className="flex gap-1.5 whitespace-nowrap">
-                        <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/business-case`}>
+                        <Link className="btn-ghost btn-sm" href={s8EntryHref(p.id)}>
                           {t("linkBusinessCase")}
                         </Link>
                         <Link className="btn-ghost btn-sm" href={`/projects/${p.id}/dd`}>

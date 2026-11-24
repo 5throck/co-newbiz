@@ -27,19 +27,19 @@ export interface CaseAttainmentEntry {
 
 /** Tab keys that live inside the business-case page (?tab=). `technical` and `financial`
  * are the two lens tabs (ADR-0169); the former five analysis tabs are financial sub-tabs. */
-export const S8_TAB_KEYS = ["technical", "financial", "goals", "scenarios", "targets", "wacc", "financial-analysis", "bep", "overview", "params", "target-costing", "decision"] as const;
+export const S8_TAB_KEYS = ["technical", "financial", "goals", "scenarios", "targets", "wacc", "financial-analysis", "bep", "financial-model", "params", "target-costing", "decision"] as const;
 export type S8TabKey = (typeof S8_TAB_KEYS)[number];
 
 /** Stage-level tab order (INTERIM-WORDING labels live in lib/stage-tabs.ts). */
 export const S8_PRIMARY_TAB_ORDER: readonly S8TabKey[] = ["goals", "technical", "financial", "targets", "decision"];
 
 /** Sub-tabs inside the financial part (goals and targets are primary tabs; the more-menu holds only 요약 and the risk heatmap). */
-export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["overview", "scenarios", "wacc", "financial-analysis", "bep", "params", "target-costing"];
+export const S8_FINANCIAL_SUBTABS: readonly S8TabKey[] = ["financial-model", "scenarios", "wacc", "financial-analysis", "bep", "params", "target-costing"];
 
 /** Alias ?tab= values that land on an existing tab key. */
 export const S8_TAB_ALIASES: Readonly<Record<string, S8TabKey>> = {
   capability: "technical", // 역량 달성 가능성 lives in the technical lens
-  financial: "overview", // umbrella lens link lands on its default sub-tab
+  financial: "financial-model", // umbrella lens link lands on its default sub-tab
 };
 
 /** The three major parts of the S8 screen: what to achieve, can it be realised, does it pay. */
@@ -77,29 +77,33 @@ export function primaryKeyOfS8Tab(key: S8TabKey): S8TabKey | null {
 }
 
 /** Resolve the ?tab= value to a tab key. Old keys keep working (goals stays goals; scenarios/wacc/
- * financial-analysis resolve into the financial part with the right sub-tab; overview/params/
+ * financial-analysis resolve into the financial part with the right sub-tab; params/
  * target-costing/decision are unchanged), aliases map to their lens
- * (`capability` -> technical, `financial` -> overview, the financial default sub-tab), a `#item` suffix is ignored, old
- * greenfield deep links to the hidden targets tab land on overview, and unknown values
- * fall back to overview (the financial lens default). */
+ * (`capability` -> technical, `financial` -> financial-model, the financial default sub-tab), a `#item` suffix is ignored, old
+ * greenfield deep links to the hidden targets tab land on financial-model, and unknown values
+ * fall back to financial-model (the financial lens default). The sub-tab key was renamed from
+ * `overview` to `financial-model` (2026-11-24, user decision): the old key no longer names that
+ * sub-tab (`overview` is the 개요 page, /projects/{id}), so it is an unknown value here and the
+ * page-mode route redirects it before the stage renders (see s8BareTabRedirect). */
 export function resolveS8Tab(tabParam: string | null | undefined, opts: { greenfield: boolean }): S8TabKey {
   const raw = (tabParam ?? "").split("#")[0];
   const aliased = S8_TAB_ALIASES[raw];
   if (aliased) return aliased;
-  const known = (S8_TAB_KEYS as readonly string[]).includes(raw) ? (raw as S8TabKey) : "overview";
-  if (known === "financial") return "overview";
-  if (known === "targets" && opts.greenfield) return "overview";
+  const known = (S8_TAB_KEYS as readonly string[]).includes(raw) ? (raw as S8TabKey) : "financial-model";
+  if (known === "financial") return "financial-model";
+  if (known === "targets" && opts.greenfield) return "financial-model";
   return known;
 }
 
 /** Defect remediation 2026-11-23 (design 2026-11-21-s8-overview-tab § Defect Remediation):
  * the ABSENT `?tab=` on the page-mode route redirects to the 개요 tab's canonical URL — the
- * project page itself. Keyed on the raw param being null (absent), never on the resolved
- * value: every explicit `?tab=` (including `overview`, the financial sub-tab alias above)
- * resolves exactly as before and returns null here. Embedded mode never reaches this (the
- * caller guards with urlSync). */
+ * project page itself. Keyed on the raw param (absent), never on the resolved value. Since the
+ * 2026-11-24 sub-tab key rename (`overview` -> `financial-model`), the legacy
+ * `business-case?tab=overview` also redirects there: `overview` names the 개요 tab, no longer
+ * the financial sub-tab. Every other explicit `?tab=` resolves exactly as before and returns
+ * null here. Embedded mode never reaches this (the caller guards with urlSync). */
 export function s8BareTabRedirect(projectId: string, tabParam: string | null): string | null {
-  return tabParam === null ? `/projects/${projectId}` : null;
+  return tabParam === null || tabParam === "overview" ? `/projects/${projectId}` : null;
 }
 
 /** True when the URL's tab must be rewritten (greenfield + ?tab=targets). */

@@ -16,6 +16,7 @@ import { api } from "../../../../lib/api.ts";
 import { localizeBlocker } from "../../../../lib/labels.ts";
 import { STAGE_META } from "../../../../lib/stage-meta.ts";
 import { STAGE_STATUS_KEY, trackKeysText, resolveLabelTokens } from "../../../../lib/label-keys.ts";
+import { projectStageHref } from "../../../../lib/project-stage-entry.ts";
 import { resolveDealCarrier } from "../../../../lib/deal-carrier.ts";
 import type { TrackId } from "../../../../lib/stage-meta.ts";
 import { PageState } from "../../../../components/ui.tsx";
@@ -325,15 +326,9 @@ function S3Synergy({ routeId, analysisId }: { routeId: string; analysisId?: stri
   );
 }
 
-// S8~S12 프로젝트 단계 — 정본 프로젝트 화면 경로 (StageFrame의 STAGE_HREF와 동일).
+// S8~S12 프로젝트 단계 — 정본 프로젝트 화면 경로는 lib/project-stage-entry.ts
+// (StageFrame의 STAGE_HREF와 동일 규칙: S8 빈 쿼리 → /projects/{pid} 개요, DEC-20261124-01).
 // ADR-0094/0095: carrierId가 프로젝트 id면 그대로, 기회 id면 opportunity.project_id로 해석한다.
-const PROJECT_STAGE_PATH: Record<string, string> = {
-  S8: "business-case",
-  S9: "dd",
-  S10: "deal-structure",
-  S11: "ic-review",
-  S12: "portfolio",
-};
 
 function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: string }) {
   const t = useTranslations("pages.dealStage");
@@ -351,10 +346,7 @@ function ProjectStageTab({ carrierId, stageId }: { carrierId: string; stageId: s
     setError(null);
     setPromoHref(null);
     const go = (pid: string) => {
-      if (alive)
-        router.replace(
-          `/projects/${encodeURIComponent(pid)}/${PROJECT_STAGE_PATH[stageId]}${query ? `?${query}` : ""}`,
-        );
+      if (alive) router.replace(projectStageHref(stageId, pid, query));
     };
     // 프로젝트 id 링크가 대부분이므로 프로젝트 process를 먼저 조회한다(멤버십 포함 검증) —
     // 기회 id일 때만 기회 조회로 폴백해 프로젝트 id에 대한 불필요한 404 탐침을 없앤다.

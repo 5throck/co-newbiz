@@ -243,11 +243,11 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSync = !embedded;
-  const [localTab, setLocalTab] = useState("overview");
+  const [localTab, setLocalTab] = useState("financial-model");
   // Bumped after an S5 connect / update / disconnect so the calculation-chain explanation reloads its parameters.
   const [s5ConnectVersion, setS5ConnectVersion] = useState(0);
   const tabParam = urlSync ? searchParams.get("tab") : localTab;
-  // Greenfield (no target axis) hides the target compare/select tab; old deep links land on overview (ADR-0159).
+  // Greenfield (no target axis) hides the target compare/select tab; old deep links land on financial-model (ADR-0159).
   const [greenfield, setGreenfield] = useState(false);
   const tab = resolveS8Tab(tabParam, { greenfield });
   const setTab = (key: string) => {
@@ -262,14 +262,15 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   }, [urlSync, tabParam, projectId, router]);
   useEffect(() => {
     if (urlSync && shouldRedirectTargetsTab(tabParam, greenfield))
-      router.replace(`/projects/${projectId}/business-case?tab=overview`, { scroll: false });
+      router.replace(`/projects/${projectId}/business-case?tab=financial-model`, { scroll: false });
   }, [urlSync, tabParam, greenfield, projectId, router]);
   // Defect remediation 2026-11-23 (design 2026-11-21-s8-overview-tab) — the ABSENT `?tab=` on
   // the page-mode route lands on 개요: that tab's canonical URL is the project page itself
   // (seg ""), so bare /projects/{id}/business-case redirects there. The decision lives in
-  // lib/business-goals-view.ts (s8BareTabRedirect) and keys on the raw param being null —
-  // every explicit value (including `?tab=overview`, the financial sub-tab alias) resolves
-  // exactly as before.
+  // lib/business-goals-view.ts (s8BareTabRedirect) and keys on the raw param being null (or the
+  // legacy `overview`, 2026-11-24 rename) — every other explicit value resolves exactly as before. Since remediation 2 (2026-11-24) the page wrapper
+  // (app/projects/[id]/business-case/page.tsx) redirects bare URLs BEFORE this stage mounts, so
+  // this effect is only a backstop for other urlSync mounts — it is not the primary mechanism.
   useEffect(() => {
     if (!urlSync) return;
     const dest = s8BareTabRedirect(projectId, searchParams.get("tab"));
@@ -769,14 +770,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           only the stage-level tabs (StageTabs); the analysis sub-tabs live there as
           ?tab= entries. The embedded deal tab has no StageTabs row, so it keeps this TabNav.
           IA cleanup 2026-10-14: the global regeneration row and its sr-only tab note
-          were removed — generation has ONE entry, the overview tab. */}
+          were removed — generation has ONE entry, the financial-model sub-tab. */}
         {embedded && (
           <>
             <TabNav
               className="mb-3"
               label={t("s8BusinessCaseScreen")}
               active={primaryKeyOfS8Tab(tab) ?? tab}
-              onSelect={(k) => setTab(k === "financial" ? "overview" : k)}
+              onSelect={(k) => setTab(k === "financial" ? "financial-model" : k)}
               tabs={[
                 { key: "goals", label: t("businessGoals"), id: "s8-tab-goals", panelId: "s8-panel-goals" }, // INTERIM-WORDING
                 {
@@ -807,10 +808,10 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 onSelect={setTab}
                 tabs={[
                   {
-                    key: "overview",
+                    key: "financial-model",
                     label: t("explanationGenerationRecommendation"),
-                    id: "s8fin-tab-overview",
-                    panelId: "s8fin-panel-overview",
+                    id: "s8fin-tab-financial-model",
+                    panelId: "s8fin-panel-financial-model",
                   },
                   {
                     key: "scenarios",
@@ -1258,8 +1259,8 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </section>
         )}
 
-        {tab === "overview" && (
-          <div role="tabpanel" id="s8fin-panel-overview" aria-labelledby="s8fin-tab-overview">
+        {tab === "financial-model" && (
+          <div role="tabpanel" id="s8fin-panel-financial-model" aria-labelledby="s8fin-tab-financial-model">
             {/* S5 connection status + human-only connect actions sit directly above the primary action (decider feedback 2026-10-16) */}
             {greenfield && (
               <S5ConnectBlock
@@ -1705,7 +1706,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                           <button
                                             type="button"
                                             className="text-[color:var(--accent)] font-bold"
-                                            onClick={() => setTab("overview")}
+                                            onClick={() => setTab("financial-model")}
                                           >
                                             {t("seeTheOverviewTab")}
                                           </button>
@@ -1863,7 +1864,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                     <button
                       type="button"
                       className="text-[color:var(--accent)] font-bold"
-                      onClick={() => setTab("overview")}
+                      onClick={() => setTab("financial-model")}
                     >
                       {t("seeTheOverviewTab2")}
                     </button>
@@ -1900,7 +1901,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
           </div>
         )}
 
-        {data && data.cases.length === 0 && (tab === "overview" || tab === "scenarios") && (
+        {data && data.cases.length === 0 && (tab === "financial-model" || tab === "scenarios") && (
           <p className="text-[length:var(--fs-body)] text-[color:var(--muted-fg)]">
             {t("noBusinessCaseRegisteredRun")}
           </p>
@@ -1940,7 +1941,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                 <button
                   type="button"
                   className="text-[color:var(--accent)] font-bold"
-                  onClick={() => setTab("overview")}
+                  onClick={() => setTab("financial-model")}
                 >
                   {t("toTheS5LinkBlock")}
                 </button>

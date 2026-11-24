@@ -408,9 +408,12 @@ describe("stage-screen wiring lock (static source)", () => {
     const s8 = src.slice(src.indexOf('if (stageId === "S8"'), src.indexOf("return <StageGuidanceTab"));
     expect(s8).not.toContain("DealEntryMarketStrip");
     expect(s8).toContain("<ProjectStageTab");
-    expect(src).toMatch(/router\.replace\(\s*`\/projects\//);
+    // DEC-20261124-01: the /projects target (incl. the per-stage segments) is built by the shared helper.
+    expect(src).toContain("router.replace(projectStageHref(stageId, pid, query))");
+    const helper = read("lib/project-stage-entry.ts");
+    expect(helper).toMatch(/`\/projects\//);
     for (const seg of ["business-case", "dd", "deal-structure", "ic-review", "portfolio"])
-      expect(src).toContain(`"${seg}"`);
+      expect(helper).toContain(`"${seg}"`);
   });
 
   test("S1 mounts its own frame (documented exception); the flat /market route stays a frame-free stub", () => {
