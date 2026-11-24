@@ -86,7 +86,7 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
         seg: "/business-case",
         query: "financial",
         label: "재무적 타당성",
-        aliases: ["scenarios", "overview", "params", "target-costing"],
+        aliases: ["scenarios", "financial-model", "params", "target-costing"],
         extraSegs: ["/wacc", "/financial-analysis"],
         isDefault: true,
         lens: "financial",
@@ -98,7 +98,7 @@ export const STAGE_TAB_GROUPS: StageTabGroup[] = [
     // the header's "프로젝트 개요 돌아가기" already reaches it. Empty more = no 더보기 button.
     more: [],
     subtabs: [
-      { seg: "/business-case", query: "overview", label: "설명·생성·권고", isDefault: true },
+      { seg: "/business-case", query: "financial-model", label: "설명·생성·권고", isDefault: true },
       { seg: "/business-case", query: "scenarios", label: "시나리오 비교" },
       { seg: "/wacc", label: "WACC" },
       { seg: "/financial-analysis", label: "대상회사" },

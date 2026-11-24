@@ -1,9 +1,9 @@
 ---
 lang: en
 date: 2026-11-21
-status: implemented (defect remediation ruled 2026-11-23, awaiting implementation — see § Defect Remediation — 2026-11-23)
+status: implemented (defect remediation 2 ruled 2026-11-24, awaiting implementation — see § Defect Remediation 2 — 2026-11-24; remediation 1 of 2026-11-23 implemented)
 owner: ux-designer-agent (design), pm (dispatch)
-amendments: Defect Remediation 2026-11-23 (user-reported: bare `/projects/{id}/business-case` opens the `재무적 타당성` lens instead of `개요`; ruled at Design Gate Row 0 — absent `?tab=` must land on `개요`; see § Defect Remediation — 2026-11-23)
+amendments: Defect Remediation 2026-11-23 (user-reported: bare `/projects/{id}/business-case` opens the `재무적 타당성` lens instead of `개요`; ruled at Design Gate Row 0 — absent `?tab=` must land on `개요`; see § Defect Remediation — 2026-11-23; Defect Remediation 2 2026-11-24 (user-reported: selecting S8 first paints `재무적 타당성`, then moves to `개요` — the 2026-11-23 redirect runs after first render and every S8 entry link still targets the bare route; ruled at Design Gate Row 0, DEC-20261124-01 — entry links target `/projects/{id}` directly and the bare-route fallback must redirect before the stage body paints; see § Defect Remediation 2 — 2026-11-24)
 related: docs/designs/2026-10-08-wave-u-ux-overhaul-design.md (§3.4 stage-tab map of record), docs/designs/2026-09-20-wave3-project-stage-tabs-design.md, docs/designs/2026-10-23-i18n-ui-adoption-design.md (§3.6 i18n-lint Korean baseline), ADR-0159, ADR-0161, ADR-0169
 spec: s8-overview-tab
 ---
@@ -169,3 +169,162 @@ Edges, stated so the implementer cannot guess wrong:
 
 Spec registry entry (`docs/specs/entries/2026-11-21-s8-overview-tab-design.json`)
 carries no amendment/defect field in the registry schema — it stays untouched.
+
+## Defect Remediation 2 — 2026-11-24: render-then-redirect flash
+
+**Status**: user-reported 2026-11-24 (selecting S8 `사업성 분석` first shows the
+`재무적 타당성` tab, then moves to `개요`), ruled at Design Gate Row 0 the same
+day (decision record: `docs/decisions/DEC-20261124-01.md`). This is a defect in
+the 2026-11-23 remediation above, not in the tab map: that remediation ruled the
+right OUTCOME (absent `?tab=` lands on `개요`) but its mechanism and its entry
+points leave the wrong tab visible for one paint.
+
+**Persona and job**. Deal analyst or IC reviewer opening the S8 stage from the
+stage rail, the project list, or a deal card. The job is to land on the stage's
+first tab, `개요` (charter summary and process status), and read from there. A
+transient flash of a different tab's content (`재무적 타당성` figures and the
+`설명·생성·권고` sub-tab) reads as a wrong landing and, for a reviewer scanning
+financials, as a stale or unrelated view.
+
+**Current behavior (observed)**. Clicking S8 in the stage rail renders
+`재무적 타당성` for one paint, then the URL is replaced with `/projects/{id}` and
+`개요` appears.
+
+- **Anchor — the redirect mechanism**: the 2026-11-23 fix is a client-side
+  `useEffect` in `app/web-next/components/stages/BusinessCaseStage.tsx`
+  (around lines 268-278) calling `s8BareTabRedirect` from
+  `app/web-next/lib/business-goals-view.ts`. An effect runs after the first
+  commit, so the stage body has already rendered when the replace is issued.
+- **Anchor — what paints in that window**: `resolveS8Tab(null)` returns
+  `"overview"`, the financial sub-tab key (`설명·생성·권고`) under the
+  `재무적 타당성` primary tab (`lib/stage-tabs.ts`, the `financial` tab's aliases
+  include `overview`). The flash is therefore specifically `재무적 타당성`.
+- **Anchor — the entry links still target the bare route** (so every normal click
+  exercises the flash; the redirect was meant as a fallback, not the main path):
+  - `app/web-next/components/StageFrame.tsx:39` `STAGE_HREF.S8` →
+    `/projects/${p}/business-case` (stage rail).
+  - `app/web-next/app/projects/page.tsx:141` project-list shortcut button.
+  - `app/web-next/app/deals/[id]/[stage]/page.tsx:331`
+    `PROJECT_STAGE_PATH.S8 = "business-case"`: `ProjectStageTab` does
+    `router.replace` to `/projects/{pid}/business-case` plus the query, so a
+    `/deals/{id}/s8` entry makes three hops (deal-stage route → bare
+    business-case → `/projects/{pid}`), with the stage body painting in the
+    middle hop.
+
+**Intended behavior (ruling)**. Two rules, one per failure source. The first
+removes the flash for every in-app entry; the second makes the bare URL safe for
+entries the app does not control.
+
+1. **Entry links target the canonical `개요` URL directly.** Every S8 entry link
+   that carries no explicit tab targets `/projects/{id}`:
+   - Stage rail (`StageFrame.tsx` S8 href), project-list shortcut
+     (`projects/page.tsx`), and the deal-stage S8 entry all resolve to
+     `/projects/{id}`.
+   - `ProjectStageTab` (`app/deals/[id]/[stage]/page.tsx`): S8 with an EMPTY
+     query goes to `/projects/{pid}` (one hop, no intermediate route). S8 WITH a
+     query keeps `/projects/{pid}/business-case?{query}` (an explicit tab is a
+     deliberate deep link and must reach the business-case route unchanged).
+   - No other S8 entry may link to the bare `/business-case` route. The tab map
+     is not touched: `개요` stays seg `""` and `사업 목표`, `재무적 타당성` and the
+     rest keep their `/business-case` segs.
+2. **Bare-route fallback never paints the stage body.** A bookmark, a typed URL,
+   or a stale link to `/projects/{id}/business-case` with no `?tab=` must be
+   redirected to `/projects/{id}` BEFORE the stage renders. The acceptance
+   criterion is the outcome: for a bare URL the `BusinessCaseStage` body is never
+   committed to the DOM, so there is no frame in which `재무적 타당성` content,
+   its sub-tab row, or any highlighted tab is visible. The mechanism is the
+   implementer's choice, provided the outcome holds. Permitted mechanisms:
+   - a server-side redirect, such as the `business-case/page.tsx` server
+     component reading `searchParams` and calling `redirect()`, or a
+     `next.config` redirect with a `missing` query condition on `tab`; or
+   - a client wrapper that renders nothing (no stage body, no tab chrome) while
+     the replace is pending and renders the stage only when a `?tab=` is present.
+   A solution that renders the stage and then redirects in an effect is the
+   defect, whatever it is named. The redirect keys on the ABSENT `tab` param, the
+   same key as the 2026-11-23 edge 1 (not on the resolved value).
+3. **Everything with an explicit tab resolves exactly as before.** `?tab=goals`,
+   `?tab=technical`, `?tab=financial`, every alias, and `?tab=overview` (which
+   still opens the financial lens `설명·생성·권고`, per 2026-11-23 edge 1) are
+   byte-identical to today. Embedded mode (`/deals/{id}/s8`, `urlSync=false`) is
+   unchanged, including its internal default (2026-11-23 edge 3). The greenfield
+   `?tab=targets` normalization is unchanged.
+
+Rule 1 is the primary fix; rule 2 stays because bookmarks and typed URLs exist
+and the 2026-11-23 ruling (bare route redirects to `개요`) remains correct. The
+2026-11-23 acceptance criteria 1-4 continue to hold, tightened by rule 2 from
+"lands on `개요`" to "lands on `개요` with no intermediate paint".
+
+**CRUD and linkage coverage**. No surface is added or removed; this ruling only
+changes link targets and the bare-route fallback timing. Stage-to-stage linkage
+is unchanged except that S8 now has one canonical entry URL (`/projects/{id}`)
+shared by the rail, the list, the deal card, and the promotion landing.
+
+**Single primary action and accessibility**. Unchanged by this ruling. The one
+accessibility-relevant property is that no frame exposes a wrong
+`aria-current` tab: before this fix, assistive technology could announce
+`재무적 타당성` as current for one frame before `개요`.
+
+**Acceptance criteria**.
+
+1. Clicking S8 in the stage rail shows `개요` highlighted (exactly one tab
+   current), with no intermediate `재무적 타당성` paint. Same for the
+   project-list shortcut and the `/deals/{id}/s8` entry with an empty query.
+2. Bare `/projects/{id}/business-case` (bookmark or typed URL) ends on
+   `/projects/{id}` and never commits the stage body.
+3. `/projects/{id}/business-case?tab=X` and `/deals/{id}/s8?tab=X` still open X;
+   `?tab=overview` still opens the financial lens `설명·생성·권고`.
+4. Embedded `/deals/{id}/s8` usage and the greenfield `?tab=targets` redirect
+   behave as before.
+
+**Verification (measurable)**.
+
+- **Unit test (new)**: assert the S8 entry hrefs equal `/projects/{id}` for
+  StageFrame S8, the project-list S8 shortcut, and the deal-stage S8 path with an
+  empty query (`ProjectStageTab` target `/projects/{pid}`); and that S8 with a
+  non-empty query yields `/projects/{pid}/business-case?{query}`. Where an href
+  is built inline in JSX, the implementer may extract a tiny pure helper so the
+  assertion has a seam; that is an implementation detail, not a design change.
+- **Unit test (existing, must keep passing)**: `tests/unit/s8-goals-ui.test.ts`
+  coverage of `s8BareTabRedirect` (with `tests/unit/stage-tabs.test.ts` and the
+  rest of the S8 suite).
+- **Browser check**: clicking S8 in the stage rail on a real project shows
+  `개요` with no intermediate `재무적 타당성` paint (verified by observing the
+  first painted frame or by asserting the stage body is absent from the DOM
+  throughout the navigation); a typed bare `/projects/{id}/business-case` URL
+  behaves the same.
+- **Success criterion**: across rail, list, and deal-card entries plus the
+  bare-URL fallback, the count of frames in which a non-`개요` S8 tab is visible
+  before landing is zero.
+
+**Handoff to `frontend-engineer`**. Real contracts consumed: the tab map in
+`lib/stage-tabs.ts`, `s8BareTabRedirect` and `resolveS8Tab` in
+`lib/business-goals-view.ts`, and the existing `/projects/{id}` overview page.
+No new API, token, component, or pattern is introduced, so nothing escalates to
+`design-system-agent`. Reasoning for the choice of rule 1 over a redirect-only
+fix: a faster redirect still leaves a hop and a race with hydration, whereas a
+correct link has no intermediate state at all; the redirect is retained only as
+the fallback for URLs the app does not generate.
+
+### Addendum — sub-tab key rename (2026-11-24, user decision)
+
+The financial sub-tab `설명·생성·권고` used the key `overview`, the same word as the
+`개요` tab (seg `""`, `?tab=overview` on the project page), which is how the 2026-11-24
+flash was easy to misread. Decision: rename the sub-tab key `overview` to `financial-model`.
+
+- **Code**: `S8_TAB_KEYS`, `S8_FINANCIAL_SUBTABS`, the `financial` alias and every
+  `resolveS8Tab` fallback (unknown value, `financial`, greenfield `targets`) now resolve to
+  `financial-model`. In `lib/stage-tabs.ts` the sub-tab query and the `재무적 타당성`
+  primary-tab alias use `financial-model`; the `개요` tab (seg `""`, query `overview`) is
+  unchanged. `BusinessCaseStage` panel and tab ids follow (`s8fin-tab-financial-model`,
+  `s8fin-panel-financial-model`); embedded mode defaults to `financial-model`, and the
+  greenfield `targets` normalization now lands on `?tab=financial-model`.
+- **Legacy URL**: `/projects/{id}/business-case?tab=overview` no longer names a business-case
+  tab. In page mode it redirects to `/projects/{id}` (the `개요` page) before the stage
+  renders: `s8BareTabRedirect` returns the project URL for an absent `tab` or `tab=overview`,
+  and the page wrapper renders nothing for both. This supersedes the 2026-11-23/2026-11-24
+  rulings that kept `?tab=overview` opening the financial lens (acceptance criterion 3 now
+  reads: every other explicit `?tab=` is unchanged; `?tab=financial` and
+  `?tab=financial-model` open the financial lens).
+- **Verification**: `tests/unit/s8-goals-ui.test.ts`, `stage-tabs.test.ts`,
+  `technical-lens.test.ts` and `s8-entry-href.test.ts` cover the new key, the legacy
+  redirect, and the unchanged `개요` tab.

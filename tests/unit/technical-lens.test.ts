@@ -48,13 +48,30 @@ const json = JSON.stringify;
 const LENS = {
   version: 1,
   subjects: {
-    project: { items: { T2: { status: "caution", rationale: "TRL 5", evidence: ["doc-1"], draftedBy: "human", confirmedBy: "u", confirmedAt: NOW, detail: { trlCurrent: 5 } } }, verification: {} },
-    "target:abc": { items: {}, verification: { T2: { s8Ref: "target:abc/T2", result: "different", observed: "TRL 4", s8RevisionAt: NOW } } },
+    project: {
+      items: {
+        T2: {
+          status: "caution",
+          rationale: "TRL 5",
+          evidence: ["doc-1"],
+          draftedBy: "human",
+          confirmedBy: "u",
+          confirmedAt: NOW,
+          detail: { trlCurrent: 5 },
+        },
+      },
+      verification: {},
+    },
+    "target:abc": {
+      items: {},
+      verification: { T2: { s8Ref: "target:abc/T2", result: "different", observed: "TRL 4", s8RevisionAt: NOW } },
+    },
   },
   updatedAt: NOW,
   futureKey: { keep: "me" },
 };
-const storedRaw = () => (db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j;
+const storedRaw = () =>
+  (db.query("SELECT capability_gap_json j FROM opportunity WHERE id = ?").get(oppId) as { j: string }).j;
 const storedLens = () => (JSON.parse(storedRaw()) as { technicalLens?: unknown }).technicalLens;
 
 beforeAll(async () => {
@@ -66,19 +83,49 @@ beforeAll(async () => {
   cookie = await loginCookie(LEAD, `pw-${LEAD}-12345`);
   outsiderCookie = await loginCookie(OUTSIDER, `pw-${OUTSIDER}-12345`);
   oppId = ulid();
-  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [oppId, "tl 기회", "산업", "selected", LEAD, NOW]);
-  db.run("INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)", [ulid(), oppId, "greenfield", "test", "대안 검토", LEAD, NOW]);
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "tl 기회",
+    "산업",
+    "selected",
+    LEAD,
+    NOW,
+  ]);
+  db.run(
+    "INSERT INTO route_decision (id, opportunity_id, track, rationale, alternatives_considered, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
+    [ulid(), oppId, "greenfield", "test", "대안 검토", LEAD, NOW],
+  );
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)`,
     [ulid(), oppId, "직접 진출", "M&A 대안", "test", LEAD, NOW, NOW],
   );
   const rows = [
-    { id: "r1", capability: "정밀 가공", source: "manual", held: { status: "unmet" }, requiredLevel: "숙련", currentLevel: "기초" },
-    { id: "r2", capability: "품질 인증", source: "manual", held: { status: "met", holders: ["A사"] }, requiredLevel: "실무", currentLevel: "실무" },
+    {
+      id: "r1",
+      capability: "정밀 가공",
+      source: "manual",
+      held: { status: "unmet" },
+      requiredLevel: "숙련",
+      currentLevel: "기초",
+    },
+    {
+      id: "r2",
+      capability: "품질 인증",
+      source: "manual",
+      held: { status: "met", holders: ["A사"] },
+      requiredLevel: "실무",
+      currentLevel: "실무",
+    },
   ];
-  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [json({ rows, updatedAt: NOW, technicalLens: LENS }), oppId]);
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    json({ rows, updatedAt: NOW, technicalLens: LENS }),
+    oppId,
+  ]);
   for (const gate of ["screening", "pre_fs"]) {
-    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "t", LEAD, NOW]);
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "opportunity", oppId, gate, "go", "t", LEAD, NOW],
+    );
   }
   projectId = promoteOpportunity(oppId, { promotedBy: LEAD, needToKnowBasis: "tl test" }).project.id;
 });
@@ -87,8 +134,12 @@ describe("register writers keep technicalLens verbatim", () => {
   test("S3/S5 PUT /api/opportunities/:id/capability-gap carries it over and ignores a client-sent copy", async () => {
     const rows = cg.parseGapRegister(storedRaw()).rows;
     const res = await req(`/api/opportunities/${oppId}/capability-gap`, {
-      method: "PUT", headers: { cookie },
-      body: json({ rows: rows.map((r) => ({ ...r, note: "수정" })), technicalLens: { version: 1, subjects: { project: { items: { T3: { status: "met" } } } } } }),
+      method: "PUT",
+      headers: { cookie },
+      body: json({
+        rows: rows.map((r) => ({ ...r, note: "수정" })),
+        technicalLens: { version: 1, subjects: { project: { items: { T3: { status: "met" } } } } },
+      }),
     });
     expect(res.status).toBe(200);
     expect(storedLens()).toEqual(LENS); // verbatim, incl. unknown futureKey; the client copy is ignored
@@ -97,7 +148,12 @@ describe("register writers keep technicalLens verbatim", () => {
 
   test("attainability writeRegister keeps it", () => {
     const reg = att.readRegister(db, oppId)!;
-    att.writeRegister(db, oppId, reg.rows, { actor: LEAD, action: "capability_attainability.save", target: "t", at: new Date().toISOString() });
+    att.writeRegister(db, oppId, reg.rows, {
+      actor: LEAD,
+      action: "capability_attainability.save",
+      target: "t",
+      at: new Date().toISOString(),
+    });
     expect(storedLens()).toEqual(LENS);
   });
 
@@ -117,7 +173,8 @@ describe("register writers keep technicalLens verbatim", () => {
         if (statSync(p).isDirectory()) walk(p);
         else if (/\.(ts|tsx)$/.test(e) && !/\.test\./.test(e)) {
           const t = readFileSync(p, "utf8");
-          if (/UPDATE opportunity SET[^;`"']*capability_gap_json/.test(t) && !/serializeGapRegister/.test(t)) hits.push(p.replace(PROJECT_ROOT, ""));
+          if (/UPDATE opportunity SET[^;`"']*capability_gap_json/.test(t) && !/serializeGapRegister/.test(t))
+            hits.push(p.replace(PROJECT_ROOT, ""));
         }
       }
     };
@@ -129,7 +186,11 @@ describe("register writers keep technicalLens verbatim", () => {
 describe("technicalLens parse and summary", () => {
   test("tolerant normalize: unknown subjects/items dropped, confirmation needs both fields and a status", () => {
     const lens = tl.normalizeTechnicalLens({
-      subjects: { project: { items: { T2: { status: "met", confirmedBy: "u" }, T9: { status: "met" } } }, "bad subject": { items: {} }, "target:x": { items: {}, verification: { T5: { s8Ref: "target:x/T5", result: "verified" } } } },
+      subjects: {
+        project: { items: { T2: { status: "met", confirmedBy: "u" }, T9: { status: "met" } } },
+        "bad subject": { items: {} },
+        "target:x": { items: {}, verification: { T5: { s8Ref: "target:x/T5", result: "verified" } } },
+      },
     });
     expect(Object.keys(lens.subjects).sort()).toEqual(["project", "target:x"]);
     expect(lens.subjects.project.items.T2?.confirmedBy).toBeNull();
@@ -142,7 +203,32 @@ describe("technicalLens parse and summary", () => {
     expect(tl.isValidSubject("target:")).toBe(false);
   });
 
-  const row = (grade: any, confirmed = false) => ({ id: ulid(), capability: "c", source: "manual", requiredNote: "", held: { status: "met", holders: [], evidence: "" }, resolution: null, note: "", requiredLevel: "", currentLevel: "", ...(grade ? { attainability: { closingCostKrwM: null, monthsToAttain: null, grade, rationale: "r", evidence: [], draftedBy: "human", confirmedBy: confirmed ? "u" : null, confirmedAt: confirmed ? NOW : null } } : {}) }) as any;
+  const row = (grade: any, confirmed = false) =>
+    ({
+      id: ulid(),
+      capability: "c",
+      source: "manual",
+      requiredNote: "",
+      held: { status: "met", holders: [], evidence: "" },
+      resolution: null,
+      note: "",
+      requiredLevel: "",
+      currentLevel: "",
+      ...(grade
+        ? {
+            attainability: {
+              closingCostKrwM: null,
+              monthsToAttain: null,
+              grade,
+              rationale: "r",
+              evidence: [],
+              draftedBy: "human",
+              confirmedBy: confirmed ? "u" : null,
+              confirmedAt: confirmed ? NOW : null,
+            },
+          }
+        : {}),
+    }) as any;
   test("T1 derives from confirmed ADR-0168 rows; the lens stays 미판정 while T2-T6 have no judgement", () => {
     expect(tl.deriveT1([]).status).toBe("undetermined");
     expect(tl.deriveT1([row("high", true), row("medium", true)]).status).toBe("met");
@@ -160,19 +246,32 @@ describe("technicalLens parse and summary", () => {
   });
   test("a fully judged lens is 충족 or 주의; mismatches counted; Brown Field T6 label", () => {
     const item = (status: string) => ({ status, confirmedBy: "u", confirmedAt: NOW, rationale: "r" });
-    const lens = tl.normalizeTechnicalLens({ subjects: { project: { items: { T2: item("met"), T3: item("met"), T4: item("met"), T5: item("met") } } } });
+    const lens = tl.normalizeTechnicalLens({
+      subjects: { project: { items: { T2: item("met"), T3: item("met"), T4: item("met"), T5: item("met") } } },
+    });
     // round 4/5: T6 is the pairing progress — once T2-T5 are judged it is judged too, so a
     // fully judged T1-T5 lens is now fully judged (met here: every item met).
     expect(tl.summarizeTechnicalLens([row("high", true)], lens).status).toBe("met");
     const withMismatch = tl.normalizeTechnicalLens(LENS);
-    expect(tl.summarizeTechnicalLens([], withMismatch, { subject: "target:abc", brownfield: true }).mismatchCount).toBe(1);
-    expect(tl.summarizeTechnicalLens([], null, { brownfield: true }).items[5].label).toBe(tl.TECH_ITEM_LABEL_T6_BROWNFIELD);
+    expect(tl.summarizeTechnicalLens([], withMismatch, { subject: "target:abc", brownfield: true }).mismatchCount).toBe(
+      1,
+    );
+    expect(tl.summarizeTechnicalLens([], null, { brownfield: true }).items[5].label).toBe(
+      tl.TECH_ITEM_LABEL_T6_BROWNFIELD,
+    );
     expect(tl.summarizeTechnicalLens([row("low", true)], lens).cautionCount).toBe(1);
   });
 });
 
 describe("financial lens status and strip view", () => {
-  const base = { hasAdoptedCase: true, baseIrr: 0.18, hurdleIrr: 0.12, downsideNpvP50: 500, missedGoals: 0, goalCount: 2 };
+  const base = {
+    hasAdoptedCase: true,
+    baseIrr: 0.18,
+    hurdleIrr: 0.12,
+    downsideNpvP50: 500,
+    missedGoals: 0,
+    goalCount: 2,
+  };
   test("matrix: 미판정 / 충족 / 주의 (hurdle, missed goal, downside)", () => {
     expect(st.financialLensStatus({ ...base, hasAdoptedCase: false }).status).toBe("undetermined");
     expect(st.financialLensStatus({ ...base, baseIrr: null }).status).toBe("undetermined");
@@ -186,16 +285,27 @@ describe("financial lens status and strip view", () => {
     expect(st.financialLensStatus({ ...base, baseIrr: 0.1, missedGoals: 2 }).reasons).toHaveLength(2);
   });
   test("strip: icon + text, warning only for technical 주의, goals line, caption", () => {
-    const v = st.buildLensStripView({ status: "caution", judged: 6, total: 6, cautionCount: 1, worstItem: "기술 성숙도(TRL)" }, { status: "undetermined", reasons: [] }, { goalCount: 3, met: 2, hasCase: true });
+    const v = st.buildLensStripView(
+      { status: "caution", judged: 6, total: 6, cautionCount: 1, worstItem: "기술 성숙도(TRL)" },
+      { status: "undetermined", reasons: [] },
+      { goalCount: 3, met: 2, hasCase: true },
+    );
     expect(v.technical.icon).toBe("!");
     expect(v.financial.label).toBe("미판정");
     expect(v.warning).toBe(st.TECHNICAL_CAUTION_WARNING);
     expect(v.goalsText).toBe("목표 3개 중 달성 2개");
     expect(v.caption).toContain("사람이 합니다");
-    expect(st.buildLensStripView({ status: "met", judged: 6, total: 6, cautionCount: 0, worstItem: null }, { status: "met", reasons: [] }).warning).toBeNull();
+    expect(
+      st.buildLensStripView(
+        { status: "met", judged: 6, total: 6, cautionCount: 0, worstItem: null },
+        { status: "met", reasons: [] },
+      ).warning,
+    ).toBeNull();
     expect(st.goalsStatusText({ goalCount: 0, met: 0, hasCase: false })).toBe("목표 미설정");
     expect(st.goalsStatusText({ goalCount: 2, met: 0, hasCase: false })).toContain("채택 케이스 없음");
-    expect(st.technicalLensBriefLine({ status: "undetermined", judged: 1, total: 6, cautionItems: ["a"] })).toContain("미판정 (판정 1/6, 주의 항목 a)");
+    expect(st.technicalLensBriefLine({ status: "undetermined", judged: 1, total: 6, cautionItems: ["a"] })).toContain(
+      "미판정 (판정 1/6, 주의 항목 a)",
+    );
   });
 });
 
@@ -209,7 +319,9 @@ describe("summary route and gate brief (existing project: no backfill, 미판정
     expect(d.subject).toBe("project");
     expect(d.technical.items[0].key).toBe("T1");
     expect(d.strip.goalsText).toBe("목표 미설정");
-    expect((await req(`/api/projects/${projectId}/s8-lens-summary`, { headers: { cookie: outsiderCookie } })).status).toBe(404);
+    expect(
+      (await req(`/api/projects/${projectId}/s8-lens-summary`, { headers: { cookie: outsiderCookie } })).status,
+    ).toBe(404);
     expect((await req(`/api/projects/${projectId}/s8-lens-summary`)).status).toBe(401);
     // summary reads only: the stored register is unchanged
     expect(storedLens()).toEqual(LENS);
@@ -230,9 +342,9 @@ describe("summary route and gate brief (existing project: no backfill, 미판정
 describe("S8 tab aliases (deep-link compatibility)", () => {
   const r = (t: string | null | undefined, greenfield = false) => view.resolveS8Tab(t, { greenfield });
   test("alias table", () => {
-    expect(r(null)).toBe("overview");
-    expect(r("bogus")).toBe("overview");
-    expect(r("financial")).toBe("overview");
+    expect(r(null)).toBe("financial-model");
+    expect(r("bogus")).toBe("financial-model");
+    expect(r("financial")).toBe("financial-model");
     expect(r("scenarios")).toBe("scenarios");
     expect(r("wacc")).toBe("wacc");
     expect(r("financial-analysis")).toBe("financial-analysis");
@@ -240,14 +352,26 @@ describe("S8 tab aliases (deep-link compatibility)", () => {
     expect(r("technical")).toBe("technical");
     expect(r("technical#T2")).toBe("technical");
     expect(r("capability")).toBe("technical");
-    for (const k of ["overview", "params", "target-costing", "decision"] as const) expect(r(k)).toBe(k);
+    for (const k of ["financial-model", "params", "target-costing", "decision"] as const) expect(r(k)).toBe(k);
+    // the pre-2026-11-24 key is no longer a tab key: unknown -> default sub-tab (page-mode redirects it first)
+    expect(r("overview")).toBe("financial-model");
     expect(r("targets", false)).toBe("targets");
-    expect(r("targets", true)).toBe("overview");
+    expect(r("targets", true)).toBe("financial-model");
   });
   test("parts and primary highlight", () => {
     expect(view.partOfS8Tab("goals")).toBe("goals");
     expect(view.partOfS8Tab("technical")).toBe("technical");
-    for (const k of ["scenarios", "wacc", "financial-analysis", "overview", "params", "target-costing"] as const) { expect(view.partOfS8Tab(k)).toBe("financial"); expect(view.primaryKeyOfS8Tab(k)).toBe("financial"); }
+    for (const k of [
+      "scenarios",
+      "wacc",
+      "financial-analysis",
+      "financial-model",
+      "params",
+      "target-costing",
+    ] as const) {
+      expect(view.partOfS8Tab(k)).toBe("financial");
+      expect(view.primaryKeyOfS8Tab(k)).toBe("financial");
+    }
     expect(view.partOfS8Tab("targets")).toBeNull();
     expect(view.primaryKeyOfS8Tab("targets")).toBe("targets");
     expect(view.partOfS8Tab("decision")).toBeNull();

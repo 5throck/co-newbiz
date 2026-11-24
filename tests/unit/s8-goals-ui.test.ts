@@ -48,7 +48,7 @@ describe("S8 tab order and greenfield redirect", () => {
       "decision",
     ]);
     expect(s8.subtabs!.map((t) => t.query ?? t.seg)).toEqual([
-      "overview",
+      "financial-model",
       "scenarios",
       "/wacc",
       "/financial-analysis",
@@ -74,12 +74,12 @@ describe("S8 tab order and greenfield redirect", () => {
     expect(shouldRedirectTargetsTab("targets", true)).toBe(true);
     expect(shouldRedirectTargetsTab("targets", false)).toBe(false);
     expect(shouldRedirectTargetsTab("goals", true)).toBe(false);
-    expect(resolveS8Tab("targets", { greenfield: true })).toBe("overview");
+    expect(resolveS8Tab("targets", { greenfield: true })).toBe("financial-model");
     expect(resolveS8Tab("targets", { greenfield: false })).toBe("targets");
     expect(resolveS8Tab("goals", { greenfield: true })).toBe("goals");
-    expect(resolveS8Tab(null, { greenfield: false })).toBe("overview");
-    expect(resolveS8Tab(undefined, { greenfield: true })).toBe("overview");
-    expect(resolveS8Tab("bogus", { greenfield: false })).toBe("overview");
+    expect(resolveS8Tab(null, { greenfield: false })).toBe("financial-model");
+    expect(resolveS8Tab(undefined, { greenfield: true })).toBe("financial-model");
+    expect(resolveS8Tab("bogus", { greenfield: false })).toBe("financial-model");
   });
 });
 
@@ -88,11 +88,15 @@ describe("bare /business-case lands on 개요 (defect remediation 2026-11-23)", 
     expect(s8BareTabRedirect("p1", null)).toBe("/projects/p1");
     expect(s8BareTabRedirect("abc", null)).toBe("/projects/abc");
   });
-  test("every explicit ?tab= is byte-identical to today — no redirect", () => {
+  test("the legacy ?tab=overview (sub-tab key renamed 2026-11-24) redirects to the 개요 page too", () => {
+    expect(s8BareTabRedirect("p1", "overview")).toBe("/projects/p1");
+  });
+  test("every other explicit ?tab= is byte-identical to today — no redirect", () => {
     for (const v of [
       "goals",
       "technical",
       "financial",
+      "financial-model",
       "scenarios",
       "targets",
       "params",
@@ -107,12 +111,14 @@ describe("bare /business-case lands on 개요 (defect remediation 2026-11-23)", 
     // `?tab=` present-but-empty is an explicit value (URLSearchParams.get → ""), not absent
     expect(s8BareTabRedirect("p1", "")).toBeNull();
   });
-  test("?tab=overview keeps resolving to the financial-lens sub-tab 설명·생성·권고 (alias untouched)", () => {
-    expect(resolveS8Tab("overview", { greenfield: false })).toBe("overview");
-    expect(resolveS8Tab("overview", { greenfield: true })).toBe("overview");
-    expect(S8_FINANCIAL_SUBTABS[0]).toBe("overview");
-    expect(resolveS8Tab("financial", { greenfield: false })).toBe("overview");
-    expect(resolveS8Tab(null, { greenfield: false })).toBe("overview"); // fallback, not the absent-param ruling
+  test("the financial default sub-tab key is financial-model (renamed from overview, 2026-11-24)", () => {
+    expect(resolveS8Tab("financial-model", { greenfield: false })).toBe("financial-model");
+    expect(resolveS8Tab("financial-model", { greenfield: true })).toBe("financial-model");
+    expect(S8_FINANCIAL_SUBTABS[0]).toBe("financial-model");
+    expect(resolveS8Tab("financial", { greenfield: false })).toBe("financial-model");
+    expect(resolveS8Tab(null, { greenfield: false })).toBe("financial-model"); // fallback, not the absent-param ruling
+    // the old key is no longer a tab key: unknown -> default sub-tab (page-mode redirects it earlier)
+    expect(resolveS8Tab("overview", { greenfield: false })).toBe("financial-model");
   });
   test("the redirect wires into the page-mode wrapper only (source pin — replace called with the canonical URL)", () => {
     const src = read("components/stages/BusinessCaseStage.tsx");
@@ -124,7 +130,9 @@ describe("bare /business-case lands on 개요 (defect remediation 2026-11-23)", 
     // the legacy wacc/financial-analysis and greenfield-targets redirects stay untouched
     // (needles are escaped template literals so noTemplateCurlyInString stays silent)
     expect(src).toContain(`router.replace(\`/projects/\${projectId}/wacc\`)`);
-    expect(src).toContain(`router.replace(\`/projects/\${projectId}/business-case?tab=overview\`, { scroll: false })`);
+    expect(src).toContain(
+      `router.replace(\`/projects/\${projectId}/business-case?tab=financial-model\`, { scroll: false })`,
+    );
   });
 });
 
@@ -313,7 +321,7 @@ describe("S8 median-gap hint (cross-check signal, not a bug)", () => {
     expect(src).toContain('data-testid="p50-gap-hint"');
     expect(src).toContain('t("theGrowthAssumptionDifferenceDominates")');
     expect(koOf("stages.s8.stage.theGrowthAssumptionDifferenceDominates")).toBe("성장 가정 차이가 지배적");
-    expect(src).toContain('onClick={() => setTab("overview")}');
+    expect(src).toContain('onClick={() => setTab("financial-model")}');
   });
 });
 
@@ -379,7 +387,7 @@ describe("S8 IA cleanup (2026-10-14): one home per fact", () => {
       src.indexOf('label={t("s8BusinessCaseScreen")}'),
       src.indexOf('label={t("financialFeasibility2")}'),
     );
-    for (const k of ["overview", "params", "target-costing"]) expect(primary).not.toContain(`key: "${k}"`);
+    for (const k of ["financial-model", "params", "target-costing"]) expect(primary).not.toContain(`key: "${k}"`);
   });
   test("TargetCheckPanel is decision-tab only, above GateDecisionPanel", () => {
     expect(src.match(/<TargetCheckPanel/g)).toHaveLength(1);

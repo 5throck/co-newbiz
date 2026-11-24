@@ -18,6 +18,7 @@ import { useTranslations } from "next-intl";
 import { STAGE_META, stageLabelOf, type StageMetaId, type TrackId } from "../lib/stage-meta.ts";
 import { GATE_LABEL_KEY } from "../lib/label-keys.ts";
 import { STAGE_HANDOFF } from "../lib/stage-handoff.ts";
+import { s8EntryHref } from "../lib/project-stage-entry.ts";
 import { useDealContext } from "../lib/use-deal-context.ts";
 import { api } from "../lib/api.ts";
 import { ReconfirmNotice } from "./ReconfirmNotice.tsx";
@@ -36,7 +37,7 @@ const STAGE_HREF: Record<StageMetaId, (dealId?: string, projectId?: string) => s
   S5: (d) => (d ? `/deals/${d}/s5` : "/greenfield"),
   S6: (d) => (d ? `/deals/${d}/s6` : "/brownfield"),
   S7: (d) => (d ? `/deals/${d}/s7` : "/brownfield"),
-  S8: (_d, p) => (p ? `/projects/${p}/business-case` : null),
+  S8: (_d, p) => (p ? s8EntryHref(p) : null),
   S9: (_d, p) => (p ? `/projects/${p}/dd` : null),
   S10: (_d, p) => (p ? `/projects/${p}/deal-structure` : null),
   S11: (_d, p) => (p ? `/projects/${p}/ic-review` : null),
