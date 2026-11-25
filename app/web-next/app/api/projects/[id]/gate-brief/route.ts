@@ -11,7 +11,7 @@ import { appendAudit } from "../../../../../../../db/lib/access-control.ts";
 import { recomputeRag } from "../../../../../../../db/lib/rag-service.ts";
 import {
   buildGateContext,
-  gateManifest,
+  projectGateManifest,
   normalizeGateBrief,
   synthesisGateBrief,
   PROJECT_GATE_BRIEFS,
@@ -46,7 +46,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 
   // ADR-0186 D3: kill-criteria outcomes are evaluated (and, for a project gate, persisted) before the brief is composed.
   const killEval = briefKillEvaluation(db, { entityType: "project", entityId: id, gate, actor: ctx.userId });
-  const manifest = killEval ? [...gateManifest("project", gate)!, KILL_MANIFEST_ENTRY] : gateManifest("project", gate)!;
+  const baseManifest = projectGateManifest(db, id, gate)!;
+  const manifest = killEval ? [...baseManifest, KILL_MANIFEST_ENTRY] : baseManifest;
   // Gate-package assembly refreshes the RAG proposal first (Wave F-5) so the
   // brief reads the current assessment, not a stale or empty table. Only the
   // IC gates carry a RAG artifact in their manifest.

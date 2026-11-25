@@ -104,8 +104,8 @@ export interface S8LensSummary {
   financial: FinancialLensSummary;
   goals: { goal_count: number; met: number; missed: number };
   strip: S8LensStripView;
-  /** ADR-0176 slice 4: latest confirmed S5 simulation output (read-only, informational). */
-  invest_uncertainty: InvestUncertaintyView;
+  /** ADR-0176 slice 4: latest confirmed S5 simulation output (read-only, informational). Null for brownfield (S5 simulation is greenfield-only). */
+  invest_uncertainty: InvestUncertaintyView | null;
 }
 
 function p50(c: BusinessCaseView | undefined): { npv: number | null; irr: number | null } {
@@ -211,6 +211,6 @@ export function buildS8LensSummary(db: Database, projectId: string): S8LensSumma
       met: goals.met,
       hasCase: goals.hasCase,
     }),
-    invest_uncertainty: buildInvestUncertainty(db, projectId),
+    invest_uncertainty: brownfield ? null : buildInvestUncertainty(db, projectId),
   };
 }
