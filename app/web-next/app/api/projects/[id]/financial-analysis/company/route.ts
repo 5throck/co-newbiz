@@ -6,16 +6,20 @@
 // 0084). project_company is deliberately NOT used — migration 0073 dropped
 // it as a dead surface superseded by brownfield_target. Re-binding updates
 // the binding in place; the previous binding survives in the audit log.
+// Brownfield is closed to this route: the gate-bound target (company_id) comes
+// only from S8 target selection (lib/business-case.ts), so a free company
+// search here would bypass the s8_target_select record — 409.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
-import { badRequest, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "Company linking requires the analyst role or higher.");
+  if (auth.auth.role === "viewer")
+    return forbidden("role_required", "Company linking requires the analyst role or higher.");
   const { id } = await params;
   const project = visibleProject(auth.auth, id);
   if (!project) return notFound();
@@ -27,18 +31,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!rationale) return badRequest("rationale_required", "Linking rationale is required.");
 
   const db = getDb();
-  const projectRow = db.query("SELECT id, track FROM md_project WHERE id = ?").get(id) as { id: string; track: string | null } | undefined;
+  const projectRow = db.query("SELECT id, track FROM md_project WHERE id = ?").get(id) as
+    | { id: string; track: string | null }
+    | undefined;
   if (!projectRow) return notFound();
-  const company = db.query("SELECT id, name_ko FROM md_company WHERE id = ?").get(companyId) as { id: string; name_ko: string } | undefined;
+  if (projectRow.track === "brownfield") {
+    return fail(
+      409,
+      "brownfield_target_via_s8_selection",
+      "In a brownfield project the target company is set only through S8 target selection — it cannot be linked or changed here.",
+    );
+  }
+  const company = db.query("SELECT id, name_ko FROM md_company WHERE id = ?").get(companyId) as
+    | { id: string; name_ko: string }
+    | undefined;
   if (!company) return badRequest("company_not_found", "Company not found — verify the id via /api/companies search.");
 
   const role = projectRow.track === "brownfield" ? "target" : "candidate";
-  const previous = db.query("SELECT company_id, subject_company_rationale FROM md_project WHERE id = ?").get(id) as
-    | { company_id: string | null; subject_company_rationale: string | null };
-  db.run(
-    "UPDATE md_project SET company_id = ?, subject_company_rationale = ? WHERE id = ?",
-    [company.id, rationale, id],
-  );
+  const previous = db.query("SELECT company_id, subject_company_rationale FROM md_project WHERE id = ?").get(id) as {
+    company_id: string | null;
+    subject_company_rationale: string | null;
+  };
+  db.run("UPDATE md_project SET company_id = ?, subject_company_rationale = ? WHERE id = ?", [
+    company.id,
+    rationale,
+    id,
+  ]);
   appendAudit(db, {
     actor: auth.auth.userId,
     action: "project_company_link",
