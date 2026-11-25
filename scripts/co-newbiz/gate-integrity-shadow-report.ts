@@ -37,6 +37,7 @@ export const CODE_FAMILY: Record<string, GateIntegrityFamily | "infrastructure" 
   condition_open: "validators",
   derived_item: "validators",
   wacc_unconfirmed: "wacc",
+  target_not_shortlisted: "target",
   ladder_prerequisite_missing: "ladder",
   divergence_reason_required: "divergence",
   checker_must_differ: "maker_checker",

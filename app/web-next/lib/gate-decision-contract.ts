@@ -47,6 +47,7 @@ import { reconfirmBlock } from "./reconfirm.ts";
 import { validateRationale } from "./rationale-check.ts";
 import { certificationFailure } from "./gate-certification.ts";
 import { groupIcConditionFailure } from "./gate-conditions.ts";
+import { resolveS8Staleness, type S8Staleness } from "./business-case.ts";
 
 export interface ProvidedAck {
   key: string;
@@ -310,6 +311,36 @@ export function waccUnconfirmedFailure(subject: string | null, missing: string[]
     message: `GO is not allowed - the discount rate is not human-confirmed (${missing.join(", ")}). Confirm the WACC application subject, the WACC and the hurdle IRR in the WACC session first (neb-policy 2.2; no waiver path). HOLD or KILL can be recorded at any time.`,
     details: { subject, missing },
   };
+}
+
+/** Gates whose project GO is refused while the selected/adopted S8 target is off the Short List (family `target`, ADR-0206). */
+export const TARGET_GO_GATES: ReadonlySet<string> = new Set(["fs", "dd", "entity_ic", "group_ic"]);
+
+/** The 409 of a stale S8 selection/adoption (ADR-0206); null when neither record is stale. */
+export function targetNotShortlistedFailure(st: S8Staleness): IntegrityFailure | null {
+  if (!st.any) return null;
+  return {
+    status: 409 as const,
+    code: "target_not_shortlisted",
+    message:
+      "GO is not allowed - the selected/adopted target is no longer on the Short List; re-select the target and re-adopt a business case. HOLD or KILL can be recorded at any time.",
+    details: { selection: st.selection, adoption: st.adoption, target_ids: st.target_ids },
+  };
+}
+
+/** Family `target` re-read at the decision write (inside the transaction); null for HOLD/KILL, non-project and other gates. */
+function targetBlockFailure(
+  db: Database,
+  input: { entityType: SnapshotEntity; entityId: string; gate: string; decision: string; actor: string },
+): IntegrityFailure | null {
+  if (input.decision !== "go" || input.entityType !== "project" || !TARGET_GO_GATES.has(input.gate)) return null;
+  const ctx: IntegrityContext = {
+    entityType: input.entityType,
+    entityId: input.entityId,
+    gate: input.gate,
+    actor: input.actor,
+  };
+  return applyFamilyFailure("target", ctx, () => targetNotShortlistedFailure(resolveS8Staleness(input.entityId)), db);
 }
 
 export interface ContractResult {
@@ -697,16 +728,27 @@ export function recordGateDecisionRow(db: Database, input: DecisionRecordInput):
 
   if (!input.extras) {
     // Legacy path: the original single INSERT plus its audit row (and the conditions, atomically, when the recorder sent any).
-    const conditionIds = db.transaction(() => {
-      insertRow(null);
-      return writeConditions(input.conditions ?? []);
-    })();
-    return { ok: true, id, snapshotHash: null, acknowledgements: [], conditionIds };
+    // ADR-0206 family `target` is re-read inside the same transaction (default enforce, so it applies on this path too).
+    try {
+      const conditionIds = db.transaction(() => {
+        const stale = targetBlockFailure(db, input);
+        if (stale) throw new ContractRejection(stale, null);
+        insertRow(null);
+        return writeConditions(input.conditions ?? []);
+      })();
+      return { ok: true, id, snapshotHash: null, acknowledgements: [], conditionIds };
+    } catch (e) {
+      if (e instanceof ContractRejection) return { ok: false, failure: e.failure, built: null };
+      throw e;
+    }
   }
   const extras = input.extras;
   try {
     return db
       .transaction((): DecisionRecordResult => {
+        // ADR-0206 family `target`: a stale S8 selection/adoption refuses a project GO; read before the snapshot run is opened.
+        const stale = targetBlockFailure(db, input);
+        if (stale) throw new ContractRejection(stale, null);
         const c = runDecisionContract(db, {
           entityType: input.entityType,
           entityId: input.entityId,

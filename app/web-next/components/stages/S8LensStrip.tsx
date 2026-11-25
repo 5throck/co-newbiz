@@ -9,9 +9,11 @@ import { S8InvestUncertaintyBlock } from "./S8InvestUncertaintyBlock.tsx";
 import type { S8LensSummary } from "../../lib/s8-lens-summary.ts";
 import { useTranslations } from "next-intl";
 import { WaccStatusBadge, type WaccStatusLike } from "../WaccStatusBadge.tsx";
+import { StaleTargetBanner } from "./StaleTargetBanner.tsx";
 
-export function S8LensStrip({ projectId }: { projectId: string }) {
+export function S8LensStrip({ projectId, onOpenSelection }: { projectId: string; onOpenSelection?: () => void }) {
   const t = useTranslations("stages.s8.lensStrip");
+  const ts = useTranslations("stages.s8.staleTarget");
   const tc = useTranslations("common");
   const [data, setData] = useState<(S8LensSummary & { wacc_status?: WaccStatusLike }) | null>(null);
   const [error, setError] = useState(false);
@@ -38,6 +40,14 @@ export function S8LensStrip({ projectId }: { projectId: string }) {
     return (
       <section className="market-section sizing-step mb-3" aria-label={t("s8FeasibilitySummary")} aria-busy="true">
         <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("loadingTheFeasibility")}</p>
+      </section>
+    );
+  // ADR-0206: the selected/adopted target left the Short List - show the stale state, never figures of a stale record.
+  if (data.state === "stale_target")
+    return (
+      <section className="market-section sizing-step mb-3" aria-label={t("s8FeasibilitySummary2")}>
+        <StaleTargetBanner staleness={data.staleness} onOpenSelection={onOpenSelection} className="mb-1" />
+        <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] m-0">{ts("figuresHidden")}</p>
       </section>
     );
   const { strip, financial, technical } = data;

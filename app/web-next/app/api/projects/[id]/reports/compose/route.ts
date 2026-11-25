@@ -15,7 +15,8 @@ import { promptAgent, systemMessage } from "../../../../../../lib/prompts.ts";
 export const POST = route(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "Report-draft generation requires the analyst role or higher.");
+  if (auth.auth.role === "viewer")
+    return forbidden("role_required", "Report-draft generation requires the analyst role or higher.");
   const { id } = await params;
   const project = visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true });
   if (!project) return notFound();
@@ -29,7 +30,10 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     const res = await completeOrFallback(
       [
         systemMessage("s11.report_narration"),
-        { role: "user" as const, content: "검토 팩트:\n" + composed.markdown.slice(0, 6000) + '\n\nJSON: {"summary":"경영진용 요약 3~5문장"}' },
+        {
+          role: "user" as const,
+          content: `검토 팩트:\n${composed.markdown.slice(0, 6000)}\n\nJSON: {"summary":"경영진용 요약 3~5문장"}`,
+        },
       ],
       () => "",
       { maxTokens: 900, agent: promptAgent("s11.report_narration") },
@@ -42,7 +46,7 @@ export const POST = route(async (request: Request, { params }: { params: Promise
         const summary = String(raw.summary ?? "").trim();
         if (summary) {
           aiSummary = summary;
-          contentMd = `## 0. 경영 요약 (AI 초안 — 검토 필수)\n\n${summary}\n\n` + contentMd;
+          contentMd = `## 0. 경영 요약 (AI 초안 — 검토 필수)\n\n${summary}\n\n${contentMd}`;
           aiNote = "경영 요약 초안을 삽입했습니다 — 검토·수정 후 저장하세요 (경계 #2).";
         }
       }
@@ -50,7 +54,18 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   } catch {
     // narration is best-effort — the deterministic report stands on its own
   }
-  return ok({ title: composed.title, content_md: contentMd, sections: composed.sections, ai_summary: aiSummary, ai_note: aiNote }, 200, {
-    section_count: composed.sections.length,
-  });
+  return ok(
+    {
+      title: composed.title,
+      content_md: contentMd,
+      sections: composed.sections,
+      stale: composed.stale,
+      ai_summary: aiSummary,
+      ai_note: aiNote,
+    },
+    200,
+    {
+      section_count: composed.sections.length,
+    },
+  );
 });

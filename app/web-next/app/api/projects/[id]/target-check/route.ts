@@ -6,11 +6,7 @@
 import { authenticate } from "../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../lib/project-visibility.ts";
 import { goalJudgedCase, listBusinessCases } from "../../../../../lib/business-case.ts";
-import {
-  countGoalsBySource,
-  evaluateTargets,
-  resolveProjectTargets,
-} from "../../../../../lib/business-targets.ts";
+import { countGoalsBySource, evaluateTargets, resolveProjectTargets } from "../../../../../lib/business-targets.ts";
 import { migrationPendingResponse, notFound, ok } from "../../../../../lib/envelope.ts";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -26,16 +22,42 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     // D4 (2026-10-28): judge on the ADOPTED case's own scenario (base before adoption),
     // not the engine-recommended scenario - same basis as /s8-lens-summary.
     const list = listBusinessCases(id);
-    const adoptedCase = list.cases.find((c) => c.adopted) ?? null;
-    const judged = goalJudgedCase(list);
+    // ADR-0206: while the selection/adoption is stale there is no judged case - the stale adopted case is
+    // never the basis of a goal verdict (cases of excluded targets are already filtered out of the list).
+    const stale = list.staleness.any ? (list.staleness.selection ?? list.staleness.adoption) : null;
+    const adoptedCase = stale ? null : (list.cases.find((c) => c.adopted) ?? null);
+    const judged = stale ? { caseView: null, basis: "base_fallback" as const } : goalJudgedCase(list);
     const entries = evaluateTargets(resolved, scope, judged.caseView, judged.basis);
     const goal_count_by_source = countGoalsBySource(entries);
     if (!scope && entries.length === 0) {
       // No resolvable scope and no project goal: the UI shows an actionable state.
-      return ok({ resolvable: false, reason: "scope_unresolved", scope: null, goal_count_by_source, entries }, 200, { count: 0 });
+      return ok(
+        {
+          resolvable: false,
+          reason: "scope_unresolved",
+          stale,
+          staleness: list.staleness,
+          scope: null,
+          goal_count_by_source,
+          entries,
+        },
+        200,
+        { count: 0 },
+      );
     }
     return ok(
-      { resolvable: scope != null, ...(scope ? {} : { reason: "scope_unresolved" }), scope, adopted_case_id: adoptedCase?.id ?? null, judged_case_id: judged.caseView?.id ?? null, judged_basis: judged.caseView ? judged.basis : null, goal_count_by_source, entries },
+      {
+        resolvable: scope != null,
+        ...(scope ? {} : { reason: "scope_unresolved" }),
+        stale,
+        staleness: list.staleness,
+        scope,
+        adopted_case_id: adoptedCase?.id ?? null,
+        judged_case_id: judged.caseView?.id ?? null,
+        judged_basis: judged.caseView ? judged.basis : null,
+        goal_count_by_source,
+        entries,
+      },
       200,
       { count: entries.length },
     );

@@ -42,8 +42,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  const { cases, archived, recommendedScenario, adoption, targetSelection, targets, enginesMixed, methodsMixed } =
-    listBusinessCases(id);
+  const {
+    cases,
+    archived,
+    recommendedScenario,
+    adoption,
+    targetSelection,
+    targets,
+    enginesMixed,
+    methodsMixed,
+    staleness,
+  } = listBusinessCases(id);
   const db = getDb();
   // 에스컬레이션 조정 CAGR 필드는 제거되었다 (design 2026-11-13-calibration-
   // loop-convergence §3.2) — 결정론 스케일링 에스컬레이션 자체가 삭제되어
@@ -95,6 +104,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       recommended_scenario: recommendedScenario,
       adoption,
       target_selection: targetSelection,
+      // ADR-0206: stale selection/adoption against the live Short List (the S8 banner and the FS GO reason read this).
+      staleness,
       targets,
       engines_mixed: enginesMixed,
       methods_mixed: methodsMixed,

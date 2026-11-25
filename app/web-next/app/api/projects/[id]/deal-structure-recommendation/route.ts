@@ -11,6 +11,7 @@ import { forbidden, notFound, ok } from "../../../../../lib/envelope.ts";
 import { completeOrFallback, isLlmConfigured } from "../../../../../lib/llm.ts";
 import { route } from "../../../../../lib/route.ts";
 import { promptAgent, systemMessage } from "../../../../../lib/prompts.ts";
+import { staleTargetDenied } from "../../../../../lib/s8-stale-target.ts";
 
 const VEHICLES = ["direct", "spc", "holdco", "spinoff", "jv"] as const;
 
@@ -18,29 +19,65 @@ interface RecoPayload {
   vehicle: string | null;
   stake_type: string | null;
   instrument_mix: string | null;
-  four_axis: { tax_structure_note: string; liability_isolation_note: string; financing_leverage_note: string; exit_structure_note: string };
+  four_axis: {
+    tax_structure_note: string;
+    liability_isolation_note: string;
+    financing_leverage_note: string;
+    exit_structure_note: string;
+  };
   rationale_draft: string;
   key_evidence: string[];
   cautions: string[];
 }
 
 function normalize(raw: Record<string, unknown>): RecoPayload {
-  const vehicle = String(raw.vehicle ?? "").trim().toLowerCase();
+  const vehicle = String(raw.vehicle ?? "")
+    .trim()
+    .toLowerCase();
   const axis = (raw.four_axis ?? {}) as Record<string, unknown>;
-  const note = (k: string) => String(axis[k] ?? "").trim().slice(0, 400);
+  const note = (k: string) =>
+    String(axis[k] ?? "")
+      .trim()
+      .slice(0, 400);
   return {
     vehicle: (VEHICLES as readonly string[]).includes(vehicle) ? vehicle : null,
-    stake_type: String(raw.stake_type ?? "").trim().slice(0, 120) || null,
-    instrument_mix: String(raw.instrument_mix ?? "").trim().slice(0, 200) || null,
+    stake_type:
+      String(raw.stake_type ?? "")
+        .trim()
+        .slice(0, 120) || null,
+    instrument_mix:
+      String(raw.instrument_mix ?? "")
+        .trim()
+        .slice(0, 200) || null,
     four_axis: {
       tax_structure_note: note("tax_structure_note") || "검증 필요",
       liability_isolation_note: note("liability_isolation_note") || "검증 필요",
       financing_leverage_note: note("financing_leverage_note") || "검증 필요",
       exit_structure_note: note("exit_structure_note") || "검증 필요",
     },
-    rationale_draft: String(raw.rationale_draft ?? "").trim().slice(0, 1500),
-    key_evidence: Array.isArray(raw.key_evidence) ? raw.key_evidence.map((s) => String(s ?? "").trim().slice(0, 300)).filter(Boolean).slice(0, 8) : [],
-    cautions: Array.isArray(raw.cautions) ? raw.cautions.map((s) => String(s ?? "").trim().slice(0, 300)).filter(Boolean).slice(0, 8) : [],
+    rationale_draft: String(raw.rationale_draft ?? "")
+      .trim()
+      .slice(0, 1500),
+    key_evidence: Array.isArray(raw.key_evidence)
+      ? raw.key_evidence
+          .map((s) =>
+            String(s ?? "")
+              .trim()
+              .slice(0, 300),
+          )
+          .filter(Boolean)
+          .slice(0, 8)
+      : [],
+    cautions: Array.isArray(raw.cautions)
+      ? raw.cautions
+          .map((s) =>
+            String(s ?? "")
+              .trim()
+              .slice(0, 300),
+          )
+          .filter(Boolean)
+          .slice(0, 8)
+      : [],
   };
 }
 
@@ -48,17 +85,23 @@ export const POST = route(async (request: Request, { params }: { params: Promise
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Deal-structure recommendation generation requires the analyst role or higher.");
+  if (ctx.role === "viewer")
+    return forbidden("role_required", "Deal-structure recommendation generation requires the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(ctx, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
+  // ADR-0206: no LLM recommendation is generated on a stale basis (excluded target / adoption differs from the selection).
+  const staleDenied = staleTargetDenied(id);
+  if (staleDenied) return staleDenied;
 
   // 매니페스트 (flow.spec S10 inputs + 자기 단계 상태)
   const adoption = latestAdoption(id);
   const { cases, archived } = listBusinessCases(id);
   const adoptedCase = adoption ? [...cases, ...archived].find((c) => c.id === adoption.modelId) : undefined;
   const findings = db
-    .query("SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? AND target_id IS NULL ORDER BY created_at DESC LIMIT 6")
+    .query(
+      "SELECT category, description, value_impact FROM dd_finding WHERE project_id = ? AND target_id IS NULL ORDER BY created_at DESC LIMIT 6",
+    )
     .all(id) as Array<{ category: string; description: string; value_impact: string | null }>;
   const waccRows = db
     .query(
@@ -69,10 +112,21 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     )
     .all() as Array<{ assumption_key: string; value: string }>;
   const hypothesis = db
-    .query("SELECT vehicle, stake_type, instrument_mix, four_axis_review_completed FROM deal_structure_hypothesis WHERE project_id = ? ORDER BY hypothesized_at DESC, id DESC LIMIT 1")
-    .get(id) as { vehicle: string | null; stake_type: string | null; instrument_mix: string | null; four_axis_review_completed: number } | undefined;
+    .query(
+      "SELECT vehicle, stake_type, instrument_mix, four_axis_review_completed FROM deal_structure_hypothesis WHERE project_id = ? ORDER BY hypothesized_at DESC, id DESC LIMIT 1",
+    )
+    .get(id) as
+    | {
+        vehicle: string | null;
+        stake_type: string | null;
+        instrument_mix: string | null;
+        four_axis_review_completed: number;
+      }
+    | undefined;
   const financing = db
-    .query("SELECT kind, COUNT(*) n, SUM(amount_krw_m) total FROM financing_sources_uses WHERE project_id = ? GROUP BY kind")
+    .query(
+      "SELECT kind, COUNT(*) n, SUM(amount_krw_m) total FROM financing_sources_uses WHERE project_id = ? GROUP BY kind",
+    )
     .all(id) as Array<{ kind: string; n: number; total: number | null }>;
 
   const manifest = ["S8 채택 BC 요약", "S9 DD 발견사항", "WACC·hurdle", "자기 단계 가설·재원 현황"];
@@ -107,7 +161,11 @@ export const POST = route(async (request: Request, { params }: { params: Promise
       const end = res.text.lastIndexOf("}");
       let raw: unknown = null;
       if (start !== -1 && end > start) {
-        try { raw = JSON.parse(res.text.slice(start, end + 1)) as unknown; } catch { raw = null; }
+        try {
+          raw = JSON.parse(res.text.slice(start, end + 1)) as unknown;
+        } catch {
+          raw = null;
+        }
       }
       if (raw) {
         payload = normalize(raw as Record<string, unknown>);
@@ -127,7 +185,12 @@ export const POST = route(async (request: Request, { params }: { params: Promise
     note = "LLM 미구성 — 결정론 폴백(vehicle 권고 없음). CO_NEWBIZ_LLM_* 구성 후 재생성하세요.";
   }
 
-  appendAudit(db, { actor: ctx.userId, action: "deal_structure_recommendation.generate", target: `${id}:${source}`, now: new Date().toISOString() });
+  appendAudit(db, {
+    actor: ctx.userId,
+    action: "deal_structure_recommendation.generate",
+    target: `${id}:${source}`,
+    now: new Date().toISOString(),
+  });
   return ok({ source, provider, note, manifest, recommendation: payload }, 200);
 });
 

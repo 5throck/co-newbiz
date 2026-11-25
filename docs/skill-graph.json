@@ -1028,6 +1028,11 @@
       "layer": "L3"
     },
     {
+      "id": "adr:0206",
+      "type": "adr",
+      "layer": "L3"
+    },
+    {
       "id": "agent:root/antitrust-agent",
       "type": "agent",
       "layer": "L3",
@@ -2034,6 +2039,11 @@
     },
     {
       "id": "dec:DEC-20261124-01",
+      "type": "decision",
+      "layer": "L3"
+    },
+    {
+      "id": "dec:DEC-20261124-02",
       "type": "decision",
       "layer": "L3"
     },
@@ -6647,6 +6657,12 @@
     {
       "type": "cites_skill",
       "from": "dec:DEC-20261124-01",
+      "to": "skill:root/decision-record",
+      "source": "skills_used"
+    },
+    {
+      "type": "cites_skill",
+      "from": "dec:DEC-20261124-02",
       "to": "skill:root/decision-record",
       "source": "skills_used"
     },

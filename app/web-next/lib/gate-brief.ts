@@ -9,7 +9,7 @@ import { getDb } from "../../../db/client.ts";
 import { readRagView } from "../../../db/lib/rag-service.ts";
 import { effectiveState } from "../../../db/lib/gate-effective.ts";
 import { getCurrentRouteDecision } from "../../../db/repositories/route-decision.repository.ts";
-import { listBusinessCases, latestAdoption, activeTargetCases, shortlistedTargetIds } from "./business-case.ts";
+import { listBusinessCases, latestAdoption } from "./business-case.ts";
 import { irrGuardBand } from "./irr-guard.ts";
 import irrGuardLabels from "./irr-guard-labels.json" with { type: "json" };
 import { resolveAnchorScopeFlag, type AnchorScopeFlag } from "./anchor-scope.ts";
@@ -401,11 +401,9 @@ function bfSummary(db: Database, oppId: string): string {
 function s8Summary(projectId: string): string {
   const db = getDb();
   try {
-    // Cases of targets dropped from the Short List are not decision-support input.
-    const { cases, adoption } = {
-      cases: activeTargetCases(listBusinessCases(projectId).cases, shortlistedTargetIds(projectId)),
-      adoption: latestAdoption(projectId),
-    };
+    // listBusinessCases already drops cases of targets removed from the Short List (ADR-0206).
+    const { cases } = listBusinessCases(projectId);
+    const adoption = latestAdoption(projectId);
     if (cases.length === 0) return "S8 Business Case: 없음";
     // ADR-0179 slice 1 - IRR ceiling guard markers per case (display metadata
     // for the gate-brief so risk-officer's optimism-bias review sees it; never

@@ -64,9 +64,12 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
   // Business case — the human ADOPTED case only feeds the committees; when
   // nothing is adopted yet the package says so rather than substituting a case.
   const list = listBusinessCases(id);
-  const { cases, adoption } = list;
+  const { cases, adoption, staleness } = list;
+  // ADR-0206: while the adoption is stale (its target left the Short List, or it differs from the current
+  // selection) the package carries the stale state and NO adopted-case figures - never the stale numbers.
+  const adoptionStale = staleness.adoption;
   // ADR-0158: an archived legacy model that a human adopted still resolves here.
-  const adoptedCase: BusinessCaseView | null = findAdoptedCase(list);
+  const adoptedCase: BusinessCaseView | null = adoptionStale ? null : findAdoptedCase(list);
 
   // Committee deliberation refs (ADR-0104, ADR-0196 Phase E) — sessions
   // convened for this project give the IC the deliberation provenance. Both
@@ -194,6 +197,8 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
       wacc_status: waccStatusView(id, db),
       // ADR-0186 O-6: non-blocking notice while the legacy record awaits re-confirmation.
       reconfirmation: reconfirmNotice(db, id),
+      // ADR-0206: stale selection/adoption against the live Short List (top-level, also when nothing is adopted).
+      staleness,
       business_case: adoptedCase
         ? {
             adopted: adoptedCase,
@@ -201,8 +206,14 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
             // ADR-0117 — the adopted variant next to its sibling perspective
             // (market_forward vs historical), so the IC sees how much the
             // growth assumption alone moves the valuation.
+            // ADR-0206: a sibling is the same scenario of the SAME target (never crosses target_id).
             comparison: cases
-              .filter((c) => c.scenario === adoptedCase.scenario && c.id !== adoptedCase.id)
+              .filter(
+                (c) =>
+                  c.scenario === adoptedCase.scenario &&
+                  c.id !== adoptedCase.id &&
+                  c.target_id === adoptedCase.target_id,
+              )
               .map((c) => ({
                 variant: c.variant,
                 name: c.name,
@@ -210,11 +221,19 @@ export const GET = route(async (request: Request, { params }: { params: Promise<
                 p05: c.simulations.find((x) => x.percentile === "p05")?.npv_krw_m ?? null,
               })),
           }
-        : {
-            adopted: null,
-            adoption,
-            note: "채택(adopt)된 Business Case가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다.",
-          },
+        : adoptionStale
+          ? {
+              adopted: null,
+              adoption,
+              stale: adoptionStale,
+              // English by design: the UI renders its own localized notice from `stale` / `staleness`.
+              note: "The adopted business case belongs to a target that left the Short List or differs from the current selection; re-select the target and re-adopt a case. Figures of the stale adoption are not shown.",
+            }
+          : {
+              adopted: null,
+              adoption,
+              note: "채택(adopt)된 Business Case가 없습니다 — 법인 투자심의위원회 심사 전 S8 채택이 필요합니다.",
+            },
       // Informational only (never gates): in-scope checklist items still draft-AI, shown in the IC "could not verify" area.
       dd: { completion, findings, finding_count: findings.length, review_status: draftAiSummary(listDdWorkspace(id)) },
       // ADR-0122 #2 — the S9 risk heatmap snapshot auto-attaches to the IC

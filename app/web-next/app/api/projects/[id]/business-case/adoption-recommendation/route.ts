@@ -4,7 +4,7 @@
 // 1차 기준)를 그대로 echo한다 — 위조가 아니라 기존 산출물의 인용.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../db/lib/access-control.ts";
-import { listBusinessCases, activeTargetCases, shortlistedTargetIds } from "../../../../../../lib/business-case.ts";
+import { listBusinessCases } from "../../../../../../lib/business-case.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
@@ -60,9 +60,8 @@ export const POST = route(async (request: Request, { params }: { params: Promise
 
   // 매니페스트 (자기 단계): 6개 case + 킬크라이어리아 상태
   // Excluded-target cases (dropped from the Short List) never reach the LLM prompt,
-  // the deterministic echo, or the recommended_model_id validation set.
-  const { cases: allCases, adoption } = listBusinessCases(id);
-  const cases = activeTargetCases(allCases, shortlistedTargetIds(id));
+  // the deterministic echo, or the recommended_model_id validation set: listBusinessCases filters them at the source (ADR-0206).
+  const { cases, adoption } = listBusinessCases(id);
   if (cases.length === 0) return notFound();
   const adoptionRow = adoption;
   const kills = db

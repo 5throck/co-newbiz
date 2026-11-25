@@ -29,6 +29,8 @@ import {
   type ConditionDraft,
 } from "../lib/gate-integrity-view.ts";
 import { WaccStatusBadge, type WaccStatusLike } from "./WaccStatusBadge.tsx";
+import type { S8Staleness } from "../lib/business-case.ts";
+import { STALE_TARGET_GO_GATES, staleTargetBlocksGo } from "../lib/s8-stale-target-view.ts";
 import { GateAckBlock, GateSnapshotSummary, useGateSnapshot } from "./GateSnapshotAck.tsx";
 import {
   ACK_NOT_REACHED_CODE,
@@ -535,6 +537,26 @@ export function GateDecisionPanel({
     load();
   }, [load]);
 
+  // ADR-0206: the server answers 409 target_not_shortlisted for a GO while the selected/adopted S8 target is off the
+  // Short List. The panel reads the server's `staleness` (never recomputes it) only where such a GO gate is offered.
+  const staleGateOffered = entityType === "project" && gates.some((g) => STALE_TARGET_GO_GATES.includes(g));
+  const [staleness, setStaleness] = useState<S8Staleness | null>(null);
+  const loadStaleness = useCallback(() => {
+    if (!staleGateOffered) return;
+    api
+      .get<{ staleness?: S8Staleness }>(`${entityBase}/business-case`)
+      .then((r) => setStaleness(r.data.staleness ?? null))
+      .catch(() => setStaleness(null)); // additive: the server still refuses the GO, so a failed read only loses the early reason
+  }, [staleGateOffered, entityBase]);
+  useEffect(() => {
+    loadStaleness();
+  }, [loadStaleness]);
+  const goStaleBlocked = staleTargetBlocksGo(staleness, form.gate);
+  // A blocked GO cannot stay the selected decision: fall back to HOLD (the person can still pick KILL).
+  useEffect(() => {
+    if (goStaleBlocked) setForm((f) => (f.decision === "go" ? { ...f, decision: "hold" } : f));
+  }, [goStaleBlocked]);
+
   // Sequence mode: until the person picks a committee, the form targets the current turn.
   useEffect(() => {
     if (seq && latest && !gatePicked.current)
@@ -577,7 +599,8 @@ export function GateDecisionPanel({
   const gateBlocker = seq ? gateSequenceBlocker(gates, form.gate, latest) : null;
   // Owner decision 2026-11-08: the empty-rationale reason is exposed to assistive tech only (sr-only),
   // never as visible text; every other submit reason stays visible.
-  const rationaleMissing = !saving && !gateBlocker && !form.rationale.trim();
+  const rationaleMissing =
+    !saving && !gateBlocker && !(goStaleBlocked && form.decision === "go") && !form.rationale.trim();
   const submitReason = saving
     ? t("recording")
     : gateBlocker
@@ -585,13 +608,15 @@ export function GateDecisionPanel({
           p1: tr(GATE_LABEL_KEY[gateBlocker] ?? gateBlocker),
           p2: tr(GATE_LABEL_KEY[form.gate] ?? form.gate),
         })
-      : !form.rationale.trim()
-        ? t("theDecisionCanBeRecorded")
-        : killNeedsLearning
-          ? t("aKillRequiresCapturingThe")
-          : holdNeedsMissing
-            ? t("aHoldRequiresTheList")
-            : null;
+      : goStaleBlocked && form.decision === "go"
+        ? tr("stages.s8.staleTarget.goBlocked") // INTERIM-WORDING
+        : !form.rationale.trim()
+          ? t("theDecisionCanBeRecorded")
+          : killNeedsLearning
+            ? t("aKillRequiresCapturingThe")
+            : holdNeedsMissing
+              ? t("aHoldRequiresTheList")
+              : null;
   const lockedReason = gateBlocker
     ? tr("common.gate.lockedReason", {
         p1: tr(GATE_LABEL_KEY[gateBlocker] ?? gateBlocker),
@@ -738,6 +763,13 @@ export function GateDecisionPanel({
         err.code === "rationale_insufficient" && typeof d.reason === "string" ? te(d.reason as never) : err.message,
       );
       setError(null);
+      return;
+    }
+    // ADR-0206: GO refused for a selected/adopted target that left the Short List. Localized text, and a fresh
+    // staleness read so the GO option disables right away (HOLD and KILL stay recordable).
+    if (err.code === "target_not_shortlisted") {
+      setError(tr("stages.s8.staleTarget.goBlocked")); // INTERIM-WORDING
+      loadStaleness();
       return;
     }
     if ((KNOWN_HARD_BLOCKS as readonly string[]).includes(err.code)) {
@@ -1189,6 +1221,16 @@ export function GateDecisionPanel({
               {lockedReason}
             </p>
           )}
+          {goStaleBlocked && (
+            <p
+              id={`${formId}-go-blocked`}
+              className="mb-2 text-[length:var(--fs-caption)] text-[color:var(--amber-fg)]"
+              role="note"
+              data-testid="go-stale-target-reason"
+            >
+              <span aria-hidden="true">▲</span> {tr("stages.s8.staleTarget.goBlocked") /* INTERIM-WORDING */}
+            </p>
+          )}
           <div className="flex flex-wrap items-end gap-2">
             {gates.length > 1 && (
               <label className="text-[length:var(--fs-caption)]">
@@ -1215,8 +1257,11 @@ export function GateDecisionPanel({
                 value={form.decision}
                 onChange={(e) => setForm({ ...form, decision: e.target.value as "go" | "hold" | "kill" })}
                 className="sizing-new-input sizing-new-input-sm"
+                aria-describedby={goStaleBlocked ? `${formId}-go-blocked` : undefined}
               >
-                <option value="go">GO</option>
+                <option value="go" disabled={goStaleBlocked}>
+                  GO
+                </option>
                 <option value="hold">HOLD</option>
                 <option value="kill">KILL</option>
               </select>

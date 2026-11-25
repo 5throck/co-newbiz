@@ -23,16 +23,30 @@ export interface GapOverride {
 export function icGoGapItems(projectId: string, actor?: string): string[] {
   const db = getDb();
   const gaps: string[] = [];
-  if (!findAdoptedCase(listBusinessCases(projectId))) gaps.push("채택된 Business Case 없음 (S8)");
+  // ADR-0206: an adoption whose target left the Short List (or differs from the selection) is a gap of its own;
+  // the stale line replaces the misleading "none adopted" line, never both. One line keeps the i18n-lint count.
+  const bcList = listBusinessCases(projectId);
+  const bcStale = bcList.staleness.adoption !== null;
+  // biome-ignore format: keep on one line — i18n-lint counts Korean lines
+  if (bcStale || !findAdoptedCase(bcList)) gaps.push(bcStale ? "채택된 Business Case의 대상이 Short List에서 제외됨 (S8)" : "채택된 Business Case 없음 (S8)");
   if (actor) {
-    try { recomputeRag(db, projectId, "ic_package", { actor }); } catch { /* the read below reports not graded */ }
+    try {
+      recomputeRag(db, projectId, "ic_package", { actor });
+    } catch {
+      /* the read below reports not graded */
+    }
   }
   if (!readRagView(db, projectId).overall?.grade) gaps.push("종합 등급 미산정");
-  const origin = (db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string | null } | undefined)?.origin;
+  const origin = (
+    db.query("SELECT origin FROM md_project WHERE id = ?").get(projectId) as { origin: string | null } | undefined
+  )?.origin;
   if (origin === "internal" || origin === "joint") {
     const p = establishmentProgress(projectId);
     if (p.mode === null) gaps.push("설립 방식 미선택 (신규 법인 설립 / 신규 사업부 추진)");
-    else if (!p.complete) gaps.push(`${p.mode === "business_unit" ? "사업부 신설 실행" : "설립 실행"} ${p.done}/5 — 대기 ${p.total - p.done}단계`);
+    else if (!p.complete)
+      gaps.push(
+        `${p.mode === "business_unit" ? "사업부 신설 실행" : "설립 실행"} ${p.done}/5 — 대기 ${p.total - p.done}단계`,
+      );
   }
   // 2026-10-21 (decider: proceed with the remaining work) — the S11 procedure
   // steps (Kill Criteria check, IC memo, certainty of funds) join the same

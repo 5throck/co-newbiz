@@ -876,6 +876,10 @@
         "maker_checker": {
           "name": "Maker/Checker Separation (second review)",
           "desc": "An investment committee GO only takes effect after another person countersigns."
+        },
+        "target": {
+          "name": "Target Short List Check",
+          "desc": "A GO is blocked when the selected or adopted target is no longer on the Short List."
         }
       },
       "actions": {
@@ -3632,6 +3636,7 @@
       "waiver_term_too_long": "A waiver may run at most 90 days from approval.",
       "why_it_matters_required": "why_it_matters is required.",
       "year_required": "The target year must be after 2026.",
+      "target_not_shortlisted": "The selected or adopted target company is no longer on the Short List. Select the target again and re-adopt a business case. Only GO is blocked; HOLD and KILL can be recorded.",
       "wacc_unconfirmed": "The discount rate (WACC subject, WACC and hurdle IRR) is not confirmed by a person, so GO cannot be recorded. There is no waiver path. HOLD or KILL can be recorded at any time.",
       "rate_out_of_range": "A rate must be a ratio strictly between 0 and 1 (0.12 means 12 percent).",
       "glossary_write_disabled": "Glossary registration is disabled in production; add terms through the repository."
@@ -7522,6 +7527,16 @@
         "xBase": "x, base",
         "xExceedsTheGlobalReference": "x exceeds the global reference cap of (",
         "xOrMore": "x or more)"
+      },
+      "staleTarget": {
+        "adoptionExcluded": "The target company ‘{name}’ of the adopted business case was removed from the Short List. The records are kept as they are.",
+        "adoptionMismatch": "The target company of the adopted business case differs from the currently selected target. Adopt a business case again.",
+        "figuresHidden": "The figures of this summary are hidden until the target is selected again and a business case is re-adopted.",
+        "goBlocked": "GO cannot be recorded because the selected or adopted target was removed from the Short List. HOLD and KILL can be recorded.",
+        "label": "Target company needs attention",
+        "openSelection": "Go to target comparison and selection",
+        "selectionExcluded": "The selected target company ‘{name}’ is no longer on the Short List. Select the target again and re-adopt a business case before the FS gate GO can be recorded.",
+        "unnamedTarget": "Unnamed target"
       },
       "targetCostingPanel": {
         "allowedCost": "Allowed cost",
