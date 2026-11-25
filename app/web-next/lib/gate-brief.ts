@@ -30,6 +30,7 @@ import { attainabilitySummary } from "./capability-attainability.ts";
 import { entryStrategyText } from "./greenfield-entry-strategy.ts";
 import { isStale } from "./capability-linkage.ts";
 import { buildS8LensSummary } from "./s8-lens-summary.ts";
+import { investUncertaintyApplies } from "./investment-uncertainty-applies.ts";
 import { buildInvestUncertainty, investUncertaintyBriefText } from "./investment-uncertainty-s8.ts";
 import { technicalLensBriefLine } from "./s8-lens-status.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
@@ -54,6 +55,7 @@ export interface GateBrief {
 // ADR-0118 manifests — the ONLY artifacts each gate's brief reads. The UI
 // renders this list verbatim ("이 제안이 본 산출물") so the LLM's field of
 // view is auditable.
+const INVEST_MANIFEST_ENTRY = "S8 투자 불확실성(S5 시뮬레이션 산출물, 참고)";
 const MANIFESTS: Record<string, string[]> = {
   screening: [
     "S1 시장 규모·성장 추정",
@@ -72,12 +74,7 @@ const MANIFESTS: Record<string, string[]> = {
     "S5 역량 격차·진출전략 또는 BF 쇼트리스트",
   ],
   target_screening: ["S4 트랙 결정·라우트", "S6 Target Universe·Long List", "S7 대상 선정 판정"],
-  fs: [
-    "S4 트랙 결정",
-    "S8 채택 Business Case·밸류에이션 요약",
-    "S8 기술적 타당성 요약(참고)",
-    "S8 투자 불확실성(S5 시뮬레이션 산출물, 참고)",
-  ],
+  fs: ["S4 트랙 결정", "S8 채택 Business Case·밸류에이션 요약", "S8 기술적 타당성 요약(참고)", INVEST_MANIFEST_ENTRY],
   dd: ["S8 채택 BC 요약", "체크리스트 판정 집계", "DD 발견사항(dd_finding)", "waiver 연결"],
   entity_ic: ["채택 BC 요약", "DD 완료 요약", "RAG 제안(승인 아님)", "검토/안건구조 가설(S10)", "선행 의사결정(fs·dd)"],
   group_ic: [
@@ -95,6 +92,13 @@ export function gateManifest(entityType: GateBriefEntity, gate: string): string[
   if (entityType === "project" && (PROJECT_GATE_BRIEFS as readonly string[]).includes(gate))
     return MANIFESTS[gate] ?? null;
   return null;
+}
+
+/** Project gate manifest without the S5-simulation entry when it does not apply (brownfield). */
+export function projectGateManifest(db: Database, projectId: string, gate: string): string[] | null {
+  const base = gateManifest("project", gate);
+  if (!base || investUncertaintyApplies(db, projectId)) return base;
+  return base.filter((m) => m !== INVEST_MANIFEST_ENTRY);
 }
 
 interface OppRow {
@@ -625,7 +629,9 @@ export function buildGateContext(db: Database, entityType: GateBriefEntity, enti
       base,
       `\n[S8 Business Case]\n${s8Summary(entityId)}`,
       `\n[S8 기술적 타당성(참고)]\n${technicalLensLine(db, entityId)}`,
-      `\n[S8 투자 불확실성(S5 시뮬레이션 산출물, 참고)]\n${investUncertaintyLine(db, entityId)}`,
+      ...(investUncertaintyApplies(db, entityId)
+        ? [`\n[S8 투자 불확실성(S5 시뮬레이션 산출물, 참고)]\n${investUncertaintyLine(db, entityId)}`]
+        : []),
     ].join("\n");
   }
   if (gate === "dd") {
@@ -709,7 +715,7 @@ export function synthesisGateBrief(
     evidence.push(s8Summary(entityId));
     if (gate === "fs") {
       evidence.push(technicalLensLine(db, entityId));
-      evidence.push(investUncertaintyLine(db, entityId));
+      if (investUncertaintyApplies(db, entityId)) evidence.push(investUncertaintyLine(db, entityId));
     }
     if (gate === "dd" || gate === "entity_ic" || gate === "group_ic") evidence.push(ddSummary(db, entityId));
     if (gate === "entity_ic" || gate === "group_ic") {
