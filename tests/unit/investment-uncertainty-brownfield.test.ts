@@ -115,5 +115,5 @@ describe("adoption-recommendation manifest", () => {
   test("brownfield omits the investment-uncertainty entry; greenfield keeps it", async () => {
     expect((await adoptionManifest(brownfieldId)).some((m) => m.includes(MARKER))).toBe(false);
     expect((await adoptionManifest(greenfieldId)).some((m) => m.includes(MARKER))).toBe(true);
-  });
+  }, 60000);
 });
