@@ -157,9 +157,50 @@ describe("catalog entries (ko + en)", () => {
     }
   });
 
-  test("the ko design copy is kept verbatim (INTERIM-WORDING)", () => {
+  test("ko copy uses the user-manual term 최종 후보 목록, never the English 'Short List'", () => {
     expect(lookup(ko as Catalog, "stages.s8.staleTarget.goBlocked")).toBe(
-      "Short List에서 제외된 대상이 선택·채택되어 있어 GO를 기록할 수 없습니다. HOLD·KILL은 기록할 수 있습니다.",
+      "최종 후보 목록에서 제외된 대상이 선택·채택되어 있어 GO를 기록할 수 없습니다. HOLD·KILL은 기록할 수 있습니다.",
     );
+    const koKeys = [
+      ...[
+        "adoptionExcluded",
+        "adoptionMismatch",
+        "figuresHidden",
+        "goBlocked",
+        "label",
+        "openSelection",
+        "selectionExcluded",
+        "unnamedTarget",
+      ].map((k) => `stages.s8.staleTarget.${k}`),
+      "errors.codes.target_not_shortlisted",
+    ];
+    for (const k of koKeys)
+      expect([k, lookup(ko as Catalog, k) as string]).not.toEqual([k, expect.stringContaining("Short List")]);
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.selectionExcluded") as string).toContain(
+      "최종 후보 목록에 없습니다",
+    );
+    expect(lookup(ko as Catalog, "errors.codes.target_not_shortlisted") as string).toContain("최종 후보 목록");
+  });
+
+  test("the finalized banner strings are pinned as written", () => {
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.label")).toBe("대상 기업 확인 필요");
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.openSelection")).toBe("대상 비교·선정으로 이동");
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.unnamedTarget")).toBe("이름 없는 대상");
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.figuresHidden")).toBe(
+      "대상을 다시 선택하고 분석안을 다시 채택할 때까지 이 요약의 수치는 표시하지 않습니다.",
+    );
+  });
+
+  test("en copy follows the en catalog's Final Candidate List term", () => {
+    for (const k of ["adoptionExcluded", "goBlocked", "selectionExcluded"]) {
+      const v = lookup(en as Catalog, `stages.s8.staleTarget.${k}`) as string;
+      expect(v).toContain("Final Candidate List");
+      expect(v).not.toContain("Short List");
+    }
+  });
+
+  test("the banner call sites carry no INTERIM-WORDING marker for the finalized strings", () => {
+    expect(read("components/stages/StaleTargetBanner.tsx")).not.toContain("INTERIM-WORDING");
+    expect(read("components/stages/S8LensStrip.tsx")).not.toContain("INTERIM-WORDING");
   });
 });

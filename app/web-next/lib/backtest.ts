@@ -8,9 +8,12 @@
  * insufficient_evidence — never fabricated. The corpus includes projects
  * closed with a kill_with_learning_captured decision (ADR-0123: learnings
  * from cancelled/failed deals are part of the corpus), labelled `killed`.
+ * ADR-0206: a project whose adopted case belongs to a target that has left the
+ * Short List is excluded from the corpus (its forecast is not a current basis)
+ * and counted in `org.stale_adoption_excluded`; the adoption record is untouched.
  */
 import type { getDb } from "../../../db/client.ts";
-import { latestAdoption } from "./business-case.ts";
+import { latestAdoption, resolveS8Staleness } from "./business-case.ts";
 import { computeBias, type BacktestBias } from "./backtest-bias.ts";
 
 type Db = ReturnType<typeof getDb>;
@@ -34,6 +37,8 @@ export interface BacktestOrg {
   outlier: number;
   insufficient: number;
   killed_in_corpus: number;
+  /** ADR-0206: projects skipped because the adopted case's target is no longer on the Short List. */
+  stale_adoption_excluded: number;
   avg_abs_deviation_pct: number | null;
   bias: BacktestBias;
 }
@@ -54,13 +59,29 @@ export function runBacktest(db: Db, visible: (projectId: string) => boolean): Ba
        WHERE p.deleted_at IS NULL AND (p.closed_at IS NULL OR EXISTS (
          SELECT 1 FROM venture_transition_decision v WHERE v.project_id = p.id AND v.decision = 'kill_with_learning_captured'))`,
     )
-    .all() as Array<{ id: string; project_no: string; project_name: string | null; closed_at: string | null; killed: number }>;
+    .all() as Array<{
+    id: string;
+    project_no: string;
+    project_name: string | null;
+    closed_at: string | null;
+    killed: number;
+  }>;
   const rows: BacktestRow[] = [];
   const deviations: number[] = [];
-  let scored = 0, within = 0, outlier = 0, insufficient = 0, killedInCorpus = 0, devSum = 0;
+  let scored = 0,
+    within = 0,
+    outlier = 0,
+    insufficient = 0,
+    killedInCorpus = 0,
+    devSum = 0,
+    staleExcluded = 0;
   for (const p of projects) {
     const adoption = latestAdoption(p.id);
     if (!adoption) continue;
+    if (resolveS8Staleness(p.id).adoption !== null) {
+      staleExcluded += 1;
+      continue;
+    }
     const sim = db
       .query(
         `SELECT percentile, npv_krw_m FROM valuation_simulation
@@ -80,7 +101,13 @@ export function runBacktest(db: Db, visible: (projectId: string) => boolean): Ba
       )
       .get(p.id) as { ratio: number | null };
     const isVisible = visible(p.id);
-    const base = { project_id: p.id, project_no: p.project_no, name: p.project_name ?? p.project_no, corpus, forecast_npv_krw_m: sim.npv_krw_m };
+    const base = {
+      project_id: p.id,
+      project_no: p.project_no,
+      name: p.project_name ?? p.project_no,
+      corpus,
+      forecast_npv_krw_m: sim.npv_krw_m,
+    };
     if (attainment.ratio === null || !Number.isFinite(attainment.ratio)) {
       insufficient += 1;
       if (isVisible) rows.push({ ...base, status: "insufficient_evidence" });
@@ -91,13 +118,25 @@ export function runBacktest(db: Db, visible: (projectId: string) => boolean): Ba
     scored += 1;
     devSum += Math.abs(deviation);
     deviations.push(deviation);
-    if (Math.abs(deviation) <= WITHIN_BAND_PCT) within += 1; else outlier += 1;
-    if (isVisible) rows.push({ ...base, actual_npv_krw_m: actual, deviation_pct: deviation, status: Math.abs(deviation) <= WITHIN_BAND_PCT ? "within_band" : "outlier" });
+    if (Math.abs(deviation) <= WITHIN_BAND_PCT) within += 1;
+    else outlier += 1;
+    if (isVisible)
+      rows.push({
+        ...base,
+        actual_npv_krw_m: actual,
+        deviation_pct: deviation,
+        status: Math.abs(deviation) <= WITHIN_BAND_PCT ? "within_band" : "outlier",
+      });
   }
   return {
     rows,
     org: {
-      scored, within, outlier, insufficient, killed_in_corpus: killedInCorpus,
+      scored,
+      within,
+      outlier,
+      insufficient,
+      killed_in_corpus: killedInCorpus,
+      stale_adoption_excluded: staleExcluded,
       avg_abs_deviation_pct: scored ? Math.round((devSum / scored) * 10) / 10 : null,
       bias: computeBias(deviations),
     },

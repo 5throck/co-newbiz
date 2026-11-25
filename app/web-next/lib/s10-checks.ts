@@ -61,20 +61,28 @@ const fmt = (n: number) => String(Math.round(n * 1000) / 1000);
 /** (a) uses vs the S8 adopted investment. */
 export function s10UsesReconciliation(db: Database, projectId: string): S10CheckResult {
   const out = empty();
-  const uses = (db
-    .query("SELECT COALESCE(SUM(amount_krw_m), 0) AS u FROM financing_sources_uses WHERE project_id = ? AND kind = 'use'")
-    .get(projectId) as { u: number }).u;
+  const uses = (
+    db
+      .query(
+        "SELECT COALESCE(SUM(amount_krw_m), 0) AS u FROM financing_sources_uses WHERE project_id = ? AND kind = 'use'",
+      )
+      .get(projectId) as { u: number }
+  ).u;
   if (uses <= 0) return out; // the balance blocker already names an empty plan
   const adopted = adoptedCaseCapex(projectId, db);
   if (adopted.total === null || adopted.total <= 0) {
-    const why = !adopted.modelId
-      ? "S8 채택 Business Case가 없습니다"
-      : adopted.lines === 0
-        ? "채택 케이스에 capex 행이 없습니다"
-        : adopted.unitIssue
-          ? "채택 케이스 capex 행 단위가 KRW_M으로 명시되어 있지 않습니다"
-          : "채택 케이스 capex 합계가 양수가 아닙니다";
-    out.advisories.push(`[권고·비차단] 자금 사용(uses) ${fmt(uses)} 백만 KRW를 S8 채택 투자금과 대사할 수 없습니다 — ${why}. 허용 오차 ±${S10_USES_RECONCILIATION_TOLERANCE * 100}% 대사는 사람이 직접 확인하세요.`);
+    const why = adopted.stale
+      ? "the adopted case's target is no longer on the Short List (re-select the target and re-adopt in S8)"
+      : !adopted.modelId
+        ? "S8 채택 Business Case가 없습니다"
+        : adopted.lines === 0
+          ? "채택 케이스에 capex 행이 없습니다"
+          : adopted.unitIssue
+            ? "채택 케이스 capex 행 단위가 KRW_M으로 명시되어 있지 않습니다"
+            : "채택 케이스 capex 합계가 양수가 아닙니다";
+    out.advisories.push(
+      `[권고·비차단] 자금 사용(uses) ${fmt(uses)} 백만 KRW를 S8 채택 투자금과 대사할 수 없습니다 — ${why}. 허용 오차 ±${S10_USES_RECONCILIATION_TOLERANCE * 100}% 대사는 사람이 직접 확인하세요.`,
+    );
     return out;
   }
   const deviation = Math.abs(uses - adopted.total) / adopted.total;
@@ -111,7 +119,9 @@ export function s10CovenantHeadroom(db: Database, projectId: string): S10CheckRe
   if (report.breached_periods > 0) {
     fail(`DSCR 커버넌트가 위반되었습니다 (${report.breached_periods}개 기간, ${basis} 시나리오)`);
   } else if (report.min_dscr !== null && report.min_dscr < S10_MIN_DOWNSIDE_DSCR) {
-    fail(`최소 DSCR ${fmt(report.min_dscr)}배(${report.min_dscr_year}년차, ${basis} 시나리오)가 기준 ${S10_MIN_DOWNSIDE_DSCR}배 미만입니다`);
+    fail(
+      `최소 DSCR ${fmt(report.min_dscr)}배(${report.min_dscr_year}년차, ${basis} 시나리오)가 기준 ${S10_MIN_DOWNSIDE_DSCR}배 미만입니다`,
+    );
   }
   return out;
 }
@@ -120,13 +130,14 @@ export function s10CovenantHeadroom(db: Database, projectId: string): S10CheckRe
 export function s10FundingEvidence(db: Database, projectId: string): S10CheckResult {
   const out = empty();
   const rows = db
-    .query("SELECT name, evidence_kind, evidence_ref FROM financing_sources_uses WHERE project_id = ? AND kind = 'source'")
+    .query(
+      "SELECT name, evidence_kind, evidence_ref FROM financing_sources_uses WHERE project_id = ? AND kind = 'source'",
+    )
     .all(projectId) as Array<{ name: string; evidence_kind: string | null; evidence_ref: string | null }>;
   const lacking = rows.filter((r) => !r.evidence_kind || !(r.evidence_ref ?? "").trim());
   if (lacking.length > 0) {
-    out.blockers.push(
-      `자금 확정성 증빙이 없는 조달원 ${lacking.length}건 — ${lacking.slice(0, 3).map((r) => r.name).join(", ")}${lacking.length > 3 ? " 외" : ""} (증빙 종류·참조 기록 필요)`,
-    );
+    // biome-ignore format: keep on one line — i18n-lint counts Korean lines
+    out.blockers.push(`자금 확정성 증빙이 없는 조달원 ${lacking.length}건 — ${lacking.slice(0, 3).map((r) => r.name).join(", ")}${lacking.length > 3 ? " 외" : ""} (증빙 종류·참조 기록 필요)`);
     out.missing.push(blocker("s10.funding_evidence"));
   }
   return out;
@@ -134,7 +145,11 @@ export function s10FundingEvidence(db: Database, projectId: string): S10CheckRes
 
 /** All three, for a project past the predicate date. */
 export function s10M1Checks(db: Database, projectId: string): S10CheckResult {
-  const parts = [s10UsesReconciliation(db, projectId), s10CovenantHeadroom(db, projectId), s10FundingEvidence(db, projectId)];
+  const parts = [
+    s10UsesReconciliation(db, projectId),
+    s10CovenantHeadroom(db, projectId),
+    s10FundingEvidence(db, projectId),
+  ];
   return {
     blockers: parts.flatMap((p) => p.blockers),
     missing: parts.flatMap((p) => p.missing),
@@ -144,6 +159,8 @@ export function s10M1Checks(db: Database, projectId: string): S10CheckResult {
 
 /** True when the project predates the M1 tightening and keeps the legacy S10 predicate. */
 export function s10M1Grandfathered(db: Database, project: { id: string; created_at: string | null }): boolean {
-  const pin = db.query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ?").get(project.id) as { at: string | null };
+  const pin = db.query("SELECT MIN(pinned_at) AS at FROM project_policy_pin WHERE project_id = ?").get(project.id) as {
+    at: string | null;
+  };
   return (pin.at ?? project.created_at ?? "") < ADR_0187_P3_PREDICATE_DATE;
 }

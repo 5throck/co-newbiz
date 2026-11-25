@@ -170,3 +170,22 @@ Acceptance:
 - Could not verify: exact GateDecisionPanel prop path for the disabled reason; whether any export/archive job calls `listBusinessCases` outside `app/web-next` (none found in `scripts/`).
 - Needs judgement: none open. Resolved 2026-11-24 by the user: (1) GO is blocked at fs, dd, entity_ic and
   group_ic while stale, and HOLD/KILL stay allowed; (2) `target` ships straight to `enforce` (default), with the env var kept as an escape hatch.
+
+## Addendum — remaining adoption readers (2026-11-25)
+
+Five modules read the adoption record (`process_run` `s8_case_adopt`) directly and were outside §7. They follow the
+same principles: the selection/adoption rows are never altered, stale adopted-case figures are never presented as
+current, and the stale state is surfaced. All of them reuse `resolveS8Staleness(projectId).adoption`; a stale state is
+derived, so re-selecting the target and re-adopting a case clears it with no data repair. A target-less (greenfield or
+legacy) adopted case is never stale, so those paths are unchanged.
+
+| Reader | Behavior on a stale adoption |
+|---|---|
+| `lib/backtest.ts` | The project is excluded from the forecast/actual corpus (its forecast is not a current basis) and counted in the new additive `org.stale_adoption_excluded`; no row, no deviation, no bias contribution. |
+| `lib/covenant-dscr.ts` | `computeDownsideDscr` returns `insufficient_evidence` with the new reason `stale_adopted_case` and a message naming the cause; no periods and no minimum DSCR are computed. `no_debt` still wins first. The S10 covenant-headroom check therefore blocks with that message, the same way it blocks on a missing adopted case. |
+| `lib/greenfield-execution.ts` (`adoptedCaseCapex`, `trancheReconciliation`) | The adopted capex total is `null` with `stale: true`; the tranche reconciliation records the finding `adopted_case_stale` (replacing the misleading "no adopted case"). `lib/s10-checks.ts` `s10UsesReconciliation` states the stale reason in its existing non-blocking advisory. Greenfield itself has no target axis, so its adopted capex path is unchanged; the guard matters for brownfield projects that share this S10 code. |
+| `lib/process-flow.ts` | S11 completion keeps the adopted-case artifact open when the adoption is stale: same blocker key `s11.adopted_business_case`, with a stated-reason message. Only the S11 artifact check reads the adoption as an IC input; S8 completion keys on the case's own artifacts and is left unchanged. |
+| `db/lib/snapshot-filler.ts` | The covenant variable `risk.covenants_breached` is written with `status = 'stale'`, no value and `evidence_ref = 's8-stale-adopted-target'` (the gate reads it as unassessed, never zero). The DD value-impact variable already requires a target-less adopted model, so it can never be stale and is unchanged. |
+
+Tests: `tests/unit/s8-stale-adoption-readers.test.ts` (healthy vs stale per reader, byte-identical selection/adoption rows,
+automatic recovery after re-inclusion, greenfield never stale, S11 blocker).

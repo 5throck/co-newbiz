@@ -35,7 +35,14 @@ export function ColGroup({ widths }: { widths: readonly number[] }) {
     const sum = widths.reduce((a, b) => a + b, 0);
     if (Math.abs(sum - 100) > 0.01) throw new Error(`ColGroup: widths sum to ${sum}, expected 100`);
   }
-  return <colgroup>{widths.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>;
+  return (
+    <colgroup>
+      {widths.map((w, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: fixed-order static column list, never reordered
+        <col key={i} style={{ width: `${w}%` }} />
+      ))}
+    </colgroup>
+  );
 }
 
 /* ── Button — btn-primary (ONE per screen/section) / btn-ghost / btn-danger ── */
@@ -54,7 +61,8 @@ export function Button({
   danger?: boolean;
   children: ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const v = variant === "primary" || primary ? "btn-primary" : danger || variant === "danger" ? "btn-danger" : "btn-ghost";
+  const v =
+    variant === "primary" || primary ? "btn-primary" : danger || variant === "danger" ? "btn-danger" : "btn-ghost";
   return (
     <button type="button" {...rest} className={`${v}${size === "sm" ? " btn-sm" : ""} ${rest.className ?? ""}`.trim()}>
       {children}
@@ -84,7 +92,15 @@ export interface PrimaryActionProps {
   readOnly?: boolean;
 }
 
-export function PrimaryAction({ label, onClick, href, form, disabled, disabledReason: reasonIn, readOnly }: PrimaryActionProps) {
+export function PrimaryAction({
+  label,
+  onClick,
+  href,
+  form,
+  disabled,
+  disabledReason: reasonIn,
+  readOnly,
+}: PrimaryActionProps) {
   const reasonId = useId();
   const tr = useTranslations();
   const { me } = useAuth();
@@ -92,23 +108,30 @@ export function PrimaryAction({ label, onClick, href, form, disabled, disabledRe
   const viewerBlocked = me?.role === "viewer" && !readOnly;
   const blocked = !!disabled || viewerBlocked;
   const disabledReason = viewerBlocked ? tr("common.viewerReadOnly") : reasonIn;
-  const control = href && !blocked ? (
-    <Link href={href} className="btn-primary">{label}</Link>
-  ) : (
-    <button
-      type={form && !blocked ? "submit" : "button"}
-      form={form}
-      className="btn-primary"
-      disabled={blocked}
-      aria-describedby={blocked && disabledReason ? reasonId : undefined}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
+  const control =
+    href && !blocked ? (
+      <Link href={href} className="btn-primary">
+        {label}
+      </Link>
+    ) : (
+      <button
+        type={form && !blocked ? "submit" : "button"}
+        form={form}
+        className="btn-primary"
+        disabled={blocked}
+        aria-describedby={blocked && disabledReason ? reasonId : undefined}
+        onClick={onClick}
+      >
+        {label}
+      </button>
+    );
   const node = (
     <>
-      {blocked && disabledReason && <span id={reasonId} className="primary-reason">{disabledReason}</span>}
+      {blocked && disabledReason && (
+        <span id={reasonId} className="primary-reason">
+          {disabledReason}
+        </span>
+      )}
       {control}
     </>
   );
@@ -152,22 +175,42 @@ export function ParamTable({
   const hasExtra = rows.some((r) => r.extra);
   const valueCls = `param-value${valueAlign === "start" ? " param-value-start" : ""}`;
   return (
+    // biome-ignore lint/a11y/useSemanticElements: scroll container keeps the div; the region role names it for assistive tech
+    // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable so keyboard users can scroll it (WCAG 2.1.1)
     <div className="table-scroll" role="region" aria-label={tt("scrollRegion")} tabIndex={0}>
       <table className="param-table">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
-            <th scope="col" className="param-label">{labelHeaderText}</th>
-            <th scope="col" className={valueCls}>{tt("value")}</th>
-            {hasUnit && <th scope="col" className="param-unit">{tt("unit")}</th>}
-            {hasSource && <th scope="col" className="param-source">{tt("source")}</th>}
-            {hasExtra && <th scope="col" className="param-source">{extraHeaderText}</th>}
+            <th scope="col" className="param-label">
+              {labelHeaderText}
+            </th>
+            <th scope="col" className={valueCls}>
+              {tt("value")}
+            </th>
+            {hasUnit && (
+              <th scope="col" className="param-unit">
+                {tt("unit")}
+              </th>
+            )}
+            {hasSource && (
+              <th scope="col" className="param-source">
+                {tt("source")}
+              </th>
+            )}
+            {hasExtra && (
+              <th scope="col" className="param-source">
+                {extraHeaderText}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.label}>
-              <th scope="row" className="param-label">{r.label}</th>
+              <th scope="row" className="param-label">
+                {r.label}
+              </th>
               <td className={valueCls}>{r.value}</td>
               {hasUnit && <td className="param-unit">{r.unit ?? ""}</td>}
               {hasSource && <td className="param-source">{r.source}</td>}
@@ -239,10 +282,14 @@ export function Tabs({
   );
 }
 
-/* ── DevRef — ADR/spec references live in a collapsed developer disclosure, never in reader-facing copy (R2-C 8) ── */
+/* ── DevRef — ADR/spec references live in a collapsed developer disclosure, never in reader-facing copy (R2-C 8).
+   Rule: admin-only. Internal ADR/flow.spec references are for system administrators; every other role (and a
+   signed-out or still-loading session) gets nothing rendered, not even the empty disclosure. ── */
 
 export function DevRef({ refs }: { refs: string }) {
   const t = useTranslations("components.devRef");
+  const { me } = useAuth();
+  if (me?.role !== "admin") return null;
   return (
     <details className="review-dev">
       <summary>{t("summary")}</summary>
@@ -275,6 +322,7 @@ export function PageState({
       <div role="status" aria-busy="true" aria-label={ps("loading")}>
         <div className="skeleton" style={{ width: "45%" }} />
         {Array.from({ length: rows }, (_, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative skeleton rows
           <div key={i} className="skeleton" style={{ width: `${88 - i * 12}%` }} />
         ))}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 // ADR-0206 / design 2026-11-24-s8-excluded-target-handling §5: the selected or adopted S8 target left the
-// Short List. Warning callout (amber, icon + label + text, never colour alone) announced politely as a status.
+// Final Candidate List. Warning callout (amber, icon + label + text, never colour alone) announced politely as a status.
 // The records are never changed here; the banner only tells a person to re-select and re-adopt.
 import { useTranslations } from "next-intl";
 import type { S8Staleness } from "../../lib/business-case.ts";
@@ -31,7 +31,6 @@ export function StaleTargetBanner({
       </span>
       {messages.map((m) => (
         <p key={m.kind} className="m-0 text-[length:var(--fs-caption)]">
-          {/* INTERIM-WORDING */}
           {m.kind === "adoptionMismatch"
             ? t("adoptionMismatch")
             : m.kind === "adoptionExcluded"

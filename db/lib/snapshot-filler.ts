@@ -591,6 +591,13 @@ function fillCovenantVar(db: Database, projectId: string, now: Date): SnapshotWr
     row.status = "present";
     return row;
   }
+  if (report.reason === "stale_adopted_case") {
+    // ADR-0206: the adopted case's target left the Short List - no figure is carried; the stale state is recorded so the
+    // gate reads "stale" (UNASSESSED, never zero) and the ledger shows why.
+    row.status = "stale";
+    row.evidence_ref = "s8-stale-adopted-target";
+    return row;
+  }
   if (report.status === "computed") {
     // Counts periods below the tighter of the declared DSCR covenant and the S10 1.3x floor (RAG agrees with the gate).
     row.value_num = report.rag_breached_periods;

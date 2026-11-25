@@ -33,6 +33,7 @@ import {
 } from "../../../db/repositories/venture-scorecard.repository.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { SPEC_VERSION } from "./spec-activities.generated.ts";
+import { resolveS8Staleness } from "./business-case.ts";
 import { listCapexTranches, type CapexTrancheRow } from "./capex-tranches.ts";
 import { NON_PMI_SUB_TRACKS } from "./pmi-kickoff.ts";
 import { conditionsEnforced, s11OpenConditions } from "./gate-conditions.ts";
@@ -76,9 +77,19 @@ export function executionBaselineScope(projectId: string, db: Database = getDb()
     };
   }
   if (route.track !== "greenfield") {
-    return { state: "not_applicable", route, permit_step_applies: false, reason: "실행 기준선은 greenfield 프로젝트에만 적용됩니다." };
+    return {
+      state: "not_applicable",
+      route,
+      permit_step_applies: false,
+      reason: "실행 기준선은 greenfield 프로젝트에만 적용됩니다.",
+    };
   }
-  return { state: "applies", route, permit_step_applies: route.sub_track !== "intra_venture", reason: "greenfield (case_type/track)" };
+  return {
+    state: "applies",
+    route,
+    permit_step_applies: route.sub_track !== "intra_venture",
+    reason: "greenfield (case_type/track)",
+  };
 }
 
 // ── Step 1: tranche reconciliation (O2 — exact match) ────────────────────
@@ -89,7 +100,12 @@ export interface Finding {
 }
 
 export interface TrancheReconciliation {
-  tranches: Array<Pick<CapexTrancheRow, "id" | "tranche_no" | "amount" | "currency" | "release_condition" | "status" | "source_stage"> & { pending_release: boolean }>;
+  tranches: Array<
+    Pick<
+      CapexTrancheRow,
+      "id" | "tranche_no" | "amount" | "currency" | "release_condition" | "status" | "source_stage"
+    > & { pending_release: boolean }
+  >;
   tranche_total: number;
   tranche_currencies: string[];
   case: { model_id: string | null; capex_total_krw_m: number | null; capex_lines: number; unit_issue: boolean };
@@ -122,6 +138,8 @@ export interface AdoptedCaseCapex {
   total: number | null;
   lines: number;
   unitIssue: boolean;
+  /** ADR-0206: the adopted case's target left the Short List; its capex is not reported as current (total stays null). */
+  stale?: boolean;
 }
 
 /**
@@ -133,10 +151,23 @@ export interface AdoptedCaseCapex {
 export function adoptedCaseCapex(projectId: string, db: Database = getDb()): AdoptedCaseCapex {
   const modelId = adoptedModelId(projectId, db);
   if (!modelId) return { modelId: null, total: null, lines: 0, unitIssue: false };
-  const model = db.query("SELECT horizon_years FROM business_case_model WHERE id = ?").get(modelId) as { horizon_years: number } | null;
+  // ADR-0206: greenfield cases carry no target (never stale); a brownfield adoption whose target left the Short List is surfaced, not summed.
+  if (resolveS8Staleness(projectId).adoption !== null)
+    return { modelId, total: null, lines: 0, unitIssue: false, stale: true };
+  const model = db.query("SELECT horizon_years FROM business_case_model WHERE id = ?").get(modelId) as {
+    horizon_years: number;
+  } | null;
   const capex = db
-    .query("SELECT annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ? AND category = 'capex'")
-    .all(modelId) as Array<{ annual_amount_krw_m: number; start_year: number; end_year: number | null; growth_rate: number; unit: string | null }>;
+    .query(
+      "SELECT annual_amount_krw_m, start_year, end_year, growth_rate, unit FROM business_case_line WHERE model_id = ? AND category = 'capex'",
+    )
+    .all(modelId) as Array<{
+    annual_amount_krw_m: number;
+    start_year: number;
+    end_year: number | null;
+    growth_rate: number;
+    unit: string | null;
+  }>;
   const horizon = model?.horizon_years ?? 0;
   let total = 0;
   let unitIssue = false;
@@ -145,9 +176,13 @@ export function adoptedCaseCapex(projectId: string, db: Database = getDb()): Ado
     if (l.unit !== "KRW_M") unitIssue = true;
     // end_year (ADR-0174 slice 2) clamps the spending window: NULL = run through the horizon.
     // ADR-0178 slice 1: a 시작 전 (start_year 0) capex line is a single year-0 outlay - counted once, never dropped.
-    if (l.start_year === 0) { total += l.annual_amount_krw_m; continue; }
+    if (l.start_year === 0) {
+      total += l.annual_amount_krw_m;
+      continue;
+    }
     const lastYear = Math.min(l.end_year ?? horizon, horizon);
-    for (let y = Math.max(1, l.start_year); y <= lastYear; y++) total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
+    for (let y = Math.max(1, l.start_year); y <= lastYear; y++)
+      total += l.annual_amount_krw_m * Math.pow(1 + l.growth_rate, y - l.start_year);
   }
   return { modelId, total: capex.length > 0 && !unitIssue ? exact(total) : null, lines: capex.length, unitIssue };
 }
@@ -156,29 +191,69 @@ export function trancheReconciliation(projectId: string, db: Database = getDb())
   const findings: Finding[] = [];
   const rows = listCapexTranches(projectId, {}, db);
   const tranches = rows.map((t) => ({
-    id: t.id, tranche_no: t.tranche_no, amount: t.amount, currency: t.currency, release_condition: t.release_condition,
-    status: t.status, source_stage: t.source_stage, pending_release: t.pending_release !== null,
+    id: t.id,
+    tranche_no: t.tranche_no,
+    amount: t.amount,
+    currency: t.currency,
+    release_condition: t.release_condition,
+    status: t.status,
+    source_stage: t.source_stage,
+    pending_release: t.pending_release !== null,
   }));
   // R5: the sum counts planned + released only; withheld rows are listed but excluded (retired rows are never listed).
   const counted = rows.filter((t) => t.status === "planned" || t.status === "released");
   const currencies = [...new Set(counted.map((t) => t.currency))].sort();
   const trancheTotal = exact(counted.reduce((s, t) => s + t.amount, 0));
   const s10 = !!db.query("SELECT id FROM deal_structure_hypothesis WHERE project_id = ? LIMIT 1").get(projectId);
-  if (!s10) findings.push({ code: "s10_structure_missing", message: "S10 투자구조 기록이 없습니다 — 트랜치 집행 조건의 근거를 확인할 수 없습니다." });
-  if (counted.length === 0) findings.push({ code: "no_tranches", message: "합계에 들어가는 capex 트랜치(planned·released)가 없습니다 (S10 투자구조 단계에서 기록)." });
+  if (!s10)
+    findings.push({
+      code: "s10_structure_missing",
+      message: "S10 투자구조 기록이 없습니다 — 트랜치 집행 조건의 근거를 확인할 수 없습니다.",
+    });
+  if (counted.length === 0)
+    findings.push({
+      code: "no_tranches",
+      message: "합계에 들어가는 capex 트랜치(planned·released)가 없습니다 (S10 투자구조 단계에서 기록).",
+    });
   for (const t of rows) {
-    if (!t.release_condition.trim()) findings.push({ code: "tranche_condition_missing", message: `트랜치 ${t.tranche_no}번에 집행 조건이 없습니다.` });
-    if (t.source_stage !== "S10") findings.push({ code: "tranche_not_from_s10", message: `트랜치 ${t.tranche_no}번은 S10 조건이 아닌 ${t.source_stage}에서 기록되었습니다 — 확인이 필요합니다.` });
+    if (!t.release_condition.trim())
+      findings.push({ code: "tranche_condition_missing", message: `트랜치 ${t.tranche_no}번에 집행 조건이 없습니다.` });
+    if (t.source_stage !== "S10")
+      findings.push({
+        code: "tranche_not_from_s10",
+        message: `트랜치 ${t.tranche_no}번은 S10 조건이 아닌 ${t.source_stage}에서 기록되었습니다 — 확인이 필요합니다.`,
+      });
   }
   const adopted = adoptedCaseCapex(projectId, db);
   const { modelId, lines, unitIssue } = adopted;
   const caseTotal = adopted.total;
-  if (!modelId) {
-    findings.push({ code: "no_adopted_case", message: "S8 채택 Business Case가 없습니다 — capex 대조를 할 수 없습니다." });
-  } else if (lines === 0) findings.push({ code: "case_capex_missing", message: "S8 채택 케이스에 capex 행이 없습니다 — 트랜치 합계와 대조할 수 없습니다." });
-  else if (unitIssue) findings.push({ code: "case_unit_not_comparable", message: "S8 채택 케이스 capex 행 단위가 KRW_M(백만 원)으로 명시되어 있지 않습니다 (미기재 포함) — 단위 변환·추정 없이 대조하지 않습니다." });
+  if (adopted.stale) {
+    findings.push({
+      code: "adopted_case_stale",
+      message:
+        "The adopted Business Case belongs to a target that is no longer on the Short List - capex is not reconciled against it. Re-select the target and re-adopt a case in S8.",
+    });
+  } else if (!modelId) {
+    findings.push({
+      code: "no_adopted_case",
+      message: "S8 채택 Business Case가 없습니다 — capex 대조를 할 수 없습니다.",
+    });
+  } else if (lines === 0)
+    findings.push({
+      code: "case_capex_missing",
+      message: "S8 채택 케이스에 capex 행이 없습니다 — 트랜치 합계와 대조할 수 없습니다.",
+    });
+  else if (unitIssue)
+    findings.push({
+      code: "case_unit_not_comparable",
+      message:
+        "S8 채택 케이스 capex 행 단위가 KRW_M(백만 원)으로 명시되어 있지 않습니다 (미기재 포함) — 단위 변환·추정 없이 대조하지 않습니다.",
+    });
   if (currencies.length > 1 || (currencies.length === 1 && currencies[0] !== "KRW")) {
-    findings.push({ code: "tranche_currency_not_comparable", message: `트랜치 통화(${currencies.join(", ")})가 S8 케이스 통화(KRW)와 다릅니다 — 환산하지 않습니다.` });
+    findings.push({
+      code: "tranche_currency_not_comparable",
+      message: `트랜치 통화(${currencies.join(", ")})가 S8 케이스 통화(KRW)와 다릅니다 — 환산하지 않습니다.`,
+    });
   }
   let difference: number | null = null;
   let matches = false;
@@ -193,24 +268,52 @@ export function trancheReconciliation(projectId: string, db: Database = getDb())
     }
   }
   return {
-    tranches, tranche_total: trancheTotal, tranche_currencies: currencies,
+    tranches,
+    tranche_total: trancheTotal,
+    tranche_currencies: currencies,
     case: { model_id: modelId, capex_total_krw_m: caseTotal, capex_lines: lines, unit_issue: unitIssue },
-    s10_structure_recorded: s10, difference, matches, findings,
+    s10_structure_recorded: s10,
+    difference,
+    matches,
+    findings,
   };
 }
 
 /** Stable hash of the live tranche ids + amounts + statuses (confirmation snapshot). */
 export function trancheSnapshotHash(rec: Pick<TrancheReconciliation, "tranches">): string {
-  const canon = rec.tranches.map((t) => `${t.id}:${t.tranche_no}:${t.amount}:${t.currency}:${t.status}`).sort().join("|");
+  const canon = rec.tranches
+    .map((t) => `${t.id}:${t.tranche_no}:${t.amount}:${t.currency}:${t.status}`)
+    .sort()
+    .join("|");
   return createHash("sha256").update(canon).digest("hex");
 }
 
 // ── Baseline entries (steps 2-5): checkable shapes ───────────────────────
 
-export interface Milestone { name: string; issuer: string; target_date: string; gates_ref: string | null; source_id: string | null }
-export interface HiringRow { role_family: string; quarter: string; headcount: number }
-export interface KpiTarget { metric_key: string; target_value: number; unit: string | null; due: string }
-export interface IncentiveObligation { obligation: string; deadline: string | null; depends_on: string | null; incentive_id: string | null }
+export interface Milestone {
+  name: string;
+  issuer: string;
+  target_date: string;
+  gates_ref: string | null;
+  source_id: string | null;
+}
+export interface HiringRow {
+  role_family: string;
+  quarter: string;
+  headcount: number;
+}
+export interface KpiTarget {
+  metric_key: string;
+  target_value: number;
+  unit: string | null;
+  due: string;
+}
+export interface IncentiveObligation {
+  obligation: string;
+  deadline: string | null;
+  depends_on: string | null;
+  incentive_id: string | null;
+}
 export interface BaselineEntries {
   permit_milestones: Milestone[];
   certification_milestones: Milestone[];
@@ -230,7 +333,9 @@ const opt = (v: unknown, max: number, field: string): Parse<string | null> => {
   if (v === undefined || v === null || v === "") return { ok: true, value: null };
   if (typeof v !== "string") return { ok: false, message: `${field}는 문자열이어야 합니다.` };
   const t = v.trim();
-  return t.length > max ? { ok: false, message: `${field}는 ${max}자 이하여야 합니다.` } : { ok: true, value: t || null };
+  return t.length > max
+    ? { ok: false, message: `${field}는 ${max}자 이하여야 합니다.` }
+    : { ok: true, value: t || null };
 };
 const req = (v: unknown, max: number, field: string): Parse<string> => {
   const t = s(v);
@@ -242,8 +347,10 @@ const isDate = (v: string) => DATE_RE.test(v) && !Number.isNaN(Date.parse(`${v}T
 function list(raw: unknown, field: string): Parse<Record<string, unknown>[]> {
   if (raw === undefined || raw === null) return { ok: true, value: [] };
   if (!Array.isArray(raw)) return { ok: false, message: `${field}는 배열이어야 합니다.` };
-  if (raw.length > ENTRY_LIMITS.list) return { ok: false, message: `${field}는 ${ENTRY_LIMITS.list}개 이하여야 합니다.` };
-  if (!raw.every((r) => r && typeof r === "object" && !Array.isArray(r))) return { ok: false, message: `${field}의 각 항목은 객체여야 합니다.` };
+  if (raw.length > ENTRY_LIMITS.list)
+    return { ok: false, message: `${field}는 ${ENTRY_LIMITS.list}개 이하여야 합니다.` };
+  if (!raw.every((r) => r && typeof r === "object" && !Array.isArray(r)))
+    return { ok: false, message: `${field}의 각 항목은 객체여야 합니다.` };
   return { ok: true, value: raw as Record<string, unknown>[] };
 }
 
@@ -253,71 +360,118 @@ function milestones(raw: unknown, field: string, idKey: string): Parse<Milestone
   const out: Milestone[] = [];
   for (const [i, r] of l.value.entries()) {
     const at = `${field}[${i}]`;
-    const name = req(r.name, ENTRY_LIMITS.short, `${at}.name`); if (!name.ok) return name;
-    const issuer = req(r.issuer, ENTRY_LIMITS.short, `${at}.issuer`); if (!issuer.ok) return issuer;
+    const name = req(r.name, ENTRY_LIMITS.short, `${at}.name`);
+    if (!name.ok) return name;
+    const issuer = req(r.issuer, ENTRY_LIMITS.short, `${at}.issuer`);
+    if (!issuer.ok) return issuer;
     const date = s(r.target_date);
     if (!isDate(date)) return { ok: false, message: `${at}.target_date는 YYYY-MM-DD 날짜여야 합니다.` };
-    const gates = opt(r.gates_ref, ENTRY_LIMITS.short, `${at}.gates_ref`); if (!gates.ok) return gates;
+    const gates = opt(r.gates_ref, ENTRY_LIMITS.short, `${at}.gates_ref`);
+    if (!gates.ok) return gates;
     // Request entries name the link `${idKey}`; stored (parsed) entries carry it as `source_id` - accept both so a
     // re-parse of a stored record (toRecord, or a re-recorded copy) keeps the link (ADR-0187 D4 adoption by id).
-    const src = opt(r[idKey] ?? r.source_id, 64, `${at}.${idKey}`); if (!src.ok) return src;
-    out.push({ name: name.value, issuer: issuer.value, target_date: date, gates_ref: gates.value, source_id: src.value });
+    const src = opt(r[idKey] ?? r.source_id, 64, `${at}.${idKey}`);
+    if (!src.ok) return src;
+    out.push({
+      name: name.value,
+      issuer: issuer.value,
+      target_date: date,
+      gates_ref: gates.value,
+      source_id: src.value,
+    });
   }
   return { ok: true, value: out };
 }
 
 /** Validate the baseline entries; unknown top-level keys are rejected (aggregate-only hiring plan, no personal rows). */
 export function parseBaselineEntries(raw: unknown): Parse<BaselineEntries> {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, message: "entries는 객체여야 합니다." };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    return { ok: false, message: "entries는 객체여야 합니다." };
   const o = raw as Record<string, unknown>;
-  const allowed = ["permit_milestones", "certification_milestones", "hiring_plan", "kpi_targets", "incentive_obligations"];
+  const allowed = [
+    "permit_milestones",
+    "certification_milestones",
+    "hiring_plan",
+    "kpi_targets",
+    "incentive_obligations",
+  ];
   const unknown = Object.keys(o).filter((k) => !allowed.includes(k));
   if (unknown.length) return { ok: false, message: `알 수 없는 entries 키: ${unknown.join(", ")}` };
-  const permits = milestones(o.permit_milestones, "permit_milestones", "permit_id"); if (!permits.ok) return permits;
-  const certs = milestones(o.certification_milestones, "certification_milestones", "certification_id"); if (!certs.ok) return certs;
-  const h = list(o.hiring_plan, "hiring_plan"); if (!h.ok) return h;
+  const permits = milestones(o.permit_milestones, "permit_milestones", "permit_id");
+  if (!permits.ok) return permits;
+  const certs = milestones(o.certification_milestones, "certification_milestones", "certification_id");
+  if (!certs.ok) return certs;
+  const h = list(o.hiring_plan, "hiring_plan");
+  if (!h.ok) return h;
   const hiring: HiringRow[] = [];
   for (const [i, r] of h.value.entries()) {
     const at = `hiring_plan[${i}]`;
     const extra = Object.keys(r).filter((k) => !["role_family", "quarter", "headcount"].includes(k));
-    if (extra.length) return { ok: false, message: `${at}는 role_family·quarter·headcount만 허용합니다 (개인 단위 행 금지): ${extra.join(", ")}` };
-    const rf = req(r.role_family, 100, `${at}.role_family`); if (!rf.ok) return rf;
+    if (extra.length)
+      return {
+        ok: false,
+        message: `${at}는 role_family·quarter·headcount만 허용합니다 (개인 단위 행 금지): ${extra.join(", ")}`,
+      };
+    const rf = req(r.role_family, 100, `${at}.role_family`);
+    if (!rf.ok) return rf;
     const q = s(r.quarter);
     if (!QUARTER_RE.test(q)) return { ok: false, message: `${at}.quarter는 YYYY-Qn 형식이어야 합니다.` };
     const n = Number(r.headcount);
-    if (typeof r.headcount === "boolean" || !Number.isInteger(n) || n < 0 || n > 100000) return { ok: false, message: `${at}.headcount는 0~100000 정수여야 합니다.` };
+    if (typeof r.headcount === "boolean" || !Number.isInteger(n) || n < 0 || n > 100000)
+      return { ok: false, message: `${at}.headcount는 0~100000 정수여야 합니다.` };
     hiring.push({ role_family: rf.value, quarter: q, headcount: n });
   }
-  const k = list(o.kpi_targets, "kpi_targets"); if (!k.ok) return k;
+  const k = list(o.kpi_targets, "kpi_targets");
+  if (!k.ok) return k;
   const kpis: KpiTarget[] = [];
   for (const [i, r] of k.value.entries()) {
     const at = `kpi_targets[${i}]`;
     const key = s(r.metric_key);
-    if (!METRIC_RE.test(key)) return { ok: false, message: `${at}.metric_key는 소문자·숫자·_.- (선택 접두 goal:) 1~80자여야 합니다.` };
-    if (typeof r.target_value !== "number" || !Number.isFinite(r.target_value)) return { ok: false, message: `${at}.target_value는 유한한 숫자여야 합니다.` };
-    const unit = opt(r.unit, 20, `${at}.unit`); if (!unit.ok) return unit;
+    if (!METRIC_RE.test(key))
+      return { ok: false, message: `${at}.metric_key는 소문자·숫자·_.- (선택 접두 goal:) 1~80자여야 합니다.` };
+    if (typeof r.target_value !== "number" || !Number.isFinite(r.target_value))
+      return { ok: false, message: `${at}.target_value는 유한한 숫자여야 합니다.` };
+    const unit = opt(r.unit, 20, `${at}.unit`);
+    if (!unit.ok) return unit;
     const due = s(r.due);
-    if (!QUARTER_RE.test(due) && !isDate(due)) return { ok: false, message: `${at}.due는 YYYY-Qn 또는 YYYY-MM-DD여야 합니다.` };
+    if (!QUARTER_RE.test(due) && !isDate(due))
+      return { ok: false, message: `${at}.due는 YYYY-Qn 또는 YYYY-MM-DD여야 합니다.` };
     kpis.push({ metric_key: key, target_value: r.target_value, unit: unit.value, due });
   }
-  const inc = list(o.incentive_obligations, "incentive_obligations"); if (!inc.ok) return inc;
+  const inc = list(o.incentive_obligations, "incentive_obligations");
+  if (!inc.ok) return inc;
   const obligations: IncentiveObligation[] = [];
   for (const [i, r] of inc.value.entries()) {
     const at = `incentive_obligations[${i}]`;
-    const ob = req(r.obligation, ENTRY_LIMITS.text, `${at}.obligation`); if (!ob.ok) return ob;
+    const ob = req(r.obligation, ENTRY_LIMITS.text, `${at}.obligation`);
+    if (!ob.ok) return ob;
     const dl = s(r.deadline);
     if (dl && !isDate(dl)) return { ok: false, message: `${at}.deadline은 YYYY-MM-DD 날짜여야 합니다.` };
-    const dep = opt(r.depends_on, ENTRY_LIMITS.short, `${at}.depends_on`); if (!dep.ok) return dep;
-    const iid = opt(r.incentive_id, 64, `${at}.incentive_id`); if (!iid.ok) return iid;
+    const dep = opt(r.depends_on, ENTRY_LIMITS.short, `${at}.depends_on`);
+    if (!dep.ok) return dep;
+    const iid = opt(r.incentive_id, 64, `${at}.incentive_id`);
+    if (!iid.ok) return iid;
     obligations.push({ obligation: ob.value, deadline: dl || null, depends_on: dep.value, incentive_id: iid.value });
   }
   return {
     ok: true,
-    value: { permit_milestones: permits.value, certification_milestones: certs.value, hiring_plan: hiring, kpi_targets: kpis, incentive_obligations: obligations },
+    value: {
+      permit_milestones: permits.value,
+      certification_milestones: certs.value,
+      hiring_plan: hiring,
+      kpi_targets: kpis,
+      incentive_obligations: obligations,
+    },
   };
 }
 
-export const EMPTY_ENTRIES: BaselineEntries = { permit_milestones: [], certification_milestones: [], hiring_plan: [], kpi_targets: [], incentive_obligations: [] };
+export const EMPTY_ENTRIES: BaselineEntries = {
+  permit_milestones: [],
+  certification_milestones: [],
+  hiring_plan: [],
+  kpi_targets: [],
+  incentive_obligations: [],
+};
 
 // ── Ledger: append-only process_run rows (stage s11_execution_baseline) ──
 
@@ -356,9 +510,19 @@ function toRecord(row: BaselineRow | null): BaselineRecord | null {
     const parsed = parseBaselineEntries(meta.entries ?? {});
     const c = meta.confirmation && meta.confirmation.rationale?.trim() ? meta.confirmation : null;
     return {
-      id: row.id, recorded_by: row.started_by, recorded_at: row.finished_at ?? "",
+      id: row.id,
+      recorded_by: row.started_by,
+      recorded_at: row.finished_at ?? "",
       entries: parsed.ok ? parsed.value : EMPTY_ENTRIES,
-      confirmation: c ? { ...c, acknowledged_findings: c.acknowledged_findings ?? [], entries_recorded_by: c.entries_recorded_by ?? null, entries_record_id: c.entries_record_id ?? null, entries_hash: c.entries_hash ?? "" } : null,
+      confirmation: c
+        ? {
+            ...c,
+            acknowledged_findings: c.acknowledged_findings ?? [],
+            entries_recorded_by: c.entries_recorded_by ?? null,
+            entries_record_id: c.entries_record_id ?? null,
+            entries_hash: c.entries_hash ?? "",
+          }
+        : null,
     };
   } catch {
     return null;
@@ -393,13 +557,31 @@ export function latestConfirmedBaseline(projectId: string, db: Database = getDb(
 }
 
 export type BaselineErrorCode =
-  | "invalid_request" | "agent_forbidden" | "not_applicable_track" | "needs_classification" | "insider_required"
-  | "lead_required" | "baseline_empty" | "findings_open" | "condition_open";
-export type BaselineResult<T> = ({ ok: true } & T) | { ok: false; code: BaselineErrorCode; message: string; open_findings?: Finding[]; missing_sections?: string[] };
-const bfail = (code: BaselineErrorCode, message: string, extra: { open_findings?: Finding[]; missing_sections?: string[] } = {}) => ({ ok: false as const, code, message, ...extra });
+  | "invalid_request"
+  | "agent_forbidden"
+  | "not_applicable_track"
+  | "needs_classification"
+  | "insider_required"
+  | "lead_required"
+  | "baseline_empty"
+  | "findings_open"
+  | "condition_open";
+export type BaselineResult<T> =
+  | ({ ok: true } & T)
+  | { ok: false; code: BaselineErrorCode; message: string; open_findings?: Finding[]; missing_sections?: string[] };
+const bfail = (
+  code: BaselineErrorCode,
+  message: string,
+  extra: { open_findings?: Finding[]; missing_sections?: string[] } = {},
+) => ({ ok: false as const, code, message, ...extra });
 
-function writeGuard(projectId: string, actor: string, db: Database): { ok: false; code: BaselineErrorCode; message: string } | null {
-  if (AGENT_KEYS.has(actor)) return bfail("agent_forbidden", "실행 기준선 기록·확인은 사람만 할 수 있습니다 (boundary #2).");
+function writeGuard(
+  projectId: string,
+  actor: string,
+  db: Database,
+): { ok: false; code: BaselineErrorCode; message: string } | null {
+  if (AGENT_KEYS.has(actor))
+    return bfail("agent_forbidden", "실행 기준선 기록·확인은 사람만 할 수 있습니다 (boundary #2).");
   const scope = executionBaselineScope(projectId, db);
   if (scope.state === "needs_classification") return bfail("needs_classification", scope.reason);
   if (scope.state === "not_applicable") return bfail("not_applicable_track", scope.reason);
@@ -411,7 +593,20 @@ function appendRow(db: Database, projectId: string, actor: string, now: string, 
   db.run(
     `INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, "project", projectId, projectId, SPEC_VERSION, EXECUTION_BASELINE_STAGE, "done", "web", actor, now, now, JSON.stringify(meta)],
+    [
+      id,
+      "project",
+      projectId,
+      projectId,
+      SPEC_VERSION,
+      EXECUTION_BASELINE_STAGE,
+      "done",
+      "web",
+      actor,
+      now,
+      now,
+      JSON.stringify(meta),
+    ],
   );
   return id;
 }
@@ -434,13 +629,24 @@ export function recordBaselineEntries(
   const now = input.now ?? new Date().toISOString();
   db.transaction(() => {
     const before = latestExecutionBaseline(input.projectId, db);
-    const id = appendRow(db, input.projectId, input.actor, now, { kind: "entries", entries: parsed.value, confirmation: null });
+    const id = appendRow(db, input.projectId, input.actor, now, {
+      kind: "entries",
+      entries: parsed.value,
+      confirmation: null,
+    });
     const detail = JSON.stringify({
-      before: before ? { record_id: before.id, entries_hash: entriesHash(before.entries), confirmed: !!before.confirmation } : null,
+      before: before
+        ? { record_id: before.id, entries_hash: entriesHash(before.entries), confirmed: !!before.confirmation }
+        : null,
       after: { record_id: id, entries_hash: entriesHash(parsed.value), confirmed: false },
       recorded_by: input.actor,
     });
-    appendAudit(db, { actor: input.actor, action: "execution_baseline.entries_recorded", target: `${input.projectId}:${id}|${detail}`, now });
+    appendAudit(db, {
+      actor: input.actor,
+      action: "execution_baseline.entries_recorded",
+      target: `${input.projectId}:${id}|${detail}`,
+      now,
+    });
   }).immediate();
   return { ok: true, record: latestExecutionBaseline(input.projectId, db)! };
 }
@@ -450,7 +656,8 @@ export function missingBaselineSections(entries: BaselineEntries, permitStepAppl
   const missing: string[] = [];
   if (entries.kpi_targets.length === 0) missing.push("kpi_targets");
   if (entries.hiring_plan.length === 0) missing.push("hiring_plan");
-  if (permitStepApplies && entries.permit_milestones.length === 0 && entries.certification_milestones.length === 0) missing.push("permit_or_certification_milestones");
+  if (permitStepApplies && entries.permit_milestones.length === 0 && entries.certification_milestones.length === 0)
+    missing.push("permit_or_certification_milestones");
   return missing;
 }
 
@@ -473,7 +680,8 @@ export function confirmExecutionBaseline(
   }
   const rationale = s(input.rationale);
   if (!rationale) return bfail("invalid_request", "실행 기준선 확인에는 rationale(근거)이 필요합니다.");
-  if (rationale.length > MAX_RATIONALE_LEN) return bfail("invalid_request", `rationale은 ${MAX_RATIONALE_LEN}자 이하여야 합니다.`);
+  if (rationale.length > MAX_RATIONALE_LEN)
+    return bfail("invalid_request", `rationale은 ${MAX_RATIONALE_LEN}자 이하여야 합니다.`);
   let acks: AcknowledgedFinding[] = [];
   if (input.acknowledgedFindings !== undefined && input.acknowledgedFindings !== null) {
     if (!Array.isArray(input.acknowledgedFindings) || input.acknowledgedFindings.length > 50) {
@@ -483,78 +691,152 @@ export function confirmExecutionBaseline(
       const o = (a && typeof a === "object" ? a : {}) as Record<string, unknown>;
       const code = s(o.code);
       const r = s(o.rationale);
-      if (!/^[a-z0-9_]{1,64}$/.test(code)) return bfail("invalid_request", `acknowledged_findings[${i}].code가 올바르지 않습니다.`);
-      if (!r || r.length > MAX_ACK_RATIONALE_LEN) return bfail("invalid_request", `acknowledged_findings[${i}].rationale은 1~${MAX_ACK_RATIONALE_LEN}자여야 합니다.`);
-      if (acks.some((x) => x.code === code)) return bfail("invalid_request", `acknowledged_findings[${i}].code '${code}'가 중복되었습니다.`);
+      if (!/^[a-z0-9_]{1,64}$/.test(code))
+        return bfail("invalid_request", `acknowledged_findings[${i}].code가 올바르지 않습니다.`);
+      if (!r || r.length > MAX_ACK_RATIONALE_LEN)
+        return bfail(
+          "invalid_request",
+          `acknowledged_findings[${i}].rationale은 1~${MAX_ACK_RATIONALE_LEN}자여야 합니다.`,
+        );
+      if (acks.some((x) => x.code === code))
+        return bfail("invalid_request", `acknowledged_findings[${i}].code '${code}'가 중복되었습니다.`);
       acks.push({ code, rationale: r });
     }
   }
   const now = input.now ?? new Date().toISOString();
   const scope = executionBaselineScope(input.projectId, db);
   type Out = BaselineResult<{ record: BaselineRecord; open_findings: Finding[] }>;
-  const out = db.transaction((): Out => {
-    // S4: every read the decision depends on happens inside the write transaction.
-    // ADR-0186 D4 (family `validators` = enforce): open establishment / closing condition precedents hard-block the confirmation.
-    if (conditionsEnforced()) {
-      const open = s11OpenConditions(db, input.projectId);
-      if (open.length > 0) return bfail("condition_open", `${open.length} open IC condition precedent(s) block confirming the execution baseline - clear them first.`);
-    }
-    const rec = trancheReconciliation(input.projectId, db);
-    const before = latestExecutionBaseline(input.projectId, db);
-    const entries = before?.entries ?? EMPTY_ENTRIES;
-    const missing = missingBaselineSections(entries, scope.permit_step_applies);
-    if (missing.length) return bfail("baseline_empty", `필수 기준선 항목이 비어 있습니다: ${missing.join(", ")}`, { missing_sections: missing });
-    const openCodes = [...new Set(rec.findings.map((f) => f.code))];
-    const uncovered = openCodes.filter((c) => !acks.some((a) => a.code === c));
-    if (uncovered.length) {
-      return bfail("findings_open", `열린 대조 결과(finding)를 모두 acknowledged_findings로 확인해야 합니다: ${uncovered.join(", ")}`, { open_findings: rec.findings });
-    }
-    acks = acks.filter((a) => openCodes.includes(a.code));
-    const confirmation: BaselineConfirmation = {
-      confirmed_by: input.actor,
-      confirmed_at: now,
-      rationale,
-      entries_recorded_by: before?.recorded_by ?? null,
-      entries_record_id: before?.id ?? null,
-      entries_hash: entriesHash(entries),
-      tranche_ids: rec.tranches.map((t) => t.id),
-      tranche_hash: trancheSnapshotHash(rec),
-      open_findings: openCodes,
-      acknowledged_findings: acks,
-    };
-    const id = appendRow(db, input.projectId, input.actor, now, { kind: "confirmation", entries, confirmation });
-    const detail = JSON.stringify({
-      before: before ? { record_id: before.id, confirmed: !!before.confirmation } : null,
-      after: { record_id: id, confirmed: true, entries_hash: confirmation.entries_hash, tranche_hash: confirmation.tranche_hash.slice(0, 16) },
-      recorded_by: confirmation.entries_recorded_by,
-      confirmed_by: input.actor,
-      rationale_hash: sha16(rationale),
-      rationale: auditSummary(rationale),
-      acknowledged: acks.map((a) => ({ code: a.code, rationale_hash: sha16(a.rationale) })),
-    });
-    appendAudit(db, { actor: input.actor, action: "execution_baseline.confirmed", target: `${input.projectId}:${id}|${detail}`, now });
-    return { ok: true, record: toRecord({ id, started_by: input.actor, finished_at: now, meta_json: JSON.stringify({ entries, confirmation }) })!, open_findings: rec.findings };
-  }).immediate();
+  const out = db
+    .transaction((): Out => {
+      // S4: every read the decision depends on happens inside the write transaction.
+      // ADR-0186 D4 (family `validators` = enforce): open establishment / closing condition precedents hard-block the confirmation.
+      if (conditionsEnforced()) {
+        const open = s11OpenConditions(db, input.projectId);
+        if (open.length > 0)
+          return bfail(
+            "condition_open",
+            `${open.length} open IC condition precedent(s) block confirming the execution baseline - clear them first.`,
+          );
+      }
+      const rec = trancheReconciliation(input.projectId, db);
+      const before = latestExecutionBaseline(input.projectId, db);
+      const entries = before?.entries ?? EMPTY_ENTRIES;
+      const missing = missingBaselineSections(entries, scope.permit_step_applies);
+      if (missing.length)
+        return bfail("baseline_empty", `필수 기준선 항목이 비어 있습니다: ${missing.join(", ")}`, {
+          missing_sections: missing,
+        });
+      const openCodes = [...new Set(rec.findings.map((f) => f.code))];
+      const uncovered = openCodes.filter((c) => !acks.some((a) => a.code === c));
+      if (uncovered.length) {
+        return bfail(
+          "findings_open",
+          `열린 대조 결과(finding)를 모두 acknowledged_findings로 확인해야 합니다: ${uncovered.join(", ")}`,
+          { open_findings: rec.findings },
+        );
+      }
+      acks = acks.filter((a) => openCodes.includes(a.code));
+      const confirmation: BaselineConfirmation = {
+        confirmed_by: input.actor,
+        confirmed_at: now,
+        rationale,
+        entries_recorded_by: before?.recorded_by ?? null,
+        entries_record_id: before?.id ?? null,
+        entries_hash: entriesHash(entries),
+        tranche_ids: rec.tranches.map((t) => t.id),
+        tranche_hash: trancheSnapshotHash(rec),
+        open_findings: openCodes,
+        acknowledged_findings: acks,
+      };
+      const id = appendRow(db, input.projectId, input.actor, now, { kind: "confirmation", entries, confirmation });
+      const detail = JSON.stringify({
+        before: before ? { record_id: before.id, confirmed: !!before.confirmation } : null,
+        after: {
+          record_id: id,
+          confirmed: true,
+          entries_hash: confirmation.entries_hash,
+          tranche_hash: confirmation.tranche_hash.slice(0, 16),
+        },
+        recorded_by: confirmation.entries_recorded_by,
+        confirmed_by: input.actor,
+        rationale_hash: sha16(rationale),
+        rationale: auditSummary(rationale),
+        acknowledged: acks.map((a) => ({ code: a.code, rationale_hash: sha16(a.rationale) })),
+      });
+      appendAudit(db, {
+        actor: input.actor,
+        action: "execution_baseline.confirmed",
+        target: `${input.projectId}:${id}|${detail}`,
+        now,
+      });
+      return {
+        ok: true,
+        record: toRecord({
+          id,
+          started_by: input.actor,
+          finished_at: now,
+          meta_json: JSON.stringify({ entries, confirmation }),
+        })!,
+        open_findings: rec.findings,
+      };
+    })
+    .immediate();
   return out;
 }
 
 // ── Retroactive rule (Q2, design §8.2; review R1/R2/R4) ──────────────────
 
 export type BaselineRequirement =
-  | "satisfied" | "blocking" | "recommended" | "reconfirm_required"
-  | "not_applicable" | "needs_classification" | "classification_conflict";
+  | "satisfied"
+  | "blocking"
+  | "recommended"
+  | "reconfirm_required"
+  | "not_applicable"
+  | "needs_classification"
+  | "classification_conflict";
 
 /** Latest policy_migration entry snapshot for the project (null when none). */
-export function policyMigrationEntry(projectId: string, db: Database = getDb()): { actor: string; at: string; completed_stages: string[]; migration_note: string; migration_note_hash: string | null } | null {
+export function policyMigrationEntry(
+  projectId: string,
+  db: Database = getDb(),
+): {
+  actor: string;
+  at: string;
+  completed_stages: string[];
+  migration_note: string;
+  migration_note_hash: string | null;
+} | null {
   const row = db
-    .query(`SELECT actor_user_id, created_at, target FROM audit_log WHERE action = ? AND substr(target, 1, ?) = ? ORDER BY created_at DESC, id DESC LIMIT 1`)
-    .get(POLICY_MIGRATION_ACTION, projectId.length + 1, `${projectId}|`) as { actor_user_id: string; created_at: string; target: string } | null;
+    .query(
+      `SELECT actor_user_id, created_at, target FROM audit_log WHERE action = ? AND substr(target, 1, ?) = ? ORDER BY created_at DESC, id DESC LIMIT 1`,
+    )
+    .get(POLICY_MIGRATION_ACTION, projectId.length + 1, `${projectId}|`) as {
+    actor_user_id: string;
+    created_at: string;
+    target: string;
+  } | null;
   if (!row) return null;
   try {
-    const d = JSON.parse(row.target.slice(projectId.length + 1)) as { completed_stages?: string[]; migration_note?: string; migration_note_hash?: string };
-    return { actor: row.actor_user_id, at: row.created_at, completed_stages: d.completed_stages ?? [], migration_note: d.migration_note ?? "", migration_note_hash: d.migration_note_hash ?? null };
+    const d = JSON.parse(row.target.slice(projectId.length + 1)) as {
+      completed_stages?: string[];
+      migration_note?: string;
+      migration_note_hash?: string;
+    };
+    return {
+      actor: row.actor_user_id,
+      at: row.created_at,
+      completed_stages: d.completed_stages ?? [],
+      migration_note: d.migration_note ?? "",
+      migration_note_hash: d.migration_note_hash ?? null,
+    };
   } catch {
-    return { actor: row.actor_user_id, at: row.created_at, completed_stages: [], migration_note: "", migration_note_hash: null };
+    return {
+      actor: row.actor_user_id,
+      at: row.created_at,
+      completed_stages: [],
+      migration_note: "",
+      migration_note_hash: null,
+    };
   }
 }
 
@@ -587,16 +869,23 @@ export interface BaselineS11Check {
  *    change followed it — blocks only while S11 is not complete.
  *  - blocking: otherwise.
  */
-export function executionBaselineS11Check(projectId: string, opts: { otherCriteriaMet: boolean }, db: Database = getDb()): BaselineS11Check {
+export function executionBaselineS11Check(
+  projectId: string,
+  opts: { otherCriteriaMet: boolean },
+  db: Database = getDb(),
+): BaselineS11Check {
   const scope = executionBaselineScope(projectId, db);
   const migrated = s11CompletedBeforeRule(projectId, db);
-  if (scope.state === "not_applicable") return { requirement: "not_applicable", blocks: false, blocker: null, warning: null };
+  if (scope.state === "not_applicable")
+    return { requirement: "not_applicable", blocks: false, blocker: null, warning: null };
   if (scope.state === "needs_classification") {
     if (scope.route.basis === "conflict") {
       return {
         requirement: "classification_conflict",
         blocks: !migrated,
-        blocker: migrated ? null : `트랙 분류 충돌을 사람이 정리해야 합니다 (case_type=${scope.route.case_type}, route=${scope.route.route_track}) — 실행 기준선 적용 여부를 정할 수 없습니다`,
+        blocker: migrated
+          ? null
+          : `트랙 분류 충돌을 사람이 정리해야 합니다 (case_type=${scope.route.case_type}, route=${scope.route.route_track}) — 실행 기준선 적용 여부를 정할 수 없습니다`,
         warning: null,
       };
     }
@@ -605,24 +894,32 @@ export function executionBaselineS11Check(projectId: string, opts: { otherCriter
   const latest = latestExecutionBaseline(projectId, db);
   const confirmed = latestConfirmedBaseline(projectId, db);
   if (confirmed) {
-    const tranchesSame = confirmed.confirmation!.tranche_hash === trancheSnapshotHash(trancheReconciliation(projectId, db));
-    if (latest?.id === confirmed.id && tranchesSame) return { requirement: "satisfied", blocks: false, blocker: null, warning: null };
+    const tranchesSame =
+      confirmed.confirmation!.tranche_hash === trancheSnapshotHash(trancheReconciliation(projectId, db));
+    if (latest?.id === confirmed.id && tranchesSame)
+      return { requirement: "satisfied", blocks: false, blocker: null, warning: null };
     // R4: once S11 is complete with a confirmed baseline, newer entries / tranche drift never re-block it.
     const blocks = !opts.otherCriteriaMet;
     const msg = "확인 이후 실행 기준선 항목 또는 capex 트랜치가 바뀌었습니다 — 재확인이 필요합니다";
     return { requirement: "reconfirm_required", blocks, blocker: blocks ? msg : null, warning: blocks ? null : msg };
   }
-  if (migrated && opts.otherCriteriaMet) return { requirement: "recommended", blocks: false, blocker: null, warning: RECOMMENDED_LABEL };
+  if (migrated && opts.otherCriteriaMet)
+    return { requirement: "recommended", blocks: false, blocker: null, warning: RECOMMENDED_LABEL };
   return {
     requirement: "blocking",
     blocks: true,
-    blocker: "Greenfield 실행 기준선 사람 확인이 필요합니다 (트랜치·인허가/인증·채용·KPI·인센티브 의무 — S11 IC 승인 후 프로젝트 lead가 확인)",
+    blocker:
+      "Greenfield 실행 기준선 사람 확인이 필요합니다 (트랜치·인허가/인증·채용·KPI·인센티브 의무 — S11 IC 승인 후 프로젝트 lead가 확인)",
     warning: null,
   };
 }
 
 /** Back-compat wrapper: the requirement state only. */
-export function executionBaselineRequirement(projectId: string, opts: { otherCriteriaMet: boolean }, db: Database = getDb()): BaselineRequirement {
+export function executionBaselineRequirement(
+  projectId: string,
+  opts: { otherCriteriaMet: boolean },
+  db: Database = getDb(),
+): BaselineRequirement {
   return executionBaselineS11Check(projectId, opts, db).requirement;
 }
 
@@ -632,28 +929,54 @@ export function executionBaselineStatus(projectId: string, db: Database = getDb(
   const scope = executionBaselineScope(projectId, db);
   if (scope.state !== "applies") {
     const chk = executionBaselineS11Check(projectId, { otherCriteriaMet: true }, db);
-    return { applicability: scope, requirement: chk.requirement, blocks: chk.blocks, warning: chk.warning ?? chk.blocker, reconciliation: null, sources: null, record: null, confirmed_record: null, findings: [] as Finding[], missing_sections: [] as string[] };
+    return {
+      applicability: scope,
+      requirement: chk.requirement,
+      blocks: chk.blocks,
+      warning: chk.warning ?? chk.blocker,
+      reconciliation: null,
+      sources: null,
+      record: null,
+      confirmed_record: null,
+      findings: [] as Finding[],
+      missing_sections: [] as string[],
+    };
   }
   const rec = trancheReconciliation(projectId, db);
   const record = latestExecutionBaseline(projectId, db);
   const confirmed = latestConfirmedBaseline(projectId, db);
   const findings = [...rec.findings];
   if (confirmed?.confirmation && confirmed.confirmation.tranche_hash !== trancheSnapshotHash(rec)) {
-    findings.push({ code: "tranches_changed_since_confirmation", message: "확인 이후 capex 트랜치가 바뀌었습니다 — 기준선 재확인이 필요합니다." });
+    findings.push({
+      code: "tranches_changed_since_confirmation",
+      message: "확인 이후 capex 트랜치가 바뀌었습니다 — 기준선 재확인이 필요합니다.",
+    });
   }
   const entries = record?.entries ?? EMPTY_ENTRIES;
   if (!scope.permit_step_applies && (entries.permit_milestones.length || entries.certification_milestones.length)) {
-    findings.push({ code: "permit_step_not_applicable", message: "사내벤처(intra_venture)에는 인허가·인증 단계(2)가 기본 적용되지 않습니다 — 기록된 항목은 참고로만 표시합니다." });
+    findings.push({
+      code: "permit_step_not_applicable",
+      message:
+        "사내벤처(intra_venture)에는 인허가·인증 단계(2)가 기본 적용되지 않습니다 — 기록된 항목은 참고로만 표시합니다.",
+    });
   }
   // ADR-0187 D4 (migration 0182): stage_captured marks pre-IC captures (S5/S8) the baseline adopts by id
   // (lib/pre-ic-capture.ts adoptPreIcCaptures); NULL = recorded without a capture stage.
-  const permits = db.query("SELECT id, name, agency, status, stage_captured FROM permit WHERE project_id = ? ORDER BY name, id").all(projectId);
-  const certifications = db.query("SELECT id, name, agency, status FROM certification WHERE project_id = ? ORDER BY name, id").all(projectId);
+  const permits = db
+    .query("SELECT id, name, agency, status, stage_captured FROM permit WHERE project_id = ? ORDER BY name, id")
+    .all(projectId);
+  const certifications = db
+    .query("SELECT id, name, agency, status FROM certification WHERE project_id = ? ORDER BY name, id")
+    .all(projectId);
   const incentives = db
-    .query("SELECT id, type, program_name, direction, status, application_deadline, construction_deadline, clawback_rule, obligation_json, stage_captured FROM incentive WHERE project_id = ? ORDER BY id")
+    .query(
+      "SELECT id, type, program_name, direction, status, application_deadline, construction_deadline, clawback_rule, obligation_json, stage_captured FROM incentive WHERE project_id = ? ORDER BY id",
+    )
     .all(projectId);
   const goals = db
-    .query("SELECT id, metric_key, label, direction, target_value FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL ORDER BY metric_key, id")
+    .query(
+      "SELECT id, metric_key, label, direction, target_value FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL ORDER BY metric_key, id",
+    )
     .all(projectId);
   // The GET reports the rule as it applies once the other S11 criteria hold.
   const chk = executionBaselineS11Check(projectId, { otherCriteriaMet: true }, db);
@@ -692,7 +1015,8 @@ export function postManagementApplicability(projectId: string, db: Database = ge
   const bf = route.track === "brownfield";
   return {
     route,
-    portfolio_venture_monitoring: route.track === "greenfield" || (origin !== null && ["internal", "hybrid", "joint"].includes(origin)),
+    portfolio_venture_monitoring:
+      route.track === "greenfield" || (origin !== null && ["internal", "hybrid", "joint"].includes(origin)),
     integration_monitoring: bf && !(sub && (sub === "jv" || NON_PMI_SUB_TRACKS.has(sub))),
     partnership_monitoring: origin === "joint" || (bf && sub === "partnership"),
     pmi_applies: bf && !(sub && NON_PMI_SUB_TRACKS.has(sub)),
@@ -717,7 +1041,9 @@ export function defaultVentureClass(track: string | null, subTrack: string | nul
  */
 export function recordGreenfieldScorecardCycle(
   input: Omit<RecordVentureScorecardInput, "rows" | "sourceProcedure"> & {
-    rows: Array<Omit<RecordVentureScorecardInput["rows"][number], "venture_class"> & { venture_class?: ScorecardVentureClass }>;
+    rows: Array<
+      Omit<RecordVentureScorecardInput["rows"][number], "venture_class"> & { venture_class?: ScorecardVentureClass }
+    >;
     /** Reason for an override (stored in the override audit entry). */
     note?: string | null;
   },
@@ -731,7 +1057,10 @@ export function recordGreenfieldScorecardCycle(
   const { note, ...repoInput } = input;
   const now = input.now ?? new Date().toISOString();
   const result = db.transaction(() => {
-    const r = recordVentureScorecardCycle({ ...repoInput, now, sourceProcedure: "portfolio-venture-monitoring", rows } as RecordVentureScorecardInput, db);
+    const r = recordVentureScorecardCycle(
+      { ...repoInput, now, sourceProcedure: "portfolio-venture-monitoring", rows } as RecordVentureScorecardInput,
+      db,
+    );
     if (overrides.length) {
       appendAudit(db, {
         actor: input.actor,
@@ -750,26 +1079,57 @@ export const GREENFIELD_CYCLE_ACTION = "venture_scorecard.greenfield_cycle_recor
 
 export const GREENFIELD_MEASURE_KEYS = {
   financial: ["capex_deployed_vs_tranche", "revenue_vs_case", "ebitda_vs_case", "bep_month_vs_plan"],
-  strategic: ["first_revenue_reached", "utilisation_pct", "headcount_vs_plan", "permit_milestones_met", "certification_milestones_met"],
+  strategic: [
+    "first_revenue_reached",
+    "utilisation_pct",
+    "headcount_vs_plan",
+    "permit_milestones_met",
+    "certification_milestones_met",
+  ],
 } as const;
 
 /** Greenfield ramp-up view: latest-cycle scorecard rows + goal:<metric_key> resolved to ADR-0159 goals (reference only). */
 export function greenfieldRampUpView(projectId: string, db: Database = getDb()) {
   const route = resolveTrack(projectId, db);
   if (route.track !== "greenfield") return null;
-  const latest = db.query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ?").get(projectId) as { c: string | null };
+  const latest = db
+    .query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ?")
+    .get(projectId) as { c: string | null };
   const rows = latest.c
     ? (db
-        .query("SELECT section, measure_key, venture_class, target_value, actual_value, status, evidence_ref, observed_at FROM venture_scorecard WHERE project_id = ? AND review_cycle = ? ORDER BY section, measure_key")
-        .all(projectId, latest.c) as Array<{ section: string; measure_key: string; venture_class: string; target_value: string | null; actual_value: string | null; status: string; evidence_ref: string; observed_at: string }>)
+        .query(
+          "SELECT section, measure_key, venture_class, target_value, actual_value, status, evidence_ref, observed_at FROM venture_scorecard WHERE project_id = ? AND review_cycle = ? ORDER BY section, measure_key",
+        )
+        .all(projectId, latest.c) as Array<{
+        section: string;
+        measure_key: string;
+        venture_class: string;
+        target_value: string | null;
+        actual_value: string | null;
+        status: string;
+        evidence_ref: string;
+        observed_at: string;
+      }>)
     : [];
   const goals = db
-    .query("SELECT id, metric_key, label, direction, target_value FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL ORDER BY metric_key, id")
-    .all(projectId) as Array<{ id: string; metric_key: string; label: string | null; direction: string; target_value: number }>;
+    .query(
+      "SELECT id, metric_key, label, direction, target_value FROM project_business_goal WHERE project_id = ? AND superseded_at IS NULL AND retired_at IS NULL ORDER BY metric_key, id",
+    )
+    .all(projectId) as Array<{
+    id: string;
+    metric_key: string;
+    label: string | null;
+    direction: string;
+    target_value: number;
+  }>;
   const goalRefs = goals.map((g) => {
     const row = rows.find((r) => r.measure_key === `goal:${g.metric_key}`);
     return {
-      goal_id: g.id, metric_key: g.metric_key, label: g.label, direction: g.direction, target_value: g.target_value,
+      goal_id: g.id,
+      metric_key: g.metric_key,
+      label: g.label,
+      direction: g.direction,
+      target_value: g.target_value,
       judgement: row && row.status !== "insufficient_evidence" ? row.status : "not_judged",
       reference_only: true as const,
     };
@@ -785,7 +1145,14 @@ export function greenfieldRampUpView(projectId: string, db: Database = getDb()) 
   };
 }
 
-export interface VentureClassOverride { review_cycle: string; before: string; after: string; note: string | null; by: string; at: string }
+export interface VentureClassOverride {
+  review_cycle: string;
+  before: string;
+  after: string;
+  note: string | null;
+  by: string;
+  at: string;
+}
 export interface EffectiveVentureClass {
   default: ScorecardVentureClass | null;
   /** The class on the latest greenfield cycle (the default when nothing is recorded yet). */
@@ -800,22 +1167,36 @@ export function effectiveVentureClass(projectId: string, db: Database = getDb())
   const route = resolveTrack(projectId, db);
   const def = defaultVentureClass(route.track, route.sub_track);
   const latest = db
-    .query("SELECT review_cycle, venture_class FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'portfolio-venture-monitoring' ORDER BY review_cycle DESC, created_at DESC LIMIT 1")
+    .query(
+      "SELECT review_cycle, venture_class FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'portfolio-venture-monitoring' ORDER BY review_cycle DESC, created_at DESC LIMIT 1",
+    )
     .get(projectId) as { review_cycle: string; venture_class: string } | null;
   if (!latest) return { default: def, effective: def, overridden: false, override: null };
   const overridden = def !== null && latest.venture_class !== def;
   let override: VentureClassOverride | null = null;
   if (overridden) {
     const a = db
-      .query("SELECT actor_user_id, target, created_at FROM audit_log WHERE action = ? AND target LIKE ? ORDER BY created_at DESC, id DESC LIMIT 1")
-      .get(VENTURE_CLASS_OVERRIDE_ACTION, `${projectId}:${latest.review_cycle}|%`) as { actor_user_id: string; target: string; created_at: string } | null;
+      .query(
+        "SELECT actor_user_id, target, created_at FROM audit_log WHERE action = ? AND target LIKE ? ORDER BY created_at DESC, id DESC LIMIT 1",
+      )
+      .get(VENTURE_CLASS_OVERRIDE_ACTION, `${projectId}:${latest.review_cycle}|%`) as {
+      actor_user_id: string;
+      target: string;
+      created_at: string;
+    } | null;
     if (a) {
       let detail: { before?: string; after?: string[] | string; note?: string | null } = {};
-      try { detail = JSON.parse(a.target.slice(a.target.indexOf("|") + 1)); } catch { /* malformed — keep defaults */ }
+      try {
+        detail = JSON.parse(a.target.slice(a.target.indexOf("|") + 1));
+      } catch {
+        /* malformed — keep defaults */
+      }
       override = {
         review_cycle: latest.review_cycle,
         before: detail.before ?? def!,
-        after: Array.isArray(detail.after) ? (detail.after[0] ?? latest.venture_class) : (detail.after ?? latest.venture_class),
+        after: Array.isArray(detail.after)
+          ? (detail.after[0] ?? latest.venture_class)
+          : (detail.after ?? latest.venture_class),
         note: detail.note ?? null,
         by: a.actor_user_id,
         at: a.created_at,
@@ -864,13 +1245,22 @@ export function observedAtIssue(v: unknown, nowIso: string): string | null {
   return null;
 }
 
-export type ScorecardErrorCode = "invalid_request" | "not_applicable_track" | "needs_classification" | "run_required" | "cycle_exists" | "agent_forbidden";
-export type ScorecardResult = { ok: true; review_cycle: string; venture_class: EffectiveVentureClass; row_ids: string[]; measures: number } | { ok: false; code: ScorecardErrorCode; message: string };
+export type ScorecardErrorCode =
+  | "invalid_request"
+  | "not_applicable_track"
+  | "needs_classification"
+  | "run_required"
+  | "cycle_exists"
+  | "agent_forbidden";
+export type ScorecardResult =
+  | { ok: true; review_cycle: string; venture_class: EffectiveVentureClass; row_ids: string[]; measures: number }
+  | { ok: false; code: ScorecardErrorCode; message: string };
 const sfail = (code: ScorecardErrorCode, message: string) => ({ ok: false as const, code, message });
 
 function finiteOrNull(v: unknown, field: string): { ok: true; value: number | null } | { ok: false; message: string } {
   if (v === null || v === undefined) return { ok: true, value: null };
-  if (typeof v !== "number" || !Number.isFinite(v)) return { ok: false, message: `${field}은 유한한 숫자(또는 null)여야 합니다.` };
+  if (typeof v !== "number" || !Number.isFinite(v))
+    return { ok: false, message: `${field}은 유한한 숫자(또는 null)여야 합니다.` };
   return { ok: true, value: v };
 }
 
@@ -890,10 +1280,16 @@ export function recordGreenfieldScorecardFromRequest(
   input: { projectId: string; body: unknown; actor: string; now?: string },
   db: Database = getDb(),
 ): ScorecardResult {
-  if (AGENT_KEYS.has(input.actor)) return sfail("agent_forbidden", "S12 스코어카드 기록은 사람만 할 수 있습니다 (boundary #2).");
+  if (AGENT_KEYS.has(input.actor))
+    return sfail("agent_forbidden", "S12 스코어카드 기록은 사람만 할 수 있습니다 (boundary #2).");
   const route = resolveTrack(input.projectId, db);
-  if (route.track === null) return sfail("needs_classification", "트랙(case_type/track)이 확인되지 않았습니다 — 사람의 분류가 필요합니다.");
-  if (route.track !== "greenfield") return sfail("not_applicable_track", "이 기록은 greenfield 프로젝트에만 적용됩니다 (brownfield는 integration-monitoring / partnership-monitoring).");
+  if (route.track === null)
+    return sfail("needs_classification", "트랙(case_type/track)이 확인되지 않았습니다 — 사람의 분류가 필요합니다.");
+  if (route.track !== "greenfield")
+    return sfail(
+      "not_applicable_track",
+      "이 기록은 greenfield 프로젝트에만 적용됩니다 (brownfield는 integration-monitoring / partnership-monitoring).",
+    );
   const def = defaultVentureClass(route.track, route.sub_track)!;
   const b = (input.body && typeof input.body === "object" ? input.body : {}) as Record<string, unknown>;
   const cycle = typeof b.review_cycle === "string" ? b.review_cycle.trim() : "";
@@ -902,35 +1298,55 @@ export function recordGreenfieldScorecardFromRequest(
   if (cycleIssue) return sfail("invalid_request", cycleIssue);
   let vc: ScorecardVentureClass = def;
   if (b.venture_class !== undefined && b.venture_class !== null) {
-    if (!(GREENFIELD_VENTURE_CLASSES as readonly unknown[]).includes(b.venture_class)) return sfail("invalid_request", "venture_class는 driving | enabling | emergent 중 하나입니다.");
+    if (!(GREENFIELD_VENTURE_CLASSES as readonly unknown[]).includes(b.venture_class))
+      return sfail("invalid_request", "venture_class는 driving | enabling | emergent 중 하나입니다.");
     vc = b.venture_class as ScorecardVentureClass;
   }
-  if (b.note !== undefined && b.note !== null && typeof b.note !== "string") return sfail("invalid_request", "note는 문자열이어야 합니다.");
+  if (b.note !== undefined && b.note !== null && typeof b.note !== "string")
+    return sfail("invalid_request", "note는 문자열이어야 합니다.");
   const note = typeof b.note === "string" ? b.note.trim() : "";
-  if (note.length > MAX_OVERRIDE_NOTE_LEN) return sfail("invalid_request", `note는 ${MAX_OVERRIDE_NOTE_LEN}자 이하여야 합니다.`);
-  if (vc !== def && !note) return sfail("invalid_request", `venture_class를 기본값(${def})과 다르게 기록하려면 note(사유)가 필요합니다.`);
-  if (!Array.isArray(b.measures) || b.measures.length === 0) return sfail("invalid_request", "measures는 비어 있지 않은 배열이어야 합니다.");
-  if (b.measures.length > SCORECARD_LIMITS.measures * 2) return sfail("invalid_request", `measures는 최대 ${SCORECARD_LIMITS.measures * 2}개입니다.`);
-  const rows: Array<Omit<RecordVentureScorecardInput["rows"][number], "venture_class"> & { venture_class: ScorecardVentureClass }> = [];
+  if (note.length > MAX_OVERRIDE_NOTE_LEN)
+    return sfail("invalid_request", `note는 ${MAX_OVERRIDE_NOTE_LEN}자 이하여야 합니다.`);
+  if (vc !== def && !note)
+    return sfail("invalid_request", `venture_class를 기본값(${def})과 다르게 기록하려면 note(사유)가 필요합니다.`);
+  if (!Array.isArray(b.measures) || b.measures.length === 0)
+    return sfail("invalid_request", "measures는 비어 있지 않은 배열이어야 합니다.");
+  if (b.measures.length > SCORECARD_LIMITS.measures * 2)
+    return sfail("invalid_request", `measures는 최대 ${SCORECARD_LIMITS.measures * 2}개입니다.`);
+  const rows: Array<
+    Omit<RecordVentureScorecardInput["rows"][number], "venture_class"> & { venture_class: ScorecardVentureClass }
+  > = [];
   for (let i = 0; i < b.measures.length; i++) {
     const m = (b.measures[i] && typeof b.measures[i] === "object" ? b.measures[i] : {}) as Record<string, unknown>;
     const at = `measures[${i}]`;
     const key = typeof m.measure_key === "string" ? m.measure_key.trim() : "";
-    if (!key || key.length > SCORECARD_LIMITS.measure_key) return sfail("invalid_request", `${at}.measure_key가 필요합니다 (최대 ${SCORECARD_LIMITS.measure_key}자).`);
+    if (!key || key.length > SCORECARD_LIMITS.measure_key)
+      return sfail("invalid_request", `${at}.measure_key가 필요합니다 (최대 ${SCORECARD_LIMITS.measure_key}자).`);
     const section = greenfieldMeasureSection(key);
-    if (!section) return sfail("invalid_request", `${at}.measure_key '${key}'는 문서화된 greenfield 측정 키가 아닙니다 (portfolio-venture-monitoring v1.2.0).`);
+    if (!section)
+      return sfail(
+        "invalid_request",
+        `${at}.measure_key '${key}'는 문서화된 greenfield 측정 키가 아닙니다 (portfolio-venture-monitoring v1.2.0).`,
+      );
     const value = finiteOrNull(m.value, `${at}.value`);
     if (!value.ok) return sfail("invalid_request", value.message);
     const target = finiteOrNull(m.target_value, `${at}.target_value`);
     if (!target.ok) return sfail("invalid_request", target.message);
-    if (!(SCORECARD_STATUSES as readonly unknown[]).includes(m.status)) return sfail("invalid_request", `${at}.status는 on_target | deviation | insufficient_evidence 중 하나입니다.`);
+    if (!(SCORECARD_STATUSES as readonly unknown[]).includes(m.status))
+      return sfail("invalid_request", `${at}.status는 on_target | deviation | insufficient_evidence 중 하나입니다.`);
     const status = m.status as (typeof SCORECARD_STATUSES)[number];
     if (status !== "insufficient_evidence" && (value.value === null || target.value === null)) {
-      return sfail("invalid_request", `${at}: value와 target_value가 없으면 status는 insufficient_evidence여야 합니다.`);
+      return sfail(
+        "invalid_request",
+        `${at}: value와 target_value가 없으면 status는 insufficient_evidence여야 합니다.`,
+      );
     }
     const ev = typeof m.evidence_ref === "string" ? m.evidence_ref.trim() : "";
     if (!ev || ev.length > SCORECARD_LIMITS.evidence_ref || !isValidEvidenceRef(ev)) {
-      return sfail("invalid_request", `${at}.evidence_ref는 doc:<id> / src:<code> / https://<url> 형식이어야 합니다 (최대 ${SCORECARD_LIMITS.evidence_ref}자).`);
+      return sfail(
+        "invalid_request",
+        `${at}.evidence_ref는 doc:<id> / src:<code> / https://<url> 형식이어야 합니다 (최대 ${SCORECARD_LIMITS.evidence_ref}자).`,
+      );
     }
     let observed = now;
     if (m.observed_at !== undefined && m.observed_at !== null) {
@@ -938,21 +1354,30 @@ export function recordGreenfieldScorecardFromRequest(
       if (oi) return sfail("invalid_request", `${at}.observed_at ${oi}`);
       observed = m.observed_at as string;
     }
-    if (rows.some((r) => r.measure_key === key)) return sfail("invalid_request", `${at}.measure_key '${key}'가 중복되었습니다.`);
+    if (rows.some((r) => r.measure_key === key))
+      return sfail("invalid_request", `${at}.measure_key '${key}'가 중복되었습니다.`);
     rows.push({
-      venture_class: vc, section, measure_key: key,
+      venture_class: vc,
+      section,
+      measure_key: key,
       target_value: target.value === null ? null : String(target.value),
       actual_value: value.value === null ? null : String(value.value),
-      status, evidence_ref: ev, observed_at: observed,
+      status,
+      evidence_ref: ev,
+      observed_at: observed,
     });
   }
   for (const sec of ["financial", "strategic"] as const) {
-    if (rows.filter((r) => r.section === sec).length > SCORECARD_LIMITS.measures) return sfail("invalid_request", `${sec} 측정은 최대 ${SCORECARD_LIMITS.measures}개입니다.`);
+    if (rows.filter((r) => r.section === sec).length > SCORECARD_LIMITS.measures)
+      return sfail("invalid_request", `${sec} 측정은 최대 ${SCORECARD_LIMITS.measures}개입니다.`);
   }
   const prior = db
-    .query("SELECT COUNT(*) AS n FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'portfolio-venture-monitoring' AND review_cycle = ?")
+    .query(
+      "SELECT COUNT(*) AS n FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'portfolio-venture-monitoring' AND review_cycle = ?",
+    )
     .get(input.projectId, cycle) as { n: number };
-  if (prior.n > 0) return sfail("cycle_exists", `${cycle} 주기는 이미 기록되었습니다 — 주기는 변경할 수 없는 단위입니다 (ADR-0005).`);
+  if (prior.n > 0)
+    return sfail("cycle_exists", `${cycle} 주기는 이미 기록되었습니다 — 주기는 변경할 수 없는 단위입니다 (ADR-0005).`);
   // venture_scorecard is UNIQUE (run_id, source_procedure, review_cycle,
   // section, measure_key) since migration 0139 (ADR-0164) — review_cycle is
   // part of the key, so consecutive quarters all land on the SAME latest run
@@ -971,39 +1396,72 @@ export function recordGreenfieldScorecardFromRequest(
     );
   }
   const out = db.transaction(() => {
-    const r = recordGreenfieldScorecardCycle({ projectId: input.projectId, runId: run.id, reviewCycle: cycle, actor: input.actor, now, rows, note: note || null }, db);
+    const r = recordGreenfieldScorecardCycle(
+      {
+        projectId: input.projectId,
+        runId: run.id,
+        reviewCycle: cycle,
+        actor: input.actor,
+        now,
+        rows,
+        note: note || null,
+      },
+      db,
+    );
     const out0 = r;
     appendAudit(db, {
       actor: input.actor,
       action: GREENFIELD_CYCLE_ACTION,
       // R10: hashes + short summary only; the values live in venture_scorecard.
       target: `${input.projectId}:${cycle}|${JSON.stringify({
-        venture_class: vc, default_venture_class: def, measures: rows.length,
-        statuses: rows.reduce<Record<string, number>>((acc, x) => ((acc[x.status] = (acc[x.status] ?? 0) + 1), acc), {}),
-        measures_hash: sha16(JSON.stringify(rows.map((x) => [x.measure_key, x.actual_value, x.target_value, x.status]))),
+        venture_class: vc,
+        default_venture_class: def,
+        measures: rows.length,
+        statuses: rows.reduce<Record<string, number>>((acc, x) => {
+          acc[x.status] = (acc[x.status] ?? 0) + 1;
+          return acc;
+        }, {}),
+        measures_hash: sha16(
+          JSON.stringify(rows.map((x) => [x.measure_key, x.actual_value, x.target_value, x.status])),
+        ),
         row_ids: out0.result.rowIds,
       })}`,
       now,
     });
     return r;
   })();
-  return { ok: true, review_cycle: cycle, venture_class: effectiveVentureClass(input.projectId, db), row_ids: out.result.rowIds, measures: rows.length };
+  return {
+    ok: true,
+    review_cycle: cycle,
+    venture_class: effectiveVentureClass(input.projectId, db),
+    row_ids: out.result.rowIds,
+    measures: rows.length,
+  };
 }
 
 /** integration-monitoring read surface (pmi step 6): existing pmi_* ledgers only. */
 export function integrationMonitoringView(projectId: string, db: Database = getDb()) {
   const certs = db
-    .query("SELECT id, run_rate_bp, sustained_quarters, signed_at FROM pmi_synergy_certification WHERE project_id = ? ORDER BY signed_at DESC")
+    .query(
+      "SELECT id, run_rate_bp, sustained_quarters, signed_at FROM pmi_synergy_certification WHERE project_id = ? ORDER BY signed_at DESC",
+    )
     .all(projectId) as Array<{ id: string; run_rate_bp: number; sustained_quarters: number; signed_at: string }>;
-  const talent = db.query("SELECT status, COUNT(*) AS n FROM pmi_key_talent WHERE project_id = ? GROUP BY status").all(projectId) as Array<{ status: string; n: number }>;
+  const talent = db
+    .query("SELECT status, COUNT(*) AS n FROM pmi_key_talent WHERE project_id = ? GROUP BY status")
+    .all(projectId) as Array<{ status: string; n: number }>;
   const count = (st: string) => talent.find((t) => t.status === st)?.n ?? 0;
   const total = talent.reduce((a, t) => a + t.n, 0);
   return {
     synergy: { certifications: certs.length, latest: certs[0] ?? null },
     // pmi_key_talent.status CHECK: active | departed_regretted | departed_planned.
     key_talent: {
-      total, active: count("active"), departed_regretted: count("departed_regretted"), departed_planned: count("departed_planned"),
-      retention_pct: total ? Math.round(((total - count("departed_regretted") - count("departed_planned")) / total) * 1000) / 10 : null,
+      total,
+      active: count("active"),
+      departed_regretted: count("departed_regretted"),
+      departed_planned: count("departed_planned"),
+      retention_pct: total
+        ? Math.round(((total - count("departed_regretted") - count("departed_planned")) / total) * 1000) / 10
+        : null,
     },
     recommended: true as const,
   };
@@ -1013,11 +1471,15 @@ export function integrationMonitoringView(projectId: string, db: Database = getD
 export function partnershipMonitoringView(projectId: string, db: Database = getDb()) {
   const terms = (db.query("SELECT COUNT(*) AS n FROM jv_term WHERE project_id = ?").get(projectId) as { n: number }).n;
   const latest = db
-    .query("SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'jv-lifecycle-governance'")
+    .query(
+      "SELECT MAX(review_cycle) AS c FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'jv-lifecycle-governance'",
+    )
     .get(projectId) as { c: string | null };
   const rows = latest.c
     ? (db
-        .query("SELECT section, measure_key, status FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'jv-lifecycle-governance' AND review_cycle = ? ORDER BY section, measure_key")
+        .query(
+          "SELECT section, measure_key, status FROM venture_scorecard WHERE project_id = ? AND source_procedure = 'jv-lifecycle-governance' AND review_cycle = ? ORDER BY section, measure_key",
+        )
         .all(projectId, latest.c) as Array<{ section: string; measure_key: string; status: string }>)
     : [];
   return { jv_terms: terms, review_cycle: latest.c, measures: rows, recommended: true as const };
@@ -1061,27 +1523,49 @@ export function recordPolicyMigration(
   input: { projectId: string; migrationNote: unknown; completedStages: string[]; actor: string; now?: string },
   db: Database = getDb(),
 ): MigrationResult<{ audit_id: string; applies: ReturnType<typeof adr0161Applicability> }> {
-  if (AGENT_KEYS.has(input.actor)) return { ok: false, code: "agent_forbidden", message: "정책 이행 기록은 사람만 남길 수 있습니다." };
+  if (AGENT_KEYS.has(input.actor))
+    return { ok: false, code: "agent_forbidden", message: "정책 이행 기록은 사람만 남길 수 있습니다." };
   if (!isProjectLead(input.projectId, input.actor, db)) {
-    return { ok: false, code: "lead_required", message: "정책 이행 기록은 프로세스 책임자(프로젝트 lead)만 남길 수 있습니다." };
+    return {
+      ok: false,
+      code: "lead_required",
+      message: "정책 이행 기록은 프로세스 책임자(프로젝트 lead)만 남길 수 있습니다.",
+    };
   }
   const note = s(input.migrationNote);
   if (!note) return { ok: false, code: "invalid_request", message: "migration_note가 필요합니다." };
-  if (note.length > MAX_MIGRATION_NOTE_LEN) return { ok: false, code: "invalid_request", message: `migration_note는 ${MAX_MIGRATION_NOTE_LEN}자 이하여야 합니다.` };
-  if (policyMigrationEntry(input.projectId, db)) return { ok: false, code: "already_migrated", message: "이 프로젝트의 ADR-0161 정책 이행 기록이 이미 있습니다." };
+  if (note.length > MAX_MIGRATION_NOTE_LEN)
+    return {
+      ok: false,
+      code: "invalid_request",
+      message: `migration_note는 ${MAX_MIGRATION_NOTE_LEN}자 이하여야 합니다.`,
+    };
+  if (policyMigrationEntry(input.projectId, db))
+    return { ok: false, code: "already_migrated", message: "이 프로젝트의 ADR-0161 정책 이행 기록이 이미 있습니다." };
   const applies = adr0161Applicability(input.projectId, db);
   const now = input.now ?? new Date().toISOString();
   const detail = {
-    adr: POLICY_MIGRATION_ADR, from_spec: POLICY_MIGRATION_FROM_SPEC, to_spec: POLICY_MIGRATION_TO_SPEC,
+    adr: POLICY_MIGRATION_ADR,
+    from_spec: POLICY_MIGRATION_FROM_SPEC,
+    to_spec: POLICY_MIGRATION_TO_SPEC,
     // R10: short summary + hash only in the audit target.
-    migration_note: auditSummary(note), migration_note_hash: sha16(note), completed_stages: input.completedStages, applies,
+    migration_note: auditSummary(note),
+    migration_note_hash: sha16(note),
+    completed_stages: input.completedStages,
+    applies,
   };
   let auditId = "";
   db.transaction(() => {
     if (policyMigrationEntry(input.projectId, db)) return;
-    auditId = appendAudit(db, { actor: input.actor, action: POLICY_MIGRATION_ACTION, target: `${input.projectId}|${JSON.stringify(detail)}`, now });
+    auditId = appendAudit(db, {
+      actor: input.actor,
+      action: POLICY_MIGRATION_ACTION,
+      target: `${input.projectId}|${JSON.stringify(detail)}`,
+      now,
+    });
   }).immediate();
-  if (!auditId) return { ok: false, code: "already_migrated", message: "이 프로젝트의 ADR-0161 정책 이행 기록이 이미 있습니다." };
+  if (!auditId)
+    return { ok: false, code: "already_migrated", message: "이 프로젝트의 ADR-0161 정책 이행 기록이 이미 있습니다." };
   return { ok: true, audit_id: auditId, applies };
 }
 
@@ -1103,19 +1587,38 @@ export function inFlightAdr0161Counts(db: Database = getDb()): InFlightAdr0161Co
     .query("SELECT id, project_no FROM md_project WHERE status = 'open' AND deleted_at IS NULL ORDER BY created_at, id")
     .all() as Array<{ id: string; project_no: string }>;
   const out: InFlightAdr0161Counts = {
-    total: rows.length, by_track: {}, greenfield_execution_baseline: 0, needs_classification: 0,
-    portfolio_venture_monitoring: 0, integration_monitoring: 0, partnership_monitoring: 0, migrated: 0, projects: [],
+    total: rows.length,
+    by_track: {},
+    greenfield_execution_baseline: 0,
+    needs_classification: 0,
+    portfolio_venture_monitoring: 0,
+    integration_monitoring: 0,
+    partnership_monitoring: 0,
+    migrated: 0,
+    projects: [],
   };
   for (const r of rows) {
     const a = adr0161Applicability(r.id, db);
     const track = a.track ?? "needs_classification";
     out.by_track[track] = (out.by_track[track] ?? 0) + 1;
     const applies: string[] = [];
-    if (a.greenfield_execution_baseline === "applies") { out.greenfield_execution_baseline += 1; applies.push("greenfield-execution-baseline"); }
+    if (a.greenfield_execution_baseline === "applies") {
+      out.greenfield_execution_baseline += 1;
+      applies.push("greenfield-execution-baseline");
+    }
     if (a.greenfield_execution_baseline === "needs_classification") out.needs_classification += 1;
-    if (a.portfolio_venture_monitoring) { out.portfolio_venture_monitoring += 1; applies.push("portfolio-venture-monitoring"); }
-    if (a.integration_monitoring) { out.integration_monitoring += 1; applies.push("integration-monitoring"); }
-    if (a.partnership_monitoring) { out.partnership_monitoring += 1; applies.push("partnership-monitoring"); }
+    if (a.portfolio_venture_monitoring) {
+      out.portfolio_venture_monitoring += 1;
+      applies.push("portfolio-venture-monitoring");
+    }
+    if (a.integration_monitoring) {
+      out.integration_monitoring += 1;
+      applies.push("integration-monitoring");
+    }
+    if (a.partnership_monitoring) {
+      out.partnership_monitoring += 1;
+      applies.push("partnership-monitoring");
+    }
     const migrated = !!policyMigrationEntry(r.id, db);
     if (migrated) out.migrated += 1;
     out.projects.push({ project_no: r.project_no, track, sub_track: a.sub_track ?? "none", applies, migrated });

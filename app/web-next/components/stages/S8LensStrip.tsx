@@ -42,7 +42,7 @@ export function S8LensStrip({ projectId, onOpenSelection }: { projectId: string;
         <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{t("loadingTheFeasibility")}</p>
       </section>
     );
-  // ADR-0206: the selected/adopted target left the Short List - show the stale state, never figures of a stale record.
+  // ADR-0206: target left the Final Candidate List - show the stale state, never figures of a stale record.
   if (data.state === "stale_target")
     return (
       <section className="market-section sizing-step mb-3" aria-label={t("s8FeasibilitySummary2")}>
