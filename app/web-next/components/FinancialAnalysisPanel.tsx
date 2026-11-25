@@ -118,6 +118,7 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
   }
 
   const company = view?.company ?? null;
+  const isGreenfield = view?.project.track === "greenfield";
   const roleChip = company?.role === "target" ? t("brownfieldAcquisitionTarget") : t("greenfieldBenchmarkCompany");
 
   return (
@@ -234,13 +235,13 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
               <div className="border border-dashed border-[color:var(--border-bright)] rounded-lg p-6 text-center text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
                 {canAct ? (
                   <>
-                    {t("noLinkedTargetCompanySearching")}
+                    {t(isGreenfield ? "noLinkedBenchmarkCompanySearching" : "noLinkedTargetCompanySearching")}
                     <br />
                     <b>{t("keyMetricsSummaryFullFinancial")}</b>
                     {t("canBeUsed")}
                   </>
                 ) : (
-                  t("noLinkedTargetCompany")
+                  t(isGreenfield ? "noLinkedBenchmarkCompany" : "noLinkedTargetCompany")
                 )}
               </div>
             </section>
@@ -248,7 +249,9 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
 
           {canAct && !selectedTarget && (
             <section className="market-section sizing-step mt-3">
-              <h3 className="sizing-step-title">{t("linkOrChangeTargetCompany")}</h3>
+              <h3 className="sizing-step-title">
+                {t(isGreenfield ? "linkOrChangeBenchmarkCompany" : "linkOrChangeTargetCompany")}
+              </h3>
               <div className="grid gap-2 md:grid-cols-[1fr_auto] items-end">
                 <div>
                   <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] mb-1">
