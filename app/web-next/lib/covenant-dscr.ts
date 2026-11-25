@@ -28,7 +28,13 @@
  */
 import type { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
-import { caseInputsForProject, caseInputsForTarget, deterministicCaseYearTable, listShortlistSubjects } from "./business-case-generator.ts";
+import {
+  caseInputsForProject,
+  caseInputsForTarget,
+  deterministicCaseYearTable,
+  listShortlistSubjects,
+} from "./business-case-generator.ts";
+import { resolveS8Staleness } from "./business-case.ts";
 import { adoptedModelId } from "./greenfield-execution.ts";
 
 /**
@@ -40,7 +46,7 @@ import { adoptedModelId } from "./greenfield-execution.ts";
 export const S10_MIN_DOWNSIDE_DSCR = 1.3;
 
 export type Amortization = "annuity" | "equal_principal" | "bullet";
-export type DscrReason = "no_debt" | "no_adopted_case" | "missing_input" | "no_cash_flows";
+export type DscrReason = "no_debt" | "no_adopted_case" | "missing_input" | "no_cash_flows" | "stale_adopted_case";
 
 export interface DscrPeriod {
   year: number;
@@ -85,8 +91,21 @@ export interface DscrReport {
 }
 
 const empty = (): DscrReport => ({
-  status: "insufficient_evidence", message: null, missing_inputs: [], scenario: null, fallback_to_base: false, case_id: null,
-  periods: [], min_dscr: null, min_dscr_year: null, covenant_tests: [], breached_periods: 0, rag_breached_periods: 0, evidence: null, untested_covenants: [], advisories: [],
+  status: "insufficient_evidence",
+  message: null,
+  missing_inputs: [],
+  scenario: null,
+  fallback_to_base: false,
+  case_id: null,
+  periods: [],
+  min_dscr: null,
+  min_dscr_year: null,
+  covenant_tests: [],
+  breached_periods: 0,
+  rag_breached_periods: 0,
+  evidence: null,
+  untested_covenants: [],
+  advisories: [],
 });
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 
@@ -132,7 +151,11 @@ export function parseTenorYears(raw: string | null | undefined, refIso: string |
   return years > 0 ? Math.max(1, Math.floor(years + 1e-9)) : null;
 }
 
-interface DeclaredCovenant { key: string; direction: "min" | "max"; value: number }
+interface DeclaredCovenant {
+  key: string;
+  direction: "min" | "max";
+  value: number;
+}
 
 /** Covenant thresholds out of covenant_json (JSON object/array or "DSCR >= 1.3 · NetLev <= 3.5x"). */
 export function parseDeclaredCovenants(raw: string | null | undefined): DeclaredCovenant[] {
@@ -156,12 +179,18 @@ export function parseDeclaredCovenants(raw: string | null | undefined): Declared
       if (typeof o.min === "number") out.push({ key: norm(key), direction: "min", value: o.min });
       else if (typeof o.max === "number") out.push({ key: norm(key), direction: "max", value: o.max });
       else if (typeof o.threshold === "number" || typeof o.value === "number") {
-        out.push({ key: norm(key), direction: o.direction === "max" || o.type === "max" ? "max" : "min", value: (o.threshold ?? o.value) as number });
+        out.push({
+          key: norm(key),
+          direction: o.direction === "max" || o.type === "max" ? "max" : "min",
+          value: (o.threshold ?? o.value) as number,
+        });
       }
     }
   };
   if (Array.isArray(parsed)) {
-    for (const e of parsed) if (e && typeof e === "object" && typeof (e as { key?: unknown }).key === "string") fromSpec((e as { key: string }).key, e);
+    for (const e of parsed)
+      if (e && typeof e === "object" && typeof (e as { key?: unknown }).key === "string")
+        fromSpec((e as { key: string }).key, e);
   } else if (parsed && typeof parsed === "object") {
     for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) fromSpec(k, v);
   }
@@ -169,14 +198,26 @@ export function parseDeclaredCovenants(raw: string | null | undefined): Declared
 }
 
 /** Year-t debt service (interest + scheduled principal) of one instrument; 0 after maturity. */
-export function debtServiceByYear(principal: number, ratePct: number, tenor: number, amortization: Amortization): number[] {
+export function debtServiceByYear(
+  principal: number,
+  ratePct: number,
+  tenor: number,
+  amortization: Amortization,
+): number[] {
   const r = ratePct / 100;
   const out: number[] = [];
   let balance = principal;
   const annuity = r > 0 ? (principal * r) / (1 - Math.pow(1 + r, -tenor)) : principal / tenor;
   for (let t = 1; t <= tenor; t++) {
     const interest = balance * r;
-    const repay = amortization === "bullet" ? (t === tenor ? balance : 0) : amortization === "equal_principal" ? principal / tenor : annuity - interest;
+    const repay =
+      amortization === "bullet"
+        ? t === tenor
+          ? balance
+          : 0
+        : amortization === "equal_principal"
+          ? principal / tenor
+          : annuity - interest;
     const principalPaid = Math.min(balance, Math.max(0, repay));
     out.push(interest + principalPaid);
     balance -= principalPaid;
@@ -200,13 +241,20 @@ interface Cfads {
 /** Models of one generation round are created within seconds of each other; siblings must fall inside this window. */
 export const SAME_ROUND_WINDOW_MS = 30 * 60 * 1000;
 
-interface FrozenFlows { years: Array<{ year: number; fcf: number }>; exit_value: number; horizon: number }
+interface FrozenFlows {
+  years: Array<{ year: number; fcf: number }>;
+  exit_value: number;
+  horizon: number;
+}
 
 function snapshotOf(inputsJson: string | null): { flows: FrozenFlows | null; hash: string } {
   if (!inputsJson) return { flows: null, hash: "none" };
   try {
     const spec = JSON.parse(inputsJson) as { deterministic_flows?: FrozenFlows; cases?: Array<{ drivers?: unknown }> };
-    const hash = createHash("sha256").update(JSON.stringify(spec.cases?.[0]?.drivers ?? null)).digest("hex").slice(0, 12);
+    const hash = createHash("sha256")
+      .update(JSON.stringify(spec.cases?.[0]?.drivers ?? null))
+      .digest("hex")
+      .slice(0, 12);
     const f = spec.deterministic_flows;
     return { flows: f && Array.isArray(f.years) ? f : null, hash };
   } catch {
@@ -214,16 +262,27 @@ function snapshotOf(inputsJson: string | null): { flows: FrozenFlows | null; has
   }
 }
 
-function liveYears(db: Database, projectId: string, model: { variant: "market_forward" | "historical"; target_id: string | null }, scenario: "downside" | "base"): Array<{ year: number; cfads: number }> {
+function liveYears(
+  db: Database,
+  projectId: string,
+  model: { variant: "market_forward" | "historical"; target_id: string | null },
+  scenario: "downside" | "base",
+): Array<{ year: number; cfads: number }> {
   let inputs = caseInputsForProject(projectId);
   if (model.target_id) {
-    const opp = (db.query("SELECT source_opportunity_id AS o FROM md_project WHERE id = ?").get(projectId) as { o: string | null } | null)?.o;
+    const opp = (
+      db.query("SELECT source_opportunity_id AS o FROM md_project WHERE id = ?").get(projectId) as {
+        o: string | null;
+      } | null
+    )?.o;
     const subject = opp ? listShortlistSubjects(db as never, opp).find((s) => s.id === model.target_id) : undefined;
     inputs = caseInputsForTarget(projectId, { id: model.target_id, companyId: subject?.companyId ?? null }, inputs);
   }
   const table = deterministicCaseYearTable(inputs, scenario, model.variant);
   // The last year's fcf carries the exit/disposal value; debt service is not paid from a sale.
-  return table.rows.filter((r) => r.year >= 1).map((r) => ({ year: r.year, cfads: r.year === table.horizon ? r.fcf - table.exitValue : r.fcf }));
+  return table.rows
+    .filter((r) => r.year >= 1)
+    .map((r) => ({ year: r.year, cfads: r.year === table.horizon ? r.fcf - table.exitValue : r.fcf }));
 }
 
 /**
@@ -238,19 +297,36 @@ function adoptedCfads(db: Database, projectId: string): Cfads | { missing: strin
   const modelId = adoptedModelId(projectId, db);
   if (!modelId) return { missing: "S8 채택 Business Case" };
   const model = db
-    .query("SELECT id, created_at, COALESCE(variant, 'market_forward') AS variant, target_id FROM business_case_model WHERE id = ? AND project_id = ?")
-    .get(modelId, projectId) as { id: string; created_at: string; variant: "market_forward" | "historical"; target_id: string | null } | null;
+    .query(
+      "SELECT id, created_at, COALESCE(variant, 'market_forward') AS variant, target_id FROM business_case_model WHERE id = ? AND project_id = ?",
+    )
+    .get(modelId, projectId) as {
+    id: string;
+    created_at: string;
+    variant: "market_forward" | "historical";
+    target_id: string | null;
+  } | null;
   if (!model) return { missing: "S8 채택 Business Case 모델" };
-  const adoptedAt = (db
-    .query("SELECT started_at AS at FROM process_run WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_case_adopt' AND status = 'done' ORDER BY started_at DESC, id DESC LIMIT 1")
-    .get(projectId) as { at: string } | null)?.at ?? model.created_at;
+  const adoptedAt =
+    (
+      db
+        .query(
+          "SELECT started_at AS at FROM process_run WHERE entity_type = 'project' AND entity_id = ? AND stage = 's8_case_adopt' AND status = 'done' ORDER BY started_at DESC, id DESC LIMIT 1",
+        )
+        .get(projectId) as { at: string } | null
+    )?.at ?? model.created_at;
   const round = db
     .query(
       `SELECT m.id, m.created_at, m.inputs_json, (SELECT v.scenario FROM valuation_simulation v WHERE v.model_id = m.id LIMIT 1) AS scenario
        FROM business_case_model m
        WHERE m.project_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant, 'market_forward') = ? AND COALESCE(m.target_id, '') = ?`,
     )
-    .all(projectId, model.variant, model.target_id ?? "") as Array<{ id: string; created_at: string; inputs_json: string | null; scenario: string | null }>;
+    .all(projectId, model.variant, model.target_id ?? "") as Array<{
+    id: string;
+    created_at: string;
+    inputs_json: string | null;
+    scenario: string | null;
+  }>;
   const t0 = Date.parse(model.created_at);
   const pick = (scenario: string) =>
     round
@@ -265,7 +341,10 @@ function adoptedCfads(db: Database, projectId: string): Cfads | { missing: strin
   let stale = false;
   let legacy = false;
   if (snap.flows) {
-    years = snap.flows.years.map((y) => ({ year: y.year, cfads: y.year === snap.flows!.horizon ? y.fcf - snap.flows!.exit_value : y.fcf }));
+    years = snap.flows.years.map((y) => ({
+      year: y.year,
+      cfads: y.year === snap.flows!.horizon ? y.fcf - snap.flows!.exit_value : y.fcf,
+    }));
     try {
       const live = liveYears(db, projectId, model, scenario);
       stale = live.length !== years.length || live.some((l, i) => Math.abs(l.cfads - years[i].cfads) > 0.01);
@@ -276,23 +355,57 @@ function adoptedCfads(db: Database, projectId: string): Cfads | { missing: strin
     legacy = true;
     years = liveYears(db, projectId, model, scenario);
   }
-  return { caseId: modelId, sourceModelId: chosen.id, scenario, fallback: !down, adoptedAt, years, inputsHash: snap.hash, stale, legacy };
+  return {
+    caseId: modelId,
+    sourceModelId: chosen.id,
+    scenario,
+    fallback: !down,
+    adoptedAt,
+    years,
+    inputsHash: snap.hash,
+    stale,
+    legacy,
+  };
 }
 
 /** Compute the deterministic downside DSCR report for a project. A project with no debt reports `no_debt`. */
 export function computeDownsideDscr(db: Database, projectId: string): DscrReport {
   const out = empty();
   const debt = db
-    .query("SELECT id, lender, principal, rate, maturity, amortization, covenant_json FROM debt_instrument WHERE project_id = ? ORDER BY rowid")
+    .query(
+      "SELECT id, lender, principal, rate, maturity, amortization, covenant_json FROM debt_instrument WHERE project_id = ? ORDER BY rowid",
+    )
     .all(projectId) as DebtRow[];
   if (debt.length === 0) return { ...out, reason: "no_debt", message: null };
 
+  // ADR-0206: an adopted case whose target left the Short List is not a current basis for a covenant verdict.
+  // Never computed from it and never presented as current; the adoption record itself stays untouched.
+  if (resolveS8Staleness(projectId).adoption !== null) {
+    return {
+      ...out,
+      reason: "stale_adopted_case",
+      missing_inputs: ["S8 adopted case on the Short List"],
+      message:
+        "Downside DSCR was not computed: the adopted Business Case belongs to a target that is no longer on the Short List. Re-select the target and re-adopt a case in S8.",
+    };
+  }
+
   const cf = adoptedCfads(db, projectId);
   if ("missing" in cf) {
-    return { ...out, reason: "no_adopted_case", missing_inputs: [cf.missing], message: `다운사이드 DSCR을 계산할 수 없습니다 — ${cf.missing}이(가) 없습니다 (S8에서 케이스를 채택하세요)` };
+    return {
+      ...out,
+      reason: "no_adopted_case",
+      missing_inputs: [cf.missing],
+      message: `다운사이드 DSCR을 계산할 수 없습니다 — ${cf.missing}이(가) 없습니다 (S8에서 케이스를 채택하세요)`,
+    };
   }
   if (cf.years.length === 0) {
-    return { ...out, reason: "no_cash_flows", case_id: cf.caseId, message: "다운사이드 DSCR을 계산할 수 없습니다 — 채택 케이스에 연도별 현금흐름이 없습니다" };
+    return {
+      ...out,
+      reason: "no_cash_flows",
+      case_id: cf.caseId,
+      message: "다운사이드 DSCR을 계산할 수 없습니다 — 채택 케이스에 연도별 현금흐름이 없습니다",
+    };
   }
 
   // Inputs per instrument: every missing one is named (no silent default).
@@ -305,9 +418,14 @@ export function computeDownsideDscr(db: Database, projectId: string): DscrReport
     const bad: string[] = [];
     if (!(d.principal > 0)) bad.push("원금(principal)");
     if (!(d.rate > 0)) bad.push("금리(rate, % 단위; 0이거나 없음)");
-    else if (d.rate < 1) bad.push(`금리(rate=${d.rate} — % 단위입니다. 0.05처럼 소수로 입력했다면 5로 고쳐 주세요; 정말 ${d.rate}%라면 확인 후 재입력)`);
+    else if (d.rate < 1)
+      bad.push(
+        `금리(rate=${d.rate} — % 단위입니다. 0.05처럼 소수로 입력했다면 5로 고쳐 주세요; 정말 ${d.rate}%라면 확인 후 재입력)`,
+      );
     else if (d.rate > 100) bad.push(`금리(rate=${d.rate} — 100% 초과)`);
+    // biome-ignore format: keep on one line — i18n-lint counts Korean lines
     if (tenor === null) bad.push(d.maturity?.trim() ? `만기/상환기간(maturity='${d.maturity}' — 'N년' 또는 채택일 이후 날짜 필요)` : "만기/상환기간(maturity)");
+    // biome-ignore format: keep on one line — i18n-lint counts Korean lines
     if (amort === null) bad.push(d.amortization?.trim() ? `상환방식(amortization='${d.amortization}' — 원리금균등·원금균등·만기일시 중 하나)` : "상환방식(amortization)");
     if (bad.length > 0) {
       for (const b of bad) missing.push(`${b} [${who}]`);
@@ -316,7 +434,13 @@ export function computeDownsideDscr(db: Database, projectId: string): DscrReport
     schedules.push({ row: d, service: debtServiceByYear(d.principal, d.rate, tenor as number, amort as Amortization) });
   }
   if (missing.length > 0) {
-    return { ...out, reason: "missing_input", case_id: cf.caseId, missing_inputs: missing, message: `다운사이드 DSCR 계산에 필요한 부채 조건이 없습니다 — ${missing.join("; ")}` };
+    return {
+      ...out,
+      reason: "missing_input",
+      case_id: cf.caseId,
+      missing_inputs: missing,
+      message: `다운사이드 DSCR 계산에 필요한 부채 조건이 없습니다 — ${missing.join("; ")}`,
+    };
   }
 
   const horizon = cf.years.length;
@@ -326,7 +450,10 @@ export function computeDownsideDscr(db: Database, projectId: string): DscrReport
     return { year, cfads: r3(cfads), debt_service: r3(service), dscr: service > 0 ? r3(cfads / service) : null };
   });
   const tested = periods.filter((p) => p.dscr !== null);
-  const min = tested.reduce<DscrPeriod | null>((m, p) => (m === null || (p.dscr as number) < (m.dscr as number) ? p : m), null);
+  const min = tested.reduce<DscrPeriod | null>(
+    (m, p) => (m === null || (p.dscr as number) < (m.dscr as number) ? p : m),
+    null,
+  );
 
   // Declared DSCR covenants: the tightest min-threshold across instruments is tested per period.
   const declared = debt.flatMap((d) => parseDeclaredCovenants(d.covenant_json));
@@ -335,16 +462,40 @@ export function computeDownsideDscr(db: Database, projectId: string): DscrReport
   const minTh = dscrDeclared.filter((c) => c.direction === "min").map((c) => c.value);
   if (minTh.length > 0) {
     const threshold = Math.max(...minTh);
-    for (const p of tested) tests.push({ period_id: `Y${p.year}`, covenant_key: "DSCR", threshold, projected_value: p.dscr as number, breached: (p.dscr as number) < threshold ? 1 : 0, direction: "min" });
+    for (const p of tested)
+      tests.push({
+        period_id: `Y${p.year}`,
+        covenant_key: "DSCR",
+        threshold,
+        projected_value: p.dscr as number,
+        breached: (p.dscr as number) < threshold ? 1 : 0,
+        direction: "min",
+      });
   }
   const advisories: string[] = [];
   const untested = [...new Set(declared.filter((c) => !/^dscr/i.test(c.key)).map((c) => c.key))];
-  if (untested.length > 0) advisories.push(`[권고·비차단] 커버넌트 ${untested.join(", ")}은(는) 재무상태표 입력이 없어 자동 시험하지 않았습니다 — 사람이 직접 확인하세요.`);
-  if (cf.fallback) advisories.push("[권고·비차단] 이 프로젝트에는 다운사이드 케이스가 없어 기준(base) 시나리오 현금흐름으로 DSCR을 계산했습니다 — 다운사이드 케이스를 생성하면 다운사이드 기준으로 다시 계산됩니다.");
-  if (cf.stale) advisories.push("[권고·비차단] 채택 케이스의 입력이 채택 이후 바뀌었습니다(채택 케이스가 오래됨) — 채택 당시 저장된 스냅샷 현금흐름으로 판정했습니다. 최신 입력으로 보려면 S8에서 케이스를 재생성·재채택하세요.");
-  if (cf.legacy) advisories.push("[권고·비차단] 채택 케이스 스냅샷에 저장된 현금흐름이 없어(구버전 생성물) 현재 입력으로 계산했습니다 — 재생성하면 스냅샷에 고정됩니다.");
-  if (longest > horizon) advisories.push(`[권고·비차단] 차입 상환기간(${longest}년)이 사업 계획 기간(${horizon}년)보다 길어 계획 기간 이후 연도는 DSCR을 시험하지 않았습니다.`);
-  if (tested.length === 0) advisories.push("[권고·비차단] 계획 기간 안에 원리금 상환 연도가 없어 DSCR 시험 대상 기간이 없습니다.");
+  if (untested.length > 0)
+    advisories.push(
+      `[권고·비차단] 커버넌트 ${untested.join(", ")}은(는) 재무상태표 입력이 없어 자동 시험하지 않았습니다 — 사람이 직접 확인하세요.`,
+    );
+  if (cf.fallback)
+    advisories.push(
+      "[권고·비차단] 이 프로젝트에는 다운사이드 케이스가 없어 기준(base) 시나리오 현금흐름으로 DSCR을 계산했습니다 — 다운사이드 케이스를 생성하면 다운사이드 기준으로 다시 계산됩니다.",
+    );
+  if (cf.stale)
+    advisories.push(
+      "[권고·비차단] 채택 케이스의 입력이 채택 이후 바뀌었습니다(채택 케이스가 오래됨) — 채택 당시 저장된 스냅샷 현금흐름으로 판정했습니다. 최신 입력으로 보려면 S8에서 케이스를 재생성·재채택하세요.",
+    );
+  if (cf.legacy)
+    advisories.push(
+      "[권고·비차단] 채택 케이스 스냅샷에 저장된 현금흐름이 없어(구버전 생성물) 현재 입력으로 계산했습니다 — 재생성하면 스냅샷에 고정됩니다.",
+    );
+  if (longest > horizon)
+    advisories.push(
+      `[권고·비차단] 차입 상환기간(${longest}년)이 사업 계획 기간(${horizon}년)보다 길어 계획 기간 이후 연도는 DSCR을 시험하지 않았습니다.`,
+    );
+  if (tested.length === 0)
+    advisories.push("[권고·비차단] 계획 기간 안에 원리금 상환 연도가 없어 DSCR 시험 대상 기간이 없습니다.");
 
   return {
     ...out,
@@ -359,7 +510,9 @@ export function computeDownsideDscr(db: Database, projectId: string): DscrReport
     breached_periods: tests.filter((t) => t.breached === 1).length,
     // RAG count (MEDIUM-4): periods below the tighter of the declared DSCR covenant and the S10 floor,
     // so a floor breach without a declared covenant counts and RAG agrees with the gate.
-    rag_breached_periods: tested.filter((p) => (p.dscr as number) < Math.max(minTh.length > 0 ? Math.max(...minTh) : 0, S10_MIN_DOWNSIDE_DSCR)).length,
+    rag_breached_periods: tested.filter(
+      (p) => (p.dscr as number) < Math.max(minTh.length > 0 ? Math.max(...minTh) : 0, S10_MIN_DOWNSIDE_DSCR),
+    ).length,
     evidence: `case=${cf.caseId};scenario=${cf.scenario};source_model=${cf.sourceModelId};inputs=${cf.inputsHash}`,
     untested_covenants: untested,
     advisories,

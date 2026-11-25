@@ -16,7 +16,9 @@ describe("PrimaryAction renders in place", () => {
     expect(frame).not.toMatch(/PrimarySlot/);
   });
   test("PrimaryAction always wraps its output in the in-place container", () => {
-    const body = ui.slice(ui.indexOf("export function PrimaryAction("));
+    // Bounded to PrimaryAction itself: later components (e.g. the admin-only DevRef) may legitimately `return null`.
+    const start = ui.indexOf("export function PrimaryAction(");
+    const body = ui.slice(start, ui.indexOf("/* ── ParamTable", start));
     expect(body).toContain('<span className="primary-inline">{node}</span>');
     expect(body).not.toMatch(/return null/);
   });

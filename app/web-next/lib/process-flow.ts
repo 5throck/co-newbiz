@@ -13,6 +13,7 @@ import { hasScreeningEvidence, listTargets, longListCandidateGaps, screeningSumm
 import { countSourcedCapabilityRows } from "./capability-gap.ts";
 import { AGENT_KEYS } from "./agent-registry.generated.ts";
 import { latestPmiKickoff, pmiKickoffApplies } from "./pmi-kickoff.ts";
+import { resolveS8Staleness } from "./business-case.ts";
 import { adoptedModelId, executionBaselineS11Check } from "./greenfield-execution.ts";
 import { ddCompletionSummary } from "./dd-checklist-tailor.ts";
 import { establishmentProgress, reopenedAfterGate } from "./establishment.ts";
@@ -1151,6 +1152,13 @@ const PROJECT_STAGE_COMPLETION: Partial<Record<StageId, (args: ProjectStageArgs)
          ORDER BY started_at DESC, id DESC LIMIT 1`,
       )
       .get(project.id) as { id: string } | undefined;
+    // ADR-0206: an adoption whose target left the Short List is no longer a usable IC input - same missing key, stated reason.
+    if (adoption && resolveS8Staleness(project.id).adoption !== null) {
+      blockers.push(
+        "The adopted Business Case belongs to a target no longer on the Short List - re-select the target and re-adopt a case in S8 (ADR-0206)",
+      );
+      missing.push(blocker("s11.adopted_business_case"));
+    }
     if (!adoption) {
       blockers.push("채택된 Business Case가 필요합니다 (투자심의 자료 입력)");
       missing.push(blocker("s11.adopted_business_case"));
