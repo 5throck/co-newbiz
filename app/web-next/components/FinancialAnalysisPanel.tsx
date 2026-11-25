@@ -119,6 +119,8 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
 
   const company = view?.company ?? null;
   const isGreenfield = view?.project.track === "greenfield";
+  // Brownfield: the gate-bound target comes only from S8 target selection — no free link/change here.
+  const isBrownfield = view?.project.track === "brownfield";
   const roleChip = company?.role === "target" ? t("brownfieldAcquisitionTarget") : t("greenfieldBenchmarkCompany");
 
   return (
@@ -233,7 +235,9 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
           ) : (
             <section className="market-section sizing-step">
               <div className="border border-dashed border-[color:var(--border-bright)] rounded-lg p-6 text-center text-[color:var(--muted-fg)] text-[length:var(--fs-body)]">
-                {canAct ? (
+                {canAct && isBrownfield ? (
+                  t("noLinkedTargetCompanyViaS8")
+                ) : canAct ? (
                   <>
                     {t(isGreenfield ? "noLinkedBenchmarkCompanySearching" : "noLinkedTargetCompanySearching")}
                     <br />
@@ -247,7 +251,21 @@ export function FinancialAnalysisPanel({ projectId }: { projectId: string }) {
             </section>
           )}
 
-          {canAct && !selectedTarget && (
+          {isBrownfield && (
+            <section className="market-section sizing-step mt-3" data-testid="brownfield-target-via-s8-notice">
+              <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                {t("brownfieldTargetViaS8Selection")}
+              </p>
+              <Link
+                href={`/projects/${encodeURIComponent(projectId)}/business-case?tab=targets`}
+                className="text-[color:var(--accent)] font-bold text-[length:var(--fs-body)]"
+              >
+                {t("openS8TargetSelection")}
+              </Link>
+            </section>
+          )}
+
+          {canAct && !selectedTarget && !isBrownfield && (
             <section className="market-section sizing-step mt-3">
               <h3 className="sizing-step-title">
                 {t(isGreenfield ? "linkOrChangeBenchmarkCompany" : "linkOrChangeTargetCompany")}
