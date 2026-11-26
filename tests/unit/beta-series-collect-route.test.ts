@@ -12,6 +12,7 @@
  */
 import { test, expect, beforeAll, afterAll, afterEach, describe } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import type { BetaCollectionResult } from "../../scripts/co-newbiz/beta-series-core.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -39,6 +40,18 @@ const { BETA_COLLECT_JOB_KEY, STALE_RUN_MS, betaCollectionIdle, setBetaCollectio
   await import("../../app/web-next/lib/beta-collection-runner.ts");
 
 const NOW = new Date().toISOString();
+
+/** A minimal, fully typed collection result for runs whose content the test does not care about. */
+const fakeResult = (projectId: string, collected: number): BetaCollectionResult => ({
+  projectId,
+  backfillOnly: false,
+  collected,
+  krxCalls: 0,
+  budget: 2000,
+  cacheHits: 0,
+  emptyDays: 0,
+  series: [],
+});
 const PACING = { minIntervalMs: 0, retryDelayMs: 1 };
 const FAKE_KEY = ["fixture", "krx", "key"].join("-"); // dummy fixture, not a credential
 
@@ -267,7 +280,7 @@ describe("concurrency (409) and failure recording", () => {
     expect(runsOf(projectA)).toHaveLength(0);
     // and the slot is free again
     setBetaCollectionTestHooks({
-      run: async (opts) => ({ ...({} as never), projectId: opts.projectId, collected: 1 }) as never,
+      run: async (opts) => fakeResult(opts.projectId, 1),
     });
     expect((await collect(projectB, analystCookie)).status).toBe(202);
     await betaCollectionIdle();
@@ -292,7 +305,7 @@ describe("concurrency (409) and failure recording", () => {
     expect(run.error).toContain("0 observations collected");
     // a failed run does not block a retry
     setBetaCollectionTestHooks({
-      run: async (opts) => ({ projectId: opts.projectId, collected: 2 }) as never,
+      run: async (opts) => fakeResult(opts.projectId, 2),
     });
     expect((await collect(projectA, analystCookie)).status).toBe(202);
     await betaCollectionIdle();
