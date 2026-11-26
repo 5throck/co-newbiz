@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-25T13:25:12.506Z
+**Generated**: 2026-11-26T00:42:19.007Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 217 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 218 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -210,7 +210,8 @@
 | backfill-capability-gap.ts | 1.1.1 | scripts/co-newbiz/backfill-capability-gap.ts | N/A |
 | backfill-hyd-brk-report.ts | 1.1.0 | scripts/co-newbiz/backfill-hyd-brk-report.ts | N/A |
 | backup.ts | 1.0.1 | scripts/co-newbiz/backup.ts | fs, path |
-| beta-series.ts | 1.3.1 | scripts/co-newbiz/beta-series.ts | fs, path |
+| beta-series-core.ts | 1.0.0 | scripts/co-newbiz/beta-series-core.ts | fs, path, url |
+| beta-series.ts | 1.4.0 | scripts/co-newbiz/beta-series.ts | N/A |
 | bootstrap-stages.ts | 1.1.0 | scripts/bootstrap-stages.ts | fs, js-yaml, path |
 | build-search-index.ts | 1.0.0 | scripts/handbook/build-search-index.ts | fs, path |
 | calibrate.ts | 1.1.0 | scripts/co-newbiz/calibrate.ts | fs, os, path |

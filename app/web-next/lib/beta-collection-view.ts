@@ -1,4 +1,6 @@
-// @version 1.1.0
+// @version 1.2.0
+// 1.2.0: in-app collection (수집 실행) — betaCollectUrl + BetaCollectRun/parseBetaCollectRun for the status poll
+// (the run shape is shared with the ECOS collection; see use-collect-run.ts).
 // Pure view helpers for the WACC beta panel's collection-status block.
 // Mirrors the `collection` object returned by GET /api/projects/[id]/wacc/beta-series.
 
@@ -87,7 +89,9 @@ export function betaSeriesUrl(projectId: string, index: BetaIndexMarket | null):
 }
 
 // INTERIM-WORDING: Korean status messages pending copy review.
-export function statusMessage(c: Pick<BetaCollection, "status" | "aligned" | "min_rows"> & Partial<Pick<BetaCollection, "index_market">>): string {
+export function statusMessage(
+  c: Pick<BetaCollection, "status" | "aligned" | "min_rows"> & Partial<Pick<BetaCollection, "index_market">>,
+): string {
   switch (c.status) {
     case "none":
       return "수집된 시계열이 없습니다. 수집을 실행해야 합니다."; // INTERIM-WORDING
@@ -171,5 +175,34 @@ export function parseBetaSeriesResponse(httpOk: boolean, body: unknown): BetaSer
     rows: Array.isArray(b.data.rows) ? b.data.rows : [],
     indexOptions: Array.isArray(b.data.index_options) ? b.data.index_options : [],
     defaultIndex: b.data.default_index === "KOSPI" || b.data.default_index === "KOSDAQ" ? b.data.default_index : null,
+  };
+}
+
+/** POST (start) / GET (latest run status) — the in-app "수집 실행" endpoint. */
+export function betaCollectUrl(projectId: string): string {
+  return `/api/projects/${encodeURIComponent(projectId)}/wacc/beta-series/collect`;
+}
+
+export interface BetaCollectRun {
+  run_id: string;
+  status: "running" | "success" | "failed";
+  started_at: string;
+  finished_at: string | null;
+  error: string | null;
+  result: Record<string, unknown> | null;
+}
+
+/** Narrow the GET .../collect payload ({project_id, run}) to a run, or null when none/unrecognised. */
+export function parseBetaCollectRun(data: unknown): BetaCollectRun | null {
+  const run = (data as { run?: unknown } | null | undefined)?.run as Partial<BetaCollectRun> | null | undefined;
+  if (!run || typeof run.run_id !== "string") return null;
+  if (run.status !== "running" && run.status !== "success" && run.status !== "failed") return null;
+  return {
+    run_id: run.run_id,
+    status: run.status,
+    started_at: String(run.started_at ?? ""),
+    finished_at: run.finished_at ?? null,
+    error: run.error ?? null,
+    result: run.result ?? null,
   };
 }
