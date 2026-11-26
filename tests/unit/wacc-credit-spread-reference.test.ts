@@ -149,7 +149,16 @@ describe("GET .../wacc/suggestions - credit_spread", () => {
       synthetic: null,
       crosscheck: null,
       issuance_evidence: [],
-      agency_links: [],
+      // ADR-0208 slice 2: home-page links of the registered agencies are a human verification aid, always offered
+      agency_links: [
+        { agency: "korea-ratings", home_url: "https://www.korearatings.com" },
+        { agency: "kis", home_url: "https://www.kisrating.com" },
+        { agency: "nice", home_url: "https://www.nicerating.com" },
+      ],
+      // the test company has no DART corp code: the disclosed rung cannot run, so there is nothing to collect
+      collect_hint: false,
+      disclosed_status: "no_dart_corp_code",
+      credit_rating_snapshot_id: null,
       reason_code: "no_disclosed_rating_and_synthetic_unavailable",
       spread_reason_code: null,
     });

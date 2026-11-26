@@ -76,6 +76,30 @@ COPY --from=build /repo/app/web-next/next.config.ts ./app/web-next/next.config.t
 # of next.config.ts must be copied here (guarded by
 # tests/unit/dockerfile-next-config-imports.test.ts).
 COPY --from=build /repo/app/web-next/lib/dev-origins.ts ./app/web-next/lib/dev-origins.ts
+# Optional Monte Carlo engine layer (python/sim_engine). SIM_GPU selects what
+# the image carries — it is a BUILD argument, so GPU variants are separate
+# images:
+#   none (default)  no Python at all: the app uses its in-process TS simulator
+#   cpu             Python + numpy engine, no torch
+#   cuda|rocm|xpu   cpu + the matching accelerator extra (python/requirements-gpu-<x>.txt)
+# Build:  docker build -f docker/Dockerfile --build-arg SIM_GPU=cuda -t co-newbiz-web:cuda .
+# (mps is macOS-only and cannot be built into a Linux image.) The GPU must be
+# passed through at run time (e.g. `docker run --gpus all` for cuda); without a
+# visible device the engine falls back to CPU. The venv lives at /repo/.venv,
+# where app/web-next/lib/sim-engine.ts looks for it. Runs as root, no sudo:
+# apt installs the interpreter, then scripts/co-newbiz/setup-python-env.ts does the rest.
+ARG SIM_GPU=none
+COPY python ./python
+RUN case "$SIM_GPU" in \
+      none) echo "SIM_GPU=none: skipping the Python engine layer" ;; \
+      cpu|cuda|rocm|xpu) \
+        apt-get update \
+        && apt-get install -y --no-install-recommends python3 python3-venv python3-pip \
+        && rm -rf /var/lib/apt/lists/* \
+        && if [ "$SIM_GPU" = "cpu" ]; then GPU_FLAG=none; else GPU_FLAG="$SIM_GPU"; fi \
+        && bun scripts/co-newbiz/setup-python-env.ts --gpu="$GPU_FLAG" ;; \
+      *) echo "invalid SIM_GPU=$SIM_GPU (none|cpu|cuda|rocm|xpu)" >&2; exit 2 ;; \
+    esac
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
   && mkdir -p /repo/db/data /backups \

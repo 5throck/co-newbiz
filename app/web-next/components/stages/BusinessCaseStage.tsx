@@ -1349,7 +1349,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   </p>
                 )}
                 {gen.run && gen.run.activities.length > 0 && (
-                  <details open>
+                  <details>
                     <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">
                       {t("genStepList")}
                     </summary>

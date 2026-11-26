@@ -69,6 +69,45 @@ series through the library behind `fetch --source ecos`.
 - The public demo key `sample` is capped at 10 rows per request and is not
   enough for a 12-month collection; the server key must be a personal ECOS key.
 
+## In-app credit-rating collection (disclosed rating, ADR-0208 slice 2)
+
+The `credit_spread` reference follows the subject company's credit rating. The
+rating comes first from DART (`rating_source: "disclosed"`); until it is
+collected the card shows the default `BBB-` with the reason
+`rating_not_collected` and a collect hint, and "apply all" skips that row.
+`POST /api/projects/<id>/wacc/credit-rating/collect` (add `?target_id=<id>` for a
+shortlisted target's company) collects it: `202` at once, the client polls
+`GET` and then reloads `GET .../wacc/suggestions`, which reads the cache only and
+never calls DART.
+
+What a run does, per company: (1) finds the latest business report (the cached
+`dart_disclosure` list first; typed `list.json` `pblntf_detail_ty=A001` when the
+cache has none or only one older than about 13 months); (2) fetches that report
+ONCE per `rcept_no` and parser version, parses the credit-rating section and the
+debt-securities issuance table; (3) asks OpenDART `bdRs.json` (public offerings
+only) for the last 18 months of registrations and their `cdrt_int` rating text.
+Each result is one immutable `dart_credit_rating_snapshot` row (migration 0200).
+
+- Needs `DART_API_KEY` on the server (else `503 dart_api_key_missing`), an
+  analyst project member (viewer 403, non-member/admin 404) and a company with a
+  DART corp code (else `400 no_dart_corp_code`; no company: `400 no_subject_company`).
+- One run per project and one per company at a time (`409 already_running`):
+  DART evidence is shared across projects.
+- Each run is a `job_run` row (`job_key = wacc-credit-rating.collect`, trigger
+  `manual`, actor = the calling user) plus an `audit_log` entry
+  `wacc_credit_rating.collect_requested`. Failures show on the run (status
+  `failed` + reason), not as an HTTP error; a run fails only when every DART
+  step failed, partial failures are `warnings` on a successful run.
+- Reading the outcome: `report_status` is the recorded parse status. A missing
+  rating is never "unrated": `not_disclosed` (the filing says nothing applies),
+  `section_present_no_bond_rating` (for example commercial paper only),
+  `section_absent` and `parse_failed` (layout drift: ask for a parser fix) all
+  leave the default rating with `disclosed_status` saying which. A transient
+  fetch failure writes nothing, so the next run simply retries.
+- A new parser version (`CREDIT_RATING_PARSER_VERSION`) re-parses each filing
+  once; snapshots of older versions are ignored by the reads.
+- Rolling back migration 0200 drops the cache only; it is re-fetchable from DART.
+
 ## Index choice (listing market)
 
 The beta regression pairs the stock with the index of its **listing market**

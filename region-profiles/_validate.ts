@@ -350,6 +350,10 @@ function validateCreditRatingReferences(file: string, section: unknown): Issue[]
     if (!Array.isArray(d.agencies) || d.agencies.length === 0) err("data.agencies must be a non-empty list when present");
     else {
       const ids = new Set<string>();
+      // Aliases are matched after NFKC, whitespace removal and lower-casing; an alias owned by two agencies would make
+      // the agency of a filing row ambiguous (and a bureau alias must never also be a bond-agency alias).
+      const aliasOwner = new Map<string, string>();
+      const aliasKey = (x: string) => x.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
       d.agencies.forEach((a, i) => {
         if (!isMap(a)) {
           err(`data.agencies[${i}] must be a mapping`);
@@ -360,6 +364,18 @@ function validateCreditRatingReferences(file: string, section: unknown): Issue[]
         else ids.add(a.id);
         if (!Array.isArray(a.aliases) || a.aliases.length === 0 || !a.aliases.every(isNonEmptyString)) {
           err(`data.agencies[${i}].aliases must be a non-empty list of non-empty strings`);
+        } else if (isNonEmptyString(a.id)) {
+          for (const al of a.aliases as string[]) {
+            const owner = aliasOwner.get(aliasKey(al));
+            if (owner !== undefined && owner !== a.id) err(`data.agencies[${i}] alias '${al}' is already an alias of agency '${owner}'`);
+            else aliasOwner.set(aliasKey(al), a.id);
+          }
+        }
+        if (a.kind !== undefined && a.kind !== "bond" && a.kind !== "bureau") {
+          err(`data.agencies[${i}].kind must be 'bond' or 'bureau' when present`);
+        }
+        if (a.attested !== undefined && typeof a.attested !== "boolean") {
+          err(`data.agencies[${i}].attested must be a boolean when present`);
         }
         if (a.home_url !== undefined && (!isNonEmptyString(a.home_url) || !a.home_url.startsWith("https://") || a.home_url.length <= "https://".length)) {
           err(`data.agencies[${i}].home_url must be an https:// URL with a host`);

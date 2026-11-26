@@ -12,6 +12,12 @@
 // the caller shows N/A with a reason instead of a placeholder.
 import type { Database } from "bun:sqlite";
 import {
+  resolveDisclosedRating,
+  type BureauEvidence,
+  type DisclosedMissStatus,
+  type DisclosedRatingResult,
+} from "./credit-rating-evidence.ts";
+import {
   loadKrCreditRatingRegistry,
   mapRatingToSpread,
   type CreditRatingRegistry,
@@ -41,8 +47,12 @@ export interface ReferenceEntry {
   credit?: CreditSpreadDetail;
 }
 
-/** Where the rating of a credit-spread suggestion came from. Slice 1 produces `default` only. */
-export type CreditRatingSource = "disclosed" | "synthetic" | "default";
+/**
+ * Where the rating of a credit-spread suggestion came from, best evidence first: `disclosed` (corporate-bond rating of
+ * a domestic agency), `bureau` (credit-information bureau issuer rating, lower confidence, ADR-0208 amendment
+ * 2026-11-26), `synthetic` (slice 3), `default`.
+ */
+export type CreditRatingSource = "disclosed" | "bureau" | "synthetic" | "default";
 
 /** One ECOS series the spread was built from (percent points). */
 export interface SeriesUsed {
@@ -57,9 +67,29 @@ export interface CreditSpreadDetail {
   rating: string | null;
   rating_source: CreditRatingSource | null;
   rating_stale: boolean;
-  rating_agencies: Array<{ agency: string; grade: string; rated_on: string }>;
+  rating_agencies: Array<{ agency: string; grade: string; rated_on: string; outlook: string | null }>;
   rating_instrument: string | null;
+  /** Date of the selected disclosed rating (YYYY-MM-DD; "at issuance" for a debt-securities registration). */
+  rating_rated_on: string | null;
   source_rcept_no: string | null;
+  /** dart_credit_rating_snapshot id the disclosed rating came from; the confirmation POST cites it. */
+  credit_rating_snapshot_id: string | null;
+  /** Where the disclosed rating was read: the business report or a debt-securities registration. */
+  rating_evidence_kind: "business_report" | "debt_securities_filing" | null;
+  /** Bureau basis only: the issuer-rating evidence (bureau, cash-flow grade, every row of the rating date). */
+  rating_bureau: BureauEvidence | null;
+  /** When both evidence sources produced a rating and they differ: the other one (the lower is used). */
+  rating_alternative: {
+    rating: string;
+    rated_on: string;
+    stale: boolean;
+    source_rcept_no: string;
+    evidence_kind: "business_report" | "debt_securities_filing";
+  } | null;
+  /** Why the disclosed rung produced no rating (null when it did). Never "unrated": a failed parse has its own value. */
+  disclosed_status: DisclosedMissStatus | null;
+  /** True when a collection could produce (more) evidence: the company has a DART code and no usable rating is cached. */
+  collect_hint: boolean;
   /** How the spread was built; null when there is no spread value at all. */
   spread_basis: SpreadBasis | null;
   /** True only for a value interpolated between the two ECOS anchors (not a published difference). */
@@ -76,7 +106,8 @@ export interface CreditSpreadDetail {
   spread_reason: string | null;
   crosscheck: null;
   issuance_evidence: [];
-  agency_links: [];
+  /** Home pages of the registered domestic rating agencies: a human verification aid only (never fetched). */
+  agency_links: Array<{ agency: string; home_url: string }>;
   /** Indicative Kd = latest Rf + spread, percent points; null when either is missing. The Ke comparison is the caller's. */
   kd_indicative_pct: number | null;
 }
@@ -192,41 +223,89 @@ function seriesUsed(inputs: SpreadInputs): SeriesUsed[] {
 }
 
 /**
- * Rating of the credit-spread suggestion (ADR-0208 D1). Slice 1 has no evidence rungs yet, so the
- * ladder always ends at the registry default with an explicit reason; the disclosed (DART) and
- * synthetic (interest coverage) rungs are inserted ahead of it by later slices.
+ * Rating of the credit-spread suggestion (ADR-0208 D1): the disclosed (DART) rung first, then the registry
+ * default with an explicit reason. The synthetic (interest coverage) rung is inserted between them by slice 3.
+ * `disclosed` is the cache-only resolution (null = the caller has no company context: legacy behaviour).
  */
-export function decideCreditRating(registry: CreditRatingRegistry): {
+export function decideCreditRating(
+  registry: CreditRatingRegistry,
+  disclosed: DisclosedRatingResult | null = null,
+): {
   rating: string;
   source: CreditRatingSource;
   reason_code: string;
   reason: string;
+  evidence: Extract<DisclosedRatingResult, { ok: true }> | null;
+  disclosed_status: DisclosedMissStatus | null;
 } {
+  if (disclosed?.ok && disclosed.basis === "bureau") {
+    return {
+      rating: disclosed.rating,
+      source: "bureau",
+      reason_code: "bureau_issuer_rating",
+      reason:
+        `Credit-bureau issuer rating ${disclosed.rating} (${disclosed.rated_on}): the latest 기업신용평가 row of DART ` +
+        `filing ${disclosed.source_rcept_no} (lowest when several bureaus rated on that date). Lower confidence than a ` +
+        `corporate-bond rating - confirm it individually; it is not part of apply-all.`,
+      evidence: disclosed,
+      disclosed_status: null,
+    };
+  }
+  if (disclosed?.ok) {
+    return {
+      rating: disclosed.rating,
+      source: "disclosed",
+      reason_code: "disclosed_rating",
+      reason:
+        `Disclosed corporate-bond rating ${disclosed.rating} (${disclosed.rated_on}): the lowest of the latest rating per ` +
+        `domestic agency, read from DART filing ${disclosed.source_rcept_no}.`,
+      evidence: disclosed,
+      disclosed_status: null,
+    };
+  }
+  const status = disclosed ? disclosed.status : null;
   return {
     rating: registry.defaultRating,
     source: "default",
-    reason_code: "no_disclosed_rating_and_synthetic_unavailable",
-    reason: `${registry.defaultReason} (The disclosed-rating and synthetic-rating rungs are not available yet.)`,
+    reason_code:
+      status === "rating_not_collected" ? "rating_not_collected" : "no_disclosed_rating_and_synthetic_unavailable",
+    reason:
+      status === "rating_not_collected"
+        ? `${registry.defaultReason} (No disclosed rating has been collected for this company yet - run the credit-rating collection.)`
+        : `${registry.defaultReason} (The disclosed-rating and synthetic-rating rungs are not available yet.)`,
+    evidence: null,
+    disclosed_status: status,
   };
 }
 
 export type DerivedCreditSpread =
-  | { ok: true; rating: string; rating_source: CreditRatingSource; mapped: MappedSpread }
+  | {
+      ok: true;
+      rating: string;
+      rating_source: CreditRatingSource;
+      mapped: MappedSpread;
+      /** Set when the rating is a disclosed one: the evidence the server re-derived it from. */
+      disclosed: Extract<DisclosedRatingResult, { ok: true }> | null;
+    }
   | { ok: false; reason_code: string; reason: string };
 
 /**
- * Re-derive the credit spread for the registry default rating at one ECOS month. Used by the
- * confirmation audit (db/lib/wacc.ts) so that rating, source and basis are recorded from stored
- * evidence, never from the client. Pure read.
+ * Re-derive the credit spread at one ECOS month. Used by the confirmation audit (db/lib/wacc.ts) so that rating,
+ * source and basis are recorded from stored evidence, never from the client. Pure read.
+ * `corpCode` is the subject's DART code: with it the disclosed rating (cached snapshots) is resolved first; without
+ * it (null/undefined) only the registry default applies (the slice-1 behaviour).
  */
 export function deriveCreditSpreadAt(
   db: Database,
   asOf: string,
   loaded?: ReturnType<typeof loadKrCreditRatingRegistry>,
+  corpCode?: string | null,
+  now: Date = new Date(),
 ): DerivedCreditSpread {
   const reg = loaded ?? loadKrCreditRatingRegistry();
   if (!reg.ok) return { ok: false, reason_code: reg.reason_code, reason: reg.reason };
-  const decision = decideCreditRating(reg.registry);
+  const disclosed = corpCode === undefined ? null : resolveDisclosedRating(db, corpCode, reg.registry, now);
+  const decision = decideCreditRating(reg.registry, disclosed);
   const inputs = readSpreadInputs(db, asOf);
   if (!inputs) {
     return {
@@ -237,7 +316,7 @@ export function deriveCreditSpreadAt(
   }
   const mapped = mapRatingToSpread(reg.registry, decision.rating, inputs);
   if (!mapped.ok) return { ok: false, reason_code: mapped.reason_code, reason: mapped.reason };
-  return { ok: true, rating: decision.rating, rating_source: decision.source, mapped };
+  return { ok: true, rating: decision.rating, rating_source: decision.source, mapped, disclosed: decision.evidence };
 }
 
 function pctEntry(
@@ -265,7 +344,14 @@ const EMPTY_CREDIT_DETAIL: CreditSpreadDetail = {
   rating_stale: false,
   rating_agencies: [],
   rating_instrument: null,
+  rating_rated_on: null,
   source_rcept_no: null,
+  credit_rating_snapshot_id: null,
+  rating_evidence_kind: null,
+  rating_bureau: null,
+  rating_alternative: null,
+  disclosed_status: null,
+  collect_hint: false,
   spread_basis: null,
   derived: false,
   flags: [],
@@ -288,7 +374,7 @@ const EMPTY_CREDIT_DETAIL: CreditSpreadDetail = {
  */
 function buildCreditSpreadEntry(
   db: Database,
-  input: { legacy: ReferenceEntry; riskFree: ReferenceEntry },
+  input: { legacy: ReferenceEntry; riskFree: ReferenceEntry; corpCode: string | null; now: Date },
 ): ReferenceEntry {
   const { legacy, riskFree } = input;
   const rfPct = riskFree.value;
@@ -305,12 +391,38 @@ function buildCreditSpreadEntry(
   const loaded = loadKrCreditRatingRegistry();
   if (!loaded.ok) return keepLegacy({ spread_reason_code: loaded.reason_code, spread_reason: loaded.reason });
 
-  const decision = decideCreditRating(loaded.registry);
+  const disclosed = resolveDisclosedRating(db, input.corpCode, loaded.registry, input.now);
+  const decision = decideCreditRating(loaded.registry, disclosed);
+  const ev = decision.evidence;
+  const agencyLinks = loaded.registry.agencies
+    .filter((a) => a.homeUrl !== null)
+    .map((a) => ({ agency: a.id, home_url: a.homeUrl as string }));
   const ratingPart = {
     rating: decision.rating,
     rating_source: decision.source,
     reason_code: decision.reason_code,
     reason: decision.reason,
+    rating_stale: ev?.stale ?? false,
+    rating_agencies:
+      ev?.agencies.map((a) => ({ agency: a.agency, grade: a.grade, rated_on: a.rated_on, outlook: a.outlook })) ?? [],
+    rating_instrument: ev ? ev.instrument : null,
+    rating_rated_on: ev?.rated_on ?? null,
+    source_rcept_no: ev?.source_rcept_no ?? null,
+    credit_rating_snapshot_id: ev?.snapshot_id ?? null,
+    rating_evidence_kind: ev?.source_kind ?? null,
+    rating_bureau: ev?.bureau ?? null,
+    rating_alternative: ev?.alternative
+      ? {
+          rating: ev.alternative.rating,
+          rated_on: ev.alternative.rated_on,
+          stale: ev.alternative.stale,
+          source_rcept_no: ev.alternative.source_rcept_no,
+          evidence_kind: ev.alternative.source_kind,
+        }
+      : null,
+    disclosed_status: decision.disclosed_status,
+    collect_hint: !ev && disclosed.ok === false && disclosed.status !== "no_dart_corp_code",
+    agency_links: agencyLinks,
   };
   const month = selectCreditMonth(db);
   const inputs = month ? readSpreadInputs(db, month) : null;
@@ -333,7 +445,9 @@ function buildCreditSpreadEntry(
   const sourceNote =
     decision.source === "default"
       ? ` Rating basis: default placeholder (${decision.reason_code}) - confirm the company's rating before relying on it.`
-      : "";
+      : decision.source === "bureau"
+        ? ` Rating basis: credit-bureau issuer rating ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no} (lower confidence than a corporate-bond rating).`
+        : ` Rating basis: disclosed ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no}.`;
   return {
     key: "credit_spread",
     label: RATED_CREDIT_LABEL,
@@ -357,9 +471,9 @@ function buildCreditSpreadEntry(
   };
 }
 
-export function computeWaccReference(db: Database, subjectCompanyId: string): WaccReference {
-  const company = db.query("SELECT id, name_ko FROM md_company WHERE id = ?").get(subjectCompanyId) as
-    | { id: string; name_ko: string | null }
+export function computeWaccReference(db: Database, subjectCompanyId: string, now: Date = new Date()): WaccReference {
+  const company = db.query("SELECT id, name_ko, dart_corp_code FROM md_company WHERE id = ?").get(subjectCompanyId) as
+    | { id: string; name_ko: string | null; dart_corp_code: string | null }
     | undefined;
   if (!company) throw new Error(`subject company '${subjectCompanyId}' not found`);
 
@@ -443,7 +557,12 @@ export function computeWaccReference(db: Database, subjectCompanyId: string): Wa
   // ADR-0208: rating-aware spread. The legacy AA- entry above is the fail-soft fallback (spread_basis
   // "aa_minus_legacy") whenever the registry, the ECOS months or the anchors cannot produce a figure.
   const legacyCredit = entries[1];
-  entries[1] = buildCreditSpreadEntry(db, { legacy: legacyCredit, riskFree: entries[0] });
+  entries[1] = buildCreditSpreadEntry(db, {
+    legacy: legacyCredit,
+    riskFree: entries[0],
+    corpCode: company.dart_corp_code,
+    now,
+  });
   const finalSpread = entries[1].value;
 
   return {

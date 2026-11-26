@@ -76,6 +76,7 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
       tax_reference_basis?: unknown;
       tax_reference_bracket_id?: unknown;
       credit_rating_basis?: unknown;
+      credit_rating_snapshot_id?: unknown;
       reference_as_of?: unknown;
     };
     if (typeof item.key !== "string" || typeof item.value !== "number" || typeof item.kind !== "string") {
@@ -125,12 +126,13 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
       item.credit_rating_basis !== undefined &&
       item.credit_rating_basis !== null &&
       item.credit_rating_basis !== "disclosed" &&
+      item.credit_rating_basis !== "bureau" &&
       item.credit_rating_basis !== "synthetic" &&
       item.credit_rating_basis !== "default"
     ) {
       throw new WaccComponentValidationError(
         "invalid_request",
-        "credit_rating_basis must be 'disclosed', 'synthetic', 'default' or null.",
+        "credit_rating_basis must be 'disclosed', 'bureau', 'synthetic', 'default' or null.",
       );
     }
     if (
@@ -143,10 +145,23 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
         "reference_as_of must be an ECOS month string (YYYY-MM) or null.",
       );
     }
-    if ((item.credit_rating_basis != null || item.reference_as_of != null) && item.key !== "wacc.debt_spread") {
+    if (
+      item.credit_rating_snapshot_id !== undefined &&
+      item.credit_rating_snapshot_id !== null &&
+      typeof item.credit_rating_snapshot_id !== "string"
+    ) {
       throw new WaccComponentValidationError(
         "invalid_request",
-        "credit_rating_basis and reference_as_of are allowed only on the wacc.debt_spread component.",
+        "credit_rating_snapshot_id must be a snapshot id string or null.",
+      );
+    }
+    if (
+      (item.credit_rating_basis != null || item.reference_as_of != null || item.credit_rating_snapshot_id != null) &&
+      item.key !== "wacc.debt_spread"
+    ) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "credit_rating_basis, credit_rating_snapshot_id and reference_as_of are allowed only on the wacc.debt_spread component.",
       );
     }
     // ADR-0207 addendum: optional statutory tax-bracket citation on wacc.tax_rate. The server resolves the
@@ -195,10 +210,13 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
           : null,
       creditRatingBasis:
         item.credit_rating_basis === "disclosed" ||
+        item.credit_rating_basis === "bureau" ||
         item.credit_rating_basis === "synthetic" ||
         item.credit_rating_basis === "default"
           ? item.credit_rating_basis
           : null,
+      creditRatingSnapshotId:
+        typeof item.credit_rating_snapshot_id === "string" ? item.credit_rating_snapshot_id : null,
       referenceAsOf: typeof item.reference_as_of === "string" ? item.reference_as_of : null,
     };
   });

@@ -72,6 +72,25 @@ MCP 서버는 각 AI 클라이언트 자체의 설정(Claude Code는 `.mcp.json`
 
 §7의 배포 후 확인은 동일하게 적용됩니다: 예약 작업은 ADR-0019에 따라 **호스트 OS 스케줄러**(launchd)에 등록된 채로 유지됩니다 — 컨테이너는 in-process 타이머를 실행하지 않으며 컨테이너 교체가 호스트 스케줄러 등록을 흔들어서는 안 됩니다.
 
+### 선택 사항: 몬테카를로 엔진 층 (`SIM_GPU` 빌드 인자)
+
+운영 이미지에는 기본으로 파이썬이 없습니다. 이때 S8 시뮬레이션은 앱에 내장된 TypeScript 시뮬레이터로 돌고 배포 절차는 그대로입니다. 파이썬 엔진(`python/sim_engine`)을 이미지에 넣으려면 `SIM_GPU` 빌드 인자를 줍니다(`docker/Dockerfile`).
+
+| `SIM_GPU` | 이미지에 들어가는 것 |
+|---|---|
+| `none`(기본) | 파이썬 없음. CI가 `ghcr.io/5throck/co-newbiz-web`에 올리는 이미지이며 `bun scripts/deploy-web.ts`와 `docker compose`도 이것을 씁니다. 둘 다 이 인자를 넘기지 않습니다 |
+| `cpu` | 파이썬과 numpy 엔진, torch 없음 |
+| `cuda`, `rocm`, `xpu` | `cpu`에 알맞은 가속기 패키지(`python/requirements-gpu-<x>.txt`)를 더함 |
+
+```bash
+docker build -f docker/Dockerfile --build-arg SIM_GPU=cuda -t co-newbiz-web:cuda .
+```
+
+- 이 층은 빌드 안에서 `scripts/co-newbiz/setup-python-env.ts --gpu=<x>`를 돌립니다(먼저 apt로 인터프리터를 깔며 `sudo`는 없습니다). 가상환경은 `app/web-next/lib/sim-engine.ts`가 찾는 `/repo/.venv`에 놓입니다. 모르는 값이면 빌드가 `invalid SIM_GPU`로 멈춥니다.
+- 가속기 이미지는 운영자가 직접 빌드하고 띄우는 별도 이미지입니다. `mps`는 macOS 전용이라 리눅스 이미지에 넣을 수 없고, 실행할 때 GPU를 넘겨 주어야 합니다(예: `cuda`는 `docker run --gpus all`, compose는 장치 항목을 따로 둡니다). 보이는 장치가 없으면 엔진은 CPU로 물러납니다.
+- 엔진은 `반복 횟수 x 케이스 수`가 200,000 이상일 때만 GPU를 쓰므로 GPU 이미지는 큰 실행에서만 이득입니다. 되돌리기는 그대로입니다: 이전 이미지를 다시 태그합니다(§8의 3단계).
+- 호스트 쪽 준비와 `CO_NEWBIZ_SIM_GPU` 변수: `docs/manuals/operations-manual_ko.md` §3.3.
+
 ### 운영자 전환 절차 (2026-10-11 포트 교체)
 
 Cloudflare 터널(`cloudflared`, 운영 PC의 docker 컨테이너이며 설정은 이 저장소 밖에 있음)은 `https://newbiz.bizknights.org`를 호스트 포트 7749로 연결합니다. 교체 전 7749는 개발 서버였고, 교체 후에는 운영 컨테이너입니다. 순서대로 실행:

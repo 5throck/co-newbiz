@@ -11,9 +11,13 @@
 // the bracket is estimated from the subject's latest DART income figure and
 // falls back to the top bracket (with a stated reason) when none is usable.
 // ADR-0208: the credit_spread entry keeps its key/value/as_of and gains additive rating fields (rating,
-// rating_source, spread_basis, series_used, anchors, derived, flags, ...). The rating is `default` (BBB-)
-// until the evidence rungs land; a default or stale rating is listed in apply_all_excluded so one click
-// never carries an unevidenced placeholder. Kd >= Ke needs the form's beta, so only the indicative Kd is
+// rating_source, spread_basis, series_used, anchors, derived, flags, ...). Slice 2: the rating is the DISCLOSED
+// one (`rating_source: "disclosed"`, from the cached DART snapshots filled by POST .../wacc/credit-rating/collect;
+// this GET reads the cache only and never calls DART) when a snapshot supports it, else the default (BBB-) with a
+// reason (`rating_not_collected` + `collect_hint` when nothing is cached). Without a corporate-bond rating the latest
+// credit-bureau ISSUER rating is the lower-confidence rung (`rating_source: "bureau"`, `rating_bureau` carries the
+// bureau, the cash-flow grade and the rows of the rating date; amendment 2026-11-26). A default, bureau, stale-disclosed
+// or legacy-spread rating is listed in apply_all_excluded so one click never carries an unevidenced placeholder. Kd >= Ke needs the form's beta, so only the indicative Kd is
 // returned here (credit_spread.kd_indicative_pct); the confirmation POST reports the kd_ge_ke warning.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
@@ -38,12 +42,30 @@ function creditApplyAllExcluded(
       },
     ];
   }
+  if (e.credit.rating_source === "bureau") {
+    return [
+      {
+        key: "credit_spread",
+        reason_code: "credit_rating_bureau_basis",
+        reason: `The rating (${e.credit.rating}) is a credit-bureau issuer rating (lower confidence than a corporate-bond rating) - confirm it individually before applying.`,
+      },
+    ];
+  }
   if (e.credit.rating_stale) {
     return [
       {
         key: "credit_spread",
         reason_code: "credit_rating_stale",
         reason: `The disclosed rating (${e.credit.rating}) is stale - confirm it individually before applying.`,
+      },
+    ];
+  }
+  if (e.credit.rating_source === "disclosed" && e.credit.spread_basis === "aa_minus_legacy") {
+    return [
+      {
+        key: "credit_spread",
+        reason_code: "credit_spread_legacy_basis",
+        reason: `The spread could not be mapped to the disclosed rating (${e.credit.rating}) and is the AA- legacy value - confirm it individually before applying.`,
       },
     ];
   }

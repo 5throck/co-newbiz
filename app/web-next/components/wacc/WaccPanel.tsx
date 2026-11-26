@@ -21,6 +21,8 @@ import {
   appliedErpRefFrom,
   appliedTaxRefFrom,
   applicableSuggestions,
+  creditCollectUrl,
+  creditCollectVisible,
   creditReferenceFields,
   creditSourceLabel,
   erpReferenceFields,
@@ -41,6 +43,7 @@ import { WaccStatusBadge } from "../WaccStatusBadge.tsx";
 import { ParamTable } from "../ui.tsx";
 import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
+import { CreditRatingEvidence } from "./CreditRatingEvidence.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
 import { api } from "../../lib/api.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
@@ -303,6 +306,21 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         : ecos.startError !== null
           ? ecos.startError || t("collectEcosStartFailed")
           : null;
+  // 신용등급 수집 실행 (ADR-0208) — DART 사업보고서에서 공시 신용등급을 읽어 캐시에 채운다. 제안 GET 은 캐시만
+  // 읽으므로, 실행이 끝나면(성공·실패 모두) 참조값을 다시 불러온다. 선택 대상(target_id)을 따라간다.
+  const creditCollect = useCollectRun(creditCollectUrl(projectId, selectedTarget), () => {
+    loadSugg();
+  });
+  const creditCollectMessage =
+    creditCollect.phase === "done"
+      ? t("collectCreditDone")
+      : creditCollect.phase === "failed"
+        ? t("collectCreditFailed", { p1: creditCollect.run?.error ?? "" })
+        : creditCollect.startError !== null
+          ? creditCollect.startErrorCode === "no_subject_company"
+            ? t("collectCreditNoSubject")
+            : creditCollect.startError || t("collectCreditStartFailed")
+          : null;
   useEffect(() => {
     api
       .get<{ targets: AnalysisTarget[] }>(`/api/projects/${encodeURIComponent(projectId)}/targets`)
@@ -398,6 +416,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const CREDIT_SOURCE_LABEL: Record<string, string> = {
     default: t("creditSourceDefault"),
     disclosed: t("creditSourceDisclosed"),
+    bureau: t("creditSourceBureau"),
     synthetic: t("creditSourceSynthetic"),
   };
   const CREDIT_BASIS_LABEL: Record<string, string> = {
@@ -416,6 +435,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     no_disclosed_rating_and_synthetic_unavailable: t("creditReasonNoRatingEvidence"),
     credit_rating_default_basis: t("creditReasonDefaultBasis"),
     credit_rating_stale: t("creditReasonStale"),
+    rating_not_collected: t("creditReasonNotCollected"),
+    disclosed_rating: t("creditReasonDisclosed"),
+    bureau_issuer_rating: t("creditReasonBureauRating"),
+    credit_rating_bureau_basis: t("creditReasonBureauBasis"),
+    credit_spread_legacy_basis: t("creditReasonLegacyBasis"),
     credit_rating_no_registry: t("creditReasonNoRegistry"),
     credit_rating_registry_error: t("creditReasonRegistryError"),
     no_ecos_observations: t("creditReasonNoEcos"),
@@ -423,6 +447,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     anchor_missing: t("creditReasonAnchorMissing"),
     spread_not_positive: t("creditReasonSpreadNotPositive"),
     anchors_inverted: t("creditReasonAnchorsInverted"),
+  };
+  // Why the disclosed rung produced no rating (disclosed_status) -> localized text; "parsed" is the success value.
+  const CREDIT_STATUS_LABEL: Record<string, string> = {
+    parsed: t("creditStatusParsed"),
+    rating_not_collected: t("creditStatusNotCollected"),
+    not_disclosed: t("creditStatusNotDisclosed"),
+    section_present_no_bond_rating: t("creditStatusSectionPresentNoBondRating"),
+    section_absent: t("creditStatusSectionAbsent"),
+    parse_failed: t("creditStatusParseFailed"),
+    not_zip: t("creditStatusNotZip"),
+    no_bond_rating: t("creditStatusNoBondRating"),
+    no_dart_corp_code: t("creditStatusNoDartCode"),
   };
   const creditReasonText = (code: string | null | undefined, fallback: string | null | undefined) =>
     reasonByCode(CREDIT_REASON_LABEL, code, fallback);
@@ -436,7 +472,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       )}
       {x.rating_source && (
         <span
-          className={`status-chip ${x.rating_source === "default" ? "status-amber" : "status-info"}`}
+          className={`status-chip ${x.rating_source === "default" || x.rating_source === "bureau" ? "status-amber" : "status-info"}`}
           data-testid="credit-source-chip"
         >
           {CREDIT_SOURCE_LABEL[x.rating_source] ?? x.rating_source}
@@ -472,6 +508,10 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     const lines: string[] = [];
     const rating = creditReasonText(x.reason_code, x.reason);
     if (rating) lines.push(rating);
+    // rating_not_collected already has its own reason (with the collect hint); the other misses add their own line.
+    if (x.disclosed_status && x.disclosed_status !== "rating_not_collected") {
+      lines.push(CREDIT_STATUS_LABEL[x.disclosed_status] ?? x.disclosed_status);
+    }
     for (const f of x.flags ?? []) lines.push(CREDIT_FLAG_LABEL[f] ?? f);
     const spread = creditReasonText(x.spread_reason_code, x.spread_reason);
     if (spread) lines.push(spread);
@@ -1088,6 +1128,32 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   )}
                 </div>
               )}
+              {creditCollectVisible(sugg.suggestions.find((x) => x.key === "credit_spread")) && (
+                <div className="flex flex-wrap items-center gap-2 mt-2" aria-live="polite" data-testid="credit-collect">
+                  <button
+                    type="button"
+                    className="btn-primary btn-sm"
+                    disabled={creditCollect.busy}
+                    aria-busy={creditCollect.busy}
+                    onClick={() => void creditCollect.start()}
+                  >
+                    {creditCollect.busy ? tc("loadingEllipsis") : t("collectCreditRun")}
+                  </button>
+                  {creditCollect.phase === "running" && (
+                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("collectCreditRunning")}
+                    </span>
+                  )}
+                </div>
+              )}
+              {creditCollectMessage && (
+                <p
+                  role={creditCollect.phase === "done" ? undefined : "alert"}
+                  className={`mt-2 text-[length:var(--fs-caption)] font-semibold ${creditCollect.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+                >
+                  {creditCollect.phase === "done" ? "✓" : "✕"} {creditCollectMessage}
+                </p>
+              )}
               {ecosMessage && (
                 <p
                   role={ecos.phase === "done" ? undefined : "alert"}
@@ -1324,6 +1390,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                 {creditNoteLines(r).map((line) => (
                                   <div key={line}>{line}</div>
                                 ))}
+                                <CreditRatingEvidence suggestion={r} />
                               </div>
                             ) : (
                               `${r.source_label ?? ""} · ${r.as_of ?? ""}`

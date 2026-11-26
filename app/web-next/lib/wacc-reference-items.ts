@@ -40,9 +40,23 @@ export interface ReferenceSuggestion {
   rating?: string | null;
   rating_source?: CreditRatingSource | null;
   rating_stale?: boolean;
-  rating_agencies?: Array<{ agency: string; grade: string; rated_on: string }>;
+  rating_agencies?: CreditAgencyRating[];
   rating_instrument?: string | null;
+  /** Date of the selected disclosed rating (YYYY-MM-DD). */
+  rating_rated_on?: string | null;
   source_rcept_no?: string | null;
+  /** `dart_credit_rating_snapshot` id the disclosed rating came from; the confirmation must cite it. */
+  credit_rating_snapshot_id?: string | null;
+  rating_evidence_kind?: CreditEvidenceKind | null;
+  /** Bureau basis only: the credit-bureau issuer-rating evidence (bureau, cash-flow grade, rows of the rating date). */
+  rating_bureau?: CreditBureauEvidence | null;
+  /** The other evidence source's rating when the two differ (the lower one is the one used). */
+  rating_alternative?: CreditRatingAlternative | null;
+  /** Why the disclosed rung produced no rating (null when it did). */
+  disclosed_status?: CreditDisclosedStatus | null;
+  /** True when running the credit-rating collection could produce (more) evidence. */
+  collect_hint?: boolean;
+  agency_links?: CreditAgencyLink[];
   spread_basis?: CreditSpreadBasis | null;
   derived?: boolean;
   flags?: CreditSpreadFlag[];
@@ -53,7 +67,50 @@ export interface ReferenceSuggestion {
   kd_indicative_pct?: number | null;
 }
 
-export type CreditRatingSource = "default" | "disclosed" | "synthetic";
+/** `bureau` = credit-bureau issuer rating, a lower-confidence basis than the corporate-bond `disclosed` one. */
+export type CreditRatingSource = "default" | "disclosed" | "bureau" | "synthetic";
+export type CreditEvidenceKind = "business_report" | "debt_securities_filing";
+export type CreditDisclosedStatus =
+  | "no_dart_corp_code"
+  | "rating_not_collected"
+  | "not_disclosed"
+  | "section_present_no_bond_rating"
+  | "section_absent"
+  | "parse_failed"
+  | "not_zip"
+  | "no_bond_rating";
+
+export interface CreditAgencyRating {
+  /** Registry agency id (`korea-ratings`, `kis`, `nice`). */
+  agency: string;
+  grade: string;
+  rated_on: string;
+  outlook?: string | null;
+}
+
+export interface CreditBureauEvidence {
+  /** Registry bureau id of the picked row; null when the filing names none (or an unregistered bureau). */
+  agency: string | null;
+  agency_raw: string | null;
+  /** True when the agency was inherited from an earlier table row, not stated in the row. */
+  agency_carried: boolean;
+  /** Cash-flow grade as filed (CR-3, C+, B): a separate scale, never the rating. */
+  cashflow_grade: string | null;
+  rows: Array<{ agency: string | null; agency_raw: string | null; grade: string; cashflow_grade: string | null }>;
+}
+
+export interface CreditRatingAlternative {
+  rating: string;
+  rated_on: string;
+  stale: boolean;
+  source_rcept_no: string;
+  evidence_kind: CreditEvidenceKind;
+}
+
+export interface CreditAgencyLink {
+  agency: string;
+  home_url: string;
+}
 export type CreditSpreadBasis = "ecos_interpolated" | "ecos_clamped" | "aa_minus_legacy";
 export type CreditSpreadFlag =
   | "interpolated"
@@ -204,7 +261,7 @@ export function observedDeSourceDetail(o: Pick<ObservedDeSource, "source" | "asO
   return [o.source, o.asOf].filter((x) => x !== "").join(" · ");
 }
 
-const CREDIT_RATING_SOURCES: readonly string[] = ["default", "disclosed", "synthetic"];
+const CREDIT_RATING_SOURCES: readonly string[] = ["default", "disclosed", "bureau", "synthetic"];
 /** Same tolerance the server uses to derive `edited_from_reference` for the credit spread (ratio units). */
 export const CREDIT_EDIT_TOLERANCE = 0.0005;
 const ECOS_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -214,33 +271,48 @@ export interface AppliedCreditRef {
   basis: CreditRatingSource;
   referenceAsOf: string;
   appliedValue: number;
+  /** Snapshot the rating was read from; always set for basis "disclosed" and "bureau", null otherwise. */
+  snapshotId: string | null;
 }
 
 /**
  * ADR-0208: an applied credit spread is recorded as rated only when the suggestion names where the rating
  * came from AND the ECOS month it was mapped at - the server re-derives from exactly those two. The legacy
- * AA- fallback (no anchors) carries neither, so applying it records no rating basis.
+ * AA- fallback (no anchors) carries neither, so applying it records no rating basis. A disclosed rating also
+ * names its evidence snapshot (the confirmation is a 400 without it), so a disclosed suggestion that lacks the
+ * id records no rating basis either.
  */
 export function appliedCreditRefFrom(e: ReferenceSuggestion, appliedValue: number | null): AppliedCreditRef | null {
   if (appliedValue === null || e.key !== "credit_spread") return null;
   const basis = e.rating_source;
   const month = e.anchors?.as_of;
   if (!basis || !CREDIT_RATING_SOURCES.includes(basis) || !month || !ECOS_MONTH.test(month)) return null;
-  return { basis, referenceAsOf: month, appliedValue };
+  const needsSnapshot = basis === "disclosed" || basis === "bureau";
+  const snapshotId = needsSnapshot ? (e.credit_rating_snapshot_id ?? null) : null;
+  if (needsSnapshot && !snapshotId) return null;
+  return { basis, referenceAsOf: month, appliedValue, snapshotId };
 }
 
 /**
  * ADR-0208: fields a confirmed `wacc.debt_spread` component carries when the value came from the rating-mapped
  * reference. Manual entry (nothing applied) carries none. `editedFromReference` flips true once the human moves
- * the number beyond the server's tolerance; the citation is kept either way.
+ * the number beyond the server's tolerance; the citation is kept either way. A disclosed rating also carries the
+ * id of its evidence snapshot.
  */
 export function creditReferenceFields(
   ref: AppliedCreditRef | null,
   currentValue: number | null,
-): Pick<WaccComponentInput, "creditRatingBasis" | "referenceAsOf" | "editedFromReference"> {
+): Pick<WaccComponentInput, "creditRatingBasis" | "creditRatingSnapshotId" | "referenceAsOf" | "editedFromReference"> {
   if (!ref) return {};
   const edited = currentValue !== null && Math.abs(currentValue - ref.appliedValue) > CREDIT_EDIT_TOLERANCE;
-  return { creditRatingBasis: ref.basis, referenceAsOf: ref.referenceAsOf, editedFromReference: edited };
+  return {
+    creditRatingBasis: ref.basis,
+    ...((ref.basis === "disclosed" || ref.basis === "bureau") && ref.snapshotId
+      ? { creditRatingSnapshotId: ref.snapshotId }
+      : {}),
+    referenceAsOf: ref.referenceAsOf,
+    editedFromReference: edited,
+  };
 }
 
 /**
@@ -314,7 +386,11 @@ export function toWaccComponentPayload(c: WaccComponentInput): Record<string, un
     ...(c.taxReferenceBracketId ? { tax_reference_bracket_id: c.taxReferenceBracketId } : {}),
     ...(c.taxReferenceBracketId && c.taxReferenceBasis ? { tax_reference_basis: c.taxReferenceBasis } : {}),
     ...(c.creditRatingBasis && c.referenceAsOf
-      ? { credit_rating_basis: c.creditRatingBasis, reference_as_of: c.referenceAsOf }
+      ? {
+          credit_rating_basis: c.creditRatingBasis,
+          ...(c.creditRatingSnapshotId ? { credit_rating_snapshot_id: c.creditRatingSnapshotId } : {}),
+          reference_as_of: c.referenceAsOf,
+        }
       : {}),
   };
 }
@@ -322,4 +398,91 @@ export function toWaccComponentPayload(c: WaccComponentInput): Record<string, un
 /** Only https links are rendered as anchors (registry URLs are validated https:// at the source). */
 export function safeHttpsUrl(url: string | undefined): string | null {
   return typeof url === "string" && url.startsWith("https://") ? url : null;
+}
+
+const DART_VIEWER_URL = "https://dart.fss.or.kr/dsaf001/main.do";
+
+/** DART filing viewer link for a receipt number (14 digits); null for anything else. https only. */
+export function dartFilingUrl(rceptNo: string | null | undefined): string | null {
+  return typeof rceptNo === "string" && /^\d{14}$/.test(rceptNo) ? `${DART_VIEWER_URL}?rcpNo=${rceptNo}` : null;
+}
+
+/** Rating-agency home pages of a credit_spread suggestion; only https links survive. */
+export function creditAgencyLinks(e: ReferenceSuggestion): Array<{ agency: string; href: string }> {
+  const links: Array<{ agency: string; href: string }> = [];
+  for (const l of e.agency_links ?? []) {
+    const href = safeHttpsUrl(l.home_url);
+    if (href) links.push({ agency: l.agency, href });
+  }
+  return links;
+}
+
+/**
+ * Whether the "신용등급 수집 실행" button is offered for a credit_spread suggestion: the backend says a
+ * collection could add evidence (`collect_hint`), or the disclosed rating in use is out of date. A company
+ * without a DART code has neither - the collection would only answer 400.
+ */
+export function creditCollectVisible(e: ReferenceSuggestion | undefined): boolean {
+  if (!e || e.key !== "credit_spread") return false;
+  return (
+    e.collect_hint === true ||
+    ((e.rating_source === "disclosed" || e.rating_source === "bureau") && e.rating_stale === true)
+  );
+}
+
+/** Collect endpoint of a project; `targetId` scopes it to a shortlisted target (ADR-0156), like the suggestions GET. */
+export function creditCollectUrl(projectId: string, targetId?: string | null): string {
+  const base = `/api/projects/${encodeURIComponent(projectId)}/wacc/credit-rating/collect`;
+  return targetId ? `${base}?target_id=${encodeURIComponent(targetId)}` : base;
+}
+
+/** The disclosed-rating evidence block of a credit_spread suggestion; null unless the rating is a disclosed one. */
+export interface DisclosedCreditView {
+  rating: string;
+  stale: boolean;
+  ratedOn: string | null;
+  instrument: string | null;
+  evidenceKind: CreditEvidenceKind | null;
+  agencies: CreditAgencyRating[];
+  filingUrl: string | null;
+  filingNo: string | null;
+  alternative: (CreditRatingAlternative & { filingUrl: string | null }) | null;
+}
+
+export function disclosedCreditView(e: ReferenceSuggestion): DisclosedCreditView | null {
+  if (e.key !== "credit_spread" || e.rating_source !== "disclosed" || !e.rating) return null;
+  const alt = e.rating_alternative ?? null;
+  return {
+    rating: e.rating,
+    stale: e.rating_stale === true,
+    ratedOn: e.rating_rated_on ?? null,
+    instrument: e.rating_instrument ?? null,
+    evidenceKind: e.rating_evidence_kind ?? null,
+    agencies: e.rating_agencies ?? [],
+    filingUrl: dartFilingUrl(e.source_rcept_no),
+    filingNo: e.source_rcept_no ?? null,
+    alternative: alt ? { ...alt, filingUrl: dartFilingUrl(alt.source_rcept_no) } : null,
+  };
+}
+
+/** The credit-bureau issuer-rating evidence block of a credit_spread suggestion; null unless the rating is a bureau one. */
+export interface BureauCreditView {
+  rating: string;
+  stale: boolean;
+  ratedOn: string | null;
+  evidence: CreditBureauEvidence;
+  filingUrl: string | null;
+  filingNo: string | null;
+}
+
+export function bureauCreditView(e: ReferenceSuggestion): BureauCreditView | null {
+  if (e.key !== "credit_spread" || e.rating_source !== "bureau" || !e.rating || !e.rating_bureau) return null;
+  return {
+    rating: e.rating,
+    stale: e.rating_stale === true,
+    ratedOn: e.rating_rated_on ?? null,
+    evidence: e.rating_bureau,
+    filingUrl: dartFilingUrl(e.source_rcept_no),
+    filingNo: e.source_rcept_no ?? null,
+  };
 }

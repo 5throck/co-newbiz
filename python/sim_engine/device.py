@@ -74,12 +74,15 @@ def select_device(requested: str, iterations: int, n_cases: int) -> DeviceInfo:
     if requested == "cpu":
         return DeviceInfo("cpu", "numpy", "float64", reason="requested device=cpu")
 
-    torch_module = _torch()
     if requested == "auto":
         work = iterations * n_cases
         if work < GPU_WORK_THRESHOLD:
+            # Decide BEFORE touching torch: importing it costs ~0.5s per process,
+            # which CPU-sized jobs must never pay (even with torch installed).
             return DeviceInfo("cpu", "numpy", "float64",
                               reason=f"work={work} below GPU payoff threshold {GPU_WORK_THRESHOLD} (REQ-W7-6)")
+    torch_module = _torch()
+    if requested == "auto":
         if torch_module is None:
             return DeviceInfo("cpu", "numpy", "float64",
                               warnings=["torch not installed — CPU fallback (REQ-W7-3)"],
@@ -114,3 +117,30 @@ def _gpu_supports_fp64(torch_module: Any) -> bool:
         return bool(tensor is not None)
     except Exception:
         return False
+
+
+def describe_runtime() -> dict:
+    """Read-only runtime probe behind `python -m sim_engine --device-info`: what
+    torch is installed, which accelerators it can drive, and what `auto` would
+    pick for a job large enough to clear the GPU payoff threshold. Used by
+    scripts/co-newbiz/setup-python-env.ts and the web app's misconfiguration
+    warning; it never runs a simulation."""
+    torch_module = _torch()
+    torch_info: dict[str, Any] = {"installed": torch_module is not None}
+    if torch_module is not None:
+        torch_info["version"] = str(getattr(torch_module, "__version__", ""))
+        torch_info["hip"] = getattr(getattr(torch_module, "version", None), "hip", None)
+        available: dict[str, bool] = {}
+        for name in AUTO_ORDER:
+            try:
+                available[name] = _torch_device_available(torch_module, name)
+            except Exception:  # a broken accelerator stack must not break the probe
+                available[name] = False
+        torch_info["available"] = available
+    info = select_device("auto", GPU_WORK_THRESHOLD, 1)
+    return {
+        "torch": torch_info,
+        "gpu_work_threshold": GPU_WORK_THRESHOLD,
+        "device": {"device": info.device, "backend": info.backend, "precision": info.precision,
+                   "build": info.build, "reason": info.reason, "warnings": info.warnings},
+    }

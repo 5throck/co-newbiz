@@ -179,6 +179,30 @@ describe("credit_rating_references validator", () => {
       expect(joined(withAgencies([{ aliases: ["x"] }]))).toContain("missing required field 'id'");
       expect(joined(withAgencies([]))).toContain("data.agencies must be a non-empty list");
     });
+    test("kind must be bond or bureau, attested a boolean; an alias owned by two agencies is rejected", () => {
+      expect(errors(withAgencies([{ id: "a", kind: "bureau", attested: false, aliases: ["x"] }]))).toEqual([]);
+      expect(joined(withAgencies([{ id: "a", kind: "rater", aliases: ["x"] }]))).toContain(
+        "kind must be 'bond' or 'bureau'",
+      );
+      expect(joined(withAgencies([{ id: "a", aliases: ["x"], attested: "no" }]))).toContain(
+        "attested must be a boolean",
+      );
+      expect(
+        joined(
+          withAgencies([
+            { id: "a", aliases: ["NICE 디앤비"] },
+            { id: "b", kind: "bureau", aliases: ["nice디앤비"] },
+          ]),
+        ),
+      ).toContain("is already an alias of agency 'a'");
+    });
+    test("the shipped bureau agencies are kind bureau, unattested, and share no alias with a bond agency", () => {
+      const agencies = kr().credit_rating_references.data.agencies as Array<Record<string, any>>;
+      const bureau = agencies.filter((a) => a.kind === "bureau");
+      expect(bureau.map((a) => a.id)).toEqual(["nice-dnb", "ecredible", "ked", "nice-info", "sci"]);
+      expect(bureau.every((a) => a.attested === false && a.home_url === undefined)).toBe(true);
+      expect(agencies.filter((a) => a.kind === undefined).map((a) => a.id)).toEqual(["korea-ratings", "kis", "nice"]);
+    });
   });
 
   describe("synthetic (optional, validated when present)", () => {

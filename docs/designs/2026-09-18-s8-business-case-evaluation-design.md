@@ -193,3 +193,17 @@ S8(사업성 분석)의 현재 구현은 "돈이 되는가?"라는 단계 목표
 3. 3 시나리오 × 2 관점 × 10,000 반복 기준 실측: 웹 내장 TS 루프 대비 ≥10배 향상, 케이스 수에 따른 선형 확장(병렬) 확인. GPU 탑재 장치에서 대형 작업(임계 이상)이 GPU로 분기됨을 확인.
 4. fs 게이트 산출물에 BEP 시점·판매목표·입력 스냅샷이 존재함을 체크리스트로 확인.
 5. 품평회 3개 평가 축 전부 통과 기록이 존재함.
+
+## 구현 기록 (as-built) — 연산 장치 환경 자동 준비 (2026-11-26, REQ-W7-2·W7-3 보강)
+
+REQ-W7-3은 torch를 선택 설치로 두고 없으면 CPU로 물러나게 했지만, 가속기 패키지를 사람이 손으로 설치해야 했다. 이 구현은 설치를 자동으로 만든다. 장치를 고르는 규칙(`device.py`의 `AUTO_ORDER`, `GPU_WORK_THRESHOLD`)은 바꾸지 않았다. 결정 기록: ADR-0188 결정 2(장치 계층)의 연장이라 새 ADR은 만들지 않았다.
+
+- **준비 스크립트.** `scripts/co-newbiz/setup-python-env.ts`(`bun run setup:python`)가 저장소 맨 위 `.venv`를 만들거나 갱신하고, `python/requirements.txt`를 설치한 뒤 가속기를 찾아 `python/requirements-gpu-<cuda|mps|rocm|xpu>.txt`를 설치한다. 찾는 순서는 엔진의 `AUTO_ORDER`와 같다: Apple Silicon이면 `mps`, `nvidia-smi`가 있으면 `cuda`(순서는 cuda → mps → xpu → rocm), Intel `xpu-smi`·`sycl-ls`·`ONEAPI_ROOT`가 있으면 `xpu`, `rocminfo`·`rocm-smi`가 있으면 `rocm`(리눅스), 없으면 CPU 패키지만. 가속기와 운영체제 짝이 없는 선택(예: 리눅스의 `mps`)은 쓰임새 오류(종료 코드 2)로 거절한다. `.venv` 안에서만 일하고 `sudo`는 쓰지 않는다.
+- **다시 실행해도 안전.** `.venv/.co-newbiz-setup.json`의 도장(stamp)이 요구 파일 묶음·가속기·운영체제·인터프리터의 해시를 담고, 같으면 아무것도 하지 않는다(파이썬 한 번 띄우는 비용만 든다). `--force`는 도장을 무시한다.
+- **옵션.** `--gpu=auto|none|cuda|mps|rocm|xpu`(환경 변수 `CO_NEWBIZ_SIM_GPU`, 비우면 `auto`; 플래그가 우선), `--dry-run`(계획만 출력), `--check`(바꾸지 않고 확인, 고른 가속기를 torch가 못 쓰면 종료 코드 1, 끝에 엔진 자신의 점검 `python -m sim_engine --device-info`), `--soft`(실패해도 호출자를 막지 않고 6시간 동안 다시 시도하지 않음), `--quiet`.
+- **자동 실행.** 웹 앱의 `predev`(`app/web-next/package.json`)가 `--soft --quiet`로 먼저 돌린다. 설치가 실패해도 개발 서버는 뜬다.
+- **엔진 쪽 변경.** `python -m sim_engine --device-info`가 torch 설치 여부·가속기별 사용 가능 여부·`auto`가 큰 작업에서 고를 장치를 JSON으로 알린다(`device.describe_runtime()`, 작업은 돌리지 않음). 작은 작업(반복 × 케이스 < 200,000)은 torch를 읽기 전에 CPU로 정한다 — torch를 읽는 데 프로세스마다 약 0.5초가 들기 때문이다.
+- **서버 경고.** `app/web-next/lib/sim-engine.ts`가 엔진 확인 때 `CO_NEWBIZ_SIM_GPU`가 GPU를 요청했는데 torch가 없거나 그 가속기를 쓸 수 없으면 경고를 한 번 남기고 `bun run setup:python`을 안내한다. 엔진 사용 가능 여부에는 영향이 없다.
+- **`CO_NEWBIZ_SIM_GPU`의 뜻.** 설치할 패키지만 정한다. 실행할 때 장치는 여전히 job-spec의 `device`와 작업 크기(반복 × 케이스가 200,000 이상일 때만 GPU)가 정하며, 이 변수가 실행 장치를 CPU로 못 박지는 않는다. 설계 REQ-W7-1의 `SIM_ENGINE_DEVICE` 덮어쓰기 환경 변수는 구현에 없다.
+- **Docker.** `docker/Dockerfile`의 빌드 인자 `SIM_GPU`(`none` 기본 — 파이썬 없이 내장 TS 시뮬레이터 사용, `cpu`, `cuda`, `rocm`, `xpu`)가 엔진 층을 더한다. 가속기별 이미지는 따로 빌드하고 `mps`는 리눅스 이미지에 넣을 수 없다. 실행할 때 GPU를 넘겨 주어야 하며(예: `docker run --gpus all`) 보이는 장치가 없으면 엔진은 CPU로 물러난다. 운영 절차: `docs/manuals/operations-manual.md` 3.3, `docs/runbooks/deployment.md` 8절.
+- **검증.** 단위 시험 `tests/unit/setup-python-env.test.ts`(감지·선택·계획·도장). 이 기록은 소스 기준이며 GPU 장비에서의 실측 결과는 담지 않았다(10절의 2·3 검증은 이 변경의 범위 밖).

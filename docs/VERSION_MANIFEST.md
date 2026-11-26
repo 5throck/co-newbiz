@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-26T09:56:12.479Z
+**Generated**: 2026-11-26T11:04:37.876Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 218 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 219 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -361,6 +361,7 @@
 | seed-s1-s12-demo.ts | 1.17.1 | scripts/co-newbiz/seed-s1-s12-demo.ts | N/A |
 | segment.test.ts | 1.0.0 | scripts/humanize/tests/segment.test.ts | bun:test |
 | setup-github-branch-protection.ts | 1.0.1 | scripts/setup-github-branch-protection.ts | bun, fs, os, path |
+| setup-python-env.ts | 1.0.0 | scripts/co-newbiz/setup-python-env.ts | child_process, crypto, fs, path |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | child_process, fs, path |
 | skill-lifecycle-audit.ts | 1.11.0 | scripts/skill-lifecycle-audit.ts | fs, path, process |

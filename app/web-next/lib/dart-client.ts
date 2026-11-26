@@ -1,3 +1,5 @@
+// @version 1.6.0 (2026-11-26: ADR-0208 slice 2 — listBusinessReports (typed list.json, pblntf_detail_ty=A001) and
+// fetchDebtSecuritiesFilings (bdRs.json rating text); additive, no existing export changes.)
 // @version 1.5.0 (2026-11-16: ADR-0199 incremental collection seams — fetchFinancials gains an
 // opt-in `fiscalYears` list and an additive `yearOutcomes` result; new listDisclosuresSince (paged,
 // no type filter) and selectEvidenceBusinessReport. Callers that pass neither option are unchanged.)
@@ -777,6 +779,113 @@ export async function listDisclosuresSince(
     return { complete: false, rows, error: "DART list page cap reached" };
   } catch (err) {
     return { complete: false, rows, error: err instanceof Error ? err.message : "공시 목록 조회 실패" };
+  }
+}
+
+/**
+ * Typed business-report list (ADR-0208): `pblntf_detail_ty=A001` returns the annual business reports (and their
+ * corrections) of one company directly. The client-side `searchDisclosures(..., "business")` filter reads five pages
+ * of 100 untyped rows and misses the report of a high-volume filer. Status 013 (no filings) is a complete, empty
+ * answer. Never throws.
+ */
+export async function listBusinessReports(
+  corpCode: string,
+  months = 36,
+  now: Date = new Date(),
+): Promise<{ ok: boolean; rows: DartListRow[]; error?: string }> {
+  const key = apiKey();
+  if (!key) return { ok: false, rows: [], error: "DART_API_KEY is not configured" };
+  const fmt = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
+  const bgn = new Date(now);
+  bgn.setMonth(bgn.getMonth() - months);
+  const rows: DartListRow[] = [];
+  try {
+    for (let pageNo = 1; pageNo <= 5; pageNo++) {
+      const json = await dartJson<{
+        status?: string;
+        total_page?: number;
+        list?: Array<{ rcept_no?: string; corp_code?: string; corp_name?: string; report_nm?: string; rcept_dt?: string; flr_nm?: string; rm?: string }>;
+      }>(
+        `${BASE}/list.json?crtfc_key=${encodeURIComponent(key)}&corp_code=${encodeURIComponent(corpCode)}&bgn_de=${fmt(bgn)}&end_de=${fmt(now)}&pblntf_detail_ty=A001&page_no=${pageNo}&page_count=100`,
+      );
+      if (json.status === "013") return { ok: true, rows };
+      if (json.status !== "000" || !Array.isArray(json.list)) {
+        return { ok: false, rows, error: `DART list status ${json.status ?? "ERR"}` };
+      }
+      for (const r of json.list) {
+        const rcept = (r.rcept_no ?? "").trim();
+        const dt = (r.rcept_dt ?? "").trim();
+        if (rcept.length !== 14 || dt.length !== 8) continue;
+        const code = (r.corp_code ?? "").trim();
+        rows.push({
+          rcept_no: rcept,
+          corp_code: code.length === 8 ? code : corpCode,
+          corp_name: (r.corp_name ?? "").trim(),
+          report_nm: (r.report_nm ?? "").trim(),
+          rcept_dt: dt,
+          flr_nm: r.flr_nm?.trim() || null,
+          rm: r.rm?.trim() || null,
+        });
+      }
+      if (pageNo >= (json.total_page ?? 1)) return { ok: true, rows };
+    }
+    return { ok: true, rows };
+  } catch (err) {
+    return { ok: false, rows, error: err instanceof Error ? err.message : "business report list failed" };
+  }
+}
+
+/** One debt-securities registration statement (OpenDART bdRs.json, public offerings only). */
+export interface DartDebtSecuritiesFiling {
+  rcept_no: string;
+  /** Credit-rating text, e.g. `AA-(outlook) (agency / agency)`; null when absent or `-`. */
+  cdrt_int: string | null;
+  /** Payment date (YYYY-MM-DD or YYYYMMDD) or null. */
+  pymd: string | null;
+  /** Guaranteed amount text; a real amount marks a guaranteed issue. */
+  grt_amt: string | null;
+}
+
+/**
+ * Debt-securities registration filings of one company in [bgnDe, endDe] (YYYYMMDD) with their rating text
+ * (ADR-0208). bdRs.json answers groups of lists; the general-information group carries `cdrt_int`, `pymd` and the
+ * guarantee fields, other groups of the same rcept_no are merged in. Status 013 is a complete, empty answer.
+ * Never throws.
+ */
+export async function fetchDebtSecuritiesFilings(
+  corpCode: string,
+  bgnDe: string,
+  endDe: string,
+): Promise<{ ok: boolean; filings: DartDebtSecuritiesFiling[]; error?: string }> {
+  const key = apiKey();
+  if (!key) return { ok: false, filings: [], error: "DART_API_KEY is not configured" };
+  try {
+    const json = await dartJson<{
+      status?: string;
+      group?: Array<{ title?: string; list?: Array<Record<string, unknown>> }>;
+      list?: Array<Record<string, unknown>>;
+    }>(
+      `${BASE}/bdRs.json?crtfc_key=${encodeURIComponent(key)}&corp_code=${encodeURIComponent(corpCode)}&bgn_de=${bgnDe}&end_de=${endDe}`,
+    );
+    if (json.status === "013") return { ok: true, filings: [] };
+    if (json.status !== "000") return { ok: false, filings: [], error: `DART bdRs status ${json.status ?? "ERR"}` };
+    const lists: Array<Record<string, unknown>> = [];
+    for (const g of json.group ?? []) if (Array.isArray(g.list)) lists.push(...g.list);
+    if (Array.isArray(json.list)) lists.push(...json.list);
+    const byRcept = new Map<string, DartDebtSecuritiesFiling>();
+    const text = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" && v.trim() !== "-" ? v.trim() : null);
+    for (const item of lists) {
+      const rcept = typeof item.rcept_no === "string" ? item.rcept_no.trim() : "";
+      if (rcept.length !== 14) continue;
+      const cur = byRcept.get(rcept) ?? { rcept_no: rcept, cdrt_int: null, pymd: null, grt_amt: null };
+      cur.cdrt_int = cur.cdrt_int ?? text(item.cdrt_int);
+      cur.pymd = cur.pymd ?? text(item.pymd);
+      cur.grt_amt = cur.grt_amt ?? text(item.grt_amt);
+      byRcept.set(rcept, cur);
+    }
+    return { ok: true, filings: [...byRcept.values()] };
+  } catch (err) {
+    return { ok: false, filings: [], error: err instanceof Error ? err.message : "debt securities lookup failed" };
   }
 }
 

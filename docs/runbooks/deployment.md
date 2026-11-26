@@ -71,6 +71,25 @@ Layout: host port **7749** → container 7749 (compose `127.0.0.1:7749:7749` —
 
 §7 post-deployment checks apply unchanged: scheduled jobs stay registered at the **host OS scheduler** (launchd) per ADR-0019 — the container runs no in-process timers, and container replacement must not disturb the host scheduler registrations.
 
+### Optional Monte Carlo engine layer (`SIM_GPU` build argument)
+
+The production image carries no Python by default: the S8 simulation then runs in the app's in-process TypeScript simulator and the deploy is unchanged. To bake the Python engine (`python/sim_engine`) into an image, build with the `SIM_GPU` build argument (`docker/Dockerfile`):
+
+| `SIM_GPU` | Image content |
+|---|---|
+| `none` (default) | No Python. This is what CI pushes to `ghcr.io/5throck/co-newbiz-web` and what `bun scripts/deploy-web.ts` / `docker compose` use; neither passes the argument |
+| `cpu` | Python and the numpy engine, no torch |
+| `cuda`, `rocm`, `xpu` | `cpu` plus the matching accelerator packages (`python/requirements-gpu-<x>.txt`) |
+
+```bash
+docker build -f docker/Dockerfile --build-arg SIM_GPU=cuda -t co-newbiz-web:cuda .
+```
+
+- The layer runs `scripts/co-newbiz/setup-python-env.ts --gpu=<x>` inside the build (apt installs the interpreter first; there is no `sudo`). The venv lives at `/repo/.venv`, where `app/web-next/lib/sim-engine.ts` looks for it. An unknown value fails the build (`invalid SIM_GPU`).
+- GPU variants are separate images that an operator builds and runs by hand: `mps` is macOS-only and cannot be built into a Linux image, and the GPU must be passed through at run time (for example `docker run --gpus all` for `cuda`; compose needs its own device entry). With no visible device the engine falls back to CPU.
+- The engine uses a GPU only when `iterations x cases` reaches 200,000, so a GPU image pays off only for large runs. Rollback is unchanged: tag the previous image back (§8 step 3).
+- Host-side setup and the `CO_NEWBIZ_SIM_GPU` variable: `docs/manuals/operations-manual.md` §3.3.
+
 ### Runtime-stage rules for `next.config.ts`
 
 `next.config.ts` is loaded by `next start` at runtime and is not bundled into `.next`, so every local (relative) import it has, directly or transitively, must be copied explicitly in the `docker/Dockerfile` runtime stage. A missing copy crash-loops the container with `Cannot find module` (2026-10-13 incident: `./lib/dev-origins.ts`). `tests/unit/dockerfile-next-config-imports.test.ts` fails when a relative import has no matching `COPY`.

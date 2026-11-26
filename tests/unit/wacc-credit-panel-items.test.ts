@@ -9,8 +9,14 @@ import { readFileSync } from "node:fs";
 import {
   appliedCreditRefFrom,
   applicableSuggestions,
+  bureauCreditView,
+  creditAgencyLinks,
+  creditCollectUrl,
+  creditCollectVisible,
   creditReferenceFields,
   creditSourceLabel,
+  dartFilingUrl,
+  disclosedCreditView,
   formatCreditAnchorPct,
   kdKeWarning,
   missingReferenceItems,
@@ -29,6 +35,7 @@ const anchors = {
   bbb_minus_spread_pp: 6.497,
   ratio_per_notch: 1.454,
 };
+const SNAPSHOT_ID = "01JABCDEFGHJKMNPQRSTVWXYZ0";
 const credit: ReferenceSuggestion = {
   key: "credit_spread",
   value: 3.073,
@@ -50,12 +57,25 @@ describe("appliedCreditRefFrom", () => {
       basis: "default",
       referenceAsOf: "2026-10",
       appliedValue: 0.03073,
+      snapshotId: null,
     });
   });
-  test("each rating source maps through unchanged", () => {
+  test("each rating source maps through unchanged (a disclosed one with its snapshot id)", () => {
     for (const rating_source of ["default", "disclosed", "synthetic"] as const) {
-      expect(appliedCreditRefFrom({ ...credit, rating_source }, 0.03)?.basis).toBe(rating_source);
+      const e = { ...credit, rating_source, credit_rating_snapshot_id: SNAPSHOT_ID };
+      expect(appliedCreditRefFrom(e, 0.03)?.basis).toBe(rating_source);
     }
+  });
+  test("a disclosed rating carries its evidence snapshot id; other sources never do", () => {
+    const disclosed = { ...credit, rating_source: "disclosed" as const, credit_rating_snapshot_id: SNAPSHOT_ID };
+    expect(appliedCreditRefFrom(disclosed, 0.03)?.snapshotId).toBe(SNAPSHOT_ID);
+    expect(appliedCreditRefFrom({ ...disclosed, rating_source: "default" }, 0.03)?.snapshotId).toBeNull();
+  });
+  test("a disclosed suggestion without a snapshot id records no basis (the confirmation would be a 400)", () => {
+    expect(appliedCreditRefFrom({ ...credit, rating_source: "disclosed" }, 0.03)).toBeNull();
+    expect(
+      appliedCreditRefFrom({ ...credit, rating_source: "disclosed", credit_rating_snapshot_id: null }, 0.03),
+    ).toBeNull();
   });
   test("legacy AA- fallback (no anchors, no rating source) records nothing", () => {
     const legacy: ReferenceSuggestion = {
@@ -78,10 +98,18 @@ describe("appliedCreditRefFrom", () => {
 });
 
 describe("creditReferenceFields and the wacc.debt_spread payload", () => {
-  const ref = { basis: "disclosed" as const, referenceAsOf: "2026-10", appliedValue: 0.03073 };
+  const ref = { basis: "disclosed" as const, referenceAsOf: "2026-10", appliedValue: 0.03073, snapshotId: SNAPSHOT_ID };
   test("unedited applied value keeps edited_from_reference false", () => {
     expect(creditReferenceFields(ref, 0.03073)).toEqual({
       creditRatingBasis: "disclosed",
+      creditRatingSnapshotId: SNAPSHOT_ID,
+      referenceAsOf: "2026-10",
+      editedFromReference: false,
+    });
+  });
+  test("a default-basis reference sends no snapshot id", () => {
+    expect(creditReferenceFields({ ...ref, basis: "default", snapshotId: null }, 0.03073)).toEqual({
+      creditRatingBasis: "default",
       referenceAsOf: "2026-10",
       editedFromReference: false,
     });
@@ -109,6 +137,34 @@ describe("creditReferenceFields and the wacc.debt_spread payload", () => {
       reference_as_of: "2026-10",
       edited_from_reference: false,
     });
+  });
+  test("a disclosed rating's payload also carries credit_rating_snapshot_id (the server 400s without it)", () => {
+    const applied = appliedCreditRefFrom(
+      { ...credit, rating_source: "disclosed", credit_rating_snapshot_id: SNAPSHOT_ID },
+      0.03073,
+    );
+    const p = toWaccComponentPayload({
+      key: "wacc.debt_spread",
+      value: 0.03073,
+      kind: "live",
+      ...creditReferenceFields(applied, 0.03073),
+    });
+    expect(p).toMatchObject({
+      credit_rating_basis: "disclosed",
+      credit_rating_snapshot_id: SNAPSHOT_ID,
+      reference_as_of: "2026-10",
+      edited_from_reference: false,
+    });
+  });
+  test("a default-basis payload carries no credit_rating_snapshot_id", () => {
+    const p = toWaccComponentPayload({
+      key: "wacc.debt_spread",
+      value: 0.03073,
+      kind: "live",
+      ...creditReferenceFields({ ...ref, basis: "default", snapshotId: null }, 0.03073),
+    });
+    expect(p.credit_rating_basis).toBe("default");
+    expect("credit_rating_snapshot_id" in p).toBe(false);
   });
   test("manual debt_spread sends none of the three fields", () => {
     const p = toWaccComponentPayload({ key: "wacc.debt_spread", value: 0.02, kind: "user" });
@@ -145,6 +201,21 @@ describe("apply-all handling of the credit_spread row", () => {
     expect(applicableSuggestions([rf, stale], staleExcluded).map((x) => x.key)).toEqual(["risk_free"]);
     expect(missingReferenceItems([rf, stale], staleExcluded)[0]?.reason_code).toBe("credit_rating_stale");
   });
+  test("a disclosed rating whose spread fell back to the legacy AA- value is excluded with its code", () => {
+    const legacyExcluded = [
+      { key: "credit_spread", reason_code: "credit_spread_legacy_basis", reason: "legacy spread" },
+    ];
+    const legacy = {
+      ...credit,
+      rating_source: "disclosed" as const,
+      spread_basis: "aa_minus_legacy" as const,
+      anchors: null,
+    };
+    expect(applicableSuggestions([rf, legacy], legacyExcluded).map((x) => x.key)).toEqual(["risk_free"]);
+    expect(missingReferenceItems([rf, legacy], legacyExcluded)).toEqual([
+      { key: "credit_spread", reason_code: "credit_spread_legacy_basis", reason: "legacy spread" },
+    ]);
+  });
   test("a fresh disclosed or synthetic rating stays applicable and not missing", () => {
     for (const rating_source of ["disclosed", "synthetic"] as const) {
       const s = { ...credit, rating_source };
@@ -165,6 +236,108 @@ describe("reasonByCode / formatCreditAnchorPct", () => {
     expect(formatCreditAnchorPct(4.549)).toBe("4.55");
     expect(formatCreditAnchorPct(null)).toBe("—");
     expect(formatCreditAnchorPct(undefined)).toBe("—");
+  });
+});
+
+describe("disclosed rating evidence helpers", () => {
+  const disclosed: ReferenceSuggestion = {
+    ...credit,
+    rating: "AA-",
+    rating_source: "disclosed",
+    rating_stale: false,
+    rating_agencies: [
+      { agency: "kis", grade: "AA-", rated_on: "2026-03-20", outlook: "stable" },
+      { agency: "nice", grade: "AA", rated_on: "2026-03-18", outlook: null },
+    ],
+    rating_instrument: "corporate_bond",
+    rating_rated_on: "2026-03-20",
+    source_rcept_no: "20260331001234",
+    credit_rating_snapshot_id: SNAPSHOT_ID,
+    rating_evidence_kind: "business_report",
+    rating_alternative: {
+      rating: "A+",
+      rated_on: "2025-05-01",
+      stale: true,
+      source_rcept_no: "20250502000111",
+      evidence_kind: "debt_securities_filing",
+    },
+    agency_links: [
+      { agency: "kis", home_url: "https://www.kisrating.com" },
+      { agency: "x", home_url: "javascript:alert(1)" },
+      { agency: "y", home_url: "http://insecure.example" },
+    ],
+  };
+  test("DART viewer link only for a 14-digit receipt number, https", () => {
+    expect(dartFilingUrl("20260331001234")).toBe("https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331001234");
+    for (const bad of ["2026033100123", "2026033100123x", "20260331001234/../x", "", null, undefined]) {
+      expect(dartFilingUrl(bad)).toBeNull();
+    }
+  });
+  test("agency links keep https only", () => {
+    expect(creditAgencyLinks(disclosed)).toEqual([{ agency: "kis", href: "https://www.kisrating.com" }]);
+    expect(creditAgencyLinks(credit)).toEqual([]);
+  });
+  test("view of a disclosed rating: agencies, dates, filing links, stale flag, alternative", () => {
+    const v = disclosedCreditView(disclosed);
+    expect(v?.rating).toBe("AA-");
+    expect(v?.agencies).toHaveLength(2);
+    expect(v?.ratedOn).toBe("2026-03-20");
+    expect(v?.filingUrl).toContain("rcpNo=20260331001234");
+    expect(v?.stale).toBe(false);
+    expect(v?.alternative).toMatchObject({ rating: "A+", stale: true });
+    expect(v?.alternative?.filingUrl).toContain("rcpNo=20250502000111");
+    expect(disclosedCreditView({ ...disclosed, rating_stale: true })?.stale).toBe(true);
+  });
+  test("no evidence view for a default or synthetic rating, or another key", () => {
+    expect(disclosedCreditView({ ...disclosed, rating_source: "default" })).toBeNull();
+    expect(disclosedCreditView({ ...disclosed, rating_source: "synthetic" })).toBeNull();
+    expect(disclosedCreditView({ ...disclosed, key: "risk_free" })).toBeNull();
+  });
+  test("collect button: offered on collect_hint or a stale disclosed rating, never otherwise", () => {
+    expect(creditCollectVisible({ ...credit, collect_hint: true })).toBe(true);
+    expect(creditCollectVisible({ ...disclosed, rating_stale: true })).toBe(true);
+    expect(creditCollectVisible(disclosed)).toBe(false);
+    expect(creditCollectVisible({ ...credit, collect_hint: false })).toBe(false);
+    expect(creditCollectVisible(undefined)).toBe(false);
+    expect(creditCollectVisible({ ...credit, key: "risk_free", collect_hint: true })).toBe(false);
+  });
+  test("bureau basis: evidence view, snapshot id required and carried on apply, collect offered when stale", () => {
+    const bureau: ReferenceSuggestion = {
+      ...credit,
+      rating: "BB+",
+      rating_source: "bureau",
+      rating_stale: false,
+      rating_rated_on: "2024-12-31",
+      source_rcept_no: "20260318001708",
+      credit_rating_snapshot_id: SNAPSHOT_ID,
+      rating_evidence_kind: "business_report",
+      rating_bureau: {
+        agency: "ecredible",
+        agency_raw: "ecredible",
+        agency_carried: false,
+        cashflow_grade: "B",
+        rows: [{ agency: "ecredible", agency_raw: "ecredible", grade: "BB+", cashflow_grade: "B" }],
+      },
+    };
+    expect(bureauCreditView(bureau)).toMatchObject({ rating: "BB+", ratedOn: "2024-12-31", stale: false });
+    expect(bureauCreditView(bureau)?.filingUrl).toContain("rcpNo=20260318001708");
+    expect(bureauCreditView({ ...bureau, rating_source: "disclosed" })).toBeNull();
+    expect(bureauCreditView({ ...bureau, rating_bureau: null })).toBeNull();
+    expect(disclosedCreditView(bureau)).toBeNull();
+    const ref = appliedCreditRefFrom(bureau, 0.05);
+    expect(ref).toMatchObject({ basis: "bureau", snapshotId: SNAPSHOT_ID });
+    expect(creditReferenceFields(ref, 0.05)).toMatchObject({
+      creditRatingBasis: "bureau",
+      creditRatingSnapshotId: SNAPSHOT_ID,
+    });
+    expect(appliedCreditRefFrom({ ...bureau, credit_rating_snapshot_id: null }, 0.05)).toBeNull();
+    expect(creditCollectVisible({ ...bureau, rating_stale: true })).toBe(true);
+    expect(creditCollectVisible(bureau)).toBe(false);
+  });
+  test("collect URL is scoped to the selected target like the suggestions GET", () => {
+    expect(creditCollectUrl("p1")).toBe("/api/projects/p1/wacc/credit-rating/collect");
+    expect(creditCollectUrl("p1", "t 1")).toBe("/api/projects/p1/wacc/credit-rating/collect?target_id=t%201");
+    expect(creditCollectUrl("p1", null)).toBe("/api/projects/p1/wacc/credit-rating/collect");
   });
 });
 
@@ -190,6 +363,45 @@ describe("kdKeWarning", () => {
 describe("locale catalog carries every credit-spread key in ko and en", () => {
   const load = (l: string) => JSON.parse(readFileSync(`app/web-next/locales/${l}.json`, "utf8"));
   const keys = [
+    "collectCreditRun",
+    "collectCreditRunning",
+    "collectCreditDone",
+    "collectCreditFailed",
+    "collectCreditStartFailed",
+    "collectCreditNoSubject",
+    "creditReasonNotCollected",
+    "creditReasonDisclosed",
+    "creditReasonLegacyBasis",
+    "creditDisclosedTitle",
+    "creditDisclosedAgencies",
+    "creditAgencyKoreaRatings",
+    "creditAgencyKis",
+    "creditAgencyNice",
+    "creditAgencyRow",
+    "creditOutlookLine",
+    "creditOutlookStable",
+    "creditOutlookPositive",
+    "creditOutlookNegative",
+    "creditOutlookDeveloping",
+    "creditInstrumentLine",
+    "creditInstrumentCorporateBond",
+    "creditRatedOnLine",
+    "creditEvidenceBusinessReport",
+    "creditEvidenceDebtFiling",
+    "creditEvidenceLine",
+    "creditFilingLink",
+    "creditAlternativeNote",
+    "creditAlternativeStale",
+    "creditAgencyLinksLabel",
+    "creditStatusParsed",
+    "creditStatusNotCollected",
+    "creditStatusNotDisclosed",
+    "creditStatusSectionPresentNoBondRating",
+    "creditStatusSectionAbsent",
+    "creditStatusParseFailed",
+    "creditStatusNotZip",
+    "creditStatusNoBondRating",
+    "creditStatusNoDartCode",
     "creditRatingChip",
     "creditSourceDefault",
     "creditSourceDisclosed",
@@ -225,9 +437,54 @@ describe("locale catalog carries every credit-spread key in ko and en", () => {
       const panel = m.stages.s8.wacc.waccPanel;
       for (const k of keys) expect(typeof panel[k]).toBe("string");
       expect(typeof m.components.waccStatus.warning.kd_ge_ke).toBe("string");
+      for (const c of ["dart_api_key_missing", "no_dart_corp_code", "no_subject_company", "already_running"]) {
+        expect(typeof m.errors.codes[c]).toBe("string");
+      }
       for (const k of ["risk_free", "credit_spread", "observed_de", "beta_levered"]) {
         expect(typeof m.pages.companyFinancials.waccLabel[k]).toBe("string");
       }
     });
   }
+});
+
+describe("WACC panel wiring of the disclosed credit rating (static)", () => {
+  const panel = readFileSync("app/web-next/components/wacc/WaccPanel.tsx", "utf8");
+  const evidence = readFileSync("app/web-next/components/wacc/CreditRatingEvidence.tsx", "utf8");
+  test("collect button reuses useCollectRun on the credit-rating endpoint, reloads suggestions, sits in the analyst block", () => {
+    expect(panel).toMatch(/useCollectRun\(creditCollectUrl\(projectId, selectedTarget\)[\s\S]{0,80}loadSugg\(\)/);
+    expect(panel).toContain("creditCollectVisible(");
+    const gate = panel.indexOf("{canAct && (\n        <>");
+    expect(panel.indexOf('data-testid="credit-collect"')).toBeGreaterThan(gate);
+  });
+  test("every backend reason code and disclosed_status value is localized in the panel", () => {
+    for (const code of [
+      "rating_not_collected",
+      "credit_rating_stale",
+      "credit_spread_legacy_basis",
+      "credit_rating_default_basis",
+      "disclosed_rating",
+      "bureau_issuer_rating",
+      "credit_rating_bureau_basis",
+    ]) {
+      expect(panel).toContain(`${code}: t(`);
+    }
+    for (const status of [
+      "parsed",
+      "not_disclosed",
+      "section_present_no_bond_rating",
+      "section_absent",
+      "parse_failed",
+      "not_zip",
+    ]) {
+      expect(panel).toContain(`${status}: t(`);
+    }
+    expect(panel).toContain("<CreditRatingEvidence");
+  });
+  test("evidence block opens external links in a new tab with an sr-only hint, via the https-only helpers", () => {
+    expect(evidence).toContain('target="_blank"');
+    expect(evidence).toContain('rel="noreferrer"');
+    expect(evidence).toContain('className="sr-only"');
+    expect(evidence).toContain("disclosedCreditView(");
+    expect(evidence).toContain("creditAgencyLinks(");
+  });
 });

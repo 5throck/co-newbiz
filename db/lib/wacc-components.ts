@@ -81,12 +81,18 @@ export interface WaccComponentInput {
    */
   taxReferenceBracketId?: string | null;
   /**
-   * ADR-0208, `wacc.debt_spread` only: the rating basis the human applied (`default` is the only value
-   * the server can resolve in this release). Type-validated here; the server RE-DERIVES the rating,
-   * source, spread basis and the edited flag from stored evidence at `referenceAsOf` and records those -
-   * a client-sent `editedFromReference` is ignored for this key.
+   * ADR-0208, `wacc.debt_spread` only: the rating basis the human applied (`default`, `disclosed` or `bureau` (a credit-bureau
+   * issuer rating, lower confidence); `synthetic` resolves from slice 3). Type-validated here; the server RE-DERIVES the rating, source, agencies, rating date,
+   * spread basis and the edited flag from stored evidence at `referenceAsOf` and records those - a client-sent
+   * `editedFromReference` is ignored for this key.
    */
-  creditRatingBasis?: "disclosed" | "synthetic" | "default" | null;
+  creditRatingBasis?: "disclosed" | "bureau" | "synthetic" | "default" | null;
+  /**
+   * ADR-0208, `wacc.debt_spread` only, required with basis `disclosed` or `bureau`: id of the `dart_credit_rating_snapshot` the
+   * suggestion showed (`credit_rating_snapshot_id`). An unknown id, or one of another company, is a 400; it is
+   * otherwise a pointer - the server records the rating it re-derives from the company's stored snapshots.
+   */
+  creditRatingSnapshotId?: string | null;
   /** ADR-0208, `wacc.debt_spread` only: ECOS month (YYYY-MM) of the applied suggestion; required with creditRatingBasis. */
   referenceAsOf?: string | null;
 }
@@ -262,7 +268,7 @@ export function validateComponentInput(c: WaccComponentInput): void {
       );
     }
   }
-  if (c.creditRatingBasis != null || c.referenceAsOf != null) {
+  if (c.creditRatingBasis != null || c.referenceAsOf != null || c.creditRatingSnapshotId != null) {
     if (c.key !== "wacc.debt_spread") {
       throw new WaccComponentValidationError(
         "invalid_request",
@@ -272,12 +278,13 @@ export function validateComponentInput(c: WaccComponentInput): void {
     if (
       c.creditRatingBasis != null &&
       c.creditRatingBasis !== "disclosed" &&
+      c.creditRatingBasis !== "bureau" &&
       c.creditRatingBasis !== "synthetic" &&
       c.creditRatingBasis !== "default"
     ) {
       throw new WaccComponentValidationError(
         "invalid_request",
-        "credit_rating_basis must be 'disclosed', 'synthetic' or 'default'.",
+        "credit_rating_basis must be 'disclosed', 'bureau', 'synthetic' or 'default'.",
       );
     }
     if (
@@ -291,6 +298,20 @@ export function validateComponentInput(c: WaccComponentInput): void {
     }
     if (c.creditRatingBasis == null && c.referenceAsOf != null) {
       throw new WaccComponentValidationError("invalid_request", "reference_as_of requires credit_rating_basis.");
+    }
+    if (c.creditRatingSnapshotId != null) {
+      if (typeof c.creditRatingSnapshotId !== "string" || !/^[0-9A-Za-z]{26}$/.test(c.creditRatingSnapshotId)) {
+        throw new WaccComponentValidationError(
+          "invalid_request",
+          "credit_rating_snapshot_id must be a snapshot id string (26 characters).",
+        );
+      }
+      if (c.creditRatingBasis == null) {
+        throw new WaccComponentValidationError(
+          "invalid_request",
+          "credit_rating_snapshot_id requires credit_rating_basis.",
+        );
+      }
     }
   }
   if (c.anchorRef != null && c.anchorRef.trim() !== "" && !isValidEvidenceRef(c.anchorRef)) {

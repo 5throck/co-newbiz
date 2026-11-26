@@ -19,6 +19,8 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
   const [run, setRun] = useState<BetaCollectRun | null>(null);
   /** Localized message of a rejected start (ApiError text); null when the start was accepted. */
   const [startError, setStartError] = useState<string | null>(null);
+  /** Envelope error code of a rejected start (e.g. "no_subject_company"); null when accepted or not an ApiError. */
+  const [startErrorCode, setStartErrorCode] = useState<string | null>(null);
   const alive = useRef(true);
   const polling = useRef(false);
   const finishedRef = useRef(onFinished);
@@ -55,6 +57,7 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
     setPhase("idle");
     setRun(null);
     setStartError(null);
+    setStartErrorCode(null);
     void (async () => {
       try {
         const latest = parseBetaCollectRun((await api.get<unknown>(url)).data);
@@ -74,6 +77,7 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
   const start = useCallback(async () => {
     setPhase("starting");
     setStartError(null);
+    setStartErrorCode(null);
     setRun(null);
     try {
       await api.post(url);
@@ -84,11 +88,12 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
       } else {
         setPhase("idle");
         setStartError(err instanceof ApiError ? err.message : "");
+        setStartErrorCode(err instanceof ApiError ? err.code : null);
         return;
       }
     }
     await poll();
   }, [url, poll]);
 
-  return { phase, run, startError, start, busy: phase === "starting" || phase === "running" };
+  return { phase, run, startError, startErrorCode, start, busy: phase === "starting" || phase === "running" };
 }
