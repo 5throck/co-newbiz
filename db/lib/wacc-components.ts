@@ -228,14 +228,19 @@ export function validateComponentInput(c: WaccComponentInput): void {
     }
     if (
       c.taxReferenceBracketId != null &&
-      (typeof c.taxReferenceBracketId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(c.taxReferenceBracketId))
+      (typeof c.taxReferenceBracketId !== "string" ||
+        !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(c.taxReferenceBracketId))
     ) {
       throw new WaccComponentValidationError(
         "invalid_request",
         "tax_reference_bracket_id must be a registry bracket id (letters, digits, '.', '_', '-').",
       );
     }
-    if (c.taxReferenceBasis != null && c.taxReferenceBasis !== "bracket_estimate" && c.taxReferenceBasis !== "top_bracket_fallback") {
+    if (
+      c.taxReferenceBasis != null &&
+      c.taxReferenceBasis !== "bracket_estimate" &&
+      c.taxReferenceBasis !== "top_bracket_fallback"
+    ) {
       throw new WaccComponentValidationError(
         "invalid_request",
         "tax_reference_basis must be 'bracket_estimate' or 'top_bracket_fallback'.",
@@ -263,8 +268,10 @@ export function capmComponentGaps(components: readonly WaccComponentLike[]): str
   for (const key of ["wacc.risk_free", "wacc.erp", "wacc.tax_rate", "wacc.target_de"] as const) {
     if (!have.has(key)) need.push(key);
   }
-  if (!have.has("wacc.beta_unlevered") && !have.has("wacc.beta_levered")) need.push("wacc.beta_unlevered | wacc.beta_levered");
-  if (!have.has("wacc.cost_of_debt") && !have.has("wacc.debt_spread")) need.push("wacc.cost_of_debt | wacc.debt_spread");
+  if (!have.has("wacc.beta_unlevered") && !have.has("wacc.beta_levered"))
+    need.push("wacc.beta_unlevered | wacc.beta_levered");
+  if (!have.has("wacc.cost_of_debt") && !have.has("wacc.debt_spread"))
+    need.push("wacc.cost_of_debt | wacc.debt_spread");
   if (have.has("wacc.beta_levered") && !have.has("wacc.beta_unlevered") && !have.has("wacc.observed_de")) {
     need.push("wacc.observed_de (wacc.beta_levered을 비레버드 환산하려면 필요)");
   }

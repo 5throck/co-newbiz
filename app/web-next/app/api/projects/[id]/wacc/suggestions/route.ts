@@ -28,10 +28,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const db = getDb();
   // ADR-0156: ?target_id= asks for a shortlisted target's company instead of the bound subject.
   const targetId = new URL(request.url).searchParams.get("target_id");
-  let companyId = (db.query("SELECT company_id FROM md_project WHERE id = ?").get(id) as { company_id: string | null } | undefined)?.company_id ?? null;
+  let companyId =
+    (db.query("SELECT company_id FROM md_project WHERE id = ?").get(id) as { company_id: string | null } | undefined)
+      ?.company_id ?? null;
   if (targetId) {
     const t = listProjectAnalysisTargets(db, id).find((x) => x.targetId === targetId);
-    if (!t || !t.companyId) return badRequest("invalid_request", "target_id must be a shortlisted target (a company that can be analyzed).");
+    if (!t || !t.companyId)
+      return badRequest("invalid_request", "target_id must be a shortlisted target (a company that can be analyzed).");
     companyId = t.companyId;
   }
   const market = resolveProjectMarket(db, id) === "KR" ? "KR" : "OTHER";
@@ -60,9 +63,22 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const suggestion = (key: string) => {
     const e = byKey.get(key);
     if (!e || e.value === null) return { key, value: null, reason: e?.reason ?? "데이터 없음" };
-    return { key, value: e.value, as_of: e.as_of, anchor_ref: e.anchor_ref, source_label: e.source_label, note: e.note ?? null };
+    return {
+      key,
+      value: e.value,
+      as_of: e.as_of,
+      anchor_ref: e.anchor_ref,
+      source_label: e.source_label,
+      note: e.note ?? null,
+    };
   };
-  const suggestions = [suggestion("risk_free"), suggestion("credit_spread"), suggestion("observed_de"), erpOffer.erp, taxRate];
+  const suggestions = [
+    suggestion("risk_free"),
+    suggestion("credit_spread"),
+    suggestion("observed_de"),
+    erpOffer.erp,
+    taxRate,
+  ];
   const missing = [
     ...reference.missing,
     ...erpOffer.apply_all_excluded.map((x) => `erp: ${x.reason_code} - ${x.reason}`),

@@ -6,7 +6,18 @@
 // derivable component set and returns the server-computed WACC alongside the
 // human-confirmed one.
 import { getDb } from "../../../../../../../db/client.ts";
-import { isWaccSubject, listProjectAnalysisTargets, loadProjectComponents, recordWaccSession, resolveProjectHurdleIrr, resolveProjectWacc, resolveProjectWaccSubject, resolveReleveredBeta, setProjectWaccSubject, type WaccScope } from "../../../../../../../db/lib/wacc.ts";
+import {
+  isWaccSubject,
+  listProjectAnalysisTargets,
+  loadProjectComponents,
+  recordWaccSession,
+  resolveProjectHurdleIrr,
+  resolveProjectWacc,
+  resolveProjectWaccSubject,
+  resolveReleveredBeta,
+  setProjectWaccSubject,
+  type WaccScope,
+} from "../../../../../../../db/lib/wacc.ts";
 import {
   assembleDerivation,
   capmComponentGaps,
@@ -27,7 +38,11 @@ const COMPUTED_TOLERANCE = 0.00005;
 /** ADR-0156: `?target_id=` scopes the view to that shortlisted target's own
  *  sessions; absent = project-level (the fs-gate figure). Throws on an
  *  unknown/unanalyzable target — callers map that to badRequest. */
-async function analysisScope(db: ReturnType<typeof getDb>, projectId: string, request: Request): Promise<WaccScope & { targetId?: string }> {
+async function analysisScope(
+  db: ReturnType<typeof getDb>,
+  projectId: string,
+  request: Request,
+): Promise<WaccScope & { targetId?: string }> {
   const targetId = new URL(request.url).searchParams.get("target_id") ?? undefined;
   if (!targetId) return {};
   const target = listProjectAnalysisTargets(db, projectId).find((t) => t.targetId === targetId);
@@ -38,7 +53,8 @@ async function analysisScope(db: ReturnType<typeof getDb>, projectId: string, re
 }
 
 function parseRate(value: unknown): number | null {
-  const n = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  const n =
+    typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
   return Number.isFinite(n) && n > -1 ? n : null;
 }
 
@@ -80,7 +96,10 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
         throw new WaccComponentValidationError("invalid_request", `${flag} must be a boolean.`);
       }
     }
-    const hasErpFields = item.erp_reference_id != null || item.erp_reference_default !== undefined || item.erp_reference_stale !== undefined;
+    const hasErpFields =
+      item.erp_reference_id != null ||
+      item.erp_reference_default !== undefined ||
+      item.erp_reference_stale !== undefined;
     if (hasErpFields && item.key !== "wacc.erp") {
       throw new WaccComponentValidationError(
         "invalid_request",
@@ -145,7 +164,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
+  if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
   const db = getDb();
   let scope: WaccScope;
   try {
@@ -159,17 +178,18 @@ if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true }
   const derivation = components.length > 0 ? assembleDerivation(components) : null;
   const subject = resolveProjectWaccSubject(db, id);
   const relevering = subject.subject !== "promoter" ? resolveReleveredBeta(db, id, scope) : null;
-  return ok(
-    { wacc, hurdle_irr: hurdle, components, derivation, subject, relevering },
-    200,
-    { wacc_source: wacc.source, run_id: wacc.run_id ?? undefined, components_run_id: runId ?? undefined },
-  );
+  return ok({ wacc, hurdle_irr: hurdle, components, derivation, subject, relevering }, 200, {
+    wacc_source: wacc.source,
+    run_id: wacc.run_id ?? undefined,
+    components_run_id: runId ?? undefined,
+  });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
-  if (auth.auth.role === "viewer") return forbidden("role_required", "WACC input sessions require the analyst role or higher.");
+  if (auth.auth.role === "viewer")
+    return forbidden("role_required", "WACC input sessions require the analyst role or higher.");
   const { id } = await params;
   if (!visibleProject(auth.auth, id)) return notFound();
   const body = (await request.json().catch(() => null)) as {
@@ -194,15 +214,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     scope = { subjectCompanyId: target.companyId };
   }
-  if (wacc === null) return badRequest("invalid_request", "wacc must be a finite ratio greater than -1. Example: 0.095");
+  if (wacc === null)
+    return badRequest("invalid_request", "wacc must be a finite ratio greater than -1. Example: 0.095");
   const hasHurdle = body?.hurdle_irr !== undefined && body?.hurdle_irr !== null && body?.hurdle_irr !== "";
   const hurdleIrr = hasHurdle ? parseRate(body?.hurdle_irr) : null;
   if (hasHurdle && hurdleIrr === null) {
     return badRequest("invalid_request", "hurdle_irr must be a finite ratio greater than -1.");
   }
   // ADR-0186 D8 plausibility: a discount rate is a ratio strictly between 0 and 1 (catches 12 typed for 0.12).
-  if (wacc <= 0 || wacc >= 1) return badRequest("rate_out_of_range", "wacc must be a ratio strictly between 0 and 1 (0.12 means 12 percent).");
-  if (hurdleIrr !== null && (hurdleIrr <= 0 || hurdleIrr >= 1)) return badRequest("rate_out_of_range", "hurdle_irr must be a ratio strictly between 0 and 1 (0.12 means 12 percent).");
+  if (wacc <= 0 || wacc >= 1)
+    return badRequest("rate_out_of_range", "wacc must be a ratio strictly between 0 and 1 (0.12 means 12 percent).");
+  if (hurdleIrr !== null && (hurdleIrr <= 0 || hurdleIrr >= 1))
+    return badRequest(
+      "rate_out_of_range",
+      "hurdle_irr must be a ratio strictly between 0 and 1 (0.12 means 12 percent).",
+    );
 
   let components: WaccComponentInput[] | undefined;
   let derivation: ReturnType<typeof assembleDerivation> | null = null;
@@ -270,6 +296,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   } catch (err) {
     if (err instanceof WaccComponentValidationError) return badRequest(err.code, err.message);
-    return badRequest("wacc_session_failed", err instanceof Error ? err.message : "Failed to save the WACC input session.");
+    return badRequest(
+      "wacc_session_failed",
+      err instanceof Error ? err.message : "Failed to save the WACC input session.",
+    );
   }
 }

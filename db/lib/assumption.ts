@@ -66,10 +66,7 @@ export interface AssumptionRow {
 
 export function recordAssumption(db: Database, options: RecordAssumptionOptions): AssumptionRow {
   if (!ASSUMPTION_KINDS.has(options.kind)) {
-    throw new AssumptionValidationError(
-      "invalid_request",
-      `kind must be one of ${[...ASSUMPTION_KINDS].join("|")}.`,
-    );
+    throw new AssumptionValidationError("invalid_request", `kind must be one of ${[...ASSUMPTION_KINDS].join("|")}.`);
   }
   if (typeof options.value !== "number" || !Number.isFinite(options.value)) {
     throw new AssumptionValidationError("invalid_request", "value must be a number.");
@@ -104,7 +101,17 @@ export function recordAssumption(db: Database, options: RecordAssumptionOptions)
   db.run(
     `INSERT INTO assumption (id, run_id, assumption_key, kind, value, rationale, anchor_ref, as_of, ttl_days)
      VALUES (?,?,?,?,?,?,?,?,?)`,
-    [row.id, row.run_id, row.assumption_key, row.kind, row.value, row.rationale, row.anchor_ref, row.as_of, row.ttl_days],
+    [
+      row.id,
+      row.run_id,
+      row.assumption_key,
+      row.kind,
+      row.value,
+      row.rationale,
+      row.anchor_ref,
+      row.as_of,
+      row.ttl_days,
+    ],
   );
   appendAudit(db, {
     actor: options.actor,

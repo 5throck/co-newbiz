@@ -220,7 +220,13 @@ describe("erp-reference registry reader", () => {
 describe("GET /api/projects/[id]/wacc/suggestions - ERP reference", () => {
   test("KR project: default erp entry present, existing keys unchanged, fresh default not excluded", async () => {
     const body = await suggestions(projectKr);
-    expect(body.suggestions.map((s) => s.key)).toEqual(["risk_free", "credit_spread", "observed_de", "erp", "tax_rate"]);
+    expect(body.suggestions.map((s) => s.key)).toEqual([
+      "risk_free",
+      "credit_spread",
+      "observed_de",
+      "erp",
+      "tax_rate",
+    ]);
     const e = body.suggestions[3];
     const reg = erp.loadKrErpRegistry();
     if (!reg.ok) throw new Error("registry must load");
@@ -262,7 +268,13 @@ describe("GET /api/projects/[id]/wacc/suggestions - ERP reference", () => {
 
   test("project that declared a non-KR scope gets a null erp with a reason; other keys unaffected", async () => {
     const body = await suggestions(projectOther);
-    expect(body.suggestions.map((s) => s.key)).toEqual(["risk_free", "credit_spread", "observed_de", "erp", "tax_rate"]);
+    expect(body.suggestions.map((s) => s.key)).toEqual([
+      "risk_free",
+      "credit_spread",
+      "observed_de",
+      "erp",
+      "tax_rate",
+    ]);
     expect(body.suggestions[3]).toMatchObject({ key: "erp", value: null, reason_code: "erp_market_not_kr" });
     expect(typeof body.suggestions[3].reason).toBe("string");
     expect(body.erp_alternatives).toEqual([]);

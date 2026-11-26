@@ -12,6 +12,7 @@ describe("suggestionToInputValue", () => {
     expect(suggestionToInputValue("observed_de", 0.85)).toBe(0.85);
   });
   test("null stays null for every key", () => {
-    for (const k of ["risk_free", "credit_spread", "observed_de", "erp", "tax_rate"]) expect(suggestionToInputValue(k, null)).toBeNull();
+    for (const k of ["risk_free", "credit_spread", "observed_de", "erp", "tax_rate"])
+      expect(suggestionToInputValue(k, null)).toBeNull();
   });
 });
