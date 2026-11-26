@@ -14,6 +14,7 @@ import {
   spreadEditedFromReference,
   type CreditRatingRegistry,
   type MappedSpread,
+  type SpreadInputs,
 } from "../../db/lib/credit-spread-map.ts";
 
 const loaded = loadKrCreditRatingRegistry();
@@ -21,7 +22,7 @@ if (!loaded.ok) throw new Error(`KR registry must load: ${loaded.reason}`);
 const REG: CreditRatingRegistry = loaded.registry;
 
 const FULL = { asOf: "2026-10", ktbPct: 3.861, aaMinusPct: 4.549, bbbMinusPct: 10.358 };
-const ok = (rating: string, inputs = FULL): MappedSpread => {
+const ok = (rating: string, inputs: SpreadInputs = FULL): MappedSpread => {
   const r = mapRatingToSpread(REG, rating, inputs);
   if (!r.ok) throw new Error(`${rating}: ${r.reason_code} ${r.reason}`);
   return r;
