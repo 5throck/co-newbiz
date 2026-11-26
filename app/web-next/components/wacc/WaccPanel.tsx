@@ -1320,77 +1320,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           )}
         </>
       )}
-      {/* 저장된 CAPM 세션 — 계산 과정은 저장 후에도 레지스트리에서 재현된다 (ADR-0115) */}
-      {view && view.derivation && view.components.length > 0 && (
-        <section className="market-section sizing-step">
-          <h3 className="sizing-step-title">
-            {t("savedSessionFormulaBreakdown")}
-            <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">
-              {t("recomputedFromTheWaccRows")}
-            </span>
-          </h3>
-          <DerivationTable derivation={view.derivation} />
-          <div className="overflow-x-auto mt-3">
-            <table className="data-table" aria-label={t("savedWaccComponents")}>
-              <caption className="sr-only">{t("savedWaccComponentsAssumptionKeys")}</caption>
-              <thead>
-                <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
-                  <th className="py-1.5 px-1.5">{t("assumptionKey")}</th>
-                  <th className="py-1.5 px-1.5 text-right">{tc("value")}</th>
-                  <th className="py-1.5 px-1.5">kind</th>
-                  <th className="py-1.5 px-1.5">{t("sourceEvidence")}</th>
-                  <th className="py-1.5 px-1.5">{tc("asOfDate")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.components.map((c) => (
-                  <tr key={c.key} className="border-b border-[color:var(--border-subtle)]">
-                    <td className="py-1.5 px-1.5">
-                      <div className="text-[length:var(--fs-caption)]">{COMPONENT_LABELS(tr)[c.key] ?? c.key}</div>
-                      <div className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                        {c.key}
-                      </div>
-                    </td>
-                    <td className="py-1.5 px-1.5 text-right tabular-nums font-semibold">
-                      <SourceTooltip
-                        provenance={{
-                          assumption_key: c.key,
-                          as_of: c.as_of,
-                          source: c.rationale,
-                          anchor_ref: c.anchor_ref,
-                          run_id: c.run_id,
-                        }}
-                      >
-                        {formatComponentValue(c.key, c.value)}
-                      </SourceTooltip>
-                    </td>
-                    <td className="py-1.5 px-1.5">
-                      <KindChip kind={c.kind as "live" | "user" | "derived"} />
-                    </td>
-                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      {c.rationale ?? "—"}
-                      {c.anchor_ref && (
-                        <>
-                          {" "}
-                          <a
-                            href={c.anchor_ref}
-                            className="text-[color:var(--accent)]"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {tc("linkLabel")}
-                          </a>
-                        </>
-                      )}
-                    </td>
-                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)]">{c.as_of}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
 
       {canAct && (
         <>
@@ -2031,6 +1960,77 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             </form>
           )}
         </>
+      )}
+      {/* 저장된 CAPM 세션 — 계산 과정은 저장 후에도 레지스트리에서 재현된다 (ADR-0115) */}
+      {view && view.derivation && view.components.length > 0 && (
+        <section className="market-section sizing-step">
+          <h3 className="sizing-step-title">
+            {t("savedSessionFormulaBreakdown")}
+            <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">
+              {t("recomputedFromTheWaccRows")}
+            </span>
+          </h3>
+          <DerivationTable derivation={view.derivation} />
+          <div className="overflow-x-auto mt-3">
+            <table className="data-table" aria-label={t("savedWaccComponents")}>
+              <caption className="sr-only">{t("savedWaccComponentsAssumptionKeys")}</caption>
+              <thead>
+                <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
+                  <th className="py-1.5 px-1.5">{t("assumptionKey")}</th>
+                  <th className="py-1.5 px-1.5 text-right">{tc("value")}</th>
+                  <th className="py-1.5 px-1.5">kind</th>
+                  <th className="py-1.5 px-1.5">{t("sourceEvidence")}</th>
+                  <th className="py-1.5 px-1.5">{tc("asOfDate")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.components.map((c) => (
+                  <tr key={c.key} className="border-b border-[color:var(--border-subtle)]">
+                    <td className="py-1.5 px-1.5">
+                      <div className="text-[length:var(--fs-caption)]">{COMPONENT_LABELS(tr)[c.key] ?? c.key}</div>
+                      <div className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                        {c.key}
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-1.5 text-right tabular-nums font-semibold">
+                      <SourceTooltip
+                        provenance={{
+                          assumption_key: c.key,
+                          as_of: c.as_of,
+                          source: c.rationale,
+                          anchor_ref: c.anchor_ref,
+                          run_id: c.run_id,
+                        }}
+                      >
+                        {formatComponentValue(c.key, c.value)}
+                      </SourceTooltip>
+                    </td>
+                    <td className="py-1.5 px-1.5">
+                      <KindChip kind={c.kind as "live" | "user" | "derived"} />
+                    </td>
+                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {c.rationale ?? "—"}
+                      {c.anchor_ref && (
+                        <>
+                          {" "}
+                          <a
+                            href={c.anchor_ref}
+                            className="text-[color:var(--accent)]"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {tc("linkLabel")}
+                          </a>
+                        </>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)]">{c.as_of}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </>
   );
