@@ -334,11 +334,16 @@ describe("WACC 참조값 section — missing items are rendered, not silently fi
   const keysOf = (d: { stages: { s8: { wacc: { waccPanel: Record<string, string> } } } }) => d.stages.s8.wacc.waccPanel;
 
   test("null suggestions are listed with their reason (REF_LABEL + x.reason)", () => {
-    expect(panel).toContain("const missingSuggestions = (sugg?.suggestions ?? []).filter((x) => x.value === null)");
+    // Null-valued entries (and valued ones apply-all must skip) come from missingReferenceItems, which
+    // keeps each entry's reason / reason_code; the list renders them under a localized label.
+    expect(panel).toContain(
+      "const missingItems = missingReferenceItems(sugg?.suggestions ?? [], sugg?.apply_all_excluded)",
+    );
     expect(panel).toContain('data-testid="wacc-reference-missing"');
-    expect(panel).toContain("missingSuggestions.map((x) =>");
+    expect(panel).toContain("missingItems.map((x) =>");
     expect(panel).toContain("REF_LABEL[x.key]");
     expect(panel).toContain("x.reason");
+    expect(panel).toContain("x.reason_code");
   });
 
   test("ECOS collection button: only when risk_free/credit_spread are missing, inside the analyst-only block, reloads suggestions", () => {
@@ -380,5 +385,69 @@ describe("WACC 참조값 section — missing items are rendered, not silently fi
     expect(beta).toContain("canWriteProject(me?.role)");
     expect(beta).toContain("{canCollect && (");
     expect(beta).toContain("betaCollectUrl(projectId)");
+  });
+});
+
+describe("WACC 참조값 section — tax_rate row and observed-D/E target button (static)", () => {
+  const WEB = join(import.meta.dirname, "../../app/web-next");
+  const panel = readFileSync(join(WEB, "components/wacc/WaccPanel.tsx"), "utf8");
+  const ko = JSON.parse(readFileSync(join(WEB, "locales/ko.json"), "utf8"));
+  const en = JSON.parse(readFileSync(join(WEB, "locales/en.json"), "utf8"));
+
+  test("tax_rate row: basis chip, bracket text, statute link, apply button; apply fills the tax input with its reference", () => {
+    for (const needle of [
+      'data-testid="tax-basis-chip"',
+      'data-testid="tax-bracket-text"',
+      "taxSourceLink(r)",
+      "taxBracketText(r)",
+      'if (key === "tax_rate")',
+      "setTaxRef(appliedTaxRefFrom(e, ratio))",
+      "...taxReferenceFields(taxRef, taxN)",
+    ]) {
+      expect(panel).toContain(needle);
+    }
+  });
+
+  test("target D/E button is enabled only with an observed value and is not part of apply-all", () => {
+    expect(panel).toContain("disabled={observedForTarget === null}");
+    expect(panel).toContain('t("applyObservedDeAsTarget")');
+    // apply-all only iterates the applicable suggestions through applyRef; the target D/E setter is separate
+    const applyAll = panel.slice(
+      panel.indexOf("for (const x of applicable) applyRef"),
+      panel.indexOf("for (const x of applicable) applyRef") + 80,
+    );
+    expect(applyAll).not.toContain("setTargetDe");
+  });
+
+  test("new keys exist in both locales", () => {
+    const keysOf = (d: { stages: { s8: { wacc: { waccPanel: Record<string, string> } } } }) =>
+      d.stages.s8.wacc.waccPanel;
+    for (const d of [ko, en]) {
+      for (const k of [
+        "applyTaxRate",
+        "taxRateApplyAria",
+        "taxRatePublishedLabel",
+        "taxRatePublishedRowLabel",
+        "taxBracketRange",
+        "taxBracketRangeOpen",
+        "taxBasisBracketEstimate",
+        "taxBasisTopFallback",
+        "taxNoteEstimatedPretax",
+        "taxNoteEstimatedOperating",
+        "taxNoteCaveat",
+        "taxNoteFallback",
+        "taxFallbackNoCompany",
+        "taxFallbackNoFinancials",
+        "taxFallbackNotPositive",
+        "taxReasonNotKr",
+        "taxReasonNoRegistry",
+        "taxReasonRegistryError",
+        "applyObservedDeAsTarget",
+        "targetDeFromObserved",
+      ]) {
+        expect(typeof keysOf(d)[k]).toBe("string");
+      }
+    }
+    expect(ko.stages.s8.wacc.waccPanel.targetDeFromObserved).toContain("관측 D/E 준용 ({detail})");
   });
 });

@@ -22,9 +22,12 @@
 
 import type { Database } from "bun:sqlite";
 import { recordAssumption } from "./assumption.ts";
+import { resolveErpReferenceAudit } from "./erp-reference.ts";
+import { resolveTaxReferenceAudit } from "./tax-rate-reference.ts";
 import { createRun } from "./versioning.ts";
 import {
   validateComponentInput,
+  WaccComponentValidationError,
   type WaccComponentInput,
 } from "./wacc-components.ts";
 
@@ -288,6 +291,36 @@ export function recordWaccSession(
   if (opts.hurdleIrr !== undefined && opts.hurdleIrr !== null) assertRate("hurdle_irr", opts.hurdleIrr);
   for (const comp of opts.components ?? []) validateComponentInput(comp);
   const now = opts.now ?? new Date().toISOString();
+  // ADR-0207: a cited published ERP reference must resolve against the KR registry (checked
+  // BEFORE any run is created); default/stale are derived here at confirmation time, never
+  // taken from the client. A manual wacc.erp entry audits as { id: null, default: false, stale: false }.
+  const erpAudit = new Map<WaccComponentInput, NonNullable<ReturnType<typeof resolveErpReferenceAudit>>>();
+  for (const comp of opts.components ?? []) {
+    if (comp.key !== "wacc.erp") continue;
+    const resolved = resolveErpReferenceAudit(comp.erpReferenceId ?? null, new Date(now));
+    if (!resolved) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `erp_reference_id '${comp.erpReferenceId}' is not a registered ERP reference.`,
+      );
+    }
+    erpAudit.set(comp, resolved);
+  }
+  // ADR-0207 addendum: a cited statutory tax bracket must resolve against the KR registry (checked
+  // BEFORE any run is created); whether the number was edited is derived here from the bracket's
+  // combined rate, never taken from the client. A manual wacc.tax_rate entry audits exactly as before.
+  const taxAudit = new Map<WaccComponentInput, NonNullable<ReturnType<typeof resolveTaxReferenceAudit>>>();
+  for (const comp of opts.components ?? []) {
+    if (comp.key !== "wacc.tax_rate" || comp.taxReferenceBracketId == null) continue;
+    const resolved = resolveTaxReferenceAudit(comp.taxReferenceBracketId, comp.value);
+    if (!resolved) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `tax_reference_bracket_id '${comp.taxReferenceBracketId}' is not a registered tax bracket.`,
+      );
+    }
+    taxAudit.set(comp, resolved);
+  }
   const asOf = opts.asOf?.trim() || now.slice(0, 10);
   const overrides: Record<string, number> = { wacc: opts.wacc };
   if (opts.hurdleIrr !== undefined && opts.hurdleIrr !== null) overrides.hurdle_irr = opts.hurdleIrr;
@@ -331,16 +364,40 @@ export function recordWaccSession(
       })
     : null;
   for (const comp of opts.components ?? []) {
+    const erp = erpAudit.get(comp);
+    const erpNotes = erp
+      ? [
+          erp.id && !comp.rationale?.includes(`erp_reference_id=${erp.id}`) ? `erp_reference_id=${erp.id}` : "",
+          comp.editedFromReference === true && erp.id ? "edited_from_reference: true" : "",
+        ].filter(Boolean)
+      : [];
+    const tax = taxAudit.get(comp);
+    const taxNotes = tax
+      ? [
+          `tax_reference_bracket=${tax.bracketId}`,
+          comp.taxReferenceBasis ? `tax_reference_basis=${comp.taxReferenceBasis}` : "",
+          tax.edited ? "edited_from_reference: true" : "",
+        ].filter(Boolean)
+      : [];
+    const notes = [...erpNotes, ...taxNotes];
     recordAssumption(db, {
       runId: run.run_id,
       assumptionKey: comp.key,
       kind: comp.kind,
       value: comp.value,
       asOf: comp.asOf?.trim() || asOf,
-      rationale: [comp.sourceLabel?.trim(), comp.rationale?.trim()].filter(Boolean).join(" — ") || undefined,
+      rationale:
+        [comp.sourceLabel?.trim(), [comp.rationale?.trim(), ...notes].filter(Boolean).join("; ")]
+          .filter(Boolean)
+          .join(" — ") || undefined,
       anchorRef: comp.anchorRef ?? undefined,
       actor: opts.actor,
       now,
+      auditSuffix: erp
+        ? `erp_reference_id=${erp.id ?? "null"}:erp_reference_default=${erp.isDefault}:erp_reference_stale=${erp.stale}`
+        : tax
+          ? `tax_reference_basis=${comp.taxReferenceBasis ?? "null"}:tax_reference_bracket=${tax.bracketId}:edited_from_reference=${tax.edited}`
+          : undefined,
     });
   }
   const scope: WaccScope = { subjectCompanyId: opts.subjectCompanyId ?? null };

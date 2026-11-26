@@ -58,6 +58,28 @@ export interface WaccComponentInput {
   anchorRef?: string | null;
   asOf?: string;
   rationale?: string;
+  /**
+   * ADR-0207, `wacc.erp` only: id of the published ERP reference the human applied
+   * (null/undefined = typed manually). The server resolves it against the KR registry
+   * and derives default/stale itself; it never trusts client-sent flags.
+   */
+  erpReferenceId?: string | null;
+  /**
+   * ADR-0207, `wacc.erp` / `wacc.tax_rate`: the human changed the number after applying the
+   * reference. For `wacc.tax_rate` the server derives this from the bracket instead (client flag ignored).
+   */
+  editedFromReference?: boolean;
+  /**
+   * ADR-0207 addendum, `wacc.tax_rate` only: how the applied statutory-rate suggestion was
+   * derived (`bracket_estimate` | `top_bracket_fallback`). Type-validated, recorded as cited, not re-derived.
+   */
+  taxReferenceBasis?: "bracket_estimate" | "top_bracket_fallback" | null;
+  /**
+   * ADR-0207 addendum, `wacc.tax_rate` only: id of the registry bracket the human applied
+   * (`<schedule_id>.<lower_krw>`; null/undefined = typed manually). Resolved against the KR registry
+   * by the server, which derives the "edited" flag itself.
+   */
+  taxReferenceBracketId?: string | null;
 }
 
 export class WaccComponentValidationError extends Error {
@@ -171,6 +193,60 @@ export function validateComponentInput(c: WaccComponentInput): void {
   ]);
   if (nonNegative.has(c.key) && c.value < 0) {
     throw new WaccComponentValidationError("invalid_request", `component '${c.key}' must be non-negative.`);
+  }
+  if (c.erpReferenceId != null) {
+    if (c.key !== "wacc.erp") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `component '${c.key}' cannot carry an ERP reference (wacc.erp only).`,
+      );
+    }
+    if (typeof c.erpReferenceId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(c.erpReferenceId)) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "erp_reference_id must be a registry entry id (letters, digits, '.', '_', '-').",
+      );
+    }
+  }
+  if (c.editedFromReference !== undefined) {
+    if (c.key !== "wacc.erp" && c.key !== "wacc.tax_rate") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `component '${c.key}' cannot carry edited_from_reference (wacc.erp or wacc.tax_rate only).`,
+      );
+    }
+    if (typeof c.editedFromReference !== "boolean") {
+      throw new WaccComponentValidationError("invalid_request", "edited_from_reference must be a boolean.");
+    }
+  }
+  if (c.taxReferenceBracketId != null || c.taxReferenceBasis != null) {
+    if (c.key !== "wacc.tax_rate") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `component '${c.key}' cannot carry a tax reference (wacc.tax_rate only).`,
+      );
+    }
+    if (
+      c.taxReferenceBracketId != null &&
+      (typeof c.taxReferenceBracketId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(c.taxReferenceBracketId))
+    ) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "tax_reference_bracket_id must be a registry bracket id (letters, digits, '.', '_', '-').",
+      );
+    }
+    if (c.taxReferenceBasis != null && c.taxReferenceBasis !== "bracket_estimate" && c.taxReferenceBasis !== "top_bracket_fallback") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "tax_reference_basis must be 'bracket_estimate' or 'top_bracket_fallback'.",
+      );
+    }
+    if (c.taxReferenceBasis != null && c.taxReferenceBracketId == null) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "tax_reference_basis requires tax_reference_bracket_id.",
+      );
+    }
   }
   if (c.anchorRef != null && c.anchorRef.trim() !== "" && !isValidEvidenceRef(c.anchorRef)) {
     throw new WaccComponentValidationError(

@@ -11,6 +11,22 @@
 
 import { type TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { suggestionToInputValue } from "../../lib/wacc-suggestion-convert.ts";
+import {
+  type AppliedErpRef,
+  type AppliedTaxRef,
+  type ApplyAllExcluded,
+  type ReferenceSuggestion,
+  appliedErpRefFrom,
+  appliedTaxRefFrom,
+  applicableSuggestions,
+  erpReferenceFields,
+  missingReferenceItems,
+  observedDeAsTarget,
+  observedDeSourceDetail,
+  safeHttpsUrl,
+  taxReferenceFields,
+  toWaccComponentPayload,
+} from "../../lib/wacc-reference-items.ts";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SourceTooltip } from "../SourceTooltip.tsx";
@@ -241,26 +257,24 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const [mode, setMode] = useState<"direct" | "capm">("capm");
 
   // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
-  interface Sugg {
-    key: string;
-    value: number | null;
-    as_of?: string;
-    anchor_ref?: string;
-    source_label?: string;
-    reason?: string;
-    note?: string | null;
-  }
-  const [sugg, setSugg] = useState<{
+  type Sugg = ReferenceSuggestion;
+  interface SuggPayload {
     subject: { name_ko: string | null } | null;
     suggestions: Sugg[];
+    // ADR-0207: published ERP alternatives (never part of apply-all) and the items apply-all skips.
+    erp_alternatives?: Sugg[];
+    apply_all_excluded?: ApplyAllExcluded[];
     missing?: string[];
-  } | null>(null);
+  }
+  const [sugg, setSugg] = useState<SuggPayload | null>(null);
+  // ERP reference the human applied to the form (null = typed manually / none applied).
+  const [erpRef, setErpRef] = useState<AppliedErpRef | null>(null);
+  // Statutory tax-rate reference the human applied (ADR-0207 addendum); its bracket id + basis travel with the confirmation.
+  const [taxRef, setTaxRef] = useState<AppliedTaxRef | null>(null);
   const targetQuery = selectedTarget ? `?target_id=${encodeURIComponent(selectedTarget)}` : "";
   const loadSugg = useCallback(() => {
     api
-      .get<{ subject: { name_ko: string | null } | null; suggestions: Sugg[] }>(
-        `/api/projects/${encodeURIComponent(projectId)}/wacc/suggestions${targetQuery}`,
-      )
+      .get<SuggPayload>(`/api/projects/${encodeURIComponent(projectId)}/wacc/suggestions${targetQuery}`)
       .then((r) => setSugg(r.data)) // 제안은 선택 대상(기본: 게이트 기준 회사)을 따라 갱신 — 확정은 사람
       .catch(() => setSugg(null));
   }, [projectId, targetQuery]);
@@ -298,19 +312,139 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     if (key === "risk_free") setRf(cited);
     if (key === "credit_spread") setKdSpread(cited);
     if (key === "observed_de") setObsDe({ value: cited.value, source: cited.source, asOf: cited.asOf });
+    // ADR-0207: an applied ERP reference replaces any earlier one; its id travels with the confirmation.
+    if (key === "erp") {
+      setErp(cited);
+      setErpRef(appliedErpRefFrom(e, ratio));
+    }
+    // ADR-0207 addendum: the statutory rate fills the marginal tax-rate input; a later edit is flagged on confirmation.
+    if (key === "tax_rate") {
+      setTaxRate({ value: cited.value, source: cited.source });
+      setTaxRef(appliedTaxRefFrom(e, ratio));
+    }
   }, []);
   const REF_LABEL: Record<string, string> = {
     risk_free: t("rfGovernmentBond"),
     credit_spread: t("creditSpreadMinusGovernmentBond"),
     observed_de: tc("observedDE"),
+    erp: t("equityRiskPremiumErp2"),
+    tax_rate: t("taxRatePublishedLabel"),
   };
-  const missingSuggestions = (sugg?.suggestions ?? []).filter((x) => x.value === null);
-  const applicableCount = (sugg?.suggestions ?? []).length - missingSuggestions.length;
-  const missingEcos = missingSuggestions.some((x) => x.key === "risk_free" || x.key === "credit_spread");
+  const missingItems = missingReferenceItems(sugg?.suggestions ?? [], sugg?.apply_all_excluded);
+  const applicable = applicableSuggestions(sugg?.suggestions ?? [], sugg?.apply_all_excluded);
+  const applicableCount = applicable.length;
+  const missingEcos = missingItems.some((x) => x.key === "risk_free" || x.key === "credit_spread");
   const APPLY_LABEL: Record<string, string> = {
     risk_free: t("applyRf"),
     credit_spread: t("applyCreditSpread"),
     observed_de: t("applyDE"),
+    erp: t("applyErp"),
+    tax_rate: t("applyTaxRate"),
+  };
+  const TAX_BASIS_LABEL: Record<string, string> = {
+    bracket_estimate: t("taxBasisBracketEstimate"),
+    top_bracket_fallback: t("taxBasisTopFallback"),
+  };
+  const TAX_NULL_REASON_LABEL: Record<string, string> = {
+    tax_rate_market_not_kr: t("taxReasonNotKr"),
+    tax_rate_no_registry: t("taxReasonNoRegistry"),
+    tax_rate_registry_error: t("taxReasonRegistryError"),
+  };
+  const TAX_FALLBACK_LABEL: Record<string, string> = {
+    tax_income_no_company: t("taxFallbackNoCompany"),
+    tax_income_no_financials: t("taxFallbackNoFinancials"),
+    tax_income_not_positive: t("taxFallbackNotPositive"),
+  };
+  const ERP_BASIS_LABEL: Record<string, string> = {
+    implied: t("erpBasisImplied"),
+    historical: t("erpBasisHistorical"),
+    survey: t("erpBasisSurvey"),
+    recommended: t("erpBasisRecommended"),
+  };
+  const ERP_REASON_LABEL: Record<string, string> = {
+    erp_reference_stale: t("erpReasonStale"),
+    erp_market_not_kr: t("erpReasonNotKr"),
+    erp_no_registry: t("erpReasonNoRegistry"),
+    erp_registry_error: t("erpReasonRegistryError"),
+  };
+  /** 기본 표시 + 오래됨 칩 — 상태는 글자로 전달한다 (색만으로 구분하지 않음, FR-SYS-05). */
+  const erpChips = (x: Sugg) => (
+    <>
+      {x.is_default && (
+        <span className="status-chip status-info" data-testid="erp-default-marker">
+          {t("erpDefaultMarker")}
+        </span>
+      )}
+      {x.stale && (
+        <span className="status-chip status-amber" data-testid="erp-stale-badge">
+          {t("erpStaleBadge")}
+        </span>
+      )}
+    </>
+  );
+  const erpSourceLink = (x: Sugg) => {
+    const href = safeHttpsUrl(x.anchor_ref);
+    const label = x.source_label ?? "";
+    return href ? (
+      <a href={href} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">
+        {label}
+        <span className="sr-only"> {t("erpOpensInNewTab")}</span>
+      </a>
+    ) : (
+      label
+    );
+  };
+  const erpReasonText = (code: string | undefined, fallback: string | undefined) =>
+    (code ? ERP_REASON_LABEL[code] : undefined) ?? fallback ?? "";
+  const taxReasonText = (code: string | undefined, fallback: string | undefined) =>
+    (code ? TAX_NULL_REASON_LABEL[code] : undefined) ?? fallback ?? "";
+  /** 구간 텍스트 — 과세표준 구간(백만원). 상한이 없으면 "초과" 표기. */
+  const taxBracketText = (x: Sugg) =>
+    x.bracket
+      ? x.bracket.upper_krw_million === null
+        ? t("taxBracketRangeOpen", { lower: x.bracket.lower_krw_million.toLocaleString("en-US") })
+        : t("taxBracketRange", {
+            lower: x.bracket.lower_krw_million.toLocaleString("en-US"),
+            upper: x.bracket.upper_krw_million.toLocaleString("en-US"),
+          })
+      : "";
+  const taxSourceLink = (x: Sugg) => {
+    const href = safeHttpsUrl(x.anchor_ref);
+    const label = [x.statute_ref, x.local_statute_ref].filter(Boolean).join(" · ") || (x.source_label ?? "");
+    return href ? (
+      <a href={href} target="_blank" rel="noreferrer" className="text-[color:var(--accent)] underline">
+        {label}
+        <span className="sr-only"> {t("erpOpensInNewTab")}</span>
+      </a>
+    ) : (
+      label
+    );
+  };
+  /** 소득 근거·대체 사유·회계이익≠과세표준 주의 — 영업이익 기준일 때는 세전이익 미수집 사실을 함께 밝힌다. */
+  const taxNoteLines = (x: Sugg): string[] => {
+    const lines: string[] = [];
+    if (x.basis === "bracket_estimate" && x.income_period && x.estimated_income_krw_million != null) {
+      const args = {
+        period: x.income_period,
+        income: x.estimated_income_krw_million.toLocaleString("en-US"),
+      };
+      lines.push(
+        x.income_account === "operating_income"
+          ? t("taxNoteEstimatedOperating", args)
+          : t("taxNoteEstimatedPretax", args),
+      );
+    } else if (x.fallback_reason_code || x.fallback_reason) {
+      lines.push(
+        t("taxNoteFallback", {
+          reason:
+            (x.fallback_reason_code ? TAX_FALLBACK_LABEL[x.fallback_reason_code] : undefined) ??
+            x.fallback_reason ??
+            "",
+        }),
+      );
+    }
+    lines.push(t("taxNoteCaveat", { pct: x.local_rate_adjustment_pct ?? 50 }));
+    return lines;
   };
 
   // ── 직접 입력 ──
@@ -366,6 +500,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const erpN = nOr(erp.value);
   const spN = nOr(sp.value);
   const obsDeN = nOr(obsDe.value);
+  // 관측 D/E를 목표 D/E로 준용 — apply-all 대상이 아니며, 사람이 버튼으로만 채운다.
+  const observedForTarget = observedDeAsTarget(
+    obsDe,
+    (sugg?.suggestions ?? []).find((x) => x.key === "observed_de"),
+  );
+  const applyObservedDeAsTarget = () => {
+    if (!observedForTarget) return;
+    setTargetDe({
+      value: String(observedForTarget.value),
+      source: t("targetDeFromObserved", { detail: observedDeSourceDetail(observedForTarget) }),
+    });
+  };
 
   /** 폼 상태 → 저장 예정 컴포넌트 (UI 프리뷰와 POST 페이로드가 동일한 소스). */
   const components = useMemo<WaccComponentInput[]>(() => {
@@ -383,7 +529,10 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       });
     };
     cited("wacc.risk_free", rf);
-    cited("wacc.erp", erp);
+    // ERP is a user judgement (ADR-0115) — a cited or applied reference never makes it 'live'.
+    cited("wacc.erp", erp, "user");
+    const erpComp = comps.find((c) => c.key === "wacc.erp");
+    if (erpComp) Object.assign(erpComp, erpReferenceFields(erpRef, erpComp.value));
     cited("wacc.size_premium", sp, "user");
     if (betaTab === "regression" && regResult) {
       comps.push({
@@ -462,12 +611,19 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       });
     }
     if (taxN !== null) {
-      comps.push({ key: "wacc.tax_rate", value: taxN, kind: "user", sourceLabel: taxRate.source.trim() || undefined });
+      comps.push({
+        key: "wacc.tax_rate",
+        value: taxN,
+        kind: "user",
+        sourceLabel: taxRate.source.trim() || undefined,
+        ...taxReferenceFields(taxRef, taxN),
+      });
     }
     return comps;
   }, [
     rf,
     erp,
+    erpRef,
     sp,
     betaTab,
     regResult,
@@ -475,6 +631,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     obsDeN,
     peers,
     taxN,
+    taxRef,
     kdMode,
     kdSpread,
     kdDirect,
@@ -588,7 +745,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         hurdle_irr: hurdle.trim() || undefined,
         mode: "capm",
         rationale,
-        components,
+        components: components.map(toWaccComponentPayload),
         target_id: selectedTarget ?? undefined,
       });
       const mismatchNote =
@@ -751,10 +908,19 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                           ? t("rfGovernmentBond")
                           : x.key === "credit_spread"
                             ? t("creditSpreadMinusGovernmentBond")
-                            : tc("observedDE")}{" "}
+                            : x.key === "erp"
+                              ? t("erpPublishedLabel")
+                              : x.key === "tax_rate"
+                                ? t("taxRatePublishedLabel")
+                                : tc("observedDE")}{" "}
                         · {x.as_of}
                       </div>
-                      {x.note ? (
+                      {x.key === "erp" && (
+                        <div className="flex flex-wrap items-center gap-1 text-[length:var(--fs-caption)]">
+                          {erpChips(x)}
+                        </div>
+                      )}
+                      {x.note && x.key !== "tax_rate" ? (
                         <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] max-w-[22rem]">
                           {x.note}
                         </div>
@@ -762,16 +928,24 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                     </div>
                   ))}
               </div>
-              {missingSuggestions.length > 0 && (
+              {missingItems.length > 0 && (
                 <div className="mt-3" data-testid="wacc-reference-missing">
                   <h4 className="font-semibold text-[length:var(--fs-caption)]">{t("referenceMissingTitle")}</h4>
                   <ul className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] list-disc pl-5">
-                    {missingSuggestions.map((x) => (
-                      <li key={x.key}>
-                        <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
-                        {x.reason ? ` — ${x.reason}` : ""}
-                      </li>
-                    ))}
+                    {missingItems.map((x) => {
+                      const reason =
+                        x.key === "erp"
+                          ? erpReasonText(x.reason_code, x.reason)
+                          : x.key === "tax_rate"
+                            ? taxReasonText(x.reason_code, x.reason)
+                            : x.reason;
+                      return (
+                        <li key={x.key}>
+                          <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
+                          {reason ? ` — ${reason}` : ""}
+                        </li>
+                      );
+                    })}
                   </ul>
                   {missingEcos && (
                     <div className="flex flex-wrap items-center gap-2 mt-2" aria-live="polite">
@@ -808,9 +982,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   disabled={applicableCount === 0}
                   onClick={() => {
                     setMode("capm");
-                    for (const x of sugg.suggestions) {
-                      if (x.value !== null) applyRef(x.key, x);
-                    }
+                    for (const x of applicable) applyRef(x.key, x);
                   }}
                 >
                   {t("applyApplicableCount", { n: applicableCount, total: sugg.suggestions.length })}
@@ -925,59 +1097,134 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             </button>
           </div>
 
-          {mode === "capm" && sugg && sugg.suggestions.some((x) => x.value !== null) && (
-            <section className="market-section sizing-step mt-3" aria-label={tc("waccReference")}>
-              <h3 className="sizing-step-title">
-                {tc("waccReference")}{" "}
-                <span className="status-chip status-info">
-                  {sugg.subject?.name_ko ?? t("targetCompany2")} {t("baselineAndProposalAPerson2")}
-                </span>
-              </h3>
-              <table className="data-table">
-                <caption className="sr-only">{t("waccReferenceParametersReferenceValues")}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t("parameters")}</th>
-                    <th scope="col" className="num">
-                      {t("referenceValue")}
-                    </th>
-                    <th scope="col">{t("sourceAndDate")}</th>
-                    <th scope="col"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sugg.suggestions.map((x) => (
-                    <tr key={x.key}>
-                      <td>
-                        {x.key === "risk_free"
-                          ? t("rateRfGovernmentBond")
-                          : x.key === "credit_spread"
-                            ? t("creditRatingSpreadCorporateBond")
-                            : t("observedDEDebtEquity")}
-                      </td>
-                      <td className="num mono-num">
-                        {x.value === null
-                          ? "N/A"
-                          : x.key === "observed_de"
-                            ? x.value.toFixed(2)
-                            : `${x.value.toFixed(2)}%`}
-                      </td>
-                      <td className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                        {x.value !== null ? `${x.source_label ?? ""} · ${x.as_of ?? ""}` : (x.reason ?? "")}
-                      </td>
-                      <td>
-                        {x.value !== null && (
-                          <button type="button" className="btn-ghost btn-sm" onClick={() => applyRef(x.key, x)}>
-                            {APPLY_LABEL[x.key]}
-                          </button>
-                        )}
-                      </td>
+          {mode === "capm" &&
+            sugg &&
+            (sugg.suggestions.some((x) => x.value !== null) || (sugg.erp_alternatives ?? []).length > 0) && (
+              <section className="market-section sizing-step mt-3" aria-label={tc("waccReference")}>
+                <h3 className="sizing-step-title">
+                  {tc("waccReference")}{" "}
+                  <span className="status-chip status-info">
+                    {sugg.subject?.name_ko ?? t("targetCompany2")} {t("baselineAndProposalAPerson2")}
+                  </span>
+                </h3>
+                <table className="data-table">
+                  <caption className="sr-only">{t("waccReferenceParametersReferenceValues")}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("parameters")}</th>
+                      <th scope="col" className="num">
+                        {t("referenceValue")}
+                      </th>
+                      <th scope="col">{t("sourceAndDate")}</th>
+                      <th scope="col"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
+                  </thead>
+                  <tbody>
+                    {sugg.suggestions.flatMap((x) => {
+                      const isErp = x.key === "erp";
+                      const isTax = x.key === "tax_rate";
+                      const rowsFor = (r: Sugg, alt: boolean) => (
+                        <tr
+                          key={alt ? `erp-alt-${r.id ?? r.source_label}` : r.key}
+                          data-testid={alt ? "erp-alt-row" : undefined}
+                        >
+                          <td className={alt ? "pl-6" : undefined}>
+                            {alt
+                              ? t("erpAlternativeLabel")
+                              : r.key === "risk_free"
+                                ? t("rateRfGovernmentBond")
+                                : r.key === "credit_spread"
+                                  ? t("creditRatingSpreadCorporateBond")
+                                  : r.key === "erp"
+                                    ? t("erpPublishedRowLabel")
+                                    : r.key === "tax_rate"
+                                      ? t("taxRatePublishedRowLabel")
+                                      : t("observedDEDebtEquity")}
+                          </td>
+                          <td className="num mono-num">
+                            {r.value === null
+                              ? "N/A"
+                              : r.key === "observed_de"
+                                ? r.value.toFixed(2)
+                                : `${r.value.toFixed(2)}%`}
+                          </td>
+                          <td className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                            {r.value === null ? (
+                              isErp ? (
+                                erpReasonText(r.reason_code, r.reason)
+                              ) : isTax ? (
+                                taxReasonText(r.reason_code, r.reason)
+                              ) : (
+                                (r.reason ?? "")
+                              )
+                            ) : isTax ? (
+                              <>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {taxSourceLink(r)}
+                                  {r.basis && (
+                                    <span
+                                      className={`status-chip ${r.basis === "top_bracket_fallback" ? "status-amber" : "status-info"}`}
+                                      data-testid="tax-basis-chip"
+                                    >
+                                      {TAX_BASIS_LABEL[r.basis] ?? r.basis}
+                                    </span>
+                                  )}
+                                </div>
+                                <div data-testid="tax-bracket-text">{taxBracketText(r)}</div>
+                                <div>
+                                  {t("erpAsOfVerified", {
+                                    asOf: r.effective_from ?? r.as_of ?? "",
+                                    verifiedOn: r.verified_on ?? "",
+                                  })}
+                                </div>
+                                {taxNoteLines(r).map((line) => (
+                                  <div key={line}>{line}</div>
+                                ))}
+                              </>
+                            ) : isErp ? (
+                              <>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {erpSourceLink(r)}
+                                  {erpChips(r)}
+                                </div>
+                                <div>
+                                  {r.basis ? `${ERP_BASIS_LABEL[r.basis] ?? r.basis} · ` : ""}
+                                  {t("erpAsOfVerified", { asOf: r.as_of ?? "", verifiedOn: r.verified_on ?? "" })}
+                                </div>
+                                {r.note ? <div>{r.note}</div> : null}
+                              </>
+                            ) : (
+                              `${r.source_label ?? ""} · ${r.as_of ?? ""}`
+                            )}
+                          </td>
+                          <td>
+                            {r.value !== null && (
+                              <button
+                                type="button"
+                                className="btn-ghost btn-sm"
+                                aria-label={
+                                  isErp
+                                    ? t("erpApplyAria", { source: r.source_label ?? "", value: r.value.toFixed(2) })
+                                    : isTax
+                                      ? t("taxRateApplyAria", { source: taxBracketText(r), value: r.value.toFixed(2) })
+                                      : undefined
+                                }
+                                onClick={() => applyRef(r.key, r)}
+                              >
+                                {APPLY_LABEL[r.key]}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                      return isErp
+                        ? [rowsFor(x, false), ...(sugg.erp_alternatives ?? []).map((alt) => rowsFor(alt, true))]
+                        : [rowsFor(x, false)];
+                    })}
+                  </tbody>
+                </table>
+              </section>
+            )}
           {mode === "direct" ? (
             <form
               className="sizing-step grid gap-3 mt-0 rounded-tl-none"
@@ -1071,6 +1318,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   sub={t("marketRiskPremium")}
                   field={erp}
                   onChange={setErp}
+                  forceKind="user"
                 />
                 <CitedRow
                   name={t("scalePremium2")}
@@ -1196,8 +1444,17 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                     onChange={(e) => setTargetDe({ ...targetDe, source: e.target.value })}
                   />
                 </label>
-                <div>
+                <div className="grid gap-1 justify-items-start">
                   <KindChip kind="user" />
+                  <button
+                    type="button"
+                    className="btn-ghost btn-sm"
+                    disabled={observedForTarget === null}
+                    data-testid="apply-observed-de-as-target"
+                    onClick={applyObservedDeAsTarget}
+                  >
+                    {t("applyObservedDeAsTarget")}
+                  </button>
                 </div>
               </div>
               <div className="grid md:grid-cols-[9.5rem_7rem_1fr_6.5rem] gap-2 items-end py-2 border-t border-[color:var(--border-subtle)] text-sm">

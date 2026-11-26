@@ -44,6 +44,12 @@ export interface RecordAssumptionOptions {
   /** Audit actor — the HTTP user id or "cli". */
   actor: string;
   now: string;
+  /**
+   * Optional `key=value` detail appended to the `assumption_set` audit target
+   * (`<run>:<key>:<kind>:<suffix>`), so the existing event can carry detail
+   * without a new action. The `<run>:<key>:<kind>` prefix is unchanged.
+   */
+  auditSuffix?: string;
 }
 
 export interface AssumptionRow {
@@ -103,7 +109,7 @@ export function recordAssumption(db: Database, options: RecordAssumptionOptions)
   appendAudit(db, {
     actor: options.actor,
     action: "assumption_set",
-    target: `${row.run_id}:${row.assumption_key}:${row.kind}`,
+    target: `${row.run_id}:${row.assumption_key}:${row.kind}${options.auditSuffix ? `:${options.auditSuffix}` : ""}`,
     now: options.now,
   });
   return row;

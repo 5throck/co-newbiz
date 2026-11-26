@@ -87,4 +87,52 @@ incentives:
     categories: ["지방투자촉진보조금(입지·설비·이전)", "외국인투자 조세감면", "지방세 감면(취득세·재산세)", "고용창출장려금", "기회발전특구 특례"]
     clawback_norm: "최소 운영기간·고용유지 인원 미충족 시 가산금 포함 환수가 일반적"
 
+erp_references:
+  source: "Registry of published ERP figures - free, publicly accessible publications only (each entry cites its own source)"
+  verified_on: "2026-11-26"
+  maintainer: quant-methodologist
+  data:
+    default_source_id: damodaran-kr-2026-01
+    entries:
+      - id: damodaran-kr-2026-01
+        source: "Damodaran, Country Default Spreads and Risk Premiums (NYU Stern), January 2026 update - Korea, total equity risk premium"
+        url: "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html"
+        value_pct: 4.87
+        basis: implied
+        as_of: "2026-01-05"
+        published_on: "2026-01-05"
+        verified_on: "2026-11-26"
+        maintainer: quant-methodologist
+        note: "Free access confirmed (public page, no login or payment). Korea (Moody's Aa2): total ERP 4.87% = mature-market ERP 4.23% + country risk premium 0.64%, so the figure already includes a country risk premium - avoid adding it again. Data file: https://www.stern.nyu.edu/~adamodar/pc/datasets/ctryprem.xlsx"
+
+corporate_tax_rates:
+  source: "법인세법 제55조 (effective 2026-01-01; amended 2025-12-23 and 2025-12-31) and 지방세법 제103조의20 - read from the statute text through the Ministry of Government Legislation National Law Information Center Open API (open.law.go.kr)"
+  verified_on: "2026-11-26"
+  maintainer: financial-analyst
+  data:
+    effective_from: "2026-01-01"
+    default_schedule_id: general-domestic
+    local_rate_ratio: 0.1
+    local_adjustment_note: "지방세법 제103조의20 제2항: municipalities may adjust the local corporate income tax rate by up to +/-50% by ordinance, so the combined rate can differ by locality. The registry carries the standard 1/10 rate."
+    schedules:
+      - id: general-domestic
+        description: "General domestic corporation (법인세법 제55조 제1항 제1호)"
+        statute_ref: "법인세법 제55조 제1항 제1호"
+        local_statute_ref: "지방세법 제103조의20 제1항"
+        url: "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%B2%95%EC%9D%B8%EC%84%B8%EB%B2%95/%EC%A0%9C55%EC%A1%B0"
+        brackets:
+          - { lower_krw: 0, upper_krw: 200000000, national_rate_pct: 10.0, local_rate_pct: 1.0, combined_rate_pct: 11.0 }
+          - { lower_krw: 200000000, upper_krw: 20000000000, national_rate_pct: 20.0, local_rate_pct: 2.0, combined_rate_pct: 22.0 }
+          - { lower_krw: 20000000000, upper_krw: 300000000000, national_rate_pct: 22.0, local_rate_pct: 2.2, combined_rate_pct: 24.2 }
+          - { lower_krw: 300000000000, upper_krw: null, national_rate_pct: 25.0, local_rate_pct: 2.5, combined_rate_pct: 27.5 }
+      - id: sincere-filing-corp
+        description: "Corporation subject to the 성실신고확인서 submission rule (법인세법 제60조의2 제1항 제1호) - no 10% bracket (법인세법 제55조 제1항 제2호)"
+        statute_ref: "법인세법 제55조 제1항 제2호"
+        local_statute_ref: "지방세법 제103조의20 제1항"
+        url: "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%B2%95%EC%9D%B8%EC%84%B8%EB%B2%95/%EC%A0%9C55%EC%A1%B0"
+        brackets:
+          - { lower_krw: 0, upper_krw: 20000000000, national_rate_pct: 20.0, local_rate_pct: 2.0, combined_rate_pct: 22.0 }
+          - { lower_krw: 20000000000, upper_krw: 300000000000, national_rate_pct: 22.0, local_rate_pct: 2.2, combined_rate_pct: 24.2 }
+          - { lower_krw: 300000000000, upper_krw: null, national_rate_pct: 25.0, local_rate_pct: 2.5, combined_rate_pct: 27.5 }
+
 typical_closing_weeks: 12
