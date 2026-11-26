@@ -31,6 +31,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -59,7 +60,13 @@ beforeAll(async () => {
   approveUser(db, { userId: ANALYST, approvedBy: "test", now: NOW });
   await createUser(db, { userId: VIEWER, role: "viewer", password: "pw-viewer-12345", createdBy: "test", now: NOW });
   approveUser(db, { userId: VIEWER, approvedBy: "test", now: NOW });
-  await createUser(db, { userId: OUTSIDER, role: "analyst", password: "pw-outsider-12345", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: OUTSIDER,
+    role: "analyst",
+    password: "pw-outsider-12345",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: OUTSIDER, approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
   analystCookie = await loginCookie(ANALYST, "pw-analyst-12345");
@@ -70,10 +77,14 @@ beforeAll(async () => {
   // promoter becomes the lead member, which is what makes visibility
   // meaningful for the deny-by-default checks.
   const oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, "S8 테스트 기회", "테스트 산업", "selected", ANALYST, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "S8 테스트 기회",
+    "테스트 산업",
+    "selected",
+    ANALYST,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
     [ulid(), oppId, "greenfield", "test route", ANALYST, NOW],
@@ -81,16 +92,19 @@ beforeAll(async () => {
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [ulid(), oppId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+    [ulid(), oppId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
   // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), oppId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }),
+    oppId,
+  ]);
   // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
   for (const gate of ["screening", "pre_fs"]) {
-    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW]);
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW],
+    );
   }
   projectId = promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: "S8 test promoter" }).project.id;
 });
@@ -111,9 +125,10 @@ describe("S8 generation (ADR-0098)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({}),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202); // async start: the chain runs detached from the request
     const { runId } = (await res.json()).data as { runId: string };
     expect(runId).toBeTruthy();
+    await businessCaseGenerationIdle();
 
     const models = db
       .query("SELECT id, name, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
@@ -147,13 +162,21 @@ describe("S8 generation (ADR-0098)", () => {
       headers: { cookie: analystCookie },
     });
     expect(status.status).toBe(200);
-    const st = (await status.json()).data as { status: string; activities: Array<{ activityId: string; agentKey: string; status: string }>; cases: unknown[] };
+    const st = (await status.json()).data as {
+      status: string;
+      activities: Array<{ activityId: string; agentKey: string; status: string }>;
+      cases: unknown[];
+    };
     expect(st.status).toBe("done");
     expect(st.activities.length).toBe(12); // 3 scenarios × 4 procedure steps
     expect(st.activities.filter((a) => a.status === "done").length).toBe(12);
     // ADR-0117: activity ids are namespaced per variant (gate-primary first).
-    expect(st.activities.find((a) => a.activityId === "base:market_forward:growth_projection")?.agentKey).toBe("financial-analyst");
-    expect(st.activities.find((a) => a.activityId === "downside:market_forward:distributional_valuation")?.agentKey).toBe("quant-methodologist");
+    expect(st.activities.find((a) => a.activityId === "base:market_forward:growth_projection")?.agentKey).toBe(
+      "financial-analyst",
+    );
+    expect(
+      st.activities.find((a) => a.activityId === "downside:market_forward:distributional_valuation")?.agentKey,
+    ).toBe("quant-methodologist");
     expect(st.cases.length).toBe(3);
 
     // (b) the RECOMMENDED flag is recorded on the run's meta.
@@ -169,7 +192,9 @@ describe("S8 generation (ADR-0098)", () => {
     });
     expect(markers()).toEqual({ adopt: 0, gate: 0 });
 
-    const modelId = (db.query("SELECT id FROM business_case_model WHERE project_id = ? LIMIT 1").get(projectId) as { id: string }).id;
+    const modelId = (
+      db.query("SELECT id FROM business_case_model WHERE project_id = ? LIMIT 1").get(projectId) as { id: string }
+    ).id;
 
     // Viewer cannot adopt — adoption is a human analyst+ action.
     const viewerRes = await req(`/api/projects/${projectId}/business-case/adopt`, {
@@ -199,7 +224,10 @@ describe("S8 generation (ADR-0098)", () => {
     // Still no gate_decision: adoption is an fs-gate INPUT, not the gate.
     const list = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });
     expect(list.status).toBe(200);
-    const data = (await list.json()).data as { cases: Array<{ id: string; adopted: boolean }>; adoption: { modelId: string } | null };
+    const data = (await list.json()).data as {
+      cases: Array<{ id: string; adopted: boolean }>;
+      adoption: { modelId: string } | null;
+    };
     expect(data.adoption?.modelId).toBe(modelId);
     expect(data.cases.find((c) => c.id === modelId)?.adopted).toBe(true);
     expect(markers().gate).toBe(0);
@@ -211,7 +239,13 @@ describe("S8 generation (ADR-0098)", () => {
       body: JSON.stringify({ gate: "fs", decision: "go", rationale: "채택 케이스 검토 후 인적 결재" }),
     });
     expect(gate.status).toBe(201);
-    expect((db.query("SELECT COUNT(*) n FROM gate_decision WHERE entity_type = 'project' AND gate = 'fs'").get() as { n: number }).n).toBe(1);
+    expect(
+      (
+        db.query("SELECT COUNT(*) n FROM gate_decision WHERE entity_type = 'project' AND gate = 'fs'").get() as {
+          n: number;
+        }
+      ).n,
+    ).toBe(1);
   });
 
   test("(d) S8 completion flips only with case AND simulation (case alone is not enough)", () => {
@@ -262,12 +296,21 @@ describe("S8 generation (ADR-0098)", () => {
   test("(e) deny-by-default: non-member 404 on every business-case route", async () => {
     const routes: Array<[string, RequestInit]> = [
       [`/api/projects/${projectId}/business-case`, { method: "GET" }],
-      [`/api/projects/${projectId}/business-case/generate`, { method: "POST", headers: { cookie: outsiderCookie }, body: JSON.stringify({}) }],
-      [`/api/projects/${projectId}/business-case/adopt`, { method: "POST", headers: { cookie: outsiderCookie }, body: JSON.stringify({ model_id: "x" }) }],
+      [
+        `/api/projects/${projectId}/business-case/generate`,
+        { method: "POST", headers: { cookie: outsiderCookie }, body: JSON.stringify({}) },
+      ],
+      [
+        `/api/projects/${projectId}/business-case/adopt`,
+        { method: "POST", headers: { cookie: outsiderCookie }, body: JSON.stringify({ model_id: "x" }) },
+      ],
       [`/api/projects/${projectId}/gate-decisions`, { method: "GET", headers: { cookie: outsiderCookie } }],
     ];
     for (const [path, init] of routes) {
-      const res = await req(path, { ...init, headers: { cookie: outsiderCookie, ...(init.headers as Record<string, string> | undefined) } });
+      const res = await req(path, {
+        ...init,
+        headers: { cookie: outsiderCookie, ...(init.headers as Record<string, string> | undefined) },
+      });
       expect(res.status).toBe(404);
     }
     // Run status route with a fabricated runId — still 404, not a leak.
@@ -304,7 +347,9 @@ describe("S8 generation (ADR-0098)", () => {
       }),
     });
     expect(put.status).toBe(200);
-    const lines = db.query("SELECT COUNT(*) n FROM business_case_line WHERE model_id = ?").get(manualId) as { n: number };
+    const lines = db.query("SELECT COUNT(*) n FROM business_case_line WHERE model_id = ?").get(manualId) as {
+      n: number;
+    };
     expect(lines.n).toBe(1);
 
     const del = await req(`/api/projects/${projectId}/business-case?model_id=${manualId}`, {
@@ -312,7 +357,9 @@ describe("S8 generation (ADR-0098)", () => {
       headers: { cookie: analystCookie },
     });
     expect(del.status).toBe(200);
-    expect((db.query("SELECT COUNT(*) n FROM business_case_model WHERE id = ?").get(manualId) as { n: number }).n).toBe(0);
+    expect((db.query("SELECT COUNT(*) n FROM business_case_model WHERE id = ?").get(manualId) as { n: number }).n).toBe(
+      0,
+    );
 
     // Invalid line category → 400, and the model is not left behind.
     const bad = await req(`/api/projects/${projectId}/business-case`, {

@@ -310,7 +310,21 @@ describe("brownfield M&A S1 to S12", () => {
       );
       await s.page.locator("button", { hasText: "대상별 재생성" }).first().click();
       const res = await done;
-      expect(res.status()).toBe(201);
+      // Async start: 202 and the chain runs in the background — wait for the new run to finish.
+      expect(res.status()).toBe(202);
+      const deadline = Date.now() + 120_000;
+      for (;;) {
+        const status = app.readDb((d) =>
+          d
+            .query(
+              "SELECT status FROM process_run WHERE project_id=? AND stage='s8_business_case_generation' AND id != 'e2e-s8-gen-done' ORDER BY started_at DESC LIMIT 1",
+            )
+            .get(P),
+        ) as { status: string } | undefined;
+        if (status && status.status !== "running") break;
+        if (Date.now() > deadline) throw new Error("S8 generation did not finish within 120 s");
+        await new Promise((r) => setTimeout(r, 1000));
+      }
       // New run recorded, not the pre-existing done run.
       const run = app.readDb((d) =>
         d

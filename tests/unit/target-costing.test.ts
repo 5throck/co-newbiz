@@ -23,6 +23,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 
@@ -132,7 +133,10 @@ describe("price evidence drafts", () => {
     });
     expect(ok.status).toBe(201);
 
-    const get = await req(`/api/projects/${projectId}/target-costing`, { method: "GET", headers: { cookie: analystCookie } });
+    const get = await req(`/api/projects/${projectId}/target-costing`, {
+      method: "GET",
+      headers: { cookie: analystCookie },
+    });
     const latest = (await get.json()).data.latest as { priceEvidence: { source_url: string; quote: string } | null };
     expect(latest.priceEvidence).not.toBeNull();
     expect(latest.priceEvidence!.source_url).toBe("https://example.com/price");
@@ -168,15 +172,21 @@ describe("computeTargetCostGap (pure)", () => {
 
     // exactly at +10% is NOT exceeded (strictly beyond the threshold feeds downside)
     const exact = computeTargetCostGap({ marketPrice: 10000, targetMargin: 0, estimatedUnitCost: 11000 });
-    expect(exact.gapRatio).toBeCloseTo(0.10, 6);
+    expect(exact.gapRatio).toBeCloseTo(0.1, 6);
     expect(exact.thresholdExceeded).toBe(false);
   });
 
   test("(b) invalid inputs are rejected, never silently repaired", async () => {
     const { computeTargetCostGap } = await import("../../app/web-next/lib/target-costing.ts");
-    expect(() => computeTargetCostGap({ marketPrice: -1, targetMargin: 0.1, estimatedUnitCost: 5 })).toThrow(/market_price/);
-    expect(() => computeTargetCostGap({ marketPrice: 100, targetMargin: 1, estimatedUnitCost: 5 })).toThrow(/target_margin/);
-    expect(() => computeTargetCostGap({ marketPrice: 100, targetMargin: 0.1, estimatedUnitCost: Number.NaN })).toThrow(/estimated_unit_cost/);
+    expect(() => computeTargetCostGap({ marketPrice: -1, targetMargin: 0.1, estimatedUnitCost: 5 })).toThrow(
+      /market_price/,
+    );
+    expect(() => computeTargetCostGap({ marketPrice: 100, targetMargin: 1, estimatedUnitCost: 5 })).toThrow(
+      /target_margin/,
+    );
+    expect(() => computeTargetCostGap({ marketPrice: 100, targetMargin: 0.1, estimatedUnitCost: Number.NaN })).toThrow(
+      /estimated_unit_cost/,
+    );
   });
 });
 
@@ -210,11 +220,18 @@ describe("target-costing route + generation wiring", () => {
       }),
     });
     expect(post.status).toBe(201);
-    const analysis = (await post.json()).data.analysis as { gapRatio: number; thresholdExceeded: boolean; allowableCost: number };
+    const analysis = (await post.json()).data.analysis as {
+      gapRatio: number;
+      thresholdExceeded: boolean;
+      allowableCost: number;
+    };
     expect(analysis.allowableCost).toBeCloseTo(10200, 6);
     expect(analysis.thresholdExceeded).toBe(true);
 
-    const get = await req(`/api/projects/${projectId}/target-costing`, { method: "GET", headers: { cookie: analystCookie } });
+    const get = await req(`/api/projects/${projectId}/target-costing`, {
+      method: "GET",
+      headers: { cookie: analystCookie },
+    });
     expect(get.status).toBe(200);
     const view = (await get.json()).data as { latest: { gapRatio: number } | null; threshold: number };
     expect(view.latest?.gapRatio).toBeCloseTo(analysis.gapRatio, 6);
@@ -227,7 +244,8 @@ describe("target-costing route + generation wiring", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({}),
     });
-    expect(gen.status).toBe(201);
+    expect(gen.status).toBe(202);
+    await businessCaseGenerationIdle();
 
     const rows = db
       .query(
@@ -239,7 +257,9 @@ describe("target-costing route + generation wiring", () => {
     expect(rows.length).toBeGreaterThanOrEqual(3);
 
     for (const row of rows) {
-      const spec = JSON.parse(row.inputs_json!) as { cases: Array<{ drivers: { opex_ratio: { value: number; source: string } } }> };
+      const spec = JSON.parse(row.inputs_json!) as {
+        cases: Array<{ drivers: { opex_ratio: { value: number; source: string } } }>;
+      };
       const opex = spec.cases[0].drivers.opex_ratio;
       if (row.scenario === "downside") {
         expect(row.note).toMatch(/tc_downside_opex_uplift=1\.1[0-9]/);

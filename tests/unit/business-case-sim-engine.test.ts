@@ -27,6 +27,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -49,10 +50,14 @@ let paramsProjectId = "";
 
 async function seedProject(name: string): Promise<string> {
   const oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, name, "테스트 산업", "selected", ANALYST, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    name,
+    "테스트 산업",
+    "selected",
+    ANALYST,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
     [ulid(), oppId, "greenfield", "test route", ANALYST, NOW],
@@ -62,10 +67,10 @@ async function seedProject(name: string): Promise<string> {
        VALUES (?,?,?,?,?,?,?,?)`,
     [ulid(), oppId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), oppId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }),
+    oppId,
+  ]);
   for (const gate of ["screening", "pre_fs"]) {
     db.run(
       "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -81,7 +86,8 @@ async function generate(projectId: string): Promise<void> {
     headers: { cookie: analystCookie },
     body: JSON.stringify({}),
   });
-  expect(res.status).toBe(201);
+  expect(res.status).toBe(202);
+  await businessCaseGenerationIdle();
 }
 
 function simulationNotes(projectId: string): Array<{ scenario: string; percentile: string; note: string }> {
@@ -94,7 +100,13 @@ function simulationNotes(projectId: string): Array<{ scenario: string; percentil
 }
 
 beforeAll(async () => {
-  await createUser(db, { userId: ANALYST, role: "analyst", password: "pw-s8engine-12345", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: ANALYST,
+    role: "analyst",
+    password: "pw-s8engine-12345",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: ANALYST, approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
   analystCookie = await loginCookie(ANALYST, "pw-s8engine-12345");
@@ -147,7 +159,9 @@ describe("S8 generation x sim-engine bridge", () => {
     expect(Array.isArray((drivers.ramp_up as { value: number[] }).value)).toBe(true);
 
     const p50 = db
-      .query("SELECT bep_year, bep_volume, payback_discounted_years FROM valuation_simulation WHERE model_id = ? AND percentile = 'p50' LIMIT 1")
+      .query(
+        "SELECT bep_year, bep_volume, payback_discounted_years FROM valuation_simulation WHERE model_id = ? AND percentile = 'p50' LIMIT 1",
+      )
       .get(model.id) as { bep_year: number | null; bep_volume: number | null; payback_discounted_years: number | null };
     expect(p50.bep_year).not.toBeNull(); // REQ-W3-2: BEP year persisted on the p50 row
     expect(p50.payback_discounted_years).toBe(p50.bep_year);
@@ -165,16 +179,27 @@ describe("S8 generation x sim-engine bridge", () => {
     const post = await req(`/api/projects/${projectId3}/business-case/params`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ params: { capture_rate: 0.01, ramp_up: [0.5, 0.8, 1.0] }, rationale: "시장 재조사 기반 시장점유율 상향 — 테스트 근거" }),
+      body: JSON.stringify({
+        params: { capture_rate: 0.01, ramp_up: [0.5, 0.8, 1.0] },
+        rationale: "시장 재조사 기반 시장점유율 상향 — 테스트 근거",
+      }),
     });
     expect(post.status).toBe(201);
     const posted = (await post.json()).data as { written: string[] };
     expect(posted.written).toContain("bc.capture_rate");
     expect(posted.written).toContain("bc.ramp_up.y1");
 
-    const get = await req(`/api/projects/${projectId3}/business-case/params`, { method: "GET", headers: { cookie: analystCookie } });
+    const get = await req(`/api/projects/${projectId3}/business-case/params`, {
+      method: "GET",
+      headers: { cookie: analystCookie },
+    });
     expect(get.status).toBe(200);
-    const resolved = (await get.json()).data.params as { captureRate: number; captureSource: string; rampUp: number[]; rampSource: string };
+    const resolved = (await get.json()).data.params as {
+      captureRate: number;
+      captureSource: string;
+      rampUp: number[];
+      rampSource: string;
+    };
     expect(resolved.captureRate).toBe(0.01);
     expect(resolved.captureSource).toContain("bc.capture_rate");
     expect(resolved.rampUp[0]).toBe(0.5);
@@ -204,14 +229,30 @@ describe("S8 generation x sim-engine bridge", () => {
       body: JSON.stringify({
         name: "판매목표 수동 케이스",
         kind: "revenue",
-        lines: [{ category: "revenue", name: "연간 판매", annual_amount_krw_m: 24000, sales_volume: 200000, unit_price_krw: 120 }],
+        lines: [
+          {
+            category: "revenue",
+            name: "연간 판매",
+            annual_amount_krw_m: 24000,
+            sales_volume: 200000,
+            unit_price_krw: 120,
+          },
+        ],
       }),
     });
     expect(create.status).toBe(201);
     const modelId = ((await create.json()).data as { id: string }).id;
 
-    const get = await req(`/api/projects/${paramsProjectId}/business-case`, { method: "GET", headers: { cookie: analystCookie } });
-    const manual = ((await get.json()).data.cases as Array<{ id: string; lines: Array<{ sales_volume: number | null; unit_price_krw: number | null }> }>).find((c) => c.id === modelId);
+    const get = await req(`/api/projects/${paramsProjectId}/business-case`, {
+      method: "GET",
+      headers: { cookie: analystCookie },
+    });
+    const manual = (
+      (await get.json()).data.cases as Array<{
+        id: string;
+        lines: Array<{ sales_volume: number | null; unit_price_krw: number | null }>;
+      }>
+    ).find((c) => c.id === modelId);
     expect(manual?.lines[0].sales_volume).toBe(200000);
     expect(manual?.lines[0].unit_price_krw).toBe(120);
 

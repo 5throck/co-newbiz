@@ -28,6 +28,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -65,9 +66,9 @@ function readBaseCase(targetId: string): CaseRead | null {
     )
     .get(projectId, targetId) as { id: string; inputs_json: string } | undefined;
   if (!m) return null;
-  const sim = db
-    .query("SELECT note FROM valuation_simulation WHERE model_id = ? AND percentile = 'p50'")
-    .get(m.id) as { note: string } | undefined;
+  const sim = db.query("SELECT note FROM valuation_simulation WHERE model_id = ? AND percentile = 'p50'").get(m.id) as
+    | { note: string }
+    | undefined;
   const spec = JSON.parse(m.inputs_json ?? "{}") as { discount_rate?: CaseRead["discount"] };
   return { note: sim?.note ?? null, discount: spec.discount_rate ?? {} };
 }
@@ -78,7 +79,8 @@ async function regenerate(): Promise<void> {
     headers: { cookie: analystCookie },
     body: JSON.stringify({ regenerate: true }),
   });
-  expect(res.status).toBe(201);
+  expect(res.status).toBe(202);
+  await businessCaseGenerationIdle();
 }
 
 beforeAll(async () => {
@@ -88,10 +90,14 @@ beforeAll(async () => {
   analystCookie = await loginCookie(ANALYST, "pw-waccscope-1");
 
   oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, "WACC 스코프 기회", "테스트 산업", "selected", ANALYST, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "WACC 스코프 기회",
+    "테스트 산업",
+    "selected",
+    ANALYST,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
     [ulid(), oppId, "brownfield", "m_and_a", "test route", ANALYST, NOW],
@@ -107,12 +113,32 @@ beforeAll(async () => {
   db.run(
     `INSERT INTO brownfield_target (id, opportunity_id, company_name, status, rank, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?), (?,?,?,?,?,?,?)`,
-    [targetAId, oppId, "스코프대상A", "shortlisted", 1, NOW, NOW, targetBId, oppId, "스코프대상B", "shortlisted", 2, NOW, NOW],
+    [
+      targetAId,
+      oppId,
+      "스코프대상A",
+      "shortlisted",
+      1,
+      NOW,
+      NOW,
+      targetBId,
+      oppId,
+      "스코프대상B",
+      "shortlisted",
+      2,
+      NOW,
+      NOW,
+    ],
   );
   // A: name_ko 폴백, B: dart_corp_code 우선 — ADR-0143 회사 해석 규칙.
   db.run("INSERT INTO md_company (id, name_ko, created_at) VALUES (?,?,?)", ["compA", "스코프대상A", NOW]);
   db.run("UPDATE brownfield_target SET dart_corp_code = ? WHERE id = ?", ["88888888", targetBId]);
-  db.run("INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)", ["compB", "스코프대상B회사", "88888888", NOW]);
+  db.run("INSERT INTO md_company (id, name_ko, dart_corp_code, created_at) VALUES (?,?,?,?)", [
+    "compB",
+    "스코프대상B회사",
+    "88888888",
+    NOW,
+  ]);
 
   projectId = promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: "wacc scope test" }).project.id;
 });
@@ -177,7 +203,11 @@ describe("S8 대상별 WACC 소비 (ADR-0156 수정본 2)", () => {
     const res = await req(`/api/projects/${projectId}/wacc`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ wacc: 0.3, rationale: "compA own session must not hijack gate scope", target_id: targetAId }),
+      body: JSON.stringify({
+        wacc: 0.3,
+        rationale: "compA own session must not hijack gate scope",
+        target_id: targetAId,
+      }),
     });
     expect(res.status).toBe(201);
 

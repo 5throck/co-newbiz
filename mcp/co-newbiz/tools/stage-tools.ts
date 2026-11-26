@@ -530,7 +530,7 @@ const SPECS: readonly RouteToolSpec[] = [
     activities: ["business-case-modeling", "valuation", "quant-methods"],
     artifacts: ["stage:S8:1", "stage:S8:2", "stage:S8:3"],
     description:
-      "Generate business cases, NPV quantile simulation, and BEP. Flags a RECOMMENDED case; adoption is a proposal a person confirms.",
+      "Start business-case generation (NPV quantile simulation, BEP) in the background: answers 202 with a runId; follow it with get_business_case_run. 409 already_running returns the in-flight runId. Flags a RECOMMENDED case; adoption is a proposal a person confirms.",
   },
   {
     name: "get_business_case_run",
@@ -538,7 +538,8 @@ const SPECS: readonly RouteToolSpec[] = [
     method: "GET",
     path: "/api/projects/{projectId}/business-case/generate/{runId}",
     activities: ["business-case-modeling"],
-    description: "Status of a business-case generation run.",
+    description:
+      "Status of a business-case generation run: per-activity progress (waiting/running/done/failed) while it runs, then the resulting cases.",
   },
   {
     name: "recommend_case_adoption",
