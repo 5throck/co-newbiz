@@ -5,7 +5,7 @@ lang_reason: proper-noun
 
 # WACC ERP published reference suggestion — design
 
-- Status: Draft (design only, no implementation)
+- Status: Implemented (PR #981, merged 2026-11-26); section 13 records the as-built details that were not in the draft
 - Date: 2026-11-26
 - Owner: valuation-agent (design author); reviewers: quant-methodologist (method, registry maintainer), region-lead (region-profile contract), design-system-agent (UI, per DESIGN-CHECKLIST)
 - Related: ADR-0115 (WACC component decomposition), ADR-0116 Phase 4 (WACC reference suggestions), ADR-0058 §2 (evidence-ref `https://` anchor shape), proposed ADR-0207 (this change, amends ADR-0115)
@@ -174,7 +174,7 @@ Local corporate income tax is 1/10 of the national rate (Local Tax Act Art. 103-
 - Fallback to the top bracket (27.5) with `basis: "top_bracket_fallback"` and `fallback_reason_code`: `tax_income_no_company` (no subject bound), `tax_income_no_financials`, `tax_income_not_positive` (zero or loss). The top bracket is a conservative upper bound, and it is labelled as a fallback rather than presented as an estimate.
 - Response fields (value in percent points like `risk_free`; money in integer KRW millions per ADR-0061): `value`, `as_of` (= `effective_from`), `anchor_ref`, `source_label`, `note`, `basis` (`bracket_estimate` | `top_bracket_fallback`), `schedule_id`, `bracket_id`, `bracket{lower_krw_million, upper_krw_million, national_rate_pct, local_rate_pct, combined_rate_pct}`, `statute_ref`, `local_statute_ref`, `effective_from`, `verified_on`, `local_rate_adjustment_pct`, `income_account`, `estimated_income_krw_million`, `income_period`, `fallback_reason_code`, `fallback_reason`. The note always says accounting income is not taxable income and the local rate may vary by +/-50%.
 - Apply-all: eligible whenever `value` is not null. A statute has no staleness window like an ERP edition, so nothing is added to `apply_all_excluded`; the registry's `verified_on` is shown instead. The entry is market-common and survives the no-company early return (as a top-bracket fallback).
-- The panel's ratio conversion treats `tax_rate` as percent points (`suggestionToInputValue`). Panel wiring of the new key (apply handler, label, basis chips, bracket citation on confirm) is a frontend follow-up.
+- The panel's ratio conversion treats `tax_rate` as percent points (`suggestionToInputValue`). Panel wiring of the new key (apply handler `법정세율 적용`, label, `구간 추정` / `최고세율 대체` chips, bracket citation on confirm) shipped in the same PR.
 
 ### 12.4 Confirmation audit
 
@@ -190,3 +190,27 @@ Local corporate income tax is 1/10 of the national rate (Local Tax Act Art. 103-
 | Statute amended | registry replaced by PR with new `effective_from` / `verified_on`; past confirmations keep the bracket id they cited |
 
 Tests: `tests/unit/wacc-tax-rate-reference.test.ts` (bracket boundaries, income lookup incl. revisions and pre-tax preference, fallbacks, non-KR, malformed registries, suggestions route, confirmation audit) and `tests/unit/region-tax-rates-validator.test.ts` (validator rules).
+
+## 13. As-built details (addendum 2026-11-26, PR #981)
+
+Recorded here because the draft did not specify them. ADR-0207 decision 11 carries the decision-level summary.
+
+### 13.1 Market resolution (ERP and tax rate)
+
+`resolveProjectMarket(db, projectId)` (`db/lib/erp-reference.ts`) reads `target_scope_json` on the opportunity behind the project (`md_project.source_opportunity_id`, else the newest opportunity with `project_id` set). Rule: `regions` exactly `["kr"]` gives KR; no scope, an empty `regions` list, or unparsable JSON gives KR (all WACC reference series are Korean, so an undeclared scope is the domestic case); any other declared list gives `OTHER`. `OTHER` yields the null entries `erp_market_not_kr` and `tax_rate_market_not_kr` with a reason; a project that declared another market is never defaulted to KR. The same helper serves both offers.
+
+### 13.2 Kind and edit tracking
+
+`wacc.erp` and `wacc.tax_rate` are persisted `kind='user'` in every case (the panel calls `cited(..., "user")`); the server never upgrades them. Applying a reference carries `source_label` / `anchor_ref` / `as_of` onto the pending component; editing the number afterwards keeps the citation and sets `edited_from_reference`. The server derives the edited flag for the tax rate by comparing the confirmed ratio with the bracket's combined rate and ignores the client flag.
+
+### 13.3 Observed-to-target D/E button
+
+Beside the target D/E input the panel shows `관측값을 목표로 적용` (`data-testid="apply-observed-de-as-target"`). `observedDeAsTarget()` (`app/web-next/lib/wacc-reference-items.ts`) prefers the observed D/E in the form and falls back to the `observed_de` reference suggestion; with neither the button is disabled. The click fills the target D/E value and source ("관측 D/E 준용 (<source> · <as of>)") only. It is not part of apply-all (a human decision whether the observed leverage is also the target), writes nothing, and the confirmed row is the existing `wacc.target_de`, `kind='user'`.
+
+### 13.4 Confirmation payload contract and `ref_invalid`
+
+`toWaccComponentPayload()` builds the POST body in the snake_case contract: `key`, `value`, `kind`, `source_label`, `anchor_ref`, `as_of`, `rationale`, `erp_reference_id`, `edited_from_reference` (only with an ERP or tax reference), `tax_reference_bracket_id`, `tax_reference_basis`. Before the fix the panel posted camelCase keys, which the route (snake_case only) does not read, so citation fields were not stored and no error was raised. The server (`db/lib/wacc-components.ts`) accepts a non-empty `anchor_ref` only if `isValidEvidenceRef` holds (`https://<x>`, `doc:<x>`, `src:<x>`, no whitespace, ADR-0058 section 2); otherwise the whole confirmation fails with `400 ref_invalid` ("component '<key>' anchor_ref must match ..."), no run is created and nothing is persisted. Consequence for users: a source URL typed into the source field must have one of those shapes; registry URLs (`https://`, validator-enforced) always pass.
+
+### 13.5 In-app collection (PR #980) cross-reference
+
+The "Missing" list and the "적용 가능한 n/total개 적용" count in section 6 are served by the same panel that hosts the in-app collection buttons (`수집 실행` for KRX beta, `ECOS 금리 수집 실행`). Collection is operational plumbing, not a decision record: it adds no source, key, role or schema (calling-user permissions, existing `KRX_API_KEY` / `ECOS_API_KEY`, `job_run` and `audit_log` only), so it triggers none of the project ADR triggers (external data source change, auth/permission model change, MCP scope). Its record is `docs/runbooks/beta-series-collection.md` (both collection routes), `docs/architecture/api-spec.md` and `docs/architecture/openapi.yaml`.

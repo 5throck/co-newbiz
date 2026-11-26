@@ -80,6 +80,15 @@ export interface WaccComponentInput {
    * by the server, which derives the "edited" flag itself.
    */
   taxReferenceBracketId?: string | null;
+  /**
+   * ADR-0208, `wacc.debt_spread` only: the rating basis the human applied (`default` is the only value
+   * the server can resolve in this release). Type-validated here; the server RE-DERIVES the rating,
+   * source, spread basis and the edited flag from stored evidence at `referenceAsOf` and records those -
+   * a client-sent `editedFromReference` is ignored for this key.
+   */
+  creditRatingBasis?: "disclosed" | "synthetic" | "default" | null;
+  /** ADR-0208, `wacc.debt_spread` only: ECOS month (YYYY-MM) of the applied suggestion; required with creditRatingBasis. */
+  referenceAsOf?: string | null;
 }
 
 export class WaccComponentValidationError extends Error {
@@ -209,10 +218,10 @@ export function validateComponentInput(c: WaccComponentInput): void {
     }
   }
   if (c.editedFromReference !== undefined) {
-    if (c.key !== "wacc.erp" && c.key !== "wacc.tax_rate") {
+    if (c.key !== "wacc.erp" && c.key !== "wacc.tax_rate" && c.key !== "wacc.debt_spread") {
       throw new WaccComponentValidationError(
         "invalid_request",
-        `component '${c.key}' cannot carry edited_from_reference (wacc.erp or wacc.tax_rate only).`,
+        `component '${c.key}' cannot carry edited_from_reference (wacc.erp, wacc.tax_rate or wacc.debt_spread only).`,
       );
     }
     if (typeof c.editedFromReference !== "boolean") {
@@ -251,6 +260,37 @@ export function validateComponentInput(c: WaccComponentInput): void {
         "invalid_request",
         "tax_reference_basis requires tax_reference_bracket_id.",
       );
+    }
+  }
+  if (c.creditRatingBasis != null || c.referenceAsOf != null) {
+    if (c.key !== "wacc.debt_spread") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `component '${c.key}' cannot carry a credit-rating reference (wacc.debt_spread only).`,
+      );
+    }
+    if (
+      c.creditRatingBasis != null &&
+      c.creditRatingBasis !== "disclosed" &&
+      c.creditRatingBasis !== "synthetic" &&
+      c.creditRatingBasis !== "default"
+    ) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "credit_rating_basis must be 'disclosed', 'synthetic' or 'default'.",
+      );
+    }
+    if (
+      c.referenceAsOf != null &&
+      (typeof c.referenceAsOf !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(c.referenceAsOf))
+    ) {
+      throw new WaccComponentValidationError("invalid_request", "reference_as_of must be an ECOS month (YYYY-MM).");
+    }
+    if (c.creditRatingBasis != null && c.referenceAsOf == null) {
+      throw new WaccComponentValidationError("invalid_request", "credit_rating_basis requires reference_as_of.");
+    }
+    if (c.creditRatingBasis == null && c.referenceAsOf != null) {
+      throw new WaccComponentValidationError("invalid_request", "reference_as_of requires credit_rating_basis.");
     }
   }
   if (c.anchorRef != null && c.anchorRef.trim() !== "" && !isValidEvidenceRef(c.anchorRef)) {

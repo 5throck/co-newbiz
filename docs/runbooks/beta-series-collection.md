@@ -45,6 +45,30 @@ paced KRX call per service per weekday, default last 13 months).
   until the 60-minute stale sweep fails it; then retry (reruns are cache hits).
 - Failures show on the run (status `failed` + reason), not as an HTTP error.
 
+## In-app ECOS rate collection ("`ECOS 금리 수집 실행`")
+
+The WACC reference card reports the risk-free rate and the credit spread as
+missing until the three ECOS series are collected: Korean Treasury 3-year
+(ECOS `721Y001`, item `5020000`), corporate bond 3-year AA- (item `7020000`) and
+corporate bond 3-year BBB- (item `7030000`, ADR-0208: the lower anchor of the
+rating-to-spread map; without it the spread falls back to the AA- figure).
+Analysts can collect them from the WACC panel with "`ECOS 금리 수집 실행`"; the
+panel then reloads the reference values. The button calls
+`POST /api/projects/<id>/wacc/ecos/collect` (same model as the beta route: `202`
+at once, the panel polls `GET`), which collects the last 12 months of both
+series through the library behind `fetch --source ecos`.
+
+- Needs `ECOS_API_KEY` on the server (else `503 ecos_api_key_missing`) and an
+  analyst account that is a project member (viewer 403, non-member/admin 404).
+- ECOS series are market-common, so the run slot and the status are global: a
+  second request while one runs gets `409 already_running`, and `GET` shows the
+  latest run to every member.
+- Each run is a `job_run` row (trigger `manual`, actor = the calling user) plus
+  an `audit_log` entry `wacc_ecos.collect_requested`. Failures show on the run
+  (status `failed` + reason), not as an HTTP error.
+- The public demo key `sample` is capped at 10 rows per request and is not
+  enough for a 12-month collection; the server key must be a personal ECOS key.
+
 ## Index choice (listing market)
 
 The beta regression pairs the stock with the index of its **listing market**

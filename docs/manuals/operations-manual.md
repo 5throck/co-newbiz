@@ -56,6 +56,10 @@ The committee pre-review engine is chosen per new session (ADR-0204). The turn-b
 - **No silent fallback**: an LLM failure stops convening. It never drops to `rounds`. Without a configured LLM provider, convening refuses with `llm_required`.
 - **Rollback**: set `rounds` as above. Turn rows already written stay readable as history.
 
+### 3.2 External data-source keys
+
+In-app collection and the scheduled collectors read their keys (`DART_API_KEY`, `KRX_API_KEY`, `ECOS_API_KEY`, `LAW_API_OC`, `KOSIS_API_KEY`, `DATA_GO_KR_API_KEY`) from the repo-root `.env` at server start; restart the server after a change. A missing key makes the in-app collection answer `503 <source>_api_key_missing` and makes the scheduled job skip with `credential_missing`. A set key can still fail when the source has not approved the account or dataset. The per-source application steps, approval notes, and the data.go.kr dataset registry are in the [admin manual](admin-manual.md) section 6.
+
 ## 4. Access Control (Operator-Facing)
 
 The CLI, run by a human operator, still resolves to a real `project_member` context (operator account or an audited `--as-user` flag) — **there is no trusted-operator exemption from need-to-know** (meeting M7-1 D-M7-1... / M7 D-M7-1). Do not treat local CLI access as a bypass.

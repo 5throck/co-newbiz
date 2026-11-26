@@ -23,6 +23,8 @@
 import type { Database } from "bun:sqlite";
 import { recordAssumption } from "./assumption.ts";
 import { resolveErpReferenceAudit } from "./erp-reference.ts";
+import { spreadEditedFromReference } from "./credit-spread-map.ts";
+import { deriveCreditSpreadAt } from "./wacc-reference.ts";
 import { resolveTaxReferenceAudit } from "./tax-rate-reference.ts";
 import { createRun } from "./versioning.ts";
 import { validateComponentInput, WaccComponentValidationError, type WaccComponentInput } from "./wacc-components.ts";
@@ -359,6 +361,42 @@ export function recordWaccSession(
     }
     taxAudit.set(comp, resolved);
   }
+  // ADR-0208: a cited credit-rating basis is RE-DERIVED here from stored ECOS evidence and the registry at the
+  // cited month (checked BEFORE any run is created); rating, source, spread basis and the edited flag come from
+  // that re-derivation, never from the client. A manual wacc.debt_spread audits exactly as before.
+  const creditAudit = new Map<
+    WaccComponentInput,
+    { rating: string; source: string; spreadBasis: string; asOf: string; edited: boolean }
+  >();
+  for (const comp of opts.components ?? []) {
+    if (comp.key !== "wacc.debt_spread" || comp.creditRatingBasis == null) continue;
+    if (comp.creditRatingBasis !== "default") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `credit_rating_basis '${comp.creditRatingBasis}' cannot be resolved: no stored rating evidence is available for that basis yet.`,
+      );
+    }
+    const derived = deriveCreditSpreadAt(db, comp.referenceAsOf as string);
+    if (!derived.ok) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `reference_as_of '${comp.referenceAsOf}' cannot be re-derived: ${derived.reason}`,
+      );
+    }
+    if (derived.rating_source !== comp.creditRatingBasis) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `credit_rating_basis '${comp.creditRatingBasis}' does not match the server-derived basis '${derived.rating_source}'.`,
+      );
+    }
+    creditAudit.set(comp, {
+      rating: derived.rating,
+      source: derived.rating_source,
+      spreadBasis: derived.mapped.basis,
+      asOf: derived.mapped.anchors.as_of,
+      edited: spreadEditedFromReference(comp.value, derived.mapped.spreadPct),
+    });
+  }
   const asOf = opts.asOf?.trim() || now.slice(0, 10);
   const overrides: Record<string, number> = { wacc: opts.wacc };
   if (opts.hurdleIrr !== undefined && opts.hurdleIrr !== null) overrides.hurdle_irr = opts.hurdleIrr;
@@ -418,7 +456,17 @@ export function recordWaccSession(
           tax.edited ? "edited_from_reference: true" : "",
         ].filter(Boolean)
       : [];
-    const notes = [...erpNotes, ...taxNotes];
+    const credit = creditAudit.get(comp);
+    const creditNotes = credit
+      ? [
+          `credit_rating=${credit.rating}`,
+          `credit_rating_source=${credit.source}`,
+          `spread_basis=${credit.spreadBasis}`,
+          `reference_as_of=${credit.asOf}`,
+          credit.edited ? "edited_from_reference: true" : "",
+        ].filter(Boolean)
+      : [];
+    const notes = [...erpNotes, ...taxNotes, ...creditNotes];
     recordAssumption(db, {
       runId: run.run_id,
       assumptionKey: comp.key,
@@ -436,7 +484,9 @@ export function recordWaccSession(
         ? `erp_reference_id=${erp.id ?? "null"}:erp_reference_default=${erp.isDefault}:erp_reference_stale=${erp.stale}`
         : tax
           ? `tax_reference_basis=${comp.taxReferenceBasis ?? "null"}:tax_reference_bracket=${tax.bracketId}:edited_from_reference=${tax.edited}`
-          : undefined,
+          : credit
+            ? `credit_rating=${credit.rating}:credit_rating_source=${credit.source}:spread_basis=${credit.spreadBasis}:edited_from_reference=${credit.edited}`
+            : undefined,
     });
   }
   const scope: WaccScope = { subjectCompanyId: opts.subjectCompanyId ?? null };

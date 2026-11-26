@@ -57,6 +57,10 @@ counterpart: operations-manual.md
 - **조용한 대체 없음**: LLM 호출이 실패하면 회의 열기가 멈춘다. `rounds`로 몰래 바꾸지 않는다. LLM 공급자가 설정되지 않으면 `llm_required`로 거부한다.
 - **되돌리기(롤백)**: 위처럼 `rounds`로 정한다. 이미 쌓인 turn 행은 이력으로 그대로 읽힌다.
 
+### 3.2 외부 자료 출처 키
+
+앱 수집과 예약 수집 작업은 키(`DART_API_KEY`, `KRX_API_KEY`, `ECOS_API_KEY`, `LAW_API_OC`, `KOSIS_API_KEY`, `DATA_GO_KR_API_KEY`)를 서버가 시작할 때 저장소 맨 위 `.env`에서 읽습니다. 바꾼 뒤에는 서버를 다시 시작합니다. 키가 없으면 앱 수집은 `503 <출처>_api_key_missing`을 돌려 주고 예약 작업은 `credential_missing`으로 건너뜁니다. 키가 있어도 출처가 계정이나 데이터셋을 승인하지 않았으면 실패할 수 있습니다. 출처별 신청 방법, 승인 안내, data.go.kr 데이터셋 등록부는 [관리자 매뉴얼](admin-manual_ko.md) 6절에 있습니다.
+
 ## 4. 접근 제어 (운영자 대상)
 
 인간 운영자가 실행하는 CLI도 여전히 실제 `project_member` 컨텍스트로 해석된다(운영자 계정 또는 감사되는 `--as-user` 플래그) — **need-to-know에 면제되는 신뢰된 운영자는 존재하지 않는다**(미팅 M7-1 D-M7-1... / M7 D-M7-1). 로컬 CLI 접근을 우회로 취급하지 말 것.

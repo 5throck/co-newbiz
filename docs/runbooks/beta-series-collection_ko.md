@@ -32,6 +32,15 @@ bun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10
 - 실행마다 `job_run` 행(`job_key = beta-series.collect`, trigger `manual`, actor = 호출한 사용자)과 `audit_log` 항목 `beta_series.collect_requested`가 남습니다. 서버가 중간에 죽은 실행은 60분 뒤 정리 작업이 실패로 바꾸기 전까지 `running`으로 남으니, 그 뒤 다시 실행하세요(재실행은 캐시 히트).
 - 수집 중 실패는 HTTP 오류가 아니라 실행 상태(`failed` + 사유)로 보입니다.
 
+## 앱에서 ECOS 금리 수집 ("ECOS 금리 수집 실행")
+
+WACC 참조값 카드는 ECOS 시계열 세 개를 수집하기 전까지 무위험이자율과 가산금리를 "가져오지 못한 항목"으로 알립니다. 세 시계열은 국고채 3년(ECOS `721Y001`, 항목 `5020000`), 회사채 3년 AA-(항목 `7020000`), 회사채 3년 BBB-(항목 `7030000`, ADR-0208: 등급별 가산금리 산정의 하단 기준점이며 없으면 AA- 값으로 대체됩니다)입니다. 분석가는 WACC 패널의 "ECOS 금리 수집 실행"으로 직접 수집할 수 있고, 끝나면 패널이 참조값을 다시 불러옵니다. 버튼은 `POST /api/projects/<id>/wacc/ecos/collect`를 호출합니다(베타 경로와 같은 방식: 곧바로 `202`, 패널이 `GET`으로 확인). 이 경로는 `fetch --source ecos`의 라이브러리로 세 시계열의 최근 12개월을 수집합니다.
+
+- 서버에 `ECOS_API_KEY`가 있어야 하며(없으면 `503 ecos_api_key_missing`), 프로젝트 구성원인 분석가 계정이어야 합니다(조회자 403, 비구성원·관리자 404).
+- ECOS 시계열은 시장 공통이라 실행 자리와 상태가 전역입니다. 한 번 도는 중에 다시 요청하면 `409 already_running`이고, `GET`은 최근 실행을 모든 구성원에게 보여 줍니다.
+- 실행마다 `job_run` 행(trigger `manual`, actor = 호출한 사용자)과 `audit_log` 항목 `wacc_ecos.collect_requested`가 남습니다. 수집 중 실패는 HTTP 오류가 아니라 실행 상태(`failed` + 사유)로 보입니다.
+- 공개 시험 키 `sample`은 요청당 10행으로 제한되어 12개월 수집에는 모자랍니다. 서버 키는 개인 ECOS 인증키여야 합니다.
+
 ## 지수 선택 (상장시장 기준)
 
 베타 회귀는 기본적으로 종목의 **상장시장 지수**와 짝지어 계산합니다. 코스닥 상장사(예: 로보티즈 108490, 레인보우로보틱스 277810)는 코스닥 지수, 코스피 상장사는 코스피 지수와 회귀합니다. 다른 지수도 패널의 "시장 지수" 선택 상자("수집 데이터 불러오기" 옆)나 `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`로 고를 수 있습니다.

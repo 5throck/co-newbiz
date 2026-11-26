@@ -36,6 +36,40 @@ export interface ReferenceSuggestion {
   fallback_reason?: string | null;
   effective_from?: string;
   local_rate_adjustment_pct?: number;
+  // credit_spread-only fields (ADR-0208): rating, how it was obtained, and how the spread was mapped from it.
+  rating?: string | null;
+  rating_source?: CreditRatingSource | null;
+  rating_stale?: boolean;
+  rating_agencies?: Array<{ agency: string; grade: string; rated_on: string }>;
+  rating_instrument?: string | null;
+  source_rcept_no?: string | null;
+  spread_basis?: CreditSpreadBasis | null;
+  derived?: boolean;
+  flags?: CreditSpreadFlag[];
+  series_used?: Array<{ role: string; series_id: string; value_pct: number }>;
+  anchors?: CreditAnchorsView | null;
+  spread_reason_code?: string | null;
+  spread_reason?: string | null;
+  kd_indicative_pct?: number | null;
+}
+
+export type CreditRatingSource = "default" | "disclosed" | "synthetic";
+export type CreditSpreadBasis = "ecos_interpolated" | "ecos_clamped" | "aa_minus_legacy";
+export type CreditSpreadFlag =
+  | "interpolated"
+  | "above_upper_anchor_clamped"
+  | "below_investment_grade_series_understates"
+  | "clamped_fallback";
+
+/** `credit_spread.anchors` as returned by the suggestions route (percent points; null = anchor not available). */
+export interface CreditAnchorsView {
+  as_of: string;
+  ktb_pct: number;
+  aa_minus_pct: number | null;
+  bbb_minus_pct: number | null;
+  aa_minus_spread_pp?: number | null;
+  bbb_minus_spread_pp?: number | null;
+  ratio_per_notch?: number | null;
 }
 
 /** Bracket as returned in a tax_rate suggestion (KRW million bounds; `upper` null = no ceiling). */
@@ -170,6 +204,98 @@ export function observedDeSourceDetail(o: Pick<ObservedDeSource, "source" | "asO
   return [o.source, o.asOf].filter((x) => x !== "").join(" · ");
 }
 
+const CREDIT_RATING_SOURCES: readonly string[] = ["default", "disclosed", "synthetic"];
+/** Same tolerance the server uses to derive `edited_from_reference` for the credit spread (ratio units). */
+export const CREDIT_EDIT_TOLERANCE = 0.0005;
+const ECOS_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** The credit-spread reference the human applied; `appliedValue` is the ratio that was filled in. */
+export interface AppliedCreditRef {
+  basis: CreditRatingSource;
+  referenceAsOf: string;
+  appliedValue: number;
+}
+
+/**
+ * ADR-0208: an applied credit spread is recorded as rated only when the suggestion names where the rating
+ * came from AND the ECOS month it was mapped at - the server re-derives from exactly those two. The legacy
+ * AA- fallback (no anchors) carries neither, so applying it records no rating basis.
+ */
+export function appliedCreditRefFrom(e: ReferenceSuggestion, appliedValue: number | null): AppliedCreditRef | null {
+  if (appliedValue === null || e.key !== "credit_spread") return null;
+  const basis = e.rating_source;
+  const month = e.anchors?.as_of;
+  if (!basis || !CREDIT_RATING_SOURCES.includes(basis) || !month || !ECOS_MONTH.test(month)) return null;
+  return { basis, referenceAsOf: month, appliedValue };
+}
+
+/**
+ * ADR-0208: fields a confirmed `wacc.debt_spread` component carries when the value came from the rating-mapped
+ * reference. Manual entry (nothing applied) carries none. `editedFromReference` flips true once the human moves
+ * the number beyond the server's tolerance; the citation is kept either way.
+ */
+export function creditReferenceFields(
+  ref: AppliedCreditRef | null,
+  currentValue: number | null,
+): Pick<WaccComponentInput, "creditRatingBasis" | "referenceAsOf" | "editedFromReference"> {
+  if (!ref) return {};
+  const edited = currentValue !== null && Math.abs(currentValue - ref.appliedValue) > CREDIT_EDIT_TOLERANCE;
+  return { creditRatingBasis: ref.basis, referenceAsOf: ref.referenceAsOf, editedFromReference: edited };
+}
+
+/**
+ * Citation text stored with an applied credit spread: the ECOS source label plus the rating and how the
+ * spread was mapped from it (codes, not UI strings - the text is persisted with the component).
+ */
+export function creditSourceLabel(e: ReferenceSuggestion): string {
+  const base = e.source_label ?? "";
+  if (!e.rating) return base;
+  const detail = `${e.rating} (${[e.rating_source, e.spread_basis].filter(Boolean).join(", ")})`;
+  return base ? `${base} · ${detail}` : detail;
+}
+
+/** Percent-point yield as shown on the anchors line; "—" for an anchor that is not available. */
+export function formatCreditAnchorPct(v: number | null | undefined): string {
+  return typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "—";
+}
+
+/** Localized text for a backend reason code, falling back to the backend's English reason, then to nothing. */
+export function reasonByCode(
+  labels: Readonly<Record<string, string>>,
+  code: string | null | undefined,
+  fallback: string | null | undefined,
+): string {
+  return (code ? labels[code] : undefined) ?? fallback ?? "";
+}
+
+/** Kd at or above Ke (ADR-0208): a warning only, never a block. Values are ratios. */
+export interface KdKeWarning {
+  kd: number;
+  ke: number;
+  /** True when Kd is the reference's indicative figure rather than the confirmed derivation's. */
+  indicative: boolean;
+}
+
+/**
+ * Compare the cost of debt with the cost of equity. The panel's own derivation wins; the reference's
+ * indicative Kd (percent points, Rf + mapped spread) is only the fallback before a spread has been applied.
+ */
+export function kdKeWarning(
+  derived: { kd: number | null; ke: number | null },
+  indicativeKdPct: number | null | undefined,
+): KdKeWarning | null {
+  const ke = derived.ke;
+  if (ke === null || !Number.isFinite(ke)) return null;
+  if (derived.kd !== null && Number.isFinite(derived.kd)) {
+    return derived.kd >= ke ? { kd: derived.kd, ke, indicative: false } : null;
+  }
+  if (typeof indicativeKdPct === "number" && Number.isFinite(indicativeKdPct)) {
+    const kd = indicativeKdPct / 100;
+    return kd >= ke ? { kd, ke, indicative: true } : null;
+  }
+  return null;
+}
+
 /** Request-body shape of one component for POST /api/projects/[id]/wacc (snake_case contract). */
 export function toWaccComponentPayload(c: WaccComponentInput): Record<string, unknown> {
   return {
@@ -181,11 +307,15 @@ export function toWaccComponentPayload(c: WaccComponentInput): Record<string, un
     ...(c.asOf !== undefined ? { as_of: c.asOf } : {}),
     ...(c.rationale !== undefined ? { rationale: c.rationale } : {}),
     ...(c.erpReferenceId ? { erp_reference_id: c.erpReferenceId } : {}),
-    ...((c.erpReferenceId || c.taxReferenceBracketId) && c.editedFromReference !== undefined
+    ...((c.erpReferenceId || c.taxReferenceBracketId || (c.creditRatingBasis && c.referenceAsOf)) &&
+    c.editedFromReference !== undefined
       ? { edited_from_reference: c.editedFromReference }
       : {}),
     ...(c.taxReferenceBracketId ? { tax_reference_bracket_id: c.taxReferenceBracketId } : {}),
     ...(c.taxReferenceBracketId && c.taxReferenceBasis ? { tax_reference_basis: c.taxReferenceBasis } : {}),
+    ...(c.creditRatingBasis && c.referenceAsOf
+      ? { credit_rating_basis: c.creditRatingBasis, reference_as_of: c.referenceAsOf }
+      : {}),
   };
 }
 

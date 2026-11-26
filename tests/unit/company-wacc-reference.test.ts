@@ -39,9 +39,10 @@ function seedCompany(): string {
 function monthPeriod(ym: string): string {
   const id = `M${ym}`;
   if (!db.query("SELECT 1 FROM md_period WHERE id = ?").get(id)) {
-    db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [
-      id, "month", `${ym}-01`, `${ym}-28`, Number(ym.slice(0, 4)), NOW,
-    ]);
+    db.run(
+      "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+      [id, "month", `${ym}-01`, `${ym}-28`, Number(ym.slice(0, 4)), NOW],
+    );
   }
   return id;
 }
@@ -55,12 +56,15 @@ function clearObs() {
   db.run("DELETE FROM fact_market_observation");
 }
 function yearPeriod(year: number): string {
-  const ex = db.query("SELECT id FROM md_period WHERE period_type='year' AND fiscal_year=?").get(year) as { id: string } | undefined;
+  const ex = db.query("SELECT id FROM md_period WHERE period_type='year' AND fiscal_year=?").get(year) as
+    | { id: string }
+    | undefined;
   if (ex) return ex.id;
   const id = `Y${year}`;
-  db.run("INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)", [
-    id, "year", `${year}-01-01`, `${year}-12-31`, year, NOW,
-  ]);
+  db.run(
+    "INSERT INTO md_period (id, period_type, start_date, end_date, fiscal_year, created_at) VALUES (?,?,?,?,?,?)",
+    [id, "year", `${year}-01-01`, `${year}-12-31`, year, NOW],
+  );
   return id;
 }
 function fact(companyId: string, year: number, account: string, value: number) {
@@ -72,19 +76,36 @@ function fact(companyId: string, year: number, account: string, value: number) {
 }
 function payload(companyId: string) {
   const ref = computeWaccReference(db, companyId);
-  return toCompanyWaccReferencePayload(ref, { subject: { id: companyId, name_ko: ref.subject.name_ko }, latestYear: null });
+  return toCompanyWaccReferencePayload(ref, {
+    subject: { id: companyId, name_ko: ref.subject.name_ko },
+    latestYear: null,
+  });
 }
 const entry = (p: ReturnType<typeof payload>, key: string) => p.entries.find((e) => e.key === key)!;
 
 beforeAll(async () => {
   unitId = ulid();
   sourceId = ulid();
-  db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [unitId, "PCT.T", "dimensionless", 1, NOW]);
-  db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [sourceId, "TESTECOS", "A", NOW]);
+  db.run("INSERT INTO md_unit (id, code, dimension, si_coefficient, created_at) VALUES (?,?,?,?,?)", [
+    unitId,
+    "PCT.T",
+    "dimensionless",
+    1,
+    NOW,
+  ]);
+  db.run("INSERT INTO md_source (id, code, reliability_grade, created_at) VALUES (?,?,?,?)", [
+    sourceId,
+    "TESTECOS",
+    "A",
+    NOW,
+  ]);
   await createUser(db, { userId: "cwr1", role: "analyst", password: "pw-cwr-12345678", createdBy: "test", now: NOW });
   approveUser(db, { userId: "cwr1", approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
-  const res = await nextRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ userId: "cwr1", password: "pw-cwr-12345678" }) });
+  const res = await nextRequest("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ userId: "cwr1", password: "pw-cwr-12345678" }),
+  });
   cookie = (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 });
 
@@ -181,7 +202,13 @@ describe("company WACC reference mapper", () => {
     expect(beta.reason).toBe(BETA_PENDING_REASON);
     const ref = computeWaccReference(db, c);
     ref.entries.push({
-      key: "beta_levered", label: "b", value: 1.1, as_of: "2026-09-01", anchor_ref: "src:krx", source_label: "KRX", reason: null,
+      key: "beta_levered",
+      label: "b",
+      value: 1.1,
+      as_of: "2026-09-01",
+      anchor_ref: "src:krx",
+      source_label: "KRX",
+      reason: null,
     });
     const p = toCompanyWaccReferencePayload(ref, { subject: { id: c, name_ko: null }, latestYear: null });
     expect(entry(p, "beta_levered").value).toBe(1.1);
@@ -206,20 +233,30 @@ describe("routes", () => {
     const body = await res.json();
     const w = body.data.wacc_reference;
     expect(w.subject.id).toBe(c);
-    expect(w.entries.map((e: { key: string }) => e.key)).toEqual(["risk_free", "credit_spread", "observed_de", "beta_levered"]);
+    expect(w.entries.map((e: { key: string }) => e.key)).toEqual([
+      "risk_free",
+      "credit_spread",
+      "observed_de",
+      "beta_levered",
+    ]);
     expect(w.entries[0].value).toBeCloseTo(0.0285, 10);
     expect(Array.isArray(w.missing)).toBe(true);
     expect(typeof w.disclaimer).toBe("string");
     expect(w.latest_year).toBeNull();
   });
 
-  test("8b. suggestions route output is unchanged (percent points, same-month data)", async () => {
+  test("8b. suggestions route keeps every existing key (percent points, same-month data); BBB- missing falls soft to AA- legacy", async () => {
     clearObs();
     obs(RF_SERIES_ID, "2026-09", 2.85);
     obs(CORP_BOND_SERIES_ID, "2026-09", 3.35);
     const c = seedCompany();
     const pid = ulid();
-    db.run("INSERT INTO md_project (id, project_no, company_id, created_at) VALUES (?,?,?,?)", [pid, `P-${pid.slice(-6)}`, c, NOW]);
+    db.run("INSERT INTO md_project (id, project_no, company_id, created_at) VALUES (?,?,?,?)", [
+      pid,
+      `P-${pid.slice(-6)}`,
+      c,
+      NOW,
+    ]);
     db.run(
       "INSERT INTO project_member (project_id, user_id, project_role, granted_by, granted_at, need_to_know_basis) VALUES (?,?,?,?,?,?)",
       [pid, "cwr1", "lead", "cwr1", NOW, "test"],
@@ -230,8 +267,20 @@ describe("routes", () => {
     expect(d.suggestions[0]).toMatchObject({ key: "risk_free", value: 2.85, as_of: "2026-09", anchor_ref: "src:ecos" });
     expect(d.suggestions[1].key).toBe("credit_spread");
     expect(d.suggestions[1].value).toBeCloseTo(0.5, 10);
-    expect(Object.keys(d.suggestions[1]).sort()).toEqual(["anchor_ref", "as_of", "key", "note", "source_label", "value"]);
+    // ADR-0208: additive fields only - every pre-existing key is still present; the BBB- series is not
+    // collected here, so the spread falls soft to the AA- legacy basis and the default rating is excluded from apply-all.
+    expect(Object.keys(d.suggestions[1])).toEqual(
+      expect.arrayContaining(["anchor_ref", "as_of", "key", "note", "source_label", "value"]),
+    );
+    expect(d.suggestions[1]).toMatchObject({
+      rating: "BBB-",
+      rating_source: "default",
+      spread_basis: "aa_minus_legacy",
+      spread_reason_code: "anchor_missing",
+    });
     expect(d.suggestions[2]).toMatchObject({ key: "observed_de", value: null });
-    expect(d.missing).toEqual(["observed_de"]);
+    expect(d.apply_all_excluded.map((x: { key: string }) => x.key)).toEqual(["credit_spread"]);
+    expect(d.missing[0]).toBe("observed_de");
+    expect(d.missing).toHaveLength(2);
   });
 });

@@ -108,7 +108,7 @@ Skills with a `skills/<name>/` directory in the workspace root. These are the pr
 | `unit-conversion-calibration` | 1.0.0 | active | quant-methodologist | 2026-08-20 | — | Wave 5.8F — lead-lag OLS regression, `python/correlation.py` |
 | `update-bun-packages` | 1.3.1 | active | pm | 2026-09-09 | — | — |
 | `value-chain-linkage-analysis` | 1.2.0 | active | market-intelligence-agent | 2026-10-28 | — | Wave 5.8F — ADR-0025 deliberate separation from proxy-chain betas |
-| `wacc-input-session` | 1.3.2 | active | valuation-agent | 2026-10-27 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
+| `wacc-input-session` | 1.3.3 | active | valuation-agent | 2026-11-26 | — | Wave 5.8G — kind=user WACC/hurdle-IRR confirmation gate (checklist bf-02) |
 | `waiver-management` | 1.1.2 | experimental | compliance-officer | — | — | Wave 5.8B — ADR-0036 mandatory-expiry waiver lifecycle; deliberately experimental — dispatched per ADR-0036 (compliance-officer core), not an unfinished promotion |
 | `zod-contract-gate` | 1.0.3 | active | contract-gate-engineer | 2026-11-12 | — | Defines Zod runtime schema validation patterns and contract safety rules |
 | `assumption-audit` | 1.2.0 | experimental | risk-officer | — | — | Wave 5.8I — user/assumed/derived kind-tag correctness audit; deliberately experimental — dispatched at S3 synergy-red-team per owner decision D6' (2026-10-28, amends ADR-0187 D6), not an unfinished promotion |

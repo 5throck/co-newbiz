@@ -135,4 +135,26 @@ corporate_tax_rates:
           - { lower_krw: 20000000000, upper_krw: 300000000000, national_rate_pct: 22.0, local_rate_pct: 2.2, combined_rate_pct: 24.2 }
           - { lower_krw: 300000000000, upper_krw: null, national_rate_pct: 25.0, local_rate_pct: 2.5, combined_rate_pct: 27.5 }
 
+credit_rating_references:
+  source: "Credit rating scale, rating-to-spread mapping parameters and rule defaults for the WACC credit-spread suggestion (ADR-0208). The spread itself is never stored here: it is derived from Bank of Korea ECOS 721Y001 (AA- item 7020000, BBB- item 7030000, KTB 3y item 5020000)."
+  verified_on: "2026-11-26"
+  maintainer: quant-methodologist
+  data:
+    rating_scale: [AAA, AA+, AA, AA-, A+, A, A-, BBB+, BBB, BBB-, BB+, BB, BB-, B+, B, B-, CCC, CC, C, D]
+    default:
+      rating: BBB-
+      reason: "No evidence of the subject's credit rating is available. BBB- is the lowest investment-grade point on the ECOS and KOFIA grade tables; it is a placeholder for a human to review, not an estimate, and it is excluded from apply-all."
+    disclosed:
+      instrument: corporate_bond
+      stale_months: 18
+      aggregate: lowest
+    spread_map:
+      upper_anchor: AA-
+      lower_anchor: BBB-
+      between: geometric
+      above_upper: clamp
+      below_lower: clamp_flagged
+    kd_crosscheck:
+      warn_gap_pp: 2.0
+
 typical_closing_weeks: 12

@@ -1,0 +1,49 @@
+---
+lang: ko
+lang_reason: proper-noun
+---
+
+# ADR-0208: WACC credit spread follows the subject's credit rating — evidence-first rating ladder, Korean grade yields, server-derived audit
+
+- Status: Accepted (2026-11-26)
+- Date: 2026-11-26
+- Deciders: New Business Review Lead (PM); method review quant-methodologist; profile-contract review region-lead; data-model review data-architect; third-party terms legal-counsel
+- Amends: ADR-0115 (decision 4, cost of debt follows the company's credit)
+- Related: ADR-0116 Phase 4 (WACC reference suggestions), ADR-0199 (DART evidence cache), ADR-0207 (same suggestion mechanism), ADR-0061 (money units), design `docs/designs/2026-11-26-wacc-credit-rating-spread-design.md`
+
+## Context
+
+The `credit_spread` suggestion is fixed to ECOS "corporate bond 3y AA-" minus "KTB 3y", so Kd = Rf + spread equals the AA- yield for every company (live: Ke 10.28%, Kd 4.55%). For a company below AA- the cost of debt, and therefore WACC, is understated. The user decided that the system should determine the company's credit rating automatically to choose the spread grade, with humans still confirming.
+
+## Decision
+
+1. **Rating ladder.** The suggestion's rating comes from, in order: (1) a **disclosed** rating from DART; (2) a **synthetic** rating from interest coverage; (3) a **default** `BBB-` with a reason. The rung used is always stated.
+2. **Disclosed rating.** From the DART business report section `신용평가에 관한 사항` (and, as a supplement, the debt-securities issuance table and OpenDART `bdRs.json` `cdrt_int`). Domestic agencies (한국기업평가, 한국신용평가, NICE신용평가) and corporate-bond ratings only; latest per agency, **lowest across agencies**; agency, instrument, rating date and `rcept_no` recorded. Older than 18 months: stale chip, excluded from apply-all. Guaranteed, secured, structured and foreign-scale ratings are not issuer ratings and are skipped. A parse that finds nothing is a recorded status, never "unrated".
+3. **Synthetic rating.** Coverage = operating income / interest expense, mapped with Damodaran's free published coverage-to-rating table (rating column only; his USD spreads are never used), stored in `region-profiles/KR.yaml` `credit_rating_references` under the profile contract (schema 1.4, `source` / `verified_on` / `maintainer`, `_validate.ts` rules). Interest expense hierarchy: interest expense, then interest paid (operating plus financing), then finance costs (flagged as an overstating proxy). Skipped for financial-sector companies and when interest expense is zero or missing.
+4. **Collector extension.** DART collection today holds 8 accounts and no interest expense, pre-tax income or borrowings. The collector gains id-keyed interest and pre-tax-income accounts and name-pattern borrowing rows (existing 8 accounts unchanged), with `md_account` seed rows and a one-time re-sync of already-synced companies. Pre-tax income also feeds the ADR-0207 tax-rate suggestion.
+5. **Rating to spread.** Korean market sources only, in a recorded basis ladder: KOFIA grade yield (target primary, **not built until KOFIA's terms for automated collection are confirmed in writing, or a maintainer-transcribed monthly snapshot is adopted**) > ECOS AA- and BBB- anchors with **geometric interpolation by notch** for A+ to BBB (AAA to AA- clamp to AA-; BB+ and below clamp to BBB- with an understatement chip) > ECOS clamp. ECOS publishes only AA- and BBB- (verified), so the ECOS BBB- series `ecos:721Y001:7030000` is collected. Spread = grade yield - KTB 3y of the same source and date. The interpolated figures are labelled as derived, not published.
+6. **Cross-check, not override.** Implied cost = interest expense / average interest-bearing debt, compared with the market-built Kd; warn beyond 2.0 percentage points (registry parameter). Recent bond issuance coupons and ratings from DART are shown as evidence. Nothing changes the number.
+7. **Sources.** Free only (ADR-0207 D2). Excluded: paid evaluators (KIS P&I, NICE P&I, KAP); KRX data portal (login, copy restrictions, thin trading); agency websites (copyright and crawler policies: human verification aid only, home-page links). Deferred, each needing its own ADR amendment when onboarded: KOFIA grade yields; data.go.kr FSC bond basic-info and price APIs (KOGL type 2 / type 4, key not yet activated for them, legal reading of "commercial use" required). The status of every source fact is in the design section 4, with unverified items marked.
+8. **Storage.** New additive table `dart_credit_rating_snapshot` (immutable rows per `rcept_no` and parser version; money in INTEGER KRW millions per ADR-0061), a separate collect route `.../wacc/credit-rating/collect` (async, analyst role, audited), cache-only reads in the suggestions GET. No change to `dart_business_report_extract`.
+9. **Apply and audit.** Apply is client-side. Apply-all includes disclosed (not stale) and synthetic ratings and excludes default and stale-disclosed ones (listed as missing with a reason). The confirmation of `wacc.debt_spread` accepts `credit_rating_snapshot_id`, `credit_rating_basis`, `reference_as_of`; the **server re-derives** rating, source, agency, date, spread basis and series from stored evidence, derives the edited flag by comparing the confirmed spread (the client flag is ignored), and extends the `assumption_set` audit target. Unknown snapshot id: 400. Manual spreads audit as before.
+10. **Human boundary.** The rating is a model input with provenance, not a credit opinion. Confirmation stays a user-confirmed component; no gate, RAG grade, kill-criteria or data-confidence effect.
+11. **ADR triggers.** DB schema (new table), master-data code system (new `md_account` rows), external data source changes (ECOS series; DART section and `bdRs.json` as new evidence uses). Lifecycle: `region-profiles/**` rule; maintainer quant-methodologist; yearly re-verification.
+
+## Consequences
+
+- Kd reflects the subject's credit instead of the AA- yield; the rating basis behind every confirmed spread is traceable and recomputable by the server.
+- A new parsing dependency on free-text DART filings. Format drift is the main risk and is contained by recorded statuses (a failed parse never reads as "unrated"), fixtures and a visible source filing number.
+- Interpolated A-range spreads are not published figures; they are disclosed as such. They depend on a thin BBB- ECOS series (a Kd above Ke is possible in the current market) until KOFIA grade yields are adopted.
+- Standing maintenance of one more registry section; a collector and migration change with a one-time re-sync.
+- The A-range of the ladder is only as good as the interpolation until a direct grade-yield source clears its terms.
+
+## Alternatives considered
+
+- Keep AA- for everyone: rejected, understates Kd and WACC for non-AA- companies.
+- Two-bucket step rule (A and above to AA-, below to BBB-): rejected as the primary rule (a 5.8-point cliff between A- and BBB+ at current ECOS levels); kept as the `ecos_clamped` fallback basis.
+- Scrape KOFIA, KRX or agency sites now: rejected, terms unconfirmed or restrictive; an undocumented KOFIA endpoint is not verified to work.
+- Use data.go.kr bond APIs in the first slice: rejected, key not activated, field names unverified, KOGL restrictions; DART already provides coupon and rating per issue.
+- Rating from the market-implied Kd of listed bonds only: rejected, thin trading and no rating in the FSC basic-info API.
+- Reuse `dart_business_report_extract` for credit data: rejected, couples to the ADR-0199 brownfield-evaluation windows and its extractor-version re-fetch.
+- Default AA- or a missing suggestion when unrated: rejected, flatters an unevidenced company or leaves the number to an uncited guess; BBB- default is excluded from apply-all so it never carries silently.
+- Paid evaluators (KIS P&I, NICE P&I, KAP): rejected, free-only principle.

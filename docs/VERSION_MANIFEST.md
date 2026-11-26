@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-26T03:34:47.549Z
+**Generated**: 2026-11-26T06:14:55.569Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -178,7 +178,7 @@
 | value-chain-driver-identification | 1.1.0 | experimental | skills/value-chain-driver-identification/SKILL.md | workspace | value chain drivers, driver analysis, driver identification, stage sensitivity | quant-methodologist |
 | value-chain-linkage-analysis | 1.2.0 | active | skills/value-chain-linkage-analysis/SKILL.md | workspace | value chain linkage, pass-through rate, upstream downstream risk exposure, margin risk from supplier or customer industry | market-intelligence-agent |
 | value-chain-stage-financials | 1.1.0 | experimental | skills/value-chain-stage-financials/SKILL.md | workspace | stage financials, value chain economics, segment financials, chain stage rollup | financial-analyst |
-| wacc-input-session | 1.3.2 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
+| wacc-input-session | 1.3.3 | active | skills/wacc-input-session/SKILL.md | workspace | WACC input, hurdle IRR confirmation, CAPM components, discount rate session, beta estimation | valuation-agent |
 | waiver-management | 1.1.2 | experimental | skills/waiver-management/SKILL.md | workspace | waiver, waiver request, exemption approval, waiver expiry | compliance-officer |
 | zod-contract-gate | 1.0.3 | active | skills/zod-contract-gate/SKILL.md | workspace | zod-contract-gate, /zod-contract-gate, zod contract validation, schema contract gate, runtime schema validation | contract-gate-engineer |
 
@@ -365,7 +365,7 @@
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | child_process, fs, path |
 | skill-lifecycle-audit.ts | 1.11.0 | scripts/skill-lifecycle-audit.ts | fs, path, process |
 | skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun, fs, path |
-| source-adapters.ts | 1.5.1 | scripts/co-newbiz/source-adapters.ts | bun:sqlite |
+| source-adapters.ts | 1.6.0 | scripts/co-newbiz/source-adapters.ts | bun:sqlite |
 | spec-register.ts | 1.6.1 | scripts/spec-register.ts | fs, path |
 | sync-agent-mirrors.ts | 1.3.1 | scripts/sync-agent-mirrors.ts | fs, js-yaml, path, url |
 | sync-agent-personas.ts | 1.1.0 | scripts/co-newbiz/sync-agent-personas.ts | fs, path |

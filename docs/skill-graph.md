@@ -116,7 +116,7 @@
 | `root/value-chain-driver-identification` | L3 | 1.1.0 | root/process-governance-manager, root/quant-methodologist | — | — | — | — |
 | `root/value-chain-linkage-analysis` | L3 | 1.2.0 | root/market-intelligence-agent, root/quant-methodologist | root/phase 1 | root/competitive-intelligence (composes_with), root/scenario-planning (composes_with), root/site-infrastructure-assessment (follows) | — | — |
 | `root/value-chain-stage-financials` | L3 | 1.1.0 | root/financial-analyst, root/market-intelligence-agent, root/process-governance-manager | — | — | — | — |
-| `root/wacc-input-session` | L3 | 1.3.2 | root/quant-methodologist, root/valuation-agent | root/phase 2 | root/brownfield-feasibility (follows), root/debt-and-contingent-liability-simulation (composes_with), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/site-infrastructure-assessment (follows) | — | — |
+| `root/wacc-input-session` | L3 | 1.3.3 | root/quant-methodologist, root/valuation-agent | root/phase 2 | root/brownfield-feasibility (follows), root/debt-and-contingent-liability-simulation (composes_with), root/financing-plan-review (composes_with), root/investment-feasibility-modeling (composes_with), root/site-infrastructure-assessment (follows) | — | — |
 | `root/waiver-management` | L3 | 1.1.2 | root/compliance-officer, root/process-governance-manager | — | — | — | — |
 | `root/zod-contract-gate` | L3 | 1.0.3 | root/contract-gate-engineer | — | — | — | — |
 
@@ -366,6 +366,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `adr:0204` | adr | — | — | — |
 | `adr:0205` | adr | — | — | — |
 | `adr:0206` | adr | — | — | — |
+| `adr:0207` | adr | — | — | — |
+| `adr:0208` | adr | — | — | — |
 | `dec:DEC-20260908-01` | decision | `root/project-review` | — | — |
 | `dec:DEC-20260908-02` | decision | `root/waiver-management` | — | — |
 | `dec:DEC-20260909-01` | decision | — | — | — |
@@ -625,7 +627,7 @@ None — every capability has a single content hash.
 
 | Type | Count | Nodes |
 |------|-------|-------|
-| adr | 194 | (expected until docs `references` edges are mined) |
+| adr | 196 | (expected until docs `references` edges are mined) |
 | decision | 4 | (expected until docs `references` edges are mined) |
 | skill | 7 | root/api-documentation, root/explain-me, root/finishing-a-development-branch, root/platform-command-lifecycle-manager, root/platform-skill-lifecycle-manager, root/source-command-commit-push-pr, root/standup-synthesizer |
 
@@ -639,7 +641,7 @@ No suggestions: no procedure step pairs one of these skills with an owning agent
 
 ## Skill Usage (E3)
 
-Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-25), window 90 days. Skill nodes with usage: 2.
+Joined from memory `## Skills Used` sections (names resolve via capability); reference date = newest memory log (2026-11-26), window 90 days. Skill nodes with usage: 2.
 
 - **used-but-unlinked** (usage > 0, no `used_by`) (0): —
 - **unused** (0 sessions in 90 days) (107): root/accessibility-audit, root/agent-lifecycle-manager, root/antitrust-screening, root/api-documentation, root/assumption-audit, root/brownfield-feasibility, root/certification-roadmap, root/certification-transferability, root/ci-triage, root/commercial-due-diligence, root/community-partnership-planning, root/company-intelligence, root/compensation-harmonization-analysis, root/competitive-intelligence, root/compliance-monitoring, root/customer-attrition-risk, root/dd-to-valuation-bridge, root/deal-execution-playbook, root/debt-and-contingent-liability-simulation, root/decision-record, root/delegate-to-hub, root/design-foundation, root/documentation-writing, root/evidence-ledger, root/executive-presentation, root/explain-me, root/financial-statement-analysis, root/financing-plan-review, root/finishing-a-development-branch, root/forward-industry-research, root/greenfield-feasibility, root/group-level-review, root/growth-projection-modeling, root/handbook, root/handbook-sync-audit, root/historical-financial-analysis, root/humanize-polish, root/i18n-audit, root/i18n-formatting, root/i18n-layout … and 67 more

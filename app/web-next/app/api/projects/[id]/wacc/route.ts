@@ -75,6 +75,8 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
       edited_from_reference?: unknown;
       tax_reference_basis?: unknown;
       tax_reference_bracket_id?: unknown;
+      credit_rating_basis?: unknown;
+      reference_as_of?: unknown;
     };
     if (typeof item.key !== "string" || typeof item.value !== "number" || typeof item.kind !== "string") {
       throw new WaccComponentValidationError("invalid_request", "each component needs { key, value, kind }.");
@@ -106,10 +108,45 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
         "erp_reference_* fields are allowed only on the wacc.erp component.",
       );
     }
-    if (item.edited_from_reference !== undefined && item.key !== "wacc.erp" && item.key !== "wacc.tax_rate") {
+    if (
+      item.edited_from_reference !== undefined &&
+      item.key !== "wacc.erp" &&
+      item.key !== "wacc.tax_rate" &&
+      item.key !== "wacc.debt_spread"
+    ) {
       throw new WaccComponentValidationError(
         "invalid_request",
-        "edited_from_reference is allowed only on the wacc.erp and wacc.tax_rate components.",
+        "edited_from_reference is allowed only on the wacc.erp, wacc.tax_rate and wacc.debt_spread components.",
+      );
+    }
+    // ADR-0208: optional credit-rating citation on wacc.debt_spread. Types are validated here; the server
+    // re-derives rating, source, spread basis and the edited flag from stored evidence (client flag ignored).
+    if (
+      item.credit_rating_basis !== undefined &&
+      item.credit_rating_basis !== null &&
+      item.credit_rating_basis !== "disclosed" &&
+      item.credit_rating_basis !== "synthetic" &&
+      item.credit_rating_basis !== "default"
+    ) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "credit_rating_basis must be 'disclosed', 'synthetic', 'default' or null.",
+      );
+    }
+    if (
+      item.reference_as_of !== undefined &&
+      item.reference_as_of !== null &&
+      typeof item.reference_as_of !== "string"
+    ) {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "reference_as_of must be an ECOS month string (YYYY-MM) or null.",
+      );
+    }
+    if ((item.credit_rating_basis != null || item.reference_as_of != null) && item.key !== "wacc.debt_spread") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        "credit_rating_basis and reference_as_of are allowed only on the wacc.debt_spread component.",
       );
     }
     // ADR-0207 addendum: optional statutory tax-bracket citation on wacc.tax_rate. The server resolves the
@@ -156,6 +193,13 @@ function parseComponents(raw: unknown): WaccComponentInput[] {
         item.tax_reference_basis === "bracket_estimate" || item.tax_reference_basis === "top_bracket_fallback"
           ? item.tax_reference_basis
           : null,
+      creditRatingBasis:
+        item.credit_rating_basis === "disclosed" ||
+        item.credit_rating_basis === "synthetic" ||
+        item.credit_rating_basis === "default"
+          ? item.credit_rating_basis
+          : null,
+      referenceAsOf: typeof item.reference_as_of === "string" ? item.reference_as_of : null,
     };
   });
 }
@@ -289,7 +333,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         computed_mismatch: computed != null && Math.abs(computed - wacc) > COMPUTED_TOLERANCE,
         subject,
         // Display-only: the confirmed WACC should sit below the hurdle IRR.
-        warnings: hurdleIrr !== null && wacc >= hurdleIrr ? ["wacc_not_below_hurdle"] : [],
+        // ADR-0208: a market-built Kd at or above Ke is shown as a warning only - it never blocks the session.
+        warnings: [
+          ...(hurdleIrr !== null && wacc >= hurdleIrr ? ["wacc_not_below_hurdle"] : []),
+          ...(derivation?.computed.kd != null &&
+          derivation.computed.ke != null &&
+          derivation.computed.kd >= derivation.computed.ke
+            ? ["kd_ge_ke"]
+            : []),
+        ],
       },
       201,
       { run_id: result.run_id, wacc_source: result.wacc.source },

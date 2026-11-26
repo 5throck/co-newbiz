@@ -1,0 +1,261 @@
+lang: ko
+lang_reason: proper-noun
+# data.go.kr dataset registry - the single authoritative list of every data.go.kr
+# (공공데이터포털) Open API dataset this project uses or plans to use.
+#
+# Why this exists: one DATA_GO_KR_API_KEY (the portal's service key) is issued per
+# account, but each dataset still needs its own 활용신청 (usage application) and
+# approval before that key works against it. An unapproved dataset answers
+# HTTP 403 SERVICE_KEY_IS_NOT_REGISTERED_ERROR (resultCode 30). See
+# skills/k-opendata/SKILL.md (Portal Activation Flow, Failure Modes).
+#
+# Procedure for a NEW dataset (apply -> register -> build):
+#   1. Apply: open the dataset's openapi.do page on data.go.kr and press 활용신청.
+#   2. Register: add an entry below in the same pull request that adds the code.
+#      Start with status planned and application_status pending.
+#   3. Build: write the code only after the application is approved; then set
+#      status in_use, application_status approved, and approved_on.
+#   tests/unit/data-go-kr-registry.test.ts fails when code or a skill references an
+#   apis.data.go.kr endpoint that is not listed here.
+#
+# Account type and expiry: every approval below is a development account
+# (개발계정). An approval expires (expires_on); renew it with 활용연장 on data.go.kr
+# before that date or the dataset answers 403 again. Earliest expiry: 2028-09-03
+# (the seven 관세청 datasets), then 2028-11-26 (금융위원회_채권기본정보).
+#
+# application_status is a record, not a live check. Source of the 2026-11-26 values:
+# data.go.kr 마이페이지 > 활용신청 현황 (10 applications, all 승인, none pending,
+# rejected, or expired), read by the PM with the project owner logged in. The repo
+# cannot read that page; re-confirm there whenever this file is edited.
+#
+# Fields:
+#   id                  unique slug
+#   name_ko             official Korean dataset name as shown on data.go.kr
+#   provider            providing organization
+#   dataset_id          data.go.kr dataset number (the 15xxxxxx in /data/<id>/openapi.do), null if not verified
+#   url                 openapi.do page, null if dataset_id is unknown
+#   endpoints           service URLs without scheme found in code or skills; empty when the dataset has no
+#                       confirmed code endpoint (see endpoint_mapping)
+#   endpoint_mapping    verified | unverified | none - whether the endpoint(s) are a certain match for name_ko
+#   env_var             credential variable (root .env)
+#   status              in_use | planned
+#   application_status  approved | pending | not_applied | unknown
+#   account_type        development | operation | null
+#   applied_on          ISO date of the 활용신청, null if unknown
+#   approved_on         ISO date of approval, null when the portal does not show it
+#   expires_on          ISO date the approval lapses, null when the portal shows none
+#   evidence            what supports application_status (date and source)
+#   used_by             app feature / script / skill that calls the dataset
+#   owner               accountable agent
+#   notes               caveats
+#
+# Considered, not used (deliberately NOT registered as datasets; add a normal entry
+# only if a feature ever needs it):
+#   - 관세청_수출이행내역 (dataset 15126269, https://www.data.go.kr/data/15126269/openapi.do):
+#     per-export-declaration fulfilment data (acceptance date, departure date, shipped
+#     and remaining weight). Its Open API also requires a separate UNI-PASS membership
+#     on top of the 활용신청. No code or skill uses it and no feature needs
+#     per-declaration granularity, so it is not applied for and not tracked above.
+#     (skills/k-opendata/SKILL.md mentions it for discovery only.)
+
+version: 2
+verified_on: "2026-11-26"
+verified_source: "data.go.kr 마이페이지 > 활용신청 현황"
+maintainer: public-data-analyst
+env_var: DATA_GO_KR_API_KEY
+
+datasets:
+  - id: customs-nitemtrade
+    name_ko: "관세청_품목별 국가별 수출입실적(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints:
+      - apis.data.go.kr/1220000/nitemtrade/getNitemtradeList
+    endpoint_mapping: verified
+    env_var: DATA_GO_KR_API_KEY
+    status: in_use
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "skill k-opendata (agent lookups). No app screen or scheduled collector calls it yet; the opendata source adapter is a catalog-kind extension point."
+    owner: public-data-analyst
+    notes: "Live-tested 2026-09-03 (resultCode 00). The window of strtYymm..endYymm must be 1 year or less. Renew (활용연장) before 2028-09-03."
+
+  - id: customs-itemtrade
+    name_ko: "관세청_품목별 수출입실적(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints:
+      - apis.data.go.kr/1220000/Itemtrade/getItemtradeList
+    endpoint_mapping: verified
+    env_var: DATA_GO_KR_API_KEY
+    status: in_use
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "skill k-opendata (agent lookups)"
+    owner: public-data-analyst
+    notes: "Live-tested 2026-09-03. HS code x month, no country split. Renew before 2028-09-03."
+
+  - id: customs-nationtrade
+    name_ko: "관세청_국가별 수출입실적(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints:
+      - apis.data.go.kr/1220000/nationtrade/getNationtradeList
+    endpoint_mapping: verified
+    env_var: DATA_GO_KR_API_KEY
+    status: in_use
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "skill k-opendata (agent lookups)"
+    owner: public-data-analyst
+    notes: "Live-tested 2026-09-03. Country x month, no HS split. Renew before 2028-09-03."
+
+  - id: customs-newtrade
+    name_ko: "관세청_수출입총괄(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints:
+      - apis.data.go.kr/1220000/Newtrade/getNewtradeList
+    endpoint_mapping: verified
+    env_var: DATA_GO_KR_API_KEY
+    status: in_use
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "skill k-opendata (agent lookups)"
+    owner: public-data-analyst
+    notes: "Live-tested 2026-09-03. Pre-aggregated national monthly total. Renew before 2028-09-03."
+
+  - id: customs-sidotrade
+    name_ko: "관세청_시도별 수출입실적(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints:
+      - apis.data.go.kr/1220000/sidotrade/getSidotradeList
+    endpoint_mapping: verified
+    env_var: DATA_GO_KR_API_KEY
+    status: in_use
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "skill k-opendata (documented)"
+    owner: public-data-analyst
+    notes: "A live test on 2026-09-03 returned HTTP 403 SERVICE_KEY_IS_NOT_REGISTERED_ERROR; the portal now shows the application (2026-09-03) as 승인. Re-test the endpoint, then update the skill text that still describes it as unapproved. Renew before 2028-09-03."
+
+  - id: customs-sido-nature-trade
+    name_ko: "관세청_시도별 성질별 수출입실적(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints: []
+    endpoint_mapping: none
+    env_var: DATA_GO_KR_API_KEY
+    status: planned
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "none yet; approved but no code or skill calls it"
+    owner: public-data-analyst
+    notes: "Approved, never called. The endpoint is not in the repo; read the service URL from the openapi.do page before building. Renew before 2028-09-03."
+
+  - id: customs-continent-trade
+    name_ko: "관세청_대륙별 수출입실적(GW)"
+    provider: "관세청"
+    dataset_id: null
+    url: null
+    endpoints: []
+    endpoint_mapping: none
+    env_var: DATA_GO_KR_API_KEY
+    status: planned
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-03"
+    approved_on: null
+    expires_on: "2028-09-03"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정."
+    used_by: "none yet; approved but no code or skill calls it"
+    owner: public-data-analyst
+    notes: "Approved, never called. The endpoint is not in the repo; read the service URL from the openapi.do page before building. Renew before 2028-09-03."
+
+  - id: nts-business-status
+    name_ko: "국세청_사업자등록정보 진위확인 및 상태조회 서비스"
+    provider: "국세청"
+    dataset_id: null
+    url: null
+    endpoints: []
+    endpoint_mapping: none
+    env_var: DATA_GO_KR_API_KEY
+    status: planned
+    application_status: approved
+    account_type: development
+    applied_on: "2026-09-15"
+    approved_on: null
+    expires_on: null
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정; the portal shows no expiry date."
+    used_by: "none: no code or skill references it (searched 2026-11-26 for api.odcloud.kr / nts-businessman)"
+    owner: public-data-analyst
+    notes: "Approved but unused. The service URL is not in the repo; read it from the openapi.do page before building. Check the portal for an expiry date."
+
+  - id: fsc-bond-basic-info
+    name_ko: "금융위원회_채권기본정보"
+    provider: "금융위원회"
+    dataset_id: "15059592"
+    url: "https://www.data.go.kr/data/15059592/openapi.do"
+    endpoints: []
+    endpoint_mapping: none
+    env_var: DATA_GO_KR_API_KEY
+    status: planned
+    application_status: approved
+    account_type: development
+    applied_on: "2026-11-26"
+    approved_on: null
+    expires_on: "2028-11-26"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정. A probe the same day still returned SERVICE_KEY_IS_NOT_REGISTERED, most likely approval propagation delay."
+    used_by: "planned: WACC credit-rating cross-check, not built"
+    owner: valuation-agent
+    notes: "Recheck the key against this dataset after the propagation delay before building. Service URL and operation are not yet confirmed; read them from the openapi.do page. Renew (활용연장) before 2028-11-26."
+
+  - id: fsc-bond-price-info
+    name_ko: "금융위원회_채권시세정보"
+    provider: "금융위원회"
+    dataset_id: "15094784"
+    url: "https://www.data.go.kr/data/15094784/openapi.do"
+    endpoints: []
+    endpoint_mapping: none
+    env_var: DATA_GO_KR_API_KEY
+    status: planned
+    application_status: approved
+    account_type: development
+    applied_on: "2026-11-26"
+    approved_on: "2026-11-26"
+    expires_on: "2028-11-26"
+    evidence: "[승인] on 마이페이지 > 활용신청 현황, verified 2026-11-26 (key propagation may lag, as with 채권기본정보)."
+    used_by: "planned: WACC credit-rating cross-check, not built"
+    owner: valuation-agent
+    notes: "Apply (활용신청) before building; the credit-rating cross-check does not work for this dataset until then. Data refreshes once per business day, not in real time."
