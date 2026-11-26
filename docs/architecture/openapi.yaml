@@ -6957,9 +6957,9 @@ paths:
           description: Unexpected server error (generic message, details logged server-side).
 
   /api/projects/{id}/business-case/generate:
-    post:
-      operationId: generateProjectBusinessCases
-      summary: Run the S8 agent chain (base/upside/downside) and persist per-scenario cases with simulated NPV percentiles (analyst+).
+    get:
+      operationId: getProjectBusinessCaseGenerationLatest
+      summary: "Latest S8 generation run of the project with per-activity progress (the page restores an in-flight run after a reload). data = {project_id, run: null | {runId, status running|done|failed, stage, started_at, finished_at, error, failed_activity, recommended_scenario, activities[{activityId, agentKey, status waiting|running|done|failed|skipped, started_at, finished_at, outputMd (always null here; use the run status route), error}], progress {total, done, running, failed}}}. Project visibility only (non-member 404). A 'running' run whose server process died (started before this process booted, or older than 30 minutes) is failed here with error timeout_or_crash instead of staying running forever."
       tags:
         - Analysis
       parameters:
@@ -6969,21 +6969,41 @@ paths:
           schema:
             type: string
       responses:
-        '201':
-          $ref: '#/components/responses/Created'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: generateProjectBusinessCases
+      summary: "Start the S8 agent chain (base/upside/downside) in the background (analyst+). Asynchronous: answers 202 {runId, status: running, started_at} immediately — the chain runs detached from the request on the process_run/activity_run model, so a page refresh, a closed tab or a tunnel timeout cannot interrupt it; poll GET .../generate (latest run) or GET .../generate/{runId}. 409 already_running with error.details.runId when a run for this project is in progress (also for regenerate: true). 200 {runId, alreadyRun: true} when a non-failed run already exists and regenerate is not set (a failed run never blocks a retry). Body {regenerate?: boolean} starts a NEW run. A failure inside the run (activity error, no shortlisted target) lands on the run (status failed + error + failed_activity), not on the HTTP status. Proposals only — no adoption marker, no gate decision."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '202':
+          $ref: '#/components/responses/Ok'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/projects/{id}/business-case/generate/{runId}:
     get:
       operationId: getProjectBusinessCaseGenerationRun
-      summary: "Generation run status with per-activity rows and the resulting case summary. ADR-0186 P4 (D8): the data carries wacc_status {status confirmed|provisional, reason wacc_unconfirmed|wacc_subject_not_target|null, missing[] of wacc_subject|wacc|hurdle_irr, subject promoter|target|project_newco|null, scope project|target, warnings[] wacc_not_below_hurdle} - DISPLAY only (the UI labels discount-rate-dependent figures 'provisional discount rate' until confirmed; always present, whatever the wacc flag mode)."
+      summary: "Generation run status with per-activity rows (status waiting|running|done|failed|skipped, started_at/finished_at, outputMd, the failing activity's error), run-level error/failed_activity/progress {total, done, running, failed} and the resulting case summary; polled while a 202 start is in progress. ADR-0186 P4 (D8): the data carries wacc_status {status confirmed|provisional, reason wacc_unconfirmed|wacc_subject_not_target|null, missing[] of wacc_subject|wacc|hurdle_irr, subject promoter|target|project_newco|null, scope project|target, warnings[] wacc_not_below_hurdle} - DISPLAY only (the UI labels discount-rate-dependent figures 'provisional discount rate' until confirmed; always present, whatever the wacc flag mode)."
       tags:
         - Analysis
       parameters:

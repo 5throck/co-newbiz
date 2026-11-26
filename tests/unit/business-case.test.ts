@@ -31,6 +31,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -111,9 +112,10 @@ describe("S8 generation (ADR-0098)", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({}),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(202); // async start: the chain runs detached from the request
     const { runId } = (await res.json()).data as { runId: string };
     expect(runId).toBeTruthy();
+    await businessCaseGenerationIdle();
 
     const models = db
       .query("SELECT id, name, kind FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")

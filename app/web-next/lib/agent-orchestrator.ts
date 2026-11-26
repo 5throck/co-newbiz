@@ -151,13 +151,26 @@ export interface RunActivityChainOpts extends RunOpts {
   callAgent?: CallAgent;
   /** Keep going after a failed activity (process_run still ends 'failed'). */
   continueOnError?: boolean;
+  /**
+   * Run under a process_run the caller already inserted (insertProcessRun). Background starts
+   * need the run id BEFORE the chain begins so the request can answer 202 {runId} immediately.
+   */
+  processRunId?: string;
+  /**
+   * Yield to the event loop before each activity. bun's SQLite layer is synchronous, so a
+   * detached chain would otherwise hold the loop until it finishes and status polls (and a
+   * page refresh) could not be answered mid-run.
+   */
+  yieldBetweenActivities?: boolean;
 }
 
 /**
  * Execute activities sequentially. Each activity writes one activity_run and
- * one agent_run row; the artifact (output_md) comes from execute() or, in its
- * absence, from the injected callAgent strategy. First failure marks the run
- * failed and stops, unless continueOnError.
+ * one agent_run row — inserted as 'running' when the activity starts and
+ * settled to done/failed when it ends, so a status poll sees real progress;
+ * the artifact (output_md) comes from execute() or, in its absence, from the
+ * injected callAgent strategy. First failure marks the run failed and stops,
+ * unless continueOnError.
  */
 export async function runActivityChain(
   entity: EntityRef,
@@ -165,12 +178,25 @@ export async function runActivityChain(
   opts: RunActivityChainOpts,
 ): Promise<ChainResult> {
   const db = getDb();
-  const runId = insertProcessRun(entity, opts.stage ?? "activity_chain", opts);
+  const runId = opts.processRunId ?? insertProcessRun(entity, opts.stage ?? "activity_chain", opts);
   const results: ActivityResult[] = [];
   let runStatus: RunStatus = "done";
 
   for (const activity of activities) {
+    if (opts.yieldBetweenActivities) await new Promise<void>((resolve) => setTimeout(resolve, 0));
     const startedAt = nowIso();
+    const activityRowId = ulid();
+    const agentRowId = ulid();
+    db.run(
+      `INSERT INTO activity_run (id, process_run_id, activity_id, status, output_md, source, started_at, finished_at)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [activityRowId, runId, activity.activityId, "running", null, opts.source ?? "agent", startedAt, null],
+    );
+    db.run(
+      `INSERT INTO agent_run (id, process_run_id, activity_id, agent_key, status, summary_md, source, started_at, finished_at)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [agentRowId, runId, activity.activityId, activity.agentKey, "running", null, "agent", startedAt, null],
+    );
     const ctx: ActivityContext = { entity, processRunId: runId };
     let outputMd: string | null = null;
     let error: string | undefined;
@@ -186,16 +212,19 @@ export async function runActivityChain(
     }
 
     const status: RunStatus = error ? "failed" : "done";
-    db.run(
-      `INSERT INTO activity_run (id, process_run_id, activity_id, status, output_md, source, started_at, finished_at)
-       VALUES (?,?,?,?,?,?,?,?)`,
-      [ulid(), runId, activity.activityId, status, outputMd, opts.source ?? "agent", startedAt, nowIso()],
-    );
-    db.run(
-      `INSERT INTO agent_run (id, process_run_id, activity_id, agent_key, status, summary_md, source, started_at, finished_at)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [ulid(), runId, activity.activityId, activity.agentKey, status, outputMd, "agent", startedAt, nowIso()],
-    );
+    const finishedAt = nowIso();
+    db.run("UPDATE activity_run SET status = ?, output_md = ?, finished_at = ? WHERE id = ?", [
+      status,
+      outputMd,
+      finishedAt,
+      activityRowId,
+    ]);
+    db.run("UPDATE agent_run SET status = ?, summary_md = ?, finished_at = ? WHERE id = ?", [
+      status,
+      outputMd,
+      finishedAt,
+      agentRowId,
+    ]);
     results.push({ activityId: activity.activityId, agentKey: activity.agentKey, status, outputMd, error });
 
     if (error) {

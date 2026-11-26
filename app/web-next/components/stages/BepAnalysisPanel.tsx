@@ -139,7 +139,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {const tr
           BEP Analysis — {acquisition ? t("acquisitionPriceRecovery") : t("item")} ({SCENARIO_LABEL(tr)[scenario]}, {BASIS_LABEL(tr)[table.basis]})
         </h4>
         <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mb-1">
-          {t("yearTheFirstYearCumulative")} {(table.wacc * 100).toFixed(1)}{t("discountBasis")}
+          {t("yearTheFirstYearCumulative")} {(table.wacc * 100).toFixed(2)}{t("discountBasis")}
         </p>
         <div className="flex flex-wrap gap-2" aria-label={t("bepSummary")}>
           <span className={`status-chip ${table.bepYear != null ? "status-green" : "status-amber"}`}>

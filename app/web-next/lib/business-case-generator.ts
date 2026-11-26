@@ -2548,7 +2548,7 @@ export function defaultExecutor(): BusinessCaseStepExecutor {
       return [
         `### [밸류에이션] valuation-agent — 밸류에이션 모델 (${SCENARIO_LABEL[ctx.scenario]} · ${VARIANT_LABEL[variant]})`,
         "",
-        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(1)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${fmtNpvInteger(npv / 100)} 억원,`,
+        `확정 WACC ${(ctx.inputs.wacc.value * 100).toFixed(2)}%·회수기간 ${horizonOf(ctx.inputs)}년 기준 NPV ${fmtNpvInteger(npv / 100)} 억원,`,
         `성장 ${(eff.growth * 100).toFixed(2)}% (${eff.growthSource}) · sigma ${pct1(eff.disp)} (${eff.dispSource}).`,
         `WACC 출처: ${ctx.inputs.wacc.source}${ctx.inputs.waccScope?.scope === "target" ? " · 대상별 세션" : ""}${ctx.inputs.wacc.run_id ? ` (run ${ctx.inputs.wacc.run_id})` : ""}.`,
         ...(exitEvRevenueOf(ctx.inputs) > 0 && ctx.inputs.revenueAnchor
@@ -2716,6 +2716,38 @@ export function getBusinessCaseExecutor(): BusinessCaseStepExecutor {
 
 // ── The chain (one process_run, 9 activities — 3 scenarios × 4 steps) ───────
 
+/**
+ * When this server process first loaded the generator. Stored on globalThis (separate Next bundles
+ * and HMR re-evaluations must agree). A 'running' generation run that started BEFORE this instant
+ * belongs to a previous process (killed/restarted mid-run) and can never finish — the stale sweep
+ * in business-case-run.ts fails it instead of leaving the project blocked behind a ghost run.
+ */
+const BOOTED_AT_KEY = "__coNewbizProcessBootedAt";
+export function processBootedAt(): string {
+  const g = globalThis as Record<string, unknown>;
+  if (typeof g[BOOTED_AT_KEY] !== "string") g[BOOTED_AT_KEY] = new Date().toISOString();
+  return g[BOOTED_AT_KEY] as string;
+}
+processBootedAt();
+
+/** Merge `patch` into process_run.meta_json (read-modify-write; keys not in the patch are kept). */
+export function mergeRunMeta(runId: string, patch: Record<string, unknown>): void {
+  const db = getDb();
+  const row = db.query("SELECT meta_json FROM process_run WHERE id = ?").get(runId) as
+    | { meta_json: string | null }
+    | undefined;
+  let current: Record<string, unknown> = {};
+  if (row?.meta_json) {
+    try {
+      const parsed = JSON.parse(row.meta_json) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) current = parsed as Record<string, unknown>;
+    } catch {
+      // unparseable meta — start over rather than fail the run
+    }
+  }
+  db.run("UPDATE process_run SET meta_json = ? WHERE id = ?", [JSON.stringify({ ...current, ...patch }), runId]);
+}
+
 export interface GenerationResult {
   processRunId: string;
   status: "running" | "done" | "failed";
@@ -2739,7 +2771,15 @@ export interface GenerationResult {
  */
 export async function generateBusinessCases(
   projectId: string,
-  opts: { actor: string; source?: string; callAgent?: CallAgent },
+  opts: {
+    actor: string;
+    source?: string;
+    callAgent?: CallAgent;
+    /** Run under a process_run the caller inserted (background start: the runId is handed out first). */
+    processRunId?: string;
+    /** Yield to the event loop between activities so status polls are answered mid-run. */
+    yieldBetweenActivities?: boolean;
+  },
 ): Promise<GenerationResult> {
   const db = getDb();
   const project = db.query("SELECT id, track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
@@ -2821,11 +2861,30 @@ export async function generateBusinessCases(
     }
   }
 
+  // Planned activity list on the run's meta_json: lets the status route show the activities that
+  // have not started yet as "waiting" (and the n/m progress) while the chain is still running.
+  if (opts.processRunId) {
+    mergeRunMeta(opts.processRunId, {
+      planned: activities.map((a) => ({ activityId: a.activityId, agentKey: a.agentKey })),
+    });
+  }
+
   const result = await runActivityChain({ entityType: "project", entityId: projectId }, activities, {
     actor: opts.actor,
     source: opts.source ?? "web",
     stage: "s8_business_case_generation",
+    processRunId: opts.processRunId,
+    yieldBetweenActivities: opts.yieldBetweenActivities,
   });
+
+  // A failed activity: keep which one and why on the run (activity_run stores no error text), so the
+  // status route / UI can name the failing step after the fact.
+  if (result.status === "failed") {
+    const failed = result.activities.find((a) => a.status === "failed");
+    if (failed) {
+      mergeRunMeta(result.processRunId, { failed_activity: failed.activityId, error: failed.error ?? null });
+    }
+  }
 
   // quant-methodologist's cross-case comparison: flag the RECOMMENDED case —
   // the scenario that best survives the risk tests (highest p05 NPV that is
@@ -2837,10 +2896,7 @@ export async function generateBusinessCases(
   if (result.status === "done" && subjects.length === 0) {
     recommendedScenario = recommendedFromDb(projectId);
     if (recommendedScenario) {
-      getDb().run("UPDATE process_run SET meta_json = ? WHERE id = ?", [
-        JSON.stringify({ recommended_scenario: recommendedScenario }),
-        result.processRunId,
-      ]);
+      mergeRunMeta(result.processRunId, { recommended_scenario: recommendedScenario });
     }
   }
   return { processRunId: result.processRunId, status: result.status, recommendedScenario };

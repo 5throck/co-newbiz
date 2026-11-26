@@ -28,6 +28,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
@@ -78,7 +79,8 @@ async function regenerate(): Promise<void> {
     headers: { cookie: analystCookie },
     body: JSON.stringify({ regenerate: true }),
   });
-  expect(res.status).toBe(201);
+  expect(res.status).toBe(202);
+  await businessCaseGenerationIdle();
 }
 
 beforeAll(async () => {

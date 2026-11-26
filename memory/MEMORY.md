@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-26](2026-11-26.md) | feat(s8): run KRX beta and ECOS rate collection from the WACC page |
 | [2026-11-25](2026-11-25.md) | feat(s8): hide excluded-target cases and block GO on stale target selection or adoption (ADR-0206) |
 | [2026-11-24](2026-11-24.md) | fix(ux): S8 entry lands on the overview tab without the financial-tab flash; rename financial sub-tab key to financial-model |
 | [2026-11-23](2026-11-23.md) | docs(records): review backfill — ADR index, spec registrations, lifecycle records, manuals, registry hygiene — ADR index +23; 22 spec entries (233/236); 65 lifecycle records; strategic-fit 1.2.0; Verification added. Co-Authored-By: ZCode <noreply@z.ai> |
@@ -14,7 +15,7 @@
 | [2026-11-19](2026-11-19.md) | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
 | 2026-11-17 | feat(s6): parallel per-candidate evaluation, criteria modal and coverage markers (ADR-0199) |
 | 2026-11-16 | docs(designs): S6 bulk AI evaluation with draft versioning and incremental DART collection (ADR-0199) |
-| [2026-11-18](2026-11-18.md) | docs(docs): workspace sync (12 files) |
+| 2026-11-18 | docs(docs): workspace sync (12 files) |
 | 2026-11-15 | chore: workspace sync (1 file) |
 | 2026-11-14 | s7 ignore suppression |
 | 2026-11-13 | fix(s1): probe project-industry bindings only when a project row exists |

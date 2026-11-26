@@ -23,6 +23,7 @@ runMigrations(TEST_DB_PATH);
 const db = getDb(TEST_DB_PATH);
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
+const { businessCaseGenerationIdle } = await import("../../app/web-next/lib/business-case-run.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 
@@ -227,7 +228,8 @@ describe("target-costing route + generation wiring", () => {
       headers: { cookie: analystCookie },
       body: JSON.stringify({}),
     });
-    expect(gen.status).toBe(201);
+    expect(gen.status).toBe(202);
+    await businessCaseGenerationIdle();
 
     const rows = db
       .query(

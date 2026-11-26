@@ -28,6 +28,8 @@ const P50_GAP_WARN_RATIO = 0.5;
 import TargetSelector from "../TargetSelector.tsx";
 import { KRW_MILLIONS_UNIT, formatKrwMillionsPlain } from "../../lib/format.ts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { elapsedText, parseActivityId } from "../../lib/business-case-generation-view.ts";
+import { useGenerationRun } from "../../lib/use-generation-run.ts";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewBuckets } from "../ReviewBuckets.tsx";
 import { stageArtifactTabs } from "../../lib/review/stage-artifact-labels.ts";
@@ -210,6 +212,29 @@ const ENGINE_LABEL = (tr: TranslatorFn): Record<string, string> =>
   });
 const VARIANT_LABEL = (tr: TranslatorFn): Record<string, string> =>
   resolveLabels(tr, { market_forward: "common.marketBasis", historical: "stages.s8.stage.item" });
+// Step names in the generation progress list (activity id = [targetId/]scenario:variant:step).
+const GEN_STEP_LABEL = (tr: TranslatorFn): Record<string, string> =>
+  resolveLabels(tr, {
+    growth_projection: "stages.s8.stage.genStepGrowthProjection",
+    valuation_model: "stages.s8.stage.genStepValuationModel",
+    distributional_valuation: "stages.s8.stage.genStepDistributionalValuation",
+    scenario_risk_assessment: "stages.s8.stage.genStepScenarioRiskAssessment",
+  });
+const GEN_STATUS_LABEL = (tr: TranslatorFn): Record<string, string> =>
+  resolveLabels(tr, {
+    waiting: "stages.s8.stage.genStatusWaiting",
+    running: "stages.s8.stage.genStatusRunning",
+    done: "stages.s8.stage.genStatusDone",
+    failed: "stages.s8.stage.genStatusFailed",
+    skipped: "stages.s8.stage.genStatusSkipped",
+  });
+const GEN_STATUS_CLASS: Record<string, string> = {
+  waiting: "status-not-started",
+  running: "status-in-progress",
+  done: "status-green",
+  failed: "status-red",
+  skipped: "status-not-started",
+};
 // 라인 읽기 전용 표의 분류 표기 (라인 category는 5종 — labor/opex/capex/revenue/gov_rnd).
 const LINE_CATEGORY_LABEL = (tr: TranslatorFn): Record<string, string> =>
   resolveLabels(tr, {
@@ -292,7 +317,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
   const [ackError, setAckError] = useState<string | null>(null);
   const [goalsLoadError, setGoalsLoadError] = useState<string | null>(null);
   const [run, setRun] = useState<{ runId: string; status: string; activities: ActivityRow[] } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [actionBusy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ modelId: string; text: string; label: string } | null>(null);
   const editorSectionRef = useRef<HTMLElement>(null);
@@ -392,41 +417,46 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
     load();
   }, [loadGoals, load]);
 
-  // regenerate=true — "대상별 재생성": bypasses the already-run guard and
-  // starts a NEW generation run (per-target models, ADR-0143). The ordinary
-  // path keeps the idempotency guard and surfaces alreadyRun instead of
-  // silently doing nothing.
-  async function generate(regenerate = false) {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
+  // The 3-case generation runs on the SERVER, detached from this page (POST answers 202; see
+  // lib/use-generation-run.ts): a refresh only drops the poller — on mount the hook restores an in-flight
+  // run and keeps polling. regenerate=true (per-target regenerate): bypasses the already-run guard and starts a
+  // NEW generation run (per-target models, ADR-0143). The ordinary path keeps the idempotency guard.
+  const gen = useGenerationRun(projectId, async (finished) => {
     try {
-      const r = await api.post<{ runId: string; alreadyRun?: boolean }>(
-        `/api/projects/${encodeURIComponent(projectId)}/business-case/generate`,
-        regenerate ? { regenerate: true } : {},
-      );
-      // IA cleanup 2026-10-14: ONE generate entry. The first press keeps the
-      // already-run guard; when it reports an existing run, the SAME press
-      // escalates to `regenerate: true` so a second entry point is not needed.
-      let runId = r.data.runId;
-      if (!regenerate && r.data.alreadyRun) {
-        const again = await api.post<{ runId: string }>(
-          `/api/projects/${encodeURIComponent(projectId)}/business-case/generate`,
-          { regenerate: true },
-        );
-        runId = again.data.runId;
-      }
       const status = await api.get<{ runId: string; status: string; activities: ActivityRow[] }>(
-        `/api/projects/${encodeURIComponent(projectId)}/business-case/generate/${encodeURIComponent(runId)}`,
+        `/api/projects/${encodeURIComponent(projectId)}/business-case/generate/${encodeURIComponent(finished.runId)}`,
       );
       setRun({ runId: status.data.runId, status: status.data.status, activities: status.data.activities });
-      load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("failed"));
-    } finally {
-      setBusy(false);
+    } catch {
+      // the run log is secondary — the case data below still reloads
     }
+    load();
+  });
+  // `[target ·] scenario · variant · step` — the progress list names each step the way the case tables do.
+  function genActivityLabel(activityId: string): string {
+    const p = parseActivityId(activityId);
+    if (!p) return activityId;
+    const target = p.targetId ? data?.targets.find((x) => x.targetId === p.targetId)?.companyName : null;
+    return [
+      target,
+      SCEN_LABEL(tr)[p.scenario] ?? p.scenario,
+      VARIANT_LABEL(tr)[p.variant] ?? p.variant,
+      GEN_STEP_LABEL(tr)[p.step] ?? p.step,
+    ]
+      .filter(Boolean)
+      .join(" · ");
   }
+  // Every row action is disabled while a generation runs (it replaces the case set under them).
+  const busy = actionBusy || gen.busy;
+  async function generate(regenerate = false) {
+    if (busy) return;
+    setError(null);
+    setRun(null);
+    await gen.start(regenerate);
+  }
+  useEffect(() => {
+    if (gen.startError !== null) setError(gen.startError || t("failed"));
+  }, [gen.startError, t]);
 
   async function postAdopt(modelId: string, goalsAck?: { acknowledged: true; note: string }) {
     setBusy(true);
@@ -1282,12 +1312,66 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                   {busy ? tc("creating") : greenfield ? t("marketBasis3Scenarios") : t("marketPastBasis3Scenarios")}
                 </button>
                 <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                  {busy ? t("calculatingResultsRefreshWhenDone") : t("recordTheDecisionInThe")}
+                  {gen.busy
+                    ? t("genKeepsRunning")
+                    : busy
+                      ? t("calculatingResultsRefreshWhenDone")
+                      : t("recordTheDecisionInThe")}
                 </span>
               </div>
             )}
 
-            {run && (
+            {/* Background generation progress (restored after a reload): overall n/m + per-activity state */}
+            {(gen.phase === "starting" || gen.phase === "running" || (gen.phase === "failed" && gen.run)) && (
+              <section className="dd-progress" aria-label={t("genProgressTitle")} aria-busy={gen.busy}>
+                <div className="dd-progress-head">
+                  <h3 className="sizing-step-title">{t("genProgressTitle")}</h3>
+                  <span role="status" aria-live="polite" className="mono-num">
+                    {gen.run && gen.run.progress.total > 0
+                      ? t("genProgressSummary", { done: gen.run.progress.done, total: gen.run.progress.total })
+                      : t("genPreparing")}
+                  </span>
+                </div>
+                {gen.run && gen.run.progress.total > 0 && (
+                  <progress
+                    className="w-full"
+                    max={gen.run.progress.total}
+                    value={gen.run.progress.done}
+                    aria-label={t("genProgressSummary", { done: gen.run.progress.done, total: gen.run.progress.total })}
+                  />
+                )}
+                {gen.phase === "failed" && gen.run && (
+                  <p role="alert" className="text-[length:var(--fs-caption)] text-[color:var(--red-fg)] break-words">
+                    {gen.run.failed_activity
+                      ? t("genFailedStep", { step: genActivityLabel(gen.run.failed_activity) })
+                      : t("genRunFailed")}
+                    {gen.run.error ? ` — ${gen.run.error}` : ""}
+                  </p>
+                )}
+                {gen.run && gen.run.activities.length > 0 && (
+                  <details open>
+                    <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">
+                      {t("genStepList")}
+                    </summary>
+                    <ul className="sizing-note-list list-none p-0 m-0 mt-1">
+                      {gen.run.activities.map((a) => (
+                        <li key={a.activityId} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5">
+                          <span className={`status-chip ${GEN_STATUS_CLASS[a.status] ?? "status-not-started"}`}>
+                            {GEN_STATUS_LABEL(tr)[a.status] ?? a.status}
+                          </span>
+                          <span className="min-w-0 break-words">{genActivityLabel(a.activityId)}</span>
+                          <span className="mono-num text-[color:var(--muted-fg)] ml-auto">
+                            {elapsedText(a, gen.nowMs)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </section>
+            )}
+
+            {run && !gen.busy && (
               <details className="mb-3">
                 <summary className="cursor-pointer text-[length:var(--fs-caption)] text-[color:var(--accent)]">
                   {t("generationRunLog")}
