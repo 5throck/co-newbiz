@@ -44,6 +44,12 @@ const { setPlaywrightSearchOverrideForTests } = await import("../../app/web-next
 // Deterministic synthesis path: search unconfigured + headless stubbed empty.
 setWebResearchOverrideForTests({ configured: false, sources: [] });
 setPlaywrightSearchOverrideForTests([]);
+// bun runs every unit file in one process; these module-level overrides would otherwise leak
+// into whichever file runs next (e.g. capability-ai-sources B1 sees an unconfigured search).
+afterAll(() => {
+  setWebResearchOverrideForTests(null);
+  setPlaywrightSearchOverrideForTests(null);
+});
 
 const { nextRequest } = await import("./helpers/next-route-dispatch.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");

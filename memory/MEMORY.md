@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-27](2026-11-27.md) | test: stop web-research test seams leaking across files; drop unused WACC breakdown strings |
 | [2026-11-26](2026-11-26.md) | feat(s8): run KRX beta and ECOS rate collection from the WACC page |
 | [2026-11-25](2026-11-25.md) | feat(s8): hide excluded-target cases and block GO on stale target selection or adoption (ADR-0206) |
 | [2026-11-24](2026-11-24.md) | fix(ux): S8 entry lands on the overview tab without the financial-tab flash; rename financial sub-tab key to financial-model |
@@ -11,8 +12,8 @@
 | [2026-11-22](2026-11-22.md) | fix(library): normalize source EOL before embedding the library projection U-20261121-002: JSON.stringify serializes a real CRLF as the escape sequence \r\n, so the file-level normalize() in --check never matched a CRLF working copy — 283 git-clean sources read as projection drift and blocked dev-sync. Sources are now LF-normalized at read time; the projection is identical for LF and CRLF checkouts. Adds a subprocess regression test that converts one source to CRLF and asserts --check stays green. |
 | [2026-11-21](2026-11-21.md) | fix(committee): minutes window, history rows, dialogue fallback, CLI minutes v2, docs (ADR-0204) |
 | [2026-11-20](2026-11-20.md) | chore: workspace sync (1 file) |
-| [2026-11-19](2026-11-19.md) | docs(docs): workspace sync (10 files) |
-| [2026-11-19](2026-11-19.md) | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
+| 2026-11-19 | docs(docs): workspace sync (10 files) |
+| 2026-11-19 | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
 | 2026-11-17 | feat(s6): parallel per-candidate evaluation, criteria modal and coverage markers (ADR-0199) |
 | 2026-11-16 | docs(designs): S6 bulk AI evaluation with draft versioning and incremental DART collection (ADR-0199) |
 | 2026-11-18 | docs(docs): workspace sync (12 files) |
