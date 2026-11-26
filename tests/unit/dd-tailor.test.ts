@@ -39,7 +39,9 @@ const { promoteOpportunity } = await import("../../db/repositories/project.repos
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
 const { DD_WORKSPACE_CHECKLISTS, getChecklistItems } = await import("../../app/web-next/lib/library.ts");
-const { makeTavilyDdTailorExecutor, getDdTailorExecutor } = await import("../../app/web-next/lib/dd-checklist-tailor.ts");
+const { makeTavilyDdTailorExecutor, getDdTailorExecutor } = await import(
+  "../../app/web-next/lib/dd-checklist-tailor.ts"
+);
 
 const NOW = new Date().toISOString();
 
@@ -64,7 +66,13 @@ beforeAll(async () => {
   approveUser(db, { userId: ANALYST, approvedBy: "test", now: NOW });
   await createUser(db, { userId: VIEWER, role: "viewer", password: "pw-viewer-12345", createdBy: "test", now: NOW });
   approveUser(db, { userId: VIEWER, approvedBy: "test", now: NOW });
-  await createUser(db, { userId: OUTSIDER, role: "analyst", password: "pw-outsider-12345", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: OUTSIDER,
+    role: "analyst",
+    password: "pw-outsider-12345",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: OUTSIDER, approvedBy: "test", now: NOW });
   db.run("UPDATE app_user SET must_change_password = 0");
   analystCookie = await loginCookie(ANALYST, "pw-analyst-12345");
@@ -72,10 +80,14 @@ beforeAll(async () => {
   outsiderCookie = await loginCookie(OUTSIDER, "pw-outsider-12345");
 
   const oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, "S9 테스트 기회", "반도체 테스트 산업", "selected", ANALYST, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "S9 테스트 기회",
+    "반도체 테스트 산업",
+    "selected",
+    ANALYST,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,1)",
     [ulid(), oppId, "greenfield", "test route", ANALYST, NOW],
@@ -83,16 +95,19 @@ beforeAll(async () => {
   db.run(
     `INSERT INTO greenfield_assessment (id, opportunity_id, entry_strategy, alternatives_considered, rationale, created_by, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?)`,
-      [ulid(), oppId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
+    [ulid(), oppId, "직접 진출", "M&A 대안 검토", "test", ANALYST, NOW, NOW],
   );
   // ADR-0136: 역량 격차 건수는 S3 레지스터(opportunity.capability_gap_json)에서 센다.
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }), oppId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "g1", resolution: "hire" }], updatedAt: NOW }),
+    oppId,
+  ]);
   // Promotion preconditions (2026-09-12): screening + pre_fs must be GO.
   for (const gate of ["screening", "pre_fs"]) {
-    db.run("INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)", [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW]);
+    db.run(
+      "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), "opportunity", oppId, gate, "go", "test", ANALYST, NOW],
+    );
   }
   projectId = promoteOpportunity(oppId, { promotedBy: ANALYST, needToKnowBasis: "S9 test promoter" }).project.id;
 });
@@ -138,7 +153,8 @@ describe("Wave D Tavily provenance executor", () => {
     const drafts = await getDdTailorExecutor()("legal", { projectId, industry: "반도체 테스트 산업" });
     expect(drafts.every((d) => d.sourceUrl === null && d.sourceReliability === "C")).toBe(true);
     process.env.CO_NEWBIZ_DD_TAILOR_AGENTS = prevMode;
-    if (prevKey === undefined) process.env.TAVILY_API_KEY = ""; else process.env.TAVILY_API_KEY = prevKey;
+    if (prevKey === undefined) process.env.TAVILY_API_KEY = "";
+    else process.env.TAVILY_API_KEY = prevKey;
   });
 });
 
@@ -188,7 +204,10 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
     const ws = await req(`/api/projects/${projectId}/dd`, { headers: { cookie: analystCookie } });
     expect(ws.status).toBe(200);
     const data = (await ws.json()).data as {
-      domains: Array<{ domain: string; custom: Array<{ source_url: string | null; source_reliability: string | null; status: string }> }>;
+      domains: Array<{
+        domain: string;
+        custom: Array<{ source_url: string | null; source_reliability: string | null; status: string }>;
+      }>;
       completion: { total: number };
     };
     expect(data.domains.length).toBe(7);
@@ -210,7 +229,11 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
   test("(b) boundary #2: no state row until the human approves; approve+state is one transaction", async () => {
     // Before any approval: zero custom state rows.
     const customStateCount = () =>
-      (db.query("SELECT COUNT(*) n FROM project_checklist_item_state WHERE checklist_id LIKE 'custom:%'").get() as { n: number }).n;
+      (
+        db.query("SELECT COUNT(*) n FROM project_checklist_item_state WHERE checklist_id LIKE 'custom:%'").get() as {
+          n: number;
+        }
+      ).n;
     expect(customStateCount()).toBe(0);
 
     const first = customItems().find((i) => i.domain === "commercial")!;
@@ -234,12 +257,16 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
     expect(res.status).toBe(200);
     expect(customStateCount()).toBe(1);
     const row = db
-      .query("SELECT checklist_id, item_id, status FROM project_checklist_item_state WHERE checklist_id LIKE 'custom:%'")
+      .query(
+        "SELECT checklist_id, item_id, status FROM project_checklist_item_state WHERE checklist_id LIKE 'custom:%'",
+      )
       .get() as { checklist_id: string; item_id: string; status: string };
     expect(row.checklist_id).toBe("custom:commercial");
     expect(row.item_id).toBe(first.id);
     expect(row.status).toBe("pending");
-    const approved = db.query("SELECT status, approved_by FROM project_checklist_item_custom WHERE id = ?").get(first.id) as {
+    const approved = db
+      .query("SELECT status, approved_by FROM project_checklist_item_custom WHERE id = ?")
+      .get(first.id) as {
       status: string;
       approved_by: string;
     };
@@ -262,7 +289,10 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
     });
     expect(rej.status).toBe(200);
     expect(customStateCount()).toBe(1);
-    expect((db.query("SELECT status FROM project_checklist_item_custom WHERE id = ?").get(second.id) as { status: string }).status).toBe("rejected");
+    expect(
+      (db.query("SELECT status FROM project_checklist_item_custom WHERE id = ?").get(second.id) as { status: string })
+        .status,
+    ).toBe("rejected");
   });
 
   test("(c) S9 completion: all judged AND mandatory unmet 0; proposed-only never counts", async () => {
@@ -312,7 +342,11 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
     expect(customItems().filter((i) => i.status === "proposed").length).toBeGreaterThan(0);
 
     // Judge the approved custom item pass → S9 completes WITH proposals outstanding.
-    const customId = (db.query("SELECT item_id FROM project_checklist_item_state WHERE checklist_id = 'custom:commercial'").get() as { item_id: string }).item_id;
+    const customId = (
+      db.query("SELECT item_id FROM project_checklist_item_state WHERE checklist_id = 'custom:commercial'").get() as {
+        item_id: string;
+      }
+    ).item_id;
     const done = await req(`/api/projects/${projectId}/dd-checklist/state`, {
       method: "PUT",
       headers: { cookie: analystCookie },
@@ -343,13 +377,34 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
     db.run(
       `INSERT INTO waiver (id, project_id, governance_doc_id, clause_ref, reason, requested_by, approver_role, approved_by, approved_at, expires_at, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
-      [ulid(), projectId, "chk-commercial-dd-checklist", "custom:commercial:" + customId, "test waiver", ANALYST, "lead", ANALYST, NOW, "2099-12-31T00:00:00Z", NOW],
+      [
+        ulid(),
+        projectId,
+        "chk-commercial-dd-checklist",
+        "custom:commercial:" + customId,
+        "test waiver",
+        ANALYST,
+        "lead",
+        ANALYST,
+        NOW,
+        "2099-12-31T00:00:00Z",
+        NOW,
+      ],
     );
-    const waiverId = (db.query("SELECT id FROM waiver WHERE project_id = ? ORDER BY created_at DESC LIMIT 1").get(projectId) as { id: string }).id;
+    const waiverId = (
+      db.query("SELECT id FROM waiver WHERE project_id = ? ORDER BY created_at DESC LIMIT 1").get(projectId) as {
+        id: string;
+      }
+    ).id;
     const waive = await req(`/api/projects/${projectId}/dd-checklist/state`, {
       method: "PUT",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ checklist_id: "custom:commercial", item_id: customId, status: "waived", waiver_id: waiverId }),
+      body: JSON.stringify({
+        checklist_id: "custom:commercial",
+        item_id: customId,
+        status: "waived",
+        waiver_id: waiverId,
+      }),
     });
     expect(waive.status).toBe(200);
     expect(evaluateProcess({ type: "project", id: projectId }).completedStages).toContain("S9");
@@ -358,8 +413,18 @@ describe("S9 tailored DD checklists (ADR-0099)", () => {
   test("(d) deny-by-default: a non-member gets 404 on the S9 surface", async () => {
     for (const [path, init] of [
       [`/api/projects/${projectId}/dd`, { headers: { cookie: outsiderCookie } }],
-      [`/api/projects/${projectId}/dd-checklist/tailor`, { method: "POST", headers: { cookie: outsiderCookie }, body: JSON.stringify({}) }],
-      [`/api/projects/${projectId}/dd-checklist/state`, { method: "PUT", headers: { cookie: outsiderCookie }, body: JSON.stringify({ checklist_id: "x", item_id: "y", status: "pass" }) }],
+      [
+        `/api/projects/${projectId}/dd-checklist/tailor`,
+        { method: "POST", headers: { cookie: outsiderCookie }, body: JSON.stringify({}) },
+      ],
+      [
+        `/api/projects/${projectId}/dd-checklist/state`,
+        {
+          method: "PUT",
+          headers: { cookie: outsiderCookie },
+          body: JSON.stringify({ checklist_id: "x", item_id: "y", status: "pass" }),
+        },
+      ],
     ] as const) {
       const res = await req(path, init as RequestInit);
       expect(res.status).toBe(404);

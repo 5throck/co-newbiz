@@ -38,10 +38,36 @@ const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { evaluateProcess } = await import("../../app/web-next/lib/process-flow.ts");
-const { flagRecommendedTarget, recommendTargetsFromDb, enginesMixedAcrossTargets, crossCheckOfNote, XCHECK_DIVERGENCE_WARN_RATIO, ACQUISITION_EV_REVENUE_BAND, resolveConfirmedEvBand, recordEvRevenueBand, recordBusinessCaseParams, evRevenueBandPayload, EV_BAND_OPTIMISM_FLAG_FACTOR, EV_BAND_MAX_SANE, EV_BAND_RATIONALE_MAX, EV_BAND_SOURCE_MAX, EV_BAND_SPREAD_FLAG_RATIO, EV_BAND_STALE_DAYS, validateEvBandInput } = await import("../../app/web-next/lib/business-case-generator.ts");
+const {
+  flagRecommendedTarget,
+  recommendTargetsFromDb,
+  enginesMixedAcrossTargets,
+  crossCheckOfNote,
+  XCHECK_DIVERGENCE_WARN_RATIO,
+  ACQUISITION_EV_REVENUE_BAND,
+  resolveConfirmedEvBand,
+  recordEvRevenueBand,
+  recordBusinessCaseParams,
+  evRevenueBandPayload,
+  EV_BAND_OPTIMISM_FLAG_FACTOR,
+  EV_BAND_MAX_SANE,
+  EV_BAND_RATIONALE_MAX,
+  EV_BAND_SOURCE_MAX,
+  EV_BAND_SPREAD_FLAG_RATIO,
+  EV_BAND_STALE_DAYS,
+  validateEvBandInput,
+} = await import("../../app/web-next/lib/business-case-generator.ts");
 
 const NOW = new Date().toISOString();
-const NOXC = { xcheckFadeNpv: null, xcheckFadeIrr: null, xcheckDivergence: null, structureMismatch: false, acqEvRevenue: null, acqEvRevenueInBand: null, acqEvBandSource: "none" as const };
+const NOXC = {
+  xcheckFadeNpv: null,
+  xcheckFadeIrr: null,
+  xcheckDivergence: null,
+  structureMismatch: false,
+  acqEvRevenue: null,
+  acqEvRevenueInBand: null,
+  acqEvBandSource: "none" as const,
+};
 
 function req(path: string, init?: RequestInit) {
   return nextRequest(path, init);
@@ -75,10 +101,14 @@ beforeAll(async () => {
 
   // Promote a brownfield opportunity carrying TWO shortlisted targets.
   const oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, "BF 다중 대상 기회", "테스트 산업", "selected", ANALYST, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "BF 다중 대상 기회",
+    "테스트 산업",
+    "selected",
+    ANALYST,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
     [ulid(), oppId, "brownfield", "m_and_a", "test route", ANALYST, NOW],
@@ -117,7 +147,9 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     await businessCaseGenerationIdle();
 
     const models = db
-      .query("SELECT id, name, target_id, variant FROM business_case_model WHERE project_id = ? ORDER BY created_at, id")
+      .query(
+        "SELECT id, name, target_id, variant FROM business_case_model WHERE project_id = ? ORDER BY created_at, id",
+      )
       .all(projectId) as Array<{ id: string; name: string; target_id: string | null; variant: string }>;
     // 2 targets × 3 scenarios × market_forward (no company facts → no historical variant).
     expect(models.length).toBe(6);
@@ -146,18 +178,27 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
       expect(p50.note).toContain("seed=");
       if (scenario === "base") baseP50ByTarget.set(m.target_id!, p50.npv_krw_m);
     }
-    for (const t of [targetAId, targetBId]) expect(scenariosByTarget.get(t)).toEqual(new Set(["base", "upside", "downside"]));
+    for (const t of [targetAId, targetBId])
+      expect(scenariosByTarget.get(t)).toEqual(new Set(["base", "upside", "downside"]));
     // GENUINELY different numbers across targets for the same scenario.
     expect(baseP50ByTarget.get(targetAId)).not.toBe(baseP50ByTarget.get(targetBId));
 
     // Run status route: activity ids carry the target subject prefix.
-    const status = await req(`/api/projects/${projectId}/business-case/generate/${runId}`, { headers: { cookie: analystCookie } });
-    const st = (await status.json()).data as { status: string; activities: Array<{ activityId: string; status: string }>; cases: unknown[] };
+    const status = await req(`/api/projects/${projectId}/business-case/generate/${runId}`, {
+      headers: { cookie: analystCookie },
+    });
+    const st = (await status.json()).data as {
+      status: string;
+      activities: Array<{ activityId: string; status: string }>;
+      cases: unknown[];
+    };
     expect(st.status).toBe("done");
     expect(st.activities.length).toBe(24); // 2 targets × 3 scenarios × 4 steps
     // D6: the activity id carries the unique target id — the company name
     // ("대상A") is not unique across opportunities and must not key the id.
-    expect(st.activities.find((a) => a.activityId.startsWith(`${targetAId}/base:market_forward:growth_projection`))).toBeTruthy();
+    expect(
+      st.activities.find((a) => a.activityId.startsWith(`${targetAId}/base:market_forward:growth_projection`)),
+    ).toBeTruthy();
     expect(st.cases.length).toBe(6);
   });
 
@@ -173,7 +214,19 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     const targetCId = ulid();
     db.run(
       "INSERT INTO brownfield_target (id, opportunity_id, company_name, status, rank, created_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-      [targetCId, (db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as { source_opportunity_id: string }).source_opportunity_id, "대상C", "shortlisted", 3, NOW, NOW],
+      [
+        targetCId,
+        (
+          db.query("SELECT source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as {
+            source_opportunity_id: string;
+          }
+        ).source_opportunity_id,
+        "대상C",
+        "shortlisted",
+        3,
+        NOW,
+        NOW,
+      ],
     );
     const withC = evaluateProcess({ type: "project", id: projectId });
     expect(withC.completedStages).not.toContain("S8");
@@ -219,7 +272,9 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
 
   test("(c) selection is human-only, rationale-mandatory, shortlist-bound, finalizes company_id", async () => {
     // (Uses the post-(b) state: targetA already selected in (b).)
-    const companyId = (db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null }).company_id;
+    const companyId = (
+      db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null }
+    ).company_id;
     expect(companyId).toBeTruthy();
 
     // Viewer cannot select (boundary #2).
@@ -261,7 +316,9 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
       body: JSON.stringify({ target_id: targetBId, rationale: "DD 대기 후 재검토로 B 선정" }),
     });
     expect(reselect.status).toBe(201);
-    const newCompanyId = (db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null }).company_id;
+    const newCompanyId = (
+      db.query("SELECT company_id FROM md_project WHERE id = ?").get(projectId) as { company_id: string | null }
+    ).company_id;
     expect(newCompanyId).not.toBeNull();
     const list = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });
     const data = (await list.json()).data as { target_selection: { targetId: string } };
@@ -271,7 +328,11 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
 
   test("(d) adoption is constrained to the selected target's cases", async () => {
     const modelOf = (targetId: string) =>
-      (db.query("SELECT id FROM business_case_model WHERE project_id = ? AND target_id = ? LIMIT 1").get(projectId, targetId) as { id: string }).id;
+      (
+        db
+          .query("SELECT id FROM business_case_model WHERE project_id = ? AND target_id = ? LIMIT 1")
+          .get(projectId, targetId) as { id: string }
+      ).id;
 
     // State: targetB selected (from (c) re-selection). Adopting targetA's
     // case is rejected with a 400 naming the constraint.
@@ -286,11 +347,17 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     const adopt = await req(`/api/projects/${projectId}/business-case/adopt`, {
       method: "POST",
       headers: { cookie: analystCookie },
-      body: JSON.stringify({ model_id: modelOf(targetBId), goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" } }),
+      body: JSON.stringify({
+        model_id: modelOf(targetBId),
+        goals_ack: { acknowledged: true, note: "test: 목표 비교 없이 진행" },
+      }),
     });
     expect(adopt.status).toBe(201);
     const list = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });
-    const data = (await list.json()).data as { adoption: { modelId: string } | null; targets: Array<{ targetId: string; recommended: boolean; caseCount: number }> };
+    const data = (await list.json()).data as {
+      adoption: { modelId: string } | null;
+      targets: Array<{ targetId: string; recommended: boolean; caseCount: number }>;
+    };
     expect(data.adoption?.modelId).toBe(modelOf(targetBId));
 
     // (e) exactly one RECOMMENDED target on the comparison read model.
@@ -313,7 +380,11 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
     // D5: ADR-0143 constraint violation (wrong target) stays a client-fixable
     // 400 — the instanceof 404 mapping must not swallow it.
     const modelOf = (targetId: string) =>
-      (db.query("SELECT id FROM business_case_model WHERE project_id = ? AND target_id = ? LIMIT 1").get(projectId, targetId) as { id: string }).id;
+      (
+        db
+          .query("SELECT id FROM business_case_model WHERE project_id = ? AND target_id = ? LIMIT 1")
+          .get(projectId, targetId) as { id: string }
+      ).id;
     const wrongTarget = await req(`/api/projects/${projectId}/business-case/adopt`, {
       method: "POST",
       headers: { cookie: analystCookie },
@@ -332,9 +403,45 @@ describe("S8 brownfield per-target generation (ADR-0143)", () => {
 
   test("flagRecommendedTarget: positive pool first, then max p05 (pure rule)", () => {
     const rows = [
-      { targetId: "t1", companyName: "A", rank: 1, baseP05: -5, baseP50: 10, irr: 0.1, caseCount: 3, engine: null, anchorMethod: null, recommended: false, ...NOXC },
-      { targetId: "t2", companyName: "B", rank: 2, baseP05: 3, baseP50: 12, irr: 0.2, caseCount: 3, engine: null, anchorMethod: null, recommended: false, ...NOXC },
-      { targetId: "t3", companyName: "C", rank: 3, baseP05: 1, baseP50: 30, irr: 0.3, caseCount: 3, engine: null, anchorMethod: null, recommended: false, ...NOXC },
+      {
+        targetId: "t1",
+        companyName: "A",
+        rank: 1,
+        baseP05: -5,
+        baseP50: 10,
+        irr: 0.1,
+        caseCount: 3,
+        engine: null,
+        anchorMethod: null,
+        recommended: false,
+        ...NOXC,
+      },
+      {
+        targetId: "t2",
+        companyName: "B",
+        rank: 2,
+        baseP05: 3,
+        baseP50: 12,
+        irr: 0.2,
+        caseCount: 3,
+        engine: null,
+        anchorMethod: null,
+        recommended: false,
+        ...NOXC,
+      },
+      {
+        targetId: "t3",
+        companyName: "C",
+        rank: 3,
+        baseP05: 1,
+        baseP50: 30,
+        irr: 0.3,
+        caseCount: 3,
+        engine: null,
+        anchorMethod: null,
+        recommended: false,
+        ...NOXC,
+      },
     ];
     const flagged = flagRecommendedTarget(rows);
     expect(flagged[0].targetId).toBe("t2"); // positive pool, max p05 — not the max p50
@@ -350,13 +457,20 @@ describe("D2 engine provenance on the target comparison", () => {
       [`engine=${engine}`, projectId, targetId],
     );
   }
-  const snapshot = () => recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+  const snapshot = () =>
+    recommendTargetsFromDb(projectId).map((r) => ({
+      id: r.targetId,
+      rank: r.rank,
+      rec: r.recommended,
+      p05: r.baseP05,
+    }));
 
   test("python-only, fallback-only and mixed; ranking untouched", () => {
     setEngine(targetAId, "python-sim-engine@1.0.0");
     setEngine(targetBId, "python-sim-engine@1.0.0");
     const before = snapshot();
-    const ab = () => recommendTargetsFromDb(projectId).filter((r) => r.targetId === targetAId || r.targetId === targetBId);
+    const ab = () =>
+      recommendTargetsFromDb(projectId).filter((r) => r.targetId === targetAId || r.targetId === targetBId);
     let rows = ab();
     expect(rows.every((r) => r.engine === "python-sim-engine")).toBe(true);
     expect(enginesMixedAcrossTargets(rows)).toBe(false);
@@ -375,7 +489,16 @@ describe("D2 engine provenance on the target comparison", () => {
   });
 
   test("a target whose own cases mix engines is 'mixed'; flagRecommendedTarget stays pure", () => {
-    const base = { rank: 1, baseP05: 1, baseP50: 2, irr: 0.1, caseCount: 1, anchorMethod: "company_revenue" as const, recommended: false, ...NOXC };
+    const base = {
+      rank: 1,
+      baseP05: 1,
+      baseP50: 2,
+      irr: 0.1,
+      caseCount: 1,
+      anchorMethod: "company_revenue" as const,
+      recommended: false,
+      ...NOXC,
+    };
     const rows = [
       { ...base, targetId: "a", companyName: "A", engine: "mixed" as const },
       { ...base, targetId: "b", companyName: "B", engine: null },
@@ -395,9 +518,23 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
   const row = (id: string, p05: number, p50: number, fade: number | null, ev: number | null, rank = 1) => {
     const div = fade !== null && p50 !== 0 ? (fade - p50) / Math.abs(p50) : null;
     return {
-      targetId: id, companyName: id, rank, baseP05: p05, baseP50: p50, irr: 0.1, caseCount: 1, engine: null, anchorMethod: null, recommended: false,
-      xcheckFadeNpv: fade, xcheckFadeIrr: null, xcheckDivergence: div, structureMismatch: false,
-      acqEvRevenue: ev, acqEvRevenueInBand: null, acqEvBandSource: "none" as const,
+      targetId: id,
+      companyName: id,
+      rank,
+      baseP05: p05,
+      baseP50: p50,
+      irr: 0.1,
+      caseCount: 1,
+      engine: null,
+      anchorMethod: null,
+      recommended: false,
+      xcheckFadeNpv: fade,
+      xcheckFadeIrr: null,
+      xcheckDivergence: div,
+      structureMismatch: false,
+      acqEvRevenue: ev,
+      acqEvRevenueInBand: null,
+      acqEvBandSource: "none" as const,
     };
   };
 
@@ -465,7 +602,11 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
   });
 
   test("structureMismatch only on the starred row; ranking invariant", () => {
-    const rows = [row("best", 50, 1000, 400, 3, 2), row("other", 10, 1000, 100, 3, 1), row("clean", 5, 1000, 1300, 3, 3)];
+    const rows = [
+      row("best", 50, 1000, 400, 3, 2),
+      row("other", 10, 1000, 100, 3, 1),
+      row("clean", 5, 1000, 1300, 3, 3),
+    ];
     const out = flagRecommendedTarget(rows);
     expect(out.map((r) => r.targetId)).toEqual(["best", "other", "clean"]); // same order as pre-change rule
     expect(out[0].recommended).toBe(true);
@@ -493,14 +634,35 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
   });
 
   test("recommendTargetsFromDb populates fields from the latest base model's p50 note only", () => {
-    const before = recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+    const before = recommendTargetsFromDb(projectId).map((r) => ({
+      id: r.targetId,
+      rank: r.rank,
+      rec: r.recommended,
+      p05: r.baseP05,
+    }));
     const modelOf = (t: string) =>
-      (db.query("SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward')='market_forward' AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario='base') ORDER BY m.created_at DESC, m.id DESC").get(projectId, t) as { id: string }).id;
+      (
+        db
+          .query(
+            "SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward')='market_forward' AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario='base') ORDER BY m.created_at DESC, m.id DESC",
+          )
+          .get(projectId, t) as { id: string }
+      ).id;
     const mid = modelOf(targetAId);
-    const p50 = (db.query("SELECT npv_krw_m FROM valuation_simulation WHERE model_id = ? AND scenario='base' AND percentile='p50'").get(mid) as { npv_krw_m: number }).npv_krw_m;
+    const p50 = (
+      db
+        .query("SELECT npv_krw_m FROM valuation_simulation WHERE model_id = ? AND scenario='base' AND percentile='p50'")
+        .get(mid) as { npv_krw_m: number }
+    ).npv_krw_m;
     // p05 note carries a decoy that must be ignored.
-    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p05'", [genNote(999999, 0.9, 9), mid]);
-    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p50'", [genNote(p50 * 0.4, 0.07, 6), mid]);
+    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p05'", [
+      genNote(999999, 0.9, 9),
+      mid,
+    ]);
+    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p50'", [
+      genNote(p50 * 0.4, 0.07, 6),
+      mid,
+    ]);
     const a = recommendTargetsFromDb(projectId).find((r) => r.targetId === targetAId)!;
     expect(a.xcheckFadeNpv).toBeCloseTo(p50 * 0.4, 1);
     expect(a.xcheckFadeIrr).toBeCloseTo(0.07);
@@ -510,7 +672,12 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
     expect(a.acqEvBandSource).toBe("none");
     const b = recommendTargetsFromDb(projectId).find((r) => r.targetId === targetBId)!;
     expect(b.structureMismatch).toBe(false);
-    const after = recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+    const after = recommendTargetsFromDb(projectId).map((r) => ({
+      id: r.targetId,
+      rank: r.rank,
+      rec: r.recommended,
+      p05: r.baseP05,
+    }));
     expect(after).toEqual(before);
     expect(a.structureMismatch).toBe(a.recommended && Math.abs(a.xcheckDivergence!) > 0.5);
   });
@@ -518,13 +685,37 @@ describe("S8 fade-DCF cross-check and acquisition benchmark (display-only)", () 
 
 describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-confirmed)", () => {
   const bandRoute = (cookie: string, body: unknown) =>
-    req(`/api/projects/${projectId}/business-case/ev-band`, { method: "POST", headers: { cookie }, body: JSON.stringify(body) });
-  const good = { min: 4, max: 8, rationale: "service robot comps reviewed by analyst", source: "management judgement: analyst" };
-  const setTargetEv = (targetId: string, ev: number) => {
-    const mid = (db.query("SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward')='market_forward' AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario='base') ORDER BY m.created_at DESC, m.id DESC").get(projectId, targetId) as { id: string }).id;
-    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p50'", [`seed=1; acq_ev=${ev.toFixed(2)}x; engine=python-sim-engine`, mid]);
+    req(`/api/projects/${projectId}/business-case/ev-band`, {
+      method: "POST",
+      headers: { cookie },
+      body: JSON.stringify(body),
+    });
+  const good = {
+    min: 4,
+    max: 8,
+    rationale: "service robot comps reviewed by analyst",
+    source: "management judgement: analyst",
   };
-  const snapshot = () => recommendTargetsFromDb(projectId).map((r) => ({ id: r.targetId, rank: r.rank, rec: r.recommended, p05: r.baseP05 }));
+  const setTargetEv = (targetId: string, ev: number) => {
+    const mid = (
+      db
+        .query(
+          "SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.target_id = ? AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward')='market_forward' AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario='base') ORDER BY m.created_at DESC, m.id DESC",
+        )
+        .get(projectId, targetId) as { id: string }
+    ).id;
+    db.run("UPDATE valuation_simulation SET note = ? WHERE model_id = ? AND scenario='base' AND percentile='p50'", [
+      `seed=1; acq_ev=${ev.toFixed(2)}x; engine=python-sim-engine`,
+      mid,
+    ]);
+  };
+  const snapshot = () =>
+    recommendTargetsFromDb(projectId).map((r) => ({
+      id: r.targetId,
+      rank: r.rank,
+      rec: r.recommended,
+      p05: r.baseP05,
+    }));
 
   test("1-null: nothing confirmed -> inBand null even with acq 3.0 (regression), source none", () => {
     setTargetEv(targetAId, 3.0);
@@ -534,13 +725,25 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
     expect(a.acqEvBandSource).toBe("none");
     expect(resolveConfirmedEvBand(db, projectId)).toBeNull();
     expect(evRevenueBandPayload(null).optimismFlag).toBe(false);
-    expect(evRevenueBandPayload(null).reference).toEqual({ min: 2, max: 6, label: "global robotics/automation M&A screening band", sourced: false });
+    expect(evRevenueBandPayload(null).reference).toEqual({
+      min: 2,
+      max: 6,
+      label: "global robotics/automation M&A screening band",
+      sourced: false,
+    });
   });
 
   test("validation rejects bad input", async () => {
     const bad: Array<Record<string, unknown>> = [
-      { ...good, min: 0 }, { ...good, min: 5, max: 5 }, { ...good, min: 9, max: 5 }, { ...good, min: Number.NaN },
-      { ...good, max: Infinity }, { ...good, max: EV_BAND_MAX_SANE + 1 }, { ...good, rationale: "   " }, { ...good, rationale: "short" }, { ...good, source: "" },
+      { ...good, min: 0 },
+      { ...good, min: 5, max: 5 },
+      { ...good, min: 9, max: 5 },
+      { ...good, min: Number.NaN },
+      { ...good, max: Infinity },
+      { ...good, max: EV_BAND_MAX_SANE + 1 },
+      { ...good, rationale: "   " },
+      { ...good, rationale: "short" },
+      { ...good, source: "" },
     ];
     for (const b of bad) {
       await expect(recordEvRevenueBand(db, { projectId, ...(b as typeof good), actor: ANALYST })).rejects.toThrow();
@@ -558,10 +761,27 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
     const before = snapshot();
     const res = await bandRoute(analystCookie, good);
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { data: { evRevenueBand: { confirmed: { min: number; max: number; confirmedBy: string; source: string; rationale: string } | null; optimismFlag: boolean } } };
-    expect(body.data.evRevenueBand.confirmed).toMatchObject({ min: 4, max: 8, confirmedBy: ANALYST, source: good.source, rationale: good.rationale });
+    const body = (await res.json()) as {
+      data: {
+        evRevenueBand: {
+          confirmed: { min: number; max: number; confirmedBy: string; source: string; rationale: string } | null;
+          optimismFlag: boolean;
+        };
+      };
+    };
+    expect(body.data.evRevenueBand.confirmed).toMatchObject({
+      min: 4,
+      max: 8,
+      confirmedBy: ANALYST,
+      source: good.source,
+      rationale: good.rationale,
+    });
     expect(body.data.evRevenueBand.optimismFlag).toBe(false);
-    const audits = db.query("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'assumption_set' AND target LIKE '%bc.acquisition_ev_revenue_band.%'").get() as { n: number };
+    const audits = db
+      .query(
+        "SELECT COUNT(*) AS n FROM audit_log WHERE action = 'assumption_set' AND target LIKE '%bc.acquisition_ev_revenue_band.%'",
+      )
+      .get() as { n: number };
     expect(audits.n).toBe(2);
     expect(snapshot()).toEqual(before); // display-only invariant
   });
@@ -582,32 +802,65 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
   });
 
   test("latest run wins; half-written (min-only) newer run is ignored", async () => {
-    await recordEvRevenueBand(db, { projectId, min: 3, max: 7, rationale: "second confirmation rationale", source: "src two", actor: ANALYST, now: new Date(Date.now() + 5000).toISOString() });
+    await recordEvRevenueBand(db, {
+      projectId,
+      min: 3,
+      max: 7,
+      rationale: "second confirmation rationale",
+      source: "src two",
+      actor: ANALYST,
+      now: new Date(Date.now() + 5000).toISOString(),
+    });
     expect(resolveConfirmedEvBand(db, projectId)).toMatchObject({ min: 3, max: 7, source: "src two" });
     const { createRun } = await import("../../db/lib/versioning.ts");
     const { recordAssumption } = await import("../../db/lib/assumption.ts");
     const later = new Date(Date.now() + 10000).toISOString();
     const run = createRun(db, { projectId, label: "half", createdBy: ANALYST, overrides: {}, now: later });
-    recordAssumption(db, { runId: run.run_id, assumptionKey: "bc.acquisition_ev_revenue_band.min", kind: "user", value: 1, asOf: later.slice(0, 10), rationale: "orphan min only", anchorRef: "x", actor: ANALYST, now: later });
+    recordAssumption(db, {
+      runId: run.run_id,
+      assumptionKey: "bc.acquisition_ev_revenue_band.min",
+      kind: "user",
+      value: 1,
+      asOf: later.slice(0, 10),
+      rationale: "orphan min only",
+      anchorRef: "x",
+      actor: ANALYST,
+      now: later,
+    });
     expect(resolveConfirmedEvBand(db, projectId)).toMatchObject({ min: 3, max: 7 });
   });
 
   test("5: optimismFlag true at max 9.01, false at 9", () => {
     expect(EV_BAND_OPTIMISM_FLAG_FACTOR * ACQUISITION_EV_REVENUE_BAND.max).toBe(9);
-    const mk = (max: number) => evRevenueBandPayload({ min: 2, max, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: "t", runId: "x" }).optimismFlag;
+    const mk = (max: number) =>
+      evRevenueBandPayload({ min: 2, max, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: "t", runId: "x" })
+        .optimismFlag;
     expect(mk(9.01)).toBe(true);
     expect(mk(9)).toBe(false);
   });
 
   test("6: general params route and recordBusinessCaseParams reject band keys; GET shows band read-only", async () => {
     const res = await req(`/api/projects/${projectId}/business-case/params`, {
-      method: "POST", headers: { cookie: analystCookie },
-      body: JSON.stringify({ params: { acquisition_ev_revenue_band_min: 1 }, rationale: "try to write band via params" }),
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({
+        params: { acquisition_ev_revenue_band_min: 1 },
+        rationale: "try to write band via params",
+      }),
     });
     expect(res.status).toBe(400);
-    await expect(recordBusinessCaseParams(db, { projectId, params: { acquisition_ev_revenue_band_max: 99 } as never, rationale: "x", actor: ANALYST })).rejects.toThrow(/ev-band/);
+    await expect(
+      recordBusinessCaseParams(db, {
+        projectId,
+        params: { acquisition_ev_revenue_band_max: 99 } as never,
+        rationale: "x",
+        actor: ANALYST,
+      }),
+    ).rejects.toThrow(/ev-band/);
     const get = await req(`/api/projects/${projectId}/business-case/params`, { headers: { cookie: analystCookie } });
-    const j = (await get.json()) as { data: { params: { acquisitionEvRevenueBand: { min: number; max: number } | null } } };
+    const j = (await get.json()) as {
+      data: { params: { acquisitionEvRevenueBand: { min: number; max: number } | null } };
+    };
     expect(j.data.params.acquisitionEvRevenueBand).toMatchObject({ min: 3, max: 7 });
   });
 
@@ -626,7 +879,9 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
 
   test("review amendments: length caps at boundary", () => {
     expect(() => validateEvBandInput({ ...good, rationale: "r".repeat(EV_BAND_RATIONALE_MAX) })).not.toThrow();
-    expect(() => validateEvBandInput({ ...good, rationale: "r".repeat(EV_BAND_RATIONALE_MAX + 1) })).toThrow(/rationale/);
+    expect(() => validateEvBandInput({ ...good, rationale: "r".repeat(EV_BAND_RATIONALE_MAX + 1) })).toThrow(
+      /rationale/,
+    );
     expect(() => validateEvBandInput({ ...good, source: "s".repeat(EV_BAND_SOURCE_MAX) })).not.toThrow();
     expect(() => validateEvBandInput({ ...good, source: "s".repeat(EV_BAND_SOURCE_MAX + 1) })).toThrow(/source/);
     expect(() => validateEvBandInput({ ...good, source: " ".repeat(600) + "abc" })).not.toThrow(); // cap applies after trim
@@ -637,20 +892,33 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: { message: string } }).error.message).toContain("rationale");
     const orig = db.run.bind(db);
-    (db as { run: unknown }).run = () => { throw new Error("SQLITE_SECRET_internal_detail"); };
-    const origErr = console.error; console.error = () => {};
+    (db as { run: unknown }).run = () => {
+      throw new Error("SQLITE_SECRET_internal_detail");
+    };
+    const origErr = console.error;
+    console.error = () => {};
     try {
       const r = await bandRoute(analystCookie, good);
       expect(r.status).toBe(500);
       expect(JSON.stringify(await r.json())).not.toContain("SQLITE_SECRET");
     } finally {
-      (db as { run: unknown }).run = orig; console.error = origErr;
+      (db as { run: unknown }).run = orig;
+      console.error = origErr;
     }
   });
 
   test("review amendments: spreadFlag boundary at exactly 4.5", () => {
     expect(EV_BAND_SPREAD_FLAG_RATIO).toBe(1.5 * (ACQUISITION_EV_REVENUE_BAND.max / ACQUISITION_EV_REVENUE_BAND.min));
-    const mk = (min: number, max: number) => evRevenueBandPayload({ min, max, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: new Date().toISOString(), runId: "x" }).spreadFlag;
+    const mk = (min: number, max: number) =>
+      evRevenueBandPayload({
+        min,
+        max,
+        rationale: "r",
+        source: "s",
+        confirmedBy: "u",
+        confirmedAt: new Date().toISOString(),
+        runId: "x",
+      }).spreadFlag;
     expect(mk(2, 9)).toBe(false); // exactly 4.5
     expect(mk(2, 9.02)).toBe(true);
     expect(mk(4, 8)).toBe(false);
@@ -659,7 +927,19 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
 
   test("review amendments: stale at 89/90/91 days with injected now", () => {
     const at = new Date("2026-10-11T00:00:00.000Z");
-    const mk = (days: number) => evRevenueBandPayload({ min: 2, max: 6, rationale: "r", source: "s", confirmedBy: "u", confirmedAt: new Date(at.getTime() - days * 86_400_000).toISOString(), runId: "x" }, at);
+    const mk = (days: number) =>
+      evRevenueBandPayload(
+        {
+          min: 2,
+          max: 6,
+          rationale: "r",
+          source: "s",
+          confirmedBy: "u",
+          confirmedAt: new Date(at.getTime() - days * 86_400_000).toISOString(),
+          runId: "x",
+        },
+        at,
+      );
     expect(EV_BAND_STALE_DAYS).toBe(90);
     expect(mk(89)).toMatchObject({ stale: false, ageDays: 89 });
     expect(mk(90)).toMatchObject({ stale: true, ageDays: 90 });
@@ -668,7 +948,11 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
   });
 
   test("review amendments: audit_log content, methodsMixed alongside band, rank invariant across none/confirmed/flagged", async () => {
-    const audits = db.query("SELECT target FROM audit_log WHERE action = 'assumption_set' AND target LIKE '%bc.acquisition_ev_revenue_band.%'").all() as Array<{ target: string }>;
+    const audits = db
+      .query(
+        "SELECT target FROM audit_log WHERE action = 'assumption_set' AND target LIKE '%bc.acquisition_ev_revenue_band.%'",
+      )
+      .all() as Array<{ target: string }>;
     expect(audits.length).toBeGreaterThanOrEqual(2);
     for (const a of audits) expect(a.target).toMatch(/^[^:]+:bc\.acquisition_ev_revenue_band\.(min|max):user$/); // run:key:kind only; values not logged
     const { listBusinessCases } = await import("../../app/web-next/lib/business-case.ts");
@@ -676,7 +960,15 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
     expect(typeof l.methodsMixed).toBe("boolean");
     expect(l.evRevenueBand).toBeDefined();
     const base = snapshot();
-    await recordEvRevenueBand(db, { projectId, min: 1, max: 30, rationale: "optimistic wide band for invariant", source: "invariant test", actor: ANALYST, now: new Date(Date.now() + 60000).toISOString() });
+    await recordEvRevenueBand(db, {
+      projectId,
+      min: 1,
+      max: 30,
+      rationale: "optimistic wide band for invariant",
+      source: "invariant test",
+      actor: ANALYST,
+      now: new Date(Date.now() + 60000).toISOString(),
+    });
     const p = evRevenueBandPayload(resolveConfirmedEvBand(db, projectId));
     expect(p.optimismFlag).toBe(true);
     expect(p.spreadFlag).toBe(true);
@@ -697,7 +989,13 @@ describe("S8 human-confirmed EV/Revenue band (design 2026-10-11-s8-ev-band-user-
     expect((await bandRoute(analystCookie, { ...good, default: "5" })).status).toBe(400);
     // a good confirmation with a default persists and reads back — stamped AFTER the
     // review-amendments run (which itself carries now = +60s) so it sorts newest.
-    await recordEvRevenueBand(db, { projectId, ...good, default: 5, actor: ANALYST, now: new Date(Date.now() + 120000).toISOString() });
+    await recordEvRevenueBand(db, {
+      projectId,
+      ...good,
+      default: 5,
+      actor: ANALYST,
+      now: new Date(Date.now() + 120000).toISOString(),
+    });
     const band = resolveConfirmedEvBand(db, projectId)!;
     expect(band).toMatchObject({ min: 4, max: 8, default: 5 });
     // and with no direct bc.acquisition_ev_revenue pin, the band default drives bcParams
