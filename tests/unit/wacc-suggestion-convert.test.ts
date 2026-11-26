@@ -5,11 +5,14 @@ describe("suggestionToInputValue", () => {
   test("percent-point keys are divided by 100", () => {
     expect(suggestionToInputValue("risk_free", 3.788)).toBeCloseTo(0.03788, 10);
     expect(suggestionToInputValue("credit_spread", 0.6)).toBeCloseTo(0.006, 10);
+    expect(suggestionToInputValue("tax_rate", 24.2)).toBeCloseTo(0.242, 10);
+    expect(suggestionToInputValue("tax_rate", 27.5)).toBeCloseTo(0.275, 10);
   });
   test("observed_de passes through unchanged", () => {
     expect(suggestionToInputValue("observed_de", 0.85)).toBe(0.85);
   });
   test("null stays null for every key", () => {
-    for (const k of ["risk_free", "credit_spread", "observed_de"]) expect(suggestionToInputValue(k, null)).toBeNull();
+    for (const k of ["risk_free", "credit_spread", "observed_de", "erp", "tax_rate"])
+      expect(suggestionToInputValue(k, null)).toBeNull();
   });
 });

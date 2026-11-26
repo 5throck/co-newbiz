@@ -1,4 +1,4 @@
-schema_version: "1.1"
+schema_version: "1.3"
 description: >
   Region profile contract (design v1.0 section 2-6 / 4-9-1 amendment). Each
   top-level section is a provenance-bearing unit: source, verified_on, and
@@ -28,6 +28,8 @@ optional_top_level:
   # team while running cdd-08 on a deal (preferred, not required); maintainer is the
   # agent_key that filled it.
   - payment_practice   # benchmark for commercial DD cdd-08 collection-period axis
+  - erp_references     # published equity-risk-premium references offered as WACC suggestions (ADR-0207)
+  - corporate_tax_rates # statutory marginal corporate tax brackets offered as the WACC tax-rate suggestion (ADR-0207 addendum)
 
 section_shape:
   # every section listed above except code/name_ko/typical_closing_weeks
@@ -50,6 +52,20 @@ section_field_reference:
   incentives: [categories, clawback_norm]
   # payment_practice: collection-period norms for receivables owed by customers in
   # this region. Distinct from fx_and_repatriation (cash movement across borders).
+  # erp_references: data = { default_source_id, entries[] } (ADR-0207). Each entry is one
+  # published edition of a free, publicly accessible source (no paid data), carrying its own
+  # provenance: id, source, url (https://), value_pct (percent points, 0 < v < 25),
+  # basis (implied | historical | survey | recommended), as_of, verified_on, maintainer;
+  # optional published_on, note, superseded_by. Entries are superseded, never deleted.
+  erp_references: [default_source_id, entries]
+  # corporate_tax_rates: data = { effective_from, default_schedule_id, local_rate_ratio, schedules[] }
+  # (ADR-0207 addendum). Each schedule is one statutory rate table: id, statute_ref, local_statute_ref,
+  # url (https://), brackets[] with lower_krw / upper_krw (null = open top bracket) / national_rate_pct /
+  # local_rate_pct / combined_rate_pct (percent points). Brackets are contiguous from 0 (upper bound
+  # inclusive: a taxable income equal to upper_krw belongs to that bracket) with non-decreasing rates;
+  # local = national x local_rate_ratio and combined = national + local (rounding tolerance 0.0005).
+  # Optional: description, local_adjustment_note. Schedules are replaced on amendment (effective_from).
+  corporate_tax_rates: [effective_from, default_schedule_id, local_rate_ratio, schedules]
   payment_practice: [typical_payment_terms_days, statutory_late_payment_rule, collection_enforcement_note, credit_insurance_note]
 
 validation_rules:
@@ -57,3 +73,5 @@ validation_rules:
   - "Every section (except code/name_ko/typical_closing_weeks) must carry source, verified_on, maintainer, and data."
   - "A section with an empty data object is rejected — an unsourced placeholder is worse than a missing file, since it looks authoritative."
   - "verified_on must parse as ISO-8601 and must not be in the future."
+  - "erp_references (optional, ADR-0207): the section follows the rules above; in addition data.entries is a non-empty list, entry ids are unique, each entry has source, url (https://), value_pct (number, 0 < v < 25 — a transcription guard, not a judgment), basis (enum), as_of, verified_on and maintainer, as_of/verified_on/published_on are valid ISO dates not in the future, superseded_by resolves to an entry id, and data.default_source_id matches exactly one non-superseded entry. The validator never fetches URLs."
+  - "corporate_tax_rates (optional, ADR-0207 addendum): the section follows the rules above; in addition data.effective_from is a valid ISO date not in the future (the registry carries in-force figures only), data.local_rate_ratio is a number in (0, 1], data.schedules is a non-empty list with unique ids, each schedule has statute_ref, local_statute_ref and an https:// url, and brackets that start at lower_krw 0, are contiguous (each lower_krw equals the previous upper_krw), end with exactly one open bracket (upper_krw null), carry non-decreasing combined rates in (0, 50), and satisfy local = national x local_rate_ratio and combined = national + local. data.default_schedule_id matches exactly one schedule. The validator never fetches URLs and does not re-verify the statute - verified_on/maintainer are the human attestation."

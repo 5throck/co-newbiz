@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.1.0
+// @version 1.3.0
 /**
  * Region Profile Validator — co-newbiz
  *
@@ -21,6 +21,17 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname);
 const VERBOSE = process.argv.includes("--verbose");
+
+// erp_references (ADR-0207): a guard band for transcription slips, not a judgment of the value.
+export const ERP_VALUE_MIN_EXCLUSIVE = 0;
+export const ERP_VALUE_MAX_EXCLUSIVE = 25;
+const ERP_BASIS = ["implied", "historical", "survey", "recommended"];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// corporate_tax_rates (ADR-0207 addendum): arithmetic tolerance for local/combined (percent points)
+// and a transcription guard on the combined rate; neither judges the statute itself.
+export const TAX_RATE_ARITHMETIC_TOLERANCE = 0.0005;
+export const TAX_RATE_MAX_EXCLUSIVE = 50;
 
 const REQUIRED_TOP_LEVEL = [
   "code",
@@ -44,11 +55,11 @@ const REQUIRED_SOURCED_SECTIONS = REQUIRED_TOP_LEVEL.filter(
 
 // Optional sections are skipped when absent and held to the same provenance
 // rules when present (see optional_top_level in _schema.yaml).
-const OPTIONAL_SOURCED_SECTIONS = ["payment_practice"];
+const OPTIONAL_SOURCED_SECTIONS = ["payment_practice", "erp_references", "corporate_tax_rates"];
 
 const SOURCED_SECTIONS = [...REQUIRED_SOURCED_SECTIONS, ...OPTIONAL_SOURCED_SECTIONS];
 
-interface Issue {
+export interface Issue {
   file: string;
   message: string;
   severity: "error" | "warn";
@@ -61,7 +72,205 @@ async function findProfileFiles(dir: string): Promise<string[]> {
     .map((e) => join(dir, e.name));
 }
 
-function validateProfile(file: string, doc: unknown): Issue[] {
+function isNonEmptyString(v: unknown): v is string {
+  return typeof v === "string" && v.trim() !== "";
+}
+
+/** Valid ISO calendar date (YYYY-MM-DD), not in the future. Returns an error fragment or null. */
+function dateProblem(v: unknown): string | null {
+  if (typeof v !== "string" || !ISO_DATE.test(v)) return "is not a valid ISO-8601 date (YYYY-MM-DD)";
+  const d = new Date(`${v}T00:00:00Z`);
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return "is not a valid ISO-8601 date (YYYY-MM-DD)";
+  if (d.getTime() > Date.now()) return "is in the future";
+  return null;
+}
+
+/**
+ * erp_references (ADR-0207): section-level provenance is checked by the generic
+ * loop; this adds the entry-level contract. The validator never fetches URLs.
+ */
+function validateErpReferences(file: string, section: unknown): Issue[] {
+  const issues: Issue[] = [];
+  const err = (message: string) => issues.push({ file, message: `erp_references: ${message}`, severity: "error" });
+  if (typeof section !== "object" || section === null || Array.isArray(section)) return issues; // reported by the generic loop
+  const data = (section as Record<string, unknown>).data;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return issues; // reported by the generic loop (empty/missing data)
+  const d = data as Record<string, unknown>;
+
+  const entries = d.entries;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    err("data.entries must be a non-empty list");
+    return issues;
+  }
+
+  const byId = new Map<string, Record<string, unknown>>();
+  entries.forEach((raw, i) => {
+    const at = `entries[${i}]`;
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      err(`${at} must be a mapping`);
+      return;
+    }
+    const e = raw as Record<string, unknown>;
+    const label = isNonEmptyString(e.id) ? `entry '${e.id}'` : at;
+    if (!isNonEmptyString(e.id)) err(`${at} is missing required field 'id'`);
+    else if (byId.has(e.id)) err(`duplicate entry id '${e.id}'`);
+    else byId.set(e.id, e);
+    for (const f of ["source", "verified_on", "maintainer", "url", "as_of"]) {
+      if (!isNonEmptyString(e[f])) err(`${label} is missing required field '${f}'`);
+    }
+    if (isNonEmptyString(e.url) && !e.url.startsWith("https://")) err(`${label}.url must start with https://`);
+    if (isNonEmptyString(e.url) && e.url.startsWith("https://") && e.url.length <= "https://".length) err(`${label}.url has no host`);
+    if (typeof e.value_pct !== "number" || !Number.isFinite(e.value_pct)) {
+      err(`${label}.value_pct must be a number (percent points)`);
+    } else if (!(e.value_pct > ERP_VALUE_MIN_EXCLUSIVE && e.value_pct < ERP_VALUE_MAX_EXCLUSIVE)) {
+      err(`${label}.value_pct ${e.value_pct} is outside the sanity band (${ERP_VALUE_MIN_EXCLUSIVE}, ${ERP_VALUE_MAX_EXCLUSIVE}) percent points`);
+    }
+    if (typeof e.basis !== "string" || !ERP_BASIS.includes(e.basis)) {
+      err(`${label}.basis must be one of ${ERP_BASIS.join(" | ")}`);
+    }
+    for (const f of ["as_of", "verified_on", "published_on"]) {
+      if (e[f] === undefined) continue; // required ones already reported; published_on is optional
+      if (f !== "published_on" && !isNonEmptyString(e[f])) continue;
+      const problem = dateProblem(e[f]);
+      if (problem) err(`${label}.${f} ${problem}`);
+    }
+  });
+
+  for (const [id, e] of byId) {
+    if (e.superseded_by === undefined) continue;
+    if (!isNonEmptyString(e.superseded_by) || !byId.has(e.superseded_by)) {
+      err(`entry '${id}'.superseded_by does not resolve to an entry id`);
+    } else if (e.superseded_by === id) {
+      err(`entry '${id}'.superseded_by points at itself`);
+    }
+  }
+
+  const def = d.default_source_id;
+  if (!isNonEmptyString(def)) {
+    err("data.default_source_id is required");
+  } else {
+    const matches = entries.filter((x) => typeof x === "object" && x !== null && (x as Record<string, unknown>).id === def);
+    if (matches.length !== 1) err(`data.default_source_id '${def}' must match exactly one entry (matched ${matches.length})`);
+    else if ((matches[0] as Record<string, unknown>).superseded_by !== undefined) {
+      err(`data.default_source_id '${def}' names a superseded entry`);
+    }
+  }
+  return issues;
+}
+
+/**
+ * corporate_tax_rates (ADR-0207 addendum): section-level provenance is checked by the generic
+ * loop; this adds the schedule/bracket contract. The validator never fetches URLs and cannot
+ * re-verify the statute - it guards structure, contiguity and arithmetic.
+ */
+function validateCorporateTaxRates(file: string, section: unknown): Issue[] {
+  const issues: Issue[] = [];
+  const err = (message: string) => issues.push({ file, message: `corporate_tax_rates: ${message}`, severity: "error" });
+  if (typeof section !== "object" || section === null || Array.isArray(section)) return issues; // generic loop reports it
+  const data = (section as Record<string, unknown>).data;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return issues; // generic loop reports it
+  const d = data as Record<string, unknown>;
+
+  const eff = dateProblem(d.effective_from);
+  if (d.effective_from === undefined) err("data.effective_from is required");
+  else if (eff) err(`data.effective_from ${eff}`);
+
+  const ratio = d.local_rate_ratio;
+  if (typeof ratio !== "number" || !Number.isFinite(ratio) || !(ratio > 0 && ratio <= 1)) {
+    err("data.local_rate_ratio must be a number in (0, 1]");
+  }
+
+  const schedules = d.schedules;
+  if (!Array.isArray(schedules) || schedules.length === 0) {
+    err("data.schedules must be a non-empty list");
+    return issues;
+  }
+
+  const ids = new Set<string>();
+  schedules.forEach((raw, i) => {
+    const at = `schedules[${i}]`;
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      err(`${at} must be a mapping`);
+      return;
+    }
+    const sc = raw as Record<string, unknown>;
+    const label = isNonEmptyString(sc.id) ? `schedule '${sc.id}'` : at;
+    if (!isNonEmptyString(sc.id)) err(`${at} is missing required field 'id'`);
+    else if (ids.has(sc.id)) err(`duplicate schedule id '${sc.id}'`);
+    else ids.add(sc.id);
+    for (const f of ["statute_ref", "local_statute_ref", "url"]) {
+      if (!isNonEmptyString(sc[f])) err(`${label} is missing required field '${f}'`);
+    }
+    if (isNonEmptyString(sc.url) && (!sc.url.startsWith("https://") || sc.url.length <= "https://".length)) {
+      err(`${label}.url must be an https:// URL with a host`);
+    }
+
+    const brackets = sc.brackets;
+    if (!Array.isArray(brackets) || brackets.length === 0) {
+      err(`${label}.brackets must be a non-empty list`);
+      return;
+    }
+    let prevUpper: number | null = 0;
+    let prevCombined = 0;
+    brackets.forEach((b, j) => {
+      const bt = `${label}.brackets[${j}]`;
+      if (typeof b !== "object" || b === null || Array.isArray(b)) {
+        err(`${bt} must be a mapping`);
+        prevUpper = null;
+        return;
+      }
+      const br = b as Record<string, unknown>;
+      const lower = br.lower_krw;
+      const upper = br.upper_krw;
+      if (typeof lower !== "number" || !Number.isInteger(lower) || lower < 0) {
+        err(`${bt}.lower_krw must be a non-negative integer`);
+        prevUpper = null;
+        return;
+      }
+      if (prevUpper === null || lower !== prevUpper) {
+        err(`${bt}.lower_krw ${lower} must equal ${j === 0 ? "0" : "the previous bracket's upper_krw"} (brackets must be contiguous from 0)`);
+      }
+      const isLast = j === brackets.length - 1;
+      if (upper === null) {
+        if (!isLast) err(`${bt}.upper_krw is null (open bracket) but is not the last bracket`);
+        prevUpper = null;
+      } else if (typeof upper !== "number" || !Number.isInteger(upper) || upper <= lower) {
+        err(`${bt}.upper_krw must be an integer greater than lower_krw, or null for the open top bracket`);
+        prevUpper = null;
+      } else {
+        if (isLast) err(`${bt}.upper_krw must be null - the last bracket must be open`);
+        prevUpper = upper;
+      }
+      const nat = br.national_rate_pct;
+      const loc = br.local_rate_pct;
+      const comb = br.combined_rate_pct;
+      const nums = [nat, loc, comb];
+      if (nums.some((n) => typeof n !== "number" || !Number.isFinite(n))) {
+        err(`${bt} national_rate_pct, local_rate_pct and combined_rate_pct must all be numbers (percent points)`);
+        return;
+      }
+      const [n, l, c] = nums as number[];
+      if (!(c > 0 && c < TAX_RATE_MAX_EXCLUSIVE)) {
+        err(`${bt}.combined_rate_pct ${c} is outside the sanity band (0, ${TAX_RATE_MAX_EXCLUSIVE}) percent points`);
+      }
+      if (typeof ratio === "number" && Math.abs(l - n * ratio) > TAX_RATE_ARITHMETIC_TOLERANCE) {
+        err(`${bt}.local_rate_pct ${l} does not equal national_rate_pct ${n} x local_rate_ratio ${ratio}`);
+      }
+      if (Math.abs(c - (n + l)) > TAX_RATE_ARITHMETIC_TOLERANCE) {
+        err(`${bt}.combined_rate_pct ${c} does not equal national_rate_pct + local_rate_pct (${n + l})`);
+      }
+      if (c < prevCombined) err(`${bt}.combined_rate_pct ${c} is lower than the previous bracket's (rates must be non-decreasing)`);
+      prevCombined = c;
+    });
+  });
+
+  const def = d.default_schedule_id;
+  if (!isNonEmptyString(def)) err("data.default_schedule_id is required");
+  else if (!ids.has(def)) err(`data.default_schedule_id '${def}' must match exactly one schedule id`);
+  return issues;
+}
+
+export function validateProfile(file: string, doc: unknown): Issue[] {
   const issues: Issue[] = [];
   if (typeof doc !== "object" || doc === null) {
     return [{ file, message: "Document is not a YAML mapping", severity: "error" }];
@@ -99,6 +308,9 @@ function validateProfile(file: string, doc: unknown): Issue[] {
       }
     }
   }
+
+  if (p.erp_references !== undefined) issues.push(...validateErpReferences(file, p.erp_references));
+  if (p.corporate_tax_rates !== undefined) issues.push(...validateCorporateTaxRates(file, p.corporate_tax_rates));
 
   const closing = p.typical_closing_weeks;
   if (closing !== undefined && (typeof closing !== "number" || closing <= 0)) {
@@ -145,4 +357,4 @@ async function main() {
   console.log("✅ Region profile validation passed.");
 }
 
-main();
+if (import.meta.main) main();
