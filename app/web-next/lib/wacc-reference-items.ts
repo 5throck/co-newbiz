@@ -62,10 +62,82 @@ export interface ReferenceSuggestion {
   flags?: CreditSpreadFlag[];
   series_used?: Array<{ role: string; series_id: string; value_pct: number }>;
   anchors?: CreditAnchorsView | null;
+  /** ADR-0208 slice 3: the interest-coverage evaluation (used or not), the cost-of-debt cross-check, recent bond coupons. */
+  synthetic?: CreditSyntheticDetail | null;
+  rating_superseded?: CreditRatingSuperseded | null;
+  crosscheck?: CreditCrosscheck | null;
+  issuance_evidence?: CreditIssuanceRow[];
+  issuance_status?: CreditIssuanceStatus | null;
   spread_reason_code?: string | null;
   spread_reason?: string | null;
   kd_indicative_pct?: number | null;
 }
+
+export type CreditInterestSource = "interest_expense" | "interest_paid" | "finance_costs";
+
+/** `credit_spread.synthetic`: available (coverage mapped to a rating) or not (why, and whether a re-sync could help). */
+export type CreditSyntheticDetail =
+  | {
+      available: true;
+      /** True when this estimate is the rating in use. */
+      used: boolean;
+      rating: string;
+      coverage_x: number;
+      interest_source: CreditInterestSource;
+      interest_is_proxy: boolean;
+      fiscal_year: number;
+      table_id: string;
+      table_as_of: string;
+      published_label: string | null;
+      band_lower_x: number;
+      band_upper_x: number | null;
+      operating_income_krw_million: number;
+      interest_expense_krw_million: number;
+      loss_making: boolean;
+      note: string;
+    }
+  | { available: false; used: false; reason_code: string; reason: string; resync_hint: boolean };
+
+/** A stale disclosed or bureau rating that a fresh synthetic estimate was preferred over. */
+export interface CreditRatingSuperseded {
+  basis: "disclosed" | "bureau";
+  rating: string;
+  rated_on: string;
+  source_rcept_no: string;
+}
+
+/** `credit_spread.crosscheck`: implied actual cost of debt vs the market-built Kd (a warning input, never an override). */
+export interface CreditCrosscheck {
+  status: "ok" | "warn" | "unreliable" | "unavailable";
+  reason_code: string | null;
+  reason: string | null;
+  implied_cost_pct: number | null;
+  market_kd_pct: number | null;
+  gap_pp: number | null;
+  direction: "market_above_actual" | "market_below_actual" | null;
+  interest_source: CreditInterestSource | null;
+  fiscal_year: number | null;
+  interest_expense_krw_million: number | null;
+  avg_debt_krw_million: number | null;
+  debt_basis: "two_year_average" | "year_end" | null;
+  warn_gap_pp: number;
+}
+
+export interface CreditIssuanceRow {
+  issued_on: string;
+  amount_krw_million: number | null;
+  coupon_pct: number | null;
+  rating_raw: string;
+  maturity_on: string | null;
+  outstanding: boolean | null;
+  source_rcept_no: string;
+}
+export type CreditIssuanceStatus =
+  | "available"
+  | "no_dart_corp_code"
+  | "not_collected"
+  | "issues_unavailable"
+  | "none_in_window";
 
 /** `bureau` = credit-bureau issuer rating, a lower-confidence basis than the corporate-bond `disclosed` one. */
 export type CreditRatingSource = "default" | "disclosed" | "bureau" | "synthetic";
@@ -485,4 +557,93 @@ export function bureauCreditView(e: ReferenceSuggestion): BureauCreditView | nul
     filingUrl: dartFilingUrl(e.source_rcept_no),
     filingNo: e.source_rcept_no ?? null,
   };
+}
+
+/** The synthetic (interest coverage) evidence block of a credit_spread suggestion; null unless that estimate is the rating in use. */
+export interface SyntheticCreditView {
+  rating: string;
+  coverageX: number;
+  interestSource: CreditInterestSource;
+  interestIsProxy: boolean;
+  fiscalYear: number;
+  lossMaking: boolean;
+  publishedLabel: string | null;
+  tableAsOf: string;
+  operatingIncomeKrwMillion: number;
+  interestExpenseKrwMillion: number;
+  superseded: CreditRatingSuperseded | null;
+}
+
+export function syntheticCreditView(e: ReferenceSuggestion): SyntheticCreditView | null {
+  const s = e.synthetic;
+  if (e.key !== "credit_spread" || e.rating_source !== "synthetic" || !e.rating || !s || !s.available) return null;
+  return {
+    rating: e.rating,
+    coverageX: s.coverage_x,
+    interestSource: s.interest_source,
+    interestIsProxy: s.interest_is_proxy,
+    fiscalYear: s.fiscal_year,
+    lossMaking: s.loss_making,
+    publishedLabel: s.published_label,
+    tableAsOf: s.table_as_of,
+    operatingIncomeKrwMillion: s.operating_income_krw_million,
+    interestExpenseKrwMillion: s.interest_expense_krw_million,
+    superseded: e.rating_superseded ?? null,
+  };
+}
+
+/**
+ * True when the interest figures behind the synthetic rung and the cross-check are missing because the company's DART
+ * financials predate the extended collector: a financial re-sync would fill them. The backend says so with `resync_hint`.
+ */
+export function financialResyncNeeded(e: ReferenceSuggestion | undefined): boolean {
+  if (!e || e.key !== "credit_spread") return false;
+  const s = e.synthetic;
+  return !!s && s.available === false && s.resync_hint === true;
+}
+
+/** Cross-check line of a credit_spread suggestion; null unless there is something to say (a gap, or an unreliable reading). */
+export interface CrosscheckView {
+  status: "ok" | "warn" | "unreliable";
+  /** `crosscheck_implied_far_below_market` when the actual cost is far below the market Kd (policy or low-rate funding?). */
+  reasonCode: string | null;
+  impliedPct: number;
+  marketKdPct: number;
+  gapPp: number;
+  direction: "market_above_actual" | "market_below_actual";
+  warnGapPp: number;
+  fiscalYear: number | null;
+  interestSource: CreditInterestSource | null;
+  debtBasis: "two_year_average" | "year_end" | null;
+}
+
+export function crosscheckView(e: ReferenceSuggestion): CrosscheckView | null {
+  const c = e.crosscheck;
+  if (e.key !== "credit_spread" || !c) return null;
+  if (c.status !== "ok" && c.status !== "warn") return null;
+  if (c.implied_cost_pct === null || c.market_kd_pct === null || c.gap_pp === null || c.direction === null) return null;
+  return {
+    status: c.status,
+    reasonCode: c.reason_code,
+    impliedPct: c.implied_cost_pct,
+    marketKdPct: c.market_kd_pct,
+    gapPp: c.gap_pp,
+    direction: c.direction,
+    warnGapPp: c.warn_gap_pp,
+    fiscalYear: c.fiscal_year,
+    interestSource: c.interest_source,
+    debtBasis: c.debt_basis,
+  };
+}
+
+/** Cross-check that could be computed but is unreliable (implied cost below Rf): shown as a plain note, never a warning. */
+export function crosscheckUnreliable(e: ReferenceSuggestion): CreditCrosscheck | null {
+  const c = e.crosscheck;
+  return e.key === "credit_spread" && c?.status === "unreliable" ? c : null;
+}
+
+/** Recent bond coupons to show next to the market Kd; empty unless the issuance table was read and has recent issues. */
+export function issuanceEvidenceRows(e: ReferenceSuggestion): CreditIssuanceRow[] {
+  if (e.key !== "credit_spread" || e.issuance_status !== "available") return [];
+  return e.issuance_evidence ?? [];
 }

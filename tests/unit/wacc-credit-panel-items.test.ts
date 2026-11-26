@@ -15,12 +15,17 @@ import {
   creditCollectVisible,
   creditReferenceFields,
   creditSourceLabel,
+  crosscheckUnreliable,
+  crosscheckView,
   dartFilingUrl,
   disclosedCreditView,
+  financialResyncNeeded,
   formatCreditAnchorPct,
+  issuanceEvidenceRows,
   kdKeWarning,
   missingReferenceItems,
   reasonByCode,
+  syntheticCreditView,
   toWaccComponentPayload,
   type ReferenceSuggestion,
 } from "../../app/web-next/lib/wacc-reference-items.ts";
@@ -486,5 +491,266 @@ describe("WACC panel wiring of the disclosed credit rating (static)", () => {
     expect(evidence).toContain('className="sr-only"');
     expect(evidence).toContain("disclosedCreditView(");
     expect(evidence).toContain("creditAgencyLinks(");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Slice 3: synthetic rung, cost-of-debt cross-check, issuance evidence, financial re-sync hint.
+// ---------------------------------------------------------------------------------------------------------------
+const synAvailable = {
+  available: true as const,
+  used: true,
+  rating: "A",
+  coverage_x: 4.5,
+  interest_source: "finance_costs" as const,
+  interest_is_proxy: true,
+  fiscal_year: 2025,
+  table_id: "damodaran-large-non-financial-2026-01",
+  table_as_of: "2026-01-01",
+  published_label: "A2/A",
+  band_lower_x: 4.25,
+  band_upper_x: 5.5,
+  operating_income_krw_million: 450000,
+  interest_expense_krw_million: 100000,
+  loss_making: false,
+  note: "n",
+};
+const syntheticCredit: ReferenceSuggestion = {
+  ...credit,
+  rating: "A",
+  rating_source: "synthetic",
+  value: 1.454,
+  synthetic: synAvailable,
+  rating_superseded: { basis: "disclosed", rating: "AA-", rated_on: "2024-05-01", source_rcept_no: "20250310000001" },
+};
+const xcheck = {
+  status: "warn" as const,
+  reason_code: null,
+  reason: null,
+  implied_cost_pct: 10,
+  market_kd_pct: 5.315,
+  gap_pp: -4.685,
+  direction: "market_below_actual" as const,
+  interest_source: "interest_expense" as const,
+  fiscal_year: 2025,
+  interest_expense_krw_million: 100000,
+  avg_debt_krw_million: 1000000,
+  debt_basis: "two_year_average" as const,
+  warn_gap_pp: 2,
+};
+
+describe("slice 3: synthetic credit view and apply", () => {
+  test("syntheticCreditView only for a synthetic rating in use, with the superseded rating", () => {
+    expect(syntheticCreditView(syntheticCredit)).toMatchObject({
+      rating: "A",
+      coverageX: 4.5,
+      interestSource: "finance_costs",
+      interestIsProxy: true,
+      fiscalYear: 2025,
+      lossMaking: false,
+      publishedLabel: "A2/A",
+      operatingIncomeKrwMillion: 450000,
+      interestExpenseKrwMillion: 100000,
+      superseded: { basis: "disclosed", rating: "AA-" },
+    });
+    expect(syntheticCreditView({ ...syntheticCredit, rating_source: "disclosed" })).toBeNull();
+    expect(syntheticCreditView({ ...syntheticCredit, synthetic: null })).toBeNull();
+    expect(
+      syntheticCreditView({
+        ...syntheticCredit,
+        synthetic: { available: false, used: false, reason_code: "x", reason: "y", resync_hint: false },
+      }),
+    ).toBeNull();
+    expect(syntheticCreditView({ ...syntheticCredit, key: "risk_free" })).toBeNull();
+  });
+
+  test("applying a synthetic rating records basis synthetic with the ECOS month and NO snapshot id", () => {
+    const ratio = suggestionToInputValue("credit_spread", syntheticCredit.value);
+    expect(appliedCreditRefFrom(syntheticCredit, ratio)).toEqual({
+      basis: "synthetic",
+      referenceAsOf: "2026-10",
+      appliedValue: 0.01454,
+      snapshotId: null,
+    });
+    const ref = appliedCreditRefFrom(syntheticCredit, ratio);
+    expect(creditReferenceFields(ref, 0.01454)).toEqual({
+      creditRatingBasis: "synthetic",
+      referenceAsOf: "2026-10",
+      editedFromReference: false,
+    });
+    expect(creditReferenceFields(ref, 0.02)).toMatchObject({
+      creditRatingBasis: "synthetic",
+      editedFromReference: true,
+    });
+    expect(creditSourceLabel(syntheticCredit)).toContain("A (synthetic, ecos_interpolated)");
+  });
+
+  test("a synthetic suggestion is skipped by apply-all when the server lists it (credit_rating_synthetic_basis) and is reported as missing", () => {
+    const excluded = [{ key: "credit_spread", reason_code: "credit_rating_synthetic_basis", reason: "x" }];
+    expect(applicableSuggestions([syntheticCredit], excluded)).toHaveLength(0);
+    expect(missingReferenceItems([syntheticCredit], excluded)[0]?.reason_code).toBe("credit_rating_synthetic_basis");
+    // individually applicable: the apply path still records the synthetic basis
+    expect(appliedCreditRefFrom(syntheticCredit, 0.01454)?.basis).toBe("synthetic");
+  });
+});
+
+describe("slice 3: cross-check view, issuance rows and the re-sync hint", () => {
+  test("crosscheckView carries the far-below reason code of a warning", () => {
+    const far = {
+      ...xcheck,
+      direction: "market_above_actual" as const,
+      gap_pp: 6.7,
+      reason_code: "crosscheck_implied_far_below_market",
+    };
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: far })).toMatchObject({
+      status: "warn",
+      reasonCode: "crosscheck_implied_far_below_market",
+    });
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: xcheck })?.reasonCode).toBeNull();
+  });
+
+  test("crosscheckView: ok and warn are shown; unreliable and unavailable are not a gap line", () => {
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: xcheck })).toMatchObject({
+      status: "warn",
+      impliedPct: 10,
+      marketKdPct: 5.315,
+      gapPp: -4.685,
+      direction: "market_below_actual",
+      warnGapPp: 2,
+      debtBasis: "two_year_average",
+    });
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: { ...xcheck, status: "ok", gap_pp: 0.5 } })?.status).toBe(
+      "ok",
+    );
+    const unreliable = {
+      ...xcheck,
+      status: "unreliable" as const,
+      gap_pp: null,
+      direction: null,
+      reason_code: "crosscheck_unreliable_non_positive_debt",
+    };
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: unreliable })).toBeNull();
+    expect(crosscheckUnreliable({ ...syntheticCredit, crosscheck: unreliable })).toMatchObject({
+      status: "unreliable",
+    });
+    const unavailable = {
+      ...xcheck,
+      status: "unavailable" as const,
+      implied_cost_pct: null,
+      gap_pp: null,
+      direction: null,
+    };
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: unavailable })).toBeNull();
+    expect(crosscheckUnreliable({ ...syntheticCredit, crosscheck: unavailable })).toBeNull();
+    expect(crosscheckView({ ...syntheticCredit, crosscheck: null })).toBeNull();
+    expect(crosscheckView({ ...syntheticCredit, key: "risk_free", crosscheck: xcheck })).toBeNull();
+  });
+
+  test("issuanceEvidenceRows: only when the table was read and has recent issues", () => {
+    const row = {
+      issued_on: "2026-03-10",
+      amount_krw_million: 200000,
+      coupon_pct: 4.35,
+      rating_raw: "A+",
+      maturity_on: "2029-03-10",
+      outstanding: true,
+      source_rcept_no: "20260310000001",
+    };
+    expect(
+      issuanceEvidenceRows({ ...syntheticCredit, issuance_status: "available", issuance_evidence: [row] }),
+    ).toEqual([row]);
+    expect(
+      issuanceEvidenceRows({ ...syntheticCredit, issuance_status: "issues_unavailable", issuance_evidence: [row] }),
+    ).toEqual([]);
+    expect(
+      issuanceEvidenceRows({ ...syntheticCredit, issuance_status: "none_in_window", issuance_evidence: [] }),
+    ).toEqual([]);
+    expect(issuanceEvidenceRows({ ...syntheticCredit })).toEqual([]);
+  });
+
+  test("financialResyncNeeded follows the backend's resync_hint, nothing else", () => {
+    const hint = {
+      available: false as const,
+      used: false as const,
+      reason_code: "synthetic_interest_not_collected",
+      reason: "r",
+      resync_hint: true,
+    };
+    expect(financialResyncNeeded({ ...credit, synthetic: hint })).toBe(true);
+    expect(financialResyncNeeded({ ...credit, synthetic: { ...hint, resync_hint: false } })).toBe(false);
+    expect(financialResyncNeeded({ ...credit, synthetic: synAvailable })).toBe(false);
+    expect(financialResyncNeeded({ ...credit, synthetic: null })).toBe(false);
+    expect(financialResyncNeeded(undefined)).toBe(false);
+  });
+});
+
+describe("slice 3: locale wiring (static)", () => {
+  const keys = [
+    "creditSourceSynthetic",
+    "creditSyntheticLossChip",
+    "creditCrosscheckWarnChip",
+    "creditReasonSyntheticRating",
+    "creditReasonSyntheticFinancial",
+    "creditReasonSyntheticNoFinancials",
+    "creditReasonSyntheticNotCollected",
+    "creditReasonSyntheticNoInterest",
+    "creditReasonSyntheticNoTable",
+    "creditSyntheticTitle",
+    "creditSyntheticCoverageLine",
+    "creditSyntheticTableLine",
+    "creditSyntheticProxyNote",
+    "creditSyntheticLossLine",
+    "creditSyntheticEstimateNote",
+    "creditSupersededLine",
+    "creditSupersededBasisDisclosed",
+    "creditSupersededBasisBureau",
+    "creditCrosscheckFarBelow",
+    "creditCrosscheckFarBelowReason",
+    "creditReasonSyntheticBasis",
+    "creditInterestSourceExpense",
+    "creditInterestSourcePaid",
+    "creditInterestSourceFinanceCosts",
+    "creditCrosscheckTitle",
+    "creditCrosscheckLine",
+    "creditDebtBasisAverage",
+    "creditDebtBasisYearEnd",
+    "creditCrosscheckMarketAbove",
+    "creditCrosscheckMarketBelow",
+    "creditCrosscheckWarnLine",
+    "creditCrosscheckOkLine",
+    "creditCrosscheckProxyNote",
+    "creditCrosscheckNote",
+    "creditCrosscheckUnreliable",
+    "creditCrosscheckUnavailableFinancial",
+    "creditCrosscheckUnavailableNoInterest",
+    "creditCrosscheckUnavailableNoDebt",
+    "creditCrosscheckUnavailableNoKd",
+    "creditIssuanceTitle",
+    "creditIssuanceRow",
+    "creditIssuanceNote",
+  ];
+  for (const l of ["en", "ko"]) {
+    test(`${l}: every slice-3 key exists and the source chip names the interest-coverage estimate`, () => {
+      const m = JSON.parse(readFileSync(`app/web-next/locales/${l}.json`, "utf8"));
+      const p = m.stages.s8.wacc.waccPanel;
+      for (const k of keys) expect(typeof p[k]).toBe("string");
+      expect(p.creditSourceSynthetic).toBe(l === "ko" ? "이자보상배율 추정" : "Interest-coverage estimate");
+    });
+  }
+  test("every backend reason code the panel maps has a localized label (no raw code reaches the user)", () => {
+    const panel = readFileSync("app/web-next/components/wacc/WaccPanel.tsx", "utf8");
+    for (const code of [
+      "synthetic_rating",
+      "synthetic_not_applicable_financial",
+      "synthetic_no_financials",
+      "synthetic_interest_not_collected",
+      "synthetic_no_interest_expense",
+      "crosscheck_unavailable_no_debt_rows",
+      "crosscheck_unreliable_non_positive_debt",
+      "crosscheck_implied_far_below_market",
+      "credit_rating_synthetic_basis",
+    ]) {
+      expect(panel).toContain(`${code}:`);
+    }
   });
 });

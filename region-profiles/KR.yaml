@@ -136,7 +136,7 @@ corporate_tax_rates:
           - { lower_krw: 300000000000, upper_krw: null, national_rate_pct: 25.0, local_rate_pct: 2.5, combined_rate_pct: 27.5 }
 
 credit_rating_references:
-  source: "Credit rating scale, rating-to-spread mapping parameters and rule defaults for the WACC credit-spread suggestion (ADR-0208). The spread itself is never stored here: it is derived from Bank of Korea ECOS 721Y001 (AA- item 7020000, BBB- item 7030000, KTB 3y item 5020000)."
+  source: "Credit rating scale, rating-to-spread mapping parameters, the published coverage-to-rating table and rule defaults for the WACC credit-spread suggestion (ADR-0208). The spread itself is never stored here: it is derived from Bank of Korea ECOS 721Y001 (AA- item 7020000, BBB- item 7030000, KTB 3y item 5020000)."
   verified_on: "2026-11-26"
   maintainer: quant-methodologist
   data:
@@ -193,5 +193,46 @@ credit_rating_references:
       below_lower: clamp_flagged
     kd_crosscheck:
       warn_gap_pp: 2.0
+    # Synthetic rating (ADR-0208 D3, slice 3): coverage = operating income / interest expense, mapped through a published
+    # coverage-to-rating table. Rating column only; the publisher's USD default spreads are never read. Rows are
+    # lower-bound inclusive, upper-bound exclusive (the page prints inclusive uppers such as 0.199999 that are rounding
+    # artefacts of the next lower bound, so upper_x is the next row's lower_x). Below the first lower_x falls in the first row.
+    synthetic:
+      default_table_id: damodaran-large-non-financial-2026-01
+      # Financial-sector companies (banks, insurers, securities, card and capital companies) skip the synthetic rung:
+      # interest is an operating cost there and coverage is meaningless. md_company carries no industry code, so the
+      # sector is detected from the company name (a heuristic the human can see in the row and override); a company
+      # whose name (company-form words and spaces removed) contains a name_keyword or ends with a name_suffix is treated as
+      # financial. Suffixes are separate because a bare "생명" would also hit biotech names such as "...생명과학".
+      # Extending either list is a maintainer attestation.
+      financial_sector:
+        detection: company_name
+        name_keywords: ["은행", "금융", "증권", "보험", "캐피탈", "저축", "자산운용", "신탁", "여신"]
+        name_suffixes: ["생명", "화재", "카드", "해상"]
+      tables:
+        - id: damodaran-large-non-financial-2026-01
+          source: "Damodaran Online (NYU Stern), Ratings, Interest Coverage Ratios and Default Spread - table 'For large non-financial service firms' (interest coverage ratio -> synthetic rating)"
+          url: "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html"
+          basis: ebit_over_interest
+          as_of: "2026-01-01"
+          verified_on: "2026-11-26"
+          maintainer: quant-methodologist
+          note: "Transcribed from the page on 2026-11-26 (free access, no login, no usage terms stated). The page says 'Data used is as of January 2026'; the contract needs a full date, so as_of is the first of that month. Rating column only - the USD default spreads are never used. The page labels are Moody's/S&P pairs; the S&P-style label is stored (page label kept in published_label). The table is coarser than the notch scale: it publishes AAA, AA, A+, A, A-, BBB, BB+, BB, B+, B, B-, CCC, CC, C, D, so AA+, AA-, BBB+, BBB- and BB- are never produced. Global-scale and US-calibrated: a synthetic rating is typically lower than the same company's Korean national-scale rating. Reported operating income over one fiscal year, no lease or R&D adjustment."
+          rows:
+            - { lower_x: -100000, upper_x: 0.2, rating: "D", published_label: "D2/D" }
+            - { lower_x: 0.2, upper_x: 0.65, rating: "C", published_label: "C2/C" }
+            - { lower_x: 0.65, upper_x: 0.8, rating: "CC", published_label: "Ca2/CC" }
+            - { lower_x: 0.8, upper_x: 1.25, rating: "CCC", published_label: "Caa/CCC" }
+            - { lower_x: 1.25, upper_x: 1.5, rating: "B-", published_label: "B3/B-" }
+            - { lower_x: 1.5, upper_x: 1.75, rating: "B", published_label: "B2/B" }
+            - { lower_x: 1.75, upper_x: 2.0, rating: "B+", published_label: "B1/B+" }
+            - { lower_x: 2.0, upper_x: 2.25, rating: "BB", published_label: "Ba2/BB" }
+            - { lower_x: 2.25, upper_x: 2.5, rating: "BB+", published_label: "Ba1/BB+" }
+            - { lower_x: 2.5, upper_x: 3.0, rating: "BBB", published_label: "Baa2/BBB" }
+            - { lower_x: 3.0, upper_x: 4.25, rating: "A-", published_label: "A3/A-" }
+            - { lower_x: 4.25, upper_x: 5.5, rating: "A", published_label: "A2/A" }
+            - { lower_x: 5.5, upper_x: 6.5, rating: "A+", published_label: "A1/A+" }
+            - { lower_x: 6.5, upper_x: 8.5, rating: "AA", published_label: "Aa2/AA" }
+            - { lower_x: 8.5, upper_x: null, rating: "AAA", published_label: "Aaa/AAA" }
 
 typical_closing_weeks: 12

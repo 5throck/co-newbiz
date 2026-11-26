@@ -14,6 +14,8 @@ import {
   creditRowStatus,
   ecosCollectNeeded,
   ecosRowStatus,
+  financialsCollectNeeded,
+  financialsRowStatus,
 } from "../../app/web-next/lib/wacc-collect-rows.ts";
 import type { ReferenceSuggestion } from "../../app/web-next/lib/wacc-reference-items.ts";
 
@@ -153,6 +155,19 @@ describe("panel and locale wiring (static)", () => {
     "collectStatusCreditDefault",
     "collectLastRun",
     "collectGoToArea",
+    // slice 3: synthetic status and the financial re-sync row
+    "collectStatusCreditSynthetic",
+    "collectStatusCreditCoverage",
+    "collectFinancialsName",
+    "collectFinancialsFills",
+    "collectFinancialsSource",
+    "collectFinancialsRun",
+    "collectFinancialsRerun",
+    "collectFinancialsRunning",
+    "collectFinancialsDone",
+    "collectFinancialsFailed",
+    "collectStatusFinancialsNeeded",
+    "collectStatusFinancialsOk",
   ];
   for (const l of ["en", "ko"]) {
     test(`${l}: collect block keys exist`, () => {
@@ -161,4 +176,69 @@ describe("panel and locale wiring (static)", () => {
       for (const k of keys) expect(typeof p[k]).toBe("string");
     });
   }
+});
+
+describe("slice 3: synthetic status and the financial re-sync row", () => {
+  const syn = {
+    available: true as const,
+    used: true,
+    rating: "A",
+    coverage_x: 4.5,
+    interest_source: "interest_expense" as const,
+    interest_is_proxy: false,
+    fiscal_year: 2025,
+    table_id: "t",
+    table_as_of: "2026-01-01",
+    published_label: "A2/A",
+    band_lower_x: 4.25,
+    band_upper_x: 5.5,
+    operating_income_krw_million: 450000,
+    interest_expense_krw_million: 100000,
+    loss_making: false,
+    note: "",
+  };
+  const needHint = {
+    available: false as const,
+    used: false as const,
+    reason_code: "synthetic_interest_not_collected",
+    reason: "x",
+    resync_hint: true,
+  };
+
+  test("creditRowStatus: a synthetic rating in use reports itself with coverage and year", () => {
+    expect(creditRowStatus(credit({ rating: "A", rating_source: "synthetic", synthetic: syn }))).toEqual({
+      kind: "synthetic",
+      rating: "A",
+      coverageX: 4.5,
+      fiscalYear: 2025,
+    });
+    expect(creditRowStatus(credit({ rating: "A", rating_source: "synthetic", synthetic: null }))).toMatchObject({
+      kind: "synthetic",
+      coverageX: null,
+    });
+  });
+
+  test("a disclosed rating still reports as rated, whatever the synthetic evaluation says", () => {
+    expect(creditRowStatus(credit({ rating: "A+", rating_source: "disclosed", synthetic: syn }))).toMatchObject({
+      kind: "rated",
+    });
+  });
+
+  test("financials row: needed only when the backend asks for a re-sync", () => {
+    expect(financialsCollectNeeded(credit({ rating_source: "default", synthetic: needHint }))).toBe(true);
+    expect(financialsRowStatus(credit({ synthetic: needHint }))).toEqual({ kind: "resync_needed" });
+    expect(financialsCollectNeeded(credit({ synthetic: { ...needHint, resync_hint: false } }))).toBe(false);
+    expect(financialsCollectNeeded(credit({ synthetic: syn }))).toBe(false);
+    expect(financialsCollectNeeded(credit())).toBe(false);
+    expect(financialsCollectNeeded(undefined)).toBe(false);
+    expect(financialsRowStatus(credit({ synthetic: syn }))).toEqual({ kind: "synced" });
+    expect(financialsCollectNeeded({ ...credit({ synthetic: needHint }), key: "risk_free" })).toBe(false);
+  });
+
+  test("the row key has a stable DOM id and the panel wires the financial sync endpoint", () => {
+    expect(collectRowId("financials")).toBe("wacc-collect-row-financials");
+    const panel = readFileSync("app/web-next/components/wacc/WaccPanel.tsx", "utf8");
+    expect(panel).toContain("/api/companies/${encodeURIComponent(finCompanyId)}/sync");
+    expect(panel).toContain('key: "financials"');
+  });
 });

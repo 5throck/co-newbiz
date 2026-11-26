@@ -54,6 +54,21 @@ WACC 참조값 카드는 ECOS 시계열 세 개를 수집하기 전까지 무위
 - 파서 버전(`CREDIT_RATING_PARSER_VERSION`)을 올리면 공시마다 한 번씩 다시 읽고, 이전 버전의 저장분은 조회에서 무시합니다.
 - 마이그레이션 0200을 되돌리면 저장분만 지워지며 DART에서 다시 받을 수 있습니다.
 
+## 이자보상배율 추정과 재무 다시 동기화 (ADR-0208 3단계)
+
+회사에 최신 공시 회사채 등급도, 최신 신용조사기관 등급도 없으면 `credit_spread` 참조값은 **추정** 등급(`rating_source: "synthetic"`, 칩 "이자보상배율 추정")을 씁니다. 이자보상배율 = 영업이익과 이자비용이 모두 있는 가장 최근 사업연도의 영업이익 ÷ 이자비용이고, `region-profiles/KR.yaml`(`credit_rating_references.synthetic`)의 공표 등급표로 등급을 정합니다. 신용평가사가 부여한 등급이 아닌 추정치라서 "모두 적용"에는 포함되지 않고(`credit_rating_synthetic_basis`), 행에서 개별로 적용합니다. 같은 값으로 차입비용 점검도 합니다(실효이자율 = 이자비용 ÷ 이자 붙는 차입금의 평균을 시장 Kd와 비교). 경고만 하고 숫자를 바꾸지 않습니다.
+
+입력은 수집기가 전에는 읽지 않던 DART 계정입니다. 이자비용(`dart_AdjustmentsForInterestExpenses` / `ifrs-full_InterestExpense`), 금융비용, 이자지급(두 줄), 세전이익, 차입금 항목이며 마이그레이션 `0201_md_account_interest_debt.sql`이 계정을 만듭니다. **이번 배포 전에 재무를 동기화한 회사에는 이 값이 하나도 없어** 카드가 기본 등급과 `synthetic_interest_not_collected`를 보이고, "참조 데이터 수집" 영역에 "재무 데이터" 행과 **재무 동기화 실행** 버튼이 나타납니다(기존 `POST /api/companies/<id>/sync`를 부릅니다).
+
+배포 뒤 한 번만 하는 다시 동기화:
+
+1. 마이그레이션 0201을 먼저 적용합니다(마이그레이션이 수집기 배포보다 앞, ADR-0014). 다른 마이그레이션처럼 데이터베이스를 백업하고, 되돌릴 때는 파일 안의 `ROLLBACK-SQL` 블록을 씁니다(새 계정과 그 계정의 값만 지웁니다).
+2. 마이그레이션이 `dart_corp_sync_state.financial_checked_at`을 비웁니다. 그래서 다음 **증분** 동기화(ADR-0199, S6 일괄 평가)가 동기화된 모든 회사의 최신 사업연도를 다시 받아 새 계정을 채웁니다. 증분 동기화는 이미 닫힌 이전 연도를 다시 받지 않습니다.
+3. **수동** 회사 동기화(`POST /api/companies/<id>/sync`, 회사 화면의 "DART 재무 동기화" 버튼과 WACC 패널의 새 행)는 언제나 5개 연도를 받아 모든 연도를 채웁니다. 지금 가치평가하는 회사에는 이 방법을 쓰세요. 차입비용 점검은 2개 연도의 차입금 잔액 평균이 필요합니다(한 해뿐이면 기말 잔액을 쓰고 그렇게 표시합니다).
+4. 건너뛰어도 잃는 것은 없습니다. 새 계정이 없는 회사는 기본 등급과 다시 동기화 안내를 유지하고, 법정세율 제안은 세전이익이 저장되기 전까지 영업이익을 쓰다가 저장되면 세전이익을 우선합니다.
+
+결과 읽는 법: `synthetic.reason_code`가 추정이 없는 이유를 말합니다. `synthetic_interest_not_collected`(다시 동기화), `synthetic_no_interest_expense`(최근 연도에 이자 없음), `synthetic_no_financials`, `synthetic_not_applicable_financial`(은행·보험 등, 등록부 규칙 `synthetic.financial_sector`가 회사 이름으로 판별). 이자 우선순위는 이자비용, 이자지급(영업+재무활동 합계), 금융비용(이자보다 크게 잡히는 대용치) 순입니다. 점검이 없는 이유는 `crosscheck_unavailable_*`와 `crosscheck_unreliable_non_positive_debt`. `crosscheck_implied_far_below_market` 경고는 실제 차입비용이 시장 Kd보다 크게 낮다는 뜻입니다(정책금융·저리 차입 여부 확인). 실효이자율이 무위험수익률보다 낮을 때도 같은 기준으로 경고합니다입니다.
+
 ## 지수 선택 (상장시장 기준)
 
 베타 회귀는 기본적으로 종목의 **상장시장 지수**와 짝지어 계산합니다. 코스닥 상장사(예: 로보티즈 108490, 레인보우로보틱스 277810)는 코스닥 지수, 코스피 상장사는 코스피 지수와 회귀합니다. 다른 지수도 패널의 "시장 지수" 선택 상자("수집 데이터 불러오기" 옆)나 `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`로 고를 수 있습니다.

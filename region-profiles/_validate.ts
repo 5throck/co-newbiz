@@ -461,6 +461,26 @@ function validateCreditRatingReferences(file: string, section: unknown): Issue[]
       }
       if (!isNonEmptyString(syn.default_table_id)) err("data.synthetic.default_table_id is required");
       else if (!tableIds.has(syn.default_table_id)) err(`data.synthetic.default_table_id '${syn.default_table_id}' must match exactly one table id`);
+      // financial_sector (optional): the name-based rule that skips the synthetic rung for banks, insurers and the like.
+      if (syn.financial_sector !== undefined) {
+        const fs = syn.financial_sector;
+        if (!isMap(fs)) err("data.synthetic.financial_sector must be a mapping when present");
+        else {
+          if (fs.detection !== "company_name") err("data.synthetic.financial_sector.detection must be 'company_name'");
+          for (const f of ["name_keywords", "name_suffixes"]) {
+            const v = fs[f];
+            if (v !== undefined && (!Array.isArray(v) || !v.every(isNonEmptyString))) {
+              err(`data.synthetic.financial_sector.${f} must be a list of non-empty strings`);
+            }
+          }
+          if (
+            !(Array.isArray(fs.name_keywords) && fs.name_keywords.length > 0) &&
+            !(Array.isArray(fs.name_suffixes) && fs.name_suffixes.length > 0)
+          ) {
+            err("data.synthetic.financial_sector needs at least one name_keywords or name_suffixes entry");
+          }
+        }
+      }
     }
   }
   return issues;

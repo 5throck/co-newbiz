@@ -363,7 +363,8 @@ export function recordWaccSession(
     taxAudit.set(comp, resolved);
   }
   // ADR-0208: a cited credit-rating basis is RE-DERIVED here from stored evidence (ECOS observations, the registry
-  // and, for a disclosed rating, the cached DART snapshots) at the cited month, checked BEFORE any run is created.
+  // and, for a disclosed rating, the cached DART snapshots; for a synthetic rating, the stored financial facts) at the
+  // cited month, checked BEFORE any run is created.
   // Rating, source, agency, rating date, spread basis and the edited flag come from that re-derivation, never from
   // the client. A manual wacc.debt_spread audits exactly as before.
   const creditAudit = new Map<
@@ -380,16 +381,14 @@ export function recordWaccSession(
       sourceRceptNo: string | null;
       /** Bureau basis only: the cash-flow grade of the picked row (a separate scale, never the rating). */
       cashflowGrade: string | null;
+      /** Synthetic basis only: the coverage, interest source and fiscal year the server re-derived. */
+      coverageX: number | null;
+      interestSource: string | null;
+      fiscalYear: number | null;
     }
   >();
   for (const comp of opts.components ?? []) {
     if (comp.key !== "wacc.debt_spread" || comp.creditRatingBasis == null) continue;
-    if (comp.creditRatingBasis === "synthetic") {
-      throw new WaccComponentValidationError(
-        "invalid_request",
-        "credit_rating_basis 'synthetic' cannot be resolved: no stored rating evidence is available for that basis yet.",
-      );
-    }
     // The subject company's DART code: the rating evidence is company-specific, so a cited snapshot must belong to it.
     const subjectCompanyId =
       opts.subjectCompanyId ??
@@ -432,7 +431,14 @@ export function recordWaccSession(
         `credit_rating_basis '${comp.creditRatingBasis}' requires credit_rating_snapshot_id.`,
       );
     }
-    const derived = deriveCreditSpreadAt(db, comp.referenceAsOf as string, undefined, subjectCorp, new Date(now));
+    const derived = deriveCreditSpreadAt(
+      db,
+      comp.referenceAsOf as string,
+      undefined,
+      subjectCorp,
+      new Date(now),
+      subjectCompanyId,
+    );
     if (!derived.ok) {
       throw new WaccComponentValidationError(
         "invalid_request",
@@ -460,6 +466,9 @@ export function recordWaccSession(
       ratedOn: derived.disclosed?.rated_on ?? null,
       sourceRceptNo: derived.disclosed?.source_rcept_no ?? null,
       cashflowGrade: derived.disclosed?.bureau?.cashflow_grade ?? null,
+      coverageX: derived.synthetic?.coverage_x ?? null,
+      interestSource: derived.synthetic?.interest_source ?? null,
+      fiscalYear: derived.synthetic?.fiscal_year ?? null,
     });
   }
   const asOf = opts.asOf?.trim() || now.slice(0, 10);
@@ -532,6 +541,10 @@ export function recordWaccSession(
           credit.ratedOn ? `credit_rating_rated_on=${credit.ratedOn}` : "",
           credit.source === "bureau" ? "credit_rating_confidence=lower" : "",
           credit.cashflowGrade ? `credit_rating_cashflow_grade=${credit.cashflowGrade}` : "",
+          credit.coverageX !== null ? `credit_rating_coverage_x=${credit.coverageX}` : "",
+          credit.interestSource ? `credit_rating_interest_source=${credit.interestSource}` : "",
+          credit.fiscalYear !== null ? `credit_rating_period=FY${credit.fiscalYear}` : "",
+          credit.source === "synthetic" ? "credit_rating_confidence=estimate" : "",
           `spread_basis=${credit.spreadBasis}`,
           `reference_as_of=${credit.asOf}`,
           credit.edited ? "edited_from_reference: true" : "",

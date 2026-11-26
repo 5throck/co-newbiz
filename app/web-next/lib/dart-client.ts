@@ -1,3 +1,7 @@
+// @version 1.7.0 (2026-11-26: ADR-0208 slice 3 — fetchFinancials also returns, per year, `extraItems`: id-keyed pre-tax
+// income / interest expense / finance costs / interest paid and name-pattern borrowing classes
+// (db/lib/dart-financial-accounts.ts). The original eight accounts keep their name-keyed path byte for byte; `items`,
+// `out.items` and the "found" decision are unchanged, and a year without extras carries no `extraItems` key.)
 // @version 1.6.0 (2026-11-26: ADR-0208 slice 2 — listBusinessReports (typed list.json, pblntf_detail_ty=A001) and
 // fetchDebtSecuritiesFilings (bdRs.json rating text); additive, no existing export changes.)
 // @version 1.5.0 (2026-11-16: ADR-0199 incremental collection seams — fetchFinancials gains an
@@ -45,7 +49,14 @@ export interface DartFinancials {
    *  나온 작성 기준이며 연도별 출처 표기의 정본) */
   items: Array<{ name: string; value: number; unit: string; year?: string; fsDiv?: "CFS" | "BFS" }>;
   /** 연도별 재무 요약 — 연도가 있는 조회에서 채워진다 (fsDiv는 그 연도에 채택된 기준) */
-  yearly?: Array<{ year: string; fsDiv?: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string }> }>;
+  yearly?: Array<{
+    year: string;
+    fsDiv?: "CFS" | "BFS";
+    items: Array<{ name: string; value: number; unit: string }>;
+    /** ADR-0208 slice 3: extra credit-input facts of the year (interest, pre-tax income, borrowings), keyed by ifrs_code.
+     *  Absent when the filing carried none; never part of `items` (so the deterministic analysis is unaffected). */
+    extraItems?: CreditInputItem[];
+  }>;
   reportUrl?: string;
   raw?: unknown;
   error?: string;
@@ -57,6 +68,7 @@ export interface DartFinancials {
 const BASE = "https://opendart.fss.or.kr/api";
 
 import { loadRootEnvPipelineKeys } from "./llm.ts";
+import { type CreditInputItem, extractCreditInputItems } from "../../../db/lib/dart-financial-accounts.ts";
 
 function apiKey(): string | null {
   loadRootEnvPipelineKeys();
@@ -521,7 +533,7 @@ export async function fetchFinancials(
   opts: { years?: number; /** ADR-0199: exact business years to fetch (same CFS-then-BFS rule per year); overrides `years`. */ fiscalYears?: number[] } = {},
 ): Promise<DartFinancials> {
   const key = apiKey();
-  const yearlyAgg: Array<{ year: string; fsDiv?: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string }> }> = [];
+  const yearlyAgg: NonNullable<DartFinancials["yearly"]> = [];
   const out: DartFinancials = { corpCode, found: false, items: [], yearly: yearlyAgg };
   if (!key) { out.error = "DART_API_KEY 미구성"; return out; }
   const latest = new Date().getFullYear() - 1; // latest complete business year
@@ -544,14 +556,28 @@ export async function fetchFinancials(
   const fetchBlock = async (
     year: number,
     fsDiv: "CFS" | "BFS",
-  ): Promise<{ ok: boolean; status: string; items: Array<{ name: string; value: number; unit: string; year: string }> }> => {
+  ): Promise<{
+    ok: boolean;
+    status: string;
+    items: Array<{ name: string; value: number; unit: string; year: string }>;
+    extra: CreditInputItem[];
+  }> => {
     try {
       // fnlttSinglAcntAll은 api_key를 인식하지 못한다(HTML 오류 페이지 반환) — crttc_key 필수.
-      const json = await dartJson<{ status?: string; list?: Array<{ account_nm?: string; thstrm_amount?: string; thstrm_nm?: string }> }>(
+      const json = await dartJson<{
+        status?: string;
+        list?: Array<{
+          account_nm?: string;
+          thstrm_amount?: string;
+          thstrm_nm?: string;
+          sj_div?: string;
+          account_id?: string;
+        }>;
+      }>(
         `${BASE}/fnlttSinglAcntAll.json?crtfc_key=${encodeURIComponent(key)}&corp_code=${encodeURIComponent(corpCode)}&bsns_year=${year}&reprt_code=11011&fs_div=${fsDiv}`,
       );
       if (json.status !== "000" || !Array.isArray(json.list)) {
-        return { ok: false, status: json.status ?? "ERR", items: [] };
+        return { ok: false, status: json.status ?? "ERR", items: [], extra: [] };
       }
       // All 엔드포인트는 공시 섹션마다 같은 계정명을 반복한다(값이 다를 수 있음) —
       // 첫 건(최상위 재무제표 순서)만 채택해 항목별 1개 값을 보장한다.
@@ -570,22 +596,27 @@ export async function fetchFinancials(
       // P2-5: 합산 검증
       const sum = checkSummation([...byName.entries()].map(([name, value]) => ({ name, value })));
       if (sum === false) integrityNotes.push(`${year}: 자산총계 ≠ 부채총계+자본총계 (±1% 초과) — 해당 연도 수치 신뢰도 하향`);
-      return { ok: yearlyItems.length > 0, status: json.status ?? "000", items: yearlyItems };
+      // ADR-0208 slice 3: extra credit-input facts. Computed from the same block; they never decide "ok".
+      const extra = yearlyItems.length > 0 ? extractCreditInputItems(json.list) : [];
+      return { ok: yearlyItems.length > 0, status: json.status ?? "000", items: yearlyItems, extra };
     } catch (err) {
-      return { ok: false, status: err instanceof Error ? err.message : "ERR", items: [] };
+      return { ok: false, status: err instanceof Error ? err.message : "ERR", items: [], extra: [] };
     }
   };
 
   for (const year of yearList) {
     // 연결(CFS) 우선 — 미스인 같은 연도에만 개별(BFS)로 폴백한다(연도별 단일 기준).
     const cfs = await fetchBlock(year, "CFS");
-    let chosen: { fsDiv: "CFS" | "BFS"; items: Array<{ name: string; value: number; unit: string; year: string }> } | null =
-      cfs.ok ? { fsDiv: "CFS", items: cfs.items } : null;
+    let chosen: {
+      fsDiv: "CFS" | "BFS";
+      items: Array<{ name: string; value: number; unit: string; year: string }>;
+      extra: CreditInputItem[];
+    } | null = cfs.ok ? { fsDiv: "CFS", items: cfs.items, extra: cfs.extra } : null;
     let bfsStatus: string | null = null;
     if (!chosen) {
       const bfs = await fetchBlock(year, "BFS");
       bfsStatus = bfs.status;
-      chosen = bfs.ok ? { fsDiv: "BFS", items: bfs.items } : null;
+      chosen = bfs.ok ? { fsDiv: "BFS", items: bfs.items, extra: bfs.extra } : null;
     }
     if (!chosen) {
       // lastError 규율(v1.3.0): 두 기준 모두 무실과인 연도에서만 기록 — 부분 성공
@@ -603,7 +634,12 @@ export async function fetchFinancials(
     const stamped = chosen.items.map((i) => ({ ...i, fsDiv: basis }));
     anyFound = true;
     perYearBases.push(basis);
-    yearlyAgg.push({ year: String(year), fsDiv: basis, items: stamped });
+    yearlyAgg.push({
+      year: String(year),
+      fsDiv: basis,
+      items: stamped,
+      ...(chosen.extra.length > 0 ? { extraItems: chosen.extra } : {}),
+    });
     out.items.push(...stamped);
     if (!out.year) out.year = String(year);
     out.reportUrl = `https://dart.fss.or.kr/dsab007/main.do?option=corp&corp_code=${corpCode}`;

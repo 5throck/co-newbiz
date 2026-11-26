@@ -82,7 +82,7 @@ export interface WaccComponentInput {
   taxReferenceBracketId?: string | null;
   /**
    * ADR-0208, `wacc.debt_spread` only: the rating basis the human applied (`default`, `disclosed` or `bureau` (a credit-bureau
-   * issuer rating, lower confidence); `synthetic` resolves from slice 3). Type-validated here; the server RE-DERIVES the rating, source, agencies, rating date,
+   * issuer rating, lower confidence) or `synthetic` (interest-coverage estimate, slice 3)). Type-validated here; the server RE-DERIVES the rating, source, agencies, rating date,
    * spread basis and the edited flag from stored evidence at `referenceAsOf` and records those - a client-sent
    * `editedFromReference` is ignored for this key.
    */
