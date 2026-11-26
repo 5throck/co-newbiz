@@ -899,7 +899,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                 {sugg.suggestions
                   .filter((x): x is Sugg & { value: number } => x.value !== null)
                   .map((x) => (
-                    <div key={x.key}>
+                    <div key={x.key} className="min-w-0 max-w-full [overflow-wrap:anywhere]">
                       <div className="font-bold tabular-nums text-[1.05rem]">
                         {x.key === "observed_de" ? x.value.toFixed(2) : `${x.value.toFixed(2)}%`}
                       </div>
