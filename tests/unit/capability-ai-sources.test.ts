@@ -266,12 +266,21 @@ describe("B1. web-research chain: Playwright last, opt-in, diagnosed, breaker-aw
     savedSearchEnv = SEARCH_ENV_KEYS.map((k) => [k, process.env[k]]);
     if (!process.env.TAVILY_API_KEY?.trim()) process.env.TAVILY_API_KEY = "test";
     delete process.env.WEB_SEARCH_DDG_ENABLED;
+    // The B1 tests drive the real provider chain. A sibling file's leftover
+    // setWebResearchOverrideForTests() short-circuits researchSourcesDetailed
+    // before any provider runs, so clear every module-level seam up front.
+    wr.setWebResearchOverrideForTests(null);
+    wr.setWebProvidersForTests(null);
+    wr.resetWebResearchStateForTests();
+    ps.setPlaywrightSearchOverrideForTests(null);
+    delete process.env.WEB_SEARCH_PLAYWRIGHT_ENABLED;
   });
   afterEach(() => {
     for (const [k, v] of savedSearchEnv) {
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }
+    wr.setWebResearchOverrideForTests(null);
     wr.setWebProvidersForTests(null);
     wr.resetWebResearchStateForTests();
     ps.setPlaywrightSearchOverrideForTests(null);

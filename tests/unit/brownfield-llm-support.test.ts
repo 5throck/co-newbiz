@@ -4,7 +4,7 @@
  * 폴백)를 검증한다. ADR-0118 §5가 미뤄뒀던 S6 웹검색 제안이 "근거 없는 이름을
  * 절대 반환하지 않는다"는 것을 회귀로 잠근다.
  */
-import { test, expect, beforeAll, describe } from "bun:test";
+import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { existsSync, rmSync } from "node:fs";
 import { resetDb, getDb, type getDb as GetDb } from "../../db/client.ts";
 import { runMigrations } from "../../db/migrate.ts";
@@ -47,6 +47,12 @@ process.env.CO_NEWBIZ_LLM_BASE_URL = "";
 process.env.CO_NEWBIZ_LLM_MODEL = "";
 setWebResearchOverrideForTests({ configured: false, sources: [] });
 setPlaywrightSearchOverrideForTests([]);
+// bun runs every unit file in one process; these module-level overrides would otherwise leak
+// into whichever file runs next (e.g. capability-ai-sources B1 sees an unconfigured search).
+afterAll(() => {
+  setWebResearchOverrideForTests(null);
+  setPlaywrightSearchOverrideForTests(null);
+});
 
 function req(path: string, init?: RequestInit) {
   return nextRequest(path, init);
