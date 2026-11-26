@@ -9,7 +9,7 @@
 // 않는다. 화면 구성은 승인된 목업
 // docs/designs/mockups/2026-09-10-wacc-capm-ui-mockup_ko.html 기준.
 
-import { TranslatorFn, resolveLabels } from "../../i18n/config.ts";
+import { type TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { suggestionToInputValue } from "../../lib/wacc-suggestion-convert.ts";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -24,6 +24,7 @@ import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 import { resolveTargetScope } from "../../lib/target-default.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
+import { useCollectRun } from "../../lib/use-collect-run.ts";
 import {
   assembleDerivation,
   capmComponentGaps,
@@ -266,6 +267,19 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   useEffect(() => {
     loadSugg();
   }, [loadSugg]);
+  // ECOS 수집 실행 — 위험무풍수익률·신용스프레드 참조값이 비어 있을 때(ECOS 시계열 미수집). 202 + 폴링은
+  // useCollectRun 이 맡고, 실행이 끝나면(성공·실패 모두) 참조값을 다시 불러온다.
+  const ecos = useCollectRun(`/api/projects/${encodeURIComponent(projectId)}/wacc/ecos/collect`, () => {
+    loadSugg();
+  });
+  const ecosMessage =
+    ecos.phase === "done"
+      ? t("collectEcosDone")
+      : ecos.phase === "failed"
+        ? t("collectEcosFailed", { p1: ecos.run?.error ?? "" })
+        : ecos.startError !== null
+          ? ecos.startError || t("collectEcosStartFailed")
+          : null;
   useEffect(() => {
     api
       .get<{ targets: AnalysisTarget[] }>(`/api/projects/${encodeURIComponent(projectId)}/targets`)
@@ -285,6 +299,14 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     if (key === "credit_spread") setKdSpread(cited);
     if (key === "observed_de") setObsDe({ value: cited.value, source: cited.source, asOf: cited.asOf });
   }, []);
+  const REF_LABEL: Record<string, string> = {
+    risk_free: t("rfGovernmentBond"),
+    credit_spread: t("creditSpreadMinusGovernmentBond"),
+    observed_de: tc("observedDE"),
+  };
+  const missingSuggestions = (sugg?.suggestions ?? []).filter((x) => x.value === null);
+  const applicableCount = (sugg?.suggestions ?? []).length - missingSuggestions.length;
+  const missingEcos = missingSuggestions.some((x) => x.key === "risk_free" || x.key === "credit_spread");
   const APPLY_LABEL: Record<string, string> = {
     risk_free: t("applyRf"),
     credit_spread: t("applyCreditSpread"),
@@ -740,10 +762,50 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                     </div>
                   ))}
               </div>
+              {missingSuggestions.length > 0 && (
+                <div className="mt-3" data-testid="wacc-reference-missing">
+                  <h4 className="font-semibold text-[length:var(--fs-caption)]">{t("referenceMissingTitle")}</h4>
+                  <ul className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] list-disc pl-5">
+                    {missingSuggestions.map((x) => (
+                      <li key={x.key}>
+                        <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
+                        {x.reason ? ` — ${x.reason}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                  {missingEcos && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2" aria-live="polite">
+                      <button
+                        type="button"
+                        className="btn-primary btn-sm"
+                        disabled={ecos.busy}
+                        aria-busy={ecos.busy}
+                        onClick={() => void ecos.start()}
+                      >
+                        {ecos.busy ? tc("loadingEllipsis") : t("collectEcosRun")}
+                      </button>
+                      {ecos.phase === "running" && (
+                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                          {t("collectEcosRunning")}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {ecosMessage && (
+                <p
+                  role={ecos.phase === "done" ? undefined : "alert"}
+                  className={`mt-2 text-[length:var(--fs-caption)] font-semibold ${ecos.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+                >
+                  {ecos.phase === "done" ? "✓" : "✕"} {ecosMessage}
+                </p>
+              )}
               <div className="flex gap-2 mt-2">
                 <button
                   type="button"
                   className="btn-ghost btn-sm"
+                  disabled={applicableCount === 0}
                   onClick={() => {
                     setMode("capm");
                     for (const x of sugg.suggestions) {
@@ -751,7 +813,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                     }
                   }}
                 >
-                  {t("applyToTheWholeCapm")}
+                  {t("applyApplicableCount", { n: applicableCount, total: sugg.suggestions.length })}
                 </button>
                 <button type="button" className="btn-ghost btn-sm" onClick={() => void loadSugg()}>
                   {t("refresh")}
@@ -760,7 +822,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
               <p className="note-line">{t("referenceValuesAreProposalsAfter")}</p>
             </section>
           )}
-          {sugg && sugg.suggestions.every((x) => x.value === null) && (
+          {sugg && sugg.suggestions.length === 0 && (
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-3">
               {t("noDataToFetchReference")} {(sugg.missing ?? []).join(" · ")}
             </p>

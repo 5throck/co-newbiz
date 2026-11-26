@@ -24,6 +24,27 @@ bun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10
 bun scripts/co-newbiz/beta-series.ts --project <id> --ticker 회사명=058050   # pin an unresolved short code
 ```
 
+## In-app collection ("`수집 실행`")
+
+Analysts can start the same collection from the WACC beta panel: step 1 ->
+collected source -> "`수집 실행`" (shown while nothing usable is collected;
+the copyable command stays as the fallback). The button calls
+`POST /api/projects/<id>/wacc/beta-series/collect`, which answers `202` at once
+and runs `runBetaCollection` (`scripts/co-newbiz/beta-series-core.ts`, the CLI's
+own core) inside the web server; the panel polls `GET` on the same path and
+refills the status/data when the run finishes. A cold run takes minutes (one
+paced KRX call per service per weekday, default last 13 months).
+
+- Needs `KRX_API_KEY` on the server (else `503 krx_api_key_missing`) and an
+  analyst account that is a project member (viewer 403, non-member/admin 404).
+- One run per project (`409 already_running`) and one at a time per server
+  (`409 collection_busy`) — the KRX adapter's run state is process-wide.
+- Each run is a `job_run` row (`job_key = beta-series.collect`, trigger
+  `manual`, actor = the calling user) plus an `audit_log` entry
+  `beta_series.collect_requested`. A run whose server died stays `running`
+  until the 60-minute stale sweep fails it; then retry (reruns are cache hits).
+- Failures show on the run (status `failed` + reason), not as an HTTP error.
+
 ## Index choice (listing market)
 
 The beta regression pairs the stock with the index of its **listing market**

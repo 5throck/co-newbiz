@@ -10979,6 +10979,96 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{id}/wacc/beta-series/collect:
+    get:
+      operationId: getProjectWaccBetaSeriesCollectStatus
+      summary: "Latest in-app KRX beta-series collection run for the project (status poll for the run-collection button). data = {project_id, run: null | {run_id, status: running|success|failed, started_at, finished_at, error, result}}; result (success only) = {collected, krx_calls, cache_hits, empty_days, series[], warnings[]}. Project visibility only."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: startProjectWaccBetaSeriesCollect
+      summary: "Start the KRX beta-series collection for the project (the same flow as `bun scripts/co-newbiz/beta-series.ts --project <id>`, run in-process, default range = last 13 months). Asynchronous: answers 202 {project_id, run_id, status: running, started_at} immediately; poll the GET for completion. Analyst role with project visibility (viewer 403 role_required; admin/non-member/closed project 404). One run per project (409 already_running) and one at a time per server process (409 collection_busy). Audited (beta_series.collect_requested, actor = calling user); the run is recorded in job_run (job_key beta-series.collect, trigger manual)."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: KRX_API_KEY is not configured on the server (error code krx_api_key_missing).
+
+  /api/projects/{id}/wacc/ecos/collect:
+    get:
+      operationId: getProjectWaccEcosCollectStatus
+      summary: "Latest in-app ECOS collection run (status poll). ECOS series are market-common, so the run is global, not per project. data = {project_id, run: null | {run_id, status: running|success|failed, started_at, finished_at, error, result}}; result (success only) = {rows_upserted, rows_changed, series[], warnings[]}. Project visibility only."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: startProjectWaccEcosCollect
+      summary: "Start the ECOS collection the WACC reference needs (risk-free rate ecos:721Y001:5020000 and corporate-bond rate ecos:721Y001:7020000, last 12 months, through fetchSource — the library behind `fetch --source ecos`). Asynchronous: answers 202 {project_id, run_id, status: running, started_at}; poll the GET, then reload GET .../wacc/suggestions. Analyst role with project visibility (viewer 403 role_required; admin/non-member/closed project 404). One run at a time (409 already_running). Audited (wacc_ecos.collect_requested, actor = calling user); recorded in job_run (job_key wacc-ecos.collect, trigger manual)."
+      tags:
+        - Analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          description: ECOS_API_KEY is not configured on the server (error code ecos_api_key_missing).
+
   /api/projects/{id}/targets:
     get:
       operationId: listProjectAnalysisTargets

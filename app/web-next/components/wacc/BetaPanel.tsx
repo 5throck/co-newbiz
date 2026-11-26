@@ -11,6 +11,9 @@ import { EChart } from "../EChart.tsx";
 import { ColGroup } from "../ui.tsx";
 import { TabNav } from "../TabNav.tsx";
 import { useTranslations } from "next-intl";
+import { useAuth } from "../../lib/auth-client.tsx";
+import { useCollectRun } from "../../lib/use-collect-run.ts";
+import { canWriteProject } from "../../lib/project-write-access.ts";
 import {
   medianBetaUnlevered,
   parseSeriesInput,
@@ -18,6 +21,7 @@ import {
   type BetaRegressionResult,
 } from "../../../../db/lib/beta-regression.ts";
 import {
+  betaCollectUrl,
   betaSeriesUrl,
   defaultSourceMode,
   runDisabledReason,
@@ -222,6 +226,30 @@ export function BetaPanel({
     void fetchCollected(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  // 수집 실행 — POST .../beta-series/collect 가 202로 즉시 돌려주면 GET 으로 완료까지 폴링한다
+  // (콜드 수집은 수 분). 화면을 떠났다 돌아와도 mount 시 진행 중 실행을 이어받는다 (useCollectRun).
+  const { me } = useAuth();
+  const canCollect = canWriteProject(me?.role);
+  const {
+    phase: collectPhase,
+    run: collectRun,
+    startError: collectStartError,
+    start: startCollect,
+    busy: collectBusy,
+  } = useCollectRun(betaCollectUrl(projectId), async (run) => {
+    // success: refill the status + textarea from the new data; failure: just refresh the status block
+    await fetchCollected(run.status === "success");
+  });
+  const collectMessage =
+    collectPhase === "done"
+      ? t("collectDone", { p1: Number(collectRun?.result?.collected ?? 0) })
+      : collectPhase === "failed"
+        ? t("collectFailed", { p1: collectRun?.error ?? "" })
+        : collectStartError !== null
+          ? collectStartError || t("collectStartFailed")
+          : null;
+  const collectFailedShown = collectPhase === "failed" || collectStartError !== null;
   const copyRunbook = async (cmd: string) => {
     try {
       await navigator.clipboard.writeText(cmd);
@@ -437,20 +465,54 @@ export function BetaPanel({
                         </dd>
                       </dl>
                       {showsRunbook(collection.status) && (
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">
-                            {collection.runbook_command}
-                          </code>
-                          <button
-                            type="button"
-                            className="btn-ghost btn-sm"
-                            onClick={() => void copyRunbook(collection.runbook_command)}
-                          >
-                            {copied ? t("copied") : t("copyCommand")}
-                          </button>
+                        <div className="mt-2">
+                          {canCollect && (
+                            <button
+                              type="button"
+                              className="btn-primary btn-sm"
+                              disabled={collectBusy}
+                              aria-busy={collectBusy}
+                              onClick={() => void startCollect()}
+                            >
+                              {collectBusy ? tc("loadingEllipsis") : t("collectRun")}
+                            </button>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {canCollect && (
+                              <span className="text-[color:var(--muted-fg)]">{t("collectOrTerminal")}</span>
+                            )}
+                            <code className="font-mono select-all rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5">
+                              {collection.runbook_command}
+                            </code>
+                            <button
+                              type="button"
+                              className="btn-ghost btn-sm"
+                              onClick={() => void copyRunbook(collection.runbook_command)}
+                            >
+                              {copied ? t("copied") : t("copyCommand")}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
+                  )}
+                  {collectPhase === "running" && (
+                    <p className="mt-2 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {t("collectRunning")}
+                    </p>
+                  )}
+                  {collectPhase === "done" && collectMessage && (
+                    <p className="mt-2 text-[length:var(--fs-caption)] font-semibold text-[color:var(--accent)]">
+                      ✓ {collectMessage}
+                    </p>
+                  )}
+                  {collectFailedShown && collectMessage && (
+                    <p
+                      role="alert"
+                      className="mt-2 text-[length:var(--fs-caption)] font-semibold text-[color:var(--red-fg)]"
+                    >
+                      ✕ {collectMessage}
+                    </p>
                   )}
                 </div>
                 {collectedRowCount > 0 && (

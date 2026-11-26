@@ -23,6 +23,15 @@ bun scripts/co-newbiz/beta-series.ts --project <id> --from 2025-10 --to 2026-10
 
 단축코드가 자동 해석되지 않으면 `--ticker 회사명=058050`으로 지정할 수 있습니다. 해석된 단축코드는 `db/data/krx-stock-code-cache.json`에 캐시됩니다.
 
+## 앱에서 수집 ("수집 실행")
+
+분석가는 WACC 베타 패널에서 같은 수집을 시작할 수 있습니다. 1단계 → 수집 데이터 → "수집 실행" 버튼(쓸 만한 수집 데이터가 없을 때 표시, 복사용 명령은 대체 수단으로 그대로 둠). 버튼은 `POST /api/projects/<id>/wacc/beta-series/collect`를 호출하고, 이 경로는 곧바로 `202`를 돌려준 뒤 웹 서버 안에서 `runBetaCollection`(`scripts/co-newbiz/beta-series-core.ts`, CLI와 같은 핵심 코드)을 실행합니다. 패널은 같은 경로를 `GET`으로 확인하다가 끝나면 상태와 데이터를 다시 불러옵니다. 처음 수집은 몇 분 걸립니다(서비스별·평일별 KRX 호출 1건씩, 기본 최근 13개월).
+
+- 서버에 `KRX_API_KEY`가 있어야 하며(없으면 `503 krx_api_key_missing`), 프로젝트 구성원인 분석가 계정이어야 합니다(조회자 403, 비구성원·관리자 404).
+- 프로젝트당 한 번에 하나(`409 already_running`), 서버 전체로도 한 번에 하나(`409 collection_busy`)만 실행됩니다. KRX 어댑터의 실행 상태가 프로세스 전체에서 공유되기 때문입니다.
+- 실행마다 `job_run` 행(`job_key = beta-series.collect`, trigger `manual`, actor = 호출한 사용자)과 `audit_log` 항목 `beta_series.collect_requested`가 남습니다. 서버가 중간에 죽은 실행은 60분 뒤 정리 작업이 실패로 바꾸기 전까지 `running`으로 남으니, 그 뒤 다시 실행하세요(재실행은 캐시 히트).
+- 수집 중 실패는 HTTP 오류가 아니라 실행 상태(`failed` + 사유)로 보입니다.
+
 ## 지수 선택 (상장시장 기준)
 
 베타 회귀는 기본적으로 종목의 **상장시장 지수**와 짝지어 계산합니다. 코스닥 상장사(예: 로보티즈 108490, 레인보우로보틱스 277810)는 코스닥 지수, 코스피 상장사는 코스피 지수와 회귀합니다. 다른 지수도 패널의 "시장 지수" 선택 상자("수집 데이터 불러오기" 옆)나 `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`로 고를 수 있습니다.
