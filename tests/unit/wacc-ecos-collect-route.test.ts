@@ -17,6 +17,12 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const TEST_DB_PATH = "db/data/test-wacc-ecos-collect-route.sqlite";
+// Module-level env/mocks are process-wide (coverage runs every tests/unit file in ONE process): remember the
+// originals and restore them in afterAll so later files never see this file's DB path or ssrf mock.
+const ENV_ORIGINALS: Record<string, string | undefined> = {
+  CO_NEWBIZ_DB_PATH: process.env.CO_NEWBIZ_DB_PATH,
+  ECOS_API_KEY: process.env.ECOS_API_KEY,
+};
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
@@ -162,6 +168,11 @@ afterEach(() => {
 afterAll(() => {
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
+  mock.module("../../scripts/lib/ssrf.ts", () => actualSsrf); // drop the safeFetch stub
+  for (const [key, value] of Object.entries(ENV_ORIGINALS)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 describe("authorization and preflight", () => {

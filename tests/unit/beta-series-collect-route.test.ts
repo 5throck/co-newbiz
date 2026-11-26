@@ -18,6 +18,12 @@ import { join } from "node:path";
 
 const TEST_DB_PATH = "db/data/test-beta-series-collect-route.sqlite";
 const TMP = mkdtempSync(join(tmpdir(), "beta-collect-"));
+// Module-level env is process-wide (coverage runs every tests/unit file in ONE process): remember the
+// originals and put them back in afterAll so later files never see this file's temp paths.
+const ENV_ORIGINALS: Record<string, string | undefined> = {
+  CO_NEWBIZ_DB_PATH: process.env.CO_NEWBIZ_DB_PATH,
+  CO_NEWBIZ_KRX_CODE_CACHE: process.env.CO_NEWBIZ_KRX_CODE_CACHE,
+};
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 // Keep the tracked db/data/krx-stock-code-cache.json untouched: the flow resolves codes through the mocked master.
 process.env.CO_NEWBIZ_KRX_CODE_CACHE = join(TMP, "krx-stock-code-cache.json");
@@ -176,6 +182,10 @@ afterAll(() => {
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
   rmSync(TMP, { recursive: true, force: true });
+  for (const [key, value] of Object.entries(ENV_ORIGINALS)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 describe("authorization and preflight", () => {
