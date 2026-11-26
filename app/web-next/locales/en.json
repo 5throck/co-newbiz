@@ -8079,7 +8079,7 @@
           "collectStatusCreditBureau": "Using credit-bureau rating {rating}",
           "collectStatusCreditBureauNoBond": "No corporate-bond rating · using credit-bureau rating {rating}",
           "collectStatusRatedOn": "rated on {ratedOn}",
-          "collectStatusStale": "out of date",
+          "collectStatusStale": "out of date — this is the latest filing's rating; collect again once a new business report is filed",
           "collectStatusCreditDefault": "No disclosed or credit-bureau rating, so the default rating is used.",
           "collectLastRun": "Last run {when}",
           "collectGoToArea": "Go to collection area",

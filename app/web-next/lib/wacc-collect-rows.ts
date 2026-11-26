@@ -30,8 +30,10 @@ export function ecosCollectNeeded(suggestions: readonly ReferenceSuggestion[]): 
 }
 
 /** Credit-rating collection is required when the backend hints it or the rating in use is out of date. */
+/** Primary emphasis only when the rating has not been collected (or must be re-read). A stale rating from an
+ *  already-read filing gets the secondary "re-collect" button: re-reading the same filing cannot freshen it. */
 export function creditCollectNeeded(credit: ReferenceSuggestion | undefined): boolean {
-  return creditCollectVisible(credit);
+  return credit?.key === "credit_spread" && credit.collect_hint === true;
 }
 
 /** The credit row has no usable action when the company has no DART code (the collection would answer 400). */

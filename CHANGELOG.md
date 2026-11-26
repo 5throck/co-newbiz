@@ -6,6 +6,8 @@ lang_reason: source-material
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+- **[2026-11-26]**: fix(s8): **the credit-rating collection button is no longer emphasised for a stale rating from an already-read filing** — in the WACC "Reference data collection" block the credit-rating action is the primary button only when the rating has not been collected yet (`collect_hint`). A stale rating that comes from a filing that was already read now gets the secondary "collect again" button, and its stale status text tells the user to collect again once a new business report is filed. Changes in `wacc-collect-rows.ts`, the ko/en locale strings and the `wacc-collect-rows` test.
+
 - **[2026-11-26]**: style(s8): **the WACC reference collection sources are shown side by side** — the ECOS rate and DART credit-rating rows in the "Reference data collection" block are now bordered cards laid out in a two-column grid on medium and wider screens and stacked on narrow ones. Layout change in `WaccPanel` only; no behaviour, locale or API change.
 
 - **[2026-11-26]**: feat(s8): **the WACC page groups reference collection into one described block with a row per source** — the ECOS rate collection and the DART credit-rating collection actions, previously separate buttons, now sit in a single "reference collection" block (`lib/wacc-collect-rows.ts`). Each row shows its purpose, its source and its current status; the action that still has work to do is the primary button and an already collected source offers a secondary re-collect action. Locale strings (ko/en) updated; tests `wacc-collect-rows`, `wacc-credit-panel-items` and `wacc-ecos-collect-route` updated.

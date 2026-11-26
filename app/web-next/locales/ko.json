@@ -8079,7 +8079,7 @@
           "collectStatusCreditBureau": "신용조사기관 등급 {rating} 사용",
           "collectStatusCreditBureauNoBond": "회사채 등급 없음 · 신용조사기관 등급 {rating} 사용",
           "collectStatusRatedOn": "평가일 {ratedOn}",
-          "collectStatusStale": "오래됨",
+          "collectStatusStale": "오래됨 — 최신 공시의 등급입니다. 새 사업보고서가 나오면 다시 수집하세요",
           "collectStatusCreditDefault": "공시·신용조사기관 등급이 없어 기본 등급을 씁니다.",
           "collectLastRun": "마지막 실행 {when}",
           "collectGoToArea": "수집 영역으로",

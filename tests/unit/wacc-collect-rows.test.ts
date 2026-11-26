@@ -86,9 +86,10 @@ describe("creditRowStatus", () => {
 });
 
 describe("credit collect emphasis, availability and reason link", () => {
-  test("primary when collect_hint or a stale rating; secondary when the rating is current", () => {
+  test("primary only when collect_hint; a stale rating from an already-read filing stays secondary", () => {
     expect(creditCollectNeeded(credit({ collect_hint: true }))).toBe(true);
-    expect(creditCollectNeeded(credit({ rating_source: "disclosed", rating_stale: true }))).toBe(true);
+    expect(creditCollectNeeded(credit({ rating_source: "disclosed", rating_stale: true }))).toBe(false);
+    expect(creditCollectNeeded(credit({ rating_source: "bureau", rating_stale: true }))).toBe(false);
     expect(creditCollectNeeded(credit({ rating_source: "disclosed", rating_stale: false }))).toBe(false);
     expect(collectEmphasis(creditCollectNeeded(credit()))).toBe("secondary");
   });
