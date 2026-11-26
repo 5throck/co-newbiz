@@ -53,6 +53,19 @@ describe("credit_rating_references validator", () => {
     expect(d.kd_crosscheck.warn_gap_pp).toBe(2);
   });
 
+  test("the shipped synthetic table is the transcribed published table with provenance (slice 3)", () => {
+    const syn = kr().credit_rating_references.data.synthetic;
+    expect(syn.default_table_id).toBe("damodaran-large-non-financial-2026-01");
+    const t = syn.tables[0];
+    expect(t.url).toBe("https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html");
+    expect(t.verified_on).toBe("2026-11-26");
+    expect(t.maintainer).toBe("quant-methodologist");
+    expect(t.note).toContain("never used");
+    expect(t.rows).toHaveLength(15);
+    expect(t.rows.at(-1)).toMatchObject({ upper_x: null, rating: "AAA" });
+    expect(syn.financial_sector.detection).toBe("company_name");
+  });
+
   test("schema file is version 1.4 and lists the section as optional", () => {
     const schema = readFileSync(join(DIR, "_schema.yaml"), "utf-8");
     expect(schema).toContain('schema_version: "1.4"');
@@ -258,6 +271,36 @@ describe("credit_rating_references validator", () => {
           { lower_x: 2, upper_x: null, rating: "BBB" },
         ]),
       ).toContain("ratings must not worsen as coverage rises");
+    });
+  });
+
+  describe("synthetic.financial_sector (slice 3)", () => {
+    const withRule = (rule: unknown) => {
+      const doc = kr();
+      doc.credit_rating_references.data.synthetic.financial_sector = rule;
+      return doc;
+    };
+    test("absent rule is valid; a well-formed rule is valid", () => {
+      const doc = kr();
+      delete doc.credit_rating_references.data.synthetic.financial_sector;
+      expect(errors(doc)).toEqual([]);
+      expect(errors(withRule({ detection: "company_name", name_keywords: ["은행"] }))).toEqual([]);
+      expect(errors(withRule({ detection: "company_name", name_suffixes: ["생명"] }))).toEqual([]);
+    });
+    test("detection must be company_name; lists hold non-empty strings; at least one entry", () => {
+      expect(joined(withRule({ detection: "ksic", name_keywords: ["은행"] }))).toContain(
+        "detection must be 'company_name'",
+      );
+      expect(joined(withRule({ detection: "company_name", name_keywords: [""] }))).toContain(
+        "name_keywords must be a list of non-empty strings",
+      );
+      expect(joined(withRule({ detection: "company_name", name_suffixes: "생명" }))).toContain(
+        "name_suffixes must be a list of non-empty strings",
+      );
+      expect(joined(withRule({ detection: "company_name" }))).toContain(
+        "needs at least one name_keywords or name_suffixes entry",
+      );
+      expect(joined(withRule("은행"))).toContain("financial_sector must be a mapping");
     });
   });
 });

@@ -51,8 +51,40 @@ export interface CreditRatingRegistry {
   defaultReason: string;
   disclosed: { instrument: string; staleMonths: number; aggregate: "lowest" };
   spreadMap: { upperAnchor: string; lowerAnchor: string };
-  /** Cross-check warning threshold, percentage points (used by a later slice; carried here as registry data). */
+  /** Cross-check warning threshold, percentage points (registry data, ADR-0208 D6). */
   warnGapPp: number;
+  /** Published coverage-to-rating table and the financial-sector rule (slice 3); null when the registry carries none. */
+  synthetic: SyntheticRegistry | null;
+}
+
+/** One coverage band of a published coverage-to-rating table: lower-inclusive, upper-exclusive (null = open top). */
+export interface CoverageBand {
+  lowerX: number;
+  upperX: number | null;
+  rating: string;
+  /** Label as the publisher prints it (kept for the human; never parsed). */
+  publishedLabel: string | null;
+}
+
+export interface CoverageTable {
+  id: string;
+  source: string;
+  url: string;
+  basis: string;
+  asOf: string;
+  verifiedOn: string;
+  maintainer: string;
+  note: string | null;
+  rows: CoverageBand[];
+}
+
+export interface SyntheticRegistry {
+  defaultTableId: string;
+  /** The table used (the default one). */
+  table: CoverageTable;
+  /** Financial-sector detection from the company name (md_company carries no industry code). */
+  financialNameKeywords: string[];
+  financialNameSuffixes: string[];
 }
 
 export type CreditRatingRegistryResult =
@@ -141,6 +173,8 @@ export function parseCreditRatingRegistry(doc: unknown): CreditRatingRegistryRes
   if (typeof warnGap !== "number" || !Number.isFinite(warnGap) || warnGap <= 0) {
     return bad("credit_rating_references.data.kd_crosscheck.warn_gap_pp is missing or not positive.");
   }
+  const synthetic = parseSynthetic(data.synthetic, scale);
+  if (synthetic === "malformed") return bad("credit_rating_references.data.synthetic is malformed.");
   return {
     ok: true,
     registry: {
@@ -151,7 +185,49 @@ export function parseCreditRatingRegistry(doc: unknown): CreditRatingRegistryRes
       disclosed: { instrument, staleMonths, aggregate: "lowest" },
       spreadMap: { upperAnchor: upper, lowerAnchor: lower },
       warnGapPp: warnGap,
+      synthetic,
     },
+  };
+}
+
+function strList(v: unknown): string[] | null {
+  return Array.isArray(v) && v.every((x) => str(x) !== null) ? (v as string[]) : null;
+}
+
+/** The optional `synthetic` block: absent -> null (the rung is unavailable); present but unusable -> "malformed". */
+function parseSynthetic(raw: unknown, scale: string[]): SyntheticRegistry | null | "malformed" {
+  if (raw === undefined) return null;
+  if (!isMap(raw)) return "malformed";
+  const tables = Array.isArray(raw.tables) ? raw.tables : [];
+  const wanted = str(raw.default_table_id);
+  const t = tables.find((x) => isMap(x) && x.id === wanted);
+  if (!wanted || !isMap(t) || !Array.isArray(t.rows) || t.rows.length === 0) return "malformed";
+  const rows: CoverageBand[] = [];
+  for (const r of t.rows) {
+    if (!isMap(r)) return "malformed";
+    const lower = r.lower_x;
+    const upper = r.upper_x;
+    const rating = str(r.rating);
+    if (typeof lower !== "number" || !Number.isFinite(lower) || !rating || !scale.includes(rating)) return "malformed";
+    if (upper !== null && (typeof upper !== "number" || !Number.isFinite(upper) || upper <= lower)) return "malformed";
+    rows.push({ lowerX: lower, upperX: upper, rating, publishedLabel: str(r.published_label) });
+  }
+  const fin = isMap(raw.financial_sector) ? raw.financial_sector : {};
+  return {
+    defaultTableId: wanted,
+    table: {
+      id: wanted,
+      source: str(t.source) ?? "",
+      url: str(t.url) ?? "",
+      basis: str(t.basis) ?? "",
+      asOf: str(t.as_of) ?? "",
+      verifiedOn: str(t.verified_on) ?? "",
+      maintainer: str(t.maintainer) ?? "",
+      note: str(t.note),
+      rows,
+    },
+    financialNameKeywords: strList(fin.name_keywords) ?? [],
+    financialNameSuffixes: strList(fin.name_suffixes) ?? [],
   };
 }
 

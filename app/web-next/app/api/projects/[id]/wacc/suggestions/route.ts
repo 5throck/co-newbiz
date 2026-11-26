@@ -17,7 +17,14 @@
 // reason (`rating_not_collected` + `collect_hint` when nothing is cached). Without a corporate-bond rating the latest
 // credit-bureau ISSUER rating is the lower-confidence rung (`rating_source: "bureau"`, `rating_bureau` carries the
 // bureau, the cash-flow grade and the rows of the rating date; amendment 2026-11-26). A default, bureau, stale-disclosed
-// or legacy-spread rating is listed in apply_all_excluded so one click never carries an unevidenced placeholder. Kd >= Ke needs the form's beta, so only the indicative Kd is
+// or legacy-spread rating is listed in apply_all_excluded so one click never carries an unevidenced placeholder.
+// Slice 3: between the bureau rung and the default sits the SYNTHETIC rung (`rating_source: "synthetic"`, interest coverage
+// = operating income / interest expense mapped through the registry's published table; `synthetic` carries coverage,
+// interest source, fiscal year and band, or why it is unavailable with `resync_hint`). A synthetic rating is NOT part of
+// apply-all (user decision 2026-11-26, amending ADR-0208 decision 9): it is listed in apply_all_excluded with
+// `credit_rating_synthetic_basis` and stays individually applicable. The entry also carries `crosscheck`
+// (implied cost of debt vs the market Kd; warns, never changes the number) and `issuance_evidence` (recent bond coupons).
+// Kd >= Ke needs the form's beta, so only the indicative Kd is
 // returned here (credit_spread.kd_indicative_pct); the confirmation POST reports the kd_ge_ke warning.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
@@ -48,6 +55,15 @@ function creditApplyAllExcluded(
         key: "credit_spread",
         reason_code: "credit_rating_bureau_basis",
         reason: `The rating (${e.credit.rating}) is a credit-bureau issuer rating (lower confidence than a corporate-bond rating) - confirm it individually before applying.`,
+      },
+    ];
+  }
+  if (e.credit.rating_source === "synthetic") {
+    return [
+      {
+        key: "credit_spread",
+        reason_code: "credit_rating_synthetic_basis",
+        reason: `The rating (${e.credit.rating}) is an interest-coverage estimate, not a rating issued by an agency - confirm it individually before applying.`,
       },
     ];
   }

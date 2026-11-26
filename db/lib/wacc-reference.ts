@@ -18,6 +18,15 @@ import {
   type DisclosedRatingResult,
 } from "./credit-rating-evidence.ts";
 import {
+  computeKdCrosscheck,
+  deriveSyntheticRating,
+  listIssuanceEvidence,
+  type IssuanceEvidenceRow,
+  type IssuanceStatus,
+  type KdCrosscheck,
+  type SyntheticResult,
+} from "./credit-synthetic.ts";
+import {
   loadKrCreditRatingRegistry,
   mapRatingToSpread,
   type CreditRatingRegistry,
@@ -50,7 +59,7 @@ export interface ReferenceEntry {
 /**
  * Where the rating of a credit-spread suggestion came from, best evidence first: `disclosed` (corporate-bond rating of
  * a domestic agency), `bureau` (credit-information bureau issuer rating, lower confidence, ADR-0208 amendment
- * 2026-11-26), `synthetic` (slice 3), `default`.
+ * 2026-11-26), `synthetic` (interest-coverage estimate, slice 3), `default`.
  */
 export type CreditRatingSource = "disclosed" | "bureau" | "synthetic" | "default";
 
@@ -97,20 +106,61 @@ export interface CreditSpreadDetail {
   flags: SpreadFlag[];
   series_used: SeriesUsed[];
   anchors: MappedSpread["anchors"] | null;
-  synthetic: null;
+  /** ADR-0208 slice 3: the interest-coverage (synthetic) evaluation; null when no company context or no registry table. */
+  synthetic: SyntheticDetail | null;
+  /** Set when a fresh synthetic estimate was used over an older (stale) disclosed or bureau rating that is still on file. */
+  rating_superseded: {
+    basis: "disclosed" | "bureau";
+    rating: string;
+    rated_on: string;
+    source_rcept_no: string;
+  } | null;
   /** Why the rating is what it is (rung that produced it, or why the ladder fell through). */
   reason_code: string | null;
   reason: string | null;
   /** Why the legacy AA- spread was kept instead of a rating-mapped one (null when mapped). */
   spread_reason_code: string | null;
   spread_reason: string | null;
-  crosscheck: null;
-  issuance_evidence: [];
+  /** Implied actual borrowing cost vs the market-built Kd (never changes the number); null without company context. */
+  crosscheck: KdCrosscheck | null;
+  /** Recent corporate-bond issues (coupon and rating at issue) of the last 36 months; informational. */
+  issuance_evidence: IssuanceEvidenceRow[];
+  issuance_status: IssuanceStatus | null;
   /** Home pages of the registered domestic rating agencies: a human verification aid only (never fetched). */
   agency_links: Array<{ agency: string; home_url: string }>;
   /** Indicative Kd = latest Rf + spread, percent points; null when either is missing. The Ke comparison is the caller's. */
   kd_indicative_pct: number | null;
 }
+
+/** ADR-0208 slice 3: the synthetic (interest coverage) evaluation as returned in the credit_spread entry. */
+export type SyntheticDetail =
+  | {
+      available: true;
+      /** True when this estimate is the rating in use (rating_source "synthetic"). */
+      used: boolean;
+      rating: string;
+      coverage_x: number;
+      interest_source: "interest_expense" | "interest_paid" | "finance_costs";
+      interest_is_proxy: boolean;
+      fiscal_year: number;
+      table_id: string;
+      table_as_of: string;
+      published_label: string | null;
+      band_lower_x: number;
+      band_upper_x: number | null;
+      operating_income_krw_million: number;
+      interest_expense_krw_million: number;
+      loss_making: boolean;
+      note: string;
+    }
+  | {
+      available: false;
+      used: false;
+      reason_code: string;
+      reason: string;
+      /** True when re-syncing the company's DART financials could make the estimate available. */
+      resync_hint: boolean;
+    };
 
 export interface WaccReference {
   subject: { company_id: string; name_ko: string | null };
@@ -223,47 +273,81 @@ function seriesUsed(inputs: SpreadInputs): SeriesUsed[] {
 }
 
 /**
- * Rating of the credit-spread suggestion (ADR-0208 D1): the disclosed (DART) rung first, then the registry
- * default with an explicit reason. The synthetic (interest coverage) rung is inserted between them by slice 3.
- * `disclosed` is the cache-only resolution (null = the caller has no company context: legacy behaviour).
+ * Rating of the credit-spread suggestion (ADR-0208 D1). Ladder, best evidence first:
+ *   fresh disclosed corporate-bond rating -> fresh credit-bureau issuer rating -> synthetic (interest coverage)
+ *   -> a stale disclosed / bureau rating (still better evidence than a placeholder) -> the registry default.
+ * A stale disclosed or bureau rating ranks BELOW a synthetic estimate (the ladder is stated in terms of fresh
+ * ratings); the superseded rating stays visible in `superseded`. `disclosed` is the cache-only resolution (null = no
+ * company context: legacy behaviour); `synthetic` is null when it was not evaluated.
  */
 export function decideCreditRating(
   registry: CreditRatingRegistry,
   disclosed: DisclosedRatingResult | null = null,
+  synthetic: SyntheticResult | null = null,
 ): {
   rating: string;
   source: CreditRatingSource;
   reason_code: string;
   reason: string;
   evidence: Extract<DisclosedRatingResult, { ok: true }> | null;
+  synthetic: Extract<SyntheticResult, { ok: true }> | null;
+  superseded: { basis: "disclosed" | "bureau"; rating: string; rated_on: string; source_rcept_no: string } | null;
   disclosed_status: DisclosedMissStatus | null;
 } {
-  if (disclosed?.ok && disclosed.basis === "bureau") {
+  const fromDisclosed = (d: Extract<DisclosedRatingResult, { ok: true }>) =>
+    d.basis === "bureau"
+      ? {
+          rating: d.rating,
+          source: "bureau" as const,
+          reason_code: "bureau_issuer_rating",
+          reason:
+            `Credit-bureau issuer rating ${d.rating} (${d.rated_on}): the latest 기업신용평가 row of DART ` +
+            `filing ${d.source_rcept_no} (lowest when several bureaus rated on that date). Lower confidence than a ` +
+            `corporate-bond rating - confirm it individually; it is not part of apply-all.`,
+          evidence: d,
+          synthetic: null,
+          superseded: null,
+          disclosed_status: null,
+        }
+      : {
+          rating: d.rating,
+          source: "disclosed" as const,
+          reason_code: "disclosed_rating",
+          reason:
+            `Disclosed corporate-bond rating ${d.rating} (${d.rated_on}): the lowest of the latest rating per ` +
+            `domestic agency, read from DART filing ${d.source_rcept_no}.`,
+          evidence: d,
+          synthetic: null,
+          superseded: null,
+          disclosed_status: null,
+        };
+  if (disclosed?.ok && !disclosed.stale) return fromDisclosed(disclosed);
+  if (synthetic?.ok) {
     return {
-      rating: disclosed.rating,
-      source: "bureau",
-      reason_code: "bureau_issuer_rating",
+      rating: synthetic.rating,
+      source: "synthetic",
+      reason_code: "synthetic_rating",
       reason:
-        `Credit-bureau issuer rating ${disclosed.rating} (${disclosed.rated_on}): the latest 기업신용평가 row of DART ` +
-        `filing ${disclosed.source_rcept_no} (lowest when several bureaus rated on that date). Lower confidence than a ` +
-        `corporate-bond rating - confirm it individually; it is not part of apply-all.`,
-      evidence: disclosed,
+        `Synthetic rating ${synthetic.rating} from interest coverage ${synthetic.coverage_x}x (FY${synthetic.fiscal_year}). ` +
+        `An estimate, not a rating issued by an agency${disclosed?.ok ? `; the ${disclosed.basis === "bureau" ? "credit-bureau" : "disclosed"} rating ${disclosed.rating} on file is stale` : ""}. ` +
+        "Confirm it before relying on it.",
+      evidence: null,
+      synthetic,
+      superseded: disclosed?.ok
+        ? {
+            basis: disclosed.basis,
+            rating: disclosed.rating,
+            rated_on: disclosed.rated_on,
+            source_rcept_no: disclosed.source_rcept_no,
+          }
+        : null,
       disclosed_status: null,
     };
   }
-  if (disclosed?.ok) {
-    return {
-      rating: disclosed.rating,
-      source: "disclosed",
-      reason_code: "disclosed_rating",
-      reason:
-        `Disclosed corporate-bond rating ${disclosed.rating} (${disclosed.rated_on}): the lowest of the latest rating per ` +
-        `domestic agency, read from DART filing ${disclosed.source_rcept_no}.`,
-      evidence: disclosed,
-      disclosed_status: null,
-    };
-  }
+  if (disclosed?.ok) return fromDisclosed(disclosed); // stale, and no synthetic estimate to prefer
   const status = disclosed ? disclosed.status : null;
+  const synthPart =
+    synthetic && !synthetic.ok ? ` Synthetic rung: ${synthetic.reason}` : " The synthetic rung is not available.";
   return {
     rating: registry.defaultRating,
     source: "default",
@@ -271,9 +355,11 @@ export function decideCreditRating(
       status === "rating_not_collected" ? "rating_not_collected" : "no_disclosed_rating_and_synthetic_unavailable",
     reason:
       status === "rating_not_collected"
-        ? `${registry.defaultReason} (No disclosed rating has been collected for this company yet - run the credit-rating collection.)`
-        : `${registry.defaultReason} (The disclosed-rating and synthetic-rating rungs are not available yet.)`,
+        ? `${registry.defaultReason} (No disclosed rating has been collected for this company yet - run the credit-rating collection.${synthPart})`
+        : `${registry.defaultReason} (No disclosed or bureau rating is available.${synthPart})`,
     evidence: null,
+    synthetic: null,
+    superseded: null,
     disclosed_status: status,
   };
 }
@@ -286,6 +372,8 @@ export type DerivedCreditSpread =
       mapped: MappedSpread;
       /** Set when the rating is a disclosed one: the evidence the server re-derived it from. */
       disclosed: Extract<DisclosedRatingResult, { ok: true }> | null;
+      /** Set when the rating is the synthetic one: coverage, interest source and period the server re-derived. */
+      synthetic: Extract<SyntheticResult, { ok: true }> | null;
     }
   | { ok: false; reason_code: string; reason: string };
 
@@ -293,7 +381,8 @@ export type DerivedCreditSpread =
  * Re-derive the credit spread at one ECOS month. Used by the confirmation audit (db/lib/wacc.ts) so that rating,
  * source and basis are recorded from stored evidence, never from the client. Pure read.
  * `corpCode` is the subject's DART code: with it the disclosed rating (cached snapshots) is resolved first; without
- * it (null/undefined) only the registry default applies (the slice-1 behaviour).
+ * it (null/undefined) only the registry default applies (the slice-1 behaviour). `companyId` (slice 3) adds the
+ * synthetic rung: coverage, interest source and period are re-derived from the stored financial facts.
  */
 export function deriveCreditSpreadAt(
   db: Database,
@@ -301,11 +390,13 @@ export function deriveCreditSpreadAt(
   loaded?: ReturnType<typeof loadKrCreditRatingRegistry>,
   corpCode?: string | null,
   now: Date = new Date(),
+  companyId?: string | null,
 ): DerivedCreditSpread {
   const reg = loaded ?? loadKrCreditRatingRegistry();
   if (!reg.ok) return { ok: false, reason_code: reg.reason_code, reason: reg.reason };
   const disclosed = corpCode === undefined ? null : resolveDisclosedRating(db, corpCode, reg.registry, now);
-  const decision = decideCreditRating(reg.registry, disclosed);
+  const synthetic = companyId ? deriveSyntheticRating(db, companyId, reg.registry) : null;
+  const decision = decideCreditRating(reg.registry, disclosed, synthetic);
   const inputs = readSpreadInputs(db, asOf);
   if (!inputs) {
     return {
@@ -316,7 +407,14 @@ export function deriveCreditSpreadAt(
   }
   const mapped = mapRatingToSpread(reg.registry, decision.rating, inputs);
   if (!mapped.ok) return { ok: false, reason_code: mapped.reason_code, reason: mapped.reason };
-  return { ok: true, rating: decision.rating, rating_source: decision.source, mapped, disclosed: decision.evidence };
+  return {
+    ok: true,
+    rating: decision.rating,
+    rating_source: decision.source,
+    mapped,
+    disclosed: decision.evidence,
+    synthetic: decision.synthetic,
+  };
 }
 
 function pctEntry(
@@ -358,15 +456,41 @@ const EMPTY_CREDIT_DETAIL: CreditSpreadDetail = {
   series_used: [],
   anchors: null,
   synthetic: null,
+  rating_superseded: null,
   reason_code: null,
   reason: null,
   spread_reason_code: null,
   spread_reason: null,
   crosscheck: null,
   issuance_evidence: [],
+  issuance_status: null,
   agency_links: [],
   kd_indicative_pct: null,
 };
+
+function syntheticDetail(r: SyntheticResult, registry: CreditRatingRegistry, used: boolean): SyntheticDetail {
+  if (!r.ok) {
+    return { available: false, used: false, reason_code: r.reason_code, reason: r.reason, resync_hint: r.resync_hint };
+  }
+  return {
+    available: true,
+    used,
+    rating: r.rating,
+    coverage_x: r.coverage_x,
+    interest_source: r.interest_source,
+    interest_is_proxy: r.interest_is_proxy,
+    fiscal_year: r.fiscal_year,
+    table_id: r.table_id,
+    table_as_of: registry.synthetic?.table.asOf ?? "",
+    published_label: r.band.publishedLabel,
+    band_lower_x: r.band.lowerX,
+    band_upper_x: r.band.upperX,
+    operating_income_krw_million: r.operating_income_krw_million,
+    interest_expense_krw_million: r.interest_expense_krw_million,
+    loss_making: r.loss_making,
+    note: r.note,
+  };
+}
 
 /**
  * ADR-0208: the credit_spread entry. `legacy` is the AA- entry computed before (kept byte for byte when
@@ -374,26 +498,56 @@ const EMPTY_CREDIT_DETAIL: CreditSpreadDetail = {
  */
 function buildCreditSpreadEntry(
   db: Database,
-  input: { legacy: ReferenceEntry; riskFree: ReferenceEntry; corpCode: string | null; now: Date },
+  input: {
+    legacy: ReferenceEntry;
+    riskFree: ReferenceEntry;
+    corpCode: string | null;
+    companyId: string;
+    now: Date;
+  },
 ): ReferenceEntry {
   const { legacy, riskFree } = input;
   const rfPct = riskFree.value;
-  const keepLegacy = (detail: Partial<CreditSpreadDetail>): ReferenceEntry => ({
-    ...legacy,
-    credit: {
-      ...EMPTY_CREDIT_DETAIL,
-      ...detail,
-      spread_basis: legacy.value !== null ? "aa_minus_legacy" : null,
-      kd_indicative_pct: legacy.value !== null && rfPct !== null ? rfPct + legacy.value : null,
-    },
+  // Slice 3 evidence that does not depend on the ECOS month: the cross-check is added once Kd is known.
+  let slice3: Partial<CreditSpreadDetail> = {};
+  const withCrosscheck = (
+    detail: Partial<CreditSpreadDetail>,
+    kdPct: number | null,
+    registry: CreditRatingRegistry,
+  ) => ({
+    ...detail,
+    ...slice3,
+    crosscheck: computeKdCrosscheck(db, input.companyId, registry, kdPct),
   });
+  let registryForCheck: CreditRatingRegistry | null = null;
+  const keepLegacy = (detail: Partial<CreditSpreadDetail>): ReferenceEntry => {
+    const kd = legacy.value !== null && rfPct !== null ? rfPct + legacy.value : null;
+    return {
+      ...legacy,
+      credit: {
+        ...EMPTY_CREDIT_DETAIL,
+        ...(registryForCheck ? withCrosscheck(detail, kd, registryForCheck) : detail),
+        spread_basis: legacy.value !== null ? "aa_minus_legacy" : null,
+        kd_indicative_pct: kd,
+      },
+    };
+  };
 
   const loaded = loadKrCreditRatingRegistry();
   if (!loaded.ok) return keepLegacy({ spread_reason_code: loaded.reason_code, spread_reason: loaded.reason });
+  registryForCheck = loaded.registry;
 
   const disclosed = resolveDisclosedRating(db, input.corpCode, loaded.registry, input.now);
-  const decision = decideCreditRating(loaded.registry, disclosed);
+  const syntheticResult = deriveSyntheticRating(db, input.companyId, loaded.registry);
+  const decision = decideCreditRating(loaded.registry, disclosed, syntheticResult);
   const ev = decision.evidence;
+  const issuance = listIssuanceEvidence(db, input.corpCode, input.now);
+  slice3 = {
+    synthetic: syntheticDetail(syntheticResult, loaded.registry, decision.source === "synthetic"),
+    rating_superseded: decision.superseded,
+    issuance_evidence: issuance.rows,
+    issuance_status: issuance.status,
+  };
   const agencyLinks = loaded.registry.agencies
     .filter((a) => a.homeUrl !== null)
     .map((a) => ({ agency: a.id, home_url: a.homeUrl as string }));
@@ -424,6 +578,7 @@ function buildCreditSpreadEntry(
     collect_hint: !ev && disclosed.ok === false && disclosed.status !== "no_dart_corp_code",
     agency_links: agencyLinks,
   };
+  const loadedRegistry = loaded.registry;
   const month = selectCreditMonth(db);
   const inputs = month ? readSpreadInputs(db, month) : null;
   if (!inputs) {
@@ -445,9 +600,11 @@ function buildCreditSpreadEntry(
   const sourceNote =
     decision.source === "default"
       ? ` Rating basis: default placeholder (${decision.reason_code}) - confirm the company's rating before relying on it.`
-      : decision.source === "bureau"
-        ? ` Rating basis: credit-bureau issuer rating ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no} (lower confidence than a corporate-bond rating).`
-        : ` Rating basis: disclosed ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no}.`;
+      : decision.source === "synthetic"
+        ? ` Rating basis: synthetic estimate ${decision.rating} from interest coverage (not a rating issued by an agency) - confirm before relying on it.`
+        : decision.source === "bureau"
+          ? ` Rating basis: credit-bureau issuer rating ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no} (lower confidence than a corporate-bond rating).`
+          : ` Rating basis: disclosed ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no}.`;
   return {
     key: "credit_spread",
     label: RATED_CREDIT_LABEL,
@@ -460,7 +617,7 @@ function buildCreditSpreadEntry(
     note: `${mapped.note}${sourceNote}`,
     credit: {
       ...EMPTY_CREDIT_DETAIL,
-      ...ratingPart,
+      ...withCrosscheck(ratingPart, rfPct !== null ? rfPct + mapped.spreadPct : null, loadedRegistry),
       spread_basis: mapped.basis,
       derived: mapped.derived,
       flags: mapped.flags,
@@ -561,6 +718,7 @@ export function computeWaccReference(db: Database, subjectCompanyId: string, now
     legacy: legacyCredit,
     riskFree: entries[0],
     corpCode: company.dart_corp_code,
+    companyId: company.id,
     now,
   });
   const finalSpread = entries[1].value;

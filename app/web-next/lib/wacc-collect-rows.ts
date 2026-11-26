@@ -4,9 +4,9 @@
  * (ECOS rates, DART credit rating) with a status line, a button emphasis rule and the anchor that the
  * credit-spread reason text links to. The panel maps the returned kinds to localized text.
  */
-import { type ReferenceSuggestion, creditCollectVisible } from "./wacc-reference-items.ts";
+import { type ReferenceSuggestion, financialResyncNeeded } from "./wacc-reference-items.ts";
 
-export type CollectRowKey = "ecos" | "credit";
+export type CollectRowKey = "ecos" | "credit" | "financials";
 
 /** DOM id of a collect row; the credit-spread reason text links to the credit row. */
 export const COLLECT_BLOCK_ID = "wacc-collect-block";
@@ -70,6 +70,8 @@ export type CreditStatus =
       /** Bureau basis only: the disclosure carried no usable bond rating. */
       bondRatingMissing: boolean;
     }
+  /** No disclosed or bureau rating; the rating in use is the interest-coverage (synthetic) estimate. */
+  | { kind: "synthetic"; rating: string; coverageX: number | null; fiscalYear: number | null }
   /** Collected, but the disclosure has no rating and nothing else filled in. */
   | { kind: "no_rating"; statusCode: string | null }
   | { kind: "default_basis" };
@@ -89,7 +91,31 @@ export function creditRowStatus(credit: ReferenceSuggestion | undefined): Credit
       bondRatingMissing: credit.rating_source === "bureau" && status !== null,
     };
   }
+  if (credit.rating && credit.rating_source === "synthetic") {
+    const syn = credit.synthetic && credit.synthetic.available ? credit.synthetic : null;
+    return {
+      kind: "synthetic",
+      rating: credit.rating,
+      coverageX: syn?.coverage_x ?? null,
+      fiscalYear: syn?.fiscal_year ?? null,
+    };
+  }
   if (status === "rating_not_collected") return { kind: "not_collected" };
   if (status !== null) return { kind: "no_rating", statusCode: status };
   return { kind: "default_basis" };
+}
+
+/**
+ * The company financials row (re-sync hint): offered when the interest, pre-tax and borrowing figures behind the
+ * synthetic rung and the cost-of-debt cross-check are not stored because the company's financials were synced before the
+ * extended collector. It needs a company (the sync endpoint is per company) and answers 'primary' emphasis only then.
+ */
+export function financialsCollectNeeded(credit: ReferenceSuggestion | undefined): boolean {
+  return financialResyncNeeded(credit);
+}
+
+export type FinancialsStatus = { kind: "resync_needed" } | { kind: "synced" };
+
+export function financialsRowStatus(credit: ReferenceSuggestion | undefined): FinancialsStatus {
+  return financialResyncNeeded(credit) ? { kind: "resync_needed" } : { kind: "synced" };
 }

@@ -738,11 +738,17 @@ describe("POST /api/projects/[id]/wacc - disclosed credit-rating audit (server-d
     expect(rationaleOf(d)).not.toContain("credit_rating_snapshot_id");
   });
 
-  test("synthetic stays unresolvable until slice 3 (400, no run)", async () => {
+  test("synthetic is re-derived like the others: claiming it while a disclosed rating applies (or none) is 400, no run (slice 3)", async () => {
     arrange();
     const before = runCount();
     const res = await confirm(applied({ credit_rating_basis: "synthetic", credit_rating_snapshot_id: undefined }));
     expect(res.status).toBe(400);
+    expect(((await res.json()) as any).error.message).toContain("does not match the server-derived basis 'disclosed'");
+    expect(runCount()).toBe(before);
+    clearSnapshots(); // no evidence and no stored financials: the server-derived basis is the default
+    const none = await confirm(applied({ credit_rating_basis: "synthetic", credit_rating_snapshot_id: undefined }));
+    expect(none.status).toBe(400);
+    expect(((await none.json()) as any).error.message).toContain("does not match the server-derived basis 'default'");
     expect(runCount()).toBe(before);
   });
 });

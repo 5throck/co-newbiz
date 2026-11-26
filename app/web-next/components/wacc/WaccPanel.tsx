@@ -24,7 +24,9 @@ import {
   creditCollectUrl,
   creditReferenceFields,
   creditSourceLabel,
+  crosscheckView,
   erpReferenceFields,
+  financialResyncNeeded,
   formatCreditAnchorPct,
   kdKeWarning,
   missingReferenceItems,
@@ -43,7 +45,7 @@ import { ParamTable } from "../ui.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { CreditRatingEvidence } from "./CreditRatingEvidence.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
-import { api } from "../../lib/api.ts";
+import { api, ApiError } from "../../lib/api.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
 import { resolveTargetScope } from "../../lib/target-default.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
@@ -61,6 +63,8 @@ import {
   creditRowStatus,
   ecosCollectNeeded,
   ecosRowStatus,
+  financialsCollectNeeded,
+  financialsRowStatus,
 } from "../../lib/wacc-collect-rows.ts";
 import {
   assembleDerivation,
@@ -253,6 +257,9 @@ function formatComponentValue(key: string, v: number): string {
   return pct(v);
 }
 
+/** What a collect row needs from a run: the background-run hook, or the synchronous financial re-sync adapter. */
+type CollectRunLike = Pick<ReturnType<typeof useCollectRun>, "busy" | "phase" | "run" | "start">;
+
 export function WaccPanel({ projectId }: { projectId: string }) {
   const tr = useTranslations();
   const t = useTranslations("stages.s8.wacc.waccPanel");
@@ -281,7 +288,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   // ── 참조값 (ADR-0116 Phase 4; 제안일 뿐 — 확정은 사람) ──
   type Sugg = ReferenceSuggestion;
   interface SuggPayload {
-    subject: { name_ko: string | null } | null;
+    subject: { company_id?: string; name_ko: string | null } | null;
     suggestions: Sugg[];
     // ADR-0207: published ERP alternatives (never part of apply-all) and the items apply-all skips.
     erp_alternatives?: Sugg[];
@@ -333,6 +340,28 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             ? t("collectCreditNoSubject")
             : creditCollect.startError || t("collectCreditStartFailed")
           : null;
+  // 재무 동기화 (ADR-0208) — 이자비용·차입금·세전이익이 없으면 회사의 DART 재무를 다시 동기화한다. 기존
+  // 회사 재무 동기화 엔드포인트(동기 응답)를 그대로 쓰고, 끝나면 참조값을 다시 불러온다.
+  // 결과는 그 회사에만 속한다(대상이 바뀌면 이전 회사의 메시지는 보이지 않는다).
+  const [finSyncState, setFinSync] = useState<{
+    companyId: string;
+    busy: boolean;
+    ok: boolean | null;
+    error: string;
+  } | null>(null);
+  const finCompanyId = sugg?.subject?.company_id ?? null;
+  const finSync = finSyncState && finSyncState.companyId === finCompanyId ? finSyncState : null;
+  const runFinSync = useCallback(async () => {
+    if (!finCompanyId) return;
+    setFinSync({ companyId: finCompanyId, busy: true, ok: null, error: "" });
+    try {
+      await api.post(`/api/companies/${encodeURIComponent(finCompanyId)}/sync`);
+      setFinSync({ companyId: finCompanyId, busy: false, ok: true, error: "" });
+    } catch (e) {
+      setFinSync({ companyId: finCompanyId, busy: false, ok: false, error: e instanceof ApiError ? e.message : "" });
+    }
+    loadSugg();
+  }, [finCompanyId, loadSugg]);
   useEffect(() => {
     api
       .get<{ targets: AnalysisTarget[] }>(`/api/projects/${encodeURIComponent(projectId)}/targets`)
@@ -449,6 +478,21 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     rating_not_collected: t("creditReasonNotCollected"),
     disclosed_rating: t("creditReasonDisclosed"),
     bureau_issuer_rating: t("creditReasonBureauRating"),
+    synthetic_rating: t("creditReasonSyntheticRating"),
+    synthetic_not_applicable_financial: t("creditReasonSyntheticFinancial"),
+    synthetic_no_financials: t("creditReasonSyntheticNoFinancials"),
+    synthetic_interest_not_collected: t("creditReasonSyntheticNotCollected"),
+    synthetic_no_interest_expense: t("creditReasonSyntheticNoInterest"),
+    synthetic_no_registry_table: t("creditReasonSyntheticNoTable"),
+    crosscheck_unavailable_financial_sector: t("creditCrosscheckUnavailableFinancial"),
+    crosscheck_unavailable_no_financials: t("creditReasonSyntheticNoFinancials"),
+    crosscheck_unavailable_interest_not_collected: t("creditReasonSyntheticNotCollected"),
+    crosscheck_unavailable_no_interest_expense: t("creditCrosscheckUnavailableNoInterest"),
+    crosscheck_unavailable_no_debt_rows: t("creditCrosscheckUnavailableNoDebt"),
+    crosscheck_unavailable_no_market_kd: t("creditCrosscheckUnavailableNoKd"),
+    crosscheck_unreliable_non_positive_debt: t("creditCrosscheckUnreliable"),
+    crosscheck_implied_far_below_market: t("creditCrosscheckFarBelowReason"),
+    credit_rating_synthetic_basis: t("creditReasonSyntheticBasis"),
     credit_rating_bureau_basis: t("creditReasonBureauBasis"),
     credit_spread_legacy_basis: t("creditReasonLegacyBasis"),
     credit_rating_no_registry: t("creditReasonNoRegistry"),
@@ -483,7 +527,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       )}
       {x.rating_source && (
         <span
-          className={`status-chip ${x.rating_source === "default" || x.rating_source === "bureau" ? "status-amber" : "status-info"}`}
+          className={`status-chip ${x.rating_source === "default" || x.rating_source === "bureau" || x.rating_source === "synthetic" ? "status-amber" : "status-info"}`}
           data-testid="credit-source-chip"
         >
           {CREDIT_SOURCE_LABEL[x.rating_source] ?? x.rating_source}
@@ -504,6 +548,16 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           {t("creditDerivedChip")}
         </span>
       )}
+      {x.rating_source === "synthetic" && x.synthetic?.available === true && x.synthetic.loss_making && (
+        <span className="status-chip status-amber" data-testid="credit-synthetic-loss-chip">
+          {t("creditSyntheticLossChip")}
+        </span>
+      )}
+      {crosscheckView(x)?.status === "warn" && (
+        <span className="status-chip status-amber" data-testid="credit-crosscheck-chip">
+          {t("creditCrosscheckWarnChip")}
+        </span>
+      )}
     </>
   );
   /** 앵커 한 줄(AA− · BBB− · 기준월). 앵커가 없으면(기존 AA− 유지) 줄을 만들지 않는다. */
@@ -522,6 +576,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     // rating_not_collected already has its own reason (with the collect hint); the other misses add their own line.
     if (x.disclosed_status && x.disclosed_status !== "rating_not_collected") {
       lines.push(CREDIT_STATUS_LABEL[x.disclosed_status] ?? x.disclosed_status);
+    }
+    // A rating that is not the synthetic one still tells why the synthetic rung could not help (and the re-sync hint).
+    if (x.synthetic && x.synthetic.available === false && x.rating_source === "default") {
+      const why = creditReasonText(x.synthetic.reason_code, x.synthetic.reason);
+      if (why) lines.push(why);
     }
     for (const f of x.flags ?? []) lines.push(CREDIT_FLAG_LABEL[f] ?? f);
     const spread = creditReasonText(x.spread_reason_code, x.spread_reason);
@@ -559,12 +618,39 @@ export function WaccPanel({ projectId }: { projectId: string }) {
           .filter(Boolean)
           .join(" · ");
       }
+      case "synthetic":
+        return [
+          t("collectStatusCreditSynthetic", { rating: s.rating }),
+          s.coverageX !== null && s.fiscalYear !== null
+            ? t("collectStatusCreditCoverage", { coverage: s.coverageX.toFixed(2), year: s.fiscalYear })
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
       case "no_rating":
         return (s.statusCode && CREDIT_STATUS_LABEL[s.statusCode]) || t("collectStatusCreditNotCollected");
       default:
         return t("collectStatusCreditDefault");
     }
   };
+  /** Financial-data row status line - whether the interest and borrowing figures are stored. */
+  const financialsStatusText = () =>
+    financialsRowStatus(creditSugg).kind === "resync_needed"
+      ? t("collectStatusFinancialsNeeded")
+      : t("collectStatusFinancialsOk");
+  const finBusy = finSync?.busy === true;
+  const finCollect: CollectRunLike = {
+    busy: finBusy,
+    phase: finBusy ? "running" : finSync?.ok == null ? "idle" : finSync.ok ? "done" : "failed",
+    run: null,
+    start: runFinSync,
+  };
+  const finMessage =
+    finSync?.ok === true
+      ? t("collectFinancialsDone")
+      : finSync?.ok === false
+        ? t("collectFinancialsFailed", { p1: finSync.error })
+        : null;
   /** Jump from a reason text to its collect row (moves focus so keyboard users land on it). */
   const goToCollectRow = (key: CollectRowKey) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -590,7 +676,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     source: string;
     status: string;
     needed: boolean;
-    runCollect: ReturnType<typeof useCollectRun>;
+    runCollect: CollectRunLike;
     message: string | null;
     runLabel: string;
     rerunLabel: string;
@@ -1206,6 +1292,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                           <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
                           {reason ? ` — ${reason}` : ""}
                           {x.key === "credit_spread" && creditReasonLinksToCollect(creditSugg) && collectLink("credit")}
+                          {x.key === "credit_spread" && financialResyncNeeded(creditSugg) && collectLink("financials")}
                         </li>
                       );
                     })}
@@ -1255,6 +1342,23 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                         runningText: t("collectCreditRunning"),
                         actionTestId: "credit-collect",
                         noAction: !creditCollectAvailable(creditSugg),
+                      })}
+                    {creditSugg &&
+                      (financialsCollectNeeded(creditSugg) || finMessage !== null) &&
+                      collectRow({
+                        key: "financials",
+                        name: t("collectFinancialsName"),
+                        fills: t("collectFinancialsFills"),
+                        source: t("collectFinancialsSource"),
+                        status: financialsStatusText(),
+                        needed: financialsCollectNeeded(creditSugg),
+                        runCollect: finCollect,
+                        message: finMessage,
+                        runLabel: t("collectFinancialsRun"),
+                        rerunLabel: t("collectFinancialsRerun"),
+                        runningText: t("collectFinancialsRunning"),
+                        actionTestId: "financials-collect",
+                        noAction: !finCompanyId,
                       })}
                   </ul>
                 </section>
@@ -1417,6 +1521,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                   <div key={line}>{line}</div>
                                 ))}
                                 {creditReasonLinksToCollect(r) && <div>{collectLink("credit")}</div>}
+                                {financialResyncNeeded(r) && <div>{collectLink("financials")}</div>}
                                 <CreditRatingEvidence suggestion={r} />
                               </div>
                             ) : (

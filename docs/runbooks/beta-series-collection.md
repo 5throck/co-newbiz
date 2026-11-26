@@ -108,6 +108,56 @@ Each result is one immutable `dart_credit_rating_snapshot` row (migration 0200).
   once; snapshots of older versions are ignored by the reads.
 - Rolling back migration 0200 drops the cache only; it is re-fetchable from DART.
 
+## Interest-coverage estimate and the one-time financial re-sync (ADR-0208 slice 3)
+
+When a company has no fresh disclosed corporate-bond rating and no fresh
+credit-bureau rating, the `credit_spread` reference uses a **synthetic** rating
+(`rating_source: "synthetic"`, chip "interest-coverage estimate"): coverage =
+operating income / interest expense of the latest fiscal year that has both,
+mapped through the published coverage-to-rating table in
+`region-profiles/KR.yaml` (`credit_rating_references.synthetic`). It is an
+estimate, not an agency rating, so it is NOT part of "apply all" (`credit_rating_synthetic_basis`); apply it from its own row. The same inputs
+feed the cost-of-debt cross-check (implied cost = interest expense / average
+interest-bearing debt, compared with the market Kd; a warning only, never a
+change of the number).
+
+The inputs are DART accounts that the collector did not read before: interest
+expense (`dart_AdjustmentsForInterestExpenses` / `ifrs-full_InterestExpense`),
+finance costs, interest paid (two rows), pre-tax income and the borrowing rows
+(migration `0201_md_account_interest_debt.sql`). **A company whose financials
+were synced before this release has none of them**, so the card shows the
+default rating with `synthetic_interest_not_collected` and a "financial data"
+row in the "reference data collection" block with a **Run financial sync**
+button (it calls the existing `POST /api/companies/<id>/sync`).
+
+One-time re-sync after the release:
+
+1. Apply migration 0201 first (migrations before the collector release,
+   ADR-0014). Back up the database as for any migration; rollback is the
+   `ROLLBACK-SQL` block in the file (it deletes the new accounts and their
+   facts, nothing else).
+2. The migration clears `dart_corp_sync_state.financial_checked_at`, so the next
+   **incremental** sync (ADR-0199, the S6 bulk evaluation) re-fetches the latest
+   fiscal year of every synced company and fills the new accounts for it. An
+   incremental sync does NOT re-fetch closed earlier years.
+3. The **manual** company sync (`POST /api/companies/<id>/sync`, the "sync DART
+   financials" button on the company screen and the new row in the WACC panel)
+   always pulls five years and fills every year. Use it for the companies you
+   are valuing now; the cross-check needs two fiscal years of borrowing balances
+   for its two-year average (with one year it uses the year-end balance and says so).
+4. Nothing is lost if it is skipped: a company without the new accounts keeps the
+   default rating and a re-sync hint; the WACC tax-rate suggestion keeps using
+   operating income until pre-tax income is stored, then prefers pre-tax income.
+
+Reading the outcome: `synthetic.reason_code` says why there is no estimate:
+`synthetic_interest_not_collected` (re-sync), `synthetic_no_interest_expense`
+(the latest year shows no interest), `synthetic_no_financials`,
+`synthetic_not_applicable_financial` (a bank, insurer or similar, detected from
+the company name by the registry rule `synthetic.financial_sector`). Interest
+source order: interest expense, interest paid (operating plus financing
+activities), finance costs (a proxy that overstates interest). Cross-check
+reasons are `crosscheck_unavailable_*` and `crosscheck_unreliable_non_positive_debt`. A warning with `crosscheck_implied_far_below_market` means the actual cost is far below the market Kd (policy finance or low-rate borrowing?); it is also raised when the implied cost is below the risk-free rate.
+
 ## Index choice (listing market)
 
 The beta regression pairs the stock with the index of its **listing market**

@@ -14,9 +14,12 @@
 // md_account by migration 0083; the writer maps by normalized Korean name
 // (name_ko) and fails loudly if an account row is missing rather than
 // inventing an id.
+// ADR-0208 slice 3: a year may also carry `extraItems` (interest expense, pre-tax
+// income, interest paid, borrowing classes; migration 0201). They are keyed by
+// ifrs_code, not by name, and follow the same append-only revision rule.
 import { resolveCorpCode, validateCorpCode, fetchFinancials, isDartConfigured } from "./dart-client.ts";
 import { canonicalCompanyName } from "./company-name.ts";
-import { getDb } from "../../../db/client.ts";
+import type { getDb } from "../../../db/client.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import {
   correctedBusinessReportYears,
@@ -96,6 +99,17 @@ function resolveAccountId(db: ReturnType<typeof getDb>, nameKo: string): string 
   if (!row) {
     throw new Error(
       `md_account에 '${nameKo}' 계정이 없습니다 — migration 0083 시드를 확인하세요 (writer는 임의 계정을 생성하지 않습니다).`,
+    );
+  }
+  return row.id;
+}
+
+/** ADR-0208 slice 3: extra credit-input accounts resolve by ifrs_code (migration 0201 seeds them). */
+function resolveAccountIdByIfrs(db: ReturnType<typeof getDb>, ifrsCode: string): string {
+  const row = db.query("SELECT id FROM md_account WHERE ifrs_code = ?").get(ifrsCode) as { id: string } | undefined;
+  if (!row) {
+    throw new Error(
+      `md_account has no row for '${ifrsCode}' - check that migration 0201 was applied (the writer never creates accounts).`,
     );
   }
   return row.id;
@@ -188,8 +202,15 @@ export async function syncCompanyFinancialFacts(
       if (!Number.isFinite(fiscalYear)) continue;
       years.push(fiscalYear);
       const periodId = ensureYearPeriod(db, fiscalYear);
-      for (const item of yearBlock.items) {
-        const accountId = resolveAccountId(db, item.name);
+      const rowsToWrite: Array<{ accountId: string; value: number }> = [
+        ...yearBlock.items.map((item) => ({ accountId: resolveAccountId(db, item.name), value: item.value })),
+        ...(yearBlock.extraItems ?? []).map((item) => ({
+          accountId: resolveAccountIdByIfrs(db, item.ifrsCode),
+          value: item.value,
+        })),
+      ];
+      for (const item of rowsToWrite) {
+        const accountId = item.accountId;
         const latest = db
           .query(
             "SELECT value, revision_no FROM fact_financial WHERE company_id = ? AND period_id = ? AND account_id = ? ORDER BY revision_no DESC LIMIT 1",

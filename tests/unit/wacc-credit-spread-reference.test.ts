@@ -146,9 +146,13 @@ describe("GET .../wacc/suggestions - credit_spread", () => {
       spread_basis: "ecos_interpolated",
       derived: false,
       flags: [],
-      synthetic: null,
-      crosscheck: null,
+      // slice 3: the test company has no stored financials, so the synthetic rung and the cross-check are recorded as
+      // unavailable (with their reasons), and there is no issuance table to show
+      synthetic: { available: false, used: false, reason_code: "synthetic_no_financials", resync_hint: false },
+      crosscheck: { status: "unavailable", reason_code: "crosscheck_unavailable_no_financials", gap_pp: null },
       issuance_evidence: [],
+      issuance_status: "no_dart_corp_code",
+      rating_superseded: null,
       // ADR-0208 slice 2: home-page links of the registered agencies are a human verification aid, always offered
       agency_links: [
         { agency: "korea-ratings", home_url: "https://www.korearatings.com" },

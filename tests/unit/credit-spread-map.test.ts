@@ -39,6 +39,55 @@ describe("credit_rating_references registry reader", () => {
     expect(REG.warnGapPp).toBe(2.0);
   });
 
+  test("slice 3: the synthetic block (table, financial-sector rule) is parsed; absent -> null; unusable -> registry error", () => {
+    expect(REG.synthetic?.defaultTableId).toBe("damodaran-large-non-financial-2026-01");
+    expect(REG.synthetic?.table.rows[0]).toEqual({ lowerX: -100000, upperX: 0.2, rating: "D", publishedLabel: "D2/D" });
+    expect(REG.synthetic?.financialNameKeywords).toContain("은행");
+    expect(REG.synthetic?.financialNameSuffixes).toContain("생명");
+    const base = {
+      rating_scale: ["AAA", "AA", "A", "BBB", "BB"],
+      default: { rating: "BBB", reason: "placeholder" },
+      disclosed: { instrument: "corporate_bond", stale_months: 18, aggregate: "lowest" },
+      spread_map: {
+        upper_anchor: "AA",
+        lower_anchor: "BBB",
+        between: "geometric",
+        above_upper: "clamp",
+        below_lower: "clamp_flagged",
+      },
+      kd_crosscheck: { warn_gap_pp: 2 },
+    };
+    const doc = (synthetic?: unknown) => ({
+      credit_rating_references: { data: { ...base, ...(synthetic === undefined ? {} : { synthetic }) } },
+    });
+    expect(parseCreditRatingRegistry(doc())).toMatchObject({ ok: true, registry: { synthetic: null } });
+    const table = {
+      id: "t",
+      rows: [
+        { lower_x: -5, upper_x: 1, rating: "BB" },
+        { lower_x: 1, upper_x: null, rating: "A" },
+      ],
+    };
+    const good = parseCreditRatingRegistry(doc({ default_table_id: "t", tables: [table] }));
+    expect(good).toMatchObject({ ok: true });
+    if (good.ok) {
+      expect(good.registry.synthetic?.table.rows).toHaveLength(2);
+      expect(good.registry.synthetic?.financialNameKeywords).toEqual([]);
+    }
+    for (const bad of [
+      { default_table_id: "missing", tables: [table] },
+      { default_table_id: "t", tables: [{ id: "t", rows: [{ lower_x: 0, upper_x: null, rating: "ZZZ" }] }] },
+      { default_table_id: "t", tables: [{ id: "t", rows: [{ lower_x: 2, upper_x: 1, rating: "A" }] }] },
+      { default_table_id: "t", tables: [{ id: "t", rows: [] }] },
+      "nope",
+    ]) {
+      expect(parseCreditRatingRegistry(doc(bad))).toMatchObject({
+        ok: false,
+        reason_code: "credit_rating_registry_error",
+      });
+    }
+  });
+
   test("notch = index + 1; unknown rating is null", () => {
     expect(notchOf(REG, "AAA")).toBe(1);
     expect(notchOf(REG, "AA-")).toBe(4);
