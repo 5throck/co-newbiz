@@ -40,7 +40,6 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "reac
 import { SourceTooltip } from "../SourceTooltip.tsx";
 import { WaccStatusBadge } from "../WaccStatusBadge.tsx";
 import { ParamTable } from "../ui.tsx";
-import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { CreditRatingEvidence } from "./CreditRatingEvidence.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
@@ -768,8 +767,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const taxN = nOr(taxRate.value);
   const targetDeN = nOr(targetDe.value);
   const rfN = nOr(rf.value);
-  const erpN = nOr(erp.value);
-  const spN = nOr(sp.value);
   const obsDeN = nOr(obsDe.value);
   // 관측 D/E를 목표 D/E로 준용 — apply-all 대상이 아니며, 사람이 버튼으로만 채운다.
   const observedForTarget = observedDeAsTarget(
@@ -931,38 +928,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
 
   const mismatch =
     computedWacc != null && nOr(waccFinal) !== null && Math.abs(computedWacc - nOr(waccFinal)!) > 0.00005;
-
-  // 워터폴 스텝 — assembleDerivation 결과에서 그대로 가져온다.
-  const keSteps = useMemo(() => {
-    const d = derivation;
-    if (!d || d.computed.ke == null || rfN == null || erpN == null) return [];
-    const steps: { step: string; value: number; kind: "delta" | "total" }[] = [
-      { step: t("rate"), value: rfN, kind: "delta" },
-      { step: "β×ERP", value: (d.computed.betaLevered ?? 0) * erpN, kind: "delta" },
-    ];
-    if (spN) steps.push({ step: t("sizePremium"), value: spN, kind: "delta" });
-    steps.push({ step: t("costOfEquityKe"), value: d.computed.ke, kind: "total" });
-    return steps;
-  }, [derivation, rfN, erpN, spN, t]);
-  const waccSteps = useMemo(() => {
-    const d = derivation;
-    if (
-      !d ||
-      d.computed.wacc == null ||
-      d.computed.ke == null ||
-      d.computed.kd == null ||
-      d.computed.we == null ||
-      d.computed.wd == null ||
-      taxN == null
-    )
-      return [];
-    const steps: { step: string; value: number; kind: "delta" | "total" }[] = [
-      { step: t("equityContribution"), value: d.computed.we * d.computed.ke, kind: "total" },
-      { step: t("debtContributionAfterTax"), value: d.computed.wd * d.computed.kd * (1 - taxN), kind: "delta" },
-      { step: "WACC", value: d.computed.wacc, kind: "total" },
-    ];
-    return steps;
-  }, [derivation, taxN, t]);
 
   // Hamada 체인 표시 (② 패널 하단) — tax = 법인세율(수치), t = 번역기
   const chain = useMemo(() => {
@@ -1776,46 +1741,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   <StatCard k={t("equityWeightWe11")}>{pct(derivation.computed.we)}</StatCard>
                   <StatCard k={t("debtWeightWdDE")}>{pct(derivation.computed.wd)}</StatCard>
                 </div>
-              )}
-
-              {/* 산식 분해 */}
-              <h3 className="sizing-step-title mt-6">
-                {t("breakdown")}{" "}
-                <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">
-                  {t("seeAtAGlanceHow")}
-                </span>
-              </h3>
-              {derivation && derivation.steps.length > 0 ? (
-                <>
-                  {derivation.missing.length > 0 && (
-                    <p className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)] mb-2">
-                      {t("notEntered")} {derivation.missing.join(" · ")}
-                    </p>
-                  )}
-                  <DerivationTable derivation={derivation} />
-                  {keSteps.length > 0 && (
-                    <div className="grid gap-4 lg:grid-cols-2 mt-4">
-                      <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
-                        <h4 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--muted-fg)] mb-1">
-                          {t("costOfEquityCapm")}
-                        </h4>
-                        <RoicWaterfallChart steps={keSteps} numberFormat="percent" />
-                      </div>
-                      {waccSteps.length > 0 && (
-                        <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
-                          <h4 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--muted-fg)] mb-1">
-                            {t("waccWeightedBlend")}
-                          </h4>
-                          <RoicWaterfallChart steps={waccSteps} numberFormat="percent" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                  {t("enterMarketFigures1Beta")}
-                </p>
               )}
 
               {/* 기록될 컴포넌트·출처 */}
