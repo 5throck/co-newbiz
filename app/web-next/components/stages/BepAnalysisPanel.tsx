@@ -218,7 +218,7 @@ export function BepAnalysisPanel({ projectId }: { projectId: string }) {
     <div className="text-[length:var(--fs-body)]" data-testid="bep-analysis">
       <fieldset className="flex flex-wrap items-center gap-2 mb-2 m-0 p-0 border-0 min-w-0">
         <legend className="sr-only">{t("scenarioSelection")}</legend>
-        {(Object.keys(SCENARIO_LABEL) as ScenarioKey[]).map((k) => (
+        {(Object.keys(SCENARIO_LABEL(tr)) as ScenarioKey[]).map((k) => (
           <button
             key={k}
             type="button"
