@@ -607,7 +607,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         key={o.key}
         id={collectRowId(o.key)}
         tabIndex={-1}
-        className="flex flex-wrap items-start justify-between gap-2 py-2 border-t border-[color:var(--border)] first:border-t-0"
+        className="min-w-0 flex flex-wrap items-start justify-between gap-2 p-3 rounded-lg border border-[color:var(--border)]"
         data-testid={`wacc-collect-row-${o.key}`}
         data-emphasis={primary ? "primary" : "secondary"}
       >
@@ -1260,7 +1260,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   <p className="m-0 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
                     {t("collectBlockHint")}
                   </p>
-                  <ul className="list-none m-0 p-0">
+                  <ul className="list-none m-0 p-0 mt-2 grid gap-3 md:grid-cols-2">
                     {ecosSuggested &&
                       collectRow({
                         key: "ecos",
