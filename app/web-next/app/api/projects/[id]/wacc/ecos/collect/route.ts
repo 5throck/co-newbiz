@@ -1,7 +1,7 @@
 // POST/GET /api/projects/[id]/wacc/ecos/collect — in-app ECOS collection for the WACC reference values
 // (risk-free rate and credit spread, which GET .../wacc/suggestions reports as missing until the ECOS
 // series are collected). Same model as .../wacc/beta-series/collect: POST starts the collection in-process
-// (fetchSource over the two series the reference reads, last 12 months — the library behind
+// (fetchSource over the three series the reference reads, last 12 months — the library behind
 // `fetch --source ecos`) and answers 202 {run_id, status: "running"}; GET returns the latest run for
 // polling. ECOS series are market-common, so the run slot and the status are global (409 already_running
 // for a second request while one runs; GET shows the latest run to every member).

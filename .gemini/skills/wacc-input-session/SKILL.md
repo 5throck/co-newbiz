@@ -15,8 +15,8 @@ description: >
 
   Use when: "WACC input", "hurdle IRR confirmation", "CAPM components",
   "discount rate session", "beta estimation".
-version: 1.3.2
-last_reviewed: 2026-10-27
+version: 1.3.3
+last_reviewed: 2026-11-26
 status: active
 owner: valuation-agent
 prerequisites: none
@@ -73,10 +73,17 @@ bf-02 exists to catch — WACC and hurdle IRR must be `kind='user'`, not
 1. **Choose the input mode with the user explicitly** — direct WACC entry,
    or CAPM-component decomposition
 2. **For CAPM mode, source each component at the highest tier available**:
-   market rates (risk-free, ERP) and beta from a recognized external source
-   (AlphaSpread, ValueInvesting.io, Bank of Korea ECOS, Damodaran) recorded as
-   `kind='live'` with source name, URL (`https://…` anchor_ref), and as-of
-   date; judgment values (size premium, target D/E, tax rate) as `kind='user'`
+   the risk-free rate and beta from a recognized external source
+   (AlphaSpread, ValueInvesting.io, Bank of Korea ECOS) recorded as
+   `kind='live'` with source name, URL (`https://…`, `doc:<id>` or `src:<code>`
+   anchor_ref; any other shape fails the confirmation with `ref_invalid`), and
+   as-of date; judgment values (ERP, size premium, target D/E, tax rate) as
+   `kind='user'`. The ERP stays `kind='user'` even when a published reference
+   (ADR-0207, `region-profiles/KR.yaml` `erp_references`, e.g. Damodaran) is
+   applied: the reference is a cited proposal and the human confirms it. The
+   statutory marginal tax rate (`corporate_tax_rates`) and the observed D/E
+   used as target D/E (the "apply observed as target" button) follow the same rule — suggested,
+   never auto-confirmed
 3. **Estimate beta by the best available path**: (a) peer group — cited
    levered betas plus each peer's D/E, Hamada-unlevered, median taken; or
    (b) time-series regression — paste `date, price, index` closes, OLS gives

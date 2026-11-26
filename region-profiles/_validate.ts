@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// @version 1.3.0
+// @version 1.4.0
 /**
  * Region Profile Validator — co-newbiz
  *
@@ -55,7 +55,7 @@ const REQUIRED_SOURCED_SECTIONS = REQUIRED_TOP_LEVEL.filter(
 
 // Optional sections are skipped when absent and held to the same provenance
 // rules when present (see optional_top_level in _schema.yaml).
-const OPTIONAL_SOURCED_SECTIONS = ["payment_practice", "erp_references", "corporate_tax_rates"];
+const OPTIONAL_SOURCED_SECTIONS = ["payment_practice", "erp_references", "corporate_tax_rates", "credit_rating_references"];
 
 const SOURCED_SECTIONS = [...REQUIRED_SOURCED_SECTIONS, ...OPTIONAL_SOURCED_SECTIONS];
 
@@ -270,6 +270,186 @@ function validateCorporateTaxRates(file: string, section: unknown): Issue[] {
   return issues;
 }
 
+/**
+ * credit_rating_references (ADR-0208): section-level provenance is checked by the generic loop; this
+ * adds the data contract. Required: rating_scale, default, disclosed, spread_map, kd_crosscheck.
+ * Optional (validated when present, added by later slices): agencies, synthetic. Every rating named
+ * anywhere must resolve in rating_scale. The validator never fetches URLs and cannot re-verify a
+ * transcribed table - verified_on / maintainer stay the human attestation.
+ */
+function validateCreditRatingReferences(file: string, section: unknown): Issue[] {
+  const issues: Issue[] = [];
+  const err = (message: string) =>
+    issues.push({ file, message: `credit_rating_references: ${message}`, severity: "error" });
+  if (typeof section !== "object" || section === null || Array.isArray(section)) return issues; // generic loop reports it
+  const data = (section as Record<string, unknown>).data;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return issues; // generic loop reports it
+  const d = data as Record<string, unknown>;
+  const isMap = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+  // rating_scale: best to worst, notch = index + 1
+  const scale: string[] = [];
+  if (!Array.isArray(d.rating_scale) || d.rating_scale.length === 0) {
+    err("data.rating_scale must be a non-empty list (best rating first)");
+  } else {
+    const seen = new Set<string>();
+    d.rating_scale.forEach((r, i) => {
+      if (!isNonEmptyString(r)) err(`data.rating_scale[${i}] must be a non-empty string`);
+      else if (seen.has(r)) err(`data.rating_scale has a duplicate rating '${r}'`);
+      else {
+        seen.add(r);
+        scale.push(r);
+      }
+    });
+  }
+  const notch = (r: unknown): number => (typeof r === "string" ? scale.indexOf(r) : -1);
+  const resolves = (r: unknown, at: string) => {
+    if (!isNonEmptyString(r)) err(`${at} is required`);
+    else if (scale.length > 0 && notch(r) < 0) err(`${at} '${r}' is not in data.rating_scale`);
+  };
+
+  // default
+  if (!isMap(d.default)) err("data.default must be a mapping { rating, reason }");
+  else {
+    resolves(d.default.rating, "data.default.rating");
+    if (!isNonEmptyString(d.default.reason)) err("data.default.reason is required");
+  }
+
+  // disclosed
+  if (!isMap(d.disclosed)) err("data.disclosed must be a mapping { instrument, stale_months, aggregate }");
+  else {
+    if (!isNonEmptyString(d.disclosed.instrument)) err("data.disclosed.instrument is required");
+    const sm = d.disclosed.stale_months;
+    if (typeof sm !== "number" || !Number.isFinite(sm) || sm <= 0) err("data.disclosed.stale_months must be a positive number");
+    if (d.disclosed.aggregate !== "lowest") err("data.disclosed.aggregate must be 'lowest'");
+  }
+
+  // spread_map
+  if (!isMap(d.spread_map)) err("data.spread_map must be a mapping");
+  else {
+    const sm = d.spread_map;
+    resolves(sm.upper_anchor, "data.spread_map.upper_anchor");
+    resolves(sm.lower_anchor, "data.spread_map.lower_anchor");
+    if (notch(sm.upper_anchor) >= 0 && notch(sm.lower_anchor) >= 0 && notch(sm.upper_anchor) >= notch(sm.lower_anchor)) {
+      err("data.spread_map.upper_anchor must be a better rating than lower_anchor");
+    }
+    if (sm.between !== "geometric") err("data.spread_map.between must be 'geometric'");
+    if (sm.above_upper !== "clamp") err("data.spread_map.above_upper must be 'clamp'");
+    if (sm.below_lower !== "clamp_flagged") err("data.spread_map.below_lower must be 'clamp_flagged'");
+  }
+
+  // kd_crosscheck
+  if (!isMap(d.kd_crosscheck)) err("data.kd_crosscheck must be a mapping { warn_gap_pp }");
+  else {
+    const g = d.kd_crosscheck.warn_gap_pp;
+    if (typeof g !== "number" || !Number.isFinite(g) || g <= 0) err("data.kd_crosscheck.warn_gap_pp must be a positive number");
+  }
+
+  // agencies (optional)
+  if (d.agencies !== undefined) {
+    if (!Array.isArray(d.agencies) || d.agencies.length === 0) err("data.agencies must be a non-empty list when present");
+    else {
+      const ids = new Set<string>();
+      d.agencies.forEach((a, i) => {
+        if (!isMap(a)) {
+          err(`data.agencies[${i}] must be a mapping`);
+          return;
+        }
+        if (!isNonEmptyString(a.id)) err(`data.agencies[${i}] is missing required field 'id'`);
+        else if (ids.has(a.id)) err(`duplicate agency id '${a.id}'`);
+        else ids.add(a.id);
+        if (!Array.isArray(a.aliases) || a.aliases.length === 0 || !a.aliases.every(isNonEmptyString)) {
+          err(`data.agencies[${i}].aliases must be a non-empty list of non-empty strings`);
+        }
+        if (a.home_url !== undefined && (!isNonEmptyString(a.home_url) || !a.home_url.startsWith("https://") || a.home_url.length <= "https://".length)) {
+          err(`data.agencies[${i}].home_url must be an https:// URL with a host`);
+        }
+      });
+    }
+  }
+
+  // synthetic (optional): coverage-to-rating tables
+  if (d.synthetic !== undefined) {
+    if (!isMap(d.synthetic)) err("data.synthetic must be a mapping when present");
+    else {
+      const syn = d.synthetic;
+      const tables = syn.tables;
+      const tableIds = new Set<string>();
+      if (!Array.isArray(tables) || tables.length === 0) err("data.synthetic.tables must be a non-empty list");
+      else {
+        tables.forEach((t, i) => {
+          const at = `data.synthetic.tables[${i}]`;
+          if (!isMap(t)) {
+            err(`${at} must be a mapping`);
+            return;
+          }
+          if (!isNonEmptyString(t.id)) err(`${at} is missing required field 'id'`);
+          else if (tableIds.has(t.id)) err(`duplicate synthetic table id '${t.id}'`);
+          else tableIds.add(t.id);
+          for (const f of ["source", "url", "basis", "maintainer"]) {
+            if (!isNonEmptyString(t[f])) err(`${at} is missing required field '${f}'`);
+          }
+          if (isNonEmptyString(t.url) && (!t.url.startsWith("https://") || t.url.length <= "https://".length)) {
+            err(`${at}.url must be an https:// URL with a host`);
+          }
+          for (const f of ["as_of", "verified_on"]) {
+            const p = dateProblem(t[f]);
+            if (t[f] === undefined) err(`${at} is missing required field '${f}'`);
+            else if (p) err(`${at}.${f} ${p}`);
+          }
+          const rows = t.rows;
+          if (!Array.isArray(rows) || rows.length === 0) {
+            err(`${at}.rows must be a non-empty list`);
+            return;
+          }
+          let prevUpper: number | null | undefined;
+          let prevNotch = Number.POSITIVE_INFINITY;
+          rows.forEach((r, j) => {
+            const rt = `${at}.rows[${j}]`;
+            if (!isMap(r)) {
+              err(`${rt} must be a mapping`);
+              prevUpper = undefined;
+              return;
+            }
+            const lo = r.lower_x;
+            const up = r.upper_x;
+            if (typeof lo !== "number" || !Number.isFinite(lo)) {
+              err(`${rt}.lower_x must be a finite number`);
+              prevUpper = undefined;
+              return;
+            }
+            if (j === 0) {
+              if (lo > 0) err(`${rt}.lower_x ${lo} must be <= 0 (the first row must cover zero and below)`);
+            } else if (prevUpper === undefined || prevUpper === null || lo !== prevUpper) {
+              err(`${rt}.lower_x ${lo} must equal the previous row's upper_x (rows must be contiguous)`);
+            }
+            const isLast = j === rows.length - 1;
+            if (up === null) {
+              if (!isLast) err(`${rt}.upper_x is null (open row) but is not the last row`);
+              prevUpper = null;
+            } else if (typeof up !== "number" || !Number.isFinite(up) || up <= lo) {
+              err(`${rt}.upper_x must be a number greater than lower_x, or null for the open top row`);
+              prevUpper = undefined;
+            } else {
+              if (isLast) err(`${rt}.upper_x must be null - the last row must be open`);
+              prevUpper = up;
+            }
+            resolves(r.rating, `${rt}.rating`);
+            const n = notch(r.rating);
+            if (n >= 0) {
+              if (n > prevNotch) err(`${rt}.rating '${r.rating}' is worse than the previous row's (ratings must not worsen as coverage rises)`);
+              prevNotch = n;
+            }
+          });
+        });
+      }
+      if (!isNonEmptyString(syn.default_table_id)) err("data.synthetic.default_table_id is required");
+      else if (!tableIds.has(syn.default_table_id)) err(`data.synthetic.default_table_id '${syn.default_table_id}' must match exactly one table id`);
+    }
+  }
+  return issues;
+}
+
 export function validateProfile(file: string, doc: unknown): Issue[] {
   const issues: Issue[] = [];
   if (typeof doc !== "object" || doc === null) {
@@ -311,6 +491,7 @@ export function validateProfile(file: string, doc: unknown): Issue[] {
 
   if (p.erp_references !== undefined) issues.push(...validateErpReferences(file, p.erp_references));
   if (p.corporate_tax_rates !== undefined) issues.push(...validateCorporateTaxRates(file, p.corporate_tax_rates));
+  if (p.credit_rating_references !== undefined) issues.push(...validateCreditRatingReferences(file, p.credit_rating_references));
 
   const closing = p.typical_closing_weeks;
   if (closing !== undefined && (typeof closing !== "number" || closing <= 0)) {

@@ -1,4 +1,4 @@
-// @version 1.5.1
+// @version 1.6.0
 // 1.5.1: lint-gate cleanup only (biome whole-file scan on the changed file blocked the quality
 // gate) — useLiteralKeys dot access on the law-adapter rows, noNonNullAssertion removed (kosis
 // closure snapshots the validated orgId/tblId/itmId keys; listKrxDailyRows restructures the
@@ -342,6 +342,18 @@ const ECOS_SEED_SERIES: SeriesDescriptor[] = [
     statCode: "721Y001",
     itemCode: "7020000",
     title: "회사채(3년, AA-) 월별금리 — ECOS 721Y001 live-verified 2026-09-11 (item 7020000)",
+    unitCode: "percent",
+    periodType: "month",
+    _verified: true,
+  },
+  {
+    seriesId: "ecos:721Y001:7030000",
+    adapter: "ecos",
+    statCode: "721Y001",
+    itemCode: "7030000",
+    // ADR-0208: lower anchor of the rating-to-spread map. Item code verified 2026-11-26 against StatisticItemList
+    // (monthly from 2000-10). Title is ASCII on purpose (TS sources carry no Korean text in new code).
+    title: "Corporate bond 3y BBB- monthly yield - ECOS 721Y001 item 7030000 (verified 2026-11-26)",
     unitCode: "percent",
     periodType: "month",
     _verified: true,

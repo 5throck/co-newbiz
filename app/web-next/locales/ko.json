@@ -3332,7 +3332,8 @@
       "confirmLink": "할인율 확정하러 가기",
       "missingLabel": "남은 항목",
       "warning": {
-        "wacc_not_below_hurdle": "WACC가 허들 IRR 이상입니다. 두 비율을 확인하세요."
+        "wacc_not_below_hurdle": "WACC가 허들 IRR 이상입니다. 두 비율을 확인하세요.",
+        "kd_ge_ke": "타인자본비용(Kd)이 자기자본비용(Ke) 이상입니다. 등급과 가산금리를 확인하세요."
       }
     },
     "reconfirm": {
@@ -7851,8 +7852,8 @@
           "creditRatingPlusSpread": "신용등급 + 가산금리",
           "creditRatingSpread": "신용등급 가산금리",
           "creditRatingSpread2": "신용등급 가산금리",
-          "creditRatingSpreadCorporateBond": "신용등급 가산금리 (회사채 AA− − 국고채)",
-          "creditSpreadMinusGovernmentBond": "가산금리 (AA− − 국고채)",
+          "creditRatingSpreadCorporateBond": "신용등급 가산금리 (등급별 회사채 − 국고채)",
+          "creditSpreadMinusGovernmentBond": "가산금리 (등급별 회사채 − 국고채)",
           "currentConfirmedValue": "현재 확정값",
           "currentlyConfirmedWaccValue": "현재 확정된 WACC 값",
           "debtContributionAfterTax": "타인자본 기여 (세후)",
@@ -8000,7 +8001,35 @@
           "taxReasonNoRegistry": "등록된 법정세율표가 없습니다",
           "taxReasonRegistryError": "법정세율표를 읽지 못했습니다",
           "applyObservedDeAsTarget": "관측값을 목표로 적용",
-          "targetDeFromObserved": "관측 D/E 준용 ({detail})"
+          "targetDeFromObserved": "관측 D/E 준용 ({detail})",
+          "creditRatingChip": "등급 {rating}",
+          "creditSourceDefault": "기본값",
+          "creditSourceDisclosed": "공시",
+          "creditSourceSynthetic": "추정",
+          "creditStaleChip": "등급 오래됨",
+          "creditBasisInterpolated": "등급 보간",
+          "creditBasisClamped": "구간 고정",
+          "creditBasisLegacy": "기존 AA−",
+          "creditDerivedChip": "파생값",
+          "creditAnchorsLine": "AA− {aa}% · BBB− {bbb}% · 기준월 {asOf}",
+          "creditFlagInterpolated": "공시된 수치가 아닙니다: AA−와 BBB− 수익률 사이를 등급 단계별로 보간(기하)한 값입니다.",
+          "creditFlagAboveUpperClamped": "AA− 이상 등급: AA− 가산금리를 씁니다 (AAA 가산금리는 조금 더 낮아 보수적으로 잡힙니다).",
+          "creditFlagBelowInvestmentGrade": "투자등급 미만: BBB− 가산금리를 쓰므로 실제 가산금리보다 낮게 잡힙니다.",
+          "creditFlagClampedFallback": "이 달에 앵커 시계열이 없어 가장 가까운 앵커를 씁니다.",
+          "creditReasonNoRatingEvidence": "공시 등급도 추정 등급도 없어 등록된 기본 등급을 씁니다. 이 회사의 등급을 확인한 뒤 활용하세요.",
+          "creditReasonDefaultBasis": "등급 근거 없음 — 기본 등급은 자리표시값입니다. 회사 등급을 확인한 뒤 개별로 적용하세요",
+          "creditReasonStale": "공시 등급이 오래되었습니다 — 확인한 뒤 개별로 적용하세요",
+          "creditReasonNoRegistry": "이 시장에는 신용등급 레지스트리가 등록되어 있지 않아 AA− 가산금리를 유지합니다.",
+          "creditReasonRegistryError": "신용등급 레지스트리를 읽지 못해 AA− 가산금리를 유지합니다.",
+          "creditReasonNoEcos": "국고채와 회사채 앵커가 함께 있는 ECOS 월이 없어 AA− 가산금리를 유지합니다.",
+          "creditReasonNotInScale": "등급이 등록된 등급 체계에 없어 AA− 가산금리를 유지합니다.",
+          "creditReasonAnchorMissing": "회사채 앵커가 없어 AA− 가산금리를 유지합니다.",
+          "creditReasonSpreadNotPositive": "이 달의 앵커 가산금리가 0 이하여서 AA− 가산금리를 유지합니다.",
+          "creditReasonAnchorsInverted": "이 달의 BBB− 가산금리가 AA−보다 낮아 AA− 가산금리를 유지합니다.",
+          "creditApplyAria": "가산금리 {value}% 적용 (등급 {rating}, {source})",
+          "kdGeKeChip": "Kd가 Ke 이상",
+          "kdGeKeDetail": "타인자본비용 Kd {kd} ≥ 자기자본비용 Ke {ke}. 등급과 가산금리를 확인하세요. 저장은 그대로 할 수 있습니다.",
+          "kdGeKeDetailIndicative": "참조값 기준 예상 Kd({kd})가 Ke({ke}) 이상입니다. 적용 전에 등급을 확인하세요. 저장은 그대로 할 수 있습니다."
         }
       }
     },
@@ -10520,6 +10549,12 @@
       "waccHeading": "WACC 참조값 — 이 회사 기준",
       "waccBadge": "밸류에이션 관점",
       "noBasis": "산출 근거 없음",
+      "waccLabel": {
+        "risk_free": "무위험이자율 (Rf)",
+        "credit_spread": "신용등급 가산금리 (등급별 회사채 − 국고채)",
+        "observed_de": "관측 D/E",
+        "beta_levered": "베타 (레버드)"
+      },
       "waccNotePre": "참조값은 ",
       "waccNoteB": "제안",
       "waccNotePost": "입니다. 프로젝트 WACC 세션(사업성 분석 → WACC)에서 불러와 사람이 확인·수정한 뒤 확정합니다. 참조 주체가 다른 값(그룹 계열사 기준 — 투자 허들 관점)은 그룹/계열사 화면에서 별도 확인할 수 있습니다.",

@@ -12,17 +12,24 @@
 import { type TranslatorFn, resolveLabels } from "../../i18n/config.ts";
 import { suggestionToInputValue } from "../../lib/wacc-suggestion-convert.ts";
 import {
+  type AppliedCreditRef,
   type AppliedErpRef,
   type AppliedTaxRef,
   type ApplyAllExcluded,
   type ReferenceSuggestion,
+  appliedCreditRefFrom,
   appliedErpRefFrom,
   appliedTaxRefFrom,
   applicableSuggestions,
+  creditReferenceFields,
+  creditSourceLabel,
   erpReferenceFields,
+  formatCreditAnchorPct,
+  kdKeWarning,
   missingReferenceItems,
   observedDeAsTarget,
   observedDeSourceDetail,
+  reasonByCode,
   safeHttpsUrl,
   taxReferenceFields,
   toWaccComponentPayload,
@@ -271,6 +278,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const [erpRef, setErpRef] = useState<AppliedErpRef | null>(null);
   // Statutory tax-rate reference the human applied (ADR-0207 addendum); its bracket id + basis travel with the confirmation.
   const [taxRef, setTaxRef] = useState<AppliedTaxRef | null>(null);
+  // ADR-0208: credit-spread reference the human applied (rating basis + ECOS month); null = typed manually / legacy AA- applied.
+  const [creditRef, setCreditRef] = useState<AppliedCreditRef | null>(null);
   const targetQuery = selectedTarget ? `?target_id=${encodeURIComponent(selectedTarget)}` : "";
   const loadSugg = useCallback(() => {
     api
@@ -310,7 +319,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       asOf: e.as_of ?? "",
     };
     if (key === "risk_free") setRf(cited);
-    if (key === "credit_spread") setKdSpread(cited);
+    // ADR-0208: the citation names the rating and how the spread was mapped; the basis and ECOS month travel with the confirmation.
+    if (key === "credit_spread") {
+      setKdSpread({ ...cited, source: creditSourceLabel(e) });
+      setCreditRef(appliedCreditRefFrom(e, ratio));
+    }
     if (key === "observed_de") setObsDe({ value: cited.value, source: cited.source, asOf: cited.asOf });
     // ADR-0207: an applied ERP reference replaces any earlier one; its id travels with the confirmation.
     if (key === "erp") {
@@ -382,6 +395,88 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       )}
     </>
   );
+  const CREDIT_SOURCE_LABEL: Record<string, string> = {
+    default: t("creditSourceDefault"),
+    disclosed: t("creditSourceDisclosed"),
+    synthetic: t("creditSourceSynthetic"),
+  };
+  const CREDIT_BASIS_LABEL: Record<string, string> = {
+    ecos_interpolated: t("creditBasisInterpolated"),
+    ecos_clamped: t("creditBasisClamped"),
+    aa_minus_legacy: t("creditBasisLegacy"),
+  };
+  const CREDIT_FLAG_LABEL: Record<string, string> = {
+    interpolated: t("creditFlagInterpolated"),
+    above_upper_anchor_clamped: t("creditFlagAboveUpperClamped"),
+    below_investment_grade_series_understates: t("creditFlagBelowInvestmentGrade"),
+    clamped_fallback: t("creditFlagClampedFallback"),
+  };
+  // Backend reason codes of the credit_spread entry (rating rung, spread map, apply-all exclusions) -> localized text.
+  const CREDIT_REASON_LABEL: Record<string, string> = {
+    no_disclosed_rating_and_synthetic_unavailable: t("creditReasonNoRatingEvidence"),
+    credit_rating_default_basis: t("creditReasonDefaultBasis"),
+    credit_rating_stale: t("creditReasonStale"),
+    credit_rating_no_registry: t("creditReasonNoRegistry"),
+    credit_rating_registry_error: t("creditReasonRegistryError"),
+    no_ecos_observations: t("creditReasonNoEcos"),
+    rating_not_in_scale: t("creditReasonNotInScale"),
+    anchor_missing: t("creditReasonAnchorMissing"),
+    spread_not_positive: t("creditReasonSpreadNotPositive"),
+    anchors_inverted: t("creditReasonAnchorsInverted"),
+  };
+  const creditReasonText = (code: string | null | undefined, fallback: string | null | undefined) =>
+    reasonByCode(CREDIT_REASON_LABEL, code, fallback);
+  /** 등급·근거·보간 방식 칩 — 상태는 글자로 전달한다 (색만으로 구분하지 않음, FR-SYS-05). */
+  const creditChips = (x: Sugg) => (
+    <>
+      {x.rating && (
+        <span className="status-chip status-info" data-testid="credit-rating-chip">
+          {t("creditRatingChip", { rating: x.rating })}
+        </span>
+      )}
+      {x.rating_source && (
+        <span
+          className={`status-chip ${x.rating_source === "default" ? "status-amber" : "status-info"}`}
+          data-testid="credit-source-chip"
+        >
+          {CREDIT_SOURCE_LABEL[x.rating_source] ?? x.rating_source}
+        </span>
+      )}
+      {x.rating_stale && (
+        <span className="status-chip status-amber" data-testid="credit-stale-chip">
+          {t("creditStaleChip")}
+        </span>
+      )}
+      {x.spread_basis && (
+        <span className="status-chip status-info" data-testid="credit-basis-chip">
+          {CREDIT_BASIS_LABEL[x.spread_basis] ?? x.spread_basis}
+        </span>
+      )}
+      {x.derived && (
+        <span className="status-chip status-info" data-testid="credit-derived-chip">
+          {t("creditDerivedChip")}
+        </span>
+      )}
+    </>
+  );
+  /** 앵커 한 줄(AA− · BBB− · 기준월). 앵커가 없으면(기존 AA− 유지) 줄을 만들지 않는다. */
+  const creditAnchorsText = (x: Sugg) =>
+    x.anchors
+      ? t("creditAnchorsLine", {
+          aa: formatCreditAnchorPct(x.anchors.aa_minus_pct),
+          bbb: formatCreditAnchorPct(x.anchors.bbb_minus_pct),
+          asOf: x.anchors.as_of,
+        })
+      : null;
+  const creditNoteLines = (x: Sugg): string[] => {
+    const lines: string[] = [];
+    const rating = creditReasonText(x.reason_code, x.reason);
+    if (rating) lines.push(rating);
+    for (const f of x.flags ?? []) lines.push(CREDIT_FLAG_LABEL[f] ?? f);
+    const spread = creditReasonText(x.spread_reason_code, x.spread_reason);
+    if (spread) lines.push(spread);
+    return lines;
+  };
   const erpSourceLink = (x: Sugg) => {
     const href = safeHttpsUrl(x.anchor_ref);
     const label = x.source_label ?? "";
@@ -600,8 +695,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         }
       }
     }
-    if (kdMode === "rating") cited("wacc.debt_spread", kdSpread);
-    else cited("wacc.cost_of_debt", kdDirect);
+    if (kdMode === "rating") {
+      cited("wacc.debt_spread", kdSpread);
+      const spreadComp = comps.find((c) => c.key === "wacc.debt_spread");
+      if (spreadComp) Object.assign(spreadComp, creditReferenceFields(creditRef, spreadComp.value));
+    } else cited("wacc.cost_of_debt", kdDirect);
     if (targetDeN !== null) {
       comps.push({
         key: "wacc.target_de",
@@ -632,6 +730,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     peers,
     taxN,
     taxRef,
+    creditRef,
     kdMode,
     kdSpread,
     kdDirect,
@@ -644,6 +743,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const derivation = useMemo(() => (components.length > 0 ? assembleDerivation(components) : null), [components]);
   const computedWacc = derivation?.computed.wacc ?? null;
   const gaps = useMemo(() => capmComponentGaps(components), [components]);
+  // ADR-0208: Kd at or above Ke is a warning only (the BBB- ECOS series can run extreme) - it never blocks confirmation.
+  const kdKe = kdKeWarning(
+    { kd: derivation?.computed.kd ?? null, ke: derivation?.computed.ke ?? null },
+    kdMode === "rating" ? (sugg?.suggestions ?? []).find((x) => x.key === "credit_spread")?.kd_indicative_pct : null,
+  );
 
   useEffect(() => {
     if (!waccTouched && computedWacc != null) setWaccFinal(computedWacc.toFixed(4));
@@ -920,7 +1024,22 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                           {erpChips(x)}
                         </div>
                       )}
-                      {x.note && x.key !== "tax_rate" ? (
+                      {x.key === "credit_spread" && (
+                        <>
+                          <div className="flex flex-wrap items-center gap-1 text-[length:var(--fs-caption)]">
+                            {creditChips(x)}
+                          </div>
+                          {creditAnchorsText(x) && (
+                            <div
+                              className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] max-w-[22rem]"
+                              data-testid="credit-anchors-line"
+                            >
+                              {creditAnchorsText(x)}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {x.note && x.key !== "tax_rate" && x.key !== "credit_spread" ? (
                         <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] max-w-[22rem]">
                           {x.note}
                         </div>
@@ -938,7 +1057,9 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                           ? erpReasonText(x.reason_code, x.reason)
                           : x.key === "tax_rate"
                             ? taxReasonText(x.reason_code, x.reason)
-                            : x.reason;
+                            : x.key === "credit_spread"
+                              ? creditReasonText(x.reason_code, x.reason)
+                              : x.reason;
                       return (
                         <li key={x.key}>
                           <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
@@ -1193,6 +1314,17 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                 </div>
                                 {r.note ? <div>{r.note}</div> : null}
                               </>
+                            ) : r.key === "credit_spread" ? (
+                              <div className="min-w-0 [overflow-wrap:anywhere]" data-testid="credit-spread-detail">
+                                <div>{`${r.source_label ?? ""} · ${r.as_of ?? ""}`}</div>
+                                <div className="flex flex-wrap items-center gap-1">{creditChips(r)}</div>
+                                {creditAnchorsText(r) && (
+                                  <div data-testid="credit-anchors-line">{creditAnchorsText(r)}</div>
+                                )}
+                                {creditNoteLines(r).map((line) => (
+                                  <div key={line}>{line}</div>
+                                ))}
+                              </div>
                             ) : (
                               `${r.source_label ?? ""} · ${r.as_of ?? ""}`
                             )}
@@ -1207,7 +1339,13 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                     ? t("erpApplyAria", { source: r.source_label ?? "", value: r.value.toFixed(2) })
                                     : isTax
                                       ? t("taxRateApplyAria", { source: taxBracketText(r), value: r.value.toFixed(2) })
-                                      : undefined
+                                      : r.key === "credit_spread" && r.rating
+                                        ? t("creditApplyAria", {
+                                            rating: r.rating,
+                                            value: r.value.toFixed(2),
+                                            source: CREDIT_SOURCE_LABEL[r.rating_source ?? ""] ?? "",
+                                          })
+                                        : undefined
                                 }
                                 onClick={() => applyRef(r.key, r)}
                               >
@@ -1411,6 +1549,24 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                   onChange={setKdDirect}
                   forceKind="user"
                 />
+              )}
+
+              {kdKe && (
+                <p
+                  role="note"
+                  className="mt-2 flex min-w-0 flex-wrap items-center gap-1 text-[length:var(--fs-caption)] [overflow-wrap:anywhere]"
+                  data-testid="kd-ge-ke-warning"
+                >
+                  <span className="status-chip status-amber">
+                    <span aria-hidden="true">⚠</span> {t("kdGeKeChip")}
+                  </span>
+                  <span className="min-w-0 text-[color:var(--muted-fg)]">
+                    {t(kdKe.indicative ? "kdGeKeDetailIndicative" : "kdGeKeDetail", {
+                      kd: pct(kdKe.kd),
+                      ke: pct(kdKe.ke),
+                    })}
+                  </span>
+                </p>
               )}
 
               {/* ④ 자본구조·세율 */}

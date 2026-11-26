@@ -8,7 +8,7 @@
  * network (any ECOS call without an installed mock throws).
  * Covers: authorization (viewer 403, non-member/admin 404, anonymous 401), 503 without ECOS_API_KEY (no run,
  * no audit), 202 + job_run lifecycle + audit with the calling user as actor, observations landing for the
- * two reference series so GET .../wacc/suggestions turns risk_free/credit_spread from null into values,
+ * three reference series (KTB 3y, AA-, BBB-; ADR-0208) so GET .../wacc/suggestions turns risk_free/credit_spread from null into values,
  * partial failures (unpublished months) staying a success, global 409 already_running, and a run where
  * nothing landed ending failed (HTTP stays 202).
  */
@@ -310,13 +310,18 @@ describe("success path — real fetchSource over the mocked ECOS payload", () =>
       series: Array<{ seriesId: string }>;
     };
     expect(detail.warnings.length).toBeGreaterThan(0);
-    expect(detail.series.map((s) => s.seriesId).sort()).toEqual(["ecos:721Y001:5020000", "ecos:721Y001:7020000"]);
+    expect(detail.series.map((s) => s.seriesId).sort()).toEqual([
+      "ecos:721Y001:5020000",
+      "ecos:721Y001:7020000",
+      "ecos:721Y001:7030000",
+    ]);
     expect(auditCount(projectA)).toBe(auditBefore + 1);
 
     const obs = (sid: string) =>
       (db.query("SELECT COUNT(*) AS n FROM fact_market_observation WHERE series_id = ?").get(sid) as { n: number }).n;
     expect(obs("ecos:721Y001:5020000")).toBeGreaterThan(5);
     expect(obs("ecos:721Y001:7020000")).toBeGreaterThan(5);
+    expect(obs("ecos:721Y001:7030000")).toBeGreaterThan(5);
 
     const after = await suggestions(projectA);
     const rf = after.find((s) => s.key === "risk_free");

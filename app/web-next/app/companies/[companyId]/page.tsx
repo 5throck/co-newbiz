@@ -76,6 +76,8 @@ interface View {
   wacc_reference: { entries: WaccEntry[]; latest_year: string | null; disclaimer?: string };
 }
 
+const WACC_LABEL_KEYS = ["risk_free", "credit_spread", "observed_de", "beta_levered"] as const;
+
 // DART 계정명(저장 데이터의 account_name 매칭 키) — UI 문자열이 아니므로 카탈로그로 옮기지 않는다.
 const ACCOUNT_ORDER = ["매출액", "영업이익", "당기순이익", "자산총계", "부채총계", "자본총계"];
 const toEok = (v: number): string => (v / 1e8).toLocaleString("ko-KR", { maximumFractionDigits: 1 });
@@ -92,6 +94,9 @@ export default function CompanyFinancialsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  // The API labels are backend text (one language); known keys are shown in the viewer's locale instead.
+  const waccLabel = (key: string, apiLabel: string) =>
+    (WACC_LABEL_KEYS as readonly string[]).includes(key) ? t(`waccLabel.${key}` as never) : apiLabel;
 
   const load = useCallback(() => {
     api
@@ -319,7 +324,9 @@ export default function CompanyFinancialsPage() {
                   key={e.key}
                   className="border border-[color:var(--border)] rounded-lg p-3 bg-[color:var(--muted-bg)]"
                 >
-                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">{e.label}</div>
+                  <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                    {waccLabel(e.key, e.label)}
+                  </div>
                   <div className="font-extrabold text-[1.05rem] tabular-nums">{formatWaccValue(e.value, e.unit)}</div>
                   {e.value === null ? (
                     <div className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">

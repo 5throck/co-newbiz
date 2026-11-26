@@ -3332,7 +3332,8 @@
       "confirmLink": "Confirm the discount rate",
       "missingLabel": "Remaining items",
       "warning": {
-        "wacc_not_below_hurdle": "The WACC is at or above the hurdle IRR; check the two rates."
+        "wacc_not_below_hurdle": "The WACC is at or above the hurdle IRR; check the two rates.",
+        "kd_ge_ke": "The cost of debt (Kd) is at or above the cost of equity (Ke); check the rating and spread."
       }
     },
     "reconfirm": {
@@ -7851,8 +7852,8 @@
           "creditRatingPlusSpread": "Credit rating plus spread",
           "creditRatingSpread": "Credit rating spread",
           "creditRatingSpread2": "Credit rating spread",
-          "creditRatingSpreadCorporateBond": "Credit rating spread (AA− corporate bond minus government bond)",
-          "creditSpreadMinusGovernmentBond": "Credit spread (AA− minus government bond)",
+          "creditRatingSpreadCorporateBond": "Credit rating spread (rating-mapped corporate bond minus government bond)",
+          "creditSpreadMinusGovernmentBond": "Credit spread (rating-mapped corporate bond minus government bond)",
           "currentConfirmedValue": "Current confirmed value",
           "currentlyConfirmedWaccValue": "Currently confirmed WACC value",
           "debtContributionAfterTax": "Debt contribution (after tax)",
@@ -8000,7 +8001,35 @@
           "taxReasonNoRegistry": "No statutory tax-rate table is registered",
           "taxReasonRegistryError": "The statutory tax-rate table could not be read",
           "applyObservedDeAsTarget": "Use observed value as target",
-          "targetDeFromObserved": "Observed D/E carried over ({detail})"
+          "targetDeFromObserved": "Observed D/E carried over ({detail})",
+          "creditRatingChip": "Rating {rating}",
+          "creditSourceDefault": "Default",
+          "creditSourceDisclosed": "Disclosed",
+          "creditSourceSynthetic": "Estimated",
+          "creditStaleChip": "Rating out of date",
+          "creditBasisInterpolated": "Interpolated by grade",
+          "creditBasisClamped": "Range clamped",
+          "creditBasisLegacy": "Legacy AA−",
+          "creditDerivedChip": "Derived value",
+          "creditAnchorsLine": "AA− {aa}% · BBB− {bbb}% · as of {asOf}",
+          "creditFlagInterpolated": "Not a published figure: interpolated by grade between the AA− and BBB− yields (geometric).",
+          "creditFlagAboveUpperClamped": "Rated above AA−: the AA− spread is used (the AAA spread is slightly lower, so this errs on the conservative side).",
+          "creditFlagBelowInvestmentGrade": "Below investment grade: the BBB− spread is used, which understates the true spread.",
+          "creditFlagClampedFallback": "An anchor series is missing for this month, so the nearest available anchor is used.",
+          "creditReasonNoRatingEvidence": "No disclosed or estimated rating is available, so the registered default rating is used. Confirm the company's rating before relying on it.",
+          "creditReasonDefaultBasis": "The rating is a default placeholder with no rating evidence — confirm the company's rating, then apply individually",
+          "creditReasonStale": "The disclosed rating is out of date — confirm it, then apply individually",
+          "creditReasonNoRegistry": "No credit-rating registry is registered for this market; the AA− spread is kept.",
+          "creditReasonRegistryError": "The credit-rating registry could not be read; the AA− spread is kept.",
+          "creditReasonNoEcos": "No common ECOS month exists for the government bond and the corporate-bond anchors; the AA− spread is kept.",
+          "creditReasonNotInScale": "The rating is not on the registered rating scale; the AA− spread is kept.",
+          "creditReasonAnchorMissing": "A corporate-bond anchor is missing; the AA− spread is kept.",
+          "creditReasonSpreadNotPositive": "An anchor spread is not positive for this month; the AA− spread is kept.",
+          "creditReasonAnchorsInverted": "The BBB− spread is below the AA− spread for this month; the AA− spread is kept.",
+          "creditApplyAria": "Apply credit spread {value}% (rating {rating}, {source})",
+          "kdGeKeChip": "Kd is at or above Ke",
+          "kdGeKeDetail": "Cost of debt Kd {kd} ≥ cost of equity Ke {ke}. Check the rating and spread; saving is still allowed.",
+          "kdGeKeDetailIndicative": "The indicative Kd from the reference ({kd}) is at or above Ke ({ke}). Check the rating before applying; saving is still allowed."
         }
       }
     },
@@ -10520,6 +10549,12 @@
       "waccHeading": "WACC reference — for this company",
       "waccBadge": "Valuation view",
       "noBasis": "No derivation basis",
+      "waccLabel": {
+        "risk_free": "Risk-free rate (Rf)",
+        "credit_spread": "Credit-rating spread (corporate bond minus government bond)",
+        "observed_de": "Observed D/E",
+        "beta_levered": "Beta (levered)"
+      },
       "waccNotePre": "References are ",
       "waccNoteB": "proposals",
       "waccNotePost": ". Load them in the project WACC session (Business case → WACC), then a human confirms and finalizes. Values with a different reference subject (group affiliate basis — investment-hurdle view) can be checked separately on the group/affiliate screen.",

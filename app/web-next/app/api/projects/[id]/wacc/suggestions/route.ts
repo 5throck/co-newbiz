@@ -10,14 +10,45 @@
 // (combined national + local, percent points) from region-profiles/KR.yaml —
 // the bracket is estimated from the subject's latest DART income figure and
 // falls back to the top bracket (with a stated reason) when none is usable.
+// ADR-0208: the credit_spread entry keeps its key/value/as_of and gains additive rating fields (rating,
+// rating_source, spread_basis, series_used, anchors, derived, flags, ...). The rating is `default` (BBB-)
+// until the evidence rungs land; a default or stale rating is listed in apply_all_excluded so one click
+// never carries an unevidenced placeholder. Kd >= Ke needs the form's beta, so only the indicative Kd is
+// returned here (credit_spread.kd_indicative_pct); the confirmation POST reports the kd_ge_ke warning.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { listProjectAnalysisTargets } from "../../../../../../../../db/lib/wacc.ts";
-import { computeWaccReference } from "../../../../../../../../db/lib/wacc-reference.ts";
+import { computeWaccReference, type ReferenceEntry } from "../../../../../../../../db/lib/wacc-reference.ts";
 import { buildErpOffer, resolveProjectMarket } from "../../../../../../../../db/lib/erp-reference.ts";
 import { buildTaxRateSuggestion, lookupTaxableIncomeProxy } from "../../../../../../../../db/lib/tax-rate-reference.ts";
+
+/** apply-all exclusions of the credit_spread entry (empty when it carries no value or a fresh evidenced rating). */
+function creditApplyAllExcluded(
+  e: ReferenceEntry | undefined,
+): Array<{ key: string; reason_code: string; reason: string }> {
+  if (!e || e.value === null || !e.credit) return [];
+  if (e.credit.rating_source === "default") {
+    return [
+      {
+        key: "credit_spread",
+        reason_code: "credit_rating_default_basis",
+        reason: `The rating (${e.credit.rating}) is a default placeholder with no rating evidence - confirm the company's rating individually before applying.`,
+      },
+    ];
+  }
+  if (e.credit.rating_stale) {
+    return [
+      {
+        key: "credit_spread",
+        reason_code: "credit_rating_stale",
+        reason: `The disclosed rating (${e.credit.rating}) is stale - confirm it individually before applying.`,
+      },
+    ];
+  }
+  return [];
+}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = authenticate(request);
@@ -70,6 +101,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       anchor_ref: e.anchor_ref,
       source_label: e.source_label,
       note: e.note ?? null,
+      ...(e.credit ?? {}),
     };
   };
   const suggestions = [
@@ -79,16 +111,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     erpOffer.erp,
     taxRate,
   ];
-  const missing = [
-    ...reference.missing,
-    ...erpOffer.apply_all_excluded.map((x) => `erp: ${x.reason_code} - ${x.reason}`),
+  // ADR-0208: a default or stale rating is shown and individually applicable, but apply-all skips it.
+  const credit = byKey.get("credit_spread");
+  const applyAllExcluded: Array<{ key: string; reason_code: string; reason: string }> = [
+    ...erpOffer.apply_all_excluded,
+    ...creditApplyAllExcluded(credit),
   ];
+  const missing = [...reference.missing, ...applyAllExcluded.map((x) => `${x.key}: ${x.reason_code} - ${x.reason}`)];
   return ok(
     {
       subject: reference.subject,
       suggestions,
       erp_alternatives: erpOffer.erp_alternatives,
-      apply_all_excluded: erpOffer.apply_all_excluded,
+      apply_all_excluded: applyAllExcluded,
       missing,
     },
     200,

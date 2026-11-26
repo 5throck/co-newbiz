@@ -29,7 +29,7 @@ import {
 } from "../../../scripts/co-newbiz/beta-series-core.ts";
 import { fetchSource } from "../../../scripts/co-newbiz/jobs/collect/fetch-source.ts";
 import { SOURCE_ADAPTERS } from "../../../scripts/co-newbiz/source-adapters.ts";
-import { CORP_BOND_SERIES_ID, RF_SERIES_ID } from "../../../db/lib/wacc-reference.ts";
+import { CORP_BOND_BBBM_SERIES_ID, CORP_BOND_SERIES_ID, RF_SERIES_ID } from "../../../db/lib/wacc-reference.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import type { getDb } from "../../../db/client.ts";
 
@@ -250,9 +250,9 @@ export function latestBetaCollectionRun(db: Db, projectId: string, now: Date = n
 // The same async/202 model, recorded in job_run (job_key 'wacc-ecos.collect'). The ECOS series are
 // market-common (not per-project), so the concurrency slot and the status are GLOBAL: one ECOS collection
 // at a time (409 already_running for anyone asking meanwhile) and every member sees the latest run. The
-// requesting project is kept in detail_json for the audit trail only. Scoped to the two series the WACC
-// reference reads (RF_SERIES_ID / CORP_BOND_SERIES_ID) over the last 12 months through fetchSource — the
-// same library the CLI `fetch --source ecos` and the nightly collect.ecos job call. Months ECOS has not
+// requesting project is kept in detail_json for the audit trail only. Scoped to the three series the WACC
+// reference reads (RF_SERIES_ID / CORP_BOND_SERIES_ID / CORP_BOND_BBBM_SERIES_ID, ADR-0208) over the last 12
+// months through fetchSource — the same library the CLI `fetch --source ecos` and the nightly collect.ecos job call. Months ECOS has not
 // published yet fail as isolated per-period failures (kept as warnings); the run only fails when NOTHING
 // landed.
 
@@ -261,7 +261,7 @@ export type StartEcosCollection =
   | { kind: "already_running"; runId: string }
   | { kind: "missing_api_key" };
 
-const ECOS_SERIES = [RF_SERIES_ID, CORP_BOND_SERIES_ID] as const;
+const ECOS_SERIES = [RF_SERIES_ID, CORP_BOND_SERIES_ID, CORP_BOND_BBBM_SERIES_ID] as const;
 const ECOS_TIMEOUT_MS = 10 * 60 * 1000;
 
 function ecosMonthRange(now: Date): { from: string; to: string } {
