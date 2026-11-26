@@ -203,7 +203,7 @@ async function executeRun(db: Db, runId: string, projectId: string): Promise<voi
   }
 }
 
-interface RunRow {
+export interface RunRow {
   id: string;
   status: string;
   started_at: string;
@@ -212,7 +212,7 @@ interface RunRow {
   detail_json: string | null;
 }
 
-function toRun(row: RunRow): BetaCollectRun {
+export function toRun(row: RunRow): BetaCollectRun {
   let result: Record<string, unknown> | null = null;
   if (row.status === "success" && row.detail_json) {
     try {

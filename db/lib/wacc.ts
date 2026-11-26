@@ -24,6 +24,7 @@ import type { Database } from "bun:sqlite";
 import { recordAssumption } from "./assumption.ts";
 import { resolveErpReferenceAudit } from "./erp-reference.ts";
 import { spreadEditedFromReference } from "./credit-spread-map.ts";
+import { getCreditRatingSnapshot } from "../repositories/dart-credit-rating.repository.ts";
 import { deriveCreditSpreadAt } from "./wacc-reference.ts";
 import { resolveTaxReferenceAudit } from "./tax-rate-reference.ts";
 import { createRun } from "./versioning.ts";
@@ -361,22 +362,77 @@ export function recordWaccSession(
     }
     taxAudit.set(comp, resolved);
   }
-  // ADR-0208: a cited credit-rating basis is RE-DERIVED here from stored ECOS evidence and the registry at the
-  // cited month (checked BEFORE any run is created); rating, source, spread basis and the edited flag come from
-  // that re-derivation, never from the client. A manual wacc.debt_spread audits exactly as before.
+  // ADR-0208: a cited credit-rating basis is RE-DERIVED here from stored evidence (ECOS observations, the registry
+  // and, for a disclosed rating, the cached DART snapshots) at the cited month, checked BEFORE any run is created.
+  // Rating, source, agency, rating date, spread basis and the edited flag come from that re-derivation, never from
+  // the client. A manual wacc.debt_spread audits exactly as before.
   const creditAudit = new Map<
     WaccComponentInput,
-    { rating: string; source: string; spreadBasis: string; asOf: string; edited: boolean }
+    {
+      rating: string;
+      source: string;
+      spreadBasis: string;
+      asOf: string;
+      edited: boolean;
+      snapshotId: string | null;
+      agencies: string;
+      ratedOn: string | null;
+      sourceRceptNo: string | null;
+      /** Bureau basis only: the cash-flow grade of the picked row (a separate scale, never the rating). */
+      cashflowGrade: string | null;
+    }
   >();
   for (const comp of opts.components ?? []) {
     if (comp.key !== "wacc.debt_spread" || comp.creditRatingBasis == null) continue;
-    if (comp.creditRatingBasis !== "default") {
+    if (comp.creditRatingBasis === "synthetic") {
       throw new WaccComponentValidationError(
         "invalid_request",
-        `credit_rating_basis '${comp.creditRatingBasis}' cannot be resolved: no stored rating evidence is available for that basis yet.`,
+        "credit_rating_basis 'synthetic' cannot be resolved: no stored rating evidence is available for that basis yet.",
       );
     }
-    const derived = deriveCreditSpreadAt(db, comp.referenceAsOf as string);
+    // The subject company's DART code: the rating evidence is company-specific, so a cited snapshot must belong to it.
+    const subjectCompanyId =
+      opts.subjectCompanyId ??
+      (
+        db.query("SELECT company_id FROM md_project WHERE id = ?").get(opts.projectId) as
+          | { company_id: string | null }
+          | undefined
+      )?.company_id ??
+      null;
+    const subjectCorp = subjectCompanyId
+      ? ((
+          db.query("SELECT dart_corp_code FROM md_company WHERE id = ?").get(subjectCompanyId) as
+            | { dart_corp_code: string | null }
+            | undefined
+        )?.dart_corp_code ?? null)
+      : null;
+    if (comp.creditRatingSnapshotId != null) {
+      if (comp.creditRatingBasis !== "disclosed" && comp.creditRatingBasis !== "bureau") {
+        throw new WaccComponentValidationError(
+          "invalid_request",
+          "credit_rating_snapshot_id is allowed only with credit_rating_basis 'disclosed' or 'bureau'.",
+        );
+      }
+      const snap = getCreditRatingSnapshot(db, comp.creditRatingSnapshotId);
+      if (!snap) {
+        throw new WaccComponentValidationError(
+          "invalid_request",
+          `credit_rating_snapshot_id '${comp.creditRatingSnapshotId}' is not a stored credit rating snapshot.`,
+        );
+      }
+      if (!subjectCorp || snap.corp_code !== subjectCorp) {
+        throw new WaccComponentValidationError(
+          "invalid_request",
+          "credit_rating_snapshot_id does not belong to the subject company of this WACC session.",
+        );
+      }
+    } else if (comp.creditRatingBasis === "disclosed" || comp.creditRatingBasis === "bureau") {
+      throw new WaccComponentValidationError(
+        "invalid_request",
+        `credit_rating_basis '${comp.creditRatingBasis}' requires credit_rating_snapshot_id.`,
+      );
+    }
+    const derived = deriveCreditSpreadAt(db, comp.referenceAsOf as string, undefined, subjectCorp, new Date(now));
     if (!derived.ok) {
       throw new WaccComponentValidationError(
         "invalid_request",
@@ -395,6 +451,15 @@ export function recordWaccSession(
       spreadBasis: derived.mapped.basis,
       asOf: derived.mapped.anchors.as_of,
       edited: spreadEditedFromReference(comp.value, derived.mapped.spreadPct),
+      snapshotId: derived.disclosed?.snapshot_id ?? null,
+      agencies: derived.disclosed
+        ? derived.disclosed.bureau
+          ? derived.disclosed.bureau.rows.map((r) => `${r.agency ?? r.agency_raw ?? "unnamed"}:${r.grade}`).join(",")
+          : derived.disclosed.agencies.map((a) => `${a.agency}:${a.grade}`).join(",")
+        : "",
+      ratedOn: derived.disclosed?.rated_on ?? null,
+      sourceRceptNo: derived.disclosed?.source_rcept_no ?? null,
+      cashflowGrade: derived.disclosed?.bureau?.cashflow_grade ?? null,
     });
   }
   const asOf = opts.asOf?.trim() || now.slice(0, 10);
@@ -461,6 +526,12 @@ export function recordWaccSession(
       ? [
           `credit_rating=${credit.rating}`,
           `credit_rating_source=${credit.source}`,
+          credit.snapshotId ? `credit_rating_snapshot_id=${credit.snapshotId}` : "",
+          credit.sourceRceptNo ? `credit_rating_rcept_no=${credit.sourceRceptNo}` : "",
+          credit.agencies ? `credit_rating_agencies=${credit.agencies}` : "",
+          credit.ratedOn ? `credit_rating_rated_on=${credit.ratedOn}` : "",
+          credit.source === "bureau" ? "credit_rating_confidence=lower" : "",
+          credit.cashflowGrade ? `credit_rating_cashflow_grade=${credit.cashflowGrade}` : "",
           `spread_basis=${credit.spreadBasis}`,
           `reference_as_of=${credit.asOf}`,
           credit.edited ? "edited_from_reference: true" : "",

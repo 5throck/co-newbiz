@@ -29,9 +29,24 @@ export type SpreadFlag =
   | "below_investment_grade_series_understates"
   | "clamped_fallback";
 
+/** One domestic rating agency of the registry (ADR-0208 D2): aliases as written in filings, home page for humans. */
+export interface CreditRatingAgency {
+  id: string;
+  /** `bond` (default): corporate-bond rating agency, feeds the 'disclosed' rung. `bureau`: credit-information bureau
+   *  whose issuer rating (기업신용평가) feeds the lower-confidence 'bureau' rung. */
+  kind: "bond" | "bureau";
+  /** False when the aliases are transcribed from filings and still await the maintainer's confirmation. */
+  attested: boolean;
+  aliases: string[];
+  /** Home page only (a human verification aid; never fetched). Null when the registry carries none. */
+  homeUrl: string | null;
+}
+
 export interface CreditRatingRegistry {
   /** Ratings best to worst; notch = index + 1. */
   scale: string[];
+  /** Agencies whose corporate-bond ratings count as 'disclosed'; empty when the registry has no `agencies` block. */
+  agencies: CreditRatingAgency[];
   defaultRating: string;
   defaultReason: string;
   disclosed: { instrument: string; staleMonths: number; aggregate: "lowest" };
@@ -80,6 +95,25 @@ export function parseCreditRatingRegistry(doc: unknown): CreditRatingRegistryRes
   if (!defaultRating || !defaultReason || !scale.includes(defaultRating)) {
     return bad("credit_rating_references.data.default does not name a rating of the scale.");
   }
+  const agencies: CreditRatingAgency[] = [];
+  if (data.agencies !== undefined) {
+    if (!Array.isArray(data.agencies)) return bad("credit_rating_references.data.agencies is malformed.");
+    for (const a of data.agencies) {
+      const id = isMap(a) ? str(a.id) : null;
+      const aliases = isMap(a) && Array.isArray(a.aliases) ? a.aliases.filter((x): x is string => str(x) !== null) : [];
+      if (!isMap(a) || !id || aliases.length === 0)
+        return bad("credit_rating_references.data.agencies has a malformed entry.");
+      if (a.kind !== undefined && a.kind !== "bond" && a.kind !== "bureau")
+        return bad("credit_rating_references.data.agencies has an entry with an unknown kind.");
+      agencies.push({
+        id,
+        kind: a.kind === "bureau" ? "bureau" : "bond",
+        attested: a.attested !== false,
+        aliases,
+        homeUrl: str(a.home_url),
+      });
+    }
+  }
   const disc = isMap(data.disclosed) ? data.disclosed : null;
   const instrument = str(disc?.instrument);
   const staleMonths = disc?.stale_months;
@@ -111,6 +145,7 @@ export function parseCreditRatingRegistry(doc: unknown): CreditRatingRegistryRes
     ok: true,
     registry: {
       scale,
+      agencies,
       defaultRating,
       defaultReason,
       disclosed: { instrument, staleMonths, aggregate: "lowest" },

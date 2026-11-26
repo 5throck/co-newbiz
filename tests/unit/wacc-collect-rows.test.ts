@@ -1,0 +1,164 @@
+// @version 1.0.0
+/**
+ * Reference-data collection block of the WACC panel: row status derivation, the button emphasis rule,
+ * the credit-reason -> collect-row link rule, and the panel/locale wiring (static).
+ */
+import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import {
+  collectEmphasis,
+  collectRowId,
+  creditCollectAvailable,
+  creditCollectNeeded,
+  creditReasonLinksToCollect,
+  creditRowStatus,
+  ecosCollectNeeded,
+  ecosRowStatus,
+} from "../../app/web-next/lib/wacc-collect-rows.ts";
+import type { ReferenceSuggestion } from "../../app/web-next/lib/wacc-reference-items.ts";
+
+const rf: ReferenceSuggestion = { key: "risk_free", value: 3.86, as_of: "2026-10" };
+const credit = (over: Partial<ReferenceSuggestion> = {}): ReferenceSuggestion => ({
+  key: "credit_spread",
+  value: 0.69,
+  as_of: "2026-10",
+  ...over,
+});
+
+describe("collectEmphasis", () => {
+  test("primary only when the data is needed", () => {
+    expect(collectEmphasis(true)).toBe("primary");
+    expect(collectEmphasis(false)).toBe("secondary");
+  });
+});
+
+describe("ecosCollectNeeded / ecosRowStatus", () => {
+  test("needed when the risk-free rate is missing", () => {
+    expect(ecosCollectNeeded([{ key: "risk_free", value: null, reason_code: "x" }, credit()])).toBe(true);
+    expect(ecosRowStatus([{ key: "risk_free", value: null }])).toEqual({ kind: "missing" });
+  });
+  test("needed when the credit spread has no ECOS series; other credit misses do not make it primary", () => {
+    expect(ecosCollectNeeded([rf, credit({ value: null, reason_code: "no_ecos_observations" })])).toBe(true);
+    expect(ecosCollectNeeded([rf, credit({ value: null, reason_code: "rating_not_collected" })])).toBe(false);
+  });
+  test("collected state carries the as-of month, falling back to the credit anchors", () => {
+    expect(ecosCollectNeeded([rf, credit()])).toBe(false);
+    expect(ecosRowStatus([rf, credit()])).toEqual({ kind: "collected", asOf: "2026-10" });
+    const noDate: ReferenceSuggestion = { key: "risk_free", value: 3.8 };
+    expect(ecosRowStatus([noDate])).toEqual({ kind: "collected", asOf: null });
+  });
+});
+
+describe("creditRowStatus", () => {
+  test("not collected / no DART code / no suggestion", () => {
+    expect(creditRowStatus(credit({ disclosed_status: "rating_not_collected", collect_hint: true }))).toEqual({
+      kind: "not_collected",
+    });
+    expect(creditRowStatus(credit({ disclosed_status: "no_dart_corp_code" }))).toEqual({ kind: "no_dart_code" });
+    expect(creditRowStatus(undefined)).toEqual({ kind: "not_collected" });
+  });
+  test("disclosed rating with its date and staleness", () => {
+    expect(
+      creditRowStatus(
+        credit({ rating: "AA-", rating_source: "disclosed", rating_rated_on: "2026-03-31", rating_stale: true }),
+      ),
+    ).toEqual({
+      kind: "rated",
+      source: "disclosed",
+      rating: "AA-",
+      ratedOn: "2026-03-31",
+      stale: true,
+      bondRatingMissing: false,
+    });
+  });
+  test("bureau rating after a disclosure without bond rating says so", () => {
+    expect(
+      creditRowStatus(credit({ rating: "BBB", rating_source: "bureau", disclosed_status: "no_bond_rating" })),
+    ).toMatchObject({ kind: "rated", source: "bureau", rating: "BBB", ratedOn: null, bondRatingMissing: true });
+  });
+  test("a collected disclosure without a rating and no fallback keeps the filing's reason", () => {
+    expect(creditRowStatus(credit({ rating_source: "default", disclosed_status: "section_absent" }))).toEqual({
+      kind: "no_rating",
+      statusCode: "section_absent",
+    });
+    expect(creditRowStatus(credit({ rating_source: "default" }))).toEqual({ kind: "default_basis" });
+  });
+});
+
+describe("credit collect emphasis, availability and reason link", () => {
+  test("primary only when collect_hint; a stale rating from an already-read filing stays secondary", () => {
+    expect(creditCollectNeeded(credit({ collect_hint: true }))).toBe(true);
+    expect(creditCollectNeeded(credit({ rating_source: "disclosed", rating_stale: true }))).toBe(false);
+    expect(creditCollectNeeded(credit({ rating_source: "bureau", rating_stale: true }))).toBe(false);
+    expect(creditCollectNeeded(credit({ rating_source: "disclosed", rating_stale: false }))).toBe(false);
+    expect(collectEmphasis(creditCollectNeeded(credit()))).toBe("secondary");
+  });
+  test("no action without a DART code", () => {
+    expect(creditCollectAvailable(credit({ disclosed_status: "no_dart_corp_code" }))).toBe(false);
+    expect(creditCollectAvailable(credit())).toBe(true);
+    expect(creditCollectAvailable(undefined)).toBe(false);
+  });
+  test("reason text links to the collect row when collection could help, never without a DART code", () => {
+    expect(creditReasonLinksToCollect(credit({ reason_code: "rating_not_collected" }))).toBe(true);
+    expect(creditReasonLinksToCollect(credit({ reason_code: "credit_spread_legacy_basis", collect_hint: true }))).toBe(
+      true,
+    );
+    expect(creditReasonLinksToCollect(credit({ reason_code: "disclosed_rating" }))).toBe(false);
+    expect(
+      creditReasonLinksToCollect(
+        credit({ reason_code: "rating_not_collected", disclosed_status: "no_dart_corp_code" }),
+      ),
+    ).toBe(false);
+    expect(creditReasonLinksToCollect(undefined)).toBe(false);
+  });
+});
+
+describe("panel and locale wiring (static)", () => {
+  const panel = readFileSync("app/web-next/components/wacc/WaccPanel.tsx", "utf8");
+  test("row ids and testids are wired and the link targets the credit row", () => {
+    expect(collectRowId("credit")).toBe("wacc-collect-row-credit");
+    expect(panel).toContain("wacc-collect-row-$" + "{o.key}");
+    expect(panel).toContain('data-testid="wacc-collect-block"');
+    expect(panel).toContain('collectLink("credit")');
+  });
+  test("the old stacked primary buttons are gone", () => {
+    expect(panel).not.toContain("missingEcos");
+  });
+  const keys = [
+    "collectBlockTitle",
+    "collectBlockHint",
+    "collectFillsLabel",
+    "collectSourceLabel",
+    "collectStatusLabel",
+    "collectEcosName",
+    "collectEcosFills",
+    "collectEcosSource",
+    "collectCreditName",
+    "collectCreditFills",
+    "collectCreditSource",
+    "collectRowRun",
+    "collectRowRerun",
+    "collectEcosRerun",
+    "collectCreditRerun",
+    "collectStatusEcosCollected",
+    "collectStatusEcosCollectedNoDate",
+    "collectStatusEcosMissing",
+    "collectStatusCreditNotCollected",
+    "collectStatusCreditNoDartCode",
+    "collectStatusCreditDisclosed",
+    "collectStatusCreditBureau",
+    "collectStatusCreditBureauNoBond",
+    "collectStatusRatedOn",
+    "collectStatusStale",
+    "collectStatusCreditDefault",
+    "collectLastRun",
+    "collectGoToArea",
+  ];
+  for (const l of ["en", "ko"]) {
+    test(`${l}: collect block keys exist`, () => {
+      const m = JSON.parse(readFileSync(`app/web-next/locales/${l}.json`, "utf8"));
+      const p = m.stages.s8.wacc.waccPanel;
+      for (const k of keys) expect(typeof p[k]).toBe("string");
+    });
+  }
+});

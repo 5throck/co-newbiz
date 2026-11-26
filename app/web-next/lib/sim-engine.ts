@@ -9,6 +9,10 @@
 //   --version` once; any failure means the caller silently falls back to the
 //   legacy in-process simulator and the fallback is stamped into the note.
 // - CO_NEWBIZ_SIM_ENGINE=off is the ops/test kill switch ( skips the probe).
+// - CO_NEWBIZ_SIM_GPU (auto|none|cuda|mps|rocm|xpu) is read by
+//   scripts/co-newbiz/setup-python-env.ts (`bun run setup:python`), which
+//   installs the accelerator packages. When it asks for a GPU but the engine
+//   still reports CPU for lack of torch, the probe logs a one-time warning.
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -63,6 +67,39 @@ function pythonBin(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 
+const GPU_NAMES = ["cuda", "mps", "xpu", "rocm"] as const;
+
+/** Shape of `python -m sim_engine --device-info` (only the fields used here). */
+export interface EngineDeviceProbe {
+  torch?: { installed?: boolean; available?: Record<string, boolean> };
+  device?: { device?: string; reason?: string };
+}
+
+/** The GPU the operator asked for via CO_NEWBIZ_SIM_GPU ("auto" counts when set
+ *  explicitly), or null when unset / "none" / invalid — silence by default. */
+export function requestedGpu(env: Record<string, string | undefined> = process.env): string | null {
+  const value = (env.CO_NEWBIZ_SIM_GPU ?? "").trim().toLowerCase();
+  return value === "auto" || (GPU_NAMES as readonly string[]).includes(value) ? value : null;
+}
+
+/** Warning text when a requested GPU cannot be used because the engine has no
+ *  (working) torch runtime; null when nothing is misconfigured. Pure. */
+export function gpuMisconfigWarning(
+  env: Record<string, string | undefined>,
+  probe: EngineDeviceProbe | null,
+): string | null {
+  const requested = requestedGpu(env);
+  if (!requested || !probe) return null;
+  const hint = "Run `bun run setup:python` to install the matching accelerator packages.";
+  if (probe.device?.device === "cpu" && probe.device.reason?.includes("no torch runtime")) {
+    return `[sim-engine] CO_NEWBIZ_SIM_GPU=${requested} requests a GPU but the Monte Carlo engine reports CPU (no torch runtime). ${hint}`;
+  }
+  if (requested !== "auto" && probe.torch?.installed && probe.torch.available?.[requested] === false) {
+    return `[sim-engine] CO_NEWBIZ_SIM_GPU=${requested} requests a GPU but the installed torch cannot use ${requested}; the engine runs on CPU. Check the driver/runtime, or re-run \`bun run setup:python --gpu=${requested}\`.`;
+  }
+  return null;
+}
+
 let availabilityProbe: Promise<string | null> | null = null;
 
 /** Resolves to the engine version string, or null when unavailable. Cached —
@@ -73,13 +110,28 @@ export function probeSimEngine(): Promise<string | null> {
       try {
         const stdout = await spawnEngine(["--version"], 10_000);
         const parsed = JSON.parse(stdout) as { engine?: string; version?: string };
-        return parsed.engine === "python-sim-engine" && parsed.version ? parsed.version : null;
+        if (parsed.engine !== "python-sim-engine" || !parsed.version) return null;
+        await warnIfGpuMisconfigured();
+        return parsed.version;
       } catch {
         return null;
       }
     })();
   }
   return availabilityProbe;
+}
+
+/** Best-effort, once per probe: only spawns the device probe when a GPU was
+ *  requested, and never affects availability. */
+async function warnIfGpuMisconfigured(): Promise<void> {
+  if (!requestedGpu()) return;
+  try {
+    const probe = JSON.parse(await spawnEngine(["--device-info"], 20_000)) as EngineDeviceProbe;
+    const warning = gpuMisconfigWarning(process.env, probe);
+    if (warning) console.warn(warning);
+  } catch {
+    // An engine too old for --device-info, or a timeout: nothing to warn about.
+  }
 }
 
 export function resetSimEngineProbe(): void {

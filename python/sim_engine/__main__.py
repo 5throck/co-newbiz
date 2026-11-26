@@ -5,11 +5,13 @@ so callers can distinguish them from crashes (exit 1).
     python3 -m sim_engine job.json
     cat job.json | python3 -m sim_engine
     python3 -m sim_engine --version
+    python3 -m sim_engine --device-info   # torch/accelerator probe (JSON), no job run
 """
 
 from __future__ import annotations
 
 import json
+import platform
 import sys
 
 from . import JobSpecError, __version__
@@ -26,6 +28,13 @@ def _read_input(argv: list[str]) -> str:
 def main(argv: list[str]) -> int:
     if "--version" in argv:
         print(json.dumps({"engine": "python-sim-engine", "version": __version__}))
+        return 0
+    if "--device-info" in argv:
+        from .device import describe_runtime
+
+        print(json.dumps({"engine": "python-sim-engine", "version": __version__,
+                          "host": {"python": platform.python_version(), "machine": platform.machine()},
+                          **describe_runtime()}))
         return 0
     try:
         raw = json.loads(_read_input([a for a in argv if a != "--"]))

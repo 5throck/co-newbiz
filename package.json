@@ -58,6 +58,7 @@
     "gate-integrity:shadow-report": "bun scripts/co-newbiz/gate-integrity-shadow-report.ts",
     "reconfirm:requirement": "bun scripts/co-newbiz/reconfirm-requirement.ts",
     "demo": "bun scripts/co-newbiz/demo.ts",
+    "setup:python": "bun scripts/co-newbiz/setup-python-env.ts",
     "manual:capture": "bun scripts/co-newbiz/manual-capture.ts",
     "test:scripts": "bun scripts/test-runner.ts scripts",
     "test:coverage": "mkdir -p coverage tests/.temp/worker-0 && TEST_TEMP_DIR=tests/.temp/worker-0 WORKER_ID=0 bun test --timeout=30000 --coverage --coverage-reporter=lcov --coverage-reporter=text --coverage-dir=coverage tests/unit",

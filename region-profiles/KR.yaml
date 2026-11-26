@@ -144,6 +144,43 @@ credit_rating_references:
     default:
       rating: BBB-
       reason: "No evidence of the subject's credit rating is available. BBB- is the lowest investment-grade point on the ECOS and KOFIA grade tables; it is a placeholder for a human to review, not an estimate, and it is excluded from apply-all."
+    # Domestic agencies whose corporate-bond ratings count as 'disclosed' (D2). aliases = names as written in DART
+    # filings (matched after NFKC normalisation, spaces and the company-form suffix removed, case-insensitive);
+    # home_url = home page only, a human verification aid (no automated fetch; the agencies' own terms bar it).
+    agencies:
+      - id: korea-ratings
+        aliases: ["한국기업평가", "한기평"]
+        home_url: "https://www.korearatings.com"
+      - id: kis
+        aliases: ["한국신용평가", "한신평"]
+        home_url: "https://www.kisrating.com"
+      - id: nice
+        aliases: ["NICE신용평가", "나이스신용평가", "NICE신평", "나이스신평"]
+        home_url: "https://www.nicerating.com"
+      # kind: bureau = credit-information bureaus (신용조사기관) whose issuer ratings (기업신용평가) fill the LOWER-CONFIDENCE
+      # 'bureau' rung of the ladder (ADR-0208 amendment 2026-11-26). Not bond-rating agencies: their rows never count as
+      # 'disclosed'. attested: false = the aliases are transcribed from filings and NOT yet confirmed by the maintainer
+      # (no home_url until attested). Agencies without `kind` are bond agencies.
+      - id: nice-dnb
+        kind: bureau
+        attested: false
+        aliases: ["NICE디앤비", "나이스디앤비"]
+      - id: ecredible
+        kind: bureau
+        attested: false
+        aliases: ["이크레더블"]
+      - id: ked
+        kind: bureau
+        attested: false
+        aliases: ["한국기업데이터"]
+      - id: nice-info
+        kind: bureau
+        attested: false
+        aliases: ["NICE평가정보", "나이스평가정보"]
+      - id: sci
+        kind: bureau
+        attested: false
+        aliases: ["SCI평가정보", "서울신용평가정보"]
     disclosed:
       instrument: corporate_bond
       stale_months: 18

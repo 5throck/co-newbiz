@@ -2,7 +2,12 @@
 # orchestrated from scripts/co-newbiz/*.ts (fin-analyze.ts, fin-pipeline.ts,
 # and the correlation/monte_carlo scripts). See design v1.0 section 4-8.
 #
-# Install with: pip install -r python/requirements.txt
+# Install with: bun run setup:python   (recommended — creates/updates the repo-root
+# .venv, installs this file, then auto-detects the accelerator and installs the
+# matching requirements-gpu-<cuda|mps|rocm|xpu>.txt; see
+# scripts/co-newbiz/setup-python-env.ts and the operations manual §3.3).
+# Manual, CPU-only equivalent: pip install -r python/requirements.txt
+# The app's `bun run dev` runs the same step automatically (predev, soft mode).
 
 # validate.py, normalize.py — DART financial-statement processing, reused
 # from Projects/co-consult/python/{validate,normalize}.py per design §4-4.

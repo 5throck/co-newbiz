@@ -21,6 +21,7 @@ import {
   appliedErpRefFrom,
   appliedTaxRefFrom,
   applicableSuggestions,
+  creditCollectUrl,
   creditReferenceFields,
   creditSourceLabel,
   erpReferenceFields,
@@ -35,12 +36,12 @@ import {
   toWaccComponentPayload,
 } from "../../lib/wacc-reference-items.ts";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { SourceTooltip } from "../SourceTooltip.tsx";
 import { WaccStatusBadge } from "../WaccStatusBadge.tsx";
 import { ParamTable } from "../ui.tsx";
-import { RoicWaterfallChart } from "../RoicWaterfallChart.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
+import { CreditRatingEvidence } from "./CreditRatingEvidence.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
 import { api } from "../../lib/api.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
@@ -48,6 +49,19 @@ import { resolveTargetScope } from "../../lib/target-default.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { useCollectRun } from "../../lib/use-collect-run.ts";
+import { formatDateTimeHm } from "../../lib/format.ts";
+import {
+  COLLECT_BLOCK_ID,
+  type CollectRowKey,
+  collectEmphasis,
+  collectRowId,
+  creditCollectAvailable,
+  creditCollectNeeded,
+  creditReasonLinksToCollect,
+  creditRowStatus,
+  ecosCollectNeeded,
+  ecosRowStatus,
+} from "../../lib/wacc-collect-rows.ts";
 import {
   assembleDerivation,
   capmComponentGaps,
@@ -61,7 +75,7 @@ import {
   regressionFromText,
   type BetaRegressionResult,
 } from "../../../../db/lib/beta-regression.ts";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 interface WaccResolution {
   value: number;
@@ -243,6 +257,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const tr = useTranslations();
   const t = useTranslations("stages.s8.wacc.waccPanel");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   // ADR-0156: per-target sessions. null = project-level (the fs-gate view);
@@ -303,6 +318,21 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         : ecos.startError !== null
           ? ecos.startError || t("collectEcosStartFailed")
           : null;
+  // 신용등급 수집 실행 (ADR-0208) — DART 사업보고서에서 공시 신용등급을 읽어 캐시에 채운다. 제안 GET 은 캐시만
+  // 읽으므로, 실행이 끝나면(성공·실패 모두) 참조값을 다시 불러온다. 선택 대상(target_id)을 따라간다.
+  const creditCollect = useCollectRun(creditCollectUrl(projectId, selectedTarget), () => {
+    loadSugg();
+  });
+  const creditCollectMessage =
+    creditCollect.phase === "done"
+      ? t("collectCreditDone")
+      : creditCollect.phase === "failed"
+        ? t("collectCreditFailed", { p1: creditCollect.run?.error ?? "" })
+        : creditCollect.startError !== null
+          ? creditCollect.startErrorCode === "no_subject_company"
+            ? t("collectCreditNoSubject")
+            : creditCollect.startError || t("collectCreditStartFailed")
+          : null;
   useEffect(() => {
     api
       .get<{ targets: AnalysisTarget[] }>(`/api/projects/${encodeURIComponent(projectId)}/targets`)
@@ -346,7 +376,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const missingItems = missingReferenceItems(sugg?.suggestions ?? [], sugg?.apply_all_excluded);
   const applicable = applicableSuggestions(sugg?.suggestions ?? [], sugg?.apply_all_excluded);
   const applicableCount = applicable.length;
-  const missingEcos = missingItems.some((x) => x.key === "risk_free" || x.key === "credit_spread");
   const APPLY_LABEL: Record<string, string> = {
     risk_free: t("applyRf"),
     credit_spread: t("applyCreditSpread"),
@@ -398,6 +427,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const CREDIT_SOURCE_LABEL: Record<string, string> = {
     default: t("creditSourceDefault"),
     disclosed: t("creditSourceDisclosed"),
+    bureau: t("creditSourceBureau"),
     synthetic: t("creditSourceSynthetic"),
   };
   const CREDIT_BASIS_LABEL: Record<string, string> = {
@@ -416,6 +446,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     no_disclosed_rating_and_synthetic_unavailable: t("creditReasonNoRatingEvidence"),
     credit_rating_default_basis: t("creditReasonDefaultBasis"),
     credit_rating_stale: t("creditReasonStale"),
+    rating_not_collected: t("creditReasonNotCollected"),
+    disclosed_rating: t("creditReasonDisclosed"),
+    bureau_issuer_rating: t("creditReasonBureauRating"),
+    credit_rating_bureau_basis: t("creditReasonBureauBasis"),
+    credit_spread_legacy_basis: t("creditReasonLegacyBasis"),
     credit_rating_no_registry: t("creditReasonNoRegistry"),
     credit_rating_registry_error: t("creditReasonRegistryError"),
     no_ecos_observations: t("creditReasonNoEcos"),
@@ -423,6 +458,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     anchor_missing: t("creditReasonAnchorMissing"),
     spread_not_positive: t("creditReasonSpreadNotPositive"),
     anchors_inverted: t("creditReasonAnchorsInverted"),
+  };
+  // Why the disclosed rung produced no rating (disclosed_status) -> localized text; "parsed" is the success value.
+  const CREDIT_STATUS_LABEL: Record<string, string> = {
+    parsed: t("creditStatusParsed"),
+    rating_not_collected: t("creditStatusNotCollected"),
+    not_disclosed: t("creditStatusNotDisclosed"),
+    section_present_no_bond_rating: t("creditStatusSectionPresentNoBondRating"),
+    section_absent: t("creditStatusSectionAbsent"),
+    parse_failed: t("creditStatusParseFailed"),
+    not_zip: t("creditStatusNotZip"),
+    no_bond_rating: t("creditStatusNoBondRating"),
+    no_dart_corp_code: t("creditStatusNoDartCode"),
   };
   const creditReasonText = (code: string | null | undefined, fallback: string | null | undefined) =>
     reasonByCode(CREDIT_REASON_LABEL, code, fallback);
@@ -436,7 +483,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       )}
       {x.rating_source && (
         <span
-          className={`status-chip ${x.rating_source === "default" ? "status-amber" : "status-info"}`}
+          className={`status-chip ${x.rating_source === "default" || x.rating_source === "bureau" ? "status-amber" : "status-info"}`}
           data-testid="credit-source-chip"
         >
           {CREDIT_SOURCE_LABEL[x.rating_source] ?? x.rating_source}
@@ -472,10 +519,138 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     const lines: string[] = [];
     const rating = creditReasonText(x.reason_code, x.reason);
     if (rating) lines.push(rating);
+    // rating_not_collected already has its own reason (with the collect hint); the other misses add their own line.
+    if (x.disclosed_status && x.disclosed_status !== "rating_not_collected") {
+      lines.push(CREDIT_STATUS_LABEL[x.disclosed_status] ?? x.disclosed_status);
+    }
     for (const f of x.flags ?? []) lines.push(CREDIT_FLAG_LABEL[f] ?? f);
     const spread = creditReasonText(x.spread_reason_code, x.spread_reason);
     if (spread) lines.push(spread);
     return lines;
+  };
+  const creditSugg = sugg?.suggestions.find((x) => x.key === "credit_spread");
+  const ecosSuggested = !!sugg?.suggestions.some((x) => x.key === "risk_free" || x.key === "credit_spread");
+  /** ECOS row status line - what the reference data currently holds (suggestion fields only). */
+  const ecosStatusText = () => {
+    const s = ecosRowStatus(sugg?.suggestions ?? []);
+    if (s.kind === "missing") return t("collectStatusEcosMissing");
+    return s.asOf ? t("collectStatusEcosCollected", { asOf: s.asOf }) : t("collectStatusEcosCollectedNoDate");
+  };
+  /** Credit-rating row status line - rating, its source/date, or why there is none. */
+  const creditStatusText = () => {
+    const s = creditRowStatus(creditSugg);
+    switch (s.kind) {
+      case "no_dart_code":
+        return t("collectStatusCreditNoDartCode");
+      case "not_collected":
+        return t("collectStatusCreditNotCollected");
+      case "rated": {
+        const head =
+          s.source === "disclosed"
+            ? t("collectStatusCreditDisclosed", { rating: s.rating })
+            : s.bondRatingMissing
+              ? t("collectStatusCreditBureauNoBond", { rating: s.rating })
+              : t("collectStatusCreditBureau", { rating: s.rating });
+        return [
+          head,
+          s.ratedOn ? t("collectStatusRatedOn", { ratedOn: s.ratedOn }) : null,
+          s.stale ? t("collectStatusStale") : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+      }
+      case "no_rating":
+        return (s.statusCode && CREDIT_STATUS_LABEL[s.statusCode]) || t("collectStatusCreditNotCollected");
+      default:
+        return t("collectStatusCreditDefault");
+    }
+  };
+  /** Jump from a reason text to its collect row (moves focus so keyboard users land on it). */
+  const goToCollectRow = (key: CollectRowKey) => (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const el = document.getElementById(collectRowId(key));
+    el?.scrollIntoView({ block: "center" });
+    el?.focus();
+  };
+  const collectLink = (key: CollectRowKey) => (
+    <a
+      href={`#${collectRowId(key)}`}
+      onClick={goToCollectRow(key)}
+      className="ml-1 text-[color:var(--accent)] underline"
+      data-testid={`wacc-collect-link-${key}`}
+    >
+      {t("collectGoToArea")}
+    </a>
+  );
+  /** One source row of the collect block: name, what it fills, source, status, then the (emphasis-ruled) button. */
+  const collectRow = (o: {
+    key: CollectRowKey;
+    name: string;
+    fills: string;
+    source: string;
+    status: string;
+    needed: boolean;
+    runCollect: ReturnType<typeof useCollectRun>;
+    message: string | null;
+    runLabel: string;
+    rerunLabel: string;
+    runningText: string;
+    actionTestId?: string;
+    noAction?: boolean;
+  }) => {
+    const { runCollect: rc } = o;
+    const primary = collectEmphasis(o.needed) === "primary";
+    const finishedAt = rc.phase === "done" || rc.phase === "failed" ? rc.run?.finished_at : null;
+    return (
+      <li
+        key={o.key}
+        id={collectRowId(o.key)}
+        tabIndex={-1}
+        className="min-w-0 flex flex-wrap items-start justify-between gap-2 p-3 rounded-lg border border-[color:var(--border)]"
+        data-testid={`wacc-collect-row-${o.key}`}
+        data-emphasis={primary ? "primary" : "secondary"}
+      >
+        <div className="min-w-0 flex-1 basis-[16rem] [overflow-wrap:anywhere]">
+          <div className="font-semibold text-[length:var(--fs-body)]">{o.name}</div>
+          <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+            {t("collectFillsLabel")}: {o.fills}
+          </div>
+          <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+            {t("collectSourceLabel")}: {o.source}
+          </div>
+          <div className="text-[length:var(--fs-caption)]" data-testid={`wacc-collect-status-${o.key}`}>
+            {t("collectStatusLabel")}: {o.status}
+            {finishedAt ? ` · ${t("collectLastRun", { when: formatDateTimeHm(finishedAt, locale) })}` : ""}
+          </div>
+        </div>
+        {!o.noAction && (
+          <div className="flex flex-col items-start gap-1 shrink-0" aria-live="polite" data-testid={o.actionTestId}>
+            <button
+              type="button"
+              className={primary ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+              aria-label={primary ? o.runLabel : o.rerunLabel}
+              disabled={rc.busy}
+              aria-busy={rc.busy}
+              onClick={() => void rc.start()}
+            >
+              {rc.busy ? tc("loadingEllipsis") : primary ? t("collectRowRun") : t("collectRowRerun")}
+            </button>
+            {rc.phase === "running" && (
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{o.runningText}</span>
+            )}
+          </div>
+        )}
+        {o.message && (
+          <p
+            role={rc.phase === "done" ? undefined : "alert"}
+            className={`basis-full m-0 text-[length:var(--fs-caption)] font-semibold ${rc.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+            data-testid={`wacc-collect-message-${o.key}`}
+          >
+            {rc.phase === "done" ? "✓" : "✕"} {o.message}
+          </p>
+        )}
+      </li>
+    );
   };
   const erpSourceLink = (x: Sugg) => {
     const href = safeHttpsUrl(x.anchor_ref);
@@ -592,8 +767,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const taxN = nOr(taxRate.value);
   const targetDeN = nOr(targetDe.value);
   const rfN = nOr(rf.value);
-  const erpN = nOr(erp.value);
-  const spN = nOr(sp.value);
   const obsDeN = nOr(obsDe.value);
   // 관측 D/E를 목표 D/E로 준용 — apply-all 대상이 아니며, 사람이 버튼으로만 채운다.
   const observedForTarget = observedDeAsTarget(
@@ -755,38 +928,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
 
   const mismatch =
     computedWacc != null && nOr(waccFinal) !== null && Math.abs(computedWacc - nOr(waccFinal)!) > 0.00005;
-
-  // 워터폴 스텝 — assembleDerivation 결과에서 그대로 가져온다.
-  const keSteps = useMemo(() => {
-    const d = derivation;
-    if (!d || d.computed.ke == null || rfN == null || erpN == null) return [];
-    const steps: { step: string; value: number; kind: "delta" | "total" }[] = [
-      { step: t("rate"), value: rfN, kind: "delta" },
-      { step: "β×ERP", value: (d.computed.betaLevered ?? 0) * erpN, kind: "delta" },
-    ];
-    if (spN) steps.push({ step: t("sizePremium"), value: spN, kind: "delta" });
-    steps.push({ step: t("costOfEquityKe"), value: d.computed.ke, kind: "total" });
-    return steps;
-  }, [derivation, rfN, erpN, spN, t]);
-  const waccSteps = useMemo(() => {
-    const d = derivation;
-    if (
-      !d ||
-      d.computed.wacc == null ||
-      d.computed.ke == null ||
-      d.computed.kd == null ||
-      d.computed.we == null ||
-      d.computed.wd == null ||
-      taxN == null
-    )
-      return [];
-    const steps: { step: string; value: number; kind: "delta" | "total" }[] = [
-      { step: t("equityContribution"), value: d.computed.we * d.computed.ke, kind: "total" },
-      { step: t("debtContributionAfterTax"), value: d.computed.wd * d.computed.kd * (1 - taxN), kind: "delta" },
-      { step: "WACC", value: d.computed.wacc, kind: "total" },
-    ];
-    return steps;
-  }, [derivation, taxN, t]);
 
   // Hamada 체인 표시 (② 패널 하단) — tax = 법인세율(수치), t = 번역기
   const chain = useMemo(() => {
@@ -1064,37 +1205,59 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                         <li key={x.key}>
                           <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
                           {reason ? ` — ${reason}` : ""}
+                          {x.key === "credit_spread" && creditReasonLinksToCollect(creditSugg) && collectLink("credit")}
                         </li>
                       );
                     })}
                   </ul>
-                  {missingEcos && (
-                    <div className="flex flex-wrap items-center gap-2 mt-2" aria-live="polite">
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        disabled={ecos.busy}
-                        aria-busy={ecos.busy}
-                        onClick={() => void ecos.start()}
-                      >
-                        {ecos.busy ? tc("loadingEllipsis") : t("collectEcosRun")}
-                      </button>
-                      {ecos.phase === "running" && (
-                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                          {t("collectEcosRunning")}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
-              {ecosMessage && (
-                <p
-                  role={ecos.phase === "done" ? undefined : "alert"}
-                  className={`mt-2 text-[length:var(--fs-caption)] font-semibold ${ecos.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+              {(ecosSuggested || creditSugg) && (
+                <section
+                  id={COLLECT_BLOCK_ID}
+                  className="mt-3"
+                  aria-labelledby={`${COLLECT_BLOCK_ID}-title`}
+                  data-testid="wacc-collect-block"
                 >
-                  {ecos.phase === "done" ? "✓" : "✕"} {ecosMessage}
-                </p>
+                  <h4 id={`${COLLECT_BLOCK_ID}-title`} className="font-semibold text-[length:var(--fs-caption)]">
+                    {t("collectBlockTitle")}
+                  </h4>
+                  <p className="m-0 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                    {t("collectBlockHint")}
+                  </p>
+                  <ul className="list-none m-0 p-0 mt-2 grid gap-3 md:grid-cols-2">
+                    {ecosSuggested &&
+                      collectRow({
+                        key: "ecos",
+                        name: t("collectEcosName"),
+                        fills: t("collectEcosFills"),
+                        source: t("collectEcosSource"),
+                        status: ecosStatusText(),
+                        needed: ecosCollectNeeded(sugg.suggestions),
+                        runCollect: ecos,
+                        message: ecosMessage,
+                        runLabel: t("collectEcosRun"),
+                        rerunLabel: t("collectEcosRerun"),
+                        runningText: t("collectEcosRunning"),
+                      })}
+                    {creditSugg &&
+                      collectRow({
+                        key: "credit",
+                        name: t("collectCreditName"),
+                        fills: t("collectCreditFills"),
+                        source: t("collectCreditSource"),
+                        status: creditStatusText(),
+                        needed: creditCollectNeeded(creditSugg),
+                        runCollect: creditCollect,
+                        message: creditCollectMessage,
+                        runLabel: t("collectCreditRun"),
+                        rerunLabel: t("collectCreditRerun"),
+                        runningText: t("collectCreditRunning"),
+                        actionTestId: "credit-collect",
+                        noAction: !creditCollectAvailable(creditSugg),
+                      })}
+                  </ul>
+                </section>
               )}
               <div className="flex gap-2 mt-2">
                 <button
@@ -1121,77 +1284,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             </p>
           )}
         </>
-      )}
-      {/* 저장된 CAPM 세션 — 계산 과정은 저장 후에도 레지스트리에서 재현된다 (ADR-0115) */}
-      {view && view.derivation && view.components.length > 0 && (
-        <section className="market-section sizing-step">
-          <h3 className="sizing-step-title">
-            {t("savedSessionFormulaBreakdown")}
-            <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">
-              {t("recomputedFromTheWaccRows")}
-            </span>
-          </h3>
-          <DerivationTable derivation={view.derivation} />
-          <div className="overflow-x-auto mt-3">
-            <table className="data-table" aria-label={t("savedWaccComponents")}>
-              <caption className="sr-only">{t("savedWaccComponentsAssumptionKeys")}</caption>
-              <thead>
-                <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
-                  <th className="py-1.5 px-1.5">{t("assumptionKey")}</th>
-                  <th className="py-1.5 px-1.5 text-right">{tc("value")}</th>
-                  <th className="py-1.5 px-1.5">kind</th>
-                  <th className="py-1.5 px-1.5">{t("sourceEvidence")}</th>
-                  <th className="py-1.5 px-1.5">{tc("asOfDate")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.components.map((c) => (
-                  <tr key={c.key} className="border-b border-[color:var(--border-subtle)]">
-                    <td className="py-1.5 px-1.5">
-                      <div className="text-[length:var(--fs-caption)]">{COMPONENT_LABELS(tr)[c.key] ?? c.key}</div>
-                      <div className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                        {c.key}
-                      </div>
-                    </td>
-                    <td className="py-1.5 px-1.5 text-right tabular-nums font-semibold">
-                      <SourceTooltip
-                        provenance={{
-                          assumption_key: c.key,
-                          as_of: c.as_of,
-                          source: c.rationale,
-                          anchor_ref: c.anchor_ref,
-                          run_id: c.run_id,
-                        }}
-                      >
-                        {formatComponentValue(c.key, c.value)}
-                      </SourceTooltip>
-                    </td>
-                    <td className="py-1.5 px-1.5">
-                      <KindChip kind={c.kind as "live" | "user" | "derived"} />
-                    </td>
-                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      {c.rationale ?? "—"}
-                      {c.anchor_ref && (
-                        <>
-                          {" "}
-                          <a
-                            href={c.anchor_ref}
-                            className="text-[color:var(--accent)]"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {tc("linkLabel")}
-                          </a>
-                        </>
-                      )}
-                    </td>
-                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)]">{c.as_of}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
       )}
 
       {canAct && (
@@ -1324,6 +1416,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                 {creditNoteLines(r).map((line) => (
                                   <div key={line}>{line}</div>
                                 ))}
+                                {creditReasonLinksToCollect(r) && <div>{collectLink("credit")}</div>}
+                                <CreditRatingEvidence suggestion={r} />
                               </div>
                             ) : (
                               `${r.source_label ?? ""} · ${r.as_of ?? ""}`
@@ -1649,46 +1743,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                 </div>
               )}
 
-              {/* 산식 분해 */}
-              <h3 className="sizing-step-title mt-6">
-                {t("breakdown")}{" "}
-                <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">
-                  {t("seeAtAGlanceHow")}
-                </span>
-              </h3>
-              {derivation && derivation.steps.length > 0 ? (
-                <>
-                  {derivation.missing.length > 0 && (
-                    <p className="text-[color:var(--amber-fg)] text-[length:var(--fs-caption)] mb-2">
-                      {t("notEntered")} {derivation.missing.join(" · ")}
-                    </p>
-                  )}
-                  <DerivationTable derivation={derivation} />
-                  {keSteps.length > 0 && (
-                    <div className="grid gap-4 lg:grid-cols-2 mt-4">
-                      <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
-                        <h4 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--muted-fg)] mb-1">
-                          {t("costOfEquityCapm")}
-                        </h4>
-                        <RoicWaterfallChart steps={keSteps} numberFormat="percent" />
-                      </div>
-                      {waccSteps.length > 0 && (
-                        <div className="border border-[color:var(--border-subtle)] rounded-lg p-3">
-                          <h4 className="text-[length:var(--fs-caption)] font-semibold text-[color:var(--muted-fg)] mb-1">
-                            {t("waccWeightedBlend")}
-                          </h4>
-                          <RoicWaterfallChart steps={waccSteps} numberFormat="percent" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
-                  {t("enterMarketFigures1Beta")}
-                </p>
-              )}
-
               {/* 기록될 컴포넌트·출처 */}
               {components.length > 0 && (
                 <>
@@ -1831,6 +1885,77 @@ export function WaccPanel({ projectId }: { projectId: string }) {
             </form>
           )}
         </>
+      )}
+      {/* 저장된 CAPM 세션 — 계산 과정은 저장 후에도 레지스트리에서 재현된다 (ADR-0115) */}
+      {view && view.derivation && view.components.length > 0 && (
+        <section className="market-section sizing-step">
+          <h3 className="sizing-step-title">
+            {t("savedSessionFormulaBreakdown")}
+            <span className="text-[color:var(--muted-fg)] font-normal text-[length:var(--fs-caption)]">
+              {t("recomputedFromTheWaccRows")}
+            </span>
+          </h3>
+          <DerivationTable derivation={view.derivation} />
+          <div className="overflow-x-auto mt-3">
+            <table className="data-table" aria-label={t("savedWaccComponents")}>
+              <caption className="sr-only">{t("savedWaccComponentsAssumptionKeys")}</caption>
+              <thead>
+                <tr className="text-left text-[color:var(--muted-fg)] text-[length:var(--fs-caption)] border-b border-[color:var(--border-bright)]">
+                  <th className="py-1.5 px-1.5">{t("assumptionKey")}</th>
+                  <th className="py-1.5 px-1.5 text-right">{tc("value")}</th>
+                  <th className="py-1.5 px-1.5">kind</th>
+                  <th className="py-1.5 px-1.5">{t("sourceEvidence")}</th>
+                  <th className="py-1.5 px-1.5">{tc("asOfDate")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.components.map((c) => (
+                  <tr key={c.key} className="border-b border-[color:var(--border-subtle)]">
+                    <td className="py-1.5 px-1.5">
+                      <div className="text-[length:var(--fs-caption)]">{COMPONENT_LABELS(tr)[c.key] ?? c.key}</div>
+                      <div className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                        {c.key}
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-1.5 text-right tabular-nums font-semibold">
+                      <SourceTooltip
+                        provenance={{
+                          assumption_key: c.key,
+                          as_of: c.as_of,
+                          source: c.rationale,
+                          anchor_ref: c.anchor_ref,
+                          run_id: c.run_id,
+                        }}
+                      >
+                        {formatComponentValue(c.key, c.value)}
+                      </SourceTooltip>
+                    </td>
+                    <td className="py-1.5 px-1.5">
+                      <KindChip kind={c.kind as "live" | "user" | "derived"} />
+                    </td>
+                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                      {c.rationale ?? "—"}
+                      {c.anchor_ref && (
+                        <>
+                          {" "}
+                          <a
+                            href={c.anchor_ref}
+                            className="text-[color:var(--accent)]"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {tc("linkLabel")}
+                          </a>
+                        </>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-1.5 text-[length:var(--fs-caption)]">{c.as_of}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
     </>
   );

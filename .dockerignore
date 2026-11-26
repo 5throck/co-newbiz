@@ -16,6 +16,9 @@ db/dev.db
 !packages/**
 !glossary/**
 !config/**
+!python/**
+python/**/__pycache__/**
+python/**/*.pyc
 packages/**/tests/**
 packages/**/node_modules/**
 mcp/**/node_modules/**

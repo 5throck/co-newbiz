@@ -41,6 +41,19 @@ WACC 참조값 카드는 ECOS 시계열 세 개를 수집하기 전까지 무위
 - 실행마다 `job_run` 행(trigger `manual`, actor = 호출한 사용자)과 `audit_log` 항목 `wacc_ecos.collect_requested`가 남습니다. 수집 중 실패는 HTTP 오류가 아니라 실행 상태(`failed` + 사유)로 보입니다.
 - 공개 시험 키 `sample`은 요청당 10행으로 제한되어 12개월 수집에는 모자랍니다. 서버 키는 개인 ECOS 인증키여야 합니다.
 
+## 앱에서 공시 신용등급 수집 (ADR-0208 2단계)
+
+`credit_spread` 참조값은 대상 회사의 신용등급을 따릅니다. 등급은 먼저 DART에서 가져오며(`rating_source: "disclosed"`), 수집하기 전에는 기본값 `BBB-`와 사유 `rating_not_collected`, 수집 안내가 카드에 보이고 "모두 적용"은 이 행을 건너뜁니다. `POST /api/projects/<id>/wacc/credit-rating/collect`(후보 대상 회사는 `?target_id=<id>`)로 수집합니다. 곧바로 `202`가 오고, 화면은 `GET`으로 확인한 뒤 `GET .../wacc/suggestions`를 다시 불러옵니다. 이 조회는 저장된 값만 읽고 DART를 부르지 않습니다.
+
+회사마다 한 번의 실행이 하는 일은 이렇습니다. (1) 최신 사업보고서를 찾습니다(저장된 `dart_disclosure` 목록이 먼저이고, 없거나 13개월보다 오래됐으면 유형 지정 `list.json` `pblntf_detail_ty=A001`). (2) 그 보고서를 `rcept_no`와 파서 버전마다 딱 한 번 내려받아 신용평가 항목과 채무증권 발행실적 표를 읽습니다. (3) OpenDART `bdRs.json`(공모만 해당)에서 최근 18개월 증권신고서의 `cdrt_int` 등급을 보충합니다. 결과는 바꿀 수 없는 `dart_credit_rating_snapshot` 행(마이그레이션 0200) 하나씩으로 남습니다.
+
+- 서버에 `DART_API_KEY`가 있어야 하며(없으면 `503 dart_api_key_missing`), 프로젝트 구성원인 분석가여야 하고(조회자 403, 비구성원·관리자 404), 회사에 DART 고유번호가 있어야 합니다(없으면 `400 no_dart_corp_code`, 회사가 없으면 `400 no_subject_company`).
+- 프로젝트당 하나, 회사당 하나만 동시에 실행됩니다(`409 already_running`). DART 근거는 프로젝트 사이에 공유됩니다.
+- 실행마다 `job_run` 행(`job_key = wacc-credit-rating.collect`, trigger `manual`, actor = 호출한 사용자)과 `audit_log` 항목 `wacc_credit_rating.collect_requested`가 남습니다. 실패는 HTTP 오류가 아니라 실행 상태(`failed` + 사유)로 보입니다. DART 단계가 모두 실패했을 때만 실행이 실패하고, 일부만 실패하면 성공한 실행에 `warnings`로 남습니다.
+- 결과 읽는 법: `report_status`는 기록된 해석 상태입니다. 등급이 없다고 "무등급"으로 읽지 않습니다. `not_disclosed`(공시가 해당 없음이라 적음), `section_present_no_bond_rating`(예: 기업어음 등급뿐), `section_absent`, `parse_failed`(서식 변경: 파서 수정 요청)는 모두 기본 등급을 남기고 `disclosed_status`가 이유를 알려 줍니다. 일시적인 내려받기 실패는 아무것도 쓰지 않으므로 다음 실행이 다시 시도합니다.
+- 파서 버전(`CREDIT_RATING_PARSER_VERSION`)을 올리면 공시마다 한 번씩 다시 읽고, 이전 버전의 저장분은 조회에서 무시합니다.
+- 마이그레이션 0200을 되돌리면 저장분만 지워지며 DART에서 다시 받을 수 있습니다.
+
 ## 지수 선택 (상장시장 기준)
 
 베타 회귀는 기본적으로 종목의 **상장시장 지수**와 짝지어 계산합니다. 코스닥 상장사(예: 로보티즈 108490, 레인보우로보틱스 277810)는 코스닥 지수, 코스피 상장사는 코스피 지수와 회귀합니다. 다른 지수도 패널의 "시장 지수" 선택 상자("수집 데이터 불러오기" 옆)나 `GET .../wacc/beta-series?index=KOSPI|KOSDAQ`로 고를 수 있습니다.
