@@ -353,13 +353,14 @@ describe("WACC 참조값 section — missing items are rendered, not silently fi
 
   test("ECOS collection button: only when risk_free/credit_spread are missing, inside the analyst-only block, reloads suggestions", () => {
     expect(panel).toContain('x.key === "risk_free" || x.key === "credit_spread"');
-    expect(panel).toContain("{missingEcos && (");
+    expect(panel).toContain("ecosSuggested &&");
     expect(panel).toContain("/wacc/ecos/collect");
     expect(panel).toMatch(/useCollectRun\([\s\S]{0,120}wacc\/ecos\/collect[\s\S]{0,120}loadSugg\(\)/);
     // the reference block sits inside the canWriteProject gate (read-only users get no collect button)
     const gate = panel.indexOf("{canAct && (\n        <>");
     expect(gate).toBeGreaterThan(-1);
     expect(panel.indexOf('data-testid="wacc-reference-missing"')).toBeGreaterThan(gate);
+    expect(panel.indexOf('data-testid="wacc-collect-block"')).toBeGreaterThan(gate);
   });
 
   test("apply-all shows the applicable count and is disabled at zero; the old label is gone", () => {

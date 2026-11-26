@@ -452,9 +452,9 @@ describe("WACC panel wiring of the disclosed credit rating (static)", () => {
   const evidence = readFileSync("app/web-next/components/wacc/CreditRatingEvidence.tsx", "utf8");
   test("collect button reuses useCollectRun on the credit-rating endpoint, reloads suggestions, sits in the analyst block", () => {
     expect(panel).toMatch(/useCollectRun\(creditCollectUrl\(projectId, selectedTarget\)[\s\S]{0,80}loadSugg\(\)/);
-    expect(panel).toContain("creditCollectVisible(");
+    expect(panel).toContain("creditCollectNeeded(creditSugg)");
     const gate = panel.indexOf("{canAct && (\n        <>");
-    expect(panel.indexOf('data-testid="credit-collect"')).toBeGreaterThan(gate);
+    expect(panel.indexOf('actionTestId: "credit-collect"')).toBeGreaterThan(gate);
   });
   test("every backend reason code and disclosed_status value is localized in the panel", () => {
     for (const code of [

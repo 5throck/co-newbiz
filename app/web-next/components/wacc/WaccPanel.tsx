@@ -22,7 +22,6 @@ import {
   appliedTaxRefFrom,
   applicableSuggestions,
   creditCollectUrl,
-  creditCollectVisible,
   creditReferenceFields,
   creditSourceLabel,
   erpReferenceFields,
@@ -37,7 +36,7 @@ import {
   toWaccComponentPayload,
 } from "../../lib/wacc-reference-items.ts";
 import { KO_DATA } from "../../lib/ko-data-values.ts";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { SourceTooltip } from "../SourceTooltip.tsx";
 import { WaccStatusBadge } from "../WaccStatusBadge.tsx";
 import { ParamTable } from "../ui.tsx";
@@ -51,6 +50,19 @@ import { resolveTargetScope } from "../../lib/target-default.ts";
 import { useAuth } from "../../lib/auth-client.tsx";
 import { canWriteProject } from "../../lib/project-write-access.ts";
 import { useCollectRun } from "../../lib/use-collect-run.ts";
+import { formatDateTimeHm } from "../../lib/format.ts";
+import {
+  COLLECT_BLOCK_ID,
+  type CollectRowKey,
+  collectEmphasis,
+  collectRowId,
+  creditCollectAvailable,
+  creditCollectNeeded,
+  creditReasonLinksToCollect,
+  creditRowStatus,
+  ecosCollectNeeded,
+  ecosRowStatus,
+} from "../../lib/wacc-collect-rows.ts";
 import {
   assembleDerivation,
   capmComponentGaps,
@@ -64,7 +76,7 @@ import {
   regressionFromText,
   type BetaRegressionResult,
 } from "../../../../db/lib/beta-regression.ts";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 interface WaccResolution {
   value: number;
@@ -246,6 +258,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const tr = useTranslations();
   const t = useTranslations("stages.s8.wacc.waccPanel");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const { me } = useAuth();
   const canAct = canWriteProject(me?.role);
   // ADR-0156: per-target sessions. null = project-level (the fs-gate view);
@@ -364,7 +377,6 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const missingItems = missingReferenceItems(sugg?.suggestions ?? [], sugg?.apply_all_excluded);
   const applicable = applicableSuggestions(sugg?.suggestions ?? [], sugg?.apply_all_excluded);
   const applicableCount = applicable.length;
-  const missingEcos = missingItems.some((x) => x.key === "risk_free" || x.key === "credit_spread");
   const APPLY_LABEL: Record<string, string> = {
     risk_free: t("applyRf"),
     credit_spread: t("applyCreditSpread"),
@@ -516,6 +528,130 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     const spread = creditReasonText(x.spread_reason_code, x.spread_reason);
     if (spread) lines.push(spread);
     return lines;
+  };
+  const creditSugg = sugg?.suggestions.find((x) => x.key === "credit_spread");
+  const ecosSuggested = !!sugg?.suggestions.some((x) => x.key === "risk_free" || x.key === "credit_spread");
+  /** ECOS row status line - what the reference data currently holds (suggestion fields only). */
+  const ecosStatusText = () => {
+    const s = ecosRowStatus(sugg?.suggestions ?? []);
+    if (s.kind === "missing") return t("collectStatusEcosMissing");
+    return s.asOf ? t("collectStatusEcosCollected", { asOf: s.asOf }) : t("collectStatusEcosCollectedNoDate");
+  };
+  /** Credit-rating row status line - rating, its source/date, or why there is none. */
+  const creditStatusText = () => {
+    const s = creditRowStatus(creditSugg);
+    switch (s.kind) {
+      case "no_dart_code":
+        return t("collectStatusCreditNoDartCode");
+      case "not_collected":
+        return t("collectStatusCreditNotCollected");
+      case "rated": {
+        const head =
+          s.source === "disclosed"
+            ? t("collectStatusCreditDisclosed", { rating: s.rating })
+            : s.bondRatingMissing
+              ? t("collectStatusCreditBureauNoBond", { rating: s.rating })
+              : t("collectStatusCreditBureau", { rating: s.rating });
+        return [
+          head,
+          s.ratedOn ? t("collectStatusRatedOn", { ratedOn: s.ratedOn }) : null,
+          s.stale ? t("collectStatusStale") : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+      }
+      case "no_rating":
+        return (s.statusCode && CREDIT_STATUS_LABEL[s.statusCode]) || t("collectStatusCreditNotCollected");
+      default:
+        return t("collectStatusCreditDefault");
+    }
+  };
+  /** Jump from a reason text to its collect row (moves focus so keyboard users land on it). */
+  const goToCollectRow = (key: CollectRowKey) => (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const el = document.getElementById(collectRowId(key));
+    el?.scrollIntoView({ block: "center" });
+    el?.focus();
+  };
+  const collectLink = (key: CollectRowKey) => (
+    <a
+      href={`#${collectRowId(key)}`}
+      onClick={goToCollectRow(key)}
+      className="ml-1 text-[color:var(--accent)] underline"
+      data-testid={`wacc-collect-link-${key}`}
+    >
+      {t("collectGoToArea")}
+    </a>
+  );
+  /** One source row of the collect block: name, what it fills, source, status, then the (emphasis-ruled) button. */
+  const collectRow = (o: {
+    key: CollectRowKey;
+    name: string;
+    fills: string;
+    source: string;
+    status: string;
+    needed: boolean;
+    runCollect: ReturnType<typeof useCollectRun>;
+    message: string | null;
+    runLabel: string;
+    rerunLabel: string;
+    runningText: string;
+    actionTestId?: string;
+    noAction?: boolean;
+  }) => {
+    const { runCollect: rc } = o;
+    const primary = collectEmphasis(o.needed) === "primary";
+    const finishedAt = rc.phase === "done" || rc.phase === "failed" ? rc.run?.finished_at : null;
+    return (
+      <li
+        key={o.key}
+        id={collectRowId(o.key)}
+        tabIndex={-1}
+        className="flex flex-wrap items-start justify-between gap-2 py-2 border-t border-[color:var(--border)] first:border-t-0"
+        data-testid={`wacc-collect-row-${o.key}`}
+        data-emphasis={primary ? "primary" : "secondary"}
+      >
+        <div className="min-w-0 flex-1 basis-[16rem] [overflow-wrap:anywhere]">
+          <div className="font-semibold text-[length:var(--fs-body)]">{o.name}</div>
+          <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+            {t("collectFillsLabel")}: {o.fills}
+          </div>
+          <div className="text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+            {t("collectSourceLabel")}: {o.source}
+          </div>
+          <div className="text-[length:var(--fs-caption)]" data-testid={`wacc-collect-status-${o.key}`}>
+            {t("collectStatusLabel")}: {o.status}
+            {finishedAt ? ` · ${t("collectLastRun", { when: formatDateTimeHm(finishedAt, locale) })}` : ""}
+          </div>
+        </div>
+        {!o.noAction && (
+          <div className="flex flex-col items-start gap-1 shrink-0" aria-live="polite" data-testid={o.actionTestId}>
+            <button
+              type="button"
+              className={primary ? "btn-primary btn-sm" : "btn-ghost btn-sm"}
+              aria-label={primary ? o.runLabel : o.rerunLabel}
+              disabled={rc.busy}
+              aria-busy={rc.busy}
+              onClick={() => void rc.start()}
+            >
+              {rc.busy ? tc("loadingEllipsis") : primary ? t("collectRowRun") : t("collectRowRerun")}
+            </button>
+            {rc.phase === "running" && (
+              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{o.runningText}</span>
+            )}
+          </div>
+        )}
+        {o.message && (
+          <p
+            role={rc.phase === "done" ? undefined : "alert"}
+            className={`basis-full m-0 text-[length:var(--fs-caption)] font-semibold ${rc.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+            data-testid={`wacc-collect-message-${o.key}`}
+          >
+            {rc.phase === "done" ? "✓" : "✕"} {o.message}
+          </p>
+        )}
+      </li>
+    );
   };
   const erpSourceLink = (x: Sugg) => {
     const href = safeHttpsUrl(x.anchor_ref);
@@ -1104,63 +1240,59 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                         <li key={x.key}>
                           <span className="font-semibold">{REF_LABEL[x.key] ?? x.key}</span>
                           {reason ? ` — ${reason}` : ""}
+                          {x.key === "credit_spread" && creditReasonLinksToCollect(creditSugg) && collectLink("credit")}
                         </li>
                       );
                     })}
                   </ul>
-                  {missingEcos && (
-                    <div className="flex flex-wrap items-center gap-2 mt-2" aria-live="polite">
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        disabled={ecos.busy}
-                        aria-busy={ecos.busy}
-                        onClick={() => void ecos.start()}
-                      >
-                        {ecos.busy ? tc("loadingEllipsis") : t("collectEcosRun")}
-                      </button>
-                      {ecos.phase === "running" && (
-                        <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                          {t("collectEcosRunning")}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
-              {creditCollectVisible(sugg.suggestions.find((x) => x.key === "credit_spread")) && (
-                <div className="flex flex-wrap items-center gap-2 mt-2" aria-live="polite" data-testid="credit-collect">
-                  <button
-                    type="button"
-                    className="btn-primary btn-sm"
-                    disabled={creditCollect.busy}
-                    aria-busy={creditCollect.busy}
-                    onClick={() => void creditCollect.start()}
-                  >
-                    {creditCollect.busy ? tc("loadingEllipsis") : t("collectCreditRun")}
-                  </button>
-                  {creditCollect.phase === "running" && (
-                    <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                      {t("collectCreditRunning")}
-                    </span>
-                  )}
-                </div>
-              )}
-              {creditCollectMessage && (
-                <p
-                  role={creditCollect.phase === "done" ? undefined : "alert"}
-                  className={`mt-2 text-[length:var(--fs-caption)] font-semibold ${creditCollect.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+              {(ecosSuggested || creditSugg) && (
+                <section
+                  id={COLLECT_BLOCK_ID}
+                  className="mt-3"
+                  aria-labelledby={`${COLLECT_BLOCK_ID}-title`}
+                  data-testid="wacc-collect-block"
                 >
-                  {creditCollect.phase === "done" ? "✓" : "✕"} {creditCollectMessage}
-                </p>
-              )}
-              {ecosMessage && (
-                <p
-                  role={ecos.phase === "done" ? undefined : "alert"}
-                  className={`mt-2 text-[length:var(--fs-caption)] font-semibold ${ecos.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
-                >
-                  {ecos.phase === "done" ? "✓" : "✕"} {ecosMessage}
-                </p>
+                  <h4 id={`${COLLECT_BLOCK_ID}-title`} className="font-semibold text-[length:var(--fs-caption)]">
+                    {t("collectBlockTitle")}
+                  </h4>
+                  <p className="m-0 text-[color:var(--muted-fg)] text-[length:var(--fs-caption)]">
+                    {t("collectBlockHint")}
+                  </p>
+                  <ul className="list-none m-0 p-0">
+                    {ecosSuggested &&
+                      collectRow({
+                        key: "ecos",
+                        name: t("collectEcosName"),
+                        fills: t("collectEcosFills"),
+                        source: t("collectEcosSource"),
+                        status: ecosStatusText(),
+                        needed: ecosCollectNeeded(sugg.suggestions),
+                        runCollect: ecos,
+                        message: ecosMessage,
+                        runLabel: t("collectEcosRun"),
+                        rerunLabel: t("collectEcosRerun"),
+                        runningText: t("collectEcosRunning"),
+                      })}
+                    {creditSugg &&
+                      collectRow({
+                        key: "credit",
+                        name: t("collectCreditName"),
+                        fills: t("collectCreditFills"),
+                        source: t("collectCreditSource"),
+                        status: creditStatusText(),
+                        needed: creditCollectNeeded(creditSugg),
+                        runCollect: creditCollect,
+                        message: creditCollectMessage,
+                        runLabel: t("collectCreditRun"),
+                        rerunLabel: t("collectCreditRerun"),
+                        runningText: t("collectCreditRunning"),
+                        actionTestId: "credit-collect",
+                        noAction: !creditCollectAvailable(creditSugg),
+                      })}
+                  </ul>
+                </section>
               )}
               <div className="flex gap-2 mt-2">
                 <button
@@ -1390,6 +1522,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                 {creditNoteLines(r).map((line) => (
                                   <div key={line}>{line}</div>
                                 ))}
+                                {creditReasonLinksToCollect(r) && <div>{collectLink("credit")}</div>}
                                 <CreditRatingEvidence suggestion={r} />
                               </div>
                             ) : (
