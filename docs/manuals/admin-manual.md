@@ -12,7 +12,7 @@ counterpart: admin-manual_ko.md
 
 ## What This Manual Covers
 
-Account management, regulation-version administration, master-data administration, external data-source keys and approvals, and notification-rule configuration — the job of the admin console at `/admin` (`app/web-next/app/admin`).
+Account management, regulation-version administration, master-data administration, external data-source keys and approvals, scheduled jobs, and notification-rule configuration — the job of the admin console at `/admin` (`app/web-next/app/admin`).
 
 ## 1. Account Management
 
@@ -56,7 +56,7 @@ Every external data source needs its own key, and several also need an approval 
 | `법제처` Open Law (`LAW_API_OC`) | `LAW_API_OC` (the registered OC id, not a secret key) | `open.law.go.kr` > OPEN API > `활용신청` | About 1 to 2 business days per the `k-law` skill | Statute catalog sync (`collect.law`), statute and article checks by agents (`k-law`) | The scheduled job is skipped with `credential_missing`; agent statute checks cannot run |
 | KOSIS | `KOSIS_API_KEY` | `kosis.kr/openapi` > `활용신청` | Lead time not documented in the repo | Macro series collection (`collect.kosis`) | The scheduled job is skipped with `credential_missing` |
 | `공공데이터포털` (data.go.kr) | `DATA_GO_KR_API_KEY` | `www.data.go.kr` > the dataset's `openapi.do` page > `활용신청`, once per dataset | The key is shared, but each dataset needs its own approval. All current approvals are development accounts (the customs datasets expire 2028-09-03, the two FSC bond datasets 2028-11-26); renew with `활용연장` before then. The key in `.env` is the **Encoding** form (percent escapes); do not escape it again | Agent lookups through the `k-opendata` skill (customs trade statistics) and, since ADR-0208 slice 4, the **bond cross-check** on the WACC page ("Look up outstanding bonds"): `금융위원회_채권기본정보` and `금융위원회_채권시세정보`, both approved and verified live 2026-11-27. It is reference evidence only (never applied, never in apply-all), carries the `공공누리` notice (basic info type 2, price info type 4: attribution, no commercial use, price info also no modification) and matches the issuer by name | HTTP 403 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR` (`resultCode 30`) means the key has no approval for that dataset, or a new approval has not propagated yet, or the key was escaped twice; the WACC panel then says to look up again shortly (HTTP 200, `unavailable`). Missing key: `503 data_go_kr_api_key_missing` |
-| Korea Financial Investment Association (KOFIA) bond information service, `kofiabond.or.kr` | none (public pages, no login); a switch `CO_NEWBIZ_KOFIA_COLLECT` | No application exists. Automated collection is **off by default** and must stay off until KOFIA confirms **in writing** that it is permitted | Not an approval process: a written confirmation from KOFIA that automated collection of the grade-by-rating bond yields is allowed (none exists yet; the site has no API contract and no terms clause on automation) | Credit spread by grade on the WACC page (`spread_basis: kofia_grade`, chip "grade yield (KOFIA)"); the collection row "grade yields" appears in "reference data collection" only when the switch is `on` | Switch off (default): the collect route answers `503 kofia_collect_disabled`, no KOFIA row is shown and the spread uses the ECOS bases. Stored KOFIA data is still read. A layout change on the KOFIA side fails the run with a parse error and writes nothing. See `docs/runbooks/beta-series-collection.md` |
+| Korea Financial Investment Association (KOFIA) bond information service, `kofiabond.or.kr` | none (public pages, no login); a switch `CO_NEWBIZ_KOFIA_COLLECT` | No application exists. Automated collection is **off by default** and must stay off until KOFIA confirms **in writing** that it is permitted | Not an approval process: a written confirmation from KOFIA that automated collection of the grade-by-rating bond yields is allowed (none exists yet; the site has no API contract and no terms clause on automation) | Credit spread by grade on the WACC page (`spread_basis: kofia_grade`, chip "grade yield (KOFIA)"); the collection row "grade yields" appears in "reference data collection" only when the switch is `on` | Switch off (default): the collect route answers `503 kofia_collect_disabled`, no KOFIA row is shown and the spread uses the ECOS bases. Stored KOFIA data is still read. A layout change on the KOFIA side fails the run with a parse error and writes nothing. See `docs/runbooks/beta-series-collection.md`. The scheduled job `collect.kofia` is described in section 6.3 |
 
 ### 6.2 The data.go.kr dataset registry
 
@@ -73,6 +73,53 @@ Before using a new data.go.kr dataset:
 The registry records the application status; it cannot read it from the portal. It was last checked against data.go.kr `마이페이지` > `활용신청 현황` on 2026-11-26: nine applications, all approved, none pending, rejected, or expired, all on **development accounts** (`개발계정`). The `application_status` of every dataset is a recorded statement, not a fact the system checks, so confirm it on the portal whenever you edit the registry and correct it where it differs. The two FSC bond datasets (`금융위원회_채권기본정보`, `금융위원회_채권시세정보`) became `in_use` on 2026-11-27 (ADR-0208 slice 4): their endpoints and response fields are recorded in the registry and were confirmed by a live call with the repo key; they feed a cross-check display only.
 
 **Expiry.** Each approval has an expiry date (`expires_on`). Renew with `활용연장` on data.go.kr before **2028-09-03** (the customs datasets) and before **2028-11-26** (`금융위원회_채권기본정보`, `금융위원회_채권시세정보`). `국세청_사업자등록정보 진위확인 및 상태조회 서비스` shows no expiry on the portal; check it. After expiry the dataset answers 403 again. A development account is also traffic-capped; move to a production account (`운영계정`, reviewed by the portal) before a recurring-traffic feature goes live.
+
+### 6.3 Scheduled jobs
+
+Scheduled jobs collect external data and run housekeeping on a timer. An OS timer (the scheduler tick) fires every minute and starts each job that is due. You manage the jobs on `/admin/schedule` (menu `Collection schedule`, role `admin`). The OS registration, the heartbeat, and the failure triage are in `docs/runbooks/scheduler.md`.
+
+**Set up the jobs.**
+
+1. Seed the job rows. Dev: `CO_NEWBIZ_SCHEDULER_ENV=dev bun scripts/co-newbiz/schedule-seed.ts` (add `--dry-run` to preview). Prod: `POST /api/admin/schedule-jobs/seed` (admin only; the audit log records every non-dry-run call). When the job list is empty, the page also offers `Register default jobs`. Seeding is idempotent: it adds missing rows and never changes an existing row.
+2. Enable each job. Seeding creates every row **disabled**. Open `/admin/schedule` and press `Enable` on the row. The change takes effect within one minute.
+3. Leave the OS tick alone. The tick is installed once per environment with `scripts/co-newbiz/scheduler-install.ts`, and both the dev and the prod tick are registered on the project host. Enabling a job, disabling a job, and editing a cron expression need no reinstall. Reinstall only on a new host or after `--uninstall`.
+
+State of the dev database on 2026-11-27: all eleven rows are seeded and enabled with the default schedules below.
+
+| Job key | Default schedule (KST) | What it does | Needs |
+|---|---|---|---|
+| `collect.dart` | `0 7 * * 1-5` (weekdays 07:00) | Syncs the DART corporation-code catalog into the company master data (`md_company`) | `DART_API_KEY` |
+| `collect.ecos` | `0 8 * * *` (daily 08:00) | Collects Bank of Korea ECOS monthly interest-rate observations | `ECOS_API_KEY` |
+| `collect.kofia` | `45 18 * * 1-5` (weekdays 18:45) | Collects the KOFIA valuation-firm average 3-year yields of the AAA to BBB- corporate bond grades and the KTB 3-year | The switch `CO_NEWBIZ_KOFIA_COLLECT=on`; no key (see the gate below) |
+| `collect.kosis` | `0 9 * * 1` (Mondays 09:00) | Collects KOSIS monthly statistical series | `KOSIS_API_KEY` |
+| `collect.krx` | `30 18 * * 1-5` (weekdays 18:30) | Collects KRX daily closes (indexes and per-deal stock series) after market close | `KRX_API_KEY` and the approved KRX services |
+| `collect.law` | `0 6 * * *` (daily 06:00) | Syncs the deal-review statute whitelist from `법제처` into `md_statute` | `LAW_API_OC` |
+| `gate_integrity.shadow_report` | `0 8 * * 1` (Mondays 08:00) | Writes the weekly read-only summary of gate-integrity shadow-mode audit rows and enforce-flip readiness | None |
+| `notify.deliver` | `* * * * *` (every minute) | Expands new notifications into per-recipient deliveries and sends the due email and webhook messages | `NOTIFY_SMTP_*` for email, `NOTIFY_WEBHOOK_URL_*` for webhooks (see `.env.sample`); an unconfigured channel records `skipped: channel_unconfigured` |
+| `notify.digest` | `30 8 * * *` (daily 08:30) | Folds each recipient's undelivered daily-bundle notifications of the past 24 hours into one email | `NOTIFY_SMTP_*` |
+| `retention.cleanup` | `0 3 * * *` (daily 03:00) | Applies the retention policies to the allow-listed tables (archive before delete; the audit log is never eligible) | None; set `RETENTION_DRY_RUN=1` for the first run |
+| `watch.evaluate` | `*/30 * * * *` (every 30 minutes) | Evaluates watch rules against new data, records notifications, and resumes paused pipelines | None |
+
+The `collect.*` jobs read the same keys as the in-app collection, so the per-source key, the application page, and the approval lead time are in the table in section 6.1. A missing key ends the run `skipped` with `credential_missing` (not `failed`). A key without the source's approval ends the run `failed`, for example `respCode 401 - Unauthorized API Call` from KRX.
+
+**The KOFIA gate.** `collect.kofia` is a dedicated handler gated by `CO_NEWBIZ_KOFIA_COLLECT`.
+
+- Off (the default): every run ends `skipped` with the reason `kofia_collect_off` and makes no network call. Enabling the job row while the switch is off is harmless.
+- On: a scheduled or catch-up run reads the latest published day and stores it, then backfills the weekdays still missing within the last 10 calendar days. It skips a day that is already stored. A holiday weekday costs one request.
+- A layout change on the KOFIA side fails the run and writes nothing. A network error, a 5xx, or a 429 retries up to 2 times.
+- **Run now** on this job re-collects the latest day (unchanged values write nothing; changed values become a revision). This is the admin's force: admins cannot reach the project collect route. An analyst's `Collect grade yields` button on the WACC page answers `up_to_date` while the stored data is fresh.
+- Set the switch in the repo-root `.env` for the dev tick. For the prod tick, set it in the container environment (`.env.prod`). Restart the server after a change.
+- **Prod: keep the switch off until KOFIA confirms in writing that automated collection is allowed.** The row in section 6.1 and `docs/runbooks/beta-series-collection.md` ("KOFIA grade yields") carry the reasoning.
+
+**Change a job.** Press `Edit` on the row to change the cron expression (`Quick setup` or `Direct input`; times are KST; the minimum interval is 5 minutes), the timeout in minutes (1 to 120), and the retries on failure (0 to 5).
+
+**See the run history.** The `/admin/schedule` list shows `Next run` and `Last run` for each job. The `History` button opens the run history: start and end time, status (`Succeeded`, `Failed`, `Skipped`, `Running`, `Timeout`), trigger (`Schedule`, `Manual`, `Catch-up`), actor, environment, rows read, written, and changed, attempt, duration, and the scrubbed error. The chips `Overdue` and `N consecutive failures` mark a job that needs attention. The banner `The scheduler is not firing` means the heartbeat is stale; follow `docs/runbooks/scheduler.md` section 9. **Run now** in the history dialog queues a manual run for the next tick (within 60 seconds) and also works on a disabled job.
+
+The history shows the status `Skipped` but not the reason. Read the reason from `job_run.detail_json`:
+
+```bash
+sqlite3 db/data/co-newbiz.sqlite "SELECT started_at, status, \"trigger\", detail_json FROM job_run WHERE job_key = 'collect.kofia' ORDER BY started_at DESC LIMIT 5;"
+```
 
 ## 7. Logs & Audit
 
