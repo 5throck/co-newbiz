@@ -161,8 +161,8 @@ function ScheduleScreen({ ctx }: { ctx: AdminConsoleState }) {
                           {/* 한 줄 행 — 이름·키·설명을 한 줄에 나란히 적는다(2026-11 사용자 후속 요청:
                               작업 열을 더 넓히고 한 줄로). 좁은 폭에서는 각 조각이 자연 줄바꿈된다. */}
                           <td>
-                            <span className="whitespace-nowrap font-semibold">{name}</span>{" "}
-                            <span className="whitespace-nowrap font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                            <span className="whitespace-nowrap font-semibold mr-3">{name}</span>
+                            <span className="whitespace-nowrap font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mr-3">
                               {j.job_key}
                             </span>
                             {desc && (

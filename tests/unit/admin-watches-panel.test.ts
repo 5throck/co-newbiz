@@ -101,13 +101,25 @@ describe("§13.6 watches table", () => {
     expect(has("admin.watches.deleteConfirmBody")).toBe(true);
   });
 
-  test("create dialog: project named by ID (admin visibility precedent) + active-user picker", () => {
+  test("create dialog: project picked by name/number search (2026-11-27 user request) + active-user picker", () => {
     expect(SECTION).toMatch(
       /api\.post\("\/api\/admin\/watches", \{ project_id: projectId\.trim\(\), user_id: userId\.trim\(\) \}\)/,
     );
     expect(SECTION).toMatch(/\.get<AdminUser\[\]>\(\s*"\/api\/admin\/users"\s*\)/);
     expect(SECTION).toMatch(/u\.status === "active"/);
-    expect(koOf("admin.watches.createProjectHint")).toContain("프로젝트 ID로 지정");
+    // Project search — /api/admin/project-options, debounced, matches number or name.
+    expect(SECTION).toMatch(/\/api\/admin\/project-options\?q=/);
+    const ROUTE = readFileSync(
+      new URL("../../app/web-next/app/api/admin/project-options/route.ts", import.meta.url),
+      "utf8",
+    );
+    expect(ROUTE).toMatch(/project_no LIKE \? OR project_name LIKE \?/); // route searches both
+    expect(ROUTE).toMatch(/requireAdmin/); // admin-only, like /api/admin/users
+    expect(SECTION).toMatch(
+      /setProjectLabel\(p\.project_name \? `\$\{p\.project_no\} · \$\{p\.project_name\}` : p\.project_no\)/,
+    );
+    expect(koOf("admin.watches.createProjectHint")).toContain("이름으로 검색");
+    expect(has("admin.watches.createProjectNoMatch")).toBe(true);
   });
 
   test("409 watch_exists renders its own inline message", () => {
