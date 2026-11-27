@@ -28,6 +28,11 @@ relates_to:
     type: relates_to
 ---
 
+<!-- LOCAL-PATCH(upstream-request: U-20261127-006) — project-authored frontmatter deltas (v1.1.2 >
+template 1.1.1): scope/triggers clarify DEC-format ownership vs evidence-ledger and
+stage-gate-governance, relates_to gains stage-gate-governance, and the Validator-contract
+paragraph names the scripts/validate-decisions.ts contract. -->
+
 ## Purpose
 
 Closes the Decision link of the Agent → Skill → Knowledge → Evidence → Rule → Decision chain (ADR-0061). Gate rulings made only in chat vanish when the session ends; a decision record keeps the ruling, what was rejected, and which rules and evidence produced it — queryable after the session is gone.

@@ -140,7 +140,7 @@ function cmdList(o: CliOptions): number {
     return 0;
   }
   if (rows.length === 0) {
-    console.log(`external-deps.json (schema v${manifest?.schema_version}): no dependencies declared.`);
+    console.log(`external-deps.json (schema v${manifest!.schema_version}): no dependencies declared.`);
     return 0;
   }
   for (const r of rows) {
@@ -161,7 +161,7 @@ function cmdInstall(o: CliOptions): number {
     console.log("No external-deps.json — nothing to install.");
     return 0;
   }
-  if (o.id && !manifest?.dependencies.some((d) => d.id === o.id)) {
+  if (o.id && !manifest!.dependencies.some((d) => d.id === o.id)) {
     console.error(`❌ no dependency with id '${o.id}' in external-deps.json`);
     return 1;
   }

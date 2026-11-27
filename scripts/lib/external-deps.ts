@@ -1,4 +1,32 @@
-// @version 1.2.0
+// @version 1.4.0
+// v1.4.0 (2026-11-21, T-20261121-001 — design
+//          docs/designs/2026-11-21-external-deps-market-scope-design.md):
+//          advisory `market_scope?: string[]` on schema-v2 entries — PHASE 1
+//          METADATA ONLY, nothing gates on it (standard Addendum C; behavioral
+//          gating via country_config is explicitly out of scope). Parse:
+//          optional; when present a non-empty array of non-empty strings
+//          (non-array / non-string member / empty string rejected with
+//          precise errors); unknown VALUES are accepted (new-market
+//          flexibility). KNOWN_MARKET_SCOPES = ["KR", "ko-language"] is the
+//          documented set; verify check V10 WARNs on values outside it
+//          (absent → no row; all-known → PASS row). Deliberately NOT in
+//          V2_CONTRACT_FIELDS — the advisory field spreads via channel-2c
+//          verbatim adoption, not v1→v2 migration.
+// v1.3.0 (2026-11-19, T-20261118-005 — design
+//          docs/designs/2026-11-18-pin-divergence-symmetry-design.md): two pure
+//          helpers for pin-divergence symmetry between the template seed and a
+//          project manifest. classifySeedDivergence classifies the divergence
+//          of a project pin against the seed pin (project strictly ahead /
+//          non-semver divergence / same-pin commit divergence / repo mismatch /
+//          project behind / in-sync — Arm 1 rows fire only on the ahead and
+//          diverged classes). resolveSeedTarget applies the max-rule target
+//          selection: upstream.newer wins when present; the seed pin becomes
+//          the compat-gated target only when upstream failed/unreachable (or
+//          confirms it) and the seed pin is a semver tag strictly newer than
+//          the project pin and (when upstream answered) present among upstream
+//          tags. Commit-only / non-semver seed pins are unsupported and
+//          report-only — never targets (install templates are tag-only;
+//          standard §5.2 pin rules).
 // v1.2.0 (2026-11-08, T-20261108-002 — port of co-work #38 / LOCAL-PATCH
 //          U-20261107-002): bounded NON-GIT admission — an `install` template
 //          may invoke an allowlisted deterministic non-git tool
@@ -78,6 +106,15 @@ export type ExternalDepPropagation = (typeof PROPAGATION_VALUES)[number];
 export const USAGE_VALUES = ["as-is"] as const;
 export type ExternalDepUsage = (typeof USAGE_VALUES)[number];
 
+/**
+ * Documented `market_scope` values (T-20261121-001, standard Addendum C).
+ * ADVISORY registry — unknown values are LEGAL at parse (new-market
+ * flexibility); verify check V10 WARNs on them so the standard's value
+ * registry catches up. Behavioral gating on these values is OUT OF SCOPE
+ * (phase 1 metadata only).
+ */
+export const KNOWN_MARKET_SCOPES = ["KR", "ko-language"] as const;
+
 /** A deliberately excluded part of the upstream repo (standard §5.2). */
 export interface ExcludedComponent {
   name: string;
@@ -117,6 +154,12 @@ export interface ExternalDepEntry {
   excluded_components?: ExcludedComponent[];
   /** DEC-YYYYMMDD-NN or ADR-NNNN; required for review / review-standalone classes. */
   license_decision?: string;
+  /** Advisory market-scope tags (T-20261121-001, standard Addendum C) — WHY
+   *  this entry is here: "KR" = Korea market (the HWP-adapter class),
+   *  "ko-language" = Korean-language dependency. PHASE 1 METADATA ONLY:
+   *  nothing gates on it. Unknown values are legal (new-market flexibility)
+   *  and WARN via verify V10. */
+  market_scope?: string[];
 }
 
 export interface ExternalDepsManifest {
@@ -157,10 +200,13 @@ export const ENTRY_FIELDS_V2 = [
   "adapter",
   "excluded_components",
   "license_decision",
+  "market_scope",
 ] as const;
 /** The CURRENT (writer) schema's field set. */
 export const ENTRY_FIELDS = ENTRY_FIELDS_V2;
-/** v2 fields a v1 → v2 migration takes from the template seed (standard §5.6). */
+/** v2 fields a v1 → v2 migration takes from the template seed (standard §5.6).
+ *  `market_scope` is deliberately NOT here (T-20261121-001): it is advisory
+ *  metadata that spreads via channel-2c verbatim adoption, not migration. */
 export const V2_CONTRACT_FIELDS = ["license", "usage", "adapter", "excluded_components", "license_decision"] as const;
 const REQUIRED_ENTRY_FIELDS: ReadonlyArray<string> = ["id", "repo", "pin", "install", "install_dir", "propagation"];
 const REQUIRED_ENTRY_FIELDS_V2_EXTRA: ReadonlyArray<string> = ["license", "usage", "adapter"];
@@ -525,6 +571,31 @@ export function parseExternalDepsManifest(
           );
         }
         entry.license_decision = rawEntry.license_decision;
+      }
+      // market_scope (T-20261121-001, standard Addendum C): advisory metadata,
+      // nothing gates on it. Shape-only validation here — unknown VALUES are
+      // accepted (new-market flexibility) and WARNed by verify check V10.
+      if (rawEntry.market_scope !== undefined) {
+        const ms = rawEntry.market_scope;
+        if (!Array.isArray(ms)) {
+          throw typeErr(
+            origin,
+            `${at}: market_scope must be an array of market-scope strings (got: ${JSON.stringify(ms)})`,
+          );
+        }
+        if (ms.length === 0) {
+          throw typeErr(
+            origin,
+            `${at}: market_scope must be a non-empty array — omit the field for a market-neutral entry`,
+          );
+        }
+        for (let m = 0; m < ms.length; m++) {
+          const v = ms[m];
+          if (typeof v !== "string" || v.trim().length === 0) {
+            throw typeErr(origin, `${at}: market_scope[${m}] must be a non-empty string (got: ${JSON.stringify(v)})`);
+          }
+        }
+        entry.market_scope = ms as string[];
       }
     }
     return entry;
@@ -905,6 +976,95 @@ export function checkUpstreamTags(entry: Pick<ExternalDepEntry, "repo" | "pin">)
   return { ok: true, tags, newer };
 }
 
+// ── Pin-divergence symmetry (v1.3.0, T-20261118-005, design
+//    docs/designs/2026-11-18-pin-divergence-symmetry-design.md §5.1/§6) ────────
+
+/** Divergence class of a project pin against the template-seed pin for the same id. */
+export type SeedDivergenceKind =
+  | "in-sync"
+  | "project-ahead"
+  | "non-semver-divergence"
+  | "same-pin-commit-divergence"
+  | "repo-mismatch"
+  | "project-behind";
+
+/**
+ * Classify the divergence between a project manifest entry (`dep`) and the
+ * template-seed entry with the same id (`seedDep`). Pure — no I/O, no network.
+ *
+ * Class order (design §5.1 Arm 1 table):
+ *   - `repo-mismatch` — the seed entry's repo differs from the dep's repo
+ *     (id reused across repos): pin comparison is meaningless, skipped.
+ *   - equal pins + both commits present and different →
+ *     `same-pin-commit-divergence` (tag likely re-cut upstream).
+ *   - equal pins (or either commit absent) → `in-sync`.
+ *   - project pin strictly newer than the seed pin (both semver) →
+ *     `project-ahead`.
+ *   - seed pin strictly newer than the project pin (both semver) →
+ *     `project-behind` — no report row; the seed-target arm
+ *     (resolveSeedTarget) owns this direction.
+ *   - pins differ and neither direction is a strictly-newer semver →
+ *     `non-semver-divergence` (a non-semver pin on either side).
+ */
+export function classifySeedDivergence(
+  dep: { pin: string; commit?: string },
+  seedDep: { pin: string; commit?: string; repo: string },
+  depRepo: string,
+): { kind: SeedDivergenceKind } {
+  if (seedDep.repo !== depRepo) return { kind: "repo-mismatch" };
+  if (dep.pin === seedDep.pin) {
+    if (dep.commit && seedDep.commit && dep.commit !== seedDep.commit) return { kind: "same-pin-commit-divergence" };
+    return { kind: "in-sync" };
+  }
+  if (isNewerTag(dep.pin, seedDep.pin)) return { kind: "project-ahead" };
+  if (isNewerTag(seedDep.pin, dep.pin)) return { kind: "project-behind" };
+  return { kind: "non-semver-divergence" };
+}
+
+/** Result of the seed-target max-rule (design §5.1 Arm 2, ruling (e)). */
+export interface SeedTargetResolution {
+  /** The compat-test target pin, when one was selected. */
+  target?: string;
+  /** Which side supplied the target (`upstream` = today's arm; `seed` = the fallback arm). */
+  source: "upstream" | "seed";
+  /** Non-target reason (e.g. the seed pin is out of sync with upstream) — surfaced as its own WARN row. */
+  reason?: string;
+}
+
+/**
+ * Seed-target max-rule selection. Pure — consumes the already-computed
+ * upstream check, no I/O.
+ *
+ *   1. `upstream.ok && upstream.newer` → upstream target (today's behavior,
+ *      unchanged — when the seed pin is a strictly-newer upstream tag,
+ *      `upstream.newer ≥ seed.pin` by construction, so the max of both
+ *      reduces to upstream-first).
+ *   2. else the seed pin is a strictly-newer semver tag than the project pin
+ *      AND (`upstream.ok` implies the seed pin is among upstream tags) → seed
+ *      target. The membership requirement prevents a doomed fetch when the
+ *      seed pin is absent from upstream (renamed/deleted tag) — that state
+ *      returns no target with the out-of-sync `reason` instead.
+ *   3. else → no target (today's hold). Commit-only / non-semver seed pins
+ *      never become targets (install templates are tag-only; report-only).
+ */
+export function resolveSeedTarget(
+  dep: { pin: string },
+  seedDep: { pin: string } | undefined,
+  upstream: UpstreamTagCheck,
+): SeedTargetResolution {
+  if (upstream.ok && upstream.newer) return { target: upstream.newer, source: "upstream" };
+  if (!seedDep) return { source: "upstream" };
+  if (!isNewerTag(seedDep.pin, dep.pin)) return { source: "upstream" };
+  if (!parseSemverTag(seedDep.pin)) return { source: "upstream" };
+  if (upstream.ok && !upstream.tags.includes(seedDep.pin)) {
+    return {
+      source: "seed",
+      reason: `template seed pin ${seedDep.pin} is newer than the project pin but is not among upstream tags — the seed is out of sync with upstream; not adopted`,
+    };
+  }
+  return { target: seedDep.pin, source: "seed" };
+}
+
 /**
  * Pin-drift tripwire (design §5): compare the recorded advisory `commit` with
  * the sha the pinned tag currently resolves to. `null` when the check cannot
@@ -958,7 +1118,7 @@ export function isGitignoreCovered(gitignoreContent: string, installDir: string)
   const parts = installDir.split("/").filter(Boolean);
   for (let i = 1; i <= parts.length; i++) {
     ancestors.add(parts.slice(0, i).join("/"));
-    ancestors.add(`${parts.slice(0, i).join("/")}/`);
+    ancestors.add(parts.slice(0, i).join("/") + "/");
   }
   for (const rawLine of gitignoreContent.split(/\r?\n/)) {
     const line = rawLine.trim();
@@ -1056,7 +1216,7 @@ export function fetchProjectExternalDeps(
   const outcomes: InstallOutcome[] = [];
   const selected =
     opts.onlyIds && opts.onlyIds.length > 0
-      ? manifest.dependencies.filter((d) => opts.onlyIds?.includes(d.id))
+      ? manifest.dependencies.filter((d) => opts.onlyIds!.includes(d.id))
       : manifest.dependencies;
   for (const dep of selected) {
     // E5 (standard §5.4): license gate + R3 convention BEFORE any clone — a
@@ -1089,9 +1249,9 @@ export function fetchProjectExternalDeps(
     if (!opts.dryRun && outcome.commit) {
       try {
         const doc = JSON.parse(readFileSync(manifestPath, "utf8")) as { dependencies?: Array<Record<string, unknown>> };
-        const row = doc.dependencies?.find((d) => d.id === dep.id);
-        if (row && row.commit !== outcome.commit) {
-          row.commit = outcome.commit;
+        const row = doc.dependencies?.find((d) => d["id"] === dep.id);
+        if (row && row["commit"] !== outcome.commit) {
+          row["commit"] = outcome.commit;
           writeFileSync(manifestPath, `${JSON.stringify(doc, null, 2)}\n`, "utf8");
         }
       } catch {
@@ -1108,10 +1268,10 @@ export function fetchProjectExternalDeps(
   return result;
 }
 
-// ── Verify (standard §5.3 — V1-V9; backs scripts/external-deps.ts verify) ─────
+// ── Verify (standard §5.3 — V1-V10; backs scripts/external-deps.ts verify) ────
 
 export interface VerifyFinding {
-  check: "V1" | "V2" | "V3" | "V3a" | "V4" | "V5" | "V6" | "V7" | "V8" | "V9";
+  check: "V1" | "V2" | "V3" | "V3a" | "V4" | "V5" | "V6" | "V7" | "V8" | "V9" | "V10";
   id: string | null;
   severity: GateSeverity;
   message: string;
@@ -1244,8 +1404,8 @@ export function scanExcludedComponents(
 
 /**
  * Run the standard §5.3 verify checks over a project. `manifestOnly` limits
- * the run to the offline manifest checks (V1-V5 + V3a) — the commit-time and
- * CI legs (E3/E4). Never touches the network.
+ * the run to the offline manifest checks (V1-V5 + V3a + V10) — the commit-time
+ * and CI legs (E3/E4). Never touches the network.
  */
 export function verifyProjectExternalDeps(
   projectDir: string,
@@ -1332,6 +1492,29 @@ export function verifyProjectExternalDeps(
             },
       );
     }
+    // V10 (T-20261121-001, standard Addendum C): advisory market_scope
+    // registry. Absent → no row (existing verify output stays byte-stable);
+    // all values in KNOWN_MARKET_SCOPES → PASS; any unknown value → WARN
+    // (legal — new-market flexibility; the registry documents the set).
+    // Advisory by definition: V10 never FAILs and never gates.
+    if (dep.market_scope !== undefined) {
+      const unknown = dep.market_scope.filter((v) => !(KNOWN_MARKET_SCOPES as readonly string[]).includes(v));
+      findings.push(
+        unknown.length === 0
+          ? {
+              check: "V10",
+              id: dep.id,
+              severity: "pass",
+              message: `${dep.id}: market_scope [${dep.market_scope.join(", ")}] (advisory metadata — nothing gates on it)`,
+            }
+          : {
+              check: "V10",
+              id: dep.id,
+              severity: "warn",
+              message: `${dep.id}: market_scope value(s) ${unknown.map((v) => `'${v}'`).join(", ")} not in the documented set [${KNOWN_MARKET_SCOPES.join(", ")}] — allowed (new-market flexibility); document the value in the standard's Addendum C on its next revision`,
+            },
+      );
+    }
     if (opts.manifestOnly) continue;
 
     const dest = resolve(projectDir, dep.install_dir);
@@ -1412,14 +1595,14 @@ export function migrateManifestV1ToV2(
   seed: ExternalDepsManifest,
 ): { document: Record<string, unknown>; migrated: string[]; unattested: string[] } {
   const doc = JSON.parse(projectRaw) as Record<string, unknown>;
-  const deps = Array.isArray(doc.dependencies) ? (doc.dependencies as Array<Record<string, unknown>>) : [];
+  const deps = Array.isArray(doc["dependencies"]) ? (doc["dependencies"] as Array<Record<string, unknown>>) : [];
   const seedById = new Map(seed.dependencies.map((d) => [d.id, d] as const));
   const migrated: string[] = [];
   const unattested: string[] = [];
   for (const dep of deps) {
-    const id = typeof dep.id === "string" ? dep.id : "";
+    const id = typeof dep["id"] === "string" ? dep["id"] : "";
     const s = seedById.get(id);
-    if (s?.license) {
+    if (s && s.license) {
       for (const f of V2_CONTRACT_FIELDS) {
         const v = (s as unknown as Record<string, unknown>)[f];
         if (v !== undefined) dep[f] = v;
@@ -1430,9 +1613,9 @@ export function migrateManifestV1ToV2(
     }
   }
   const out: Record<string, unknown> = {};
-  if (typeof doc.$comment === "string") out.$comment = doc.$comment;
-  out.schema_version = EXTERNAL_DEPS_SCHEMA_VERSION;
-  out.dependencies = deps;
+  if (typeof doc["$comment"] === "string") out["$comment"] = doc["$comment"];
+  out["schema_version"] = EXTERNAL_DEPS_SCHEMA_VERSION;
+  out["dependencies"] = deps;
   return { document: out, migrated, unattested };
 }
 

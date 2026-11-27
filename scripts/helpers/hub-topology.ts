@@ -116,7 +116,7 @@ export function loadHubTopology(rootDir: string): LoadResult {
       error: `docs/workspace-schema.json is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
-  const topology = schema.hub_topology as HubTopology | undefined;
+  const topology = schema["hub_topology"] as HubTopology | undefined;
   if (!topology || typeof topology !== "object" || Array.isArray(topology)) {
     return { ok: false, error: "absent-section" };
   }
@@ -367,7 +367,7 @@ export function checkUnregisteredDuplicates(topology: HubTopology, duplicates: D
   const entries = Array.isArray(topology.entries) ? topology.entries : [];
   const registered = new Set<string>(
     entries
-      .map((e) => (e && typeof e === "object" ? String((e as Record<string, unknown>).asset ?? "") : ""))
+      .map((e) => (e && typeof e === "object" ? String((e as Record<string, unknown>)["asset"] ?? "") : ""))
       .filter(Boolean),
   );
   const soak = new Map<string, Record<string, unknown>>();
@@ -375,7 +375,7 @@ export function checkUnregisteredDuplicates(topology: HubTopology, duplicates: D
     for (const row of topology.known_unregistered_duplicates) {
       if (row && typeof row === "object") {
         const r = row as Record<string, unknown>;
-        soak.set(`${String(r.kind ?? "")}/${String(r.asset ?? "")}`, r);
+        soak.set(`${String(r["kind"] ?? "")}/${String(r["asset"] ?? "")}`, r);
       }
     }
   }
@@ -398,7 +398,7 @@ export function checkUnregisteredDuplicates(topology: HubTopology, duplicates: D
     const dup = duplicates.find((d) => `${d.kind}/${d.asset}` === key);
     if (!dup) {
       warns.push(
-        `known_unregistered_duplicates row '${key}' (${JSON.stringify(row.variants ?? [])}) no longer matches on-disk duplication — retire the stale inventory row`,
+        `known_unregistered_duplicates row '${key}' (${JSON.stringify(row["variants"] ?? [])}) no longer matches on-disk duplication — retire the stale inventory row`,
       );
     }
   }
@@ -427,17 +427,17 @@ export function checkVariantIdentity(topology: HubTopology, rootDir: string): Le
   for (const row of entries) {
     if (!row || typeof row !== "object") continue;
     const e = row as Record<string, unknown>;
-    if (e.category !== "variant-identity") continue;
+    if (e["category"] !== "variant-identity") continue;
     identityCount++;
-    const hubVariant = String(e.hub_variant ?? "");
-    const canonicalPath = String(e.canonical_path ?? "");
+    const hubVariant = String(e["hub_variant"] ?? "");
+    const canonicalPath = String(e["canonical_path"] ?? "");
     if (!hubVariant || !canonicalPath || canonicalPath.includes("..") || canonicalPath.startsWith("/")) continue; // shape leg owns malformed rows
     for (const entry of readdirSync(templatesDir, { withFileTypes: true })) {
       if (!entry.isDirectory() || !entry.name.startsWith("co-") || entry.name === hubVariant) continue;
       const foreignCopy = join(templatesDir, entry.name, canonicalPath);
       if (existsSync(foreignCopy) && statSync(foreignCopy).isFile()) {
         fails.push(
-          `variant-identity asset '${String(e.asset)}' (hub: ${hubVariant}) found copied into templates/${entry.name}/${canonicalPath} — unauthorized promotion/copy of identity content (design §2.4 leg 2). Remove the foreign copy; the owning variant keeps identity assets`,
+          `variant-identity asset '${String(e["asset"])}' (hub: ${hubVariant}) found copied into templates/${entry.name}/${canonicalPath} — unauthorized promotion/copy of identity content (design §2.4 leg 2). Remove the foreign copy; the owning variant keeps identity assets`,
         );
       }
     }
@@ -473,14 +473,14 @@ export function checkConsumerMinimumVersions(topology: HubTopology, consumers: C
   for (const row of entries) {
     if (!row || typeof row !== "object") continue;
     const e = row as Record<string, unknown>;
-    const domain = String(e.domain ?? "");
+    const domain = String(e["domain"] ?? "");
     const list = entriesByDomain.get(domain);
     if (list) list.push(e);
     else entriesByDomain.set(domain, [e]);
   }
 
   for (const { variant, hubBlock } of consumers) {
-    const consumes = hubBlock.consumes;
+    const consumes = hubBlock["consumes"];
     if (!Array.isArray(consumes)) continue;
     for (const row of consumes) {
       if (!row || typeof row !== "object") {
@@ -488,8 +488,8 @@ export function checkConsumerMinimumVersions(topology: HubTopology, consumers: C
         continue;
       }
       const c = row as Record<string, unknown>;
-      const domain = typeof c.domain === "string" ? c.domain : "";
-      const minRaw = c.minimum_version;
+      const domain = typeof c["domain"] === "string" ? c["domain"] : "";
+      const minRaw = c["minimum_version"];
       const min = parseSemver(minRaw);
       if (!domain) {
         fails.push(`${variant}: hub.consumes row missing "domain"`);
@@ -510,17 +510,17 @@ export function checkConsumerMinimumVersions(topology: HubTopology, consumers: C
       const domainEntries = entriesByDomain.get(domain) ?? [];
       if (domainEntries.length === 0) continue; // vacuous — no canonical assets for the domain yet
       for (const e of domainEntries) {
-        const entryVersion = parseSemver(e.version);
-        const asset = String(e.asset ?? "<unknown>");
+        const entryVersion = parseSemver(e["version"]);
+        const asset = String(e["asset"] ?? "<unknown>");
         if (!entryVersion) {
           fails.push(
-            `${variant} consumes ${asset} (${domain}) whose registry version "${String(e.version)}" is not semver — cannot verify minimum_version`,
+            `${variant} consumes ${asset} (${domain}) whose registry version "${String(e["version"])}" is not semver — cannot verify minimum_version`,
           );
           continue;
         }
         if (semverCompare(entryVersion, min) < 0) {
           fails.push(
-            `${variant} consumes ${asset} (${domain}) at minimum_version ${String(minRaw)} but the canonical registry version is ${String(e.version)} — consumer below minimum (design §2.4 leg 3). Upgrade the consumer declaration or promote the asset`,
+            `${variant} consumes ${asset} (${domain}) at minimum_version ${String(minRaw)} but the canonical registry version is ${String(e["version"])} — consumer below minimum (design §2.4 leg 3). Upgrade the consumer declaration or promote the asset`,
           );
         }
       }
@@ -550,7 +550,7 @@ export function loadConsumingVariants(rootDir: string): ConsumingVariant[] {
     if (!existsSync(vjPath)) continue;
     try {
       const vj = JSON.parse(readFileSync(vjPath, "utf-8")) as Record<string, unknown>;
-      const hub = vj.hub as Record<string, unknown> | undefined;
+      const hub = vj["hub"] as Record<string, unknown> | undefined;
       if (hub && typeof hub === "object" && !Array.isArray(hub)) {
         out.push({ variant: entry.name, hubBlock: hub });
       }
@@ -599,10 +599,10 @@ function variantIdentitySanction(entries: unknown[], variantName: string, rel: s
   return entries.some((row) => {
     if (!row || typeof row !== "object") return false;
     const v = row as Record<string, unknown>;
-    if (v.category !== "variant-identity") return false;
-    const hubVariant = String(v.hub_variant ?? "");
+    if (v["category"] !== "variant-identity") return false;
+    const hubVariant = String(v["hub_variant"] ?? "");
     if (hubVariant !== variantName) return false;
-    return entryTemplateRelPath(String(v.canonical_path ?? ""), hubVariant) === rel;
+    return entryTemplateRelPath(String(v["canonical_path"] ?? ""), hubVariant) === rel;
   });
 }
 
@@ -627,18 +627,18 @@ export function checkHubDoctrineDuplication(topology: HubTopology, ctx: HubDoctr
   for (const row of entries) {
     if (!row || typeof row !== "object") continue;
     const e = row as Record<string, unknown>;
-    if (e.category !== "hub-doctrine") continue;
-    const hubVariant = String(e.hub_variant ?? "");
+    if (e["category"] !== "hub-doctrine") continue;
+    const hubVariant = String(e["hub_variant"] ?? "");
     if (!hubVariant || hubVariant === ctx.variantName) continue; // the hub's own promotion copy
-    const rel = entryTemplateRelPath(String(e.canonical_path ?? ""), hubVariant);
+    const rel = entryTemplateRelPath(String(e["canonical_path"] ?? ""), hubVariant);
     if (!rel) continue;
     checked++;
     const localCopy = join(ctx.templateDir, rel);
     if (!existsSync(localCopy)) continue;
-    const asset = String(e.asset ?? rel);
-    const consumers = Array.isArray(e.consumers) ? e.consumers : [];
+    const asset = String(e["asset"] ?? rel);
+    const consumers = Array.isArray(e["consumers"]) ? e["consumers"] : [];
     const declaredConsumer = (consumers as unknown[]).some(
-      (c) => c && typeof c === "object" && String((c as Record<string, unknown>).variant ?? "") === ctx.variantName,
+      (c) => c && typeof c === "object" && String((c as Record<string, unknown>)["variant"] ?? "") === ctx.variantName,
     );
     const isCommonStock = ctx.commonNames?.has(asset) ?? false;
     const variantIdentity = variantIdentitySanction(entries, ctx.variantName, rel);
@@ -662,7 +662,7 @@ export function checkHubDoctrineDuplication(topology: HubTopology, ctx: HubDoctr
     }
     if (declaredConsumer || isCommonStock) continue; // sanctioned copy (§7.4 stale-read / common contract)
     fails.push(
-      `${ctx.variantName} template carries a copy of hub-doctrine asset '${asset}' (hub: ${hubVariant}, domain: ${String(e.domain ?? "")}) at ${rel} with no sanction — unregistered hub-doctrine duplication (design §6.2). Declare consumption in variant.json hub.consumes {domain, minimum_version} or remove the copy; the hub delivers the canonical`,
+      `${ctx.variantName} template carries a copy of hub-doctrine asset '${asset}' (hub: ${hubVariant}, domain: ${String(e["domain"] ?? "")}) at ${rel} with no sanction — unregistered hub-doctrine duplication (design §6.2). Declare consumption in variant.json hub.consumes {domain, minimum_version} or remove the copy; the hub delivers the canonical`,
     );
   }
   if (checked === 0) {

@@ -2484,7 +2484,7 @@
       "name": "decision-record",
       "scope": "root",
       "capability": "decision-record",
-      "content_hash": "f97306e933b308c0",
+      "content_hash": "e5463d13d00bacb0",
       "version": "1.1.2",
       "mirrors": [
         "skills/decision-record/SKILL.md",
@@ -2556,7 +2556,7 @@
       "name": "evidence-ledger",
       "scope": "root",
       "capability": "evidence-ledger",
-      "content_hash": "ae4297fc669e81d8",
+      "content_hash": "b34343cc4a5fc7ab",
       "version": "1.1.1",
       "mirrors": [
         "skills/evidence-ledger/SKILL.md",
@@ -2693,8 +2693,8 @@
         ".hermes/skills/gateguard/SKILL.md"
       ],
       "usage": {
-        "sessions": 1,
-        "last_used": "2026-11-23"
+        "sessions": 2,
+        "last_used": "2026-11-27"
       }
     },
     {

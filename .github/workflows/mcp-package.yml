@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10 # review F-31: CI-timeout convention (was the 360m GitHub default)
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261127-007)
 
       - name: Tag must equal mcp/co-newbiz/package.json version
         run: |
@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10 # review F-31: CI-timeout convention
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261127-007)
 
       # The repository is personal-account-owned while the package scope is
       # org-owned (@co-newbiz), so the repo-scoped GITHUB_TOKEN does not carry
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10 # review F-31: CI-timeout convention
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261127-007)
 
       # The publish job above routes @co-newbiz at npm.pkg.github.com through
       # its own ~/.npmrc. This job must NOT inherit that routing: a
@@ -137,7 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15 # review F-31: bun init + install + stdio handshake
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261108-002)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # LOCAL-PATCH(upstream-request: U-20261127-007)
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:

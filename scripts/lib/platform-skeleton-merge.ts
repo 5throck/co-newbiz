@@ -1,4 +1,4 @@
-// @version 1.2.0
+// @version 1.2.1
 // v1.2.0 (2026-10-28, design
 //         docs/designs/2026-10-28-instruction-ownership-backport-hardening-design.md
 //         D3/D2): the ADR-0101 skeleton registry widens to ALL FIVE instruction

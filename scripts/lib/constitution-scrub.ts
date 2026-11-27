@@ -1,12 +1,12 @@
-// @version 1.3.0
+// @version 1.3.1
 /**
- * constitution-scrub.ts — shared CONSTITUTION.md reference scrubber
+ * constitution-scrub.ts — shared context.md reference scrubber
  *
  * v1.3.0 (2026-11-11, U-20261111-002 from co-deck, spec
  *          docs/designs/2026-11-11-co-deck-upstream-fixes-design.md §U-002): new
  *          prose rule A-10 — bare section citations without the .md suffix
  *          (`CONSTITUTION §11`) project to `context.md §11`, like A-4 does for
- *          `CONSTITUTION.md §N`. The L1 CODEX.md body kept "(CONSTITUTION §11)"
+ *          `context.md §N`. The L1 CODEX.md body kept "(CONSTITUTION §11)"
  *          under an L0-ONLY marker that claimed the strip was complete. Code
  *          files and JSON are unchanged (prose arm only).
  *
@@ -30,8 +30,8 @@
  *          without touching the state; only real block-comment markers drive it.
  *
  * Single source for the L0→L1+ reference transform applied when workspace-root
- * (L0) content is propagated into templates/ (L1/L2), where CONSTITUTION.md is
- * replaced by docs/context.md (§7.5 CONSTITUTION.md Non-Propagation).
+ * (L0) content is propagated into templates/ (L1/L2), where context.md is
+ * replaced by docs/context.md (§7.5 context.md Non-Propagation).
  *
  * Consumers:
  *   - scripts/propagate-to-templates.ts (L0→L1 copy + marker-inject + governance deploy)
@@ -51,13 +51,13 @@
  *
  * Non-targets (never scrubbed):
  *   - JSON files (.json): functional data. Field values such as
- *     propagation-map.json's constitution-context "source_file": "CONSTITUTION.md"
+ *     propagation-map.json's constitution-context "source_file": "context.md"
  *     are read by code (publishDocs / runMarkerRewrite); scrubbing them corrupts
  *     the L1 mirror (found 2026-09-12 — T-20260912-005).
  *   - Code outside comments (.ts/.tsx/.js/.jsx): string literals used in
  *     functional file-existence checks must keep pointing at the real L0 marker.
  *   - Policy self-description HTML comments: a comment that says "must NOT
- *     reference CONSTITUTION.md — see §7.5 Non-Propagation" documents the rule;
+ *     reference context.md — see §7.5 Non-Propagation" documents the rule;
  *     scrubbing it produces a self-referentially false statement.
  *
  * @license MIT
@@ -82,11 +82,11 @@ function isPolicySelfDescriptionBlock(block: string): boolean {
 }
 
 /**
- * Scrub CONSTITUTION.md references for L1+ targets (no longer L0 context).
+ * Scrub context.md references for L1+ targets (no longer L0 context).
  *
  * For code files (.ts/.js/.tsx/.jsx), only text inside line comments and block
  * comments is scrubbed — string literals used in functional file-existence checks (e.g.
- * `join(dir, "CONSTITUTION.md")`, used by several scripts' own L0-root detection) are
+ * `join(dir, "context.md")`, used by several scripts' own L0-root detection) are
  * left untouched. Those checks must keep pointing at the real L0 marker file regardless
  * of which layer the script itself runs from; blanket-replacing them with "context.md"
  * silently breaks root detection in the propagated copy (found 2026-08-15 — several
@@ -100,7 +100,7 @@ function isPolicySelfDescriptionBlock(block: string): boolean {
  */
 export function scrubConstitutionRefs(content: string, filePath?: string, targetPath?: string): string {
   // T-20260912-005: JSON is functional data, not prose. No occurrence of
-  // CONSTITUTION.md in a .json file is ever prose — it is a field value some
+  // context.md in a .json file is ever prose — it is a field value some
   // reader depends on.
   if (filePath && extname(filePath).toLowerCase() === ".json") {
     return content;
@@ -142,7 +142,7 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
 
       // Trailing line comment on an otherwise-functional line: scrub only the comment part.
       const commentIdx = line.indexOf("//");
-      if (commentIdx !== -1 && line.slice(commentIdx).includes("CONSTITUTION.md")) {
+      if (commentIdx !== -1 && line.slice(commentIdx).includes("context.md")) {
         return line.slice(0, commentIdx) + line.slice(commentIdx).replace(/CONSTITUTION\.md/g, "context.md");
       }
 
@@ -154,8 +154,8 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
 
   // T-20260912-005: policy self-description comments (documentation OF the
   // Non-Propagation rule) must survive scrubbing — e.g. CLAUDE.md's
-  // "L1/L2 projects must NOT reference CONSTITUTION.md — see CONSTITUTION.md §7.5
-  // CONSTITUTION.md Non-Propagation" comment. Mask qualifying HTML comment blocks
+  // "L1/L2 projects must NOT reference context.md — see context.md §7.5
+  // context.md Non-Propagation" comment. Mask qualifying HTML comment blocks
   // out of the content, run the prose rules, then restore them verbatim.
   const protectedBlocks: string[] = [];
   let work = content.replace(/<!--[\s\S]*?-->/g, (block) => {
@@ -171,9 +171,9 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
     /> \*\*(?:Shared workspace setup.*?|Project context.*?)(?:CONSTITUTION\.md|context\.md)[^*]*?\.\*\*/s,
     "> **Project context, architecture, coding guidelines, and design standards live in [`docs/context.md`](docs/context.md) - read it first.**",
   );
-  // A-2. Full markdown links where link text mentions CONSTITUTION.md.
+  // A-2. Full markdown links where link text mentions context.md.
   work = work.replace(/\[`?CONSTITUTION\.md`?[^\]]*\]\([^)]*\)/g, "[docs/context.md](docs/context.md)");
-  // A-3. Remaining markdown link targets that still point at CONSTITUTION.md.
+  // A-3. Remaining markdown link targets that still point at context.md.
   work = work.replace(/\]\(CONSTITUTION\.md[^)]*\)/g, "](docs/context.md)");
   // A-4. Plain-text mentions.
   work = work.replace(/CONSTITUTION\.md/g, "context.md");
@@ -183,7 +183,7 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
   // Same projection as A-4: the section number stays as visible text.
   work = work.replace(/\bCONSTITUTION(?=\s*§)/g, "context.md");
   // A-5. Part-file links into docs/constitution/ (e.g. 06-skill-lifecycle.md) whose
-  // link text does NOT mention CONSTITUTION.md (those are already covered by A-2).
+  // link text does NOT mention context.md (those are already covered by A-2).
   // L1/L2 trees have no docs/constitution/ directory — the projected home is
   // docs/context.md, so pointing the link there keeps it resolvable.
   work = work.replace(
@@ -198,7 +198,7 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
   // (e.g. `docs/constitution/06-skill-lifecycle.md §6.6`) — projected to docs/context.md.
   work = work.replace(/docs\/constitution\/[a-z0-9.-]+\.md/gi, "docs/context.md");
   // A-8. Bare `docs/constitution/` directory mentions (no part-file name, so A-7
-  // misses them — found 2026-09-12: CONSTITUTION.md's validate-md-language scan-path
+  // misses them — found 2026-09-12: context.md's validate-md-language scan-path
   // list propagated the bare directory into templates/common/docs/context.md, where
   // it was masked by the L0-leakage check's old whole-file intentional-duplicate
   // exemption). A list item (`X`, `docs/constitution/`, …) is dropped with one
@@ -207,7 +207,7 @@ export function scrubConstitutionRefs(content: string, filePath?: string, target
   work = work.replace(/`docs\/constitution\/`,\s*/g, "");
   work = work.replace(/,\s*`docs\/constitution\/`/g, "");
   work = work.replace(/`docs\/constitution\/`/g, "`docs/`");
-  work = work.replace(/(^|[^/\w.-])docs\/constitution\/(?![\w.-])/gi, "$1docs/");
+  work = work.replace(/(^|[^\/\w.-])docs\/constitution\/(?![\w.-])/gi, "$1docs/");
   // A-6. Target-aware: every ](docs/context.md) the rules above emit is
   // root-depth-shaped, which only resolves from the project root. Rewrite the
   // target to the path relative to the TARGET file's own directory — a

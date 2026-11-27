@@ -31,7 +31,7 @@
  *   - Sets schema_version: "1.1" only for variants shipping _human-roles.yaml
  *
  * @usage bun scripts/generate-raci.ts [--variant co-consult|all] [--root <dir>] [--write]
- * @version 1.2.0
+ * @version 1.2.1
  */
 
 import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";

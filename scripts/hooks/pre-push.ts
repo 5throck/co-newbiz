@@ -243,6 +243,11 @@ async function main() {
   // workspace audit runs in CI (ci.yml "Documentation Audit" job; review
   // F-34, 2026-11-22: the comment previously named test.yml "Workspace
   // audit", a workflow that no longer exists).
+  // LOCAL-PATCH(upstream-request: U-20261127-002) — F-34 (2026-11-22): the workflow-name corrections in
+  // this and the changed-path comment below are co-newbiz review findings inside a delivered
+  // file. Runner base v1.7.1 vs template v1.9.0 — template security additions (rogue-commit
+  // push scan T-20261109-002, fail-closed config snapshot v1.8.1) remain pending backport
+  // (next cycle; do not adopt wholesale or the F-34 comments are lost).
   const auditAlreadyRan = process.env.SYNC_ACTIVE === "1";
   if (!auditAlreadyRan) {
     try {
