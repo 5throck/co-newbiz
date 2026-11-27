@@ -1,5 +1,8 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
+ * v1.2.0 (2026-11 coverage-gate file-length split): the watch create dialog moved to
+ * WatchCreateDialog.tsx (ScheduleCreateDialog.tsx precedent); create-dialog assertions read
+ * CREATE — invariant strength unchanged.
  * /admin/notifications — watch management panel (design 2026-10-29-scheduled-jobs-design
  * §13.6, P4) — frontend source-reading tests in the admin-schedule-panel.test.ts pattern.
  *
@@ -21,6 +24,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const SECTION = readFileSync("app/web-next/components/admin/console/WatchesSection.tsx", "utf8");
+const CREATE = readFileSync("app/web-next/components/admin/console/WatchCreateDialog.tsx", "utf8");
 const DIALOG = readFileSync("app/web-next/components/admin/console/WatchRulesDialog.tsx", "utf8");
 const FORM = readFileSync("app/web-next/components/admin/console/WatchRuleForm.tsx", "utf8");
 const TYPES = readFileSync("app/web-next/components/admin/console/types.ts", "utf8");
@@ -102,20 +106,20 @@ describe("§13.6 watches table", () => {
   });
 
   test("create dialog: project picked by name/number search (2026-11-27 user request) + active-user picker", () => {
-    expect(SECTION).toMatch(
+    expect(CREATE).toMatch(
       /api\.post\("\/api\/admin\/watches", \{ project_id: projectId\.trim\(\), user_id: userId\.trim\(\) \}\)/,
     );
-    expect(SECTION).toMatch(/\.get<AdminUser\[\]>\(\s*"\/api\/admin\/users"\s*\)/);
-    expect(SECTION).toMatch(/u\.status === "active"/);
+    expect(CREATE).toMatch(/\.get<AdminUser\[\]>\(\s*"\/api\/admin\/users"\s*\)/);
+    expect(CREATE).toMatch(/u\.status === "active"/);
     // Project search — /api/admin/project-options, debounced, matches number or name.
-    expect(SECTION).toMatch(/\/api\/admin\/project-options\?q=/);
+    expect(CREATE).toMatch(/\/api\/admin\/project-options\?q=/);
     const ROUTE = readFileSync(
       new URL("../../app/web-next/app/api/admin/project-options/route.ts", import.meta.url),
       "utf8",
     );
     expect(ROUTE).toMatch(/project_no LIKE \? OR project_name LIKE \?/); // route searches both
     expect(ROUTE).toMatch(/requireAdmin/); // admin-only, like /api/admin/users
-    expect(SECTION).toMatch(
+    expect(CREATE).toMatch(
       /setProjectLabel\(p\.project_name \? `\$\{p\.project_no\} · \$\{p\.project_name\}` : p\.project_no\)/,
     );
     expect(koOf("admin.watches.createProjectHint")).toContain("이름으로 검색");
@@ -123,7 +127,7 @@ describe("§13.6 watches table", () => {
   });
 
   test("409 watch_exists renders its own inline message", () => {
-    expect(SECTION).toMatch(/err\.code === "watch_exists"/);
+    expect(CREATE).toMatch(/err\.code === "watch_exists"/);
     expect(koOf("admin.watches.createExists")).toContain("이미");
     expect(has("admin.watches.createExists")).toBe(true);
   });

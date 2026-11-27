@@ -1,10 +1,15 @@
-// @version 1.1.0
+// @version 1.2.0
 /**
  * /admin/notifications — history panel + detail drawer + test send (design
  * 2026-10-29-scheduled-jobs-design §13.5/§13.7, P4) — frontend source-reading tests in the
  * admin-schedule-panel.test.ts pattern: the section is a client component bound to browser
  * APIs, so the invariants below are asserted against the source and pinned to the ko master
  * catalog.
+ *
+ * v1.2.0 (2026-11 coverage-gate file-length split): the filter bar moved to
+ * NotificationFilters.tsx (presentational child; state and the debounced query stay in
+ * NotificationSection.tsx). Filter-bar assertions read FILTERS, section/query/list assertions
+ * still read SECTION — every invariant below keeps its original strength, none was dropped.
  *
  * Covered: the server-side filter bar (period presets + custom from/to, trigger, severity,
  * channel, read, delivery_status, project selector with the admin-has-no-visibility custom-ID
@@ -25,6 +30,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const SECTION = readFileSync("app/web-next/components/admin/console/NotificationSection.tsx", "utf8");
+const FILTERS = readFileSync("app/web-next/components/admin/console/NotificationFilters.tsx", "utf8");
 const DRAWER = readFileSync("app/web-next/components/admin/console/NotificationDetailDrawer.tsx", "utf8");
 const TEST_DIALOG = readFileSync("app/web-next/components/admin/console/TestSendDialog.tsx", "utf8");
 const DATA = readFileSync("app/web-next/components/admin/console/useAdminData.ts", "utf8");
@@ -59,8 +65,8 @@ function has(key: string): boolean {
 
 describe("§13.5 filter bar (server-side filters)", () => {
   test("period presets + custom from/to date inputs bound the sent_at window", () => {
-    expect(SECTION).toMatch(/const PERIODS = \["24h", "7d", "30d", "90d", "all", "custom"\]/);
-    expect(SECTION).toContain('type="date"');
+    expect(FILTERS).toMatch(/const PERIODS = \["24h", "7d", "30d", "90d", "all", "custom"\]/);
+    expect(FILTERS).toContain('type="date"');
     expect(SECTION).toMatch(/params\.set\("from", bounds\.from\)/);
     expect(SECTION).toMatch(/params\.set\("to", bounds\.to\)/);
     expect(koOf("admin.ops.period_24h")).toBe("최근 24시간");
@@ -69,32 +75,32 @@ describe("§13.5 filter bar (server-side filters)", () => {
   });
 
   test("trigger/severity/channel/read/delivery_status selects cover the full option sets", () => {
-    expect(SECTION).toMatch(
+    expect(FILTERS).toMatch(
       /"rag_upgrade",\s+"rag_downgrade",\s+"kill_criteria",\s+"regulation_change",\s+"threshold_breach",/,
     );
-    expect(SECTION).toMatch(/const SEVERITIES = \["opportunity", "warning", "urgent", "info", "ops"\]/);
-    expect(SECTION).toMatch(/const CHANNELS = \["in_app", "email", "webhook"\]/);
-    expect(SECTION).toMatch(/const READ_STATES = \["read", "unread"\]/);
-    expect(SECTION).toMatch(
+    expect(FILTERS).toMatch(/const SEVERITIES = \["opportunity", "warning", "urgent", "info", "ops"\]/);
+    expect(FILTERS).toMatch(/const CHANNELS = \["in_app", "email", "webhook"\]/);
+    expect(FILTERS).toMatch(/const READ_STATES = \["read", "unread"\]/);
+    expect(FILTERS).toMatch(
       /const DELIVERY_STATUSES = \["pending", "retry", "sent", "failed", "skipped", "deferred"\]/,
     );
-    expect(SECTION).toMatch(/label\("trigger", v\)/);
-    expect(SECTION).toMatch(/label\("deliveryStatus", v\)/);
+    expect(FILTERS).toMatch(/label\("trigger", v\)/);
+    expect(FILTERS).toMatch(/label\("deliveryStatus", v\)/);
   });
 
   test("q search is a debounced server query, not client filtering", () => {
     expect(SECTION).toMatch(/params\.set\("q", q\.trim\(\)\)/);
     expect(SECTION).toMatch(/setTimeout\(\(\) => setQ\(qInput\), Q_DEBOUNCE_MS\)/);
     expect(SECTION).toMatch(/const Q_DEBOUNCE_MS = 300/);
-    expect(SECTION).toMatch(/type="search"/);
+    expect(FILTERS).toMatch(/type="search"/);
     expect(koOf("admin.ops.filterQPlaceholder")).toContain("검색");
   });
 
   test("project selector names observed projects and falls back to the admin-ID custom input (FR-SEC-02)", () => {
-    expect(SECTION).toContain('"__custom__"');
-    expect(SECTION).toMatch(/title=\{t\("filterProjectHint"\)\}/);
+    expect(FILTERS).toContain('"__custom__"');
+    expect(FILTERS).toMatch(/title=\{t\("filterProjectHint"\)\}/);
     expect(koOf("admin.ops.filterProjectHint")).toContain("프로젝트 ID로만 필터링");
-    expect(SECTION).toMatch(/aria-label=\{t\("filterProjectAria"\)\}/);
+    expect(FILTERS).toMatch(/aria-label=\{t\("filterProjectAria"\)\}/);
     expect(koOf("admin.pageIntro.notifications")).toContain("관리"); // intro covers watches too
   });
 
@@ -107,10 +113,10 @@ describe("§13.5 filter bar (server-side filters)", () => {
   test("every filter label stays on one line: whitespace-nowrap on all 9 bar labels (2026-11 defect 3)", () => {
     // The bar is the flex-wrap container; nowrap moves overflow BETWEEN filters (whole
     // items wrap) instead of breaking a label's text ("전송 상태" / "Delivery status") mid-word.
-    const labelCount = (SECTION.match(/<label\s+className="flex items-center gap-1/g) ?? []).length;
+    const labelCount = (FILTERS.match(/<label\s+className="flex items-center gap-1/g) ?? []).length;
     expect(labelCount).toBe(9); // 기간 + 시작일 + 종료일 + 트리거 + 심각도 + 채널 + 읽음 + 전송 상태 + 프로젝트
     const nowrapCount = (
-      SECTION.match(/flex items-center gap-1 text-\[length:var\(--fs-caption\)\] whitespace-nowrap/g) ?? []
+      FILTERS.match(/flex items-center gap-1 text-\[length:var\(--fs-caption\)\] whitespace-nowrap/g) ?? []
     ).length;
     expect(nowrapCount).toBe(9); // every bar label carries whitespace-nowrap (2026-11 follow-up adds 3 data-cell nowraps separately)
   });
@@ -119,10 +125,10 @@ describe("§13.5 filter bar (server-side filters)", () => {
     // project_no is the only project naming the admin console may show (FR-SEC-02 payload
     // has no name column); the sizing-new-input-sm 5rem floor clipped it mid-string. The
     // shared class stays so its max-width: 100% cap still degrades the floor on 390px.
-    expect(SECTION).toMatch(
+    expect(FILTERS).toMatch(
       /aria-label=\{t\("filterProject"\)\}\s*\n?\s*className="sizing-new-input sizing-new-input-sm"\s*\n?\s*style=\{\{ minWidth: "12rem" \}\}/,
     );
-    expect(SECTION).not.toMatch(/minWidth: "12rem"[^>]*maxWidth/); // no inline width cap invented
+    expect(FILTERS).not.toMatch(/minWidth: "12rem"[^>]*maxWidth/); // no inline width cap invented
   });
 });
 
@@ -142,8 +148,10 @@ describe("§13.5 list (the seven-column list standard)", () => {
     // whitespace-nowrap (overflow goes to the table's horizontal scroll), and the
     // 프로젝트 (15%) / 제목 (26%) columns gained share from 시각·심각도·트리거·전송.
     expect(SECTION).not.toContain("cell-truncate");
-    // 12 = 9 filter-bar labels (defect 3) + the 3 data cells (시각 · 프로젝트 · 제목)
-    expect(SECTION.match(/whitespace-nowrap/g) ?? []).toHaveLength(12);
+    // 12 nowraps total = 9 filter-bar labels (FILTERS file, defect 3) + the 3 data cells
+    // (시각 · 프로젝트 · 제목) that stayed in SECTION.
+    expect(FILTERS.match(/whitespace-nowrap/g) ?? []).toHaveLength(9);
+    expect(SECTION.match(/whitespace-nowrap/g) ?? []).toHaveLength(3);
     const m = SECTION.match(/const NOTIFICATIONS_COL_PCT = \[([^\]]+)\]/);
     const widths = m![1].split(",").map((x) => Number(x.trim()));
     expect(widths[3]).toBe(15); // 프로젝트
@@ -265,7 +273,8 @@ describe("§13.7 test send dialog", () => {
   });
 
   test("the panel header hosts the 테스트 발송 control", () => {
-    expect(SECTION).toMatch(/onClick=\{\(\) => setTestOpen\(true\)\}\s*>\s*\n?\s*\{t\("testSend"\)\}/);
+    expect(FILTERS).toMatch(/onClick=\{onOpenTestSend\}\s*>\s*\n?\s*\{t\("testSend"\)\}/);
+    expect(SECTION).toMatch(/onOpenTestSend=\{\(\) => setTestOpen\(true\)\}/); // the section owns the dialog
     expect(koOf("admin.ops.testSend")).toBe("테스트 발송");
   });
 });

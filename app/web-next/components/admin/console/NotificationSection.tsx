@@ -7,6 +7,9 @@
 // Rows carry per-channel delivery STATUS COUNTS rendered as compact chips; {} means in-app only
 // (the notification row IS the in-app delivery, §13.2). Row click opens the detail drawer
 // (NotificationDetailDrawer) and the panel header hosts the §13.7 test-send dialog.
+// The filter bar (option sets + selects + search + project picker) is extracted into
+// NotificationFilters.tsx (2026-11 coverage-gate file-length split) — state and the debounced
+// query stay here; the bar is presentational and calls back through patchFilters/pickProject/onQInput.
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
@@ -16,6 +19,7 @@ import { formatDateTime } from "../../../lib/format.ts";
 import type { AdminNotificationListRow, DeliverySummary, PageMeta } from "./types.ts";
 import { Pager, useAdminLabel } from "./admin-ui.tsx";
 import { NotificationDetailDrawer } from "./NotificationDetailDrawer.tsx";
+import { EMPTY_FILTERS, NotificationFilters, periodFrom, type Filters } from "./NotificationFilters.tsx";
 import { TestSendDialog } from "./TestSendDialog.tsx";
 
 // 알림 7열 — 제목·프로젝트가 긴 텍스트라 가장 넓고(26·15%), 셀은 한 줄(잘림 없음)로 표시한다.
@@ -23,59 +27,6 @@ import { TestSendDialog } from "./TestSendDialog.tsx";
 const NOTIFICATIONS_COL_PCT = [12, 8, 12, 15, 26, 17, 10] as const;
 const PAGE_SIZE = 50; // server default; the cap is 100 (§13.5)
 const Q_DEBOUNCE_MS = 300;
-
-/** The notification CHECK's 11 trigger values (0185) — the filter's option set. */
-const TRIGGER_TYPES = [
-  "rag_upgrade",
-  "rag_downgrade",
-  "kill_criteria",
-  "regulation_change",
-  "threshold_breach",
-  "staleness",
-  "batch_failure",
-  "pipeline_paused",
-  "establishment_step_reopened",
-  "establishment_step_assigned",
-  "test",
-] as const;
-const SEVERITIES = ["opportunity", "warning", "urgent", "info", "ops"] as const;
-const CHANNELS = ["in_app", "email", "webhook"] as const; // bound-inclusive server matching
-const READ_STATES = ["read", "unread"] as const;
-const DELIVERY_STATUSES = ["pending", "retry", "sent", "failed", "skipped", "deferred"] as const;
-const PERIODS = ["24h", "7d", "30d", "90d", "all", "custom"] as const;
-type Period = (typeof PERIODS)[number];
-
-interface Filters {
-  period: Period;
-  from: string; // date input value (custom period only)
-  to: string;
-  trigger_type: string;
-  severity: string;
-  channel: string;
-  read: string;
-  delivery_status: string;
-  project_id: string;
-}
-
-const EMPTY_FILTERS: Filters = {
-  period: "30d",
-  from: "",
-  to: "",
-  trigger_type: "",
-  severity: "",
-  channel: "",
-  read: "",
-  delivery_status: "",
-  project_id: "",
-};
-
-/** Period preset → `from` bound (ISO); `all`/`custom` return null (custom uses the date inputs). */
-function periodFrom(period: Period, from: string, to: string): { from: string | null; to: string | null } {
-  if (period === "all") return { from: null, to: null };
-  if (period === "custom") return { from: from || null, to: to || null };
-  const hours = period === "24h" ? 24 : period === "7d" ? 24 * 7 : period === "30d" ? 24 * 30 : 24 * 90;
-  return { from: new Date(Date.now() - hours * 3_600_000).toISOString(), to: null };
-}
 
 /** Delivery-status chip tone — status is never encoded by color alone (the label text carries it). */
 function deliveryChipCls(status: string): string {
@@ -233,173 +184,16 @@ export function NotificationSection() {
 
   return (
     <>
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-          {t("filterPeriod")}
-          <select
-            aria-label={t("filterPeriod")}
-            className="sizing-new-input sizing-new-input-sm"
-            value={filters.period}
-            onChange={(e) => patchFilters({ period: e.target.value as Period })}
-          >
-            {PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {t(`period_${p}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {filters.period === "custom" && (
-          <>
-            <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-              {t("filterFrom")}
-              <input
-                type="date"
-                aria-label={t("filterFrom")}
-                className="sizing-new-input sizing-new-input-sm"
-                value={filters.from}
-                onChange={(e) => patchFilters({ from: e.target.value })}
-              />
-            </label>
-            <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-              {t("filterTo")}
-              <input
-                type="date"
-                aria-label={t("filterTo")}
-                className="sizing-new-input sizing-new-input-sm"
-                value={filters.to}
-                onChange={(e) => patchFilters({ to: e.target.value })}
-              />
-            </label>
-          </>
-        )}
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-          {t("filterTrigger")}
-          <select
-            aria-label={t("filterTrigger")}
-            className="sizing-new-input sizing-new-input-sm"
-            value={filters.trigger_type}
-            onChange={(e) => patchFilters({ trigger_type: e.target.value })}
-          >
-            <option value="">{t("filterAll")}</option>
-            {TRIGGER_TYPES.map((v) => (
-              <option key={v} value={v}>
-                {label("trigger", v)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-          {t("filterSeverity")}
-          <select
-            aria-label={t("filterSeverity")}
-            className="sizing-new-input sizing-new-input-sm"
-            value={filters.severity}
-            onChange={(e) => patchFilters({ severity: e.target.value })}
-          >
-            <option value="">{t("filterAll")}</option>
-            {SEVERITIES.map((v) => (
-              <option key={v} value={v}>
-                {label("severity", v)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-          {t("filterChannel")}
-          <select
-            aria-label={t("filterChannel")}
-            className="sizing-new-input sizing-new-input-sm"
-            value={filters.channel}
-            onChange={(e) => patchFilters({ channel: e.target.value })}
-          >
-            <option value="">{t("filterAll")}</option>
-            {CHANNELS.map((v) => (
-              <option key={v} value={v}>
-                {label("channel", v)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-          {t("filterRead")}
-          <select
-            aria-label={t("filterRead")}
-            className="sizing-new-input sizing-new-input-sm"
-            value={filters.read}
-            onChange={(e) => patchFilters({ read: e.target.value })}
-          >
-            <option value="">{t("filterAll")}</option>
-            {READ_STATES.map((v) => (
-              <option key={v} value={v}>
-                {t(v)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
-          {t("filterDeliveryStatus")}
-          <select
-            aria-label={t("filterDeliveryStatus")}
-            className="sizing-new-input sizing-new-input-sm"
-            value={filters.delivery_status}
-            onChange={(e) => patchFilters({ delivery_status: e.target.value })}
-          >
-            <option value="">{t("filterAll")}</option>
-            {DELIVERY_STATUSES.map((v) => (
-              <option key={v} value={v}>
-                {label("deliveryStatus", v)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label
-          className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap"
-          title={t("filterProjectHint")}
-        >
-          {t("filterProject")}
-          {/* project_no(관리자 화면에서 프로젝트를 부르는 유일한 이름)가 5rem 하한에 잘리지 않도록
-              넓은 min-width를 둔다(2026-11 사용자 결함 보고 2). UUID 폴백은 드롭다운 목록에서 완전히 읽힌다. */}
-          <select
-            aria-label={t("filterProject")}
-            className="sizing-new-input sizing-new-input-sm"
-            style={{ minWidth: "12rem" }}
-            value={customProject ? "__custom__" : filters.project_id}
-            onChange={(e) => pickProject(e.target.value)}
-          >
-            <option value="">{t("filterAll")}</option>
-            {observed.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.project_no ?? p.id}
-              </option>
-            ))}
-            <option value="__custom__">{t("filterProjectCustom")}</option>
-          </select>
-        </label>
-        {customProject && (
-          <input
-            aria-label={t("filterProjectAria")}
-            placeholder="project id"
-            className="sizing-new-input sizing-new-input-sm font-mono"
-            style={{ width: "16rem" }}
-            value={filters.project_id}
-            onChange={(e) => patchFilters({ project_id: e.target.value })}
-          />
-        )}
-        <input
-          type="search"
-          aria-label={t("filterQAria")}
-          placeholder={t("filterQPlaceholder")}
-          className="sizing-new-input sizing-new-input-sm"
-          style={{ width: "14rem" }}
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-        />
-        <span className="flex-1" />
-        <button type="button" className="btn-ghost btn-sm" onClick={() => setTestOpen(true)}>
-          {t("testSend")}
-        </button>
-      </div>
+      <NotificationFilters
+        filters={filters}
+        patchFilters={patchFilters}
+        customProject={customProject}
+        pickProject={pickProject}
+        observed={observed}
+        qInput={qInput}
+        onQInput={setQInput}
+        onOpenTestSend={() => setTestOpen(true)}
+      />
       {loadError && (
         <p role="alert" className="mb-2 text-[color:var(--red-fg)]">
           {loadError}
