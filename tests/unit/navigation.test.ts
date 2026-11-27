@@ -159,8 +159,8 @@ describe("navigation SSOT (ADR-0105)", () => {
       "/admin/master-data",
       "/admin/adr",
       "/admin/connected-apps",
-      "/admin/system-mode",
       "/settings/connected-apps",
+      "/admin/system-mode",
     ]);
     for (const href of ADMIN_NAV.map((i: { href: string }) => i.href)) {
       expect(allPageRoutes().some((r) => r === href || r.startsWith(`${href}/`))).toBe(true);

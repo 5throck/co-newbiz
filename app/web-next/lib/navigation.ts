@@ -192,8 +192,8 @@ export const ADMIN_NAV: Array<{ href: string; label: string }> = [
   { href: "/admin/master-data", label: "nav.admin.masterData" },
   { href: "/admin/adr", label: "nav.admin.adr" },
   { href: "/admin/connected-apps", label: "nav.admin.connectedApps" },
-  { href: "/admin/system-mode", label: "nav.admin.systemMode" },
   { href: "/settings/connected-apps", label: "nav.connectedApps" },
+  { href: "/admin/system-mode", label: "nav.admin.systemMode" },
 ];
 
 export function adminNavHrefs(): string[] {
