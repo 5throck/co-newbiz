@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
 // @version 1.17.0
+// LOCAL-PATCH(upstream-request: U-20261127-004) — F-27 (2026-11-23): project-authored perimeter
+// extension to the six remaining official-docs zones (architecture/manuals/runbooks/
+// security/dd/planning; v1.17.0 > template 1.16.2). Detector unchanged.
 // v1.17.0 (2026-11-23, F-27 review item — token burn-down batch): perimeter
 //           extension — the six remaining official-docs zones join the scan:
 //           docs/architecture/, docs/manuals/, docs/runbooks/, docs/security/,

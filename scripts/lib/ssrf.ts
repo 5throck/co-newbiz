@@ -26,6 +26,13 @@
  * ignored, while http(s).request()'s `lookup` option is honored).
  *
  * @version 1.1.2
+ *
+ * LOCAL-PATCH(upstream-request: U-20261127-003) — project-authored headers passthrough: init.headers
+ * is forwarded into the pinned http(s).request() options (consumed by the variant-owned
+ * scripts/co-newbiz/source-adapters.ts DART corpCode.xml fetch); isBlockedIp stays
+ * module-private. NOTE: BLOCKED_CIDRS ends still carry the pre-U-20261031-003 over-blocking
+ * values (public 1.x-15.x refused) — take the template CIDR fix at the next cycle.
+ *
  * @security Production hardening — TOCTOU DNS rebinding mitigation
  */
 

@@ -2,6 +2,13 @@
  * test-runner.ts — Test Runner for TypeScript Test Suites
  * @version 1.13.0
  *
+ * LOCAL-PATCH(upstream-request: U-20261127-001) — F-33 (DEC-20261123-01): project-authored runner fork.
+ * The suite set itself is the co-newbiz delta inside this delivered file: the `visual` suite
+ * (v1.13.0, tests/e2e-visual, sequential, FILE_TIME_BUDGETS row) and the integration-suite
+ * removal (v1.12.0, review F-36 / DEC-20261122-02). Keep both until upstream maps them; do NOT
+ * adopt the template runner wholesale — the template suite set/budgets target the L0 workspace
+ * battery and would silently delete the visual suite.
+ *
  * v1.13.0 (2026-11-23, review F-33 / DEC-20261123-01): the `visual` suite joins
  * the runner — `bun run test:visual` previously shelled `bun test tests/e2e-visual`
  * directly: no runner kill budget, no per-file budgets, invisible to the suite

@@ -251,6 +251,10 @@ export interface RegistryEntry {
 const REMOVAL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * LOCAL-PATCH(upstream-request: U-20261127-005) — F-23 (DEC-20261122-02): project-authored Check 5c
+ * (removal-date overload WARN); findOverloadedRemovalDates is pinned by
+ * tests/unit/verify-scripts-removal-date.test.ts — do not adopt the template file wholesale.
+ *
  * F-23 (2026-11-22): the removal-date column is a typed cell — `—` or a
  * YYYY-MM-DD date. A non-deprecated row carrying flags or prose there
  * (usage-flag lists like `--date`, `--json`, or changelog fragments) overloads
