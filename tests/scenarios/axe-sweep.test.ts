@@ -98,6 +98,7 @@ const ADMIN_ROUTES = [
   "/admin/governance",
   "/admin/master-data",
   "/admin/adr",
+  "/admin/connected-apps",
   "/admin/system-mode",
   "/admin/gate-integrity",
   "/inbox",

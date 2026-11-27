@@ -13,6 +13,7 @@ import { DataSourcesPanel, DatabasePanel } from "./OpsSections.tsx";
 import { SchedulePanel } from "./ScheduleSection.tsx";
 import { NotificationSection } from "./NotificationSection.tsx";
 import { WatchesSection } from "./WatchesSection.tsx";
+import { ConnectedAppsSection } from "./ConnectedAppsSection.tsx";
 import { GlossaryListPanel, GlossaryLintPanel, GlossaryFormPanel } from "./GlossarySections.tsx";
 import { ReviewAuditPanel, GovernancePanel, AdrPanel } from "./GovernanceSections.tsx";
 import { SECTION_INTRO_KEY, SECTION_TITLE_KEY } from "./constants.ts";
@@ -75,6 +76,8 @@ export function AdminConsole(props0: { section: Section }) {
       {section === "notifications" && <NotificationSection />}
 
       {section === "notifications" && <WatchesSection />}
+
+      {section === "connected-apps" && <ConnectedAppsSection />}
 
       <GlossaryListPanel ctx={ctx} />
 

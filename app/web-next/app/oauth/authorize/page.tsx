@@ -41,6 +41,10 @@ export default function OAuthAuthorizePage() {
   const t = useTranslations("pages.oauthAuthorize");
   const [info, setInfo] = useState<ConsentInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // G1 (design 2026-11-27-admin-oauth-client-stop-start): the authorize GET answers
+  // 400 client_stopped (redirectSafe:false) when an admin stopped the client — a
+  // dedicated honest state instead of the generic invalid one; never a redirect.
+  const [stopped, setStopped] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -49,12 +53,15 @@ export default function OAuthAuthorizePage() {
     api
       .get<ConsentInfo>(`/api/oauth/authorize${window.location.search}`)
       .then((r) => setInfo(r.data))
-      .catch((e) => setError(e instanceof ApiError ? e.message : t("loadFailed")));
+      .catch((e) => {
+        if (e instanceof ApiError && e.code === "client_stopped") setStopped(true);
+        else setError(e instanceof ApiError ? e.message : t("loadFailed"));
+      });
   }, []);
 
   useEffect(() => {
-    if (info || error) headingRef.current?.focus();
-  }, [info, error]);
+    if (info || error || stopped) headingRef.current?.focus();
+  }, [info, error, stopped]);
 
   async function decide(decision: "approve" | "deny") {
     setBusy(true);
@@ -70,7 +77,13 @@ export default function OAuthAuthorizePage() {
       setStatus(t("returning"));
       window.location.assign(r.data.redirect_to);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("decideFailed"));
+      // The same G1 door re-validates on decision: a stop racing the human's
+      // choice lands here — show the stopped state, not the generic invalid one.
+      if (e instanceof ApiError && e.code === "client_stopped") {
+        setStopped(true);
+      } else {
+        setError(e instanceof ApiError ? e.message : t("decideFailed"));
+      }
       setStatus("");
       setBusy(false);
     }
@@ -78,7 +91,7 @@ export default function OAuthAuthorizePage() {
 
   const blocked = info?.scopes?.some((s) => !s.allowed) ?? false;
   // R2-C 10: a missing or invalid request is an error state, never a consent screen.
-  const failed = !!error || (info !== null && !info.valid);
+  const failed = !!error || stopped || (info !== null && !info.valid);
 
   return (
     <main aria-labelledby="consent-heading" className="oauth-consent">
@@ -86,10 +99,25 @@ export default function OAuthAuthorizePage() {
         {failed ? t("headingFailed") : t("heading")}
       </h1>
       <p aria-live="polite" className="sr-only">{status}</p>
-      {!info && !error && (
+      {!info && !error && !stopped && (
         <div className="card">
           <PageState state="loading" />
         </div>
+      )}
+      {stopped && (
+        // 중단된 앱 — icon + text (§3.2, never color-only); the settings page link is
+        // the state's single action. Stays inside the chromeless consent card.
+        <section aria-labelledby="stopped-heading" className="card">
+          <h2 id="stopped-heading">{t("stoppedHeading")}</h2>
+          <p role="alert">
+            <span aria-hidden="true">✕</span> {t("stoppedBody")}
+          </p>
+          <div className="page-header-actions">
+            <Link href="/settings/connected-apps" className="btn-primary">
+              {t("viewConnectedApps")}
+            </Link>
+          </div>
+        </section>
       )}
       {error && (
         <section aria-labelledby="invalid-heading" className="card">

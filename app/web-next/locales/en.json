@@ -48,7 +48,8 @@
       "masterData": "Master data",
       "notifications": "Notifications & watches",
       "schedule": "Collection schedule",
-      "users": "Users and tokens"
+      "users": "Users and tokens",
+      "connectedApps": "Connected apps"
     },
     "ops": {
       "dsCaption": "Data sources — shows key presence only; values are never displayed",
@@ -947,7 +948,8 @@
       "glossary": "Look up the terms used across the service and register new ones. The definition files are the source of truth, so edit or remove existing terms in those files.",
       "governance": "See which governance documents (policies, procedures, and so on) are registered and how reliable the AI review is. Change a document's content in the document repository.",
       "masterData": "Manage the shared code tables (industries, currencies, countries, units, companies) and resolve values that could not be mapped.",
-      "adr": "Browse the design decision records and their status. Read-only; change a record in the docs folder."
+      "adr": "Browse the design decision records and their status. Read-only; change a record in the docs folder.",
+      "connectedApps": "Manage the connection status of external apps (OAuth clients). Stopping an app immediately revokes every user's connection."
     },
     "labels": {
       "role": {
@@ -1317,6 +1319,39 @@
       "previewRecipientsEmpty": "No external-channel recipients",
       "previewInApp": "In-app recipients",
       "previewInAppEmpty": "No in-app recipients"
+    },
+    "connectedApps": {
+      "colApp": "App name",
+      "colClientId": "client_id",
+      "colStatus": "Status",
+      "colStoppedAt": "Stopped at",
+      "colUsers": "Connected users",
+      "colVerified": "Verified",
+      "emptyClients": "No apps registered yet.",
+      "errAlreadyRunning": "The app is already operating. Refreshing the list.",
+      "errAlreadyStopped": "The app is already stopped. Refreshing the list.",
+      "errLoad": "Failed to load the list.",
+      "errNotFound": "App not found. It may have been removed or its registration cancelled.",
+      "filterAll": "All ({p1})",
+      "filterOperating": "Operating ({p1})",
+      "filterStopped": "Stopped ({p1})",
+      "searchAria": "Search by app name or client_id",
+      "startButton": "Start",
+      "startButtonAria": "Start app ‘{p1}’",
+      "startConfirmBody": "New connections and reconnections are allowed. Users who connected before must reconnect.",
+      "startConfirmTitle": "Start ‘{p1}’?",
+      "startedToast": "Started ‘{p1}’. Existing users must reconnect.",
+      "statusOperating": "Operating",
+      "statusStopped": "Stopped",
+      "stopButton": "Stop",
+      "stopButtonAria": "Stop app ‘{p1}’",
+      "stopConfirmBody": "Every user's connection is revoked immediately and the app is refused authentication and reconnection. Starting it again does not restore existing connections.",
+      "stopConfirmTitle": "Stop ‘{p1}’?",
+      "stoppedToast": "Stopped ‘{p1}’. {p2} connection(s) revoked.",
+      "tableCaption": "Registered external apps",
+      "unverifiedChip": "Unverified app",
+      "userCount": "{p1} user(s)",
+      "verifiedChip": "Verified app"
     }
   },
   "auth": {
@@ -3746,7 +3781,8 @@
       "schedule": "Collection schedule",
       "systemMode": "System mode",
       "users": "Users and tokens",
-      "gateIntegrity": "Stage Gate integrity"
+      "gateIntegrity": "Stage Gate integrity",
+      "connectedApps": "Connected apps"
     },
     "archives": "Archives",
     "benchmarks": "Benchmarks",
@@ -10636,7 +10672,9 @@
       "noGateNote": "No permission can execute gate approvals, investment decisions, or closures. The connection can be revoked at any time on the “Connected apps” screen.",
       "approveBlockedNote": "Some permissions cannot be granted with your current role, so the connection cannot be approved.",
       "approveBtn": "Allow",
-      "denyBtn": "Deny"
+      "denyBtn": "Deny",
+      "stoppedHeading": "This app's connection is stopped",
+      "stoppedBody": "An administrator has stopped this app's connection. Contact your administrator for details."
     },
     "glossary": {
       "heading": "Glossary",

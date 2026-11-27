@@ -32,6 +32,7 @@ import {
   Database,
   Users,
   ScrollText,
+  Cable,
   FolderKanban,
   PanelLeftClose,
   PanelLeftOpen,
@@ -94,6 +95,7 @@ const ADMIN_ICON_BY_HREF: Record<string, ReactNode> = {
   "/admin/governance": <Scale size={18} />,
   "/admin/master-data": <Layers size={18} />,
   "/admin/adr": <FileText size={18} />,
+  "/admin/connected-apps": <Cable size={18} />,
   "/settings/connected-apps": <Plug size={18} />,
 };
 const CHILD_ICON: ReactNode = <Landmark size={14} />;

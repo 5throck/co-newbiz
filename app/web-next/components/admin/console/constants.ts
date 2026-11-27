@@ -21,6 +21,7 @@ export const SECTION_TITLE_KEY: Record<Section, string> = {
   governance: "admin.section.governance",
   "master-data": "admin.section.masterData",
   adr: "admin.section.adr",
+  "connected-apps": "admin.section.connectedApps",
 };
 
 // One-line purpose under each h1 (admin.pageIntro.*), same pattern as the dashboard and gate-integrity pages.
@@ -35,4 +36,5 @@ export const SECTION_INTRO_KEY: Record<Section, string> = {
   governance: "admin.pageIntro.governance",
   "master-data": "admin.pageIntro.masterData",
   adr: "admin.pageIntro.adr",
+  "connected-apps": "admin.pageIntro.connectedApps",
 };
