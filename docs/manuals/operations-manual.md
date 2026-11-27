@@ -36,9 +36,11 @@ Batch operations, backup/recovery, incident response, and deployment/rollback �
 
 ## 3. Batch Operations
 
-The scheduled data-collection pipeline (`newbiz.ts watch:run`, `scripts/co-newbiz/newbiz.ts`) runs at the OS level (Task Scheduler / systemd timer), **not** as an in-process timer — an in-process timer dies with the app, which defeats the purpose of scheduled monitoring.
+Scheduled work runs at the OS level, **not** as an in-process timer — an in-process timer dies with the app, which defeats the purpose of scheduled monitoring. One OS entry per environment (a launchd LaunchAgent on macOS; the systemd and Task Scheduler variants are documented but not auto-installed) fires the scheduler tick every minute (ADR-0189). The tick reads the `schedule_job` rows (enabled flag and cron, edited on `/admin/schedule`) and starts each due job. Install and verification are in `docs/runbooks/scheduler.md`; the job list is in the [admin manual](admin-manual.md) section 6.3.
 
-Pipeline: fetch (cache-first) → impact detection → auto-rerun → RAG re-evaluation → notification. `job_run` is the operational audit trail for this pipeline — check it first when a scheduled run appears to have not fired.
+Pipeline: the `collect.*` jobs fetch external data (cache-first); the `watch.evaluate` job then runs impact detection, auto-rerun, RAG re-evaluation, and notification; `notify.deliver` and `notify.digest` send the notifications. `job_run` is the operational audit trail for this pipeline — check it first when a scheduled run appears to have not fired.
+
+Manual alternative: `bun scripts/co-newbiz/newbiz.ts watch:run` runs one monitoring cycle by hand, outside the tick. Use it for a one-off check, not as the schedule.
 
 ### 3.1 Committee Meeting Engine (`CO_NEWBIZ_COMMITTEE_ENGINE`)
 
@@ -80,6 +82,24 @@ Precedence is the engine's own order: cuda, mps, xpu, rocm.
 - **Preview / verify**: `--dry-run` prints the plan and changes nothing. `--check` changes nothing and exits 1 when the selected accelerator is not usable by torch in `.venv`; it ends with the engine's own probe (`python -m sim_engine --device-info`).
 - **Misconfiguration warning**: when `CO_NEWBIZ_SIM_GPU` asks for a GPU but the engine reports CPU for lack of torch, the server logs one warning pointing to `bun run setup:python`.
 - **Docker**: the production image is CPU-only and carries no Python by default. Build-arg `SIM_GPU` (`none` default, `cpu`, `cuda`, `rocm`, `xpu`) adds the engine layer: `docker build -f docker/Dockerfile --build-arg SIM_GPU=cuda -t co-newbiz-web:cuda .`. GPU variants are separate images and the GPU must be passed through at run time.
+
+### 3.4 Scheduled jobs: daily checks
+
+The scheduler tick runs eleven jobs (data collection, notifications, retention, watch evaluation). The job list, the default schedules, the keys each job needs, and the enable steps are in the [admin manual](admin-manual.md) section 6.3. The OS registration, the heartbeat, and the failure triage are in `docs/runbooks/scheduler.md`.
+
+Check these once a day on `/admin/schedule` (the sre fetch-failure triage in the rhythm table covers the same ground):
+
+1. **The banner `The scheduler is not firing`.** It means the heartbeat is older than 3 minutes. Work through `docs/runbooks/scheduler.md` section 9. In prod the tick runs inside the `co-newbiz-web` container, so a stopped container shows up here.
+2. **Failed and timed-out runs.** Look for the chips `N consecutive failures` and `Overdue`, and open `History` for the job. Three failures in a row is a high alert.
+3. **Skipped runs.** `Skipped` is not always a fault. The reason sits in `job_run.detail_json`, not on the screen:
+   - `credential_missing`: the job's source key is not set on the server. Set it in `.env` (section 6.1 of the admin manual lists the keys) and restart.
+   - `kofia_collect_off`: the switch `CO_NEWBIZ_KOFIA_COLLECT` is not `on`. This is the intended default for `collect.kofia` until KOFIA confirms in writing that automated collection is allowed. Do not turn it on to clear the skip.
+   - A delivery row marked `skipped: channel_unconfigured` (in the notification detail, not in the job run) means no SMTP host or webhook URL is set for that channel.
+4. **Recent non-success runs**, in one query:
+
+   ```bash
+   sqlite3 db/data/co-newbiz.sqlite "SELECT job_key, started_at, status, substr(COALESCE(error,''),1,120) FROM job_run WHERE env IS NOT NULL AND status <> 'success' ORDER BY started_at DESC LIMIT 20;"
+   ```
 
 ## 4. Access Control (Operator-Facing)
 

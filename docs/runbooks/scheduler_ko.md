@@ -104,7 +104,7 @@ bun scripts/co-newbiz/scheduler-install.ts --env prod
   	</array>
   ```
 
-- **운영 잡은 사용 켜진 상태로 시드되고, 개발 잡은 꺼진 상태로 시드됩니다**(소유자 결정 D3) — §6 참고.
+- **시드는 운영과 개발 모두 모든 잡을 꺼진 상태로 만듭니다**(시드 코드는 켜진 행을 넣지 않습니다). 관리자가 `/admin/schedule`에서 잡마다 켭니다 — §6 참고. 설계 문서의 "운영 잡은 켬"(소유자 결정 D3)은 시드가 아니라 이 관리자 단계로 이루어집니다.
 
 ## 4. 다른 OS 경로 (문서화됨, 자동 설치 아님)
 
@@ -213,7 +213,7 @@ CO_NEWBIZ_SCHEDULER_ENV=dev bun scripts/co-newbiz/schedule-seed.ts             #
 
 **관리자 API (prod / 서버 DB):** `POST /api/admin/schedule-jobs/seed` (관리자 전용, 본문 `{"dryRun": true}` 선택). dry-run이 아닌 모든 호출은 감사 기록을 남깁니다(`schedule_job_seed`). 잡 활성화는 그 후 `/admin/schedule` 화면에서 합니다(또는 `PATCH /api/admin/schedule-jobs/[jobKey]`) — 시드 엔드포인트는 잡을 절대 켜지 않습니다.
 
-어떤 행이 생기는지는 핸들러 레지스트리(`scripts/co-newbiz/jobs/index.ts`)가 정합니다: P2 시점 기준 `watch.evaluate`(30분마다)와 `gate_integrity.shadow_report`(월요일 08:00 KST). `collect.*`와 `retention.cleanup` 핸들러는 이후 단계(P5/P6)에 들어옵니다; 그 단계 이후 다시 시드하면 기존 행을 건드리지 않고 빠진 행만 추가됩니다.
+어떤 행이 생기는지는 핸들러 레지스트리(`scripts/co-newbiz/jobs/index.ts`)가 정합니다. 핸들러 11개가 등록되어 있습니다: `collect.dart`(평일 07:00), `collect.ecos`(매일 08:00), `collect.kofia`(평일 18:45), `collect.kosis`(월요일 09:00), `collect.krx`(평일 18:30), `collect.law`(매일 06:00), `gate_integrity.shadow_report`(월요일 08:00), `notify.deliver`(매분), `notify.digest`(매일 08:30), `retention.cleanup`(매일 03:00), `watch.evaluate`(30분마다). 시각은 모두 KST입니다. 새 핸들러가 등록된 뒤 다시 시드하면 기존 행을 건드리지 않고 빠진 행만 추가됩니다. 잡마다 하는 일과 필요한 키는 관리자 매뉴얼 6.3절에 있습니다.
 
 **`collect.kofia` (ADR-0208 4단계)** - 평일 18:45 KST에 금투협 신용등급별 채권 수익률을 모으는 전용 핸들러입니다(`SOURCE_ADAPTERS` 항목이 아니므로 `fetch` /
 `md:sync`로는 닿을 수 없음). 다른 행처럼 **꺼진 상태**로 시드됩니다. 환경 스위치 `CO_NEWBIZ_KOFIA_COLLECT=on`으로도 잠겨 있습니다(dev 틱은 저장소 루트 `.env`에서 읽고, prod 틱은

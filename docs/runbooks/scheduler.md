@@ -103,7 +103,7 @@ Implications to accept before installing:
   	</array>
   ```
 
-- **Prod jobs are seeded enabled; dev jobs are seeded disabled** (owner decision D3) — see §6.
+- **Seeding creates every job disabled, in prod and in dev** (the seed code never inserts an enabled row). An admin enables each job on `/admin/schedule` — see §6. The design's wording "prod jobs enabled" (owner decision D3) is realized by that admin step, not by the seed.
 
 ## 4. Other OS paths (documented, not auto-installed)
 
@@ -212,7 +212,7 @@ Output is JSON: `{"env":"dev","dryRun":false,"inserted":[...],"existing":[...],"
 
 **Admin API (prod / server DB):** `POST /api/admin/schedule-jobs/seed` (admin-only, body `{"dryRun": true}` optional). Every non-dry-run call is audited (`schedule_job_seed`). Enable jobs afterwards from the `/admin/schedule` page (or `PATCH /api/admin/schedule-jobs/[jobKey]`) — the seed endpoint never enables a job.
 
-Which rows exist is decided by the handler registry (`scripts/co-newbiz/jobs/index.ts`): as of P2, `watch.evaluate` (every 30 min) and `gate_integrity.shadow_report` (Mondays 08:00 KST). The `collect.*` and `retention.cleanup` handlers land in later phases (P5/P6); a re-seed after those phases adds the missing rows without touching existing ones.
+Which rows exist is decided by the handler registry (`scripts/co-newbiz/jobs/index.ts`). It registers 11 handlers: `collect.dart` (weekdays 07:00), `collect.ecos` (daily 08:00), `collect.kofia` (weekdays 18:45), `collect.kosis` (Mondays 09:00), `collect.krx` (weekdays 18:30), `collect.law` (daily 06:00), `gate_integrity.shadow_report` (Mondays 08:00), `notify.deliver` (every minute), `notify.digest` (daily 08:30), `retention.cleanup` (daily 03:00), and `watch.evaluate` (every 30 min); all times are KST. A re-seed after a new handler is registered adds the missing row without touching existing ones. The per-job purpose and the keys each needs are in the admin manual section 6.3.
 
 **`collect.kofia` (ADR-0208 slice 4)** - weekday 18:45 KST collection of the KOFIA grade-by-rating bond yields, a dedicated handler (not a
 `SOURCE_ADAPTERS` entry, so `fetch` / `md:sync` cannot reach it). Seeded **disabled** like every row. It is also gated by the env switch

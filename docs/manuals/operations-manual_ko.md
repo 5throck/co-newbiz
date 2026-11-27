@@ -37,9 +37,11 @@ counterpart: operations-manual.md
 
 ## 3. 배치 운영
 
-예약 수집 파이프라인(`newbiz.ts watch:run`, `scripts/co-newbiz/newbiz.ts`)은 OS 레벨(Task Scheduler / systemd timer)에서 실행된다. **인프로세스 타이머가 아니다** — 인프로세스 타이머는 앱과 함께 죽고 그러면 예약 모니터링의 목적 자체가 사라진다.
+예약 작업은 OS 레벨에서 실행한다. **인프로세스 타이머가 아니다** — 인프로세스 타이머는 앱과 함께 죽고 그러면 예약 모니터링의 목적 자체가 사라진다. 환경마다 OS 등록 하나(macOS는 launchd LaunchAgent. systemd와 Task Scheduler 방식은 문서로만 있고 자동 설치되지 않는다)가 스케줄러 tick을 1분마다 깨운다(ADR-0189). tick은 `schedule_job` 행(켜짐 여부와 cron. `/admin/schedule`에서 고친다)을 읽어 때가 된 작업을 시작한다. 설치와 확인은 `docs/runbooks/scheduler_ko.md`에, 작업 목록은 [관리자 매뉴얼](admin-manual_ko.md) 6.3절에 있다.
 
-파이프라인: 수집(cache-first) → 영향 탐지 → 자동 재실행 → RAG 재평가 → 알림. `job_run`이 이 파이프라인의 운영 감사 기록이다 — 예약 실행이 발화하지 않은 것처럼 보이면 가장 먼저 확인할 것.
+파이프라인: `collect.*` 작업이 외부 자료를 수집(cache-first)하고, `watch.evaluate` 작업이 영향 탐지 → 자동 재실행 → RAG 재평가 → 알림을 하며, `notify.deliver`와 `notify.digest`가 알림을 보낸다. `job_run`이 이 파이프라인의 운영 감사 기록이다 — 예약 실행이 발화하지 않은 것처럼 보이면 가장 먼저 확인할 것.
+
+수동 대안: `bun scripts/co-newbiz/newbiz.ts watch:run`은 tick 밖에서 감시 주기를 한 번 손으로 돌린다. 한 번 확인할 때 쓰고 스케줄 대신으로는 쓰지 않는다.
 
 ### 3.1 위원회 회의 방식 (`CO_NEWBIZ_COMMITTEE_ENGINE`)
 
@@ -81,6 +83,24 @@ S8 몬테카를로 엔진(`python/sim_engine`)은 언제나 CPU(numpy)로 돌아
 - **미리 보기 / 확인**: `--dry-run`은 계획만 출력하고 아무것도 바꾸지 않습니다. `--check`도 바꾸지 않으며, 고른 가속기를 `.venv`의 torch가 쓸 수 없으면 종료 코드 1을 돌려줍니다. 끝에는 엔진 자신의 점검 결과(`python -m sim_engine --device-info`)가 나옵니다.
 - **잘못된 설정 경고**: `CO_NEWBIZ_SIM_GPU`가 GPU를 요청했는데 torch가 없어 엔진이 CPU라고 알리면, 서버가 `bun run setup:python`을 안내하는 경고를 한 번 남깁니다.
 - **Docker**: 운영 이미지는 기본적으로 CPU 전용이며 파이썬이 없습니다. 빌드 인자 `SIM_GPU`(`none` 기본, `cpu`, `cuda`, `rocm`, `xpu`)가 엔진 층을 더합니다: `docker build -f docker/Dockerfile --build-arg SIM_GPU=cuda -t co-newbiz-web:cuda .`. GPU 이미지는 따로 만들어야 하며 실행할 때 GPU를 넘겨 주어야 합니다.
+
+### 3.4 예약 작업: 날마다 하는 점검
+
+스케줄러 tick은 열한 개 작업(자료 수집, 알림, 보존, 감시 평가)을 돌립니다. 작업 목록, 기본 스케줄, 작업마다 필요한 키, 켜는 순서는 [관리자 매뉴얼](admin-manual_ko.md) 6.3절에 있습니다. OS 등록, 심장박동, 실패 점검은 `docs/runbooks/scheduler_ko.md`에 있습니다.
+
+`/admin/schedule`에서 하루에 한 번 다음을 확인합니다(운영 리듬 표의 sre 수집 실패 점검과 같은 범위입니다).
+
+1. **`스케줄러가 발화하지 않습니다` 배너.** 심장박동이 3분보다 오래되었다는 뜻입니다. `docs/runbooks/scheduler_ko.md` 9절을 따릅니다. 운영 환경에서는 tick이 `co-newbiz-web` 컨테이너 안에서 돌기 때문에 컨테이너가 멈추면 여기에 나타납니다.
+2. **실패와 시간 초과 실행.** `N회 연속 실패`, `예정보다 지연` 표지를 찾고 그 작업의 `이력`을 엽니다. 연달아 세 번 실패하면 높은 등급 경보입니다.
+3. **건너뜀 실행.** `건너뜀`이 늘 고장은 아닙니다. 사유는 화면이 아니라 `job_run.detail_json`에 있습니다.
+   - `credential_missing`: 그 작업의 출처 키가 서버에 없습니다. `.env`에 넣고(키 목록은 관리자 매뉴얼 6.1절) 서버를 다시 시작합니다.
+   - `kofia_collect_off`: 스위치 `CO_NEWBIZ_KOFIA_COLLECT`가 `on`이 아닙니다. 금투협이 자동 수집을 허용한다고 서면으로 확인해 줄 때까지 `collect.kofia`의 의도된 기본값입니다. 건너뜀을 없애려고 스위치를 켜지 않습니다.
+   - 알림 상세의 전달 건(작업 실행이 아닙니다)에 `skipped: channel_unconfigured`가 보이면 그 채널의 SMTP 호스트나 웹훅 주소가 없다는 뜻입니다.
+4. **최근의 성공이 아닌 실행**을 한 번에 봅니다.
+
+   ```bash
+   sqlite3 db/data/co-newbiz.sqlite "SELECT job_key, started_at, status, substr(COALESCE(error,''),1,120) FROM job_run WHERE env IS NOT NULL AND status <> 'success' ORDER BY started_at DESC LIMIT 20;"
+   ```
 
 ## 4. 접근 제어 (운영자 대상)
 
