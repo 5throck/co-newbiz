@@ -47,6 +47,8 @@ const SSOT_EXTRA_KEYS = [
   "CHROME_PATH",
   "CO_NEWBIZ_BOOTSTRAP_MIGRATIONS",
   "CO_NEWBIZ_ALLOW_REGISTER",
+  // ADR-0208 slice 4: automated KOFIA grade-yield collection, OFF unless exactly "on" (db/lib/kofia-grade-yield.ts).
+  "CO_NEWBIZ_KOFIA_COLLECT",
   // OAuth / request-meta keys (ADR-0203; §10 amendment 2026-11-19). Read
   // directly from process.env at request time, so loader admission is the only
   // channel a root .env value has to reach them in dev.

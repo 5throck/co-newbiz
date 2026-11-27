@@ -28,13 +28,23 @@ import {
 } from "./credit-synthetic.ts";
 import {
   loadKrCreditRatingRegistry,
+  mapKofiaGradeSpread,
   mapRatingToSpread,
   type CreditRatingRegistry,
+  type KofiaSpreadDetail,
   type MappedSpread,
   type SpreadBasis,
   type SpreadFlag,
   type SpreadInputs,
 } from "./credit-spread-map.ts";
+import {
+  KOFIA_GRADES,
+  KOFIA_PAGE_URL,
+  KOFIA_SOURCE_CODE,
+  KOFIA_SOURCE_LABEL,
+  latestKofiaDate,
+  readKofiaGradeReading,
+} from "./kofia-grade-yield.ts";
 
 export const RF_SERIES_ID = "ecos:721Y001:5020000";
 export const CORP_BOND_SERIES_ID = "ecos:721Y001:7020000";
@@ -65,7 +75,7 @@ export type CreditRatingSource = "disclosed" | "bureau" | "synthetic" | "default
 
 /** One ECOS series the spread was built from (percent points). */
 export interface SeriesUsed {
-  role: "ktb_3y" | "aa_minus" | "bbb_minus";
+  role: "ktb_3y" | "aa_minus" | "bbb_minus" | "grade_yield";
   series_id: string;
   value_pct: number;
 }
@@ -101,6 +111,10 @@ export interface CreditSpreadDetail {
   collect_hint: boolean;
   /** How the spread was built; null when there is no spread value at all. */
   spread_basis: SpreadBasis | null;
+  /** ADR-0208 slice 4: set only for the `kofia_grade` basis - the KOFIA grade yield and the same-date KTB 3y it came from. */
+  kofia: KofiaSpreadDetail | null;
+  /** Latest date with stored KOFIA data (null when none was collected, e.g. the collection switch is off). */
+  kofia_latest_date: string | null;
   /** True only for a value interpolated between the two ECOS anchors (not a published difference). */
   derived: boolean;
   flags: SpreadFlag[];
@@ -273,6 +287,48 @@ function seriesUsed(inputs: SpreadInputs): SeriesUsed[] {
 }
 
 /**
+ * ADR-0208 slice 4: the KOFIA grade-yield spread of a rating, from stored observations only (the collection switch
+ * gates fetching, not reading). `month` restricts to one YYYY-MM (the confirmation re-derivation); `notBefore` makes
+ * KOFIA lose to a newer ECOS month (the suggestion keeps the most current basis). Null when KOFIA has no usable
+ * reading for the rating (never collected, grade not published, non-positive spread): the ECOS bases then apply.
+ */
+function kofiaSpreadFor(
+  db: Database,
+  registry: CreditRatingRegistry,
+  rating: string,
+  opts: { month?: string | null; notBefore?: string | null },
+): MappedSpread | null {
+  const r = readKofiaGradeReading(db, rating, opts.month ?? null);
+  if (!r) return null;
+  if (opts.notBefore && r.month < opts.notBefore) return null;
+  const mapped = mapKofiaGradeSpread(
+    registry,
+    rating,
+    {
+      date: r.date,
+      month: r.month,
+      gradeYieldPct: r.gradeYieldPct,
+      ktbPct: r.ktbPct,
+      aaMinusPct: r.aaMinusPct,
+      bbbMinusPct: r.bbbMinusPct,
+      seriesId: r.seriesId,
+      ktbSeriesId: r.ktbSeriesId,
+      sourceUrl: KOFIA_PAGE_URL,
+      sourceLabel: KOFIA_SOURCE_LABEL,
+    },
+    KOFIA_GRADES,
+  );
+  return mapped.ok ? mapped : null;
+}
+
+function kofiaSeriesUsed(k: KofiaSpreadDetail): SeriesUsed[] {
+  return [
+    { role: "ktb_3y", series_id: k.ktb_series_id, value_pct: k.ktb_pct },
+    { role: "grade_yield", series_id: k.series_id, value_pct: k.grade_yield_pct },
+  ];
+}
+
+/**
  * Rating of the credit-spread suggestion (ADR-0208 D1). Ladder, best evidence first:
  *   fresh disclosed corporate-bond rating -> fresh credit-bureau issuer rating -> synthetic (interest coverage)
  *   -> a stale disclosed / bureau rating (still better evidence than a placeholder) -> the registry default.
@@ -397,6 +453,18 @@ export function deriveCreditSpreadAt(
   const disclosed = corpCode === undefined ? null : resolveDisclosedRating(db, corpCode, reg.registry, now);
   const synthetic = companyId ? deriveSyntheticRating(db, companyId, reg.registry) : null;
   const decision = decideCreditRating(reg.registry, disclosed, synthetic);
+  // Slice 4: KOFIA grade yield of the cited month outranks the ECOS bases (the suggestion cites that month).
+  const kofiaMapped = kofiaSpreadFor(db, reg.registry, decision.rating, { month: asOf });
+  if (kofiaMapped) {
+    return {
+      ok: true,
+      rating: decision.rating,
+      rating_source: decision.source,
+      mapped: kofiaMapped,
+      disclosed: decision.evidence,
+      synthetic: decision.synthetic,
+    };
+  }
   const inputs = readSpreadInputs(db, asOf);
   if (!inputs) {
     return {
@@ -451,6 +519,8 @@ const EMPTY_CREDIT_DETAIL: CreditSpreadDetail = {
   disclosed_status: null,
   collect_hint: false,
   spread_basis: null,
+  kofia: null,
+  kofia_latest_date: null,
   derived: false,
   flags: [],
   series_used: [],
@@ -577,9 +647,45 @@ function buildCreditSpreadEntry(
     disclosed_status: decision.disclosed_status,
     collect_hint: !ev && disclosed.ok === false && disclosed.status !== "no_dart_corp_code",
     agency_links: agencyLinks,
+    kofia_latest_date: latestKofiaDate(db),
   };
   const loadedRegistry = loaded.registry;
   const month = selectCreditMonth(db);
+  const sourceNote = (): string =>
+    decision.source === "default"
+      ? ` Rating basis: default placeholder (${decision.reason_code}) - confirm the company's rating before relying on it.`
+      : decision.source === "synthetic"
+        ? ` Rating basis: synthetic estimate ${decision.rating} from interest coverage (not a rating issued by an agency) - confirm before relying on it.`
+        : decision.source === "bureau"
+          ? ` Rating basis: credit-bureau issuer rating ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no} (lower confidence than a corporate-bond rating).`
+          : ` Rating basis: disclosed ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no}.`;
+  // Slice 4: a stored KOFIA grade yield of the rating's own grade (same-date KTB 3y) outranks the ECOS bases unless the
+  // ECOS data is of a newer month. The collection switch gates fetching only; stored observations are always read.
+  const kofiaMapped = kofiaSpreadFor(db, loadedRegistry, decision.rating, { notBefore: month });
+  if (kofiaMapped?.kofia) {
+    const kd = rfPct !== null ? rfPct + kofiaMapped.spreadPct : null;
+    return {
+      key: "credit_spread",
+      label: RATED_CREDIT_LABEL,
+      value: kofiaMapped.spreadPct,
+      as_of: kofiaMapped.anchors.as_of,
+      anchor_ref: `src:${KOFIA_SOURCE_CODE}`,
+      source_label: `${KOFIA_SOURCE_LABEL} (${kofiaMapped.kofia.date})`,
+      reason: null,
+      note: `${kofiaMapped.note}${sourceNote()}`,
+      credit: {
+        ...EMPTY_CREDIT_DETAIL,
+        ...withCrosscheck(ratingPart, kd, loadedRegistry),
+        spread_basis: kofiaMapped.basis,
+        kofia: kofiaMapped.kofia,
+        derived: false,
+        flags: kofiaMapped.flags,
+        series_used: kofiaSeriesUsed(kofiaMapped.kofia),
+        anchors: kofiaMapped.anchors,
+        kd_indicative_pct: kd,
+      },
+    };
+  }
   const inputs = month ? readSpreadInputs(db, month) : null;
   if (!inputs) {
     return keepLegacy({
@@ -597,14 +703,6 @@ function buildCreditSpreadEntry(
       spread_reason: `${mapped.reason} AA- legacy spread kept.`,
     });
   }
-  const sourceNote =
-    decision.source === "default"
-      ? ` Rating basis: default placeholder (${decision.reason_code}) - confirm the company's rating before relying on it.`
-      : decision.source === "synthetic"
-        ? ` Rating basis: synthetic estimate ${decision.rating} from interest coverage (not a rating issued by an agency) - confirm before relying on it.`
-        : decision.source === "bureau"
-          ? ` Rating basis: credit-bureau issuer rating ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no} (lower confidence than a corporate-bond rating).`
-          : ` Rating basis: disclosed ${decision.rating}${ev?.stale ? " (stale: older than the registry window)" : ""} from DART filing ${ev?.source_rcept_no}.`;
   return {
     key: "credit_spread",
     label: RATED_CREDIT_LABEL,
@@ -614,7 +712,7 @@ function buildCreditSpreadEntry(
     // Same citation as the risk-free entry (both are ECOS 721Y001 monthly market rates).
     source_label: riskFree.source_label ?? legacy.source_label,
     reason: null,
-    note: `${mapped.note}${sourceNote}`,
+    note: `${mapped.note}${sourceNote()}`,
     credit: {
       ...EMPTY_CREDIT_DETAIL,
       ...withCrosscheck(ratingPart, rfPct !== null ? rfPct + mapped.spreadPct : null, loadedRegistry),

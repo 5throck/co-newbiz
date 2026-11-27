@@ -7,6 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   loadKrCreditRatingRegistry,
+  mapKofiaGradeSpread,
   mapRatingToSpread,
   notchOf,
   parseCreditRatingRegistry,
@@ -330,5 +331,67 @@ describe("spreadEditedFromReference", () => {
     expect(spreadEditedFromReference(0.06497, 6.4971)).toBe(false); // 0.0001 pp, inside the tolerance
     expect(spreadEditedFromReference(0.06497 + (SPREAD_EDIT_TOLERANCE_PP * 2) / 100, 6.497)).toBe(true);
     expect(spreadEditedFromReference(0.05, 6.497)).toBe(true);
+  });
+});
+
+describe("slice 4: mapKofiaGradeSpread (basis kofia_grade)", () => {
+  const GRADES = ["AAA", "AA+", "AA", "AA-", "A+", "A", "A-", "BBB+", "BBB", "BBB-"];
+  const input = {
+    date: "2026-11-26",
+    month: "2026-11",
+    gradeYieldPct: 4.934,
+    ktbPct: 3.612,
+    aaMinusPct: 4.274 as number | null,
+    bbbMinusPct: 10.07 as number | null,
+    seriesId: "kofia:corp-public-unsecured:A:3y",
+    ktbSeriesId: "kofia:ktb:3y",
+    sourceUrl: "https://www.kofiabond.or.kr/x",
+    sourceLabel: "KOFIA",
+  };
+  test("spread = grade yield - same-date KTB; published (not derived), no flags, no interpolation ratio", () => {
+    const r = mapKofiaGradeSpread(REG, "A", input, GRADES);
+    if (!r.ok) throw new Error(r.reason);
+    expect(r).toMatchObject({ rating: "A", notch: 6, basis: "kofia_grade", derived: false, flags: [] });
+    expect(r.spreadPct).toBe(1.322);
+    expect(r.anchors).toMatchObject({
+      as_of: "2026-11",
+      ktb_pct: 3.612,
+      aa_minus_pct: 4.274,
+      bbb_minus_pct: 10.07,
+      aa_minus_spread_pp: 0.662,
+      bbb_minus_spread_pp: 6.458,
+      ratio_per_notch: null,
+    });
+    expect(r.kofia).toMatchObject({
+      date: "2026-11-26",
+      grade: "A",
+      tenor: "3y",
+      grade_yield_pct: 4.934,
+      ktb_pct: 3.612,
+    });
+    expect(r.note).toContain("no interpolation");
+    expect(r.note).toContain("2026-11-26");
+  });
+  test("the anchors line is optional (a missing KOFIA AA- / BBB- of that date stays null)", () => {
+    const r = mapKofiaGradeSpread(REG, "A", { ...input, aaMinusPct: null, bbbMinusPct: null }, GRADES);
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.anchors).toMatchObject({ aa_minus_pct: null, bbb_minus_pct: null, aa_minus_spread_pp: null });
+  });
+  test("a rating KOFIA does not publish, or off the scale, or a non-positive spread, is a failure (the caller falls back)", () => {
+    expect(mapKofiaGradeSpread(REG, "BB+", input, GRADES)).toMatchObject({
+      ok: false,
+      reason_code: "kofia_grade_not_published",
+    });
+    expect(mapKofiaGradeSpread(REG, "XYZ", input, GRADES)).toMatchObject({
+      ok: false,
+      reason_code: "rating_not_in_scale",
+    });
+    expect(mapKofiaGradeSpread(REG, "A", { ...input, gradeYieldPct: 3.612 }, GRADES)).toMatchObject({
+      ok: false,
+      reason_code: "spread_not_positive",
+    });
+  });
+  test("deterministic: same inputs, same output (the confirmation audit re-derives with it)", () => {
+    expect(mapKofiaGradeSpread(REG, "BBB-", input, GRADES)).toEqual(mapKofiaGradeSpread(REG, "BBB-", input, GRADES));
   });
 });

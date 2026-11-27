@@ -24,11 +24,17 @@
 // apply-all (user decision 2026-11-26, amending ADR-0208 decision 9): it is listed in apply_all_excluded with
 // `credit_rating_synthetic_basis` and stays individually applicable. The entry also carries `crosscheck`
 // (implied cost of debt vs the market Kd; warns, never changes the number) and `issuance_evidence` (recent bond coupons).
+// Slice 4: with a stored KOFIA grade yield of the rating's own grade (AAA..BBB-) the spread basis is `kofia_grade` (the grade's 3y
+// yield minus the same-date KOFIA KTB 3y; `kofia` carries date, series and source URL), outranking the ECOS bases unless the
+// ECOS data is of a newer month. Stored observations are always read; `data.kofia_collect.enabled` only says whether the
+// automated collection (POST .../wacc/kofia/collect, env CO_NEWBIZ_KOFIA_COLLECT=on, default off) may run. The FSC bond
+// cross-check is NOT part of this payload (GET .../wacc/bond-evidence, reference only, never applied).
 // Kd >= Ke needs the form's beta, so only the indicative Kd is
 // returned here (credit_spread.kd_indicative_pct); the confirmation POST reports the kd_ge_ke warning.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
+import { kofiaCollectEnabled } from "../../../../../../lib/kofia-collector.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { listProjectAnalysisTargets } from "../../../../../../../../db/lib/wacc.ts";
 import { computeWaccReference, type ReferenceEntry } from "../../../../../../../../db/lib/wacc-reference.ts";
@@ -163,6 +169,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       erp_alternatives: erpOffer.erp_alternatives,
       apply_all_excluded: applyAllExcluded,
       missing,
+      kofia_collect: { enabled: kofiaCollectEnabled() },
     },
     200,
     { suggestion_count: suggestions.filter((s) => s.value !== null).length },

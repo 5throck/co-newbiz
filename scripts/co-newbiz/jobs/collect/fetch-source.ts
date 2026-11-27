@@ -275,7 +275,7 @@ function registerSourceIfNeeded(db: Database, source: string, emit?: (e: FetchSo
  * the revision it now lives at. See the module header for the change-log policy:
  * initial inserts log a 'new' row (old_value NULL), same contract as ensure_fresh.
  */
-function upsertObservation(
+export function upsertObservation(
   db: Database,
   o: { seriesId: string; periodId: string; unitId: string; sourceId: string; value: number; contentHash: string },
 ): { status: "new" | "revised" | "unchanged"; revisionNo: number } {

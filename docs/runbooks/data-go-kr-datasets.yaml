@@ -227,35 +227,37 @@ datasets:
     provider: "금융위원회"
     dataset_id: "15059592"
     url: "https://www.data.go.kr/data/15059592/openapi.do"
-    endpoints: []
-    endpoint_mapping: none
+    endpoints:
+      - apis.data.go.kr/1160100/GetBondIssuInfoService_V2/getBondBasiInfo_V2
+    endpoint_mapping: verified
     env_var: DATA_GO_KR_API_KEY
-    status: planned
+    status: in_use
     application_status: approved
     account_type: development
     applied_on: "2026-11-26"
     approved_on: null
     expires_on: "2028-11-26"
-    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정. A probe the same day still returned SERVICE_KEY_IS_NOT_REGISTERED, most likely approval propagation delay."
-    used_by: "planned: WACC credit-rating cross-check, not built"
+    evidence: "data.go.kr 마이페이지 > 활용신청 현황, read 2026-11-26: 승인, 개발계정. Live call 2026-11-27 with the repo key (Encoding form, passed unchanged): HTTP 200, resultCode 00, 7 bonds for bondIsurNm=한화솔루션 (the 2026-11-26 probe had answered SERVICE_KEY_IS_NOT_REGISTERED; double escaping of the Encoding-form key reproduces that error on every dataset, cause of the earlier probe not established)."
+    used_by: "app GET /api/projects/:id/wacc/bond-evidence (ADR-0208 slice 4): the subject company's outstanding bonds (coupon, maturity, balance) as CROSS-CHECK evidence next to the credit spread; never an applied value, never in apply-all, never stored. Code: db/lib/fsc-bond-evidence.ts, app/web-next/lib/fsc-bond-client.ts."
     owner: valuation-agent
-    notes: "Recheck the key against this dataset after the propagation delay before building. Service URL and operation are not yet confirmed; read them from the openapi.do page. Renew (활용연장) before 2028-11-26."
+    notes: "Service base apis.data.go.kr/1160100/GetBondIssuInfoService_V2, operation getBondBasiInfo_V2 (the openapi.do page lists only the base; the operation was confirmed by a live call). Filters used: bondIsurNm (issuer name), pageNo, numOfRows, resultType=json; crno and basDt also exist (crno alone is not a reliable filter: a crno-only query answered 30422 rows). Verified response fields: basDt, crno, isinCd, isinCdNm, bondIsurNm, bondIssuDt, bondExprDt, bondSrfcInrt (coupon %), bondBal and bondIssuAmt (full KRW strings), grnDcdNm, bondRnknDcdNm, bondOffrMcdNm, irtChngDcdNm, plus per-valuation-firm class fields (kisScrsItmsKcdNm etc., not used). No credit-rating field. License: KOGL type 2 (공공누리 제2유형): source attribution, no commercial use (commercial users contract with 한국예탁결제원); the panel carries the notice. Issuer matching is by NAME: md_company holds the 10-digit business registration number (biz_reg_no), not the 13-digit corporate registration number (crno) this API uses; the response crno is shown as evidence and several crno under one name = ambiguous, nothing shown. Key quirk: the repo's DATA_GO_KR_API_KEY is the Encoding form (percent escapes); it must be sent once-escaped (the client decodes then escapes). Renew (활용연장) before 2028-11-26."
 
   - id: fsc-bond-price-info
     name_ko: "금융위원회_채권시세정보"
     provider: "금융위원회"
     dataset_id: "15094784"
     url: "https://www.data.go.kr/data/15094784/openapi.do"
-    endpoints: []
-    endpoint_mapping: none
+    endpoints:
+      - apis.data.go.kr/1160100/GetBondSecuritiesInfoService_V2/getBondPriceInfo_V2
+    endpoint_mapping: verified
     env_var: DATA_GO_KR_API_KEY
-    status: planned
+    status: in_use
     application_status: approved
     account_type: development
     applied_on: "2026-11-26"
     approved_on: "2026-11-26"
     expires_on: "2028-11-26"
-    evidence: "[승인] on 마이페이지 > 활용신청 현황, verified 2026-11-26 (key propagation may lag, as with 채권기본정보)."
-    used_by: "planned: WACC credit-rating cross-check, not built"
+    evidence: "[승인] on 마이페이지 > 활용신청 현황, verified 2026-11-26. Live call 2026-11-27 with the repo key: HTTP 200, resultCode 00, 4 trading days for isinCd=KR6009832C14; beginBasDt filters (0 rows for 2026)."
+    used_by: "app GET /api/projects/:id/wacc/bond-evidence (ADR-0208 slice 4): the latest price-implied yield of the issuer's largest outstanding bonds (at most five lookups per request, 12-month window) shown with the bond list as cross-check evidence; never an applied value. Code: app/web-next/lib/fsc-bond-client.ts."
     owner: valuation-agent
-    notes: "Apply (활용신청) before building; the credit-rating cross-check does not work for this dataset until then. Data refreshes once per business day, not in real time."
+    notes: "Service base apis.data.go.kr/1160100/GetBondSecuritiesInfoService_V2, operation getBondPriceInfo_V2. Filters used: isinCd, beginBasDt (trading-day lower bound), pageNo, numOfRows, resultType=json; there is no issuer filter, so ISINs come from the basic-info call first. Verified response fields: basDt, srtnCd, isinCd, itmsNm, clprPrc, clprBnfRt (closing yield %, shown exactly as published), clprVs, mkpPrc, hiprPrc, loprPrc, trqu, trPrc. Only days with a trade are listed (the API gives no order guarantee: the client takes the greatest basDt). License: KOGL type 4 (공공누리 제4유형): source attribution, no commercial use, NO MODIFICATION and no redistribution (commercial use is bought from KRX): yields are displayed unchanged with their date and nothing is stored or exported. Whether internal valuation work counts as commercial use is a legal-counsel reading (design 2026-11-26 section 4.2). Renew (활용연장) before 2028-11-26."

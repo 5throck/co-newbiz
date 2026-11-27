@@ -385,6 +385,9 @@ export function recordWaccSession(
       coverageX: number | null;
       interestSource: string | null;
       fiscalYear: number | null;
+      /** `kofia_grade` spread basis only: the KOFIA publication date and the stored series the server re-derived from. */
+      kofiaDate: string | null;
+      kofiaSeries: string | null;
     }
   >();
   for (const comp of opts.components ?? []) {
@@ -469,6 +472,8 @@ export function recordWaccSession(
       coverageX: derived.synthetic?.coverage_x ?? null,
       interestSource: derived.synthetic?.interest_source ?? null,
       fiscalYear: derived.synthetic?.fiscal_year ?? null,
+      kofiaDate: derived.mapped.kofia?.date ?? null,
+      kofiaSeries: derived.mapped.kofia?.series_id ?? null,
     });
   }
   const asOf = opts.asOf?.trim() || now.slice(0, 10);
@@ -546,6 +551,8 @@ export function recordWaccSession(
           credit.fiscalYear !== null ? `credit_rating_period=FY${credit.fiscalYear}` : "",
           credit.source === "synthetic" ? "credit_rating_confidence=estimate" : "",
           `spread_basis=${credit.spreadBasis}`,
+          credit.kofiaDate ? `kofia_date=${credit.kofiaDate}` : "",
+          credit.kofiaSeries ? `kofia_series=${credit.kofiaSeries}` : "",
           `reference_as_of=${credit.asOf}`,
           credit.edited ? "edited_from_reference: true" : "",
         ].filter(Boolean)

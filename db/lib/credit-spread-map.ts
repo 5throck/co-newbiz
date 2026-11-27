@@ -1,4 +1,4 @@
-// @version 1.0.0
+// @version 1.1.0
 /**
  * Credit-rating registry reader and rating-to-spread map (ADR-0208, design
  * 2026-11-26-wacc-credit-rating-spread-design sections 6 and 8.1). PURE: no DB access, no writes.
@@ -10,7 +10,9 @@
  *                      below clamp (flagged) to the BBB- spread, the notches between are interpolated
  *                      geometrically: spread(n) = s_AA- x r^(n - n_AA-), r = (s_BBB-/s_AA-)^(1/(n_BBB- - n_AA-)).
  *   ecos_clamped       an anchor is missing: A-range and above use AA-, below uses BBB- (flagged).
- * Not built yet: kofia_grade_direct (slice 4, gated on KOFIA's terms). When no basis can produce a
+ * kofia_grade (slice 4, mapKofiaGradeSpread): the KOFIA valuation-firm average 3y yield of the rating's own grade minus
+ * the KOFIA KTB 3y of the SAME date; it outranks the ECOS bases whenever stored (the caller decides, see
+ * db/lib/wacc-reference.ts) and needs no interpolation. KOFIA covers AAA..BBB- only. When no basis can produce a
  * figure the caller keeps today's AA- behaviour (aa_minus_legacy) - never a placeholder.
  *
  * Interpolated values are DERIVED, not published figures: they are labelled `derived` and the note
@@ -21,7 +23,7 @@ import { existsSync, readFileSync } from "node:fs";
 import * as yaml from "js-yaml";
 import { registryPath } from "./erp-reference.ts";
 
-export type SpreadBasis = "ecos_interpolated" | "ecos_clamped" | "aa_minus_legacy";
+export type SpreadBasis = "kofia_grade" | "ecos_interpolated" | "ecos_clamped" | "aa_minus_legacy";
 
 export type SpreadFlag =
   | "interpolated"
@@ -267,6 +269,20 @@ export interface SpreadInputs {
   bbbMinusPct: number | null;
 }
 
+/** Where a `kofia_grade` spread came from: stored KOFIA observations of one date (ADR-0208 slice 4). */
+export interface KofiaSpreadDetail {
+  /** YYYY-MM-DD the yields were published for. */
+  date: string;
+  grade: string;
+  tenor: string;
+  grade_yield_pct: number;
+  ktb_pct: number;
+  series_id: string;
+  ktb_series_id: string;
+  source_url: string;
+  source_label: string;
+}
+
 export interface MappedSpread {
   ok: true;
   rating: string;
@@ -291,11 +307,18 @@ export interface MappedSpread {
   };
   /** Human-readable derivation (English; the panel localizes labels, not this text). */
   note: string;
+  /** Present only for the `kofia_grade` basis. */
+  kofia?: KofiaSpreadDetail;
 }
 
 export interface SpreadMapFailure {
   ok: false;
-  reason_code: "rating_not_in_scale" | "anchor_missing" | "spread_not_positive" | "anchors_inverted";
+  reason_code:
+    | "rating_not_in_scale"
+    | "anchor_missing"
+    | "spread_not_positive"
+    | "anchors_inverted"
+    | "kofia_grade_not_published";
   reason: string;
 }
 
@@ -427,6 +450,97 @@ export function mapRatingToSpread(
     note:
       `Rating ${rating}: spread ${fmt(spreadPct)} pp - clamped to the ${selName} spread because the ` +
       `${useUpper ? lower : upper} anchor is missing for ${inputs.asOf} (${where}); collect the ECOS series to enable interpolation.`,
+  };
+}
+
+/** One stored KOFIA reading of the rating's grade (see db/lib/kofia-grade-yield.ts readKofiaGradeReading). */
+export interface KofiaSpreadInput {
+  date: string;
+  /** YYYY-MM, carried as the suggestion's as-of month. */
+  month: string;
+  gradeYieldPct: number;
+  ktbPct: number;
+  aaMinusPct: number | null;
+  bbbMinusPct: number | null;
+  seriesId: string;
+  ktbSeriesId: string;
+  sourceUrl: string;
+  sourceLabel: string;
+}
+
+/**
+ * Map one rating to a credit spread directly from KOFIA's grade yield (basis `kofia_grade`): spread = the grade's 3y
+ * yield minus the KTB 3y of the same KOFIA date. No interpolation, not derived (a published valuation-firm average).
+ * Deterministic like mapRatingToSpread (the confirmation audit re-derives with it). A rating outside the grades KOFIA
+ * publishes, or a non-positive spread, is a failure: the caller then falls back to the ECOS bases.
+ */
+export function mapKofiaGradeSpread(
+  registry: CreditRatingRegistry,
+  rating: string,
+  input: KofiaSpreadInput,
+  grades: readonly string[],
+): MappedSpread | SpreadMapFailure {
+  const n = notchOf(registry, rating);
+  if (n === null) {
+    return {
+      ok: false,
+      reason_code: "rating_not_in_scale",
+      reason: `Rating '${rating}' is not on the registry scale.`,
+    };
+  }
+  if (!grades.includes(rating)) {
+    return {
+      ok: false,
+      reason_code: "kofia_grade_not_published",
+      reason: `KOFIA publishes no corporate-bond grade yield for rating ${rating}.`,
+    };
+  }
+  const spread = input.gradeYieldPct - input.ktbPct;
+  if (!(spread > 0)) {
+    return {
+      ok: false,
+      reason_code: "spread_not_positive",
+      reason: `The KOFIA ${rating} spread is not positive (${fmt(spread)} pp on ${input.date}).`,
+    };
+  }
+  const nU = notchOf(registry, registry.spreadMap.upperAnchor) as number;
+  const nL = notchOf(registry, registry.spreadMap.lowerAnchor) as number;
+  const spreadPct = round6(spread);
+  const aaSpread = input.aaMinusPct === null ? null : round6(input.aaMinusPct - input.ktbPct);
+  const bbbSpread = input.bbbMinusPct === null ? null : round6(input.bbbMinusPct - input.ktbPct);
+  return {
+    ok: true,
+    rating,
+    notch: n,
+    spreadPct,
+    basis: "kofia_grade",
+    derived: false,
+    flags: [],
+    anchors: {
+      as_of: input.month,
+      ktb_pct: input.ktbPct,
+      aa_minus_pct: input.aaMinusPct,
+      bbb_minus_pct: input.bbbMinusPct,
+      aa_minus_spread_pp: aaSpread,
+      bbb_minus_spread_pp: bbbSpread,
+      ratio_per_notch: null,
+      upper_notch: nU,
+      lower_notch: nL,
+    },
+    kofia: {
+      date: input.date,
+      grade: rating,
+      tenor: "3y",
+      grade_yield_pct: input.gradeYieldPct,
+      ktb_pct: input.ktbPct,
+      series_id: input.seriesId,
+      ktb_series_id: input.ktbSeriesId,
+      source_url: input.sourceUrl,
+      source_label: input.sourceLabel,
+    },
+    note:
+      `Rating ${rating}: spread ${fmt(spreadPct)} pp - KOFIA valuation-firm average 3y yield ${fmt(input.gradeYieldPct)}% ` +
+      `- KOFIA KTB 3y ${fmt(input.ktbPct)}% (same date ${input.date}; a published grade yield, no interpolation).`,
   };
 }
 

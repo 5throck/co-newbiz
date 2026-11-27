@@ -104,6 +104,28 @@ describe("data.go.kr dataset registry", () => {
     expect(missing).toEqual([]);
   });
 
+  test("the FSC bond datasets (ADR-0208 slice 4) are in use with their verified endpoints, cross-check only, with the KOGL terms recorded", () => {
+    const byId = new Map(load().datasets.map((d) => [d.id, d]));
+    const basic = byId.get("fsc-bond-basic-info");
+    const price = byId.get("fsc-bond-price-info");
+    expect(basic?.endpoints).toEqual(["apis.data.go.kr/1160100/GetBondIssuInfoService_V2/getBondBasiInfo_V2"]);
+    expect(price?.endpoints).toEqual(["apis.data.go.kr/1160100/GetBondSecuritiesInfoService_V2/getBondPriceInfo_V2"]);
+    for (const d of [basic, price]) {
+      expect(d?.status).toBe("in_use");
+      expect(d?.endpoint_mapping).toBe("verified");
+      expect(d?.application_status).toBe("approved");
+      expect(d?.used_by).toContain("wacc/bond-evidence");
+      expect(d?.used_by).toContain("never an applied value");
+      expect(d?.notes).toContain("KOGL");
+    }
+    expect(basic?.notes).toContain("type 2");
+    expect(price?.notes).toContain("type 4");
+    expect(price?.notes).toContain("NO MODIFICATION");
+    // the code constants carry exactly the registered endpoints (the scan test above would flag a stray one)
+    const lib = readFileSync(join(ROOT, "db", "lib", "fsc-bond-evidence.ts"), "utf8");
+    for (const e of [...(basic?.endpoints ?? []), ...(price?.endpoints ?? [])]) expect(lib).toContain(e);
+  });
+
   test("every registered endpoint is a well-formed service URL", () => {
     for (const d of load().datasets) {
       for (const e of d.endpoints) expect(e).toMatch(new RegExp(`^${ENDPOINT.source}$`));

@@ -6,7 +6,7 @@
  */
 import { type ReferenceSuggestion, financialResyncNeeded } from "./wacc-reference-items.ts";
 
-export type CollectRowKey = "ecos" | "credit" | "financials";
+export type CollectRowKey = "ecos" | "credit" | "financials" | "kofia";
 
 /** DOM id of a collect row; the credit-spread reason text links to the credit row. */
 export const COLLECT_BLOCK_ID = "wacc-collect-block";
@@ -118,4 +118,28 @@ export type FinancialsStatus = { kind: "resync_needed" } | { kind: "synced" };
 
 export function financialsRowStatus(credit: ReferenceSuggestion | undefined): FinancialsStatus {
   return financialResyncNeeded(credit) ? { kind: "resync_needed" } : { kind: "synced" };
+}
+
+/**
+ * KOFIA grade-yield row (ADR-0208 slice 4). It exists ONLY when the server reports the automated collection switch as on
+ * (`data.kofia_collect.enabled`, env CO_NEWBIZ_KOFIA_COLLECT, default off pending KOFIA's written confirmation), and only
+ * when there is a credit suggestion to feed. Primary emphasis while nothing was collected; otherwise "collect again".
+ */
+export function kofiaRowVisible(enabled: boolean | undefined, credit: ReferenceSuggestion | undefined): boolean {
+  return enabled === true && !!credit && credit.key === "credit_spread";
+}
+
+export function kofiaCollectNeeded(credit: ReferenceSuggestion | undefined): boolean {
+  return credit?.key === "credit_spread" && !credit.kofia_latest_date;
+}
+
+export type KofiaStatus =
+  | { kind: "not_collected" }
+  /** Collected up to `date`; `used` is true when the spread in use is built from it. */
+  | { kind: "collected"; date: string; used: boolean };
+
+export function kofiaRowStatus(credit: ReferenceSuggestion | undefined): KofiaStatus {
+  const date = credit?.kofia_latest_date ?? null;
+  if (!date) return { kind: "not_collected" };
+  return { kind: "collected", date, used: credit?.spread_basis === "kofia_grade" };
 }

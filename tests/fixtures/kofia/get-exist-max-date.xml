@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><root><message><proframeHeader>
+<pfmAppName>BIS-KOFIABOND</pfmAppName>
+<pfmSvcName>BISBndSrtPrcSrchSO</pfmSvcName>
+<pfmFnName>getExistMaxDate</pfmFnName>
+<pfmGlobalNo>fixture</pfmGlobalNo>
+<pfmTrDate>20261127</pfmTrDate>
+<pfmTrTime>20261127083420866</pfmTrTime>
+<pfmResponseDtal></pfmResponseDtal>
+</proframeHeader>
+<systemHeader>
+</systemHeader>
+<BISComDspDatDTO>
+<val1>20261126</val1>
+</BISComDspDatDTO></message></root>

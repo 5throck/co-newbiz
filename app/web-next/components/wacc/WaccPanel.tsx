@@ -29,6 +29,7 @@ import {
   financialResyncNeeded,
   formatCreditAnchorPct,
   kdKeWarning,
+  kofiaCollectUrl,
   missingReferenceItems,
   observedDeAsTarget,
   observedDeSourceDetail,
@@ -44,6 +45,7 @@ import { WaccStatusBadge } from "../WaccStatusBadge.tsx";
 import { ParamTable } from "../ui.tsx";
 import { BetaPanel, type PeerRow } from "./BetaPanel.tsx";
 import { CreditRatingEvidence } from "./CreditRatingEvidence.tsx";
+import { BondEvidenceBlock, KofiaYieldEvidence } from "./CreditSpreadSourceEvidence.tsx";
 import { DerivationTable } from "./DerivationTable.tsx";
 import { api, ApiError } from "../../lib/api.ts";
 import TargetSelector, { type AnalysisTarget } from "../TargetSelector.tsx";
@@ -65,6 +67,9 @@ import {
   ecosRowStatus,
   financialsCollectNeeded,
   financialsRowStatus,
+  kofiaCollectNeeded,
+  kofiaRowStatus,
+  kofiaRowVisible,
 } from "../../lib/wacc-collect-rows.ts";
 import {
   assembleDerivation,
@@ -294,6 +299,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     erp_alternatives?: Sugg[];
     apply_all_excluded?: ApplyAllExcluded[];
     missing?: string[];
+    // ADR-0208 slice 4: whether the automated KOFIA grade-yield collection may run (env switch, default off).
+    kofia_collect?: { enabled: boolean };
   }
   const [sugg, setSugg] = useState<SuggPayload | null>(null);
   // ERP reference the human applied to the form (null = typed manually / none applied).
@@ -330,6 +337,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   const creditCollect = useCollectRun(creditCollectUrl(projectId, selectedTarget), () => {
     loadSugg();
   });
+  // 등급별 수익률(KOFIA) 수집 — 서버 스위치(CO_NEWBIZ_KOFIA_COLLECT)가 꺼져 있으면 행 자체가 보이지 않는다 (ADR-0208).
+  const kofiaCollect = useCollectRun(kofiaCollectUrl(projectId), () => {
+    loadSugg();
+  });
+  const kofiaCollectMessage =
+    kofiaCollect.phase === "done"
+      ? t("collectKofiaDone")
+      : kofiaCollect.phase === "failed"
+        ? t("collectKofiaFailed", { p1: kofiaCollect.run?.error ?? "" })
+        : kofiaCollect.startError !== null
+          ? kofiaCollect.startError || t("collectKofiaStartFailed")
+          : null;
   const creditCollectMessage =
     creditCollect.phase === "done"
       ? t("collectCreditDone")
@@ -460,6 +479,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     synthetic: t("creditSourceSynthetic"),
   };
   const CREDIT_BASIS_LABEL: Record<string, string> = {
+    kofia_grade: t("creditBasisKofia"),
     ecos_interpolated: t("creditBasisInterpolated"),
     ecos_clamped: t("creditBasisClamped"),
     aa_minus_legacy: t("creditBasisLegacy"),
@@ -632,6 +652,15 @@ export function WaccPanel({ projectId }: { projectId: string }) {
       default:
         return t("collectStatusCreditDefault");
     }
+  };
+  /** KOFIA grade-yield row status line - latest collected date, and whether the spread in use is built from it. */
+  const kofiaStatusText = () => {
+    const s = kofiaRowStatus(creditSugg);
+    if (s.kind === "not_collected") return t("collectStatusKofiaNotCollected");
+    return [
+      t("collectStatusKofiaCollected", { date: s.date }),
+      s.used ? t("collectStatusKofiaUsed") : t("collectStatusKofiaNotUsed"),
+    ].join(" · ");
   };
   /** Financial-data row status line - whether the interest and borrowing figures are stored. */
   const financialsStatusText = () =>
@@ -1343,6 +1372,21 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                         actionTestId: "credit-collect",
                         noAction: !creditCollectAvailable(creditSugg),
                       })}
+                    {kofiaRowVisible(sugg.kofia_collect?.enabled, creditSugg) &&
+                      collectRow({
+                        key: "kofia",
+                        name: t("collectKofiaName"),
+                        fills: t("collectKofiaFills"),
+                        source: t("collectKofiaSource"),
+                        status: kofiaStatusText(),
+                        needed: kofiaCollectNeeded(creditSugg),
+                        runCollect: kofiaCollect,
+                        message: kofiaCollectMessage,
+                        runLabel: t("collectKofiaRun"),
+                        rerunLabel: t("collectKofiaRerun"),
+                        runningText: t("collectKofiaRunning"),
+                        actionTestId: "kofia-collect",
+                      })}
                     {creditSugg &&
                       (financialsCollectNeeded(creditSugg) || finMessage !== null) &&
                       collectRow({
@@ -1522,7 +1566,9 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                                 ))}
                                 {creditReasonLinksToCollect(r) && <div>{collectLink("credit")}</div>}
                                 {financialResyncNeeded(r) && <div>{collectLink("financials")}</div>}
+                                <KofiaYieldEvidence suggestion={r} />
                                 <CreditRatingEvidence suggestion={r} />
+                                <BondEvidenceBlock projectId={projectId} targetId={selectedTarget} />
                               </div>
                             ) : (
                               `${r.source_label ?? ""} · ${r.as_of ?? ""}`
