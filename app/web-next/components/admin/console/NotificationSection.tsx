@@ -18,16 +18,25 @@ import { Pager, useAdminLabel } from "./admin-ui.tsx";
 import { NotificationDetailDrawer } from "./NotificationDetailDrawer.tsx";
 import { TestSendDialog } from "./TestSendDialog.tsx";
 
-// 알림 7열 — 제목과 전송 배지가 넓은 텍스트라 고정 비율 유지.
-const NOTIFICATIONS_COL_PCT = [13, 9, 13, 13, 22, 20, 10] as const;
+// 알림 7열 — 제목·프로젝트가 긴 텍스트라 가장 넓고(26·15%), 셀은 한 줄(잘림 없음)로 표시한다.
+// 넘치는 분은 표 가로 스크롤(.table-scroll)이 흡수한다(2026-11 사용자 후속 요청: 열 확대·줄바꿈 금지).
+const NOTIFICATIONS_COL_PCT = [12, 8, 12, 15, 26, 17, 10] as const;
 const PAGE_SIZE = 50; // server default; the cap is 100 (§13.5)
 const Q_DEBOUNCE_MS = 300;
 
 /** The notification CHECK's 11 trigger values (0185) — the filter's option set. */
 const TRIGGER_TYPES = [
-  "rag_upgrade", "rag_downgrade", "kill_criteria", "regulation_change", "threshold_breach",
-  "staleness", "batch_failure", "pipeline_paused", "establishment_step_reopened",
-  "establishment_step_assigned", "test",
+  "rag_upgrade",
+  "rag_downgrade",
+  "kill_criteria",
+  "regulation_change",
+  "threshold_breach",
+  "staleness",
+  "batch_failure",
+  "pipeline_paused",
+  "establishment_step_reopened",
+  "establishment_step_assigned",
+  "test",
 ] as const;
 const SEVERITIES = ["opportunity", "warning", "urgent", "info", "ops"] as const;
 const CHANNELS = ["in_app", "email", "webhook"] as const; // bound-inclusive server matching
@@ -48,7 +57,17 @@ interface Filters {
   project_id: string;
 }
 
-const EMPTY_FILTERS: Filters = { period: "30d", from: "", to: "", trigger_type: "", severity: "", channel: "", read: "", delivery_status: "", project_id: "" };
+const EMPTY_FILTERS: Filters = {
+  period: "30d",
+  from: "",
+  to: "",
+  trigger_type: "",
+  severity: "",
+  channel: "",
+  read: "",
+  delivery_status: "",
+  project_id: "",
+};
 
 /** Period preset → `from` bound (ISO); `all`/`custom` return null (custom uses the date inputs). */
 function periodFrom(period: Period, from: string, to: string): { from: string | null; to: string | null } {
@@ -77,7 +96,9 @@ function DeliveryBadges({ delivery }: { delivery: DeliverySummary }) {
     [delivery],
   );
   if (chips.length === 0) {
-    return <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("deliveryInAppOnly")}</span>;
+    return (
+      <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("deliveryInAppOnly")}</span>
+    );
   }
   return (
     <span className="flex flex-wrap gap-1">
@@ -93,14 +114,28 @@ function DeliveryBadges({ delivery }: { delivery: DeliverySummary }) {
 /** Severity chip — text + icon glyph, never color alone (FR-SYS-05). */
 export function SeverityChip({ severity }: { severity: string }) {
   const label = useAdminLabel();
-  const glyph = severity === "opportunity" ? "↗" : severity === "warning" ? "▲" : severity === "urgent" ? "!" : severity === "ops" ? "⚙" : "i";
+  const glyph =
+    severity === "opportunity"
+      ? "↗"
+      : severity === "warning"
+        ? "▲"
+        : severity === "urgent"
+          ? "!"
+          : severity === "ops"
+            ? "⚙"
+            : "i";
   const cls =
-    severity === "opportunity" ? "bg-[color:var(--green-bg)] text-[color:var(--green-fg)]"
-    : severity === "warning" ? "bg-[color:var(--amber-bg)] text-[color:var(--amber-fg)]"
-    : severity === "urgent" ? "bg-[color:var(--red-bg)] text-[color:var(--red-fg)]"
-    : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]";
+    severity === "opportunity"
+      ? "bg-[color:var(--green-bg)] text-[color:var(--green-fg)]"
+      : severity === "warning"
+        ? "bg-[color:var(--amber-bg)] text-[color:var(--amber-fg)]"
+        : severity === "urgent"
+          ? "bg-[color:var(--red-bg)] text-[color:var(--red-fg)]"
+          : "bg-[color:var(--muted-bg)] text-[color:var(--muted-fg)]";
   return (
-    <span className={`inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[length:var(--fs-caption)] ${cls}`}>
+    <span
+      className={`inline-flex items-center gap-[0.3rem] px-[0.55rem] py-[0.15rem] rounded-full text-[length:var(--fs-caption)] ${cls}`}
+    >
       <span aria-hidden="true">{glyph}</span> {label("severity", severity)}
     </span>
   );
@@ -132,6 +167,8 @@ export function NotificationSection() {
   }, [qInput]);
 
   // Debounced server query — rebuilt and re-run on any filter/page change; stale responses drop.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: observed is written by THIS effect (fresh-project collect); depending on it would loop.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tc only feeds an error string; next-intl memoizes it per locale.
   useEffect(() => {
     const bounds = periodFrom(filters.period, filters.from, filters.to);
     const params = new URLSearchParams();
@@ -146,21 +183,36 @@ export function NotificationSection() {
     let cancelled = false;
     const timer = setTimeout(() => {
       // {rows} list envelope (lib/api.ts RowList) — paging meta arrives on res.meta.
-      api.get<RowList<AdminNotificationListRow>>(`/api/admin/notifications?${params.toString()}`)
+      api
+        .get<RowList<AdminNotificationListRow>>(`/api/admin/notifications?${params.toString()}`)
         .then((res) => {
           if (cancelled) return;
           setRows(res.data.rows);
-          setMeta({ page: Number(res.meta.page ?? 1), page_size: Number(res.meta.page_size ?? PAGE_SIZE), total: Number(res.meta.total ?? 0), total_pages: Number(res.meta.total_pages ?? 1) });
+          setMeta({
+            page: Number(res.meta.page ?? 1),
+            page_size: Number(res.meta.page_size ?? PAGE_SIZE),
+            total: Number(res.meta.total ?? 0),
+            total_pages: Number(res.meta.total_pages ?? 1),
+          });
           setLoadError(null);
           const seen = new Set(observed.map((p) => p.id));
-          const fresh = res.data.rows.map((r) => r.project).filter((p): p is { id: string; project_no: string | null } => p !== null && !seen.has(p.id));
-          if (fresh.length > 0) setObserved((prev) => [...prev, ...fresh.filter((f) => !prev.some((p) => p.id === f.id))]);
+          const fresh = res.data.rows
+            .map((r) => r.project)
+            .filter((p): p is { id: string; project_no: string | null } => p !== null && !seen.has(p.id));
+          if (fresh.length > 0)
+            setObserved((prev) => [...prev, ...fresh.filter((f) => !prev.some((p) => p.id === f.id))]);
         })
         .catch((err) => {
-          if (!cancelled) { setRows([]); setLoadError(err instanceof Error ? err.message : tc("errors.loadFailed")); }
+          if (!cancelled) {
+            setRows([]);
+            setLoadError(err instanceof Error ? err.message : tc("errors.loadFailed"));
+          }
         });
     }, Q_DEBOUNCE_MS);
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, q, page]);
 
@@ -170,7 +222,11 @@ export function NotificationSection() {
   }
 
   function pickProject(value: string) {
-    if (value === "__custom__") { setCustomProject(true); patchFilters({ project_id: "" }); return; }
+    if (value === "__custom__") {
+      setCustomProject(true);
+      patchFilters({ project_id: "" });
+      return;
+    }
     setCustomProject(false);
     patchFilters({ project_id: value });
   }
@@ -178,64 +234,145 @@ export function NotificationSection() {
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
           {t("filterPeriod")}
-          <select aria-label={t("filterPeriod")} className="sizing-new-input sizing-new-input-sm" value={filters.period} onChange={(e) => patchFilters({ period: e.target.value as Period })}>
-            {PERIODS.map((p) => <option key={p} value={p}>{t(`period_${p}`)}</option>)}
+          <select
+            aria-label={t("filterPeriod")}
+            className="sizing-new-input sizing-new-input-sm"
+            value={filters.period}
+            onChange={(e) => patchFilters({ period: e.target.value as Period })}
+          >
+            {PERIODS.map((p) => (
+              <option key={p} value={p}>
+                {t(`period_${p}`)}
+              </option>
+            ))}
           </select>
         </label>
         {filters.period === "custom" && (
           <>
-            <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+            <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
               {t("filterFrom")}
-              <input type="date" aria-label={t("filterFrom")} className="sizing-new-input sizing-new-input-sm" value={filters.from} onChange={(e) => patchFilters({ from: e.target.value })} />
+              <input
+                type="date"
+                aria-label={t("filterFrom")}
+                className="sizing-new-input sizing-new-input-sm"
+                value={filters.from}
+                onChange={(e) => patchFilters({ from: e.target.value })}
+              />
             </label>
-            <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+            <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
               {t("filterTo")}
-              <input type="date" aria-label={t("filterTo")} className="sizing-new-input sizing-new-input-sm" value={filters.to} onChange={(e) => patchFilters({ to: e.target.value })} />
+              <input
+                type="date"
+                aria-label={t("filterTo")}
+                className="sizing-new-input sizing-new-input-sm"
+                value={filters.to}
+                onChange={(e) => patchFilters({ to: e.target.value })}
+              />
             </label>
           </>
         )}
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
           {t("filterTrigger")}
-          <select aria-label={t("filterTrigger")} className="sizing-new-input sizing-new-input-sm" value={filters.trigger_type} onChange={(e) => patchFilters({ trigger_type: e.target.value })}>
+          <select
+            aria-label={t("filterTrigger")}
+            className="sizing-new-input sizing-new-input-sm"
+            value={filters.trigger_type}
+            onChange={(e) => patchFilters({ trigger_type: e.target.value })}
+          >
             <option value="">{t("filterAll")}</option>
-            {TRIGGER_TYPES.map((v) => <option key={v} value={v}>{label("trigger", v)}</option>)}
+            {TRIGGER_TYPES.map((v) => (
+              <option key={v} value={v}>
+                {label("trigger", v)}
+              </option>
+            ))}
           </select>
         </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
           {t("filterSeverity")}
-          <select aria-label={t("filterSeverity")} className="sizing-new-input sizing-new-input-sm" value={filters.severity} onChange={(e) => patchFilters({ severity: e.target.value })}>
+          <select
+            aria-label={t("filterSeverity")}
+            className="sizing-new-input sizing-new-input-sm"
+            value={filters.severity}
+            onChange={(e) => patchFilters({ severity: e.target.value })}
+          >
             <option value="">{t("filterAll")}</option>
-            {SEVERITIES.map((v) => <option key={v} value={v}>{label("severity", v)}</option>)}
+            {SEVERITIES.map((v) => (
+              <option key={v} value={v}>
+                {label("severity", v)}
+              </option>
+            ))}
           </select>
         </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
           {t("filterChannel")}
-          <select aria-label={t("filterChannel")} className="sizing-new-input sizing-new-input-sm" value={filters.channel} onChange={(e) => patchFilters({ channel: e.target.value })}>
+          <select
+            aria-label={t("filterChannel")}
+            className="sizing-new-input sizing-new-input-sm"
+            value={filters.channel}
+            onChange={(e) => patchFilters({ channel: e.target.value })}
+          >
             <option value="">{t("filterAll")}</option>
-            {CHANNELS.map((v) => <option key={v} value={v}>{label("channel", v)}</option>)}
+            {CHANNELS.map((v) => (
+              <option key={v} value={v}>
+                {label("channel", v)}
+              </option>
+            ))}
           </select>
         </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
           {t("filterRead")}
-          <select aria-label={t("filterRead")} className="sizing-new-input sizing-new-input-sm" value={filters.read} onChange={(e) => patchFilters({ read: e.target.value })}>
+          <select
+            aria-label={t("filterRead")}
+            className="sizing-new-input sizing-new-input-sm"
+            value={filters.read}
+            onChange={(e) => patchFilters({ read: e.target.value })}
+          >
             <option value="">{t("filterAll")}</option>
-            {READ_STATES.map((v) => <option key={v} value={v}>{t(v)}</option>)}
+            {READ_STATES.map((v) => (
+              <option key={v} value={v}>
+                {t(v)}
+              </option>
+            ))}
           </select>
         </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+        <label className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap">
           {t("filterDeliveryStatus")}
-          <select aria-label={t("filterDeliveryStatus")} className="sizing-new-input sizing-new-input-sm" value={filters.delivery_status} onChange={(e) => patchFilters({ delivery_status: e.target.value })}>
+          <select
+            aria-label={t("filterDeliveryStatus")}
+            className="sizing-new-input sizing-new-input-sm"
+            value={filters.delivery_status}
+            onChange={(e) => patchFilters({ delivery_status: e.target.value })}
+          >
             <option value="">{t("filterAll")}</option>
-            {DELIVERY_STATUSES.map((v) => <option key={v} value={v}>{label("deliveryStatus", v)}</option>)}
+            {DELIVERY_STATUSES.map((v) => (
+              <option key={v} value={v}>
+                {label("deliveryStatus", v)}
+              </option>
+            ))}
           </select>
         </label>
-        <label className="flex items-center gap-1 text-[length:var(--fs-caption)]" title={t("filterProjectHint")}>
+        <label
+          className="flex items-center gap-1 text-[length:var(--fs-caption)] whitespace-nowrap"
+          title={t("filterProjectHint")}
+        >
           {t("filterProject")}
-          <select aria-label={t("filterProject")} className="sizing-new-input sizing-new-input-sm" value={customProject ? "__custom__" : filters.project_id} onChange={(e) => pickProject(e.target.value)}>
+          {/* project_no(관리자 화면에서 프로젝트를 부르는 유일한 이름)가 5rem 하한에 잘리지 않도록
+              넓은 min-width를 둔다(2026-11 사용자 결함 보고 2). UUID 폴백은 드롭다운 목록에서 완전히 읽힌다. */}
+          <select
+            aria-label={t("filterProject")}
+            className="sizing-new-input sizing-new-input-sm"
+            style={{ minWidth: "12rem" }}
+            value={customProject ? "__custom__" : filters.project_id}
+            onChange={(e) => pickProject(e.target.value)}
+          >
             <option value="">{t("filterAll")}</option>
-            {observed.map((p) => <option key={p.id} value={p.id}>{p.project_no ?? p.id}</option>)}
+            {observed.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.project_no ?? p.id}
+              </option>
+            ))}
             <option value="__custom__">{t("filterProjectCustom")}</option>
           </select>
         </label>
@@ -259,15 +396,23 @@ export function NotificationSection() {
           onChange={(e) => setQInput(e.target.value)}
         />
         <span className="flex-1" />
-        <button type="button" className="btn-ghost btn-sm" onClick={() => setTestOpen(true)}>{t("testSend")}</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => setTestOpen(true)}>
+          {t("testSend")}
+        </button>
       </div>
-      {loadError && <p role="alert" className="mb-2 text-[color:var(--red-fg)]">{loadError}</p>}
+      {loadError && (
+        <p role="alert" className="mb-2 text-[color:var(--red-fg)]">
+          {loadError}
+        </p>
+      )}
       {rows === null ? (
         <p>{tc("loading")}</p>
       ) : rows.length === 0 ? (
         <p className="text-[color:var(--muted-fg)] italic">{t("emptyNotifications")}</p>
       ) : (
         <>
+          {/* biome-ignore lint/a11y/useSemanticElements: scrollable-region-focusable (axe) needs the focusable scroll region; a <section> landmark per table is not wanted here. */}
+          {/* biome-ignore lint/a11y/noNoninteractiveTabindex: same axe rule — keyboard users must be able to scroll the table region. */}
           <div className="table-scroll" role="region" aria-label={tc("dataTableHorizontalScroll")} tabIndex={0}>
             <table className="data-table list-table table-fixed-pct tmin-56">
               <caption className="sr-only">{t("notificationsCaption")}</caption>
@@ -280,30 +425,45 @@ export function NotificationSection() {
                   <th scope="col">{t("colProject")}</th>
                   <th scope="col">{t("colTitle")}</th>
                   <th scope="col">{t("colDelivery")}</th>
-                  <th scope="col"><span className="sr-only">{tc("actions")}</span></th>
+                  <th scope="col">
+                    <span className="sr-only">{tc("actions")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((n) => (
                   <tr key={n.id} className="cursor-pointer" onClick={() => setDetailId(n.id)}>
-                    <td className="col-date cell-truncate">{formatDateTime(n.sent_at, locale)}</td>
-                    <td><SeverityChip severity={n.severity} /></td>
+                    <td className="col-date whitespace-nowrap">{formatDateTime(n.sent_at, locale)}</td>
+                    <td>
+                      <SeverityChip severity={n.severity} />
+                    </td>
                     <td>{label("trigger", n.trigger_type)}</td>
-                    <td className="cell-truncate">
+                    <td className="whitespace-nowrap">
                       {n.project ? (
-                        <Link className="text-[color:var(--accent)] underline" href={`/projects/${n.project.id}`} onClick={(e) => e.stopPropagation()}>{n.project.project_no ?? n.project.id}</Link>
+                        <Link
+                          className="text-[color:var(--accent)] underline"
+                          href={`/projects/${n.project.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {n.project.project_no ?? n.project.id}
+                        </Link>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="cell-truncate">{n.title ?? t("titleNone")}</td>
-                    <td><DeliveryBadges delivery={n.delivery} /></td>
+                    <td className="whitespace-nowrap">{n.title ?? t("titleNone")}</td>
+                    <td>
+                      <DeliveryBadges delivery={n.delivery} />
+                    </td>
                     <td className="sizing-actions-cell">
                       <button
                         type="button"
                         className="btn-ghost btn-sm"
                         aria-label={`${t("drawerAria")} — ${n.title ?? t("titleNone")}`}
-                        onClick={(e) => { e.stopPropagation(); setDetailId(n.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailId(n.id);
+                        }}
                       >
                         {t("detailAction")}
                       </button>
@@ -313,7 +473,12 @@ export function NotificationSection() {
               </tbody>
             </table>
           </div>
-          <Pager page={meta?.page ?? page} pages={meta?.total_pages ?? 1} total={meta?.total ?? rows.length} onPage={setPage} />
+          <Pager
+            page={meta?.page ?? page}
+            pages={meta?.total_pages ?? 1}
+            total={meta?.total ?? rows.length}
+            onPage={setPage}
+          />
         </>
       )}
       {detailId !== null && <NotificationDetailDrawer id={detailId} onClose={() => setDetailId(null)} />}
