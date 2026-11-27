@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0: the handler context carries `trigger` (collect.kofia: a manual run-now re-collects the latest day).
 //
 // run-job - the scheduler's thin runner (ADR-0189, scheduled-jobs design 2.2 / 3.4 / 5). Executes ONE registered job
 // handler: re-checks `enabled` (manual requests carry an explicit actor and bypass it), takes the lease lock, runs the
@@ -221,6 +222,7 @@ export async function runJob(db: any, opts: RunJobOptions): Promise<RunJobResult
               db,
               now: clock(),
               env: opts.env,
+              trigger: opts.trigger,
               signal: ac.signal,
               reportDir: opts.reportDir ?? DEFAULT_REPORT_DIR,
             }),

@@ -7,6 +7,12 @@
 // that it is permitted (ADR-0208, runbook beta-series-collection). Switch off: POST answers 503 kofia_collect_disabled
 // (nothing is fetched, no job_run row, no audit row); GET still answers the latest run (null) with `enabled: false`.
 //
+// READ-MOSTLY (scheduled collection, scripts/co-newbiz/jobs/collect/kofia.ts keeps the store current): a POST while the
+// stored data is up to date fetches nothing and answers 200 {status: "up_to_date", latest_date, expected_date, run_id: null}
+// (no job_run, no audit row); a stale store is collected by any analyst. There is no force flag: admins cannot reach project
+// routes (FR-SEC-03), so an admin forces a re-collect with "run now" of the scheduled job collect.kofia (admin schedule page).
+// GET adds `status`: the latest stored day, whether it is up to date, and the next scheduled run (stored schedule row).
+//
 // Same model as .../wacc/ecos/collect: POST records a job_run row and answers 202 {run_id, status: "running"}; the run
 // executes in-process; GET returns the latest run for polling. Market-common data, so the run slot and status are GLOBAL
 // (409 already_running). Authorization: analyst with project visibility (viewer 403 role_required; admin / non-member /
@@ -15,6 +21,7 @@ import { getDb } from "../../../../../../../../../db/client.ts";
 import { appendAudit } from "../../../../../../../../../db/lib/access-control.ts";
 import { authenticate } from "../../../../../../../lib/auth.ts";
 import { fail, forbidden, notFound, ok } from "../../../../../../../lib/envelope.ts";
+import { kofiaCollectStatus } from "../../../../../../../lib/kofia-collect-status.ts";
 import { kofiaCollectEnabled } from "../../../../../../../lib/kofia-collector.ts";
 import { latestKofiaCollectionRun, startKofiaCollection } from "../../../../../../../lib/kofia-collection-runner.ts";
 import { visibleProject } from "../../../../../../../lib/project-visibility.ts";
@@ -24,7 +31,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (!visibleProject(auth.auth, id, { includeClosed: true, includeDeleted: true })) return notFound();
-  return ok({ project_id: id, enabled: kofiaCollectEnabled(), run: latestKofiaCollectionRun(getDb()) });
+  const db = getDb();
+  return ok({
+    project_id: id,
+    enabled: kofiaCollectEnabled(),
+    run: latestKofiaCollectionRun(db),
+    status: kofiaCollectStatus(db),
+  });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +52,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const db = getDb();
   const started = startKofiaCollection(db, { projectId: id, actor: auth.auth.userId });
   switch (started.kind) {
+    case "up_to_date":
+      return ok({
+        project_id: id,
+        status: "up_to_date",
+        run_id: null,
+        latest_date: started.latestDate,
+        expected_date: started.expectedDate,
+      });
     case "disabled":
       return fail(
         503,

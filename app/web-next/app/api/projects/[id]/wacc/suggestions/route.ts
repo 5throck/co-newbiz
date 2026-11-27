@@ -26,15 +26,17 @@
 // (implied cost of debt vs the market Kd; warns, never changes the number) and `issuance_evidence` (recent bond coupons).
 // Slice 4: with a stored KOFIA grade yield of the rating's own grade (AAA..BBB-) the spread basis is `kofia_grade` (the grade's 3y
 // yield minus the same-date KOFIA KTB 3y; `kofia` carries date, series and source URL), outranking the ECOS bases unless the
-// ECOS data is of a newer month. Stored observations are always read; `data.kofia_collect.enabled` only says whether the
-// automated collection (POST .../wacc/kofia/collect, env CO_NEWBIZ_KOFIA_COLLECT=on, default off) may run. The FSC bond
+// ECOS data is of a newer month. Stored observations are always read - this GET never fetches KOFIA data: the scheduled job
+// collect.kofia (and the manual button) fill the store. `data.kofia_collect` = {enabled, latest_date, expected_date, up_to_date,
+// next_run}: whether the automated collection (POST .../wacc/kofia/collect, env CO_NEWBIZ_KOFIA_COLLECT=on, default
+// off) may run, and the stored-data status the panel shows. The FSC bond
 // cross-check is NOT part of this payload (GET .../wacc/bond-evidence, reference only, never applied).
 // Kd >= Ke needs the form's beta, so only the indicative Kd is
 // returned here (credit_spread.kd_indicative_pct); the confirmation POST reports the kd_ge_ke warning.
 import { getDb } from "../../../../../../../../db/client.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { badRequest, notFound, ok } from "../../../../../../lib/envelope.ts";
-import { kofiaCollectEnabled } from "../../../../../../lib/kofia-collector.ts";
+import { kofiaCollectStatus } from "../../../../../../lib/kofia-collect-status.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
 import { listProjectAnalysisTargets } from "../../../../../../../../db/lib/wacc.ts";
 import { computeWaccReference, type ReferenceEntry } from "../../../../../../../../db/lib/wacc-reference.ts";
@@ -169,7 +171,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       erp_alternatives: erpOffer.erp_alternatives,
       apply_all_excluded: applyAllExcluded,
       missing,
-      kofia_collect: { enabled: kofiaCollectEnabled() },
+      kofia_collect: kofiaCollectStatus(db),
     },
     200,
     { suggestion_count: suggestions.filter((s) => s.value !== null).length },

@@ -4,6 +4,9 @@
 // 202; GET returns the latest run). Starts a run, polls GET until it leaves "running", and resumes an
 // already-running run on mount. Shared by the WACC beta panel (KRX) and the WACC reference section (ECOS).
 //
+// A start answered 200 {status: "up_to_date", latest_date} (read-mostly collect endpoints, e.g. KOFIA) fetched nothing: the hook
+// stays idle and exposes `upToDate` (the latest stored date) instead of polling.
+//
 // `onFinished` is called once per observed run completion (success or failure) so the caller can reload
 // whatever the run feeds; it always sees the latest callback (ref), so closures over fresh state are safe.
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -21,6 +24,8 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
   const [startError, setStartError] = useState<string | null>(null);
   /** Envelope error code of a rejected start (e.g. "no_subject_company"); null when accepted or not an ApiError. */
   const [startErrorCode, setStartErrorCode] = useState<string | null>(null);
+  /** Latest stored date when the last start was answered "up to date" (nothing was fetched); null otherwise. */
+  const [upToDate, setUpToDate] = useState<string | null>(null);
   const alive = useRef(true);
   const polling = useRef(false);
   const finishedRef = useRef(onFinished);
@@ -58,6 +63,7 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
     setRun(null);
     setStartError(null);
     setStartErrorCode(null);
+    setUpToDate(null);
     void (async () => {
       try {
         const latest = parseBetaCollectRun((await api.get<unknown>(url)).data);
@@ -78,9 +84,15 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
     setPhase("starting");
     setStartError(null);
     setStartErrorCode(null);
+    setUpToDate(null);
     setRun(null);
     try {
-      await api.post(url);
+      const res = await api.post<{ status?: string; latest_date?: string }>(url);
+      if (res.data?.status === "up_to_date") {
+        setUpToDate(res.data.latest_date ?? "");
+        setPhase("idle");
+        return;
+      }
       setPhase("running");
     } catch (err) {
       if (err instanceof ApiError && err.code === "already_running") {
@@ -95,5 +107,5 @@ export function useCollectRun(url: string, onFinished?: (run: BetaCollectRun) =>
     await poll();
   }, [url, poll]);
 
-  return { phase, run, startError, startErrorCode, start, busy: phase === "starting" || phase === "running" };
+  return { phase, run, startError, startErrorCode, upToDate, start, busy: phase === "starting" || phase === "running" };
 }

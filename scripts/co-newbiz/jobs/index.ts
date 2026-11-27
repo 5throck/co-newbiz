@@ -1,4 +1,6 @@
-// @version 1.2.0
+// @version 1.3.0
+// 1.3.0: collect.kofia (ADR-0208 slice 4) - a dedicated handler (the KOFIA collector is deliberately not a SOURCE_ADAPTERS entry);
+// weekday 18:45 KST, gated by CO_NEWBIZ_KOFIA_COLLECT (off: the run ends skipped).
 // 1.2.0: ADR-0189 phase P6 — retention.cleanup registers here, which makes schedule-seed create its
 // schedule_job row disabled (D3) with cron 0 3 * * *, timeout 30 min, max_retries 0.
 // 1.1.0: ADR-0189 phase P5 — the five collect.* handlers register here, which makes schedule-seed create their
@@ -13,6 +15,7 @@ import { notifyDeliver } from "./notify-deliver.ts";
 import { notifyDigest } from "./notify-digest.ts";
 import { collectDart } from "./collect/dart.ts";
 import { collectEcos } from "./collect/ecos.ts";
+import { collectKofia } from "./collect/kofia.ts";
 import { collectKrx } from "./collect/krx.ts";
 import { collectKosis } from "./collect/kosis.ts";
 import { collectLaw } from "./collect/law.ts";
@@ -41,6 +44,7 @@ registerJobHandler(notifyDeliver);
 registerJobHandler(notifyDigest);
 registerJobHandler(collectDart);
 registerJobHandler(collectEcos);
+registerJobHandler(collectKofia);
 registerJobHandler(collectKrx);
 registerJobHandler(collectKosis);
 registerJobHandler(collectLaw);

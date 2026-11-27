@@ -133,6 +133,18 @@ export function kofiaCollectNeeded(credit: ReferenceSuggestion | undefined): boo
   return credit?.key === "credit_spread" && !credit.kofia_latest_date;
 }
 
+/** `data.kofia_collect` of the suggestions payload (server: kofia-collect-status.ts; stored data and the schedule row only). */
+export interface KofiaCollectInfo {
+  enabled: boolean;
+  /** Latest stored KOFIA day (YYYY-MM-DD) or null. */
+  latest_date?: string | null;
+  expected_date?: string;
+  /** Nothing to fetch now: the manual collect answers "up to date" without a network call. */
+  up_to_date?: boolean;
+  /** The scheduled job collect.kofia: next fire (`at`, ISO UTC) when enabled; `cron` is the KST expression. */
+  next_run?: { state: "scheduled" | "disabled" | "not_registered"; at: string | null; cron: string | null };
+}
+
 export type KofiaStatus =
   | { kind: "not_collected" }
   /** Collected up to `date`; `used` is true when the spread in use is built from it. */

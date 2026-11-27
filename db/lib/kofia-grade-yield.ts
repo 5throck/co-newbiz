@@ -1,4 +1,6 @@
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0 (ADR-0208 slice 4, scheduled collection): collect.kofia job key, the business-day helpers (expected latest
+// published day, backfill window) and kofiaFreshness (what the manual collect button reads to answer "already up to date").
 /**
  * KOFIA grade-by-rating corporate bond yields (ADR-0208 slice 4, design 2026-11-26-wacc-credit-rating-spread-design
  * sections 4.1 and 17.5). PURE parser plus read helpers over the existing market-observation storage
@@ -30,6 +32,17 @@ export const KOFIA_SOURCE_LABEL = "금융투자협회 채권정보센터 채권�
 export const KOFIA_PARSER_VERSION = "kofia-1";
 /** Env switch: automated collection runs only when this is exactly "on" (default off, ADR-0208 slice 4). */
 export const KOFIA_COLLECT_ENV = "CO_NEWBIZ_KOFIA_COLLECT";
+/** Scheduler job key of the scheduled collection (scripts/co-newbiz/jobs/collect/kofia.ts). */
+export const KOFIA_JOB_KEY = "collect.kofia";
+/** Run key of the manual (button) collection in job_run; the freshness check reads both. */
+export const KOFIA_MANUAL_JOB_KEY = "wacc-kofia.collect";
+/** How many calendar days back a scheduled run looks for business days that are still missing (not stored). */
+export const KOFIA_BACKFILL_DAYS = 10;
+/**
+ * The day D's yields are assumed to be published from D 18:30 KST (the scheduled run is 18:45 KST; KOFIA states no
+ * time, so this is an assumption). A later publication is picked up by the next run, whose backfill covers the gap.
+ */
+export const KOFIA_PUBLISH_MINUTE_KST = 18 * 60 + 30;
 /** The tenor of the stored series (column attrCd 0300). */
 export const KOFIA_TENOR = "3y";
 const TENOR_ATTR_CODE = "0300";
@@ -298,4 +311,94 @@ export function latestKofiaDate(db: Database): string | null {
     )
     .get(KOFIA_KTB_SERIES_ID) as { d: string | null } | undefined;
   return row?.d ?? null;
+}
+
+// ── Business days and freshness (what is "already up to date") ──────────────
+
+const KST_OFFSET_MS = 9 * 3_600_000;
+const DAY_MS = 86_400_000;
+const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+const dayMs = (date: string) => Date.parse(`${date}T00:00:00Z`);
+const isWeekend = (ms: number) => [0, 6].includes(new Date(ms).getUTCDay());
+
+/** The instant (UTC) from which the yields of `date` (YYYY-MM-DD, a KST calendar day) are assumed to be published. */
+export function kofiaPublishMoment(date: string): Date {
+  return new Date(dayMs(date) + KOFIA_PUBLISH_MINUTE_KST * 60_000 - KST_OFFSET_MS);
+}
+
+/**
+ * The most recent weekday whose publication moment has passed at `now`: what a complete store would hold. Public
+ * holidays are not modelled (a holiday never gets data); kofiaFreshness covers that through the last successful check.
+ */
+export function kofiaExpectedLatestDate(now: Date): string {
+  const kst = now.getTime() + KST_OFFSET_MS;
+  let day = Math.floor(kst / DAY_MS) * DAY_MS;
+  if (kst - day < KOFIA_PUBLISH_MINUTE_KST * 60_000) day -= DAY_MS;
+  while (isWeekend(day)) day -= DAY_MS;
+  return ymd(day);
+}
+
+/**
+ * Weekdays (YYYY-MM-DD, ascending) strictly after `storedThrough` (null: none stored) and strictly before `latest`, no more
+ * than `maxBackDays` calendar days before `latest` (inclusive): the days a scheduled run still has to fetch besides the latest one.
+ * Gaps older than the latest stored day are not chased (they would include holidays that never get data).
+ */
+export function kofiaMissingBusinessDays(storedThrough: string | null, latest: string, maxBackDays: number): string[] {
+  const from = Math.max(
+    dayMs(latest) - maxBackDays * DAY_MS,
+    storedThrough ? dayMs(storedThrough) + DAY_MS : -Infinity,
+  );
+  const out: string[] = [];
+  for (let t = dayMs(latest) - DAY_MS; t >= from; t -= DAY_MS) if (!isWeekend(t)) out.push(ymd(t));
+  return out.reverse();
+}
+
+/** True when the KTB 3y of `date` is stored (a day is stored atomically: KTB and grades are written in one transaction). */
+export function isKofiaDayStored(db: Database, date: string): boolean {
+  const row = db
+    .query(
+      `SELECT 1 AS x FROM fact_market_observation o JOIN md_period p ON p.id = o.period_id AND p.period_type = 'date'
+       WHERE o.series_id = ? AND p.start_date = ? LIMIT 1`,
+    )
+    .get(KOFIA_KTB_SERIES_ID, date);
+  return !!row;
+}
+
+export interface KofiaFreshness {
+  /** Latest stored KOFIA day (YYYY-MM-DD) or null when nothing was collected. */
+  latestStoredDate: string | null;
+  /** The weekday a complete store would hold at `now`. */
+  expectedDate: string;
+  /** No fetch is needed: the expected day is stored, or a check after its publication found nothing newer. */
+  upToDate: boolean;
+}
+
+/**
+ * Whether the store is current, from stored data only (no network). Up to date when the latest stored day reaches the
+ * expected day, or when a SUCCESSFUL run (scheduled or manual) finished after the expected day's publication moment
+ * and saw the service's latest day equal to the latest stored one (a public holiday: nothing newer exists).
+ */
+export function kofiaFreshness(db: Database, now: Date): KofiaFreshness {
+  const latestStoredDate = latestKofiaDate(db);
+  const expectedDate = kofiaExpectedLatestDate(now);
+  if (!latestStoredDate) return { latestStoredDate, expectedDate, upToDate: false };
+  if (latestStoredDate >= expectedDate) return { latestStoredDate, expectedDate, upToDate: true };
+  const since = kofiaPublishMoment(expectedDate).toISOString();
+  const rows = db
+    .query(
+      `SELECT detail_json FROM job_run
+       WHERE job_key IN (?, ?) AND status = 'success' AND finished_at >= ? ORDER BY finished_at DESC LIMIT 5`,
+    )
+    .all(KOFIA_JOB_KEY, KOFIA_MANUAL_JOB_KEY, since) as Array<{ detail_json: string | null }>;
+  const confirmed = rows.some((r) => {
+    try {
+      return (
+        (JSON.parse(r.detail_json ?? "null") as { max_published_date?: string } | null)?.max_published_date ===
+        latestStoredDate
+      );
+    } catch {
+      return false;
+    }
+  });
+  return { latestStoredDate, expectedDate, upToDate: confirmed };
 }

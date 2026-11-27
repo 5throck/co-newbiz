@@ -1,10 +1,11 @@
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0: JobContext.trigger (collect.kofia treats a manual run-now as a re-collect of the latest day).
 /**
  * Scheduler job handler contract (ADR-0189, design section 2.2). A handler is a registered, named unit of work with
  * structural results - there is NO free-text command anywhere in the scheduler (an admin console that could name a
  * command would be remote code execution).
  */
-import type { SchedulerEnv } from "../scheduler-core.ts";
+import type { RunTrigger, SchedulerEnv } from "../scheduler-core.ts";
 import type { CatchupPolicy } from "../scheduler-core.ts";
 
 export interface JobContext {
@@ -12,6 +13,8 @@ export interface JobContext {
   db: any;
   now: Date;
   env: SchedulerEnv;
+  /** how this run was started (schedule | catchup | manual run-now); optional so existing callers and tests need no change */
+  trigger?: RunTrigger;
   /** aborted when the timeout elapses; long handlers should check it between units of work */
   signal: AbortSignal;
   /** directory for generated report files (handlers must not assume the repo layout) */

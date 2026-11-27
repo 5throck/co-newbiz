@@ -184,6 +184,31 @@ only and accepts no liability; nothing is said about automation or redistributio
 - **Stored data is always read**, whatever the switch says: turning the switch off stops fetching, it does not hide what was
   collected. To stop using KOFIA data entirely, delete nothing: ask for a decision (ADR) first.
 
+**Scheduled collection (the data path) and the manual button (a fallback).** The suggestions never fetch: `GET .../wacc/suggestions`
+reads the stored observations only (and the status below from the stored data and the schedule row). The store is kept
+current by the scheduler job **`collect.kofia`** (ADR-0019/ADR-0189, `docs/runbooks/scheduler.md`), default **weekday 18:45
+KST** (15 minutes after `collect.krx`; KOFIA states no publication time, so a day's yields are assumed published from 18:30 KST
+and a later publication is picked up the next day). Edit the cron on the admin schedule page if needed (no OS re-registration).
+
+- Same gate: with `CO_NEWBIZ_KOFIA_COLLECT` not `on`, the job run ends **skipped** (`kofia_collect_off` in `job_run.detail_json`),
+  with no network call. The job is a dedicated handler; the collector is deliberately **not** a `SOURCE_ADAPTERS` entry, so the
+  generic `fetch` / `md:sync` / `collect.*` paths can never reach KOFIA.
+- Each run asks for the service's latest published day (1 POST); if that day is stored it stops there (a holiday weekday costs
+  one POST), otherwise it fetches and stores it (3 POSTs) and then backfills the business days still missing after the latest
+  stored day, within the last 10 calendar days (2 POSTs per day, newest first; a day with no rows, i.e. a public holiday, is
+  skipped; a failed backfill day is listed in the run detail and ends the backfill but never fails the run). A day is stored in
+  one transaction, so a day is either complete or absent. The run detail carries `max_published_date`, `days_stored`,
+  `days_already_stored`, `backfill_no_data`, `backfill_failed`. A layout change fails the run (terminal, a `batch_failure`
+  notification); a 5xx/timeout is retried (max 2).
+- **The manual button never fetches needlessly.** While the stored data is up to date (the latest stored day reaches the most recent
+  weekday whose 18:30 KST publication has passed, or a successful check after that moment saw nothing newer, which settles
+  public holidays) a click answers `200 up_to_date` ("already up to date", latest day shown): no network call, no run, no audit
+  row. When the data is stale any analyst's click collects the latest day (no backfill). There is no force flag on the project
+  route: admins cannot reach project routes (FR-SEC-03). An admin forces a re-collect with **Run now** of `collect.kofia` on the
+  admin schedule page (a manual run fetches the latest day again; unchanged values write nothing, changed values become a revision).
+- The panel row shows the latest stored day, whether the grade yield is used for this spread, and the **next scheduled run**
+  (KST) - or that the job is switched off / not registered yet.
+
 What is known and what is not (verified 2026-11-27, by reading the page's own client file and one probe each of three calls;
 no login): the page calls one undocumented XML service (`POST https://www.kofiabond.or.kr/proframeWeb/XMLSERVICES/`, app
 `BIS-KOFIABOND`, service `BISBndSrtPrcSrchSO`, functions `getExistMaxDate`, `getHeadList`, `selectDay`) and the answers

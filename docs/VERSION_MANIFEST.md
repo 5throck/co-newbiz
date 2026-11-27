@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-27T00:39:57.492Z
+**Generated**: 2026-11-27T00:54:54.970Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 219 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 220 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -300,9 +300,10 @@
 | i18n-lint.ts | 1.2.0 | scripts/co-newbiz/i18n-lint.ts | fs, path |
 | import-base-rates.ts | 1.0.0 | scripts/co-newbiz/import-base-rates.ts | fs |
 | import-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/import-benchmark-cases.ts | fs |
-| index.ts | 1.2.0 | scripts/co-newbiz/jobs/index.ts | N/A |
+| index.ts | 1.3.0 | scripts/co-newbiz/jobs/index.ts | N/A |
 | inventory.ts | 1.0.0 | scripts/eval/inventory.ts | fs, js-yaml, path, zod |
 | job-worker.ts | 1.0.0 | scripts/co-newbiz/job-worker.ts | N/A |
+| kofia.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/kofia.ts | N/A |
 | korean.ts | 1.0.0 | scripts/humanize/tests/fixtures/korean.ts | N/A |
 | kosis-units.ts | 1.0.2 | scripts/co-newbiz/kosis-units.ts | N/A |
 | kosis.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/kosis.ts | N/A |
@@ -344,7 +345,7 @@
 | retry-handler.ts | 1.1.0 | scripts/retry-handler.ts | path |
 | route-audit-scan.ts | 1.0.0 | scripts/co-newbiz/route-audit-scan.ts | fs, path |
 | route-audit-scan.ts | 1.0.1 | scripts/route-audit-scan.ts | fs, path |
-| run-job.ts | 1.0.0 | scripts/co-newbiz/run-job.ts | path |
+| run-job.ts | 1.1.0 | scripts/co-newbiz/run-job.ts | path |
 | run.ts | 1.1.0 | scripts/eval/run.ts | child_process, fs, path |
 | runbook-validate.ts | 1.0.0 | scripts/co-newbiz/runbook-validate.ts | fs, js-yaml, path |
 | scaffold-handbook.ts | 1.3.1 | scripts/handbook/scaffold-handbook.ts | fs, path |
@@ -380,7 +381,7 @@
 | translate-readme.ts | 1.0.0 | scripts/translate-readme.ts | bun, crypto, fs, path, url |
 | typecheck-baseline.ts | 1.0.0 | scripts/typecheck-baseline.ts | fs, path |
 | typecheck.ts | 1.2.0 | scripts/typecheck.ts | fs, path |
-| types.ts | 1.0.0 | scripts/co-newbiz/jobs/types.ts | N/A |
+| types.ts | 1.1.0 | scripts/co-newbiz/jobs/types.ts | N/A |
 | types.ts | 1.1.0 | scripts/eval/types.ts | N/A |
 | update-footers.ts | 1.1.0 | scripts/handbook/update-footers.ts | fs, path |
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | fs |
