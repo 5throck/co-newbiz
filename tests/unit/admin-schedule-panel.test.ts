@@ -1,4 +1,4 @@
-// @version 2.2.0
+// @version 2.3.0
 /**
  * /admin/schedule screen (docs/designs/2026-10-29-scheduled-jobs-design §4.3 list-and-edit +
  * the P7 remainder §4.2/§4.1) — frontend source-reading tests in the connected-apps-page.test.ts
@@ -24,6 +24,9 @@
  * v2.2.0 (§4.4 structured cron picker): the shared-field pin gains the jobKey prop both
  * dialogs now pass (the 매분·매분 option is floor-exempt per job). The §4.4 picker invariants
  * themselves live in schedule-cron-picker.test.ts.
+ * v2.3.0 (2026-11 user defect 1 — too-narrow job column): the 작업 column pins gain the 40%
+ * share and the full-wrap rule (no line-clamp on the job cell) so name + key + description
+ * always read in full; the freed 6% goes to the cron column, whose prose preview wraps safely.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -106,6 +109,25 @@ describe("schedule list columns (§4.3)", () => {
     const widths = m![1].split(",").map((x) => Number(x.trim()));
     expect(widths).toHaveLength(6); // 작업 / 스케줄 / 상태 / 다음 실행 / 최근 실행 / 작업
     expect(widths.reduce((a, b) => a + b, 0)).toBe(100);
+  });
+
+  test("작업 column: widest share, one-line name·key·description, no line-clamp (2026-11 defect 1 + follow-up)", () => {
+    // The job cell renders name + mono key + description INLINE on one line (2026-11
+    // follow-up: "작업열을 더 크게, 한 줄로"); a 3-line clamp previously truncated the
+    // description. The column keeps the widest share (46%) and each fragment keeps
+    // whitespace-nowrap so a fragment never breaks mid-text — narrow widths wrap whole
+    // fragments instead.
+    const m = PANEL.match(/const SCHEDULE_COL_PCT = \[([^\]]+)\]/);
+    expect(m).toBeTruthy();
+    const widths = m![1].split(",").map((x) => Number(x.trim()));
+    expect(widths[0]).toBe(46); // 작업 col — the widest text in the table
+    expect(widths[0]).toBeGreaterThan(widths[1]); // strictly wider than the 스케줄 column
+    expect(PANEL).not.toContain("cell-clamp-3");
+    expect(PANEL).toMatch(/whitespace-nowrap font-semibold/); // name fragment never breaks mid-text
+    expect(PANEL).toMatch(/whitespace-nowrap font-mono/); // key fragment ditto
+    // The job cell is one inline line. Exactly two <br />s remain, both in OTHER columns by
+    // design: the cron column (preview over raw cron) and 다음 실행 (datetime over relative time).
+    expect(PANEL.split("<br />").length - 1).toBe(2);
   });
 
   test("작업 column: catalog jobName first, DB display_name fallback, raw key in mono, description line", () => {

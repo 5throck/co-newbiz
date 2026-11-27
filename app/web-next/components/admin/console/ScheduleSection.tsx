@@ -23,8 +23,9 @@ import {
 import { ScheduleRunsDialog } from "./ScheduleRunsDialog.tsx";
 import { ListSearch, Pager, matchesQuery, useAdminLabel, usePaged } from "./admin-ui.tsx";
 
-// 스케줄 작업 6열 — 작업(이름·키·설명 3줄)과 스케줄(미리보기+raw cron)이 긴 텍스트라 고정 비율 유지.
-const SCHEDULE_COL_PCT = [34, 22, 10, 11, 13, 10] as const;
+// 스케줄 작업 6열 — 작업(이름·키·설명)이 가장 긴 텍스트라 40%로 넓히고, 스케줄(미리보기+raw cron)은
+// 16%로 줄여도 미리보기는 문장이라 줄바꿈된다(2026-11 사용자 결함 보고 1: 작업 열 협소 수정).
+const SCHEDULE_COL_PCT = [46, 13, 10, 10, 11, 10] as const;
 const SCHEDULE_PAGE_SIZE = 15;
 
 export function SchedulePanel({ ctx }: { ctx: AdminConsoleState }) {
@@ -157,19 +158,18 @@ function ScheduleScreen({ ctx }: { ctx: AdminConsoleState }) {
                       const rel = j.next_run_at ? relIn(j.next_run_at) : null;
                       return (
                         <tr key={j.id}>
-                          <td className="cell-clamp-3">
-                            {name}
-                            <br />
-                            <span className="font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                          {/* 한 줄 행 — 이름·키·설명을 한 줄에 나란히 적는다(2026-11 사용자 후속 요청:
+                              작업 열을 더 넓히고 한 줄로). 좁은 폭에서는 각 조각이 자연 줄바꿈된다. */}
+                          <td>
+                            <span className="whitespace-nowrap font-semibold mr-3">{name}</span>
+                            <span className="whitespace-nowrap font-mono text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mr-3">
                               {j.job_key}
                             </span>
                             {desc && (
-                              <>
-                                <br />
-                                <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
-                                  {desc}
-                                </span>
-                              </>
+                              <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">
+                                {" · "}
+                                {desc}
+                              </span>
                             )}
                           </td>
                           <td>

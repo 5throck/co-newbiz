@@ -1352,6 +1352,22 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+  /api/admin/project-options:
+    get:
+      operationId: listAdminProjectOptions
+      summary: >-
+        Project picker options (id, project_no, project_name) for the watch create dialog —
+        ?q= matches project_no or project_name (LIKE), deleted projects are excluded, capped
+        at 20 rows ordered by project_no. Admin role; read-only.
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/watches:
     get:
       operationId: adminListWatches

@@ -1,5 +1,8 @@
-// @version 1.0.0
+// @version 1.2.0
 /**
+ * v1.2.0 (2026-11 coverage-gate file-length split): the watch create dialog moved to
+ * WatchCreateDialog.tsx (ScheduleCreateDialog.tsx precedent); create-dialog assertions read
+ * CREATE — invariant strength unchanged.
  * /admin/notifications — watch management panel (design 2026-10-29-scheduled-jobs-design
  * §13.6, P4) — frontend source-reading tests in the admin-schedule-panel.test.ts pattern.
  *
@@ -12,11 +15,16 @@
  * days unit hints, cooldown 1–720, channel set, enabled on edit only, per-field
  * error.details.fields rendering), and the zero-write preview (form draft AND per-rule
  * entry points, status trio + masked recipients + the "no data written" caption).
+ * v1.1.0 (2026-11 user defect 2 — truncated project column): the 프로젝트 column pins a 28%
+ * share and a no-truncate project cell — project_no is the only project naming the admin
+ * console may show (FR-SEC-02), so it must read in full; the freed width comes from the
+ * 사용자·규칙 columns.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const SECTION = readFileSync("app/web-next/components/admin/console/WatchesSection.tsx", "utf8");
+const CREATE = readFileSync("app/web-next/components/admin/console/WatchCreateDialog.tsx", "utf8");
 const DIALOG = readFileSync("app/web-next/components/admin/console/WatchRulesDialog.tsx", "utf8");
 const FORM = readFileSync("app/web-next/components/admin/console/WatchRuleForm.tsx", "utf8");
 const TYPES = readFileSync("app/web-next/components/admin/console/types.ts", "utf8");
@@ -27,13 +35,23 @@ import ko from "../../app/web-next/locales/ko.json";
 import en from "../../app/web-next/locales/en.json";
 
 function koOf(key: string): string {
-  const v = key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), ko);
+  const v = key
+    .split(".")
+    .reduce<unknown>(
+      (acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
+      ko,
+    );
   if (typeof v !== "string") throw new Error(`ko catalog key not found: ${key}`);
   return v;
 }
 
 function has(key: string): boolean {
-  const v = key.split(".").reduce<unknown>((acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined), en);
+  const v = key
+    .split(".")
+    .reduce<unknown>(
+      (acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
+      en,
+    );
   return typeof v === "string";
 }
 
@@ -48,39 +66,68 @@ describe("§13.6 watches table", () => {
     expect(widths.reduce((a, b) => a + b, 0)).toBe(100);
   });
 
+  test("프로젝트 column reads in full: 28% share and a no-truncate project cell (2026-11 defect 2)", () => {
+    // project_no is the only project identity the admin payload carries (FR-SEC-02); the
+    // former 24% share + cell-truncate clipped it. A missing project_no (rare UUID fallback)
+    // wraps inside the cell instead (table-fixed-pct td has overflow-wrap: anywhere).
+    const m = SECTION.match(/const WATCHES_COL_PCT = \[([^\]]+)\]/);
+    expect(m).toBeTruthy();
+    const widths = m![1].split(",").map((x) => Number(x.trim()));
+    expect(widths[0]).toBe(28); // 프로젝트 col
+    const squash = (s: string) => s.replace(/\s+/g, " ");
+    expect(squash(SECTION)).toContain("<td> {w.project ? ("); // bare td — no cell-truncate
+    expect(SECTION).not.toMatch(/className="cell-truncate">\s*\{?w\.project/);
+  });
+
   test("enabled state is the server-DERIVED field — no enabled column invented client-side", () => {
     expect(TYPES).toMatch(/`enabled` is DERIVED \(enabled_rule_count > 0; no watch\.enabled column\)/);
     expect(SECTION).toMatch(/\{w\.enabled \? \(/);
     expect(SECTION).not.toMatch(/w\.enabled =/); // never written client-side
-    expect(SECTION).toMatch(/api\.patch\(`\/api\/admin\/watches\/\$\{encodeURIComponent\(watch\.id\)\}`, \{ enabled: next \}\)/);
+    expect(SECTION).toMatch(
+      /api\.patch\(`\/api\/admin\/watches\/\$\{encodeURIComponent\(watch\.id\)\}`, \{ enabled: next \}\)/,
+    );
   });
 
   test("RowMenu carries 규칙 관리 / 사용·중지 / 삭제; the delete is danger-flagged", () => {
     expect(SECTION).toMatch(/<RowMenu/);
     expect(SECTION).toMatch(/\{ key: "rules", label: t\("rulesManage"\)/);
-    expect(SECTION).toMatch(/\{ key: "disable", label: t\("disable"\)/);
-    expect(SECTION).toMatch(/\{ key: "enable", label: t\("enable"\)/);
-    expect(SECTION).toMatch(/\{ key: "delete", label: t\("deleteWatch"\), danger: true, separatorBefore: true/);
+    expect(SECTION).toMatch(/\{\s*key: "disable",\s+label: t\("disable"\)/);
+    expect(SECTION).toMatch(/\{\s*key: "enable",\s+label: t\("enable"\)/);
+    expect(SECTION).toMatch(/\{\s*key: "delete",\s+label: t\("deleteWatch"\),\s*danger: true,\s*separatorBefore: true/);
   });
 
   test("delete is the §13.6 soft delete with the ConfirmDialog warning copy", () => {
-    expect(SECTION).toMatch(/api\.delete\(`\/api\/admin\/watches\/\$\{encodeURIComponent\(watch\.id\)\}`\)/);
+    expect(SECTION).toMatch(/\.delete\(`\/api\/admin\/watches\/\$\{encodeURIComponent\(watch\.id\)\}`\)/);
     expect(koOf("admin.watches.deleteConfirmBody")).toContain("모든 규칙이 비활성화됩니다");
     expect(koOf("admin.watches.deleteConfirmBody")).toContain("소프트 삭제");
     expect(SECTION).toMatch(/useConfirm\(\)/);
-    expect(SECTION).toMatch(/confirm\(t\("deleteConfirmTitle"\)/);
+    expect(SECTION).toMatch(/confirm\(\s*t\("deleteConfirmTitle"\)/);
     expect(has("admin.watches.deleteConfirmBody")).toBe(true);
   });
 
-  test("create dialog: project named by ID (admin visibility precedent) + active-user picker", () => {
-    expect(SECTION).toMatch(/api\.post\("\/api\/admin\/watches", \{ project_id: projectId\.trim\(\), user_id: userId\.trim\(\) \}\)/);
-    expect(SECTION).toMatch(/api\.get<AdminUser\[\]>\("\/api\/admin\/users"\)/);
-    expect(SECTION).toMatch(/u\.status === "active"/);
-    expect(koOf("admin.watches.createProjectHint")).toContain("프로젝트 ID로 지정");
+  test("create dialog: project picked by name/number search (2026-11-27 user request) + active-user picker", () => {
+    expect(CREATE).toMatch(
+      /api\.post\("\/api\/admin\/watches", \{ project_id: projectId\.trim\(\), user_id: userId\.trim\(\) \}\)/,
+    );
+    expect(CREATE).toMatch(/\.get<AdminUser\[\]>\(\s*"\/api\/admin\/users"\s*\)/);
+    expect(CREATE).toMatch(/u\.status === "active"/);
+    // Project search — /api/admin/project-options, debounced, matches number or name.
+    expect(CREATE).toMatch(/\/api\/admin\/project-options\?q=/);
+    const ROUTE = readFileSync(
+      new URL("../../app/web-next/app/api/admin/project-options/route.ts", import.meta.url),
+      "utf8",
+    );
+    expect(ROUTE).toMatch(/project_no LIKE \? OR project_name LIKE \?/); // route searches both
+    expect(ROUTE).toMatch(/requireAdmin/); // admin-only, like /api/admin/users
+    expect(CREATE).toMatch(
+      /setProjectLabel\(p\.project_name \? `\$\{p\.project_no\} · \$\{p\.project_name\}` : p\.project_no\)/,
+    );
+    expect(koOf("admin.watches.createProjectHint")).toContain("이름으로 검색");
+    expect(has("admin.watches.createProjectNoMatch")).toBe(true);
   });
 
   test("409 watch_exists renders its own inline message", () => {
-    expect(SECTION).toMatch(/err\.code === "watch_exists"/);
+    expect(CREATE).toMatch(/err\.code === "watch_exists"/);
     expect(koOf("admin.watches.createExists")).toContain("이미");
     expect(has("admin.watches.createExists")).toBe(true);
   });
@@ -100,7 +147,9 @@ describe("§13.6 rules dialog", () => {
   });
 
   test("threshold renders with the trigger's unit (%p for threshold_breach, days for staleness)", () => {
-    expect(DIALOG).toMatch(/r\.trigger_type === "staleness" \? t\("thresholdDays", \{ n: r\.threshold \}\) : t\("thresholdPct", \{ n: r\.threshold \}\)/);
+    expect(DIALOG).toMatch(
+      /r\.trigger_type === "staleness" \? t\("thresholdDays", \{ n: r\.threshold \}\) : t\("thresholdPct", \{ n: r\.threshold \}\)/,
+    );
     expect(koOf("admin.watches.thresholdPct")).toBe("{n}%p");
     expect(koOf("admin.watches.thresholdDays")).toBe("{n}일");
   });
@@ -113,7 +162,9 @@ describe("§13.6 rules dialog", () => {
 
 describe("§13.6 rule form (server-authoritative validation matrix)", () => {
   test("trigger select is the watch_rule CHECK's 7-value set — not the notification table's 11", () => {
-    expect(FORM).toMatch(/"rag_upgrade", "rag_downgrade", "kill_criteria", "regulation_change", "threshold_breach", "staleness", "batch_failure"/);
+    expect(FORM).toMatch(
+      /"rag_upgrade", "rag_downgrade", "kill_criteria", "regulation_change", "threshold_breach", "staleness", "batch_failure"/,
+    );
     expect(FORM).not.toMatch(/pipeline_paused/);
     expect(FORM).not.toMatch(/establishment_step_reopened/);
   });
@@ -163,13 +214,17 @@ describe("§13.6 rule form (server-authoritative validation matrix)", () => {
 
 describe("§13.6 preview (zero-write evaluation)", () => {
   test("POST /api/admin/watch-rules/preview with the watch-scoped draft; both entry points wired", () => {
-    expect(DIALOG).toMatch(/api\.post<WatchRulePreview>\("\/api\/admin\/watch-rules\/preview", \{ watch_id: watch\.id, \.\.\.draft \}\)/);
+    expect(DIALOG).toMatch(
+      /api\.post<WatchRulePreview>\("\/api\/admin\/watch-rules\/preview", \{ watch_id: watch\.id, \.\.\.draft \}\)/,
+    );
     // entry point 1: the form's 미리보기 button (unsaved draft)
     expect(FORM).toMatch(/function runPreview\(\)/);
     expect(FORM).toMatch(/onPreview\(draft\)/);
     // entry point 2: the per-rule preview RowMenu action (saved rule values)
     expect(DIALOG).toMatch(/key: "preview",\s*\n?\s*label: t\("rulePreview"\)/);
-    expect(DIALOG).toMatch(/runPreview\(\{ trigger_type: r\.trigger_type, threshold: r\.threshold, cooldown_hours: r\.cooldown_hours, channel: r\.channel \}\)/);
+    expect(DIALOG).toMatch(
+      /runPreview\(\{ trigger_type: r\.trigger_type, threshold: r\.threshold, cooldown_hours: r\.cooldown_hours, channel: r\.channel \}\)/,
+    );
   });
 
   test("results panel: evaluated / would_fire / suppressed trio + reason + expected severity", () => {
@@ -208,7 +263,7 @@ describe("list envelope typing (P4 QA S-1 — the {rows} runtime-crash guard)", 
     // pass caught. The shared RowList type makes the .rows access compiler-enforced;
     // this pin keeps a revert from passing the suite again.
     expect(API_LIB).toMatch(/export interface RowList<T> \{\n  rows: T\[\];\n\}/);
-    expect(SECTION).toMatch(/api\.get<RowList<WatchListRow>>\("\/api\/admin\/watches"\)/);
+    expect(SECTION).toMatch(/\.get<RowList<WatchListRow>>\(\s*"\/api\/admin\/watches"\s*\)/);
     expect(SECTION).toContain("setWatches(res.data.rows);");
     expect(DIALOG).toMatch(/api\.get<RowList<WatchRuleRow>>\(`\/api\/admin\/watches/);
     expect(DIALOG).toContain("setRules(res.data.rows);");
@@ -223,7 +278,19 @@ describe("catalog (ko master + en parity)", () => {
     expect(koOf("admin.watches.stateEnabled")).toBe("사용 중");
     expect(koOf("admin.watches.stateDisabled")).toBe("중지");
     expect(koOf("admin.watches.rulesCount")).toBe("{p1} / {p2}");
-    for (const key of ["heading", "note", "colProject", "colUser", "colRules", "colState", "createButton", "ruleAdd", "previewButton", "previewYes", "previewNo"]) {
+    for (const key of [
+      "heading",
+      "note",
+      "colProject",
+      "colUser",
+      "colRules",
+      "colState",
+      "createButton",
+      "ruleAdd",
+      "previewButton",
+      "previewYes",
+      "previewNo",
+    ]) {
       expect(has(`admin.watches.${key}`)).toBe(true);
     }
   });
