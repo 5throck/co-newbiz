@@ -90,6 +90,12 @@ export function ScheduleCronQuickPicker({
 
   /** The ONE write path for valid composes: canonical form into the dialog's cron state. */
   function compose(next: StructuredCron) {
+    // The controls must mirror what was composed: the re-seed effect early-returns on our own
+    // write (cron === lastComposed.current) on the stated invariant that the controls already
+    // reflect it — without this sync a preset switch composed the right expression but kept
+    // the stale radio/select state (매주 clicked, 매일 still checked, 요일 chips unreachable)
+    // (user defect 2026-11-27, schedule-job edit modal).
+    setCtrl(next);
     const expr = composeStructured(next);
     lastComposed.current = expr;
     onDowEmpty(false);
@@ -238,11 +244,11 @@ export function ScheduleCronQuickPicker({
             <span id={`${idPrefix}CronDow`} className="text-[length:var(--fs-caption)] font-semibold">
               {t("cronDowLegend")}
             </span>
-            <div
-              role="group"
+            <fieldset
               aria-labelledby={`${idPrefix}CronDow`}
               aria-describedby={dowEmpty ? `${idPrefix}CronError` : undefined}
               className="flex flex-wrap gap-1"
+              style={{ border: 0, padding: 0, margin: 0 }}
             >
               {DOW_VALUES.map((d) => {
                 const selected = ctrl.days.includes(d);
@@ -269,7 +275,7 @@ export function ScheduleCronQuickPicker({
                   </label>
                 );
               })}
-            </div>
+            </fieldset>
           </div>
           <div className="flex flex-wrap items-center gap-2">{timeSelects}</div>
         </>

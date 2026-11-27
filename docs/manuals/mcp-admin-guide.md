@@ -183,6 +183,7 @@ Set `CO_NEWBIZ_AUDIT_IP_HMAC_KEY` in the production environment. It is a secret:
 ## Related Screens
 
 - `연결된 앱` / Connected Apps (`/settings`) — where users issue and revoke their own tokens.
+- `연결된 앱 관리` / Connected apps (admin) (`/admin/connected-apps`) — the admin-console fleet stop/start for registered OAuth clients; see the [admin manual](admin-manual.md) section 7.
 - `docs/runbooks/deployment.md` — release procedure that links here for the rotation requirement.
 - `docs/architecture/mcp-integration.md` — architecture and client registration.
 - `mcp-user-guide.md` — the user-side counterpart of this guide.
