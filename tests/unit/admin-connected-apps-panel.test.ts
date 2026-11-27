@@ -117,7 +117,9 @@ describe("connected-apps section registration (all four points)", () => {
     const appsIdx = hrefs.indexOf("/admin/connected-apps");
     const sysIdx = hrefs.indexOf("/admin/system-mode");
     expect(appsIdx).toBe(adrIdx + 1);
-    expect(sysIdx).toBe(appsIdx + 1);
+    // system-mode is last in the sidebar (after the settings connected-apps entry),
+    // so adjacency to connected-apps is no longer asserted — ordering only.
+    expect(sysIdx).toBeGreaterThan(appsIdx);
     expect(block).toContain('{ href: "/admin/connected-apps", label: "nav.admin.connectedApps" }');
   });
 
