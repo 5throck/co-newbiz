@@ -185,6 +185,11 @@ const EXPECTED_ROUND_TRIP: Record<string, { cron: string; structured: Structured
     regenerated: "0 7 * * 1-5",
   },
   "collect.ecos": { cron: "0 8 * * *", structured: { preset: "daily", hour: 8, minute: 0 }, regenerated: "0 8 * * *" },
+  "collect.kofia": {
+    cron: "45 18 * * 1-5",
+    structured: { preset: "weekly", days: [1, 2, 3, 4, 5], hour: 18, minute: 45 },
+    regenerated: "45 18 * * 1-5",
+  },
   "collect.krx": {
     cron: "30 18 * * 1-5",
     structured: { preset: "weekly", days: [1, 2, 3, 4, 5], hour: 18, minute: 30 },
@@ -342,7 +347,7 @@ describe("dual-mode field source pins (§4.4 invariants over the client sources)
     expect(PICKER).toContain('t("cronTzNote")');
     expect(PICKER).toContain('t("cronDomHint")');
     // the dow chip group is labelled via aria-labelledby + sr-only checkboxes (replaces the multiple select)
-    expect(PICKER).toContain('aria-labelledby={`${idPrefix}CronDow`}');
+    expect(PICKER).toContain("aria-labelledby={`${idPrefix}CronDow`}");
     expect(PICKER).toContain('className="sr-only"');
     expect(PICKER).toContain('type="checkbox"'); // one literal inside the DOW map — 7 chips at runtime
     // frequency + mode radio labels render on one line (owner-reported squish fix)

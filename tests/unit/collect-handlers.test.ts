@@ -521,7 +521,14 @@ describe("collect.* handlers", () => {
     }
     // No opendata job (design §3.1 has five collect rows; opendata has no onboarded dataset).
     expect(getJobHandler("collect.opendata")).toBeUndefined();
-    expect(listJobHandlers().filter((h) => h.key.startsWith("collect."))).toHaveLength(5);
+    // Five source-backed handlers plus the dedicated collect.kofia (ADR-0208 slice 4; NOT a SOURCE_ADAPTERS entry, tested
+    // in kofia-scheduled-collection.test.ts).
+    expect(
+      listJobHandlers()
+        .filter((h) => h.key.startsWith("collect."))
+        .map((h) => h.key)
+        .sort(),
+    ).toEqual(["collect.dart", "collect.ecos", "collect.kofia", "collect.kosis", "collect.krx", "collect.law"]);
   });
 
   test("schedule-seed creates the collect rows disabled (D3) with handler values", () => {

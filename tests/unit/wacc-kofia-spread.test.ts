@@ -20,6 +20,8 @@ const ENV_ORIGINALS: Record<string, string | undefined> = {
 };
 process.env.CO_NEWBIZ_DB_PATH = TEST_DB_PATH;
 delete process.env.CO_NEWBIZ_KOFIA_COLLECT;
+// Hermetic: the repo-root .env (CO_NEWBIZ_KOFIA_COLLECT=on on a dev machine) must not be re-read into the unset switch.
+const restoreRootEnv = await (await import("./helpers/isolate-root-env.ts")).isolateRootEnv();
 for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
 
 const { resetDb, getDb } = await import("../../db/client.ts");
@@ -165,6 +167,7 @@ beforeAll(async () => {
   cookie = (res.headers.getSetCookie()[0] ?? "").split(";")[0];
 });
 afterAll(() => {
+  restoreRootEnv();
   resetDb();
   for (const s of ["", "-wal", "-shm"]) if (existsSync(TEST_DB_PATH + s)) rmSync(TEST_DB_PATH + s);
   for (const [k, v] of Object.entries(ENV_ORIGINALS)) {

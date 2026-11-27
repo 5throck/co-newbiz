@@ -214,6 +214,14 @@ Output is JSON: `{"env":"dev","dryRun":false,"inserted":[...],"existing":[...],"
 
 Which rows exist is decided by the handler registry (`scripts/co-newbiz/jobs/index.ts`): as of P2, `watch.evaluate` (every 30 min) and `gate_integrity.shadow_report` (Mondays 08:00 KST). The `collect.*` and `retention.cleanup` handlers land in later phases (P5/P6); a re-seed after those phases adds the missing rows without touching existing ones.
 
+**`collect.kofia` (ADR-0208 slice 4)** - weekday 18:45 KST collection of the KOFIA grade-by-rating bond yields, a dedicated handler (not a
+`SOURCE_ADAPTERS` entry, so `fetch` / `md:sync` cannot reach it). Seeded **disabled** like every row. It is also gated by the env switch
+`CO_NEWBIZ_KOFIA_COLLECT=on` (read from the repo-root `.env` for the dev tick; for the prod tick the switch must be in the container
+env, i.e. `.env.prod`): enabling the row with the switch off is harmless - each run ends `skipped` (`kofia_collect_off`) with no network
+call. Enable it only after KOFIA's written confirmation (runbook `beta-series-collection.md`, "KOFIA grade yields"). A scheduled or
+catch-up run skips an already stored day; a manual run-now re-collects the latest day (the admin's force). Look at the last runs with
+`sqlite3 db/data/co-newbiz.sqlite "SELECT started_at, status, \"trigger\", rows_written, detail_json FROM job_run WHERE job_key = 'collect.kofia' ORDER BY started_at DESC LIMIT 5;"`.
+
 A job only fires on schedule when its row is **enabled**. A manual `run-job.ts` invocation runs a job even when it is disabled (`CO_NEWBIZ_SCHEDULER_ENV=dev bun scripts/co-newbiz/run-job.ts --job <job_key>`; actor defaults to `operator:cli`) — "disabled" stops the tick from firing it, it is not a hard off-switch.
 
 ## 7. Sleep/wake catch-up

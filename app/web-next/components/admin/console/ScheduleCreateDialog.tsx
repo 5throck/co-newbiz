@@ -29,6 +29,7 @@ import { ScheduleCronField, useCronFieldCheck } from "./ScheduleCronField.tsx";
 const KNOWN_HANDLERS: ReadonlyArray<{ key: string; defaultCron: string; timeoutSec: number; maxRetries: number }> = [
   { key: "collect.dart", defaultCron: "0 7 * * 1-5", timeoutSec: 1800, maxRetries: 2 },
   { key: "collect.ecos", defaultCron: "0 8 * * *", timeoutSec: 1200, maxRetries: 2 },
+  { key: "collect.kofia", defaultCron: "45 18 * * 1-5", timeoutSec: 600, maxRetries: 2 },
   { key: "collect.krx", defaultCron: "30 18 * * 1-5", timeoutSec: 1200, maxRetries: 2 },
   { key: "collect.kosis", defaultCron: "0 9 * * 1", timeoutSec: 1800, maxRetries: 2 },
   { key: "collect.law", defaultCron: "0 6 * * *", timeoutSec: 1800, maxRetries: 2 },

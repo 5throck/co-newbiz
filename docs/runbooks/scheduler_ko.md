@@ -215,6 +215,13 @@ CO_NEWBIZ_SCHEDULER_ENV=dev bun scripts/co-newbiz/schedule-seed.ts             #
 
 어떤 행이 생기는지는 핸들러 레지스트리(`scripts/co-newbiz/jobs/index.ts`)가 정합니다: P2 시점 기준 `watch.evaluate`(30분마다)와 `gate_integrity.shadow_report`(월요일 08:00 KST). `collect.*`와 `retention.cleanup` 핸들러는 이후 단계(P5/P6)에 들어옵니다; 그 단계 이후 다시 시드하면 기존 행을 건드리지 않고 빠진 행만 추가됩니다.
 
+**`collect.kofia` (ADR-0208 4단계)** - 평일 18:45 KST에 금투협 신용등급별 채권 수익률을 모으는 전용 핸들러입니다(`SOURCE_ADAPTERS` 항목이 아니므로 `fetch` /
+`md:sync`로는 닿을 수 없음). 다른 행처럼 **꺼진 상태**로 시드됩니다. 환경 스위치 `CO_NEWBIZ_KOFIA_COLLECT=on`으로도 잠겨 있습니다(dev 틱은 저장소 루트 `.env`에서 읽고, prod 틱은
+컨테이너 환경, 즉 `.env.prod`에 스위치가 있어야 합니다). 스위치가 꺼진 채 행을 켜도 해롭지 않습니다 — 매 실행이 네트워크 호출 없이 `skipped`(`kofia_collect_off`)로 끝납니다.
+금투협의 서면 확인 뒤에만 켜십시오(런북 `beta-series-collection_ko.md`, "금융투자협회 등급별 수익률"). 예약·따라잡기 실행은 이미 저장된 날을 건너뛰고, 수동 "지금 실행"은 최신 하루를
+다시 수집합니다(관리자의 강제 수집). 최근 실행은 다음으로 봅니다:
+`sqlite3 db/data/co-newbiz.sqlite "SELECT started_at, status, \"trigger\", rows_written, detail_json FROM job_run WHERE job_key = 'collect.kofia' ORDER BY started_at DESC LIMIT 5;"`.
+
 잡이 예약 실행되려면 행이 **켜져** 있어야 합니다. 손으로 `run-job.ts`를 호출하면 꺼진 잡도 실행됩니다(`CO_NEWBIZ_SCHEDULER_ENV=dev bun scripts/co-newbiz/run-job.ts --job <job_key>`; 실행 주체 기본값 `operator:cli`) — "꺼짐"은 틱이 예약 실행하지 못하게 할 뿐 완전한 차단이 아닙니다.
 
 ## 7. 절전/깨어남 따라잡기

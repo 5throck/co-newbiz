@@ -70,6 +70,7 @@ import {
   kofiaCollectNeeded,
   kofiaRowStatus,
   kofiaRowVisible,
+  type KofiaCollectInfo,
 } from "../../lib/wacc-collect-rows.ts";
 import {
   assembleDerivation,
@@ -299,8 +300,9 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     erp_alternatives?: Sugg[];
     apply_all_excluded?: ApplyAllExcluded[];
     missing?: string[];
-    // ADR-0208 slice 4: whether the automated KOFIA grade-yield collection may run (env switch, default off).
-    kofia_collect?: { enabled: boolean };
+    // ADR-0208 slice 4: whether the automated KOFIA grade-yield collection may run (env switch, default off), the stored-data
+    // freshness and the next run of the scheduled job (stored data and the schedule row only).
+    kofia_collect?: KofiaCollectInfo;
   }
   const [sugg, setSugg] = useState<SuggPayload | null>(null);
   // ERP reference the human applied to the form (null = typed manually / none applied).
@@ -342,13 +344,15 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     loadSugg();
   });
   const kofiaCollectMessage =
-    kofiaCollect.phase === "done"
-      ? t("collectKofiaDone")
-      : kofiaCollect.phase === "failed"
-        ? t("collectKofiaFailed", { p1: kofiaCollect.run?.error ?? "" })
-        : kofiaCollect.startError !== null
-          ? kofiaCollect.startError || t("collectKofiaStartFailed")
-          : null;
+    kofiaCollect.upToDate !== null
+      ? t("collectKofiaUpToDate", { date: kofiaCollect.upToDate })
+      : kofiaCollect.phase === "done"
+        ? t("collectKofiaDone")
+        : kofiaCollect.phase === "failed"
+          ? t("collectKofiaFailed", { p1: kofiaCollect.run?.error ?? "" })
+          : kofiaCollect.startError !== null
+            ? kofiaCollect.startError || t("collectKofiaStartFailed")
+            : null;
   const creditCollectMessage =
     creditCollect.phase === "done"
       ? t("collectCreditDone")
@@ -656,10 +660,18 @@ export function WaccPanel({ projectId }: { projectId: string }) {
   /** KOFIA grade-yield row status line - latest collected date, and whether the spread in use is built from it. */
   const kofiaStatusText = () => {
     const s = kofiaRowStatus(creditSugg);
-    if (s.kind === "not_collected") return t("collectStatusKofiaNotCollected");
+    const next = sugg?.kofia_collect?.next_run;
+    const schedule =
+      next?.state === "scheduled" && next.at
+        ? t("collectStatusKofiaNext", { when: formatDateTimeHm(next.at, locale, "Asia/Seoul") })
+        : next?.state === "disabled"
+          ? t("collectStatusKofiaScheduleOff")
+          : t("collectStatusKofiaNotScheduled");
+    if (s.kind === "not_collected") return [t("collectStatusKofiaNotCollected"), schedule].join(" · ");
     return [
       t("collectStatusKofiaCollected", { date: s.date }),
       s.used ? t("collectStatusKofiaUsed") : t("collectStatusKofiaNotUsed"),
+      schedule,
     ].join(" · ");
   };
   /** Financial-data row status line - whether the interest and borrowing figures are stored. */
@@ -712,6 +724,8 @@ export function WaccPanel({ projectId }: { projectId: string }) {
     runningText: string;
     actionTestId?: string;
     noAction?: boolean;
+    /** The message is a neutral/positive notice even though the run phase is not "done" (e.g. "already up to date"). */
+    messageOk?: boolean;
   }) => {
     const { runCollect: rc } = o;
     const primary = collectEmphasis(o.needed) === "primary";
@@ -757,11 +771,11 @@ export function WaccPanel({ projectId }: { projectId: string }) {
         )}
         {o.message && (
           <p
-            role={rc.phase === "done" ? undefined : "alert"}
-            className={`basis-full m-0 text-[length:var(--fs-caption)] font-semibold ${rc.phase === "done" ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
+            role={rc.phase === "done" || o.messageOk ? undefined : "alert"}
+            className={`basis-full m-0 text-[length:var(--fs-caption)] font-semibold ${rc.phase === "done" || o.messageOk ? "text-[color:var(--accent)]" : "text-[color:var(--red-fg)]"}`}
             data-testid={`wacc-collect-message-${o.key}`}
           >
-            {rc.phase === "done" ? "✓" : "✕"} {o.message}
+            {rc.phase === "done" || o.messageOk ? "✓" : "✕"} {o.message}
           </p>
         )}
       </li>
@@ -1386,6 +1400,7 @@ export function WaccPanel({ projectId }: { projectId: string }) {
                         rerunLabel: t("collectKofiaRerun"),
                         runningText: t("collectKofiaRunning"),
                         actionTestId: "kofia-collect",
+                        messageOk: kofiaCollect.upToDate !== null,
                       })}
                     {creditSugg &&
                       (financialsCollectNeeded(creditSugg) || finMessage !== null) &&

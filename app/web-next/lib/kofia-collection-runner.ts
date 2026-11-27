@@ -1,13 +1,21 @@
-// @version 1.0.0
+// @version 1.1.0
+// 1.1.0 (ADR-0208 slice 4, scheduled collection): read-mostly manual collection - an up-to-date store answers
+// {kind:"up_to_date"} without a network call; a stale store is collected by any analyst.
 // In-app KOFIA grade-yield collection (POST /api/projects/[id]/wacc/kofia/collect), ADR-0208 slice 4.
 //
 // Same async/202 model as the ECOS collection (job_run, job_key 'wacc-kofia.collect', trigger 'manual', actor = calling
 // user, detail_json.project_id for the audit trail). The data is market-common, so the slot and the status are GLOBAL:
 // one collection at a time (409 already_running) and every member sees the latest run.
 //
+// READ-MOSTLY: the scheduled job (collect.kofia, scripts/co-newbiz/jobs/collect/kofia.ts) keeps the store current. A manual
+// start while the store is up to date (kofiaFreshness: stored data only) fetches nothing and answers up_to_date. There is no
+// force here: admins cannot reach project routes (FR-SEC-03); an admin forces a re-collect with "run now" of collect.kofia on
+// the schedule page (a manual run of that job fetches the latest day again).
+//
 // GATED: start returns {kind:"disabled"} - and the collector itself refuses - unless CO_NEWBIZ_KOFIA_COLLECT is "on"
 // (default off, pending KOFIA's written confirmation; see kofia-collector.ts). No job_run row is written when disabled.
 import type { getDb } from "../../../db/client.ts";
+import { kofiaFreshness } from "../../../db/lib/kofia-grade-yield.ts";
 import { ulid } from "../../../db/lib/ulid.ts";
 import { finishJobRun } from "../../../scripts/co-newbiz/scheduler-core.ts";
 import { sweepStaleRuns, toRun, type BetaCollectRun, type RunRow } from "./beta-collection-runner.ts";
@@ -25,6 +33,7 @@ export const KOFIA_COLLECT_JOB_KEY = "wacc-kofia.collect";
 export type StartKofiaCollection =
   | { kind: "started"; runId: string; startedAt: string }
   | { kind: "already_running"; runId: string }
+  | { kind: "up_to_date"; latestDate: string; expectedDate: string }
   | { kind: "disabled" };
 
 interface TestHooks {
@@ -54,6 +63,11 @@ export function startKofiaCollection(
     .get(KOFIA_COLLECT_JOB_KEY) as { id: string } | undefined;
   if (running) return { kind: "already_running", runId: running.id };
 
+  const fresh = kofiaFreshness(db, now);
+  if (fresh.upToDate && fresh.latestStoredDate) {
+    return { kind: "up_to_date", latestDate: fresh.latestStoredDate, expectedDate: fresh.expectedDate };
+  }
+
   const runId = ulid();
   const startedAt = now.toISOString();
   db.run(
@@ -68,11 +82,12 @@ export function startKofiaCollection(
         status: "success",
         now: new Date(),
         rowsRead: 3,
-        rowsWritten: r.grades_written + 1,
+        rowsWritten: r.rows_written_total,
         rowsChanged: r.rows_changed,
         detail: {
           project_id: input.projectId,
           date: r.date,
+          max_published_date: r.max_published_date,
           ktb_pct: r.ktb_pct,
           grades_written: r.grades_written,
           rows_changed: r.rows_changed,
