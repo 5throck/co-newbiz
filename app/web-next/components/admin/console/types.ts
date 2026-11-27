@@ -7,7 +7,12 @@ export interface AuditStats {
   byActor: Array<{ actor: string; count: number }>;
 }
 
-export interface ReviewAuditRate { key: string; sampled: number; agreed: number; rate: number | null }
+export interface ReviewAuditRate {
+  key: string;
+  sampled: number;
+  agreed: number;
+  rate: number | null;
+}
 export interface ReviewAuditSummary {
   overall: ReviewAuditRate;
   by_domain: ReviewAuditRate[];
@@ -16,7 +21,18 @@ export interface ReviewAuditSummary {
   note: string | null;
 }
 
-export type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr" | "connected-apps";
+export type Section =
+  | "users"
+  | "audit"
+  | "data-sources"
+  | "schedule"
+  | "database"
+  | "notifications"
+  | "glossary"
+  | "governance"
+  | "master-data"
+  | "adr"
+  | "connected-apps";
 
 // ── P4 notifications & watches (design 2026-10-29-scheduled-jobs-design §13.5–13.7) ──
 // Shapes mirror the B1 Route Handler contracts verbatim (app/api/admin/notifications*,
@@ -180,7 +196,6 @@ export interface AdrRow {
   status: string;
   file: string;
 }
-
 
 export interface GovernanceDocRow {
   id: string;

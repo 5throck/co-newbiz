@@ -35,10 +35,12 @@ import en from "../../app/web-next/locales/en.json";
 type Catalog = Record<string, unknown>;
 
 function catOf(catalog: Catalog, key: string): unknown {
-  return key.split(".").reduce<unknown>(
-    (acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
-    catalog,
-  );
+  return key
+    .split(".")
+    .reduce<unknown>(
+      (acc, k) => (acc !== null && typeof acc === "object" ? (acc as Record<string, unknown>)[k] : undefined),
+      catalog,
+    );
 }
 
 function koOf(key: string): string {
@@ -93,7 +95,7 @@ const DESIGN_KEYS = [
 
 describe("connected-apps section registration (all four points)", () => {
   test("Section union carries connected-apps and the console renders it", () => {
-    expect(TYPES).toMatch(/export type Section = [^\n]*"connected-apps"/);
+    expect(TYPES).toMatch(/export type Section =[\s\S]*?\| "connected-apps"/);
     expect(CONSOLE).toContain('import { ConnectedAppsSection } from "./ConnectedAppsSection.tsx"');
     expect(CONSOLE).toContain('{section === "connected-apps" && <ConnectedAppsSection />}');
     expect(existsSync(`${ROOT}/app/admin/connected-apps/page.tsx`)).toBe(true);
@@ -180,8 +182,12 @@ describe("§ fleet table (P2 Report standard)", () => {
 
 describe("row actions + confirm flow (the house commitment pattern)", () => {
   test("one action per row, state-dependent: danger 중단 when running, ghost 시작 when stopped", () => {
-    expect(SECTION).toMatch(/<Button\n?\s*variant="danger"\n?\s*size="sm"\n?\s*aria-label=\{t\("stopButtonAria", \{ p1: a\.name \}\)\}/);
-    expect(SECTION).toMatch(/<Button\n?\s*variant="ghost"\n?\s*size="sm"\n?\s*aria-label=\{t\("startButtonAria", \{ p1: a\.name \}\)\}/);
+    expect(SECTION).toMatch(
+      /<Button\n?\s*variant="danger"\n?\s*size="sm"\n?\s*aria-label=\{t\("stopButtonAria", \{ p1: a\.name \}\)\}/,
+    );
+    expect(SECTION).toMatch(
+      /<Button\n?\s*variant="ghost"\n?\s*size="sm"\n?\s*aria-label=\{t\("startButtonAria", \{ p1: a\.name \}\)\}/,
+    );
     expect(SECTION.match(/<Button/g)?.length).toBe(2); // exactly the two variants — no third action
     expect(SECTION).toMatch(/useConfirm\(\)/);
   });
@@ -206,7 +212,7 @@ describe("row actions + confirm flow (the house commitment pattern)", () => {
     );
     expect(SECTION).toMatch(/t\("stoppedToast", \{ p1: app\.name, p2: res\.data\.revoked \?\? 0 \}\)/);
     expect(SECTION).toMatch(/t\("startedToast", \{ p1: app\.name \}\)/);
-    expect(SECTION).toContain('reload();');
+    expect(SECTION).toContain("reload();");
   });
 });
 
@@ -231,7 +237,9 @@ describe("409 self-healing (the acceptance item)", () => {
 
 describe("toolbar: search + status FilterChip trio", () => {
   test("search input filters name·client_id substring with the catalog aria/placeholder", () => {
-    expect(SECTION).toMatch(/type="search"\n?\s*aria-label=\{t\("searchAria"\)\}\n?\s*placeholder=\{t\("searchAria"\)\}/);
+    expect(SECTION).toMatch(
+      /type="search"\n?\s*aria-label=\{t\("searchAria"\)\}\n?\s*placeholder=\{t\("searchAria"\)\}/,
+    );
     expect(SECTION).toMatch(/`\$\{a\.name\} \$\{a\.client_id\}`\.toLowerCase\(\)\.includes\(q\)/);
     expect(koOf("admin.connectedApps.searchAria")).toBe("앱 이름 또는 client_id 검색");
   });

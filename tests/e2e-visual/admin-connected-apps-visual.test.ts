@@ -132,9 +132,7 @@ describe("/admin/connected-apps visual smoke", () => {
       .locator("tr", { hasText: "ChatGPT connector" })
       .locator('button:has-text("시작")')
       .waitFor({ state: "visible", timeout: 15_000 });
-    const stoppedChips = (await page.locator("main .control-chip").allTextContents()).map((c) =>
-      c.replace(/\s+/g, ""),
-    );
+    const stoppedChips = (await page.locator("main .control-chip").allTextContents()).map((c) => c.replace(/\s+/g, ""));
     expect(stoppedChips).toContain("중단(2)");
 
     // 시작 on one row (the table sorts created_at DESC, so the first 시작 is

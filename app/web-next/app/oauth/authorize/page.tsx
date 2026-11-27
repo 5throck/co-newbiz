@@ -35,7 +35,16 @@ const SCOPE_KEY: Record<string, string> = {
   propose: "scopePropose",
 };
 
-const PARAM_KEYS = ["response_type", "client_id", "redirect_uri", "scope", "state", "code_challenge", "code_challenge_method", "resource"];
+const PARAM_KEYS = [
+  "response_type",
+  "client_id",
+  "redirect_uri",
+  "scope",
+  "state",
+  "code_challenge",
+  "code_challenge_method",
+  "resource",
+];
 
 export default function OAuthAuthorizePage() {
   const t = useTranslations("pages.oauthAuthorize");
@@ -57,7 +66,7 @@ export default function OAuthAuthorizePage() {
         if (e instanceof ApiError && e.code === "client_stopped") setStopped(true);
         else setError(e instanceof ApiError ? e.message : t("loadFailed"));
       });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (info || error || stopped) headingRef.current?.focus();
@@ -98,7 +107,9 @@ export default function OAuthAuthorizePage() {
       <h1 id="consent-heading" ref={headingRef} tabIndex={-1}>
         {failed ? t("headingFailed") : t("heading")}
       </h1>
-      <p aria-live="polite" className="sr-only">{status}</p>
+      <p aria-live="polite" className="sr-only">
+        {status}
+      </p>
       {!info && !error && !stopped && (
         <div className="card">
           <PageState state="loading" />
@@ -123,10 +134,17 @@ export default function OAuthAuthorizePage() {
         <section aria-labelledby="invalid-heading" className="card">
           <h2 id="invalid-heading">{t("invalidHeading")}</h2>
           <p role="alert">{t("invalidMissingBody")}</p>
-          <details className="review-dev"><summary>{t("devNote")}</summary><span>{error}</span></details>
+          <details className="review-dev">
+            <summary>{t("devNote")}</summary>
+            <span>{error}</span>
+          </details>
           <div className="page-header-actions">
-            <Link href="/settings/connected-apps" className="btn-primary">{t("viewConnectedApps")}</Link>
-            <Link href="/deals" className="btn-ghost">{t("goDealBoard")}</Link>
+            <Link href="/settings/connected-apps" className="btn-primary">
+              {t("viewConnectedApps")}
+            </Link>
+            <Link href="/deals" className="btn-ghost">
+              {t("goDealBoard")}
+            </Link>
           </div>
         </section>
       )}
@@ -134,7 +152,12 @@ export default function OAuthAuthorizePage() {
         <section aria-labelledby="invalid-heading" className="card">
           <h2 id="invalid-heading">{t("invalidHeading")}</h2>
           <p role="alert">{t("invalidBody")}</p>
-          {info.error_description && <details className="review-dev"><summary>{t("devNote")}</summary><span>{info.error_description}</span></details>}
+          {info.error_description && (
+            <details className="review-dev">
+              <summary>{t("devNote")}</summary>
+              <span>{info.error_description}</span>
+            </details>
+          )}
           {info.redirect_to && (
             <Button onClick={() => window.location.assign(info.redirect_to ?? "")}>{t("backToApp")}</Button>
           )}
@@ -168,7 +191,8 @@ export default function OAuthAuthorizePage() {
               <dl className="oauth-facts">
                 <div className="oauth-fact">
                   <dt className="oauth-fact-label">
-                    <span aria-hidden="true">↗ </span>{t("redirectHostLabel")}
+                    <span aria-hidden="true">↗ </span>
+                    {t("redirectHostLabel")}
                   </dt>
                   <dd className="oauth-host-value">{info.redirect_host}</dd>
                 </div>

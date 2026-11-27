@@ -1,6 +1,5 @@
 "use client";
 
-
 // Split from components/admin/AdminConsole.tsx (Wave U-3 decomposition); behavior unchanged.
 import { useTranslations } from "next-intl";
 import { MasterDataSection } from "../MasterDataSection.tsx";
@@ -32,25 +31,39 @@ export function AdminConsole(props0: { section: Section }) {
       {confirmDialog}
       <PageHeader title={t(SECTION_TITLE_KEY[section])} description={t(SECTION_INTRO_KEY[section])} />
       {issuedSecret && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={st("aria")} onKeyDown={secretModalKeyDown}>
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label={st("aria")}
+          onKeyDown={secretModalKeyDown}
+        >
           <div ref={secretModalPanelRef} className="modal-panel">
-            <div className="modal-head"><h2>{st("issuedTitle", { kind: issuedSecret.kind })}</h2></div>
+            <div className="modal-head">
+              <h2>{st("issuedTitle", { kind: issuedSecret.kind })}</h2>
+            </div>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2 mb-2">
               {st("bodyHead")} <strong>{st("bodyEmphasis")}</strong> {st("bodyTail")}
             </p>
             <div className="flex items-center gap-2">
-              <code className="dd-item-id" style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>{issuedSecret.value}</code>
+              <code className="dd-item-id" style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>
+                {issuedSecret.value}
+              </code>
               <button
                 type="button"
                 className="btn-ghost btn-sm"
-                onClick={() => { void navigator.clipboard.writeText(issuedSecret.value); }}
+                onClick={() => {
+                  void navigator.clipboard.writeText(issuedSecret.value);
+                }}
               >
                 {t("common.copy")}
               </button>
             </div>
             <p className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)] mt-2">{issuedSecret.detail}</p>
             <div className="flex justify-end mt-3">
-              <button type="button" className="btn-ghost" onClick={() => setIssuedSecret(null)}>{t("common.close")}</button>
+              <button type="button" className="btn-ghost" onClick={() => setIssuedSecret(null)}>
+                {t("common.close")}
+              </button>
             </div>
           </div>
         </div>

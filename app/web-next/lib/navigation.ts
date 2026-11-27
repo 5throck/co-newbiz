@@ -58,9 +58,7 @@ export const NAV_SECTIONS: NavSection[] = [
     // Connected apps (ADR-0154) lives with the account/settings entries, not
     // in the topbar.
     label: "nav.section.settings",
-    items: [
-      { href: "/settings/connected-apps", label: "nav.connectedApps" },
-    ],
+    items: [{ href: "/settings/connected-apps", label: "nav.connectedApps" }],
   },
 ];
 
