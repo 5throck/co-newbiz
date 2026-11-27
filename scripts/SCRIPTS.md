@@ -226,7 +226,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `render-pdf-deck.ts` | L0 | 1.0.1 | active | —| —| L0+L1 | —|
 | `retry-handler.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
 | `setup-github-branch-protection.ts` | L0 | 1.0.1 | active | — | —| L0+L1 | —|
-| `skill-lifecycle-audit.ts` | L0 | 1.11.0 | active | —| —| L0+L1 | —|
+| `skill-lifecycle-audit.ts` | L0 | 1.15.0 | active | —| —| L0+L1 | —|
 | `spec-register.ts` | L0 | 1.6.1 | active | — | —| L0+L1 | —|
 | `lib/local-date.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `typecheck.ts` | L0 | 1.2.0 | active | —| —| L0+L1 | —|
@@ -237,7 +237,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `test-runner.ts` | L0 | 1.13.0 | active | 2026-10-08 | —| L0+L1 (`--parallel`, `--sequential`, `--concurrency <n>`, `--timeout <ms>`, `--allow-empty`) — v1.5.0: empty suites fail by default and scripts suite scans `scripts/tests/*.test.ts`; v1.6.0: bun test runs with `--timeout=30000` (per-test/hook default 5s flaked fresh-DB migration hooks on CI runners); scenarios suite runs sequentially, *.test.ts only (Wave C); v1.10.2: catch handlers narrowed from `:any` to unknown + `Number.isNaN` (lint hygiene, no behavior change); v1.11.0 (review 2026-11-04 H1): the `scripts` suite scans `scripts/tests/*.test.ts` again — a `test-*.ts` filter over top-level `scripts/` matched only the self-excluded runner, so `test:scripts` resolved 0 files and passed vacuously while the three real tests never ran in CI; scripts-only name special-case removed (uniform extension matching), dead `bun-script` exec mode removed (members are bun:test files, per-test budget restored), and an empty suite now hard-fails unless `--allow-empty` is passed; v1.12.0 (review F-36 / DEC-20261122-02): the permanently-empty `integration` suite definition is removed — tests/*.test.ts held zero files for its entire existence and survived only via `--allow-empty`, a configured gate that always passes; `runTests` no longer defaults and the CLI errors on a missing suite name; the `test:integration` alias is gone; the --allow-empty mechanism itself is untouched for the other suites; v1.13.0 (review F-33 / DEC-20261123-01): the `visual` suite joins the runner — `bun run test:visual` previously shelled `bun test tests/e2e-visual` directly with no kill budget and no per-file budgets (the CI kill shape matched the missing ceiling); the suite scans tests/e2e-visual/*.test.ts, runs sequential (each member boots its own Next server + browser against a scratch SQLite) and carries a FILE_TIME_BUDGETS row for stage-visual-smoke.test.ts (darwin first observation 66.6s wall / 37.6s test, 1 pass / 269 expects; suite 900s keeps >6x headroom over the ~2x-slower CI projection, per-test ceiling 900s matches the file's own beforeAll/test declarations) | —|
 | `translate-readme.ts` | L0 | 1.0.0 | active | —| —| L0+L1 | —|
 | `validate-agents.ts` | L0 | 1.4.1 | active | —| —| L0+L1 | —|
-| `validate-doc-folder.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `validate-doc-folder.ts` | L0 | 1.8.0 | active | —| —| L0+L1 | —|
 | `validate-docs-links.ts` | L0 | 1.6.0 | active | —| —| L0+L1 | —|
 | `validate-md-language.ts` | L0 | 1.17.0 | active | —| —| L0+L1 | —|
 | `validate-model-registry.ts` | L0 | 2.3.0 | active | —| —| L0+L1 (v1.6.0 adds ADR-0183 D3 runtime catalog parity: agent-registry.generated.ts / pm-catalog.generated.ts cross-validated against agents/*.md frontmatter; targets self-skip where the web runtime is not delivered) | —|
@@ -285,7 +285,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `validate-templates.ts` | L0 | 1.75.0 | active | — | —| L0+L1 | —|
 | `helpers/upgrade-versions.ts` | L0+L1 | 1.2.0 | active | —| —| L0+L1 | —|
 | `lib/propagation-map-schema.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
-| `lib/constitution-scrub.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
+| `lib/constitution-scrub.ts` | L0 | 1.3.1 | active | —| —| L0+L1 | —|
 | `helpers/l0-ref-policy.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `helpers/markers.ts` | L0 | 1.3.0 | active | —| —| L0+L1 | —|
 | `helpers/layer-filter.ts` | L0 | 1.5.0 | active | —| —| L0+L1 | —|
@@ -299,12 +299,12 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lint-instructions.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `helpers/merge-state.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `bootstrap-stages.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
-| `evidence-backport-scan.ts` | L0 | 1.3.0 | active | — | —| L0+L1 | —|
-| `generate-raci.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
+| `evidence-backport-scan.ts` | L0 | 1.4.0 | active | — | —| L0+L1 | —|
+| `generate-raci.ts` | L0 | 1.2.1 | active | — | —| L0+L1 | —|
 | `graph-delta-log.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `migrate-quality-gates.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `validate-process.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `validate-raci.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
+| `validate-raci.ts` | L0 | 1.2.1 | active | — | —| L0+L1 | —|
 | `lib/dependency-guard.ts` | L0 | 1.0.2 | active | — | —| L0+L1 | —|
 | `lib/upgrade-policy.ts` | L0 | 1.38.0 | active | — | —| L0+L1 | —|
 | `helpers/golden-reference-loader.ts` | L0 | 1.1.0 | active | —| —| L0+L1 | —|
@@ -319,7 +319,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `lib/ci-workflow-merge.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `validate-surface-registry.ts` | L0+L1 | 1.1.2 | active | — | —| L0+L1 | —|
 | `hooks/pm-role-bootstrap.ts` | L0 | 1.1.2 | active | — | —| L0+L1 | —|
-| `lib/self-managed-tools.ts` | L0+L1 | 1.3.0 | active | — | —| L0+L1 | —|
+| `lib/self-managed-tools.ts` | L0+L1 | 1.3.1 | active | — | —| L0+L1 | —|
 | `dependency-audit.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `normalize-registry-provenance.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `helpers/version-bump.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
@@ -339,7 +339,7 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `hooks/pm-dispatch-gate.ts` | L0 | 1.3.0 | active | — | —| L0+L1 | —|
 | `render-commands.ts` | L0+L1 | 1.1.0 | active | — | — | L0+L1 | — |
 | `helpers/variant-context.ts` | L0+L1 | 1.0.0 | active | — | — | L0+L1 | — |
-| `lib/platform-skeleton-merge.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
+| `lib/platform-skeleton-merge.ts` | L0 | 1.2.1 | active | — | —| L0+L1 | —|
 | `helpers/design-lint-roots.ts` | L0+L1 | 1.1.0 | active | — | — | L0+L1 | — |
 | `helpers/pre-commit-script-gate.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
 | `helpers/theme-token-policy.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
@@ -354,13 +354,13 @@ bun run <alias>                     # via package.json alias (preferred for CI)
 | `external-deps.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `helpers/agent-mechanical-date-bump.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
 | `helpers/audit-hook-sweep.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `helpers/memory-union-verify.ts` | L0+L1 | 1.6.0 | active | — | —| L0+L1 | —|
+| `helpers/memory-union-verify.ts` | L0+L1 | 1.7.0 | active | — | —| L0+L1 | —|
 | `helpers/ticket-drift.ts` | L0+L1 | 1.0.0 | active | — | —| L0+L1 | —|
 | `hooks/delete-guard.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
-| `lib/external-deps.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
-| `lib/fleet.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `lib/git-aware-scan.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
-| `lib/trail-block-parity.ts` | L0 | 1.0.0 | active | — | —| L0+L1 | —|
+| `lib/external-deps.ts` | L0 | 1.4.0 | active | — | —| L0+L1 | —|
+| `lib/fleet.ts` | L0 | 1.2.0 | active | — | —| L0+L1 | —|
+| `lib/git-aware-scan.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
+| `lib/trail-block-parity.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|
 | `detect-backport.ts` | L0 | 1.0.1 | active | — | —| L0+L1 | —|
 | `generate-skill-lifecycle-records.ts` | L0 | 1.4.0 | active | — | —| L0+L1 | —|
 | `lib/country-scoped-agents.ts` | L0 | 1.1.0 | active | — | —| L0+L1 | —|

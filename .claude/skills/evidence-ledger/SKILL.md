@@ -27,6 +27,11 @@ relates_to:
     type: relates_to
 ---
 
+<!-- LOCAL-PATCH(upstream-request: U-20261127-006) — project-authored frontmatter deltas (scope/
+triggers/relates_to clarify claim-to-source ownership vs decision-record and
+stage-gate-governance); template-side overlay prose (co-consult T-20261007-014 paragraph,
+2026-11-26 last_reviewed) intentionally not merged this cycle. -->
+
 ## Purpose
 
 Defines the common base format for evidence ledgers — the Evidence link of the Agent → Skill → Knowledge → Evidence → Rule → Decision chain (ADR-0061). A ledger row is the smallest unit of proof: one claim, where it came from, how it was checked, and whether it stands. Gate rulings and decision records cite ledger rows instead of re-deriving facts from prose.

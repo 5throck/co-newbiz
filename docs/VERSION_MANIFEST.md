@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-27T10:17:46.341Z
+**Generated**: 2026-11-27T10:55:49.746Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -262,7 +262,7 @@
 | ecos.ts | 1.0.0 | scripts/co-newbiz/jobs/collect/ecos.ts | N/A |
 | eligibility.test.ts | 1.0.0 | scripts/humanize/tests/eligibility.test.ts | bun:test, fs, path |
 | env-check.ts | 1.3.0 | scripts/co-newbiz/env-check.ts | fs, path |
-| evidence-backport-scan.ts | 1.3.0 | scripts/evidence-backport-scan.ts | child_process, fs, path |
+| evidence-backport-scan.ts | 1.4.0 | scripts/evidence-backport-scan.ts | child_process, fs, path |
 | external-deps.ts | 1.0.0 | scripts/external-deps.ts | fs, path |
 | extract-copycode.ts | 1.0.0 | scripts/handbook/extract-copycode.ts | fs, path |
 | fetch-source.ts | 1.3.1 | scripts/co-newbiz/jobs/collect/fetch-source.ts | bun:sqlite |
@@ -281,7 +281,7 @@
 | generate-pm-catalog.ts | 1.4.1 | scripts/co-newbiz/generate-pm-catalog.ts | crypto, fs, js-yaml, path |
 | generate-process-flow.ts | 1.5.1 | scripts/co-newbiz/generate-process-flow.ts | fs, js-yaml |
 | generate-prompt-registry.ts | 2.2.0 | scripts/co-newbiz/generate-prompt-registry.ts | fs, path |
-| generate-raci.ts | 1.2.0 | scripts/generate-raci.ts | fs, js-yaml, path |
+| generate-raci.ts | 1.2.1 | scripts/generate-raci.ts | fs, js-yaml, path |
 | generate-review-matrix.ts | 1.0.0 | scripts/co-newbiz/generate-review-matrix.ts | fs, js-yaml |
 | generate-skill-graph.ts | 2.0.1 | scripts/generate-skill-graph.ts | child_process, fs, js-yaml, path, url |
 | generate-skill-lifecycle-records.ts | 1.4.0 | scripts/generate-skill-lifecycle-records.ts | fs, js-yaml, path, url |
@@ -365,7 +365,7 @@
 | setup-python-env.ts | 1.0.0 | scripts/co-newbiz/setup-python-env.ts | child_process, crypto, fs, path |
 | shadow-compare.ts | 1.0.0 | scripts/co-newbiz/shadow-compare.ts | N/A |
 | simulate.ts | 1.0.0 | scripts/co-newbiz/simulate.ts | child_process, fs, path |
-| skill-lifecycle-audit.ts | 1.11.0 | scripts/skill-lifecycle-audit.ts | fs, path, process |
+| skill-lifecycle-audit.ts | 1.15.0 | scripts/skill-lifecycle-audit.ts | fs, path, process |
 | skill-session-review.ts | 1.3.0 | scripts/skill-session-review.ts | bun, fs, path |
 | source-adapters.ts | 1.6.0 | scripts/co-newbiz/source-adapters.ts | bun:sqlite |
 | spec-register.ts | 1.6.1 | scripts/spec-register.ts | fs, path |
@@ -387,7 +387,7 @@
 | ux-layout-check.ts | 1.0.0 | scripts/co-newbiz/ux-layout-check.ts | fs |
 | validate-agents.ts | 1.4.1 | scripts/validate-agents.ts | fs, path, process |
 | validate-decisions.ts | 1.2.1 | scripts/validate-decisions.ts | fs, js-yaml, path, process |
-| validate-doc-folder.ts | 1.3.0 | scripts/validate-doc-folder.ts | fs, path |
+| validate-doc-folder.ts | 1.8.0 | scripts/validate-doc-folder.ts | fs, path |
 | validate-docs-links.ts | 1.6.0 | scripts/validate-docs-links.ts | fs, path |
 | validate-handbook.ts | 1.1.0 | scripts/handbook/validate-handbook.ts | child_process, path |
 | validate-md-language.ts | 1.17.0 | scripts/validate-md-language.ts | child_process, fs, path |
@@ -396,7 +396,7 @@
 | validate-pm-extends.ts | 0.3.1 | scripts/validate-pm-extends.ts | child_process, fs, path |
 | validate-procedures.ts | 1.1.0 | scripts/validate-procedures.ts | fs, js-yaml, path |
 | validate-process.ts | 1.0.0 | scripts/validate-process.ts | fs, js-yaml, path |
-| validate-raci.ts | 1.2.0 | scripts/validate-raci.ts | fs, js-yaml, path |
+| validate-raci.ts | 1.2.1 | scripts/validate-raci.ts | fs, js-yaml, path |
 | validate-skills.ts | 1.5.2 | scripts/validate-skills.ts | fs, path, process |
 | validate-surface-registry.ts | 1.1.2 | scripts/validate-surface-registry.ts | fs, path |
 | validate-templates.ts | 1.75.0 | scripts/validate-templates.ts | child_process, fs, js-yaml, path, url |

@@ -45,7 +45,8 @@
         "scripts/lib/audit-fail-hint.ts",
         "scripts/helpers/security-validator.ts",
         "scripts/lib/upgrade-policy.ts",
-        "scripts/validate-templates.ts"
+        "scripts/validate-templates.ts",
+        "scripts/validate-raci.ts"
       ],
       "linter": {
         "rules": {

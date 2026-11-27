@@ -20,7 +20,7 @@
  * This script is a validator only — it never mutates files.
  *
  * @usage bun scripts/validate-raci.ts [--variant co-consult|all] [--all] [--root <dir>]
- * @version 1.2.0
+ * @version 1.2.1
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -290,18 +290,9 @@ function validateRACIFile(variant: string, root: string, issues: Issue[]): RACIM
     if (row.actor_types && typeof row.actor_types === "object") {
       const expectedKeys = new Set<string>();
       if (typeof accountable === "string") expectedKeys.add(accountable);
-      if (Array.isArray(responsible))
-        responsible.forEach((a: string) => {
-          expectedKeys.add(a);
-        });
-      if (Array.isArray(row.consulted))
-        (row.consulted as string[]).forEach((a) => {
-          expectedKeys.add(a);
-        });
-      if (Array.isArray(row.informed))
-        (row.informed as string[]).forEach((a) => {
-          expectedKeys.add(a);
-        });
+      if (Array.isArray(responsible)) responsible.forEach((a: string) => expectedKeys.add(a));
+      if (Array.isArray(row.consulted)) (row.consulted as string[]).forEach((a) => expectedKeys.add(a));
+      if (Array.isArray(row.informed)) (row.informed as string[]).forEach((a) => expectedKeys.add(a));
 
       const actualKeys = new Set<string>(Object.keys(row.actor_types));
 

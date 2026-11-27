@@ -288,7 +288,7 @@ export function analyzeSegment(segment: string): SegmentAnalysis {
  * Accepts both `~/` and the platform separator (`~\\` on win32). */
 export function expandTilde(p: string): string {
   if (p === "~") return homedir();
-  if (p.startsWith("~/") || p.startsWith(`~${sep}`)) return join(homedir(), p.slice(2));
+  if (p.startsWith("~/") || p.startsWith("~" + sep)) return join(homedir(), p.slice(2));
   return p;
 }
 
@@ -457,12 +457,12 @@ function hasFreshMarker(resolvedPath: string, sessionId: string): boolean {
 // ---------------------------------------------------------------------------
 
 function emitAsk(reason: string): never {
-  process.stdout.write(`${JSON.stringify({ decision: "ask", reason })}\n`);
+  process.stdout.write(JSON.stringify({ decision: "ask", reason }) + "\n");
   process.exit(0);
 }
 
 function emitDeny(reason: string): never {
-  process.stdout.write(`${JSON.stringify({ decision: "deny", reason })}\n`);
+  process.stdout.write(JSON.stringify({ decision: "deny", reason }) + "\n");
   process.exit(2);
 }
 

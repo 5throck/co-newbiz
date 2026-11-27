@@ -140,7 +140,7 @@ async function main() {
           writeFileSync(file, content, "utf-8");
           await $`git add ${file}`;
         }
-      } catch (_e) {
+      } catch (e) {
         /* ignore */
       }
     }
@@ -150,8 +150,8 @@ async function main() {
   if (staged.includes("CHANGELOG.md")) {
     // Local calendar day, not toISOString() (UTC) — see lib/local-date.ts (T-20260910-030).
     const today = localDateISO();
-    const content = readFileSync("CHANGELOG.md", "utf-8");
-    const lines = content.split("\n");
+    let content = readFileSync("CHANGELOG.md", "utf-8");
+    let lines = content.split("\n");
     let inUnreleased = false;
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].startsWith("## [Unreleased]")) inUnreleased = true;
@@ -333,7 +333,7 @@ async function main() {
   }
 
   // 5. README sync check
-  const readmeStaged = staged.some((f) => /README(_ko)?\.md$/.test(f));
+  const readmeStaged = staged.some((f) => /README(\_ko)?\.md$/.test(f));
   if (readmeStaged) {
     console.log("\n=== README Synchronization ===");
     try {
@@ -617,7 +617,7 @@ async function main() {
         process.exit(1);
       }
       console.log("\x1b[32m[PASS]\x1b[0m gitleaks: no secrets detected");
-    } catch (_err) {
+    } catch (err) {
       console.warn("\x1b[33m[WARN]\x1b[0m gitleaks execution error -- using regex fallback");
     }
   } else {
