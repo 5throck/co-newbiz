@@ -317,7 +317,7 @@ describe("catalog (ko master + en parity, the design's key table)", () => {
   });
 
   test("the fleet vocabulary is pinned in ko", () => {
-    expect(koOf("nav.admin.connectedApps")).toBe("연결된 앱");
+    expect(koOf("nav.admin.connectedApps")).toBe("연결된 앱 관리");
     expect(koOf("admin.section.connectedApps")).toBe("연결된 앱");
     expect(koOf("admin.connectedApps.colApp")).toBe("앱 이름");
     expect(koOf("admin.connectedApps.colClientId")).toBe("client_id");

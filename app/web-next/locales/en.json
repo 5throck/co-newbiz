@@ -3782,7 +3782,7 @@
       "systemMode": "System mode",
       "users": "Users and tokens",
       "gateIntegrity": "Stage Gate integrity",
-      "connectedApps": "Connected apps"
+      "connectedApps": "Connected apps (admin)"
     },
     "archives": "Archives",
     "benchmarks": "Benchmarks",
