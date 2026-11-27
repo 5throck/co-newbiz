@@ -184,6 +184,7 @@ CO_NEWBIZ_OAUTH_REDIRECT_HOST_ALLOWLIST=chatgpt.com,claude.ai,claude.com
 ## 관련 화면
 
 - `연결된 앱`(`/settings`) — 사용자가 자기 토큰을 발급하고 해지하는 곳.
+- `연결된 앱 관리`(`/admin/connected-apps`) — 등록된 OAuth 클라이언트를 한꺼번에 중단·시작하는 관리 콘솔 화면. [관리자 매뉴얼](admin-manual_ko.md) 7절 참조.
 - `docs/runbooks/deployment.md` — 순환 요건을 이 안내서로 잇는 릴리스 절차.
 - `docs/architecture/mcp-integration.md` — 구조와 클라이언트 등록.
 - `mcp-user-guide.md` — 이 안내서의 사용자 쪽 짝.

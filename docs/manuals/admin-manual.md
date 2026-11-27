@@ -12,7 +12,7 @@ counterpart: admin-manual_ko.md
 
 ## What This Manual Covers
 
-Account management, regulation-version administration, master-data administration, external data-source keys and approvals, scheduled jobs, and notification-rule configuration — the job of the admin console at `/admin` (`app/web-next/app/admin`).
+Account management, regulation-version administration, master-data administration, external data-source keys and approvals, scheduled jobs, notification-rule configuration, and connected-app (OAuth client) administration — the job of the admin console at `/admin` (`app/web-next/app/admin`).
 
 ## 1. Account Management
 
@@ -121,17 +121,26 @@ The history shows the status `Skipped` but not the reason. Read the reason from 
 sqlite3 db/data/co-newbiz.sqlite "SELECT started_at, status, \"trigger\", detail_json FROM job_run WHERE job_key = 'collect.kofia' ORDER BY started_at DESC LIMIT 5;"
 ```
 
-## 7. Logs & Audit
+## 7. Connected Apps Administration (OAuth clients)
+
+- `연결된 앱 관리` / "Connected apps (admin)" (`/admin/connected-apps`) lists every registered OAuth client — stopped ones included. Columns: app name, `client_id`, verified chip (`검증된 앱` / `미검증 앱`), connected-user count, status (`운영 중` / `중단`), and the stopped-at time. Search matches app name or `client_id`; the status filter narrows the list. No clients registered yet shows `아직 등록된 앱이 없습니다.`.
+- **`중단` (Stop) is a fleet kill switch.** One confirm dialog, then every user's live OAuth tokens for that client are revoked immediately (one transaction), and while stopped the client is refused authorization, token issuance, and token validation — new connections and reconnections are rejected. Personal API tokens are unaffected. The confirm dialog states both consequences up front.
+- **`시작` (Start) re-opens the door but does not restore keys.** A started client accepts new connections again, but every user who connected before the stop must reconnect through the normal connector flow — the tokens destroyed at stop are not resurrected. The confirm dialog says so.
+- A user who tries to (re)connect a stopped app sees `연결이 중단된 앱입니다` on the consent screen — the refusal is shown in place, with no redirect.
+- Every `중단`/`시작` leaves exactly one audit row (`oauth_app_stop` / `oauth_app_start`, admin actor, section 8); a refused command (another admin already acted, or an unknown client) records nothing.
+- This section manages existing clients only — there is no create, edit, or delete here. Clients are registered on the user side (dynamic registration or the manual-registration flow); the console shows metadata and counts only, never token values (ADR-0091).
+
+## 8. Logs & Audit
 
 - The audit log is **append-only** — not even an admin can delete an entry. Retention/archival is the only lifecycle action available.
 - CSV export is available for compliance reporting.
 
-## 8. Related
+## 9. Related
 
 - `docs/governance/governance-operations.md` — waiver and interpretation administration (compliance-officer's domain, adjacent to but distinct from this manual's system-admin scope).
 - [`mcp-admin-guide.md`](mcp-admin-guide.md) — MCP personal-token policy, package release, and the 90-day `NPM_TOKEN` rotation; [`mcp-user-guide.md`](mcp-user-guide.md) — the user-side guide to connecting an AI client.
 
-## 9. Related Screens
+## 10. Related Screens
 
 - `/flows` — stage-flow visualization with a dry-run lane (ADR-0183).
 - UI language switch — ko/en message catalogs behind cookie-based locale negotiation (ADR-0184).
