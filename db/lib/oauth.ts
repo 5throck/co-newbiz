@@ -39,7 +39,7 @@ const MAX_CLIENT_NAME = 100;
 export type OAuthErrorCode =
   | "invalid_request" | "invalid_client" | "invalid_grant" | "invalid_scope"
   | "unauthorized_client" | "unsupported_grant_type" | "access_denied" | "invalid_target"
-  | "invalid_redirect_uri" | "invalid_client_metadata";
+  | "invalid_redirect_uri" | "invalid_client_metadata" | "client_stopped";
 
 export interface OAuthError {
   ok: false;
@@ -114,6 +114,8 @@ export interface OAuthClient {
   registered_by_user_id: string | null;
   verified: boolean;
   created_at: string;
+  /** Non-NULL ISO timestamp = stopped by an admin; NULL = operating (design 2026-11-27-admin-oauth-client-stop-start). */
+  stopped_at: string | null;
 }
 
 export function registerClient(
@@ -139,6 +141,7 @@ export function registerClient(
     registered_by_user_id: opts.registeredByUserId ?? null,
     verified: false,
     created_at: opts.now,
+    stopped_at: null,
   };
   db.run(
     "INSERT INTO oauth_client (client_id, name, redirect_uris, registered_by_user_id, verified, created_at) VALUES (?,?,?,?,0,?)",
@@ -150,8 +153,8 @@ export function registerClient(
 
 export function getClient(db: Database, clientId: string): OAuthClient | null {
   const row = db
-    .query("SELECT client_id, name, redirect_uris, registered_by_user_id, verified, created_at FROM oauth_client WHERE client_id = ?")
-    .get(clientId) as { client_id: string; name: string; redirect_uris: string; registered_by_user_id: string | null; verified: number; created_at: string } | null;
+    .query("SELECT client_id, name, redirect_uris, registered_by_user_id, verified, created_at, stopped_at FROM oauth_client WHERE client_id = ?")
+    .get(clientId) as { client_id: string; name: string; redirect_uris: string; registered_by_user_id: string | null; verified: number; created_at: string; stopped_at: string | null } | null;
   if (!row) return null;
   return { ...row, redirect_uris: JSON.parse(row.redirect_uris) as string[], verified: row.verified === 1 };
 }
@@ -190,6 +193,11 @@ export function validateAuthorizeRequest(
 ): { ok: true; request: ValidatedAuthorizeRequest } | (OAuthError & { redirectSafe: boolean }) {
   const client = p.clientId ? getClient(db, p.clientId) : null;
   if (!client) return { ...fail("invalid_client", "Unknown client_id."), redirectSafe: false };
+  // G1 (design 2026-11-27-admin-oauth-client-stop-start): a stopped client is
+  // refused at consent entry. redirectSafe: false — shown locally, never sent
+  // to redirect_uri (no open redirect).
+  if (client.stopped_at)
+    return { ...fail("client_stopped", "client is stopped by an administrator."), redirectSafe: false };
   if (!p.redirectUri || !client.redirect_uris.includes(p.redirectUri)) {
     return { ...fail("invalid_request", "redirect_uri does not exactly match a registered URI."), redirectSafe: false };
   }
@@ -279,6 +287,14 @@ function pkceMatches(verifier: string, challenge: string): boolean {
   return computed.length === expected.length && timingSafeEqual(computed, expected);
 }
 
+/** G2/G3 gate (design 2026-11-27-admin-oauth-client-stop-start): the token-issuance paths never call getClient, so they read the marker directly. */
+function clientStoppedAt(db: Database, clientId: string): string | null {
+  const row = db.query("SELECT stopped_at FROM oauth_client WHERE client_id = ?").get(clientId) as {
+    stopped_at: string | null;
+  } | null;
+  return row?.stopped_at ?? null;
+}
+
 export function exchangeAuthorizationCode(
   db: Database,
   opts: { code: string | null; clientId: string | null; redirectUri: string | null; codeVerifier: string | null; resource: string | null; expectedResource: string; now: string },
@@ -301,6 +317,9 @@ export function exchangeAuthorizationCode(
   db.run("UPDATE oauth_code SET consumed_at = ? WHERE code_hash = ?", [opts.now, row.code_hash]);
   if (Date.parse(row.expires_at) <= Date.parse(opts.now)) return fail("invalid_grant", "Authorization code expired.");
   if (row.client_id !== opts.clientId) return fail("invalid_grant", "Code was issued to a different client.");
+  // G2 (design 2026-11-27-admin-oauth-client-stop-start): a code minted before
+  // the stop must not redeem — RFC 6749 §5.2 unauthorized_client.
+  if (clientStoppedAt(db, row.client_id)) return fail("unauthorized_client", "client is stopped by an administrator.");
   if (row.redirect_uri !== opts.redirectUri) return fail("invalid_grant", "redirect_uri mismatch.");
   if ((opts.resource ?? row.resource) !== row.resource || row.resource !== opts.expectedResource) {
     return fail("invalid_target", "resource mismatch.");
@@ -328,6 +347,20 @@ export function refreshTokens(
     } | null;
   if (!row) return fail("invalid_grant", "Unknown refresh token.");
   if (row.client_id !== opts.clientId) return fail("invalid_grant", "Refresh token was issued to a different client.");
+  // G3 (design 2026-11-27-admin-oauth-client-stop-start): stop already revoked
+  // every token, so a live refresh token presenting here is a race or a missed
+  // revoke — reject and revoke the presented family, as reuse detection does.
+  if (clientStoppedAt(db, row.client_id)) {
+    const n = revokeFamily(db, row.family_id, opts.now);
+    audit(
+      db,
+      row.user_id,
+      "oauth_refresh_stopped_client_family_revoked",
+      { client_id: row.client_id, family_id: row.family_id, revoked: n },
+      opts.now,
+    );
+    return fail("unauthorized_client", "client is stopped by an administrator.");
+  }
   if (row.revoked_at) {
     // Reuse detection: a rotated (or revoked) refresh token came back.
     const n = revokeFamily(db, row.family_id, opts.now);
@@ -373,11 +406,15 @@ export interface ValidAccessToken {
 }
 
 export function validateAccessToken(db: Database, token: string, audience: string, now: string): ValidAccessToken | null {
+  // G4 (design 2026-11-27-admin-oauth-client-stop-start): the JOIN requires the
+  // client row to be operating (stopped_at IS NULL); failure falls into the
+  // existing null -> 401 path. Normally a no-op (stop already revoked every
+  // token); it closes the in-flight race and any future writer outside the engine.
   const row = db
     .query(
       `SELECT t.id, t.user_id, t.client_id, t.family_id, t.scopes, t.audience, t.expires_at, u.role, u.status, u.must_change_password
-       FROM api_token t JOIN app_user u ON u.user_id = t.user_id
-       WHERE t.token_hash = ? AND t.kind = 'oauth_access' AND t.revoked_at IS NULL`,
+       FROM api_token t JOIN app_user u ON u.user_id = t.user_id JOIN oauth_client c ON c.client_id = t.client_id
+       WHERE t.token_hash = ? AND t.kind = 'oauth_access' AND t.revoked_at IS NULL AND c.stopped_at IS NULL`,
     )
     .get(sha256Hex(token)) as {
       id: string; user_id: string; client_id: string; family_id: string; scopes: string; audience: string; expires_at: string;
@@ -460,6 +497,62 @@ export function revokeConnectedApp(db: Database, opts: { userId: string; clientI
   return n;
 }
 
+// ── Admin START/STOP (design 2026-11-27-admin-oauth-client-stop-start) ───
+
+export type StopClientResult =
+  | { ok: true; stoppedAt: string; revoked: number }
+  | { ok: false; reason: "unknown" | "already_stopped"; stoppedAt: string | null };
+
+/**
+ * STOP one client for ALL users: stamp `stopped_at` and revoke every live
+ * oauth_access/refresh token of that client — revokeConnectedApp's predicate
+ * minus user_id (fleet-wide) — in ONE transaction. The route layer turns
+ * `already_stopped` into 409; a double call here is still safe: the stamp
+ * UPDATE affects 0 rows and the command aborts before the revoke runs, so
+ * nothing is re-revoked and no audit row is written for the refusal.
+ */
+export function stopClient(db: Database, opts: { clientId: string; actorId: string; now: string }): StopClientResult {
+  return db.transaction((): StopClientResult => {
+    const stamped = db.run("UPDATE oauth_client SET stopped_at = ? WHERE client_id = ? AND stopped_at IS NULL", [
+      opts.now,
+      opts.clientId,
+    ]).changes;
+    if (stamped === 0) {
+      const row = db.query("SELECT stopped_at FROM oauth_client WHERE client_id = ?").get(opts.clientId) as {
+        stopped_at: string | null;
+      } | null;
+      if (!row) return { ok: false, reason: "unknown", stoppedAt: null };
+      return { ok: false, reason: "already_stopped", stoppedAt: row.stopped_at };
+    }
+    const revoked = db.run(
+      "UPDATE api_token SET revoked_at = ? WHERE client_id = ? AND kind IN ('oauth_access','oauth_refresh') AND revoked_at IS NULL",
+      [opts.now, opts.clientId],
+    ).changes;
+    audit(db, opts.actorId, "oauth_app_stop", { client_id: opts.clientId, revoked }, opts.now);
+    return { ok: true, stoppedAt: opts.now, revoked };
+  })();
+}
+
+export type StartClientResult = { ok: true } | { ok: false; reason: "unknown" | "already_running" };
+
+/**
+ * START one client: clear `stopped_at` only where it is non-NULL. Tokens are
+ * NOT restored — previously authorized users must reconnect (design ruling:
+ * 시작 re-opens the door, it does not resurrect keys). The route layer turns
+ * `already_running` into 409; a double call here is a safe no-op.
+ */
+export function startClient(db: Database, opts: { clientId: string; actorId: string; now: string }): StartClientResult {
+  const cleared = db.run("UPDATE oauth_client SET stopped_at = NULL WHERE client_id = ? AND stopped_at IS NOT NULL", [
+    opts.clientId,
+  ]).changes;
+  if (cleared === 0) {
+    const row = db.query("SELECT 1 FROM oauth_client WHERE client_id = ?").get(opts.clientId);
+    return row ? { ok: false, reason: "already_running" } : { ok: false, reason: "unknown" };
+  }
+  audit(db, opts.actorId, "oauth_app_start", { client_id: opts.clientId }, opts.now);
+  return { ok: true };
+}
+
 /** Audit one authenticated use of an access token (one per MCP tool call). */
 export function auditTokenUse(
   db: Database,
@@ -468,4 +561,47 @@ export function auditTokenUse(
   audit(db, opts.userId, "mcp_tool_call", {
     client_id: opts.clientId, token_family_id: opts.familyId, tool: opts.tool, scope: opts.scope, result: opts.result, args_sha256: opts.argsHash,
   }, opts.now);
+}
+
+// ── Admin client inventory (design 2026-11-27-admin-oauth-client-stop-start) ──
+
+export interface AdminOAuthClient {
+  client_id: string;
+  name: string;
+  verified: boolean;
+  registered_by_user_id: string | null;
+  created_at: string;
+  stopped_at: string | null;
+  /** Presence only — the full URI list stays the registrant's view. */
+  redirect_uri_count: number;
+  /** DISTINCT users holding a live oauth token for this client (listConnectedApps predicate, generalized to all users). */
+  authorized_users: number;
+  /** Live (unrevoked, unexpired) kind IN ('oauth_access','oauth_refresh') rows. */
+  live_tokens: number;
+}
+
+/** Every registered client — including stopped ones — with per-client stats. */
+export function listAdminOAuthClients(db: Database, now: string): AdminOAuthClient[] {
+  const rows = db
+    .query(
+      `SELECT c.client_id, c.name, c.verified, c.registered_by_user_id, c.created_at, c.stopped_at,
+              json_array_length(c.redirect_uris) AS redirect_uri_count,
+              COUNT(DISTINCT CASE WHEN t.kind IN ('oauth_access','oauth_refresh') AND t.revoked_at IS NULL AND t.expires_at > ? THEN t.user_id END) AS authorized_users,
+              COUNT(CASE WHEN t.kind IN ('oauth_access','oauth_refresh') AND t.revoked_at IS NULL AND t.expires_at > ? THEN 1 END) AS live_tokens
+       FROM oauth_client c LEFT JOIN api_token t ON t.client_id = c.client_id
+       GROUP BY c.client_id, c.name, c.verified, c.registered_by_user_id, c.created_at, c.stopped_at
+       ORDER BY c.created_at DESC`,
+    )
+    .all(now, now) as Array<{
+    client_id: string;
+    name: string;
+    verified: number;
+    registered_by_user_id: string | null;
+    created_at: string;
+    stopped_at: string | null;
+    redirect_uri_count: number;
+    authorized_users: number;
+    live_tokens: number;
+  }>;
+  return rows.map((r) => ({ ...r, verified: r.verified === 1 }));
 }
