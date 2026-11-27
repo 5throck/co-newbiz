@@ -58,6 +58,10 @@ export interface ReferenceSuggestion {
   collect_hint?: boolean;
   agency_links?: CreditAgencyLink[];
   spread_basis?: CreditSpreadBasis | null;
+  /** ADR-0208 slice 4: the KOFIA grade yield and same-date KTB 3y behind a `kofia_grade` spread; null for other bases. */
+  kofia?: CreditKofiaDetail | null;
+  /** Latest date with stored KOFIA data (YYYY-MM-DD); null when none was collected. */
+  kofia_latest_date?: string | null;
   derived?: boolean;
   flags?: CreditSpreadFlag[];
   series_used?: Array<{ role: string; series_id: string; value_pct: number }>;
@@ -183,7 +187,20 @@ export interface CreditAgencyLink {
   agency: string;
   home_url: string;
 }
-export type CreditSpreadBasis = "ecos_interpolated" | "ecos_clamped" | "aa_minus_legacy";
+export type CreditSpreadBasis = "kofia_grade" | "ecos_interpolated" | "ecos_clamped" | "aa_minus_legacy";
+
+/** `credit_spread.kofia` (basis `kofia_grade`): one published KOFIA reading, percent points. */
+export interface CreditKofiaDetail {
+  date: string;
+  grade: string;
+  tenor: string;
+  grade_yield_pct: number;
+  ktb_pct: number;
+  series_id: string;
+  ktb_series_id: string;
+  source_url: string;
+  source_label: string;
+}
 export type CreditSpreadFlag =
   | "interpolated"
   | "above_upper_anchor_clamped"
@@ -646,4 +663,107 @@ export function crosscheckUnreliable(e: ReferenceSuggestion): CreditCrosscheck |
 export function issuanceEvidenceRows(e: ReferenceSuggestion): CreditIssuanceRow[] {
   if (e.key !== "credit_spread" || e.issuance_status !== "available") return [];
   return e.issuance_evidence ?? [];
+}
+
+/** The KOFIA reading behind a `kofia_grade` spread (source chip text, date, URL); null for any other basis. */
+export interface KofiaCreditView {
+  date: string;
+  grade: string;
+  tenor: string;
+  gradeYieldPct: number;
+  ktbPct: number;
+  sourceUrl: string;
+}
+
+export function kofiaCreditView(e: ReferenceSuggestion): KofiaCreditView | null {
+  const k = e.kofia;
+  if (e.key !== "credit_spread" || e.spread_basis !== "kofia_grade" || !k) return null;
+  // Only a KOFIA page link is rendered as a link (the URL comes from the server; anything else is shown as plain text).
+  const safe = /^https:\/\/www\.kofiabond\.or\.kr\//.test(k.source_url) ? k.source_url : "";
+  return {
+    date: k.date,
+    grade: k.grade,
+    tenor: k.tenor,
+    gradeYieldPct: k.grade_yield_pct,
+    ktbPct: k.ktb_pct,
+    sourceUrl: safe,
+  };
+}
+
+/** Collect endpoint of the KOFIA grade-yield collection (market-common, so not per target). */
+export function kofiaCollectUrl(projectId: string): string {
+  return `/api/projects/${encodeURIComponent(projectId)}/wacc/kofia/collect`;
+}
+
+// ── FSC bond cross-check (GET .../wacc/bond-evidence): reference evidence only, never applied ─────────────────────────
+
+export type BondEvidenceStatus = "ok" | "no_bonds" | "ambiguous_issuer" | "unavailable";
+export type BondPriceStatus = "traded" | "not_traded_in_window" | "not_looked_up" | "lookup_failed";
+
+export interface BondEvidenceBondRow {
+  isin: string;
+  name: string;
+  issued_on: string | null;
+  matures_on: string | null;
+  coupon_pct: number | null;
+  balance_krw_million: number | null;
+  seniority: string | null;
+  guarantee: string | null;
+  offering: string | null;
+  last_price: { as_of: string; yield_pct: number; close_price: number | null } | null;
+  price_status: BondPriceStatus;
+}
+
+export interface BondEvidencePayload {
+  project_id: string;
+  company: { id: string; name_ko: string };
+  evidence: {
+    cross_check_only: true;
+    status: BondEvidenceStatus;
+    reason_code: string | null;
+    reason: string | null;
+    issuer: { query_name: string; matched_name: string | null; crno: string | null; match_basis: "name" };
+    bonds: BondEvidenceBondRow[];
+    basis_date: string | null;
+    truncated: boolean;
+    price_window_months: number;
+    fetched_at: string;
+    attribution: {
+      basic: { dataset: string; license: string; provider: string; url: string };
+      price: { dataset: string; license: string; provider: string; url: string };
+    };
+  };
+}
+
+/** Bond-evidence endpoint of a project; `targetId` scopes it to a shortlisted target (ADR-0156), like the suggestions GET. */
+export function bondEvidenceUrl(projectId: string, targetId?: string | null): string {
+  const base = `/api/projects/${encodeURIComponent(projectId)}/wacc/bond-evidence`;
+  return targetId ? `${base}?target_id=${encodeURIComponent(targetId)}` : base;
+}
+
+/** Maturity-ordered display rows of the evidence: the bonds as published, never a value a form can take. */
+export interface BondEvidenceRowView {
+  key: string;
+  name: string;
+  couponPct: number | null;
+  matursOn: string | null;
+  balanceKrwMillion: number | null;
+  /** Latest price-implied yield (percent points, as published) with its trading day; null when none. */
+  yieldPct: number | null;
+  yieldAsOf: string | null;
+  priceStatus: BondPriceStatus;
+}
+
+export function bondEvidenceRows(p: BondEvidencePayload | null): BondEvidenceRowView[] {
+  if (!p || p.evidence.status !== "ok") return [];
+  return p.evidence.bonds.map((b) => ({
+    key: b.isin,
+    name: b.name,
+    couponPct: b.coupon_pct,
+    matursOn: b.matures_on,
+    balanceKrwMillion: b.balance_krw_million,
+    yieldPct: b.last_price?.yield_pct ?? null,
+    yieldAsOf: b.last_price?.as_of ?? null,
+    priceStatus: b.price_status,
+  }));
 }

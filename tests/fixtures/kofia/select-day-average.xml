@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?><root><message><proframeHeader>
+<pfmAppName>BIS-KOFIABOND</pfmAppName>
+<pfmSvcName>BISBndSrtPrcSrchSO</pfmSvcName>
+<pfmFnName>selectDay</pfmFnName>
+<pfmGlobalNo>fixture</pfmGlobalNo>
+<pfmTrDate>20261127</pfmTrDate>
+<pfmTrTime>20261127083430236</pfmTrTime>
+<pfmResponseDtal></pfmResponseDtal>
+</proframeHeader>
+<systemHeader>
+</systemHeader>
+<BISBndSrtPrcDayListDTO>
+<dbio_total_count_>16</dbio_total_count_>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>국채</largeCategoryMrk>
+<typeNmMrk>국고채권</typeNmMrk>
+<creditRnkMrk>양곡,외평,재정</creditRnkMrk>
+<largeCategoryMrkEng>Government</largeCategoryMrkEng>
+<typeNmMrkEng>KTB</typeNmMrkEng>
+<creditRnkMrkEng>Grain, Fx &amp; Finance</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>1010000</sigaBrnCd>
+<val1>3.268</val1>
+<val2>3.461</val2>
+<val3>3.646</val3>
+<val4>3.672</val4>
+<val5>3.700</val5>
+<val6>3.655</val6>
+<val7>3.607</val7>
+<val8>3.612</val8>
+<val9>3.668</val9>
+<val10>3.675</val10>
+<val11>3.743</val11>
+<val12>3.775</val12>
+<val13>3.891</val13>
+<val14>3.950</val14>
+<val15>3.900</val15>
+<val16>3.850</val16>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>특수채</largeCategoryMrk>
+<typeNmMrk>공사채 및 공단채</typeNmMrk>
+<creditRnkMrk>AA+</creditRnkMrk>
+<largeCategoryMrkEng>Special</largeCategoryMrkEng>
+<typeNmMrkEng>State-owned Co. Bond</typeNmMrkEng>
+<creditRnkMrkEng>AA+</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>3040121</sigaBrnCd>
+<val1>3.664</val1>
+<val2>3.995</val2>
+<val3>4.039</val3>
+<val4>4.051</val4>
+<val5>4.060</val5>
+<val6>4.077</val6>
+<val7>4.068</val7>
+<val8>4.064</val8>
+<val9>4.070</val9>
+<val10>4.111</val10>
+<val11>4.125</val11>
+<val12>4.178</val12>
+<val13>4.271</val13>
+<val14>4.431</val14>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>**금융채 II(금융기관채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AA0</creditRnkMrk>
+<largeCategoryMrkEng>**Financial II (Financial Inst)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AA0</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>6010122</sigaBrnCd>
+<val1>3.800</val1>
+<val2>4.032</val2>
+<val3>4.094</val3>
+<val4>4.101</val4>
+<val5>4.134</val5>
+<val6>4.177</val6>
+<val7>4.173</val7>
+<val8>4.195</val8>
+<val9>4.210</val9>
+<val10>4.289</val10>
+<val11>4.534</val11>
+<val12>5.306</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>***보증</typeNmMrk>
+<creditRnkMrk>특수은행,우량시중은행</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>***Guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>Spcl Bnk, Good Commercial Bnk</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7020110</sigaBrnCd>
+<val1>3.667</val1>
+<val2>3.973</val2>
+<val3>3.989</val3>
+<val4>3.977</val4>
+<val5>4.004</val5>
+<val6>3.996</val6>
+<val7>3.993</val7>
+<val8>3.983</val8>
+<val10>4.029</val10>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AAA</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AAA</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010110</sigaBrnCd>
+<val1>3.782</val1>
+<val2>4.044</val2>
+<val3>4.085</val3>
+<val4>4.088</val4>
+<val5>4.091</val5>
+<val6>4.100</val6>
+<val7>4.095</val7>
+<val8>4.088</val8>
+<val9>4.091</val9>
+<val10>4.097</val10>
+<val11>4.111</val11>
+<val12>4.275</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AA+</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AA+</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010121</sigaBrnCd>
+<val1>3.891</val1>
+<val2>4.161</val2>
+<val3>4.186</val3>
+<val4>4.186</val4>
+<val5>4.167</val5>
+<val6>4.179</val6>
+<val7>4.188</val7>
+<val8>4.184</val8>
+<val9>4.185</val9>
+<val10>4.188</val10>
+<val11>4.209</val11>
+<val12>4.558</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AA0</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AA0</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010122</sigaBrnCd>
+<val1>3.925</val1>
+<val2>4.196</val2>
+<val3>4.221</val3>
+<val4>4.223</val4>
+<val5>4.207</val5>
+<val6>4.212</val6>
+<val7>4.223</val7>
+<val8>4.223</val8>
+<val9>4.226</val9>
+<val10>4.250</val10>
+<val11>4.305</val11>
+<val12>4.894</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AA-</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AA-</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010123</sigaBrnCd>
+<val1>3.956</val1>
+<val2>4.229</val2>
+<val3>4.254</val3>
+<val4>4.258</val4>
+<val5>4.239</val5>
+<val6>4.262</val6>
+<val7>4.267</val7>
+<val8>4.274</val8>
+<val9>4.284</val9>
+<val10>4.350</val10>
+<val11>4.500</val11>
+<val12>5.258</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>A+</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>A+</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010131</sigaBrnCd>
+<val1>4.040</val1>
+<val2>4.338</val2>
+<val3>4.410</val3>
+<val4>4.421</val4>
+<val5>4.450</val5>
+<val6>4.547</val6>
+<val7>4.583</val7>
+<val8>4.660</val8>
+<val9>4.782</val9>
+<val10>5.010</val10>
+<val11>5.166</val11>
+<val12>5.841</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>A0</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>A0</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010132</sigaBrnCd>
+<val1>4.139</val1>
+<val2>4.454</val2>
+<val3>4.555</val3>
+<val4>4.577</val4>
+<val5>4.635</val5>
+<val6>4.736</val6>
+<val7>4.788</val7>
+<val8>4.934</val8>
+<val9>5.144</val9>
+<val10>5.456</val10>
+<val11>5.626</val11>
+<val12>6.302</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>A-</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>A-</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010133</sigaBrnCd>
+<val1>4.369</val1>
+<val2>4.702</val2>
+<val3>4.827</val3>
+<val4>4.848</val4>
+<val5>4.947</val5>
+<val6>5.091</val6>
+<val7>5.197</val7>
+<val8>5.390</val8>
+<val9>5.641</val9>
+<val10>6.046</val10>
+<val11>6.154</val11>
+<val12>6.814</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>BBB+</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>BBB+</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010211</sigaBrnCd>
+<val1>4.716</val1>
+<val2>5.393</val2>
+<val3>5.801</val3>
+<val4>5.901</val4>
+<val5>6.435</val5>
+<val6>7.135</val6>
+<val7>7.395</val7>
+<val8>7.658</val8>
+<val9>7.800</val9>
+<val10>7.926</val10>
+<val11>7.958</val11>
+<val12>8.307</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>BBB0</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>BBB0</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010212</sigaBrnCd>
+<val1>5.100</val1>
+<val2>5.912</val2>
+<val3>6.395</val3>
+<val4>6.590</val4>
+<val5>7.255</val5>
+<val6>8.094</val6>
+<val7>8.439</val7>
+<val8>8.709</val8>
+<val9>8.846</val9>
+<val10>8.977</val10>
+<val11>9.011</val11>
+<val12>9.403</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 I(공모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>BBB-</creditRnkMrk>
+<largeCategoryMrkEng>Corporate I (Publicly-offered)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>BBB-</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>7010213</sigaBrnCd>
+<val1>5.780</val1>
+<val2>6.714</val2>
+<val3>7.329</val3>
+<val4>7.587</val4>
+<val5>8.382</val5>
+<val6>9.263</val6>
+<val7>9.686</val7>
+<val8>10.070</val8>
+<val9>10.218</val9>
+<val10>10.329</val10>
+<val11>10.357</val11>
+<val12>10.757</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 II(사모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AAA</creditRnkMrk>
+<largeCategoryMrkEng>Corporate II (Privately-placed)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AAA</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>8010110</sigaBrnCd>
+<val1>3.863</val1>
+<val2>4.156</val2>
+<val3>4.213</val3>
+<val4>4.225</val4>
+<val5>4.239</val5>
+<val6>4.255</val6>
+<val7>4.263</val7>
+<val8>4.259</val8>
+<val9>4.273</val9>
+<val10>4.297</val10>
+<val11>4.342</val11>
+<val12>4.538</val12>
+</BISBndSrtPrcDayDTO>
+<BISBndSrtPrcDayDTO>
+<largeCategoryMrk>회사채 II(사모사채)</largeCategoryMrk>
+<typeNmMrk>무보증</typeNmMrk>
+<creditRnkMrk>AA</creditRnkMrk>
+<largeCategoryMrkEng>Corporate II (Privately-placed)</largeCategoryMrkEng>
+<typeNmMrkEng>Non-guaranteed</typeNmMrkEng>
+<creditRnkMrkEng>AA</creditRnkMrkEng>
+<koreanShotNm>평가사 평균(`23.1.9~)</koreanShotNm>
+<engShotNm>AVG</engShotNm>
+<reportCompCd>A20000</reportCompCd>
+<sigaBrnCd>8010120</sigaBrnCd>
+<val1>4.040</val1>
+<val2>4.354</val2>
+<val3>4.398</val3>
+<val4>4.406</val4>
+<val5>4.401</val5>
+<val6>4.418</val6>
+<val7>4.437</val7>
+<val8>4.442</val8>
+<val9>4.455</val9>
+<val10>4.497</val10>
+<val11>4.575</val11>
+<val12>5.167</val12>
+</BISBndSrtPrcDayDTO>
+</BISBndSrtPrcDayListDTO></message></root>

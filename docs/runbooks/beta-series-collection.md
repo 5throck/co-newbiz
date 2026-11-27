@@ -158,6 +158,76 @@ source order: interest expense, interest paid (operating plus financing
 activities), finance costs (a proxy that overstates interest). Cross-check
 reasons are `crosscheck_unavailable_*` and `crosscheck_unreliable_non_positive_debt`. A warning with `crosscheck_implied_far_below_market` means the actual cost is far below the market Kd (policy finance or low-rate borrowing?); it is also raised when the implied cost is below the risk-free rate.
 
+## KOFIA grade yields: automated collection is OFF by default (ADR-0208 slice 4)
+
+The credit spread can be built directly from the Korea Financial Investment Association's (KOFIA) published
+grade-by-rating corporate bond yields (`kofiabond.or.kr`, menu `시가평가 > 채권시가평가수익률 > 일자별`; valuation-firm
+average, public-offering unsecured corporate bonds AAA to BBB-, 3-year column) instead of interpolating between the two
+ECOS anchors. The suggestion then has `spread_basis: "kofia_grade"` (chip "grade yield (KOFIA)"): spread = the grade's 3y
+yield minus the KOFIA KTB 3y **of the same date**; no interpolation; Rf of the suggestion stays the ECOS risk-free entry.
+
+**The gate.** KOFIA publishes no API for this and has not confirmed that automated collection is permitted (design
+section 4.1: no terms clause found, `robots.txt` absent, the Q&A of 2022-08-05 says the yields are for simple information
+only and accepts no liability; nothing is said about automation or redistribution). Therefore:
+
+- Automated collection runs **only when `CO_NEWBIZ_KOFIA_COLLECT=on`** in the repo-root `.env` (restart the server after
+  a change). The default, and any other value, is **off**. It stays off until KOFIA confirms **in writing** that automated
+  collection of these yields is permitted; keep that confirmation with the ADR-0208 record before switching it on.
+- Off: `POST /api/projects/<id>/wacc/kofia/collect` answers `503 kofia_collect_disabled` (no run, no audit row, no network
+  call), the collector refuses by itself (so no script or test can fetch by accident), and the WACC panel shows **no**
+  KOFIA row in "reference data collection". The spread uses the ECOS bases as before.
+- On: the analyst sees a "grade yields" row in "reference data collection"; one run is three POSTs (latest published date,
+  column heads, that day), sequential, a generic client User-Agent, no cookie, no login; it stores the KTB 3y and the ten
+  grades of that day as day-grain observations (`kofia:ktb:3y`, `kofia:corp-public-unsecured:<GRADE>:3y`, source `kofia`,
+  unit percent). Run it as often as you need (the latest day each time; a re-run of the same day writes nothing). Each run is
+  a `job_run` (`wacc-kofia.collect`) and an audit row `wacc_kofia.collect_requested`.
+- **Stored data is always read**, whatever the switch says: turning the switch off stops fetching, it does not hide what was
+  collected. To stop using KOFIA data entirely, delete nothing: ask for a decision (ADR) first.
+
+What is known and what is not (verified 2026-11-27, by reading the page's own client file and one probe each of three calls;
+no login): the page calls one undocumented XML service (`POST https://www.kofiabond.or.kr/proframeWeb/XMLSERVICES/`, app
+`BIS-KOFIABOND`, service `BISBndSrtPrcSrchSO`, functions `getExistMaxDate`, `getHeadList`, `selectDay`) and the answers
+carried the expected rows. **Unverified**: that the service stays stable (it is internal, not a contract), and anything about
+KOFIA's permission for automation. A layout change makes the run **fail** (`not a service response`, `no 3-year column`,
+`no KTB row`, ...) and writes nothing; it is never read as a zero. Fix the parser (`db/lib/kofia-grade-yield.ts`,
+`KOFIA_PARSER_VERSION`) against a fresh fixture (`tests/fixtures/kofia/`).
+
+Reading the result: the credit row of the WACC card shows the chip, the grade yield, the same-date KTB, the date and a link
+to the KOFIA page. The confirmation audit records `spread_basis=kofia_grade`, `kofia_date=<date>` and `kofia_series=<id>`
+from the server's re-derivation at the cited month. KOFIA data wins over ECOS for the same or an older ECOS month; a newer
+ECOS month (not yet matched by KOFIA data) wins. A rating KOFIA does not publish (BB+ and below) uses the ECOS bases.
+
+## FSC bond cross-check (data.go.kr, ADR-0208 slice 4)
+
+Next to the credit spread the WACC card offers **Look up outstanding bonds**: the company's outstanding bonds (coupon,
+maturity, balance) and the latest price-implied yield of the largest five, from the data.go.kr FSC bond APIs
+`금융위원회_채권기본정보` (`getBondBasiInfo_V2`) and `금융위원회_채권시세정보` (`getBondPriceInfo_V2`). It is **reference
+evidence only**: never an applied value, never in "apply all", never stored, never an input to an audit row.
+`GET /api/projects/<id>/wacc/bond-evidence` (optional `?target_id=`).
+
+- Key: `DATA_GO_KR_API_KEY`, one `활용신청` per dataset (both approved on the development account; renew before
+  2028-11-26; registry `docs/runbooks/data-go-kr-datasets.yaml`). Missing key: `503 data_go_kr_api_key_missing`.
+  `SERVICE_KEY_IS_NOT_REGISTERED_ERROR` (a new approval not yet propagated, an unapproved dataset) is **not** an HTTP error:
+  the answer is `200` with `evidence.status: "unavailable"`, `reason_code: "service_key_not_registered"`, and the panel says
+  to look up again shortly. Quota (`quota_exceeded`) and an expired approval (`service_expired`) are shown the same way.
+- Key form: the key in `.env` is the **Encoding** form (percent escapes). The client decodes it once and escapes it once; a
+  key passed through `curl --data-urlencode` or `URLSearchParams` unchanged is escaped twice and answers
+  `SERVICE_KEY_IS_NOT_REGISTERED_ERROR` even though it is valid.
+- Issuer matching: by **name** (`md_company.name_ko`, company-form words and spaces ignored). `md_company` stores the 10-digit
+  business registration number (`biz_reg_no`), not the 13-digit corporate registration number (`crno`) this API uses, and a
+  `crno`-only query is not reliable (it answered 30,422 rows). The response `crno` is shown as evidence; several `crno` under
+  one name means `ambiguous_issuer` and nothing is shown.
+- Cost: one basic-info call plus at most five price lookups per press (the price API has no issuer filter and lists only
+  days with a trade; window 12 months), cached in process for 15 minutes. A development account is traffic-capped.
+- Terms (`공공누리`): basic info is **type 2** (source attribution, no commercial use; commercial users contract with
+  `한국예탁결제원`); price info is **type 4** (source attribution, no commercial use, **no modification**, no redistribution;
+  commercial use is bought from KRX). The panel shows the notice with links to both datasets; the price yield is displayed
+  exactly as published with its trading day and is not stored or exported. Whether internal valuation work counts as
+  "commercial use" is a legal-counsel reading (design section 4.2) that is **not** settled here.
+- Verified live 2026-11-27 with the repo key: both operations answered HTTP 200 / `resultCode 00` and the field names
+  listed in the registry notes. Not verified: behaviour for issuers with thousands of bonds (the client reads at most three
+  pages of 100), and pagination order guarantees (none are assumed).
+
 ## Index choice (listing market)
 
 The beta regression pairs the stock with the index of its **listing market**

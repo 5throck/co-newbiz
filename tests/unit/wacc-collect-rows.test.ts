@@ -16,6 +16,9 @@ import {
   ecosRowStatus,
   financialsCollectNeeded,
   financialsRowStatus,
+  kofiaCollectNeeded,
+  kofiaRowStatus,
+  kofiaRowVisible,
 } from "../../app/web-next/lib/wacc-collect-rows.ts";
 import type { ReferenceSuggestion } from "../../app/web-next/lib/wacc-reference-items.ts";
 
@@ -240,5 +243,59 @@ describe("slice 3: synthetic status and the financial re-sync row", () => {
     const panel = readFileSync("app/web-next/components/wacc/WaccPanel.tsx", "utf8");
     expect(panel).toContain("/api/companies/${encodeURIComponent(finCompanyId)}/sync");
     expect(panel).toContain('key: "financials"');
+  });
+});
+
+describe("slice 4: the KOFIA grade-yield row exists only when the switch is on", () => {
+  test("hidden unless the server reports the collection enabled AND there is a credit suggestion", () => {
+    expect(kofiaRowVisible(undefined, credit())).toBe(false); // payload from before the switch existed
+    expect(kofiaRowVisible(false, credit())).toBe(false); // switch off (default)
+    expect(kofiaRowVisible(true, undefined)).toBe(false);
+    expect(kofiaRowVisible(true, { key: "risk_free", value: 3.8 })).toBe(false);
+    expect(kofiaRowVisible(true, credit())).toBe(true);
+  });
+  test("primary emphasis until something was collected; status carries the date and whether it feeds the spread", () => {
+    expect(kofiaCollectNeeded(credit())).toBe(true);
+    expect(kofiaRowStatus(credit())).toEqual({ kind: "not_collected" });
+    const used = credit({ kofia_latest_date: "2026-11-26", spread_basis: "kofia_grade" });
+    expect(kofiaCollectNeeded(used)).toBe(false);
+    expect(kofiaRowStatus(used)).toEqual({ kind: "collected", date: "2026-11-26", used: true });
+    expect(kofiaRowStatus(credit({ kofia_latest_date: "2026-11-26", spread_basis: "ecos_interpolated" }))).toEqual({
+      kind: "collected",
+      date: "2026-11-26",
+      used: false,
+    });
+    expect(collectRowId("kofia")).toBe("wacc-collect-row-kofia");
+  });
+  test("the panel renders the row only through kofiaRowVisible(sugg.kofia_collect?.enabled, ...)", () => {
+    const panel = readFileSync("app/web-next/components/wacc/WaccPanel.tsx", "utf8");
+    expect(panel).toContain("kofiaRowVisible(sugg.kofia_collect?.enabled, creditSugg)");
+    expect(panel).toContain('key: "kofia"');
+  });
+  const keys = [
+    "creditBasisKofia",
+    "collectKofiaName",
+    "collectKofiaFills",
+    "collectKofiaSource",
+    "collectKofiaRun",
+    "collectKofiaRerun",
+    "collectKofiaRunning",
+    "collectKofiaDone",
+    "collectKofiaFailed",
+    "collectKofiaStartFailed",
+    "collectStatusKofiaNotCollected",
+    "collectStatusKofiaCollected",
+    "collectStatusKofiaUsed",
+    "collectStatusKofiaNotUsed",
+  ];
+  for (const l of ["en", "ko"]) {
+    test(`${l}: KOFIA row keys exist`, () => {
+      const m = JSON.parse(readFileSync(`app/web-next/locales/${l}.json`, "utf8"));
+      for (const k of keys) expect(typeof m.stages.s8.wacc.waccPanel[k]).toBe("string");
+    });
+  }
+  test("ko basis chip text is the agreed label", () => {
+    const m = JSON.parse(readFileSync("app/web-next/locales/ko.json", "utf8"));
+    expect(m.stages.s8.wacc.waccPanel.creditBasisKofia).toBe("등급별 수익률(금융투자협회)");
   });
 });
