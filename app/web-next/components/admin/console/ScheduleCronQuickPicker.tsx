@@ -244,11 +244,11 @@ export function ScheduleCronQuickPicker({
             <span id={`${idPrefix}CronDow`} className="text-[length:var(--fs-caption)] font-semibold">
               {t("cronDowLegend")}
             </span>
-            <div
-              role="group"
+            <fieldset
               aria-labelledby={`${idPrefix}CronDow`}
               aria-describedby={dowEmpty ? `${idPrefix}CronError` : undefined}
               className="flex flex-wrap gap-1"
+              style={{ border: 0, padding: 0, margin: 0 }}
             >
               {DOW_VALUES.map((d) => {
                 const selected = ctrl.days.includes(d);
@@ -275,7 +275,7 @@ export function ScheduleCronQuickPicker({
                   </label>
                 );
               })}
-            </div>
+            </fieldset>
           </div>
           <div className="flex flex-wrap items-center gap-2">{timeSelects}</div>
         </>
