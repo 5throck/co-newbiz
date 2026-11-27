@@ -6,22 +6,14 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   ChevronLeft,
-  GitBranch,
-  Sprout,
-  LineChart,
   LayoutDashboard,
   BookOpen,
-  Shield,
   LogOut,
   KeyRound,
   Plug,
-  ListChecks,
-  Target,
   FileText,
   LibraryBig,
   Landmark,
-  Lightbulb,
-  Handshake,
   Building2,
   Compass,
   Bell,
@@ -32,6 +24,7 @@ import {
   Database,
   Users,
   ScrollText,
+  Cable,
   FolderKanban,
   PanelLeftClose,
   PanelLeftOpen,
@@ -57,13 +50,6 @@ type SidebarState = "docked" | "open" | "closed";
 // 필요 없다 — 사이드바는 인증 확인 후에야 렌더되므로 첫 페인트에 깜빡일
 // 대상이 없고, 마운트 후 동기화로 충분하다.
 const SIDEBAR_KEY = "cn-sidebar";
-
-interface AdminNavItem {
-  href: string;
-  label: string;
-  icon: ReactNode;
-  adminOnly?: boolean;
-}
 
 // 좌측 패널 — 플랫 전역 내비. 메뉴 구성·순서의 SSOT는 lib/navigation.ts
 // (ADR-0105)다: 새 표준 화면은 반드시 이 레지스트리에 등록하고, 등록 누락·
@@ -94,6 +80,7 @@ const ADMIN_ICON_BY_HREF: Record<string, ReactNode> = {
   "/admin/governance": <Scale size={18} />,
   "/admin/master-data": <Layers size={18} />,
   "/admin/adr": <FileText size={18} />,
+  "/admin/connected-apps": <Cable size={18} />,
   "/settings/connected-apps": <Plug size={18} />,
 };
 const CHILD_ICON: ReactNode = <Landmark size={14} />;
@@ -170,9 +157,8 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
   );
   const found = (dealStageMatch || dealOverviewMatch || projectBack)
     ? undefined
-    : flat.find((e) => pathname === e.item.href || pathname.startsWith(e.item.href + "/"));
+    : flat.find((e) => pathname === e.item.href || pathname.startsWith(`${e.item.href}/`));
   const item = found?.item;
-  const listHref = found?.parent?.href ?? item?.href;
   // 상세 표현 판정 — 조회 파라미터 기반 상세(company·opportunity·industry)와
   // 경로 기반 상세(하위 경로)를 모두 커버한다. 버튼은 topbar 좌측(top)에 위치한다.
   const hasDetailParam =
@@ -248,7 +234,7 @@ function Topbar({ pathname, hasAppHistory, sidebarState, sidebarDocked, onToggle
         >
           <ChevronLeft size={14} aria-hidden="true" />
           {/* WCAG 2.5.3: the accessible name is the visible label plus a screen-reader suffix. */}
-          {dealStageMatch || dealOverviewMatch || projectBack ? t(backLabel) : t(item!.label)}
+          {dealStageMatch || dealOverviewMatch || projectBack ? t(backLabel) : item ? t(item.label) : t("common.backToList")}
           <span className="sr-only">{" "}{t("common.backSuffix")}</span>
         </button>
       )}
@@ -318,7 +304,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
           <div className="sidebar-group-label">{t("nav.section.admin")}</div>
           <nav className="sidebar-nav" aria-label="Primary">
             {ADMIN_NAV.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(item.href + "/");
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
@@ -341,7 +327,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
   // are NOT repeated here — the stage stepper owns stage navigation.
   const dealMatch = pathname.match(/^\/(projects|deals)\/([^/]+)/);
   const dealId = dealMatch && dealMatch[2] !== "archives" ? dealMatch[2] : null;
-  const dealOverviewHref = dealId ? `/${dealMatch![1]}/${dealId}` : null;
+  const dealOverviewHref = dealId && dealMatch ? `/${dealMatch[1]}/${dealId}` : null;
 
   return (
     <aside ref={panelRef} className="app-sidebar" inert={inertAttr}>
@@ -372,7 +358,7 @@ function Sidebar({ panelRef, inert: inertAttr, onToggleSidebar, inboxCount = 0 }
               // active one; the board item must not light up as well.
               const active = (item.href === "/deals" && dealId)
                 ? false
-                : pathname === item.href || pathname.startsWith(item.href + "/")
+                : pathname === item.href || pathname.startsWith(`${item.href}/`)
                   || (item.href === "/deals" && isDealFlowFlatRoute(pathname));
               return (
                 <Link

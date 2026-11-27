@@ -7,7 +7,12 @@ export interface AuditStats {
   byActor: Array<{ actor: string; count: number }>;
 }
 
-export interface ReviewAuditRate { key: string; sampled: number; agreed: number; rate: number | null }
+export interface ReviewAuditRate {
+  key: string;
+  sampled: number;
+  agreed: number;
+  rate: number | null;
+}
 export interface ReviewAuditSummary {
   overall: ReviewAuditRate;
   by_domain: ReviewAuditRate[];
@@ -16,7 +21,18 @@ export interface ReviewAuditSummary {
   note: string | null;
 }
 
-export type Section = "users" | "audit" | "data-sources" | "schedule" | "database" | "notifications" | "glossary" | "governance" | "master-data" | "adr";
+export type Section =
+  | "users"
+  | "audit"
+  | "data-sources"
+  | "schedule"
+  | "database"
+  | "notifications"
+  | "glossary"
+  | "governance"
+  | "master-data"
+  | "adr"
+  | "connected-apps";
 
 // ── P4 notifications & watches (design 2026-10-29-scheduled-jobs-design §13.5–13.7) ──
 // Shapes mirror the B1 Route Handler contracts verbatim (app/api/admin/notifications*,
@@ -138,6 +154,28 @@ export interface GlossaryTermRow {
   aliases?: string[];
 }
 
+// ── P2 connected apps (design 2026-11-27-admin-oauth-client-stop-start) ──
+// Shape mirrors GET /api/admin/oauth-clients verbatim (db/lib/oauth.ts
+// AdminOAuthClient). `stopped_at` non-null = an admin stamped 중단; the stop
+// also revoked every user's live oauth token, so a later 시작 does NOT
+// resurrect connections — users must reconnect (the confirm copy says so).
+
+/** One row of GET /api/admin/oauth-clients — metadata + counts only: no token values, no redirect_uri contents (ADR-0091; FR-SEC-02). */
+export interface AdminConnectedAppRow {
+  client_id: string;
+  name: string;
+  verified: boolean;
+  registered_by_user_id: string | null;
+  created_at: string;
+  stopped_at: string | null;
+  /** Presence only — the full URI list stays the registrant's view. */
+  redirect_uri_count: number;
+  /** DISTINCT users holding a live (unrevoked, unexpired) oauth token for this client. */
+  authorized_users: number;
+  /** Live (unrevoked, unexpired) kind IN ('oauth_access','oauth_refresh') rows. */
+  live_tokens: number;
+}
+
 // glossary-lint 미정의어 큐 (ADR-0022) — scripts/co-newbiz/glossary-lint.ts의
 // report-only 스캐너 결과. 큐는 큐레이터 심사 대상이지 자동 진행이 아니다.
 export interface GlossaryLintFinding {
@@ -158,7 +196,6 @@ export interface AdrRow {
   status: string;
   file: string;
 }
-
 
 export interface GovernanceDocRow {
   id: string;

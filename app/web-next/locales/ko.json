@@ -48,7 +48,8 @@
       "masterData": "마스터 데이터",
       "notifications": "알림·감시",
       "schedule": "수집 스케줄",
-      "users": "사용자·토큰"
+      "users": "사용자·토큰",
+      "connectedApps": "연결된 앱"
     },
     "ops": {
       "dsCaption": "데이터 소스 — 키 존재 여부만 표시, 값은 절대 표시되지 않음",
@@ -947,7 +948,8 @@
       "glossary": "서비스 전체에서 쓰는 용어 정의를 찾아보고 새 용어를 등록합니다. 정의 파일이 기준이라 기존 용어의 수정·삭제는 그 파일에서 합니다.",
       "governance": "정책·절차 등 거버넌스 문서의 등록 현황과 AI 검토의 신뢰도를 확인합니다. 문서 내용은 문서 저장소에서 바꿉니다.",
       "masterData": "산업·통화·국가·단위·기업 같은 공통 코드표를 관리하고, 매핑되지 않은 값을 처리합니다.",
-      "adr": "설계 결정 기록의 목록과 진행 상태를 확인합니다. 읽기 전용이며, 기록은 문서 폴더에서 바꿉니다."
+      "adr": "설계 결정 기록의 목록과 진행 상태를 확인합니다. 읽기 전용이며, 기록은 문서 폴더에서 바꿉니다.",
+      "connectedApps": "외부 앱(OAuth 클라이언트)의 연결 상태를 관리합니다. 중단하면 모든 사용자의 연결이 즉시 해지됩니다."
     },
     "labels": {
       "role": {
@@ -1317,6 +1319,39 @@
       "previewRecipientsEmpty": "외부 채널 수신자 없음",
       "previewInApp": "인앱 수신",
       "previewInAppEmpty": "인앱 수신 없음"
+    },
+    "connectedApps": {
+      "colApp": "앱 이름",
+      "colClientId": "client_id",
+      "colStatus": "상태",
+      "colStoppedAt": "중단 일시",
+      "colUsers": "연결 사용자",
+      "colVerified": "검증",
+      "emptyClients": "아직 등록된 앱이 없습니다.",
+      "errAlreadyRunning": "이미 운영 중인 앱입니다. 목록을 새로 고칩니다.",
+      "errAlreadyStopped": "이미 중단된 앱입니다. 목록을 새로 고칩니다.",
+      "errLoad": "목록을 불러오지 못했습니다.",
+      "errNotFound": "앱을 찾을 수 없습니다. 이미 삭제되었거나 등록이 취소되었을 수 있습니다.",
+      "filterAll": "전체 ({p1})",
+      "filterOperating": "운영 중 ({p1})",
+      "filterStopped": "중단 ({p1})",
+      "searchAria": "앱 이름 또는 client_id 검색",
+      "startButton": "시작",
+      "startButtonAria": "‘{p1}’ 앱 시작",
+      "startConfirmBody": "새 연결과 재연결이 허용됩니다. 이전에 연결했던 사용자는 다시 연결해야 합니다.",
+      "startConfirmTitle": "‘{p1}’ 앱을 시작할까요?",
+      "startedToast": "‘{p1}’ 앱을 시작했습니다. 기존 사용자는 다시 연결해야 합니다.",
+      "statusOperating": "운영 중",
+      "statusStopped": "중단",
+      "stopButton": "중단",
+      "stopButtonAria": "‘{p1}’ 앱 중단",
+      "stopConfirmBody": "모든 사용자의 연결이 즉시 해지되고, 이 앱은 인증·재연결이 거부됩니다. 다시 시작해도 기존 연결은 복구되지 않습니다.",
+      "stopConfirmTitle": "‘{p1}’ 앱을 중단할까요?",
+      "stoppedToast": "‘{p1}’ 앱을 중단했습니다. {p2}개 연결이 해지되었습니다.",
+      "tableCaption": "등록된 외부 앱 목록",
+      "unverifiedChip": "미검증 앱",
+      "userCount": "{p1}명",
+      "verifiedChip": "검증된 앱"
     }
   },
   "auth": {
@@ -3746,7 +3781,8 @@
       "schedule": "수집 스케줄",
       "systemMode": "시스템 모드",
       "users": "사용자·토큰",
-      "gateIntegrity": "게이트 무결성"
+      "gateIntegrity": "게이트 무결성",
+      "connectedApps": "연결된 앱"
     },
     "archives": "아카이브",
     "benchmarks": "벤치마킹 사례",
@@ -10636,7 +10672,9 @@
       "noGateNote": "어떤 권한도 게이트 승인·투자 결정·종결을 실행하지 않습니다. 연결은 언제든 “연결된 앱” 화면에서 해지할 수 있습니다.",
       "approveBlockedNote": "현재 역할로는 부여할 수 없는 권한이 있어 허용할 수 없습니다.",
       "approveBtn": "허용",
-      "denyBtn": "거부"
+      "denyBtn": "거부",
+      "stoppedHeading": "연결이 중단된 앱입니다",
+      "stoppedBody": "관리자가 이 앱의 연결을 중단했습니다. 자세한 내용은 관리자에게 문의하세요."
     },
     "glossary": {
       "heading": "용어집",

@@ -3144,6 +3144,69 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/admin/oauth-clients:
+    get:
+      operationId: listAdminOAuthClients
+      summary: Connected-app fleet inventory — every registered OAuth client (stopped included) with authorized_users/live_tokens counts. Metadata and counts only; never token values. Admin role.
+      description: >-
+        Design 2026-11-27-admin-oauth-client-stop-start. redirect_uris are
+        surfaced as a count, not contents — the full list stays the
+        registrant's view (app-side connected-apps / consent).
+      tags:
+        - Admin
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/oauth-clients/{clientId}:
+    put:
+      operationId: manageAdminOAuthClient
+      summary: Stop (stamp stopped_at + revoke every user's live oauth tokens in one transaction; audited oauth_app_stop) or start (clear stopped_at; audited oauth_app_start; tokens are NOT restored — users must reconnect). Admin role.
+      description: >-
+        Design 2026-11-27-admin-oauth-client-stop-start. Unknown clientId is a
+        404 (existence protected). Refusals write no audit row: double-stop
+        answers 409 oauth_client_already_stopped (error.details carries the
+        current stopped_at), start-on-active answers 409
+        oauth_client_already_running; the start response carries
+        users_must_reconnect: true.
+      tags:
+        - Admin
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - stop
+                    - start
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/system-mode:
     get:
       operationId: getSystemMode
