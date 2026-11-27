@@ -303,6 +303,17 @@ describe("dual-mode field source pins (§4.4 invariants over the client sources)
     expect(PICKER.match(/onCronChange\(/g)?.length).toBe(2); // compose() + the weekly zero-days path
   });
 
+  test("compose syncs the controls to what it composed — the re-seed effect trusts own writes", () => {
+    // User defect 2026-11-27 (schedule-job edit modal): compose() only wrote the expression, so a
+    // preset switch composed the right cron but left the stale control state — 매주 clicked yet
+    // 매일 stayed checked and the 요일 chips never rendered; the re-seed effect's early return
+    // (cron === lastComposed.current) presumes the controls already reflect the write.
+    const compose = PICKER.slice(PICKER.indexOf("function compose"), PICKER.indexOf("function changeDays"));
+    expect(compose).toContain("setCtrl(next);");
+    // the control sync precedes the cron write (same render pass, no stale intermediate)
+    expect(compose.indexOf("setCtrl(next);")).toBeLessThan(compose.indexOf("onCronChange(expr);"));
+  });
+
   test("weekly zero-days composes intentionally-invalid and flips the field to the 요일 hint", () => {
     expect(squash(PICKER)).toMatch(/const expr = `\$\{ctrl\.minute\} \$\{ctrl\.hour\} \* \* `/);
     expect(PICKER).toContain("onDowEmpty(true)");

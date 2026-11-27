@@ -90,6 +90,12 @@ export function ScheduleCronQuickPicker({
 
   /** The ONE write path for valid composes: canonical form into the dialog's cron state. */
   function compose(next: StructuredCron) {
+    // The controls must mirror what was composed: the re-seed effect early-returns on our own
+    // write (cron === lastComposed.current) on the stated invariant that the controls already
+    // reflect it — without this sync a preset switch composed the right expression but kept
+    // the stale radio/select state (매주 clicked, 매일 still checked, 요일 chips unreachable)
+    // (user defect 2026-11-27, schedule-job edit modal).
+    setCtrl(next);
     const expr = composeStructured(next);
     lastComposed.current = expr;
     onDowEmpty(false);

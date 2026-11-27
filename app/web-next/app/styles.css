@@ -3600,6 +3600,20 @@ a.funnel-card:hover { border-color: var(--primary); }
   box-shadow: var(--focus-ring);
 }
 .sizing-new-input-sm { padding: 0.3rem 0.45rem; font-size: var(--fs-caption); min-width: min(5rem, 100%); max-width: 100%; }
+/* Inline "label + control" rows (schedule cron quick-picker 시/분, notification filters
+   기간/트리거, sizing-unit declaration) nest the control directly inside a shrink-to-fit
+   flex <label>. There the percentage half of .sizing-new-input's min-width: min(8rem, 100%)
+   resolves against the label's own shrink-to-fit width: the control is forced to the full
+   label width and spills past the label box by the text+gap width, covering the neighbor
+   label's text (schedule-job edit modal 시/분 row overlap, user defect 2026-11-27).
+   The 8rem floor is only meaningful when the control is a free flex item of a row —
+   inside a label re-assert the base input containment (label > control wins over
+   .sizing-new-input-sm's 5rem floor too). Label-wrapped w-full selects with a definite
+   label width (ExecutionBaselinePanel field rows) are unaffected: width:100% already
+   pins them and the floor never engages. */
+label > .sizing-new-input {
+  min-width: 0;
+}
 /* S5 unified investment table: one control box for manual and capability rows (same colgroup, same cell structure). */
 .invest-item-table td { vertical-align: top; padding-block: 0.35rem; }
 .invest-ctl { box-sizing: border-box; width: 100%; min-width: 0; height: 2rem; line-height: 1.2; }
