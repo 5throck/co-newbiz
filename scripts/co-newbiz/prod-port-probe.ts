@@ -114,7 +114,8 @@ export function parseInspect(stdout: string): InspectFacts | null {
 }
 
 function isNonEmptyBinding(mapping: Record<string, unknown> | undefined): boolean {
-  return Array.isArray(mapping?.[PORT_KEY]) && (mapping![PORT_KEY] as unknown[]).length > 0;
+  const binding = mapping?.[PORT_KEY];
+  return Array.isArray(binding) && binding.length > 0;
 }
 
 /**
@@ -126,7 +127,7 @@ function isNonEmptyBinding(mapping: Record<string, unknown> | undefined): boolea
  *   running + published + HTTP fail          -> DEGRADED app_down
  */
 export function classifyOutcome(inspect: InspectFacts | null, httpOk: boolean): Classification {
-  if (!inspect || !inspect.running) return { outcome: "DEGRADED", sub_reason: "docker_down" };
+  if (!inspect?.running) return { outcome: "DEGRADED", sub_reason: "docker_down" };
   if (!inspect.portPublished) return { outcome: "PUBLISH_DEAD", sub_reason: null };
   if (httpOk) return { outcome: "OK", sub_reason: null };
   return { outcome: "DEGRADED", sub_reason: "app_down" };

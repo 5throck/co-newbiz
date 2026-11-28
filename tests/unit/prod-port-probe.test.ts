@@ -22,7 +22,8 @@ const inst = await import("../../scripts/co-newbiz/scheduler-install.ts");
 const TMP = mkdtempSync(join(tmpdir(), "port-probe-"));
 process.on("exit", () => rmSync(TMP, { recursive: true, force: true }));
 
-const runCli = (args: string[]) => Bun.spawnSync([process.execPath, join(REPO_ROOT, "scripts", "co-newbiz", "scheduler-install.ts"), ...args]);
+const runCli = (args: string[]) =>
+  Bun.spawnSync([process.execPath, join(REPO_ROOT, "scripts", "co-newbiz", "scheduler-install.ts"), ...args]);
 
 // Inspect payloads shaped like the real `docker inspect co-newbiz-web` output
 // (only the fields parseInspect reads are populated).
@@ -101,7 +102,9 @@ describe("parseInspect", () => {
   });
 
   test("absent 7749/tcp keys count as unpublished and unbound", () => {
-    const raw = JSON.stringify([{ State: { Running: true }, NetworkSettings: { Ports: {} }, HostConfig: { PortBindings: {} } }]);
+    const raw = JSON.stringify([
+      { State: { Running: true }, NetworkSettings: { Ports: {} }, HostConfig: { PortBindings: {} } },
+    ]);
     expect(probe.parseInspect(raw)).toEqual({
       running: true,
       portPublished: false,
@@ -200,7 +203,14 @@ const skipUnlessMac = MAC_LAUNCHD ? test : test.skip;
 describe("portprobe plist template and rendering", () => {
   skipUnlessMac("template exists with the required placeholders and probe-specific keys", () => {
     const tmpl = readFileSync(join(OPS, "launchd", "co-newbiz-portprobe.plist.tmpl"), "utf-8");
-    for (const p of ["{{LABEL}}", "{{PROGRAM_ARGUMENTS}}", "{{WORKING_DIRECTORY}}", "{{PATH}}", "{{STDOUT_LOG}}", "{{STDERR_LOG}}"]) {
+    for (const p of [
+      "{{LABEL}}",
+      "{{PROGRAM_ARGUMENTS}}",
+      "{{WORKING_DIRECTORY}}",
+      "{{PATH}}",
+      "{{STDOUT_LOG}}",
+      "{{STDERR_LOG}}",
+    ]) {
       expect(tmpl).toContain(p);
     }
     expect(tmpl).toContain("<key>StartInterval</key>\n\t<integer>300</integer>");
@@ -220,8 +230,9 @@ describe("portprobe plist template and rendering", () => {
     expect(plist).toContain("<key>StartInterval</key>\n\t<integer>300</integer>");
     expect(plist).toContain("<key>RunAtLoad</key>\n\t<true/>");
     // explicit PATH (launchd's inherited PATH is minimal), same pinning as the tick
-    const m = plist.match(/<key>PATH<\/key>\n\t\t<string>([^<]+)<\/string>/)!;
-    expect(m[1].split(":")).toContain(dirname(process.execPath));
+    const m = plist.match(/<key>PATH<\/key>\n\t\t<string>([^<]+)<\/string>/);
+    expect(m).not.toBeNull();
+    expect(m?.[1].split(":")).toContain(dirname(process.execPath));
     expect(plist).toContain("Library/Logs/co-newbiz/");
     // no secrets in the plist
     expect(plist).not.toMatch(/API_KEY|PASSWORD|SECRET|TOKEN/);
