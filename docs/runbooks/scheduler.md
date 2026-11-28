@@ -277,6 +277,6 @@ The full SRE alert set (heartbeat, job overdue, 3 consecutive failures) is speci
 
 ## 10. Related
 
-- `docs/runbooks/deployment.md` — deployment pipeline; §8 documents the prod container the prod tick executes into
+- `docs/runbooks/deployment.md` — deployment pipeline; §8 documents the prod container the prod tick executes into, and §8's port-publish probe subsection documents the second job this installer registers (`--job port-probe`, label `org.bizknights.co-newbiz.prod.portprobe`)
 - `docs/runbooks/rag-host-scheduler.md` — the pre-ADR-0189 host-level RAG staleness job (independent of this tick)
 - `docs/adr/0189-amend-adr-0019-launchd-and-docker-scheduler-model.md`, `docs/designs/2026-10-29-scheduled-jobs-design.md` — decisions D1–D8 and the installer contract

@@ -147,6 +147,50 @@ curl -sI https://newbiz.bizknights.org/ | head -1
 
 검증: 변경 후 ChatGPT에서 커스텀 커넥터를 기본값(DCR)으로 다시 추가한다. `Some app settings were rejected` 없이 생성되고 Cloudflare Security → Events에서 해당 경로의 403이 사라지면 해소다. 앱 쪽에서는 IP당 시간 20건의 등록 레이트리밋이 이미 있어 남용 차단은 유지된다.
 
+### 호스트 측 포트 공개 불변성 감시(`prod-port-probe`, 2026-11-28 부칙)
+
+compose 헬스체크는 컨테이너 **안에서** `fetch`를 실행하므로, 2026-11-28에 실제로 관찰된 장애 부류를 볼 수 없다: Docker Desktop(macOS)이 호스트 포트 포워딩을 잃었는데도 컨테이너는 계속 떠서 컨테이너 안에서는 `/api/health`가 정상이었다 — `NetworkSettings.Ports["7749/tcp"]`는 비어 있고, 호스트 127.0.0.1:7749에는 아무도 붙지 않았으며, Cloudflare 터널은 암흑 상태였다. `docker restart`로는 **고쳐지지 않았고**(같은 컨테이너 객체가 죽은 상태를 그대로 재현), `docker compose up -d --force-recreate web`만이 복구했다. 감시기(설계 부칙 REQ-P8–P11, `docs/designs/2026-09-21-docker-prod-cicd-design.md`)는 읽기 전용 **호스트** 프로세스다 — `docker inspect co-newbiz-web` 한 번, `GET http://127.0.0.1:7749/api/health` 한 번(`CO_NEWBIZ_HEALTH_URL`으로 재정의 가능), DB 기록 없음, 비밀값 없음 — 5분마다 실행되며 불변성을 먼저 판정한다:
+
+| 결과 | 의미 | 종료 코드 |
+|---|---|---|
+| `OK` | 실행 중인 컨테이너에 포트가 공개되어 있고 `/api/health`가 200 | 0 |
+| `DEGRADED` | `sub_reason`이 `app_down`(공개는 되었으나 헬스 실패) 또는 `docker_down`(inspect 실패·형태 손상·컨테이너 미실행) | 1 |
+| `PUBLISH_DEAD` | 컨테이너는 실행 중인데 `NetworkSettings.Ports["7749/tcp"]`가 비었거나 없음 — 장애의 징후 사항; HTTP보다 먼저 검사하며 우선한다 | 2 |
+
+OK가 아닌 결과에서는 macOS 알림을 띄우고, stdout에 출력한 것과 같은 JSON 줄을 `~/Library/Logs/co-newbiz/prod-port-probe.log`에 덧붙인다(launchd 자체 stdout 기록인 `prod-portprobe.out.log`에는 매 실행이 남는다).
+
+**설치**(설치기가 유일하게 지원되는 등록 경로다):
+
+```bash
+bun scripts/co-newbiz/scheduler-install.ts --job port-probe --dry-run   # 미리보기, 기록 없음
+bun scripts/co-newbiz/scheduler-install.ts --job port-probe             # 설치
+```
+
+`~/Library/LaunchAgents/org.bizknights.co-newbiz.prod.portprobe.plist`를 기록한다(`StartInterval 300`, `RunAtLoad true` — 이전 세션에서 남은 죽은 공개는 적재 시점에 바로 알림, `ProcessType Background`)와 `~/Library/Logs/co-newbiz/` 아래 기록 파일들을 만든다. 제거: `bun scripts/co-newbiz/scheduler-install.ts --job port-probe --uninstall`.
+
+**검증**:
+
+```bash
+launchctl list | grep portprobe                                            # 레이블 + PID(실행 사이에는 "-") + 마지막 종료 코드
+launchctl print gui/$UID/org.bizknights.co-newbiz.prod.portprobe           # state = waiting, run interval = 300000 milliseconds
+bun scripts/co-newbiz/prod-port-probe.ts                                   # 수동 실행; {"outcome":"OK",...}와 종료 코드 0을 기대
+```
+
+**기록 읽기**:
+
+```bash
+tail -5 ~/Library/Logs/co-newbiz/prod-port-probe.log      # 알림만 남는다 — 비어 있으면 정상(OK가 아닌 실행만 기록)
+tail -5 ~/Library/Logs/co-newbiz/prod-portprobe.out.log   # 매 실행, 줄마다 JSON 한 개
+```
+
+줄마다 JSON 객체 하나다(`ts`, `outcome`, `sub_reason`, `publish_binding`, `http`, `detail`). `"outcome":"PUBLISH_DEAD"`가 장애의 징후 사항이고, `publish_binding`이 어느 조치가 맞는지 알려준다 — `present`면 의도한 바인딩이 아직 설정에 남아 있는 것(Docker 백엔드 동기 상실 → 아래 force-recreate), `absent`면 바인딩 자체가 사라진 것(compose/설정 드리프트).
+
+**복구**(문서화된 절차일 뿐 자동화가 아니다 — 감시기는 스스로 고치지 않는다):
+
+```bash
+docker compose up -d --force-recreate web   # 단순 docker restart는 죽은 상태를 재현한다(2026-11-28 장애)
+```
+
 ## 9. 스케줄러 (분 틱)
 
 주기 잡은 호스트 OS 스케줄러에서 실행됩니다. 환경마다 하나의 launchd 항목(`org.bizknights.co-newbiz.<env>.tick`, ADR-0189)입니다. dev 틱은 호스트 프로세스로 `schedule-tick.ts`를 dev DB에 대해 실행하고, prod 틱은 `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod ...`로 **`co-newbiz-web` 컨테이너 안에서** 실행합니다 — 따라서 prod 틱에는 컨테이너가 떠 있어야 하고, 환경 플래그는 설치기가 자체 주입합니다(컨테이너 환경 설정 불필요). 설치·검증(심박)·시드·제거·문제 해결은 `docs/runbooks/scheduler_ko.md`를 참고하세요. §7은 그대로 적용됩니다: 컨테이너 교체가 호스트 스케줄러 등록을 건드리지 않아야 합니다.

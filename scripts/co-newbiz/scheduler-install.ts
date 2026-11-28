@@ -1,5 +1,9 @@
 #!/usr/bin/env bun
-// @version 1.0.0
+// @version 1.1.0
+// v1.1.0 (2026-11-28): --job port-probe - registers the host-side production port-publish invariant probe
+// (org.bizknights.co-newbiz.prod.portprobe, StartInterval 300, RunAtLoad true; prod-scoped, launchd-only,
+// host process - never docker exec; design 2026-09-21-docker-prod-cicd addendum REQ-P8..P11). The uninstall
+// primitive is extracted as removePlistFile so both jobs share the bootout + own-plist-only removal.
 //
 // scheduler-install - OS registration installer for the co-newbiz minute-tick scheduler (ADR-0189, scheduled-jobs
 // design section 7). Registers ONE OS entry per environment that fires `schedule-tick.ts` every 60 s: the OS is the
@@ -23,7 +27,15 @@
 // reverses the registration for the given env only - other LaunchAgents are never touched. A LaunchAgent runs in
 // the user session only (owner decision D5: Docker Desktop is user-session; nothing runs while logged out).
 //
-// Usage: bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|systemd|schtasks]
+// `--job port-probe` registers a second, separate job: the host-side production port-publish invariant probe
+// (design addendum 2026-11-28, REQ-P8..P11) as LaunchAgent org.bizknights.co-newbiz.prod.portprobe - a prod-only,
+// launchd-only entry (StartInterval 300, RunAtLoad true) that runs prod-port-probe.ts as a HOST process every
+// 5 minutes; the probe's HTTP check must originate on the host to exercise the port publish, and it is
+// inherently prod-scoped (it inspects the production container), so this job takes no --env. Same installer
+// machinery: template render, plutil validation, log-dir creation, PATH pinning, bootstrap/bootout.
+//
+// Usage: bun scripts/co-newbiz/scheduler-install.ts --job port-probe [--uninstall] [--dry-run] [--print]
+//        bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|systemd|schtasks]
 //                  [--uninstall] [--dry-run] [--print]
 // Exit codes: 0 ok, 2 usage error, 1 failure.
 import {
@@ -45,6 +57,10 @@ export type Platform = "launchd" | "systemd" | "schtasks";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..", "..");
 const TICK_REL = "scripts/co-newbiz/schedule-tick.ts";
+// The port probe is a HOST process (never docker exec): its HTTP check must originate on the
+// host to exercise the port publish it exists to watch (design addendum, REQ-P8). The 300 s
+// StartInterval lives in the template, like the tick's 60 s.
+const PROBE_REL = "scripts/co-newbiz/prod-port-probe.ts";
 // Inside the co-newbiz-web image the repo lives at /repo but the image's final WORKDIR is
 // /repo/app/web-next (docker/Dockerfile), so `docker exec` starts there and a RELATIVE
 // scripts/... path fails with `Module not found` (observed 2026-11-04, P7 prod-tick
@@ -54,6 +70,7 @@ const DOCKER_CONTAINER = "co-newbiz-web";
 const LABEL_BASE = "org.bizknights.co-newbiz";
 
 const LAUNCHD_TMPL = join(REPO_ROOT, "ops", "scheduler", "launchd", "co-newbiz-tick.plist.tmpl");
+const PORTPROBE_TMPL = join(REPO_ROOT, "ops", "scheduler", "launchd", "co-newbiz-portprobe.plist.tmpl");
 const SYSTEMD_SERVICE_TMPL = join(REPO_ROOT, "ops", "scheduler", "systemd", "co-newbiz-tick@.service");
 const SYSTEMD_TIMER_SRC = join(REPO_ROOT, "ops", "scheduler", "systemd", "co-newbiz-tick@.timer");
 const SCHTASKS_TMPL = join(REPO_ROOT, "ops", "scheduler", "schtasks", "co-newbiz-tick.xml");
@@ -91,6 +108,54 @@ export function launchdLogDir(home: string = homedir()): string {
 export function launchdLogPaths(env: SchedulerEnv, home: string = homedir()): { out: string; err: string } {
   const dir = launchdLogDir(home);
   return { out: join(dir, `${env}-tick.out.log`), err: join(dir, `${env}-tick.err.log`) };
+}
+
+// ── Port-probe job (--job port-probe; design addendum 2026-11-28, REQ-P8..P11) ──
+
+export type SchedulerJob = "tick" | "port-probe";
+
+/** The probe is inherently prod-scoped: label carries `prod`, not an env parameter. */
+export function portProbeLabel(): string {
+  return `${LABEL_BASE}.prod.portprobe`;
+}
+
+export function portProbePlistPath(home: string = homedir()): string {
+  return join(home, "Library", "LaunchAgents", `${portProbeLabel()}.plist`);
+}
+
+/** LaunchAgent stdout/stderr logs plus the probe's own alert log (the script appends non-OK lines there). */
+export function portProbeLogPaths(home: string = homedir()): { out: string; err: string; alert: string } {
+  const dir = launchdLogDir(home);
+  return {
+    out: join(dir, "prod-portprobe.out.log"),
+    err: join(dir, "prod-portprobe.err.log"),
+    alert: join(dir, "prod-port-probe.log"),
+  };
+}
+
+export function portProbeArguments(bunPath: string = process.execPath): string[] {
+  return [bunPath, PROBE_REL];
+}
+
+export function renderPortProbePlist(opts: RenderOptions = {}): string {
+  const repoRoot = opts.repoRoot ?? REPO_ROOT;
+  const bunPath = opts.bunPath ?? process.execPath;
+  const home = opts.home ?? homedir();
+  const args = portProbeArguments(bunPath)
+    .map((a) => `\t\t<string>${xmlEscape(a)}</string>`)
+    .join("\n");
+  // Host process: the probe needs the repo layout for `bun scripts/...` and its own template
+  // resolutions, so a WorkingDirectory is always set (unlike the tick's docker-exec prod variant).
+  const workingDirectory = `\t<key>WorkingDirectory</key>\n\t<string>${xmlEscape(repoRoot)}</string>`;
+  const logs = portProbeLogPaths(home);
+  return fill(readFileSync(PORTPROBE_TMPL, "utf-8"), {
+    LABEL: portProbeLabel(),
+    PROGRAM_ARGUMENTS: args,
+    WORKING_DIRECTORY: workingDirectory,
+    PATH: hostPath(bunPath),
+    STDOUT_LOG: logs.out,
+    STDERR_LOG: logs.err,
+  });
 }
 
 export function systemdUserDir(home: string = homedir()): string {
@@ -229,13 +294,12 @@ export function lintPlist(plist: string): { ok: boolean; message: string } {
 
 /**
  * Uninstall primitive: bootout the label (best-effort - a not-loaded label must not fail the uninstall) and remove
- * ONLY this env's plist. Other files in ~/Library/LaunchAgents are never touched. Tests inject `home` and `bootout`.
+ * ONLY the given plist. Other files in ~/Library/LaunchAgents are never touched. Tests inject `bootout`.
  */
-export function removeLaunchdPlist(
-  env: SchedulerEnv,
-  opts: { home?: string; bootout?: (plistPath: string) => CommandResult } = {},
+export function removePlistFile(
+  plistPath: string,
+  opts: { bootout?: (plistPath: string) => CommandResult } = {},
 ): { bootedOut: boolean; removed: boolean; plistPath: string } {
-  const plistPath = launchdPlistPath(env, opts.home);
   const bootout = opts.bootout ?? defaultBootout;
   let bootedOut = false;
   const existed = existsSync(plistPath);
@@ -249,6 +313,14 @@ export function removeLaunchdPlist(
     rmSync(plistPath, { force: true });
   }
   return { bootedOut, removed: existed && !existsSync(plistPath), plistPath };
+}
+
+/** Env-scoped wrapper over removePlistFile (the tick job's uninstall path). Tests inject `home` and `bootout`. */
+export function removeLaunchdPlist(
+  env: SchedulerEnv,
+  opts: { home?: string; bootout?: (plistPath: string) => CommandResult } = {},
+): { bootedOut: boolean; removed: boolean; plistPath: string } {
+  return removePlistFile(launchdPlistPath(env, opts.home), opts);
 }
 
 /**
@@ -285,14 +357,24 @@ function validateRenderedPlist(plist: string): void {
   }
 }
 
-function installLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
-  const plist = renderLaunchdPlist(env);
+/**
+ * Shared launchd install machinery for both jobs (tick, port-probe): validate, print the plan
+ * (dry-run) or the artifact (print-only), then create the log dir/files, write the plist and
+ * bootstrap. `extraLines` prints job-specific lines (e.g. the probe's alert-log path) after
+ * the common `installed:`/`logs:` pair.
+ */
+function installPlistJob(
+  plist: string,
+  plistPath: string,
+  logs: { out: string; err: string },
+  label: string,
+  { dryRun, print }: Mode,
+  extraLines: string[] = [],
+): void {
   if (print) {
     console.log(plist);
     return;
   }
-  const plistPath = launchdPlistPath(env);
-  const logs = launchdLogPaths(env);
   validateRenderedPlist(plist);
   if (dryRun) {
     console.log(`[dry-run] would write plist: ${plistPath}`);
@@ -300,6 +382,7 @@ function installLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
     console.log(`[dry-run]   ${logs.out}`);
     console.log(`[dry-run]   ${logs.err}`);
     console.log(`[dry-run] would run: launchctl bootstrap gui/\${UID} ${plistPath}`);
+    for (const l of extraLines) console.log(`[dry-run] ${l}`);
     return;
   }
   mkdirSync(launchdLogDir(), { recursive: true, mode: LOG_DIR_MODE });
@@ -319,19 +402,43 @@ function installLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
   }
   console.log(`installed: ${plistPath}`);
   console.log(`logs: ${logs.out} / ${logs.err}`);
-  console.log(`verify: launchctl print gui/${uid}/${launchdLabel(env)}`);
+  for (const l of extraLines) console.log(l);
+  console.log(`verify: launchctl print gui/${uid}/${label}`);
 }
 
-function uninstallLaunchd(env: SchedulerEnv, { dryRun, print }: Mode): void {
-  const plistPath = launchdPlistPath(env);
+function installLaunchd(env: SchedulerEnv, mode: Mode): void {
+  installPlistJob(renderLaunchdPlist(env), launchdPlistPath(env), launchdLogPaths(env), launchdLabel(env), mode);
+}
+
+/** Port-probe registration (REQ-P11): same machinery, probe label/plist/logs, plus the alert-log pointer. */
+function installPortProbeLaunchd(mode: Mode): void {
+  const logs = portProbeLogPaths();
+  installPlistJob(renderPortProbePlist(), portProbePlistPath(), logs, portProbeLabel(), mode, [
+    `alerts: ${logs.alert}`,
+  ]);
+}
+
+function uninstallPlistJob(
+  plistPath: string,
+  remove: () => { bootedOut: boolean; removed: boolean; plistPath: string },
+  { dryRun, print }: Mode,
+): void {
   const uid = currentUid();
   if (print || dryRun) {
     console.log(`[dry-run] would run: launchctl bootout gui/${uid} ${plistPath}`);
     console.log(`[dry-run] would remove (this env's plist only): ${plistPath}`);
     return;
   }
-  const r = removeLaunchdPlist(env);
+  const r = remove();
   console.log(r.removed ? `uninstalled: ${r.plistPath}` : `not installed (nothing to remove): ${r.plistPath}`);
+}
+
+function uninstallLaunchd(env: SchedulerEnv, mode: Mode): void {
+  uninstallPlistJob(launchdPlistPath(env), () => removeLaunchdPlist(env), mode);
+}
+
+function uninstallPortProbeLaunchd(mode: Mode): void {
+  uninstallPlistJob(portProbePlistPath(), () => removePlistFile(portProbePlistPath()), mode);
 }
 
 function installSystemd(env: SchedulerEnv, { dryRun, print }: Mode): void {
@@ -406,7 +513,8 @@ function uninstallSchtasks(env: SchedulerEnv): void {
 
 // ── CLI ────────────────────────────────────────────────────────────────────
 
-const USAGE = `Usage: bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|systemd|schtasks] [--uninstall] [--dry-run] [--print]`;
+const USAGE = `Usage: bun scripts/co-newbiz/scheduler-install.ts --job port-probe [--uninstall] [--dry-run] [--print]
+       bun scripts/co-newbiz/scheduler-install.ts --env prod|dev [--platform launchd|systemd|schtasks] [--uninstall] [--dry-run] [--print]`;
 
 function argValue(argv: string[], flag: string): string | undefined {
   const i = argv.indexOf(flag);
@@ -418,30 +526,63 @@ if (import.meta.main) {
   const print = argv.includes("--print");
   const dryRun = argv.includes("--dry-run");
   const uninstall = argv.includes("--uninstall");
+  const jobArg = argValue(argv, "--job");
   const envArg = argValue(argv, "--env");
-  if (envArg !== "prod" && envArg !== "dev") {
-    console.error(
-      `scheduler-install: --env must be 'prod' or 'dev' (got ${envArg === undefined ? "nothing" : `'${envArg}'`})\n${USAGE}`,
-    );
-    process.exit(2);
-  }
-  const env = envArg;
   const platformArg = argValue(argv, "--platform") ?? "launchd";
-  if (platformArg !== "launchd" && platformArg !== "systemd" && platformArg !== "schtasks") {
-    console.error(`scheduler-install: --platform must be launchd|systemd|schtasks (got '${platformArg}')\n${USAGE}`);
+
+  if (jobArg !== undefined && jobArg !== "port-probe") {
+    console.error(`scheduler-install: --job must be 'port-probe' (got '${jobArg}')\n${USAGE}`);
     process.exit(2);
   }
-  const platform = platformArg as Platform;
-  try {
-    if (platform === "launchd") {
-      uninstall ? uninstallLaunchd(env, { dryRun, print }) : installLaunchd(env, { dryRun, print });
-    } else if (platform === "systemd") {
-      uninstall ? uninstallSystemd(env, { dryRun, print }) : installSystemd(env, { dryRun, print });
-    } else {
-      uninstall ? uninstallSchtasks(env) : installSchtasks(env, { dryRun, print });
+
+  if (jobArg === "port-probe") {
+    // The probe is prod-scoped by construction (it inspects the production container) and a host
+    // process (REQ-P8: the HTTP check must originate on the host to exercise the publish), so the
+    // job takes no --env. v1 registers launchd only - systemd/schtasks remain tick-only, matching
+    // the design's LaunchAgent registration target.
+    if (envArg !== undefined) {
+      console.error(
+        `scheduler-install: --job port-probe is prod-scoped and takes no --env (got '--env ${envArg}')\n${USAGE}`,
+      );
+      process.exit(2);
     }
-  } catch (e) {
-    console.error(`scheduler-install failed: ${(e as Error).message}`);
-    process.exit(1);
+    if (platformArg !== "launchd") {
+      console.error(
+        `scheduler-install: --job port-probe supports --platform launchd only in v1 (got '${platformArg}')\n${USAGE}`,
+      );
+      process.exit(2);
+    }
+    try {
+      const mode = { dryRun, print };
+      uninstall ? uninstallPortProbeLaunchd(mode) : installPortProbeLaunchd(mode);
+    } catch (e) {
+      console.error(`scheduler-install failed: ${(e as Error).message}`);
+      process.exit(1);
+    }
+  } else {
+    if (envArg !== "prod" && envArg !== "dev") {
+      console.error(
+        `scheduler-install: --env must be 'prod' or 'dev' (got ${envArg === undefined ? "nothing" : `'${envArg}'`})\n${USAGE}`,
+      );
+      process.exit(2);
+    }
+    const env = envArg;
+    if (platformArg !== "launchd" && platformArg !== "systemd" && platformArg !== "schtasks") {
+      console.error(`scheduler-install: --platform must be launchd|systemd|schtasks (got '${platformArg}')\n${USAGE}`);
+      process.exit(2);
+    }
+    const platform = platformArg as Platform;
+    try {
+      if (platform === "launchd") {
+        uninstall ? uninstallLaunchd(env, { dryRun, print }) : installLaunchd(env, { dryRun, print });
+      } else if (platform === "systemd") {
+        uninstall ? uninstallSystemd(env, { dryRun, print }) : installSystemd(env, { dryRun, print });
+      } else {
+        uninstall ? uninstallSchtasks(env) : installSchtasks(env, { dryRun, print });
+      }
+    } catch (e) {
+      console.error(`scheduler-install failed: ${(e as Error).message}`);
+      process.exit(1);
+    }
   }
 }

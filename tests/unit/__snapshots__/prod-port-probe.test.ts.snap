@@ -1,0 +1,35 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`portprobe plist template and rendering rendered plist: label, host-process arguments, PATH pinning, log paths (snapshot) 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>org.bizknights.co-newbiz.prod.portprobe</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string><BUN_BIN>/bun</string>
+		<string>scripts/co-newbiz/prod-port-probe.ts</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string><REPO_ROOT></string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string><BUN_BIN>:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>StartInterval</key>
+	<integer>300</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>StandardOutPath</key>
+	<string><HOME>/Library/Logs/co-newbiz/prod-portprobe.out.log</string>
+	<key>StandardErrorPath</key>
+	<string><HOME>/Library/Logs/co-newbiz/prod-portprobe.err.log</string>
+</dict>
+</plist>
+"
+`;
