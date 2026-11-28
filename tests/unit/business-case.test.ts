@@ -369,4 +369,132 @@ describe("S8 generation (ADR-0098)", () => {
     });
     expect(bad.status).toBe(400);
   });
+
+  // DEC-20261128-01/-02 (design addendum REQ-W10-6 item 2): regeneration after an
+  // adoption supersedes the adopted round instead of protecting it. The adoption
+  // record is never re-pointed (boundary #2); the staleness is DERIVED
+  // (`adopted_superseded`) and a human re-adoption of the fresh round clears it.
+  test("adopt + regenerate: one active market_forward base row, adopted_superseded until re-adoption", async () => {
+    // State left by (c): the human adopted a first-round model and recorded the fs GO.
+    const adoptedModelId = (
+      db
+        .query(
+          "SELECT json_extract(meta_json,'$.model_id') AS m FROM process_run WHERE project_id = ? AND stage = 's8_case_adopt' ORDER BY started_at DESC, id DESC LIMIT 1",
+        )
+        .get(projectId) as { m: string }
+    ).m;
+    const markers = () => ({
+      adopt: (db.query("SELECT COUNT(*) n FROM process_run WHERE stage = 's8_case_adopt'").get() as { n: number }).n,
+      gate: (db.query("SELECT COUNT(*) n FROM gate_decision WHERE entity_type = 'project'").get() as { n: number }).n,
+    });
+    expect(markers()).toEqual({ adopt: 1, gate: 1 });
+
+    // Regeneration archives the whole first round — the adopted model included.
+    // (`regenerate: true` bypasses the already-run guard of the plain POST.)
+    const res = await req(`/api/projects/${projectId}/business-case/generate`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ regenerate: true }),
+    });
+    expect(res.status).toBe(202);
+    await businessCaseGenerationIdle();
+
+    // Regression pin: exactly ONE active market_forward base row for the project.
+    const activeBase = db
+      .query(
+        `SELECT m.id FROM business_case_model m WHERE m.project_id = ? AND m.kind = 'valuation'
+         AND m.archived_at IS NULL AND COALESCE(m.variant,'market_forward') = 'market_forward'
+         AND EXISTS (SELECT 1 FROM valuation_simulation v WHERE v.model_id = m.id AND v.scenario = 'base')`,
+      )
+      .all(projectId) as Array<{ id: string }>;
+    expect(activeBase.length).toBe(1);
+    const freshId = activeBase[0].id;
+
+    // Boundary #2 restated: the regeneration itself wrote no adoption / gate markers.
+    expect(markers()).toEqual({ adopt: 1, gate: 1 });
+    // The adopted row is archived; the adoption record still names it (never re-pointed).
+    expect(
+      (
+        db.query("SELECT archived_at FROM business_case_model WHERE id = ?").get(adoptedModelId) as {
+          archived_at: string | null;
+        }
+      ).archived_at,
+    ).not.toBeNull();
+
+    const list = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });
+    expect(list.status).toBe(200);
+    const data = (await list.json()).data as {
+      cases: Array<{ id: string; adopted: boolean }>;
+      archived: Array<{ id: string; adopted: boolean }>;
+      adoption: { modelId: string; stale: string | null } | null;
+      staleness: { adoption: string | null; any: boolean };
+    };
+    expect(data.adoption?.modelId).toBe(adoptedModelId);
+    expect(data.adoption?.stale).toBe("adopted_superseded");
+    expect(data.staleness.adoption).toBe("adopted_superseded");
+    expect(data.staleness.any).toBe(true);
+    // ADR-0158 fallback still resolves the archived adopted case; the GET payload's
+    // chip anchor (`adoption.modelId`) names exactly that case.
+    expect(data.cases.find((c) => c.id === adoptedModelId)).toBeUndefined();
+    expect(data.archived.find((c) => c.id === adoptedModelId)?.adopted).toBe(true);
+
+    // The fs GO route refuses while the adoption is superseded (family `target`).
+    const blocked = await req(`/api/projects/${projectId}/gate-decisions`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ gate: "fs", decision: "go", rationale: "차단 확인용" }),
+    });
+    expect(blocked.status).toBe(409);
+    const blockedBody = (await blocked.json()) as { error: { code: string; details: { adoption: string | null } } };
+    expect(blockedBody.error.code).toBe("target_not_shortlisted");
+    expect(blockedBody.error.details.adoption).toBe("adopted_superseded");
+    expect(markers()).toEqual({ adopt: 1, gate: 1 });
+
+    // Recovery is a human re-adoption of the fresh-round model — never a data repair.
+    const re = await req(`/api/projects/${projectId}/business-case/adopt`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ model_id: freshId, goals_ack: { acknowledged: true, note: "test: 재채택" } }),
+    });
+    expect(re.status).toBe(201);
+    const list2 = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });
+    const data2 = (await list2.json()).data as {
+      adoption: { modelId: string; stale: string | null } | null;
+      staleness: { adoption: string | null; any: boolean };
+      cases: Array<{ id: string; adopted: boolean }>;
+      archived: Array<{ id: string; adopted: boolean }>;
+    };
+    expect(data2.staleness.adoption).toBeNull();
+    expect(data2.adoption?.stale).toBeNull();
+    expect(data2.adoption?.modelId).toBe(freshId);
+    expect(data2.cases.find((c) => c.id === freshId)?.adopted).toBe(true);
+    // The previously-adopted archived row is no longer flagged adopted.
+    expect(data2.archived.find((c) => c.id === adoptedModelId)?.adopted).toBe(false);
+
+    // The fs GO records again once a current adoption backs it.
+    const go = await req(`/api/projects/${projectId}/gate-decisions`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({ gate: "fs", decision: "go", rationale: "재채택된 케이스 검토 후 인적 결재" }),
+    });
+    expect(go.status).toBe(201);
+
+    // DEC-20261128-02: the historical variant is comparison evidence — a direct API
+    // adoption attempt is a 409, and no adoption marker is written.
+    db.run(
+      "INSERT INTO business_case_model (id, project_id, kind, name, horizon_years, created_by, created_at, variant) VALUES (?,?,?,?,?,?,?,?)",
+      ["bc-historical-adopt", projectId, "valuation", "과거 실적 비교 케이스", 5, ANALYST, NOW, "historical"],
+    );
+    const hist = await req(`/api/projects/${projectId}/business-case/adopt`, {
+      method: "POST",
+      headers: { cookie: analystCookie },
+      body: JSON.stringify({
+        model_id: "bc-historical-adopt",
+        goals_ack: { acknowledged: true, note: "test: 채택 시도되어서는 안 됨" },
+      }),
+    });
+    expect(hist.status).toBe(409);
+    expect(((await hist.json()) as { error: { code: string } }).error.code).toBe("historical_not_adoptable");
+    expect(markers()).toEqual({ adopt: 2, gate: 2 });
+  });
 });

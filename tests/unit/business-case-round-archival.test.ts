@@ -1,12 +1,16 @@
 /**
  * Round archiving on regeneration (FIX 1) and the widened IRR bracket (FIX 2).
  *
- * FIX 1: every generateBusinessCases run first archives the previous round's
- * non-adopted, non-archived valuation models (greenfield: target_id NULL;
- * brownfield: the same shortlisted targets). Models a decision record names
- * (adoption / gate / process_run) are never archived, so adoption / IC
- * history keeps resolving. An interrupted round (lone base model from a
- * double press) is just a previous round.
+ * FIX 1 (semantics per DEC-20261128-01 / design addendum REQ-W10-1): every
+ * generateBusinessCases run first archives the previous round's active
+ * valuation models (greenfield: target_id NULL; brownfield: the same
+ * shortlisted targets) — adopted and gate-referenced models archive WITH
+ * their round-mates, because ADR-0158's archive already keeps the adoption /
+ * IC history resolvable (`findAdoptedCase` falls back to the archived set).
+ * A latest adoption pointing at an archived model reads as stale
+ * (`adopted_superseded`); the adoption record itself is never altered and a
+ * human re-adoption of a fresh-round model is the recovery. An interrupted
+ * round (lone base model from a double press) is just a previous round.
  *
  * FIX 2: irr() widens the [-0.9, 10] bracket stepwise (x10 up to a 1e6
  * ceiling) so a tiny year-0 outflow against large positive flows no longer
@@ -34,6 +38,9 @@ const { ulid } = await import("../../db/lib/ulid.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { generateBusinessCases, irr } = await import("../../app/web-next/lib/business-case-generator.ts");
+const { listBusinessCases, findAdoptedCase, resolveS8Staleness } = await import(
+  "../../app/web-next/lib/business-case.ts"
+);
 
 const NOW = new Date().toISOString();
 const ACTOR = "round-archival-actor";
@@ -65,10 +72,10 @@ function seedGreenfield(name: string): string {
     [ulid(), oppId, "direct entry", "M&A rejected", name, ACTOR, NOW, NOW],
   );
   // S5 completion predicate: >=1 capability gap in opportunity.capability_gap_json.
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "c1", resolution: "hire" }], updatedAt: NOW }), oppId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "c1", resolution: "hire" }], updatedAt: NOW }),
+    oppId,
+  ]);
   addGate(oppId, "screening");
   addGate(oppId, "pre_fs");
   return promoteOpportunity(oppId, { promotedBy: ACTOR, needToKnowBasis: "round archival test" }).project.id;
@@ -76,10 +83,14 @@ function seedGreenfield(name: string): string {
 
 function seedBrownfield(): string {
   const oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, "brownfield archival test", "robots", "selected", ACTOR, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "brownfield archival test",
+    "robots",
+    "selected",
+    ACTOR,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
     [ulid(), oppId, "brownfield", "m_and_a", "test route", ACTOR, NOW],
@@ -114,7 +125,13 @@ function addModel(name: string, projectId: string, target: string | null): strin
 }
 
 beforeAll(async () => {
-  await createUser(db, { userId: ACTOR, role: "analyst", password: "pw-round-archival-1", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: ACTOR,
+    role: "analyst",
+    password: "pw-round-archival-1",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: ACTOR, approvedBy: "test", now: NOW });
   greenProject = seedGreenfield("greenfield archival test");
   brownProject = seedBrownfield();
@@ -132,44 +149,86 @@ function activeModels(projectId: string): Array<{ id: string; target_id: string 
 }
 
 function auditRows(projectId: string): Array<{ action: string; target: string }> {
-  return db.query("SELECT action, target FROM audit_log WHERE target LIKE ?").all(projectId + ":%") as Array<{ action: string; target: string }>;
+  return db.query("SELECT action, target FROM audit_log WHERE target LIKE ?").all(projectId + ":%") as Array<{
+    action: string;
+    target: string;
+  }>;
 }
 
-describe("FIX 1 - round archiving", () => {
-  test("second run archives the first round; adopted and gate-referenced models survive", async () => {
+describe("FIX 1 - round archiving (DEC-20261128-01: supersede-to-archive)", () => {
+  test("second run archives the whole first round; adopted and gate-referenced models archive too", async () => {
     const r1 = await generateBusinessCases(greenProject, { actor: ACTOR });
     expect(r1.status).toBe("done");
     const first = activeModels(greenProject);
     expect(first.length).toBe(3);
 
     // Human adoption (s8_case_adopt) of one first-round model, and a gate
-    // rationale naming another - both must SURVIVE the next round unarchived.
+    // rationale naming another - the next round ARCHIVES them with their
+    // round-mates (REQ-W10-1); the adoption record itself is untouched.
     const adopted = first[0].id;
     const gateNamed = first[1].id;
     db.run(
       "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-      [ulid(), "project", greenProject, greenProject, "test", "s8_case_adopt", "done", "web", ACTOR, NOW, NOW, JSON.stringify({ model_id: adopted })],
+      [
+        ulid(),
+        "project",
+        greenProject,
+        greenProject,
+        "test",
+        "s8_case_adopt",
+        "done",
+        "web",
+        ACTOR,
+        NOW,
+        NOW,
+        JSON.stringify({ model_id: adopted }),
+      ],
     );
     db.run(
       "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
       [ulid(), "project", greenProject, "fs", "hold", "base case model " + gateNamed + " needed", ACTOR, NOW],
     );
+    const adoptionBefore = db
+      .query("SELECT * FROM process_run WHERE project_id = ? AND stage = 's8_case_adopt'")
+      .all(greenProject);
 
     const r2 = await generateBusinessCases(greenProject, { actor: ACTOR });
     expect(r2.status).toBe("done");
-    // Protected pair + the 3 fresh models remain active; the remaining
-    // first-round model is archived.
-    expect(activeModels(greenProject).length).toBe(5);
+    // Exactly the 3 fresh round-2 models stay active; all 3 first-round
+    // models — the adopted and gate-named ones included — are archived.
+    const active = activeModels(greenProject);
+    expect(active.length).toBe(3);
+    const firstIds = new Set(first.map((m) => m.id));
+    expect(active.every((m) => !firstIds.has(m.id))).toBe(true);
     const archived = db
       .query("SELECT id, archived_by FROM business_case_model WHERE project_id = ? AND archived_at IS NOT NULL")
       .all(greenProject) as Array<{ id: string; archived_by: string | null }>;
-    expect(archived.length).toBe(1);
-    expect(archived[0].archived_by).toBe(ACTOR);
-    expect(archived[0].id).not.toBe(adopted);
-    expect(archived[0].id).not.toBe(gateNamed);
+    expect(archived.length).toBe(3);
+    expect(archived.every((a) => a.archived_by === ACTOR)).toBe(true);
+    expect(new Set(archived.map((a) => a.id))).toEqual(firstIds);
+    // Every archived model — the previously-skipped adopted / gate-named pair
+    // included — carries its `business_case.superseded_round` audit row.
     const superseded = auditRows(greenProject).filter((a) => a.action === "business_case.superseded_round");
-    expect(superseded.length).toBe(1);
-    expect(superseded[0].target).toBe(greenProject + ":" + archived[0].id);
+    expect(superseded.length).toBe(3);
+    expect(new Set(superseded.map((a) => a.target))).toEqual(new Set(archived.map((a) => greenProject + ":" + a.id)));
+
+    // The adoption record row is byte-identical before and after (boundary #2:
+    // supersession never re-points or alters a human record).
+    expect(
+      db.query("SELECT * FROM process_run WHERE project_id = ? AND stage = 's8_case_adopt'").all(greenProject),
+    ).toEqual(adoptionBefore);
+    // ADR-0158 fallback: the adopted case still resolves from the archived set.
+    const list = listBusinessCases(greenProject);
+    expect(list.cases.find((c) => c.id === adopted)).toBeUndefined();
+    const adoptedArchived = list.archived.find((c) => c.id === adopted);
+    expect(adoptedArchived?.adopted).toBe(true);
+    expect(findAdoptedCase(list)?.id).toBe(adopted);
+    expect(findAdoptedCase(list)?.archived_at).not.toBeNull();
+    // REQ-W10-2: the latest adoption points at an archived model → stale, round-based
+    // (greenfield: no target axis, so the reason must be `adopted_superseded`).
+    expect(resolveS8Staleness(greenProject).adoption).toBe("adopted_superseded");
+    expect(list.adoption?.stale).toBe("adopted_superseded");
+    expect(list.adoption?.modelId).toBe(adopted);
   });
 
   test("interrupted round (lone base model) is archived by the next run", async () => {
@@ -177,8 +236,8 @@ describe("FIX 1 - round archiving", () => {
     const r = await generateBusinessCases(greenProject, { actor: ACTOR });
     expect(r.status).toBe("done");
     // The whole round-2 set AND the lone base are archived (they are all
-    // previous rounds); only the protected pair + 3 fresh models remain.
-    expect(activeModels(greenProject).length).toBe(5);
+    // previous rounds); only the 3 fresh round-3 models remain active.
+    expect(activeModels(greenProject).length).toBe(3);
     const lone = db
       .query("SELECT archived_at FROM business_case_model WHERE project_id = ? AND name = 'lone base'")
       .get(greenProject) as { archived_at: string | null };
@@ -202,7 +261,9 @@ describe("brownfield per-target scoping", () => {
     const aActive = active.filter((m) => m.target_id === targetA);
     expect(aActive.length).toBe(3);
     const aArchived = db
-      .query("SELECT COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id = ? AND archived_at IS NOT NULL")
+      .query(
+        "SELECT COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id = ? AND archived_at IS NOT NULL",
+      )
       .get(brownProject, targetA) as { n: number };
     expect(aArchived.n).toBe(3);
   });

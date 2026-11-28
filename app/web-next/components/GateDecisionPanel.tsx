@@ -552,6 +552,14 @@ export function GateDecisionPanel({
     loadStaleness();
   }, [loadStaleness]);
   const goStaleBlocked = staleTargetBlocksGo(staleness, form.gate);
+  // REQ-W10-5 (DEC-20261128-01): round supersession is not an exclusion — the adopted case was
+  // archived with its regeneration round — so the GO block names re-adoption, not the Short List.
+  // The server's 409 code is target_not_shortlisted for EVERY stale reason; the payload's
+  // `staleness.adoption` is what distinguishes them (the UI never recomputes it).
+  const goStaleReasonKey =
+    staleness?.adoption === "adopted_superseded"
+      ? "stages.s8.staleTarget.goBlockedAdoptionSuperseded"
+      : "stages.s8.staleTarget.goBlocked";
   // A blocked GO cannot stay the selected decision: fall back to HOLD (the person can still pick KILL).
   useEffect(() => {
     if (goStaleBlocked) setForm((f) => (f.decision === "go" ? { ...f, decision: "hold" } : f));
@@ -609,7 +617,7 @@ export function GateDecisionPanel({
           p2: tr(GATE_LABEL_KEY[form.gate] ?? form.gate),
         })
       : goStaleBlocked && form.decision === "go"
-        ? tr("stages.s8.staleTarget.goBlocked") // INTERIM-WORDING
+        ? tr(goStaleReasonKey) // INTERIM-WORDING (goBlockedAdoptionSuperseded added by REQ-W10-5)
         : !form.rationale.trim()
           ? t("theDecisionCanBeRecorded")
           : killNeedsLearning
@@ -768,7 +776,8 @@ export function GateDecisionPanel({
     // ADR-0206: GO refused for a selected/adopted target that left the Short List. Localized text, and a fresh
     // staleness read so the GO option disables right away (HOLD and KILL stay recordable).
     if (err.code === "target_not_shortlisted") {
-      setError(tr("stages.s8.staleTarget.goBlocked")); // INTERIM-WORDING
+      // REQ-W10-5: the reason-aware copy — round supersession is named as re-adoption, not exclusion.
+      setError(tr(goStaleReasonKey)); // INTERIM-WORDING
       loadStaleness();
       return;
     }
@@ -1228,7 +1237,7 @@ export function GateDecisionPanel({
               role="note"
               data-testid="go-stale-target-reason"
             >
-              <span aria-hidden="true">▲</span> {tr("stages.s8.staleTarget.goBlocked") /* INTERIM-WORDING */}
+              <span aria-hidden="true">▲</span> {tr(goStaleReasonKey) /* INTERIM-WORDING (REQ-W10-5) */}
             </p>
           )}
           <div className="flex flex-wrap items-end gap-2">

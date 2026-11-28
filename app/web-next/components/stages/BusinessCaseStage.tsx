@@ -1555,6 +1555,14 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
               const cases = byScenario.get(s) ?? [];
               const newestMf = cases.find((c) => c.variant === "market_forward");
               const newestMfP50 = newestMf?.simulations.find((x) => x.percentile === "p50")?.npv_krw_m ?? null;
+              // REQ-W10-3 (DEC-20261128-01): the header 채택됨 chip follows the adoption record
+              // (data.adoption.modelId), not `cases.find` — after a regeneration the newest
+              // market_forward row is the fresh unadopted round and the chip would silently
+              // detach from the adopted case. A superseded (archived) adopted case is not in
+              // the active list, so the chip yields to the stale-adoption banner until a human
+              // re-adopts (findAdoptedCase keeps it resolvable for the history views).
+              const adoptedId = data?.adoption?.modelId ?? null;
+              const adoptedCase = adoptedId ? (cases.find((c) => c.id === adoptedId) ?? null) : null;
               return (
                 <section
                   key={s}
@@ -1575,7 +1583,7 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                         {t("recommendation2")}
                       </span>
                     )}
-                    {newestMf?.adopted && (
+                    {adoptedCase && (
                       <span className="status-chip status-green ml-1">{t("adoptedFsProgressInput")}</span>
                     )}
                   </h3>
@@ -1845,7 +1853,12 @@ export function BusinessCaseStage({ projectId, embedded }: { projectId: string; 
                                         data-testid="scenario-row-actions"
                                         data-case-id={c.id}
                                       >
-                                        {!c.adopted && (
+                                        {/* REQ-W10-4 (DEC-20261128-02): historical (과거 기반) rows are
+                                            comparison evidence (ADR-0117) and never adoptable — the UI
+                                            hides the affordance to match the API's 409
+                                            historical_not_adoptable. Defense in depth: postAdopt's
+                                            catch still surfaces the 409 if one ever fires. */}
+                                        {!c.adopted && c.variant === "market_forward" && (
                                           <button
                                             type="button"
                                             className="btn-ghost btn-sm whitespace-nowrap font-semibold text-[color:var(--accent)]"

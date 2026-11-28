@@ -207,3 +207,129 @@ REQ-W7-3은 torch를 선택 설치로 두고 없으면 CPU로 물러나게 했�
 - **`CO_NEWBIZ_SIM_GPU`의 뜻.** 설치할 패키지만 정한다. 실행할 때 장치는 여전히 job-spec의 `device`와 작업 크기(반복 × 케이스가 200,000 이상일 때만 GPU)가 정하며, 이 변수가 실행 장치를 CPU로 못 박지는 않는다. 설계 REQ-W7-1의 `SIM_ENGINE_DEVICE` 덮어쓰기 환경 변수는 구현에 없다.
 - **Docker.** `docker/Dockerfile`의 빌드 인자 `SIM_GPU`(`none` 기본 — 파이썬 없이 내장 TS 시뮬레이터 사용, `cpu`, `cuda`, `rocm`, `xpu`)가 엔진 층을 더한다. 가속기별 이미지는 따로 빌드하고 `mps`는 리눅스 이미지에 넣을 수 없다. 실행할 때 GPU를 넘겨 주어야 하며(예: `docker run --gpus all`) 보이는 장치가 없으면 엔진은 CPU로 물러난다. 운영 절차: `docs/manuals/operations-manual.md` 3.3, `docs/runbooks/deployment.md` 8절.
 - **검증.** 단위 시험 `tests/unit/setup-python-env.test.ts`(감지·선택·계획·도장). 이 기록은 소스 기준이며 GPU 장비에서의 실측 결과는 담지 않았다(10절의 2·3 검증은 이 변경의 범위 밖).
+
+## Addendum — Scenario-regeneration supersession semantics (2026-11-28, REQ-W10)
+
+- Decisions of record: `docs/decisions/DEC-20261128-01.md` (supersede-to-archive + stale-adoption + manual re-adoption — reverses the 2026-10-16 keep-adopted-active decision, commit `95153be4`, PR #598), `docs/decisions/DEC-20261128-02.md` (adoption restricted to market_forward). Both are PM rulings, `proposed`, human-final at PR review.
+- Related: ADR-0158 (archive keeps adoption/IC history resolvable — `findAdoptedCase` archived fallback, `business-case.ts:450-455`), ADR-0206 (stale banner + fs GO block plumbing — `staleS8Records`/`buildS8Staleness`/`resolveS8Staleness`, `business-case.ts:225-301`), ADR-0117 (gate judges market_forward only; historical is comparison evidence), ADR-0053 / ADR-0098 boundary #2 (generation writes proposals; adoption is a recorded human decision, `process/flow.spec.yaml:1001`).
+- Root cause (verified in source 2026-11-28): regeneration archives the previous round but skips adopted/gate-referenced models (`business-case-cleanup.ts:95`, `isModelReferenced` :38-53) while the fresh round bare-INSERTs new models (`business-case-generator.ts:2465-2478`; no unique key — migration 0044). Duplicate active market_forward rows follow; the header adoption chip keys on `cases.find` (`BusinessCaseStage.tsx:1556`) so the chip detaches from the adopted case; S9+ readers (`greenfield-execution.ts:151`, `covenant-dscr.ts:296`, `investment-simulation-s8.ts:104`, `process-flow.ts:1005`) keep consuming old-round figures with no staleness signal. Dev-DB fingerprint (read-only scan, 2026-11-28): 3 project-scenario pairs with >1 active market_forward model; 34 archived models, 0 referenced by any adoption or gate record.
+
+### REQ-W10-1 — Supersession semantics: supersede-to-archive (supersession path ONLY)
+
+`archiveSupersededRound` (`business-case-cleanup.ts:79-102`) drops the referenced-model skip:
+the `if (isModelReferenced(db, projectId, m.id)) continue;` at :95 is removed for THIS path, so
+every active model of the superseded round — adopted and gate-referenced included — archives
+under the existing `business_case.superseded_round` audit row. `cleanupLegacyModels` (the
+ADR-0158 human-only legacy cleanup) keeps its referenced→archive / unreferenced→delete
+protection byte-for-byte; its pin suite `tests/unit/business-case-legacy-cleanup.test.ts` is
+unchanged. Rationale: ADR-0158's archive mechanism already preserves what keep-active was
+protecting — archived models stay resolvable for adoption/IC history (`findAdoptedCase`
+falls back to the archived set) — while keep-active is what manufactures the duplicate active
+rounds. Re-adoption of a fresh-round model is the human recovery path; the adoption record is
+never auto-re-pointed (boundary #2).
+
+### REQ-W10-2 — Staleness plumbing: `adopted_superseded`
+
+Extend the ADR-0206 pure helper instead of new plumbing:
+
+- `StaleReason` gains `"adopted_superseded"`: set when the latest adoption's model is archived
+  (`archived_at IS NOT NULL`), regardless of which archive path stamped it. It is round-based,
+  not target-based, so it also applies to greenfield — an explicit amendment of ADR-0206's
+  "target-less adoption is never stale" rule, which continues to hold for the target dimension
+  only.
+- `staleS8Records` gains an `adoptedArchived: boolean` input; `resolveS8Staleness` adds
+  `archived_at` to its adopted-case SELECT (`business-case.ts:297`). The value flows into
+  `adoption` and `any`, so the S8 banner, the FS GO block (`goStaleTargetCheck`, family
+  `target`), and the five downstream readers (`backtest.ts`, `covenant-dscr.ts`,
+  `greenfield-execution.ts`, `process-flow.ts` S11 blocker, `snapshot-filler.ts`) surface the
+  stale state instead of old-round figures with no per-consumer change.
+- Records are never altered — the ADR-0206 derive-don't-mutate rule stands. Recovery is a human
+  re-adopt; staleness then clears with no data repair (it is derived).
+
+### REQ-W10-3 — Header adoption chip keys on the adoption record
+
+`BusinessCaseStage.tsx:1556`'s `cases.find` keys the 추천/채택 chip on an arbitrary active row
+when duplicates exist. The chip re-anchors to the adoption record: when `data.adoption` exists,
+the chip renders on the case whose id equals `adoption.modelId`, and falls back to the
+engine-recommended market_forward row when no adoption exists. When the adopted case is
+archived (superseded round), the active per-scenario table has no row to render the chip onto:
+the chip is HIDDEN and the REQ-W10-2 stale banner carries the supersession state. (Amended
+2026-11-28, QA finding 2: the original letter had the chip resolving through `findAdoptedCase`
+onto a history label; that render surface does not exist in the active table.) No new API
+field: the business-case GET already carries `adoption.modelId`.
+
+### REQ-W10-4 — Adoption scope guard: market_forward only (DEC-20261128-02)
+
+`adoptBusinessCase` (`business-case.ts:509-537`) gains a variant guard next to the existing
+archived-model rejection (:520): `COALESCE(variant,'market_forward') <> 'market_forward'` →
+409 `historical_not_adoptable` (exact code/wording per implementation convenience). The S8 UI
+hides the 채택 button on historical rows (`BusinessCaseStage.tsx:1848`) so the affordance and
+the guard agree. Historical rows keep their full comparison role (scenario table, IC-package
+`comparison` block per ADR-0117 §4). Compatibility: the adoption record store is
+`process_run` `stage='s8_case_adopt'` with `meta_json.model_id` (:563-581); the read-only
+compatibility query
+
+```sql
+SELECT pr.id, pr.project_id, pr.started_at, COALESCE(m.variant,'market_forward') AS variant
+FROM process_run pr
+JOIN business_case_model m ON m.id = json_extract(pr.meta_json, '$.model_id')
+WHERE pr.stage = 's8_case_adopt' AND COALESCE(m.variant,'market_forward') = 'historical';
+```
+
+returned 0 rows on the dev DB (2026-11-28; 3 adoptions, 24 historical models scanned), so no
+migration or data repair is needed. The guard must still tolerate a pre-existing historical
+adoption defensively (treat it as `adopted_superseded`-grade stale rather than crash) in case a
+future environment carries one. **No schema change anywhere in this addendum** — no migration;
+existing duplicate pairs heal on the project's next regeneration (all superseded rounds archive
+in one pass), following the ADR-0158 grandfathering precedent.
+
+### REQ-W10-5 — UI copy (Korean, INTERIM-WORDING)
+
+Shared ADR-0206 banner component; next-intl ko/en catalog keys under `s8.staleAdoption.*`,
+marked `// INTERIM-WORDING`:
+
+| Location | Copy (INTERIM-WORDING) |
+|---|---|
+| S8 adoption staleness banner (latest adoption points at an archived model) | 채택 케이스가 이전 회차로 보관됨 — 재채택 필요 |
+| GateDecisionPanel FS GO disabledReason (same reason) | 채택된 케이스가 이전 회차로 보관되어 GO를 기록할 수 없습니다. 새 회차의 케이스를 다시 채택해 주세요. HOLD·KILL은 기록할 수 있습니다. |
+| History view label for the archived adopted case | DEFERRED (v2 candidate) — history views keep the pre-existing generic 보관됨/Archived chip (`reports/page.tsx:201`); the banner already carries the supersession signal, so the dedicated label adds no information today. Dedicated copy 보관됨 (이전 회차) shelved with it |
+
+### REQ-W10-6 — Test plan
+
+1. **Rewrite the archival pin** — `tests/unit/business-case-round-archival.test.ts:139-173`
+   ("adopted and gate-referenced models survive"): after round 2 the adopted and
+   gate-referenced first-round models are ARCHIVED (not surviving), each with its
+   `business_case.superseded_round` audit row; exactly the 3 fresh models stay active;
+   `findAdoptedCase` still resolves the adopted case from the archived set; the adoption record
+   row is byte-identical before and after. The interrupted-round case (:175-186) and the
+   brownfield per-target scoping case (:189-208) stand; `cleanupLegacyModels` protection stays
+   pinned by `tests/unit/business-case-legacy-cleanup.test.ts` (unchanged).
+2. **Extend the boundary suite** — `tests/unit/business-case.test.ts:188-230`: a regen that
+   archives the adopted case still writes no adoption/gate markers (boundary #2 restated); the
+   adopt route rejects a historical-variant row with 409 `historical_not_adoptable`; the fs GO
+   route returns 409 while `adopted_superseded` and 201 after re-adoption.
+3. **Extend the reader suite** — `tests/unit/s8-stale-adoption-readers.test.ts`: a superseded
+   adoption drives every reader to its stale surface (backtest corpus exclusion with the
+   additive counter, `covenant-dscr` `insufficient_evidence`/`stale_adopted_case`, S10
+   adopted-capex `stale: true`, S11 blocker, covenant snapshot `status='stale'`), including a
+   greenfield fixture proving the round-based reason applies without a target.
+4. **Regression pins**: after adopt + regen there is exactly ONE active market_forward base row
+   for the project; `findAdoptedCase({cases, archived})` resolves the archived adopted case;
+   staleness (`resolveS8Staleness().adoption`) is null again after re-adopting a fresh-round
+   model, with no write to any human record in between; the GET payload's chip anchor
+   (`adoption.modelId`) matches the rendered chip case.
+
+### Seams and landing order
+
+DB: none (no migration). Lib: `business-case-cleanup.ts` → `business-case.ts` (staleness +
+adoption guard) → downstream readers (no change expected — verify by tests) → UI
+(`BusinessCaseStage.tsx` chip + banner + button visibility) → i18n keys. backend-engineer owns
+lib/route seams; frontend-engineer owns the chip/banner/button; data-architect consulted on the
+no-migration call. QA gate: full unit suite + typecheck:web + audit.ts before review.
+
+### Verified / could not verify / needs judgement
+
+- Verified: all file:line citations above were read in source on 2026-11-28 (`business-case-cleanup.ts:38-53,79-102`; `business-case-generator.ts:2465-2478`; `business-case.ts:225-301,447-455,509-583`; `BusinessCaseStage.tsx:1554-1557,1841-1858`; migration 0044; the three test files; commit `95153be4` / PR #598; `flow.spec.yaml` S8 outputs).
+- Verified (read-only dev-DB scan, 2026-11-28): duplicate-pair and adoption-variant counts as cited.
+- Could not verify: exact `GateDecisionPanel` disabled-reason prop path at implementation time (ADR-0206 precedent says server-provided reasons; confirm during implementation); behavior of the env-var escape hatch (`CO_NEWBIZ_GATE_INTEGRITY_TARGET=off`) combined with `adopted_superseded` — judgement: the family switch governs the GO block only, the banner must still render.
+- Needs judgement (human): the two DEC records are `proposed` — human-final approval happens at PR review of the implementation batch.

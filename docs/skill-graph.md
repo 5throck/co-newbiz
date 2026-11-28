@@ -454,6 +454,8 @@ Catalog table above — not skill references and not yet resolved as graph edges
 | `dec:DEC-20261123-02` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261124-01` | decision | `root/decision-record` | — | — |
 | `dec:DEC-20261124-02` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261128-01` | decision | `root/decision-record` | — | — |
+| `dec:DEC-20261128-02` | decision | `root/decision-record` | — | — |
 | `doc:AGENTS.md` | doc | `root/agent-lifecycle-manager`, `root/skill-lifecycle-manager` | — | — |
 | `doc:CLAUDE.md` | doc | `root/meeting-facilitation` | — | — |
 | `doc:CODEX.md` | doc | `root/meeting-facilitation` | — | — |

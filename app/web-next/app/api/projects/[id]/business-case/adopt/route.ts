@@ -8,7 +8,13 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { reconfirmBlock } from "../../../../../../lib/reconfirm.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { GoalsAckNoteRequiredError, GoalsAckRequiredError, NotFoundError, adoptBusinessCase } from "../../../../../../lib/business-case.ts";
+import {
+  GoalsAckNoteRequiredError,
+  GoalsAckRequiredError,
+  HistoricalNotAdoptableError,
+  NotFoundError,
+  adoptBusinessCase,
+} from "../../../../../../lib/business-case.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 
@@ -16,18 +22,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const auth = authenticate(request);
   if (!auth.ok) return auth.response;
   const ctx = auth.auth;
-  if (ctx.role === "viewer") return forbidden("role_required", "Business-case adoption requires the analyst role or higher — adoption is a human judgement.");
+  if (ctx.role === "viewer")
+    return forbidden(
+      "role_required",
+      "Business-case adoption requires the analyst role or higher — adoption is a human judgement.",
+    );
   const { id } = await params;
   if (!visibleProject(ctx, id)) return notFound();
   // ADR-0186 O-6: a legacy record awaiting re-confirmation is not used for anything new.
   const reconfirmDenied = reconfirmBlock(getDb(), id, { kind: "case_adoption" });
-  if (reconfirmDenied) return fail(reconfirmDenied.status, reconfirmDenied.code, reconfirmDenied.message, reconfirmDenied.details);
-  const body = (await request.json().catch(() => null)) as { model_id?: string; goals_ack?: { acknowledged?: unknown; note?: unknown } } | null;
+  if (reconfirmDenied)
+    return fail(reconfirmDenied.status, reconfirmDenied.code, reconfirmDenied.message, reconfirmDenied.details);
+  const body = (await request.json().catch(() => null)) as {
+    model_id?: string;
+    goals_ack?: { acknowledged?: unknown; note?: unknown };
+  } | null;
   if (!body?.model_id) return badRequest("invalid_request", "model_id is required.");
   // ADR-0159: optional acknowledgement that no business goals apply.
   const goalsAck =
     body.goals_ack && typeof body.goals_ack === "object"
-      ? { acknowledged: body.goals_ack.acknowledged === true, note: typeof body.goals_ack.note === "string" ? body.goals_ack.note : undefined }
+      ? {
+          acknowledged: body.goals_ack.acknowledged === true,
+          note: typeof body.goals_ack.note === "string" ? body.goals_ack.note : undefined,
+        }
       : undefined;
   try {
     const adoption = adoptBusinessCase(id, body.model_id, ctx.userId, { goalsAck });
@@ -39,6 +56,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (e instanceof NotFoundError) return notFound();
     // ADR-0159: a confirmation requirement (not a gate block) — the UI turns it into a dialog.
     if (e instanceof GoalsAckRequiredError) return fail(409, "goals_ack_required", e.message);
+    // DEC-20261128-02: the historical variant is comparison evidence (ADR-0117) and
+    // cannot be adopted — a client-fixable conflict, same 409 family as goals_ack.
+    if (e instanceof HistoricalNotAdoptableError) return fail(409, "historical_not_adoptable", e.message);
     if (e instanceof GoalsAckNoteRequiredError) return badRequest("goals_ack_note_required", e.message);
     // ADR-0143 constraint violations (target not selected / wrong target) are
     // client-fixable 400s, not 404s.

@@ -35,7 +35,10 @@ export function StaleTargetBanner({
             ? t("adoptionMismatch")
             : m.kind === "adoptionExcluded"
               ? t("adoptionExcluded", { name: m.name ?? t("unnamedTarget") })
-              : t("selectionExcluded", { name: m.name ?? t("unnamedTarget") })}
+              : m.kind === "adoptionSuperseded"
+                ? // REQ-W10-5 (DEC-20261128-01): adopted case archived with its round.
+                  t("adoptionSuperseded")
+                : t("selectionExcluded", { name: m.name ?? t("unnamedTarget") })}
         </p>
       ))}
       {onOpenSelection && (
