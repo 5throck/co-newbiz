@@ -208,7 +208,11 @@ describe("superseded adoption readers (adopted_superseded, DEC-20261128-01)", ()
   const ADOPTED_BF = "demo-s1-s12-business-case";
   const SUPERSEDED_AT = "2999-01-01T00:00:00.000Z";
   const archiveModel = (id: string) =>
-    db.run("UPDATE business_case_model SET archived_at = ?, archived_by = ? WHERE id = ?", [SUPERSEDED_AT, "tester", id]);
+    db.run("UPDATE business_case_model SET archived_at = ?, archived_by = ? WHERE id = ?", [
+      SUPERSEDED_AT,
+      "tester",
+      id,
+    ]);
   let healthyBacktestOrg: ReturnType<typeof runBacktest>["org"];
 
   test("round-based staleness with a clean target dimension; the fs GO block answers it", async () => {
@@ -234,7 +238,9 @@ describe("superseded adoption readers (adopted_superseded, DEC-20261128-01)", ()
     // Family `target` (fs GO block): same 409 contract, now naming the round-based reason.
     const denied = goStaleTargetCheck({ entityType: "project", entityId: bf.projectId, gate: "fs", actor: "tester" });
     expect(denied?.status).toBe(409);
-    const body = (await (denied as Response).json()) as { error: { code: string; details: { adoption: string | null } } };
+    const body = (await (denied as Response).json()) as {
+      error: { code: string; details: { adoption: string | null } };
+    };
     expect(body.error.code).toBe("target_not_shortlisted");
     expect(body.error.details.adoption).toBe("adopted_superseded");
   });
@@ -270,7 +276,8 @@ describe("superseded adoption readers (adopted_superseded, DEC-20261128-01)", ()
     // would hold S10 (and with it S11) on the stale case — the same isolation the ADR-0206
     // S11 test applies — so it is removed before the process-level assertions.
     db.run("DELETE FROM debt_instrument WHERE project_id = ?", [bf.projectId]);
-    const cols = (t: string) => (db.query(`PRAGMA table_info(${t})`).all() as Array<{ name: string }>).map((c) => c.name);
+    const cols = (t: string) =>
+      (db.query(`PRAGMA table_info(${t})`).all() as Array<{ name: string }>).map((c) => c.name);
     const model = db.query("SELECT * FROM business_case_model WHERE id = ?").get(ADOPTED_BF) as Record<string, unknown>;
     const mc = cols("business_case_model");
     db.run(

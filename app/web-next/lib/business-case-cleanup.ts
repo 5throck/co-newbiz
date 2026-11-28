@@ -28,7 +28,9 @@ function isShortlistScopedProject(db: Database, projectId: string): boolean {
     | { track: string | null; source_opportunity_id: string | null }
     | undefined;
   if (!p || p.track !== "brownfield" || !p.source_opportunity_id) return false;
-  const n = db.query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'").get(p.source_opportunity_id) as { n: number };
+  const n = db
+    .query("SELECT COUNT(*) AS n FROM brownfield_target WHERE opportunity_id = ? AND status = 'shortlisted'")
+    .get(p.source_opportunity_id) as { n: number };
   return n.n > 0;
 }
 
@@ -37,10 +39,14 @@ function isShortlistScopedProject(db: Database, projectId: string): boolean {
  *  text. Over-matching only ever archives instead of deleting. */
 export function isModelReferenced(db: Database, projectId: string, modelId: string): boolean {
   const like = `%${modelId}%`;
-  const run = db.query("SELECT 1 AS x FROM process_run WHERE (project_id = ? OR entity_id = ?) AND meta_json LIKE ? LIMIT 1").get(projectId, projectId, like);
+  const run = db
+    .query("SELECT 1 AS x FROM process_run WHERE (project_id = ? OR entity_id = ?) AND meta_json LIKE ? LIMIT 1")
+    .get(projectId, projectId, like);
   if (run) return true;
   const gate = db
-    .query("SELECT 1 AS x FROM gate_decision WHERE entity_id = ? AND (rationale LIKE ? OR COALESCE(missing_artifacts_json, '') LIKE ?) LIMIT 1")
+    .query(
+      "SELECT 1 AS x FROM gate_decision WHERE entity_id = ? AND (rationale LIKE ? OR COALESCE(missing_artifacts_json, '') LIKE ?) LIMIT 1",
+    )
     .get(projectId, like, like);
   if (gate) return true;
   const ev = db
@@ -88,7 +94,9 @@ export function archiveSupersededRound(
   db: Database = getDb(),
 ): string[] {
   const rows = db
-    .query("SELECT id, target_id FROM business_case_model WHERE project_id = ? AND kind = 'valuation' AND archived_at IS NULL")
+    .query(
+      "SELECT id, target_id FROM business_case_model WHERE project_id = ? AND kind = 'valuation' AND archived_at IS NULL",
+    )
     .all(projectId) as Array<{ id: string; target_id: string | null }>;
   const wanted = new Set(scope.targetIds);
   const hasNull = wanted.has(null);
@@ -110,7 +118,12 @@ export function archiveSupersededRound(
 /** Delete unreferenced legacy models, archive referenced ones. `modelIds`
  *  omitted = every active legacy model; ids that are not legacy are ignored
  *  (never touches a per-target or already-archived model). */
-export function cleanupLegacyModels(projectId: string, actor: string, modelIds?: readonly string[], db: Database = getDb()): CleanupResult {
+export function cleanupLegacyModels(
+  projectId: string,
+  actor: string,
+  modelIds?: readonly string[],
+  db: Database = getDb(),
+): CleanupResult {
   const legacy = listLegacyModels(projectId, db).filter((m) => !modelIds || modelIds.includes(m.id));
   const result: CleanupResult = { deleted: [], archived: [] };
   const now = new Date().toISOString();

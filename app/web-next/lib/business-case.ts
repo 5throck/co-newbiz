@@ -226,7 +226,11 @@ export interface ListBusinessCasesOptions {
  *  model row is archived (regardless of which archive path stamped it). This AMENDS ADR-0206's
  *  "target-less adoption is never stale" rule for the round dimension only — it now also covers
  *  greenfield; the target dimension rules are unchanged. */
-export type StaleReason = "selected_target_excluded" | "adopted_target_excluded" | "adopted_target_mismatch" | "adopted_superseded";
+export type StaleReason =
+  | "selected_target_excluded"
+  | "adopted_target_excluded"
+  | "adopted_target_mismatch"
+  | "adopted_superseded";
 
 /** Pure stale-state rule (no DB access). Records are never altered; only reported.
  *  - selection is stale when its target is no longer on the Short List;
@@ -308,7 +312,8 @@ export function resolveS8Staleness(projectId: string): S8Staleness {
   const adoptedCase = latest
     ? ((db
         .query("SELECT target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?")
-        .get(latest.modelId, projectId) as { target_id: string | null; archived_at: string | null } | undefined) ?? null)
+        .get(latest.modelId, projectId) as { target_id: string | null; archived_at: string | null } | undefined) ??
+      null)
     : null;
   return buildS8Staleness(db, latestTargetSelection(projectId), adoptedCase, shortlistedTargetIds(projectId));
 }
@@ -538,7 +543,9 @@ export function adoptBusinessCase(
 ): AdoptionRecord {
   const db = getDb();
   const model = db
-    .query("SELECT id, target_id, archived_at, COALESCE(variant, 'market_forward') AS variant FROM business_case_model WHERE id = ? AND project_id = ?")
+    .query(
+      "SELECT id, target_id, archived_at, COALESCE(variant, 'market_forward') AS variant FROM business_case_model WHERE id = ? AND project_id = ?",
+    )
     .get(modelId, projectId) as
     | { id: string; target_id: string | null; archived_at: string | null; variant: "market_forward" | "historical" }
     | undefined;

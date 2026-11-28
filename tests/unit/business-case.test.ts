@@ -414,9 +414,11 @@ describe("S8 generation (ADR-0098)", () => {
     expect(markers()).toEqual({ adopt: 1, gate: 1 });
     // The adopted row is archived; the adoption record still names it (never re-pointed).
     expect(
-      (db.query("SELECT archived_at FROM business_case_model WHERE id = ?").get(adoptedModelId) as {
-        archived_at: string | null;
-      }).archived_at,
+      (
+        db.query("SELECT archived_at FROM business_case_model WHERE id = ?").get(adoptedModelId) as {
+          archived_at: string | null;
+        }
+      ).archived_at,
     ).not.toBeNull();
 
     const list = await req(`/api/projects/${projectId}/business-case`, { headers: { cookie: analystCookie } });

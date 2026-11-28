@@ -38,7 +38,9 @@ const { ulid } = await import("../../db/lib/ulid.ts");
 const { createUser, approveUser } = await import("../../db/lib/accounts.ts");
 const { promoteOpportunity } = await import("../../db/repositories/project.repository.ts");
 const { generateBusinessCases, irr } = await import("../../app/web-next/lib/business-case-generator.ts");
-const { listBusinessCases, findAdoptedCase, resolveS8Staleness } = await import("../../app/web-next/lib/business-case.ts");
+const { listBusinessCases, findAdoptedCase, resolveS8Staleness } = await import(
+  "../../app/web-next/lib/business-case.ts"
+);
 
 const NOW = new Date().toISOString();
 const ACTOR = "round-archival-actor";
@@ -70,10 +72,10 @@ function seedGreenfield(name: string): string {
     [ulid(), oppId, "direct entry", "M&A rejected", name, ACTOR, NOW, NOW],
   );
   // S5 completion predicate: >=1 capability gap in opportunity.capability_gap_json.
-  db.run(
-    "UPDATE opportunity SET capability_gap_json = ? WHERE id = ?",
-    [JSON.stringify({ rows: [{ id: "gap-1", capability: "c1", resolution: "hire" }], updatedAt: NOW }), oppId],
-  );
+  db.run("UPDATE opportunity SET capability_gap_json = ? WHERE id = ?", [
+    JSON.stringify({ rows: [{ id: "gap-1", capability: "c1", resolution: "hire" }], updatedAt: NOW }),
+    oppId,
+  ]);
   addGate(oppId, "screening");
   addGate(oppId, "pre_fs");
   return promoteOpportunity(oppId, { promotedBy: ACTOR, needToKnowBasis: "round archival test" }).project.id;
@@ -81,10 +83,14 @@ function seedGreenfield(name: string): string {
 
 function seedBrownfield(): string {
   const oppId = ulid();
-  db.run(
-    "INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)",
-    [oppId, "brownfield archival test", "robots", "selected", ACTOR, NOW],
-  );
+  db.run("INSERT INTO opportunity (id, name, market_scope, status, created_by, created_at) VALUES (?,?,?,?,?,?)", [
+    oppId,
+    "brownfield archival test",
+    "robots",
+    "selected",
+    ACTOR,
+    NOW,
+  ]);
   db.run(
     "INSERT INTO route_decision (id, opportunity_id, track, sub_track, rationale, decided_by, decided_at, is_current) VALUES (?,?,?,?,?,?,?,1)",
     [ulid(), oppId, "brownfield", "m_and_a", "test route", ACTOR, NOW],
@@ -119,7 +125,13 @@ function addModel(name: string, projectId: string, target: string | null): strin
 }
 
 beforeAll(async () => {
-  await createUser(db, { userId: ACTOR, role: "analyst", password: "pw-round-archival-1", createdBy: "test", now: NOW });
+  await createUser(db, {
+    userId: ACTOR,
+    role: "analyst",
+    password: "pw-round-archival-1",
+    createdBy: "test",
+    now: NOW,
+  });
   approveUser(db, { userId: ACTOR, approvedBy: "test", now: NOW });
   greenProject = seedGreenfield("greenfield archival test");
   brownProject = seedBrownfield();
@@ -137,7 +149,10 @@ function activeModels(projectId: string): Array<{ id: string; target_id: string 
 }
 
 function auditRows(projectId: string): Array<{ action: string; target: string }> {
-  return db.query("SELECT action, target FROM audit_log WHERE target LIKE ?").all(projectId + ":%") as Array<{ action: string; target: string }>;
+  return db.query("SELECT action, target FROM audit_log WHERE target LIKE ?").all(projectId + ":%") as Array<{
+    action: string;
+    target: string;
+  }>;
 }
 
 describe("FIX 1 - round archiving (DEC-20261128-01: supersede-to-archive)", () => {
@@ -154,7 +169,20 @@ describe("FIX 1 - round archiving (DEC-20261128-01: supersede-to-archive)", () =
     const gateNamed = first[1].id;
     db.run(
       "INSERT INTO process_run (id, entity_type, entity_id, project_id, spec_version, stage, status, source, started_by, started_at, finished_at, meta_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-      [ulid(), "project", greenProject, greenProject, "test", "s8_case_adopt", "done", "web", ACTOR, NOW, NOW, JSON.stringify({ model_id: adopted })],
+      [
+        ulid(),
+        "project",
+        greenProject,
+        greenProject,
+        "test",
+        "s8_case_adopt",
+        "done",
+        "web",
+        ACTOR,
+        NOW,
+        NOW,
+        JSON.stringify({ model_id: adopted }),
+      ],
     );
     db.run(
       "INSERT INTO gate_decision (id, entity_type, entity_id, gate, decision, rationale, decided_by, decided_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -182,15 +210,13 @@ describe("FIX 1 - round archiving (DEC-20261128-01: supersede-to-archive)", () =
     // included — carries its `business_case.superseded_round` audit row.
     const superseded = auditRows(greenProject).filter((a) => a.action === "business_case.superseded_round");
     expect(superseded.length).toBe(3);
-    expect(new Set(superseded.map((a) => a.target))).toEqual(
-      new Set(archived.map((a) => greenProject + ":" + a.id)),
-    );
+    expect(new Set(superseded.map((a) => a.target))).toEqual(new Set(archived.map((a) => greenProject + ":" + a.id)));
 
     // The adoption record row is byte-identical before and after (boundary #2:
     // supersession never re-points or alters a human record).
-    expect(db.query("SELECT * FROM process_run WHERE project_id = ? AND stage = 's8_case_adopt'").all(greenProject)).toEqual(
-      adoptionBefore,
-    );
+    expect(
+      db.query("SELECT * FROM process_run WHERE project_id = ? AND stage = 's8_case_adopt'").all(greenProject),
+    ).toEqual(adoptionBefore);
     // ADR-0158 fallback: the adopted case still resolves from the archived set.
     const list = listBusinessCases(greenProject);
     expect(list.cases.find((c) => c.id === adopted)).toBeUndefined();
@@ -235,7 +261,9 @@ describe("brownfield per-target scoping", () => {
     const aActive = active.filter((m) => m.target_id === targetA);
     expect(aActive.length).toBe(3);
     const aArchived = db
-      .query("SELECT COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id = ? AND archived_at IS NOT NULL")
+      .query(
+        "SELECT COUNT(*) AS n FROM business_case_model WHERE project_id = ? AND target_id = ? AND archived_at IS NOT NULL",
+      )
       .get(brownProject, targetA) as { n: number };
     expect(aArchived.n).toBe(3);
   });
