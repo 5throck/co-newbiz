@@ -467,7 +467,7 @@
       "status": "draft",
       "source": "manual",
       "created": "2026-09-17",
-      "last_updated": "2026-09-17"
+      "last_updated": "2026-11-28"
     },
     {
       "id": "2026-09-18-target-costing-price-anchor-design",
@@ -593,7 +593,7 @@
       "status": "implemented",
       "source": "manual",
       "created": "2026-09-21",
-      "last_updated": "2026-09-21"
+      "last_updated": "2026-11-28"
     },
     {
       "id": "2026-09-22-agent-persona-integrity-gate-design",

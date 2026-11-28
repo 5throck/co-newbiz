@@ -1,6 +1,6 @@
 # VERSION_MANIFEST.md
 
-**Generated**: 2026-11-27T22:11:21.405Z
+**Generated**: 2026-11-28T10:05:35.269Z
 **Manifest Version**: 1.0
 **Location**: docs/VERSION_MANIFEST.md
 
@@ -10,7 +10,7 @@
 
 - **Agents**: 45
 - **Skills**: 109
-- **Scripts**: 220 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
+- **Scripts**: 221 *(top-level CLI scripts; library/helper modules under `scripts/lib/`, `scripts/helpers/`, `scripts/hooks/`, and `scripts/validators/` plus experiment files under `scripts/experiments/` are excluded here — `scripts/SCRIPTS.md` is the full registry)*
 - **Commands**: 7
 
 ---
@@ -329,6 +329,7 @@
 | policy-sync.ts | 1.0.1 | scripts/co-newbiz/policy-sync.ts | fs, path |
 | proc-resolve.ts | 1.2.1 | scripts/co-newbiz/proc-resolve.ts | fs, js-yaml, path |
 | process-ssot-check.ts | 4.2.0 | scripts/co-newbiz/process-ssot-check.ts | fs, js-yaml, path, url |
+| prod-port-probe.ts | 1.0.0 | scripts/co-newbiz/prod-port-probe.ts | fs, os, path |
 | qa-gate.ts | 1.3.0 | scripts/qa-gate.ts | bun, crypto |
 | rag.ts | 1.3.0 | scripts/co-newbiz/rag.ts | bun:sqlite, crypto, fs, path |
 | readme-lifecycle-audit.ts | 1.1.0 | scripts/readme-lifecycle-audit.ts | fs, path, process |
@@ -352,7 +353,7 @@
 | schedule-seed.ts | 1.1.0 | scripts/co-newbiz/schedule-seed.ts | bun:sqlite |
 | schedule-tick.ts | 1.0.0 | scripts/co-newbiz/schedule-tick.ts | path |
 | scheduler-core.ts | 1.0.0 | scripts/co-newbiz/scheduler-core.ts | N/A |
-| scheduler-install.ts | 1.0.0 | scripts/co-newbiz/scheduler-install.ts | fs, os, path |
+| scheduler-install.ts | 1.1.0 | scripts/co-newbiz/scheduler-install.ts | fs, os, path |
 | scope-impact.ts | 1.0.0 | scripts/co-newbiz/scope-impact.ts | bun:sqlite |
 | scorecard-rollup.ts | 1.0.0 | scripts/co-newbiz/scorecard-rollup.ts | N/A |
 | seed-benchmark-cases.ts | 1.0.0 | scripts/co-newbiz/seed-benchmark-cases.ts | bun:sqlite, path |
