@@ -72,10 +72,20 @@ COPY --from=build /repo/app/web-next/.next ./app/web-next/.next
 COPY --from=build /repo/app/web-next/public ./app/web-next/public
 COPY --from=build /repo/app/web-next/package.json ./app/web-next/package.json
 COPY --from=build /repo/app/web-next/next.config.ts ./app/web-next/next.config.ts
-# next.config.ts imports ./lib/dev-origins.ts at startup; every relative import
-# of next.config.ts must be copied here (guarded by
-# tests/unit/dockerfile-next-config-imports.test.ts).
-COPY --from=build /repo/app/web-next/lib/dev-origins.ts ./app/web-next/lib/dev-origins.ts
+# Two docker-exec-side import surfaces reach into app/web-next source that the
+# selective app COPYs above omit, and BOTH must resolve inside the image
+# (guarded by tests/unit/dockerfile-next-config-imports.test.ts):
+#   1. next.config.ts imports ./lib/dev-origins.ts at server start;
+#   2. the docker-exec scheduler (scripts/co-newbiz/schedule-tick.ts,
+#      run-job.ts, job-worker.ts and every handler under jobs/) statically
+#      imports lib/** at process start — schedule/cron.ts, dart-client, llm,
+#      the analysis pipeline — plus i18n/config and the locales JSON data.
+# lib/, i18n/ and locales/ are copied wholesale so any new import edge stays
+# covered. 2026-11-29: prod ticks had been crashing since ~Nov 20 on the
+# missing schedule/cron.ts (ADR-0189); this COPY set is that incident's fix.
+COPY --from=build /repo/app/web-next/lib ./app/web-next/lib
+COPY --from=build /repo/app/web-next/i18n ./app/web-next/i18n
+COPY --from=build /repo/app/web-next/locales ./app/web-next/locales
 # Optional Monte Carlo engine layer (python/sim_engine). SIM_GPU selects what
 # the image carries — it is a BUILD argument, so GPU variants are separate
 # images:
