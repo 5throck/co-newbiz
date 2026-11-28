@@ -156,9 +156,16 @@ describe("legacy cleanup (ADR-0158)", () => {
     expect(adopted?.archived_at).not.toBeNull();
     const pkg = await req(`/api/projects/${projectId}/ic-package`, { headers: { cookie: analystCookie } });
     if (pkg.status === 200) {
-      const data = (await pkg.json()).data as { business_case: { adopted: { id: string; archived_at: string | null } | null } };
-      expect(data.business_case.adopted?.id).toBe(adoptedLegacy);
-      expect(data.business_case.adopted?.archived_at).not.toBeNull();
+      // DEC-20261128-01 (REQ-W10-2): the archive reads as `adopted_superseded` regardless of which
+      // archive path stamped the model, so the IC package suppresses the figures (stale branch);
+      // the ADR-0158 history resolution above (findAdoptedCase) keeps the adopted case resolvable.
+      const data = (await pkg.json()).data as {
+        staleness: { adoption: string | null };
+        business_case: { adopted: { id: string } | null; stale: string | null } | null;
+      };
+      expect(data.staleness.adoption).toBe("adopted_superseded");
+      expect(data.business_case?.adopted).toBeNull();
+      expect(data.business_case?.stale).toBe("adopted_superseded");
     }
     const again = (await (await cleanup(analystCookie)).json()).data as { deleted: string[]; archived: string[] };
     expect(again).toEqual({ deleted: [], archived: [] });

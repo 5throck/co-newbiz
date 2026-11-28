@@ -5,7 +5,11 @@
 import type { S8Staleness } from "./business-case.ts";
 
 /** Message kinds the banner can show; each maps to a `stages.s8.staleTarget.<kind>` catalog key. */
-export type StaleTargetMessageKind = "selectionExcluded" | "adoptionExcluded" | "adoptionMismatch";
+export type StaleTargetMessageKind =
+  | "selectionExcluded"
+  | "adoptionExcluded"
+  | "adoptionMismatch"
+  | "adoptionSuperseded";
 
 export interface StaleTargetMessage {
   kind: StaleTargetMessageKind;
@@ -27,6 +31,10 @@ export function staleTargetMessages(staleness: S8Staleness | null | undefined): 
     out.push({ kind: "adoptionExcluded", name: staleness.adopted_target?.name ?? null });
   } else if (staleness.adoption === "adopted_target_mismatch") {
     out.push({ kind: "adoptionMismatch", name: null });
+  } else if (staleness.adoption === "adopted_superseded") {
+    // REQ-W10-5 (DEC-20261128-01): the adopted case was archived with its round — copy is
+    // INTERIM-WORDING (design 2026-09-18 addendum; the catalog value carries the ruling).
+    out.push({ kind: "adoptionSuperseded", name: null });
   }
   return out;
 }

@@ -51,6 +51,24 @@ describe("staleTargetMessages", () => {
     expect(staleTargetMessages(mismatch)).toEqual([{ kind: "adoptionMismatch", name: null }]);
   });
 
+  // REQ-W10-5 (DEC-20261128-01): the round dimension — the adopted case was archived with its
+  // superseded round — maps to its own message kind with no target name attached.
+  test("adopted_superseded (round archived) maps to the supersession message, no name", () => {
+    const st: S8Staleness = { ...NONE, adoption: "adopted_superseded", any: true };
+    expect(staleTargetMessages(st)).toEqual([{ kind: "adoptionSuperseded", name: null }]);
+  });
+
+  test("selection exclusion and round supersession give two messages, selection first", () => {
+    const st: S8Staleness = {
+      ...NONE,
+      selection: "selected_target_excluded",
+      adoption: "adopted_superseded",
+      any: true,
+      target_ids: ["t1"],
+    };
+    expect(staleTargetMessages(st).map((m) => m.kind)).toEqual(["selectionExcluded", "adoptionSuperseded"]);
+  });
+
   test("both stale records give two messages, selection first; a missing name stays null", () => {
     const st: S8Staleness = {
       ...NONE,
@@ -80,6 +98,13 @@ describe("staleTargetBlocksGo", () => {
     expect(staleTargetBlocksGo(stale, "screening")).toBe(false);
     expect(staleTargetBlocksGo(null, "fs")).toBe(false);
   });
+
+  // REQ-W10-2 (DEC-20261128-01): the round dimension blocks GO too — a greenfield-style
+  // target-less adoption whose case was archived is stale with no target reason at all.
+  test("a superseded adoption (round archived, no target change) still blocks GO", () => {
+    const st: S8Staleness = { ...NONE, adoption: "adopted_superseded", any: true };
+    for (const g of ["fs", "dd", "entity_ic", "group_ic"]) expect(staleTargetBlocksGo(st, g)).toBe(true);
+  });
 });
 
 describe("source pins", () => {
@@ -106,11 +131,33 @@ describe("source pins", () => {
     expect(src).toContain('err.code === "target_not_shortlisted"');
     expect(src).toContain("stages.s8.staleTarget.goBlocked");
     expect(src).toContain("entityBase}/business-case");
+    // QA follow-up (REQ-W10-5): the disabledReason branches on the payload's staleness reason —
+    // round supersession names re-adoption, never the Short List exclusion.
+    expect(src).toContain('staleness?.adoption === "adopted_superseded"');
+    expect(src).toContain("stages.s8.staleTarget.goBlockedAdoptionSuperseded");
+    expect(src).toContain("tr(goStaleReasonKey)");
+    expect((src.match(/tr\(goStaleReasonKey\)/g) ?? []).length).toBe(3); // submitReason + 409 handler + visible note
   });
 
   test("admin KPI view knows the `target` family", () => {
     expect(FAMILY_ORDER).toContain("target");
     expect(isKnownFamily("target")).toBe(true);
+  });
+
+  // REQ-W10-3/-4/-5 (DEC-20261128-01/-02): chip re-anchors to the adoption record, historical
+  // rows lose the adopt affordance, and the shared banner learns the supersession kind.
+  test("header adoption chip keys on the adoption record; historical rows render no adopt control", () => {
+    const stage = read("components/stages/BusinessCaseStage.tsx");
+    // REQ-W10-3: the chip anchor is data.adoption.modelId — never `cases.find` over the active
+    // list, which detaches onto the fresh unadopted round after a regeneration.
+    expect(stage).toContain("data?.adoption?.modelId");
+    expect(stage).not.toContain("newestMf?.adopted");
+    // REQ-W10-4: the 채택 button renders on market_forward rows only (the API 409s historical).
+    expect(stage).toContain('!c.adopted && c.variant === "market_forward"');
+    // REQ-W10-5: the shared ADR-0206 banner renders the supersession kind from the catalog.
+    const banner = read("components/stages/StaleTargetBanner.tsx");
+    expect(banner).toContain('m.kind === "adoptionSuperseded"');
+    expect(banner).toContain('t("adoptionSuperseded")');
   });
 });
 
@@ -125,8 +172,10 @@ describe("catalog entries (ko + en)", () => {
     ...[
       "adoptionExcluded",
       "adoptionMismatch",
+      "adoptionSuperseded",
       "figuresHidden",
       "goBlocked",
+      "goBlockedAdoptionSuperseded",
       "label",
       "openSelection",
       "selectionExcluded",
@@ -135,6 +184,8 @@ describe("catalog entries (ko + en)", () => {
     "admin.gateIntegrity.family.target.name",
     "admin.gateIntegrity.family.target.desc",
     "errors.codes.target_not_shortlisted",
+    // REQ-W10-4 defense in depth: the hidden button's 409 still localizes if it ever fires.
+    "errors.codes.historical_not_adoptable",
   ];
   for (const [locale, cat] of [
     ["ko", ko],
@@ -165,14 +216,17 @@ describe("catalog entries (ko + en)", () => {
       ...[
         "adoptionExcluded",
         "adoptionMismatch",
+        "adoptionSuperseded",
         "figuresHidden",
         "goBlocked",
+        "goBlockedAdoptionSuperseded",
         "label",
         "openSelection",
         "selectionExcluded",
         "unnamedTarget",
       ].map((k) => `stages.s8.staleTarget.${k}`),
       "errors.codes.target_not_shortlisted",
+      "errors.codes.historical_not_adoptable",
     ];
     for (const k of koKeys)
       expect([k, lookup(ko as Catalog, k) as string]).not.toEqual([k, expect.stringContaining("Short List")]);
@@ -189,6 +243,35 @@ describe("catalog entries (ko + en)", () => {
     expect(lookup(ko as Catalog, "stages.s8.staleTarget.figuresHidden")).toBe(
       "대상을 다시 선택하고 분석안을 다시 채택할 때까지 이 요약의 수치는 표시하지 않습니다.",
     );
+  });
+
+  // REQ-W10-5 (DEC-20261128-01): the supersession copy is INTERIM-WORDING (design addendum)
+  // — pinned verbatim so any rewording is a conscious test change.
+  test("the adopted_superseded copy is pinned (INTERIM-WORDING per the design addendum)", () => {
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.adoptionSuperseded")).toBe(
+      "채택 케이스가 이전 회차로 보관됨 — 재채택 필요",
+    );
+    expect(lookup(en as Catalog, "stages.s8.staleTarget.adoptionSuperseded")).toBe(
+      "The adopted case was archived with its round — re-adoption required",
+    );
+    expect(lookup(ko as Catalog, "errors.codes.historical_not_adoptable")).toContain("채택할 수 없습니다");
+    expect(lookup(en as Catalog, "errors.codes.historical_not_adoptable")).toContain("cannot be adopted");
+  });
+
+  // QA follow-up: the fs GO disabledReason for round supersession — the exclusion copy
+  // (goBlocked) is factually wrong when nothing left the Short List.
+  test("the GO-blocked supersession copy is pinned and never claims a Short List exclusion", () => {
+    expect(lookup(ko as Catalog, "stages.s8.staleTarget.goBlockedAdoptionSuperseded")).toBe(
+      "채택된 케이스가 이전 회차로 보관되어 GO를 기록할 수 없습니다. 새 회차의 케이스를 다시 채택해 주세요. HOLD·KILL은 기록할 수 있습니다.",
+    );
+    expect(lookup(en as Catalog, "stages.s8.staleTarget.goBlockedAdoptionSuperseded")).toBe(
+      "The adopted case was archived with its previous round, so GO cannot be recorded. Re-adopt a case from the new round. HOLD and KILL can be recorded.",
+    );
+    for (const cat of [ko, en] as const) {
+      const v = lookup(cat as Catalog, "stages.s8.staleTarget.goBlockedAdoptionSuperseded") as string;
+      expect(v).not.toContain("최종 후보 목록");
+      expect(v).not.toContain("Final Candidate List");
+    }
   });
 
   test("en copy follows the en catalog's Final Candidate List term", () => {

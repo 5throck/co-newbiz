@@ -221,25 +221,36 @@ export interface ListBusinessCasesOptions {
   includeExcludedTargets?: boolean;
 }
 
-/** ADR-0206 — why the latest human selection / adoption no longer matches the live Short List. */
-export type StaleReason = "selected_target_excluded" | "adopted_target_excluded" | "adopted_target_mismatch";
+/** ADR-0206 — why the latest human selection / adoption no longer matches the live Short List.
+ *  DEC-20261128-01 adds the round dimension: `adopted_superseded` when the latest adoption's
+ *  model row is archived (regardless of which archive path stamped it). This AMENDS ADR-0206's
+ *  "target-less adoption is never stale" rule for the round dimension only — it now also covers
+ *  greenfield; the target dimension rules are unchanged. */
+export type StaleReason = "selected_target_excluded" | "adopted_target_excluded" | "adopted_target_mismatch" | "adopted_superseded";
 
 /** Pure stale-state rule (no DB access). Records are never altered; only reported.
  *  - selection is stale when its target is no longer on the Short List;
- *  - adoption is stale when the adopted case's target left the Short List, or (both records
- *    present) when the adopted case belongs to a different target than the current selection;
- *  - a target-less adoption (greenfield, legacy) is never stale. */
+ *  - adoption is stale when the adopted case's row is archived (round superseded —
+ *    DEC-20261128-01; checked first, it subsumes any target-state staleness of a
+ *    no-longer-active row), when the adopted case's target left the Short List, or (both
+ *    records present) when the adopted case belongs to a different target than the current
+ *    selection;
+ *  - a target-less adoption (greenfield, legacy) is never stale ON THE TARGET DIMENSION —
+ *    with `adoptedArchived` it is stale on the round dimension (ADR-0206 amendment, DEC-20261128-01). */
 export function staleS8Records(input: {
   selection: { target_id: string } | null;
   adoptedCase: { target_id: string | null } | null;
   shortlistedIds: ReadonlySet<string>;
+  adoptedArchived?: boolean;
 }): { selection: StaleReason | null; adoption: StaleReason | null; any: boolean } {
-  const { selection, adoptedCase, shortlistedIds } = input;
+  const { selection, adoptedCase, shortlistedIds, adoptedArchived } = input;
   const selectionStale: StaleReason | null =
     selection && !shortlistedIds.has(selection.target_id) ? "selected_target_excluded" : null;
   let adoptionStale: StaleReason | null = null;
   const adoptedTarget = adoptedCase?.target_id ?? null;
-  if (adoptedTarget !== null) {
+  if (adoptedArchived) {
+    adoptionStale = "adopted_superseded";
+  } else if (adoptedTarget !== null) {
     if (!shortlistedIds.has(adoptedTarget)) adoptionStale = "adopted_target_excluded";
     else if (selection && selection.target_id !== adoptedTarget) adoptionStale = "adopted_target_mismatch";
   }
@@ -260,13 +271,15 @@ export interface S8Staleness {
 function buildS8Staleness(
   db: ReturnType<typeof getDb>,
   selection: TargetSelectionRecord | null,
-  adoptedCase: { target_id: string | null } | null,
+  adoptedCase: { target_id: string | null; archived_at?: string | null } | null,
   shortlistedIds: ReadonlySet<string>,
 ): S8Staleness {
   const r = staleS8Records({
     selection: selection ? { target_id: selection.targetId } : null,
     adoptedCase,
     shortlistedIds,
+    // DEC-20261128-01: an archived adopted-case row (any archive path) reads as superseded.
+    adoptedArchived: adoptedCase?.archived_at != null,
   });
   const nameOf = (id: string): string | null =>
     (
@@ -287,15 +300,15 @@ function buildS8Staleness(
 }
 
 /** DB wrapper of `staleS8Records` for server consumers that do not need the case list: loads the latest
- *  selection, the latest adoption, the adopted case behind it (UNFILTERED - it may be excluded) and the
- *  live Short List. Older rows are history and are not evaluated. */
+ *  selection, the latest adoption, the adopted case behind it (UNFILTERED - it may be excluded or
+ *  archived — DEC-20261128-01) and the live Short List. Older rows are history and are not evaluated. */
 export function resolveS8Staleness(projectId: string): S8Staleness {
   const db = getDb();
   const latest = latestAdoption(projectId);
   const adoptedCase = latest
     ? ((db
-        .query("SELECT target_id FROM business_case_model WHERE id = ? AND project_id = ?")
-        .get(latest.modelId, projectId) as { target_id: string | null } | undefined) ?? null)
+        .query("SELECT target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?")
+        .get(latest.modelId, projectId) as { target_id: string | null; archived_at: string | null } | undefined) ?? null)
     : null;
   return buildS8Staleness(db, latestTargetSelection(projectId), adoptedCase, shortlistedTargetIds(projectId));
 }
@@ -481,7 +494,8 @@ export function activeTargetCases<T extends { target_id: string | null }>(
  * The engine may recommend; only this write — reached through the analyst's
  * explicit click — marks adoption. ADR-0143: a brownfield case (target_id
  * set) can only be adopted after the human target selection, and only when it
- * belongs to the selected target. */
+ * belongs to the selected target. DEC-20261128-02: market_forward rows only —
+ * the historical variant is comparison evidence (ADR-0117). */
 /** Thrown when no goals apply (project, affiliate and group all empty) and the
  * adopter did not acknowledge it (ADR-0159). A confirmation requirement, not a gate block. */
 export class GoalsAckRequiredError extends Error {
@@ -506,6 +520,16 @@ export interface GoalsAckInput {
   note?: string;
 }
 
+/** DEC-20261128-02 (ADR-0117): adoption is restricted to the market_forward
+ *  variant — the historical variant is comparison evidence and can never back
+ *  the fs gate. A new attempt only; a hypothetical pre-existing historical
+ *  adoption is neither migrated nor repaired. */
+export class HistoricalNotAdoptableError extends Error {
+  constructor() {
+    super("과거 실적(historical) 케이스는 채택할 수 없습니다 — 비교 근거로만 사용됩니다 (DEC-20261128-02 / ADR-0117)");
+  }
+}
+
 export function adoptBusinessCase(
   projectId: string,
   modelId: string,
@@ -514,10 +538,13 @@ export function adoptBusinessCase(
 ): AdoptionRecord {
   const db = getDb();
   const model = db
-    .query("SELECT id, target_id, archived_at FROM business_case_model WHERE id = ? AND project_id = ?")
-    .get(modelId, projectId) as { id: string; target_id: string | null; archived_at: string | null } | undefined;
+    .query("SELECT id, target_id, archived_at, COALESCE(variant, 'market_forward') AS variant FROM business_case_model WHERE id = ? AND project_id = ?")
+    .get(modelId, projectId) as
+    | { id: string; target_id: string | null; archived_at: string | null; variant: "market_forward" | "historical" }
+    | undefined;
   if (!model) throw new NotFoundError(`business case '${modelId}' not found for project '${projectId}'`);
   if (model.archived_at) throw new Error("보관된 모델은 채택할 수 없습니다 (ADR-0158)");
+  if (model.variant !== "market_forward") throw new HistoricalNotAdoptableError();
   const project = db.query("SELECT track, source_opportunity_id FROM md_project WHERE id = ?").get(projectId) as
     | { track: "greenfield" | "brownfield" | null; source_opportunity_id: string | null }
     | undefined;

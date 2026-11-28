@@ -3503,6 +3503,7 @@
       "group_not_found": "Group not found.",
       "group_required": "A group-targeted analysis requires groupId.",
       "has_assessment": "Items with recorded judgements cannot be deleted.",
+      "historical_not_adoptable": "Past-based cases cannot be adopted — they are comparison evidence only.",
       "hold_requires_artifacts": "A HOLD decision requires missing_artifacts (the list of incomplete deliverables).",
       "human_fields_not_proposable": "A proposal cannot carry the snapshot hash or acknowledgements. The person acknowledges them on the confirmation page.",
       "human_only": "Only a human can do this — agents may only propose.",
@@ -7598,8 +7599,10 @@
       "staleTarget": {
         "adoptionExcluded": "The target company ‘{name}’ of the adopted business case was removed from the Final Candidate List. The records are kept as they are.",
         "adoptionMismatch": "The target company of the adopted business case differs from the currently selected target. Adopt a business case again.",
+        "adoptionSuperseded": "The adopted case was archived with its round — re-adoption required",
         "figuresHidden": "The figures of this summary are hidden until the target is selected again and a business case is re-adopted.",
         "goBlocked": "GO cannot be recorded because the selected or adopted target was removed from the Final Candidate List. HOLD and KILL can be recorded.",
+        "goBlockedAdoptionSuperseded": "The adopted case was archived with its previous round, so GO cannot be recorded. Re-adopt a case from the new round. HOLD and KILL can be recorded.",
         "label": "Target company needs attention",
         "openSelection": "Go to target comparison and selection",
         "selectionExcluded": "The selected target company ‘{name}’ is no longer on the Final Candidate List. Select the target again and re-adopt a business case before the FS gate GO can be recorded.",

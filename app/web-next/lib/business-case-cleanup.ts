@@ -70,12 +70,17 @@ export function listLegacyModels(projectId: string, db: Database = getDb()): Leg
 /** Archive the previous generation round (called at the START of every
  *  generateBusinessCases run): every active (non-archived) valuation model of
  *  the project scoped to the subjects this run regenerates — greenfield:
- *  target_id NULL; brownfield: the shortlisted target ids. Models a decision
- *  record still names (adoption / gate / process_run, `isModelReferenced`)
- *  are NEVER archived — they stay resolvable for the adoption / IC history
- *  views; a run interrupted mid-way (a lone base model from a double press)
- *  is just a previous round and is archived the same way. Per-model
- *  `business_case.superseded_round` audit rows follow the cleanup pattern. */
+ *  target_id NULL; brownfield: the shortlisted target ids. DEC-20261128-01
+ *  (REQ-W10-1): adopted and gate-referenced models are archived WITH their
+ *  round-mates — ADR-0158's archive already keeps the adoption / IC history
+ *  resolvable (`findAdoptedCase` falls back to the archived set), so the old
+ *  keep-active skip is dropped for THIS path only; a latest adoption pointing
+ *  at an archived model reads as stale (`adopted_superseded`) and a human
+ *  re-adopt of a fresh-round model is the recovery. The keep-referenced
+ *  protection on `cleanupLegacyModels` is unchanged. A run interrupted
+ *  mid-way (a lone base model from a double press) is just a previous round
+ *  and is archived the same way. Per-model `business_case.superseded_round`
+ *  audit rows follow the cleanup pattern. */
 export function archiveSupersededRound(
   projectId: string,
   actor: string,
@@ -91,8 +96,9 @@ export function archiveSupersededRound(
   const archived: string[] = [];
   const now = new Date().toISOString();
   db.transaction(() => {
+    // DEC-20261128-01: no referenced-model skip here — every superseded-round
+    // model archives (the supersession path; legacy cleanup keeps its guard).
     for (const m of stale) {
-      if (isModelReferenced(db, projectId, m.id)) continue; // adopted / gate-referenced: leave as-is
       db.run("UPDATE business_case_model SET archived_at = ?, archived_by = ? WHERE id = ?", [now, actor, m.id]);
       appendAudit(db, { actor, action: "business_case.superseded_round", target: `${projectId}:${m.id}`, now });
       archived.push(m.id);

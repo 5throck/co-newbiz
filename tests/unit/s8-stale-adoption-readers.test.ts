@@ -20,6 +20,7 @@ const { runMigrations } = await import("../../db/migrate.ts");
 const { ulid } = await import("../../db/lib/ulid.ts");
 const { seedS1ToS12Demo, seedGreenfieldS1ToS12Demo } = await import("../../scripts/co-newbiz/seed-s1-s12-demo.ts");
 const { resolveS8Staleness } = await import("../../app/web-next/lib/business-case.ts");
+const { goStaleTargetCheck } = await import("../../app/web-next/lib/gate-write-checks.ts");
 const { runBacktest } = await import("../../app/web-next/lib/backtest.ts");
 const { computeDownsideDscr } = await import("../../app/web-next/lib/covenant-dscr.ts");
 const { adoptedCaseCapex, trancheReconciliation } = await import("../../app/web-next/lib/greenfield-execution.ts");
@@ -196,5 +197,123 @@ describe("stale adoption readers (ADR-0206 addendum)", () => {
     expect(s11?.status).toBe("current");
     expect(s11?.blockers.join("\n")).toMatch(STALE_NOTE);
     expect(s11?.missing).toContain("s11.adopted_business_case");
+  });
+});
+
+// DEC-20261128-01 (design addendum REQ-W10-2/REQ-W10-6 item 3): a regeneration archives the
+// adopted round, and the latest adoption then reads as `adopted_superseded` — ROUND-based, so it
+// applies without any target axis (greenfield) and with the target dimension entirely clean.
+// The readers must surface the stale state through their existing contracts; no record is altered.
+describe("superseded adoption readers (adopted_superseded, DEC-20261128-01)", () => {
+  const ADOPTED_BF = "demo-s1-s12-business-case";
+  const SUPERSEDED_AT = "2999-01-01T00:00:00.000Z";
+  const archiveModel = (id: string) =>
+    db.run("UPDATE business_case_model SET archived_at = ?, archived_by = ? WHERE id = ?", [SUPERSEDED_AT, "tester", id]);
+  let healthyBacktestOrg: ReturnType<typeof runBacktest>["org"];
+
+  test("round-based staleness with a clean target dimension; the fs GO block answers it", async () => {
+    // Start from the healthy demo state: drop the fixture rows the ADR-0206 S11 test added
+    // (its second selection record and its per-target case), target back on the Short List.
+    db.run("DELETE FROM process_run WHERE id = 's8-stale-sel2'");
+    db.run("DELETE FROM valuation_simulation WHERE model_id = 's8-stale-bmodel'");
+    db.run("DELETE FROM business_case_model WHERE id = 's8-stale-bmodel'");
+    db.run("DELETE FROM brownfield_target WHERE id = 's8-stale-tb'");
+    setTarget("shortlisted");
+    const before = resolveS8Staleness(bf.projectId);
+    expect(before.adoption).toBeNull();
+    expect(before.any).toBe(false);
+    healthyBacktestOrg = runBacktest(db, () => true).org;
+    expect(healthyBacktestOrg.stale_adoption_excluded).toBe(0);
+
+    // The regeneration's supersession: the adopted round's model row is archived.
+    archiveModel(ADOPTED_BF);
+    const st = resolveS8Staleness(bf.projectId);
+    expect(st.adoption).toBe("adopted_superseded");
+    expect(st.any).toBe(true);
+
+    // Family `target` (fs GO block): same 409 contract, now naming the round-based reason.
+    const denied = goStaleTargetCheck({ entityType: "project", entityId: bf.projectId, gate: "fs", actor: "tester" });
+    expect(denied?.status).toBe(409);
+    const body = (await (denied as Response).json()) as { error: { code: string; details: { adoption: string | null } } };
+    expect(body.error.code).toBe("target_not_shortlisted");
+    expect(body.error.details.adoption).toBe("adopted_superseded");
+  });
+
+  test("backtest: the superseded adopted case leaves the corpus and is counted", () => {
+    const res = runBacktest(db, () => true);
+    expect(res.rows.find((r) => r.project_id === bf.projectId)).toBeUndefined();
+    expect(res.org.stale_adoption_excluded).toBe(1);
+    expect(res.org.insufficient).toBe(healthyBacktestOrg.insufficient - 1);
+    expect(res.org.scored).toBe(healthyBacktestOrg.scored);
+  });
+
+  test("greenfield-execution and covenant readers: stale surfaces, never old-round figures", () => {
+    expect(adoptedCaseCapex(bf.projectId, db)).toMatchObject({ modelId: ADOPTED_BF, total: null, stale: true });
+    const rec = trancheReconciliation(bf.projectId, db);
+    expect(rec.findings.map((f) => f.code)).toContain("adopted_case_stale");
+    expect(rec.matches).toBe(false);
+    expect(s10UsesReconciliation(db, bf.projectId).advisories.join("\n")).not.toBe("");
+
+    // Debt row re-added (the S11 test above removed it): the covenant verdict refuses to compute.
+    db.run(
+      "INSERT INTO debt_instrument (id, project_id, lender, principal, rate_type, rate, maturity, amortization) VALUES (?,?,?,?,?,?,?,?)",
+      [ulid(), bf.projectId, "Bank A", 1000, "fixed", 5, "5 years", "annuity"],
+    );
+    const report = computeDownsideDscr(db, bf.projectId);
+    expect(report).toMatchObject({ status: "insufficient_evidence", reason: "stale_adopted_case", min_dscr: null });
+    expect(report.periods).toEqual([]);
+    expect(s10CovenantHeadroom(db, bf.projectId).blockers.join("\n")).toMatch(STALE_NOTE);
+    expect(covenantSnapshot()).toEqual({ status: "stale", value_num: null, evidence_ref: "s8-stale-adopted-target" });
+
+    // The regeneration also produced a fresh round (as every regeneration does): clone the
+    // adopted case as a new ACTIVE row so S8 can complete on the fresh set. The stale debt row
+    // would hold S10 (and with it S11) on the stale case — the same isolation the ADR-0206
+    // S11 test applies — so it is removed before the process-level assertions.
+    db.run("DELETE FROM debt_instrument WHERE project_id = ?", [bf.projectId]);
+    const cols = (t: string) => (db.query(`PRAGMA table_info(${t})`).all() as Array<{ name: string }>).map((c) => c.name);
+    const model = db.query("SELECT * FROM business_case_model WHERE id = ?").get(ADOPTED_BF) as Record<string, unknown>;
+    const mc = cols("business_case_model");
+    db.run(
+      `INSERT INTO business_case_model (${mc.join(",")}) VALUES (${mc.map(() => "?").join(",")})`,
+      mc.map((c) => (c === "id" ? "s8-fresh-bmodel" : c === "archived_at" || c === "archived_by" ? null : model[c])),
+    );
+    const vc = cols("valuation_simulation");
+    for (const v of db.query("SELECT * FROM valuation_simulation WHERE model_id = ?").all(ADOPTED_BF) as Array<
+      Record<string, unknown>
+    >) {
+      db.run(
+        `INSERT INTO valuation_simulation (${vc.join(",")}) VALUES (${vc.map(() => "?").join(",")})`,
+        vc.map((c) => (c === "id" ? `s8-fresh-${v.id}` : c === "model_id" ? "s8-fresh-bmodel" : v[c])),
+      );
+    }
+    // S8 completes on the fresh active set (the archived adopted case does not hold it open)…
+    expect(evaluateProcess({ type: "project", id: bf.projectId }).completedStages).toContain("S8");
+    // …while S11 refuses the superseded adoption as an IC input: it was complete on the healthy
+    // adoption (the transition the ADR-0206 suite pins), the supersession re-opens it with the
+    // same blocker key.
+    const s11 = evaluateProcess({ type: "project", id: bf.projectId }).stages.find((s) => s.id === "S11");
+    expect(s11?.status).toBe("current");
+    expect(s11?.missing).toContain("s11.adopted_business_case");
+  });
+
+  test("greenfield (no target axis): the round-based reason applies without a target", () => {
+    const gfAdoptedId = adoptedCaseCapex(gf.projectId, db).modelId;
+    expect(gfAdoptedId).not.toBeNull();
+    const before = runBacktest(db, () => true).org;
+    expect(before.stale_adoption_excluded).toBe(1); // the superseded brownfield case above
+
+    archiveModel(gfAdoptedId!);
+    const st = resolveS8Staleness(gf.projectId);
+    expect(st.adoption).toBe("adopted_superseded");
+    expect(st.selection).toBeNull();
+    expect(st.adopted_target).toBeNull();
+    expect(st.target_ids).toEqual([]);
+
+    const denied = goStaleTargetCheck({ entityType: "project", entityId: gf.projectId, gate: "fs", actor: "tester" });
+    expect(denied?.status).toBe(409);
+    expect(adoptedCaseCapex(gf.projectId, db).stale).toBe(true);
+    const res = runBacktest(db, () => true);
+    expect(res.rows.find((r) => r.project_id === gf.projectId)).toBeUndefined();
+    expect(res.org.stale_adoption_excluded).toBe(2);
   });
 });

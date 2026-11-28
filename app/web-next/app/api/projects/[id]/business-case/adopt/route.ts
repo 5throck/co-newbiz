@@ -8,7 +8,7 @@ import { getDb } from "../../../../../../../../db/client.ts";
 import { reconfirmBlock } from "../../../../../../lib/reconfirm.ts";
 import { authenticate } from "../../../../../../lib/auth.ts";
 import { visibleProject } from "../../../../../../lib/project-visibility.ts";
-import { GoalsAckNoteRequiredError, GoalsAckRequiredError, NotFoundError, adoptBusinessCase } from "../../../../../../lib/business-case.ts";
+import { GoalsAckNoteRequiredError, GoalsAckRequiredError, HistoricalNotAdoptableError, NotFoundError, adoptBusinessCase } from "../../../../../../lib/business-case.ts";
 import { badRequest, fail, forbidden, notFound, ok } from "../../../../../../lib/envelope.ts";
 import { recordHumanFinalForStageArtifacts } from "../../../../../../lib/review/human-final.ts";
 
@@ -39,6 +39,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (e instanceof NotFoundError) return notFound();
     // ADR-0159: a confirmation requirement (not a gate block) — the UI turns it into a dialog.
     if (e instanceof GoalsAckRequiredError) return fail(409, "goals_ack_required", e.message);
+    // DEC-20261128-02: the historical variant is comparison evidence (ADR-0117) and
+    // cannot be adopted — a client-fixable conflict, same 409 family as goals_ack.
+    if (e instanceof HistoricalNotAdoptableError) return fail(409, "historical_not_adoptable", e.message);
     if (e instanceof GoalsAckNoteRequiredError) return badRequest("goals_ack_note_required", e.message);
     // ADR-0143 constraint violations (target not selected / wrong target) are
     // client-fixable 400s, not 404s.
