@@ -9,7 +9,8 @@
  * - the picker/field source pins (client components, so invariants read the sources, per the
  *   admin-schedule-panel.test.ts pattern): 매분·매분 disabled for non-exempt keys,
  *   no-rewrite-on-toggle, unrepresentable-expr neutral state, one preview path, jobKey wiring,
- *   and the §4.4 ko drafts pinned verbatim with the en mirror.
+ *   the locale-conditional 시/분 label order (ko value-first), and the §4.4 ko drafts pinned
+ *   verbatim with the en mirror.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -364,6 +365,24 @@ describe("dual-mode field source pins (§4.4 invariants over the client sources)
     // frequency + mode radio labels render on one line (owner-reported squish fix)
     expect(PICKER).toContain("whitespace-nowrap");
     expect(FIELD).toContain("whitespace-nowrap");
+  });
+
+  test("time label order is locale-conditional: ko reads value-first (07시 00분), en/default stays label-first", () => {
+    // User defect 2026-11-28 (schedule-job edit modal): the 시/분 labels rendered before their
+    // selects in every locale — ko counts value-before-unit (07시 00분), so there the pair must
+    // flip to select-then-label; en keeps the label-first "Hour [07] Minute [00]" order.
+    expect(PICKER).toMatch(/import \{[\s\S]*?useLocale[\s\S]*?\} from "next-intl";/);
+    expect(PICKER).toContain('useLocale() === "ko"');
+    // the helper carries both branches: valueFirst (ko) renders the select before the label
+    // text, the default (en and any other locale) renders label text before the select
+    expect(squash(PICKER)).toContain("{valueFirst ? children : label} {valueFirst ? label : children}");
+    // both time selects go through the helper
+    expect(squash(PICKER)).toContain('valueFirst={valueFirst} label={t("cronHourLabel")}');
+    expect(squash(PICKER)).toContain('valueFirst={valueFirst} label={t("cronMinuteLabel")}');
+    // the accessible names ride on the order-independent aria-labels — the DOM reorder must not
+    // touch them
+    expect(PICKER).toContain('aria-label={t("cronHourLabel")}');
+    expect(PICKER).toContain('aria-label={t("cronMinuteLabel")}');
   });
 });
 

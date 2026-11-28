@@ -36,3 +36,54 @@
 - [x] `bun scripts/audit.ts` exit 0; `gitleaks detect` clean
 - [x] CI run of `.github/workflows/docker.yml` green on the PR (build) and after merge (publish)
 - [ ] Follow-up: in a throwaway container (fresh volume), admin login → `GET /api/admin/adr` returns 200 with non-empty `adrs` and `scanned_dir=/repo/docs/adr`
+
+## Addendum (2026-11-28): Host-Side Production Port-Publish Invariant Probe
+
+**Status: implemented (2026-11-28).** Probe: `scripts/co-newbiz/prod-port-probe.ts`; registration: `scheduler-install.ts --job port-probe` rendering `ops/scheduler/launchd/co-newbiz-portprobe.plist.tmpl`; tests: `tests/unit/prod-port-probe.test.ts`; runbook placement as designed (`docs/runbooks/deployment.md` §8, scheduler.md §10 pointer). This addendum extends the design above; the original requirements and verification record are unchanged. (REQ-P2's "7748 → 7749" predates the 2026-10-11 port swap — the layout this addendum designs against is the current one, host `127.0.0.1:7749` → container 7749, per `docker-compose.yml` and `docs/runbooks/deployment.md` §8.)
+
+### Incident and detectable signature (2026-11-28, verified)
+
+`co-newbiz-web` reported `healthy` and served `/api/health` correctly **inside** the container, while its host port publish was dead: `HostConfig.PortBindings` still carried the desired binding (`{"7749/tcp":[{"HostIp":"127.0.0.1","HostPort":"7749"}]}`), but the active mapping (`NetworkSettings.Ports`) was `{"7749/tcp":[]}` — nothing listened on host 127.0.0.1:7749, and the Cloudflare tunnel (`cloudflared`, targeting host 7749 for `https://newbiz.bizknights.org`) served nothing. `docker restart` did **not** fix it: the same container object replayed the dead state; only `docker compose up -d --force-recreate web` restored the mapping. Root cause: Docker Desktop (macOS) backend port-forward desync — a trigger outside this repository. The class-defining fact: **the compose healthcheck cannot see this outage** — it runs its `fetch` inside the container (`docker-compose.yml` healthcheck), so it stays green while every client outside the container is dark. "Container running and healthy with an empty active `NetworkSettings.Ports` for 7749/tcp" is the precise, detectable signature.
+
+### Requirements
+
+- REQ-P8: a host-side probe detects the dead-publish state within ~5 minutes of onset, independent of the container's own healthcheck, the app's notify pipeline, and the Cloudflare tunnel.
+- REQ-P9: the probe distinguishes three outcomes — **OK / DEGRADED** (app unhealthy) **/ PUBLISH_DEAD** (publish invariant broken) — and prints one machine-readable line per run.
+- REQ-P10: on any non-OK outcome the probe raises a host-visible alert that works when the app, the tunnel, and the container are all unavailable, and leaves a persistent log line.
+- REQ-P11: the probe is scheduled by the host OS (launchd, ADR-0019/ADR-0189), never an in-process timer; it performs no DB writes and holds no secrets.
+
+### Design
+
+**Probe** (`scripts/co-newbiz/prod-port-probe.ts`, a short-lived host process — the dev-tick model, not the prod-tick `docker exec` model, because the HTTP check must originate on the host to exercise the publish). Two checks, invariant first:
+
+1. **Publish invariant**: `docker inspect co-newbiz-web --format '{{json .NetworkSettings.Ports}}'` must show a non-empty host binding for `7749/tcp`. An empty array or absent key on a running container is PUBLISH_DEAD — the incident signature — and is checked before HTTP so the operator gets the specific diagnosis instead of an ambiguous "health check failed". For the alert body the probe also captures `HostConfig.PortBindings` as diagnostic detail: desired binding present → backend desync (force-recreate is the fix); absent → compose/config drift. Diagnostic only — the invariant itself keys on the active mapping alone.
+2. **HTTP**: `GET http://127.0.0.1:7749/api/health` (the same constant `scripts/deploy-web.ts` gates on) must return 200.
+
+Classification (invariant first, then HTTP):
+
+| Publish invariant | HTTP | Outcome | Exit code |
+|---|---|---|---|
+| non-empty binding | 200 | OK | 0 |
+| non-empty binding | fail | DEGRADED (`app_down`) | 1 |
+| `docker inspect` fails, container missing or not running | any | DEGRADED (`docker_down`) | 1 |
+| empty/absent binding on a running container | any | PUBLISH_DEAD | 2 |
+
+Output: one JSON line per run, e.g. `{"ts":"2026-11-28T00:00:00.000Z","outcome":"PUBLISH_DEAD","sub_reason":null,"publish_binding":"present","http":"fail","detail":"container running but host 7749 unpublished"}`, on stdout — grep-shaped for the out-log patterns the scheduler runbook already uses. The classification is an exported pure function (`classifyOutcome`) so the unit test needs no Docker daemon and no network.
+
+**Alerting**: on DEGRADED or PUBLISH_DEAD the probe (a) appends a line to `~/Library/Logs/co-newbiz/prod-port-probe.log` — the directory `scheduler-install.ts` already creates and manages (mode 0700 dir, 0600 files), so no new log location is invented — and (b) fires a macOS user notification: `osascript -e 'display notification "…" with title "co-newbiz prod" subtitle "PUBLISH_DEAD: host 7749 unpublished"'`. This is the only channel that survives the incident state by construction: the app's notify pipeline (SMTP `NOTIFY_SMTP_*`, webhook `NOTIFY_WEBHOOK_URL_OPS`) executes **inside the container** through the `notify.deliver` job against the prod DB (scheduled-jobs design §6/D11), and posting to the public origin traverses exactly the tunnel that is down — both channels are dark precisely when this probe must speak. A host-side SMTP re-send reusing the `NOTIFY_*` secrets would be container-independent but requires the probe to parse `.env.prod`, handle SMTP/TLS, and duplicate `notify-transport` — rejected for v1 (v2 candidate). The LaunchAgent runs in the user session, so the notification inherits the tick's accepted limitation (nothing fires while logged out — `docs/runbooks/scheduler.md` §1, owner decision D5); the log line persists regardless.
+
+**Scheduling**: LaunchAgent per ADR-0019/ADR-0189 — label `org.bizknights.co-newbiz.prod.portprobe`; host process `bun scripts/co-newbiz/prod-port-probe.ts`; `StartInterval 300` (5 min); `RunAtLoad true` (probe once at load, so a dead publish left over from a previous session alerts immediately); `ProcessType Background`; explicit `PATH` pinned the same way the tick's plist is. Registration extends `scripts/co-newbiz/scheduler-install.ts` (a `--job port-probe` mode rendering a new `ops/scheduler/launchd/co-newbiz-portprobe.plist.tmpl`) rather than a hand-rolled plist — the installer stays the only supported registration path and its render / log-dir / PATH-pinning / bootstrap-bootout machinery is reused unchanged. Runbook placement decision: the registration and troubleshooting steps are documented in **`docs/runbooks/deployment.md` §8** (new subsection), not in scheduler.md — §8 owns the production container's health and recovery path (deploy-web.ts health gate, cutover steps), while scheduler.md is scoped to the job tick; scheduler.md §10 "Related" gains a one-line pointer as a follow-up.
+
+**Recovery** (documented, not automated — v1 alerts; a human or operator script recovers):
+
+```bash
+docker compose up -d --force-recreate web   # plain docker restart replays the dead state (2026-11-28 incident)
+```
+
+### Tests
+
+`tests/unit/prod-port-probe.test.ts`, following the existing pure-logic unit pattern (no daemon, no network — cf. `scheduler-p2-install.test.ts`): the full `classifyOutcome` matrix above; malformed `docker inspect` output classified as DEGRADED (`docker_down`), never silently as OK; container present but `State.Running` false classified DEGRADED, not PUBLISH_DEAD; and the one-line JSON output shape.
+
+### Non-goals (v1) and rollback
+
+Not in v1: **self-healing** — the probe never runs `--force-recreate` itself (an automated recreate could race an active deploy or an operator's intervention; a `--remediate` mode is a v2 candidate); no host-side SMTP/webhook alerting; no monitoring of `cloudflared` itself (the tunnel container has its own health state); no probe of the dev server (7748). The probe is strictly read-only — one `docker inspect`, one HTTP GET, zero DB writes, zero secrets held. Rollback is the inverse of registration: `launchctl bootout gui/$UID/org.bizknights.co-newbiz.prod.portprobe`, delete the plist, remove the script/template/test, and (optionally) the log file — no persistent state beyond the log.

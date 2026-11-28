@@ -277,6 +277,6 @@ systemd: `--uninstall`이 비활성 명령을 출력하고 공용 템플릿 유�
 
 ## 10. 관련 문서
 
-- `docs/runbooks/deployment.md` — 배포 파이프라인; §8이 prod 틱이 실행에 들어가는 운영 컨테이너를 다룹니다
+- `docs/runbooks/deployment.md` — 배포 파이프라인; §8이 prod 틱이 실행에 들어가는 운영 컨테이너를 다루고, §8의 포트 공개 감시 소절이 이 설치기가 등록하는 두 번째 잡(`--job port-probe`, 레이블 `org.bizknights.co-newbiz.prod.portprobe`)을 문서화합니다
 - `docs/runbooks/rag-host-scheduler.md` — ADR-0189 이전의 호스트 수준 RAG 신선도 잡(이 틱과 독립)
 - `docs/adr/0189-amend-adr-0019-launchd-and-docker-scheduler-model.md`, `docs/designs/2026-10-29-scheduled-jobs-design.md` — 결정 D1–D8과 설치기 계약

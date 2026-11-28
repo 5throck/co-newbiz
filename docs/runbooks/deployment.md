@@ -152,6 +152,50 @@ Fix (Cloudflare dashboard, the `bizknights.org` zone — configured outside this
 
 Verification: after the change, re-add the ChatGPT custom connector with defaults (DCR). It should be created without `Some app settings were rejected`, and the route's 403s should disappear from Cloudflare Security → Events. The app already rate-limits registrations to 20 per IP per hour, so abuse protection stays in place.
 
+### Host-side port-publish invariant probe (`prod-port-probe`, 2026-11-28 addendum)
+
+The compose healthcheck runs its `fetch` **inside** the container, so it cannot see the one outage class observed on 2026-11-28: Docker Desktop (macOS) lost the host port-forward while the container kept running and serving `/api/health` internally — `NetworkSettings.Ports["7749/tcp"]` was empty, nothing listened on host 127.0.0.1:7749, and the Cloudflare tunnel was dark. `docker restart` did **not** fix it (the same container object replayed the dead state); only `docker compose up -d --force-recreate web` did. The probe (design addendum REQ-P8–P11 in `docs/designs/2026-09-21-docker-prod-cicd-design.md`) is a read-only **host** process — one `docker inspect co-newbiz-web`, one `GET http://127.0.0.1:7749/api/health` (override with `CO_NEWBIZ_HEALTH_URL`), zero DB writes, no secrets — that runs every 5 minutes and classifies invariant-first:
+
+| Outcome | Meaning | Exit code |
+|---|---|---|
+| `OK` | port published on the running container AND `/api/health` returns 200 | 0 |
+| `DEGRADED` | `sub_reason` `app_down` (published but health fails) or `docker_down` (inspect failed / malformed / container not running) | 1 |
+| `PUBLISH_DEAD` | container running but `NetworkSettings.Ports["7749/tcp"]` empty/absent — the incident signature; checked first, takes precedence over HTTP | 2 |
+
+On any non-OK outcome it fires a macOS notification and appends the same JSON line it prints to `~/Library/Logs/co-newbiz/prod-port-probe.log` (launchd's own stdout log `prod-portprobe.out.log` records every run).
+
+**Install** (the installer is the only supported registration path):
+
+```bash
+bun scripts/co-newbiz/scheduler-install.ts --job port-probe --dry-run   # preview, no writes
+bun scripts/co-newbiz/scheduler-install.ts --job port-probe             # install
+```
+
+This writes `~/Library/LaunchAgents/org.bizknights.co-newbiz.prod.portprobe.plist` (`StartInterval 300`, `RunAtLoad true` — a dead publish left over from a previous session alerts at load, `ProcessType Background`) and creates the log files under `~/Library/Logs/co-newbiz/`. Uninstall: `bun scripts/co-newbiz/scheduler-install.ts --job port-probe --uninstall`.
+
+**Verify**:
+
+```bash
+launchctl list | grep portprobe                                            # label + PID (or "-" between fires) + last exit code
+launchctl print gui/$UID/org.bizknights.co-newbiz.prod.portprobe           # state = waiting, run interval = 300000 milliseconds
+bun scripts/co-newbiz/prod-port-probe.ts                                   # manual run; expect {"outcome":"OK",...} and exit 0
+```
+
+**Read the logs**:
+
+```bash
+tail -5 ~/Library/Logs/co-newbiz/prod-port-probe.log      # alerts only — empty is normal (non-OK runs only)
+tail -5 ~/Library/Logs/co-newbiz/prod-portprobe.out.log   # every run, one JSON line each
+```
+
+Each line is one JSON object (`ts`, `outcome`, `sub_reason`, `publish_binding`, `http`, `detail`). `"outcome":"PUBLISH_DEAD"` is the incident signature; `publish_binding` tells you which fix applies — `present` means the desired binding is still configured (Docker backend desync → force-recreate below), `absent` means the binding itself is gone (compose/config drift).
+
+**Recovery** (documented, not automated — the probe never self-heals):
+
+```bash
+docker compose up -d --force-recreate web   # plain docker restart replays the dead state (2026-11-28 incident)
+```
+
 ## 9. Scheduler (Minute-Tick)
 
 Periodic jobs fire from the host OS scheduler, one launchd entry per environment (`org.bizknights.co-newbiz.<env>.tick`, ADR-0189). The dev tick runs `schedule-tick.ts` as a host process against the dev DB; the prod tick runs it **inside the `co-newbiz-web` container** via `docker exec -e CO_NEWBIZ_SCHEDULER_ENV=prod ...` — the prod tick therefore requires the container to be up, and the installer injects the environment flag itself (no container env setup needed). Install, verify (heartbeat), seed, uninstall, and troubleshooting: `docs/runbooks/scheduler.md`. §7 applies unchanged: container replacement must not disturb the host scheduler registrations.
