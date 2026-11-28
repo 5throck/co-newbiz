@@ -16,8 +16,8 @@
 // is 매분 · 매분 — that option is disabled (with the policy annotation) unless the job key is
 // floor-exempt; `N분 간격` offers only 5/10/15/20/30 (45 is excluded: `*\/45` fires :00/:45,
 // a 15-minute gap). The controls make the violation unreachable; the shared check decides.
-import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   composeStructured,
   HOUR_INTERVALS,
@@ -52,6 +52,32 @@ function pad2(n: number): string {
 }
 
 /**
+ * One labelled select of the 시/분 time row, in locale order. ko counts value-before-unit
+ * (07시 00분), so the label text follows its select; en and every other locale keep the
+ * label-first order ("Hour [07]"). The explicit htmlFor keeps the label↔select association
+ * order-independent, and the select's aria-label carries the accessible name, so the
+ * reorder is visual/DOM only — screen readers are unaffected.
+ */
+function LocaleOrderedTimeLabel({
+  htmlFor,
+  valueFirst,
+  label,
+  children,
+}: {
+  htmlFor: string;
+  valueFirst: boolean;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label htmlFor={htmlFor} className="flex items-center gap-1 text-[length:var(--fs-caption)]">
+      {valueFirst ? children : label}
+      {valueFirst ? label : children}
+    </label>
+  );
+}
+
+/**
  * The 빠른 설정 branch of ScheduleCronField. `everyMinuteAllowed` (computed in the field from
  * the exported INTERVAL_FLOOR_EXEMPT_KEYS) gates the 매분 · 매분 option; `dowEmpty` mirrors the
  * weekly-zero-days state up so the shared status slot can swap the parser error for the
@@ -75,6 +101,7 @@ export function ScheduleCronQuickPicker({
   onDowEmpty: (empty: boolean) => void;
 }) {
   const t = useTranslations("admin.ops");
+  const valueFirst = useLocale() === "ko"; // ko reads value-before-unit — see LocaleOrderedTimeLabel
   // Control values are state, seeded from parse-back of the dialog's cron; a cron written by
   // someone else (key re-pick in the create dialog) re-seeds them, a cron written here does
   // not (lastComposed ref). An unrepresentable cron seeds the neutral 매일 07:00 defaults.
@@ -135,8 +162,7 @@ export function ScheduleCronQuickPicker({
 
   const timeSelects = "hour" in ctrl && (
     <>
-      <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-        {t("cronHourLabel")}
+      <LocaleOrderedTimeLabel htmlFor={`${idPrefix}CronHour`} valueFirst={valueFirst} label={t("cronHourLabel")}>
         <select
           id={`${idPrefix}CronHour`}
           className="sizing-new-input"
@@ -150,9 +176,8 @@ export function ScheduleCronQuickPicker({
             </option>
           ))}
         </select>
-      </label>
-      <label className="flex items-center gap-1 text-[length:var(--fs-caption)]">
-        {t("cronMinuteLabel")}
+      </LocaleOrderedTimeLabel>
+      <LocaleOrderedTimeLabel htmlFor={`${idPrefix}CronMinute`} valueFirst={valueFirst} label={t("cronMinuteLabel")}>
         <select
           id={`${idPrefix}CronMinute`}
           className="sizing-new-input"
@@ -166,7 +191,7 @@ export function ScheduleCronQuickPicker({
             </option>
           ))}
         </select>
-      </label>
+      </LocaleOrderedTimeLabel>
       <span className="text-[length:var(--fs-caption)] text-[color:var(--muted-fg)]">{t("cronTzNote")}</span>
     </>
   );
