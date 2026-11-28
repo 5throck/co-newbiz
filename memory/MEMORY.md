@@ -4,6 +4,7 @@
 
 | Date | Summary |
 |------|---------|
+| [2026-11-29](2026-11-29.md) | fix(docker): ship the scheduler import surface in the runtime image (prod tick dead since ~Nov 20) |
 | [2026-11-28](2026-11-28.md) | fix(admin-ui): stop `시/분` selects overflowing their labels in the schedule cron quick-picker |
 | [2026-11-27](2026-11-27.md) | test: stop web-research test seams leaking across files; drop unused WACC breakdown strings |
 | [2026-11-26](2026-11-26.md) | feat(s8): run KRX beta and ECOS rate collection from the WACC page |
@@ -11,7 +12,7 @@
 | [2026-11-24](2026-11-24.md) | fix(ux): S8 entry lands on the overview tab without the financial-tab flash; rename financial sub-tab key to financial-model |
 | [2026-11-23](2026-11-23.md) | docs(records): review backfill — ADR index, spec registrations, lifecycle records, manuals, registry hygiene — ADR index +23; 22 spec entries (233/236); 65 lifecycle records; strategic-fit 1.2.0; Verification added. Co-Authored-By: ZCode <noreply@z.ai> |
 | [2026-11-22](2026-11-22.md) | fix(library): normalize source EOL before embedding the library projection U-20261121-002: JSON.stringify serializes a real CRLF as the escape sequence \r\n, so the file-level normalize() in --check never matched a CRLF working copy — 283 git-clean sources read as projection drift and blocked dev-sync. Sources are now LF-normalized at read time; the projection is identical for LF and CRLF checkouts. Adds a subprocess regression test that converts one source to CRLF and asserts --check stays green. |
-| [2026-11-21](2026-11-21.md) | fix(committee): minutes window, history rows, dialogue fallback, CLI minutes v2, docs (ADR-0204) |
+| 2026-11-21 | fix(committee): minutes window, history rows, dialogue fallback, CLI minutes v2, docs (ADR-0204) |
 | 2026-11-20 | chore: workspace sync (1 file) |
 | 2026-11-19 | docs(docs): workspace sync (10 files) |
 | 2026-11-19 | docs(wiki): apply reviewed Humanize KR polish proposals to 31 Korean wiki pages |
